@@ -26,6 +26,7 @@ pub struct IdlAccount {
     pub name: String,
     pub is_mut: bool,
     pub is_signer: bool,
+    pub is_init: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
