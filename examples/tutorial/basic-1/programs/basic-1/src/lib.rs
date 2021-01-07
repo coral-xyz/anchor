@@ -15,11 +15,11 @@ mod basic_1 {
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-    #[account(mut)]
+    #[account(init)]
     pub my_account: ProgramAccount<'info, MyAccount>,
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize)]
+#[account]
 pub struct MyAccount {
     pub data: u64,
 }

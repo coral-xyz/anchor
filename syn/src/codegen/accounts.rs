@@ -52,8 +52,7 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
                     let mut data = self.#info.try_borrow_mut_data()?;
                     let dst: &mut [u8] = &mut data;
                     let mut cursor = std::io::Cursor::new(dst);
-                    self.#ident.account.serialize(&mut cursor)
-                        .map_err(|_| ProgramError::InvalidAccountData)?;
+                    self.#ident.account.try_serialize(&mut cursor)?;
                 },
             }
         })
@@ -70,7 +69,7 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
 
     quote! {
         impl#combined_generics Accounts#trait_generics for #name#strct_generics {
-            fn try_anchor(program_id: &Pubkey, accounts: &[AccountInfo<'info>]) -> Result<Self, ProgramError> {
+            fn try_accounts(program_id: &Pubkey, accounts: &[AccountInfo<'info>]) -> Result<Self, ProgramError> {
                 let acc_infos = &mut accounts.iter();
 
                 #(#acc_infos)*
@@ -107,12 +106,7 @@ pub fn generate_field(f: &Field) -> proc_macro2::TokenStream {
         Ty::ProgramAccount(acc) => {
             let account_struct = &acc.account_ident;
             quote! {
-                let mut data: &[u8] = &#ident.try_borrow_data()?;
-                let #ident = ProgramAccount::new(
-                    #ident.clone(),
-                    #account_struct::deserialize(&mut data)
-                    .map_err(|_| ProgramError::InvalidAccountData)?
-                );
+                let #ident: ProgramAccount<#account_struct> = ProgramAccount::try_from(#ident)?;
             }
         }
     };

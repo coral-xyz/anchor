@@ -61,7 +61,7 @@ pub fn generate_dispatch(program: &Program) -> proc_macro2::TokenStream {
 
             quote! {
                 instruction::#variant_arm => {
-                    let mut accounts = #anchor::try_anchor(program_id, accounts)?;
+                    let mut accounts = #anchor::try_accounts(program_id, accounts)?;
                     #program_name::#rpc_name(
                         Context {
                             accounts: &mut accounts,
