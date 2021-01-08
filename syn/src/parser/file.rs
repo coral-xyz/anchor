@@ -63,7 +63,6 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Idl> {
                     name: acc.ident.to_string().to_mixed_case(),
                     is_mut: acc.is_mut,
                     is_signer: acc.is_signer,
-                    is_init: acc.is_init,
                 })
                 .collect::<Vec<_>>();
             IdlInstruction {

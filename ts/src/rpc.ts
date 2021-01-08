@@ -37,7 +37,7 @@ export interface Accounts {
 /**
  * RpcFn is a single rpc method.
  */
-export type RpcFn = (...args: any[]) => Promise<any>;
+export type RpcFn = (...args: any[]) => Promise<TransactionSignature>;
 
 /**
  * Ix is a function to create a `TransactionInstruction`.
@@ -47,7 +47,7 @@ export type IxFn = (...args: any[]) => TransactionInstruction;
 /**
  * Account is a function returning a deserialized account, given an address.
  */
-export type AccountFn = (address: PublicKey) => any;
+export type AccountFn<T=any> = (address: PublicKey) => T;
 
 /**
  * Options for an RPC invocation.
@@ -131,7 +131,7 @@ export class RpcFactory {
     idlIx: IdlInstruction,
     coder: Coder,
     programId: PublicKey
-  ): IxFn {
+  ): IxFn[] {
     if (idlIx.name === "_inner") {
       throw new IdlError("the _inner name is reserved");
     }
@@ -141,6 +141,10 @@ export class RpcFactory {
       validateAccounts(idlIx, ctx.accounts);
       validateInstruction(idlIx, ...args);
 
+			const initInstructions = idlIx.accounts.filter(acc => acc.isInit).map((acc) => {
+
+			});
+
       const keys = idlIx.accounts.map((acc) => {
         return {
           pubkey: ctx.accounts[acc.name],
@@ -148,11 +152,14 @@ export class RpcFactory {
           isSigner: acc.isSigner,
         };
       });
-      return new TransactionInstruction({
-        keys,
-        programId,
-        data: coder.instruction.encode(toInstruction(idlIx, ...ixArgs)),
-      });
+      return [
+				...initInstructions,
+				new TransactionInstruction({
+					keys,
+					programId,
+					data: coder.instruction.encode(toInstruction(idlIx, ...ixArgs)),
+				}),
+			];
     };
 
     return ix;

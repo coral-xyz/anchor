@@ -16,11 +16,19 @@ pub trait Accounts<'info>: Sized {
 }
 
 pub trait AccountSerialize {
+    /// Serilalizes the account data into `writer`, setting the first 8 bytes
+    /// as the account discriminator.
     fn try_serialize<W: Write>(&self, writer: &mut W) -> Result<(), ProgramError>;
 }
 
 pub trait AccountDeserialize: Sized {
+    /// Deserializes the account data.
     fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError>;
+
+    /// Deserializes account data without checking the account discriminator.
+    /// This should only be used on account initialization, when the
+    /// discriminator is not yet set (since the entire account data is zeroed).
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError>;
 }
 
 pub struct ProgramAccount<'a, T: AccountSerialize + AccountDeserialize> {
@@ -38,6 +46,16 @@ impl<'a, T: AccountSerialize + AccountDeserialize> ProgramAccount<'a, T> {
         Ok(ProgramAccount::new(
             info.clone(),
             T::try_deserialize(&mut data)?,
+        ))
+    }
+
+    pub fn try_from_unchecked(
+        info: &AccountInfo<'a>,
+    ) -> Result<ProgramAccount<'a, T>, ProgramError> {
+        let mut data: &[u8] = &info.try_borrow_data()?;
+        Ok(ProgramAccount::new(
+            info.clone(),
+            T::try_deserialize_unchecked(&mut data)?,
         ))
     }
 }

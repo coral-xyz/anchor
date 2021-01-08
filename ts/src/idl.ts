@@ -16,6 +16,7 @@ export type IdlAccount = {
   name: string;
   isMut: boolean;
   isSigner: boolean;
+	isInit: boolean;
 };
 
 export type IdlField = {

@@ -111,8 +111,6 @@ fn parse_constraints(anchor: &syn::Attribute, ty: &Ty) -> (Vec<Constraint>, bool
                 "init" => {
                     is_init = true;
                     is_mut = true;
-                    is_signer = true;
-                    constraints.push(Constraint::Signer(ConstraintSigner {}));
                 }
                 "mut" => {
                     is_mut = true;

@@ -54,6 +54,10 @@ pub fn account(
                 if &discriminator != given_disc {
                     return Err(ProgramError::InvalidInstructionData);
                 }
+                Self::try_deserialize_unchecked(buf)
+            }
+
+            fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError> {
                 let mut data: &[u8] = &buf[8..];
                 AnchorDeserialize::deserialize(&mut data)
                     .map_err(|_| ProgramError::InvalidAccountData)

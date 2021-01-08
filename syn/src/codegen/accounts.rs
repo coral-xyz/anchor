@@ -91,7 +91,6 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
     }
 }
 
-// Unpacks the field, if needed.
 pub fn generate_field(f: &Field) -> proc_macro2::TokenStream {
     let checks: Vec<proc_macro2::TokenStream> = f
         .constraints
@@ -103,12 +102,14 @@ pub fn generate_field(f: &Field) -> proc_macro2::TokenStream {
         Ty::AccountInfo => quote! {
             let #ident = #ident.clone();
         },
-        Ty::ProgramAccount(acc) => {
-            let account_struct = &acc.account_ident;
-            quote! {
-                let #ident: ProgramAccount<#account_struct> = ProgramAccount::try_from(#ident)?;
-            }
-        }
+        Ty::ProgramAccount(_acc) => match f.is_init {
+            false => quote! {
+                let #ident = ProgramAccount::try_from(#ident)?;
+            },
+            true => quote! {
+                let #ident = ProgramAccount::try_from_unchecked(#ident)?;
+            },
+        },
     };
     quote! {
         #assign_ty
