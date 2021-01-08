@@ -3,6 +3,7 @@ extern crate proc_macro;
 use quote::quote;
 use syn::parse_macro_input;
 
+/// A data structure representing a Solana account.
 #[proc_macro_attribute]
 pub fn account(
     _args: proc_macro::TokenStream,

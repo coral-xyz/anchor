@@ -10,17 +10,33 @@ pub use anchor_attribute_program::program;
 pub use anchor_derive_accounts::Accounts;
 pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorSerialize};
 
+/// A data structure of Solana accounts that can be deserialized from the input
+/// of a Solana program. Due to the freewheeling nature of the accounts array,
+/// implementations of this trait should perform any and all constraint checks
+/// on accounts to ensure the accounts maintain any invariants required for the
+/// program to run securely.
 pub trait Accounts<'info>: Sized {
     fn try_accounts(program_id: &Pubkey, from: &[AccountInfo<'info>])
         -> Result<Self, ProgramError>;
 }
 
+/// A data structure that can be serialized and stored in an `AccountInfo` data
+/// array.
+///
+/// Implementors of this trait should ensure that any subsequent usage the
+/// `AccountDeserialize` trait succeeds if and only if the account is of the
+/// correct type. For example, the implementation provided by the `#[account]`
+/// attribute sets the first 8 bytes to be a unique account discriminator,
+/// defined as the first 8 bytes of the SHA256 of the account's Rust ident.
+/// Thus, any subsequent  calls via `AccountDeserialize`'s `try_deserialize`
+/// will check this discriminator. If it doesn't match, an invalid account
+/// was given, and the program will exit with an error.
 pub trait AccountSerialize {
-    /// Serilalizes the account data into `writer`, setting the first 8 bytes
-    /// as the account discriminator.
+    /// Serilalizes the account data into `writer`.
     fn try_serialize<W: Write>(&self, writer: &mut W) -> Result<(), ProgramError>;
 }
 
+/// A data structure that can be deserialized from an `AccountInfo` data array.
 pub trait AccountDeserialize: Sized {
     /// Deserializes the account data.
     fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError>;
@@ -31,6 +47,10 @@ pub trait AccountDeserialize: Sized {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError>;
 }
 
+/// A container for a deserialized `account` and raw `AccountInfo` object.
+///
+/// Using this within a data structure deriving `Accounts` will ensure the
+/// account is owned by the currently executing program.
 pub struct ProgramAccount<'a, T: AccountSerialize + AccountDeserialize> {
     pub info: AccountInfo<'a>,
     pub account: T,
@@ -41,6 +61,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize> ProgramAccount<'a, T> {
         Self { info, account }
     }
 
+    /// Deserializes the given `info` into a `ProgramAccount`.
     pub fn try_from(info: &AccountInfo<'a>) -> Result<ProgramAccount<'a, T>, ProgramError> {
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramAccount::new(
@@ -49,6 +70,10 @@ impl<'a, T: AccountSerialize + AccountDeserialize> ProgramAccount<'a, T> {
         ))
     }
 
+    /// Deserializes the given `info` into a `ProgramAccount` without checking
+    /// the account type. This should only be used upon program account
+    /// initialization (since the entire account data array is zeroed and thus
+    /// no account type is set).
     pub fn try_from_unchecked(
         info: &AccountInfo<'a>,
     ) -> Result<ProgramAccount<'a, T>, ProgramError> {
@@ -74,6 +99,9 @@ impl<'a, T: AccountSerialize + AccountDeserialize> DerefMut for ProgramAccount<'
     }
 }
 
+/// A data structure providing non-argument inputs to the Solana program, namely
+/// the currently executing program's ID and the set of validated, deserialized
+/// accounts.
 pub struct Context<'a, 'b, T> {
     pub accounts: &'a mut T,
     pub program_id: &'b Pubkey,

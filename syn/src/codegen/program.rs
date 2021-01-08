@@ -10,7 +10,7 @@ pub fn generate(program: Program) -> proc_macro2::TokenStream {
     let instruction = generate_instruction(&program);
 
     quote! {
-        // Import everything in the mod, in case the user wants to put anchors
+        // Import everything in the mod, in case the user wants to put types
         // in there.
         use #mod_name::*;
 
