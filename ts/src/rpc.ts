@@ -7,6 +7,7 @@ import {
   TransactionSignature,
   TransactionInstruction,
 } from "@solana/web3.js";
+import { sha256 } from 'crypto-hash';
 import { Idl, IdlInstruction } from "./idl";
 import { IdlError } from "./error";
 import Coder from "./coder";
@@ -117,7 +118,20 @@ export class RpcFactory {
           if (accountInfo === null) {
             throw new Error(`Entity does not exist ${address}`);
           }
-          return coder.accounts.decode(idlAccount.name, accountInfo.data);
+
+          // Assert the account discriminator is correct.
+          const expectedDiscriminator = Buffer.from((await sha256(`account:${idlAccount.name}`, {
+            outputFormat: 'buffer',
+          })).slice(0,8));
+          const discriminator = accountInfo.data.slice(0, 8);
+
+          if (expectedDiscriminator.compare(discriminator)) {
+            throw new Error('Invalid account discriminator');
+          }
+
+          // Chop off the discriminator before decoding.
+          const data = accountInfo.data.slice(8);
+          return coder.accounts.decode(idlAccount.name, data);
         };
         const name = camelCase(idlAccount.name);
         accountFns[name] = accountFn;
