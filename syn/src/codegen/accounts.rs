@@ -92,11 +92,6 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
 }
 
 pub fn generate_field(f: &Field) -> proc_macro2::TokenStream {
-    let checks: Vec<proc_macro2::TokenStream> = f
-        .constraints
-        .iter()
-        .map(|c| generate_constraint(&f, c))
-        .collect();
     let ident = &f.ident;
     let assign_ty = match &f.ty {
         Ty::AccountInfo => quote! {
@@ -111,6 +106,11 @@ pub fn generate_field(f: &Field) -> proc_macro2::TokenStream {
             },
         },
     };
+    let checks: Vec<proc_macro2::TokenStream> = f
+        .constraints
+        .iter()
+        .map(|c| generate_constraint(&f, c))
+        .collect();
     quote! {
         #assign_ty
         #(#checks)*

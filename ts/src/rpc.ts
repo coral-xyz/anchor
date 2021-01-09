@@ -40,9 +40,9 @@ export interface Accounts {
 export type RpcFn = (...args: any[]) => Promise<TransactionSignature>;
 
 /**
- * Ix is a function to create a `TransactionInstruction`.
+ * Ix is a function to create a `TransactionInstruction[]`.
  */
-export type IxFn = (...args: any[]) => TransactionInstruction;
+export type IxFn = (...args: any[]) => TransactionInstruction[];
 
 /**
  * Account is a function returning a deserialized account, given an address.
@@ -131,19 +131,19 @@ export class RpcFactory {
     idlIx: IdlInstruction,
     coder: Coder,
     programId: PublicKey
-  ): IxFn[] {
+  ): IxFn {
     if (idlIx.name === "_inner") {
       throw new IdlError("the _inner name is reserved");
     }
 
-    const ix = (...args: any[]): TransactionInstruction => {
+    const ix = (...args: any[]): TransactionInstruction[] => {
       const [ixArgs, ctx] = splitArgsAndCtx(idlIx, [...args]);
       validateAccounts(idlIx, ctx.accounts);
       validateInstruction(idlIx, ...args);
 
-			const initInstructions = idlIx.accounts.filter(acc => acc.isInit).map((acc) => {
+			const initInstructions: TransactionInstruction[] = [];//= idlIx.accounts.filter(acc => acc.isInit).map((acc) => {
 
-			});
+//			});
 
       const keys = idlIx.accounts.map((acc) => {
         return {
@@ -172,7 +172,7 @@ export class RpcFactory {
       if (ctx.instructions !== undefined) {
         tx.add(...ctx.instructions);
       }
-      tx.add(ixFn(...args));
+      tx.add(...ixFn(...args));
       const provider = getProvider();
       if (provider === null) {
         throw new Error("Provider not found");

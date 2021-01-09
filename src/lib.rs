@@ -13,8 +13,9 @@ pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorS
 /// A data structure of Solana accounts that can be deserialized from the input
 /// of a Solana program. Due to the freewheeling nature of the accounts array,
 /// implementations of this trait should perform any and all constraint checks
-/// on accounts to ensure the accounts maintain any invariants required for the
-/// program to run securely.
+/// (in addition to any done within `AccountDeserialize`) on accounts to ensure
+/// the accounts maintain any invariants required for the program to run
+/// securely.
 pub trait Accounts<'info>: Sized {
     fn try_accounts(program_id: &Pubkey, from: &[AccountInfo<'info>])
         -> Result<Self, ProgramError>;

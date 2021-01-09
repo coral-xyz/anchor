@@ -1,5 +1,6 @@
 const assert = require('assert');
-const anchor = require('@project-serum/anchor');
+// const anchor = require('@project-serum/anchor');
+const anchor = require('/home/armaniferrante/Documents/code/src/github.com/project-serum/anchor/ts');
 
 describe('basic-1', () => {
 
@@ -22,8 +23,8 @@ describe('basic-1', () => {
       anchor.web3.SystemProgram.createAccount({
         fromPubkey: provider.wallet.publicKey,
         newAccountPubkey: myAccount.publicKey,
-        space: 8,
-        lamports: await provider.connection.getMinimumBalanceForRentExemption(8),
+        space: 8+8,
+        lamports: await provider.connection.getMinimumBalanceForRentExemption(8+8),
         programId: program.programId,
       }),
     );
@@ -66,8 +67,8 @@ describe('basic-1', () => {
         anchor.web3.SystemProgram.createAccount({
           fromPubkey: provider.wallet.publicKey,
           newAccountPubkey: myAccount.publicKey,
-          space: 8,
-          lamports: await provider.connection.getMinimumBalanceForRentExemption(8),
+          space: 8+8,
+          lamports: await provider.connection.getMinimumBalanceForRentExemption(8+8),
           programId: program.programId,
         }),
       ],
