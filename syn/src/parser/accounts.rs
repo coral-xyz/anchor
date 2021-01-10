@@ -27,8 +27,11 @@ pub fn parse(strct: &syn::ItemStruct) -> AccountsStruct {
                         Some(attr)
                     })
                     .collect();
-                assert!(anchor_attrs.len() == 1);
-                anchor_attrs[0]
+                match anchor_attrs.len() {
+                    0 => None,
+                    1 => Some(anchor_attrs[0]),
+                    _ => panic!("invalid syntax: only one account attribute is allowed"),
+                }
             };
             parse_field(f, anchor_attr)
         })
@@ -38,10 +41,13 @@ pub fn parse(strct: &syn::ItemStruct) -> AccountsStruct {
 }
 
 // Parses an inert #[anchor] attribute specifying the DSL.
-fn parse_field(f: &syn::Field, anchor: &syn::Attribute) -> Field {
+fn parse_field(f: &syn::Field, anchor: Option<&syn::Attribute>) -> Field {
     let ident = f.ident.clone().unwrap();
     let ty = parse_ty(f);
-    let (constraints, is_mut, is_signer, is_init) = parse_constraints(anchor, &ty);
+    let (constraints, is_mut, is_signer, is_init) = match anchor {
+        None => (vec![], false, false, false),
+        Some(anchor) => parse_constraints(anchor, &ty),
+    };
     Field {
         ident,
         ty,

@@ -58,15 +58,14 @@ pub struct CreateRoot<'info> {
 pub struct UpdateRoot<'info> {
     #[account(signer)]
     pub authority: AccountInfo<'info>,
-    #[account(mut, "root.initialized", "&root.authority == authority.key")]
+    #[account(mut, "&root.authority == authority.key")]
     pub root: ProgramAccount<'info, Root>,
 }
 
 #[derive(Accounts)]
 pub struct CreateLeaf<'info> {
-    #[account("root.initialized")]
     pub root: ProgramAccount<'info, Root>,
-    #[account(mut, "!leaf.initialized")]
+    #[account(init)]
     pub leaf: ProgramAccount<'info, Leaf>,
 }
 
@@ -74,9 +73,9 @@ pub struct CreateLeaf<'info> {
 pub struct UpdateLeaf<'info> {
     #[account(signer)]
     pub authority: AccountInfo<'info>,
-    #[account("root.initialized", "&root.authority == authority.key")]
+    #[account("&root.authority == authority.key")]
     pub root: ProgramAccount<'info, Root>,
-    #[account(mut, belongs_to = root, "leaf.initialized")]
+    #[account(mut, belongs_to = root)]
     pub leaf: ProgramAccount<'info, Leaf>,
 }
 
