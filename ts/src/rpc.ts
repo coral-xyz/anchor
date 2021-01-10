@@ -7,7 +7,7 @@ import {
   TransactionSignature,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { sha256 } from 'crypto-hash';
+import { sha256 } from "crypto-hash";
 import { Idl, IdlInstruction } from "./idl";
 import { IdlError } from "./error";
 import Coder from "./coder";
@@ -36,24 +36,24 @@ export interface Accounts {
 }
 
 /**
- * RpcFn is a single rpc method.
+ * RpcFn is a single rpc method generated from an IDL.
  */
 export type RpcFn = (...args: any[]) => Promise<TransactionSignature>;
 
 /**
- * Ix is a function to create a `TransactionInstruction[]`.
+ * Ix is a function to create a `TransactionInstruction` generated from an IDL.
  */
-export type IxFn = (...args: any[]) => TransactionInstruction[];
+export type IxFn = (...args: any[]) => TransactionInstruction;
 
 /**
  * Account is a function returning a deserialized account, given an address.
  */
-export type AccountFn<T=any> = (address: PublicKey) => T;
+export type AccountFn<T = any> = (address: PublicKey) => T;
 
 /**
  * Options for an RPC invocation.
  */
-type RpcOptions = ConfirmOptions;
+export type RpcOptions = ConfirmOptions;
 
 /**
  * RpcContext provides all arguments for an RPC/IX invocation that are not
@@ -108,7 +108,6 @@ export class RpcFactory {
 
     if (idl.accounts) {
       idl.accounts.forEach((idlAccount) => {
-        // todo
         const accountFn = async (address: PublicKey): Promise<any> => {
           const provider = getProvider();
           if (provider === null) {
@@ -120,13 +119,17 @@ export class RpcFactory {
           }
 
           // Assert the account discriminator is correct.
-          const expectedDiscriminator = Buffer.from((await sha256(`account:${idlAccount.name}`, {
-            outputFormat: 'buffer',
-          })).slice(0,8));
+          const expectedDiscriminator = Buffer.from(
+            (
+              await sha256(`account:${idlAccount.name}`, {
+                outputFormat: "buffer",
+              })
+            ).slice(0, 8)
+          );
           const discriminator = accountInfo.data.slice(0, 8);
 
           if (expectedDiscriminator.compare(discriminator)) {
-            throw new Error('Invalid account discriminator');
+            throw new Error("Invalid account discriminator");
           }
 
           // Chop off the discriminator before decoding.
@@ -150,14 +153,10 @@ export class RpcFactory {
       throw new IdlError("the _inner name is reserved");
     }
 
-    const ix = (...args: any[]): TransactionInstruction[] => {
+    const ix = (...args: any[]): TransactionInstruction => {
       const [ixArgs, ctx] = splitArgsAndCtx(idlIx, [...args]);
       validateAccounts(idlIx, ctx.accounts);
       validateInstruction(idlIx, ...args);
-
-			const initInstructions: TransactionInstruction[] = [];//= idlIx.accounts.filter(acc => acc.isInit).map((acc) => {
-
-//			});
 
       const keys = idlIx.accounts.map((acc) => {
         return {
@@ -166,14 +165,11 @@ export class RpcFactory {
           isSigner: acc.isSigner,
         };
       });
-      return [
-				...initInstructions,
-				new TransactionInstruction({
-					keys,
-					programId,
-					data: coder.instruction.encode(toInstruction(idlIx, ...ixArgs)),
-				}),
-			];
+      return new TransactionInstruction({
+        keys,
+        programId,
+        data: coder.instruction.encode(toInstruction(idlIx, ...ixArgs)),
+      });
     };
 
     return ix;
@@ -186,7 +182,7 @@ export class RpcFactory {
       if (ctx.instructions !== undefined) {
         tx.add(...ctx.instructions);
       }
-      tx.add(...ixFn(...args));
+      tx.add(ixFn(...args));
       const provider = getProvider();
       if (provider === null) {
         throw new Error("Provider not found");
