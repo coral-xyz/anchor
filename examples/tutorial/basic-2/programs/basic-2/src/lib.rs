@@ -50,7 +50,7 @@ mod basic_2 {
 
 #[derive(Accounts)]
 pub struct CreateRoot<'info> {
-    #[account(mut, "!root.initialized")]
+    #[account(init)]
     pub root: ProgramAccount<'info, Root>,
 }
 
@@ -82,14 +82,14 @@ pub struct UpdateLeaf<'info> {
 
 // Define the program owned accounts.
 
-#[derive(AnchorSerialize, AnchorDeserialize)]
+#[account]
 pub struct Root {
     pub initialized: bool,
     pub authority: Pubkey,
     pub data: u64,
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize)]
+#[account]
 pub struct Leaf {
     pub initialized: bool,
     pub root: Pubkey,

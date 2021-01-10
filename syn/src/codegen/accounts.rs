@@ -97,14 +97,17 @@ pub fn generate_field(f: &Field) -> proc_macro2::TokenStream {
         Ty::AccountInfo => quote! {
             let #ident = #ident.clone();
         },
-        Ty::ProgramAccount(_acc) => match f.is_init {
-            false => quote! {
-                let #ident = ProgramAccount::try_from(#ident)?;
-            },
-            true => quote! {
-                let #ident = ProgramAccount::try_from_unchecked(#ident)?;
-            },
-        },
+        Ty::ProgramAccount(acc) => {
+            let account_struct = &acc.account_ident;
+            match f.is_init {
+                false => quote! {
+                    let #ident: ProgramAccount<#account_struct> = ProgramAccount::try_from(#ident)?;
+                },
+                true => quote! {
+                    let #ident: ProgramAccount<#account_struct> = ProgramAccount::try_from_init(#ident)?;
+                },
+            }
+        }
     };
     let checks: Vec<proc_macro2::TokenStream> = f
         .constraints

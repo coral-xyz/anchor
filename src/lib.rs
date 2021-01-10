@@ -71,14 +71,21 @@ impl<'a, T: AccountSerialize + AccountDeserialize> ProgramAccount<'a, T> {
         ))
     }
 
-    /// Deserializes the given `info` into a `ProgramAccount` without checking
-    /// the account type. This should only be used upon program account
+    /// Deserializes the zero-initialized `info` into a `ProgramAccount` without
+    /// checking the account type. This should only be used upon program account
     /// initialization (since the entire account data array is zeroed and thus
     /// no account type is set).
-    pub fn try_from_unchecked(
-        info: &AccountInfo<'a>,
-    ) -> Result<ProgramAccount<'a, T>, ProgramError> {
+    pub fn try_from_init(info: &AccountInfo<'a>) -> Result<ProgramAccount<'a, T>, ProgramError> {
         let mut data: &[u8] = &info.try_borrow_data()?;
+
+        // The discriminator should be zero, since we're initializing.
+        let mut disc_bytes = [0u8; 8];
+        disc_bytes.copy_from_slice(&data[..8]);
+        let discriminator = u64::from_le_bytes(disc_bytes);
+        if discriminator != 0 {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
         Ok(ProgramAccount::new(
             info.clone(),
             T::try_deserialize_unchecked(&mut data)?,
