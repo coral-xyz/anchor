@@ -48,8 +48,10 @@ in one situation: when a given `ProgramAccount` is newly created and is being us
 for the first time (and thus it's data field is all zero). If `#[account(init)]` is not used
 when account data is zero initialized, the transaction will be rejected.
 3. The `Rent` **sysvar** is required for the rent exemption check, which the framework enforces
-by default for any account marked with `#[account(init)]`. To skip this check, one can specify
-`#[account(init, rent_exempt = skip)]`.
+by default for any account marked with `#[account(init)]`. To be more explicit about the check,
+one can specify `#[account(init, rent_exempt)]`. To skip this check, (and thus
+allowing one to omit the `Rent` acccount) one can specify
+`#[account(init, rent_exempt = skip)]` on the account being initialized (here, `my_account`).
 
 ::: details
 All accounts created with Anchor are laid out as follows: `8-byte-discriminator || borsh

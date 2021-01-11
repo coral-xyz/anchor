@@ -176,22 +176,27 @@ fn parse_constraints(anchor: &syn::Attribute, ty: &Ty) -> (Vec<Constraint>, bool
                     has_owner_constraint = true;
                 }
                 "rent_exempt" => {
-                    match inner_tts.next().unwrap() {
-                        proc_macro2::TokenTree::Punct(punct) => {
-                            assert!(punct.as_char() == '=');
-                            punct
+                    match inner_tts.next() {
+                        None => is_rent_exempt = Some(true),
+                        Some(tkn) => {
+                            match tkn {
+                                proc_macro2::TokenTree::Punct(punct) => {
+                                    assert!(punct.as_char() == '=');
+                                    punct
+                                }
+                                _ => panic!("invalid syntax"),
+                            };
+                            let should_skip = match inner_tts.next().unwrap() {
+                                proc_macro2::TokenTree::Ident(ident) => ident,
+                                _ => panic!("invalid syntax"),
+                            };
+                            match should_skip.to_string().as_str() {
+                                "skip" => {
+                                    is_rent_exempt = Some(false);
+                                },
+                                _ => panic!("invalid syntax: omit the rent_exempt attribute to enforce rent exemption"),
+                            };
                         }
-                        _ => panic!("invalid syntax"),
-                    };
-                    let should_skip = match inner_tts.next().unwrap() {
-                        proc_macro2::TokenTree::Ident(ident) => ident,
-                        _ => panic!("invalid syntax"),
-                    };
-                    match should_skip.to_string().as_str() {
-                        "skip" => {
-														is_rent_exempt = Some(false);
-												},
-                        _ => panic!("invalid syntax: omit the rent_exempt attribute to enforce rent exemption"),
                     };
                 }
                 _ => {
