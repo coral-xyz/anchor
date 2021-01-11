@@ -96,6 +96,7 @@ purposes of the Accounts macro) that can be specified on a struct deriving `Acco
 | `#[account(belongs_to = <target>)]` | On `ProgramAccount` structs | Checks the `target` field on the account matches the `target` field in the accounts array. |
 | `#[account(owner = program \| skip)]` | On `ProgramAccount` and `AccountInfo` structs | Checks the owner of the account is the current program or skips the check. |
 | `#[account("<literal>")]` | On `ProgramAccount` structs | Executes the given code literal as a constraint. The literal should evaluate to a boolean. |
+| `#[account(rent_exempt = <skip>)]` | On `AccountInfo` or `ProgramAccount` structs | Optional attribute to skips rent exemption checks. By default, all accounts marked with `#[account(init)]` will be rent exempt. |
 
 ## License
 
