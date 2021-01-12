@@ -84,6 +84,37 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
         }
     };
 
+		let to_acc_infos: Vec<proc_macro2::TokenStream> = accs
+				.fields
+				.iter()
+				.map(|f: &Field| {
+						let name = &f.ident;
+						quote! {
+								self.#name.to_account_info()
+						}
+				})
+				.collect();
+
+		let to_acc_metas: Vec<proc_macro2::TokenStream> = accs
+				.fields
+				.iter()
+				.map(|f: &Field| {
+						let name = &f.ident;
+						let is_signer = match f.is_signer {
+								false => quote! { false },
+								true => quote! { true },
+						};
+						match f.is_mut {
+								false => quote! {
+										AccountMeta::new_readonly(*self.#name.to_account_info().key, #is_signer)
+								},
+								true => quote! {
+										AccountMeta::new(*self.#name.to_account_info().key, #is_signer)
+								},
+						}
+				})
+				.collect();
+
     quote! {
         impl#combined_generics Accounts#trait_generics for #name#strct_generics {
             fn try_accounts(program_id: &Pubkey, accounts: &[AccountInfo<'info>]) -> Result<Self, ProgramError> {
@@ -107,15 +138,17 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
 
         impl#combined_generics ToAccountInfos#trait_generics for #name#strct_generics {
             fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-                // todo
-                vec![]
+                vec![
+										#(#to_acc_infos),*
+								]
             }
         }
 
         impl#combined_generics ToAccountMetas for #name#strct_generics {
             fn to_account_metas(&self) -> Vec<AccountMeta> {
-                // todo
-                vec![]
+                vec![
+										#(#to_acc_metas),*
+								]
             }
         }
 
@@ -147,34 +180,34 @@ pub fn generate_field_deserialization(f: &Field) -> proc_macro2::TokenStream {
         }
         Ty::Sysvar(sysvar) => match sysvar {
             SysvarTy::Clock => quote! {
-                let #ident = Clock::from_account_info(#ident)?;
+                let #ident: Sysvar<Clock> = Sysvar::from_account_info(#ident)?;
             },
             SysvarTy::Rent => quote! {
-                let #ident = Rent::from_account_info(#ident)?;
+                let #ident: Sysvar<Rent> = Sysvar::from_account_info(#ident)?;
             },
             SysvarTy::EpochSchedule => quote! {
-                let #ident = EpochSchedule::from_account_info(#ident)?;
+                let #ident: Sysvar<EpochSchedule> = Sysvar::from_account_info(#ident)?;
             },
             SysvarTy::Fees => quote! {
-                let #ident = Fees::from_account_info(#ident)?;
+                let #ident: Sysvar<Fees> = Sysvar::from_account_info(#ident)?;
             },
             SysvarTy::RecentBlockHashes => quote! {
-                let #ident = RecentBlockhashes::from_account_info(#ident)?;
+                let #ident: Sysvar<RecentBlockhashes> = Sysvar::from_account_info(#ident)?;
             },
             SysvarTy::SlotHashes => quote! {
-                let #ident = SlotHashes::from_account_info(#ident)?;
+                let #ident: Sysvar<SlotHashes> = Sysvar::from_account_info(#ident)?;
             },
             SysvarTy::SlotHistory => quote! {
-                let #ident = SlotHistory::from_account_info(#ident)?;
+                let #ident: Sysvar<SlotHistory> = Sysvar::from_account_info(#ident)?;
             },
             SysvarTy::StakeHistory => quote! {
-                let #ident = StakeHistory::from_account_info(#ident)?;
+                let #ident: Sysvar<StakeHistory> = Sysvar::from_account_info(#ident)?;
             },
             SysvarTy::Instructions => quote! {
-                let #ident = Instructions::from_account_info(#ident)?;
+                let #ident: Sysvar<Instructions> = Sysvar::from_account_info(#ident)?;
             },
             SysvarTy::Rewards => quote! {
-                let #ident = Rewards::from_account_info(#ident)?;
+                let #ident: Sysvar<Rewards> = Sysvar::from_account_info(#ident)?;
             },
         },
     };

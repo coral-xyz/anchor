@@ -106,18 +106,41 @@ impl<'a, T: AccountSerialize + AccountDeserialize> ProgramAccount<'a, T> {
     }
 }
 
-pub struct Sysvar<'info, T: solana_sdk::sysvar::Sysvar> {
-    pub info: AccountInfo<'info>,
-    pub account: T,
-}
-
-impl<'info, T: solana_sdk::sysvar::Sysvar> ToAccountInfo<'info> for Sysvar<'info, T> {
+impl<'info, T: AccountSerialize + AccountDeserialize> ToAccountInfo<'info> for ProgramAccount<'info, T> {
     fn to_account_info(&self) -> AccountInfo<'info> {
         self.info.clone()
     }
 }
 
-impl<'info, T: AccountSerialize + AccountDeserialize> ToAccountInfo<'info> for ProgramAccount<'info, T> {
+pub struct Sysvar<'info, T: solana_sdk::sysvar::Sysvar> {
+    info: AccountInfo<'info>,
+    account: T,
+}
+
+impl<'info, T: solana_sdk::sysvar::Sysvar> Sysvar<'info, T> {
+		pub fn from_account_info(acc_info: &AccountInfo<'info>) -> Result<Sysvar<'info, T>, ProgramError> {
+				Ok(Sysvar {
+						info: acc_info.clone(),
+						account: T::from_account_info(&acc_info)?,
+				})
+		}
+}
+
+impl<'a, T: solana_sdk::sysvar::Sysvar> Deref for Sysvar<'a, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.account
+    }
+}
+
+impl<'a, T: solana_sdk::sysvar::Sysvar> DerefMut for Sysvar<'a, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.account
+    }
+}
+
+impl<'info, T: solana_sdk::sysvar::Sysvar> ToAccountInfo<'info> for Sysvar<'info, T> {
     fn to_account_info(&self) -> AccountInfo<'info> {
         self.info.clone()
     }
@@ -162,7 +185,7 @@ pub mod prelude {
     pub use super::{
         access_control, account, program, AccountDeserialize, AccountSerialize, Accounts,
         AnchorDeserialize, AnchorSerialize, Context, CpiContext, ProgramAccount,
-        ToAccountInfos, ToAccountMetas, Sysvar,
+        ToAccountInfos, ToAccountMetas, Sysvar, ToAccountInfo,
     };
 
     pub use solana_program::msg;

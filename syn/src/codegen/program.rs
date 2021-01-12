@@ -162,6 +162,7 @@ fn generate_cpi(program: &Program) -> proc_macro2::TokenStream {
                             }
                         };
                         let acc_infos = ctx.accounts.to_account_infos();
+												//acc_infos.push(ctx.program_account_info.clone());
                         solana_sdk::program::invoke_signed(
                             &ix,
                             &acc_infos,

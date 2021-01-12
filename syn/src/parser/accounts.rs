@@ -68,17 +68,8 @@ fn parse_ty(f: &syn::Field) -> Ty {
     let segments = &path.segments[0];
     match segments.ident.to_string().as_str() {
         "ProgramAccount" => Ty::ProgramAccount(parse_program_account(&path)),
+				"Sysvar" => Ty::Sysvar(parse_sysvar(&path)),
         "AccountInfo" => Ty::AccountInfo,
-        "Clock" => Ty::Sysvar(SysvarTy::Clock),
-        "Rent" => Ty::Sysvar(SysvarTy::Rent),
-        "EpochSchedule" => Ty::Sysvar(SysvarTy::EpochSchedule),
-        "Fees" => Ty::Sysvar(SysvarTy::Fees),
-        "RecentBlockhashes" => Ty::Sysvar(SysvarTy::RecentBlockHashes),
-        "SlotHashes" => Ty::Sysvar(SysvarTy::SlotHashes),
-        "SlotHistory" => Ty::Sysvar(SysvarTy::SlotHistory),
-        "StakeHistory" => Ty::Sysvar(SysvarTy::StakeHistory),
-        "Instructions" => Ty::Sysvar(SysvarTy::Instructions),
-        "Rewards" => Ty::Sysvar(SysvarTy::Rewards),
         _ => panic!("invalid account type"),
     }
 }
@@ -105,6 +96,42 @@ fn parse_program_account(path: &syn::Path) -> ProgramAccountTy {
         _ => panic!("Invalid ProgramAccount"),
     };
     ProgramAccountTy { account_ident }
+}
+
+fn parse_sysvar(path: &syn::Path) -> SysvarTy {
+    let segments = &path.segments[0];
+    let account_ident = match &segments.arguments {
+        syn::PathArguments::AngleBracketed(args) => {
+            // Expected: <'info, MyType>.
+            assert!(args.args.len() == 2);
+            match &args.args[1] {
+                syn::GenericArgument::Type(ty) => match ty {
+                    syn::Type::Path(ty_path) => {
+                        // TODO: allow segmented paths.
+                        assert!(ty_path.path.segments.len() == 1);
+                        let path_segment = &ty_path.path.segments[0];
+                        path_segment.ident.clone()
+                    }
+                    _ => panic!("Invalid Sysvar"),
+                },
+                _ => panic!("Invalid Sysvar"),
+            }
+        }
+        _ => panic!("Invalid Sysvar"),
+    };
+		match account_ident.to_string().as_str() {
+        "Clock" => SysvarTy::Clock,
+        "Rent" => SysvarTy::Rent,
+        "EpochSchedule" => SysvarTy::EpochSchedule,
+        "Fees" => SysvarTy::Fees,
+        "RecentBlockhashes" => SysvarTy::RecentBlockHashes,
+        "SlotHashes" => SysvarTy::SlotHashes,
+        "SlotHistory" => SysvarTy::SlotHistory,
+        "StakeHistory" => SysvarTy::StakeHistory,
+        "Instructions" => SysvarTy::Instructions,
+        "Rewards" => SysvarTy::Rewards,
+				_ => panic!("Invalid Sysvar"),
+		}
 }
 
 fn parse_constraints(anchor: &syn::Attribute, ty: &Ty) -> (Vec<Constraint>, bool, bool, bool) {

@@ -20,7 +20,7 @@ mod puppet {
 pub struct Initialize<'info> {
     #[account(init)]
     pub puppet: ProgramAccount<'info, Puppet>,
-    pub rent: Rent,
+    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
