@@ -9,27 +9,27 @@ mod puppet {
         Ok(())
     }
 
-		pub fn set_data(ctx: Context<SetData>, data: u64) -> ProgramResult {
-				let puppet = &mut ctx.accounts.puppet;
-				puppet.data = data;
-				Ok(())
-		}
+    pub fn set_data(ctx: Context<SetData>, data: u64) -> ProgramResult {
+        let puppet = &mut ctx.accounts.puppet;
+        puppet.data = data;
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-		#[account(init)]
-		pub puppet: ProgramAccount<'info, Puppet>,
-		pub rent: Rent,
+    #[account(init)]
+    pub puppet: ProgramAccount<'info, Puppet>,
+    pub rent: Rent,
 }
 
 #[derive(Accounts)]
 pub struct SetData<'info> {
-		#[account(mut)]
-		pub puppet: ProgramAccount<'info, Puppet>,
+    #[account(mut)]
+    pub puppet: ProgramAccount<'info, Puppet>,
 }
 
 #[account]
 pub struct Puppet {
-		pub data: u64,
+    pub data: u64,
 }

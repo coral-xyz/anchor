@@ -13,14 +13,14 @@ mod puppet_master {
 
 #[derive(Accounts)]
 pub struct PullStrings {
-//		pub puppet: Puppet;
+    //		pub puppet: Puppet;
 }
 
 /*
 impl puppet::cpi::SetDataAccounts for PullStrings {
-		pub fn accounts(&self) -> puppet::SetData {
+        pub fn accounts(&self) -> puppet::SetData {
 
-		}
+        }
 }
 */
 
@@ -34,11 +34,11 @@ impl puppet::cpi::SetDataAccounts for PullStrings {
 
 /*
 trait spl_token::cpi::Transfer {
-		fn transfer(&self, ...args) -> Result<()> {
-				let accounts = self.accounts();
-				let ix = IX{...args};
+        fn transfer(&self, ...args) -> Result<()> {
+                let accounts = self.accounts();
+                let ix = IX{...args};
 
-		}
+        }
 }
 
 impl<'info> spl_token::cpi::Transfer<'info> for Initialize<'info> {
