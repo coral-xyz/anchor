@@ -115,10 +115,17 @@ pub struct Context<'a, 'b, T> {
     pub program_id: &'b Pubkey,
 }
 
+/// Context for cross-program-invocations.
+pub struct CpiContext<'a, 'b, 'c, 'd, 'e, T> {
+    pub accounts: &'a mut T,
+    pub program_account_info: AccountInfo<'b>,
+    pub signer_seeds: &'c [&'d [&'e [u8]]],
+}
+
 pub mod prelude {
     pub use super::{
         access_control, account, program, AccountDeserialize, AccountSerialize, Accounts,
-        AnchorDeserialize, AnchorSerialize, Context, ProgramAccount,
+        AnchorDeserialize, AnchorSerialize, Context, CpiContext, ProgramAccount,
     };
 
     pub use solana_program::msg;

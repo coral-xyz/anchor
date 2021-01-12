@@ -17,6 +17,7 @@ pub struct Rpc {
     pub raw_method: syn::ItemFn,
     pub ident: syn::Ident,
     pub args: Vec<RpcArg>,
+    // The ident for the struct deriving Accounts.
     pub anchor_ident: syn::Ident,
 }
 

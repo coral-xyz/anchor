@@ -22,6 +22,9 @@ edition = "2018"
 crate-type = ["cdylib"]
 name = "{1}"
 
+[features]
+no-entrypoint = []
+
 [dependencies]
 borsh = {{ git = "https://github.com/project-serum/borsh", branch = "serum", features = ["serum-program"] }}
 solana-program = "1.4.3"
