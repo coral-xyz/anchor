@@ -1,6 +1,7 @@
-use solana_sdk::account_info::AccountInfo;
 use solana_sdk::program_error::ProgramError;
 use solana_sdk::pubkey::Pubkey;
+use solana_sdk::account_info::AccountInfo;
+use solana_sdk::instruction::AccountMeta;
 use std::io::Write;
 use std::ops::{Deref, DerefMut};
 
@@ -19,6 +20,18 @@ pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorS
 pub trait Accounts<'info>: Sized {
     fn try_accounts(program_id: &Pubkey, from: &[AccountInfo<'info>])
         -> Result<Self, ProgramError>;
+}
+
+pub trait ToAccountInfos<'info> {
+    fn to_account_infos(&self) -> Vec<AccountInfo<'info>>;
+}
+
+pub trait ToAccountInfo<'info> {
+    fn to_account_info(&self) -> AccountInfo<'info>;
+}
+
+pub trait ToAccountMetas {
+    fn to_account_metas(&self) -> Vec<AccountMeta>;
 }
 
 /// A data structure that can be serialized and stored in an `AccountInfo` data
@@ -93,6 +106,29 @@ impl<'a, T: AccountSerialize + AccountDeserialize> ProgramAccount<'a, T> {
     }
 }
 
+pub struct Sysvar<'info, T: solana_sdk::sysvar::Sysvar> {
+    pub info: AccountInfo<'info>,
+    pub account: T,
+}
+
+impl<'info, T: solana_sdk::sysvar::Sysvar> ToAccountInfo<'info> for Sysvar<'info, T> {
+    fn to_account_info(&self) -> AccountInfo<'info> {
+        self.info.clone()
+    }
+}
+
+impl<'info, T: AccountSerialize + AccountDeserialize> ToAccountInfo<'info> for ProgramAccount<'info, T> {
+    fn to_account_info(&self) -> AccountInfo<'info> {
+        self.info.clone()
+    }
+}
+
+impl<'info> ToAccountInfo<'info> for AccountInfo<'info> {
+    fn to_account_info(&self) -> AccountInfo<'info> {
+        self.clone()
+    }
+}
+
 impl<'a, T: AccountSerialize + AccountDeserialize> Deref for ProgramAccount<'a, T> {
     type Target = T;
 
@@ -126,11 +162,12 @@ pub mod prelude {
     pub use super::{
         access_control, account, program, AccountDeserialize, AccountSerialize, Accounts,
         AnchorDeserialize, AnchorSerialize, Context, CpiContext, ProgramAccount,
+        ToAccountInfos, ToAccountMetas, Sysvar,
     };
 
     pub use solana_program::msg;
-    pub use solana_sdk::account_info::next_account_info;
-    pub use solana_sdk::account_info::AccountInfo;
+    pub use solana_sdk::account_info::{next_account_info, AccountInfo};
+    pub use solana_sdk::instruction::AccountMeta;
     pub use solana_sdk::entrypoint::ProgramResult;
     pub use solana_sdk::program_error::ProgramError;
     pub use solana_sdk::pubkey::Pubkey;
@@ -144,5 +181,5 @@ pub mod prelude {
     pub use solana_sdk::sysvar::slot_hashes::SlotHashes;
     pub use solana_sdk::sysvar::slot_history::SlotHistory;
     pub use solana_sdk::sysvar::stake_history::StakeHistory;
-    pub use solana_sdk::sysvar::Sysvar;
+    pub use solana_sdk::sysvar::Sysvar as SolanaSysvar;
 }

@@ -19,7 +19,7 @@ description = "Created with Anchor"
 edition = "2018"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "lib"]
 name = "{1}"
 
 [features]

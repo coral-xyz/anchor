@@ -146,23 +146,26 @@ fn generate_cpi(program: &Program) -> proc_macro2::TokenStream {
             let accounts_ident = &rpc.anchor_ident;
             let cpi_method = {
                 let ix_variant = generate_ix_variant(program, rpc);
-                let cpi_acc_infos = vec![quote! {
-                    // todo
-                }];
                 let method_name = &rpc.ident;
                 let args: Vec<&syn::PatType> = rpc.args.iter().map(|arg| &arg.raw_arg).collect();
                 quote! {
-                    pub fn #method_name(ctx: CpiContext<#accounts_ident>, #(#args),*) {
-                        let ix = instruction::#ix_variant;
-                        let data = AnchorSerialize::try_to_vec(&ix)
-                            .map_err(|_| ProgramError::InvalidInstructionData)?;
-                        let signer_seeds = &[]; // todo
+                    pub fn #method_name(ctx: CpiContext<#accounts_ident>, #(#args),*) -> ProgramResult {
+                        let ix = {
+                            let ix = instruction::#ix_variant;
+                            let data = AnchorSerialize::try_to_vec(&ix)
+                                .map_err(|_| ProgramError::InvalidInstructionData)?;
+                            let accounts = ctx.accounts.to_account_metas();
+                            solana_program::instruction::Instruction {
+                                program_id: *ctx.program_account_info.key,
+                                accounts,
+                                data,
+                            }
+                        };
+                        let acc_infos = ctx.accounts.to_account_infos();
                         solana_sdk::program::invoke_signed(
-                            &data,
-                            &[
-                                #(#cpi_acc_infos),*
-                            ],
-                            signer_seeds,
+                            &ix,
+                            &acc_infos,
+                            ctx.signer_seeds,
                         )
                     }
                 }

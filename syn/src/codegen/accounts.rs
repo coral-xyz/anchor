@@ -105,6 +105,20 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
             }
         }
 
+        impl#combined_generics ToAccountInfos#trait_generics for #name#strct_generics {
+            fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
+                // todo
+                vec![]
+            }
+        }
+
+        impl#combined_generics ToAccountMetas for #name#strct_generics {
+            fn to_account_metas(&self) -> Vec<AccountMeta> {
+                // todo
+                vec![]
+            }
+        }
+
         impl#strct_generics #name#strct_generics {
             pub fn exit(&self) -> ProgramResult {
                 #(#on_save)*
