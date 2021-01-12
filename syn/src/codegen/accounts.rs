@@ -84,36 +84,36 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
         }
     };
 
-		let to_acc_infos: Vec<proc_macro2::TokenStream> = accs
-				.fields
-				.iter()
-				.map(|f: &Field| {
-						let name = &f.ident;
-						quote! {
-								self.#name.to_account_info()
-						}
-				})
-				.collect();
+    let to_acc_infos: Vec<proc_macro2::TokenStream> = accs
+        .fields
+        .iter()
+        .map(|f: &Field| {
+            let name = &f.ident;
+            quote! {
+                    self.#name.to_account_info()
+            }
+        })
+        .collect();
 
-		let to_acc_metas: Vec<proc_macro2::TokenStream> = accs
-				.fields
-				.iter()
-				.map(|f: &Field| {
-						let name = &f.ident;
-						let is_signer = match f.is_signer {
-								false => quote! { false },
-								true => quote! { true },
-						};
-						match f.is_mut {
-								false => quote! {
-										AccountMeta::new_readonly(*self.#name.to_account_info().key, #is_signer)
-								},
-								true => quote! {
-										AccountMeta::new(*self.#name.to_account_info().key, #is_signer)
-								},
-						}
-				})
-				.collect();
+    let to_acc_metas: Vec<proc_macro2::TokenStream> = accs
+        .fields
+        .iter()
+        .map(|f: &Field| {
+            let name = &f.ident;
+            let is_signer = match f.is_signer {
+                false => quote! { false },
+                true => quote! { true },
+            };
+            match f.is_mut {
+                false => quote! {
+                        AccountMeta::new_readonly(*self.#name.to_account_info().key, #is_signer)
+                },
+                true => quote! {
+                        AccountMeta::new(*self.#name.to_account_info().key, #is_signer)
+                },
+            }
+        })
+        .collect();
 
     quote! {
         impl#combined_generics Accounts#trait_generics for #name#strct_generics {
@@ -139,16 +139,16 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
         impl#combined_generics ToAccountInfos#trait_generics for #name#strct_generics {
             fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
                 vec![
-										#(#to_acc_infos),*
-								]
+                                        #(#to_acc_infos),*
+                                ]
             }
         }
 
         impl#combined_generics ToAccountMetas for #name#strct_generics {
             fn to_account_metas(&self) -> Vec<AccountMeta> {
                 vec![
-										#(#to_acc_metas),*
-								]
+                                        #(#to_acc_metas),*
+                                ]
             }
         }
 

@@ -68,7 +68,7 @@ fn parse_ty(f: &syn::Field) -> Ty {
     let segments = &path.segments[0];
     match segments.ident.to_string().as_str() {
         "ProgramAccount" => Ty::ProgramAccount(parse_program_account(&path)),
-				"Sysvar" => Ty::Sysvar(parse_sysvar(&path)),
+        "Sysvar" => Ty::Sysvar(parse_sysvar(&path)),
         "AccountInfo" => Ty::AccountInfo,
         _ => panic!("invalid account type"),
     }
@@ -119,7 +119,7 @@ fn parse_sysvar(path: &syn::Path) -> SysvarTy {
         }
         _ => panic!("Invalid Sysvar"),
     };
-		match account_ident.to_string().as_str() {
+    match account_ident.to_string().as_str() {
         "Clock" => SysvarTy::Clock,
         "Rent" => SysvarTy::Rent,
         "EpochSchedule" => SysvarTy::EpochSchedule,
@@ -130,8 +130,8 @@ fn parse_sysvar(path: &syn::Path) -> SysvarTy {
         "StakeHistory" => SysvarTy::StakeHistory,
         "Instructions" => SysvarTy::Instructions,
         "Rewards" => SysvarTy::Rewards,
-				_ => panic!("Invalid Sysvar"),
-		}
+        _ => panic!("Invalid Sysvar"),
+    }
 }
 
 fn parse_constraints(anchor: &syn::Attribute, ty: &Ty) -> (Vec<Constraint>, bool, bool, bool) {

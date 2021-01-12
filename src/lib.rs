@@ -1,7 +1,7 @@
-use solana_sdk::program_error::ProgramError;
-use solana_sdk::pubkey::Pubkey;
 use solana_sdk::account_info::AccountInfo;
 use solana_sdk::instruction::AccountMeta;
+use solana_sdk::program_error::ProgramError;
+use solana_sdk::pubkey::Pubkey;
 use std::io::Write;
 use std::ops::{Deref, DerefMut};
 
@@ -106,7 +106,9 @@ impl<'a, T: AccountSerialize + AccountDeserialize> ProgramAccount<'a, T> {
     }
 }
 
-impl<'info, T: AccountSerialize + AccountDeserialize> ToAccountInfo<'info> for ProgramAccount<'info, T> {
+impl<'info, T: AccountSerialize + AccountDeserialize> ToAccountInfo<'info>
+    for ProgramAccount<'info, T>
+{
     fn to_account_info(&self) -> AccountInfo<'info> {
         self.info.clone()
     }
@@ -118,12 +120,14 @@ pub struct Sysvar<'info, T: solana_sdk::sysvar::Sysvar> {
 }
 
 impl<'info, T: solana_sdk::sysvar::Sysvar> Sysvar<'info, T> {
-		pub fn from_account_info(acc_info: &AccountInfo<'info>) -> Result<Sysvar<'info, T>, ProgramError> {
-				Ok(Sysvar {
-						info: acc_info.clone(),
-						account: T::from_account_info(&acc_info)?,
-				})
-		}
+    pub fn from_account_info(
+        acc_info: &AccountInfo<'info>,
+    ) -> Result<Sysvar<'info, T>, ProgramError> {
+        Ok(Sysvar {
+            info: acc_info.clone(),
+            account: T::from_account_info(&acc_info)?,
+        })
+    }
 }
 
 impl<'a, T: solana_sdk::sysvar::Sysvar> Deref for Sysvar<'a, T> {
@@ -184,14 +188,14 @@ pub struct CpiContext<'a, 'b, 'c, 'd, 'e, T> {
 pub mod prelude {
     pub use super::{
         access_control, account, program, AccountDeserialize, AccountSerialize, Accounts,
-        AnchorDeserialize, AnchorSerialize, Context, CpiContext, ProgramAccount,
-        ToAccountInfos, ToAccountMetas, Sysvar, ToAccountInfo,
+        AnchorDeserialize, AnchorSerialize, Context, CpiContext, ProgramAccount, Sysvar,
+        ToAccountInfo, ToAccountInfos, ToAccountMetas,
     };
 
     pub use solana_program::msg;
     pub use solana_sdk::account_info::{next_account_info, AccountInfo};
-    pub use solana_sdk::instruction::AccountMeta;
     pub use solana_sdk::entrypoint::ProgramResult;
+    pub use solana_sdk::instruction::AccountMeta;
     pub use solana_sdk::program_error::ProgramError;
     pub use solana_sdk::pubkey::Pubkey;
     pub use solana_sdk::sysvar::clock::Clock;
