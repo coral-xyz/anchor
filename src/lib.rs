@@ -71,6 +71,11 @@ pub struct ProgramAccount<'a, T: AccountSerialize + AccountDeserialize + Clone> 
     pub account: T,
 }
 
+/// Account owned by a program separate from the one being executed. Unlike
+/// `ProgramAccount`s, no checks are done to ensure this account is owned
+/// by any particular program.
+pub type CpiAccount<'a, T> = ProgramAccount<'a, T>;
+
 impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T> {
     pub fn new(info: AccountInfo<'a>, account: T) -> ProgramAccount<'a, T> {
         Self { info, account }
@@ -211,8 +216,8 @@ impl<'a, 'b, 'c, 'info, T: Accounts<'info>> CpiContext<'a, 'b, 'c, 'info, T> {
 pub mod prelude {
     pub use super::{
         access_control, account, program, AccountDeserialize, AccountSerialize, Accounts,
-        AnchorDeserialize, AnchorSerialize, Context, CpiContext, ProgramAccount, Sysvar,
-        ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        AnchorDeserialize, AnchorSerialize, Context, CpiAccount, CpiContext, ProgramAccount,
+        Sysvar, ToAccountInfo, ToAccountInfos, ToAccountMetas,
     };
 
     pub use solana_program::msg;

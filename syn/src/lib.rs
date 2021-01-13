@@ -47,6 +47,7 @@ impl AccountsStruct {
         }
     }
 
+    // Returns all program owned accounts in the Accounts struct.
     pub fn account_tys(&self) -> Vec<String> {
         self.fields
             .iter()
@@ -74,6 +75,7 @@ pub enum Ty {
     AccountInfo,
     ProgramAccount(ProgramAccountTy),
     Sysvar(SysvarTy),
+    CpiAccount(CpiAccountTy),
 }
 
 #[derive(PartialEq)]
@@ -92,6 +94,12 @@ pub enum SysvarTy {
 
 #[derive(PartialEq)]
 pub struct ProgramAccountTy {
+    // The struct type of the account.
+    pub account_ident: syn::Ident,
+}
+
+#[derive(PartialEq)]
+pub struct CpiAccountTy {
     // The struct type of the account.
     pub account_ident: syn::Ident,
 }

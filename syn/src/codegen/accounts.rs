@@ -182,6 +182,17 @@ pub fn generate_field_deserialization(f: &Field) -> proc_macro2::TokenStream {
                 },
             }
         }
+        Ty::CpiAccount(acc) => {
+            let account_struct = &acc.account_ident;
+            match f.is_init {
+                false => quote! {
+                    let #ident: CpiAccount<#account_struct> = CpiAccount::try_from(#ident)?;
+                },
+                true => quote! {
+                    let #ident: CpiAccount<#account_struct> = CpiAccount::try_from_init(#ident)?;
+                },
+            }
+        }
         Ty::Sysvar(sysvar) => match sysvar {
             SysvarTy::Clock => quote! {
                 let #ident: Sysvar<Clock> = Sysvar::from_account_info(#ident)?;
