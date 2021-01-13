@@ -7,9 +7,7 @@ use puppet::Puppet;
 mod puppet_master {
     use super::*;
     pub fn pull_strings(ctx: Context<PullStrings>, data: u64) -> ProgramResult {
-        let cpi_ctx: CpiContext<puppet::SetData> =
-            CpiContext::new(ctx.accounts.into(), ctx.accounts.puppet_program.clone());
-        puppet::cpi::set_data(cpi_ctx, data)?;
+        puppet::cpi::set_data(ctx.accounts.into(), data)?;
         Ok(())
     }
 }
@@ -21,10 +19,15 @@ pub struct PullStrings<'info> {
     pub puppet_program: AccountInfo<'info>,
 }
 
-impl<'info> From<&mut PullStrings<'info>> for puppet::SetData<'info> {
-    fn from(accounts: &mut PullStrings<'info>) -> puppet::SetData<'info> {
-        Self {
+impl<'a, 'b, 'c, 'info> From<&mut PullStrings<'info>>
+    for CpiContext<'a, 'b, 'c, 'info, puppet::SetData<'info>>
+{
+    fn from(
+        accounts: &mut PullStrings<'info>,
+    ) -> CpiContext<'a, 'b, 'c, 'info, puppet::SetData<'info>> {
+        let cpi_accounts = puppet::SetData {
             puppet: accounts.puppet.clone(),
-        }
+        };
+        CpiContext::new(cpi_accounts, accounts.puppet_program.clone())
     }
 }
