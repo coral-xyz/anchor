@@ -149,7 +149,10 @@ fn generate_cpi(program: &Program) -> proc_macro2::TokenStream {
                 let method_name = &rpc.ident;
                 let args: Vec<&syn::PatType> = rpc.args.iter().map(|arg| &arg.raw_arg).collect();
                 quote! {
-                    pub fn #method_name<'a, 'b, 'c, 'info>(ctx: CpiContext<'a, 'b, 'c, 'info, #accounts_ident<'info>>, #(#args),*) -> ProgramResult {
+                    pub fn #method_name<'a, 'b, 'c, 'info>(
+												ctx: CpiContext<'a, 'b, 'c, 'info, #accounts_ident<'info>>,
+												#(#args),*
+										) -> ProgramResult {
                         let ix = {
                             let ix = instruction::#ix_variant;
                             let data = AnchorSerialize::try_to_vec(&ix)

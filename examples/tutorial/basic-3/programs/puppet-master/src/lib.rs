@@ -7,7 +7,8 @@ use puppet::Puppet;
 mod puppet_master {
     use super::*;
     pub fn pull_strings(ctx: Context<PullStrings>, data: u64) -> ProgramResult {
-        let cpi_ctx = CpiContext::new(ctx.accounts.into(), ctx.accounts.puppet_program.clone());
+        let cpi_ctx: CpiContext<puppet::SetData> =
+            CpiContext::new(ctx.accounts.into(), ctx.accounts.puppet_program.clone());
         puppet::cpi::set_data(cpi_ctx, data)?;
         Ok(())
     }
@@ -15,7 +16,7 @@ mod puppet_master {
 
 #[derive(Accounts)]
 pub struct PullStrings<'info> {
-    #[account(mut)]
+    #[account(mut, owner = skip)]
     pub puppet: ProgramAccount<'info, Puppet>,
     pub puppet_program: AccountInfo<'info>,
 }

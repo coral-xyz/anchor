@@ -12,7 +12,9 @@ describe("basic-3", () => {
     const puppetMaster = anchor.workspace.PuppetMaster;
     const puppet = anchor.workspace.Puppet;
 
-    const newPuppetAccount = new anchor.web3.Account();
+		const newPuppetAccount = new anchor.web3.Account();
+
+		// Initialize program account.
     const tx = await puppet.rpc.initialize({
       accounts: {
         puppet: newPuppetAccount.publicKey,
@@ -32,26 +34,16 @@ describe("basic-3", () => {
       ],
     });
 
-    let puppetAccount = await puppet.account.puppet(newPuppetAccount.publicKey);
-    assert.ok(puppetAccount.data.eq(new anchor.BN(0)));
-
+		// CPI
 		await puppetMaster.rpc.pullStrings(new anchor.BN(111), {
 				accounts: {
 						puppet: newPuppetAccount.publicKey,
 						puppetProgram: puppet.programId,
 				},
 		});
-    puppetAccount = await puppet.account.puppet(newPuppetAccount.publicKey);
+
+		puppetAccount = await puppet.account.puppet(newPuppetAccount.publicKey);
 
 		assert.ok(puppetAccount.data.eq(new anchor.BN(111)));
-
-		/*
-    await puppet.rpc.setData(new anchor.BN(444), {
-      accounts: { puppet: newPuppetAccount.publicKey },
-    });
-    puppetAccount = await puppet.account.puppet(newPuppetAccount.publicKey);
-
-    assert.ok(puppetAccount.data.eq(new anchor.BN(444)));
-		*/
   });
 });
