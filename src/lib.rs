@@ -179,10 +179,10 @@ pub struct Context<'a, 'b, T> {
 }
 
 /// Context for cross-program-invocations.
-pub struct CpiContext<'a, 'b, 'c, 'd, 'e, T> {
+pub struct CpiContext<'a, 'b, 'c, 'd, 'info, T: Accounts<'info>> {
     pub accounts: &'a mut T,
-    pub program_account_info: AccountInfo<'b>,
-    pub signer_seeds: &'c [&'d [&'e [u8]]],
+    pub program_account_info: AccountInfo<'info>,
+    pub signer_seeds: &'b [&'c [&'d [u8]]],
 }
 
 pub mod prelude {

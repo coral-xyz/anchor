@@ -66,10 +66,14 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
             match f.is_mut {
                 false => quote! {},
                 true => quote! {
-                    let mut data = self.#info.try_borrow_mut_data()?;
-                    let dst: &mut [u8] = &mut data;
-                    let mut cursor = std::io::Cursor::new(dst);
-                    self.#ident.account.try_serialize(&mut cursor)?;
+                    // Only persist the change if the account is owned by the
+                    // current program.
+                    if program_id == self.#info.key  {
+                        let mut data = self.#info.try_borrow_mut_data()?;
+                        let dst: &mut [u8] = &mut data;
+                        let mut cursor = std::io::Cursor::new(dst);
+                        self.#ident.account.try_serialize(&mut cursor)?;
+                    }
                 },
             }
         })
@@ -139,21 +143,21 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
         impl#combined_generics ToAccountInfos#trait_generics for #name#strct_generics {
             fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
                 vec![
-                                        #(#to_acc_infos),*
-                                ]
+                    #(#to_acc_infos),*
+                ]
             }
         }
 
         impl#combined_generics ToAccountMetas for #name#strct_generics {
             fn to_account_metas(&self) -> Vec<AccountMeta> {
                 vec![
-                                        #(#to_acc_metas),*
-                                ]
+                    #(#to_acc_metas),*
+                ]
             }
         }
 
         impl#strct_generics #name#strct_generics {
-            pub fn exit(&self) -> ProgramResult {
+            pub fn exit(&self, program_id: &Pubkey) -> ProgramResult {
                 #(#on_save)*
                 Ok(())
             }
