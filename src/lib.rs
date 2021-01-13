@@ -201,7 +201,7 @@ pub struct CpiContext<'a, 'b, 'c, 'info, T: Accounts<'info>> {
 }
 
 impl<'a, 'b, 'c, 'info, T: Accounts<'info>> CpiContext<'a, 'b, 'c, 'info, T> {
-    pub fn new(accounts: T, program: AccountInfo<'info>) -> Self {
+    pub fn new(program: AccountInfo<'info>, accounts: T) -> Self {
         Self {
             accounts,
             program,

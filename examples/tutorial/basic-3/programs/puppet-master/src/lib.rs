@@ -8,11 +8,11 @@ use puppet::{Puppet, SetData};
 mod puppet_master {
     use super::*;
     pub fn pull_strings(ctx: Context<PullStrings>, data: u64) -> ProgramResult {
+        let cpi_program = ctx.accounts.puppet_program.clone();
         let cpi_accounts = SetData {
             puppet: ctx.accounts.puppet.clone(),
         };
-        let cpi_program = ctx.accounts.puppet_program.clone();
-        let cpi_ctx = CpiContext::new(cpi_accounts, cpi_program);
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
         puppet::cpi::set_data(cpi_ctx, data)
     }
 }
