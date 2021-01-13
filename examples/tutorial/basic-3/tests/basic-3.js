@@ -33,7 +33,6 @@ describe("basic-3", () => {
       ],
     });
 
-		// #region code
 		// Invoke the puppet master to perform a CPI to the puppet.
 		await puppetMaster.rpc.pullStrings(new anchor.BN(111), {
 				accounts: {
@@ -41,7 +40,6 @@ describe("basic-3", () => {
 						puppetProgram: puppet.programId,
 				},
 		});
-		// #endregion code
 
 		// Check the state updated.
 		puppetAccount = await puppet.account.puppet(newPuppetAccount.publicKey);

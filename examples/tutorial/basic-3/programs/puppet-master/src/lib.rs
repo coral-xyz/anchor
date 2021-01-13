@@ -1,13 +1,17 @@
 #![feature(proc_macro_hygiene)]
 
+// #region core
 use anchor::prelude::*;
-use puppet::Puppet;
 
 #[program]
 mod puppet_master {
     use super::*;
     pub fn pull_strings(ctx: Context<PullStrings>, data: u64) -> ProgramResult {
-        let cpi_ctx = ctx.accounts.into();
+        let cpi_accounts = puppet::SetData {
+            puppet: ctx.accounts.puppet.clone(),
+        };
+        let cpi_program = ctx.accounts.puppet_program;
+        let cpi_ctx = CpiContext::new(cpi_accounts, cpi_program);
         puppet::cpi::set_data(cpi_ctx, data)
     }
 }
@@ -15,19 +19,7 @@ mod puppet_master {
 #[derive(Accounts)]
 pub struct PullStrings<'info> {
     #[account(mut)]
-    pub puppet: CpiAccount<'info, Puppet>,
+    pub puppet: CpiAccount<'info, puppet::Puppet>,
     pub puppet_program: AccountInfo<'info>,
 }
-
-impl<'a, 'b, 'c, 'info> From<&mut PullStrings<'info>>
-    for CpiContext<'a, 'b, 'c, 'info, puppet::SetData<'info>>
-{
-    fn from(
-        accounts: &mut PullStrings<'info>,
-    ) -> CpiContext<'a, 'b, 'c, 'info, puppet::SetData<'info>> {
-        let cpi_accounts = puppet::SetData {
-            puppet: accounts.puppet.clone(),
-        };
-        CpiContext::new(cpi_accounts, accounts.puppet_program.clone())
-    }
-}
+// #endregion core
