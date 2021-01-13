@@ -61,20 +61,14 @@ pub trait AccountDeserialize: Sized {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError>;
 }
 
-/// A container for a deserialized `account` and raw `AccountInfo` object.
-///
-/// Using this within a data structure deriving `Accounts` will ensure the
-/// account is owned by the currently executing program.
+/// Container for a deserialized `account`. Using this within a data structure
+/// deriving `Accounts` will ensure the account is owned by the currently
+/// executing program.
 #[derive(Clone)]
 pub struct ProgramAccount<'a, T: AccountSerialize + AccountDeserialize + Clone> {
-    pub info: AccountInfo<'a>,
-    pub account: T,
+    info: AccountInfo<'a>,
+    account: T,
 }
-
-/// Account owned by a program separate from the one being executed. Unlike
-/// `ProgramAccount`s, no checks are done to ensure this account is owned
-/// by any particular program.
-pub type CpiAccount<'a, T> = ProgramAccount<'a, T>;
 
 impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T> {
     pub fn new(info: AccountInfo<'a>, account: T) -> ProgramAccount<'a, T> {
@@ -120,6 +114,26 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfo<'inf
     }
 }
 
+impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Deref for ProgramAccount<'a, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.account
+    }
+}
+
+impl<'a, T: AccountSerialize + AccountDeserialize + Clone> DerefMut for ProgramAccount<'a, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.account
+    }
+}
+
+/// Account owned by a program separate from the one being executed. Unlike
+/// `ProgramAccount`s, no checks are done to ensure this account is owned
+/// by any particular program.
+pub type CpiAccount<'a, T> = ProgramAccount<'a, T>;
+
+/// Container for a validated, deserialized Solana sysvar.
 pub struct Sysvar<'info, T: solana_sdk::sysvar::Sysvar> {
     info: AccountInfo<'info>,
     account: T,
@@ -162,20 +176,6 @@ impl<'info> ToAccountInfo<'info> for AccountInfo<'info> {
     }
 }
 
-impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Deref for ProgramAccount<'a, T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.account
-    }
-}
-
-impl<'a, T: AccountSerialize + AccountDeserialize + Clone> DerefMut for ProgramAccount<'a, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.account
-    }
-}
-
 /// A data structure providing non-argument inputs to the Solana program, namely
 /// the currently executing program's ID and the set of validated, deserialized
 /// accounts.
@@ -184,7 +184,7 @@ pub struct Context<'a, 'b, T> {
     pub program_id: &'b Pubkey,
 }
 
-/// Context for cross-program-invocations.
+/// Context speciying non-argument inputs for cross-program-invocations.
 pub struct CpiContext<'a, 'b, 'c, 'info, T: Accounts<'info>> {
     pub accounts: T,
     pub program: AccountInfo<'info>,

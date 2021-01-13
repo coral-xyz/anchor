@@ -60,7 +60,7 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
             let ident = &f.ident;
             let info = match f.ty {
                 Ty::AccountInfo => quote! { #ident },
-                Ty::ProgramAccount(_) => quote! { #ident.info },
+                Ty::ProgramAccount(_) => quote! { #ident.to_account_info() },
                 _ => return quote! {},
             };
             match f.is_mut {
@@ -69,10 +69,11 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
                     // Only persist the change if the account is owned by the
                     // current program.
                     if program_id == self.#info.owner  {
-                        let mut data = self.#info.try_borrow_mut_data()?;
+                        let info = self.#info;
+                        let mut data = info.try_borrow_mut_data()?;
                         let dst: &mut [u8] = &mut data;
                         let mut cursor = std::io::Cursor::new(dst);
-                        self.#ident.account.try_serialize(&mut cursor)?;
+                        self.#ident.try_serialize(&mut cursor)?;
                     }
                 },
             }
@@ -252,7 +253,7 @@ pub fn generate_constraint_belongs_to(
     let ident = &f.ident;
     // todo: would be nice if target could be an account info object.
     quote! {
-        if &#ident.#target != #target.info.key {
+        if &#ident.#target != #target.to_account_info().key {
             return Err(ProgramError::Custom(1)); // todo: error codes
         }
     }
@@ -262,7 +263,7 @@ pub fn generate_constraint_signer(f: &Field, _c: &ConstraintSigner) -> proc_macr
     let ident = &f.ident;
     let info = match f.ty {
         Ty::AccountInfo => quote! { #ident },
-        Ty::ProgramAccount(_) => quote! { #ident.info },
+        Ty::ProgramAccount(_) => quote! { #ident.to_account_info() },
         _ => panic!("Invalid syntax: signer cannot be specified."),
     };
     quote! {
@@ -285,7 +286,7 @@ pub fn generate_constraint_owner(f: &Field, c: &ConstraintOwner) -> proc_macro2:
     let ident = &f.ident;
     let info = match f.ty {
         Ty::AccountInfo => quote! { #ident },
-        Ty::ProgramAccount(_) => quote! { #ident.info },
+        Ty::ProgramAccount(_) => quote! { #ident.to_account_info() },
         _ => panic!("Invalid syntax: owner cannot be specified."),
     };
     match c {
@@ -305,7 +306,7 @@ pub fn generate_constraint_rent_exempt(
     let ident = &f.ident;
     let info = match f.ty {
         Ty::AccountInfo => quote! { #ident },
-        Ty::ProgramAccount(_) => quote! { #ident.info },
+        Ty::ProgramAccount(_) => quote! { #ident.to_account_info() },
         _ => panic!("Invalid syntax: rent exemption cannot be specified."),
     };
     match c {
