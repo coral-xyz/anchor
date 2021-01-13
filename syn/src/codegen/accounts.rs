@@ -68,7 +68,7 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
                 true => quote! {
                     // Only persist the change if the account is owned by the
                     // current program.
-                    if program_id == self.#info.key  {
+                    if program_id == self.#info.owner  {
                         let mut data = self.#info.try_borrow_mut_data()?;
                         let dst: &mut [u8] = &mut data;
                         let mut cursor = std::io::Cursor::new(dst);

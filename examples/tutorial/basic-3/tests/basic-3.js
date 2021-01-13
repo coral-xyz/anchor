@@ -1,5 +1,6 @@
 const assert = require("assert");
-const anchor = require("@project-serum/anchor");
+//const anchor = require("@project-serum/anchor");
+const anchor = require('/home/armaniferrante/Documents/code/src/github.com/project-serum/anchor/ts');
 
 describe("basic-3", () => {
   const provider = anchor.Provider.local();
@@ -34,11 +35,23 @@ describe("basic-3", () => {
     let puppetAccount = await puppet.account.puppet(newPuppetAccount.publicKey);
     assert.ok(puppetAccount.data.eq(new anchor.BN(0)));
 
+		await puppetMaster.rpc.pullStrings(new anchor.BN(111), {
+				accounts: {
+						puppet: newPuppetAccount.publicKey,
+						puppetProgram: puppet.programId,
+				},
+		});
+    puppetAccount = await puppet.account.puppet(newPuppetAccount.publicKey);
+
+		assert.ok(puppetAccount.data.eq(new anchor.BN(111)));
+
+		/*
     await puppet.rpc.setData(new anchor.BN(444), {
       accounts: { puppet: newPuppetAccount.publicKey },
     });
     puppetAccount = await puppet.account.puppet(newPuppetAccount.publicKey);
 
     assert.ok(puppetAccount.data.eq(new anchor.BN(444)));
+		*/
   });
 });

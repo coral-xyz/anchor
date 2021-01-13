@@ -149,20 +149,20 @@ fn generate_cpi(program: &Program) -> proc_macro2::TokenStream {
                 let method_name = &rpc.ident;
                 let args: Vec<&syn::PatType> = rpc.args.iter().map(|arg| &arg.raw_arg).collect();
                 quote! {
-                    pub fn #method_name<'a, 'b, 'c, 'd, 'info>(ctx: CpiContext<'a, 'b, 'c, 'd, 'info, #accounts_ident<'info>>, #(#args),*) -> ProgramResult {
+                    pub fn #method_name<'a, 'b, 'c, 'info>(ctx: CpiContext<'a, 'b, 'c, 'info, #accounts_ident<'info>>, #(#args),*) -> ProgramResult {
                         let ix = {
                             let ix = instruction::#ix_variant;
                             let data = AnchorSerialize::try_to_vec(&ix)
                                 .map_err(|_| ProgramError::InvalidInstructionData)?;
                             let accounts = ctx.accounts.to_account_metas();
                             solana_program::instruction::Instruction {
-                                program_id: *ctx.program_account_info.key,
+                                program_id: *ctx.program.key,
                                 accounts,
                                 data,
                             }
                         };
                         let mut acc_infos = ctx.accounts.to_account_infos();
-												acc_infos.push(ctx.program_account_info.clone());
+												acc_infos.push(ctx.program.clone());
                         solana_sdk::program::invoke_signed(
                             &ix,
                             &acc_infos,

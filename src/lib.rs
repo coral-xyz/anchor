@@ -65,12 +65,13 @@ pub trait AccountDeserialize: Sized {
 ///
 /// Using this within a data structure deriving `Accounts` will ensure the
 /// account is owned by the currently executing program.
-pub struct ProgramAccount<'a, T: AccountSerialize + AccountDeserialize> {
+#[derive(Clone)]
+pub struct ProgramAccount<'a, T: AccountSerialize + AccountDeserialize + Clone> {
     pub info: AccountInfo<'a>,
     pub account: T,
 }
 
-impl<'a, T: AccountSerialize + AccountDeserialize> ProgramAccount<'a, T> {
+impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T> {
     pub fn new(info: AccountInfo<'a>, account: T) -> ProgramAccount<'a, T> {
         Self { info, account }
     }
@@ -106,7 +107,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize> ProgramAccount<'a, T> {
     }
 }
 
-impl<'info, T: AccountSerialize + AccountDeserialize> ToAccountInfo<'info>
+impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfo<'info>
     for ProgramAccount<'info, T>
 {
     fn to_account_info(&self) -> AccountInfo<'info> {
@@ -156,7 +157,7 @@ impl<'info> ToAccountInfo<'info> for AccountInfo<'info> {
     }
 }
 
-impl<'a, T: AccountSerialize + AccountDeserialize> Deref for ProgramAccount<'a, T> {
+impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Deref for ProgramAccount<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -164,7 +165,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize> Deref for ProgramAccount<'a, 
     }
 }
 
-impl<'a, T: AccountSerialize + AccountDeserialize> DerefMut for ProgramAccount<'a, T> {
+impl<'a, T: AccountSerialize + AccountDeserialize + Clone> DerefMut for ProgramAccount<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.account
     }
@@ -179,10 +180,32 @@ pub struct Context<'a, 'b, T> {
 }
 
 /// Context for cross-program-invocations.
-pub struct CpiContext<'a, 'b, 'c, 'd, 'info, T: Accounts<'info>> {
-    pub accounts: &'a mut T,
-    pub program_account_info: AccountInfo<'info>,
-    pub signer_seeds: &'b [&'c [&'d [u8]]],
+pub struct CpiContext<'a, 'b, 'c, 'info, T: Accounts<'info>> {
+    pub accounts: T,
+    pub program: AccountInfo<'info>,
+    pub signer_seeds: &'a [&'b [&'c [u8]]],
+}
+
+impl<'a, 'b, 'c, 'info, T: Accounts<'info>> CpiContext<'a, 'b, 'c, 'info, T> {
+    pub fn new(accounts: T, program: AccountInfo<'info>) -> Self {
+        Self {
+            accounts,
+            program,
+            signer_seeds: &[],
+        }
+    }
+
+    pub fn new_with_signer(
+        accounts: T,
+        program: AccountInfo<'info>,
+        signer_seeds: &'a [&'b [&'c [u8]]],
+    ) -> Self {
+        Self {
+            accounts,
+            program,
+            signer_seeds,
+        }
+    }
 }
 
 pub mod prelude {
