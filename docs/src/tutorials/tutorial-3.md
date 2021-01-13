@@ -41,8 +41,8 @@ instruction via CPI.
 Things to notice
 
 * We create a `CpiContext` object with the target instruction's accounts and program,
-  here `puppet::SetData` and `puppet_program`.
-* To invoke another program, just use the `cpi` module on the crate, here, `puppet::cpi`.
+  here `SetData` and `puppet_program`.
+* To invoke an instruction on another program, just use the `cpi` module on the crate, here, `puppet::cpi::set_data`.
 * Our `Accounts` struct has a new type, `CpiAccount`, containing the target program's `Puppet`
   account. Think of `CpiAccount` exactly like `ProgramAccount`, except used for accounts *not*
   owned by the current program.

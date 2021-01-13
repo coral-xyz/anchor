@@ -2,15 +2,16 @@
 
 // #region core
 use anchor::prelude::*;
+use puppet::{Puppet, SetData};
 
 #[program]
 mod puppet_master {
     use super::*;
     pub fn pull_strings(ctx: Context<PullStrings>, data: u64) -> ProgramResult {
-        let cpi_accounts = puppet::SetData {
+        let cpi_accounts = SetData {
             puppet: ctx.accounts.puppet.clone(),
         };
-        let cpi_program = ctx.accounts.puppet_program;
+        let cpi_program = ctx.accounts.puppet_program.clone();
         let cpi_ctx = CpiContext::new(cpi_accounts, cpi_program);
         puppet::cpi::set_data(cpi_ctx, data)
     }
@@ -19,7 +20,7 @@ mod puppet_master {
 #[derive(Accounts)]
 pub struct PullStrings<'info> {
     #[account(mut)]
-    pub puppet: CpiAccount<'info, puppet::Puppet>,
+    pub puppet: CpiAccount<'info, Puppet>,
     pub puppet_program: AccountInfo<'info>,
 }
 // #endregion core
