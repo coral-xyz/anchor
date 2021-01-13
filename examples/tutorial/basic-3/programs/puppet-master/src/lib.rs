@@ -7,8 +7,8 @@ use puppet::Puppet;
 mod puppet_master {
     use super::*;
     pub fn pull_strings(ctx: Context<PullStrings>, data: u64) -> ProgramResult {
-        puppet::cpi::set_data(ctx.accounts.into(), data)?;
-        Ok(())
+        let cpi_ctx = ctx.accounts.into();
+        puppet::cpi::set_data(cpi_ctx, data)
     }
 }
 

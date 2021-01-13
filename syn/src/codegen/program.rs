@@ -48,10 +48,7 @@ pub fn generate_dispatch(program: &Program) -> proc_macro2::TokenStream {
                 instruction::#variant_arm => {
                     let mut accounts = #anchor::try_accounts(program_id, accounts)?;
                     #program_name::#rpc_name(
-                        Context {
-                            accounts: &mut accounts,
-                            program_id,
-                        },
+                        Context::new(&mut accounts, program_id),
                         #(#rpc_arg_names),*
                     )?;
                     accounts.exit(program_id)

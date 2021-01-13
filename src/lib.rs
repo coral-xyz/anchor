@@ -178,12 +178,19 @@ impl<'info> ToAccountInfo<'info> for AccountInfo<'info> {
     }
 }
 
-/// A data structure providing non-argument inputs to the Solana program, namely
-/// the currently executing program's ID and the set of validated, deserialized
-/// accounts.
+/// Provides non-argument inputs to the program.
 pub struct Context<'a, 'b, T> {
     pub accounts: &'a mut T,
     pub program_id: &'b Pubkey,
+}
+
+impl<'a, 'b, T> Context<'a, 'b, T> {
+    pub fn new(accounts: &'a mut T, program_id: &'b Pubkey) -> Self {
+        Self {
+            accounts,
+            program_id,
+        }
+    }
 }
 
 /// Context speciying non-argument inputs for cross-program-invocations.
