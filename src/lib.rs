@@ -9,6 +9,7 @@ pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::account;
 pub use anchor_attribute_program::program;
 pub use anchor_derive_accounts::Accounts;
+/// Default serialization format for anchor instructions and accounts.
 pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorSerialize};
 
 /// A data structure of Solana accounts that can be deserialized from the input
@@ -17,21 +18,24 @@ pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorS
 /// (in addition to any done within `AccountDeserialize`) on accounts to ensure
 /// the accounts maintain any invariants required for the program to run
 /// securely.
-pub trait Accounts<'info>: Sized {
+pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
     fn try_accounts(program_id: &Pubkey, from: &[AccountInfo<'info>])
         -> Result<Self, ProgramError>;
 }
 
+/// Transformation to `AccountMeta` structs.
+pub trait ToAccountMetas {
+    fn to_account_metas(&self) -> Vec<AccountMeta>;
+}
+
+/// Transformation to `AccountInfo` structs.
 pub trait ToAccountInfos<'info> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>>;
 }
 
+/// Transformation to an `AccountInfo` struct.
 pub trait ToAccountInfo<'info> {
     fn to_account_info(&self) -> AccountInfo<'info>;
-}
-
-pub trait ToAccountMetas {
-    fn to_account_metas(&self) -> Vec<AccountMeta>;
 }
 
 /// A data structure that can be serialized and stored in an `AccountInfo` data
@@ -61,9 +65,8 @@ pub trait AccountDeserialize: Sized {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError>;
 }
 
-/// Container for a deserialized `account`. Using this within a data structure
-/// deriving `Accounts` will ensure the account is owned by the currently
-/// executing program.
+/// Container for a serializable `account`. Use this to reference any account
+/// owned by the currently executing program.
 #[derive(Clone)]
 pub struct ProgramAccount<'a, T: AccountSerialize + AccountDeserialize + Clone> {
     info: AccountInfo<'a>,
@@ -128,12 +131,11 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> DerefMut for ProgramA
     }
 }
 
-/// Account owned by a program separate from the one being executed. Unlike
-/// `ProgramAccount`s, no checks are done to ensure this account is owned
-/// by any particular program.
+/// Similar to `ProgramAccount`, but to reference any account *not* owned by
+/// the current program.
 pub type CpiAccount<'a, T> = ProgramAccount<'a, T>;
 
-/// Container for a validated, deserialized Solana sysvar.
+/// Container for a Solana sysvar.
 pub struct Sysvar<'info, T: solana_sdk::sysvar::Sysvar> {
     info: AccountInfo<'info>,
     account: T,
