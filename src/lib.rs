@@ -19,8 +19,10 @@ pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorS
 /// the accounts maintain any invariants required for the program to run
 /// securely.
 pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
-    fn try_accounts(program_id: &Pubkey, from: &[AccountInfo<'info>])
-        -> Result<Self, ProgramError>;
+    fn try_accounts(
+        program_id: &Pubkey,
+        from: &mut &[AccountInfo<'info>],
+    ) -> Result<Self, ProgramError>;
 }
 
 /// Transformation to `AccountMeta` structs.
@@ -179,16 +181,25 @@ impl<'info> ToAccountInfo<'info> for AccountInfo<'info> {
 }
 
 /// Provides non-argument inputs to the program.
-pub struct Context<'a, 'b, T> {
+pub struct Context<'a, 'b, 'c, 'info, T> {
+    /// Deserialized accounts.
     pub accounts: &'a mut T,
+    /// Currently executing program id.
     pub program_id: &'b Pubkey,
+    /// Remaining accounts given but not deserialized or validated.
+    pub remaining_accounts: &'c [AccountInfo<'info>],
 }
 
-impl<'a, 'b, T> Context<'a, 'b, T> {
-    pub fn new(accounts: &'a mut T, program_id: &'b Pubkey) -> Self {
+impl<'a, 'b, 'c, 'info, T> Context<'a, 'b, 'c, 'info, T> {
+    pub fn new(
+        accounts: &'a mut T,
+        program_id: &'b Pubkey,
+        remaining_accounts: &'c [AccountInfo<'info>],
+    ) -> Self {
         Self {
             accounts,
             program_id,
+            remaining_accounts,
         }
     }
 }

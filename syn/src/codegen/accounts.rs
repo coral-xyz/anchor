@@ -16,6 +16,12 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
             }
         })
         .collect();
+    let acc_infos_len = {
+        let acc_infos_len = acc_infos.len();
+        quote! {
+            #acc_infos_len
+        }
+    };
 
     // Deserialization for each field.
     let deser_fields: Vec<proc_macro2::TokenStream> = accs
@@ -124,11 +130,14 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
 
     quote! {
         impl#combined_generics Accounts#trait_generics for #name#strct_generics {
-            fn try_accounts(program_id: &Pubkey, accounts: &[AccountInfo<'info>]) -> Result<Self, ProgramError> {
-                let acc_infos = &mut accounts.iter();
+            fn try_accounts(program_id: &Pubkey, remaining_accounts: &mut &[AccountInfo<'info>]) -> Result<Self, ProgramError> {
+                let acc_infos = &mut remaining_accounts.iter();
 
                 // Pull out each account info from the `accounts` slice.
                 #(#acc_infos)*
+
+                // Move the remaining_accounts cursor to the iterator end.
+                *remaining_accounts = &remaining_accounts[#acc_infos_len..];
 
                 // Deserialize each account.
                 #(#deser_fields)*
