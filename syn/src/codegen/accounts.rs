@@ -5,6 +5,7 @@ use crate::{
 use quote::quote;
 
 pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
+    // Extract out each account info.
     let acc_infos: Vec<proc_macro2::TokenStream> = accs
         .fields
         .iter()
@@ -16,43 +17,42 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
         })
         .collect();
 
-    let (deser_fields, access_checks, return_tys) = {
-        // Deserialization for each field.
-        let deser_fields: Vec<proc_macro2::TokenStream> = accs
-            .fields
-            .iter()
-            .map(generate_field_deserialization)
-            .collect();
-        // Constraint checks for each account fields.
-        let access_checks: Vec<proc_macro2::TokenStream> = accs
-            .fields
-            .iter()
-            .map(|f: &Field| {
-                let checks: Vec<proc_macro2::TokenStream> = f
-                    .constraints
-                    .iter()
-                    .map(|c| generate_constraint(&f, c))
-                    .collect();
-                quote! {
-                    #(#checks)*
-                }
-            })
-            .collect();
-        // Each field in the final deserialized accounts struct.
-        let return_tys: Vec<proc_macro2::TokenStream> = accs
-            .fields
-            .iter()
-            .map(|f: &Field| {
-                let name = &f.ident;
-                quote! {
-                    #name
-                }
-            })
-            .collect();
+    // Deserialization for each field.
+    let deser_fields: Vec<proc_macro2::TokenStream> = accs
+        .fields
+        .iter()
+        .map(generate_field_deserialization)
+        .collect();
 
-        (deser_fields, access_checks, return_tys)
-    };
+    // Constraint checks for each account fields.
+    let access_checks: Vec<proc_macro2::TokenStream> = accs
+        .fields
+        .iter()
+        .map(|f: &Field| {
+            let checks: Vec<proc_macro2::TokenStream> = f
+                .constraints
+                .iter()
+                .map(|c| generate_constraint(&f, c))
+                .collect();
+            quote! {
+                #(#checks)*
+            }
+        })
+        .collect();
 
+    // Each field in the final deserialized accounts struct.
+    let return_tys: Vec<proc_macro2::TokenStream> = accs
+        .fields
+        .iter()
+        .map(|f: &Field| {
+            let name = &f.ident;
+            quote! {
+                #name
+            }
+        })
+        .collect();
+
+    // Exit program code-blocks for each account.
     let on_save: Vec<proc_macro2::TokenStream> = accs
         .fields
         .iter()
@@ -80,26 +80,19 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
         })
         .collect();
 
-    let name = &accs.ident;
-    let (combined_generics, trait_generics, strct_generics) = match accs.generics.lt_token {
-        None => (quote! {<'info>}, quote! {<'info>}, quote! {}),
-        Some(_) => {
-            let g = &accs.generics;
-            (quote! {#g}, quote! {#g}, quote! {#g})
-        }
-    };
-
+    // Implementation for `ToAccountInfos` trait.
     let to_acc_infos: Vec<proc_macro2::TokenStream> = accs
         .fields
         .iter()
         .map(|f: &Field| {
             let name = &f.ident;
             quote! {
-                    self.#name.to_account_info()
+                self.#name.to_account_info()
             }
         })
         .collect();
 
+    // Implementation for `ToAccountMetas` trait.
     let to_acc_metas: Vec<proc_macro2::TokenStream> = accs
         .fields
         .iter()
@@ -111,14 +104,23 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
             };
             match f.is_mut {
                 false => quote! {
-                        AccountMeta::new_readonly(*self.#name.to_account_info().key, #is_signer)
+                    AccountMeta::new_readonly(*self.#name.to_account_info().key, #is_signer)
                 },
                 true => quote! {
-                        AccountMeta::new(*self.#name.to_account_info().key, #is_signer)
+                    AccountMeta::new(*self.#name.to_account_info().key, #is_signer)
                 },
             }
         })
         .collect();
+
+    let name = &accs.ident;
+    let (combined_generics, trait_generics, strct_generics) = match accs.generics.lt_token {
+        None => (quote! {<'info>}, quote! {<'info>}, quote! {}),
+        Some(_) => {
+            let g = &accs.generics;
+            (quote! {#g}, quote! {#g}, quote! {#g})
+        }
+    };
 
     quote! {
         impl#combined_generics Accounts#trait_generics for #name#strct_generics {
