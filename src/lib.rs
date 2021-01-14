@@ -21,7 +21,14 @@ pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorS
 pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
     fn try_accounts(
         program_id: &Pubkey,
-        from: &mut &[AccountInfo<'info>],
+        accounts: &mut &[AccountInfo<'info>],
+    ) -> Result<Self, ProgramError>;
+}
+
+pub trait AccountsInit<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
+    fn try_accounts_init(
+        program_id: &Pubkey,
+        accounts: &mut &[AccountInfo<'info>],
     ) -> Result<Self, ProgramError>;
 }
 
@@ -111,6 +118,60 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
     }
 }
 
+impl<'info, T> Accounts<'info> for ProgramAccount<'info, T>
+where
+    T: AccountSerialize + AccountDeserialize + Clone,
+{
+    fn try_accounts(
+        program_id: &Pubkey,
+        accounts: &mut &[AccountInfo<'info>],
+    ) -> Result<Self, ProgramError> {
+        if accounts.len() == 0 {
+            return Err(ProgramError::NotEnoughAccountKeys);
+        }
+        let account = &accounts[0];
+        *accounts = &accounts[1..];
+        ProgramAccount::try_from(account)
+    }
+}
+
+impl<'info, T> AccountsInit<'info> for ProgramAccount<'info, T>
+where
+    T: AccountSerialize + AccountDeserialize + Clone,
+{
+    fn try_accounts_init(
+        program_id: &Pubkey,
+        accounts: &mut &[AccountInfo<'info>],
+    ) -> Result<Self, ProgramError> {
+        if accounts.len() == 0 {
+            return Err(ProgramError::NotEnoughAccountKeys);
+        }
+        let account = &accounts[0];
+        *accounts = &accounts[1..];
+        ProgramAccount::try_from_init(account)
+    }
+}
+
+impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountMetas
+    for ProgramAccount<'info, T>
+{
+    fn to_account_metas(&self) -> Vec<AccountMeta> {
+        let meta = match self.info.is_writable {
+            false => AccountMeta::new_readonly(*self.info.key, self.info.is_signer),
+            true => AccountMeta::new(*self.info.key, self.info.is_signer),
+        };
+        vec![meta]
+    }
+}
+
+impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfos<'info>
+    for ProgramAccount<'info, T>
+{
+    fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
+        vec![self.info.clone()]
+    }
+}
+
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfo<'info>
     for ProgramAccount<'info, T>
 {
@@ -154,6 +215,32 @@ impl<'info, T: solana_sdk::sysvar::Sysvar> Sysvar<'info, T> {
     }
 }
 
+impl<'info, T: solana_sdk::sysvar::Sysvar> Accounts<'info> for Sysvar<'info, T> {
+    fn try_accounts(
+        program_id: &Pubkey,
+        accounts: &mut &[AccountInfo<'info>],
+    ) -> Result<Self, ProgramError> {
+        if accounts.len() == 0 {
+            return Err(ProgramError::NotEnoughAccountKeys);
+        }
+        let account = &accounts[0];
+        *accounts = &accounts[1..];
+        Sysvar::from_account_info(account)
+    }
+}
+
+impl<'info, T: solana_sdk::sysvar::Sysvar> ToAccountMetas for Sysvar<'info, T> {
+    fn to_account_metas(&self) -> Vec<AccountMeta> {
+        vec![AccountMeta::new_readonly(*self.info.key, false)]
+    }
+}
+
+impl<'info, T: solana_sdk::sysvar::Sysvar> ToAccountInfos<'info> for Sysvar<'info, T> {
+    fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
+        vec![self.info.clone()]
+    }
+}
+
 impl<'a, T: solana_sdk::sysvar::Sysvar> Deref for Sysvar<'a, T> {
     type Target = T;
 
@@ -174,6 +261,36 @@ impl<'info, T: solana_sdk::sysvar::Sysvar> ToAccountInfo<'info> for Sysvar<'info
     }
 }
 
+impl<'info> Accounts<'info> for AccountInfo<'info> {
+    fn try_accounts(
+        program_id: &Pubkey,
+        accounts: &mut &[AccountInfo<'info>],
+    ) -> Result<Self, ProgramError> {
+        if accounts.len() == 0 {
+            return Err(ProgramError::NotEnoughAccountKeys);
+        }
+        let account = &accounts[0];
+        *accounts = &accounts[1..];
+        Ok(account.clone())
+    }
+}
+
+impl<'info> ToAccountMetas for AccountInfo<'info> {
+    fn to_account_metas(&self) -> Vec<AccountMeta> {
+        let meta = match self.is_writable {
+            false => AccountMeta::new_readonly(*self.key, self.is_signer),
+            true => AccountMeta::new(*self.key, self.is_signer),
+        };
+        vec![meta]
+    }
+}
+
+impl<'info> ToAccountInfos<'info> for AccountInfo<'info> {
+    fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
+        vec![self.clone()]
+    }
+}
+
 impl<'info> ToAccountInfo<'info> for AccountInfo<'info> {
     fn to_account_info(&self) -> AccountInfo<'info> {
         self.clone()
@@ -182,18 +299,18 @@ impl<'info> ToAccountInfo<'info> for AccountInfo<'info> {
 
 /// Provides non-argument inputs to the program.
 pub struct Context<'a, 'b, 'c, 'info, T> {
-    /// Deserialized accounts.
-    pub accounts: &'a mut T,
     /// Currently executing program id.
-    pub program_id: &'b Pubkey,
+    pub program_id: &'a Pubkey,
+    /// Deserialized accounts.
+    pub accounts: &'b mut T,
     /// Remaining accounts given but not deserialized or validated.
     pub remaining_accounts: &'c [AccountInfo<'info>],
 }
 
 impl<'a, 'b, 'c, 'info, T> Context<'a, 'b, 'c, 'info, T> {
     pub fn new(
-        accounts: &'a mut T,
-        program_id: &'b Pubkey,
+        program_id: &'a Pubkey,
+        accounts: &'b mut T,
         remaining_accounts: &'c [AccountInfo<'info>],
     ) -> Self {
         Self {
@@ -236,8 +353,8 @@ impl<'a, 'b, 'c, 'info, T: Accounts<'info>> CpiContext<'a, 'b, 'c, 'info, T> {
 pub mod prelude {
     pub use super::{
         access_control, account, program, AccountDeserialize, AccountSerialize, Accounts,
-        AnchorDeserialize, AnchorSerialize, Context, CpiAccount, CpiContext, ProgramAccount,
-        Sysvar, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        AccountsInit, AnchorDeserialize, AnchorSerialize, Context, CpiAccount, CpiContext,
+        ProgramAccount, Sysvar, ToAccountInfo, ToAccountInfos, ToAccountMetas,
     };
 
     pub use solana_program::msg;

@@ -27,6 +27,15 @@ pub struct Initialize<'info> {
 pub struct SetData<'info> {
     #[account(mut)]
     pub puppet: ProgramAccount<'info, Puppet>,
+    pub holder: ThisIsATest<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ThisIsATest<'info> {
+    #[account(mut)]
+    pub hello: ProgramAccount<'info, Puppet>,
+    #[account(signer)]
+    pub auth: AccountInfo<'info>,
 }
 
 #[account]
