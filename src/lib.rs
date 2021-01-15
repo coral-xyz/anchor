@@ -110,9 +110,8 @@ pub trait AccountDeserialize: Sized {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError>;
 }
 
-/// The prelude contains all commonly used components of the crate expected
-/// to be used in most programs. All programs should include it via
-/// `anchor::prelude::*;`.
+/// The prelude contains all commonly used components of the crate.
+/// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
     pub use super::{
         access_control, account, program, AccountDeserialize, AccountSerialize, Accounts,

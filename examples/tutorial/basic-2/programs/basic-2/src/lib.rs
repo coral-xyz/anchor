@@ -1,6 +1,6 @@
 #![feature(proc_macro_hygiene)]
 
-use anchor::prelude::*;
+use anchor_lang::prelude::*;
 
 // Define the program's instruction handlers.
 
