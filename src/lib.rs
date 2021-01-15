@@ -1,12 +1,25 @@
-//! Anchor.
+//! Anchor ⚓ is a framework for Solana's Sealevel runtime providing several
+//! convenient developer tools.
 //!
-//! Anchor is a framework for Solana's Sealevel runtime providing several
-//! convenient developer tools. Presented here is a Rust crate and eDSL for
-//! writing safe, secure, and high level programs on Solana.
+//! - Rust eDSL for writing safe, secure, and high level Solana programs
+//! - [IDL](https://en.wikipedia.org/wiki/Interface_description_language) specification
+//! - TypeScript package for generating clients from IDL
+//! - CLI and workspace management for developing complete applications
+//!
+//! If you're familiar with developing in Ethereum's
+//! [Solidity](https://docs.soliditylang.org/en/v0.7.4/),
+//! [Truffle](https://www.trufflesuite.com/),
+//! [web3.js](https://github.com/ethereum/web3.js) or Parity's
+//! [Ink!](https://github.com/paritytech/ink), then the experience will be
+//! familiar. Although the syntax and semantics are targeted at Solana, the high
+//! level workflow of writing RPC request handlers, emitting an IDL, and
+//! generating clients from IDL is the same.
 //!
 //! For detailed tutorials and examples on how to use Anchor, see the guided
 //! [tutorials](https://project-serum.github.io/anchor) or examples in the GitHub
 //! [repository](https://github.com/project-serum/anchor).
+//!
+//! Presented here are the Rust primitives for building on Solana.
 
 use solana_sdk::account_info::AccountInfo;
 use solana_sdk::instruction::AccountMeta;
