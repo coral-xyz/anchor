@@ -1,7 +1,7 @@
 use crate::idl::*;
 use crate::parser::accounts;
 use crate::parser::program;
-use crate::{AccountField, AccountsStruct};
+use crate::AccountsStruct;
 use anyhow::Result;
 use heck::MixedCase;
 use quote::ToTokens;

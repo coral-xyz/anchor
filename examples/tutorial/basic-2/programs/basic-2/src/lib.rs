@@ -2,58 +2,62 @@
 
 use anchor::prelude::*;
 
-// Define the program's RPC handlers.
+// Define the program's instruction handlers.
 
 #[program]
 mod basic_2 {
     use super::*;
 
-    #[access_control(not_zero(authority))]
-    pub fn create_root(ctx: Context<CreateRoot>, authority: Pubkey, data: u64) -> ProgramResult {
-        let root = &mut ctx.accounts.root;
-        root.authority = authority;
-        root.data = data;
-        Ok(())
-    }
-
-    pub fn update_root(ctx: Context<UpdateRoot>, data: u64) -> ProgramResult {
-        let root = &mut ctx.accounts.root;
-        root.data = data;
-        Ok(())
-    }
-
-    pub fn create_leaf(ctx: Context<CreateLeaf>, data: u64, custom: MyCustomType) -> ProgramResult {
-        let leaf = &mut ctx.accounts.leaf;
-        leaf.root = *ctx.accounts.root.to_account_info().key;
-        leaf.data = data;
-        leaf.custom = custom;
-        Ok(())
-    }
-
-    pub fn update_leaf(
-        ctx: Context<UpdateLeaf>,
-        data: u64,
-        custom: Option<MyCustomType>,
+    pub fn create_author(
+        ctx: Context<CreateAuthor>,
+        authority: Pubkey,
+        name: String,
     ) -> ProgramResult {
-        let leaf = &mut ctx.accounts.leaf;
-        leaf.data = data;
-        if let Some(custom) = custom {
-            leaf.custom = custom;
+        let author = &mut ctx.accounts.author;
+        author.authority = authority;
+        author.name = name;
+        Ok(())
+    }
+
+    pub fn update_author(ctx: Context<UpdateAuthor>, name: String) -> ProgramResult {
+        let author = &mut ctx.accounts.author;
+        author.name = name;
+        Ok(())
+    }
+
+    pub fn create_book(ctx: Context<CreateBook>, title: String, pages: Vec<Page>) -> ProgramResult {
+        let book = &mut ctx.accounts.book;
+        book.author = *ctx.accounts.author.to_account_info().key;
+        book.title = title;
+        book.pages = pages;
+        Ok(())
+    }
+
+    pub fn update_book(
+        ctx: Context<UpdateBook>,
+        title: Option<String>,
+        pages: Option<Vec<Page>>,
+    ) -> ProgramResult {
+        let book = &mut ctx.accounts.book;
+        if let Some(title) = title {
+            book.title = title;
+        }
+        if let Some(pages) = pages {
+            book.pages = pages;
         }
         Ok(())
     }
 
-    pub fn update_composite(
-        ctx: Context<CompositeAccounts>,
-        root_data: u64,
-        leaf_data: u64,
-        leaf_custom: Option<MyCustomType>,
+    pub fn composite_update(
+        ctx: Context<CompositeUpdate>,
+        author_name: String,
+        book_title: String,
     ) -> ProgramResult {
-        let update_root_ctx = Context::new(ctx.program_id, &mut ctx.accounts.update_root, &[]);
-        let update_leaf_ctx = Context::new(ctx.program_id, &mut ctx.accounts.update_leaf, &[]);
+        let update_author_ctx = Context::new(ctx.program_id, &mut ctx.accounts.update_author, &[]);
+        let update_book_ctx = Context::new(ctx.program_id, &mut ctx.accounts.update_book, &[]);
 
-        update_root(update_root_ctx, root_data)?;
-        update_leaf(update_leaf_ctx, leaf_data, leaf_custom)?;
+        update_author(update_author_ctx, author_name)?;
+        update_book(update_book_ctx, Some(book_title), None)?;
 
         Ok(())
     }
@@ -62,73 +66,68 @@ mod basic_2 {
 // Define the validated accounts for each handler.
 
 #[derive(Accounts)]
-pub struct CreateRoot<'info> {
+pub struct CreateAuthor<'info> {
     #[account(init)]
-    pub root: ProgramAccount<'info, Root>,
+    pub author: ProgramAccount<'info, Author>,
     pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
-pub struct UpdateRoot<'info> {
+pub struct UpdateAuthor<'info> {
     #[account(signer)]
     pub authority: AccountInfo<'info>,
-    #[account(mut, "&root.authority == authority.key")]
-    pub root: ProgramAccount<'info, Root>,
+    #[account(mut, "&author.authority == authority.key")]
+    pub author: ProgramAccount<'info, Author>,
 }
 
 #[derive(Accounts)]
-pub struct CreateLeaf<'info> {
-    pub root: ProgramAccount<'info, Root>,
+pub struct CreateBook<'info> {
+    #[account(signer)]
+    pub authority: AccountInfo<'info>,
+    #[account("&author.authority == authority.key")]
+    pub author: ProgramAccount<'info, Author>,
     #[account(init)]
-    pub leaf: ProgramAccount<'info, Leaf>,
+    pub book: ProgramAccount<'info, Book>,
     pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
-pub struct UpdateLeaf<'info> {
+pub struct UpdateBook<'info> {
     #[account(signer)]
     pub authority: AccountInfo<'info>,
-    #[account("&root.authority == authority.key")]
-    pub root: ProgramAccount<'info, Root>,
-    #[account(mut, belongs_to = root)]
-    pub leaf: ProgramAccount<'info, Leaf>,
+    #[account("&author.authority == authority.key")]
+    pub author: ProgramAccount<'info, Author>,
+    #[account(mut, belongs_to = author)]
+    pub book: ProgramAccount<'info, Book>,
 }
 
 #[derive(Accounts)]
-pub struct CompositeAccounts<'info> {
-    update_root: UpdateRoot<'info>,
-    update_leaf: UpdateLeaf<'info>,
-}
-
-#[derive(Accounts)]
-pub struct ThisIsATest<'info> {
-    #[account(mut)]
-    pub leaf: ProgramAccount<'info, Leaf>,
-    #[account(signer)]
-    pub auth: AccountInfo<'info>,
+pub struct CompositeUpdate<'info> {
+    update_author: UpdateAuthor<'info>,
+    update_book: UpdateBook<'info>,
 }
 
 // Define the program owned accounts.
 
 #[account]
-pub struct Root {
+pub struct Author {
     pub authority: Pubkey,
-    pub data: u64,
+    pub name: String,
 }
 
 #[account]
-pub struct Leaf {
-    pub root: Pubkey,
-    pub data: u64,
-    pub custom: MyCustomType,
+pub struct Book {
+    pub author: Pubkey,
+    pub title: String,
+    pub pages: Vec<Page>,
 }
 
 // Define custom types.
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
-pub struct MyCustomType {
-    pub my_data: u64,
-    pub key: Pubkey,
+pub struct Page {
+    pub content: String,
+    pub footnote: String,
 }
 
 // Define any auxiliary access control checks.

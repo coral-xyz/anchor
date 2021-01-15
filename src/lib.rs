@@ -1,10 +1,29 @@
+//! Anchor.
+//!
+//! Anchor is a framework for Solana's Sealevel runtime providing several
+//! convenient developer tools. Presented here is a Rust crate and eDSL for
+//! writing safe, secure, and high level programs on Solana.
+//!
+//! For detailed tutorials and examples on how to use Anchor, see the guided
+//! [tutorials](https://project-serum.github.io/anchor) or examples in the GitHub
+//! [repository](https://github.com/project-serum/anchor).
+
 use solana_sdk::account_info::AccountInfo;
 use solana_sdk::instruction::AccountMeta;
 use solana_sdk::program_error::ProgramError;
 use solana_sdk::pubkey::Pubkey;
 use std::io::Write;
-use std::ops::{Deref, DerefMut};
 
+mod account_info;
+mod context;
+mod cpi_account;
+mod program_account;
+mod sysvar;
+
+pub use crate::context::{Context, CpiContext};
+pub use crate::cpi_account::CpiAccount;
+pub use crate::program_account::ProgramAccount;
+pub use crate::sysvar::Sysvar;
 pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::account;
 pub use anchor_attribute_program::program;
@@ -12,7 +31,7 @@ pub use anchor_derive_accounts::Accounts;
 /// Default serialization format for anchor instructions and accounts.
 pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorSerialize};
 
-/// A data structure of Solana accounts that can be deserialized from the input
+/// A data structure of accounts that can be deserialized from the input
 /// of a Solana program. Due to the freewheeling nature of the accounts array,
 /// implementations of this trait should perform any and all constraint checks
 /// (in addition to any done within `AccountDeserialize`) on accounts to ensure
@@ -25,6 +44,10 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
     ) -> Result<Self, ProgramError>;
 }
 
+/// A data structure of accounts providing a one time deserialization upon
+/// initialization, i.e., when the data array for a given account is zeroed.
+/// For all subsequent deserializations, it's expected that
+/// [Accounts](trait.Accounts.html) is used.
 pub trait AccountsInit<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
     fn try_accounts_init(
         program_id: &Pubkey,
@@ -72,284 +95,6 @@ pub trait AccountDeserialize: Sized {
     /// This should only be used on account initialization, when the
     /// discriminator is not yet set (since the entire account data is zeroed).
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError>;
-}
-
-/// Container for a serializable `account`. Use this to reference any account
-/// owned by the currently executing program.
-#[derive(Clone)]
-pub struct ProgramAccount<'a, T: AccountSerialize + AccountDeserialize + Clone> {
-    info: AccountInfo<'a>,
-    account: T,
-}
-
-impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T> {
-    pub fn new(info: AccountInfo<'a>, account: T) -> ProgramAccount<'a, T> {
-        Self { info, account }
-    }
-
-    /// Deserializes the given `info` into a `ProgramAccount`.
-    pub fn try_from(info: &AccountInfo<'a>) -> Result<ProgramAccount<'a, T>, ProgramError> {
-        let mut data: &[u8] = &info.try_borrow_data()?;
-        Ok(ProgramAccount::new(
-            info.clone(),
-            T::try_deserialize(&mut data)?,
-        ))
-    }
-
-    /// Deserializes the zero-initialized `info` into a `ProgramAccount` without
-    /// checking the account type. This should only be used upon program account
-    /// initialization (since the entire account data array is zeroed and thus
-    /// no account type is set).
-    pub fn try_from_init(info: &AccountInfo<'a>) -> Result<ProgramAccount<'a, T>, ProgramError> {
-        let mut data: &[u8] = &info.try_borrow_data()?;
-
-        // The discriminator should be zero, since we're initializing.
-        let mut disc_bytes = [0u8; 8];
-        disc_bytes.copy_from_slice(&data[..8]);
-        let discriminator = u64::from_le_bytes(disc_bytes);
-        if discriminator != 0 {
-            return Err(ProgramError::InvalidAccountData);
-        }
-
-        Ok(ProgramAccount::new(
-            info.clone(),
-            T::try_deserialize_unchecked(&mut data)?,
-        ))
-    }
-}
-
-impl<'info, T> Accounts<'info> for ProgramAccount<'info, T>
-where
-    T: AccountSerialize + AccountDeserialize + Clone,
-{
-    fn try_accounts(
-        program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
-    ) -> Result<Self, ProgramError> {
-        if accounts.len() == 0 {
-            return Err(ProgramError::NotEnoughAccountKeys);
-        }
-        let account = &accounts[0];
-        *accounts = &accounts[1..];
-        let pa = ProgramAccount::try_from(account)?;
-        if pa.info.owner != program_id {}
-        Ok(pa)
-    }
-}
-
-impl<'info, T> AccountsInit<'info> for ProgramAccount<'info, T>
-where
-    T: AccountSerialize + AccountDeserialize + Clone,
-{
-    fn try_accounts_init(
-        program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
-    ) -> Result<Self, ProgramError> {
-        if accounts.len() == 0 {
-            return Err(ProgramError::NotEnoughAccountKeys);
-        }
-        let account = &accounts[0];
-        *accounts = &accounts[1..];
-        ProgramAccount::try_from_init(account)
-    }
-}
-
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountMetas
-    for ProgramAccount<'info, T>
-{
-    fn to_account_metas(&self) -> Vec<AccountMeta> {
-        let meta = match self.info.is_writable {
-            false => AccountMeta::new_readonly(*self.info.key, self.info.is_signer),
-            true => AccountMeta::new(*self.info.key, self.info.is_signer),
-        };
-        vec![meta]
-    }
-}
-
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfos<'info>
-    for ProgramAccount<'info, T>
-{
-    fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        vec![self.info.clone()]
-    }
-}
-
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfo<'info>
-    for ProgramAccount<'info, T>
-{
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.info.clone()
-    }
-}
-
-impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Deref for ProgramAccount<'a, T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.account
-    }
-}
-
-impl<'a, T: AccountSerialize + AccountDeserialize + Clone> DerefMut for ProgramAccount<'a, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.account
-    }
-}
-
-/// Similar to `ProgramAccount`, but to reference any account *not* owned by
-/// the current program.
-pub type CpiAccount<'a, T> = ProgramAccount<'a, T>;
-
-/// Container for a Solana sysvar.
-pub struct Sysvar<'info, T: solana_sdk::sysvar::Sysvar> {
-    info: AccountInfo<'info>,
-    account: T,
-}
-
-impl<'info, T: solana_sdk::sysvar::Sysvar> Sysvar<'info, T> {
-    pub fn from_account_info(
-        acc_info: &AccountInfo<'info>,
-    ) -> Result<Sysvar<'info, T>, ProgramError> {
-        Ok(Sysvar {
-            info: acc_info.clone(),
-            account: T::from_account_info(&acc_info)?,
-        })
-    }
-}
-
-impl<'info, T: solana_sdk::sysvar::Sysvar> Accounts<'info> for Sysvar<'info, T> {
-    fn try_accounts(
-        program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
-    ) -> Result<Self, ProgramError> {
-        if accounts.len() == 0 {
-            return Err(ProgramError::NotEnoughAccountKeys);
-        }
-        let account = &accounts[0];
-        *accounts = &accounts[1..];
-        Sysvar::from_account_info(account)
-    }
-}
-
-impl<'info, T: solana_sdk::sysvar::Sysvar> ToAccountMetas for Sysvar<'info, T> {
-    fn to_account_metas(&self) -> Vec<AccountMeta> {
-        vec![AccountMeta::new_readonly(*self.info.key, false)]
-    }
-}
-
-impl<'info, T: solana_sdk::sysvar::Sysvar> ToAccountInfos<'info> for Sysvar<'info, T> {
-    fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        vec![self.info.clone()]
-    }
-}
-
-impl<'a, T: solana_sdk::sysvar::Sysvar> Deref for Sysvar<'a, T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.account
-    }
-}
-
-impl<'a, T: solana_sdk::sysvar::Sysvar> DerefMut for Sysvar<'a, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.account
-    }
-}
-
-impl<'info, T: solana_sdk::sysvar::Sysvar> ToAccountInfo<'info> for Sysvar<'info, T> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.info.clone()
-    }
-}
-
-impl<'info> Accounts<'info> for AccountInfo<'info> {
-    fn try_accounts(
-        program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
-    ) -> Result<Self, ProgramError> {
-        if accounts.len() == 0 {
-            return Err(ProgramError::NotEnoughAccountKeys);
-        }
-        let account = &accounts[0];
-        *accounts = &accounts[1..];
-        Ok(account.clone())
-    }
-}
-
-impl<'info> ToAccountMetas for AccountInfo<'info> {
-    fn to_account_metas(&self) -> Vec<AccountMeta> {
-        let meta = match self.is_writable {
-            false => AccountMeta::new_readonly(*self.key, self.is_signer),
-            true => AccountMeta::new(*self.key, self.is_signer),
-        };
-        vec![meta]
-    }
-}
-
-impl<'info> ToAccountInfos<'info> for AccountInfo<'info> {
-    fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        vec![self.clone()]
-    }
-}
-
-impl<'info> ToAccountInfo<'info> for AccountInfo<'info> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.clone()
-    }
-}
-
-/// Provides non-argument inputs to the program.
-pub struct Context<'a, 'b, 'c, 'info, T> {
-    /// Currently executing program id.
-    pub program_id: &'a Pubkey,
-    /// Deserialized accounts.
-    pub accounts: &'b mut T,
-    /// Remaining accounts given but not deserialized or validated.
-    pub remaining_accounts: &'c [AccountInfo<'info>],
-}
-
-impl<'a, 'b, 'c, 'info, T> Context<'a, 'b, 'c, 'info, T> {
-    pub fn new(
-        program_id: &'a Pubkey,
-        accounts: &'b mut T,
-        remaining_accounts: &'c [AccountInfo<'info>],
-    ) -> Self {
-        Self {
-            accounts,
-            program_id,
-            remaining_accounts,
-        }
-    }
-}
-
-/// Context speciying non-argument inputs for cross-program-invocations.
-pub struct CpiContext<'a, 'b, 'c, 'info, T: Accounts<'info>> {
-    pub accounts: T,
-    pub program: AccountInfo<'info>,
-    pub signer_seeds: &'a [&'b [&'c [u8]]],
-}
-
-impl<'a, 'b, 'c, 'info, T: Accounts<'info>> CpiContext<'a, 'b, 'c, 'info, T> {
-    pub fn new(program: AccountInfo<'info>, accounts: T) -> Self {
-        Self {
-            accounts,
-            program,
-            signer_seeds: &[],
-        }
-    }
-
-    pub fn new_with_signer(
-        accounts: T,
-        program: AccountInfo<'info>,
-        signer_seeds: &'a [&'b [&'c [u8]]],
-    ) -> Self {
-        Self {
-            accounts,
-            program,
-            signer_seeds,
-        }
-    }
 }
 
 pub mod prelude {
