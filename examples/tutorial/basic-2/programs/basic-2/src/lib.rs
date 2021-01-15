@@ -42,6 +42,21 @@ mod basic_2 {
         }
         Ok(())
     }
+
+    pub fn update_composite(
+        ctx: Context<CompositeAccounts>,
+        root_data: u64,
+        leaf_data: u64,
+        leaf_custom: Option<MyCustomType>,
+    ) -> ProgramResult {
+        let update_root_ctx = Context::new(ctx.program_id, &mut ctx.accounts.update_root, &[]);
+        let update_leaf_ctx = Context::new(ctx.program_id, &mut ctx.accounts.update_leaf, &[]);
+
+        update_root(update_root_ctx, root_data)?;
+        update_leaf(update_leaf_ctx, leaf_data, leaf_custom)?;
+
+        Ok(())
+    }
 }
 
 // Define the validated accounts for each handler.
@@ -77,6 +92,20 @@ pub struct UpdateLeaf<'info> {
     pub root: ProgramAccount<'info, Root>,
     #[account(mut, belongs_to = root)]
     pub leaf: ProgramAccount<'info, Leaf>,
+}
+
+#[derive(Accounts)]
+pub struct CompositeAccounts<'info> {
+    update_root: UpdateRoot<'info>,
+    update_leaf: UpdateLeaf<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ThisIsATest<'info> {
+    #[account(mut)]
+    pub leaf: ProgramAccount<'info, Leaf>,
+    #[account(signer)]
+    pub auth: AccountInfo<'info>,
 }
 
 // Define the program owned accounts.

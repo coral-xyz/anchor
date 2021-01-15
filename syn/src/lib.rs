@@ -3,6 +3,8 @@
 #[cfg(feature = "idl")]
 use crate::idl::IdlAccount;
 use anyhow::Result;
+#[cfg(feature = "idl")]
+use heck::MixedCase;
 use quote::quote;
 use std::collections::HashMap;
 

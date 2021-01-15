@@ -131,7 +131,9 @@ where
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
-        ProgramAccount::try_from(account)
+        let pa = ProgramAccount::try_from(account)?;
+        if pa.info.owner != program_id {}
+        Ok(pa)
     }
 }
 
