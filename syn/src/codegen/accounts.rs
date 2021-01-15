@@ -70,31 +70,36 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
     let on_save: Vec<proc_macro2::TokenStream> = accs
         .fields
         .iter()
-        // TODO: allow constraints on composite fields.
-        .filter_map(|af: &AccountField| match af {
-            AccountField::AccountsStruct(_) => None,
-            AccountField::Field(f) => Some(f),
-        })
-        .map(|f: &Field| {
-            let ident = &f.ident;
-            let info = match f.ty {
-                Ty::AccountInfo => quote! { #ident },
-                Ty::ProgramAccount(_) => quote! { #ident.to_account_info() },
-                _ => return quote! {},
-            };
-            match f.is_mut {
-                false => quote! {},
-                true => quote! {
-                    // Only persist the change if the account is owned by the
-                    // current program.
-                    if program_id == self.#info.owner  {
-                        let info = self.#info;
-                        let mut data = info.try_borrow_mut_data()?;
-                        let dst: &mut [u8] = &mut data;
-                        let mut cursor = std::io::Cursor::new(dst);
-                        self.#ident.try_serialize(&mut cursor)?;
+        .map(|af: &AccountField| {
+            match af {
+                AccountField::AccountsStruct(s) => {
+                    let name = &s.ident;
+                    quote! {
+                        self.#name.exit(program_id);
                     }
-                },
+                }
+                AccountField::Field(f) => {
+                    let ident = &f.ident;
+                    let info = match f.ty {
+                        Ty::AccountInfo => quote! { #ident },
+                        Ty::ProgramAccount(_) => quote! { #ident.to_account_info() },
+                        _ => return quote! {},
+                    };
+                    match f.is_mut {
+                        false => quote! {},
+                        true => quote! {
+                                // Only persist the change if the account is owned by the
+                                // current program.
+                                if program_id == self.#info.owner  {
+                                        let info = self.#info;
+                                        let mut data = info.try_borrow_mut_data()?;
+                                        let dst: &mut [u8] = &mut data;
+                                        let mut cursor = std::io::Cursor::new(dst);
+                                        self.#ident.try_serialize(&mut cursor)?;
+                                }
+                        },
+                    }
+                }
             }
         })
         .collect();

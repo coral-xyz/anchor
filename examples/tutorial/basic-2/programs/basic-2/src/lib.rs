@@ -47,20 +47,6 @@ mod basic_2 {
         }
         Ok(())
     }
-
-    pub fn composite_update(
-        ctx: Context<CompositeUpdate>,
-        author_name: String,
-        book_title: String,
-    ) -> ProgramResult {
-        let update_author_ctx = Context::new(ctx.program_id, &mut ctx.accounts.update_author, &[]);
-        let update_book_ctx = Context::new(ctx.program_id, &mut ctx.accounts.update_book, &[]);
-
-        update_author(update_author_ctx, author_name)?;
-        update_book(update_book_ctx, Some(book_title), None)?;
-
-        Ok(())
-    }
 }
 
 // Define the validated accounts for each handler.
@@ -101,12 +87,6 @@ pub struct UpdateBook<'info> {
     pub book: ProgramAccount<'info, Book>,
 }
 
-#[derive(Accounts)]
-pub struct CompositeUpdate<'info> {
-    update_author: UpdateAuthor<'info>,
-    update_book: UpdateBook<'info>,
-}
-
 // Define the program owned accounts.
 
 #[account]
@@ -128,13 +108,4 @@ pub struct Book {
 pub struct Page {
     pub content: String,
     pub footnote: String,
-}
-
-// Define any auxiliary access control checks.
-
-fn not_zero(authority: Pubkey) -> ProgramResult {
-    if authority == Pubkey::new_from_array([0; 32]) {
-        return Err(ProgramError::InvalidInstructionData);
-    }
-    Ok(())
 }
