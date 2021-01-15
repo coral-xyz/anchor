@@ -7,7 +7,7 @@ use solana_sdk::program_error::ProgramError;
 use solana_sdk::pubkey::Pubkey;
 use std::ops::{Deref, DerefMut};
 
-/// References any account *not* owned by the current program.
+/// Container for any account *not* owned by the current program.
 #[derive(Clone)]
 pub struct CpiAccount<'a, T: AccountSerialize + AccountDeserialize + Clone> {
     info: AccountInfo<'a>,
