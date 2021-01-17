@@ -28,6 +28,7 @@ use solana_program::pubkey::Pubkey;
 use std::io::Write;
 
 mod account_info;
+mod boxed;
 mod context;
 mod cpi_account;
 mod error;
@@ -59,6 +60,11 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
         program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
     ) -> Result<Self, ProgramError>;
+}
+
+/// The exit procedure for an accounts object.
+pub trait AccountsExit<'info>: ToAccountMetas + ToAccountInfos<'info> {
+    fn exit(&self, program_id: &Pubkey) -> solana_program::entrypoint::ProgramResult;
 }
 
 /// A data structure of accounts providing a one time deserialization upon
@@ -119,8 +125,8 @@ pub trait AccountDeserialize: Sized {
 pub mod prelude {
     pub use super::{
         access_control, account, error, program, AccountDeserialize, AccountSerialize, Accounts,
-        AccountsInit, AnchorDeserialize, AnchorSerialize, Context, CpiAccount, CpiContext,
-        ProgramAccount, Sysvar, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        AccountsExit, AccountsInit, AnchorDeserialize, AnchorSerialize, Context, CpiAccount,
+        CpiContext, ProgramAccount, Sysvar, ToAccountInfo, ToAccountInfos, ToAccountMetas,
     };
 
     pub use borsh;

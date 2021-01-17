@@ -1,7 +1,7 @@
 import camelCase from "camelcase";
 import { Layout } from "buffer-layout";
 import * as borsh from "@project-serum/borsh";
-import { Idl, IdlField, IdlTypeDef } from "./idl";
+import { Idl, IdlField, IdlTypeDef, IdlEnumVariant, IdlType } from "./idl";
 import { IdlError } from "./error";
 
 /**
@@ -49,7 +49,7 @@ class InstructionCoder<T = any> {
 
   private static parseIxLayout(idl: Idl): Layout {
     let ixLayouts = idl.instructions.map((ix) => {
-      let fieldLayouts = ix.args.map((arg) =>
+      let fieldLayouts = ix.args.map((arg: IdlField) =>
         IdlCoder.fieldLayout(arg, idl.types)
       );
       const name = camelCase(ix.name);
@@ -160,7 +160,7 @@ class IdlCoder {
           // @ts-ignore
           const filtered = types.filter((t) => t.name === field.type.defined);
           if (filtered.length !== 1) {
-            throw new IdlError("Type not found");
+            throw new IdlError(`Type not found: ${JSON.stringify(field)}`);
           }
           return IdlCoder.typeDefLayout(filtered[0], types, fieldName);
         } else {
@@ -176,13 +176,38 @@ class IdlCoder {
     name?: string
   ): Layout {
     if (typeDef.type.kind === "struct") {
-      const fieldLayouts = typeDef.type.fields.map((field) =>
-        IdlCoder.fieldLayout(field, types)
-      );
+      const fieldLayouts = typeDef.type.fields.map((field) => {
+        const x = IdlCoder.fieldLayout(field, types);
+        return x;
+      });
       return borsh.struct(fieldLayouts, name);
+    } else if (typeDef.type.kind === "enum") {
+      let variants = typeDef.type.variants.map((variant: IdlEnumVariant) => {
+        const name = camelCase(variant.name);
+        if (variant.fields === undefined) {
+          return borsh.struct([], name);
+        }
+        // @ts-ignore
+        const fieldLayouts = variant.fields.map((f: IdlField | IdlType) => {
+          // @ts-ignore
+          if (f.name === undefined) {
+            throw new Error("Tuple enum variants not yet implemented.");
+          }
+          // @ts-ignore
+          return IdlCoder.fieldLayout(f, types);
+        });
+        return borsh.struct(fieldLayouts, name);
+      });
+
+      if (name !== undefined) {
+        // Buffer-layout lib requires the name to be null (on construction)
+        // when used as a field.
+        return borsh.rustEnum(variants).replicate(name);
+      }
+
+      return borsh.rustEnum(variants, name);
     } else {
-      // TODO: enums
-      throw new Error("Enums not yet implemented");
+      throw new Error(`Unknown type kint: ${typeDef}`);
     }
   }
 }

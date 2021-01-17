@@ -43,8 +43,8 @@ impl<'a, 'b, 'c, 'info, T: Accounts<'info>> CpiContext<'a, 'b, 'c, 'info, T> {
     }
 
     pub fn new_with_signer(
-        accounts: T,
         program: AccountInfo<'info>,
+        accounts: T,
         signer_seeds: &'a [&'b [&'c [u8]]],
     ) -> Self {
         Self {
@@ -52,5 +52,10 @@ impl<'a, 'b, 'c, 'info, T: Accounts<'info>> CpiContext<'a, 'b, 'c, 'info, T> {
             program,
             signer_seeds,
         }
+    }
+
+    pub fn with_signer(mut self, signer_seeds: &'a [&'b [&'c [u8]]]) -> Self {
+        self.signer_seeds = signer_seeds;
+        self
     }
 }

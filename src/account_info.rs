@@ -1,5 +1,6 @@
-use crate::{Accounts, ToAccountInfo, ToAccountInfos, ToAccountMetas};
+use crate::{Accounts, AccountsExit, ToAccountInfo, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
+use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
@@ -37,5 +38,12 @@ impl<'info> ToAccountInfos<'info> for AccountInfo<'info> {
 impl<'info> ToAccountInfo<'info> for AccountInfo<'info> {
     fn to_account_info(&self) -> AccountInfo<'info> {
         self.clone()
+    }
+}
+
+impl<'info> AccountsExit<'info> for AccountInfo<'info> {
+    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
+        // no-op
+        Ok(())
     }
 }
