@@ -332,7 +332,10 @@ describe("Lockup and Registry", () => {
 		});
 
 		const member = new anchor.web3.Account();
+		let memberAccount = null;
 		let memberSigner = null;
+		let balances = null;
+		let balancesLocked = null;
 
 		it('Creates a member', async () => {
 				const [_memberSigner, nonce] = await anchor.web3.PublicKey.findProgramAddress(
@@ -341,18 +344,22 @@ describe("Lockup and Registry", () => {
 				);
 				memberSigner = _memberSigner;
 
-				const [mainTx, balances] = await utils.createBalanceSandbox(
+				const [mainTx, _balances] = await utils.createBalanceSandbox(
 						provider,
 						registrarAccount,
 						memberSigner,
 						provider.wallet.publicKey, // Beneficiary,
 				);
-				const [lockedTx, balancesLocked] = await utils.createBalanceSandbox(
+				const [lockedTx, _balancesLocked] = await utils.createBalanceSandbox(
 						provider,
 						registrarAccount,
 						memberSigner,
 						vesting.publicKey, // Lockup.
 				);
+
+				balances = _balances;
+				balancesLocked = _balancesLocked;
+
 				const tx = registry.transaction.createMember(nonce, {
 						accounts: {
 								registrar: registrar.publicKey,
@@ -373,7 +380,7 @@ describe("Lockup and Registry", () => {
 
 				let txSigs = await provider.sendAll(allTxs);
 
-				const memberAccount = await registry.account.member(member.publicKey);
+				memberAccount = await registry.account.member(member.publicKey);
 
 				assert.ok(memberAccount.registrar.equals(registrar.publicKey));
 				assert.ok(memberAccount.beneficiary.equals(provider.wallet.publicKey));
@@ -390,12 +397,69 @@ describe("Lockup and Registry", () => {
 				assert.ok(memberAccount.lastStakeTs.eq(new anchor.BN(0)));
 		});
 
-		it('Deposits to a member', async () => {
-				// todo
+		it('Deposits (unlocked) to a member', async () => {
+				const depositAmount = new anchor.BN(120);
+				await registry.rpc.deposit(depositAmount, {
+						accounts: {
+								// Whitelist relay.
+								dummyVesting: anchor.web3.SYSVAR_RENT_PUBKEY,
+								depositor: god,
+								depositorAuthority: provider.wallet.publicKey,
+								tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+								vault: memberAccount.balances.vault,
+								memberSigner,
+								// Program specific.
+								registrar: registrar.publicKey,
+								beneficiary: provider.wallet.publicKey,
+								member: member.publicKey,
+						},
+				});
+
+				const memberVault = await serumCmn.getTokenAccount(
+						provider,
+						memberAccount.balances.vault,
+				);
+				assert.ok(memberVault.amount.eq(depositAmount));
 		});
 
-		it('Stakes to a member', async () => {
-				// todo
+		it('Stakes to a member (unlocked)', async () => {
+				const stakeAmount = new anchor.BN(10);
+				await registry.rpc.stake(stakeAmount, provider.wallet.publicKey, {
+						accounts: {
+								// Stake instance.
+								registrar: registrar.publicKey,
+								rewardEventQ: rewardQ.publicKey,
+								poolMint,
+								// Member.
+								member: member.publicKey,
+								beneficiary: provider.wallet.publicKey,
+								balances,
+								balancesLocked,
+								// Program signers.
+								memberSigner,
+								registrarSigner,
+								// Misc.
+								clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+								tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+						},
+				});
+
+				const vault = await serumCmn.getTokenAccount(
+						provider,
+						memberAccount.balances.vault,
+				);
+				const vaultStake = await serumCmn.getTokenAccount(
+						provider,
+						memberAccount.balances.vaultStake,
+				);
+				const spt = await serumCmn.getTokenAccount(
+						provider,
+						memberAccount.balances.spt,
+				);
+
+				assert.ok(vault.amount.eq(new anchor.BN(100)));
+				assert.ok(vaultStake.amount.eq(new anchor.BN(20)));
+				assert.ok(spt.amount.eq(new anchor.BN(10)));
 		});
 
 		it('Drops an unlocked reward', async () => {
@@ -414,19 +478,131 @@ describe("Lockup and Registry", () => {
 				// todo
 		});
 
+		const pendingWithdrawal = new anchor.web3.Account();
+
 		it('Unstakes', async () => {
-				// todo
+				const unstakeAmount = new anchor.BN(10);
+				await registry.rpc.startUnstake(unstakeAmount, provider.wallet.publicKey, {
+						accounts: {
+								registrar: registrar.publicKey,
+								rewardEventQ: rewardQ.publicKey,
+								poolMint,
+
+								pendingWithdrawal: pendingWithdrawal.publicKey,
+								member: member.publicKey,
+								beneficiary: provider.wallet.publicKey,
+								balances,
+								balancesLocked,
+
+								memberSigner,
+
+								tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+								clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+								rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+						},
+						signers: [pendingWithdrawal],
+						instructions: [
+								await registry.account.pendingWithdrawal.createInstruction(pendingWithdrawal),
+						],
+				});
+
+				const vaultPw = await serumCmn.getTokenAccount(
+						provider,
+						memberAccount.balances.vaultPw,
+				);
+				const vaultStake = await serumCmn.getTokenAccount(
+						provider,
+						memberAccount.balances.vaultStake,
+				);
+				const spt = await serumCmn.getTokenAccount(
+						provider,
+						memberAccount.balances.spt,
+				);
+
+				assert.ok(vaultPw.amount.eq(new anchor.BN(20)));
+				assert.ok(vaultStake.amount.eq(new anchor.BN(0)));
+				assert.ok(spt.amount.eq(new anchor.BN(0)));
+		});
+
+		const tryEndUnstake = async () => {
+				await registry.rpc.endUnstake({
+						accounts: {
+								registrar: registrar.publicKey,
+
+								member: member.publicKey,
+								beneficiary: provider.wallet.publicKey,
+								pendingWithdrawal: pendingWithdrawal.publicKey,
+
+								vault: balances.vault,
+								vaultPw: balances.vaultPw,
+
+								memberSigner,
+
+								clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+								tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+						},
+				});
+		};
+
+		it('Fails to end unstaking before timelock', async () => {
+				await assert.rejects(
+						async () => {
+								await tryEndUnstake();
+						},
+						(err) => {
+								assert.equal(err.code, 108);
+								assert.equal(err.msg, 'The unstake timelock has not yet expired.');
+								return true;
+						});
 		});
 
 		it('Waits for the unstake period to end', async () => {
-				// todo
+				await serumCmn.sleep(5000);
 		});
 
-		it('Unstake finalizes', async () => {
-				// todo
+		it('Unstake finalizes (unlocked)', async () => {
+				await tryEndUnstake();
+
+				const vault = await serumCmn.getTokenAccount(
+						provider,
+						memberAccount.balances.vault,
+				);
+				const vaultPw = await serumCmn.getTokenAccount(
+						provider,
+						memberAccount.balances.vaultPw,
+				);
+
+				assert.ok(vault.amount.eq(new anchor.BN(120)));
+				assert.ok(vaultPw.amount.eq(new anchor.BN(0)));
 		});
 
-		it('Withdraws', async () => {
-				// todo
+		it('Withdraws deposits (unlocked)', async () => {
+				const token = await serumCmn.createTokenAccount(
+						provider,
+						mint,
+						provider.wallet.publicKey
+				);
+				const withdrawAmount = new anchor.BN(100);
+				await registry.rpc.withdraw(withdrawAmount,  {
+						accounts: {
+								// Whitelist relay.
+								dummyVesting: anchor.web3.SYSVAR_RENT_PUBKEY,
+								depositor: token,
+								depositorAuthority: provider.wallet.publicKey,
+								tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+								vault: memberAccount.balances.vault,
+								memberSigner,
+								// Program specific.
+								registrar: registrar.publicKey,
+								beneficiary: provider.wallet.publicKey,
+								member: member.publicKey,
+						},
+				});
+
+				const tokenAccount = await serumCmn.getTokenAccount(
+						provider,
+						token,
+				);
+				assert.ok(tokenAccount.amount.eq(withdrawAmount));
 		});
 });

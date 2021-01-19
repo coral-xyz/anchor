@@ -47,8 +47,8 @@ pub fn mint_to<'a, 'b, 'c, 'info>(
     solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.mint.clone(),
             ctx.accounts.to.clone(),
+            ctx.accounts.mint.clone(),
             ctx.accounts.authority.clone(),
             ctx.program.clone(),
         ],
