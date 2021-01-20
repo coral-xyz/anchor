@@ -561,7 +561,7 @@ describe("Lockup and Registry", () => {
 				assert.ok(vendorAccount.expiryReceiver.equals(provider.wallet.publicKey));
 				assert.ok(vendorAccount.total.eq(rewardAmount));
 				assert.ok(vendorAccount.expired === false);
-				assert.deepEqual(vendorAccount.kind, { unlocked: {} });
+				assert.deepEqual(vendorAccount.kind, rewardKind);
 		});
 
 		it('Collects an unlocked reward', async () => {
@@ -599,8 +599,74 @@ describe("Lockup and Registry", () => {
 				assert.ok(memberAccount.rewardsCursor == 1);
 		});
 
+		const lockedVendor = new anchor.web3.Account();
+		const lockedVendorVault = new anchor.web3.Account();
+		let lockedVendorSigner = null;
+
 		it('Drops a locked reward', async () => {
-				// todo
+				const rewardKind = {
+						locked: {
+								endTs: new anchor.BN(Date.now()/1000 + 10),
+								periodCount: new anchor.BN(10),
+						},
+				};
+				const rewardAmount = new anchor.BN(200);
+				const expiry = new anchor.BN(Date.now()/1000 + 5);
+				const [_vendorSigner, nonce] = await anchor.web3.PublicKey.findProgramAddress(
+						[
+								registrar.publicKey.toBuffer(),
+								lockedVendor.publicKey.toBuffer(),
+						],
+						registry.programId,
+				);
+				lockedVendorSigner = _vendorSigner;
+
+				await registry.rpc.dropReward(
+						rewardKind,
+						rewardAmount,
+						expiry,
+						provider.wallet.publicKey,
+						nonce,
+						{
+								accounts: {
+										registrar: registrar.publicKey,
+										rewardEventQ: rewardQ.publicKey,
+										poolMint,
+
+										vendor: lockedVendor.publicKey,
+										vendorVault: lockedVendorVault.publicKey,
+
+										depositor: god,
+										depositorAuthority: provider.wallet.publicKey,
+
+										tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+										clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+										rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+								},
+								signers: [lockedVendorVault, lockedVendor],
+								instructions: [
+										...(await serumCmn.createTokenAccountInstrs(
+												provider,
+												lockedVendorVault.publicKey,
+												mint,
+												lockedVendorSigner,
+										)),
+										await registry.account.rewardVendor.createInstruction(lockedVendor),
+								],
+						}
+				);
+
+				const vendorAccount = await registry.account.rewardVendor(lockedVendor.publicKey);
+
+				assert.ok(vendorAccount.registrar.equals(registrar.publicKey));
+				assert.ok(vendorAccount.vault.equals(lockedVendorVault.publicKey));
+				assert.ok(vendorAccount.nonce === nonce);
+				assert.ok(vendorAccount.poolTokenSupply.eq(new anchor.BN(10)));
+				assert.ok(vendorAccount.expiryTs.eq(expiry));
+				assert.ok(vendorAccount.expiryReceiver.equals(provider.wallet.publicKey));
+				assert.ok(vendorAccount.total.eq(rewardAmount));
+				assert.ok(vendorAccount.expired === false);
+				assert.equal(JSON.stringify(vendorAccount.kind), JSON.stringify(rewardKind));
 		});
 
 		it('Collects a locked reward', async () => {

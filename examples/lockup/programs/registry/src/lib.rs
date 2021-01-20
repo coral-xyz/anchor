@@ -161,12 +161,12 @@ mod registry {
     }
 
     #[access_control(no_available_rewards(
-				&ctx.accounts.reward_event_q,
-				&ctx.accounts.member,
-				&ctx.accounts.balances,
-				&ctx.accounts.balances_locked,
-				&ctx.accounts.registrar,
-		))]
+        &ctx.accounts.reward_event_q,
+        &ctx.accounts.member,
+        &ctx.accounts.balances,
+        &ctx.accounts.balances_locked,
+        &ctx.accounts.registrar,
+    ))]
     pub fn stake(ctx: Context<Stake>, spt_amount: u64, balance_id: Pubkey) -> Result<(), Error> {
         // Choose balances (locked or unlocked) based on balance_id.
         let balances = {
@@ -226,12 +226,12 @@ mod registry {
     }
 
     #[access_control(no_available_rewards(
-				&ctx.accounts.reward_event_q,
-				&ctx.accounts.member,
-				&ctx.accounts.balances,
-				&ctx.accounts.balances_locked,
-				&ctx.accounts.registrar,
-		))]
+        &ctx.accounts.reward_event_q,
+        &ctx.accounts.member,
+        &ctx.accounts.balances,
+        &ctx.accounts.balances_locked,
+        &ctx.accounts.registrar,
+    ))]
     pub fn start_unstake(
         ctx: Context<StartUnstake>,
         spt_amount: u64,
@@ -473,7 +473,31 @@ mod registry {
     }
 
     pub fn expire_reward(ctx: Context<ExpireReward>) -> Result<(), Error> {
-        // todo
+        if ctx.accounts.clock.unix_timestamp < ctx.accounts.vendor.expiry_ts {
+            return Err(ErrorCode::VendorNotYetExpired.into());
+        }
+
+        // Send all remaining funds to the expiry receiver.
+        let seeds = &[
+            ctx.accounts.registrar.to_account_info().key.as_ref(),
+            ctx.accounts.vendor.to_account_info().key.as_ref(),
+            &[ctx.accounts.vendor.nonce],
+        ];
+        let signer = &[&seeds[..]];
+        let cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_program.clone(),
+            token::Transfer {
+                to: ctx.accounts.token.to_account_info(),
+                from: ctx.accounts.vault.to_account_info(),
+                authority: ctx.accounts.vendor_signer.to_account_info(),
+            },
+            signer,
+        );
+        token::transfer(cpi_ctx, ctx.accounts.vault.amount)?;
+
+        let vendor = &mut ctx.accounts.vendor;
+        vendor.expired = true;
+
         Ok(())
     }
 }
@@ -570,7 +594,7 @@ pub struct CreateMember<'info> {
     )]
     balances: BalanceSandboxAccounts<'info>,
     #[account(
-				// Locked balance_id is unchecked; it's determined by the lockup program.
+        // Locked balance_id is unchecked; it's determined by the lockup program.
         "&balances_locked.spt.owner == member_signer.key",
         "balances_locked.spt.mint == registrar.pool_mint",
         "balances_locked.vault.mint == registrar.mint",
@@ -632,12 +656,12 @@ pub struct Deposit<'info> {
     #[account(mut, "&vault.owner == member_signer.key")]
     vault: CpiAccount<'info, TokenAccount>,
     #[account(
-				seeds = [
-						registrar.to_account_info().key.as_ref(),
-						member.to_account_info().key.as_ref(),
-						&[member.nonce],
-				]
-		)]
+        seeds = [
+            registrar.to_account_info().key.as_ref(),
+            member.to_account_info().key.as_ref(),
+            &[member.nonce],
+        ]
+    )]
     member_signer: AccountInfo<'info>,
 
     // Program specific.
@@ -692,11 +716,11 @@ pub struct Stake<'info> {
     )]
     member_signer: AccountInfo<'info>,
     #[account(
-				seeds = [
-						registrar.to_account_info().key.as_ref(),
-						&[registrar.nonce],
-				]
-		)]
+        seeds = [
+            registrar.to_account_info().key.as_ref(),
+            &[registrar.nonce],
+        ]
+    )]
     registrar_signer: AccountInfo<'info>,
 
     // Misc.
@@ -796,12 +820,12 @@ pub struct Withdraw<'info> {
     #[account(mut, "&vault.owner == member_signer.key")]
     vault: CpiAccount<'info, TokenAccount>,
     #[account(
-				seeds = [
-						registrar.to_account_info().key.as_ref(),
-						member.to_account_info().key.as_ref(),
-						&[member.nonce],
-				]
-		)]
+        seeds = [
+            registrar.to_account_info().key.as_ref(),
+            member.to_account_info().key.as_ref(),
+            &[member.nonce],
+        ]
+    )]
     member_signer: AccountInfo<'info>,
 
     // Program specific.
@@ -873,12 +897,12 @@ pub struct ClaimReward<'info> {
     #[account(mut)]
     vault: AccountInfo<'info>,
     #[account(
-				seeds = [
-						registrar.to_account_info().key.as_ref(),
-						vendor.to_account_info().key.as_ref(),
-						&[vendor.nonce],
-				]
-		)]
+        seeds = [
+            registrar.to_account_info().key.as_ref(),
+            vendor.to_account_info().key.as_ref(),
+            &[vendor.nonce],
+        ]
+    )]
     vendor_signer: AccountInfo<'info>,
 
     #[account("token_program.key == &token::ID")]
@@ -887,8 +911,34 @@ pub struct ClaimReward<'info> {
 }
 
 #[derive(Accounts)]
-pub struct ExpireReward {
-    // todo
+pub struct ExpireReward<'info> {
+    // Staking instance globals.
+    registrar: ProgramAccount<'info, Registrar>,
+
+    // Vendor.
+    #[account(mut, belongs_to = registrar, has_one = vault, has_one = expiry_receiver)]
+    vendor: ProgramAccount<'info, RewardVendor>,
+    #[account(mut)]
+    vault: CpiAccount<'info, TokenAccount>,
+    #[account(
+        seeds = [
+            registrar.to_account_info().key.as_ref(),
+            vendor.to_account_info().key.as_ref(),
+            &[vendor.nonce],
+        ]
+    )]
+    vendor_signer: AccountInfo<'info>,
+
+    // Receiver.
+    #[account(signer)]
+    expiry_receiver: AccountInfo<'info>,
+    #[account(mut)]
+    token: AccountInfo<'info>,
+
+    // Misc.
+    #[account("token_program.key == &token::ID")]
+    token_program: AccountInfo<'info>,
+    clock: Sysvar<'info, Clock>,
 }
 
 #[account]
@@ -1074,4 +1124,6 @@ pub enum ErrorCode {
     CursorAlreadyProcessed,
     #[msg("The account was not staked at the time of this reward.")]
     NotStakedDuringDrop,
+    #[msg("The vendor is not yet eligible for expiry.")]
+    VendorNotYetExpired,
 }
