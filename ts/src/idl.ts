@@ -23,9 +23,9 @@ export type IdlAccount = {
 
 // A nested/recursive version of IdlAccount.
 export type IdlAccounts = {
-	name: string;
-	accounts: IdlAccountItem[];
-}
+  name: string;
+  accounts: IdlAccountItem[];
+};
 
 export type IdlField = {
   name: string;

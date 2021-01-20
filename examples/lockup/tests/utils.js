@@ -1,5 +1,7 @@
 const anchor = require("/home/armaniferrante/Documents/code/src/github.com/project-serum/anchor/ts");
 const serumCmn = require("@project-serum/common");
+const Ring = anchor.std.Ring;
+const RingItemDecoder = anchor.std.RingItemDecoder;
 
 async function createBalanceSandbox(
 		provider,
@@ -13,59 +15,59 @@ async function createBalanceSandbox(
     const vaultPw = new anchor.web3.Account();
 
     const lamports = await provider.connection.getMinimumBalanceForRentExemption(
-      165,
+				165,
     );
 
     const createSptIx = await serumCmn.createTokenAccountInstrs(
-      provider,
-      spt.publicKey,
-      r.poolMint,
-      registrySigner,
-      lamports,
+				provider,
+				spt.publicKey,
+				r.poolMint,
+				registrySigner,
+				lamports,
     );
     const createVaultIx = await serumCmn.createTokenAccountInstrs(
-      provider,
-      vault.publicKey,
-      r.mint,
-      registrySigner,
-      lamports,
+				provider,
+				vault.publicKey,
+				r.mint,
+				registrySigner,
+				lamports,
     );
     const createVaultStakeIx = await serumCmn.createTokenAccountInstrs(
-      provider,
-      vaultStake.publicKey,
-      r.mint,
-      registrySigner,
-      lamports,
+				provider,
+				vaultStake.publicKey,
+				r.mint,
+				registrySigner,
+				lamports,
     );
     const createVaultPwIx = await serumCmn.createTokenAccountInstrs(
-      provider,
-      vaultPw.publicKey,
-      r.mint,
-      registrySigner,
-      lamports,
+				provider,
+				vaultPw.publicKey,
+				r.mint,
+				registrySigner,
+				lamports,
     );
     let tx0 = new anchor.web3.Transaction();
     tx0.add(
-      ...createSptIx,
-			...createVaultIx,
-      ...createVaultStakeIx,
-      ...createVaultPwIx,
+				...createSptIx,
+				...createVaultIx,
+				...createVaultStakeIx,
+				...createVaultPwIx,
     );
     let signers0 = [spt, vault, vaultStake, vaultPw];
 
     const tx = { tx: tx0, signers: signers0 };
 
     return [
-      tx,
-      {
-				balanceId: owner,
-        spt: spt.publicKey,
-        vault: vault.publicKey,
-        vaultStake: vaultStake.publicKey,
-        vaultPw: vaultPw.publicKey,
-      },
+				tx,
+				{
+						balanceId: owner,
+						spt: spt.publicKey,
+						vault: vault.publicKey,
+						vaultStake: vaultStake.publicKey,
+						vaultPw: vaultPw.publicKey,
+				},
     ];
-  }
+}
 
 module.exports = {
 		createBalanceSandbox

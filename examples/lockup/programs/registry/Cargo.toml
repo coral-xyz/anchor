@@ -16,6 +16,6 @@ cpi = ["no-entrypoint"]
 # anchor-lang = { git = "https://github.com/project-serum/anchor", features = ["derive"] }
 anchor-lang = { path = "/home/armaniferrante/Documents/code/src/github.com/project-serum/anchor", features = ["derive"] }
 anchor-spl = { path = "/home/armaniferrante/Documents/code/src/github.com/project-serum/anchor/spl" }
-# serum-common = {  git = "https://github.com/project-serum/serum-dex", features = ["program"] }
+serum-common = {  git = "https://github.com/project-serum/serum-dex", features = ["program"] }
 bytemuck = "1.4.0"
 arrayref = "0.3.6"

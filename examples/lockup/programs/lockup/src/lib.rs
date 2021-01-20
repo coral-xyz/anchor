@@ -153,6 +153,7 @@ mod lockup {
         Ok(())
     }
 
+    // Sends funds from a whitelisted program back to the lockup program.
     pub fn whitelist_deposit(
         ctx: Context<WhitelistDeposit>,
         instruction_data: Vec<u8>,
@@ -215,6 +216,7 @@ mod lockup {
         Ok(())
     }
 
+    // Sends funds from the lockup program to a whitelisted program.
     pub fn whitelist_withdraw(
         ctx: Context<WhitelistWithdraw>,
         instruction_data: Vec<u8>,
@@ -340,12 +342,6 @@ pub struct Withdraw<'info> {
 }
 
 #[derive(Accounts)]
-pub struct AvailableForWithdrawal<'info> {
-    vesting: ProgramAccount<'info, Vesting>,
-    clock: Sysvar<'info, Clock>,
-}
-
-#[derive(Accounts)]
 pub struct WhitelistAdd<'info> {
     #[account(signer)]
     authority: AccountInfo<'info>,
@@ -413,6 +409,12 @@ pub struct WhitelistWithdraw<'info> {
     #[account(mut)]
     whitelisted_program_vault: AccountInfo<'info>,
     whitelisted_program_vault_authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct AvailableForWithdrawal<'info> {
+    vesting: ProgramAccount<'info, Vesting>,
+    clock: Sysvar<'info, Clock>,
 }
 
 #[account]

@@ -2,7 +2,7 @@
 
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program_option::COption;
-use anchor_spl::token::{self, Mint, MintTo, TokenAccount};
+use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
 use std::convert::Into;
 
 #[program]
@@ -17,14 +17,8 @@ mod registry {
         withdrawal_timelock: i64,
         max_stake: u64,
         stake_rate: u64,
+        reward_q_len: u32,
     ) -> Result<(), Error> {
-        /*
-                let event_q =
-                    RewardEventQueue::from(ctx.accounts.reward_event_q.to_account_info().data.clone());
-                if event_q.get_init()? {
-                    return Err(ErrorCode::RewardQAlreadyInitialized.into());
-                }
-        */
         let vault_authority = Pubkey::create_program_address(
             &spt_signer_seeds(ctx.accounts.registrar.to_account_info().key, &nonce),
             ctx.program_id,
@@ -45,8 +39,10 @@ mod registry {
         registrar.withdrawal_timelock = withdrawal_timelock;
         registrar.max_stake = max_stake;
 
-        //        event_q.set_init()?;
-        //        event_q.set_authority(registrar.to_account_info().key);
+        let reward_q = &mut ctx.accounts.reward_event_q;
+        for _ in 0..reward_q_len {
+            reward_q.events.push(Default::default());
+        }
 
         Ok(())
     }
@@ -342,7 +338,7 @@ mod registry {
             let signer = &[&seeds[..]];
             let cpi_ctx = CpiContext::new_with_signer(
                 ctx.accounts.token_program.clone(),
-                anchor_spl::token::Transfer {
+                Transfer {
                     from: ctx.accounts.vault_pw.to_account_info(),
                     to: ctx.accounts.vault.to_account_info(),
                     authority: ctx.accounts.member_signer.clone(),
@@ -389,7 +385,7 @@ mod registry {
             &[ctx.accounts.member.nonce],
         ];
         let signer = &[&seeds[..]];
-        let cpi_accounts = anchor_spl::token::Transfer {
+        let cpi_accounts = Transfer {
             from: ctx.accounts.vault.to_account_info(),
             to: ctx.accounts.depositor.to_account_info(),
             authority: ctx.accounts.member_signer.clone(),
@@ -400,8 +396,59 @@ mod registry {
         token::transfer(cpi_ctx, amount).map_err(Into::into)
     }
 
-    pub fn drop_reward(ctx: Context<DropReward>) -> Result<(), Error> {
-        // todo
+    pub fn drop_reward(
+        ctx: Context<DropReward>,
+        kind: RewardVendorKind,
+        total: u64,
+        expiry_ts: i64,
+        expiry_receiver: Pubkey,
+        nonce: u8,
+    ) -> Result<(), Error> {
+        // Validate args.
+        let vendor_signer = Pubkey::create_program_address(
+            &[
+                ctx.accounts.registrar.to_account_info().key.as_ref(),
+                ctx.accounts.vendor.to_account_info().key.as_ref(),
+                &[nonce],
+            ],
+            ctx.program_id,
+        )
+        .map_err(|_| ErrorCode::InvalidNonce)?;
+        if vendor_signer != ctx.accounts.vendor_vault.owner {
+            return Err(ErrorCode::InvalidVaultOwner.into());
+        }
+        if total < ctx.accounts.pool_mint.supply {
+            return Err(ErrorCode::InsufficientReward.into());
+        }
+        if ctx.accounts.clock.unix_timestamp >= expiry_ts {
+            return Err(ErrorCode::InvalidExpiry.into());
+        }
+
+        // Transfer funds into the vendor's vault.
+        token::transfer(ctx.accounts.into(), total)?;
+
+        // Initialize the vendor.
+        let vendor = &mut ctx.accounts.vendor;
+        vendor.registrar = *ctx.accounts.registrar.to_account_info().key;
+        vendor.vault = *ctx.accounts.vendor_vault.to_account_info().key;
+        vendor.nonce = nonce;
+        vendor.pool_token_supply = ctx.accounts.pool_mint.supply;
+        vendor.reward_event_q_cursor = ctx.accounts.reward_event_q.head;
+        vendor.start_ts = ctx.accounts.clock.unix_timestamp;
+        vendor.expiry_ts = expiry_ts;
+        vendor.expiry_receiver = expiry_receiver;
+        vendor.total = total;
+        vendor.expired = false;
+        vendor.kind = kind.clone();
+
+        // Add the event to the reward queue.
+        let reward_q = &mut ctx.accounts.reward_event_q;
+        reward_q.append(RewardEvent {
+            vendor: *vendor.to_account_info().key,
+            ts: ctx.accounts.clock.unix_timestamp,
+            locked: kind != RewardVendorKind::Unlocked,
+        })?;
+
         Ok(())
     }
 
@@ -412,6 +459,19 @@ mod registry {
 
     pub fn expire_reward(ctx: Context<ExpireReward>) -> Result<(), Error> {
         // todo
+        Ok(())
+    }
+
+    pub fn reward_queue_test(
+        ctx: Context<RewardQueueTest>,
+        event: RewardEvent,
+    ) -> Result<(), Error> {
+        let ring = &mut ctx.accounts.reward_q;
+        /*        ring.events.push(event);
+        ring.events.push(event);
+        ring.events.push(event);
+        ring.events.push(event);
+        ring.events.push(event);*/
         Ok(())
     }
 }
@@ -434,8 +494,8 @@ pub struct Initialize<'info> {
     #[account(init)]
     registrar: ProgramAccount<'info, Registrar>,
     pool_mint: CpiAccount<'info, Mint>,
-    //    #[account(owner = program)]
-    reward_event_q: AccountInfo<'info>,
+    #[account(init)]
+    reward_event_q: ProgramAccount<'info, RewardQueue>,
     rent: Sysvar<'info, Rent>,
 }
 
@@ -544,12 +604,10 @@ pub struct Deposit<'info> {
 }
 
 impl<'a, 'b, 'c, 'info> From<&mut Deposit<'info>>
-    for CpiContext<'a, 'b, 'c, 'info, anchor_spl::token::Transfer<'info>>
+    for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>
 {
-    fn from(
-        accounts: &mut Deposit<'info>,
-    ) -> CpiContext<'a, 'b, 'c, 'info, anchor_spl::token::Transfer<'info>> {
-        let cpi_accounts = anchor_spl::token::Transfer {
+    fn from(accounts: &mut Deposit<'info>) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
+        let cpi_accounts = Transfer {
             from: accounts.depositor.clone(),
             to: accounts.vault.to_account_info(),
             authority: accounts.depositor_authority.clone(),
@@ -721,8 +779,44 @@ pub struct Withdraw<'info> {
 }
 
 #[derive(Accounts)]
-pub struct DropReward {
-    // todo
+pub struct DropReward<'info> {
+    // Staking instance.
+    #[account(has_one = reward_event_q, has_one = pool_mint)]
+    registrar: ProgramAccount<'info, Registrar>,
+    reward_event_q: ProgramAccount<'info, RewardQueue>,
+    pool_mint: CpiAccount<'info, Mint>,
+
+    // Vendor.
+    #[account(init)]
+    vendor: ProgramAccount<'info, RewardVendor>,
+    #[account(mut)]
+    vendor_vault: CpiAccount<'info, TokenAccount>,
+
+    // Depositor.
+    #[account(mut)]
+    depositor: AccountInfo<'info>,
+    #[account(signer)]
+    depositor_authority: AccountInfo<'info>,
+
+    // Misc.
+    #[account("token_program.key == &token::ID")]
+    token_program: AccountInfo<'info>,
+    clock: Sysvar<'info, Clock>,
+    rent: Sysvar<'info, Rent>,
+}
+
+impl<'a, 'b, 'c, 'info> From<&mut DropReward<'info>>
+    for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>
+{
+    fn from(accounts: &mut DropReward<'info>) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
+        let cpi_accounts = Transfer {
+            from: accounts.depositor.clone(),
+            to: accounts.vendor_vault.to_account_info(),
+            authority: accounts.depositor_authority.clone(),
+        };
+        let cpi_program = accounts.token_program.clone();
+        CpiContext::new(cpi_program, cpi_accounts)
+    }
 }
 
 #[derive(Accounts)]
@@ -817,116 +911,80 @@ pub struct PendingWithdrawal {
     pub balance_id: Pubkey,
 }
 
-/*
 #[account]
-pub struct LockedRewardVendor {
+pub struct RewardVendor {
     pub registrar: Pubkey,
     pub vault: Pubkey,
     pub nonce: u8,
-    pub pool: Pubkey,
     pub pool_token_supply: u64,
     pub reward_event_q_cursor: u32,
     pub start_ts: i64,
-    pub end_ts: i64,
     pub expiry_ts: i64,
     pub expiry_receiver: Pubkey,
     pub total: u64,
-    pub period_count: u64,
     pub expired: bool,
+    pub kind: RewardVendorKind,
 }
 
-#[account]
-pub struct UnlockedRewardVendor {
-    pub registrar: Pubkey,
-    pub vault: Pubkey,
-    pub nonce: u8,
-    pub pool: Pubkey,
-    pub pool_token_supply: u64,
-    pub reward_event_q_cursor: u32,
-    pub start_ts: i64,
-    pub expiry_ts: i64,
-    pub expiry_receiver: Pubkey,
-    pub total: u64,
-    pub expired: bool,
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq)]
+pub enum RewardVendorKind {
+    Unlocked,
+    Locked { end_ts: i64, period_count: u64 },
 }
-*/
 
 fn spt_signer_seeds<'a>(registrar: &'a Pubkey, nonce: &'a u8) -> [&'a [u8]; 2] {
     [registrar.as_ref(), bytemuck::bytes_of(nonce)]
 }
 
-/*
-
-// Largest reward variant size.
-//
-// Don't forget to change the typescript when modifying this.
-const MAX_RING_ITEM_SIZE: u32 = 145;
-
-// Generate the Ring trait.
-serum_common::ring!(MAX_RING_ITEM_SIZE);
-
-pub struct RewardEventQueue<'a> {
-    pub storage: Rc<RefCell<&'a mut [u8]>>,
+#[derive(Accounts)]
+pub struct RewardQueueTest<'info> {
+    #[account(mut)]
+    pub reward_q: ProgramAccount<'info, RewardQueue>,
 }
 
-impl<'a> RewardEventQueue<'a> {
-    // Don't forget to change the typescript when modifying this.
-    pub const RING_CAPACITY: u32 = 13792;
-
-    pub fn from(storage: Rc<RefCell<&'a mut [u8]>>) -> Self {
-        Self { storage }
-    }
+#[account]
+pub struct RewardQueue {
+    // Invariant: index is position of the next available slot.
+    head: u32,
+    // Invariant: index is position of the first (oldest) taken slot.
+    // Invariant: head == tail => queue is initialized.
+    // Invariant: index_of(head + 1) == index_of(tail) => queue is full.
+    tail: u32,
+    // Although a vec is used, the size is immutable.
+    events: Vec<RewardEvent>,
 }
 
-impl<'a> Ring<'a> for RewardEventQueue<'a> {
-    type Item = RewardEvent;
+impl RewardQueue {
+    pub fn append(&mut self, event: RewardEvent) -> Result<(), Error> {
+        // Insert into next available slot.
+        let h_idx = self.index_of(self.head);
+        self.events[h_idx] = event;
 
-    fn buffer(&self) -> Rc<RefCell<&'a mut [u8]>> {
-        self.storage.clone()
-    }
-    fn capacity(&self) -> u32 {
-        RewardEventQueue::RING_CAPACITY
-    }
-}
-
-#[derive(Debug, BorshSerialize, BorshDeserialize)]
-pub enum RewardEvent {
-    LockedAlloc {
-        from: Pubkey,
-        total: u64,
-        pool: Pubkey,
-        vendor: Pubkey,
-        mint: Pubkey,
-        ts: i64,
-    },
-    UnlockedAlloc {
-        from: Pubkey,
-        total: u64,
-        pool: Pubkey,
-        vendor: Pubkey,
-        mint: Pubkey,
-        ts: i64,
-    },
-}
-
-use anchor_lang::{AnchorDeserialize as BorshDeserialize, AnchorSerialize as BorshSerialize};
-
-serum_common::packable!(RewardEvent);
-*/
-/*
-// todo
-impl anchor_lang::AccountSerialize for RewardEventQueue {
-        fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> Result<(), ProgramError> {
-
+        // Update head and tail counters.
+        let is_full = self.index_of(self.head + 1) == self.index_of(self.tail);
+        if is_full {
+            self.tail += 1;
         }
+        self.head += 1;
+
+        Ok(())
+    }
+
+    pub fn index_of(&self, counter: u32) -> usize {
+        counter as usize % self.capacity()
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.events.len()
+    }
 }
 
-impl anchor_lang::AccountDeserialize for RewardEventQueue {
-    fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-
-        }
+#[derive(Default, Clone, Copy, Debug, AnchorSerialize, AnchorDeserialize)]
+pub struct RewardEvent {
+    vendor: Pubkey,
+    ts: i64,
+    locked: bool,
 }
-*/
 
 #[error]
 pub enum ErrorCode {
@@ -944,8 +1002,14 @@ pub enum ErrorCode {
     InvalidDepositor,
     #[msg("The vault given does not match the vault expected.")]
     InvalidVault,
+    #[msg("Invalid vault owner.")]
+    InvalidVaultOwner,
     #[msg("An unknown error has occured.")]
     Unknown,
     #[msg("The unstake timelock has not yet expired.")]
     UnstakeTimelock,
+    #[msg("Reward vendors must have at least one token unit per pool token")]
+    InsufficientReward,
+    #[msg("Reward expiry must be after the current clock timestamp.")]
+    InvalidExpiry,
 }

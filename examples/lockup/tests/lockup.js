@@ -282,6 +282,7 @@ describe("Lockup and Registry", () => {
 		const withdrawalTimelock = new anchor.BN(5);
 		const maxStake = new anchor.BN('1000000000000000000');
 		const stakeRate = new anchor.BN(2);
+		const rewardQLen = 200;
 		let registrarAccount = null;
 		let registrarSigner = null;
 		let nonce = null;
@@ -305,6 +306,7 @@ describe("Lockup and Registry", () => {
 						withdrawalTimelock,
 						maxStake,
 						stakeRate,
+						rewardQLen,
 						{
 								accounts: {
 										registrar: registrar.publicKey,
@@ -312,9 +314,10 @@ describe("Lockup and Registry", () => {
 										rewardEventQ: rewardQ.publicKey,
 										rent: anchor.web3.SYSVAR_RENT_PUBKEY,
 								},
-								signers: [registrar],
+								signers: [registrar, rewardQ],
 								instructions: [
 										await registry.account.registrar.createInstruction(registrar),
+										await registry.account.rewardQueue.createInstruction(rewardQ, 1000000),
 								],
 						},
 				);
@@ -462,8 +465,103 @@ describe("Lockup and Registry", () => {
 				assert.ok(spt.amount.eq(new anchor.BN(10)));
 		});
 
+/*
+				// TESTING.
+
+				let event = {
+						from: provider.wallet.publicKey,
+//						total: new anchor.BN(1234),
+						vendor: provider.wallet.publicKey,
+//						mint: provider.wallet.publicKey,
+						ts: new anchor.BN(33),
+						locked: false,
+				};
+
+				let r = await registry.account.rewardQueue(rewardQ.publicKey);
+				console.log(r);
+
+				for (let k = 0; k < 500; k += 5) {
+						console.log('iteration', k);
+						event.ts = new anchor.BN(k);
+						await registry.rpc.rewardQueueTest(event, {
+								accounts: {
+										rewardQ: rewardQ.publicKey,
+								},
+						});
+				}
+
+				r = await registry.account.rewardQueue(rewardQ.publicKey);
+				console.log(r);
+				console.log('len', r.events.length);
+
+				// END.
+				*/
+
+		const unlockedVendor = new anchor.web3.Account();
+		const unlockedVendorVault = new anchor.web3.Account();
+		let unlockedVendorSigner = null;
+
 		it('Drops an unlocked reward', async () => {
-				// todo
+				const rewardKind = {
+						unlocked: {},
+				};
+				const rewardAmount = new anchor.BN(200);
+				const expiry = new anchor.BN(Date.now()/1000 + 5);
+				const [_vendorSigner, nonce] = await anchor.web3.PublicKey.findProgramAddress(
+						[
+								registrar.publicKey.toBuffer(),
+								unlockedVendor.publicKey.toBuffer(),
+						],
+						registry.programId,
+				);
+				unlockedVendorSigner = _vendorSigner;
+
+				await registry.rpc.dropReward(
+						rewardKind,
+						rewardAmount,
+						expiry,
+						provider.wallet.publicKey,
+						nonce,
+						{
+								accounts: {
+										registrar: registrar.publicKey,
+										rewardEventQ: rewardQ.publicKey,
+										poolMint,
+
+										vendor: unlockedVendor.publicKey,
+										vendorVault: unlockedVendorVault.publicKey,
+
+										depositor: god,
+										depositorAuthority: provider.wallet.publicKey,
+
+										tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+										clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+										rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+								},
+								signers: [unlockedVendorVault, unlockedVendor],
+								instructions: [
+										...(await serumCmn.createTokenAccountInstrs(
+												provider,
+												unlockedVendorVault.publicKey,
+												mint,
+												unlockedVendorSigner,
+										)),
+										await registry.account.rewardVendor.createInstruction(unlockedVendor),
+								],
+						}
+				);
+
+				const vendorAccount = await registry.account.rewardVendor(unlockedVendor.publicKey);
+
+				assert.ok(vendorAccount.registrar.equals(registrar.publicKey));
+				assert.ok(vendorAccount.vault.equals(unlockedVendorVault.publicKey));
+				assert.ok(vendorAccount.nonce === nonce);
+				assert.ok(vendorAccount.poolTokenSupply.eq(new anchor.BN(10)));
+				assert.ok(vendorAccount.expiryTs.eq(expiry));
+				assert.ok(vendorAccount.expiryReceiver.equals(provider.wallet.publicKey));
+				assert.ok(vendorAccount.total.eq(rewardAmount));
+				assert.ok(vendorAccount.expired === false);
+				assert.deepEqual(vendorAccount.kind, { unlocked: {} });
 		});
 
 		it('Collects an unlocked reward', async () => {
@@ -482,6 +580,7 @@ describe("Lockup and Registry", () => {
 
 		it('Unstakes', async () => {
 				const unstakeAmount = new anchor.BN(10);
+
 				await registry.rpc.startUnstake(unstakeAmount, provider.wallet.publicKey, {
 						accounts: {
 								registrar: registrar.publicKey,
@@ -550,7 +649,7 @@ describe("Lockup and Registry", () => {
 								await tryEndUnstake();
 						},
 						(err) => {
-								assert.equal(err.code, 108);
+								assert.equal(err.code, 109);
 								assert.equal(err.msg, 'The unstake timelock has not yet expired.');
 								return true;
 						});

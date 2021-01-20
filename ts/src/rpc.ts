@@ -11,13 +11,13 @@ import {
 import { sha256 } from "crypto-hash";
 import {
   Idl,
-	IdlAccount,
+  IdlAccount,
   IdlInstruction,
   IdlTypeDef,
   IdlType,
   IdlField,
   IdlEnumVariant,
-	IdlAccountItem,
+  IdlAccountItem,
 } from "./idl";
 import { IdlError, ProgramError } from "./error";
 import Coder from "./coder";
@@ -92,7 +92,7 @@ type RpcContext = {
   signers?: Array<Account>;
   // RpcOptions.
   options?: RpcOptions;
-	__private?: { logAccounts: boolean },
+  __private?: { logAccounts: boolean };
 };
 
 /**
@@ -117,27 +117,29 @@ export class RpcFactory {
     coder: Coder,
     programId: PublicKey
   ): [Rpcs, Ixs, Txs, Accounts] {
-		const idlErrors = parseIdlErrors(idl);
+    const idlErrors = parseIdlErrors(idl);
 
     const rpcs: Rpcs = {};
     const ixFns: Ixs = {};
-		const txFns: Txs = {};
+    const txFns: Txs = {};
 
     idl.instructions.forEach((idlIx) => {
       // Function to create a raw `TransactionInstruction`.
       const ix = RpcFactory.buildIx(idlIx, coder, programId);
-			// FUnction to create a `Transaction`.
-			const tx = RpcFactory.buildTx(idlIx, ix);
+      // Ffnction to create a `Transaction`.
+      const tx = RpcFactory.buildTx(idlIx, ix);
       // Function to invoke an RPC against a cluster.
       const rpc = RpcFactory.buildRpc(idlIx, tx, idlErrors);
 
       const name = camelCase(idlIx.name);
       rpcs[name] = rpc;
       ixFns[name] = ix;
-			txFns[name] = tx;
+      txFns[name] = tx;
     });
 
-		const accountFns = idl.accounts ? RpcFactory.buildAccounts(idl, coder, programId) : {};
+    const accountFns = idl.accounts
+      ? RpcFactory.buildAccounts(idl, coder, programId)
+      : {};
 
     return [rpcs, ixFns, txFns, accountFns];
   }
@@ -157,9 +159,9 @@ export class RpcFactory {
       validateInstruction(idlIx, ...args);
 
       const keys = RpcFactory.accountsArray(ctx.accounts, idlIx.accounts);
-			if (ctx.__private && ctx.__private.logAccounts) {
-				console.log('Outoing account metas:', keys);
-			}
+      if (ctx.__private && ctx.__private.logAccounts) {
+        console.log("Outoing account metas:", keys);
+      }
       return new TransactionInstruction({
         keys,
         programId,
@@ -170,24 +172,29 @@ export class RpcFactory {
     return ix;
   }
 
-	private static accountsArray(ctx: RpcAccounts, accounts: IdlAccountItem[]): any {
-		return accounts.map((acc: IdlAccountItem) => {
-			// Nested accounts.
-			// @ts-ignore
-			const nestedAccounts: IdlAccountItem[] | undefined = acc.accounts;
-			if (nestedAccounts !== undefined) {
-				const rpcAccs = ctx[acc.name] as RpcAccounts;
-				return RpcFactory.accountsArray(rpcAccs, nestedAccounts).flat();
-			} else {
-				const account: IdlAccount = acc as IdlAccount;
-				return {
-					pubkey: ctx[acc.name],
-					isWritable: account.isMut,
-					isSigner: account.isSigner,
-				};
-			}
-    }).flat();
-	}
+  private static accountsArray(
+    ctx: RpcAccounts,
+    accounts: IdlAccountItem[]
+  ): any {
+    return accounts
+      .map((acc: IdlAccountItem) => {
+        // Nested accounts.
+        // @ts-ignore
+        const nestedAccounts: IdlAccountItem[] | undefined = acc.accounts;
+        if (nestedAccounts !== undefined) {
+          const rpcAccs = ctx[acc.name] as RpcAccounts;
+          return RpcFactory.accountsArray(rpcAccs, nestedAccounts).flat();
+        } else {
+          const account: IdlAccount = acc as IdlAccount;
+          return {
+            pubkey: ctx[acc.name],
+            isWritable: account.isMut,
+            isSigner: account.isSigner,
+          };
+        }
+      })
+      .flat();
+  }
 
   private static buildRpc(
     idlIx: IdlInstruction,
@@ -195,7 +202,7 @@ export class RpcFactory {
     idlErrors: Map<number, string>
   ): RpcFn {
     const rpc = async (...args: any[]): Promise<TransactionSignature> => {
-			const tx = txFn(...args);
+      const tx = txFn(...args);
       const [_, ctx] = splitArgsAndCtx(idlIx, [...args]);
       const provider = getProvider();
       if (provider === null) {
@@ -216,78 +223,79 @@ export class RpcFactory {
     return rpc;
   }
 
-	private static buildTx(
-    idlIx: IdlInstruction,
-    ixFn: IxFn,
-	): TxFn {
-		const txFn = (...args: any[]): Transaction => {
+  private static buildTx(idlIx: IdlInstruction, ixFn: IxFn): TxFn {
+    const txFn = (...args: any[]): Transaction => {
       const [_, ctx] = splitArgsAndCtx(idlIx, [...args]);
       const tx = new Transaction();
       if (ctx.instructions !== undefined) {
         tx.add(...ctx.instructions);
       }
       tx.add(ixFn(...args));
-			return tx;
-		};
+      return tx;
+    };
 
-		return txFn;
-	}
+    return txFn;
+  }
 
-	private static buildAccounts(idl: Idl, coder: Coder, programId: PublicKey): Accounts {
-		const accountFns: Accounts = {};
+  private static buildAccounts(
+    idl: Idl,
+    coder: Coder,
+    programId: PublicKey
+  ): Accounts {
+    const accountFns: Accounts = {};
     idl.accounts.forEach((idlAccount) => {
-        const accountFn = async (address: PublicKey): Promise<any> => {
-          const provider = getProvider();
-          if (provider === null) {
-            throw new Error("Provider not set");
-          }
-          const accountInfo = await provider.connection.getAccountInfo(address);
-          if (accountInfo === null) {
-            throw new Error(`Entity does not exist ${address}`);
-          }
+      const accountFn = async (address: PublicKey): Promise<any> => {
+        const provider = getProvider();
+        if (provider === null) {
+          throw new Error("Provider not set");
+        }
+        const accountInfo = await provider.connection.getAccountInfo(address);
+        if (accountInfo === null) {
+          throw new Error(`Entity does not exist ${address}`);
+        }
 
-          // Assert the account discriminator is correct.
-          const expectedDiscriminator = Buffer.from(
-            (
-              await sha256(`account:${idlAccount.name}`, {
-                outputFormat: "buffer",
-              })
-            ).slice(0, 8)
-          );
-          const discriminator = accountInfo.data.slice(0, 8);
+        // Assert the account discriminator is correct.
+        const expectedDiscriminator = Buffer.from(
+          (
+            await sha256(`account:${idlAccount.name}`, {
+              outputFormat: "buffer",
+            })
+          ).slice(0, 8)
+        );
+        const discriminator = accountInfo.data.slice(0, 8);
 
-          if (expectedDiscriminator.compare(discriminator)) {
-            throw new Error("Invalid account discriminator");
-          }
+        if (expectedDiscriminator.compare(discriminator)) {
+          throw new Error("Invalid account discriminator");
+        }
 
-          // Chop off the discriminator before decoding.
-          const data = accountInfo.data.slice(8);
-          return coder.accounts.decode(idlAccount.name, data);
-        };
-        const name = camelCase(idlAccount.name);
-        accountFns[name] = accountFn;
-        const size = ACCOUNT_DISCRIMINATOR_SIZE + accountSize(idl, idlAccount);
-        // @ts-ignore
-        accountFns[name]["size"] = size;
-        // @ts-ignore
-        accountFns[name]["createInstruction"] = async (
-          account: Account,
-          sizeOverride?: number
-        ): Promise<TransactionInstruction> => {
-          const provider = getProvider();
-          return SystemProgram.createAccount({
-            fromPubkey: provider.wallet.publicKey,
-            newAccountPubkey: account.publicKey,
-            space: sizeOverride ?? size,
-            lamports: await provider.connection.getMinimumBalanceForRentExemption(
-              sizeOverride ?? size
-            ),
-            programId,
-          });
-        };
+        // Chop off the discriminator before decoding.
+        const data = accountInfo.data.slice(8);
+        return coder.accounts.decode(idlAccount.name, data);
+      };
+      const name = camelCase(idlAccount.name);
+      accountFns[name] = accountFn;
+      const size = ACCOUNT_DISCRIMINATOR_SIZE + accountSize(idl, idlAccount);
+      // @ts-ignore
+      accountFns[name]["size"] = size;
+      // @ts-ignore
+      accountFns[name]["createInstruction"] = async (
+        account: Account,
+        sizeOverride?: number
+      ): Promise<TransactionInstruction> => {
+        const provider = getProvider();
+        return SystemProgram.createAccount({
+          fromPubkey: provider.wallet.publicKey,
+          newAccountPubkey: account.publicKey,
+          space: sizeOverride ?? size,
+          lamports: await provider.connection.getMinimumBalanceForRentExemption(
+            sizeOverride ?? size
+          ),
+          programId,
+        });
+      };
     });
-		return accountFns;
-	}
+    return accountFns;
+  }
 }
 
 function translateError(
@@ -363,15 +371,15 @@ function toInstruction(idlIx: IdlInstruction, ...args: any[]) {
 // Throws error if any account required for the `ix` is not given.
 function validateAccounts(ixAccounts: IdlAccountItem[], accounts: RpcAccounts) {
   ixAccounts.forEach((acc) => {
-		// @ts-ignore
-		if (acc.accounts !== undefined) {
-			// @ts-ignore
-			validateAccounts(acc.accounts, accounts[acc.name]);
-		} else {
-			if (accounts[acc.name] === undefined) {
-				throw new Error(`Invalid arguments: ${acc.name} not provided.`);
-			}
-		}
+    // @ts-ignore
+    if (acc.accounts !== undefined) {
+      // @ts-ignore
+      validateAccounts(acc.accounts, accounts[acc.name]);
+    } else {
+      if (accounts[acc.name] === undefined) {
+        throw new Error(`Invalid arguments: ${acc.name} not provided.`);
+      }
+    }
   });
 }
 

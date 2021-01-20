@@ -34,10 +34,10 @@ export class Program {
    */
   readonly instruction: Ixs;
 
-	/**
-	 * Functions to build `Transaction` objects.
-	 */
-	readonly transaction: Txs;
+  /**
+   * Functions to build `Transaction` objects.
+   */
+  readonly transaction: Txs;
 
   /**
    * Coder for serializing rpc requests.
@@ -55,7 +55,7 @@ export class Program {
     const [rpcs, ixs, txs, accounts] = RpcFactory.build(idl, coder, programId);
     this.rpc = rpcs;
     this.instruction = ixs;
-		this.transaction = txs;
+    this.transaction = txs;
     this.account = accounts;
     this.coder = coder;
   }
