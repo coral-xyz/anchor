@@ -1,7 +1,7 @@
 import camelCase from "camelcase";
 import {
   Account,
-	AccountMeta,
+  AccountMeta,
   PublicKey,
   ConfirmOptions,
   SystemProgram,
@@ -87,7 +87,7 @@ export type RpcOptions = ConfirmOptions;
 type RpcContext = {
   // Accounts the instruction will use.
   accounts?: RpcAccounts;
-	remainingAccounts?: AccountMeta[];
+  remainingAccounts?: AccountMeta[];
   // Instructions to run *before* the specified rpc instruction.
   instructions?: TransactionInstruction[];
   // Accounts that must sign the transaction.
@@ -162,9 +162,9 @@ export class RpcFactory {
 
       const keys = RpcFactory.accountsArray(ctx.accounts, idlIx.accounts);
 
-			if (ctx.remainingAccounts !== undefined) {
-				keys.push(...ctx.remainingAccounts);
-			}
+      if (ctx.remainingAccounts !== undefined) {
+        keys.push(...ctx.remainingAccounts);
+      }
 
       if (ctx.__private && ctx.__private.logAccounts) {
         console.log("Outoing account metas:", keys);
@@ -176,10 +176,10 @@ export class RpcFactory {
       });
     };
 
-		// Utility fn for ordering the accounts for this instruction.
-		ix['accounts'] = (accs: RpcAccounts) => {
-			return RpcFactory.accountsArray(accs, idlIx.accounts);
-		}
+    // Utility fn for ordering the accounts for this instruction.
+    ix["accounts"] = (accs: RpcAccounts) => {
+      return RpcFactory.accountsArray(accs, idlIx.accounts);
+    };
 
     return ix;
   }
