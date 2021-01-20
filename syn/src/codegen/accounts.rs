@@ -113,12 +113,18 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
         .fields
         .iter()
         .map(|f: &AccountField| {
-            let name = match f {
-                AccountField::AccountsStruct(s) => &s.ident,
-                AccountField::Field(f) => &f.ident,
+            let (name, is_signer) = match f {
+                AccountField::AccountsStruct(s) => (&s.ident, quote! {None}),
+                AccountField::Field(f) => {
+                    let is_signer = match f.is_signer {
+                        false => quote! {None},
+                        true => quote! {Some(true)},
+                    };
+                    (&f.ident, is_signer)
+                }
             };
             quote! {
-                account_metas.extend(self.#name.to_account_metas());
+                account_metas.extend(self.#name.to_account_metas(#is_signer));
             }
         })
         .collect();
@@ -160,7 +166,7 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
         }
 
         impl#combined_generics anchor_lang::ToAccountMetas for #name#strct_generics {
-            fn to_account_metas(&self) -> Vec<anchor_lang::solana_program::instruction::AccountMeta> {
+            fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<anchor_lang::solana_program::instruction::AccountMeta> {
                 let mut account_metas = vec![];
 
                 #(#to_acc_metas)*
@@ -224,7 +230,11 @@ pub fn generate_constraint_signer(f: &Field, _c: &ConstraintSigner) -> proc_macr
         _ => panic!("Invalid syntax: signer cannot be specified."),
     };
     quote! {
-        // Don't enforce on CPI, since usually a program is signing.
+        // Don't enforce on CPI, since usually a program is signing and so
+        // the `try_accounts` deserializatoin will fail *if* the one
+        // tries to manually invoke it.
+        //
+        // This check will be performed on the other end of the invocation.
         if cfg!(not(feature = "cpi")) {
             if !#info.is_signer {
                 return Err(ProgramError::MissingRequiredSignature);

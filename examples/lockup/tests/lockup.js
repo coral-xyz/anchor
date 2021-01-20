@@ -529,6 +529,7 @@ describe("Lockup and Registry", () => {
 				assert.ok(vendorAccount.expiryReceiver.equals(provider.wallet.publicKey));
 				assert.ok(vendorAccount.total.eq(rewardAmount));
 				assert.ok(vendorAccount.expired === false);
+				assert.ok(vendorAccount.rewardEventQCursor === 0);
 				assert.deepEqual(vendorAccount.kind, rewardKind);
 
 				const rewardQAccount = await registry.account.rewardQueue(rewardQ.publicKey);
@@ -643,14 +644,14 @@ describe("Lockup and Registry", () => {
 				assert.ok(vendorAccount.expiryReceiver.equals(provider.wallet.publicKey));
 				assert.ok(vendorAccount.total.eq(rewardAmount));
 				assert.ok(vendorAccount.expired === false);
-				assert.ok(vendorAccount.cursor === 0);
+				assert.ok(vendorAccount.rewardEventQCursor === 1);
 				assert.equal(JSON.stringify(vendorAccount.kind), JSON.stringify(rewardKind));
 
 				const rewardQAccount = await registry.account.rewardQueue(rewardQ.publicKey);
 				assert.ok(rewardQAccount.head === 2);
 				assert.ok(rewardQAccount.tail === 0);
 				const e = rewardQAccount.events[1];
-				assert.ok(e.vendor.equals(unlockedVendor.publicKey));
+				assert.ok(e.vendor.equals(lockedVendor.publicKey));
 				assert.ok(e.locked === true);
 		});
 

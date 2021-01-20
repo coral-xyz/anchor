@@ -20,10 +20,11 @@ impl<'info> Accounts<'info> for AccountInfo<'info> {
 }
 
 impl<'info> ToAccountMetas for AccountInfo<'info> {
-    fn to_account_metas(&self) -> Vec<AccountMeta> {
+    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
+        let is_signer = is_signer.unwrap_or(self.is_signer);
         let meta = match self.is_writable {
-            false => AccountMeta::new_readonly(*self.key, self.is_signer),
-            true => AccountMeta::new(*self.key, self.is_signer),
+            false => AccountMeta::new_readonly(*self.key, is_signer),
+            true => AccountMeta::new(*self.key, is_signer),
         };
         vec![meta]
     }

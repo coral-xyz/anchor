@@ -192,7 +192,7 @@ fn generate_cpi(program: &Program) -> proc_macro2::TokenStream {
                             let ix = __private::instruction::#ix_variant;
                             let data = AnchorSerialize::try_to_vec(&ix)
                                 .map_err(|_| ProgramError::InvalidInstructionData)?;
-                            let accounts = ctx.accounts.to_account_metas();
+                            let accounts = ctx.accounts.to_account_metas(None);
                             anchor_lang::solana_program::instruction::Instruction {
                                 program_id: *ctx.program.key,
                                 accounts,

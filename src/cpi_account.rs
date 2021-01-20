@@ -61,10 +61,11 @@ where
 }
 
 impl<'info, T: AccountDeserialize + Clone> ToAccountMetas for CpiAccount<'info, T> {
-    fn to_account_metas(&self) -> Vec<AccountMeta> {
+    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
+        let is_signer = is_signer.unwrap_or(self.info.is_signer);
         let meta = match self.info.is_writable {
-            false => AccountMeta::new_readonly(*self.info.key, self.info.is_signer),
-            true => AccountMeta::new(*self.info.key, self.info.is_signer),
+            false => AccountMeta::new_readonly(*self.info.key, is_signer),
+            true => AccountMeta::new(*self.info.key, is_signer),
         };
         vec![meta]
     }

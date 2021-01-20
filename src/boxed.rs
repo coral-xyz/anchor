@@ -28,7 +28,7 @@ impl<'info, T: ToAccountInfos<'info>> ToAccountInfos<'info> for Box<T> {
 }
 
 impl<T: ToAccountMetas> ToAccountMetas for Box<T> {
-    fn to_account_metas(&self) -> Vec<AccountMeta> {
-        T::to_account_metas(self)
+    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
+        T::to_account_metas(self, is_signer)
     }
 }

@@ -546,8 +546,13 @@ mod registry {
             period_count,
             reward_amount,
             nonce,
-        )
-        .map_err(Into::into)
+        )?;
+
+        // Update the member account.
+        let member = &mut ctx.accounts.cmn.member;
+        member.rewards_cursor = ctx.accounts.cmn.vendor.reward_event_q_cursor + 1;
+
+        Ok(())
     }
 
     pub fn expire_reward(ctx: Context<ExpireReward>) -> Result<(), Error> {
