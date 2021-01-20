@@ -1,8 +1,12 @@
+//! A relatively advanced example of a staking program. If you're new to Anchor,
+//! it's suggested to start with the other examples.
+
 #![feature(proc_macro_hygiene)]
 
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program_option::COption;
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
+use serum_lockup::CreateVesting;
 use std::convert::Into;
 
 #[program]
@@ -20,7 +24,10 @@ mod registry {
         reward_q_len: u32,
     ) -> Result<(), Error> {
         let vault_authority = Pubkey::create_program_address(
-            &spt_signer_seeds(ctx.accounts.registrar.to_account_info().key, &nonce),
+            &[
+                ctx.accounts.registrar.to_account_info().key.as_ref(),
+                &[nonce],
+            ],
             ctx.program_id,
         )
         .map_err(|_| ErrorCode::InvalidNonce)?;
@@ -40,9 +47,9 @@ mod registry {
         registrar.max_stake = max_stake;
 
         let reward_q = &mut ctx.accounts.reward_event_q;
-        for _ in 0..reward_q_len {
-            reward_q.events.push(Default::default());
-        }
+        reward_q
+            .events
+            .resize(reward_q_len as usize, Default::default());
 
         Ok(())
     }
@@ -203,10 +210,10 @@ mod registry {
 
         // Mint pool tokens to the staker.
         {
-            let seeds = &spt_signer_seeds(
-                ctx.accounts.registrar.to_account_info().key,
-                &ctx.accounts.registrar.nonce,
-            );
+            let seeds = &[
+                ctx.accounts.registrar.to_account_info().key.as_ref(),
+                &[ctx.accounts.registrar.nonce],
+            ];
             let registrar_signer = &[&seeds[..]];
 
             let cpi_ctx = CpiContext::new_with_signer(
@@ -450,24 +457,97 @@ mod registry {
         Ok(())
     }
 
-    pub fn claim_reward(ctx: Context<ClaimReward>) -> Result<(), Error> {
-        if ctx.accounts.vendor.expired {
-            return Err(ErrorCode::VendorExpired.into());
+    #[access_control(reward_eligible(&ctx.accounts.cmn))]
+    pub fn claim_reward_unlocked(ctx: Context<ClaimRewardUnlocked>) -> Result<(), Error> {
+        if RewardVendorKind::Unlocked != ctx.accounts.cmn.vendor.kind {
+            return Err(ErrorCode::ExpectedUnlockedVendor.into());
         }
-        if ctx.accounts.member.rewards_cursor > ctx.accounts.vendor.reward_event_q_cursor {
-            return Err(ErrorCode::CursorAlreadyProcessed.into());
-        }
-        if ctx.accounts.member.last_stake_ts > ctx.accounts.vendor.start_ts {
-            return Err(ErrorCode::NotStakedDuringDrop.into());
-        }
+        // Reward to distribute.
+        let spt_total =
+            ctx.accounts.cmn.balances.spt.amount + ctx.accounts.cmn.balances_locked.spt.amount;
+        let reward_amount = spt_total
+            .checked_mul(ctx.accounts.cmn.vendor.total)
+            .unwrap()
+            .checked_div(ctx.accounts.cmn.vendor.pool_token_supply)
+            .unwrap();
+        assert!(reward_amount > 0);
 
-        match ctx.accounts.vendor.kind.clone() {
-            RewardVendorKind::Unlocked => claim_unlocked_reward(ctx),
+        // Vend reward to the member.
+        let seeds = &[
+            ctx.accounts.cmn.registrar.to_account_info().key.as_ref(),
+            ctx.accounts.cmn.vendor.to_account_info().key.as_ref(),
+            &[ctx.accounts.cmn.vendor.nonce],
+        ];
+        let signer = &[&seeds[..]];
+        let cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.cmn.token_program.clone(),
+            token::Transfer {
+                to: ctx.accounts.token.to_account_info(),
+                from: ctx.accounts.cmn.vault.to_account_info(),
+                authority: ctx.accounts.cmn.vendor_signer.to_account_info(),
+            },
+            signer,
+        );
+        token::transfer(cpi_ctx, reward_amount)?;
+
+        // Update member as having processed the reward.
+        let member = &mut ctx.accounts.cmn.member;
+        member.rewards_cursor = ctx.accounts.cmn.vendor.reward_event_q_cursor + 1;
+
+        Ok(())
+    }
+
+    #[access_control(reward_eligible(&ctx.accounts.cmn))]
+    pub fn claim_reward_locked<'a, 'b, 'c, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, ClaimRewardLocked<'info>>,
+        nonce: u8,
+    ) -> Result<(), Error> {
+        let (end_ts, period_count) = match ctx.accounts.cmn.vendor.kind {
+            RewardVendorKind::Unlocked => return Err(ErrorCode::ExpectedLockedVendor.into()),
             RewardVendorKind::Locked {
                 end_ts,
                 period_count,
-            } => claim_locked_reward(ctx, end_ts, period_count),
-        }
+            } => (end_ts, period_count),
+        };
+        // Lockup program requires the timestamp to be >= clock's timestamp.
+        // So update if the time has already passed. 60 seconds is arbitrary.
+        let end_ts = match end_ts <= ctx.accounts.cmn.clock.unix_timestamp + 60 {
+            false => end_ts,
+            true => ctx.accounts.cmn.clock.unix_timestamp + 60,
+        };
+
+        // Calculate reward distribution.
+        let spt_total =
+            ctx.accounts.cmn.balances.spt.amount + ctx.accounts.cmn.balances_locked.spt.amount;
+        let reward_amount = spt_total
+            .checked_mul(ctx.accounts.cmn.vendor.total)
+            .unwrap()
+            .checked_div(ctx.accounts.cmn.vendor.pool_token_supply)
+            .unwrap();
+        assert!(reward_amount > 0);
+
+        // Vend reward to the member by creating a lockup account.
+        let seeds = &[
+            ctx.accounts.cmn.registrar.to_account_info().key.as_ref(),
+            ctx.accounts.cmn.vendor.to_account_info().key.as_ref(),
+            &[ctx.accounts.cmn.vendor.nonce],
+        ];
+        let signer = &[&seeds[..]];
+        let mut remaining_accounts: &[AccountInfo] = ctx.remaining_accounts;
+
+        let cpi_program = ctx.accounts.lockup_program.clone();
+        let cpi_accounts =
+            CreateVesting::try_accounts(ctx.accounts.lockup_program.key, &mut remaining_accounts)?;
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        serum_lockup::cpi::create_vesting(
+            cpi_ctx,
+            ctx.accounts.cmn.member.beneficiary,
+            end_ts,
+            period_count,
+            reward_amount,
+            nonce,
+        )
+        .map_err(Into::into)
     }
 
     pub fn expire_reward(ctx: Context<ExpireReward>) -> Result<(), Error> {
@@ -500,46 +580,18 @@ mod registry {
     }
 }
 
-fn claim_unlocked_reward(ctx: Context<ClaimReward>) -> Result<(), Error> {
-    let spt_total = ctx.accounts.balances.spt.amount + ctx.accounts.balances_locked.spt.amount;
-    let reward_amount = spt_total
-        .checked_mul(ctx.accounts.vendor.total)
-        .unwrap()
-        .checked_div(ctx.accounts.vendor.pool_token_supply)
-        .unwrap();
-    assert!(reward_amount > 0);
-
-    // Vend reward to the member.
-    let seeds = &[
-        ctx.accounts.registrar.to_account_info().key.as_ref(),
-        ctx.accounts.vendor.to_account_info().key.as_ref(),
-        &[ctx.accounts.vendor.nonce],
-    ];
-    let signer = &[&seeds[..]];
-    let cpi_ctx = CpiContext::new_with_signer(
-        ctx.accounts.token_program.clone(),
-        token::Transfer {
-            to: ctx.accounts.token.to_account_info(),
-            from: ctx.accounts.vault.to_account_info(),
-            authority: ctx.accounts.vendor_signer.to_account_info(),
-        },
-        signer,
-    );
-    token::transfer(cpi_ctx, reward_amount)?;
-
-    // Update member as having processed the reward.
-    let member = &mut ctx.accounts.member;
-    member.rewards_cursor = ctx.accounts.vendor.reward_event_q_cursor + 1;
-
-    Ok(())
-}
-
-fn claim_locked_reward(
-    ctx: Context<ClaimReward>,
-    end_ts: i64,
-    period_count: u64,
-) -> Result<(), Error> {
-    // todo
+fn reward_eligible(cmn: &ClaimRewardCommon) -> Result<(), Error> {
+    let vendor = &cmn.vendor;
+    let member = &cmn.member;
+    if vendor.expired {
+        return Err(ErrorCode::VendorExpired.into());
+    }
+    if member.rewards_cursor > vendor.reward_event_q_cursor {
+        return Err(ErrorCode::CursorAlreadyProcessed.into());
+    }
+    if member.last_stake_ts > vendor.start_ts {
+        return Err(ErrorCode::NotStakedDuringDrop.into());
+    }
     Ok(())
 }
 
@@ -891,20 +943,37 @@ impl<'a, 'b, 'c, 'info> From<&mut DropReward<'info>>
 }
 
 #[derive(Accounts)]
-pub struct ClaimReward<'info> {
+pub struct ClaimRewardUnlocked<'info> {
+    cmn: ClaimRewardCommon<'info>,
+    // Account to send reward to.
+    #[account(mut)]
+    token: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ClaimRewardLocked<'info> {
+    cmn: ClaimRewardCommon<'info>,
+    // TODO: assert on the lockup program id once deployed.
+    lockup_program: AccountInfo<'info>,
+}
+
+// Accounts common to both claim reward locked/unlocked instructions.
+#[derive(Accounts)]
+pub struct ClaimRewardCommon<'info> {
+    // Stake instance.
     registrar: ProgramAccount<'info, Registrar>,
 
+    // Member.
     #[account(mut, belongs_to = registrar)]
     member: ProgramAccount<'info, Member>,
     #[account(signer)]
     beneficiary: AccountInfo<'info>,
-    #[account(mut)]
-    token: AccountInfo<'info>,
     #[account("BalanceSandbox::from(&balances) == member.balances")]
     balances: BalanceSandboxAccounts<'info>,
     #[account("BalanceSandbox::from(&balances_locked) == member.balances_locked")]
     balances_locked: BalanceSandboxAccounts<'info>,
 
+    // Vendor.
     #[account(belongs_to = registrar, has_one = vault)]
     vendor: ProgramAccount<'info, RewardVendor>,
     #[account(mut)]
@@ -918,6 +987,7 @@ pub struct ClaimReward<'info> {
     )]
     vendor_signer: AccountInfo<'info>,
 
+    // Misc.
     #[account("token_program.key == &token::ID")]
     token_program: AccountInfo<'info>,
     clock: Sysvar<'info, Clock>,
@@ -1037,31 +1107,6 @@ pub struct PendingWithdrawal {
 }
 
 #[account]
-pub struct RewardVendor {
-    pub registrar: Pubkey,
-    pub vault: Pubkey,
-    pub nonce: u8,
-    pub pool_token_supply: u64,
-    pub reward_event_q_cursor: u32,
-    pub start_ts: i64,
-    pub expiry_ts: i64,
-    pub expiry_receiver: Pubkey,
-    pub total: u64,
-    pub expired: bool,
-    pub kind: RewardVendorKind,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq)]
-pub enum RewardVendorKind {
-    Unlocked,
-    Locked { end_ts: i64, period_count: u64 },
-}
-
-fn spt_signer_seeds<'a>(registrar: &'a Pubkey, nonce: &'a u8) -> [&'a [u8]; 2] {
-    [registrar.as_ref(), bytemuck::bytes_of(nonce)]
-}
-
-#[account]
 pub struct RewardQueue {
     // Invariant: index is position of the next available slot.
     head: u32,
@@ -1117,6 +1162,27 @@ pub struct RewardEvent {
     locked: bool,
 }
 
+#[account]
+pub struct RewardVendor {
+    pub registrar: Pubkey,
+    pub vault: Pubkey,
+    pub nonce: u8,
+    pub pool_token_supply: u64,
+    pub reward_event_q_cursor: u32,
+    pub start_ts: i64,
+    pub expiry_ts: i64,
+    pub expiry_receiver: Pubkey,
+    pub total: u64,
+    pub expired: bool,
+    pub kind: RewardVendorKind,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq)]
+pub enum RewardVendorKind {
+    Unlocked,
+    Locked { end_ts: i64, period_count: u64 },
+}
+
 #[error]
 pub enum ErrorCode {
     #[msg("The given reward queue has already been initialized.")]
@@ -1153,4 +1219,8 @@ pub enum ErrorCode {
     VendorNotYetExpired,
     #[msg("Please collect your reward before otherwise using the program.")]
     RewardsNeedsProcessing,
+    #[msg("Locked reward vendor expected but an unlocked vendor was given.")]
+    ExpectedLockedVendor,
+    #[msg("Unlocked reward vendor expected but a locked vendor was given.")]
+    ExpectedUnlockedVendor,
 }

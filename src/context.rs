@@ -12,7 +12,7 @@ pub struct Context<'a, 'b, 'c, 'info, T> {
     pub remaining_accounts: &'c [AccountInfo<'info>],
 }
 
-impl<'a, 'b, 'c, 'info, T> Context<'a, 'b, 'c, 'info, T> {
+impl<'a, 'b, 'c, 'info, T: Accounts<'info>> Context<'a, 'b, 'c, 'info, T> {
     pub fn new(
         program_id: &'a Pubkey,
         accounts: &'b mut T,

@@ -1,7 +1,5 @@
 const anchor = require("/home/armaniferrante/Documents/code/src/github.com/project-serum/anchor/ts");
 const serumCmn = require("@project-serum/common");
-const Ring = anchor.std.Ring;
-const RingItemDecoder = anchor.std.RingItemDecoder;
 
 async function createBalanceSandbox(
 		provider,

@@ -465,38 +465,6 @@ describe("Lockup and Registry", () => {
 				assert.ok(spt.amount.eq(new anchor.BN(10)));
 		});
 
-/*
-				// TESTING.
-
-				let event = {
-						from: provider.wallet.publicKey,
-//						total: new anchor.BN(1234),
-						vendor: provider.wallet.publicKey,
-//						mint: provider.wallet.publicKey,
-						ts: new anchor.BN(33),
-						locked: false,
-				};
-
-				let r = await registry.account.rewardQueue(rewardQ.publicKey);
-				console.log(r);
-
-				for (let k = 0; k < 500; k += 5) {
-						console.log('iteration', k);
-						event.ts = new anchor.BN(k);
-						await registry.rpc.rewardQueueTest(event, {
-								accounts: {
-										rewardQ: rewardQ.publicKey,
-								},
-						});
-				}
-
-				r = await registry.account.rewardQueue(rewardQ.publicKey);
-				console.log(r);
-				console.log('len', r.events.length);
-
-				// END.
-				*/
-
 		const unlockedVendor = new anchor.web3.Account();
 		const unlockedVendorVault = new anchor.web3.Account();
 		let unlockedVendorSigner = null;
@@ -570,22 +538,24 @@ describe("Lockup and Registry", () => {
 						mint,
 						provider.wallet.publicKey
 				);
-				await registry.rpc.claimReward({
+				await registry.rpc.claimRewardUnlocked({
 						accounts: {
-								registrar: registrar.publicKey,
-
-								member: member.publicKey,
-								beneficiary: provider.wallet.publicKey,
 								token,
-								balances,
-								balancesLocked,
+								cmn: {
+										registrar: registrar.publicKey,
 
-								vendor: unlockedVendor.publicKey,
-								vault: unlockedVendorVault.publicKey,
-								vendorSigner: unlockedVendorSigner,
+										member: member.publicKey,
+										beneficiary: provider.wallet.publicKey,
+										balances,
+										balancesLocked,
 
-								tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
-								clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+										vendor: unlockedVendor.publicKey,
+										vault: unlockedVendorVault.publicKey,
+										vendorSigner: unlockedVendorSigner,
+
+										tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+										clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+								},
 						}
 				});
 
@@ -670,7 +640,58 @@ describe("Lockup and Registry", () => {
 		});
 
 		it('Collects a locked reward', async () => {
-				// todo
+				const vendoredVesting = new anchor.web3.Account();
+				const vendoredVestingVault = new anchor.web3.Account();
+				let [
+						vendoredVestingSigner,
+						nonce,
+				] = await anchor.web3.PublicKey.findProgramAddress(
+						[safe.publicKey.toBuffer(), provider.wallet.publicKey.toBuffer()],
+						lockup.programId
+				);
+				try {
+				await registry.rpc.claimRewardLocked(nonce, {
+						accounts: {
+								lockupProgram: lockup.programId,
+								cmn: {
+										registrar: registrar.publicKey,
+
+										member: member.publicKey,
+										beneficiary: provider.wallet.publicKey,
+										balances,
+										balancesLocked,
+
+										vendor: lockedVendor.publicKey,
+										vault: lockedVendorVault.publicKey,
+										vendorSigner: lockedVendorSigner,
+
+										tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+										clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+								},
+						},
+						remainingAccounts: lockup.instruction.createVesting.accounts({
+								vesting: vendoredVesting.publicKey,
+								safe: safe.publicKey,
+								vault: vendoredVestingVault.publicKey,
+								depositor: lockedVendorVault.publicKey,
+								depositorAuthority: lockedVendorSigner,
+								tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+								rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+								clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+						}),
+						signers: [vendoredVesting, vendoredVestingVault],
+						instructions: [
+								await lockup.account.vesting.createInstruction(vendoredVesting),
+								...(await serumCmn.createTokenAccountInstrs(
+										provider,
+										vendoredVestingVault.publicKey,
+										mint,
+										vendoredVestingSigner,
+								)),
+						],
+						__private: { logAccounts: true },
+				});
+				} catch(err) {console.log('err', err)}
 		});
 
 		const pendingWithdrawal = new anchor.web3.Account();

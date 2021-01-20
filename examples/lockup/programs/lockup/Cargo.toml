@@ -1,12 +1,12 @@
 [package]
-name = "lockup"
+name = "serum-lockup"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2018"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "lockup"
+name = "serum_lockup"
 
 [features]
 no-entrypoint = []

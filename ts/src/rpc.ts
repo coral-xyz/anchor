@@ -1,6 +1,7 @@
 import camelCase from "camelcase";
 import {
   Account,
+	AccountMeta,
   PublicKey,
   ConfirmOptions,
   SystemProgram,
@@ -86,6 +87,7 @@ export type RpcOptions = ConfirmOptions;
 type RpcContext = {
   // Accounts the instruction will use.
   accounts?: RpcAccounts;
+	remainingAccounts?: AccountMeta[];
   // Instructions to run *before* the specified rpc instruction.
   instructions?: TransactionInstruction[];
   // Accounts that must sign the transaction.
@@ -159,6 +161,11 @@ export class RpcFactory {
       validateInstruction(idlIx, ...args);
 
       const keys = RpcFactory.accountsArray(ctx.accounts, idlIx.accounts);
+
+			if (ctx.remainingAccounts !== undefined) {
+				keys.push(...ctx.remainingAccounts);
+			}
+
       if (ctx.__private && ctx.__private.logAccounts) {
         console.log("Outoing account metas:", keys);
       }
@@ -168,6 +175,11 @@ export class RpcFactory {
         data: coder.instruction.encode(toInstruction(idlIx, ...ixArgs)),
       });
     };
+
+		// Utility fn for ordering the accounts for this instruction.
+		ix['accounts'] = (accs: RpcAccounts) => {
+			return RpcFactory.accountsArray(accs, idlIx.accounts);
+		}
 
     return ix;
   }
@@ -212,6 +224,7 @@ export class RpcFactory {
         const txSig = await provider.send(tx, ctx.signers, ctx.options);
         return txSig;
       } catch (err) {
+				console.log('pretranslate', err);
         let translatedErr = translateError(idlErrors, err);
         if (err === null) {
           throw err;
