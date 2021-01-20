@@ -224,8 +224,11 @@ pub fn generate_constraint_signer(f: &Field, _c: &ConstraintSigner) -> proc_macr
         _ => panic!("Invalid syntax: signer cannot be specified."),
     };
     quote! {
-        if !#info.is_signer {
-            return Err(ProgramError::MissingRequiredSignature);
+        // Don't enforce on CPI, since usually a program is signing.
+        if cfg!(not(feature = "cpi")) {
+            if !#info.is_signer {
+                return Err(ProgramError::MissingRequiredSignature);
+            }
         }
     }
 }

@@ -59,12 +59,12 @@ pub fn parse(program_mod: syn::ItemMod) -> Program {
 fn extract_ident(path_ty: &syn::PatType) -> &proc_macro2::Ident {
     let p = match &*path_ty.ty {
         syn::Type::Path(p) => &p.path,
-        _ => panic!("1invalid syntax"),
+        _ => panic!("invalid syntax"),
     };
     let segment = p.segments.first().unwrap();
     let generic_args = match &segment.arguments {
         syn::PathArguments::AngleBracketed(args) => args,
-        _ => panic!("2invalid syntax"),
+        _ => panic!("invalid syntax"),
     };
     let generic_ty = generic_args
         .args

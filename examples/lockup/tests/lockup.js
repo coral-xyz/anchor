@@ -530,6 +530,13 @@ describe("Lockup and Registry", () => {
 				assert.ok(vendorAccount.total.eq(rewardAmount));
 				assert.ok(vendorAccount.expired === false);
 				assert.deepEqual(vendorAccount.kind, rewardKind);
+
+				const rewardQAccount = await registry.account.rewardQueue(rewardQ.publicKey);
+				assert.ok(rewardQAccount.head === 1);
+				assert.ok(rewardQAccount.tail === 0);
+				const e = rewardQAccount.events[0];
+				assert.ok(e.vendor.equals(unlockedVendor.publicKey));
+				assert.equal(e.locked, false);
 		});
 
 		it('Collects an unlocked reward', async () => {
@@ -636,7 +643,15 @@ describe("Lockup and Registry", () => {
 				assert.ok(vendorAccount.expiryReceiver.equals(provider.wallet.publicKey));
 				assert.ok(vendorAccount.total.eq(rewardAmount));
 				assert.ok(vendorAccount.expired === false);
+				assert.ok(vendorAccount.cursor === 0);
 				assert.equal(JSON.stringify(vendorAccount.kind), JSON.stringify(rewardKind));
+
+				const rewardQAccount = await registry.account.rewardQueue(rewardQ.publicKey);
+				assert.ok(rewardQAccount.head === 2);
+				assert.ok(rewardQAccount.tail === 0);
+				const e = rewardQAccount.events[1];
+				assert.ok(e.vendor.equals(unlockedVendor.publicKey));
+				assert.ok(e.locked === true);
 		});
 
 		it('Collects a locked reward', async () => {
@@ -649,6 +664,20 @@ describe("Lockup and Registry", () => {
 						[safe.publicKey.toBuffer(), provider.wallet.publicKey.toBuffer()],
 						lockup.programId
 				);
+				const remainingAccounts = lockup.instruction.createVesting.accounts({
+						vesting: vendoredVesting.publicKey,
+						safe: safe.publicKey,
+						vault: vendoredVestingVault.publicKey,
+						depositor: lockedVendorVault.publicKey,
+						depositorAuthority: lockedVendorSigner,
+						tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+						rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+						clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+				})
+				// Change the signer status on the vendor signer since it's signed by the program, not the
+				// client.
+							.map(meta => meta.pubkey === lockedVendorSigner ? { ...meta, isSigner: false } : meta);
+
 				try {
 				await registry.rpc.claimRewardLocked(nonce, {
 						accounts: {
@@ -669,16 +698,7 @@ describe("Lockup and Registry", () => {
 										clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
 								},
 						},
-						remainingAccounts: lockup.instruction.createVesting.accounts({
-								vesting: vendoredVesting.publicKey,
-								safe: safe.publicKey,
-								vault: vendoredVestingVault.publicKey,
-								depositor: lockedVendorVault.publicKey,
-								depositorAuthority: lockedVendorSigner,
-								tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
-								rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-								clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
-						}),
+						remainingAccounts,
 						signers: [vendoredVesting, vendoredVestingVault],
 						instructions: [
 								await lockup.account.vesting.createInstruction(vendoredVesting),
@@ -689,7 +709,6 @@ describe("Lockup and Registry", () => {
 										vendoredVestingSigner,
 								)),
 						],
-						__private: { logAccounts: true },
 				});
 				} catch(err) {console.log('err', err)}
 		});

@@ -224,9 +224,8 @@ export class RpcFactory {
         const txSig = await provider.send(tx, ctx.signers, ctx.options);
         return txSig;
       } catch (err) {
-				console.log('pretranslate', err);
         let translatedErr = translateError(idlErrors, err);
-        if (err === null) {
+        if (translatedErr === null) {
           throw err;
         }
         throw translatedErr;

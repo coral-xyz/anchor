@@ -5,7 +5,7 @@
 
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program_option::COption;
-use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
+use anchor_spl::token::{self, Mint, TokenAccount, Transfer};
 use serum_lockup::CreateVesting;
 use std::convert::Into;
 
@@ -432,27 +432,27 @@ mod registry {
         // Transfer funds into the vendor's vault.
         token::transfer(ctx.accounts.into(), total)?;
 
+        // Add the event to the reward queue.
+        let reward_q = &mut ctx.accounts.reward_event_q;
+        let cursor = reward_q.append(RewardEvent {
+            vendor: *ctx.accounts.vendor.to_account_info().key,
+            ts: ctx.accounts.clock.unix_timestamp,
+            locked: kind != RewardVendorKind::Unlocked,
+        })?;
+
         // Initialize the vendor.
         let vendor = &mut ctx.accounts.vendor;
         vendor.registrar = *ctx.accounts.registrar.to_account_info().key;
         vendor.vault = *ctx.accounts.vendor_vault.to_account_info().key;
         vendor.nonce = nonce;
         vendor.pool_token_supply = ctx.accounts.pool_mint.supply;
-        vendor.reward_event_q_cursor = ctx.accounts.reward_event_q.head;
+        vendor.reward_event_q_cursor = cursor;
         vendor.start_ts = ctx.accounts.clock.unix_timestamp;
         vendor.expiry_ts = expiry_ts;
         vendor.expiry_receiver = expiry_receiver;
         vendor.total = total;
         vendor.expired = false;
         vendor.kind = kind.clone();
-
-        // Add the event to the reward queue.
-        let reward_q = &mut ctx.accounts.reward_event_q;
-        reward_q.append(RewardEvent {
-            vendor: *vendor.to_account_info().key,
-            ts: ctx.accounts.clock.unix_timestamp,
-            locked: kind != RewardVendorKind::Unlocked,
-        })?;
 
         Ok(())
     }
@@ -906,6 +906,7 @@ pub struct DropReward<'info> {
     // Staking instance.
     #[account(has_one = reward_event_q, has_one = pool_mint)]
     registrar: ProgramAccount<'info, Registrar>,
+    #[account(mut)]
     reward_event_q: ProgramAccount<'info, RewardQueue>,
     pool_mint: CpiAccount<'info, Mint>,
 
@@ -1119,7 +1120,9 @@ pub struct RewardQueue {
 }
 
 impl RewardQueue {
-    pub fn append(&mut self, event: RewardEvent) -> Result<(), Error> {
+    pub fn append(&mut self, event: RewardEvent) -> Result<u32, Error> {
+        let cursor = self.head;
+
         // Insert into next available slot.
         let h_idx = self.index_of(self.head);
         self.events[h_idx] = event;
@@ -1131,7 +1134,7 @@ impl RewardQueue {
         }
         self.head += 1;
 
-        Ok(())
+        Ok(cursor)
     }
 
     pub fn index_of(&self, counter: u32) -> usize {
