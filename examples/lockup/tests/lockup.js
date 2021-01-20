@@ -282,7 +282,7 @@ describe("Lockup and Registry", () => {
 		const withdrawalTimelock = new anchor.BN(5);
 		const maxStake = new anchor.BN('1000000000000000000');
 		const stakeRate = new anchor.BN(2);
-		const rewardQLen = 200;
+		const rewardQLen = 100;
 		let registrarAccount = null;
 		let registrarSigner = null;
 		let nonce = null;
@@ -317,7 +317,7 @@ describe("Lockup and Registry", () => {
 								signers: [registrar, rewardQ],
 								instructions: [
 										await registry.account.registrar.createInstruction(registrar),
-										await registry.account.rewardQueue.createInstruction(rewardQ, 1000000),
+										await registry.account.rewardQueue.createInstruction(rewardQ, 8250),
 								],
 						},
 				);

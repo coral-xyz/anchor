@@ -165,7 +165,6 @@ mod registry {
         &ctx.accounts.member,
         &ctx.accounts.balances,
         &ctx.accounts.balances_locked,
-        &ctx.accounts.registrar,
     ))]
     pub fn stake(ctx: Context<Stake>, spt_amount: u64, balance_id: Pubkey) -> Result<(), Error> {
         // Choose balances (locked or unlocked) based on balance_id.
@@ -230,7 +229,6 @@ mod registry {
         &ctx.accounts.member,
         &ctx.accounts.balances,
         &ctx.accounts.balances_locked,
-        &ctx.accounts.registrar,
     ))]
     pub fn start_unstake(
         ctx: Context<StartUnstake>,
@@ -548,13 +546,30 @@ fn claim_locked_reward(
 // Asserts the user calling the `Stake` instruction has no rewards available
 // in the reward queue.
 pub fn no_available_rewards<'info>(
-    reward_q: &AccountInfo<'info>,
+    reward_q: &ProgramAccount<'info, RewardQueue>,
     member: &ProgramAccount<'info, Member>,
     balances: &BalanceSandboxAccounts<'info>,
     balances_locked: &BalanceSandboxAccounts<'info>,
-    registrar: &ProgramAccount<'info, Registrar>,
 ) -> Result<(), Error> {
-    // todo
+    let mut cursor = member.rewards_cursor;
+
+    // If the member's cursor is less then the tail, then the ring buffer has
+    // overwritten those entries, so jump to the tail.
+    let tail = reward_q.tail();
+    if cursor < tail {
+        cursor = tail;
+    }
+
+    while cursor < reward_q.head() {
+        let r_event = reward_q.get(cursor);
+        if member.last_stake_ts < r_event.ts {
+            if balances.spt.amount > 0 || balances_locked.spt.amount > 0 {
+                return Err(ErrorCode::RewardsNeedsProcessing.into());
+            }
+        }
+        cursor += 1;
+    }
+
     Ok(())
 }
 
@@ -691,8 +706,7 @@ pub struct Stake<'info> {
     // Global accounts for the staking instance.
     #[account(has_one = pool_mint, has_one = reward_event_q)]
     registrar: ProgramAccount<'info, Registrar>,
-    //    #[account(owner = program)]
-    reward_event_q: AccountInfo<'info>,
+    reward_event_q: ProgramAccount<'info, RewardQueue>,
     #[account(mut)]
     pool_mint: CpiAccount<'info, Mint>,
 
@@ -733,8 +747,7 @@ pub struct Stake<'info> {
 pub struct StartUnstake<'info> {
     // Stake instance globals.
     registrar: ProgramAccount<'info, Registrar>,
-    // #[account(owner = program)]
-    reward_event_q: AccountInfo<'info>,
+    reward_event_q: ProgramAccount<'info, RewardQueue>,
     #[account(mut)]
     pool_mint: AccountInfo<'info>,
 
@@ -1083,6 +1096,18 @@ impl RewardQueue {
     pub fn capacity(&self) -> usize {
         self.events.len()
     }
+
+    pub fn get(&self, cursor: u32) -> &RewardEvent {
+        &self.events[cursor as usize % self.capacity()]
+    }
+
+    pub fn head(&self) -> u32 {
+        self.head
+    }
+
+    pub fn tail(&self) -> u32 {
+        self.tail
+    }
 }
 
 #[derive(Default, Clone, Copy, Debug, AnchorSerialize, AnchorDeserialize)]
@@ -1126,4 +1151,6 @@ pub enum ErrorCode {
     NotStakedDuringDrop,
     #[msg("The vendor is not yet eligible for expiry.")]
     VendorNotYetExpired,
+    #[msg("Please collect your reward before otherwise using the program.")]
+    RewardsNeedsProcessing,
 }
