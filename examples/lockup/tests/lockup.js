@@ -565,7 +565,38 @@ describe("Lockup and Registry", () => {
 		});
 
 		it('Collects an unlocked reward', async () => {
-				// todo
+				const token = await serumCmn.createTokenAccount(
+						provider,
+						mint,
+						provider.wallet.publicKey
+				);
+				await registry.rpc.claimReward({
+						accounts: {
+								registrar: registrar.publicKey,
+
+								member: member.publicKey,
+								beneficiary: provider.wallet.publicKey,
+								token,
+								balances,
+								balancesLocked,
+
+								vendor: unlockedVendor.publicKey,
+								vault: unlockedVendorVault.publicKey,
+								vendorSigner: unlockedVendorSigner,
+
+								tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+								clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+						}
+				});
+
+				let tokenAccount = await serumCmn.getTokenAccount(
+						provider,
+						token,
+				);
+				assert.ok(tokenAccount.amount.eq(new anchor.BN(200)));
+
+				const memberAccount = await registry.account.member(member.publicKey);
+				assert.ok(memberAccount.rewardsCursor == 1);
 		});
 
 		it('Drops a locked reward', async () => {

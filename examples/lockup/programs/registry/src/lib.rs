@@ -89,8 +89,8 @@ mod registry {
         let member = &mut ctx.accounts.member;
         member.registrar = *ctx.accounts.registrar.to_account_info().key;
         member.beneficiary = *ctx.accounts.beneficiary.key;
-        member.balances = ctx.accounts.balances.clone().into();
-        member.balances_locked = ctx.accounts.balances_locked.clone().into();
+        member.balances = (&ctx.accounts.balances).into();
+        member.balances_locked = (&ctx.accounts.balances_locked).into();
         member.nonce = nonce;
 
         // Set delegate on staking tokens.
@@ -453,27 +453,72 @@ mod registry {
     }
 
     pub fn claim_reward(ctx: Context<ClaimReward>) -> Result<(), Error> {
-        // todo
-        Ok(())
+        if ctx.accounts.vendor.expired {
+            return Err(ErrorCode::VendorExpired.into());
+        }
+        if ctx.accounts.member.rewards_cursor > ctx.accounts.vendor.reward_event_q_cursor {
+            return Err(ErrorCode::CursorAlreadyProcessed.into());
+        }
+        if ctx.accounts.member.last_stake_ts > ctx.accounts.vendor.start_ts {
+            return Err(ErrorCode::NotStakedDuringDrop.into());
+        }
+
+        match ctx.accounts.vendor.kind.clone() {
+            RewardVendorKind::Unlocked => claim_unlocked_reward(ctx),
+            RewardVendorKind::Locked {
+                end_ts,
+                period_count,
+            } => claim_locked_reward(ctx, end_ts, period_count),
+        }
     }
 
     pub fn expire_reward(ctx: Context<ExpireReward>) -> Result<(), Error> {
         // todo
         Ok(())
     }
+}
 
-    pub fn reward_queue_test(
-        ctx: Context<RewardQueueTest>,
-        event: RewardEvent,
-    ) -> Result<(), Error> {
-        let ring = &mut ctx.accounts.reward_q;
-        /*        ring.events.push(event);
-        ring.events.push(event);
-        ring.events.push(event);
-        ring.events.push(event);
-        ring.events.push(event);*/
-        Ok(())
-    }
+fn claim_unlocked_reward(ctx: Context<ClaimReward>) -> Result<(), Error> {
+    let spt_total = ctx.accounts.balances.spt.amount + ctx.accounts.balances_locked.spt.amount;
+    let reward_amount = spt_total
+        .checked_mul(ctx.accounts.vendor.total)
+        .unwrap()
+        .checked_div(ctx.accounts.vendor.pool_token_supply)
+        .unwrap();
+    assert!(reward_amount > 0);
+
+    // Vend reward to the member.
+    let seeds = &[
+        ctx.accounts.registrar.to_account_info().key.as_ref(),
+        ctx.accounts.vendor.to_account_info().key.as_ref(),
+        &[ctx.accounts.vendor.nonce],
+    ];
+    let signer = &[&seeds[..]];
+    let cpi_ctx = CpiContext::new_with_signer(
+        ctx.accounts.token_program.clone(),
+        token::Transfer {
+            to: ctx.accounts.token.to_account_info(),
+            from: ctx.accounts.vault.to_account_info(),
+            authority: ctx.accounts.vendor_signer.to_account_info(),
+        },
+        signer,
+    );
+    token::transfer(cpi_ctx, reward_amount)?;
+
+    // Update member as having processed the reward.
+    let member = &mut ctx.accounts.member;
+    member.rewards_cursor = ctx.accounts.vendor.reward_event_q_cursor + 1;
+
+    Ok(())
+}
+
+fn claim_locked_reward(
+    ctx: Context<ClaimReward>,
+    end_ts: i64,
+    period_count: u64,
+) -> Result<(), Error> {
+    // todo
+    Ok(())
 }
 
 // Asserts the user calling the `Stake` instruction has no rewards available
@@ -554,8 +599,8 @@ pub struct BalanceSandboxAccounts<'info> {
     vault_pw: CpiAccount<'info, TokenAccount>,
 }
 
-impl<'info> From<BalanceSandboxAccounts<'info>> for BalanceSandbox {
-    fn from(accs: BalanceSandboxAccounts<'info>) -> Self {
+impl<'info> From<&BalanceSandboxAccounts<'info>> for BalanceSandbox {
+    fn from(accs: &BalanceSandboxAccounts<'info>) -> Self {
         Self {
             balance_id: *accs.balance_id.key,
             spt: *accs.spt.to_account_info().key,
@@ -632,20 +677,9 @@ pub struct Stake<'info> {
     member: ProgramAccount<'info, Member>,
     #[account(signer)]
     beneficiary: AccountInfo<'info>,
-
-    // TODO: Replace these two with a hashmap mapping balance id -> accounts
-    //       keyed on the balance id. Will make the validation cleaner potentially?
-    #[account(
-        "&balances.spt.owner == member_signer.key",
-        "balances.spt.mint == registrar.pool_mint",
-        "balances.vault.mint == registrar.mint"
-    )]
+    #[account("BalanceSandbox::from(&balances) == member.balances")]
     balances: BalanceSandboxAccounts<'info>,
-    #[account(
-        "&balances_locked.spt.owner == member_signer.key",
-        "balances_locked.spt.mint == registrar.pool_mint",
-        "balances_locked.vault.mint == registrar.mint"
-    )]
+    #[account("BalanceSandbox::from(&balances_locked) == member.balances_locked")]
     balances_locked: BalanceSandboxAccounts<'info>,
 
     // Programmatic signers.
@@ -820,8 +854,36 @@ impl<'a, 'b, 'c, 'info> From<&mut DropReward<'info>>
 }
 
 #[derive(Accounts)]
-pub struct ClaimReward {
-    // todo
+pub struct ClaimReward<'info> {
+    registrar: ProgramAccount<'info, Registrar>,
+
+    #[account(mut, belongs_to = registrar)]
+    member: ProgramAccount<'info, Member>,
+    #[account(signer)]
+    beneficiary: AccountInfo<'info>,
+    #[account(mut)]
+    token: AccountInfo<'info>,
+    #[account("BalanceSandbox::from(&balances) == member.balances")]
+    balances: BalanceSandboxAccounts<'info>,
+    #[account("BalanceSandbox::from(&balances_locked) == member.balances_locked")]
+    balances_locked: BalanceSandboxAccounts<'info>,
+
+    #[account(belongs_to = registrar, has_one = vault)]
+    vendor: ProgramAccount<'info, RewardVendor>,
+    #[account(mut)]
+    vault: AccountInfo<'info>,
+    #[account(
+				seeds = [
+						registrar.to_account_info().key.as_ref(),
+						vendor.to_account_info().key.as_ref(),
+						&[vendor.nonce],
+				]
+		)]
+    vendor_signer: AccountInfo<'info>,
+
+    #[account("token_program.key == &token::ID")]
+    token_program: AccountInfo<'info>,
+    clock: Sysvar<'info, Clock>,
 }
 
 #[derive(Accounts)]
@@ -878,7 +940,7 @@ pub struct Member {
 // Once controlled by the program, the associated `Member` account's beneficiary
 // can send funds to/from any of the accounts within the sandbox, e.g., to
 // stake.
-#[derive(AnchorSerialize, AnchorDeserialize, Default, Debug, Clone)]
+#[derive(AnchorSerialize, AnchorDeserialize, Default, Debug, Clone, PartialEq)]
 pub struct BalanceSandbox {
     pub balance_id: Pubkey,
     // Staking pool token.
@@ -934,12 +996,6 @@ pub enum RewardVendorKind {
 
 fn spt_signer_seeds<'a>(registrar: &'a Pubkey, nonce: &'a u8) -> [&'a [u8]; 2] {
     [registrar.as_ref(), bytemuck::bytes_of(nonce)]
-}
-
-#[derive(Accounts)]
-pub struct RewardQueueTest<'info> {
-    #[account(mut)]
-    pub reward_q: ProgramAccount<'info, RewardQueue>,
 }
 
 #[account]
@@ -1012,4 +1068,10 @@ pub enum ErrorCode {
     InsufficientReward,
     #[msg("Reward expiry must be after the current clock timestamp.")]
     InvalidExpiry,
+    #[msg("The reward vendor has been expired.")]
+    VendorExpired,
+    #[msg("This reward has already been processed.")]
+    CursorAlreadyProcessed,
+    #[msg("The account was not staked at the time of this reward.")]
+    NotStakedDuringDrop,
 }
