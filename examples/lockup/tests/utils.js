@@ -1,4 +1,4 @@
-const anchor = require("/home/armaniferrante/Documents/code/src/github.com/project-serum/anchor/ts");
+const anchor = require("@project-serum/anchor");
 const serumCmn = require("@project-serum/common");
 
 async function createBalanceSandbox(provider, r, registrySigner, owner) {

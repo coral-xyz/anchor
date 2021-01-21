@@ -13,10 +13,6 @@ no-entrypoint = []
 cpi = ["no-entrypoint"]
 
 [dependencies]
-# anchor-lang = { git = "https://github.com/project-serum/anchor", features = ["derive"] }
-anchor-lang = { path = "/home/armaniferrante/Documents/code/src/github.com/project-serum/anchor", features = ["derive"] }
-anchor-spl = { path = "/home/armaniferrante/Documents/code/src/github.com/project-serum/anchor/spl" }
+anchor-lang = { git = "https://github.com/project-serum/anchor", features = ["derive"] }
+anchor-spl = { git = "https://github.com/project-serum/anchor" }
 serum-lockup = { path = "../lockup", features = ["cpi"] }
-serum-common = {  git = "https://github.com/project-serum/serum-dex", features = ["program"] }
-bytemuck = "1.4.0"
-arrayref = "0.3.6"
