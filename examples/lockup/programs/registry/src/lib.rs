@@ -511,9 +511,9 @@ mod registry {
         };
         // Lockup program requires the timestamp to be >= clock's timestamp.
         // So update if the time has already passed. 60 seconds is arbitrary.
-        let end_ts = match end_ts <= ctx.accounts.cmn.clock.unix_timestamp + 60 {
-            false => end_ts,
-            true => ctx.accounts.cmn.clock.unix_timestamp + 60,
+        let end_ts = match end_ts > ctx.accounts.cmn.clock.unix_timestamp + 60 {
+            true => end_ts,
+            false => ctx.accounts.cmn.clock.unix_timestamp + 60,
         };
 
         // Calculate reward distribution.

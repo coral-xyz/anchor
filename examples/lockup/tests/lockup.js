@@ -587,15 +587,17 @@ describe("Lockup and Registry", () => {
   const lockedVendor = new anchor.web3.Account();
   const lockedVendorVault = new anchor.web3.Account();
   let lockedVendorSigner = null;
+  let lockedRewardAmount = null;
+  let lockedRewardKind = null;
 
   it("Drops a locked reward", async () => {
-    const rewardKind = {
+    lockedRewardKind = {
       locked: {
-        endTs: new anchor.BN(Date.now() / 1000 + 10),
+        endTs: new anchor.BN(Date.now() / 1000 + 70),
         periodCount: new anchor.BN(10),
       },
     };
-    const rewardAmount = new anchor.BN(200);
+    lockedRewardAmount = new anchor.BN(200);
     const expiry = new anchor.BN(Date.now() / 1000 + 5);
     const [
       _vendorSigner,
@@ -607,8 +609,8 @@ describe("Lockup and Registry", () => {
     lockedVendorSigner = _vendorSigner;
 
     await registry.rpc.dropReward(
-      rewardKind,
-      rewardAmount,
+      lockedRewardKind,
+      lockedRewardAmount,
       expiry,
       provider.wallet.publicKey,
       nonce,
@@ -651,12 +653,12 @@ describe("Lockup and Registry", () => {
     assert.ok(vendorAccount.poolTokenSupply.eq(new anchor.BN(10)));
     assert.ok(vendorAccount.expiryTs.eq(expiry));
     assert.ok(vendorAccount.expiryReceiver.equals(provider.wallet.publicKey));
-    assert.ok(vendorAccount.total.eq(rewardAmount));
+    assert.ok(vendorAccount.total.eq(lockedRewardAmount));
     assert.ok(vendorAccount.expired === false);
     assert.ok(vendorAccount.rewardEventQCursor === 1);
     assert.equal(
       JSON.stringify(vendorAccount.kind),
-      JSON.stringify(rewardKind)
+      JSON.stringify(lockedRewardKind)
     );
 
     const rewardQAccount = await registry.account.rewardQueue(
@@ -696,41 +698,53 @@ describe("Lockup and Registry", () => {
         meta.pubkey === lockedVendorSigner ? { ...meta, isSigner: false } : meta
       );
 
-    try {
-      await registry.rpc.claimRewardLocked(nonce, {
-        accounts: {
-          lockupProgram: lockup.programId,
-          cmn: {
-            registrar: registrar.publicKey,
+    await registry.rpc.claimRewardLocked(nonce, {
+      accounts: {
+        lockupProgram: lockup.programId,
+        cmn: {
+          registrar: registrar.publicKey,
 
-            member: member.publicKey,
-            beneficiary: provider.wallet.publicKey,
-            balances,
-            balancesLocked,
+          member: member.publicKey,
+          beneficiary: provider.wallet.publicKey,
+          balances,
+          balancesLocked,
 
-            vendor: lockedVendor.publicKey,
-            vault: lockedVendorVault.publicKey,
-            vendorSigner: lockedVendorSigner,
+          vendor: lockedVendor.publicKey,
+          vault: lockedVendorVault.publicKey,
+          vendorSigner: lockedVendorSigner,
 
-            tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
-            clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
-          },
+          tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
         },
-        remainingAccounts,
-        signers: [vendoredVesting, vendoredVestingVault],
-        instructions: [
-          await lockup.account.vesting.createInstruction(vendoredVesting),
-          ...(await serumCmn.createTokenAccountInstrs(
-            provider,
-            vendoredVestingVault.publicKey,
-            mint,
-            vendoredVestingSigner
-          )),
-        ],
-      });
-    } catch (err) {
-      console.log("err", err);
-    }
+      },
+      remainingAccounts,
+      signers: [vendoredVesting, vendoredVestingVault],
+      instructions: [
+        await lockup.account.vesting.createInstruction(vendoredVesting),
+        ...(await serumCmn.createTokenAccountInstrs(
+          provider,
+          vendoredVestingVault.publicKey,
+          mint,
+          vendoredVestingSigner
+        )),
+      ],
+    });
+
+    const lockupAccount = await lockup.account.vesting(
+      vendoredVesting.publicKey
+    );
+
+    assert.ok(lockupAccount.safe.equals(safe.publicKey));
+    assert.ok(lockupAccount.beneficiary.equals(provider.wallet.publicKey));
+    assert.ok(lockupAccount.mint.equals(mint));
+    assert.ok(lockupAccount.vault.equals(vendoredVestingVault.publicKey));
+    assert.ok(lockupAccount.outstanding.eq(lockedRewardAmount));
+    assert.ok(lockupAccount.startBalance.eq(lockedRewardAmount));
+    assert.ok(lockupAccount.endTs.eq(lockedRewardKind.locked.endTs));
+    assert.ok(
+      lockupAccount.periodCount.eq(lockedRewardKind.locked.periodCount)
+    );
+    assert.ok(lockupAccount.whitelistOwned.eq(new anchor.BN(0)));
   });
 
   const pendingWithdrawal = new anchor.web3.Account();
