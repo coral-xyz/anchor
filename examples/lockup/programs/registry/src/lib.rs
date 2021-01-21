@@ -9,32 +9,32 @@ use anchor_spl::token::{self, Mint, TokenAccount, Transfer};
 use serum_lockup::CreateVesting;
 use std::convert::Into;
 
+#[constructor("v1")]
+pub fn registry<'info>(
+    registry: &mut ProgramAccount<'info, Registry>,
+    lockup_program: Pubkey,
+) -> Result<(), Error> {
+    registry.lockup_program = lockup_program;
+    Ok(())
+}
+
 #[program]
 mod registry {
     use super::*;
 
+    // TODO: needs to be initialized with the lockup program id and safe.
+    //       when receiving locked deposits, needs to check the vault authority
+    //       is created with correct seeds.
+    #[access_control(initialize_accounts(&ctx, nonce))]
     pub fn initialize(
         ctx: Context<Initialize>,
         mint: Pubkey,
         authority: Pubkey,
         nonce: u8,
         withdrawal_timelock: i64,
-        max_stake: u64,
         stake_rate: u64,
         reward_q_len: u32,
     ) -> Result<(), Error> {
-        let vault_authority = Pubkey::create_program_address(
-            &[
-                ctx.accounts.registrar.to_account_info().key.as_ref(),
-                &[nonce],
-            ],
-            ctx.program_id,
-        )
-        .map_err(|_| ErrorCode::InvalidNonce)?;
-        if ctx.accounts.pool_mint.mint_authority != COption::Some(vault_authority) {
-            return Err(ErrorCode::InvalidPoolMintAuthority.into());
-        }
-
         let registrar = &mut ctx.accounts.registrar;
 
         registrar.authority = authority;
@@ -44,7 +44,6 @@ mod registry {
         registrar.stake_rate = stake_rate;
         registrar.reward_event_q = *ctx.accounts.reward_event_q.to_account_info().key;
         registrar.withdrawal_timelock = withdrawal_timelock;
-        registrar.max_stake = max_stake;
 
         let reward_q = &mut ctx.accounts.reward_event_q;
         reward_q
@@ -58,7 +57,6 @@ mod registry {
         ctx: Context<UpdateRegistrar>,
         new_authority: Option<Pubkey>,
         withdrawal_timelock: Option<i64>,
-        max_stake: Option<u64>,
     ) -> Result<(), Error> {
         let registrar = &mut ctx.accounts.registrar;
 
@@ -70,13 +68,10 @@ mod registry {
             registrar.withdrawal_timelock = withdrawal_timelock;
         }
 
-        if let Some(max_stake) = max_stake {
-            registrar.max_stake = max_stake;
-        }
-
         Ok(())
     }
 
+    #[access_control(create_member_accounts(&ctx, nonce))]
     pub fn create_member(ctx: Context<CreateMember>, nonce: u8) -> Result<(), Error> {
         let seeds = &[
             ctx.accounts.registrar.to_account_info().key.as_ref(),
@@ -84,13 +79,6 @@ mod registry {
             &[nonce],
         ];
         let signer = &[&seeds[..]];
-
-        // Check the nonce + signer is correct.
-        let member_signer = Pubkey::create_program_address(seeds, ctx.program_id)
-            .map_err(|_| ErrorCode::InvalidNonce)?;
-        if &member_signer != ctx.accounts.member_signer.to_account_info().key {
-            return Err(ErrorCode::InvalidMemberSigner.into());
-        }
 
         // Initialize member.
         let member = &mut ctx.accounts.member;
@@ -631,13 +619,40 @@ pub fn no_available_rewards<'info>(
 }
 
 #[derive(Accounts)]
+pub struct Constructor<'info> {
+    from: AccountInfo<'info>,
+    #[account(mut)]
+    to: AccountInfo<'info>,
+    base: AccountInfo<'info>,
+    system_program: AccountInfo<'info>,
+    program: AccountInfo<'info>,
+    rent: Sysvar<'info, Rent>,
+}
+
+#[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(init)]
     registrar: ProgramAccount<'info, Registrar>,
-    pool_mint: CpiAccount<'info, Mint>,
     #[account(init)]
     reward_event_q: ProgramAccount<'info, RewardQueue>,
+    pool_mint: CpiAccount<'info, Mint>,
     rent: Sysvar<'info, Rent>,
+}
+
+fn initialize_accounts<'info>(ctx: &Context<Initialize<'info>>, nonce: u8) -> Result<(), Error> {
+    let registrar_signer = Pubkey::create_program_address(
+        &[
+            ctx.accounts.registrar.to_account_info().key.as_ref(),
+            &[nonce],
+        ],
+        ctx.program_id,
+    )
+    .map_err(|_| ErrorCode::InvalidNonce)?;
+    if ctx.accounts.pool_mint.mint_authority != COption::Some(registrar_signer) {
+        return Err(ErrorCode::InvalidPoolMintAuthority.into());
+    }
+    assert!(ctx.accounts.pool_mint.supply == 0);
+    Ok(())
 }
 
 #[derive(Accounts)]
@@ -655,7 +670,6 @@ pub struct CreateMember<'info> {
     member: ProgramAccount<'info, Member>,
     #[account(signer)]
     beneficiary: AccountInfo<'info>,
-    // Must be verified against the user given nonce.
     member_signer: AccountInfo<'info>,
     #[account(
         "balances.balance_id.key == beneficiary.key",
@@ -666,7 +680,7 @@ pub struct CreateMember<'info> {
     )]
     balances: BalanceSandboxAccounts<'info>,
     #[account(
-        // Locked balance_id is unchecked; it's determined by the lockup program.
+        // TODO: CHECK THIS. Locked balance_id is unchecked; it's determined by the lockup program.
         "&balances_locked.spt.owner == member_signer.key",
         "balances_locked.spt.mint == registrar.pool_mint",
         "balances_locked.vault.mint == registrar.mint",
@@ -676,6 +690,22 @@ pub struct CreateMember<'info> {
     #[account("token_program.key == &token::ID")]
     token_program: AccountInfo<'info>,
     rent: Sysvar<'info, Rent>,
+}
+
+fn create_member_accounts(ctx: &Context<CreateMember>, nonce: u8) -> Result<(), Error> {
+    // Check the nonce + signer is correct.
+    let seeds = &[
+        ctx.accounts.registrar.to_account_info().key.as_ref(),
+        ctx.accounts.member.to_account_info().key.as_ref(),
+        &[nonce],
+    ];
+    let member_signer = Pubkey::create_program_address(seeds, ctx.program_id)
+        .map_err(|_| ErrorCode::InvalidNonce)?;
+    if &member_signer != ctx.accounts.member_signer.to_account_info().key {
+        return Err(ErrorCode::InvalidMemberSigner.into());
+    }
+
+    Ok(())
 }
 
 #[derive(Accounts, Clone)]
@@ -717,8 +747,20 @@ pub struct UpdateMember<'info> {
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
+    // RULES FOR LOCKED TRANSFERS:
+    // TODO: implement this.
+    //
+    // * check the depositor authority == member.beneficiary
+    //   if so, then unlocked,
+    //   else locked
+    // * on locked
+    //   * check vesting.beneficiary == member.beneficiary
+    //   * calculate the PDA for the given vesting.
+    //     - seeds = [safe, vesting, vesting.nonce]
+    //   * assert(depositor_authority.key == vesting's pda)
+
     // Lockup whitelist relay interface.
-    dummy_vesting: AccountInfo<'info>,
+    vesting: AccountInfo<'info>,
     #[account(mut)]
     depositor: AccountInfo<'info>,
     #[account(signer)]
@@ -880,7 +922,7 @@ pub struct EndUnstake<'info> {
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
     // Lockup whitelist relay interface.
-    dummy_vesting: AccountInfo<'info>,
+    vesting: AccountInfo<'info>,
     #[account(mut)]
     depositor: AccountInfo<'info>,
     #[account(signer)]
@@ -1030,14 +1072,24 @@ pub struct ExpireReward<'info> {
     clock: Sysvar<'info, Clock>,
 }
 
+// Global state for the Registry program. This is stored at a deterministic
+// address.
+#[account]
+pub struct Registry {
+    /// Address of the lockup program.
+    lockup_program: Pubkey,
+}
+
+impl AccountCtor for Registry {
+    const SIZE: usize = 32;
+}
+
 #[account]
 pub struct Registrar {
     /// Priviledged account.
     pub authority: Pubkey,
     /// Nonce to derive the program-derived address owning the vaults.
     pub nonce: u8,
-    /// The maximum stake per member, denominated in the mint.
-    pub max_stake: u64,
     /// Number of seconds that must pass for a withdrawal to complete.
     pub withdrawal_timelock: i64,
     /// Global event queue for reward vendoring.

@@ -41,6 +41,7 @@ pub use crate::program_account::ProgramAccount;
 pub use crate::sysvar::Sysvar;
 pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::account;
+pub use anchor_attribute_constructor::constructor;
 pub use anchor_attribute_error::error;
 pub use anchor_attribute_program::program;
 pub use anchor_derive_accounts::Accounts;
@@ -125,13 +126,20 @@ pub trait AccountDeserialize: Sized {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError>;
 }
 
+/// Account type that can be constructed by the program.
+pub trait AccountCtor {
+    /// The size of the account to allocate upon construction.
+    const SIZE: usize;
+}
+
 /// The prelude contains all commonly used components of the crate.
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
     pub use super::{
-        access_control, account, error, program, AccountDeserialize, AccountSerialize, Accounts,
-        AccountsExit, AccountsInit, AnchorDeserialize, AnchorSerialize, Context, CpiAccount,
-        CpiContext, ProgramAccount, Sysvar, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        access_control, account, constructor, error, program, AccountCtor, AccountDeserialize,
+        AccountSerialize, Accounts, AccountsExit, AccountsInit, AnchorDeserialize, AnchorSerialize,
+        Context, CpiAccount, CpiContext, ProgramAccount, Sysvar, ToAccountInfo, ToAccountInfos,
+        ToAccountMetas,
     };
 
     pub use borsh;
