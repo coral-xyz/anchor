@@ -1,6 +1,5 @@
 const assert = require("assert");
-//const anchor = require('@project-serum/anchor');
-const anchor = require('/home/armaniferrante/Documents/code/src/github.com/project-serum/anchor/ts');
+const anchor = require('@project-serum/anchor');
 const serumCmn = require("@project-serum/common");
 const TokenInstructions = require("@project-serum/serum").TokenInstructions;
 const utils = require("./utils");
@@ -14,7 +13,7 @@ describe("Lockup and Registry", () => {
   const lockup = anchor.workspace.Lockup;
   const registry = anchor.workspace.Registry;
 
-	let safe = null;
+  let lockupAddress = null;
 
   let mint = null;
   let god = null;
@@ -29,50 +28,50 @@ describe("Lockup and Registry", () => {
   });
 
   it("Is initialized!", async () => {
-		await lockup.state.rpc.new(provider.wallet.publicKey);
+    await lockup.state.rpc.new(provider.wallet.publicKey);
 
-		safe = await lockup.state.address();
-		const safeAccount = await lockup.state();
+    lockupAddress = await lockup.state.address();
+    const lockupAccount = await lockup.state();
 
-    assert.ok(safeAccount.authority.equals(provider.wallet.publicKey));
-		assert.ok(safeAccount.whitelist.length === 5);
-		safeAccount.whitelist.forEach(e => {
-				assert.ok(e.programId.equals(new anchor.web3.PublicKey()));
-		});
+    assert.ok(lockupAccount.authority.equals(provider.wallet.publicKey));
+    assert.ok(lockupAccount.whitelist.length === 5);
+    lockupAccount.whitelist.forEach((e) => {
+      assert.ok(e.programId.equals(new anchor.web3.PublicKey()));
+    });
   });
 
-		it('Deletes the default whitelisted addresses', async () => {
-				const defaultEntry = { 	programId: new anchor.web3.PublicKey() };
-				await lockup.rpc.whitelistDelete(defaultEntry, {
-						accounts: {
-								authority: provider.wallet.publicKey,
-								safe,
-						},
-				});
-		});
+  it("Deletes the default whitelisted addresses", async () => {
+    const defaultEntry = { programId: new anchor.web3.PublicKey() };
+    await lockup.rpc.whitelistDelete(defaultEntry, {
+      accounts: {
+        authority: provider.wallet.publicKey,
+        lockup: lockupAddress,
+      },
+    });
+  });
 
   it("Sets a new authority", async () => {
     const newAuthority = new anchor.web3.Account();
     await lockup.rpc.setAuthority(newAuthority.publicKey, {
       accounts: {
         authority: provider.wallet.publicKey,
-        safe,
+        lockup: lockupAddress,
       },
     });
 
-    let safeAccount = await lockup.state();
-    assert.ok(safeAccount.authority.equals(newAuthority.publicKey));
+    let lockupAccount = await lockup.state();
+    assert.ok(lockupAccount.authority.equals(newAuthority.publicKey));
 
     await lockup.rpc.setAuthority(provider.wallet.publicKey, {
       accounts: {
         authority: newAuthority.publicKey,
-        safe,
+        lockup: lockupAddress,
       },
       signers: [newAuthority],
     });
 
-    safeAccount = await lockup.state();
-    assert.ok(safeAccount.authority.equals(provider.wallet.publicKey));
+    lockupAccount = await lockup.state();
+    assert.ok(lockupAccount.authority.equals(provider.wallet.publicKey));
   });
 
   let e0 = null;
@@ -97,24 +96,24 @@ describe("Lockup and Registry", () => {
 
     const accounts = {
       authority: provider.wallet.publicKey,
-      safe,
+      lockup: lockupAddress,
     };
 
     await lockup.rpc.whitelistAdd(e0, { accounts });
 
-    let safeAccount = await lockup.state();
+    let lockupAccount = await lockup.state();
 
-    assert.ok(safeAccount.whitelist.length === 1);
-    assert.deepEqual(safeAccount.whitelist, [e0]);
+    assert.ok(lockupAccount.whitelist.length === 1);
+    assert.deepEqual(lockupAccount.whitelist, [e0]);
 
     await lockup.rpc.whitelistAdd(e1, { accounts });
     await lockup.rpc.whitelistAdd(e2, { accounts });
     await lockup.rpc.whitelistAdd(e3, { accounts });
     await lockup.rpc.whitelistAdd(e4, { accounts });
 
-    safeAccount = await lockup.state();
+    lockupAccount = await lockup.state();
 
-    assert.deepEqual(safeAccount.whitelist, [e0, e1, e2, e3, e4]);
+    assert.deepEqual(lockupAccount.whitelist, [e0, e1, e2, e3, e4]);
 
     await assert.rejects(
       async () => {
@@ -132,11 +131,11 @@ describe("Lockup and Registry", () => {
     await lockup.rpc.whitelistDelete(e0, {
       accounts: {
         authority: provider.wallet.publicKey,
-        safe,
+        lockup: lockupAddress,
       },
     });
-    let safeAccount = await lockup.state();
-    assert.deepEqual(safeAccount.whitelist, [e1, e2, e3, e4]);
+    let lockupAccount = await lockup.state();
+    assert.deepEqual(lockupAccount.whitelist, [e1, e2, e3, e4]);
   });
 
   const vesting = new anchor.web3.Account();
@@ -154,7 +153,7 @@ describe("Lockup and Registry", () => {
       _vestingSigner,
       nonce,
     ] = await anchor.web3.PublicKey.findProgramAddress(
-      [safe.toBuffer(), vesting.publicKey.toBuffer()],
+      [vesting.publicKey.toBuffer()],
       lockup.programId
     );
     vestingSigner = _vestingSigner;
@@ -168,7 +167,6 @@ describe("Lockup and Registry", () => {
       {
         accounts: {
           vesting: vesting.publicKey,
-          safe,
           vault: vault.publicKey,
           depositor: god,
           depositorAuthority: provider.wallet.publicKey,
@@ -191,7 +189,6 @@ describe("Lockup and Registry", () => {
 
     vestingAccount = await lockup.account.vesting(vesting.publicKey);
 
-    assert.ok(vestingAccount.safe.equals(safe));
     assert.ok(vestingAccount.beneficiary.equals(provider.wallet.publicKey));
     assert.ok(vestingAccount.mint.equals(mint));
     assert.ok(vestingAccount.grantor.equals(provider.wallet.publicKey));
@@ -209,7 +206,6 @@ describe("Lockup and Registry", () => {
       async () => {
         await lockup.rpc.withdraw(new anchor.BN(100), {
           accounts: {
-            safe,
             vesting: vesting.publicKey,
             beneficiary: provider.wallet.publicKey,
             token: god,
@@ -241,12 +237,11 @@ describe("Lockup and Registry", () => {
 
     await lockup.rpc.withdraw(new anchor.BN(100), {
       accounts: {
-        safe,
         vesting: vesting.publicKey,
         beneficiary: provider.wallet.publicKey,
         token,
         vault: vestingAccount.vault,
-				vestingSigner,
+        vestingSigner,
         tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       },
@@ -273,7 +268,7 @@ describe("Lockup and Registry", () => {
   let registrarAccount = null;
   let registrarSigner = null;
   let nonce = null;
-		let poolMint = null;
+  let poolMint = null;
 
   it("Creates registry genesis", async () => {
     const [
@@ -288,20 +283,22 @@ describe("Lockup and Registry", () => {
     poolMint = await serumCmn.createMint(provider, registrarSigner);
   });
 
-	it('Initializes registry\'s global state', async () => {
-	    await registry.state.rpc.new(lockup.programId, safe);
+  it("Initializes registry's global state", async () => {
+    await registry.state.rpc.new(lockup.programId);
 
-			const state = await registry.state();
-			assert.ok(state.lockupProgram.equals(lockup.programId));
+    const state = await registry.state();
+    assert.ok(state.lockupProgram.equals(lockup.programId));
 
-			// Should not allow a second initializatoin.
-			await assert.rejects(
-					async () => {
-							await registry.state.rpc.new(lockup.programId);
-					}, (err) => {
-							return true;
-					});
-	});
+    // Should not allow a second initializatoin.
+    await assert.rejects(
+      async () => {
+        await registry.state.rpc.new(lockup.programId);
+      },
+      (err) => {
+        return true;
+      }
+    );
+  });
 
   it("Initializes the registrar", async () => {
     await registry.rpc.initialize(
@@ -678,13 +675,12 @@ describe("Lockup and Registry", () => {
       vendoredVestingSigner,
       nonce,
     ] = await anchor.web3.PublicKey.findProgramAddress(
-      [safe.toBuffer(), vendoredVesting.publicKey.toBuffer()],
+      [vendoredVesting.publicKey.toBuffer()],
       lockup.programId
     );
     const remainingAccounts = lockup.instruction.createVesting
       .accounts({
         vesting: vendoredVesting.publicKey,
-        safe,
         vault: vendoredVestingVault.publicKey,
         depositor: lockedVendorVault.publicKey,
         depositorAuthority: lockedVendorSigner,
@@ -734,7 +730,6 @@ describe("Lockup and Registry", () => {
       vendoredVesting.publicKey
     );
 
-    assert.ok(lockupAccount.safe.equals(safe));
     assert.ok(lockupAccount.beneficiary.equals(provider.wallet.publicKey));
     assert.ok(lockupAccount.mint.equals(mint));
     assert.ok(lockupAccount.vault.equals(vendoredVestingVault.publicKey));

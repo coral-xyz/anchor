@@ -15,18 +15,20 @@ mod lockup {
     use super::*;
 
     #[state]
-    pub struct Safe {
+    pub struct Lockup {
         /// The key with the ability to change the whitelist.
         pub authority: Pubkey,
-        /// The whitelist of valid programs the Safe can relay transactions to.
+        /// Valid programs the program can relay transactions to.
         pub whitelist: Vec<WhitelistEntry>,
     }
 
-    impl Safe {
+    impl Lockup {
+        pub const WHITELIST_SIZE: usize = 5;
+
         pub fn new(authority: Pubkey) -> Result<Self, Error> {
             let mut whitelist = vec![];
-            whitelist.resize(5, Default::default());
-            Ok(Safe {
+            whitelist.resize(Self::WHITELIST_SIZE, Default::default());
+            Ok(Lockup {
                 authority,
                 whitelist,
             })
@@ -34,8 +36,8 @@ mod lockup {
     }
 
     pub fn set_authority(ctx: Context<SetAuthority>, new_authority: Pubkey) -> Result<(), Error> {
-        let safe = &mut ctx.accounts.safe;
-        safe.authority = new_authority;
+        let lockup = &mut ctx.accounts.lockup;
+        lockup.authority = new_authority;
         Ok(())
     }
 
@@ -59,7 +61,6 @@ mod lockup {
         }
 
         let vesting = &mut ctx.accounts.vesting;
-        vesting.safe = *ctx.accounts.safe.to_account_info().key;
         vesting.beneficiary = beneficiary;
         vesting.mint = ctx.accounts.vault.mint;
         vesting.vault = *ctx.accounts.vault.to_account_info().key;
@@ -90,7 +91,6 @@ mod lockup {
 
         // Transfer funds out.
         let seeds = &[
-            ctx.accounts.safe.to_account_info().key.as_ref(),
             ctx.accounts.vesting.to_account_info().key.as_ref(),
             &[ctx.accounts.vesting.nonce],
         ];
@@ -107,10 +107,10 @@ mod lockup {
 
     #[access_control(whitelist_has_capacity(&ctx))]
     pub fn whitelist_add(ctx: Context<WhitelistAdd>, entry: WhitelistEntry) -> Result<(), Error> {
-        if ctx.accounts.safe.whitelist.contains(&entry) {
+        if ctx.accounts.lockup.whitelist.contains(&entry) {
             return Err(ErrorCode::WhitelistEntryAlreadyExists.into());
         }
-        ctx.accounts.safe.whitelist.push(entry);
+        ctx.accounts.lockup.whitelist.push(entry);
         Ok(())
     }
 
@@ -118,10 +118,10 @@ mod lockup {
         ctx: Context<WhitelistAdd>,
         entry: WhitelistEntry,
     ) -> Result<(), Error> {
-        if !ctx.accounts.safe.whitelist.contains(&entry) {
+        if !ctx.accounts.lockup.whitelist.contains(&entry) {
             return Err(ErrorCode::WhitelistEntryNotFound.into());
         }
-        ctx.accounts.safe.whitelist.retain(|e| e != &entry);
+        ctx.accounts.lockup.whitelist.retain(|e| e != &entry);
         Ok(())
     }
 
@@ -228,7 +228,6 @@ pub fn whitelist_relay_cpi<'info>(
     };
 
     let seeds = &[
-        transfer.safe.to_account_info().key.as_ref(),
         transfer.vesting.to_account_info().key.as_ref(),
         &[transfer.vesting.nonce],
     ];
@@ -240,15 +239,13 @@ pub fn whitelist_relay_cpi<'info>(
 #[derive(Accounts)]
 pub struct SetAuthority<'info> {
     #[account(mut, has_one = authority)]
-    safe: ProgramState<'info, Safe>,
+    lockup: ProgramState<'info, Lockup>,
     #[account(signer)]
     authority: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct CreateVesting<'info> {
-    // Global.
-    safe: ProgramState<'info, Safe>,
     // Vesting.
     #[account(init)]
     vesting: ProgramAccount<'info, Vesting>,
@@ -269,7 +266,6 @@ pub struct CreateVesting<'info> {
 fn create_vesting_accounts(ctx: &Context<CreateVesting>, nonce: u8) -> Result<(), Error> {
     let vault_authority = Pubkey::create_program_address(
         &[
-            ctx.accounts.safe.to_account_info().key.as_ref(),
             ctx.accounts.vesting.to_account_info().key.as_ref(),
             &[nonce],
         ],
@@ -285,22 +281,14 @@ fn create_vesting_accounts(ctx: &Context<CreateVesting>, nonce: u8) -> Result<()
 
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
-    // Global.
-    safe: ProgramState<'info, Safe>,
     // Vesting.
-    #[account(mut, belongs_to = safe, has_one = beneficiary, has_one = vault)]
+    #[account(mut, has_one = beneficiary, has_one = vault)]
     vesting: ProgramAccount<'info, Vesting>,
     #[account(signer)]
     beneficiary: AccountInfo<'info>,
     #[account(mut)]
     vault: CpiAccount<'info, TokenAccount>,
-    #[account(
-        seeds = [
-            safe.to_account_info().key.as_ref(),
-            vesting.to_account_info().key.as_ref(),
-            &[vesting.nonce],
-        ]
-    )]
+    #[account(seeds = [vesting.to_account_info().key.as_ref(), &[vesting.nonce]])]
     vesting_signer: AccountInfo<'info>,
     // Withdraw receiving target..
     #[account(mut)]
@@ -314,13 +302,13 @@ pub struct Withdraw<'info> {
 #[derive(Accounts)]
 pub struct WhitelistAdd<'info> {
     #[account(mut, has_one = authority)]
-    safe: ProgramState<'info, Safe>,
+    lockup: ProgramState<'info, Lockup>,
     #[account(signer)]
     authority: AccountInfo<'info>,
 }
 
 fn whitelist_has_capacity(ctx: &Context<WhitelistAdd>) -> Result<(), Error> {
-    if ctx.accounts.safe.whitelist.len() == 5 {
+    if ctx.accounts.lockup.whitelist.len() == lockup::Lockup::WHITELIST_SIZE {
         return Err(ErrorCode::WhitelistFull.into());
     }
     Ok(())
@@ -329,7 +317,7 @@ fn whitelist_has_capacity(ctx: &Context<WhitelistAdd>) -> Result<(), Error> {
 #[derive(Accounts)]
 pub struct WhitelistDelete<'info> {
     #[account(mut, has_one = authority)]
-    safe: ProgramState<'info, Safe>,
+    lockup: ProgramState<'info, Lockup>,
     #[account(signer)]
     authority: AccountInfo<'info>,
 }
@@ -346,23 +334,17 @@ pub struct WhitelistDeposit<'info> {
 
 #[derive(Accounts)]
 pub struct WhitelistTransfer<'info> {
-    safe: ProgramState<'info, Safe>,
+    lockup: ProgramState<'info, Lockup>,
     #[account(signer)]
     beneficiary: AccountInfo<'info>,
     whitelisted_program: AccountInfo<'info>,
 
     // Whitelist interface.
-    #[account(mut, belongs_to = safe, has_one = beneficiary, has_one = vault)]
+    #[account(mut, has_one = beneficiary, has_one = vault)]
     vesting: ProgramAccount<'info, Vesting>,
     #[account(mut, "&vault.owner == vesting_signer.key")]
     vault: CpiAccount<'info, TokenAccount>,
-    #[account(
-        seeds = [
-            safe.to_account_info().key.as_ref(),
-            vesting.to_account_info().key.as_ref(),
-            &[vesting.nonce],
-        ]
-    )]
+    #[account(seeds = [vesting.to_account_info().key.as_ref(), &[vesting.nonce]])]
     vesting_signer: AccountInfo<'info>,
     #[account("token_program.key == &token::ID")]
     token_program: AccountInfo<'info>,
@@ -372,7 +354,7 @@ pub struct WhitelistTransfer<'info> {
 }
 
 pub fn is_whitelisted<'info>(transfer: &WhitelistTransfer<'info>) -> Result<(), Error> {
-    if !transfer.safe.whitelist.contains(&WhitelistEntry {
+    if !transfer.lockup.whitelist.contains(&WhitelistEntry {
         program_id: *transfer.whitelisted_program.key,
     }) {
         return Err(ErrorCode::WhitelistEntryNotFound.into());
@@ -393,8 +375,6 @@ pub struct WhitelistEntry {
 
 #[account]
 pub struct Vesting {
-    /// The Safe instance this account is associated with.
-    pub safe: Pubkey,
     /// The owner of this Vesting account.
     pub beneficiary: Pubkey,
     /// The mint of the SPL token locked up.

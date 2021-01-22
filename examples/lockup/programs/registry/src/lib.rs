@@ -17,16 +17,11 @@ mod registry {
     pub struct Registry {
         /// Address of the lockup program.
         lockup_program: Pubkey,
-        /// Address of the lockup program's safe account instance.
-        lockup_safe: Pubkey,
     }
 
     impl Registry {
-        pub fn new<'info>(lockup_program: Pubkey, lockup_safe: Pubkey) -> Result<Self, Error> {
-            Ok(Registry {
-                lockup_program,
-                lockup_safe,
-            })
+        pub fn new<'info>(lockup_program: Pubkey) -> Result<Self, Error> {
+            Ok(Registry { lockup_program })
         }
     }
 
@@ -631,19 +626,15 @@ pub struct CreateMember<'info> {
     beneficiary: AccountInfo<'info>,
     member_signer: AccountInfo<'info>,
     #[account(
-        "balances.balance_id.key == beneficiary.key",
         "&balances.spt.owner == member_signer.key",
         "balances.spt.mint == registrar.pool_mint",
-        "balances.vault.mint == registrar.mint",
-        "balances.spt.delegate == COption::None"
+        "balances.vault.mint == registrar.mint"
     )]
     balances: BalanceSandboxAccounts<'info>,
     #[account(
-        // TODO: CHECK THIS. Locked balance_id is unchecked; it's determined by the lockup program.
         "&balances_locked.spt.owner == member_signer.key",
         "balances_locked.spt.mint == registrar.pool_mint",
-        "balances_locked.vault.mint == registrar.mint",
-        "balances_locked.spt.delegate == COption::None"
+        "balances_locked.vault.mint == registrar.mint"
     )]
     balances_locked: BalanceSandboxAccounts<'info>,
     #[account("token_program.key == &token::ID")]
