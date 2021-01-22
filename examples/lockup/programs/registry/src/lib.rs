@@ -697,18 +697,6 @@ pub struct UpdateMember<'info> {
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
-    // RULES FOR LOCKED TRANSFERS:
-    // TODO: implement this.
-    //
-    // * check the depositor authority == member.beneficiary
-    //   if so, then unlocked,
-    //   else locked
-    // * on locked
-    //   * check vesting.beneficiary == member.beneficiary
-    //   * calculate the PDA for the given vesting.
-    //     - seeds = [safe, vesting, vesting.nonce]
-    //   * assert(depositor_authority.key == vesting's pda)
-
     // Lockup whitelist relay interface.
     vesting: AccountInfo<'info>,
     #[account(mut)]
