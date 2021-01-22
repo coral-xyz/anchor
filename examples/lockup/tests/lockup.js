@@ -282,8 +282,9 @@ describe("Lockup and Registry", () => {
     poolMint = await serumCmn.createMint(provider, registrarSigner);
   });
 
-	it('Initializes registry global state', async () => {
-	    await registry.state.rpc.new(lockup.programId);
+	it('Initializes registry\'s global state', async () => {
+	    await registry.state.rpc.new(lockup.programId, safe.publicKey);
+
 			const state = await registry.state();
 			assert.ok(state.lockupProgram.equals(lockup.programId));
 

@@ -115,7 +115,7 @@ pub fn generate_non_inlined_handlers(program: &Program) -> proc_macro2::TokenStr
 
                     let from = ctor_accounts.from.key;
                     let (base, nonce) = Pubkey::find_program_address(&[], ctor_accounts.program.key);
-                    let seed = "unversioned";
+                    let seed = anchor_lang::ProgramState::<#name>::seed();
                     let owner = ctor_accounts.program.key;
                     let to = Pubkey::create_with_seed(&base, seed, owner).unwrap();
                     let space = 1000; // todo

@@ -234,7 +234,7 @@ export class RpcFactory {
       // Assert the account discriminator is correct.
       const expectedDiscriminator = Buffer.from(
         (
-          await sha256(`account:${idl.state.struct.name}`, {
+          await sha256(`state:${idl.state.struct.name}`, {
             outputFormat: "buffer",
           })
         ).slice(0, 8)

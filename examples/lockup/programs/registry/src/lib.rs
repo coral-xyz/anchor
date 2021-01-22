@@ -17,17 +17,19 @@ mod registry {
     pub struct Registry {
         /// Address of the lockup program.
         lockup_program: Pubkey,
+        /// Address of the lockup program's safe account instance.
+        lockup_safe: Pubkey,
     }
 
     impl Registry {
-        pub fn new<'info>(lockup_program: Pubkey) -> Result<Self, Error> {
-            Ok(Registry { lockup_program })
+        pub fn new<'info>(lockup_program: Pubkey, lockup_safe: Pubkey) -> Result<Self, Error> {
+            Ok(Registry {
+                lockup_program,
+                lockup_safe,
+            })
         }
     }
 
-    // TODO: needs to be initialized with the lockup program id and safe.
-    //       when receiving locked deposits, needs to check the vault authority
-    //       is created with correct seeds.
     #[access_control(initialize_accounts(&ctx, nonce))]
     pub fn initialize(
         ctx: Context<Initialize>,
@@ -76,47 +78,12 @@ mod registry {
 
     #[access_control(create_member_accounts(&ctx, nonce))]
     pub fn create_member(ctx: Context<CreateMember>, nonce: u8) -> Result<(), Error> {
-        let seeds = &[
-            ctx.accounts.registrar.to_account_info().key.as_ref(),
-            ctx.accounts.member.to_account_info().key.as_ref(),
-            &[nonce],
-        ];
-        let signer = &[&seeds[..]];
-
-        // Initialize member.
         let member = &mut ctx.accounts.member;
         member.registrar = *ctx.accounts.registrar.to_account_info().key;
         member.beneficiary = *ctx.accounts.beneficiary.key;
         member.balances = (&ctx.accounts.balances).into();
         member.balances_locked = (&ctx.accounts.balances_locked).into();
         member.nonce = nonce;
-
-        // Set delegate on staking tokens.
-        let (spt_approve, locked_spt_approve) = {
-            (
-                CpiContext::new_with_signer(
-                    ctx.accounts.token_program.clone(),
-                    token::Approve {
-                        to: ctx.accounts.balances.spt.to_account_info(),
-                        delegate: ctx.accounts.beneficiary.to_account_info(),
-                        authority: ctx.accounts.member_signer.to_account_info(),
-                    },
-                    signer,
-                ),
-                CpiContext::new_with_signer(
-                    ctx.accounts.token_program.clone(),
-                    token::Approve {
-                        to: ctx.accounts.balances_locked.spt.to_account_info(),
-                        delegate: ctx.accounts.beneficiary.to_account_info(),
-                        authority: ctx.accounts.member_signer.to_account_info(),
-                    },
-                    signer,
-                ),
-            )
-        };
-        token::approve(spt_approve, 0)?;
-        token::approve(locked_spt_approve, 0)?;
-
         Ok(())
     }
 
