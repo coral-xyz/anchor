@@ -1,5 +1,6 @@
 const assert = require("assert");
-const anchor = require('@project-serum/anchor');
+//const anchor = require('@project-serum/anchor');
+const anchor = require('/home/armaniferrante/Documents/code/src/github.com/project-serum/anchor/ts');
 const serumCmn = require("@project-serum/common");
 const TokenInstructions = require("@project-serum/serum").TokenInstructions;
 const utils = require("./utils");
@@ -26,7 +27,7 @@ describe("Lockup and Registry", () => {
     mint = _mint;
     god = _god;
   });
-/*
+
   it("Is initialized!", async () => {
     await lockup.rpc.initialize(provider.wallet.publicKey, {
       accounts: {
@@ -257,7 +258,7 @@ describe("Lockup and Registry", () => {
     const tokenAccount = await serumCmn.getTokenAccount(provider, token);
     assert.ok(tokenAccount.amount.eq(new anchor.BN(100)));
   });
-*/
+
   const registrar = new anchor.web3.Account();
   const rewardQ = new anchor.web3.Account();
   const withdrawalTimelock = new anchor.BN(4);
@@ -282,37 +283,19 @@ describe("Lockup and Registry", () => {
   });
 
 	it('Initializes registry global state', async () => {
-			let registryGlobal = new anchor.web3.Account();
-			let [registrySigner, nonce] = await anchor.web3.PublicKey.findProgramAddress(
-					[],
-					registry.programId,
-			);
+	    await registry.state.rpc.new(lockup.programId);
+			const state = await registry.state();
+			assert.ok(state.lockupProgram.equals(lockup.programId));
 
-			let to = await anchor.web3.PublicKey.createWithSeed(registrySigner, 'v1', registry.programId);
-
-			await registry.rpc.constructor(lockup.programId, {
-					accounts: {
-							registry: registryGlobal.publicKey,
-
-							from: provider.wallet.publicKey,
-							to,
-							base: registrySigner,
-							systemProgram: anchor.web3.SystemProgram.programId,
-
-							program: registry.programId,
-							rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-					},
-					signers: [registryGlobal],
-					instructions: [
-							await registry.account.registry.createInstruction(registryGlobal),
-					],
-			});
-
-			const registryAccount = await registry.account.registry(registryGlobal.publicKey);
-			console.log('reg', registryAccount);
-
+			// Should not allow a second initializatoin.
+			await assert.rejects(
+					async () => {
+							await registry.state.rpc.new(lockup.programId);
+					}, (err) => {
+							return true;
+					});
 	});
-/*
+
   it("Initializes the registrar", async () => {
     await registry.rpc.initialize(
       mint,
@@ -885,5 +868,4 @@ describe("Lockup and Registry", () => {
     const tokenAccount = await serumCmn.getTokenAccount(provider, token);
     assert.ok(tokenAccount.amount.eq(withdrawAmount));
   });
-*/
 });

@@ -19,6 +19,10 @@ mod registry {
         lockup_program: Pubkey,
     }
 
+		// registry.state.new(lockupProgram); // runs new constructor
+		// registry.state.my_method(); // executes instruction
+		// 
+		// registry.state(); // gets state object
     impl Registry {
         pub fn new<'info>(lockup_program: Pubkey) -> Result<Self, Error> {
             Ok(Registry { lockup_program })

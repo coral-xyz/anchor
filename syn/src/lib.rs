@@ -15,9 +15,20 @@ pub mod parser;
 
 #[derive(Debug)]
 pub struct Program {
+    pub state: Option<State>,
     pub rpcs: Vec<Rpc>,
     pub name: syn::Ident,
     pub program_mod: syn::ItemMod,
+}
+
+// State struct singleton.
+#[derive(Debug)]
+pub struct State {
+    pub name: String,
+    pub strct: syn::ItemStruct,
+    pub impl_block: syn::ItemImpl,
+    pub methods: Vec<Rpc>,
+    pub ctor: syn::ImplItemMethod,
 }
 
 #[derive(Debug)]
