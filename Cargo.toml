@@ -14,7 +14,6 @@ default = []
 [dependencies]
 anchor-attribute-access-control = { path = "./attribute/access-control", version = "0.0.0-alpha.0" }
 anchor-attribute-account = { path = "./attribute/account", version = "0.0.0-alpha.0" }
-anchor-attribute-constructor = { path = "./attribute/constructor", version = "0.0.0-alpha.0" }
 anchor-attribute-error = { path = "./attribute/error" }
 anchor-attribute-program = { path = "./attribute/program", version = "0.0.0-alpha.0" }
 anchor-attribute-state = { path = "./attribute/state", version = "0.0.0-alpha.0" }

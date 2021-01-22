@@ -45,7 +45,6 @@ pub use crate::state::ProgramState;
 pub use crate::sysvar::Sysvar;
 pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::account;
-pub use anchor_attribute_constructor::constructor;
 pub use anchor_attribute_error::error;
 pub use anchor_attribute_program::program;
 pub use anchor_attribute_state::state;
@@ -141,10 +140,10 @@ pub trait AccountCtor {
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
     pub use super::{
-        access_control, account, constructor, error, program, state, AccountCtor,
-        AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AccountsInit,
-        AnchorDeserialize, AnchorSerialize, Context, CpiAccount, CpiContext, Ctor, ProgramAccount,
-        ProgramState, Sysvar, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        access_control, account, error, program, state, AccountCtor, AccountDeserialize,
+        AccountSerialize, Accounts, AccountsExit, AccountsInit, AnchorDeserialize, AnchorSerialize,
+        Context, CpiAccount, CpiContext, Ctor, ProgramAccount, ProgramState, Sysvar, ToAccountInfo,
+        ToAccountInfos, ToAccountMetas,
     };
 
     pub use borsh;
