@@ -1,8 +1,9 @@
 use crate::{
-    AccountDeserialize, AccountSerialize, Accounts, CpiAccount, ToAccountInfo, ToAccountInfos,
-    ToAccountMetas,
+    AccountDeserialize, AccountSerialize, Accounts, AccountsExit, CpiAccount, ToAccountInfo,
+    ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
+use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
@@ -125,5 +126,18 @@ where
 {
     fn from(a: CpiAccount<'info, T>) -> Self {
         Self::new(a.to_account_info(), Deref::deref(&a).clone())
+    }
+}
+
+impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info>
+    for ProgramState<'info, T>
+{
+    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
+        let info = self.to_account_info();
+        let mut data = info.try_borrow_mut_data()?;
+        let dst: &mut [u8] = &mut data;
+        let mut cursor = std::io::Cursor::new(dst);
+        self.inner.account.try_serialize(&mut cursor)?;
+        Ok(())
     }
 }

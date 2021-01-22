@@ -13,10 +13,24 @@ mod calculator;
 #[program]
 mod lockup {
     use super::*;
-    pub fn initialize(ctx: Context<Initialize>, authority: Pubkey) -> Result<(), Error> {
-        let safe = &mut ctx.accounts.safe;
-        safe.authority = authority;
-        Ok(())
+
+    #[state]
+    pub struct Safe {
+        /// The key with the ability to change the whitelist.
+        pub authority: Pubkey,
+        /// The whitelist of valid programs the Safe can relay transactions to.
+        pub whitelist: Vec<WhitelistEntry>,
+    }
+
+    impl Safe {
+        pub fn new(authority: Pubkey) -> Result<Self, Error> {
+            let mut whitelist = vec![];
+            whitelist.resize(5, Default::default());
+            Ok(Safe {
+                authority,
+                whitelist,
+            })
+        }
     }
 
     pub fn set_authority(ctx: Context<SetAuthority>, new_authority: Pubkey) -> Result<(), Error> {
@@ -224,16 +238,9 @@ pub fn whitelist_relay_cpi<'info>(
 }
 
 #[derive(Accounts)]
-pub struct Initialize<'info> {
-    #[account(init)]
-    safe: ProgramAccount<'info, Safe>,
-    rent: Sysvar<'info, Rent>,
-}
-
-#[derive(Accounts)]
 pub struct SetAuthority<'info> {
     #[account(mut, has_one = authority)]
-    safe: ProgramAccount<'info, Safe>,
+    safe: ProgramState<'info, Safe>,
     #[account(signer)]
     authority: AccountInfo<'info>,
 }
@@ -241,7 +248,7 @@ pub struct SetAuthority<'info> {
 #[derive(Accounts)]
 pub struct CreateVesting<'info> {
     // Global.
-    safe: ProgramAccount<'info, Safe>,
+    safe: ProgramState<'info, Safe>,
     // Vesting.
     #[account(init)]
     vesting: ProgramAccount<'info, Vesting>,
@@ -279,7 +286,7 @@ fn create_vesting_accounts(ctx: &Context<CreateVesting>, nonce: u8) -> Result<()
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
     // Global.
-    safe: ProgramAccount<'info, Safe>,
+    safe: ProgramState<'info, Safe>,
     // Vesting.
     #[account(mut, belongs_to = safe, has_one = beneficiary, has_one = vault)]
     vesting: ProgramAccount<'info, Vesting>,
@@ -307,7 +314,7 @@ pub struct Withdraw<'info> {
 #[derive(Accounts)]
 pub struct WhitelistAdd<'info> {
     #[account(mut, has_one = authority)]
-    safe: ProgramAccount<'info, Safe>,
+    safe: ProgramState<'info, Safe>,
     #[account(signer)]
     authority: AccountInfo<'info>,
 }
@@ -322,7 +329,7 @@ fn whitelist_has_capacity(ctx: &Context<WhitelistAdd>) -> Result<(), Error> {
 #[derive(Accounts)]
 pub struct WhitelistDelete<'info> {
     #[account(mut, has_one = authority)]
-    safe: ProgramAccount<'info, Safe>,
+    safe: ProgramState<'info, Safe>,
     #[account(signer)]
     authority: AccountInfo<'info>,
 }
@@ -339,7 +346,7 @@ pub struct WhitelistDeposit<'info> {
 
 #[derive(Accounts)]
 pub struct WhitelistTransfer<'info> {
-    safe: ProgramAccount<'info, Safe>,
+    safe: ProgramState<'info, Safe>,
     #[account(signer)]
     beneficiary: AccountInfo<'info>,
     whitelisted_program: AccountInfo<'info>,
@@ -377,14 +384,6 @@ pub fn is_whitelisted<'info>(transfer: &WhitelistTransfer<'info>) -> Result<(), 
 pub struct AvailableForWithdrawal<'info> {
     vesting: ProgramAccount<'info, Vesting>,
     clock: Sysvar<'info, Clock>,
-}
-
-#[account]
-pub struct Safe {
-    /// The key with the ability to change the whitelist.
-    pub authority: Pubkey,
-    /// The whitelist of valid programs the Safe can relay transactions to.
-    pub whitelist: Vec<WhitelistEntry>,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, PartialEq, Default, Copy, Clone)]

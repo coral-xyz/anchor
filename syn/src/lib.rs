@@ -159,6 +159,12 @@ impl Field {
 
         let ty = match &self.ty {
             Ty::AccountInfo => quote! { AccountInfo },
+            Ty::ProgramState(ty) => {
+                let account = &ty.account_ident;
+                quote! {
+                    ProgramState<#account>
+                }
+            }
             Ty::ProgramAccount(ty) => {
                 let account = &ty.account_ident;
                 quote! {
@@ -200,6 +206,7 @@ impl Field {
 #[derive(Debug, PartialEq)]
 pub enum Ty {
     AccountInfo,
+    ProgramState(ProgramStateTy),
     ProgramAccount(ProgramAccountTy),
     CpiAccount(CpiAccountTy),
     Sysvar(SysvarTy),
@@ -217,6 +224,11 @@ pub enum SysvarTy {
     StakeHistory,
     Instructions,
     Rewards,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ProgramStateTy {
+    pub account_ident: syn::Ident,
 }
 
 #[derive(Debug, PartialEq)]
