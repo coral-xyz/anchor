@@ -70,11 +70,3 @@ export class Program {
     this.state = state;
   }
 }
-
-/*
-
-await program.state.rpc.new();
-await program.state.rpc.myMethod();
-await program.state.address;
-
-*/

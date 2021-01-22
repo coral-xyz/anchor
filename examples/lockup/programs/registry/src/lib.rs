@@ -1222,24 +1222,3 @@ pub enum ErrorCode {
     #[msg("Unlocked reward vendor expected but a locked vendor was given.")]
     ExpectedUnlockedVendor,
 }
-
-/*
-#[account]
-pub struct Registry {
-    /// Address of the lockup program.
-    lockup_program: Pubkey,
-}
-
-impl AccountCtor for Registry {
-    const SIZE: usize = 32;
-}
-
-#[constructor("v1")]
-pub fn registry<'info>(
-    registry: &mut ProgramAccount<'info, Registry>,
-    lockup_program: Pubkey,
-) -> Result<(), Error> {
-    registry.lockup_program = lockup_program;
-    Ok(())
-}
-*/

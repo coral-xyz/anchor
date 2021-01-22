@@ -130,19 +130,13 @@ pub trait AccountDeserialize: Sized {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError>;
 }
 
-/// Account type that can be constructed by the program.
-pub trait AccountCtor {
-    /// The size of the account to allocate upon construction.
-    const SIZE: usize;
-}
-
 /// The prelude contains all commonly used components of the crate.
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
     pub use super::{
-        access_control, account, error, program, state, AccountCtor, AccountDeserialize,
-        AccountSerialize, Accounts, AccountsExit, AccountsInit, AnchorDeserialize, AnchorSerialize,
-        Context, CpiAccount, CpiContext, Ctor, ProgramAccount, ProgramState, Sysvar, ToAccountInfo,
+        access_control, account, error, program, state, AccountDeserialize, AccountSerialize,
+        Accounts, AccountsExit, AccountsInit, AnchorDeserialize, AnchorSerialize, Context,
+        CpiAccount, CpiContext, Ctor, ProgramAccount, ProgramState, Sysvar, ToAccountInfo,
         ToAccountInfos, ToAccountMetas,
     };
 
