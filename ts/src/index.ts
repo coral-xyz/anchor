@@ -3,7 +3,9 @@ import * as web3 from "@solana/web3.js";
 import { Provider } from "@project-serum/common";
 import { Program } from "./program";
 import Coder from "./coder";
+import { Idl } from "./idl";
 import workspace from "./workspace";
+import utils from "./utils";
 
 let _provider: Provider | null = null;
 
@@ -12,6 +14,9 @@ function setProvider(provider: Provider) {
 }
 
 function getProvider(): Provider {
+  if (_provider === null) {
+    return Provider.local();
+  }
   return _provider;
 }
 
@@ -24,4 +29,6 @@ export {
   Provider,
   BN,
   web3,
+  Idl,
+  utils,
 };
