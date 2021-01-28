@@ -6,51 +6,51 @@ import {
   TransactionSignature,
   ConfirmOptions,
   sendAndConfirmRawTransaction,
-} from '@solana/web3.js';
+} from "@solana/web3.js";
 
 export default class Provider {
   constructor(
     readonly connection: Connection,
     readonly wallet: Wallet,
-    readonly opts: ConfirmOptions,
+    readonly opts: ConfirmOptions
   ) {}
 
   static defaultOptions(): ConfirmOptions {
     return {
-      preflightCommitment: 'recent',
-      commitment: 'recent',
+      preflightCommitment: "recent",
+      commitment: "recent",
     };
   }
 
-	// Node only api.
+  // Node only api.
   static local(url?: string, opts?: ConfirmOptions): Provider {
     opts = opts || Provider.defaultOptions();
     const connection = new Connection(
-      url || 'http://localhost:8899',
-      opts.preflightCommitment,
+      url || "http://localhost:8899",
+      opts.preflightCommitment
     );
     const wallet = NodeWallet.local();
     return new Provider(connection, wallet, opts);
   }
 
-	// Node only api.
-	static env(): Provider {
-		const process = require('process');
-		const url = process.env.ANCHOR_PROVIDER_URL;
-		if (url === undefined) {
-			throw new Error('ANCHOR_PROVIDER_URL is not defined');
-		}
-		const options = Provider.defaultOptions();
+  // Node only api.
+  static env(): Provider {
+    const process = require("process");
+    const url = process.env.ANCHOR_PROVIDER_URL;
+    if (url === undefined) {
+      throw new Error("ANCHOR_PROVIDER_URL is not defined");
+    }
+    const options = Provider.defaultOptions();
     const connection = new Connection(url, options.commitment);
     const wallet = NodeWallet.local();
 
-		return new Provider(connection, wallet, options);
-	}
+    return new Provider(connection, wallet, options);
+  }
 
   async send(
     tx: Transaction,
     signers?: Array<Account | undefined>,
-    opts?: ConfirmOptions,
+    opts?: ConfirmOptions
   ): Promise<TransactionSignature> {
     if (signers === undefined) {
       signers = [];
@@ -59,9 +59,9 @@ export default class Provider {
       opts = this.opts;
     }
 
-    const signerKps = signers.filter(s => s !== undefined) as Array<Account>;
+    const signerKps = signers.filter((s) => s !== undefined) as Array<Account>;
     const signerPubkeys = [this.wallet.publicKey].concat(
-      signerKps.map(s => s.publicKey),
+      signerKps.map((s) => s.publicKey)
     );
 
     tx.setSigners(...signerPubkeys);
@@ -70,7 +70,7 @@ export default class Provider {
     ).blockhash;
 
     await this.wallet.signTransaction(tx);
-    signerKps.forEach(kp => {
+    signerKps.forEach((kp) => {
       tx.partialSign(kp);
     });
 
@@ -79,7 +79,7 @@ export default class Provider {
     const txId = await sendAndConfirmRawTransaction(
       this.connection,
       rawTx,
-      opts,
+      opts
     );
 
     return txId;
@@ -87,16 +87,16 @@ export default class Provider {
 
   async sendAll(
     reqs: Array<SendTxRequest>,
-    opts?: ConfirmOptions,
+    opts?: ConfirmOptions
   ): Promise<Array<TransactionSignature>> {
     if (opts === undefined) {
       opts = this.opts;
     }
     const blockhash = await this.connection.getRecentBlockhash(
-      opts.preflightCommitment,
+      opts.preflightCommitment
     );
 
-    let txs = reqs.map(r => {
+    let txs = reqs.map((r) => {
       let tx = r.tx;
       let signers = r.signers;
 
@@ -104,14 +104,16 @@ export default class Provider {
         signers = [];
       }
 
-      const signerKps = signers.filter(s => s !== undefined) as Array<Account>;
+      const signerKps = signers.filter(
+        (s) => s !== undefined
+      ) as Array<Account>;
       const signerPubkeys = [this.wallet.publicKey].concat(
-        signerKps.map(s => s.publicKey),
+        signerKps.map((s) => s.publicKey)
       );
 
       tx.setSigners(...signerPubkeys);
       tx.recentBlockhash = blockhash.blockhash;
-      signerKps.forEach(kp => {
+      signerKps.forEach((kp) => {
         tx.partialSign(kp);
       });
 
@@ -126,7 +128,7 @@ export default class Provider {
       const tx = signedTxs[k];
       const rawTx = tx.serialize();
       sigs.push(
-        await sendAndConfirmRawTransaction(this.connection, rawTx, opts),
+        await sendAndConfirmRawTransaction(this.connection, rawTx, opts)
       );
     }
 
@@ -152,14 +154,14 @@ export class NodeWallet implements Wallet {
     const payer = new Account(
       Buffer.from(
         JSON.parse(
-          require('fs').readFileSync(
-            require('os').homedir() + '/.config/solana/id.json',
+          require("fs").readFileSync(
+            require("os").homedir() + "/.config/solana/id.json",
             {
-              encoding: 'utf-8',
-            },
-          ),
-        ),
-      ),
+              encoding: "utf-8",
+            }
+          )
+        )
+      )
     );
     return new NodeWallet(payer);
   }
@@ -170,7 +172,7 @@ export class NodeWallet implements Wallet {
   }
 
   async signAllTransactions(txs: Transaction[]): Promise<Transaction[]> {
-    return txs.map(t => {
+    return txs.map((t) => {
       t.partialSign(this.payer);
       return t;
     });

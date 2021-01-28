@@ -13,7 +13,7 @@ import {
   SYSVAR_RENT_PUBKEY,
   Commitment,
 } from "@solana/web3.js";
-import { Provider, ProgramAccount } from "@project-serum/common";
+import Provider from "./provider";
 import {
   Idl,
   IdlAccount,
@@ -81,6 +81,14 @@ export type TxFn = (...args: any[]) => Transaction;
  * Account is a function returning a deserialized account, given an address.
  */
 export type AccountFn<T = any> = AccountProps & ((address: PublicKey) => T);
+
+/**
+ * Deserialized account owned by a program.
+ */
+export type ProgramAccount<T = any> = {
+  publicKey: PublicKey;
+  account: T;
+};
 
 /**
  * Non function properties on the acccount namespace.

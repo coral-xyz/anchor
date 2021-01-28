@@ -24,9 +24,6 @@
   },
   "dependencies": {
     "@project-serum/borsh": "^0.0.1-beta.0",
-    "@project-serum/common": "^0.0.1-beta.0",
-    "@project-serum/lockup": "^0.0.1-beta.0",
-    "@solana/spl-token": "0.0.11",
     "@types/bn.js": "^4.11.6",
     "@types/bs58": "^4.0.1",
     "bn.js": "^5.1.2",

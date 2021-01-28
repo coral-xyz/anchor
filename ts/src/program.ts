@@ -1,5 +1,5 @@
 import { PublicKey } from "@solana/web3.js";
-import { Provider } from "@project-serum/common";
+import Provider from "./provider";
 import { RpcFactory } from "./rpc";
 import { Idl } from "./idl";
 import Coder from "./coder";

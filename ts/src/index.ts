@@ -1,11 +1,12 @@
 import BN from "bn.js";
 import * as web3 from "@solana/web3.js";
-import Provider from './provider';
+import Provider from "./provider";
 import { Program } from "./program";
 import Coder from "./coder";
 import { Idl } from "./idl";
 import workspace from "./workspace";
 import utils from "./utils";
+import { ProgramAccount } from "./rpc";
 
 let _provider: Provider | null = null;
 
@@ -23,6 +24,7 @@ function getProvider(): Provider {
 export {
   workspace,
   Program,
+  ProgramAccount,
   Coder,
   setProvider,
   getProvider,
