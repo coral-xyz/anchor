@@ -2,7 +2,7 @@
 // immediately after a deploy.
 
 const serumCmn = require("@project-serum/common");
-const anchor = require("/home/armaniferrante/Documents/code/src/github.com/project-serum/anchor/ts");
+const anchor = require("@project-serum/anchor");
 const PublicKey = anchor.web3.PublicKey;
 
 module.exports = async function (provider) {

@@ -38,7 +38,7 @@ pub fn deploy_script(cluster_url: &str, script_path: &str) -> String {
     format!(
         r#"
 const serumCmn = require("@project-serum/common");
-const anchor = require('/home/armaniferrante/Documents/code/src/github.com/project-serum/anchor/ts');
+const anchor = require('@project-serum/anchor');
 
 // Deploy script defined by the user.
 const userScript = require("{0}");

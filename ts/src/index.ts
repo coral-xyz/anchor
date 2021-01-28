@@ -1,6 +1,6 @@
 import BN from "bn.js";
 import * as web3 from "@solana/web3.js";
-import Provider from "./provider";
+import Provider, { NodeWallet as Wallet } from "./provider";
 import { Program } from "./program";
 import Coder from "./coder";
 import { Idl } from "./idl";
@@ -33,4 +33,5 @@ export {
   web3,
   Idl,
   utils,
+  Wallet,
 };
