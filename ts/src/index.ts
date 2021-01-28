@@ -1,6 +1,6 @@
 import BN from "bn.js";
 import * as web3 from "@solana/web3.js";
-import { Provider } from "@project-serum/common";
+import Provider from './provider';
 import { Program } from "./program";
 import Coder from "./coder";
 import { Idl } from "./idl";

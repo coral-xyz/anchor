@@ -263,12 +263,16 @@ fn test() -> Result<()> {
     // Switch again (todo: restore cwd in `build` command).
     set_workspace_dir_or_exit();
 
-    // Bootup validator.
-    let mut validator_handle = start_test_validator()?;
-
     // Deploy all programs.
     let cfg = Config::discover()?.expect("Inside a workspace").0;
-    let programs = deploy_ws("http://localhost:8899", &cfg.wallet.to_string())?;
+
+    // Bootup validator.
+    let validator_handle = match cfg.cluster.url() {
+        "http://127.0.0.1:8899" => Some(start_test_validator()?),
+        _ => None,
+    };
+
+    let programs = deploy_ws(cfg.cluster.url(), &cfg.wallet.to_string())?;
 
     // Store deployed program addresses in IDL metadata (for consumption by
     // client + tests).
@@ -290,14 +294,19 @@ fn test() -> Result<()> {
         .arg("-t")
         .arg("10000")
         .arg("tests/")
+        .env("ANCHOR_PROVIDER_URL", cfg.cluster.url())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
     {
-        validator_handle.kill()?;
+        if let Some(mut validator_handle) = validator_handle {
+            validator_handle.kill()?;
+        }
         return Err(anyhow::format_err!("{}", e.to_string()));
     }
-    validator_handle.kill()?;
+    if let Some(mut validator_handle) = validator_handle {
+        validator_handle.kill()?;
+    }
 
     Ok(())
 }
@@ -433,7 +442,7 @@ fn deploy_ws(url: &str, keypair: &str) -> Result<Vec<(Program, Pubkey)>> {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "PascalCase")]
 pub struct DeployStdout {
     program_id: String,
 }
