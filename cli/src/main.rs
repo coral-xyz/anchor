@@ -1,9 +1,11 @@
 use crate::config::{find_cargo_toml, read_all_programs, Config, Program};
 use anchor_syn::idl::Idl;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::Clap;
 use serde::{Deserialize, Serialize};
 use solana_client::rpc_client::RpcClient;
+use solana_program::bpf_loader_upgradeable::UpgradeableLoaderState;
+use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::pubkey::Pubkey;
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -52,7 +54,18 @@ pub enum Command {
     },
     /// Not yet implemented. Please use `solana program deploy` command to
     /// upgrade your program.
-    Upgrade {},
+    Upgrade { program_id: Pubkey },
+    /// View accounts.
+    Account {
+        #[clap(subcommand)]
+        subcmd: AccountCommand,
+    },
+}
+
+#[derive(Debug, Clap)]
+pub enum AccountCommand {
+    /// View the program's upgradeable loader state.
+    UpgradeState { program_id: Pubkey },
 }
 
 fn main() -> Result<()> {
@@ -70,10 +83,13 @@ fn main() -> Result<()> {
             idl(file, Some(&PathBuf::from(out.unwrap())))
         }
         Command::Deploy { url, keypair } => deploy(url, keypair),
-        Command::Upgrade {} => {
+        Command::Upgrade { program_id: _ } => {
             println!("This command is not yet implemented. Please use `solana program deploy`.");
             Ok(())
         }
+        Command::Account { subcmd } => match subcmd {
+            AccountCommand::UpgradeState { program_id } => upgrade_state(program_id),
+        },
     }
 }
 
@@ -496,4 +512,34 @@ fn set_workspace_dir_or_exit() {
             };
         }
     }
+}
+
+fn upgrade_state(program_id: Pubkey) -> Result<()> {
+    let cfg = Config::discover()?.expect("Inside a workspace").0;
+    let client = RpcClient::new(cfg.cluster.url().to_string());
+
+    println!("Fetching program account data...");
+    let account = client
+        .get_account_with_commitment(&program_id, CommitmentConfig::recent())?
+        .value
+        .map_or(Err(anyhow!("Account not found")), Ok)?;
+    let program_state: UpgradeableLoaderState = bincode::deserialize(&account.data)?;
+    println!("{:#?}", program_state);
+
+    match program_state {
+        UpgradeableLoaderState::Program {
+            programdata_address,
+        } => {
+            let account = client
+                .get_account_with_commitment(&programdata_address, CommitmentConfig::recent())?
+                .value
+                .map_or(Err(anyhow!("Account not found")), Ok)?;
+            let data_state: UpgradeableLoaderState = bincode::deserialize(&account.data)?;
+            println!("{:#?}", data_state);
+            println!("Done.");
+        }
+        _ => println!("Invalid state. Expected Program."),
+    }
+
+    Ok(())
 }

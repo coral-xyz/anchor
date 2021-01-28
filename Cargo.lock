@@ -103,6 +103,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-syn",
  "anyhow",
+ "bincode",
  "clap 3.0.0-beta.2",
  "dirs",
  "heck",
@@ -112,6 +113,7 @@ dependencies = [
  "serum-common",
  "shellexpand",
  "solana-client",
+ "solana-program",
  "solana-sdk",
  "syn 1.0.57",
  "toml",
