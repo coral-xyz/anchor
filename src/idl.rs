@@ -64,7 +64,7 @@ pub struct IdlAccount {
 impl IdlAccount {
     pub fn address(program_id: &Pubkey) -> Pubkey {
         let program_signer = Pubkey::find_program_address(&[], program_id).0;
-        Pubkey::create_with_seed(&program_signer, "anchor:idl", program_id)
+        Pubkey::create_with_seed(&program_signer, IdlAccount::seed(), program_id)
             .expect("Seed is always valid")
     }
     pub fn seed() -> &'static str {
