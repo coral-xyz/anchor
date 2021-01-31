@@ -8,8 +8,12 @@ use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 use serde::{Deserialize, Serialize};
+use solana_account_decoder::UiAccountEncoding;
 use solana_client::rpc_client::RpcClient;
-use solana_client::rpc_config::RpcSendTransactionConfig;
+use solana_client::rpc_config::{
+    RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig,
+};
+use solana_client::rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType};
 use solana_program::instruction::{AccountMeta, Instruction};
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::pubkey::Pubkey;
@@ -34,17 +38,13 @@ pub struct Opts {
 pub enum Command {
     /// Initializes a workspace.
     Init { name: String },
-    /// Builds a Solana program.
-    Build {
-        /// Output directory for the IDL.
-        #[clap(short, long)]
-        idl: Option<String>,
-    },
-    /// Runs integration tests against a localnetwork.
+    /// Builds programs.
+    Build,
+    /// Runs integration tests.
     Test,
     /// Creates a new program.
     New { name: String },
-    /// Commands for interact with interface definitions.
+    /// Commands for interface definitions.
     Idl {
         #[clap(subcommand)]
         subcmd: IdlCommand,
@@ -65,6 +65,10 @@ pub enum Command {
     /// Not yet implemented. Please use `solana program deploy` command to
     /// upgrade your program.
     Upgrade {},
+    Account {
+        #[clap(subcommand)]
+        subcmd: AccountCommand,
+    },
 }
 
 #[derive(Debug, Clap)]
@@ -93,12 +97,25 @@ pub enum IdlCommand {
     },
 }
 
+#[derive(Debug, Clap)]
+pub enum AccountCommand {
+    /// Outputs program owned accounts.
+    List {
+        #[clap(short, long)]
+        program: Pubkey,
+        /// The account kind. Matches the type defined in the program source,
+        /// lowercase.
+        #[clap(short, long)]
+        kind: Option<String>,
+    },
+}
+
 fn main() -> Result<()> {
     let opts = Opts::parse();
 
     match opts.command {
         Command::Init { name } => init(name),
-        Command::Build { idl } => build(idl),
+        Command::Build => build(None),
         Command::Test => test(),
         Command::New { name } => new(name),
         Command::Idl { subcmd } => idl(subcmd),
@@ -108,7 +125,53 @@ fn main() -> Result<()> {
             Ok(())
         }
         Command::Migrate { url } => migrate(&url),
+        Command::Account { subcmd } => account(subcmd),
     }
+}
+
+fn account(cmd: AccountCommand) -> Result<()> {
+    match cmd {
+        AccountCommand::List { program, kind } => account_list(program, kind),
+    }
+}
+
+fn account_list(program: Pubkey, kind: Option<String>) -> Result<()> {
+    let cfg = Config::discover()?.expect("Must be inside a workspace").0;
+    let client = RpcClient::new(cfg.cluster.url().to_string());
+
+    // Filter on the 8 byte account discriminator.
+    let filters = kind.map(|kind| {
+        let filter_bytes = {
+            let discriminator_preimage = format!("account:{}", kind);
+            let mut disc = [0u8; 8];
+            disc.copy_from_slice(
+                &solana_program::hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..8],
+            );
+            bs58::encode(disc).into_string()
+        };
+        let disc_filter = RpcFilterType::Memcmp(Memcmp {
+            offset: 0,
+            bytes: MemcmpEncodedBytes::Binary(filter_bytes),
+            encoding: None,
+        });
+
+        vec![disc_filter]
+    });
+
+    let resp = client.get_program_accounts_with_config(
+        &program,
+        RpcProgramAccountsConfig {
+            filters,
+            account_config: RpcAccountInfoConfig {
+                encoding: Some(UiAccountEncoding::Base64),
+                ..RpcAccountInfoConfig::default()
+            },
+        },
+    )?;
+
+    println!("RESP {:?}", resp);
+
+    Ok(())
 }
 
 fn init(name: String) -> Result<()> {
@@ -116,6 +179,7 @@ fn init(name: String) -> Result<()> {
 
     if cfg.is_some() {
         println!("Anchor workspace already initialized");
+        return Ok(());
     }
 
     fs::create_dir(name.clone())?;
