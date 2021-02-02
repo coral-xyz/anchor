@@ -1,0 +1,22 @@
+[package]
+name = "dex-crank-relay"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "dex_crank_relay"
+
+[features]
+no-entrypoint = []
+no-idl = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = { git = "https://github.com/project-serum/anchor", features = ["derive"] }
+anchor-spl = { git = "https://github.com/project-serum/anchor" }
+registry = { path = "../../../lockup/programs/registry", features = ["cpi"] }
+serum_dex = { git = "https://github.com/project-serum/serum-dex", features = ["no-entrypoint"] }
+enumflags2 = "0.6.4"
