@@ -57,7 +57,8 @@ describe("multisig", () => {
         isSigner: true,
       },
     ];
-    const newOwners = [ownerA.publicKey, ownerB.publicKey];
+		const newOwners = [ownerA.publicKey, ownerB.publicKey];
+			// TODO: FIX THIS.
     const data = program.coder.instruction.encode({
       setOwners: {
         owners: newOwners,

@@ -1,10 +1,12 @@
 import camelCase from "camelcase";
+import { snakeCase } from "snake-case";
 import { Layout } from "buffer-layout";
-import { sha256 } from "crypto-hash";
+import * as sha256 from "js-sha256";
 import * as borsh from "@project-serum/borsh";
 import {
   Idl,
   IdlField,
+  IdlInstruction,
   IdlTypeDef,
   IdlEnumVariant,
   IdlType,
@@ -54,35 +56,46 @@ export default class Coder {
 /**
  * Encodes and decodes program instructions.
  */
-class InstructionCoder<T = any> {
+class InstructionCoder {
   /**
-   * Instruction enum layout.
+   * Instruction args layout. Maps namespaced method
    */
-  private ixLayout: Layout;
+  private ixLayout: Map<string, Layout>;
 
   public constructor(idl: Idl) {
     this.ixLayout = InstructionCoder.parseIxLayout(idl);
   }
 
-  public encode(ix: T): Buffer {
+  public encode(
+    nameSpace: string,
+    idlIx: IdlInstruction | IdlStateMethod,
+    ix: any
+  ): Buffer {
     const buffer = Buffer.alloc(1000); // TODO: use a tighter buffer.
-    const len = this.ixLayout.encode(ix, buffer);
-    return buffer.slice(0, len);
+    let methodName = camelCase(idlIx.name);
+    const len = this.ixLayout.get(methodName).encode(ix, buffer);
+    const data = buffer.slice(0, len);
+    const sh = Buffer.concat([sighash(nameSpace, idlIx), data]);
+    return sh;
   }
 
-  public decode(ix: Buffer): T {
+  /*
+	// TODO
+  public decode(ix: Buffer): any {
     return this.ixLayout.decode(ix);
   }
+	*/
 
-  private static parseIxLayout(idl: Idl): Layout {
-    let stateMethods = idl.state ? idl.state.methods : [];
-    let ixLayouts = stateMethods
+  private static parseIxLayout(idl: Idl): Map<string, Layout> {
+    const stateMethods = idl.state ? idl.state.methods : [];
+
+    const ixLayouts = stateMethods
       .map((m: IdlStateMethod) => {
-        let fieldLayouts = m.args.map((arg: IdlField) =>
-          IdlCoder.fieldLayout(arg, idl.types)
-        );
+        let fieldLayouts = m.args.map((arg: IdlField) => {
+          return IdlCoder.fieldLayout(arg, idl.types);
+        });
         const name = camelCase(m.name);
-        return borsh.struct(fieldLayouts, name);
+        return [name, borsh.struct(fieldLayouts, name)];
       })
       .concat(
         idl.instructions.map((ix) => {
@@ -90,10 +103,11 @@ class InstructionCoder<T = any> {
             IdlCoder.fieldLayout(arg, idl.types)
           );
           const name = camelCase(ix.name);
-          return borsh.struct(fieldLayouts, name);
+          return [name, borsh.struct(fieldLayouts, name)];
         })
       );
-    return borsh.rustEnum(ixLayouts);
+    // @ts-ignore
+    return new Map(ixLayouts);
   }
 }
 
@@ -320,24 +334,14 @@ class IdlCoder {
 
 // Calculates unique 8 byte discriminator prepended to all anchor accounts.
 export async function accountDiscriminator(name: string): Promise<Buffer> {
-  return Buffer.from(
-    (
-      await sha256(`account:${name}`, {
-        outputFormat: "buffer",
-      })
-    ).slice(0, 8)
-  );
+  // @ts-ignore
+  return Buffer.from(sha256.digest(`account:${name}`)).slice(0, 8);
 }
 
 // Calculates unique 8 byte discriminator prepended to all anchor state accounts.
 export async function stateDiscriminator(name: string): Promise<Buffer> {
-  return Buffer.from(
-    (
-      await sha256(`account:${name}`, {
-        outputFormat: "buffer",
-      })
-    ).slice(0, 8)
-  );
+  // @ts-ignore
+  return Buffer.from(sha256.digest(`account:${name}`)).slice(0, 8);
 }
 
 // Returns the size of the type in bytes. For variable length types, just return
@@ -424,3 +428,16 @@ export function accountSize(
     .map((f) => typeSize(idl, f.type))
     .reduce((a, b) => a + b);
 }
+
+function sighash(
+  nameSpace: string,
+  idlIx: IdlInstruction | IdlStateMethod
+): Buffer {
+  let name = snakeCase(idlIx.name);
+  let preimage = `${nameSpace}::${name}`;
+  // @ts-ignore
+  return Buffer.from(sha256.digest(preimage)).slice(0, 8);
+}
+
+export const SIGHASH_STATE_NAMESPACE = "state";
+export const SIGHASH_GLOBAL_NAMESPACE = "global";

@@ -24,6 +24,8 @@ import {
 import { IdlError, ProgramError } from "./error";
 import Coder, {
   ACCOUNT_DISCRIMINATOR_SIZE,
+  SIGHASH_STATE_NAMESPACE,
+  SIGHASH_GLOBAL_NAMESPACE,
   accountDiscriminator,
   stateDiscriminator,
   accountSize,
@@ -229,7 +231,11 @@ export class RpcFactory {
               RpcFactory.accountsArray(ctx.accounts, m.accounts)
             ),
             programId,
-            data: coder.instruction.encode(toInstruction(m, ...ixArgs)),
+            data: coder.instruction.encode(
+              SIGHASH_STATE_NAMESPACE,
+              m,
+              toInstruction(m, ...ixArgs)
+            ),
           })
         );
         try {
@@ -321,7 +327,11 @@ export class RpcFactory {
       return new TransactionInstruction({
         keys,
         programId,
-        data: coder.instruction.encode(toInstruction(idlIx, ...ixArgs)),
+        data: coder.instruction.encode(
+          SIGHASH_GLOBAL_NAMESPACE,
+          idlIx,
+          toInstruction(idlIx, ...ixArgs)
+        ),
       });
     };
 
@@ -609,12 +619,7 @@ function toInstruction(idlIx: IdlInstruction | IdlStateMethod, ...args: any[]) {
     idx += 1;
   });
 
-  // JavaScript representation of the rust enum variant.
-  const name = camelCase(idlIx.name);
-  const ixVariant: { [key: string]: any } = {};
-  ixVariant[name] = ix;
-
-  return ixVariant;
+  return ix;
 }
 
 // Throws error if any account required for the `ix` is not given.
