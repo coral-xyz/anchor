@@ -18,6 +18,15 @@ import { IdlError } from "./error";
  * Number of bytes of the account discriminator.
  */
 export const ACCOUNT_DISCRIMINATOR_SIZE = 8;
+/**
+ * Namespace for state method function signatures.
+ */
+export const SIGHASH_STATE_NAMESPACE = "state";
+/**
+ * Namespace for global instruction function signatures (i.e. functions
+ * that aren't namespaced by the state or any of its trait implementations).
+ */
+export const SIGHASH_GLOBAL_NAMESPACE = "global";
 
 /**
  * Coder provides a facade for encoding and decoding all IDL related objects.
@@ -72,19 +81,11 @@ class InstructionCoder {
     ix: any
   ): Buffer {
     const buffer = Buffer.alloc(1000); // TODO: use a tighter buffer.
-    let methodName = camelCase(idlIx.name);
+    const methodName = camelCase(idlIx.name);
     const len = this.ixLayout.get(methodName).encode(ix, buffer);
     const data = buffer.slice(0, len);
-    const sh = Buffer.concat([sighash(nameSpace, idlIx), data]);
-    return sh;
+    return Buffer.concat([sighash(nameSpace, idlIx), data]);
   }
-
-  /*
-	// TODO
-  public decode(ix: Buffer): any {
-    return this.ixLayout.decode(ix);
-  }
-	*/
 
   private static parseIxLayout(idl: Idl): Map<string, Layout> {
     const stateMethods = idl.state ? idl.state.methods : [];
@@ -429,6 +430,8 @@ export function accountSize(
     .reduce((a, b) => a + b);
 }
 
+// Not technically sighash, since we don't include the arguments, as Rust
+// doesn't allow function overloading.
 function sighash(
   nameSpace: string,
   idlIx: IdlInstruction | IdlStateMethod
@@ -438,6 +441,3 @@ function sighash(
   // @ts-ignore
   return Buffer.from(sha256.digest(preimage)).slice(0, 8);
 }
-
-export const SIGHASH_STATE_NAMESPACE = "state";
-export const SIGHASH_GLOBAL_NAMESPACE = "global";
