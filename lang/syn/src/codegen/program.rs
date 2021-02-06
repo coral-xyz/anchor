@@ -3,6 +3,13 @@ use crate::{Program, RpcArg, State};
 use heck::{CamelCase, SnakeCase};
 use quote::quote;
 
+// Namespace for calculating state instruction sighash signatures.
+const SIGHASH_STATE_NAMESPACE: &'static str = "state";
+
+// Namespace for calculating instruction sighash signatures for any instruction
+// not affecting program state.
+const SIGHASH_GLOBAL_NAMESPACE: &'static str = "global";
+
 pub fn generate(program: Program) -> proc_macro2::TokenStream {
     let mod_name = &program.name;
     let dispatch = generate_dispatch(&program);
@@ -65,7 +72,7 @@ pub fn generate_dispatch(program: &Program) -> proc_macro2::TokenStream {
             let variant_arm = generate_ctor_variant(state);
             let ctor_args = generate_ctor_args(state);
             let ix_name: proc_macro2::TokenStream = generate_ctor_variant_name().parse().unwrap();
-            let sighash_arr = sighash_ctor(state);
+            let sighash_arr = sighash_ctor();
             let sighash_tts: proc_macro2::TokenStream =
                 format!("{:?}", sighash_arr).parse().unwrap();
             quote! {
@@ -91,7 +98,7 @@ pub fn generate_dispatch(program: &Program) -> proc_macro2::TokenStream {
                 let variant_arm =
                     generate_ix_variant(rpc.raw_method.sig.ident.to_string(), &rpc.args, true);
                 let ix_name = generate_ix_variant_name(rpc.raw_method.sig.ident.to_string(), true);
-                let sighash_arr = sighash(SIGHASH_STATE_NAMESPACE, &name, &rpc.args);
+                let sighash_arr = sighash(SIGHASH_STATE_NAMESPACE, &name);
                 let sighash_tts: proc_macro2::TokenStream =
                     format!("{:?}", sighash_arr).parse().unwrap();
                 quote! {
@@ -112,7 +119,7 @@ pub fn generate_dispatch(program: &Program) -> proc_macro2::TokenStream {
             let rpc_arg_names: Vec<&syn::Ident> = rpc.args.iter().map(|arg| &arg.name).collect();
             let rpc_name = &rpc.raw_method.sig.ident;
             let ix_name = generate_ix_variant_name(rpc.raw_method.sig.ident.to_string(), false);
-            let sighash_arr = sighash(SIGHASH_GLOBAL_NAMESPACE, &rpc_name.to_string(), &rpc.args);
+            let sighash_arr = sighash(SIGHASH_GLOBAL_NAMESPACE, &rpc_name.to_string());
             let sighash_tts: proc_macro2::TokenStream =
                 format!("{:?}", sighash_arr).parse().unwrap();
             let variant_arm =
@@ -727,7 +734,7 @@ fn generate_cpi(program: &Program) -> proc_macro2::TokenStream {
                 let method_name = &rpc.ident;
                 let args: Vec<&syn::PatType> = rpc.args.iter().map(|arg| &arg.raw_arg).collect();
                 let name = &rpc.raw_method.sig.ident.to_string();
-                let sighash_arr = sighash(SIGHASH_GLOBAL_NAMESPACE, &name, &rpc.args);
+                let sighash_arr = sighash(SIGHASH_GLOBAL_NAMESPACE, &name);
                 let sighash_tts: proc_macro2::TokenStream =
                     format!("{:?}", sighash_arr).parse().unwrap();
                 quote! {
@@ -776,16 +783,7 @@ fn generate_cpi(program: &Program) -> proc_macro2::TokenStream {
 // Rust doesn't have method overloading so no need to use the arguments.
 // However, we do namespace methods in the preeimage so that we can use
 // different traits with the same method name.
-fn sighash(namespace: &str, name: &str, args: &[RpcArg]) -> [u8; 8] {
-    let args = args
-        .iter()
-        .map(|arg| {
-            let mut ty = parser::tts_to_string(&arg.raw_arg.ty);
-            ty.retain(|s| !s.is_whitespace());
-            ty
-        })
-        .collect::<Vec<String>>()
-        .join(",");
+fn sighash(namespace: &str, name: &str) -> [u8; 8] {
     let preimage = format!("{}::{}", namespace, name);
 
     let mut sighash = [0u8; 8];
@@ -793,23 +791,7 @@ fn sighash(namespace: &str, name: &str, args: &[RpcArg]) -> [u8; 8] {
     sighash
 }
 
-fn sighash_ctor(state: &State) -> [u8; 8] {
-    let args = state
-        .ctor
-        .sig
-        .inputs
-        .iter()
-        .map(|arg: &syn::FnArg| match arg {
-            syn::FnArg::Typed(pat_ty) => {
-                let mut ty = parser::tts_to_string(&pat_ty.ty);
-                ty.retain(|s| !s.is_whitespace());
-                ty
-            }
-            _ => panic!("Ctor cannot have self"),
-        })
-        .collect::<Vec<String>>()
-        .join(",");
-
+fn sighash_ctor() -> [u8; 8] {
     let namespace = SIGHASH_STATE_NAMESPACE;
     let preimage = format!("{}::new", namespace);
 
@@ -817,6 +799,3 @@ fn sighash_ctor(state: &State) -> [u8; 8] {
     sighash.copy_from_slice(&crate::hash::hash(preimage.as_bytes()).to_bytes()[..8]);
     sighash
 }
-
-const SIGHASH_STATE_NAMESPACE: &'static str = "state";
-const SIGHASH_GLOBAL_NAMESPACE: &'static str = "global";
