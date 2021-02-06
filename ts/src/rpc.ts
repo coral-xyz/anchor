@@ -231,9 +231,8 @@ export class RpcFactory {
               RpcFactory.accountsArray(ctx.accounts, m.accounts)
             ),
             programId,
-            data: coder.instruction.encode(
-              SIGHASH_STATE_NAMESPACE,
-              m,
+            data: coder.instruction.encodeState(
+              m.name,
               toInstruction(m, ...ixArgs)
             ),
           })
@@ -322,14 +321,13 @@ export class RpcFactory {
       }
 
       if (ctx.__private && ctx.__private.logAccounts) {
-        console.log("Outoing account metas:", keys);
+        console.log("Outgoing account metas:", keys);
       }
       return new TransactionInstruction({
         keys,
         programId,
         data: coder.instruction.encode(
-          SIGHASH_GLOBAL_NAMESPACE,
-          idlIx,
+          idlIx.name,
           toInstruction(idlIx, ...ixArgs)
         ),
       });

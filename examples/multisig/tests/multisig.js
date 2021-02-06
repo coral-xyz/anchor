@@ -7,7 +7,7 @@ describe("multisig", () => {
 
   const program = anchor.workspace.Multisig;
 
-  it("Is initialized!", async () => {
+  it("Tests the multisig program", async () => {
     const multisig = new anchor.web3.Account();
     const [
       multisigSigner,
@@ -57,12 +57,9 @@ describe("multisig", () => {
         isSigner: true,
       },
     ];
-		const newOwners = [ownerA.publicKey, ownerB.publicKey];
-			// TODO: FIX THIS.
-    const data = program.coder.instruction.encode({
-      setOwners: {
+    const newOwners = [ownerA.publicKey, ownerB.publicKey];
+    const data = program.coder.instruction.encode('set_owners', {
         owners: newOwners,
-      },
     });
 
     const transaction = new anchor.web3.Account();

@@ -6,7 +6,6 @@ import * as borsh from "@project-serum/borsh";
 import {
   Idl,
   IdlField,
-  IdlInstruction,
   IdlTypeDef,
   IdlEnumVariant,
   IdlType,
@@ -75,16 +74,26 @@ class InstructionCoder {
     this.ixLayout = InstructionCoder.parseIxLayout(idl);
   }
 
-  public encode(
-    nameSpace: string,
-    idlIx: IdlInstruction | IdlStateMethod,
-    ix: any
-  ): Buffer {
+  /**
+   * Encodes a program instruction.
+   */
+  public encode(ixName: string, ix: any) {
+    return this._encode(SIGHASH_GLOBAL_NAMESPACE, ixName, ix);
+  }
+
+  /**
+   * Encodes a program state instruction.
+   */
+  public encodeState(ixName: string, ix: any) {
+    return this._encode(SIGHASH_STATE_NAMESPACE, ixName, ix);
+  }
+
+  public _encode(nameSpace: string, ixName: string, ix: any): Buffer {
     const buffer = Buffer.alloc(1000); // TODO: use a tighter buffer.
-    const methodName = camelCase(idlIx.name);
+    const methodName = camelCase(ixName);
     const len = this.ixLayout.get(methodName).encode(ix, buffer);
     const data = buffer.slice(0, len);
-    return Buffer.concat([sighash(nameSpace, idlIx), data]);
+    return Buffer.concat([sighash(nameSpace, ixName), data]);
   }
 
   private static parseIxLayout(idl: Idl): Map<string, Layout> {
@@ -432,11 +441,8 @@ export function accountSize(
 
 // Not technically sighash, since we don't include the arguments, as Rust
 // doesn't allow function overloading.
-function sighash(
-  nameSpace: string,
-  idlIx: IdlInstruction | IdlStateMethod
-): Buffer {
-  let name = snakeCase(idlIx.name);
+function sighash(nameSpace: string, ixName: string): Buffer {
+  let name = snakeCase(ixName);
   let preimage = `${nameSpace}::${name}`;
   // @ts-ignore
   return Buffer.from(sha256.digest(preimage)).slice(0, 8);
