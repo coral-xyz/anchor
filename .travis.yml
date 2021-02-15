@@ -44,6 +44,7 @@ jobs:
     - <<: *examples
       name: Runs the examples
       script:
+        - pushd client/example && ./run-test.sh
         - pushd examples/sysvars && anchor test && popd
         - pushd examples/composite && anchor test && popd
         - pushd examples/errors && anchor test && popd
