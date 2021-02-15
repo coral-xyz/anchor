@@ -41,7 +41,7 @@ fn main() -> Result<()> {
     // Run tests.
     composite(&client, opts.composite_pid)?;
     basic_2(&client, opts.basic_2_pid)?;
-    assert_eq!(true, false);
+
     // Success.
     Ok(())
 }
