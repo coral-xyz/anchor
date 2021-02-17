@@ -1,0 +1,19 @@
+[package]
+name = "threshold-majority"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "threshold_majority"
+
+[features]
+no-entrypoint = []
+no-idl = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = { git = "https://github.com/project-serum/anchor", features = ["derive"] }
+voting = { path = "../voting", features = ["cpi"] }

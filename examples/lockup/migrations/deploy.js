@@ -15,6 +15,7 @@ module.exports = async function (provider) {
   // Program clients.
   const lockup = anchor.workspace.Lockup;
   const registry = anchor.workspace.Registry;
+  const voting = anchor.workspace.Voting;
 
   // Registry state constructor.
   await registry.state.rpc.new({
@@ -25,6 +26,13 @@ module.exports = async function (provider) {
 
   // Lockup state constructor.
   await lockup.state.rpc.new({
+    accounts: {
+      authority: provider.wallet.publicKey,
+    },
+  });
+
+  // Voting state constructor.
+  await voting.state.rpc.new(registry.programId, {
     accounts: {
       authority: provider.wallet.publicKey,
     },
@@ -62,6 +70,19 @@ module.exports = async function (provider) {
     r["registrar"] = registrar.toString();
   }
 
+  // Initialize all governors.
+  for (let k = 0; k < cfgKeys.length; k += 1) {
+    let r = registrarConfigs[cfgKeys[k]];
+    const governor = await governorInit(
+      voting,
+      new anchor.web3.PublicKey(r.registrar),
+      r.governance.pollPrice,
+      r.governance.proposalPrice,
+      new anchor.web3.PublicKey(r.mint)
+    );
+    r["governor"] = governor.toString();
+  }
+
   // Generate code for whitelisting on UIs.
   const code = generateCode(registry, lockup, registrarConfigs);
   console.log("Generated whitelisted UI addresses:", code);
@@ -76,11 +97,16 @@ function generateCode(registry, lockup, registrarConfigs) {
     .map((cfg) => `${cfg}: new PublicKey('${registrarConfigs[cfg].mint}')`)
     .join(",");
 
+  const governors = Object.keys(registrarConfigs)
+    .map((cfg) => `${cfg}: new PublicKey('${registrarConfigs[cfg].governor}')`)
+    .join(",");
+
   return `{
 registryProgramId: new PublicKey('${registry.programId}'),
 lockupProgramId: new PublicKey('${lockup.programId}'),
 registrars: { ${registrars} },
 mints: { ${mints} },
+governors: { ${governors} },
  }`;
 }
 
@@ -121,12 +147,20 @@ async function genesis(provider) {
         stakeRate: 1000 * 10 ** 6,
         rewardQLen: 150,
         mint: token1Mint.toString(),
+        governance: {
+          pollPrice: new anchor.BN(10 * 10 ** 6),
+          proposalPrice: new anchor.BN(10 * 10 ** 6),
+        },
       },
       token2: {
         withdrawalTimelock: 60 * 60 * 24 * 7,
         stakeRate: 1,
         rewardQLen: 150,
         mint: token2Mint.toString(),
+        governance: {
+          pollPrice: new anchor.BN(10 * 10 ** 6),
+          proposalPrice: new anchor.BN(10 * 10 ** 6),
+        },
       },
     };
   }
@@ -176,4 +210,41 @@ async function registrarInit(
     }
   );
   return registrar.publicKey;
+}
+
+async function governorInit(voting, registrar, pollPrice, proposalPrice, mint) {
+  const governor = new anchor.web3.Account();
+  const [
+    governorSigner,
+    nonce,
+  ] = await anchor.web3.PublicKey.findProgramAddress(
+    [governor.publicKey.toBuffer()],
+    voting.programId
+  );
+  const pollQ = new anchor.web3.Account();
+  const proposalQ = new anchor.web3.Account();
+  console.log("creating governor");
+  await voting.rpc.createGovernor(
+    mint,
+    new anchor.BN(60),
+    nonce,
+    pollPrice,
+    proposalPrice,
+    {
+      accounts: {
+        governor: governor.publicKey,
+        pollQ: pollQ.publicKey,
+        proposalQ: proposalQ.publicKey,
+        registrar,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      instructions: [
+        await voting.account.govQueue.createInstruction(pollQ, 8250),
+        await voting.account.govQueue.createInstruction(proposalQ, 8250),
+        await voting.account.governor.createInstruction(governor),
+      ],
+      signers: [pollQ, proposalQ, governor],
+    }
+  );
+  return governor.publicKey;
 }
