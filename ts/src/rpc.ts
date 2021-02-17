@@ -130,10 +130,13 @@ type RpcAccounts = {
   [key: string]: PublicKey | RpcAccounts;
 };
 
-export type State = {
-  address: () => Promise<PublicKey>;
-  rpc: Rpcs;
-};
+export type State = () =>
+  | Promise<any>
+  | {
+      address: () => Promise<PublicKey>;
+      rpc: Rpcs;
+      instruction: Ixs;
+    };
 
 // Tracks all subscriptions.
 const subscriptions: Map<string, Subscription> = new Map();
