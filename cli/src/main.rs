@@ -606,10 +606,13 @@ fn test(skip_deploy: bool) -> Result<()> {
         let log_streams = stream_logs(&cfg.cluster.url())?;
 
         // Run the tests.
-        let exit = std::process::Command::new("mocha")
+
+        let exit = std::process::Command::new("ts-mocha")
+            .arg("-p")
+            .arg("./tsconfig.json")
             .arg("-t")
             .arg("1000000")
-            .arg("tests/")
+            .arg("tests/**/*.{j,t}s")
             .env("ANCHOR_PROVIDER_URL", cfg.cluster.url())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
