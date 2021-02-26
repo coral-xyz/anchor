@@ -306,7 +306,7 @@ fn fetch_idl(program_id: Pubkey) -> Result<Idl> {
     let idl_addr = IdlAccount::address(&program_id);
 
     let account = client
-        .get_account_with_commitment(&idl_addr, CommitmentConfig::recent())?
+        .get_account_with_commitment(&idl_addr, CommitmentConfig::processed())?
         .value
         .map_or(Err(anyhow!("Account not found")), Ok)?;
 
@@ -421,7 +421,7 @@ fn idl_set_authority(program_id: Pubkey, new_authority: Pubkey) -> Result<()> {
         );
         client.send_and_confirm_transaction_with_spinner_and_config(
             &tx,
-            CommitmentConfig::single(),
+            CommitmentConfig::confirmed(),
             RpcSendTransactionConfig {
                 skip_preflight: true,
                 ..RpcSendTransactionConfig::default()
@@ -479,7 +479,7 @@ fn idl_clear(cfg: &Config, program_id: &Pubkey) -> Result<()> {
     );
     client.send_and_confirm_transaction_with_spinner_and_config(
         &tx,
-        CommitmentConfig::single(),
+        CommitmentConfig::confirmed(),
         RpcSendTransactionConfig {
             skip_preflight: true,
             ..RpcSendTransactionConfig::default()
@@ -539,7 +539,7 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl) -> Result<()> {
         );
         client.send_and_confirm_transaction_with_spinner_and_config(
             &tx,
-            CommitmentConfig::single(),
+            CommitmentConfig::confirmed(),
             RpcSendTransactionConfig {
                 skip_preflight: true,
                 ..RpcSendTransactionConfig::default()
@@ -591,7 +591,7 @@ fn test(skip_deploy: bool) -> Result<()> {
                 build(None)?;
                 let flags = match skip_deploy {
                     true => None,
-                    false => Some(genesis_flags()?),
+                    false => Some(genesis_flags(cfg)?),
                 };
                 Some(start_test_validator(flags)?)
             }
@@ -635,7 +635,7 @@ fn test(skip_deploy: bool) -> Result<()> {
 
 // Returns the solana-test-validator flags to embed the workspace programs
 // in the genesis block. This allows us to run tests without every deploying.
-fn genesis_flags() -> Result<Vec<String>> {
+fn genesis_flags(cfg: &Config) -> Result<Vec<String>> {
     let mut flags = Vec::new();
     for mut program in read_all_programs()? {
         let binary_path = program.binary_path().display().to_string();
@@ -655,6 +655,13 @@ fn genesis_flags() -> Result<Vec<String>> {
             .join(&program.idl.name)
             .with_extension("json");
         write_idl(&program.idl, OutFile::File(idl_out))?;
+    }
+    if let Some(test) = cfg.test.as_ref() {
+        for entry in &test.genesis {
+            flags.push("--bpf-program".to_string());
+            flags.push(entry.address.clone());
+            flags.push(entry.program.clone());
+        }
     }
     Ok(flags)
 }
@@ -946,7 +953,7 @@ fn create_idl_account(
         );
         client.send_and_confirm_transaction_with_spinner_and_config(
             &tx,
-            CommitmentConfig::single(),
+            CommitmentConfig::confirmed(),
             RpcSendTransactionConfig {
                 skip_preflight: true,
                 ..RpcSendTransactionConfig::default()
