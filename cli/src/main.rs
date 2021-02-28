@@ -192,15 +192,19 @@ fn init(name: String, typescript: bool) -> Result<()> {
 
     new_program(&name)?;
 
-    // Build typescript config 
-    if typescript {
-        let mut ts_config = File::create("tsconfig.json")?;
-        ts_config.write_all(template::ts_config().as_bytes())?;
-    }
     // Build the test suite.
     fs::create_dir("tests")?;
-    let mut mocha = File::create(&format!("tests/{}.js", name))?;
-    mocha.write_all(template::mocha(&name).as_bytes())?;
+    if typescript {
+        // Build typescript config
+        let mut ts_config = File::create("tsconfig.json")?;
+        ts_config.write_all(template::ts_config().as_bytes())?;
+
+        let mut mocha = File::create(&format!("tests/{}.ts", name))?;
+        mocha.write_all(template::ts_mocha(&name).as_bytes())?;
+    } else {
+        let mut mocha = File::create(&format!("tests/{}.js", name))?;
+        mocha.write_all(template::mocha(&name).as_bytes())?;
+    }
 
     // Build the migrations directory.
     fs::create_dir("migrations")?;
@@ -611,21 +615,33 @@ fn test(skip_deploy: bool) -> Result<()> {
                 None
             }
         };
-
         let log_streams = stream_logs(&cfg.cluster.url())?;
 
-        // Run the tests.
+        let ts_config_exist = Path::new("tsconfig.json").exists();
 
-        let exit = std::process::Command::new("ts-mocha")
-            .arg("-p")
-            .arg("./tsconfig.json")
-            .arg("-t")
-            .arg("1000000")
-            .arg("tests/**/*.{j,t}s")
-            .env("ANCHOR_PROVIDER_URL", cfg.cluster.url())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .output()?;
+        // Run the tests.
+        let exit;
+        if ts_config_exist {
+            exit = std::process::Command::new("ts-mocha")
+                .arg("-p")
+                .arg("./tsconfig.json")
+                .arg("-t")
+                .arg("1000000")
+                .arg("tests/**/*.ts")
+                .env("ANCHOR_PROVIDER_URL", cfg.cluster.url())
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit())
+                .output()?;
+        } else {
+            exit = std::process::Command::new("mocha")
+                .arg("-t")
+                .arg("1000000")
+                .arg("tests/")
+                .env("ANCHOR_PROVIDER_URL", cfg.cluster.url())
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit())
+                .output()?;
+        }
 
         if !exit.status.success() {
             if let Some(mut validator_handle) = validator_handle {
