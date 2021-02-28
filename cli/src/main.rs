@@ -620,9 +620,8 @@ fn test(skip_deploy: bool) -> Result<()> {
         let ts_config_exist = Path::new("tsconfig.json").exists();
 
         // Run the tests.
-        let exit;
-        if ts_config_exist {
-            exit = std::process::Command::new("ts-mocha")
+        let exit = match ts_config_exist {
+            true => std::process::Command::new("ts-mocha")
                 .arg("-p")
                 .arg("./tsconfig.json")
                 .arg("-t")
@@ -631,17 +630,16 @@ fn test(skip_deploy: bool) -> Result<()> {
                 .env("ANCHOR_PROVIDER_URL", cfg.cluster.url())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
-                .output()?;
-        } else {
-            exit = std::process::Command::new("mocha")
+                .output()?,
+            false => std::process::Command::new("mocha")
                 .arg("-t")
                 .arg("1000000")
                 .arg("tests/")
                 .env("ANCHOR_PROVIDER_URL", cfg.cluster.url())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
-                .output()?;
-        }
+                .output()?,
+        };
 
         if !exit.status.success() {
             if let Some(mut validator_handle) = validator_handle {

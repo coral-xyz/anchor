@@ -16,6 +16,7 @@ _examples: &examples
   before_install:
   - nvm install $NODE_VERSION
   - npm install -g mocha
+  - npm install -g ts-mocha
   - npm install -g @project-serum/anchor
   - npm install -g @project-serum/serum
   - npm install -g @project-serum/common
