@@ -35,7 +35,11 @@ pub struct Opts {
 #[derive(Debug, Clap)]
 pub enum Command {
     /// Initializes a workspace.
-    Init { name: String },
+    Init {
+        name: String,
+        #[clap(short, long)]
+        typescript: bool,
+    },
     /// Builds the workspace.
     Build {
         /// Output directory for the IDL.
@@ -147,7 +151,7 @@ pub enum IdlCommand {
 fn main() -> Result<()> {
     let opts = Opts::parse();
     match opts.command {
-        Command::Init { name } => init(name),
+        Command::Init { name, typescript } => init(name, typescript),
         Command::New { name } => new(name),
         Command::Build { idl } => build(idl),
         Command::Deploy { url, keypair } => deploy(url, keypair),
@@ -163,7 +167,7 @@ fn main() -> Result<()> {
     }
 }
 
-fn init(name: String) -> Result<()> {
+fn init(name: String, typescript: bool) -> Result<()> {
     let cfg = Config::discover()?;
 
     if cfg.is_some() {
@@ -188,6 +192,11 @@ fn init(name: String) -> Result<()> {
 
     new_program(&name)?;
 
+    // Build typescript config 
+    if typescript {
+        let mut ts_config = File::create("tsconfig.json")?;
+        ts_config.write_all(template::ts_config().as_bytes())?;
+    }
     // Build the test suite.
     fs::create_dir("tests")?;
     let mut mocha = File::create(&format!("tests/{}.js", name))?;
