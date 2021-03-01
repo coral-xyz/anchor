@@ -9,6 +9,19 @@
 //!    by this program. This can be used for governing security sensitive keys
 //!    that have "authority" access to priviledged instructions.
 
+// TODO: For custom quorum types, have different program derived addresses for
+//       the different types, and different adjudicators for each type.
+//       Can hardcode the tiers or have a vec/map to make it dynamic.
+//
+// For the council vote, we can put the transaction into an intermediate,
+// cancellable state, where a stake vote can veto the vote.
+//
+// Only allow a certain number of proposals to be active at a given time.
+//
+// Have activation proposals rotate every *n* days.
+//
+//
+
 #![feature(proc_macro_hygiene)]
 
 use anchor_lang::prelude::*;
@@ -63,11 +76,11 @@ pub mod voting {
         governor.recursive_adjudicator = recursive_adjudicator;
 
         let poll_q = &mut ctx.accounts.poll_q;
-        poll_q.proposals.resize(q_len as usize, Default::default());
+        poll_q.proposals = vec![];
+        poll_q.max_len = q_len;
         let proposal_q = &mut ctx.accounts.proposal_q;
-        proposal_q
-            .proposals
-            .resize(q_len as usize, Default::default());
+        proposal_q.proposals = vec![];
+        proposal_q.max_len = q_len;
 
         Ok(())
     }
@@ -242,6 +255,7 @@ pub mod voting {
         proposal.tx = tx;
         proposal.proposer = *ctx.accounts.depositor_authority.to_account_info().key;
         proposal.stake_token_supply = ctx.accounts.pool_mint.supply;
+        proposal.id = proposal_q.head();
 
         // Add proposal to the queue.
         proposal_q.append_if_free(
@@ -318,7 +332,9 @@ pub mod voting {
         ExecuteProposal::accounts(&ctx)
         proposal_over(&ctx)
     )]
-    pub fn execute_proposal(ctx: Context<ExecuteProposal>) -> Result<()> {
+    pub fn execute_proposal<'info>(
+        ctx: Context<'_, '_, '_, 'info, ExecuteProposal<'info>>,
+    ) -> Result<()> {
         if ctx.accounts.proposal.burned {
             return Err(ErrorCode::ProposalBurned.into());
         }
@@ -332,8 +348,11 @@ pub mod voting {
             &[ctx.accounts.governor.nonce],
         ];
         let signer = &[&seeds[..]];
-        let cpi_ctx =
-            CpiContext::new_with_signer(ctx.accounts.adjudicator.clone(), Empty {}, signer);
+        let cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.adjudicator.clone(),
+            ctx.remaining_accounts.to_vec(),
+            signer,
+        );
         adjudicator::did_vote_pass(cpi_ctx, (*ctx.accounts.proposal).clone())?;
 
         // Execute the propsal.
@@ -643,6 +662,8 @@ impl Burnable for Poll {
 pub struct Proposal {
     // The governor account this proposal belongs to.
     pub governor: Pubkey,
+    // One time token for proposal execution.
+    pub burned: bool,
     // The address that created the proposal.
     pub proposer: Pubkey,
     // UI message to display to voters.
@@ -661,10 +682,10 @@ pub struct Proposal {
     pub vault: Pubkey,
     // The bump seed for the proposal signer owning the vualt.
     pub nonce: u8,
-    // One time token for proposal execution.
-    pub burned: bool,
     // The total supply of stake pool tokens minted at time of proposal.
     pub stake_token_supply: u64,
+    // The sequence number of this proposal.
+    pub id: u32,
 }
 
 impl Burnable for Proposal {
@@ -833,6 +854,8 @@ fn execute_transaction(ctx: &Context<ExecuteProposal>) -> Result<()> {
 
 #[account]
 pub struct GovQueue {
+    // Maximum number of items in the queue.
+    max_len: u32,
     // Invariant: index is position of the next available slot.
     head: u32,
     // Invariant: index is position of the first (oldest) taken slot.
@@ -868,6 +891,9 @@ impl GovQueue {
         }
 
         // Insert into next available slot.
+        if self.head < (self.max_len - 1) as u32 {
+            self.proposals.push(Default::default());
+        }
         let h_idx = self.index_of(self.head);
         self.proposals[h_idx] = proposal;
         self.head += 1;
@@ -881,6 +907,10 @@ impl GovQueue {
 
     pub fn is_full(&self) -> bool {
         self.index_of(self.head + 1) == self.index_of(self.tail)
+    }
+
+    pub fn head(&self) -> u32 {
+        self.head
     }
 
     fn index_of(&self, counter: u32) -> usize {
@@ -900,8 +930,8 @@ pub trait Burnable: AccountSerialize + AccountDeserialize + Clone {
 // proposal has been "passed", in which case the program will sign the proposal
 // transaction and execute it.
 #[interface]
-pub trait Adjudicator {
-    fn did_vote_pass(ctx: Context<Empty>, proposal: Proposal) -> ProgramResult;
+pub trait Adjudicator<'info, T: Accounts<'info>> {
+    fn did_vote_pass(ctx: Context<T>, proposal: Proposal) -> ProgramResult;
 }
 
 #[derive(Accounts)]

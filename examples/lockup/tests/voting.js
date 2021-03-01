@@ -16,7 +16,7 @@ describe("Governance", () => {
   const lockup = anchor.workspace.Lockup;
   const voting = anchor.workspace.Voting;
   const majority = anchor.workspace.ThresholdMajority;
-  const superMajority = anchor.workspace.ThresholdSuperMajority;
+  const superMajority = anchor.workspace.ThresholdSupermajority;
 
   let mint = null;
   let god = null;
@@ -184,8 +184,6 @@ describe("Governance", () => {
   const pollPrice = new anchor.BN(10 * 10 ** 6);
   const proposalPrice = new anchor.BN(10000 * 10 ** 6);
   let governorAccount = null;
-  const adjudicator = new anchor.web3.Account();
-  const recursiveAdjudicator = new anchor.web3.Account();
 
   it("Creates a governor", async () => {
     const [
@@ -197,8 +195,8 @@ describe("Governance", () => {
     );
     governorSigner = _governorSigner;
     await voting.rpc.createGovernor(
-      adjudicator.publicKey,
-      recursiveAdjudicator.publicKey,
+      majority.programId,
+      superMajority.programId,
       mint,
       time,
       nonce,
@@ -224,7 +222,10 @@ describe("Governance", () => {
 
     governorAccount = await voting.account.governor(governor.publicKey);
 
-    assert.ok(governorAccount.adjudicator.equals(adjudicator.publicKey));
+    assert.ok(governorAccount.adjudicator.equals(majority.programId));
+    assert.ok(
+      governorAccount.recursiveAdjudicator.equals(superMajority.programId)
+    );
     assert.ok(governorAccount.registrar.equals(registrar.publicKey));
     assert.ok(governorAccount.nonce == nonce);
     assert.ok(governorAccount.time.eq(time));

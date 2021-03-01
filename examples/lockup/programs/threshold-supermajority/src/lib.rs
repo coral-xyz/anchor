@@ -17,7 +17,7 @@ pub mod threshold_supermajority {
     #[state]
     pub struct ThresholdSupermajority;
 
-    impl Adjudicator for ThresholdSupermajority {
+    impl<'info> Adjudicator<'info, Empty> for ThresholdSupermajority {
         fn did_vote_pass(_ctx: Context<Empty>, proposal: Proposal) -> ProgramResult {
             let total_votes = proposal.vote_yes + proposal.vote_no;
 
