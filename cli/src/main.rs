@@ -194,6 +194,10 @@ fn init(name: String, typescript: bool) -> Result<()> {
     let mut virt_manifest = File::create("Cargo.toml")?;
     virt_manifest.write_all(template::virtual_manifest().as_bytes())?;
 
+    // Initialize .gitignore file
+    let mut virt_manifest = File::create(".gitignore")?;
+    virt_manifest.write_all(template::git_ignore().as_bytes())?;
+
     // Build the program.
     fs::create_dir("programs")?;
 
