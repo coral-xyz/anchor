@@ -18,6 +18,7 @@ incremented for features.
 * cli: Specify programs to embed into local validator genesis via Anchor.toml while testing.
 * cli: Allow skipping the creation of a local validator when testing against localnet.
 * cli: Adds support for tests with Typescript ([#94](https://github.com/project-serum/anchor/pull/94)).
+* cli: Deterministic and verifiable builds.
 
 ## Fixes
 
