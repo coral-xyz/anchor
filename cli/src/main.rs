@@ -210,7 +210,7 @@ fn init(name: String, typescript: bool) -> Result<()> {
         let mut ts_config = File::create("tsconfig.json")?;
         ts_config.write_all(template::ts_config().as_bytes())?;
 
-        let mut mocha = File::create(&format!("tests/{}.ts", name))?;
+        let mut mocha = File::create(&format!("tests/{}.spec.ts", name))?;
         mocha.write_all(template::ts_mocha(&name).as_bytes())?;
     } else {
         let mut mocha = File::create(&format!("tests/{}.js", name))?;
