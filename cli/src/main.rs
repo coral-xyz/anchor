@@ -338,16 +338,14 @@ fn build_cwd(
         Some(p) => std::env::set_current_dir(&p)?,
     };
     match verifiable {
-        false => _build_cwd(cargo_toml, idl_out),
-        true => build_cwd_verifiable(cfg_path),
+        false => _build_cwd(idl_out),
+        true => build_cwd_verifiable(cfg_path.parent().unwrap()),
     }
 }
 
 // Builds an anchor program in a docker image and copies the build artifacts
 // into the `target/` directory.
-fn build_cwd_verifiable(cfg_path: &Path) -> Result<()> {
-    let workspace_dir = cfg_path.parent().unwrap();
-
+fn build_cwd_verifiable(workspace_dir: &Path) -> Result<()> {
     // Docker vars.
     let container_name = "anchor-program";
     let image_name = "projectserum/build";
@@ -423,7 +421,7 @@ fn build_cwd_verifiable(cfg_path: &Path) -> Result<()> {
     Ok(())
 }
 
-fn _build_cwd(cargo_toml: PathBuf, idl_out: Option<PathBuf>) -> Result<()> {
+fn _build_cwd(idl_out: Option<PathBuf>) -> Result<()> {
     let exit = std::process::Command::new("cargo")
         .arg("build-bpf")
         .stdout(Stdio::inherit())
@@ -448,36 +446,43 @@ fn _build_cwd(cargo_toml: PathBuf, idl_out: Option<PathBuf>) -> Result<()> {
 fn verify(program_id: Pubkey) -> Result<()> {
     let (cfg, _path, cargo) = Config::discover()?.expect("Not in workspace.");
     let cargo = cargo.ok_or(anyhow!("Must be inside program subdirectory."))?;
+    let program_dir = cargo.parent().unwrap();
 
     // Build the program we want to verify.
     let cur_dir = std::env::current_dir()?;
     build(None, true)?;
     std::env::set_current_dir(&cur_dir)?;
 
-    // Get the local build artifacts.
-    let program_dir = cargo.parent().unwrap();
+    // Verify IDL.
     std::env::set_current_dir(program_dir)?;
     let local_idl = extract_idl("src/lib.rs")?;
-    let mut local_bin = {
-        let idl_path = program_dir
-            .join("../../target/deploy/")
-            .join(format!("{}.so", local_idl.name));
-        let mut f = File::open(idl_path)?;
-        let mut contents = vec![];
-        f.read_to_end(&mut contents)?;
-        contents
-    };
+    let deployed_idl = fetch_idl(program_id)?;
+    if local_idl != deployed_idl {
+        println!("Error: IDLs don't match");
+        std::process::exit(1);
+    }
+
+    // Verify binary.
+    let bin_path = program_dir
+        .join("../../target/deploy/")
+        .join(format!("{}.so", local_idl.name));
+    verify_bin(program_id, &bin_path, cfg.cluster.url())?;
+
+    println!("{} is verified.", program_id);
+
+    Ok(())
+}
+
+fn verify_bin(program_id: Pubkey, bin_path: &Path, cluster: &str) -> Result<()> {
+    let client = RpcClient::new(cluster.to_string());
 
     // Get the deployed build artifacts.
-    let client = RpcClient::new(cfg.cluster.url().to_string());
-    let deployed_idl = fetch_idl(program_id)?;
     let deployed_bin = {
-        let program_account: UpgradeableLoaderState = client
+        let account = client
             .get_account_with_commitment(&program_id, CommitmentConfig::default())?
             .value
-            .map_or(Err(anyhow!("Account not found")), Ok)?
-            .state()?;
-        match program_account {
+            .map_or(Err(anyhow!("Account not found")), Ok)?;
+        match account.state()? {
             UpgradeableLoaderState::Program {
                 programdata_address,
             } => client
@@ -486,15 +491,19 @@ fn verify(program_id: Pubkey) -> Result<()> {
                 .map_or(Err(anyhow!("Account not found")), Ok)?
                 .data[UpgradeableLoaderState::programdata_data_offset().unwrap_or(0)..]
                 .to_vec(),
+            UpgradeableLoaderState::Buffer { .. } => {
+                let offset = UpgradeableLoaderState::buffer_data_offset().unwrap_or(0);
+                account.data[offset..].to_vec()
+            }
             _ => return Err(anyhow!("Invalid program id")),
         }
     };
-
-    // Check the local build artifacts match the deployed ones.
-    if local_idl != deployed_idl {
-        println!("Error: IDLs don't match");
-        std::process::exit(1);
-    }
+    let mut local_bin = {
+        let mut f = File::open(bin_path)?;
+        let mut contents = vec![];
+        f.read_to_end(&mut contents)?;
+        contents
+    };
 
     // The deployed program probably has zero bytes appended. The default is
     // 2x the binary size in case of an upgrade.
@@ -502,18 +511,11 @@ fn verify(program_id: Pubkey) -> Result<()> {
         local_bin.append(&mut vec![0; deployed_bin.len() - local_bin.len()]);
     }
 
-    let mut f = File::create("deployed.so")?;
-    f.write_all(&deployed_bin)?;
-
-    let mut f = File::create("local.so")?;
-    f.write_all(&local_bin)?;
-
+    // Finally, check the bytes.
     if local_bin != deployed_bin {
         println!("Error: Binaries don't match");
         std::process::exit(1);
     }
-
-    println!("{} is verified.", program_id);
 
     Ok(())
 }
