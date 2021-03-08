@@ -49,7 +49,7 @@ pub enum Command {
         /// Output directory for the IDL.
         #[clap(short, long)]
         idl: Option<String>,
-        /// True if the build should artifiact needs to be deterministic.
+        /// True if the build artifiact needs to be deterministic and verifiable.
         #[clap(short, long)]
         verifiable: bool,
     },
