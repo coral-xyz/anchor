@@ -73,6 +73,7 @@ export type IdlType =
   | "publicKey"
   | IdlTypeVec
   | IdlTypeOption
+  | IdlTypeMap
   | IdlTypeDefined;
 
 export type IdlTypeVec = {
@@ -81,6 +82,15 @@ export type IdlTypeVec = {
 
 export type IdlTypeOption = {
   option: IdlType;
+};
+
+export type IdlTypeMapTypes = {
+  key: IdlType;
+  value: IdlType;
+};
+
+export type IdlTypeMap = {
+  map: IdlTypeMapTypes;
 };
 
 // User defined type.

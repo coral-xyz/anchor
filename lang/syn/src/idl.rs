@@ -92,6 +92,13 @@ pub enum EnumFields {
     Tuple(Vec<IdlType>),
 }
 
+/// Structure to serialize the map variant as a struct for easier use in TypeScript.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MapStruct {
+    pub key: IdlType,
+    pub value: IdlType,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum IdlType {
@@ -112,6 +119,7 @@ pub enum IdlType {
     Defined(String),
     Option(Box<IdlType>),
     Vec(Box<IdlType>),
+    Map(Box<MapStruct>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -140,27 +148,48 @@ impl std::str::FromStr for IdlType {
             "Vec<u8>" => IdlType::Bytes,
             "String" => IdlType::String,
             "Pubkey" => IdlType::PublicKey,
-            _ => match s.to_string().strip_prefix("Option<") {
-                None => match s.to_string().strip_prefix("Vec<") {
-                    None => IdlType::Defined(s.to_string()),
-                    Some(inner) => {
-                        let inner_ty = Self::from_str(
-                            inner
-                                .strip_suffix(">")
-                                .ok_or_else(|| anyhow::anyhow!("Invalid option"))?,
-                        )?;
-                        IdlType::Vec(Box::new(inner_ty))
-                    }
-                },
-                Some(inner) => {
+            _ => {
+                if let Some(inner) = s.to_string().strip_prefix("Option<") {
                     let inner_ty = Self::from_str(
                         inner
                             .strip_suffix(">")
                             .ok_or_else(|| anyhow::anyhow!("Invalid option"))?,
                     )?;
                     IdlType::Option(Box::new(inner_ty))
+                } else if let Some(inner) = s.to_string().strip_prefix("Vec<") {
+                    let inner_ty = Self::from_str(
+                        inner
+                            .strip_suffix(">")
+                            .ok_or_else(|| anyhow::anyhow!("Invalid vector"))?,
+                    )?;
+                    IdlType::Vec(Box::new(inner_ty))
+                } else if let Some(inner) = s.to_string().strip_prefix("HashMap<") {
+                    let inner = inner
+                        .strip_suffix(">")
+                        .ok_or_else(|| anyhow::anyhow!("Invalid HashMap"))?;
+
+                    let mut types = inner.split(",");
+                    let key = types
+                        .next()
+                        .ok_or_else(|| anyhow::anyhow!("Invalid HashMap key"))?
+                        .trim();
+                    let value = types
+                        .next()
+                        .ok_or_else(|| anyhow::anyhow!("Invalid HashMap value"))?
+                        .trim();
+
+                    if types.next().is_some() {
+                        return Err(anyhow::anyhow!("Invalid HashMap: must be two types"));
+                    }
+
+                    IdlType::Map(Box::new(MapStruct {
+                        key: Self::from_str(key)?,
+                        value: Self::from_str(value)?,
+                    }))
+                } else {
+                    IdlType::Defined(s.to_string())
                 }
-            },
+            }
         };
         Ok(r)
     }

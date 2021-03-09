@@ -232,6 +232,7 @@ class IdlCoder {
   public static fieldLayout(field: IdlField, types?: IdlTypeDef[]): Layout {
     const fieldName =
       field.name !== undefined ? camelCase(field.name) : undefined;
+    console.log(JSON.stringify(field.type, null, 1));
     switch (field.type) {
       case "bool": {
         return borsh.bool(fieldName);
@@ -292,10 +293,25 @@ class IdlCoder {
             fieldName
           );
           // @ts-ignore
+        } else if (field.type.map) {
+          // return borsh.struct(
+          //   IdlCoder.fieldLayout(
+          //     {
+          //       name: undefined,
+          //       // @ts-ignore
+          //       type: field.type.map,
+          //     },
+          //     types
+          //   ),
+          //   fieldName
+          // );
+          throw new Error("TODO");
+          // @ts-ignore
         } else if (field.type.defined) {
           // User defined type.
           if (types === undefined) {
-            throw new IdlError("User defined types not provided");
+            throw new IdlError("User defined types not provided: " + JSON.stringify(field.type, null, 1));
+            // throw new IdlError("User defined types not provided");
           }
           // @ts-ignore
           const filtered = types.filter((t) => t.name === field.type.defined);
@@ -395,6 +411,10 @@ function typeSize(idl: Idl, ty: IdlType): number {
     default:
       // @ts-ignore
       if (ty.vec !== undefined) {
+        return 1;
+      }
+      // @ts-ignore
+      if (ty.map !== undefined) {
         return 1;
       }
       // @ts-ignore
