@@ -297,7 +297,7 @@ class IdlCoder {
             [
               IdlCoder.fieldLayout(
                 {
-                  name: undefined,
+                  name: "key",
                   // @ts-ignore
                   type: field.type.map.key,
                 },
@@ -305,7 +305,7 @@ class IdlCoder {
               ),
               IdlCoder.fieldLayout(
                 {
-                  name: undefined,
+                  name: "value",
                   // @ts-ignore
                   type: field.type.map.value,
                 },
