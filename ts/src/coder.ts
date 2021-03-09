@@ -293,18 +293,27 @@ class IdlCoder {
           );
           // @ts-ignore
         } else if (field.type.map) {
-          // return borsh.struct(
-          //   IdlCoder.fieldLayout(
-          //     {
-          //       name: undefined,
-          //       // @ts-ignore
-          //       type: field.type.map,
-          //     },
-          //     types
-          //   ),
-          //   fieldName
-          // );
-          throw new Error("TODO");
+          return borsh.struct(
+            [
+              IdlCoder.fieldLayout(
+                {
+                  name: undefined,
+                  // @ts-ignore
+                  type: field.type.map.key,
+                },
+                types
+              ),
+              IdlCoder.fieldLayout(
+                {
+                  name: undefined,
+                  // @ts-ignore
+                  type: field.type.map.value,
+                },
+                types
+              ),
+            ],
+            fieldName
+          );
           // @ts-ignore
         } else if (field.type.defined) {
           // User defined type.
