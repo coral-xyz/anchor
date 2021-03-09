@@ -178,9 +178,7 @@ impl std::str::FromStr for IdlType {
                         .ok_or_else(|| anyhow::anyhow!("Invalid HashMap value"))?
                         .trim();
 
-                    if types.next().is_some() {
-                        return Err(anyhow::anyhow!("Invalid HashMap: must be two types"));
-                    }
+                    // * Intentionally ignore third type, it is the hasher
 
                     IdlType::Map(Box::new(MapStruct {
                         key: Self::from_str(key)?,
