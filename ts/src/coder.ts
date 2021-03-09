@@ -232,7 +232,6 @@ class IdlCoder {
   public static fieldLayout(field: IdlField, types?: IdlTypeDef[]): Layout {
     const fieldName =
       field.name !== undefined ? camelCase(field.name) : undefined;
-    console.log(JSON.stringify(field.type, null, 1));
     switch (field.type) {
       case "bool": {
         return borsh.bool(fieldName);
@@ -310,6 +309,7 @@ class IdlCoder {
         } else if (field.type.defined) {
           // User defined type.
           if (types === undefined) {
+            // TODO switch this back
             throw new IdlError("User defined types not provided: " + JSON.stringify(field.type, null, 1));
             // throw new IdlError("User defined types not provided");
           }
