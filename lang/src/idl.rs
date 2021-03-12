@@ -68,7 +68,7 @@ pub struct IdlSetBuffer<'info> {
     // The idl account to be updated with the buffer's data.
     #[account(mut, has_one = authority)]
     pub idl: ProgramAccount<'info, IdlAccount>,
-    #[account(mut, signer, "authority.key != &Pubkey::new_from_array([0u8; 32])")]
+    #[account(signer, "authority.key != &Pubkey::new_from_array([0u8; 32])")]
     pub authority: AccountInfo<'info>,
 }
 

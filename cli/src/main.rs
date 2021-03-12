@@ -111,6 +111,7 @@ pub enum Command {
         /// Filepath to the new program binary.
         program_filepath: String,
     },
+    #[cfg(feature = "dev")]
     /// Runs an airdrop loop, continuously funding the configured wallet.
     Airdrop {
         #[clap(short, long)]
@@ -149,6 +150,9 @@ pub enum IdlCommand {
     },
     /// Sets a new authority on the IDL account.
     SetAuthority {
+        /// The IDL account buffer to set the authority of. If none is given,
+        /// then the canonical IDL account is used.
+        address: Option<Pubkey>,
         /// Program to change the IDL authority.
         #[clap(short, long)]
         program_id: Pubkey,
@@ -210,6 +214,7 @@ fn main() -> Result<()> {
             skip_deploy,
             skip_local_validator,
         } => test(skip_deploy, skip_local_validator),
+        #[cfg(feature = "dev")]
         Command::Airdrop { url } => airdrop(url),
     }
 }
@@ -597,8 +602,9 @@ fn idl(subcmd: IdlCommand) -> Result<()> {
         } => idl_upgrade(program_id, filepath),
         IdlCommand::SetAuthority {
             program_id,
+            address,
             new_authority,
-        } => idl_set_authority(program_id, new_authority),
+        } => idl_set_authority(program_id, address, new_authority),
         IdlCommand::EraseAuthority { program_id } => idl_erase_authority(program_id),
         IdlCommand::Authority { program_id } => idl_authority(program_id),
         IdlCommand::Parse { file, out } => idl_parse(file, out),
@@ -689,7 +695,17 @@ fn idl_upgrade(program_id: Pubkey, idl_filepath: String) -> Result<()> {
 fn idl_authority(program_id: Pubkey) -> Result<()> {
     with_workspace(|cfg, _path, _cargo| {
         let client = RpcClient::new(cfg.cluster.url().to_string());
-        let idl_address = IdlAccount::address(&program_id);
+        let idl_address = {
+            let account = client
+                .get_account_with_commitment(&program_id, CommitmentConfig::processed())?
+                .value
+                .map_or(Err(anyhow!("Account not found")), Ok)?;
+            if account.executable {
+                IdlAccount::address(&program_id)
+            } else {
+                program_id
+            }
+        };
 
         let account = client.get_account(&idl_address)?;
         let mut data: &[u8] = &account.data;
@@ -701,10 +717,17 @@ fn idl_authority(program_id: Pubkey) -> Result<()> {
     })
 }
 
-fn idl_set_authority(program_id: Pubkey, new_authority: Pubkey) -> Result<()> {
+fn idl_set_authority(
+    program_id: Pubkey,
+    address: Option<Pubkey>,
+    new_authority: Pubkey,
+) -> Result<()> {
     with_workspace(|cfg, _path, _cargo| {
         // Misc.
-        let idl_address = IdlAccount::address(&program_id);
+        let idl_address = match address {
+            None => IdlAccount::address(&program_id),
+            Some(addr) => addr,
+        };
         let keypair = solana_sdk::signature::read_keypair_file(&cfg.wallet.to_string())
             .map_err(|_| anyhow!("Unable to read keypair file"))?;
         let client = RpcClient::new(cfg.cluster.url().to_string());
@@ -761,7 +784,7 @@ fn idl_erase_authority(program_id: Pubkey) -> Result<()> {
 
     // Program will treat the zero authority as erased.
     let new_authority = Pubkey::new_from_array([0u8; 32]);
-    idl_set_authority(program_id, new_authority)?;
+    idl_set_authority(program_id, None, new_authority)?;
 
     Ok(())
 }
@@ -1391,6 +1414,7 @@ fn set_workspace_dir_or_exit() {
     }
 }
 
+#[cfg(feature = "dev")]
 fn airdrop(url: Option<String>) -> Result<()> {
     let url = url.unwrap_or_else(|| "https://devnet.solana.com".to_string());
     loop {

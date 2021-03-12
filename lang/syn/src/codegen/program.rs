@@ -380,17 +380,6 @@ pub fn generate_non_inlined_handlers(program: &Program) -> proc_macro2::TokenStr
                 accounts: &mut anchor_lang::idl::IdlSetBuffer,
             ) -> ProgramResult {
                 accounts.idl.data = accounts.buffer.data.clone();
-                // Send the rent exemption to the authority.
-                let buffer_lamports = accounts.buffer.to_account_info().lamports();
-                let authority_lamports = accounts.authority.lamports();
-                **accounts.authority.lamports.borrow_mut() = authority_lamports
-                    .checked_add(buffer_lamports)
-                    .ok_or(ProgramError::Custom(3))?; // TODO: error codes.
-                **accounts
-                    .buffer
-                    .to_account_info()
-                    .lamports
-                    .borrow_mut() = 0;
                 Ok(())
             }
         }
