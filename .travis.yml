@@ -62,7 +62,7 @@ jobs:
         - yarn
         - yarn build
     - <<: *examples
-      name: Runs the examples
+      name: Runs the examples 1
       script:
         - pushd client/example && ./run-test.sh && popd
         - pushd examples/sysvars && anchor test && popd
@@ -74,6 +74,9 @@ jobs:
         - pushd examples/lockup && anchor test && popd
         - pushd examples/misc && anchor test && popd
         - pushd examples/cashiers-check && anchor test && popd
+    - <<: *examples
+      name: Runs the examples 2
+      script:
         - pushd examples/tutorial/basic-0 && anchor test && popd
         - pushd examples/tutorial/basic-1 && anchor test && popd
         - pushd examples/tutorial/basic-2 && anchor test && popd
