@@ -181,7 +181,12 @@ dependencies = [
  "anchor-derive-accounts",
  "base64 0.13.0",
  "borsh",
+ "bumpalo",
+ "lazy_static",
+ "rand 0.7.3",
+ "safe-transmute",
  "solana-program",
+ "spl-token 3.1.0",
  "thiserror",
 ]
 
@@ -2525,6 +2530,12 @@ name = "ryu"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71d301d4193d031abdd79ff7e3dd721168a9572ef3fe51a1517aba235bd8f86e"
+
+[[package]]
+name = "safe-transmute"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d95e7284b4bd97e24af76023904cd0157c9cc9da0310beb4139a1e88a748d47"
 
 [[package]]
 name = "same-file"

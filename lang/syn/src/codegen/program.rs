@@ -12,7 +12,7 @@ const SIGHASH_GLOBAL_NAMESPACE: &str = "global";
 
 pub fn generate(program: Program) -> proc_macro2::TokenStream {
     let mod_name = &program.name;
-    let dispatch = generate_dispatch(&program);
+    let entry = generate_entry(&program);
     let handlers_non_inlined = generate_non_inlined_handlers(&program);
     let methods = generate_methods(&program);
     let ixs = generate_ixs(&program);
@@ -23,10 +23,31 @@ pub fn generate(program: Program) -> proc_macro2::TokenStream {
         // TODO: remove once we allow segmented paths in `Accounts` structs.
         use #mod_name::*;
 
+        #entry
+
+        // Create a private module to not clutter the program's namespace.
+        mod __private {
+            use super::*;
+
+            #handlers_non_inlined
+        }
+
+        #accounts
+
+        #ixs
+
+        #methods
+
+        #cpi
+    }
+}
+
+fn generate_entry(program: &Program) -> proc_macro2::TokenStream {
+    let dispatch = generate_dispatch(&program);
+    quote! {
         #[cfg(not(feature = "no-entrypoint"))]
         anchor_lang::solana_program::entrypoint!(entry);
-        #[cfg(not(feature = "no-entrypoint"))]
-        fn entry(program_id: &Pubkey, accounts: &[AccountInfo], ix_data: &[u8]) -> ProgramResult {
+        pub fn entry(program_id: &Pubkey, accounts: &[AccountInfo], ix_data: &[u8]) -> ProgramResult {
             if ix_data.len() < 8 {
                 return Err(ProgramError::Custom(99));
             }
@@ -47,21 +68,6 @@ pub fn generate(program: Program) -> proc_macro2::TokenStream {
 
             #dispatch
         }
-
-        // Create a private module to not clutter the program's namespace.
-        mod __private {
-            use super::*;
-
-            #handlers_non_inlined
-        }
-
-        #accounts
-
-        #ixs
-
-        #methods
-
-        #cpi
     }
 }
 
@@ -432,7 +438,7 @@ pub fn generate_non_inlined_handlers(program: &Program) -> proc_macro2::TokenStr
                             space,
                             owner,
                         );
-                        anchor_lang::solana_program::program::invoke_signed(
+                        anchor_lang::cpi::invoke_signed(
                             &ix,
                             &[
                                 ctor_accounts.from.clone(),
@@ -1001,10 +1007,6 @@ fn generate_cpi(program: &Program) -> proc_macro2::TokenStream {
                     generate_ix_variant(ix.raw_method.sig.ident.to_string(), &ix.args, false);
                 let method_name = &ix.ident;
                 let args: Vec<&syn::PatType> = ix.args.iter().map(|arg| &arg.raw_arg).collect();
-                let name = &ix.raw_method.sig.ident.to_string();
-                let sighash_arr = sighash(SIGHASH_GLOBAL_NAMESPACE, &name);
-                let sighash_tts: proc_macro2::TokenStream =
-                    format!("{:?}", sighash_arr).parse().unwrap();
                 quote! {
                     pub fn #method_name<'a, 'b, 'c, 'info>(
                         ctx: CpiContext<'a, 'b, 'c, 'info, #accounts_ident<'info>>,
@@ -1012,10 +1014,7 @@ fn generate_cpi(program: &Program) -> proc_macro2::TokenStream {
                     ) -> ProgramResult {
                         let ix = {
                             let ix = instruction::#ix_variant;
-                            let mut ix_data = AnchorSerialize::try_to_vec(&ix)
-                                .map_err(|_| ProgramError::InvalidInstructionData)?;
-                            let mut data = #sighash_tts.to_vec();
-                            data.append(&mut ix_data);
+                            let data = anchor_lang::InstructionData::data(&ix);
                             let accounts = ctx.accounts.to_account_metas(None);
                             anchor_lang::solana_program::instruction::Instruction {
                                 program_id: *ctx.program.key,

@@ -9,6 +9,7 @@ description = "Solana Sealevel eDSL"
 
 [features]
 derive = []
+fuzzing = ["lazy_static", "spl-token", "bumpalo", "rand", "safe-transmute"]
 default = []
 
 [dependencies]
@@ -24,3 +25,10 @@ borsh = "0.8.2"
 solana-program = "=1.5.15"
 thiserror = "1.0.20"
 base64 = "0.13.0"
+
+# Fuzz deps.
+lazy_static = { version = "1.4.0", optional = true }
+spl-token = { version = "3.0.1", features = ["no-entrypoint"], optional = true }
+bumpalo = { version = "3.4.0", features = ["collections", "boxed"], optional = true }
+rand = { version = "0.7.3", optional = true }
+safe-transmute = { version = "0.11.0", optional = true }

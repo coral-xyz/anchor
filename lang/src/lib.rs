@@ -24,7 +24,8 @@
 extern crate self as anchor_lang;
 
 use solana_program::account_info::AccountInfo;
-use solana_program::instruction::AccountMeta;
+use solana_program::entrypoint::ProgramResult;
+use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::io::Write;
@@ -35,6 +36,8 @@ mod context;
 mod cpi_account;
 mod ctor;
 mod error;
+#[cfg(fuzzing)]
+pub mod fuzzing;
 pub mod idl;
 mod program_account;
 mod state;
@@ -189,6 +192,35 @@ pub trait EventData: AnchorSerialize + Discriminator {
 /// 8 byte identifier for a type.
 pub trait Discriminator {
     fn discriminator() -> [u8; 8];
+}
+
+/// The cpi module provides wrapped utilities for cross program invocation.
+/// These should be used instead of the underlying `solana_program::program`
+/// methods, so that Anchor programs can be fuzzed without program modification.
+pub mod cpi {
+    use super::*;
+
+    pub fn invoke<'info>(ix: &Instruction, accounts: &[AccountInfo<'info>]) -> ProgramResult {
+        invoke_signed(ix, accounts, &[])
+    }
+
+    #[cfg(not(fuzzing))]
+    pub fn invoke_signed<'info>(
+        ix: &Instruction,
+        accounts: &[AccountInfo<'info>],
+        seeds: &[&[&[u8]]],
+    ) -> ProgramResult {
+        solana_program::program::invoke_signed(ix, accounts, seeds)
+    }
+
+    #[cfg(fuzzing)]
+    pub fn invoke_signed<'info>(
+        ix: &Instruction,
+        accounts: &[AccountInfo<'info>],
+        seeds: &[&[&[u8]]],
+    ) -> ProgramResult {
+        fuzzing::env().invoke(ix, accounts, seeds)
+    }
 }
 
 /// The prelude contains all commonly used components of the crate.
