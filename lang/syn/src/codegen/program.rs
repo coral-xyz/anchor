@@ -39,6 +39,39 @@ pub fn generate(program: Program) -> proc_macro2::TokenStream {
         #methods
 
         #cpi
+
+        #[cfg(fuzzing)]
+        pub mod fuzzing {
+            use super::*;
+
+            #[derive(Debug)]
+            pub struct Program {
+                id: Pubkey,
+            }
+
+            impl Program {
+                pub fn new(id: Pubkey) -> Self {
+                    Self {
+                        id
+                    }
+                }
+            }
+
+            impl anchor_lang::fuzzing::Program for Program {
+                fn entry(
+                    &self,
+                    program_id: &Pubkey,
+                    accounts: &[AccountInfo],
+                    ix_data: &[u8],
+                ) -> ProgramResult {
+                    entry(program_id, accounts, ix_data)
+                }
+
+                fn id(&self) -> Pubkey {
+                    self.id
+                }
+            }
+        }
     }
 }
 

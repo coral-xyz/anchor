@@ -2,7 +2,7 @@
 
 use crate::config::{read_all_programs, Config, Program};
 use anchor_lang::idl::{IdlAccount, IdlInstruction};
-use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
+use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize, Discriminator};
 use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Context, Result};
 use clap::Clap;
@@ -570,6 +570,18 @@ fn fetch_idl(idl_addr: Pubkey) -> Result<Idl> {
             .get_account_with_commitment(&idl_addr, CommitmentConfig::processed())?
             .value
             .map_or(Err(anyhow!("Account not found")), Ok)?;
+    }
+
+    // Validate the account discriminator.
+    // TODO: use the anchor_client instead of manually checking this.
+    let discriminator = {
+        let mut disc = [0u8; 8];
+        disc.copy_from_slice(&account.data[..8]);
+        disc
+    };
+    if discriminator != IdlAccount::discriminator() {
+        println!("Error: the IDL's account discriminator is invalid.");
+        std::process::exit(1);
     }
 
     // Cut off account discriminator.

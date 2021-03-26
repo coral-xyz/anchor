@@ -49,6 +49,10 @@ impl Environment {
         env
     }
 
+    pub fn accounts_mut(&mut self) -> &mut AccountStore {
+        &mut self.accounts
+    }
+
     // Registers the program on the environment so that it can be invoked via
     // CPI.
     pub fn register(&mut self, program: Box<dyn Program>) {
@@ -62,15 +66,23 @@ impl Environment {
         accounts: &[AccountInfo<'info>],
         seeds: &[&[&[u8]]],
     ) -> ProgramResult {
-        let current_program = self.current_program.unwrap();
-
         // If seeds were given, then calculate the expected PDA.
-        let pda = match seeds.len() > 0 {
-            false => None,
-            true => Some(Pubkey::create_program_address(seeds[0], &current_program).unwrap()),
+        let pda = {
+            match self.current_program {
+                None => None,
+                Some(current_program) => match seeds.len() > 0 {
+                    false => None,
+                    true => {
+                        Some(Pubkey::create_program_address(seeds[0], &current_program).unwrap())
+                    }
+                },
+            }
         };
 
+        // Set the current program.
         self.current_program = Some(ix.program_id);
+
+        // Invoke the current program.
         let program = self.programs.get(&ix.program_id).unwrap();
         let account_infos: Vec<AccountInfo> = ix
             .accounts
@@ -94,7 +106,7 @@ impl Environment {
     }
 }
 
-struct AccountStore {
+pub struct AccountStore {
     // Storage bytes.
     storage: Bump,
 }
