@@ -1369,6 +1369,22 @@ fn migrate(url: Option<String>) -> Result<()> {
         let url = url.unwrap_or_else(|| cfg.cluster.url().to_string());
         let cur_dir = std::env::current_dir()?;
         let module_path = format!("{}/migrations/deploy.js", cur_dir.display());
+
+        let ts_config_exist = Path::new("tsconfig.json").exists();
+        let ts_deploy_file_exists = Path::new("migrations/deploy.ts").exists();
+
+        if ts_config_exist && ts_deploy_file_exists {
+            let ts_module_path = format!("{}/migrations/deploy.ts", cur_dir.display());
+            if let Err(_e) = std::process::Command::new("tsc")
+                .arg(&ts_module_path)
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit())
+                .output()
+            {
+                std::process::exit(1);
+            }
+        };
+
         let deploy_script_host_str = template::deploy_script_host(&url, &module_path);
 
         if !Path::new(".anchor").exists() {
@@ -1384,6 +1400,10 @@ fn migrate(url: Option<String>) -> Result<()> {
             .output()
         {
             std::process::exit(1);
+        }
+
+        if ts_config_exist && ts_deploy_file_exists {
+            std::fs::remove_file(&module_path).unwrap();
         }
 
         println!("Deploy complete.");
