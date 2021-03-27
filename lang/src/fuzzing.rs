@@ -45,6 +45,7 @@ impl Environment {
             current_program: None,
             accounts: AccountStore::new(),
         };
+        env.register(Box::new(SystemProgram));
         env.register(Box::new(SplToken));
         env
     }
@@ -234,5 +235,23 @@ impl Program for SplToken {
     }
     fn id(&self) -> Pubkey {
         spl_token::ID
+    }
+}
+
+#[derive(Debug)]
+struct SystemProgram;
+
+impl Program for SystemProgram {
+    fn entry(
+        &self,
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+        ix_data: &[u8],
+    ) -> ProgramResult {
+        // todo
+        Ok(())
+    }
+    fn id(&self) -> Pubkey {
+        system_program::ID
     }
 }

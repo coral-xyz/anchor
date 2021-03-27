@@ -350,7 +350,7 @@ pub fn generate_non_inlined_handlers(program: &Program) -> proc_macro2::TokenStr
                     space as u64,
                     owner,
                 );
-                anchor_lang::solana_program::program::invoke_signed(
+                anchor_lang::cpi::invoke_signed(
                     &ix,
                     &[
                         accounts.from.clone(),
@@ -1057,7 +1057,7 @@ fn generate_cpi(program: &Program) -> proc_macro2::TokenStream {
                         };
                         let mut acc_infos = ctx.accounts.to_account_infos();
                         acc_infos.push(ctx.program.clone());
-                        anchor_lang::solana_program::program::invoke_signed(
+                        anchor_lang::cpi::invoke_signed(
                             &ix,
                             &acc_infos,
                             ctx.signer_seeds,
