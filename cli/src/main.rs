@@ -252,22 +252,26 @@ fn init(name: String, typescript: bool) -> Result<()> {
 
     // Build the test suite.
     fs::create_dir("tests")?;
+    // Build the migrations directory.
+    fs::create_dir("migrations")?;
+
     if typescript {
         // Build typescript config
         let mut ts_config = File::create("tsconfig.json")?;
         ts_config.write_all(template::ts_config().as_bytes())?;
+
+        let mut deploy = File::create("migrations/deploy.ts")?;
+        deploy.write_all(&template::ts_deploy_script().as_bytes())?;
 
         let mut mocha = File::create(&format!("tests/{}.spec.ts", name))?;
         mocha.write_all(template::ts_mocha(&name).as_bytes())?;
     } else {
         let mut mocha = File::create(&format!("tests/{}.js", name))?;
         mocha.write_all(template::mocha(&name).as_bytes())?;
-    }
 
-    // Build the migrations directory.
-    fs::create_dir("migrations")?;
-    let mut deploy = File::create("migrations/deploy.js")?;
-    deploy.write_all(&template::deploy_script().as_bytes())?;
+        let mut deploy = File::create("migrations/deploy.js")?;
+        deploy.write_all(&template::deploy_script().as_bytes())?;
+    }
 
     println!("{} initialized", name);
 
