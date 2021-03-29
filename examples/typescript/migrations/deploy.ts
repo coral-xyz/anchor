@@ -9,14 +9,14 @@ module.exports = async function (provider) {
   anchor.setProvider(provider);
 
   // Add your deploy script here.
-  async function saySomethingAsync(withString: string): Promise<void> {
+  async function deployAsync(exampleString: string): Promise<void> {
     return new Promise((resolve) => {
       setTimeout(() => {
-        console.log(withString);
+        console.log(exampleString);
         resolve();
       }, 2000);
     });
   }
 
-  await saySomethingAsync("I like Anchor Ts migrations !");
-};
+  await deployAsync("Typescript migration example complete.");
+}

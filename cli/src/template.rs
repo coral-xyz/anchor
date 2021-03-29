@@ -93,16 +93,6 @@ module.exports = async function (provider) {
   anchor.setProvider(provider);
 
   // Add your deploy script here.
-  async function deployAsync(exampleString: string): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log(exampleString);
-        resolve();
-      }, 2000);
-    });
-  }
-
-  await deployAsync("Typescript migration example complete.");
 }
 "#
 }

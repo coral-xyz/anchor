@@ -1192,7 +1192,8 @@ fn launch(url: Option<String>, keypair: Option<String>, verifiable: bool) -> Res
         }
 
         // Run migration script.
-        if Path::new("migrations/deploy.js").exists() {
+        if Path::new("migrations/deploy.js").exists() || Path::new("migrations/deploy.ts").exists()
+        {
             migrate(Some(url))?;
         }
 
@@ -1378,9 +1379,9 @@ fn migrate(url: Option<String>) -> Result<()> {
         let ts_deploy_file_exists = Path::new("migrations/deploy.ts").exists();
 
         if ts_config_exist && ts_deploy_file_exists {
-            let ts_module_path = format!("{}/migrations/deploy.ts", cur_dir.display());
+            let ts_module_path = cur_dir.join("migrations/deploy.ts");
             if let Err(_e) = std::process::Command::new("tsc")
-                .arg(&ts_module_path)
+                .arg(&ts_module_path.canonicalize()?)
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .output()
@@ -1397,17 +1398,20 @@ fn migrate(url: Option<String>) -> Result<()> {
         std::env::set_current_dir(".anchor")?;
 
         std::fs::write("deploy.js", deploy_script_host_str)?;
-        if let Err(_e) = std::process::Command::new("node")
+        let exit = std::process::Command::new("node")
             .arg("deploy.js")
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
-            .output()
-        {
-            std::process::exit(1);
-        }
+            .output()?;
 
         if ts_config_exist && ts_deploy_file_exists {
-            std::fs::remove_file(&module_path).unwrap();
+            std::fs::remove_file(&module_path)
+                .map_err(|_| anyhow!("Unable to remove file {}", module_path))?;
+        }
+
+        if !exit.status.success() {
+            println!("Deploy failed.");
+            std::process::exit(exit.status.code().unwrap());
         }
 
         println!("Deploy complete.");
