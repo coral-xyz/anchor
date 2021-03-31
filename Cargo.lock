@@ -168,6 +168,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "anchor-fuzzing"
+version = "0.3.0"
+dependencies = [
+ "bincode",
+ "bumpalo",
+ "lazy_static",
+ "rand 0.7.3",
+ "safe-transmute",
+ "solana-program",
+ "spl-token 3.1.0",
+]
+
+[[package]]
 name = "anchor-lang"
 version = "0.3.0"
 dependencies = [
@@ -179,16 +192,10 @@ dependencies = [
  "anchor-attribute-program",
  "anchor-attribute-state",
  "anchor-derive-accounts",
+ "anchor-fuzzing",
  "base64 0.13.0",
- "bincode",
  "borsh",
- "bumpalo",
- "lazy_static",
- "num-derive",
- "rand 0.7.3",
- "safe-transmute",
  "solana-program",
- "spl-token 3.1.0",
  "thiserror",
 ]
 
