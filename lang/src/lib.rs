@@ -61,6 +61,8 @@ pub use anchor_attribute_interface::interface;
 pub use anchor_attribute_program::program;
 pub use anchor_attribute_state::state;
 pub use anchor_derive_accounts::Accounts;
+#[cfg(fuzzing)]
+pub use anchor_fuzzing;
 /// Borsh is the default serialization format for instructions and accounts.
 pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorSerialize};
 pub use error::Error;

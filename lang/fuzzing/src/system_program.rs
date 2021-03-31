@@ -228,12 +228,14 @@ mod tests {
         let host = Host::new();
 
         let owner = Pubkey::new_unique();
-        let mut from = host.accounts.new_sol_account(1000);
+        let mut from = host.accounts().new_sol_account(1000);
         from.is_writable = true;
         from.is_signer = true;
-        let mut created = host.accounts.new_sol_account(0);
+
+        let mut created = host.accounts().new_sol_account(0);
         created.is_writable = true;
         created.is_signer = true;
+
         let ix = {
             let data = bincode::serialize(&SystemInstruction::CreateAccount {
                 lamports: 999,
@@ -268,10 +270,11 @@ mod tests {
     fn system_program_transfer() {
         let host = Host::new();
 
-        let mut from = host.accounts.new_sol_account(1000);
+        let mut from = host.accounts().new_sol_account(1000);
         from.is_writable = true;
         from.is_signer = true;
-        let mut to = host.accounts.new_sol_account(0);
+
+        let mut to = host.accounts().new_sol_account(0);
         to.is_writable = true;
 
         let ix = {

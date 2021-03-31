@@ -57,7 +57,7 @@ pub fn generate(program: Program) -> proc_macro2::TokenStream {
                 }
             }
 
-            impl anchor_lang::fuzzing::Program for Program {
+            impl anchor_lang::anchor_fuzzing::Program for Program {
                 fn entry(
                     &self,
                     program_id: &Pubkey,

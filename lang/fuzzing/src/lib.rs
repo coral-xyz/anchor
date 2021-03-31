@@ -1,6 +1,6 @@
-//! The fuzz module provides utilities to facilitate fuzzing anchor programs.
+//! Utilities to facilitate fuzzing anchor programs.
 
-#![allow(mutable_transmutes)]
+#![feature(option_insert)]
 
 use crate::spl_token_program::SplTokenProgram;
 use crate::system_program::SystemProgram;
@@ -16,7 +16,7 @@ use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::sysvar::{self, Sysvar};
 use spl_token::state::{Account as TokenAccount, Mint};
-use std::cell::RefCell;
+use std::cell::{RefCell, UnsafeCell};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::mem::size_of;
@@ -28,16 +28,26 @@ lazy_static::lazy_static! {
     static ref ENV: Host = Host::new();
 }
 
-// Global host environment.
+/// Returns a fresh host environment. Should be called once at the beginning
+/// of a fuzzing iteration.
+pub fn env_reset() -> &'static Host {
+    ENV.programs.replace(HashMap::new());
+    ENV.current_program.replace(None);
+    ENV.accounts().reset();
+    &ENV
+}
+
+/// Returns the global, single threaded host environment shared across a single
+/// fuzzing iteration.
 pub fn env() -> &'static Host {
     &ENV
 }
 
-// The host execution environment.
+/// Host execution environment emulating the Solana runtime.
 #[derive(Debug)]
 pub struct Host {
     // All registered programs that can be invoked.
-    programs: HashMap<Pubkey, Box<dyn Program>>,
+    programs: RefCell<HashMap<Pubkey, Box<dyn Program>>>,
     // The currently executing program.
     current_program: RefCell<Option<Pubkey>>,
     // Account storage.
@@ -46,14 +56,14 @@ pub struct Host {
 
 impl Host {
     pub fn new() -> Host {
-        let mut env = Host {
-            programs: HashMap::new(),
+        let h = Host {
+            programs: RefCell::new(HashMap::new()),
             current_program: RefCell::new(None),
             accounts: AccountStore::new(),
         };
-        env.register(Box::new(SystemProgram));
-        env.register(Box::new(SplTokenProgram));
-        env
+        h.register(Box::new(SystemProgram));
+        h.register(Box::new(SplTokenProgram));
+        h
     }
 
     pub fn accounts(&self) -> &AccountStore {
@@ -62,8 +72,9 @@ impl Host {
 
     // Registers the program on the environment so that it can be invoked via
     // CPI.
-    pub fn register(&mut self, program: Box<dyn Program>) {
-        self.programs.insert(program.id(), program);
+    pub fn register(&self, program: Box<dyn Program>) {
+        let mut programs = self.programs.borrow_mut();
+        programs.insert(program.id(), program);
     }
 
     // Performs a cross program invocation.
@@ -90,7 +101,8 @@ impl Host {
         self.current_program.replace(Some(ix.program_id));
 
         // Invoke the current program.
-        let program = self.programs.get(&ix.program_id).unwrap();
+        let programs_map = self.programs.borrow();
+        let program = programs_map.get(&ix.program_id).unwrap();
         let account_infos: Vec<AccountInfo> = ix
             .accounts
             .iter()
@@ -117,35 +129,42 @@ impl Host {
 // lazy static without using locks (which is inconvenient and can cause
 // deadlock). The Host, as presently constructed, should never be
 // used across threads.
-unsafe impl std::marker::Sync for Host {}
+unsafe impl<'storage> std::marker::Sync for Host {}
 
 #[derive(Debug)]
 pub struct AccountStore {
-    // Storage bytes.
-    storage: Bump,
+    bump: UnsafeCell<Bump>,
 }
 
 impl AccountStore {
     pub fn new() -> Self {
         Self {
-            storage: Bump::new(),
+            bump: UnsafeCell::new(Bump::new()),
         }
     }
 
+    pub fn reset(&self) {
+        self.storage_mut().reset();
+    }
+
     pub fn storage(&self) -> &Bump {
-        &self.storage
+        unsafe { &mut *self.bump.get() }
+    }
+
+    pub fn storage_mut(&self) -> &mut Bump {
+        unsafe { &mut *self.bump.get() }
     }
 
     pub fn new_sol_account(&self, lamports: u64) -> AccountInfo {
         AccountInfo::new(
-            random_pubkey(&self.storage),
+            random_pubkey(self.storage()),
             true,
             false,
-            self.storage.alloc(lamports),
+            self.storage().alloc(lamports),
             &mut [],
             // Allocate on the bump allocator, so that the owner can be safely
             // mutated by the SystemProgram's `create_account` instruction.
-            self.storage.alloc(system_program::ID),
+            self.storage().alloc(system_program::ID),
             false,
             Epoch::default(),
         )
@@ -153,15 +172,15 @@ impl AccountStore {
 
     pub fn new_token_mint(&self) -> AccountInfo {
         let rent = Rent::default();
-        let data = self.storage.alloc_slice_fill_copy(Mint::LEN, 0u8);
+        let data = self.storage().alloc_slice_fill_copy(Mint::LEN, 0u8);
         let mut mint = Mint::default();
         mint.is_initialized = true;
         Mint::pack(mint, data).unwrap();
         AccountInfo::new(
-            random_pubkey(&self.storage),
+            random_pubkey(self.storage()),
             false,
             true,
-            self.storage.alloc(rent.minimum_balance(data.len())),
+            self.storage().alloc(rent.minimum_balance(data.len())),
             data,
             &spl_token::ID,
             false,
@@ -169,14 +188,14 @@ impl AccountStore {
         )
     }
 
-    pub fn new_token_account<'a, 'b>(
+    pub fn new_token_account(
         &self,
-        mint_pubkey: &'a Pubkey,
-        owner_pubkey: &'b Pubkey,
+        mint_pubkey: &Pubkey,
+        owner_pubkey: &Pubkey,
         balance: u64,
     ) -> AccountInfo {
         let rent = Rent::default();
-        let data = self.storage.alloc_slice_fill_copy(TokenAccount::LEN, 0u8);
+        let data = self.storage().alloc_slice_fill_copy(TokenAccount::LEN, 0u8);
         let mut account = TokenAccount::default();
         account.state = spl_token::state::AccountState::Initialized;
         account.mint = *mint_pubkey;
@@ -184,10 +203,10 @@ impl AccountStore {
         account.amount = balance;
         TokenAccount::pack(account, data).unwrap();
         AccountInfo::new(
-            random_pubkey(&self.storage),
+            random_pubkey(self.storage()),
             false,
             true,
-            self.storage.alloc(rent.minimum_balance(data.len())),
+            self.storage().alloc(rent.minimum_balance(data.len())),
             data,
             &spl_token::ID,
             false,
@@ -197,10 +216,10 @@ impl AccountStore {
 
     pub fn new_program(&self) -> AccountInfo {
         AccountInfo::new(
-            random_pubkey(&self.storage),
+            random_pubkey(self.storage()),
             false,
             false,
-            self.storage.alloc(0),
+            self.storage().alloc(0),
             &mut [],
             &bpf_loader::ID,
             true,
@@ -210,12 +229,12 @@ impl AccountStore {
 
     fn new_rent_sysvar_account(&self) -> AccountInfo {
         let lamports = 100000;
-        let data = self.storage.alloc_slice_fill_copy(size_of::<Rent>(), 0u8);
+        let data = self.storage().alloc_slice_fill_copy(size_of::<Rent>(), 0u8);
         let mut account_info = AccountInfo::new(
             &sysvar::rent::ID,
             false,
             false,
-            self.storage.alloc(lamports),
+            self.storage().alloc(lamports),
             data,
             &sysvar::ID,
             false,
@@ -227,8 +246,8 @@ impl AccountStore {
     }
 }
 
-fn random_pubkey(bump: &Bump) -> &Pubkey {
-    bump.alloc(Pubkey::new(transmute_to_bytes(&rand::random::<[u64; 4]>())))
+fn random_pubkey(storage: &Bump) -> &Pubkey {
+    storage.alloc(Pubkey::new(transmute_to_bytes(&rand::random::<[u64; 4]>())))
 }
 
 // Program that can be executed in the environment.

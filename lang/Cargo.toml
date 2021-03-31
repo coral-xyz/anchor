@@ -9,7 +9,6 @@ description = "Solana Sealevel eDSL"
 
 [features]
 derive = []
-fuzzing = ["anchor-fuzzing"]
 default = []
 
 [dependencies]
@@ -26,5 +25,5 @@ solana-program = "=1.5.15"
 thiserror = "1.0.20"
 base64 = "0.13.0"
 
-# Fuzzing.
-anchor-fuzzing = { path = "./fuzzing", version = "0.3.0", optional = true }
+[target.'cfg(fuzzing)'.dependencies]
+anchor-fuzzing = { path = "./fuzzing", version = "0.3.0" }
