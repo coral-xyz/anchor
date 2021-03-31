@@ -21,6 +21,8 @@
 //!
 //! Presented here are the Rust primitives for building on Solana.
 
+#![cfg_attr(any(fuzzing, feature = "fuzzing"), allow(mutable_transmutes))]
+
 extern crate self as anchor_lang;
 
 use solana_program::account_info::AccountInfo;
@@ -36,7 +38,7 @@ mod context;
 mod cpi_account;
 mod ctor;
 mod error;
-#[cfg(fuzzing)]
+#[cfg(any(fuzzing, feature = "fuzzing"))]
 pub mod fuzzing;
 pub mod idl;
 mod program_account;
