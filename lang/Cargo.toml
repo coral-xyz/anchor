@@ -24,3 +24,6 @@ borsh = "0.8.2"
 solana-program = "=1.5.15"
 thiserror = "1.0.20"
 base64 = "0.13.0"
+
+[target.'cfg(fuzzing)'.dependencies]
+anchor-fuzzing = { path = "./fuzzing", version = "0.3.0" }

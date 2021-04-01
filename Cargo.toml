@@ -5,6 +5,7 @@ members = [
     "lang",
     "lang/attribute/*",
     "lang/derive/*",
+    "lang/fuzzing",
     "lang/syn",
     "spl",
 ]
