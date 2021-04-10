@@ -45,10 +45,10 @@ pub fn event(
     })
 }
 
-/// Creates an event in an Anchor program, which can subsequently be subscribed
-/// to by clients. Calling this method will internally borsh serialize the
-/// [event](./attr.event.html), base64 encode the bytes, and then add a
-/// [msg!](../solana_program/macro.msg.html) log to the transaction.
+/// Creates an event that can be subscribed to by clients. Calling this method
+/// will internally borsh serialize the [event](./attr.event.html), base64
+/// encode the bytes, and then add a [msg!](../solana_program/macro.msg.html)
+/// log to the transaction.
 #[proc_macro]
 pub fn emit(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let data: proc_macro2::TokenStream = input.into();
