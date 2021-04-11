@@ -51,8 +51,8 @@ pub fn generate(program: Program) -> proc_macro2::TokenStream {
                 return Err(ProgramError::Custom(99));
             }
 
-            /// Split the instruction data into the first 8 byte method
-            /// identifier (sighash) and the serialized instruction data.
+            // Split the instruction data into the first 8 byte method
+            // identifier (sighash) and the serialized instruction data.
             let mut ix_data: &[u8] = ix_data;
             let sighash: [u8; 8] = {
                 let mut sighash: [u8; 8] = [0; 8];
@@ -61,16 +61,10 @@ pub fn generate(program: Program) -> proc_macro2::TokenStream {
                 sighash
             };
 
-            /// If the method identifier is the IDL tag, then execute an IDL
-            /// instruction, injected into all Anchor programs.
-            if cfg!(not(feature = "no-idl")) {
-                if sighash == anchor_lang::idl::IDL_IX_TAG.to_le_bytes() {
-                    return __private::__idl(program_id, accounts, &ix_data);
-                }
-            }
-
-            #dispatch
+            dispatch(program_id, accounts, sighash, ix_data)
         }
+
+        #dispatch
 
         /// Create a private module to not clutter the program's namespace.
         /// Defines an entrypoint for each individual instruction handler
@@ -110,7 +104,7 @@ pub fn generate_dispatch(program: &Program) -> proc_macro2::TokenStream {
                         let ix = instruction::state::#ix_name::deserialize(&mut ix_data)
                             .map_err(|_| ProgramError::Custom(1))?; // todo: error code
                         let instruction::state::#variant_arm = ix;
-                        __private::__ctor(program_id, accounts, #(#ctor_args),*)
+                        __private::__state::__ctor(program_id, accounts, #(#ctor_args),*)
                     }
                 }
             }
@@ -143,7 +137,7 @@ pub fn generate_dispatch(program: &Program) -> proc_macro2::TokenStream {
                                 let ix = instruction::state::#ix_name::deserialize(&mut ix_data)
                                     .map_err(|_| ProgramError::Custom(1))?; // todo: error code
                                 let instruction::state::#variant_arm = ix;
-                                __private::#ix_method_name(program_id, accounts, #(#ix_arg_names),*)
+                                __private::__state::#ix_method_name(program_id, accounts, #(#ix_arg_names),*)
                             }
                         }
                     })
@@ -229,21 +223,49 @@ pub fn generate_dispatch(program: &Program) -> proc_macro2::TokenStream {
                     let ix = instruction::#ix_name::deserialize(&mut ix_data)
                         .map_err(|_| ProgramError::Custom(1))?; // todo: error code
                     let instruction::#variant_arm = ix;
-                    __private::#ix_method_name(program_id, accounts, #(#ix_arg_names),*)
+                    __private::__global::#ix_method_name(program_id, accounts, #(#ix_arg_names),*)
                 }
             }
         })
         .collect();
 
     quote! {
-        match sighash {
-            #ctor_state_dispatch_arm
-            #(#state_dispatch_arms)*
-            #(#trait_dispatch_arms)*
-            #(#global_dispatch_arms)*
-            _ => {
-                msg!("Fallback functions are not supported. If you have a use case, please file an issue.");
-                Err(ProgramError::Custom(99))
+        /// Performs method dispatch.
+        ///
+        /// Each method in an anchor program is uniquely defined by a namespace
+        /// and a rust identifier (i.e., the name given to the method). These
+        /// two pieces can be combined to creater a method identifier,
+        /// specifically, Anchor uses
+        ///
+        /// Sha256("<namespace>::<rust-identifier>")[..8],
+        ///
+        /// where the namespace can be one of three types. 1) "global" for a
+        /// regular instruction, 2) "state" for a state struct instruction
+        /// handler and 3) a trait namespace (used in combination with the
+        /// `#[interface]` attribute), which is defined by the trait name, e..
+        /// `MyTrait`.
+        ///
+        /// With this 8 byte identifier, Anchor performs method dispatch,
+        /// matching the given 8 byte identifier to the associated method
+        /// handler, which leads to user defined code being eventually invoked.
+        fn dispatch(program_id: &Pubkey, accounts: &[AccountInfo], sighash: [u8; 8], mut ix_data: &[u8]) -> ProgramResult {
+            // If the method identifier is the IDL tag, then execute an IDL
+            // instruction, injected into all Anchor programs.
+            if cfg!(not(feature = "no-idl")) {
+                if sighash == anchor_lang::idl::IDL_IX_TAG.to_le_bytes() {
+                    return __private::__idl::__idl_dispatch(program_id, accounts, &ix_data);
+                }
+            }
+
+            match sighash {
+                #ctor_state_dispatch_arm
+                #(#state_dispatch_arms)*
+                #(#trait_dispatch_arms)*
+                #(#global_dispatch_arms)*
+                _ => {
+                    msg!("Fallback functions are not supported. If you have a use case, please file an issue.");
+                    Err(ProgramError::Custom(99))
+                }
             }
         }
     }
@@ -262,7 +284,7 @@ pub fn generate_non_inlined_handlers(program: &Program) -> proc_macro2::TokenStr
             // on chain.
             #[inline(never)]
             #[cfg(not(feature = "no-idl"))]
-            pub fn __idl(program_id: &Pubkey, accounts: &[AccountInfo], idl_ix_data: &[u8]) -> ProgramResult {
+            pub fn __idl_dispatch(program_id: &Pubkey, accounts: &[AccountInfo], idl_ix_data: &[u8]) -> ProgramResult {
                 let mut accounts = accounts;
                 let mut data: &[u8] = idl_ix_data;
 
@@ -301,7 +323,7 @@ pub fn generate_non_inlined_handlers(program: &Program) -> proc_macro2::TokenStr
 
             #[inline(never)]
             #[cfg(feature = "no-idl")]
-            pub fn __idl(program_id: &Pubkey, accounts: &[AccountInfo], idl_ix_data: &[u8]) -> ProgramResult {
+            pub fn __idl_dispatch(program_id: &Pubkey, accounts: &[AccountInfo], idl_ix_data: &[u8]) -> ProgramResult {
                 Err(anchor_lang::solana_program::program_error::ProgramError::Custom(99))
             }
 
@@ -679,11 +701,29 @@ pub fn generate_non_inlined_handlers(program: &Program) -> proc_macro2::TokenStr
         .collect();
 
     quote! {
-        #non_inlined_idl
-        #non_inlined_ctor
-        #(#non_inlined_state_handlers)*
+        /// __idl mod defines handlers for injected Anchor IDL instructions.
+        pub mod __idl {
+            use super::*;
+
+            #non_inlined_idl
+        }
+
+        /// __state mod defines wrapped handlers for state instructions.
+        pub mod __state {
+            use super::*;
+
+            #non_inlined_ctor
+            #(#non_inlined_state_handlers)*
+        }
+
         #(#non_inlined_state_trait_handlers)*
-        #(#non_inlined_handlers)*
+
+        /// __global mod defines wrapped handlers for global instructions.
+        pub mod __global {
+            use super::*;
+
+            #(#non_inlined_handlers)*
+        }
     }
 }
 
@@ -1020,7 +1060,7 @@ fn generate_accounts(program: &Program) -> proc_macro2::TokenStream {
     //       each struct here. This is convenient for Rust clients.
 
     quote! {
-        /// `accounts` is an Anchor generated module, providing a set of structs
+        /// An Anchor generated module, providing a set of structs
         /// mirroring the structs deriving `Accounts`, where each field is
         /// a `Pubkey`. This is useful for specifying accounts for a client.
         pub mod accounts {
