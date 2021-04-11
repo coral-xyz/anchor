@@ -40,7 +40,9 @@ pub fn generate(program: Program) -> proc_macro2::TokenStream {
         ///    implementation of an `#[interface]` trait.
         ///
         /// Care must be taken by the codegen to prevent collisions between
-        /// methods in these different namespaces.
+        /// methods in these different namespaces. For this reason, Anchor uses
+        /// a variant of sighash to perform method dispatch, rather than
+        /// something like a simple enum variant discriminator.
         ///
         /// The execution flow of the generated code can be roughly outlined:
         ///
