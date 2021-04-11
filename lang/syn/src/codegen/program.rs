@@ -23,9 +23,28 @@ pub fn generate(program: Program) -> proc_macro2::TokenStream {
         // TODO: remove once we allow segmented paths in `Accounts` structs.
         use #mod_name::*;
 
-        /// Standard entry to the program.
         #[cfg(not(feature = "no-entrypoint"))]
         anchor_lang::solana_program::entrypoint!(entry);
+        /// Standard entry to the program.
+        ///
+        /// The Anchor codegen can be roughly outlined as follows:
+        ///
+        /// * Start program via the entrypoint.
+        /// * Strip method identifier off the first 8 bytes of the instruction
+        ///   data and invoke the identified method. The method identifier
+        ///   is a variant of sighash. See docs.rs for `anchor_lang` for details.
+        /// * If the method identifier is an IDL identifier, execute the IDL
+        ///   instructions, which are a special set of hardcoded instructions
+        ///   baked into every Anchor program. Then exit.
+        /// * Otherwise, the method identifier is for a user defined
+        ///   instruction, i.e., one of the methods in the user defined
+        ///   `#[program]` module. Perform method dispatch, i.e., execute the
+        ///   big match statement mapping method identifier to method handler
+        ///   wrapper.
+        /// * Run the method handler wrapper. This wraps the code the user
+        ///   actually wrote, deserializing the accounts, constructing the
+        ///   context, invoking the user's code, and finally running the exit
+        ///   routine, which typically persists account changes.
         #[cfg(not(feature = "no-entrypoint"))]
         fn entry(program_id: &Pubkey, accounts: &[AccountInfo], ix_data: &[u8]) -> ProgramResult {
             if ix_data.len() < 8 {
@@ -50,12 +69,12 @@ pub fn generate(program: Program) -> proc_macro2::TokenStream {
                 }
             }
 
-            ///
             #dispatch
         }
 
         /// Create a private module to not clutter the program's namespace.
-        /// Defines an entrypoint for each individual instruction handler.
+        /// Defines an entrypoint for each individual instruction handler
+        /// wrapper.
         mod __private {
             use super::*;
 
@@ -914,7 +933,7 @@ pub fn generate_ixs(program: &Program) -> proc_macro2::TokenStream {
             // If no args, output a "unit" variant instead of a struct variant.
             if ix.args.is_empty() {
                 quote! {
-                    /// Anchor generated instruction.
+                    /// Instruction.
                     #[derive(AnchorSerialize, AnchorDeserialize)]
                     pub struct #ix_name_camel;
 
@@ -922,7 +941,7 @@ pub fn generate_ixs(program: &Program) -> proc_macro2::TokenStream {
                 }
             } else {
                 quote! {
-                    /// Anchor generated instruction.
+                    /// Instruction.
                     #[derive(AnchorSerialize, AnchorDeserialize)]
                     pub struct #ix_name_camel {
                         #(#raw_args),*

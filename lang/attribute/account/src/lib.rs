@@ -45,6 +45,7 @@ pub fn account(
     };
 
     let coder = quote! {
+        /// Anchor generated impl.
         impl anchor_lang::AccountSerialize for #account_name {
             fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> std::result::Result<(), ProgramError> {
                 writer.write_all(&#discriminator).map_err(|_| ProgramError::InvalidAccountData)?;
@@ -57,6 +58,7 @@ pub fn account(
             }
         }
 
+        /// Anchor generated impl.
         impl anchor_lang::AccountDeserialize for #account_name {
             fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
                  if buf.len() < #discriminator.len() {
@@ -76,6 +78,7 @@ pub fn account(
             }
         }
 
+        /// Anchor generated impl.
         impl anchor_lang::Discriminator for #account_name {
             fn discriminator() -> [u8; 8] {
                 #discriminator

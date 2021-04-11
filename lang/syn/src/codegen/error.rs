@@ -33,8 +33,13 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
         .collect();
 
     quote! {
-        type Result<T> = std::result::Result<T, Error>;
+        /// Anchor generated Result to be used as the return type for the
+        /// program.
+        pub type Result<T> = std::result::Result<T, Error>;
 
+        /// Anchor generated error allowing one to easily return a
+        /// `ProgramError` or a custom, user defined error code by utilizing
+        /// its `From` implementation.
         #[derive(thiserror::Error, Debug)]
         pub enum Error {
             #[error(transparent)]
@@ -47,6 +52,7 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
         #[repr(u32)]
         #error_enum
 
+        /// Anchor generated impl.
         impl std::fmt::Display for #enum_name {
             fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
                 match self {
@@ -55,8 +61,10 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
             }
         }
 
+        /// Anchor generated impl.
         impl std::error::Error for #enum_name {}
 
+        /// Anchor generated impl.
         impl std::convert::From<Error> for ProgramError {
             fn from(e: Error) -> ProgramError {
             // Errors 0-100 are reserved for the framework.
@@ -68,6 +76,7 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
             }
         }
 
+        /// Anchor generated impl.
         impl std::convert::From<#enum_name> for ProgramError {
             fn from(e: #enum_name) -> ProgramError {
                 let err: Error = e.into();

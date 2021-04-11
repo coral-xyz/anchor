@@ -230,6 +230,15 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
     };
 
     quote! {
+        /// An internal, Anchor generated module. This is used (as an
+        /// implementation detail), to generate a struct for a given
+        /// `#[derive(Accounts)]` implementation, where each field is a Pubkey,
+        /// instead of an `AccountInfo`. This is useful for clients that want
+        /// to generate a list of accounts, without explicitly knowing the
+        /// order all the fields should be in.
+        ///
+        /// To access the struct in this module, one should use the sibling
+        /// `accounts` module (also generated), which re-exports this.
         mod #account_mod_name {
             use super::*;
             use anchor_lang::prelude::borsh;
@@ -251,6 +260,7 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
             }
         }
 
+        /// Anchor generated impl.
         impl#combined_generics anchor_lang::Accounts#trait_generics for #name#strct_generics {
             #[inline(never)]
             fn try_accounts(program_id: &anchor_lang::solana_program::pubkey::Pubkey, accounts: &mut &[anchor_lang::solana_program::account_info::AccountInfo<'info>]) -> std::result::Result<Self, anchor_lang::solana_program::program_error::ProgramError> {
@@ -267,6 +277,7 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
             }
         }
 
+        /// Anchor generated impl.
         impl#combined_generics anchor_lang::ToAccountInfos#trait_generics for #name#strct_generics {
             fn to_account_infos(&self) -> Vec<anchor_lang::solana_program::account_info::AccountInfo<'info>> {
                 let mut account_infos = vec![];
@@ -277,6 +288,7 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
             }
         }
 
+        /// Anchor generated impl.
         impl#combined_generics anchor_lang::ToAccountMetas for #name#strct_generics {
             fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<anchor_lang::solana_program::instruction::AccountMeta> {
                 let mut account_metas = vec![];
@@ -288,6 +300,7 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
             }
         }
 
+        /// Anchor generated impl.
         impl#combined_generics anchor_lang::AccountsExit#trait_generics for #name#strct_generics {
             fn exit(&self, program_id: &anchor_lang::solana_program::pubkey::Pubkey) -> anchor_lang::solana_program::entrypoint::ProgramResult {
                 #(#on_save)*
