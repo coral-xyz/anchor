@@ -25,7 +25,6 @@ pub fn state(
             // No size override given. The account size is whatever is given
             // as the initialized value. Use the default implementation.
             quote! {
-                /// Anchor generated impl.
                 impl anchor_lang::AccountSize for #struct_ident {
                     fn size(&self) -> std::result::Result<u64, anchor_lang::solana_program::program_error::ProgramError> {
                         Ok(8 + self
@@ -39,7 +38,6 @@ pub fn state(
             let size = proc_macro2::TokenStream::from(args);
             // Size override given to the macro. Use it.
             quote! {
-                /// Anchor generated impl.
                 impl anchor_lang::AccountSize for #struct_ident {
                     fn size(&self) -> std::result::Result<u64, anchor_lang::solana_program::program_error::ProgramError> {
                         Ok(#size)

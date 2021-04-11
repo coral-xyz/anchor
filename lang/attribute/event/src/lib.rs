@@ -29,7 +29,6 @@ pub fn event(
         #[derive(anchor_lang::__private::EventIndex, AnchorSerialize, AnchorDeserialize)]
         #event_strct
 
-        /// Anchor generated impl.
         impl anchor_lang::Event for #event_name {
             fn data(&self) -> Vec<u8> {
                 let mut d = #discriminator.to_vec();
@@ -38,7 +37,6 @@ pub fn event(
             }
         }
 
-        /// Anchor generated impl.
         impl anchor_lang::Discriminator for #event_name {
             fn discriminator() -> [u8; 8] {
                 #discriminator

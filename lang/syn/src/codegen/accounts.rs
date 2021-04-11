@@ -260,7 +260,6 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
             }
         }
 
-        /// Anchor generated impl.
         impl#combined_generics anchor_lang::Accounts#trait_generics for #name#strct_generics {
             #[inline(never)]
             fn try_accounts(program_id: &anchor_lang::solana_program::pubkey::Pubkey, accounts: &mut &[anchor_lang::solana_program::account_info::AccountInfo<'info>]) -> std::result::Result<Self, anchor_lang::solana_program::program_error::ProgramError> {
@@ -277,7 +276,6 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
             }
         }
 
-        /// Anchor generated impl.
         impl#combined_generics anchor_lang::ToAccountInfos#trait_generics for #name#strct_generics {
             fn to_account_infos(&self) -> Vec<anchor_lang::solana_program::account_info::AccountInfo<'info>> {
                 let mut account_infos = vec![];
@@ -288,7 +286,6 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
             }
         }
 
-        /// Anchor generated impl.
         impl#combined_generics anchor_lang::ToAccountMetas for #name#strct_generics {
             fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<anchor_lang::solana_program::instruction::AccountMeta> {
                 let mut account_metas = vec![];
@@ -300,7 +297,6 @@ pub fn generate(accs: AccountsStruct) -> proc_macro2::TokenStream {
             }
         }
 
-        /// Anchor generated impl.
         impl#combined_generics anchor_lang::AccountsExit#trait_generics for #name#strct_generics {
             fn exit(&self, program_id: &anchor_lang::solana_program::pubkey::Pubkey) -> anchor_lang::solana_program::entrypoint::ProgramResult {
                 #(#on_save)*
