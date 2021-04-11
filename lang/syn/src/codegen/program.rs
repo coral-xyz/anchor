@@ -195,7 +195,7 @@ pub fn generate_dispatch(program: &Program) -> proc_macro2::TokenStream {
                                         let Args {
                                             #(#ix_arg_names),*
                                         } = ix;
-                                        __private::#ix_name(program_id, accounts, #(#ix_arg_names),*)
+                                        __private::__interface::#ix_name(program_id, accounts, #(#ix_arg_names),*)
                                     }
                                 }
                             })
@@ -716,7 +716,13 @@ pub fn generate_non_inlined_handlers(program: &Program) -> proc_macro2::TokenStr
             #(#non_inlined_state_handlers)*
         }
 
-        #(#non_inlined_state_trait_handlers)*
+        /// __interface mod defines wrapped handlers for `#[interface]` trait
+        /// implementations.
+        pub mod __interface {
+            use super::*;
+
+            #(#non_inlined_state_trait_handlers)*
+        }
 
         /// __global mod defines wrapped handlers for global instructions.
         pub mod __global {
