@@ -25,9 +25,24 @@ pub fn generate(program: Program) -> proc_macro2::TokenStream {
 
         #[cfg(not(feature = "no-entrypoint"))]
         anchor_lang::solana_program::entrypoint!(entry);
-        /// Standard entry to the program.
+        /// The Anchor codegen exposes a programming model where a user defines
+        /// a set of methods inside of a `#[program]` module in a way similar
+        /// to writing RPC request handlers. The macro then generates a bunch of
+        /// code wrapping these user defined methods into something that can be
+        /// executed on Solana.
         ///
-        /// The Anchor codegen can be roughly outlined as follows:
+        /// These methods fall into one of three categories, each of which
+        /// can be considered a different "namespace" of the program.
+        ///
+        /// 1) Global methods - regular methods inside of the `#[program]`.
+        /// 2) State methods - associated methods inside a `#[state]` struct.
+        /// 3) Interface methods - methods inside a strait struct's
+        ///    implementation of an `#[interface]` trait.
+        ///
+        /// Care must be taken by the codegen to prevent collisions between
+        /// methods in these different namespaces.
+        ///
+        /// The execution flow of the generated code can be roughly outlined:
         ///
         /// * Start program via the entrypoint.
         /// * Strip method identifier off the first 8 bytes of the instruction
@@ -45,6 +60,9 @@ pub fn generate(program: Program) -> proc_macro2::TokenStream {
         ///   actually wrote, deserializing the accounts, constructing the
         ///   context, invoking the user's code, and finally running the exit
         ///   routine, which typically persists account changes.
+        ///
+        /// The `entry` function here, defines the standard entry to a Solana
+        /// program, where execution begins.
         #[cfg(not(feature = "no-entrypoint"))]
         fn entry(program_id: &Pubkey, accounts: &[AccountInfo], ix_data: &[u8]) -> ProgramResult {
             if ix_data.len() < 8 {
