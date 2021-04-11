@@ -823,13 +823,13 @@ pub fn generate_ixs(program: &Program) -> proc_macro2::TokenStream {
                     .iter()
                     .map(|method| {
                         let ix_name_camel: proc_macro2::TokenStream = method
-														.raw_method
-														.sig
-														.ident
-														.to_string()
-														.to_camel_case()
+                            .raw_method
+                            .sig
+                            .ident
+                            .to_string()
+                            .to_camel_case()
                             .parse()
-														.unwrap();
+                            .unwrap();
                         let raw_args: Vec<proc_macro2::TokenStream> = method
                             .args
                             .iter()
@@ -859,7 +859,7 @@ pub fn generate_ixs(program: &Program) -> proc_macro2::TokenStream {
                         // If no args, output a "unit" variant instead of a struct variant.
                         if method.args.is_empty() {
                             quote! {
-																/// Anchor generated instruction.
+                                /// Anchor generated instruction.
                                 #[derive(AnchorSerialize, AnchorDeserialize)]
                                 pub struct #ix_name_camel;
 
@@ -867,7 +867,7 @@ pub fn generate_ixs(program: &Program) -> proc_macro2::TokenStream {
                             }
                         } else {
                             quote! {
-																/// Anchor generated instruction.
+                                /// Anchor generated instruction.
                                 #[derive(AnchorSerialize, AnchorDeserialize)]
                                 pub struct #ix_name_camel {
                                     #(#raw_args),*
