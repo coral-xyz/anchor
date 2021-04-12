@@ -28,7 +28,7 @@ impl<'a, 'b, 'c, 'info, T: Accounts<'info>> Context<'a, 'b, 'c, 'info, T> {
     }
 }
 
-/// Context speciying non-argument inputs for cross-program-invocations.
+/// Context specifying non-argument inputs for cross-program-invocations.
 pub struct CpiContext<'a, 'b, 'c, 'info, T>
 where
     T: ToAccountMetas + ToAccountInfos<'info>,
@@ -68,8 +68,8 @@ where
     }
 }
 
-/// Context speciying non-argument inputs for cross-program-invocations
-/// targeted at program state.
+/// Context specifying non-argument inputs for cross-program-invocations
+/// targeted at program state instructions.
 pub struct StateCpiContext<'a, 'b, 'c, 'info, T: Accounts<'info>> {
     state: AccountInfo<'info>,
     cpi_ctx: CpiContext<'a, 'b, 'c, 'info, T>,
