@@ -8,6 +8,7 @@ use heck::MixedCase;
 use quote::quote;
 use std::collections::HashMap;
 
+pub mod analyzer;
 pub mod codegen;
 #[cfg(feature = "hash")]
 pub mod hash;
@@ -294,6 +295,8 @@ pub enum Constraint {
     Executable(ConstraintExecutable),
     State(ConstraintState),
     Associated(ConstraintAssociated),
+    Address(ConstraintAddress),
+    Unsafe(ConstraintUnsafe),
 }
 
 #[derive(Debug)]
@@ -337,6 +340,14 @@ pub struct ConstraintState {
 pub struct ConstraintAssociated {
     pub associated_target: proc_macro2::Ident,
 }
+
+#[derive(Debug)]
+pub struct ConstraintAddress {
+    pub tokens: proc_macro2::TokenStream,
+}
+
+#[derive(Debug)]
+pub struct ConstraintUnsafe {}
 
 #[derive(Debug)]
 pub struct Error {

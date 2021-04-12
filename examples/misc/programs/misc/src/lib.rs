@@ -68,6 +68,7 @@ pub struct Initialize<'info> {
 pub struct TestOwner<'info> {
     #[account(owner = misc)]
     data: AccountInfo<'info>,
+    #[account(address = "asdf")]
     misc: AccountInfo<'info>,
 }
 

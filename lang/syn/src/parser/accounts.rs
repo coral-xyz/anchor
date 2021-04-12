@@ -1,8 +1,9 @@
 use crate::{
-    AccountField, AccountsStruct, CompositeField, Constraint, ConstraintAssociated,
-    ConstraintBelongsTo, ConstraintExecutable, ConstraintLiteral, ConstraintOwner,
-    ConstraintRentExempt, ConstraintSeeds, ConstraintSigner, ConstraintState, CpiAccountTy,
-    CpiStateTy, Field, ProgramAccountTy, ProgramStateTy, SysvarTy, Ty,
+    AccountField, AccountsStruct, CompositeField, Constraint, ConstraintAddress,
+    ConstraintAssociated, ConstraintBelongsTo, ConstraintExecutable, ConstraintLiteral,
+    ConstraintOwner, ConstraintRentExempt, ConstraintSeeds, ConstraintSigner, ConstraintState,
+    ConstraintUnsafe, CpiAccountTy, CpiStateTy, Field, ProgramAccountTy, ProgramStateTy, SysvarTy,
+    Ty,
 };
 
 pub fn parse(strct: &syn::ItemStruct) -> AccountsStruct {
@@ -224,6 +225,9 @@ fn parse_constraints(
                     is_signer = true;
                     constraints.push(Constraint::Signer(ConstraintSigner {}));
                 }
+                "unsafe" => {
+                    constraints.push(Constraint::Unsafe(ConstraintUnsafe {}));
+                }
                 "seeds" => {
                     match inner_tts.next().unwrap() {
                         proc_macro2::TokenTree::Punct(punct) => {
@@ -368,6 +372,22 @@ fn parse_constraints(
                         }
                         _ => panic!("invalid space"),
                     }
+                }
+                "address" => {
+                    match inner_tts.next().unwrap() {
+                        proc_macro2::TokenTree::Punct(punct) => {
+                            assert!(punct.as_char() == '=');
+                            punct
+                        }
+                        _ => panic!("invalid syntax"),
+                    };
+                    let tokens = match inner_tts.next().unwrap() {
+                        proc_macro2::TokenTree::Literal(literal) => {
+                            literal.to_string().replace("\"", "").parse().unwrap()
+                        }
+                        _ => panic!("invalid address syntax"),
+                    };
+                    constraints.push(Constraint::Address(ConstraintAddress { tokens }));
                 }
                 _ => {
                     panic!("invalid syntax");

@@ -1,7 +1,8 @@
 use crate::{
-    AccountField, AccountsStruct, CompositeField, Constraint, ConstraintAssociated,
-    ConstraintBelongsTo, ConstraintExecutable, ConstraintLiteral, ConstraintOwner,
-    ConstraintRentExempt, ConstraintSeeds, ConstraintSigner, ConstraintState, Field, Ty,
+    AccountField, AccountsStruct, CompositeField, Constraint, ConstraintAddress,
+    ConstraintAssociated, ConstraintBelongsTo, ConstraintExecutable, ConstraintLiteral,
+    ConstraintOwner, ConstraintRentExempt, ConstraintSeeds, ConstraintSigner, ConstraintState,
+    ConstraintUnsafe, Field, Ty,
 };
 use heck::SnakeCase;
 use quote::quote;
@@ -380,6 +381,8 @@ pub fn generate_field_constraint(f: &Field, c: &Constraint) -> proc_macro2::Toke
         Constraint::Executable(c) => generate_constraint_executable(f, c),
         Constraint::State(c) => generate_constraint_state(f, c),
         Constraint::Associated(c) => generate_constraint_associated(f, c),
+        Constraint::Address(c) => generate_constraint_address(f, c),
+        Constraint::Unsafe(c) => generate_constraint_unsafe(f, c),
     }
 }
 
@@ -640,4 +643,18 @@ fn to_seeds_tts(seeds: &[syn::Ident]) -> proc_macro2::TokenStream {
         };
     }
     tts
+}
+
+pub fn generate_constraint_address(f: &Field, c: &ConstraintAddress) -> proc_macro2::TokenStream {
+    let tokens = &c.tokens;
+    let ident = &f.ident;
+    quote! {
+        if #ident.to_account_info().key != #tokens {
+            return Err(anchor_lang::solana_program::program_error::ProgramError::Custom(1)); // todo: error codes
+        }
+    }
+}
+
+pub fn generate_constraint_unsafe(f: &Field, _c: &ConstraintUnsafe) -> proc_macro2::TokenStream {
+    quote! { /* No-op. */}
 }
