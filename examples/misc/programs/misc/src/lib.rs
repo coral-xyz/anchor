@@ -59,8 +59,8 @@ pub struct Initialize<'info> {
 #[derive(Accounts)]
 pub struct TestOwner<'info> {
     #[account(owner = misc)]
-    data: AccountInfo<'info>,
-    misc: AccountInfo<'info>,
+    data: UnsafeAccount<'info>,
+    misc: UnsafeAccount<'info>,
 }
 
 #[derive(Accounts)]

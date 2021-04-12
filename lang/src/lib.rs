@@ -216,6 +216,7 @@ pub mod prelude {
     };
 
     pub use borsh;
+    pub use solana_program::account_info::AccountInfo as UnsafeAccount;
     pub use solana_program::account_info::{next_account_info, AccountInfo};
     pub use solana_program::entrypoint::ProgramResult;
     pub use solana_program::instruction::AccountMeta;

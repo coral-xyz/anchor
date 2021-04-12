@@ -125,7 +125,7 @@ impl AccountsStruct {
                 AccountField::AccountsStruct(comp_f) => {
                     let accs_strct = global_accs
                         .get(&comp_f.symbol)
-                        .expect("Could not reslve Accounts symbol");
+                        .expect("Could not resolve Accounts symbol");
                     let accounts = accs_strct.idl_accounts(global_accs);
                     IdlAccountItem::IdlAccounts(IdlAccounts {
                         name: comp_f.ident.to_string().to_mixed_case(),
