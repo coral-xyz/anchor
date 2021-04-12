@@ -69,6 +69,11 @@ pub use anchor_derive_accounts::Accounts;
 /// Borsh is the default serialization format for instructions and accounts.
 pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorSerialize};
 pub use solana_program;
+/// Alias for [`AccountInfo`](../solana_program/instruction/struct.AccountInfo.html),
+/// as a reminder that the account is not validated and untrusted. When using
+/// an `UnsafeAccount`, one must manuallly validate its contents are consistent
+/// with what the program expects.
+pub use solana_program::account_info::AccountInfo as UnsafeAccount;
 
 /// A data structure of validated accounts that can be deserialized from the
 /// input to a Solana program. Implementations of this trait should perform any
