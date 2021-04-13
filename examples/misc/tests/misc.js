@@ -68,7 +68,7 @@ describe("misc", () => {
     );
   });
 
-  it("Can use the executable attribtue", async () => {
+  it("Can use the executable attribute", async () => {
     await program.rpc.testExecutable({
       accounts: {
         program: program.programId,
