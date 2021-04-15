@@ -37,6 +37,7 @@ describe('ido_pool', () => {
   let poolSigner = null;
   let pool_watermelon_publickey = null
   let pool_usdc_publickey = null
+  let poolAccount = null
 
 
   it('Initializes the IDO pool', async () => {
@@ -54,9 +55,34 @@ describe('ido_pool', () => {
     pool_watermelon_publickey =  await createTokenAccount(provider, watermelon_mint, poolSigner);
     pool_usdc_publickey =  await createTokenAccount(provider, usdc_mint, poolSigner);
 
+    poolAccount = new anchor.web3.Account();
 
+    // Atomically create the new account and initialize it with the program.
+    await program.rpc.initializePool(watermelon_ido_amount, {
+      accounts: {
+        poolAccount: poolAccount.publicKey,
+        distributionAuthority: provider.wallet.publicKey,
+        creatorWatermelon: creators_watermelon_publickey,
+        poolWatermelon: pool_watermelon_publickey,
+        tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [poolAccount],
+      instructions: [
+        anchor.web3.SystemProgram.createAccount({
+          fromPubkey: provider.wallet.publicKey,
+          newAccountPubkey: poolAccount.publicKey,
+          space: 8 + 8, // Add 8 for the account discriminator.
+          lamports: await provider.connection.getMinimumBalanceForRentExemption(
+            8 + 8
+          ),
+          programId: program.programId,
+        }),
+      ],
+    });
 
-
+    creators_watermelon_account = await getTokenAccount(provider, creators_watermelon_publickey);
+    assert.ok(creators_watermelon_account.amount.eq(new anchor.BN(0)));
   });
 
 
