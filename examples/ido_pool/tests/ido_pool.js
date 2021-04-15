@@ -9,30 +9,61 @@ describe('ido_pool', () => {
   anchor.setProvider(provider);
 
   const program = anchor.workspace.IdoPool;
+  const watermelon_ido_amount = new anchor.BN(500)
 
   let usdc_mint = null;
   let watermelon_mint = null;
 
 
-  it('Initialize test state', async () => {
+  it('Initializes the state-of-the-world', async () => {
     usdc_mint = await createMint(provider);
     watermelon_mint = await createMint(provider);
     creators_watermelon_publickey =  await createTokenAccount(provider, watermelon_mint, provider.wallet.publicKey);
+    // Tokens to distributed from the IDO pool
+    await mintToAccount(provider, watermelon_mint, creators_watermelon_publickey, watermelon_ido_amount, provider.wallet.publicKey);
+    creators_watermelon_account = await getTokenAccount(provider, creators_watermelon_publickey);
+    assert.ok(creators_watermelon_account.amount.eq(watermelon_ido_amount));
+    // console.log(Object.getOwnPropertyNames(TokenInstructions).filter(function (p) {
+    //   return typeof TokenInstructions[p] === 'function';
+    // }));
 
-    await mintToAccount(provider, watermelon_mint, creators_watermelon_publickey, new anchor.BN(1000))
-
-    console.log(Object.getOwnPropertyNames(TokenInstructions).filter(function (p) {
-      return typeof TokenInstructions[p] === 'function';
-    }));
-
-    creators_watermelon_account = await getTokenAccount(provider, creators_watermelon_publickey)
-    console.log(creators_watermelon_account.amount)
-    assert.ok(creators_watermelon_account.amount.eq(new anchor.BN(1000)))
+    // console.log(creators_watermelon_account.amount)
     // const tx = await program.rpc.initialize();
     // console.log('Your transaction signature', tx);
   });
-});
 
+
+
+  let poolSigner = null;
+  let pool_watermelon_publickey = null
+  let pool_usdc_publickey = null
+
+
+  it('Initializes the IDO pool', async () => {
+    // We use the watermelon mint address as the seed, could use something else though
+    const [
+      _poolSigner,
+      nonce,
+    ] = await anchor.web3.PublicKey.findProgramAddress(
+      [watermelon_mint.toBuffer()],
+      program.programId
+    );
+    poolSigner = _poolSigner;
+    // console.log(poolSigner);
+
+    pool_watermelon_publickey =  await createTokenAccount(provider, watermelon_mint, poolSigner);
+    pool_usdc_publickey =  await createTokenAccount(provider, usdc_mint, poolSigner);
+
+
+
+
+  });
+
+
+
+
+
+});
 
 
 
@@ -126,13 +157,12 @@ async function createTokenAccountInstrs(
 }
 
 
-async function mintToAccount(provider, mint, destination, amount) {
+async function mintToAccount(provider, mint, destination, amount, mintAuthority) {
   // mint authority is the provider
   const tx = new anchor.web3.Transaction();
   tx.add(
-    ...(await createMintToAccountInstrs(mint, destination, amount, provider.wallet.publicKey))
+    ...(await createMintToAccountInstrs(mint, destination, amount, mintAuthority))
   );
-  // await provider.send(tx, [provider.wallet]);
   await provider.send(tx, []);
   return;
 }
