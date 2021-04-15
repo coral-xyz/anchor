@@ -27,6 +27,7 @@ use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
+use std::cell::RefMut;
 use std::io::Write;
 
 mod account_info;
@@ -42,6 +43,7 @@ mod program_account;
 mod state;
 mod sysvar;
 mod vec;
+mod zero_copy_account;
 
 // Internal module used by macros.
 #[doc(hidden)]
@@ -50,6 +52,8 @@ pub mod __private {
     pub use crate::error::Error;
     pub use anchor_attribute_event::EventIndex;
     pub use base64;
+    pub use bytemuck;
+    pub use safe_transmute;
 }
 
 pub use crate::context::{Context, CpiContext, CpiStateContext};
@@ -58,6 +62,7 @@ pub use crate::cpi_state::CpiState;
 pub use crate::program_account::ProgramAccount;
 pub use crate::state::ProgramState;
 pub use crate::sysvar::Sysvar;
+pub use crate::zero_copy_account::ProgramAccountZeroCopy;
 pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::{account, associated};
 pub use anchor_attribute_error::error;
@@ -172,6 +177,14 @@ pub trait AccountDeserialize: Sized {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError>;
 }
 
+/// Zero copy version of `AccountDeserialize`.
+pub trait AccountDeserializeZeroCopy: Sized {
+    fn try_deserialize<'info>(buf: &'info mut [u8]) -> Result<RefMut<'info, Self>, ProgramError>;
+    fn try_deserialize_unchecked<'info>(
+        buf: &'info mut [u8],
+    ) -> Result<RefMut<'info, Self>, ProgramError>;
+}
+
 /// Calculates the data for an instruction invocation, where the data is
 /// `Sha256(<namespace>::<method_name>)[..8] || BorshSerialize(args)`.
 /// `args` is a borsh serialized struct of named fields for each argument given
@@ -217,8 +230,8 @@ pub mod prelude {
         access_control, account, associated, emit, error, event, interface, program, state,
         AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AccountsInit,
         AnchorDeserialize, AnchorSerialize, Context, CpiAccount, CpiContext, CpiState,
-        CpiStateContext, ProgramAccount, ProgramState, Sysvar, ToAccountInfo, ToAccountInfos,
-        ToAccountMetas,
+        CpiStateContext, ProgramAccount, ProgramAccountZeroCopy, ProgramState, Sysvar,
+        ToAccountInfo, ToAccountInfos, ToAccountMetas,
     };
 
     pub use borsh;

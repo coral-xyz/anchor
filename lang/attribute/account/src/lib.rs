@@ -44,50 +44,88 @@ pub fn account(
         format!("{:?}", discriminator).parse().unwrap()
     };
 
-    let coder = quote! {
-        impl anchor_lang::AccountSerialize for #account_name {
-            fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> std::result::Result<(), ProgramError> {
-                writer.write_all(&#discriminator).map_err(|_| ProgramError::InvalidAccountData)?;
-                AnchorSerialize::serialize(
-                    self,
-                    writer
-                )
-                    .map_err(|_| ProgramError::InvalidAccountData)?;
-                Ok(())
-            }
-        }
+    proc_macro::TokenStream::from({
+        if namespace == "zero_copy" {
+            quote! {
+                #[derive(ZeroCopyPrivate, Copy, Clone)]
+                #[repr(packed)]
+                #account_strct
 
-        impl anchor_lang::AccountDeserialize for #account_name {
-            fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
-                 if buf.len() < #discriminator.len() {
-                    return Err(ProgramError::AccountDataTooSmall);
+                unsafe impl anchor_lang::__private::bytemuck::Zeroable for #account_name {}
+                unsafe impl anchor_lang::__private::bytemuck::Pod for #account_name {}
+                unsafe impl anchor_lang::__private::safe_transmute::trivial::TriviallyTransmutable for #account_name {}
+
+                impl anchor_lang::AccountDeserializeZeroCopy for #account_name {
+                    fn try_deserialize<'info>(buf: &'info mut &[u8]) -> std::result::Result<std::cell::RefMut<'info, Self>, ProgramError> {
+                        if buf.len() < #discriminator.len() {
+                            return Err(ProgramError::AccountDataTooSmall);
+                        }
+                        let given_disc = &buf[..8];
+                        if &#discriminator != given_disc {
+                            return Err(ProgramError::InvalidInstructionData);
+                        }
+                        Self::try_deserialize_unchecked(buf)
+                    }
+
+                    fn try_deserialize_unchecked<'info>(buf: &'info mut &[u8]) -> std::result::Result<std::cell::RefMut<'info, Self>, ProgramError> {
+                        let mut data: &mut [u8] = &mut buf[8..];
+
+                        let account_data = RefMut::map(market_account.try_borrow_mut_data()?, |data| *data);
+                        RefMut::map(account_data, |data| {
+                            anchor_lang::__private::bytemuck::from_bytes_mut(cast_slice_mut(data))
+                        })
+                    }
                 }
-                let given_disc = &buf[..8];
-                if &#discriminator != given_disc {
-                    return Err(ProgramError::InvalidInstructionData);
+
+                impl anchor_lang::Discriminator for #account_name {
+                    fn discriminator() -> [u8; 8] {
+                        #discriminator
+                    }
                 }
-                Self::try_deserialize_unchecked(buf)
             }
+        } else {
+            quote! {
+                #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+                #account_strct
 
-            fn try_deserialize_unchecked(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
-                let mut data: &[u8] = &buf[8..];
-                AnchorDeserialize::deserialize(&mut data)
-                    .map_err(|_| ProgramError::InvalidAccountData)
+                impl anchor_lang::AccountSerialize for #account_name {
+                    fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> std::result::Result<(), ProgramError> {
+                        writer.write_all(&#discriminator).map_err(|_| ProgramError::InvalidAccountData)?;
+                        AnchorSerialize::serialize(
+                            self,
+                            writer
+                        )
+                            .map_err(|_| ProgramError::InvalidAccountData)?;
+                        Ok(())
+                    }
+                }
+
+                impl anchor_lang::AccountDeserialize for #account_name {
+                    fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
+                        if buf.len() < #discriminator.len() {
+                            return Err(ProgramError::AccountDataTooSmall);
+                        }
+                        let given_disc = &buf[..8];
+                        if &#discriminator != given_disc {
+                            return Err(ProgramError::InvalidInstructionData);
+                        }
+                        Self::try_deserialize_unchecked(buf)
+                    }
+
+                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
+                        let mut data: &[u8] = &buf[8..];
+                        AnchorDeserialize::deserialize(&mut data)
+                            .map_err(|_| ProgramError::InvalidAccountData)
+                    }
+                }
+
+                impl anchor_lang::Discriminator for #account_name {
+                    fn discriminator() -> [u8; 8] {
+                        #discriminator
+                    }
+                }
             }
         }
-
-        impl anchor_lang::Discriminator for #account_name {
-            fn discriminator() -> [u8; 8] {
-                #discriminator
-            }
-        }
-    };
-
-    proc_macro::TokenStream::from(quote! {
-        #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
-        #account_strct
-
-        #coder
     })
 }
 
@@ -144,3 +182,27 @@ pub fn associated(
         }
     })
 }
+
+#[proc_macro_derive(ZeroCopyPrivate, attributes(accessor))]
+pub fn derive_zero_copy_private(_item: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // todo: generate accessors
+    proc_macro::TokenStream::from(quote! {})
+}
+
+/*
+Add a macro to generate accessors. For example,
+#[account(zero_copy)]
+pub struct Account {
+    #[accessor(Pubkey)]
+    pub data: [u64; 64],
+}
+
+Will generate
+
+impl MarketState {
+  get_account(&self) -> Pubkey;
+  set_account(&self, arg: &Pubkey) -> Pubkey;
+}
+
+Where any type implementing `From` on the field can be used to convert.
+*/
