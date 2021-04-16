@@ -23,11 +23,12 @@
 
 extern crate self as anchor_lang;
 
+use bytemuck::{Pod, Zeroable};
+use safe_transmute::trivial::TriviallyTransmutable;
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
-use std::cell::RefMut;
 use std::io::Write;
 
 mod account_info;
@@ -50,6 +51,7 @@ mod zero_copy_account;
 pub mod __private {
     pub use crate::ctor::Ctor;
     pub use crate::error::Error;
+    pub use anchor_attribute_account::ZeroCopyAccessor;
     pub use anchor_attribute_event::EventIndex;
     pub use base64;
     pub use bytemuck;
@@ -179,10 +181,30 @@ pub trait AccountDeserialize: Sized {
 
 /// Zero copy version of `AccountDeserialize`.
 pub trait AccountDeserializeZeroCopy: Sized {
-    fn try_deserialize<'info>(buf: &'info mut [u8]) -> Result<RefMut<'info, Self>, ProgramError>;
+    fn try_deserialize<'info>(buf: &'info mut [u8]) -> Result<&'info mut Self, ProgramError>;
     fn try_deserialize_unchecked<'info>(
         buf: &'info mut [u8],
-    ) -> Result<RefMut<'info, Self>, ProgramError>;
+    ) -> Result<&'info mut Self, ProgramError>;
+}
+
+/// Type that can be used with a zero copy account.
+pub trait ZeroCopy:
+    AccountDeserializeZeroCopy + Discriminator + Copy + Clone + TriviallyTransmutable + Zeroable + Pod
+{
+}
+
+pub trait ZeroCopyAccessor<Ty> {
+    fn get(&self) -> Ty;
+    fn set(input: &Ty) -> Self;
+}
+
+impl ZeroCopyAccessor<Pubkey> for [u8; 32] {
+    fn get(&self) -> Pubkey {
+        Pubkey::new(self)
+    }
+    fn set(input: &Pubkey) -> [u8; 32] {
+        input.to_bytes()
+    }
 }
 
 /// Calculates the data for an instruction invocation, where the data is

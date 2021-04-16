@@ -454,6 +454,7 @@ pub fn generate_constraint_rent_exempt(
     let info = match f.ty {
         Ty::AccountInfo => quote! { #ident },
         Ty::ProgramAccount(_) => quote! { #ident.to_account_info() },
+        Ty::ProgramAccountZeroCopy(_) => quote! { #ident.to_account_info() },
         _ => panic!("Invalid syntax: rent exemption cannot be specified."),
     };
     match c {
@@ -497,7 +498,7 @@ pub fn generate_constraint_state(f: &Field, c: &ConstraintState) -> proc_macro2:
     let ident = &f.ident;
     let account_ty = match &f.ty {
         Ty::CpiState(ty) => &ty.account_ident,
-        _ => panic!("Invalid syntax"),
+        _ => panic!("Invalid state constraint"),
     };
     quote! {
         // Checks the given state account is the canonical state account for
@@ -519,7 +520,7 @@ pub fn generate_constraint_associated(
     let field = &f.ident;
     let account_ty = match &f.ty {
         Ty::ProgramAccount(ty) => &ty.account_ident,
-        _ => panic!("Invalid syntax"),
+        _ => panic!("Invalid associated constraint"),
     };
 
     let space = match &f.space {

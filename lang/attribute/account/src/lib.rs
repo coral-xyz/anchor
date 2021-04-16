@@ -47,8 +47,8 @@ pub fn account(
     proc_macro::TokenStream::from({
         if namespace == "zero_copy" {
             quote! {
-                #[derive(ZeroCopyPrivate, Copy, Clone)]
                 #[repr(packed)]
+                #[derive(anchor_lang::__private::ZeroCopyAccessor, Copy, Clone)]
                 #account_strct
 
                 unsafe impl anchor_lang::__private::bytemuck::Zeroable for #account_name {}
@@ -56,7 +56,7 @@ pub fn account(
                 unsafe impl anchor_lang::__private::safe_transmute::trivial::TriviallyTransmutable for #account_name {}
 
                 impl anchor_lang::AccountDeserializeZeroCopy for #account_name {
-                    fn try_deserialize<'info>(buf: &'info mut &[u8]) -> std::result::Result<std::cell::RefMut<'info, Self>, ProgramError> {
+                    fn try_deserialize<'info>(buf: &'info mut [u8]) -> std::result::Result<&'info mut Self, ProgramError> {
                         if buf.len() < #discriminator.len() {
                             return Err(ProgramError::AccountDataTooSmall);
                         }
@@ -67,13 +67,9 @@ pub fn account(
                         Self::try_deserialize_unchecked(buf)
                     }
 
-                    fn try_deserialize_unchecked<'info>(buf: &'info mut &[u8]) -> std::result::Result<std::cell::RefMut<'info, Self>, ProgramError> {
+                    fn try_deserialize_unchecked<'info>(buf: &'info mut [u8]) -> std::result::Result<&'info mut Self, ProgramError> {
                         let mut data: &mut [u8] = &mut buf[8..];
-
-                        let account_data = RefMut::map(market_account.try_borrow_mut_data()?, |data| *data);
-                        RefMut::map(account_data, |data| {
-                            anchor_lang::__private::bytemuck::from_bytes_mut(cast_slice_mut(data))
-                        })
+                        Ok(anchor_lang::__private::bytemuck::from_bytes_mut(data))
                     }
                 }
 
@@ -82,6 +78,8 @@ pub fn account(
                         #discriminator
                     }
                 }
+
+                impl anchor_lang::ZeroCopy for #account_name {}
             }
         } else {
             quote! {
@@ -183,26 +181,62 @@ pub fn associated(
     })
 }
 
-#[proc_macro_derive(ZeroCopyPrivate, attributes(accessor))]
-pub fn derive_zero_copy_private(_item: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    // todo: generate accessors
-    proc_macro::TokenStream::from(quote! {})
+#[proc_macro_derive(ZeroCopyAccessor, attributes(accessor))]
+pub fn derive_zero_copy_accessor(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let account_strct = parse_macro_input!(item as syn::ItemStruct);
+    let account_name = &account_strct.ident;
+
+    let fields = match &account_strct.fields {
+        syn::Fields::Named(n) => n,
+        _ => panic!("Fields must be named"),
+    };
+    let methods: Vec<proc_macro2::TokenStream> = fields
+        .named
+        .iter()
+        .filter_map(|field: &syn::Field| {
+            field
+                .attrs
+                .iter()
+                .filter(|attr| {
+                    let name = anchor_syn::parser::tts_to_string(&attr.path);
+                    if name != "accessor" {
+                        return false;
+                    }
+                    return true;
+                })
+                .next()
+                .map(|attr| {
+                    let mut tts = attr.tokens.clone().into_iter();
+                    let g_stream = match tts.next().expect("Must have a token group") {
+                        proc_macro2::TokenTree::Group(g) => g.stream(),
+                        _ => panic!("Invalid syntax"),
+                    };
+                    let accessor_ty = match g_stream.into_iter().next() {
+                        Some(token) => token,
+                        _ => panic!("Missing accessor type"),
+                    };
+
+                    let field_name = field.ident.as_ref().unwrap();
+
+                    let get_field: proc_macro2::TokenStream =
+                        format!("get_{}", field_name.to_string()).parse().unwrap();
+                    let set_field: proc_macro2::TokenStream =
+                        format!("set_{}", field_name.to_string()).parse().unwrap();
+
+                    quote! {
+                        pub fn #get_field(&self) -> #accessor_ty {
+                            anchor_lang::ZeroCopyAccessor::get(&self.#field_name)
+                        }
+                        pub fn #set_field(&mut self, input: &#accessor_ty) {
+														self.#field_name = anchor_lang::ZeroCopyAccessor::set(input);
+                        }
+                    }
+                })
+        })
+        .collect();
+    proc_macro::TokenStream::from(quote! {
+        impl #account_name {
+            #(#methods)*
+        }
+    })
 }
-
-/*
-Add a macro to generate accessors. For example,
-#[account(zero_copy)]
-pub struct Account {
-    #[accessor(Pubkey)]
-    pub data: [u64; 64],
-}
-
-Will generate
-
-impl MarketState {
-  get_account(&self) -> Pubkey;
-  set_account(&self, arg: &Pubkey) -> Pubkey;
-}
-
-Where any type implementing `From` on the field can be used to convert.
-*/
