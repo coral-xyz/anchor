@@ -449,8 +449,6 @@ export class RpcFactory {
         // Assert the account discriminator is correct.
         const discriminator = await accountDiscriminator(idlAccount.name);
         if (discriminator.compare(accountInfo.data.slice(0, 8))) {
-					console.log('account', discriminator);
-					console.log('accountINfo data', accountInfo.data.slice(0, 8));
           throw new Error("Invalid account discriminator");
         }
 

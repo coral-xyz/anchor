@@ -349,21 +349,21 @@ class IdlCoder {
             throw new IdlError(`Type not found: ${JSON.stringify(field)}`);
           }
           return IdlCoder.typeDefLayout(filtered[0], types, fieldName);
-				// @ts-ignore
+          // @ts-ignore
         } else if (field.type.array) {
-					// @ts-ignore
-					let arrayTy = field.type.array[0];
-					// @ts-ignore
-					let arrayLen = field.type.array[1];
-					let innerLayout = IdlCoder.fieldLayout(
-							{
-								name: undefined,
-								type: arrayTy,
-							},
-							types
-					);
-					return borsh.array(innerLayout, arrayLen, fieldName);
-				} else {
+          // @ts-ignore
+          let arrayTy = field.type.array[0];
+          // @ts-ignore
+          let arrayLen = field.type.array[1];
+          let innerLayout = IdlCoder.fieldLayout(
+            {
+              name: undefined,
+              type: arrayTy,
+            },
+            types
+          );
+          return borsh.array(innerLayout, arrayLen, fieldName);
+        } else {
           throw new Error(`Not yet implemented: ${field}`);
         }
       }
@@ -478,15 +478,15 @@ function typeSize(idl: Idl, ty: IdlType): number {
 
         return accountSize(idl, typeDef);
       }
-			// @ts-ignore
-			if (ty.array !== undefined) {
-				// @ts-ignore
-				let arrayTy = ty.array[0];
-				// @ts-ignore
-				let arraySize = ty.array[1];
-				// @ts-ignore
-				return typeSize(idl, arrayTy) * arraySize;
-			}
+      // @ts-ignore
+      if (ty.array !== undefined) {
+        // @ts-ignore
+        let arrayTy = ty.array[0];
+        // @ts-ignore
+        let arraySize = ty.array[1];
+        // @ts-ignore
+        return typeSize(idl, arrayTy) * arraySize;
+      }
       throw new Error(`Invalid type ${JSON.stringify(ty)}`);
   }
 }
