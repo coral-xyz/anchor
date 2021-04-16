@@ -28,9 +28,7 @@ describe("zero-copy", () => {
     assert.ok(account.secondData.toNumber() === 0);
     assert.ok(
       JSON.stringify(account.secondAuthority),
-				JSON.stringify([
-						...program.provider.wallet.publicKey.toBuffer(),
-				])
+      JSON.stringify([...program.provider.wallet.publicKey.toBuffer()])
     );
   });
 
@@ -51,9 +49,7 @@ describe("zero-copy", () => {
     assert.ok(account.secondData.toNumber() === 0);
     assert.ok(
       JSON.stringify(account.secondAuthority),
-				JSON.stringify([
-						...program.provider.wallet.publicKey.toBuffer(),
-				])
+      JSON.stringify([...program.provider.wallet.publicKey.toBuffer()])
     );
   });
 
@@ -74,49 +70,47 @@ describe("zero-copy", () => {
     assert.ok(account.secondData.toNumber() === 55);
     assert.ok(
       JSON.stringify(account.secondAuthority),
-				JSON.stringify([
-						...program.provider.wallet.publicKey.toBuffer(),
-				])
+      JSON.stringify([...program.provider.wallet.publicKey.toBuffer()])
     );
   });
 
-		it('Creates an associated zero copy account', async () => {
-				await program.rpc.createBar({
-						accounts: {
-								bar: await program.account.bar.associatedAddress(
-										program.provider.wallet.publicKey,
-										foo.publicKey,
-								),
-								authority: program.provider.wallet.publicKey,
-								foo: foo.publicKey,
-								rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-								systemProgram: anchor.web3.SystemProgram.programId,
-						},
-				});
+  it("Creates an associated zero copy account", async () => {
+    await program.rpc.createBar({
+      accounts: {
+        bar: await program.account.bar.associatedAddress(
+          program.provider.wallet.publicKey,
+          foo.publicKey
+        ),
+        authority: program.provider.wallet.publicKey,
+        foo: foo.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+    });
 
-				const bar = await program.account.bar.associated(
-						program.provider.wallet.publicKey,
-						foo.publicKey,
-				);
-				assert.ok(bar.authority.equals(program.provider.wallet.publicKey));
-				assert.ok(bar.data.toNumber() === 0);
-		});
+    const bar = await program.account.bar.associated(
+      program.provider.wallet.publicKey,
+      foo.publicKey
+    );
+    assert.ok(bar.authority.equals(program.provider.wallet.publicKey));
+    assert.ok(bar.data.toNumber() === 0);
+  });
 
-		it('Updates an associated zero copy account', async () => {
-				await program.rpc.updateBar(new anchor.BN(99), {
-						accounts: {
-								bar: await program.account.bar.associatedAddress(
-										program.provider.wallet.publicKey,
-										foo.publicKey,
-								),
-								authority: program.provider.wallet.publicKey,
-						},
-				});
-				const bar = await program.account.bar.associated(
-						program.provider.wallet.publicKey,
-						foo.publicKey,
-				);
-				assert.ok(bar.authority.equals(program.provider.wallet.publicKey));
-				assert.ok(bar.data.toNumber() === 99);
-		});
+  it("Updates an associated zero copy account", async () => {
+    await program.rpc.updateBar(new anchor.BN(99), {
+      accounts: {
+        bar: await program.account.bar.associatedAddress(
+          program.provider.wallet.publicKey,
+          foo.publicKey
+        ),
+        authority: program.provider.wallet.publicKey,
+      },
+    });
+    const bar = await program.account.bar.associated(
+      program.provider.wallet.publicKey,
+      foo.publicKey
+    );
+    assert.ok(bar.authority.equals(program.provider.wallet.publicKey));
+    assert.ok(bar.data.toNumber() === 99);
+  });
 });
