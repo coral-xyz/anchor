@@ -8,6 +8,7 @@ use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::cell::{Ref, RefMut};
+use std::io::Write;
 use std::marker::PhantomData;
 use std::ops::DerefMut;
 
@@ -31,6 +32,7 @@ impl<'info, T: ZeroCopy> ProgramAccountZeroCopy<'info, T> {
     ) -> Result<ProgramAccountZeroCopy<'info, T>, ProgramError> {
         let data: &[u8] = &acc_info.try_borrow_data()?;
 
+        // Discriminator must match.
         let mut disc_bytes = [0u8; 8];
         disc_bytes.copy_from_slice(&data[..8]);
         if disc_bytes != T::discriminator() {
@@ -44,7 +46,7 @@ impl<'info, T: ZeroCopy> ProgramAccountZeroCopy<'info, T> {
     pub fn try_from_init(
         acc_info: &AccountInfo<'info>,
     ) -> Result<ProgramAccountZeroCopy<'info, T>, ProgramError> {
-        let data: &[u8] = &acc_info.try_borrow_data()?;
+        let data = acc_info.try_borrow_mut_data()?;
 
         // The discriminator should be zero, since we're initializing.
         let mut disc_bytes = [0u8; 8];
@@ -66,6 +68,31 @@ impl<'info, T: ZeroCopy> ProgramAccountZeroCopy<'info, T> {
     pub fn load_mut(&self) -> Result<RefMut<T>, ProgramError> {
         Ok(RefMut::map(self.acc_info.try_borrow_mut_data()?, |data| {
             AccountDeserializeZeroCopy::try_deserialize(data.deref_mut()).unwrap()
+        }))
+    }
+
+    pub fn load_init(&self) -> Result<RefMut<T>, ProgramError> {
+        let data = self.acc_info.try_borrow_mut_data()?;
+
+        // The discriminator should be zero, since we're initializing.
+        let mut disc_bytes = [0u8; 8];
+        disc_bytes.copy_from_slice(&data[..8]);
+        let discriminator = u64::from_le_bytes(disc_bytes);
+        if discriminator != 0 {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        Ok(RefMut::map(data, |data| {
+            // Write the discriminator to the account.
+            let mut cursor = std::io::Cursor::new(data.deref_mut());
+            cursor.write_all(&T::discriminator()).unwrap();
+            solana_program::msg!("Data: {:?}", data);
+
+            // Zero copy deserialize.
+            let account =
+                AccountDeserializeZeroCopy::try_deserialize_unchecked(data.deref_mut()).unwrap();
+
+            account
         }))
     }
 }
@@ -105,6 +132,7 @@ impl<'info, T: ZeroCopy> AccountsInit<'info> for ProgramAccountZeroCopy<'info, T
 }
 
 impl<'info, T: ZeroCopy> AccountsExit<'info> for ProgramAccountZeroCopy<'info, T> {
+    // The account *cannot* be loaded when this is called.
     fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
         // No-op.
         Ok(())

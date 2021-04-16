@@ -1,11 +1,19 @@
 use anchor_lang::prelude::*;
 
+/*
+TODO:
+
+* persist discriminator on exit
+* work with associated accounts (if statement for the account load type and dont call load)
+* work with constraints (can call load before)
+*/
+
 #[program]
 pub mod zero_copy {
     use super::*;
 
     pub fn create_foo(ctx: Context<CreateFoo>) -> ProgramResult {
-        let foo = &mut ctx.accounts.foo.load_mut()?;
+        let foo = &mut ctx.accounts.foo.load_init()?;
         foo.set_authority(ctx.accounts.authority.key);
         Ok(())
     }
