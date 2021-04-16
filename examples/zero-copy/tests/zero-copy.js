@@ -113,4 +113,115 @@ describe("zero-copy", () => {
     assert.ok(bar.authority.equals(program.provider.wallet.publicKey));
     assert.ok(bar.data.toNumber() === 99);
   });
+
+  const eventQ = new anchor.web3.Account();
+  const size = 1000000 + 8; // Account size in bytes.
+
+  it("Creates a large event queue", async () => {
+    await program.rpc.createLargeAccount({
+      accounts: {
+        eventQ: eventQ.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      instructions: [
+        await program.account.eventQ.createInstruction(eventQ, size),
+      ],
+      signers: [eventQ],
+    });
+    const account = await program.account.eventQ(eventQ.publicKey);
+    assert.ok(account.events.length === 25000);
+    account.events.forEach((event) => {
+      assert.ok(event.from.equals(new anchor.web3.PublicKey()));
+      assert.ok(event.data.toNumber() === 0);
+    });
+  });
+
+  it("Updates a large event queue", async () => {
+    // Set index 0.
+    await program.rpc.updateLargeAccount(0, new anchor.BN(48), {
+      accounts: {
+        eventQ: eventQ.publicKey,
+        from: program.provider.wallet.publicKey,
+      },
+    });
+    // Verify update.
+    let account = await program.account.eventQ(eventQ.publicKey);
+    assert.ok(account.events.length === 25000);
+    account.events.forEach((event, idx) => {
+      if (idx === 0) {
+        assert.ok(event.from.equals(program.provider.wallet.publicKey));
+        assert.ok(event.data.toNumber() === 48);
+      } else {
+        assert.ok(event.from.equals(new anchor.web3.PublicKey()));
+        assert.ok(event.data.toNumber() === 0);
+      }
+    });
+
+    // Set index 11111.
+    await program.rpc.updateLargeAccount(11111, new anchor.BN(1234), {
+      accounts: {
+        eventQ: eventQ.publicKey,
+        from: program.provider.wallet.publicKey,
+      },
+    });
+    // Verify update.
+    account = await program.account.eventQ(eventQ.publicKey);
+    assert.ok(account.events.length === 25000);
+    account.events.forEach((event, idx) => {
+      if (idx === 0) {
+        assert.ok(event.from.equals(program.provider.wallet.publicKey));
+        assert.ok(event.data.toNumber() === 48);
+      } else if (idx === 11111) {
+        assert.ok(event.from.equals(program.provider.wallet.publicKey));
+        assert.ok(event.data.toNumber() === 1234);
+      } else {
+        assert.ok(event.from.equals(new anchor.web3.PublicKey()));
+        assert.ok(event.data.toNumber() === 0);
+      }
+    });
+
+    // Set last index.
+    await program.rpc.updateLargeAccount(24999, new anchor.BN(99), {
+      accounts: {
+        eventQ: eventQ.publicKey,
+        from: program.provider.wallet.publicKey,
+      },
+    });
+    // Verify update.
+    account = await program.account.eventQ(eventQ.publicKey);
+    assert.ok(account.events.length === 25000);
+    account.events.forEach((event, idx) => {
+      if (idx === 0) {
+        assert.ok(event.from.equals(program.provider.wallet.publicKey));
+        assert.ok(event.data.toNumber() === 48);
+      } else if (idx === 11111) {
+        assert.ok(event.from.equals(program.provider.wallet.publicKey));
+        assert.ok(event.data.toNumber() === 1234);
+      } else if (idx === 24999) {
+        assert.ok(event.from.equals(program.provider.wallet.publicKey));
+        assert.ok(event.data.toNumber() === 99);
+      } else {
+        assert.ok(event.from.equals(new anchor.web3.PublicKey()));
+        assert.ok(event.data.toNumber() === 0);
+      }
+    });
+  });
+
+  it("Errors when setting an out of bounds index", async () => {
+    // Fail to set non existing index.
+    await assert.rejects(
+      async () => {
+        await program.rpc.updateLargeAccount(25000, new anchor.BN(1), {
+          accounts: {
+            eventQ: eventQ.publicKey,
+            from: program.provider.wallet.publicKey,
+          },
+        });
+      },
+      (err) => {
+        console.log("err", err);
+        return true;
+      }
+    );
+  });
 });

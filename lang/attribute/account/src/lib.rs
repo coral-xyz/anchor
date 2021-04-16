@@ -249,3 +249,27 @@ pub fn derive_zero_copy_accessor(item: proc_macro::TokenStream) -> proc_macro::T
         }
     })
 }
+
+/// Marks a type so that it can be used as a field inside a
+/// `#[account(zero_copy)].
+///
+/// This is just a convenient alias for
+///
+/// ```
+/// #[derive(Copy, Clone)]
+/// #[repr(packed)]
+/// struct MyStruct {...}
+/// ```
+#[proc_macro_attribute]
+pub fn zero_copy(
+    _args: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    let account_strct = parse_macro_input!(item as syn::ItemStruct);
+
+    proc_macro::TokenStream::from(quote! {
+            #[derive(Copy, Clone)]
+            #[repr(packed)]
+            #account_strct
+    })
+}

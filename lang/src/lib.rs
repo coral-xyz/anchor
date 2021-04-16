@@ -66,7 +66,7 @@ pub use crate::state::ProgramState;
 pub use crate::sysvar::Sysvar;
 pub use crate::zero_copy_account::ProgramAccountZeroCopy;
 pub use anchor_attribute_access_control::access_control;
-pub use anchor_attribute_account::{account, associated};
+pub use anchor_attribute_account::{account, associated, zero_copy};
 pub use anchor_attribute_error::error;
 pub use anchor_attribute_event::{emit, event};
 pub use anchor_attribute_interface::interface;
@@ -250,7 +250,7 @@ pub trait Bump {
 pub mod prelude {
     pub use super::{
         access_control, account, associated, emit, error, event, interface, program, state,
-        AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AccountsInit,
+        zero_copy, AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AccountsInit,
         AnchorDeserialize, AnchorSerialize, Context, CpiAccount, CpiContext, CpiState,
         CpiStateContext, ProgramAccount, ProgramAccountZeroCopy, ProgramState, Sysvar,
         ToAccountInfo, ToAccountInfos, ToAccountMetas,
