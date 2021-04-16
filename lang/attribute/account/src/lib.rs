@@ -142,7 +142,7 @@ pub fn account(
 /// used as a program derived address.
 #[proc_macro_attribute]
 pub fn associated(
-    _args: proc_macro::TokenStream,
+    args: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     let mut account_strct = parse_macro_input!(input as syn::ItemStruct);
@@ -176,8 +176,9 @@ pub fn associated(
         _ => panic!("Fields must be named"),
     }
 
+    let args: proc_macro2::TokenStream = args.into();
     proc_macro::TokenStream::from(quote! {
-        #[anchor_lang::account]
+        #[anchor_lang::account(#args)]
         #[derive(Default)]
         #account_strct
 
@@ -236,7 +237,7 @@ pub fn derive_zero_copy_accessor(item: proc_macro::TokenStream) -> proc_macro::T
                             anchor_lang::ZeroCopyAccessor::get(&self.#field_name)
                         }
                         pub fn #set_field(&mut self, input: &#accessor_ty) {
-														self.#field_name = anchor_lang::ZeroCopyAccessor::set(input);
+                            self.#field_name = anchor_lang::ZeroCopyAccessor::set(input);
                         }
                     }
                 })

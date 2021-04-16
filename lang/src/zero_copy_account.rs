@@ -66,6 +66,11 @@ impl<'info, T: ZeroCopy> ProgramAccountZeroCopy<'info, T> {
     }
 
     pub fn load_mut(&self) -> Result<RefMut<T>, ProgramError> {
+        // AcocuntInfo api allows you to borrow mut even if the account isn't
+        // writable, so add this check for a better dev experience.
+        if !self.acc_info.is_writable {
+            return Err(ProgramError::Custom(87)); // todo: proper error
+        }
         Ok(RefMut::map(self.acc_info.try_borrow_mut_data()?, |data| {
             AccountDeserializeZeroCopy::try_deserialize(data.deref_mut()).unwrap()
         }))
@@ -83,11 +88,6 @@ impl<'info, T: ZeroCopy> ProgramAccountZeroCopy<'info, T> {
         }
 
         Ok(RefMut::map(data, |data| {
-            // Write the discriminator to the account.
-            let mut cursor = std::io::Cursor::new(data.deref_mut());
-            cursor.write_all(&T::discriminator()).unwrap();
-            solana_program::msg!("Data: {:?}", data);
-
             // Zero copy deserialize.
             let account =
                 AccountDeserializeZeroCopy::try_deserialize_unchecked(data.deref_mut()).unwrap();
@@ -134,7 +134,10 @@ impl<'info, T: ZeroCopy> AccountsInit<'info> for ProgramAccountZeroCopy<'info, T
 impl<'info, T: ZeroCopy> AccountsExit<'info> for ProgramAccountZeroCopy<'info, T> {
     // The account *cannot* be loaded when this is called.
     fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
-        // No-op.
+        let mut data = self.acc_info.try_borrow_mut_data()?;
+        let dst: &mut [u8] = &mut data;
+        let mut cursor = std::io::Cursor::new(dst);
+        cursor.write_all(&T::discriminator()).unwrap();
         Ok(())
     }
 }
