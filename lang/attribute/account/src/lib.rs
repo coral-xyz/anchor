@@ -158,7 +158,7 @@ pub fn account(
     })
 }
 
-/// Extends the `#[account]` attribute to allow one to create associated token
+/// Extends the `#[account]` attribute to allow one to create associated
 /// accounts. This includes a `Default` implementation, which means all fields
 /// in an `#[associated]` struct must implement `Default` and an
 /// `anchor_lang::Bump` trait implementation, which allows the account to be
