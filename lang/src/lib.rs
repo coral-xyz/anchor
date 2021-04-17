@@ -24,7 +24,6 @@
 extern crate self as anchor_lang;
 
 use bytemuck::{Pod, Zeroable};
-use safe_transmute::trivial::TriviallyTransmutable;
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
@@ -46,25 +45,13 @@ mod sysvar;
 mod vec;
 mod zero_copy_account;
 
-// Internal module used by macros.
-#[doc(hidden)]
-pub mod __private {
-    pub use crate::ctor::Ctor;
-    pub use crate::error::Error;
-    pub use anchor_attribute_account::ZeroCopyAccessor;
-    pub use anchor_attribute_event::EventIndex;
-    pub use base64;
-    pub use bytemuck;
-    pub use safe_transmute;
-}
-
 pub use crate::context::{Context, CpiContext, CpiStateContext};
 pub use crate::cpi_account::CpiAccount;
 pub use crate::cpi_state::CpiState;
 pub use crate::program_account::ProgramAccount;
 pub use crate::state::ProgramState;
 pub use crate::sysvar::Sysvar;
-pub use crate::zero_copy_account::ProgramAccountZeroCopy;
+pub use crate::zero_copy_account::AccountLoader;
 pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::{account, associated, zero_copy};
 pub use anchor_attribute_error::error;
@@ -179,33 +166,8 @@ pub trait AccountDeserialize: Sized {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError>;
 }
 
-/// Zero copy version of `AccountDeserialize`.
-pub trait AccountDeserializeZeroCopy: Sized {
-    fn try_deserialize<'info>(buf: &'info mut [u8]) -> Result<&'info mut Self, ProgramError>;
-    fn try_deserialize_unchecked<'info>(
-        buf: &'info mut [u8],
-    ) -> Result<&'info mut Self, ProgramError>;
-}
-
-/// Type that can be used with a zero copy account.
-pub trait ZeroCopy:
-    AccountDeserializeZeroCopy + Discriminator + Copy + Clone + TriviallyTransmutable + Zeroable + Pod
-{
-}
-
-pub trait ZeroCopyAccessor<Ty> {
-    fn get(&self) -> Ty;
-    fn set(input: &Ty) -> Self;
-}
-
-impl ZeroCopyAccessor<Pubkey> for [u8; 32] {
-    fn get(&self) -> Pubkey {
-        Pubkey::new(self)
-    }
-    fn set(input: &Pubkey) -> [u8; 32] {
-        input.to_bytes()
-    }
-}
+/// An account data structure capable of zero copy deserialization.
+pub trait ZeroCopy: Discriminator + Copy + Clone + Zeroable + Pod {}
 
 /// Calculates the data for an instruction invocation, where the data is
 /// `Sha256(<namespace>::<method_name>)[..8] || BorshSerialize(args)`.
@@ -250,10 +212,10 @@ pub trait Bump {
 pub mod prelude {
     pub use super::{
         access_control, account, associated, emit, error, event, interface, program, state,
-        zero_copy, AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AccountsInit,
-        AnchorDeserialize, AnchorSerialize, Context, CpiAccount, CpiContext, CpiState,
-        CpiStateContext, ProgramAccount, ProgramAccountZeroCopy, ProgramState, Sysvar,
-        ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        zero_copy, AccountDeserialize, AccountLoader, AccountSerialize, Accounts, AccountsExit,
+        AccountsInit, AnchorDeserialize, AnchorSerialize, Context, CpiAccount, CpiContext,
+        CpiState, CpiStateContext, ProgramAccount, ProgramState, Sysvar, ToAccountInfo,
+        ToAccountInfos, ToAccountMetas,
     };
 
     pub use borsh;
@@ -275,4 +237,32 @@ pub mod prelude {
     pub use solana_program::sysvar::stake_history::StakeHistory;
     pub use solana_program::sysvar::Sysvar as SolanaSysvar;
     pub use thiserror;
+}
+
+// Internal module used by macros.
+#[doc(hidden)]
+pub mod __private {
+    use solana_program::pubkey::Pubkey;
+
+    pub use crate::ctor::Ctor;
+    pub use crate::error::Error;
+    pub use anchor_attribute_account::ZeroCopyAccessor;
+    pub use anchor_attribute_event::EventIndex;
+    pub use base64;
+    pub use bytemuck;
+
+    // Very experimental trait.
+    pub trait ZeroCopyAccessor<Ty> {
+        fn get(&self) -> Ty;
+        fn set(input: &Ty) -> Self;
+    }
+
+    impl ZeroCopyAccessor<Pubkey> for [u8; 32] {
+        fn get(&self) -> Pubkey {
+            Pubkey::new(self)
+        }
+        fn set(input: &Pubkey) -> [u8; 32] {
+            input.to_bytes()
+        }
+    }
 }

@@ -204,10 +204,10 @@ impl Field {
                     ProgramAccount<#account>
                 }
             }
-            Ty::ProgramAccountZeroCopy(ty) => {
+            Ty::AccountLoader(ty) => {
                 let account = &ty.account_ident;
                 quote! {
-                    ProgramAccountZeroCopy<#account>
+                    AccountLoader<#account>
                 }
             }
             Ty::CpiAccount(ty) => {
@@ -248,7 +248,7 @@ pub enum Ty {
     ProgramState(ProgramStateTy),
     CpiState(CpiStateTy),
     ProgramAccount(ProgramAccountTy),
-    ProgramAccountZeroCopy(ProgramAccountZeroCopyTy),
+    AccountLoader(AccountLoaderTy),
     CpiAccount(CpiAccountTy),
     Sysvar(SysvarTy),
 }
@@ -290,7 +290,7 @@ pub struct CpiAccountTy {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct ProgramAccountZeroCopyTy {
+pub struct AccountLoaderTy {
     // The struct type of the account.
     pub account_ident: syn::Ident,
 }

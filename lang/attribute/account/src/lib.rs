@@ -17,6 +17,26 @@ use syn::parse_macro_input;
 /// As a result, any calls to `AccountDeserialize`'s `try_deserialize` will
 /// check this discriminator. If it doesn't match, an invalid account was given,
 /// and the account deserialization will exit with an error.
+///
+/// # Zero Copy Deserialization
+///
+/// To enable zero-copy-deserialization, one can pass in the `zero_copy`
+/// argument to the macro as follows:
+///
+/// ```
+/// #[account(zero_copy)]
+/// ```
+///
+/// This can be used to conveniently implement
+/// [`ZeroCopy`](./trait.ZeroCopy.html) so that the account can be used
+/// with [`AccountLoader`](./struct.AccountLoader.html).
+///
+/// Other than being more efficient, the most salient benefit this provides is
+/// the ability to define account types larger than the max stack or heap size.
+/// This is used in special cases, for example, the Serum DEX event queue. When
+/// using borsh, one is limited, since the account has to be copied and
+/// deserialized into a new data structure. With zero copy deserialization,
+/// everything is, effectively, lazy loaded on field access.
 #[proc_macro_attribute]
 pub fn account(
     args: proc_macro::TokenStream,
@@ -55,16 +75,24 @@ pub fn account(
     proc_macro::TokenStream::from({
         if is_zero_copy {
             quote! {
-                #[repr(packed)]
-                #[derive(anchor_lang::__private::ZeroCopyAccessor, Copy, Clone)]
+                #[zero_copy]
                 #account_strct
 
-                unsafe impl anchor_lang::__private::bytemuck::Zeroable for #account_name {}
                 unsafe impl anchor_lang::__private::bytemuck::Pod for #account_name {}
-                unsafe impl anchor_lang::__private::safe_transmute::trivial::TriviallyTransmutable for #account_name {}
+                unsafe impl anchor_lang::__private::bytemuck::Zeroable for #account_name {}
 
-                impl anchor_lang::AccountDeserializeZeroCopy for #account_name {
-                    fn try_deserialize<'info>(buf: &'info mut [u8]) -> std::result::Result<&'info mut Self, ProgramError> {
+                impl anchor_lang::ZeroCopy for #account_name {}
+
+                impl anchor_lang::Discriminator for #account_name {
+                    fn discriminator() -> [u8; 8] {
+                        #discriminator
+                    }
+                }
+
+                // This trait is useful for clients deserializing accounts.
+                // It's expected on-chain programs deserialize via zero-copy.
+                impl anchor_lang::AccountDeserialize for #account_name {
+                    fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
                         if buf.len() < #discriminator.len() {
                             return Err(ProgramError::AccountDataTooSmall);
                         }
@@ -75,19 +103,14 @@ pub fn account(
                         Self::try_deserialize_unchecked(buf)
                     }
 
-                    fn try_deserialize_unchecked<'info>(buf: &'info mut [u8]) -> std::result::Result<&'info mut Self, ProgramError> {
-                        let mut data: &mut [u8] = &mut buf[8..];
-                        Ok(anchor_lang::__private::bytemuck::from_bytes_mut(data))
+                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
+                        let data: &[u8] = &buf[8..];
+                        // Re-interpret raw bytes into the POD data structure.
+                        let account = anchor_lang::__private::bytemuck::from_bytes(data);
+                        // Copy out the bytes into a new, owned data structure.
+                        Ok(*account)
                     }
                 }
-
-                impl anchor_lang::Discriminator for #account_name {
-                    fn discriminator() -> [u8; 8] {
-                        #discriminator
-                    }
-                }
-
-                impl anchor_lang::ZeroCopy for #account_name {}
             }
         } else {
             quote! {
@@ -140,6 +163,17 @@ pub fn account(
 /// in an `#[associated]` struct must implement `Default` and an
 /// `anchor_lang::Bump` trait implementation, which allows the account to be
 /// used as a program derived address.
+///
+/// # Zero Copy Deserialization
+///
+/// Similar to the `#[account]` attribute one can enable zero copy
+/// deserialization by using the `zero_copy` argument:
+///
+/// ```
+/// #[associated(zero_copy)]
+/// ```
+///
+/// For more, see the [`account`](./attr.account.html) attribute.
 #[proc_macro_attribute]
 pub fn associated(
     args: proc_macro::TokenStream,
@@ -234,10 +268,10 @@ pub fn derive_zero_copy_accessor(item: proc_macro::TokenStream) -> proc_macro::T
 
                     quote! {
                         pub fn #get_field(&self) -> #accessor_ty {
-                            anchor_lang::ZeroCopyAccessor::get(&self.#field_name)
+                            anchor_lang::__private::ZeroCopyAccessor::get(&self.#field_name)
                         }
                         pub fn #set_field(&mut self, input: &#accessor_ty) {
-                            self.#field_name = anchor_lang::ZeroCopyAccessor::set(input);
+                            self.#field_name = anchor_lang::__private::ZeroCopyAccessor::set(input);
                         }
                     }
                 })
@@ -250,8 +284,8 @@ pub fn derive_zero_copy_accessor(item: proc_macro::TokenStream) -> proc_macro::T
     })
 }
 
-/// Marks a type so that it can be used as a field inside a
-/// `#[account(zero_copy)].
+/// A data structure that can be used as an internal field for a zero copy
+/// deserialized account, i.e., a struct marked with `#[account(zero_copy)]`.
 ///
 /// This is just a convenient alias for
 ///
@@ -268,7 +302,7 @@ pub fn zero_copy(
     let account_strct = parse_macro_input!(item as syn::ItemStruct);
 
     proc_macro::TokenStream::from(quote! {
-            #[derive(Copy, Clone)]
+            #[derive(anchor_lang::__private::ZeroCopyAccessor, Copy, Clone)]
             #[repr(packed)]
             #account_strct
     })

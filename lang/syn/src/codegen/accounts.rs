@@ -400,7 +400,7 @@ pub fn generate_constraint_belongs_to(
     let target = c.join_target.clone();
     let ident = &f.ident;
     let field = match &f.ty {
-        Ty::ProgramAccountZeroCopy(_) => quote! {#ident.load()?},
+        Ty::AccountLoader(_) => quote! {#ident.load()?},
         _ => quote! {#ident},
     };
     quote! {
@@ -458,7 +458,7 @@ pub fn generate_constraint_rent_exempt(
     let info = match f.ty {
         Ty::AccountInfo => quote! { #ident },
         Ty::ProgramAccount(_) => quote! { #ident.to_account_info() },
-        Ty::ProgramAccountZeroCopy(_) => quote! { #ident.to_account_info() },
+        Ty::AccountLoader(_) => quote! { #ident.to_account_info() },
         _ => panic!("Invalid syntax: rent exemption cannot be specified."),
     };
     match c {
@@ -524,7 +524,7 @@ pub fn generate_constraint_associated(
     let field = &f.ident;
     let (account_ty, is_zero_copy) = match &f.ty {
         Ty::ProgramAccount(ty) => (&ty.account_ident, false),
-        Ty::ProgramAccountZeroCopy(ty) => (&ty.account_ident, true),
+        Ty::AccountLoader(ty) => (&ty.account_ident, true),
         _ => panic!("Invalid associated constraint"),
     };
 
@@ -602,7 +602,7 @@ pub fn generate_constraint_associated(
             anchor_lang::ProgramAccount
         },
         true => quote! {
-            anchor_lang::ProgramAccountZeroCopy
+            anchor_lang::AccountLoader
         },
     };
     let nonce_assignment = match is_zero_copy {

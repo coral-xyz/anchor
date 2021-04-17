@@ -1,8 +1,8 @@
 use crate::{
-    AccountField, AccountsStruct, CompositeField, Constraint, ConstraintAssociated,
-    ConstraintBelongsTo, ConstraintExecutable, ConstraintLiteral, ConstraintOwner,
-    ConstraintRentExempt, ConstraintSeeds, ConstraintSigner, ConstraintState, CpiAccountTy,
-    CpiStateTy, Field, ProgramAccountTy, ProgramAccountZeroCopyTy, ProgramStateTy, SysvarTy, Ty,
+    AccountField, AccountLoaderTy, AccountsStruct, CompositeField, Constraint,
+    ConstraintAssociated, ConstraintBelongsTo, ConstraintExecutable, ConstraintLiteral,
+    ConstraintOwner, ConstraintRentExempt, ConstraintSeeds, ConstraintSigner, ConstraintState,
+    CpiAccountTy, CpiStateTy, Field, ProgramAccountTy, ProgramStateTy, SysvarTy, Ty,
 };
 
 pub fn parse(strct: &syn::ItemStruct) -> AccountsStruct {
@@ -71,13 +71,8 @@ fn parse_field(f: &syn::Field, anchor: Option<&syn::Attribute>) -> AccountField 
 
 fn is_field_primitive(f: &syn::Field) -> bool {
     match ident_string(f).as_str() {
-        "ProgramState"
-        | "ProgramAccount"
-        | "CpiAccount"
-        | "Sysvar"
-        | "AccountInfo"
-        | "CpiState"
-        | "ProgramAccountZeroCopy" => true,
+        "ProgramState" | "ProgramAccount" | "CpiAccount" | "Sysvar" | "AccountInfo"
+        | "CpiState" | "AccountLoader" => true,
         _ => false,
     }
 }
@@ -94,9 +89,7 @@ fn parse_ty(f: &syn::Field) -> Ty {
         "CpiAccount" => Ty::CpiAccount(parse_cpi_account(&path)),
         "Sysvar" => Ty::Sysvar(parse_sysvar(&path)),
         "AccountInfo" => Ty::AccountInfo,
-        "ProgramAccountZeroCopy" => {
-            Ty::ProgramAccountZeroCopy(parse_program_account_zero_copy(&path))
-        }
+        "AccountLoader" => Ty::AccountLoader(parse_program_account_zero_copy(&path)),
         _ => panic!("invalid account type"),
     }
 }
@@ -132,9 +125,9 @@ fn parse_program_account(path: &syn::Path) -> ProgramAccountTy {
     ProgramAccountTy { account_ident }
 }
 
-fn parse_program_account_zero_copy(path: &syn::Path) -> ProgramAccountZeroCopyTy {
+fn parse_program_account_zero_copy(path: &syn::Path) -> AccountLoaderTy {
     let account_ident = parse_account(path);
-    ProgramAccountZeroCopyTy { account_ident }
+    AccountLoaderTy { account_ident }
 }
 
 fn parse_account(path: &syn::Path) -> syn::Ident {
