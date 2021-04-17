@@ -1,4 +1,4 @@
-const anchor = require('@project-serum/anchor');
+const anchor = require("@project-serum/anchor");
 const assert = require("assert");
 
 describe("zero-copy", () => {
@@ -66,7 +66,7 @@ describe("zero-copy", () => {
 
     assert.ok(
       JSON.stringify(account.authority.toBuffer()) ===
-      JSON.stringify(program.provider.wallet.publicKey.toBuffer())
+        JSON.stringify(program.provider.wallet.publicKey.toBuffer())
     );
     assert.ok(account.data.toNumber() === 1234);
     assert.ok(account.secondData.toNumber() === 55);
