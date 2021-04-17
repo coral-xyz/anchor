@@ -23,7 +23,7 @@ use syn::parse_macro_input;
 /// To enable zero-copy-deserialization, one can pass in the `zero_copy`
 /// argument to the macro as follows:
 ///
-/// ```
+/// ```ignore
 /// #[account(zero_copy)]
 /// ```
 ///
@@ -169,7 +169,7 @@ pub fn account(
 /// Similar to the `#[account]` attribute one can enable zero copy
 /// deserialization by using the `zero_copy` argument:
 ///
-/// ```
+/// ```ignore
 /// #[associated(zero_copy)]
 /// ```
 ///
