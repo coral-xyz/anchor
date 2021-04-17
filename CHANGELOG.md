@@ -11,6 +11,8 @@ incremented for features.
 
 ## [Unreleased]
 
+## [0.4.4] - 2021-04-17
+
 ## Features
 
 * lang: Allows one to specify multiple `with` targets when creating associated acconts ([#197](https://github.com/project-serum/anchor/pull/197)).
