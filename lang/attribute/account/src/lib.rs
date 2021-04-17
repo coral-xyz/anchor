@@ -255,7 +255,7 @@ pub fn derive_zero_copy_accessor(item: proc_macro::TokenStream) -> proc_macro::T
 ///
 /// This is just a convenient alias for
 ///
-/// ```
+/// ```ignore
 /// #[derive(Copy, Clone)]
 /// #[repr(packed)]
 /// struct MyStruct {...}
