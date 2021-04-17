@@ -136,18 +136,18 @@ impl<'info, T: ZeroCopy> Accounts<'info> for Loader<'info, T> {
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
-        let pa = Loader::try_from(account)?;
-        if pa.acc_info.owner != program_id {
+        let l = Loader::try_from(account)?;
+        if l.acc_info.owner != program_id {
             return Err(ProgramError::Custom(1)); // todo: proper error
         }
-        Ok(pa)
+        Ok(l)
     }
 }
 
 impl<'info, T: ZeroCopy> AccountsInit<'info> for Loader<'info, T> {
     #[inline(never)]
     fn try_accounts_init(
-        _program_id: &Pubkey,
+        program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
     ) -> Result<Self, ProgramError> {
         if accounts.is_empty() {
@@ -155,7 +155,11 @@ impl<'info, T: ZeroCopy> AccountsInit<'info> for Loader<'info, T> {
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
-        Loader::try_from_init(account)
+        let l = Loader::try_from_init(account)?;
+        if l.acc_info.owner != program_id {
+            return Err(ProgramError::Custom(1)); // todo: proper error
+        }
+        Ok(l)
     }
 }
 
