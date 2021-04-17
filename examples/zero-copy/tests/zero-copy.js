@@ -65,7 +65,7 @@ describe("zero-copy", () => {
     const account = await program.account.foo(foo.publicKey);
 
     assert.ok(
-      JSON.stringify(account.authority.toBuffer()),
+      JSON.stringify(account.authority.toBuffer()) ===
       JSON.stringify(program.provider.wallet.publicKey.toBuffer())
     );
     assert.ok(account.data.toNumber() === 1234);
