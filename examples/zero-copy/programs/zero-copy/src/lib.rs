@@ -122,7 +122,7 @@ pub struct Foo {
     pub authority: Pubkey,
     pub data: u64,
     pub second_data: u64,
-    #[accessor(Pubkey)]
+    #[accessor(Pubkey)] // The `accessor` api will likely be removed.
     pub second_authority: [u8; 32],
 }
 

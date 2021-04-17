@@ -20,14 +20,15 @@ describe("zero-copy", () => {
       signers: [foo],
     });
     const account = await program.account.foo(foo.publicKey);
-    assert.ok(JSON.stringify(account.authority), [
-      ...program.provider.wallet.publicKey.toBuffer(),
-    ]);
+    assert.ok(
+      JSON.stringify(account.authority.toBuffer()) ===
+        JSON.stringify(program.provider.wallet.publicKey.toBuffer())
+    );
     assert.ok(account.data.toNumber() === 0);
     assert.ok(account.secondData.toNumber() === 0);
     assert.ok(
-      JSON.stringify(account.secondAuthority),
-      JSON.stringify([...program.provider.wallet.publicKey.toBuffer()])
+      JSON.stringify(account.secondAuthority) ===
+        JSON.stringify([...program.provider.wallet.publicKey.toBuffer()])
     );
   });
 
@@ -41,14 +42,15 @@ describe("zero-copy", () => {
 
     const account = await program.account.foo(foo.publicKey);
 
-    assert.ok(JSON.stringify(account.authority), [
-      ...program.provider.wallet.publicKey.toBuffer(),
-    ]);
+    assert.ok(
+      JSON.stringify(account.authority.toBuffer()) ===
+        JSON.stringify(program.provider.wallet.publicKey.toBuffer())
+    );
     assert.ok(account.data.toNumber() === 1234);
     assert.ok(account.secondData.toNumber() === 0);
     assert.ok(
-      JSON.stringify(account.secondAuthority),
-      JSON.stringify([...program.provider.wallet.publicKey.toBuffer()])
+      JSON.stringify(account.secondAuthority) ===
+        JSON.stringify([...program.provider.wallet.publicKey.toBuffer()])
     );
   });
 
@@ -62,14 +64,15 @@ describe("zero-copy", () => {
 
     const account = await program.account.foo(foo.publicKey);
 
-    assert.ok(JSON.stringify(account.authority), [
-      ...program.provider.wallet.publicKey.toBuffer(),
-    ]);
+    assert.ok(
+      JSON.stringify(account.authority.toBuffer()),
+      JSON.stringify(program.provider.wallet.publicKey.toBuffer())
+    );
     assert.ok(account.data.toNumber() === 1234);
     assert.ok(account.secondData.toNumber() === 55);
     assert.ok(
-      JSON.stringify(account.secondAuthority),
-      JSON.stringify([...program.provider.wallet.publicKey.toBuffer()])
+      JSON.stringify(account.secondAuthority) ===
+        JSON.stringify([...program.provider.wallet.publicKey.toBuffer()])
     );
   });
 
