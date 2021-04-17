@@ -39,19 +39,19 @@ mod ctor;
 mod error;
 #[doc(hidden)]
 pub mod idl;
+mod loader;
 mod program_account;
 mod state;
 mod sysvar;
 mod vec;
-mod zero_copy_account;
 
 pub use crate::context::{Context, CpiContext, CpiStateContext};
 pub use crate::cpi_account::CpiAccount;
 pub use crate::cpi_state::CpiState;
+pub use crate::loader::Loader;
 pub use crate::program_account::ProgramAccount;
 pub use crate::state::ProgramState;
 pub use crate::sysvar::Sysvar;
-pub use crate::zero_copy_account::AccountLoader;
 pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::{account, associated, zero_copy};
 pub use anchor_attribute_error::error;
@@ -212,9 +212,9 @@ pub trait Bump {
 pub mod prelude {
     pub use super::{
         access_control, account, associated, emit, error, event, interface, program, state,
-        zero_copy, AccountDeserialize, AccountLoader, AccountSerialize, Accounts, AccountsExit,
-        AccountsInit, AnchorDeserialize, AnchorSerialize, Context, CpiAccount, CpiContext,
-        CpiState, CpiStateContext, ProgramAccount, ProgramState, Sysvar, ToAccountInfo,
+        zero_copy, AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AccountsInit,
+        AnchorDeserialize, AnchorSerialize, Context, CpiAccount, CpiContext, CpiState,
+        CpiStateContext, Loader, ProgramAccount, ProgramState, Sysvar, ToAccountInfo,
         ToAccountInfos, ToAccountMetas,
     };
 

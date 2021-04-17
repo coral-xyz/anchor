@@ -61,7 +61,7 @@ pub mod zero_copy {
 #[derive(Accounts)]
 pub struct CreateFoo<'info> {
     #[account(init)]
-    foo: AccountLoader<'info, Foo>,
+    foo: Loader<'info, Foo>,
     #[account(signer)]
     authority: AccountInfo<'info>,
     rent: Sysvar<'info, Rent>,
@@ -70,7 +70,7 @@ pub struct CreateFoo<'info> {
 #[derive(Accounts)]
 pub struct UpdateFoo<'info> {
     #[account(mut, has_one = authority)]
-    foo: AccountLoader<'info, Foo>,
+    foo: Loader<'info, Foo>,
     #[account(signer)]
     authority: AccountInfo<'info>,
 }
@@ -78,7 +78,7 @@ pub struct UpdateFoo<'info> {
 #[derive(Accounts)]
 pub struct UpdateFooSecond<'info> {
     #[account(mut, "&foo.load()?.get_second_authority() == second_authority.key")]
-    foo: AccountLoader<'info, Foo>,
+    foo: Loader<'info, Foo>,
     #[account(signer)]
     second_authority: AccountInfo<'info>,
 }
@@ -86,10 +86,10 @@ pub struct UpdateFooSecond<'info> {
 #[derive(Accounts)]
 pub struct CreateBar<'info> {
     #[account(associated = authority, with = foo)]
-    bar: AccountLoader<'info, Bar>,
+    bar: Loader<'info, Bar>,
     #[account(signer)]
     authority: AccountInfo<'info>,
-    foo: AccountLoader<'info, Foo>,
+    foo: Loader<'info, Foo>,
     rent: Sysvar<'info, Rent>,
     system_program: AccountInfo<'info>,
 }
@@ -97,7 +97,7 @@ pub struct CreateBar<'info> {
 #[derive(Accounts)]
 pub struct UpdateBar<'info> {
     #[account(mut, has_one = authority)]
-    bar: AccountLoader<'info, Bar>,
+    bar: Loader<'info, Bar>,
     #[account(signer)]
     authority: AccountInfo<'info>,
 }
@@ -105,14 +105,14 @@ pub struct UpdateBar<'info> {
 #[derive(Accounts)]
 pub struct CreateLargeAccount<'info> {
     #[account(init)]
-    event_q: AccountLoader<'info, EventQ>,
+    event_q: Loader<'info, EventQ>,
     rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
 pub struct UpdateLargeAccount<'info> {
     #[account(mut)]
-    event_q: AccountLoader<'info, EventQ>,
+    event_q: Loader<'info, EventQ>,
     #[account(signer)]
     from: AccountInfo<'info>,
 }
