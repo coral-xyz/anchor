@@ -30,16 +30,7 @@ pub fn state(
 ) -> proc_macro::TokenStream {
     let item_struct = parse_macro_input!(input as syn::ItemStruct);
     let struct_ident = &item_struct.ident;
-    let is_zero_copy = {
-        let arg = args.to_string().replace("\"", "");
-        match args.clone().into_iter().next() {
-            None => false,
-            Some(tt) => match tt {
-                proc_macro::TokenTree::Literal(_) => false,
-                _ => arg == "zero_copy",
-            },
-        }
-    };
+    let is_zero_copy = args.to_string() == "zero_copy";
 
     let size_override = {
         if args.is_empty() {
@@ -83,6 +74,7 @@ pub fn state(
         false => quote! {#[account]},
         true => quote! {#[account(zero_copy)]},
     };
+
     proc_macro::TokenStream::from(quote! {
         #attribute
         #item_struct

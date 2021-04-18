@@ -667,12 +667,12 @@ pub fn generate_non_inlined_handlers(program: &Program) -> proc_macro2::TokenStr
                                     accounts: &[AccountInfo],
                                     #(#ix_params),*
                                 ) -> ProgramResult {
-
                                     let mut remaining_accounts: &[AccountInfo] = accounts;
                                     if remaining_accounts.is_empty() {
                                         return Err(ProgramError::Custom(1)); // todo
                                     }
 
+                                    // Deserialize the program state account.
                                     let state_account = &remaining_accounts[0];
                                     let mut state: #state_ty = {
                                         let data = state_account.try_borrow_data()?;
@@ -741,6 +741,12 @@ pub fn generate_non_inlined_handlers(program: &Program) -> proc_macro2::TokenStr
                                 let ix_name = &ix.raw_method.sig.ident;
                                 let state_ty: proc_macro2::TokenStream = state.name.parse().unwrap();
                                 let anchor_ident = &ix.anchor_ident;
+
+                                if state.is_zero_copy {
+                                    // Easy to implement. Just need to write a test.
+                                    // Feel free to open a PR.
+                                    panic!("Trait implementations not yet implemented for zero copy state structs. Please file an issue.");
+                                }
 
                                 if ix.has_receiver {
                                     quote! {
