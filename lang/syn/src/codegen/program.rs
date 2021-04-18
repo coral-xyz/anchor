@@ -690,15 +690,13 @@ pub fn generate_non_inlined_handlers(program: &Program) -> proc_macro2::TokenStr
                                     let ctx = Context::new(program_id, &mut accounts, remaining_accounts);
 
                                     // Execute user defined function.
-                                    {
-                                        state.#ix_name(
-                                            ctx,
-                                            #(#ix_arg_names),*
-                                        ).map_err(|e| {
-                                            anchor_lang::solana_program::msg!(&e.to_string());
-                                            e
-                                        })?;
-                                    }
+                                    state.#ix_name(
+                                        ctx,
+                                        #(#ix_arg_names),*
+                                    ).map_err(|e| {
+                                        anchor_lang::solana_program::msg!(&e.to_string());
+                                        e
+                                    })?;
 
                                     // Serialize the state and save it to storage.
                                     accounts.exit(program_id)?;
