@@ -5,20 +5,22 @@ const assert = require('assert');
 describe('ido_pool', () => {
 
   const provider = anchor.Provider.local();
+
   // Configure the client to use the local cluster.
   anchor.setProvider(provider);
 
   const program = anchor.workspace.IdoPool;
+
+  // All mints default to 6 decimal places
   const watermelonIdoAmount = new anchor.BN(500);
 
   // These are all of the variables we assume exist in the world already and
   // are available to the client.
-  // All mints default to 6 decimal places
   let usdcMint = null;
   let watermelonMint = null;
   let creatorUsdc = null;
   let creatorWatermelon = null;
-
+  
 
   it('Initializes the state-of-the-world', async () => {
     usdcMint = await createMint(provider);
@@ -67,11 +69,14 @@ describe('ido_pool', () => {
     poolUsdc =  await createTokenAccount(provider, usdcMint, poolSigner);
 
     poolAccount = new anchor.web3.Account();
-
+    // console.log(program);
+    // console.log(program.account);
+    
     // Atomically create the new account and initialize it with the program.
-    await program.rpc.initializePool(watermelonIdoAmount, {
+    await program.rpc.initializePool(watermelonIdoAmount, nonce, {
       accounts: {
         poolAccount: poolAccount.publicKey,
+        poolSigner,
         distributionAuthority: provider.wallet.publicKey,
         creatorWatermelon,
         creatorUsdc,
@@ -84,27 +89,53 @@ describe('ido_pool', () => {
       signers: [poolAccount],
       instructions: [
         await program.account.poolAccount.createInstruction(poolAccount),
-        // anchor.web3.SystemProgram.createAccount({
-        //   fromPubkey: provider.wallet.publicKey,
-        //   newAccountPubkey: poolAccount.publicKey,
-        //   space: 8 + 8, // Add 8 for the account discriminator.
-        //   lamports: await provider.connection.getMinimumBalanceForRentExemption(
-        //     8 + 8
-        //   ),
-        //   programId: program.programId,
-        // }),
       ],
     });
 
-    // creators_watermelon_account = await getTokenAccount(provider, creatorsWatermelon);
-    // assert.ok(creators_watermelon_account.amount.eq(new anchor.BN(0)));
+    creators_watermelon_account = await getTokenAccount(provider, creatorWatermelon);
+    assert.ok(creators_watermelon_account.amount.eq(new anchor.BN(0)));
   });
 
   // This is how you get account sizes
   // console.log(program.account.poolAccount.size)
 
+  // We're going to need to start using the associated program account for creating token accounts
+  // if not in testing, then definitely in production
+  
+  let userUsdc = null;
+  const deposit_amount = new anchor.BN(10000);
+
+  it('Exchanges user USDC for redeemable tokens', async () => {
+    
+    userUsdc =  await createTokenAccount(provider, usdcMint, provider.wallet.publicKey);
+    await mintToAccount(provider, usdcMint, userUsdc, deposit_amount, provider.wallet.publicKey);
+    userRedeemable =  await createTokenAccount(provider, redeemableMint, provider.wallet.publicKey);
+
+    await program.rpc.exchangeUsdcForRedeemable(deposit_amount, {
+      accounts: {
+        poolAccount: poolAccount.publicKey,
+        poolSigner,
+        redeemableMint,
+        poolUsdc,
+        userAuthority: provider.wallet.publicKey,
+        userUsdc,
+        userRedeemable,
+        tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+      },
+    });
+
+    poolUsdcAccount = await getTokenAccount(provider, poolUsdc);
+    assert.ok(poolUsdcAccount.amount.eq(deposit_amount));
+    userRedeemableAccount = await getTokenAccount(provider, userRedeemable);
+    assert.ok(userRedeemableAccount.amount.eq(deposit_amount));
+
+  });
+
+
 
 });
+
+
 
 
 
