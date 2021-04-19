@@ -33,6 +33,7 @@ pub struct State {
     pub ctor_and_anchor: Option<(syn::ImplItemMethod, syn::Ident)>,
     pub impl_block_and_methods: Option<(syn::ItemImpl, Vec<StateIx>)>,
     pub interfaces: Option<Vec<StateInterface>>,
+    pub is_zero_copy: bool,
 }
 
 #[derive(Debug)]
@@ -204,6 +205,12 @@ impl Field {
                     ProgramAccount<#account>
                 }
             }
+            Ty::Loader(ty) => {
+                let account = &ty.account_ident;
+                quote! {
+                    Loader<#account>
+                }
+            }
             Ty::CpiAccount(ty) => {
                 let account = &ty.account_ident;
                 quote! {
@@ -242,6 +249,7 @@ pub enum Ty {
     ProgramState(ProgramStateTy),
     CpiState(CpiStateTy),
     ProgramAccount(ProgramAccountTy),
+    Loader(LoaderTy),
     CpiAccount(CpiAccountTy),
     Sysvar(SysvarTy),
 }
@@ -278,6 +286,12 @@ pub struct ProgramAccountTy {
 
 #[derive(Debug, PartialEq)]
 pub struct CpiAccountTy {
+    // The struct type of the account.
+    pub account_ident: syn::Ident,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct LoaderTy {
     // The struct type of the account.
     pub account_ident: syn::Ident,
 }
