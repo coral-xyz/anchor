@@ -11,7 +11,7 @@ incremented for features.
 
 ## [Unreleased]
 
-## [0.4.4] - 2021-04-17
+## [0.4.4] - 2021-04-18
 
 ## Features
 
