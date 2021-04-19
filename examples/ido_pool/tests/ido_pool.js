@@ -9,20 +9,28 @@ describe('ido_pool', () => {
   anchor.setProvider(provider);
 
   const program = anchor.workspace.IdoPool;
-  const watermelon_ido_amount = new anchor.BN(500)
+  const watermelonIdoAmount = new anchor.BN(500);
 
-  let usdc_mint = null;
-  let watermelon_mint = null;
+  // These are all of the variables we assume exist in the world already and
+  // are available to the client.
+  // All mints default to 6 decimal places
+  let usdcMint = null;
+  let watermelonMint = null;
+  let creatorUsdc = null;
+  let creatorWatermelon = null;
 
 
   it('Initializes the state-of-the-world', async () => {
-    usdc_mint = await createMint(provider);
-    watermelon_mint = await createMint(provider);
-    creators_watermelon_publickey =  await createTokenAccount(provider, watermelon_mint, provider.wallet.publicKey);
-    // Tokens to distributed from the IDO pool
-    await mintToAccount(provider, watermelon_mint, creators_watermelon_publickey, watermelon_ido_amount, provider.wallet.publicKey);
-    creators_watermelon_account = await getTokenAccount(provider, creators_watermelon_publickey);
-    assert.ok(creators_watermelon_account.amount.eq(watermelon_ido_amount));
+    usdcMint = await createMint(provider);
+    watermelonMint = await createMint(provider);
+    creatorUsdc =  await createTokenAccount(provider, usdcMint, provider.wallet.publicKey);
+    creatorWatermelon =  await createTokenAccount(provider, watermelonMint, provider.wallet.publicKey);
+    // Mint Watermelon tokens the will be distributed from the IDO pool
+    await mintToAccount(provider, watermelonMint, creatorWatermelon, watermelonIdoAmount, provider.wallet.publicKey);
+    creator_watermelon_account = await getTokenAccount(provider, creatorWatermelon);
+    assert.ok(creator_watermelon_account.amount.eq(watermelonIdoAmount));
+  });
+
     // console.log(Object.getOwnPropertyNames(TokenInstructions).filter(function (p) {
     //   return typeof TokenInstructions[p] === 'function';
     // }));
@@ -30,14 +38,15 @@ describe('ido_pool', () => {
     // console.log(creators_watermelon_account.amount)
     // const tx = await program.rpc.initialize();
     // console.log('Your transaction signature', tx);
-  });
 
 
-
+  // These are all variables the client will have to create to initialize the
+  // IDO pool
   let poolSigner = null;
-  let pool_watermelon_publickey = null
-  let pool_usdc_publickey = null
-  let poolAccount = null
+  let redeemableMint = null;
+  let poolWatermelon = null;
+  let poolUsdc = null;
+  let poolAccount = null;
 
 
   it('Initializes the IDO pool', async () => {
@@ -46,47 +55,53 @@ describe('ido_pool', () => {
       _poolSigner,
       nonce,
     ] = await anchor.web3.PublicKey.findProgramAddress(
-      [watermelon_mint.toBuffer()],
+      [watermelonMint.toBuffer()],
       program.programId
     );
     poolSigner = _poolSigner;
-    // console.log(poolSigner);
 
-    pool_watermelon_publickey =  await createTokenAccount(provider, watermelon_mint, poolSigner);
-    pool_usdc_publickey =  await createTokenAccount(provider, usdc_mint, poolSigner);
+    // Pool doesn't need a Redeemable SPL token account because it only
+    // burns and mints redeemable tokens, it never stores them
+    redeemableMint = await createMint(provider, poolSigner);
+    poolWatermelon =  await createTokenAccount(provider, watermelonMint, poolSigner);
+    poolUsdc =  await createTokenAccount(provider, usdcMint, poolSigner);
 
     poolAccount = new anchor.web3.Account();
 
     // Atomically create the new account and initialize it with the program.
-    await program.rpc.initializePool(watermelon_ido_amount, {
+    await program.rpc.initializePool(watermelonIdoAmount, {
       accounts: {
         poolAccount: poolAccount.publicKey,
         distributionAuthority: provider.wallet.publicKey,
-        creatorWatermelon: creators_watermelon_publickey,
-        poolWatermelon: pool_watermelon_publickey,
+        creatorWatermelon,
+        creatorUsdc,
+        redeemableMint,
+        poolWatermelon,
+        poolUsdc,
         tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [poolAccount],
       instructions: [
-        anchor.web3.SystemProgram.createAccount({
-          fromPubkey: provider.wallet.publicKey,
-          newAccountPubkey: poolAccount.publicKey,
-          space: 8 + 8, // Add 8 for the account discriminator.
-          lamports: await provider.connection.getMinimumBalanceForRentExemption(
-            8 + 8
-          ),
-          programId: program.programId,
-        }),
+        await program.account.poolAccount.createInstruction(poolAccount),
+        // anchor.web3.SystemProgram.createAccount({
+        //   fromPubkey: provider.wallet.publicKey,
+        //   newAccountPubkey: poolAccount.publicKey,
+        //   space: 8 + 8, // Add 8 for the account discriminator.
+        //   lamports: await provider.connection.getMinimumBalanceForRentExemption(
+        //     8 + 8
+        //   ),
+        //   programId: program.programId,
+        // }),
       ],
     });
 
-    creators_watermelon_account = await getTokenAccount(provider, creators_watermelon_publickey);
-    assert.ok(creators_watermelon_account.amount.eq(new anchor.BN(0)));
+    // creators_watermelon_account = await getTokenAccount(provider, creatorsWatermelon);
+    // assert.ok(creators_watermelon_account.amount.eq(new anchor.BN(0)));
   });
 
-
-
+  // This is how you get account sizes
+  // console.log(program.account.poolAccount.size)
 
 
 });
@@ -139,7 +154,7 @@ async function createMintInstructions(provider, authority, mint) {
     }),
     TokenInstructions.initializeMint({
       mint,
-      decimals: 0,
+      decimals: 6,
       mintAuthority: authority,
     }),
   ];
