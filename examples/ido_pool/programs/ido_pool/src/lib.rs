@@ -11,7 +11,10 @@ pub mod ido_pool {
         pool_account.watermelon_mint = ctx.accounts.creator_watermelon.mint;
         pool_account.usdc_mint = ctx.accounts.creator_usdc.mint;
         pool_account.nonce = nonce;
-
+        pool_account.exchange_rate = 0; // init to 0
+        // assumes that all mints have 6 decimals, how to add a check for this?
+        // maybe it doesn't matter?
+        pool_account.decimals = 6 ; 
         let cpi_accounts = Transfer {
             from: ctx.accounts.creator_watermelon.to_account_info(),
             to: ctx.accounts.pool_watermelon.to_account_info(),
@@ -24,12 +27,12 @@ pub mod ido_pool {
     }
 
 
-    pub fn exchange_usdc_for_redeemable(ctx: Context<ExchangeUsdcForRedeemable>, amount: u64) -> ProgramResult{
+    pub fn exchange_usdc_for_redeemable(ctx: Context<ExchangeUsdcForRedeemable>, amount: u64) -> ProgramResult {
         // TODO add the time checks 
 
         // TODO add a check that the account has a sufficient amount for the transfer
 
-        // Transfer USDC to pool USDC account
+        // Transfer user's USDC to pool USDC account
         let cpi_accounts = Transfer {
             from: ctx.accounts.user_usdc.to_account_info(),
             to: ctx.accounts.pool_usdc.to_account_info(),
@@ -55,12 +58,12 @@ pub mod ido_pool {
     }
 
 
-    pub fn exchange_redeemable_for_usdc(ctx: Context<ExchangeRedeemableForUsdc>, amount: u64) -> ProgramResult{
+    pub fn exchange_redeemable_for_usdc(ctx: Context<ExchangeRedeemableForUsdc>, amount: u64) -> ProgramResult {
         // TODO add the time checks
 
         // TODO check the user has sufficient redeemable tokens
 
-        // Burn the redeemable tokens
+        // Burn the user's redeemable tokens
         let cpi_accounts = Burn {
             mint: ctx.accounts.redeemable_mint.to_account_info(),
             to: ctx.accounts.user_redeemable.to_account_info(),
@@ -84,7 +87,30 @@ pub mod ido_pool {
 
         Ok(())
     }
+
+
+    pub fn calculate_exchange_rate(ctx: Context<CalculateExchangeRate>) -> ProgramResult {
+        // TODO add time checks 
+
+        // TODO Check that redeemable mint and usdc pool account have the same values
+
+        let pool_account = &mut ctx.accounts.pool_account;
+        // TODO check that exchange rate hasn't already been set
+        // if exchange rate > 0 then error (it's already been calculated)
+
+        let base: u128 = 10;
+        let usdc_total = ctx.accounts.pool_usdc.amount;
+        // How many decimal places should we scale up usdc by?
+        let size_of_scale = 10;
+        let scaled_usdc_total = base.pow(size_of_scale) * usdc_total as u128;
+        let num_ido_tokens = pool_account.num_ido_tokens as u128;
+        let exchange_rate = scaled_usdc_total / num_ido_tokens;
+        pool_account.exchange_rate = exchange_rate;
+
+        Ok(())
+    }
 }
+
 
 #[derive(Accounts)]
 pub struct InitializePool<'info> {
@@ -149,6 +175,16 @@ pub struct ExchangeRedeemableForUsdc<'info> {
 }
 
 
+#[derive(Accounts)]
+pub struct CalculateExchangeRate<'info> {
+    #[account(mut)]
+    pub pool_account: ProgramAccount<'info, PoolAccount>,
+    pub redeemable_mint: CpiAccount<'info, Mint>,
+    pub pool_usdc: CpiAccount<'info, TokenAccount>,
+    pub pool_watermelon: CpiAccount<'info, TokenAccount>,
+}
+
+
 #[account]
 pub struct PoolAccount {
     pub num_ido_tokens: u64,
@@ -158,24 +194,6 @@ pub struct PoolAccount {
     // We're going to assume that all mint default to 6 decimal places
     // but how can we more actively check for this?
     pub nonce: u8,
+    pub exchange_rate: u128,
+    pub decimals: u8,
 }
-
-
-
-
-
-/////  Is there anyway to make this a function we can run for more than 
-/////  place, since it won't work like this
-// impl<'a, 'b, 'c, 'info> From<&mut ProxyTransfer<'info>>
-//     for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>
-// {
-//     fn from(accounts: &mut ProxyTransfer<'info>) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
-//         let cpi_accounts = Transfer {
-//             from: accounts.from.clone(),
-//             to: accounts.to.clone(),
-//             authority: accounts.authority.clone(),
-//         };
-//         let cpi_program = accounts.token_program.clone();
-//         CpiContext::new(cpi_program, cpi_accounts)
-//     }
-// }
