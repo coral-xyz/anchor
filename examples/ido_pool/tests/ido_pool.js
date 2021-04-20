@@ -124,7 +124,7 @@ describe('ido_pool', () => {
         tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
       },
     });
-
+    
     poolUsdcAccount = await getTokenAccount(provider, poolUsdc);
     assert.ok(poolUsdcAccount.amount.eq(deposit_amount));
     userRedeemableAccount = await getTokenAccount(provider, userRedeemable);
@@ -132,8 +132,12 @@ describe('ido_pool', () => {
 
   });
 
+  let withdraw_amount = new anchor.BN(5000);
+  let remaining_amount = deposit_amount.sub(withdraw_amount);
+  console.log("remaining amount: ", remaining_amount);
+
   it('Exchanges user Redeemable tokens for USDC', async () => {
-    await program.rpc.exchangeRedeemableForUsdc(deposit_amount, {
+    await program.rpc.exchangeRedeemableForUsdc(withdraw_amount, {
       accounts: {
         poolAccount: poolAccount.publicKey,
         poolSigner,
@@ -147,9 +151,27 @@ describe('ido_pool', () => {
     });
 
     poolUsdcAccount = await getTokenAccount(provider, poolUsdc);
-    assert.ok(poolUsdcAccount.amount.eq(new anchor.BN(0)));
+    assert.ok(poolUsdcAccount.amount.eq(remaining_amount));
     userUsdcAccount = await getTokenAccount(provider, userUsdc);
-    assert.ok(userUsdcAccount.amount.eq(deposit_amount));
+    assert.ok(userUsdcAccount.amount.eq(withdraw_amount));
+  });
+
+  it('Calculates the exchange rate', async () => {
+    await program.rpc.calculateExchangeRate({
+      accounts: {
+        poolAccount: poolAccount.publicKey,
+        redeemableMint,
+        poolUsdc,
+        poolWatermelon,
+      },
+    });
+
+    let thisPoolAccount = await program.account.poolAccount(poolAccount.publicKey);
+    // console.log("pool exchange rate: ", thisPoolAccount.exchangeRate);
+    // possible_exchange_rate = watermelonIdoAmount.mul(new anchor.BN(10 ** 10));
+    possible_exchange_rate = possible_exchange_rate.div(remaining_amount);
+    // console.log("test exchange rate: ", possible_exchange_rate);
+    assert.ok(thisPoolAccount.exchangeRate.eq(possible_exchange_rate));
   });
 
 });

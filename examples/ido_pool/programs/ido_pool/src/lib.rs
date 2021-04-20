@@ -15,6 +15,8 @@ pub mod ido_pool {
         // assumes that all mints have 6 decimals, how to add a check for this?
         // maybe it doesn't matter?
         pool_account.decimals = 6 ; 
+        pool_account.size_of_scale = 10;
+
         let cpi_accounts = Transfer {
             from: ctx.accounts.creator_watermelon.to_account_info(),
             to: ctx.accounts.pool_watermelon.to_account_info(),
@@ -100,12 +102,11 @@ pub mod ido_pool {
 
         let base: u128 = 10;
         let usdc_total = ctx.accounts.pool_usdc.amount;
-        // How many decimal places should we scale up usdc by?
-        let size_of_scale = 10;
-        let scaled_usdc_total = base.pow(size_of_scale) * usdc_total as u128;
-        let num_ido_tokens = pool_account.num_ido_tokens as u128;
-        let exchange_rate = scaled_usdc_total / num_ido_tokens;
-        pool_account.exchange_rate = exchange_rate;
+        // How many decimal places should we scale up by?
+        let scaled_ido_tokens = base.pow(pool_account.size_of_scale) * ctx.accounts.pool_watermelon.amount as u128;
+        let exchange_rate = scaled_ido_tokens / usdc_total as u128;
+        pool_account.exchange_rate = exchange_rate; 
+        // num pool tokens deposited * exchange rate = num watermelon tokens returned
 
         Ok(())
     }
@@ -196,4 +197,5 @@ pub struct PoolAccount {
     pub nonce: u8,
     pub exchange_rate: u128,
     pub decimals: u8,
+    pub size_of_scale: u32,
 }
