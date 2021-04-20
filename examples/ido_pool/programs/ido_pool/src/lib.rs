@@ -110,6 +110,42 @@ pub mod ido_pool {
 
         Ok(())
     }
+
+
+    pub fn exchange_redeemable_for_watermelon(ctx: Context<ExchangeRedeemableForWatermelon>, amount: u64) -> ProgramResult {
+        // TODO add the time checks
+
+        // TODO check that the exchange rate has been calculated / is non-zero
+
+        // TODO check the user has sufficient redeemable tokens
+
+        // Burn the user's redeemable tokens
+        let cpi_accounts = Burn {
+            mint: ctx.accounts.redeemable_mint.to_account_info(),
+            to: ctx.accounts.user_redeemable.to_account_info(),
+            authority: ctx.accounts.user_authority.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.clone();
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+        token::burn(cpi_ctx, amount)?;
+
+        let watermelon_amount = amount as u128 * ctx.accounts.pool_account.exchange_rate;
+        // TODO Need to remove 10 decimal places
+
+        // Transfer Watermelon from pool account to user
+        let seeds = &[ctx.accounts.pool_account.watermelon_mint.as_ref(), &[ctx.accounts.pool_account.nonce]];
+        let signer = &[&seeds[..]];
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.pool_watermelon.to_account_info(),
+            to: ctx.accounts.user_watermelon.to_account_info(),
+            authority: ctx.accounts.pool_signer.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.clone();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        token::transfer(cpi_ctx, watermelon_amount as u64)?;
+
+        Ok(())
+    }    
 }
 
 
@@ -117,7 +153,6 @@ pub mod ido_pool {
 pub struct InitializePool<'info> {
     #[account(init)]
     pub pool_account: ProgramAccount<'info, PoolAccount>,
-    // Does this have to be an AccountInfo?
     pub pool_signer: AccountInfo<'info>,
     #[account(signer)]
     pub distribution_authority: AccountInfo<'info>,
@@ -139,7 +174,8 @@ pub struct InitializePool<'info> {
 #[derive(Accounts)]
 pub struct ExchangeUsdcForRedeemable<'info> {
     pub pool_account: ProgramAccount<'info, PoolAccount>,
-    pub pool_signer: AccountInfo<'info>,
+    #[account(seeds = [pool_account.watermelon_mint.as_ref(), &[pool_account.nonce], ])]
+    pool_signer: AccountInfo<'info>,
     // Check that pool signer is the owner of the mint
     #[account(mut)]
     pub redeemable_mint: CpiAccount<'info, Mint>,
@@ -159,7 +195,8 @@ pub struct ExchangeUsdcForRedeemable<'info> {
 #[derive(Accounts)]
 pub struct ExchangeRedeemableForUsdc<'info> {
     pub pool_account: ProgramAccount<'info, PoolAccount>,
-    pub pool_signer: AccountInfo<'info>,
+    #[account(seeds = [pool_account.watermelon_mint.as_ref(), &[pool_account.nonce], ])]
+    pool_signer: AccountInfo<'info>,
     // Check that pool signer is the owner of the mint
     #[account(mut)]
     pub redeemable_mint: CpiAccount<'info, Mint>,
@@ -183,6 +220,27 @@ pub struct CalculateExchangeRate<'info> {
     pub redeemable_mint: CpiAccount<'info, Mint>,
     pub pool_usdc: CpiAccount<'info, TokenAccount>,
     pub pool_watermelon: CpiAccount<'info, TokenAccount>,
+}
+
+
+#[derive(Accounts)]
+pub struct ExchangeRedeemableForWatermelon<'info> {
+    pub pool_account: ProgramAccount<'info, PoolAccount>,
+    #[account(seeds = [pool_account.watermelon_mint.as_ref(), &[pool_account.nonce], ])]
+    pool_signer: AccountInfo<'info>,
+    // Check that pool signer is the owner of the mint
+    #[account(mut)]
+    pub redeemable_mint: CpiAccount<'info, Mint>,
+    #[account(mut)]
+    pub pool_watermelon: CpiAccount<'info, TokenAccount>,
+    #[account(signer)]
+    pub user_authority: AccountInfo<'info>,
+    #[account(mut)]
+    pub user_watermelon: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    pub user_redeemable: CpiAccount<'info, TokenAccount>,
+    // Add a check that this is the correct token program ID
+    pub token_program: AccountInfo<'info>,
 }
 
 

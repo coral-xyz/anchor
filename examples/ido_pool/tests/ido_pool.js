@@ -107,7 +107,6 @@ describe('ido_pool', () => {
   const deposit_amount = new anchor.BN(10000);
 
   it('Exchanges user USDC for redeemable tokens', async () => {
-    
     userUsdc =  await createTokenAccount(provider, usdcMint, provider.wallet.publicKey);
     await mintToAccount(provider, usdcMint, userUsdc, deposit_amount, provider.wallet.publicKey);
     userRedeemable =  await createTokenAccount(provider, redeemableMint, provider.wallet.publicKey);
@@ -168,7 +167,7 @@ describe('ido_pool', () => {
 
     let thisPoolAccount = await program.account.poolAccount(poolAccount.publicKey);
     // console.log("pool exchange rate: ", thisPoolAccount.exchangeRate);
-    // possible_exchange_rate = watermelonIdoAmount.mul(new anchor.BN(10 ** 10));
+    possible_exchange_rate = watermelonIdoAmount.mul(new anchor.BN(10 ** 10));
     possible_exchange_rate = possible_exchange_rate.div(remaining_amount);
     // console.log("test exchange rate: ", possible_exchange_rate);
     assert.ok(thisPoolAccount.exchangeRate.eq(possible_exchange_rate));
