@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Transfer, TokenAccount, Mint, MintTo};
+use anchor_spl::token::{self, Transfer, TokenAccount, Mint, Burn, MintTo};
 
 
 #[program]
@@ -25,6 +25,8 @@ pub mod ido_pool {
 
 
     pub fn exchange_usdc_for_redeemable(ctx: Context<ExchangeUsdcForRedeemable>, amount: u64) -> ProgramResult{
+        // TODO add the time checks 
+
         // TODO add a check that the account has a sufficient amount for the transfer
 
         // Transfer USDC to pool USDC account
@@ -48,6 +50,37 @@ pub mod ido_pool {
         let cpi_program = ctx.accounts.token_program.clone();
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
         token::mint_to(cpi_ctx , amount)?;
+
+        Ok(())
+    }
+
+
+    pub fn exchange_redeemable_for_usdc(ctx: Context<ExchangeRedeemableForUsdc>, amount: u64) -> ProgramResult{
+        // TODO add the time checks
+
+        // TODO check the user has sufficient redeemable tokens
+
+        // Burn the redeemable tokens
+        let cpi_accounts = Burn {
+            mint: ctx.accounts.redeemable_mint.to_account_info(),
+            to: ctx.accounts.user_redeemable.to_account_info(),
+            authority: ctx.accounts.user_authority.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.clone();
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+        token::burn(cpi_ctx, amount)?;
+
+        // Transfer USDC from pool account to user
+        let seeds = &[ctx.accounts.pool_account.watermelon_mint.as_ref(), &[ctx.accounts.pool_account.nonce]];
+        let signer = &[&seeds[..]];
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.pool_usdc.to_account_info(),
+            to: ctx.accounts.user_usdc.to_account_info(),
+            authority: ctx.accounts.pool_signer.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.clone();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        token::transfer(cpi_ctx, amount)?;
 
         Ok(())
     }
@@ -78,6 +111,26 @@ pub struct InitializePool<'info> {
 
 #[derive(Accounts)]
 pub struct ExchangeUsdcForRedeemable<'info> {
+    pub pool_account: ProgramAccount<'info, PoolAccount>,
+    pub pool_signer: AccountInfo<'info>,
+    // Check that pool signer is the owner of the mint
+    #[account(mut)]
+    pub redeemable_mint: CpiAccount<'info, Mint>,
+    #[account(mut)]
+    pub pool_usdc: CpiAccount<'info, TokenAccount>,
+    #[account(signer)]
+    pub user_authority: AccountInfo<'info>,
+    #[account(mut)]
+    pub user_usdc: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    pub user_redeemable: CpiAccount<'info, TokenAccount>,
+    // Add a check that this is the correct token program ID
+    pub token_program: AccountInfo<'info>,
+}
+
+
+#[derive(Accounts)]
+pub struct ExchangeRedeemableForUsdc<'info> {
     pub pool_account: ProgramAccount<'info, PoolAccount>,
     pub pool_signer: AccountInfo<'info>,
     // Check that pool signer is the owner of the mint
