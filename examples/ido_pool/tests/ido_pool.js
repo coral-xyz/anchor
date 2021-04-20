@@ -103,6 +103,7 @@ describe('ido_pool', () => {
   // if not in testing, then definitely in production
   
   let userUsdc = null;
+  let userRedeemable = null;
   const deposit_amount = new anchor.BN(10000);
 
   it('Exchanges user USDC for redeemable tokens', async () => {
@@ -131,7 +132,25 @@ describe('ido_pool', () => {
 
   });
 
+  it('Exchanges user Redeemable tokens for USDC', async () => {
+    await program.rpc.exchangeRedeemableForUsdc(deposit_amount, {
+      accounts: {
+        poolAccount: poolAccount.publicKey,
+        poolSigner,
+        redeemableMint,
+        poolUsdc,
+        userAuthority: provider.wallet.publicKey,
+        userUsdc,
+        userRedeemable,
+        tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+      },
+    });
 
+    poolUsdcAccount = await getTokenAccount(provider, poolUsdc);
+    assert.ok(poolUsdcAccount.amount.eq(new anchor.BN(0)));
+    userUsdcAccount = await getTokenAccount(provider, userUsdc);
+    assert.ok(userUsdcAccount.amount.eq(deposit_amount));
+  });
 
 });
 
