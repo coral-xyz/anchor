@@ -104,14 +104,15 @@ describe('ido_pool', () => {
   
   let userUsdc = null;
   let userRedeemable = null;
-  const deposit_amount = new anchor.BN(10000);
+  // 10 usdc
+  const firstDeposit = new anchor.BN(10_000_000);
 
   it('Exchanges user USDC for redeemable tokens', async () => {
     userUsdc =  await createTokenAccount(provider, usdcMint, provider.wallet.publicKey);
-    await mintToAccount(provider, usdcMint, userUsdc, deposit_amount, provider.wallet.publicKey);
+    await mintToAccount(provider, usdcMint, userUsdc, firstDeposit, provider.wallet.publicKey);
     userRedeemable =  await createTokenAccount(provider, redeemableMint, provider.wallet.publicKey);
 
-    await program.rpc.exchangeUsdcForRedeemable(deposit_amount, {
+    await program.rpc.exchangeUsdcForRedeemable(firstDeposit, {
       accounts: {
         poolAccount: poolAccount.publicKey,
         poolSigner,
@@ -125,18 +126,49 @@ describe('ido_pool', () => {
     });
     
     poolUsdcAccount = await getTokenAccount(provider, poolUsdc);
-    assert.ok(poolUsdcAccount.amount.eq(deposit_amount));
+    assert.ok(poolUsdcAccount.amount.eq(firstDeposit));
     userRedeemableAccount = await getTokenAccount(provider, userRedeemable);
-    assert.ok(userRedeemableAccount.amount.eq(deposit_amount));
+    assert.ok(userRedeemableAccount.amount.eq(firstDeposit));
 
   });
 
-  let withdraw_amount = new anchor.BN(5000);
-  let remaining_amount = deposit_amount.sub(withdraw_amount);
-  console.log("remaining amount: ", remaining_amount);
+  // 23 usdc
+  const secondDeposit = new anchor.BN(23_000_000);
+  let totalPoolUsdc = null;
+
+  it('Exchanges a second users USDC for redeemable tokens', async () => {
+    secondUserUsdc =  await createTokenAccount(provider, usdcMint, provider.wallet.publicKey);
+    await mintToAccount(provider, usdcMint, secondUserUsdc, secondDeposit, provider.wallet.publicKey);
+    secondUserRedeemable =  await createTokenAccount(provider, redeemableMint, provider.wallet.publicKey);
+
+    await program.rpc.exchangeUsdcForRedeemable(secondDeposit, {
+      accounts: {
+        poolAccount: poolAccount.publicKey,
+        poolSigner,
+        redeemableMint,
+        poolUsdc,
+        userAuthority: provider.wallet.publicKey,
+        userUsdc: secondUserUsdc,
+        userRedeemable: secondUserRedeemable,
+        tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+      },
+    });
+    
+    totalPoolUsdc = firstDeposit.add(secondDeposit);
+    poolUsdcAccount = await getTokenAccount(provider, poolUsdc);
+    // console.log("pool usdc: ", poolUsdcAccount.amount.toNumber(), "expected usdc:", totalPoolUsdc.toNumber());
+    assert.ok(poolUsdcAccount.amount.eq(totalPoolUsdc));
+    secondUserRedeemableAccount = await getTokenAccount(provider, secondUserRedeemable);
+    assert.ok(secondUserRedeemableAccount.amount.eq(secondDeposit));
+  });
+
+
+  const firstWithdrawal = new anchor.BN(2_000_000);
+  // console.log(firstDeposit.toNumber(), secondDeposit.toNumber(), firstWithdrawal.toNumber());
+  // totalPoolUsdc = totalPoolUsdc.sub(firstWithdrawal);
 
   it('Exchanges user Redeemable tokens for USDC', async () => {
-    await program.rpc.exchangeRedeemableForUsdc(withdraw_amount, {
+    await program.rpc.exchangeRedeemableForUsdc(firstWithdrawal, {
       accounts: {
         poolAccount: poolAccount.publicKey,
         poolSigner,
@@ -149,10 +181,12 @@ describe('ido_pool', () => {
       },
     });
 
+    totalPoolUsdc = totalPoolUsdc.sub(firstWithdrawal);
     poolUsdcAccount = await getTokenAccount(provider, poolUsdc);
-    assert.ok(poolUsdcAccount.amount.eq(remaining_amount));
+    // console.log("pool usdc: ", poolUsdcAccount.amount.toNumber(), "expected usdc:", totalPoolUsdc.toNumber());
+    assert.ok(poolUsdcAccount.amount.eq(totalPoolUsdc));
     userUsdcAccount = await getTokenAccount(provider, userUsdc);
-    assert.ok(userUsdcAccount.amount.eq(withdraw_amount));
+    assert.ok(userUsdcAccount.amount.eq(firstWithdrawal));
   });
 
   const ACCURACY = 6;
@@ -169,10 +203,10 @@ describe('ido_pool', () => {
 
     let thisPoolAccount = await program.account.poolAccount(poolAccount.publicKey);
     // console.log("pool exchange rate: ", thisPoolAccount.exchangeRate);
-    possible_exchange_rate = watermelonIdoAmount.mul(new anchor.BN(10 ** ACCURACY));
-    possible_exchange_rate = possible_exchange_rate.div(remaining_amount);
-    // console.log("test exchange rate: ", possible_exchange_rate);
-    assert.ok(thisPoolAccount.exchangeRate.eq(possible_exchange_rate));
+    exchangeRate = watermelonIdoAmount.mul(new anchor.BN(10 ** ACCURACY));
+    exchangeRate = exchangeRate.div(poolUsdcAccount.amount);
+    // console.log("test exchange rate: ", exchangeRate);
+    assert.ok(thisPoolAccount.exchangeRate.eq(exchangeRate));
   });
 
 
@@ -180,9 +214,10 @@ describe('ido_pool', () => {
   // const watermelonIdoAmount = new anchor.BN(5000000);
 
   it('Exchanges user Redeemable tokens for watermelon', async () => {
+    let firstUserRedeemable = firstDeposit.sub(firstWithdrawal);
     userWatermelon =  await createTokenAccount(provider, watermelonMint, provider.wallet.publicKey);
 
-    await program.rpc.exchangeRedeemableForWatermelon(remaining_amount, {
+    await program.rpc.exchangeRedeemableForWatermelon(firstUserRedeemable, {
       accounts: {
         poolAccount: poolAccount.publicKey,
         poolSigner,
@@ -196,11 +231,13 @@ describe('ido_pool', () => {
     });
 
     poolWatermelonAccount = await getTokenAccount(provider, poolWatermelon);
-    // Should have idoAmount - exchange rate * remaining amount =
-    assert.ok(poolWatermelonAccount.amount.eq(new anchor.BN(0)));
+    // Should have idoAmount - (exchange rate * remaining amount)/10**ACCURACY
+    let redeemedWatermelon = (exchangeRate.mul(firstUserRedeemable)).div(new anchor.BN(10 ** ACCURACY));
+    let remainingWatermelon = watermelonIdoAmount.sub(redeemedWatermelon);
+    assert.ok(poolWatermelonAccount.amount.eq(remainingWatermelon));
     userWatermelonAccount = await getTokenAccount(provider, userWatermelon);
-    // Should have exchange rate * remaining amount = 
-    assert.ok(userWatermelonAccount.amount.eq(watermelonIdoAmount));
+    // Should have exchange rate * remaining amount / 10**ACCURACY
+    assert.ok(userWatermelonAccount.amount.eq(redeemedWatermelon));
   });
 
 });
