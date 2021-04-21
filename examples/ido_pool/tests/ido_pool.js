@@ -105,7 +105,7 @@ describe('ido_pool', () => {
   let userUsdc = null;
   let userRedeemable = null;
   // 10 usdc
-  const firstDeposit = new anchor.BN(10_000_000);
+  const firstDeposit = new anchor.BN(10_000_349);
 
   it('Exchanges user USDC for redeemable tokens', async () => {
     userUsdc =  await createTokenAccount(provider, usdcMint, provider.wallet.publicKey);
@@ -133,7 +133,7 @@ describe('ido_pool', () => {
   });
 
   // 23 usdc
-  const secondDeposit = new anchor.BN(23_000_000);
+  const secondDeposit = new anchor.BN(23_000_672);
   let totalPoolUsdc = null;
 
   it('Exchanges a second users USDC for redeemable tokens', async () => {
@@ -239,6 +239,26 @@ describe('ido_pool', () => {
     // Should have exchange rate * remaining amount / 10**ACCURACY
     assert.ok(userWatermelonAccount.amount.eq(redeemedWatermelon));
   });
+
+
+  it('Withdraws total USDC from pool account', async () => {
+    await program.rpc.withdrawPoolUsdc({
+      accounts: {
+        poolAccount: poolAccount.publicKey,
+        poolSigner,
+        distributionAuthority: provider.wallet.publicKey,
+        creatorUsdc,
+        poolUsdc,
+        tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+      },
+    });
+
+    poolUsdcAccount = await getTokenAccount(provider, poolUsdc);
+    assert.ok(poolUsdcAccount.amount.eq(new anchor.BN(0)));
+    creatorUsdcAccount = await getTokenAccount(provider, creatorUsdc);
+    assert.ok(creatorUsdcAccount.amount.eq(totalPoolUsdc));
+  })
+
 
 });
 

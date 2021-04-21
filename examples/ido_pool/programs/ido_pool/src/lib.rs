@@ -137,8 +137,6 @@ pub mod ido_pool {
 
         let watermelon_amount = ((amount as u128 * ctx.accounts.pool_account.exchange_rate) / BASE.pow(ACCURACY)) as u64;
         msg!("Amount to return {}, Exchange rate {}, redeemable token amount {}", watermelon_amount, ctx.accounts.pool_account.exchange_rate, amount);
-        // watermelon_amount = watermelon_amount / ACCURACY as u128;
-        // TODO Need to remove 10 decimal places
         // If we add 10 decimal places to get more accuracy from the division
         // then we always need to remove 10 decimal places. We truncate, which
         // is effectively the same as flooring it. This means there may be dust
@@ -159,6 +157,29 @@ pub mod ido_pool {
 
         Ok(())
     }    
+
+
+    pub fn withdraw_pool_usdc(ctx: Context<WithdrawPoolUsdc>) -> ProgramResult {
+        // Check time and confirm the IDO has finished
+
+        // Check that an exchange rate has been calculated
+
+        // Transfer total USDC from pool account to creator account
+        let seeds = &[ctx.accounts.pool_account.watermelon_mint.as_ref(), &[ctx.accounts.pool_account.nonce]];
+        let signer = &[&seeds[..]];
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.pool_usdc.to_account_info(),
+            to: ctx.accounts.creator_usdc.to_account_info(),
+            authority: ctx.accounts.pool_signer.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.clone();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        token::transfer(cpi_ctx, ctx.accounts.pool_usdc.amount)?;
+
+        Ok(())
+    }
+
+
 }
 
 
@@ -252,6 +273,20 @@ pub struct ExchangeRedeemableForWatermelon<'info> {
     pub user_watermelon: CpiAccount<'info, TokenAccount>,
     #[account(mut)]
     pub user_redeemable: CpiAccount<'info, TokenAccount>,
+    // Add a check that this is the correct token program ID
+    pub token_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct WithdrawPoolUsdc<'info> {
+    pub pool_account: ProgramAccount<'info, PoolAccount>,
+    pub pool_signer: AccountInfo<'info>,
+    #[account(signer)]
+    pub distribution_authority: AccountInfo<'info>,
+    #[account(mut)]
+    pub creator_usdc: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    pub pool_usdc: CpiAccount<'info, TokenAccount>,
     // Add a check that this is the correct token program ID
     pub token_program: AccountInfo<'info>,
 }
