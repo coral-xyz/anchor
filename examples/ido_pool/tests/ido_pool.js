@@ -12,7 +12,7 @@ describe('ido_pool', () => {
   const program = anchor.workspace.IdoPool;
 
   // All mints default to 6 decimal places
-  const watermelonIdoAmount = new anchor.BN(500);
+  const watermelonIdoAmount = new anchor.BN(5000000);
 
   // These are all of the variables we assume exist in the world already and
   // are available to the client.
@@ -155,6 +155,8 @@ describe('ido_pool', () => {
     assert.ok(userUsdcAccount.amount.eq(withdraw_amount));
   });
 
+  const ACCURACY = 6;
+
   it('Calculates the exchange rate', async () => {
     await program.rpc.calculateExchangeRate({
       accounts: {
@@ -167,10 +169,38 @@ describe('ido_pool', () => {
 
     let thisPoolAccount = await program.account.poolAccount(poolAccount.publicKey);
     // console.log("pool exchange rate: ", thisPoolAccount.exchangeRate);
-    possible_exchange_rate = watermelonIdoAmount.mul(new anchor.BN(10 ** 10));
+    possible_exchange_rate = watermelonIdoAmount.mul(new anchor.BN(10 ** ACCURACY));
     possible_exchange_rate = possible_exchange_rate.div(remaining_amount);
     // console.log("test exchange rate: ", possible_exchange_rate);
     assert.ok(thisPoolAccount.exchangeRate.eq(possible_exchange_rate));
+  });
+
+
+  // Got to do some calculations for how much should be left
+  // const watermelonIdoAmount = new anchor.BN(5000000);
+
+  it('Exchanges user Redeemable tokens for watermelon', async () => {
+    userWatermelon =  await createTokenAccount(provider, watermelonMint, provider.wallet.publicKey);
+
+    await program.rpc.exchangeRedeemableForWatermelon(remaining_amount, {
+      accounts: {
+        poolAccount: poolAccount.publicKey,
+        poolSigner,
+        redeemableMint,
+        poolWatermelon,
+        userAuthority: provider.wallet.publicKey,
+        userWatermelon,
+        userRedeemable,
+        tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+      },
+    });
+
+    poolWatermelonAccount = await getTokenAccount(provider, poolWatermelon);
+    // Should have idoAmount - exchange rate * remaining amount =
+    assert.ok(poolWatermelonAccount.amount.eq(new anchor.BN(0)));
+    userWatermelonAccount = await getTokenAccount(provider, userWatermelon);
+    // Should have exchange rate * remaining amount = 
+    assert.ok(userWatermelonAccount.amount.eq(watermelonIdoAmount));
   });
 
 });

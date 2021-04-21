@@ -1,6 +1,12 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Transfer, TokenAccount, Mint, Burn, MintTo};
 
+const BASE: u128 = 10;
+// Assumes that all tokens use 6 decimal places
+// const DECIMALS: u32 = 6;
+// Used to scale up and scale down integer calculations
+const ACCURACY: u32 = 6;
+
 
 #[program]
 pub mod ido_pool {
@@ -14,8 +20,8 @@ pub mod ido_pool {
         pool_account.exchange_rate = 0; // init to 0
         // assumes that all mints have 6 decimals, how to add a check for this?
         // maybe it doesn't matter?
-        pool_account.decimals = 6 ; 
-        pool_account.size_of_scale = 10;
+        // pool_account.decimals = 6 ; 
+        // pool_account.size_of_scale = 10;
 
         let cpi_accounts = Transfer {
             from: ctx.accounts.creator_watermelon.to_account_info(),
@@ -100,10 +106,10 @@ pub mod ido_pool {
         // TODO check that exchange rate hasn't already been set
         // if exchange rate > 0 then error (it's already been calculated)
 
-        let base: u128 = 10;
+        
         let usdc_total = ctx.accounts.pool_usdc.amount;
         // How many decimal places should we scale up by?
-        let scaled_ido_tokens = base.pow(pool_account.size_of_scale) * ctx.accounts.pool_watermelon.amount as u128;
+        let scaled_ido_tokens = BASE.pow(ACCURACY) * ctx.accounts.pool_watermelon.amount as u128;
         let exchange_rate = scaled_ido_tokens / usdc_total as u128;
         pool_account.exchange_rate = exchange_rate; 
         // num pool tokens deposited * exchange rate = num watermelon tokens returned
@@ -129,8 +135,15 @@ pub mod ido_pool {
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
         token::burn(cpi_ctx, amount)?;
 
-        let watermelon_amount = amount as u128 * ctx.accounts.pool_account.exchange_rate;
+        let watermelon_amount = ((amount as u128 * ctx.accounts.pool_account.exchange_rate) / BASE.pow(ACCURACY)) as u64;
+        msg!("Amount to return {}, Exchange rate {}, redeemable token amount {}", watermelon_amount, ctx.accounts.pool_account.exchange_rate, amount);
+        // watermelon_amount = watermelon_amount / ACCURACY as u128;
         // TODO Need to remove 10 decimal places
+        // If we add 10 decimal places to get more accuracy from the division
+        // then we always need to remove 10 decimal places. We truncate, which
+        // is effectively the same as flooring it. This means there may be dust
+        // Probably something like 0.000001 * (num particpant accounts / 2)
+        // will be left in the account after everyone has finished withdrawing
 
         // Transfer Watermelon from pool account to user
         let seeds = &[ctx.accounts.pool_account.watermelon_mint.as_ref(), &[ctx.accounts.pool_account.nonce]];
@@ -254,6 +267,6 @@ pub struct PoolAccount {
     // but how can we more actively check for this?
     pub nonce: u8,
     pub exchange_rate: u128,
-    pub decimals: u8,
-    pub size_of_scale: u32,
+    // pub decimals: u8,
+    // pub size_of_scale: u32,
 }
