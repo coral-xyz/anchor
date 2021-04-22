@@ -1,27 +1,32 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Transfer, TokenAccount, Mint, Burn, MintTo};
 
-const BASE: u128 = 10;
-// Assumes that all tokens use 6 decimal places
+// Assume that all tokens use 6 decimal places
 // const DECIMALS: u32 = 6;
-// Used to scale up and scale down integer calculations
-const ACCURACY: u32 = 6;
 
 
 #[program]
 pub mod ido_pool {
     use super::*;
-    pub fn initialize_pool(ctx: Context<InitializePool>, num_ido_tokens: u64, nonce: u8) -> ProgramResult {
+    pub fn initialize_pool(ctx: Context<InitializePool>, num_ido_tokens: u64, nonce: u8, start_ido_ts: i64, end_deposits_ts: i64, end_ido_ts: i64) -> ProgramResult {
+        // TODO make sure the pool account hasn't already been initialised
+
+        if !(ctx.accounts.clock.unix_timestamp < start_ido_ts &&
+             start_ido_ts < end_deposits_ts && 
+             end_deposits_ts <= end_ido_ts) {
+            return Err(ErrorCode::InitTime.into());
+        }
+
+
         let pool_account = &mut ctx.accounts.pool_account;
+        // TODO just use the standard struct init syntax
         pool_account.num_ido_tokens = num_ido_tokens;
         pool_account.watermelon_mint = ctx.accounts.creator_watermelon.mint;
         pool_account.usdc_mint = ctx.accounts.creator_usdc.mint;
         pool_account.nonce = nonce;
-        pool_account.exchange_rate = 0; // init to 0
-        // assumes that all mints have 6 decimals, how to add a check for this?
-        // maybe it doesn't matter?
-        // pool_account.decimals = 6 ; 
-        // pool_account.size_of_scale = 10;
+        pool_account.start_ido_ts = start_ido_ts;
+        pool_account.end_deposits_ts = end_deposits_ts;
+        pool_account.end_ido_ts = end_ido_ts;
 
         let cpi_accounts = Transfer {
             from: ctx.accounts.creator_watermelon.to_account_info(),
@@ -36,9 +41,17 @@ pub mod ido_pool {
 
 
     pub fn exchange_usdc_for_redeemable(ctx: Context<ExchangeUsdcForRedeemable>, amount: u64) -> ProgramResult {
-        // TODO add the time checks 
+        // msg!("Time now {}", ctx.accounts.clock.unix_timestamp);
+        if !(ctx.accounts.pool_account.start_ido_ts < ctx.accounts.clock.unix_timestamp){
+            return Err(ErrorCode::StartIdoTime.into());
+        } else if !(ctx.accounts.clock.unix_timestamp < ctx.accounts.pool_account.end_deposits_ts) { 
+            return Err(ErrorCode::EndDepositsTime.into());
+        }
 
-        // TODO add a check that the account has a sufficient amount for the transfer
+        // while token::transfer will check this, we prefer a verbose err msg
+        if ctx.accounts.user_usdc.amount < amount {
+            return Err(ErrorCode::LowUsdc.into());
+        }
 
         // Transfer user's USDC to pool USDC account
         let cpi_accounts = Transfer {
@@ -67,9 +80,16 @@ pub mod ido_pool {
 
 
     pub fn exchange_redeemable_for_usdc(ctx: Context<ExchangeRedeemableForUsdc>, amount: u64) -> ProgramResult {
-        // TODO add the time checks
+        if !(ctx.accounts.pool_account.start_ido_ts < ctx.accounts.clock.unix_timestamp){
+            return Err(ErrorCode::StartIdoTime.into());
+        } else if !(ctx.accounts.clock.unix_timestamp < ctx.accounts.pool_account.end_ido_ts) { 
+            return Err(ErrorCode::EndIdoTime.into());
+        }
 
-        // TODO check the user has sufficient redeemable tokens
+        // while token::burn will check this, we prefer a verbose err msg
+        if ctx.accounts.user_redeemable.amount < amount {
+            return Err(ErrorCode::LowRedeemable.into());
+        }
 
         // Burn the user's redeemable tokens
         let cpi_accounts = Burn {
@@ -97,33 +117,43 @@ pub mod ido_pool {
     }
 
 
-    pub fn calculate_exchange_rate(ctx: Context<CalculateExchangeRate>) -> ProgramResult {
-        // TODO add time checks 
+    // pub fn calculate_exchange_rate(ctx: Context<CalculateExchangeRate>) -> ProgramResult {
+    //     if !(ctx.accounts.pool_account.end_ido_ts < ctx.accounts.clock.unix_timestamp){
+    //         return Err(ErrorCode::IdoNotOver.into());
+    //     } 
 
-        // TODO Check that redeemable mint and usdc pool account have the same values
+    //     // This seems like a sensible check to make but not sure what should
+    //     // happen if it actually occurs?
+    //     if !(ctx.accounts.pool_usdc.amount == ctx.accounts.redeemable_mint.supply){
+    //         return Err(ErrorCode::UsdcNotEqRedeem.into());
+    //     }
 
-        let pool_account = &mut ctx.accounts.pool_account;
-        // TODO check that exchange rate hasn't already been set
-        // if exchange rate > 0 then error (it's already been calculated)
+    //     let usdc_total = ctx.accounts.pool_usdc.amount;
+    //     let scaled_ido_tokens = BASE.pow(ACCURACY) * ctx.accounts.pool_watermelon.amount as u128;
+    //     let exchange_rate = scaled_ido_tokens / usdc_total as u128;
 
-        
-        let usdc_total = ctx.accounts.pool_usdc.amount;
-        // How many decimal places should we scale up by?
-        let scaled_ido_tokens = BASE.pow(ACCURACY) * ctx.accounts.pool_watermelon.amount as u128;
-        let exchange_rate = scaled_ido_tokens / usdc_total as u128;
-        pool_account.exchange_rate = exchange_rate; 
-        // num pool tokens deposited * exchange rate = num watermelon tokens returned
+    //     let pool_account = &mut ctx.accounts.pool_account;
+    //     // num pool tokens deposited * exchange rate = num watermelon tokens returned
+    //     pool_account.exchange_rate = exchange_rate; 
+    //     pool_account.start_distribution_ts = ctx.accounts.clock.unix_timestamp;
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
 
     pub fn exchange_redeemable_for_watermelon(ctx: Context<ExchangeRedeemableForWatermelon>, amount: u64) -> ProgramResult {
-        // TODO add the time checks
+        msg!("Time now {}, vs. End time {}", ctx.accounts.clock.unix_timestamp, ctx.accounts.pool_account.end_ido_ts);
+        if !(ctx.accounts.pool_account.end_ido_ts < ctx.accounts.clock.unix_timestamp ) { 
+            return Err(ErrorCode::IdoNotOver.into());
+        }
 
-        // TODO check that the exchange rate has been calculated / is non-zero
+        msg!("Amount {} vs. Account amount {}", amount, ctx.accounts.user_redeemable.amount);
+        // while token::burn will check this, we prefer a verbose err msg
+        if ctx.accounts.user_redeemable.amount < amount {
+            return Err(ErrorCode::LowRedeemable.into());
+        }
 
-        // TODO check the user has sufficient redeemable tokens
+        let watermelon_amount = (amount as u128 * ctx.accounts.pool_watermelon.amount as u128) / ctx.accounts.redeemable_mint.supply as u128; 
 
         // Burn the user's redeemable tokens
         let cpi_accounts = Burn {
@@ -134,14 +164,6 @@ pub mod ido_pool {
         let cpi_program = ctx.accounts.token_program.clone();
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
         token::burn(cpi_ctx, amount)?;
-
-        let watermelon_amount = ((amount as u128 * ctx.accounts.pool_account.exchange_rate) / BASE.pow(ACCURACY)) as u64;
-        msg!("Amount to return {}, Exchange rate {}, redeemable token amount {}", watermelon_amount, ctx.accounts.pool_account.exchange_rate, amount);
-        // If we add 10 decimal places to get more accuracy from the division
-        // then we always need to remove 10 decimal places. We truncate, which
-        // is effectively the same as flooring it. This means there may be dust
-        // Probably something like 0.000001 * (num particpant accounts / 2)
-        // will be left in the account after everyone has finished withdrawing
 
         // Transfer Watermelon from pool account to user
         let seeds = &[ctx.accounts.pool_account.watermelon_mint.as_ref(), &[ctx.accounts.pool_account.nonce]];
@@ -160,9 +182,9 @@ pub mod ido_pool {
 
 
     pub fn withdraw_pool_usdc(ctx: Context<WithdrawPoolUsdc>) -> ProgramResult {
-        // Check time and confirm the IDO has finished
-
-        // Check that an exchange rate has been calculated
+        if !(ctx.accounts.pool_account.end_ido_ts < ctx.accounts.clock.unix_timestamp) { 
+            return Err(ErrorCode::IdoNotOver.into());
+        }
 
         // Transfer total USDC from pool account to creator account
         let seeds = &[ctx.accounts.pool_account.watermelon_mint.as_ref(), &[ctx.accounts.pool_account.nonce]];
@@ -178,8 +200,6 @@ pub mod ido_pool {
 
         Ok(())
     }
-
-
 }
 
 
@@ -202,6 +222,7 @@ pub struct InitializePool<'info> {
     // Add a check that this is the correct token program ID
     pub token_program: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
+    pub clock: Sysvar<'info, Clock>,
 }
 
 
@@ -223,6 +244,7 @@ pub struct ExchangeUsdcForRedeemable<'info> {
     pub user_redeemable: CpiAccount<'info, TokenAccount>,
     // Add a check that this is the correct token program ID
     pub token_program: AccountInfo<'info>,
+    pub clock: Sysvar<'info, Clock>,
 }
 
 
@@ -244,17 +266,19 @@ pub struct ExchangeRedeemableForUsdc<'info> {
     pub user_redeemable: CpiAccount<'info, TokenAccount>,
     // Add a check that this is the correct token program ID
     pub token_program: AccountInfo<'info>,
+    pub clock: Sysvar<'info, Clock>,
 }
 
 
-#[derive(Accounts)]
-pub struct CalculateExchangeRate<'info> {
-    #[account(mut)]
-    pub pool_account: ProgramAccount<'info, PoolAccount>,
-    pub redeemable_mint: CpiAccount<'info, Mint>,
-    pub pool_usdc: CpiAccount<'info, TokenAccount>,
-    pub pool_watermelon: CpiAccount<'info, TokenAccount>,
-}
+// #[derive(Accounts)]
+// pub struct CalculateExchangeRate<'info> {
+//     #[account(mut)]
+//     pub pool_account: ProgramAccount<'info, PoolAccount>,
+//     pub redeemable_mint: CpiAccount<'info, Mint>,
+//     pub pool_usdc: CpiAccount<'info, TokenAccount>,
+//     pub pool_watermelon: CpiAccount<'info, TokenAccount>,
+//     pub clock: Sysvar<'info, Clock>,
+// }
 
 
 #[derive(Accounts)]
@@ -275,6 +299,7 @@ pub struct ExchangeRedeemableForWatermelon<'info> {
     pub user_redeemable: CpiAccount<'info, TokenAccount>,
     // Add a check that this is the correct token program ID
     pub token_program: AccountInfo<'info>,
+    pub clock: Sysvar<'info, Clock>,
 }
 
 #[derive(Accounts)]
@@ -289,6 +314,7 @@ pub struct WithdrawPoolUsdc<'info> {
     pub pool_usdc: CpiAccount<'info, TokenAccount>,
     // Add a check that this is the correct token program ID
     pub token_program: AccountInfo<'info>,
+    pub clock: Sysvar<'info, Clock>,
 }
 
 
@@ -301,7 +327,28 @@ pub struct PoolAccount {
     // We're going to assume that all mint default to 6 decimal places
     // but how can we more actively check for this?
     pub nonce: u8,
-    pub exchange_rate: u128,
-    // pub decimals: u8,
-    // pub size_of_scale: u32,
+    pub start_ido_ts: i64,
+    pub end_deposits_ts: i64,
+    pub end_ido_ts: i64,
+}
+
+
+#[error]
+pub enum ErrorCode{
+    #[msg("IDO times are non-sequential")]
+    InitTime,
+    #[msg("IDO has not started")]
+    StartIdoTime,
+    #[msg("Deposits period has ended")]
+    EndDepositsTime,
+    #[msg("IDO has ended")]
+    EndIdoTime,
+    #[msg("IDO has not finished yet")]
+    IdoNotOver,
+    #[msg("Insufficient USDC")]
+    LowUsdc,
+    #[msg("Insufficient redeemable tokens")]
+    LowRedeemable,
+    #[msg("USDC total and redeemable total don't match")]
+    UsdcNotEqRedeem,
 }

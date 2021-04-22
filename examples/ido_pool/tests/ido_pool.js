@@ -50,6 +50,9 @@ describe('ido_pool', () => {
   let poolUsdc = null;
   let poolAccount = null;
 
+  let startIdoTs = null;
+  let endDepositsTs = null;
+  let endIdoTs = null;
 
   it('Initializes the IDO pool', async () => {
     // We use the watermelon mint address as the seed, could use something else though
@@ -71,9 +74,21 @@ describe('ido_pool', () => {
     poolAccount = new anchor.web3.Account();
     // console.log(program);
     // console.log(program.account);
+    const nowBn = new anchor.BN(Date.now() / 1000);
+    // console.log("now: ", nowBn.toNumber());
+    startIdoTs = nowBn.add(new anchor.BN(5));
+    endDepositsTs = nowBn.add(new anchor.BN(10));
+    endIdoTs = nowBn.add(new anchor.BN(15));
+    // console.log("start ido: ", startIdoTs.toNumber(), "end deposits: ", endDepositsTs.toNumber());
     
     // Atomically create the new account and initialize it with the program.
-    await program.rpc.initializePool(watermelonIdoAmount, nonce, {
+    await program.rpc.initializePool(
+      watermelonIdoAmount, 
+      nonce, 
+      startIdoTs,
+      endDepositsTs,
+      endIdoTs,
+      {
       accounts: {
         poolAccount: poolAccount.publicKey,
         poolSigner,
@@ -85,6 +100,7 @@ describe('ido_pool', () => {
         poolUsdc,
         tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       },
       signers: [poolAccount],
       instructions: [
@@ -108,11 +124,18 @@ describe('ido_pool', () => {
   const firstDeposit = new anchor.BN(10_000_349);
 
   it('Exchanges user USDC for redeemable tokens', async () => {
+    // Wait until the IDO has opened
+    if (Date.now() < (startIdoTs.toNumber() * 1000)){
+      await sleep((startIdoTs.toNumber() * 1000) - Date.now() + 1000);
+    }
+    // console.log("Start time: ", startIdoTs.toNumber() * 1000, "but time now: ", Date.now());
+
     userUsdc =  await createTokenAccount(provider, usdcMint, provider.wallet.publicKey);
     await mintToAccount(provider, usdcMint, userUsdc, firstDeposit, provider.wallet.publicKey);
     userRedeemable =  await createTokenAccount(provider, redeemableMint, provider.wallet.publicKey);
 
-    await program.rpc.exchangeUsdcForRedeemable(firstDeposit, {
+    try {
+    const tx = await program.rpc.exchangeUsdcForRedeemable(firstDeposit, {
       accounts: {
         poolAccount: poolAccount.publicKey,
         poolSigner,
@@ -122,9 +145,13 @@ describe('ido_pool', () => {
         userUsdc,
         userRedeemable,
         tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       },
     });
-    
+    } catch(err) {
+      // const errMsg = "This is an error message clients will automatically display";
+      console.log("This is the error message", err.toString());
+    }
     poolUsdcAccount = await getTokenAccount(provider, poolUsdc);
     assert.ok(poolUsdcAccount.amount.eq(firstDeposit));
     userRedeemableAccount = await getTokenAccount(provider, userRedeemable);
@@ -151,6 +178,7 @@ describe('ido_pool', () => {
         userUsdc: secondUserUsdc,
         userRedeemable: secondUserRedeemable,
         tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       },
     });
     
@@ -178,6 +206,7 @@ describe('ido_pool', () => {
         userUsdc,
         userRedeemable,
         tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       },
     });
 
@@ -189,31 +218,37 @@ describe('ido_pool', () => {
     assert.ok(userUsdcAccount.amount.eq(firstWithdrawal));
   });
 
-  const ACCURACY = 6;
+  // const ACCURACY = 6;
 
-  it('Calculates the exchange rate', async () => {
-    await program.rpc.calculateExchangeRate({
-      accounts: {
-        poolAccount: poolAccount.publicKey,
-        redeemableMint,
-        poolUsdc,
-        poolWatermelon,
-      },
-    });
+  // it('Calculates the exchange rate', async () => {
+  //   await program.rpc.calculateExchangeRate({
+  //     accounts: {
+  //       poolAccount: poolAccount.publicKey,
+  //       redeemableMint,
+  //       poolUsdc,
+  //       poolWatermelon,
+  //       clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+  //     },
+  //   });
 
-    let thisPoolAccount = await program.account.poolAccount(poolAccount.publicKey);
-    // console.log("pool exchange rate: ", thisPoolAccount.exchangeRate);
-    exchangeRate = watermelonIdoAmount.mul(new anchor.BN(10 ** ACCURACY));
-    exchangeRate = exchangeRate.div(poolUsdcAccount.amount);
-    // console.log("test exchange rate: ", exchangeRate);
-    assert.ok(thisPoolAccount.exchangeRate.eq(exchangeRate));
-  });
+  //   let thisPoolAccount = await program.account.poolAccount(poolAccount.publicKey);
+  //   // console.log("pool exchange rate: ", thisPoolAccount.exchangeRate);
+  //   exchangeRate = watermelonIdoAmount.mul(new anchor.BN(10 ** ACCURACY));
+  //   exchangeRate = exchangeRate.div(poolUsdcAccount.amount);
+  //   // console.log("test exchange rate: ", exchangeRate);
+  //   assert.ok(thisPoolAccount.exchangeRate.eq(exchangeRate));
+  // });
 
 
   // Got to do some calculations for how much should be left
   // const watermelonIdoAmount = new anchor.BN(5000000);
 
   it('Exchanges user Redeemable tokens for watermelon', async () => {
+    // Wait until the IDO has opened
+    if (Date.now() < (endIdoTs.toNumber() * 1000)){
+      await sleep((endIdoTs.toNumber() * 1000) - Date.now() + 2000);
+    }
+    // console.log("End time: ", endIdoTs.toNumber() * 1000, "but time now: ", Date.now());
     let firstUserRedeemable = firstDeposit.sub(firstWithdrawal);
     userWatermelon =  await createTokenAccount(provider, watermelonMint, provider.wallet.publicKey);
 
@@ -227,12 +262,15 @@ describe('ido_pool', () => {
         userWatermelon,
         userRedeemable,
         tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       },
     });
 
     poolWatermelonAccount = await getTokenAccount(provider, poolWatermelon);
     // Should have idoAmount - (exchange rate * remaining amount)/10**ACCURACY
-    let redeemedWatermelon = (exchangeRate.mul(firstUserRedeemable)).div(new anchor.BN(10 ** ACCURACY));
+    // let redeemedwatermelon = (exchangerate.mul(firstuserredeemable)).div(new anchor.bn(10 ** accuracy));
+    let redeemedWatermelon = firstUserRedeemable.mul(watermelonIdoAmount).div(totalPoolUsdc);
+    // redeemedWatermelon = redeemedWatermelon.div();
     let remainingWatermelon = watermelonIdoAmount.sub(redeemedWatermelon);
     assert.ok(poolWatermelonAccount.amount.eq(remainingWatermelon));
     userWatermelonAccount = await getTokenAccount(provider, userWatermelon);
@@ -250,6 +288,7 @@ describe('ido_pool', () => {
         creatorUsdc,
         poolUsdc,
         tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       },
     });
 
@@ -263,6 +302,10 @@ describe('ido_pool', () => {
 });
 
 
+// Our own sleep function
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 
 
