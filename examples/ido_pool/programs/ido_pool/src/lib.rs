@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Transfer, TokenAccount, Mint, Burn, MintTo};
+use anchor_lang::solana_program::program_option::COption;
+
 
 // Assume that all tokens use 6 decimal places
 // const DECIMALS: u32 = 6;
@@ -17,15 +19,20 @@ pub mod ido_pool {
             return Err(ErrorCode::InitTime.into());
         }
 
-        let pool_account = &mut ctx.accounts.pool_account;
-        // TODO just use the standard struct init syntax
-        pool_account.num_ido_tokens = num_ido_tokens;
-        pool_account.watermelon_mint = ctx.accounts.creator_watermelon.mint;
-        pool_account.usdc_mint = ctx.accounts.creator_usdc.mint;
+        let pool_account = &mut ctx.accounts.pool_account; 
+        // TODO Can we use the standard struct init syntax?
+        pool_account.redeemable_mint = *ctx.accounts.redeemable_mint.to_account_info().key;
+        pool_account.pool_watermelon = *ctx.accounts.pool_watermelon.to_account_info().key;
+        pool_account.watermelon_mint = ctx.accounts.pool_watermelon.mint;
+        pool_account.pool_usdc = *ctx.accounts.pool_usdc.to_account_info().key;
+        pool_account.distribution_authority = *ctx.accounts.distribution_authority.key;
         pool_account.nonce = nonce;
+        pool_account.num_ido_tokens = num_ido_tokens;
         pool_account.start_ido_ts = start_ido_ts;
         pool_account.end_deposits_ts = end_deposits_ts;
         pool_account.end_ido_ts = end_ido_ts;
+
+        msg!("pool usdc owner: {}, pool signer key: {}", ctx.accounts.pool_usdc.owner, ctx.accounts.pool_signer.key);
 
         // Transfer Watermelon from creator to pool account
         let cpi_accounts = Transfer {
@@ -180,19 +187,19 @@ pub mod ido_pool {
 pub struct InitializePool<'info> {
     #[account(init)]
     pub pool_account: ProgramAccount<'info, PoolAccount>,
+    // TODO without nonce we have no way of verifying pool signer
     pub pool_signer: AccountInfo<'info>,
+    #[account("redeemable_mint.mint_authority == COption::Some(*pool_signer.key)")]
+    pub redeemable_mint: CpiAccount<'info, Mint>,
+    #[account(mut, "pool_watermelon.owner == *pool_signer.key")]
+    pub pool_watermelon: CpiAccount<'info, TokenAccount>,
+    #[account("pool_usdc.owner == *pool_signer.key")]
+    pub pool_usdc: CpiAccount<'info, TokenAccount>,
     #[account(signer)]
     pub distribution_authority: AccountInfo<'info>,
-    #[account(mut)]
+    #[account(mut, "creator_watermelon.owner == *distribution_authority.key")]
     pub creator_watermelon: CpiAccount<'info, TokenAccount>,
-    pub creator_usdc: CpiAccount<'info, TokenAccount>,
-    pub redeemable_mint: CpiAccount<'info, Mint>,
-    // How can we make sure this has the right mint?
-    // We can check that they both have the same mint
-    #[account(mut)]
-    pub pool_watermelon: CpiAccount<'info, TokenAccount>,
-    pub pool_usdc: CpiAccount<'info, TokenAccount>,
-    // Add a check that this is the correct token program ID
+    #[account("token_program.key == &token::ID")]
     pub token_program: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub clock: Sysvar<'info, Clock>,
@@ -200,78 +207,80 @@ pub struct InitializePool<'info> {
 
 #[derive(Accounts)]
 pub struct ExchangeUsdcForRedeemable<'info> {
+    #[account(has_one = redeemable_mint, has_one = pool_usdc)]
     pub pool_account: ProgramAccount<'info, PoolAccount>,
     #[account(seeds = [pool_account.watermelon_mint.as_ref(), &[pool_account.nonce], ])]
     pool_signer: AccountInfo<'info>,
-    // Check that pool signer is the owner of the mint
-    #[account(mut)]
+    #[account(mut, "redeemable_mint.mint_authority == COption::Some(*pool_signer.key)")]
     pub redeemable_mint: CpiAccount<'info, Mint>,
-    #[account(mut)]
+    #[account(mut , "pool_usdc.owner == *pool_signer.key")]
     pub pool_usdc: CpiAccount<'info, TokenAccount>,
     #[account(signer)]
     pub user_authority: AccountInfo<'info>,
-    #[account(mut)]
+    #[account(mut, "user_usdc.owner == *user_authority.key")]
     pub user_usdc: CpiAccount<'info, TokenAccount>,
-    #[account(mut)]
+    #[account(mut, "user_redeemable.owner == *user_authority.key")]
     pub user_redeemable: CpiAccount<'info, TokenAccount>,
-    // Add a check that this is the correct token program ID
+    #[account("token_program.key == &token::ID")]
     pub token_program: AccountInfo<'info>,
     pub clock: Sysvar<'info, Clock>,
 }
 
 #[derive(Accounts)]
 pub struct ExchangeRedeemableForUsdc<'info> {
+    #[account(has_one = redeemable_mint, has_one = pool_usdc)]
     pub pool_account: ProgramAccount<'info, PoolAccount>,
     #[account(seeds = [pool_account.watermelon_mint.as_ref(), &[pool_account.nonce], ])]
     pool_signer: AccountInfo<'info>,
-    // Check that pool signer is the owner of the mint
-    #[account(mut)]
+    #[account(mut, "redeemable_mint.mint_authority == COption::Some(*pool_signer.key)")]
     pub redeemable_mint: CpiAccount<'info, Mint>,
-    #[account(mut)]
+    #[account(mut, "pool_usdc.owner == *pool_signer.key")]
     pub pool_usdc: CpiAccount<'info, TokenAccount>,
     #[account(signer)]
     pub user_authority: AccountInfo<'info>,
-    #[account(mut)]
+    #[account(mut, "user_usdc.owner == *user_authority.key")]
     pub user_usdc: CpiAccount<'info, TokenAccount>,
-    #[account(mut)]
+    #[account(mut, "user_redeemable.owner == *user_authority.key")]
     pub user_redeemable: CpiAccount<'info, TokenAccount>,
-    // Add a check that this is the correct token program ID
+    #[account("token_program.key == &token::ID")]
     pub token_program: AccountInfo<'info>,
     pub clock: Sysvar<'info, Clock>,
 }
 
 #[derive(Accounts)]
 pub struct ExchangeRedeemableForWatermelon<'info> {
+    #[account(has_one = redeemable_mint, has_one = pool_watermelon)]
     pub pool_account: ProgramAccount<'info, PoolAccount>,
     #[account(seeds = [pool_account.watermelon_mint.as_ref(), &[pool_account.nonce], ])]
     pool_signer: AccountInfo<'info>,
-    // Check that pool signer is the owner of the mint
-    #[account(mut)]
+    #[account(mut, "redeemable_mint.mint_authority == COption::Some(*pool_signer.key)")]
     pub redeemable_mint: CpiAccount<'info, Mint>,
-    #[account(mut)]
+    #[account(mut, "pool_watermelon.owner == *pool_signer.key")]
     pub pool_watermelon: CpiAccount<'info, TokenAccount>,
     #[account(signer)]
     pub user_authority: AccountInfo<'info>,
-    #[account(mut)]
+    #[account(mut, "user_watermelon.owner == *user_authority.key")]
     pub user_watermelon: CpiAccount<'info, TokenAccount>,
-    #[account(mut)]
+    #[account(mut, "user_redeemable.owner == *user_authority.key")]
     pub user_redeemable: CpiAccount<'info, TokenAccount>,
-    // Add a check that this is the correct token program ID
+    #[account("token_program.key == &token::ID")]
     pub token_program: AccountInfo<'info>,
     pub clock: Sysvar<'info, Clock>,
 }
 
 #[derive(Accounts)]
 pub struct WithdrawPoolUsdc<'info> {
+    #[account(has_one = pool_usdc, has_one = distribution_authority)]
     pub pool_account: ProgramAccount<'info, PoolAccount>,
+    #[account(seeds = [pool_account.watermelon_mint.as_ref(), &[pool_account.nonce], ])]
     pub pool_signer: AccountInfo<'info>,
+    #[account(mut, "pool_usdc.owner == *pool_signer.key")]
+    pub pool_usdc: CpiAccount<'info, TokenAccount>,
     #[account(signer)]
     pub distribution_authority: AccountInfo<'info>,
-    #[account(mut)]
+    #[account(mut, "creator_usdc.owner == *distribution_authority.key")]
     pub creator_usdc: CpiAccount<'info, TokenAccount>,
-    #[account(mut)]
-    pub pool_usdc: CpiAccount<'info, TokenAccount>,
-    // Add a check that this is the correct token program ID
+    #[account("token_program.key == &token::ID")]
     pub token_program: AccountInfo<'info>,
     pub clock: Sysvar<'info, Clock>,
 }
@@ -279,13 +288,13 @@ pub struct WithdrawPoolUsdc<'info> {
 
 #[account]
 pub struct PoolAccount {
-    pub num_ido_tokens: u64,
+    pub redeemable_mint: Pubkey,
+    pub pool_watermelon: Pubkey,
     pub watermelon_mint: Pubkey,
-    // might not need to store usdc mint if known in advance?
-    pub usdc_mint: Pubkey,
-    // We're going to assume that all mint default to 6 decimal places
-    // but how can we more actively check for this?
+    pub pool_usdc: Pubkey,
+    pub distribution_authority: Pubkey,
     pub nonce: u8,
+    pub num_ido_tokens: u64,
     pub start_ido_ts: i64,
     pub end_deposits_ts: i64,
     pub end_ido_ts: i64,

@@ -279,6 +279,10 @@ describe('ido_pool', () => {
   });
 
 
+  // TODO Add another test where the second user withdraws and we check that 
+  // poolWatermelon is now empty
+
+
   it('Withdraws total USDC from pool account', async () => {
     await program.rpc.withdrawPoolUsdc({
       accounts: {
