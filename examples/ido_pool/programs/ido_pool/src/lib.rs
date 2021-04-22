@@ -11,8 +11,6 @@ use anchor_lang::solana_program::program_option::COption;
 pub mod ido_pool {
     use super::*;
     pub fn initialize_pool(ctx: Context<InitializePool>, num_ido_tokens: u64, nonce: u8, start_ido_ts: i64, end_deposits_ts: i64, end_ido_ts: i64) -> ProgramResult {
-        // TODO make sure the pool account hasn't already been initialised
-
         if !(ctx.accounts.clock.unix_timestamp < start_ido_ts &&
              start_ido_ts < end_deposits_ts && 
              end_deposits_ts <= end_ido_ts) {
@@ -20,7 +18,6 @@ pub mod ido_pool {
         }
 
         let pool_account = &mut ctx.accounts.pool_account; 
-        // TODO Can we use the standard struct init syntax?
         pool_account.redeemable_mint = *ctx.accounts.redeemable_mint.to_account_info().key;
         pool_account.pool_watermelon = *ctx.accounts.pool_watermelon.to_account_info().key;
         pool_account.watermelon_mint = ctx.accounts.pool_watermelon.mint;
