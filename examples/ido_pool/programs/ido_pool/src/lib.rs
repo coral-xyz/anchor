@@ -3,10 +3,6 @@ use anchor_spl::token::{self, Transfer, TokenAccount, Mint, Burn, MintTo};
 use anchor_lang::solana_program::program_option::COption;
 
 
-// Assume that all tokens use 6 decimal places
-// const DECIMALS: u32 = 6;
-
-
 #[program]
 pub mod ido_pool {
     use super::*;
