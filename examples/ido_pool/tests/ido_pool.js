@@ -33,14 +33,6 @@ describe('ido_pool', () => {
     assert.ok(creator_watermelon_account.amount.eq(watermelonIdoAmount));
   });
 
-    // console.log(Object.getOwnPropertyNames(TokenInstructions).filter(function (p) {
-    //   return typeof TokenInstructions[p] === 'function';
-    // }));
-
-    // console.log(creators_watermelon_account.amount)
-    // const tx = await program.rpc.initialize();
-    // console.log('Your transaction signature', tx);
-
 
   // These are all variables the client will have to create to initialize the
   // IDO pool
@@ -72,14 +64,10 @@ describe('ido_pool', () => {
     poolUsdc =  await createTokenAccount(provider, usdcMint, poolSigner);
 
     poolAccount = new anchor.web3.Account();
-    // console.log(program);
-    // console.log(program.account);
     const nowBn = new anchor.BN(Date.now() / 1000);
-    // console.log("now: ", nowBn.toNumber());
     startIdoTs = nowBn.add(new anchor.BN(5));
     endDepositsTs = nowBn.add(new anchor.BN(10));
     endIdoTs = nowBn.add(new anchor.BN(15));
-    // console.log("start ido: ", startIdoTs.toNumber(), "end deposits: ", endDepositsTs.toNumber());
     
     // Atomically create the new account and initialize it with the program.
     await program.rpc.initializePool(
@@ -96,6 +84,7 @@ describe('ido_pool', () => {
         creatorWatermelon,
         creatorUsdc,
         redeemableMint,
+        usdcMint,
         poolWatermelon,
         poolUsdc,
         tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
@@ -112,9 +101,6 @@ describe('ido_pool', () => {
     assert.ok(creators_watermelon_account.amount.eq(new anchor.BN(0)));
   });
 
-  // This is how you get account sizes
-  // console.log(program.account.poolAccount.size)
-
   // We're going to need to start using the associated program account for creating token accounts
   // if not in testing, then definitely in production
   
@@ -128,7 +114,6 @@ describe('ido_pool', () => {
     if (Date.now() < (startIdoTs.toNumber() * 1000)){
       await sleep((startIdoTs.toNumber() * 1000) - Date.now() + 1000);
     }
-    // console.log("Start time: ", startIdoTs.toNumber() * 1000, "but time now: ", Date.now());
 
     userUsdc =  await createTokenAccount(provider, usdcMint, provider.wallet.publicKey);
     await mintToAccount(provider, usdcMint, userUsdc, firstDeposit, provider.wallet.publicKey);
@@ -184,7 +169,6 @@ describe('ido_pool', () => {
     
     totalPoolUsdc = firstDeposit.add(secondDeposit);
     poolUsdcAccount = await getTokenAccount(provider, poolUsdc);
-    // console.log("pool usdc: ", poolUsdcAccount.amount.toNumber(), "expected usdc:", totalPoolUsdc.toNumber());
     assert.ok(poolUsdcAccount.amount.eq(totalPoolUsdc));
     secondUserRedeemableAccount = await getTokenAccount(provider, secondUserRedeemable);
     assert.ok(secondUserRedeemableAccount.amount.eq(secondDeposit));
@@ -192,8 +176,6 @@ describe('ido_pool', () => {
 
 
   const firstWithdrawal = new anchor.BN(2_000_000);
-  // console.log(firstDeposit.toNumber(), secondDeposit.toNumber(), firstWithdrawal.toNumber());
-  // totalPoolUsdc = totalPoolUsdc.sub(firstWithdrawal);
 
   it('Exchanges user Redeemable tokens for USDC', async () => {
     await program.rpc.exchangeRedeemableForUsdc(firstWithdrawal, {
@@ -212,36 +194,11 @@ describe('ido_pool', () => {
 
     totalPoolUsdc = totalPoolUsdc.sub(firstWithdrawal);
     poolUsdcAccount = await getTokenAccount(provider, poolUsdc);
-    // console.log("pool usdc: ", poolUsdcAccount.amount.toNumber(), "expected usdc:", totalPoolUsdc.toNumber());
     assert.ok(poolUsdcAccount.amount.eq(totalPoolUsdc));
     userUsdcAccount = await getTokenAccount(provider, userUsdc);
     assert.ok(userUsdcAccount.amount.eq(firstWithdrawal));
   });
 
-  // const ACCURACY = 6;
-
-  // it('Calculates the exchange rate', async () => {
-  //   await program.rpc.calculateExchangeRate({
-  //     accounts: {
-  //       poolAccount: poolAccount.publicKey,
-  //       redeemableMint,
-  //       poolUsdc,
-  //       poolWatermelon,
-  //       clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
-  //     },
-  //   });
-
-  //   let thisPoolAccount = await program.account.poolAccount(poolAccount.publicKey);
-  //   // console.log("pool exchange rate: ", thisPoolAccount.exchangeRate);
-  //   exchangeRate = watermelonIdoAmount.mul(new anchor.BN(10 ** ACCURACY));
-  //   exchangeRate = exchangeRate.div(poolUsdcAccount.amount);
-  //   // console.log("test exchange rate: ", exchangeRate);
-  //   assert.ok(thisPoolAccount.exchangeRate.eq(exchangeRate));
-  // });
-
-
-  // Got to do some calculations for how much should be left
-  // const watermelonIdoAmount = new anchor.BN(5000000);
 
   it('Exchanges user Redeemable tokens for watermelon', async () => {
     // Wait until the IDO has opened
@@ -267,20 +224,34 @@ describe('ido_pool', () => {
     });
 
     poolWatermelonAccount = await getTokenAccount(provider, poolWatermelon);
-    // Should have idoAmount - (exchange rate * remaining amount)/10**ACCURACY
-    // let redeemedwatermelon = (exchangerate.mul(firstuserredeemable)).div(new anchor.bn(10 ** accuracy));
     let redeemedWatermelon = firstUserRedeemable.mul(watermelonIdoAmount).div(totalPoolUsdc);
-    // redeemedWatermelon = redeemedWatermelon.div();
     let remainingWatermelon = watermelonIdoAmount.sub(redeemedWatermelon);
     assert.ok(poolWatermelonAccount.amount.eq(remainingWatermelon));
     userWatermelonAccount = await getTokenAccount(provider, userWatermelon);
-    // Should have exchange rate * remaining amount / 10**ACCURACY
     assert.ok(userWatermelonAccount.amount.eq(redeemedWatermelon));
   });
 
 
-  // TODO Add another test where the second user withdraws and we check that 
-  // poolWatermelon is now empty
+  it('Exchanges second users Redeemable tokens for watermelon', async () => {
+    secondUserWatermelon =  await createTokenAccount(provider, watermelonMint, provider.wallet.publicKey);
+
+    await program.rpc.exchangeRedeemableForWatermelon(secondDeposit, {
+      accounts: {
+        poolAccount: poolAccount.publicKey,
+        poolSigner,
+        redeemableMint,
+        poolWatermelon,
+        userAuthority: provider.wallet.publicKey,
+        userWatermelon: secondUserWatermelon,
+        userRedeemable: secondUserRedeemable,
+        tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+      },
+    });
+
+    poolWatermelonAccount = await getTokenAccount(provider, poolWatermelon);
+    assert.ok(poolWatermelonAccount.amount.eq(new anchor.BN(0)));
+  });
 
 
   it('Withdraws total USDC from pool account', async () => {

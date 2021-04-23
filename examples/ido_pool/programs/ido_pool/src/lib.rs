@@ -188,6 +188,8 @@ pub struct InitializePool<'info> {
     pub pool_signer: AccountInfo<'info>,
     #[account("redeemable_mint.mint_authority == COption::Some(*pool_signer.key)")]
     pub redeemable_mint: CpiAccount<'info, Mint>,
+    #[account("usdc_mint.decimals == redeemable_mint.decimals")]
+    pub usdc_mint: CpiAccount<'info, Mint>,
     #[account(mut, "pool_watermelon.owner == *pool_signer.key")]
     pub pool_watermelon: CpiAccount<'info, TokenAccount>,
     #[account("pool_usdc.owner == *pool_signer.key")]
