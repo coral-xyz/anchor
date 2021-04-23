@@ -1,5 +1,5 @@
 [package]
-name = "ido_pool"
+name = "ido-pool"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2018"
