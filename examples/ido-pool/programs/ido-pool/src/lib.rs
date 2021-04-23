@@ -14,7 +14,7 @@ pub mod ido_pool {
         start_ido_ts: i64,
         end_deposits_ts: i64,
         end_ido_ts: i64,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         if !(ctx.accounts.clock.unix_timestamp < start_ido_ts
             && start_ido_ts < end_deposits_ts
             && end_deposits_ts <= end_ido_ts)
@@ -55,7 +55,7 @@ pub mod ido_pool {
     pub fn exchange_usdc_for_redeemable(
         ctx: Context<ExchangeUsdcForRedeemable>,
         amount: u64,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         if !(ctx.accounts.pool_account.start_ido_ts < ctx.accounts.clock.unix_timestamp) {
             return Err(ErrorCode::StartIdoTime.into());
         } else if !(ctx.accounts.clock.unix_timestamp < ctx.accounts.pool_account.end_deposits_ts) {
@@ -98,7 +98,7 @@ pub mod ido_pool {
     pub fn exchange_redeemable_for_usdc(
         ctx: Context<ExchangeRedeemableForUsdc>,
         amount: u64,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         if !(ctx.accounts.pool_account.start_ido_ts < ctx.accounts.clock.unix_timestamp) {
             return Err(ErrorCode::StartIdoTime.into());
         } else if !(ctx.accounts.clock.unix_timestamp < ctx.accounts.pool_account.end_ido_ts) {
@@ -141,7 +141,7 @@ pub mod ido_pool {
     pub fn exchange_redeemable_for_watermelon(
         ctx: Context<ExchangeRedeemableForWatermelon>,
         amount: u64,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         if !(ctx.accounts.pool_account.end_ido_ts < ctx.accounts.clock.unix_timestamp) {
             return Err(ErrorCode::IdoNotOver.into());
         }
@@ -182,7 +182,7 @@ pub mod ido_pool {
         Ok(())
     }
 
-    pub fn withdraw_pool_usdc(ctx: Context<WithdrawPoolUsdc>) -> ProgramResult {
+    pub fn withdraw_pool_usdc(ctx: Context<WithdrawPoolUsdc>) -> Result<()> {
         if !(ctx.accounts.pool_account.end_ido_ts < ctx.accounts.clock.unix_timestamp) {
             return Err(ErrorCode::IdoNotOver.into());
         }
