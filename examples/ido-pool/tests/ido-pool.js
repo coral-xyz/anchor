@@ -2,7 +2,7 @@ const anchor = require('@project-serum/anchor');
 const assert = require('assert');
 
 
-describe('ido_pool', () => {
+describe('ido-pool', () => {
 
   const provider = anchor.Provider.local();
 
@@ -20,7 +20,7 @@ describe('ido_pool', () => {
   let watermelonMint = null;
   let creatorUsdc = null;
   let creatorWatermelon = null;
-  
+
 
   it('Initializes the state-of-the-world', async () => {
     usdcMint = await createMint(provider);
@@ -68,11 +68,11 @@ describe('ido_pool', () => {
     startIdoTs = nowBn.add(new anchor.BN(5));
     endDepositsTs = nowBn.add(new anchor.BN(10));
     endIdoTs = nowBn.add(new anchor.BN(15));
-    
+
     // Atomically create the new account and initialize it with the program.
     await program.rpc.initializePool(
-      watermelonIdoAmount, 
-      nonce, 
+      watermelonIdoAmount,
+      nonce,
       startIdoTs,
       endDepositsTs,
       endIdoTs,
@@ -103,7 +103,7 @@ describe('ido_pool', () => {
 
   // We're going to need to start using the associated program account for creating token accounts
   // if not in testing, then definitely in production
-  
+
   let userUsdc = null;
   let userRedeemable = null;
   // 10 usdc
@@ -166,7 +166,7 @@ describe('ido_pool', () => {
         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       },
     });
-    
+
     totalPoolUsdc = firstDeposit.add(secondDeposit);
     poolUsdcAccount = await getTokenAccount(provider, poolUsdc);
     assert.ok(poolUsdcAccount.amount.eq(totalPoolUsdc));
