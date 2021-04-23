@@ -6,6 +6,7 @@ use anchor_spl::token::{self, Burn, Mint, MintTo, TokenAccount, Transfer};
 pub mod ido_pool {
     use super::*;
 
+    #[access_control(InitializePool::accounts(&ctx, nonce))]
     pub fn initialize_pool(
         ctx: Context<InitializePool>,
         num_ido_tokens: u64,
@@ -229,6 +230,20 @@ pub struct InitializePool<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
+impl<'info> InitializePool<'info> {
+    fn accounts(ctx: &Context<InitializePool<'info>>, nonce: u8) -> Result<()> {
+        let expected_signer = Pubkey::create_program_address(
+            &[ctx.accounts.pool_watermelon.mint.as_ref(), &[nonce]],
+            ctx.program_id,
+        )
+        .map_err(|_| ErrorCode::InvalidNonce)?;
+        if ctx.accounts.pool_signer.key != &expected_signer {
+            return Err(ErrorCode::InvalidNonce.into());
+        }
+        Ok(())
+    }
+}
+
 #[derive(Accounts)]
 pub struct ExchangeUsdcForRedeemable<'info> {
     #[account(has_one = redeemable_mint, has_one = pool_usdc)]
@@ -350,4 +365,6 @@ pub enum ErrorCode {
     LowRedeemable,
     #[msg("USDC total and redeemable total don't match")]
     UsdcNotEqRedeem,
+    #[msg("Given nonce is invalid")]
+    InvalidNonce,
 }
