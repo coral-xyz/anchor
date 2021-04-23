@@ -1,3 +1,6 @@
+//! An IDO pool program implementing the Mango Markets token sale design here:
+//! https://docs.mango.markets/litepaper#token-sale.
+
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program_option::COption;
 use anchor_spl::token::{self, Burn, Mint, MintTo, TokenAccount, Transfer};
@@ -52,16 +55,11 @@ pub mod ido_pool {
         Ok(())
     }
 
+    #[access_control(unrestricted_phase(&ctx))]
     pub fn exchange_usdc_for_redeemable(
         ctx: Context<ExchangeUsdcForRedeemable>,
         amount: u64,
     ) -> Result<()> {
-        if !(ctx.accounts.pool_account.start_ido_ts < ctx.accounts.clock.unix_timestamp) {
-            return Err(ErrorCode::StartIdoTime.into());
-        } else if !(ctx.accounts.clock.unix_timestamp < ctx.accounts.pool_account.end_deposits_ts) {
-            return Err(ErrorCode::EndDepositsTime.into());
-        }
-
         // While token::transfer will check this, we prefer a verbose err msg.
         if ctx.accounts.user_usdc.amount < amount {
             return Err(ErrorCode::LowUsdc.into());
@@ -95,16 +93,11 @@ pub mod ido_pool {
         Ok(())
     }
 
+    #[access_control(withdraw_only_phase(&ctx))]
     pub fn exchange_redeemable_for_usdc(
         ctx: Context<ExchangeRedeemableForUsdc>,
         amount: u64,
     ) -> Result<()> {
-        if !(ctx.accounts.pool_account.start_ido_ts < ctx.accounts.clock.unix_timestamp) {
-            return Err(ErrorCode::StartIdoTime.into());
-        } else if !(ctx.accounts.clock.unix_timestamp < ctx.accounts.pool_account.end_ido_ts) {
-            return Err(ErrorCode::EndIdoTime.into());
-        }
-
         // While token::burn will check this, we prefer a verbose err msg.
         if ctx.accounts.user_redeemable.amount < amount {
             return Err(ErrorCode::LowRedeemable.into());
@@ -120,7 +113,7 @@ pub mod ido_pool {
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
         token::burn(cpi_ctx, amount)?;
 
-        // Transfer USDC from pool account to user
+        // Transfer USDC from pool account to user.
         let seeds = &[
             ctx.accounts.pool_account.watermelon_mint.as_ref(),
             &[ctx.accounts.pool_account.nonce],
@@ -138,23 +131,23 @@ pub mod ido_pool {
         Ok(())
     }
 
+    #[access_control(ido_over(&ctx.accounts.pool_account, &ctx.accounts.clock))]
     pub fn exchange_redeemable_for_watermelon(
         ctx: Context<ExchangeRedeemableForWatermelon>,
         amount: u64,
     ) -> Result<()> {
-        if !(ctx.accounts.pool_account.end_ido_ts < ctx.accounts.clock.unix_timestamp) {
-            return Err(ErrorCode::IdoNotOver.into());
-        }
-
         // While token::burn will check this, we prefer a verbose err msg.
         if ctx.accounts.user_redeemable.amount < amount {
             return Err(ErrorCode::LowRedeemable.into());
         }
 
-        let watermelon_amount = (amount as u128 * ctx.accounts.pool_watermelon.amount as u128)
-            / ctx.accounts.redeemable_mint.supply as u128;
+        let watermelon_amount = (amount as u128)
+            .checked_mul(ctx.accounts.pool_watermelon.amount as u128)
+            .unwrap()
+            .checked_div(ctx.accounts.redeemable_mint.supply as u128)
+            .unwrap();
 
-        // Burn the user's redeemable tokens
+        // Burn the user's redeemable tokens.
         let cpi_accounts = Burn {
             mint: ctx.accounts.redeemable_mint.to_account_info(),
             to: ctx.accounts.user_redeemable.to_account_info(),
@@ -164,7 +157,7 @@ pub mod ido_pool {
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
         token::burn(cpi_ctx, amount)?;
 
-        // Transfer Watermelon from pool account to user
+        // Transfer Watermelon from pool account to user.
         let seeds = &[
             ctx.accounts.pool_account.watermelon_mint.as_ref(),
             &[ctx.accounts.pool_account.nonce],
@@ -182,11 +175,8 @@ pub mod ido_pool {
         Ok(())
     }
 
+    #[access_control(ido_over(&ctx.accounts.pool_account, &ctx.accounts.clock))]
     pub fn withdraw_pool_usdc(ctx: Context<WithdrawPoolUsdc>) -> Result<()> {
-        if !(ctx.accounts.pool_account.end_ido_ts < ctx.accounts.clock.unix_timestamp) {
-            return Err(ErrorCode::IdoNotOver.into());
-        }
-
         // Transfer total USDC from pool account to creator account.
         let seeds = &[
             ctx.accounts.pool_account.watermelon_mint.as_ref(),
@@ -210,7 +200,6 @@ pub mod ido_pool {
 pub struct InitializePool<'info> {
     #[account(init)]
     pub pool_account: ProgramAccount<'info, PoolAccount>,
-    // TODO without nonce we have no way of verifying pool signer
     pub pool_signer: AccountInfo<'info>,
     #[account("redeemable_mint.mint_authority == COption::Some(*pool_signer.key)")]
     pub redeemable_mint: CpiAccount<'info, Mint>,
@@ -367,4 +356,37 @@ pub enum ErrorCode {
     UsdcNotEqRedeem,
     #[msg("Given nonce is invalid")]
     InvalidNonce,
+}
+
+// Access control modifiers.
+
+// Asserts the IDO is in the first phase.
+fn unrestricted_phase<'info>(ctx: &Context<ExchangeUsdcForRedeemable<'info>>) -> Result<()> {
+    if !(ctx.accounts.pool_account.start_ido_ts < ctx.accounts.clock.unix_timestamp) {
+        return Err(ErrorCode::StartIdoTime.into());
+    } else if !(ctx.accounts.clock.unix_timestamp < ctx.accounts.pool_account.end_deposits_ts) {
+        return Err(ErrorCode::EndDepositsTime.into());
+    }
+    Ok(())
+}
+
+// Asserts the IDO is in the second phase.
+fn withdraw_only_phase(ctx: &Context<ExchangeRedeemableForUsdc>) -> Result<()> {
+    if !(ctx.accounts.pool_account.start_ido_ts < ctx.accounts.clock.unix_timestamp) {
+        return Err(ErrorCode::StartIdoTime.into());
+    } else if !(ctx.accounts.clock.unix_timestamp < ctx.accounts.pool_account.end_ido_ts) {
+        return Err(ErrorCode::EndIdoTime.into());
+    }
+    Ok(())
+}
+
+// Asserts the IDO sale period has ended, based on the current timestamp.
+fn ido_over<'info>(
+    pool_account: &ProgramAccount<'info, PoolAccount>,
+    clock: &Sysvar<'info, Clock>,
+) -> Result<()> {
+    if !(pool_account.end_ido_ts < clock.unix_timestamp) {
+        return Err(ErrorCode::IdoNotOver.into());
+    }
+    Ok(())
 }
