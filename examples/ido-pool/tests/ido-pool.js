@@ -104,7 +104,6 @@ describe("ido-pool", () => {
           poolSigner,
           distributionAuthority: provider.wallet.publicKey,
           creatorWatermelon,
-          creatorUsdc,
           redeemableMint,
           usdcMint,
           poolWatermelon,

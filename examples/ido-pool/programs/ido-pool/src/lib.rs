@@ -18,8 +18,7 @@ pub mod ido_pool {
         end_deposits_ts: i64,
         end_ido_ts: i64,
     ) -> Result<()> {
-        if !(ctx.accounts.clock.unix_timestamp < start_ido_ts
-            && start_ido_ts < end_deposits_ts
+        if !(start_ido_ts < end_deposits_ts
             && end_deposits_ts <= end_ido_ts)
         {
             return Err(ErrorCode::InitTime.into());
