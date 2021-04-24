@@ -18,9 +18,7 @@ pub mod ido_pool {
         end_deposits_ts: i64,
         end_ido_ts: i64,
     ) -> Result<()> {
-        if !(start_ido_ts < end_deposits_ts
-            && end_deposits_ts <= end_ido_ts)
-        {
+        if !(start_ido_ts < end_deposits_ts && end_deposits_ts <= end_ido_ts) {
             return Err(ErrorCode::InitTime.into());
         }
 
@@ -213,7 +211,6 @@ pub struct InitializePool<'info> {
     #[account("token_program.key == &token::ID")]
     pub token_program: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
-    pub clock: Sysvar<'info, Clock>,
 }
 
 impl<'info> InitializePool<'info> {
