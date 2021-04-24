@@ -36,12 +36,6 @@ pub mod ido_pool {
         pool_account.end_deposits_ts = end_deposits_ts;
         pool_account.end_ido_ts = end_ido_ts;
 
-        msg!(
-            "pool usdc owner: {}, pool signer key: {}",
-            ctx.accounts.pool_usdc.owner,
-            ctx.accounts.pool_signer.key
-        );
-
         // Transfer Watermelon from creator to pool account.
         let cpi_accounts = Transfer {
             from: ctx.accounts.creator_watermelon.to_account_info(),
