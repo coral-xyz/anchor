@@ -133,7 +133,7 @@ pub mod ido_pool {
             return Err(ErrorCode::LowRedeemable.into());
         }
 
-        // Calculate watermelon tokens due
+        // Calculate watermelon tokens due.
         let watermelon_amount = (amount as u128)
             .checked_mul(ctx.accounts.pool_watermelon.amount as u128)
             .unwrap()
@@ -357,7 +357,6 @@ pub enum ErrorCode {
 }
 
 // Access control modifiers.
-
 
 // Asserts the IDO starts in the future.
 fn future_start_time<'info>(ctx: &Context<InitializePool<'info>>, start_ido_ts: i64) -> Result<()> {
