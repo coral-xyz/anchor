@@ -96,7 +96,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_cluster_bad_parse() {
-        let bad_url = "httq://my_custom_url.test.net";
+        let bad_url = "http://my_custom_url.test.net";
         Cluster::from_str(bad_url).unwrap();
     }
 }
