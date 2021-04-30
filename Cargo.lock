@@ -2761,7 +2761,7 @@ dependencies = [
 [[package]]
 name = "serum-common"
 version = "0.1.0"
-source = "git+https://github.com/project-serum/serum-dex#e264db2c9cc326f246a8fb108becb7d71bba3e72"
+source = "git+https://github.com/project-serum/serum-dex#66904088599c1a8d42623f6a6d157cec46c8da62"
 dependencies = [
  "anyhow",
  "arrayref",
@@ -2778,8 +2778,8 @@ dependencies = [
 
 [[package]]
 name = "serum_dex"
-version = "0.2.0"
-source = "git+https://github.com/project-serum/serum-dex#e264db2c9cc326f246a8fb108becb7d71bba3e72"
+version = "0.3.0"
+source = "git+https://github.com/project-serum/serum-dex#66904088599c1a8d42623f6a6d157cec46c8da62"
 dependencies = [
  "arrayref",
  "bincode",
