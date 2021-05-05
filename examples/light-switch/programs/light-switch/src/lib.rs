@@ -1,9 +1,7 @@
-/*
-Light and Light Switch program with one to one relationship.
-They share the same switch account and only transaction signed by that account is able to turn light on and off.
+// Light and Light Switch program with one to one relationship.
+// They share the same switch account and only transaction signed by that account is able to turn light on and off.
 
-This is a community example and might not represent the best practices.
-*/
+// This is a community example and might not represent the best practices.
 
 use anchor_lang::prelude::*;
 use light::light::{Light};
@@ -14,13 +12,13 @@ pub mod light_switch {
     use super::*;
 
     #[state]
-    pub struct LightSiwtch {
+    pub struct LightSwitch {
         authority: Pubkey,
         switch: Pubkey
     }
 
 
-    impl LightSiwtch {
+    impl LightSwitch {
         pub fn new(ctx: Context<SwitchInit>) -> Result<Self> {
             Ok(Self {
                 authority: *ctx.accounts.authority.key,
@@ -30,21 +28,21 @@ pub mod light_switch {
 
         pub fn flip(&mut self, ctx: Context<StateCpi>, nonce: u8) -> Result<()> {
 
-            // check authority is the signer
-            // check owner being passed in is same owner in state
+            // Check authority is the signer.
+            // Check owner being passed in is same owner in state.
             if &self.authority != ctx.accounts.authority.key || &self.switch != ctx.accounts.switch.key{
                 return Err(ErrorCode::Unauthorized.into());
             }
 
-            // obtain the light program
+            // Obtain the light program.
             let cpi_program = ctx.accounts.light_program.clone();
 
-            // set the payload, pass in switch
+            // Set the payload, pass in switch.
             let cpi_accounts = FlipSwitch {
                 switch: ctx.accounts.switch.to_account_info()
             };
 
-            // sign with master and nonce of PDA (owner signer)
+            // Sign with master and nonce of PDA (owner signer).
             let seeds = &[
                 ctx.accounts.switch.to_account_info().key.as_ref(),
                 &[nonce],
@@ -52,7 +50,7 @@ pub mod light_switch {
             let signer = &[&seeds[..]];
             let ctx = ctx.accounts.cpi_state.context(cpi_program, cpi_accounts);
 
-            // call cpi function with signer
+            // Call cpi function with signer.
             light::cpi::state::flip(ctx.with_signer(signer));
             Ok(())
         }

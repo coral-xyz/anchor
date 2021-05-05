@@ -1,9 +1,8 @@
-/*
-Light and Light Switch program with one to one relationship.
-They share the same switch account and only transaction signed by that account is able to turn light on and off.
+// Light and Light Switch program with one to one relationship.
+// They share the same switch account and only transaction signed by that account is able to turn light on and off.
 
-This is a community example and might not represent the best practices.
-*/
+// This is a community example and might not represent the best practices.
+
 use anchor_lang::prelude::*;
 
 #[program]
@@ -25,7 +24,7 @@ pub mod light {
         }
 
         pub fn flip(&mut self, ctx: Context<FlipSwitch>) -> Result<()> {
-            // check the switch passed in is also the switch stored
+            // Check the switch passed in is also the switch stored.
             if &self.switch != ctx.accounts.switch.key {
                 return Err(ErrorCode::Unauthorized.into());
             }
@@ -42,7 +41,8 @@ pub struct Init<'info>{
 
 #[derive(Accounts)]
 pub struct FlipSwitch<'info> {
-    #[account(signer)] // verifies master is the signer
+    // Verifies master is the signer.
+    #[account(signer)]
     pub switch: AccountInfo<'info>,
 }
 
