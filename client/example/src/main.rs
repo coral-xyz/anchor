@@ -26,14 +26,14 @@ use std::time::Duration;
 
 #[derive(Clap)]
 pub struct Opts {
-    /*    #[clap(long)]
+    #[clap(long)]
     composite_pid: Pubkey,
     #[clap(long)]
-    basic_2_pid: Pubkey,*/
+    basic_2_pid: Pubkey,
     #[clap(long)]
     basic_4_pid: Pubkey,
-    //    #[clap(long)]
-    //    events_pid: Pubkey,
+    #[clap(long)]
+    events_pid: Pubkey,
 }
 
 // This example assumes a local validator is running with the programs
