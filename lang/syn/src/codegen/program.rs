@@ -895,7 +895,7 @@ pub fn generate_ctor_variant(state: &State) -> proc_macro2::TokenStream {
 }
 
 pub fn generate_ctor_variant_name() -> String {
-    "Ctor".to_string()
+    "New".to_string()
 }
 
 fn generate_ctor_typed_args(state: &State) -> Vec<syn::PatType> {
@@ -1004,12 +1004,12 @@ pub fn generate_ixs(program: &Program) -> proc_macro2::TokenStream {
                 if ctor_args.is_empty() {
                     quote! {
                         #[derive(AnchorSerialize, AnchorDeserialize)]
-                        pub struct Ctor;
+                        pub struct New;
                     }
                 } else {
                     quote! {
                         #[derive(AnchorSerialize, AnchorDeserialize)]
-                        pub struct Ctor {
+                        pub struct New {
                             #(#ctor_args),*
                         }
                     }
@@ -1023,7 +1023,7 @@ pub fn generate_ixs(program: &Program) -> proc_macro2::TokenStream {
                 /// constructor.
                 #strct
 
-                impl anchor_lang::InstructionData for Ctor {
+                impl anchor_lang::InstructionData for New {
                     fn data(&self) -> Vec<u8> {
                         let mut d = #sighash_tts.to_vec();
                         d.append(&mut self.try_to_vec().expect("Should always serialize"));

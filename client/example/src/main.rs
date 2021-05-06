@@ -209,11 +209,11 @@ pub fn basic_4(client: &Client, pid: Pubkey) -> Result<()> {
     let program = client.program(pid);
     let authority = program.payer();
 
-    // Invoke the `new` constructor.
+    // Invoke the state's `new` constructor.
     program
         .state_request()
         .accounts(basic_4_accounts::Auth { authority })
-        .new(basic_4_instruction::state::Ctor)
+        .new(basic_4_instruction::state::New)
         .send()?;
     let counter_account: CounterState = program.state()?;
     assert_eq!(counter_account.authority, authority);
