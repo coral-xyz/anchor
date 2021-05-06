@@ -54,10 +54,10 @@ fn main() -> Result<()> {
     let client = Client::new_with_options(url, payer, CommitmentConfig::processed());
 
     // Run tests.
-    //    composite(&client, opts.composite_pid)?;
-    //    basic_2(&client, opts.basic_2_pid)?;
+    composite(&client, opts.composite_pid)?;
+    basic_2(&client, opts.basic_2_pid)?;
     basic_4(&client, opts.basic_4_pid)?;
-    //    events(&client, opts.events_pid)?;
+    events(&client, opts.events_pid)?;
 
     // Success.
     Ok(())
