@@ -6,9 +6,10 @@ pub mod basic_4 {
     use super::*;
 
     #[state]
+    #[derive(Debug)]
     pub struct Counter {
-        authority: Pubkey,
-        count: u64,
+        pub authority: Pubkey,
+        pub count: u64,
     }
 
     impl Counter {
