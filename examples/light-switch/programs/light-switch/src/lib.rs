@@ -14,41 +14,40 @@ pub mod light_switch {
     #[state]
     pub struct LightSwitch {
         authority: Pubkey,
-        switch: Pubkey
+        nonce: u8
     }
 
 
     impl LightSwitch {
-        pub fn new(ctx: Context<SwitchInit>) -> Result<Self> {
+        pub fn new(ctx: Context<SwitchInit>, nonce: u8) -> Result<Self> {
             Ok(Self {
                 authority: *ctx.accounts.authority.key,
-                switch: *ctx.accounts.switch.key
+                nonce
             })
         }
 
-        pub fn flip(&mut self, ctx: Context<StateCpi>, nonce: u8) -> Result<()> {
+        pub fn flip(&mut self, ctx: Context<StateCpi>) -> Result<()> {
 
             // Check authority is the signer.
-            // Check owner being passed in is same owner in state.
-            if &self.authority != ctx.accounts.authority.key || &self.switch != ctx.accounts.switch.key{
+            if &self.authority != ctx.accounts.authority.key {
                 return Err(ErrorCode::Unauthorized.into());
             }
 
             // Obtain the light program.
             let cpi_program = ctx.accounts.light_program.clone();
 
-            // Set the payload, pass in switch.
+            // Set the instruction payload, pass in switch signer.
             let cpi_accounts = FlipSwitch {
-                switch: ctx.accounts.switch.to_account_info()
+                switch_signer: ctx.accounts.switch_signer.to_account_info()
             };
+            let ctx = ctx.accounts.cpi_state.context(cpi_program, cpi_accounts);
 
-            // Sign with master and nonce of PDA (owner signer).
+            // Prepare the signature by switch + nonce to make the call sign by switch_signer.
             let seeds = &[
                 ctx.accounts.switch.to_account_info().key.as_ref(),
-                &[nonce],
+                &[self.nonce],
             ];
             let signer = &[&seeds[..]];
-            let ctx = ctx.accounts.cpi_state.context(cpi_program, cpi_accounts);
 
             // Call cpi function with signer.
             light::cpi::state::flip(ctx.with_signer(signer));
@@ -62,7 +61,6 @@ pub mod light_switch {
 pub struct SwitchInit<'info> {
     #[account(signer)]
     authority: AccountInfo<'info>,
-    switch: AccountInfo<'info>
 }
 
 #[derive(Accounts)]
@@ -70,6 +68,7 @@ pub struct StateCpi<'info> {
     #[account(signer)]
     authority: AccountInfo<'info>,
     switch: AccountInfo<'info>,
+    switch_signer: AccountInfo<'info>,
     #[account(mut, state = light_program)]
     cpi_state: CpiState<'info, Light>,
     #[account(executable)]

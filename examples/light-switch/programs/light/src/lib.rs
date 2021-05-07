@@ -1,6 +1,4 @@
 // Light and Light Switch program with one to one relationship.
-// They share the same switch account and only transaction signed by that account is able to turn light on and off.
-
 // This is a community example and might not represent the best practices.
 
 use anchor_lang::prelude::*;
@@ -11,21 +9,26 @@ pub mod light {
 
     #[state]
     pub struct Light {
+        // State of the light.
         is_light_on: bool,
-        switch: Pubkey
+        // Store the PDA for verification
+        switch_signer: Pubkey,
     }
 
     impl Light {
         pub fn new(ctx: Context<Init>) -> Result<Self> {
             Ok(Self {
                 is_light_on: false,
-                switch: *ctx.accounts.switch.key
+                switch_signer: *ctx.accounts.switch_signer.key
             })
         }
 
+        // Two conditions for flip:
+        // 1. Must be signed by ctx.accounts.switch_signer.
+        // 2. ctx.accounts.switch_signer must equals switch_signer stored in Light's State.
         pub fn flip(&mut self, ctx: Context<FlipSwitch>) -> Result<()> {
-            // Check the switch passed in is also the switch stored.
-            if &self.switch != ctx.accounts.switch.key {
+            // Verify switch signer PDA passed in equals switch_signer stored.
+            if &self.switch_signer != ctx.accounts.switch_signer.key {
                 return Err(ErrorCode::Unauthorized.into());
             }
             self.is_light_on = !self.is_light_on;
@@ -36,14 +39,14 @@ pub mod light {
 
 #[derive(Accounts)]
 pub struct Init<'info>{
-    switch:AccountInfo<'info>
+    switch_signer:AccountInfo<'info>
 }
 
 #[derive(Accounts)]
 pub struct FlipSwitch<'info> {
     // Verifies master is the signer.
     #[account(signer)]
-    pub switch: AccountInfo<'info>,
+    pub switch_signer: AccountInfo<'info>,
 }
 
 #[error]
