@@ -1,13 +1,12 @@
-import { PublicKey } from "@solana/web3.js";
-import { inflate } from "pako";
-import Provider from "./provider";
-import { RpcFactory } from "./rpc";
-import { Idl, idlAddress, decodeIdlAccount } from "./idl";
-import Coder, { eventDiscriminator } from "./coder";
-import { Rpcs, Ixs, Txs, Accounts, State } from "./rpc";
-import { getProvider } from "./";
 import * as base64 from "base64-js";
 import * as assert from "assert";
+import { inflate } from "pako";
+import { PublicKey } from "@solana/web3.js";
+import Provider from "../provider";
+import { Idl, idlAddress, decodeIdlAccount } from "../idl";
+import Coder, { eventDiscriminator } from "../coder";
+import NamespaceFactory, { Rpcs, Ixs, Txs, Accounts, State } from "./namespace";
+import { getProvider } from "../";
 
 /**
  * Program is the IDL deserialized representation of a Solana program.
@@ -68,7 +67,7 @@ export class Program {
     const coder = new Coder(idl);
 
     // Build the dynamic RPC functions.
-    const [rpcs, ixs, txs, accounts, state] = RpcFactory.build(
+    const [rpcs, ixs, txs, accounts, state] = NamespaceFactory.build(
       idl,
       coder,
       programId,
