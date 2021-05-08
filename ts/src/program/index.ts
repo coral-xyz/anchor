@@ -66,7 +66,7 @@ export class Program {
     // Build the serializer.
     const coder = new Coder(idl);
 
-    // Build the dynamic RPC functions.
+    // Build the dynamic namespaces.
     const [rpcs, ixs, txs, accounts, state] = NamespaceFactory.build(
       idl,
       coder,
