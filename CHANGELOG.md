@@ -11,6 +11,10 @@ incremented for features.
 
 ## [Unreleased]
 
+## Features
+
+* ts: Add `program.simulate` namespace ([#266](https://github.com/project-serum/anchor/pull/266)).
+
 ## [0.5.0] - 2021-05-07
 
 ## Features
