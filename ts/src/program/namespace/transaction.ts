@@ -1,6 +1,6 @@
 import { Transaction } from '@solana/web3.js';
-import { IdlInstruction } from "../idl";
-import { splitArgsAndCtx } from './context';
+import { IdlInstruction } from "../../idl";
+import { splitArgsAndCtx } from '../context';
 import { IxFn } from './instruction';
 
 /**

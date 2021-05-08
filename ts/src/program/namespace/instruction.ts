@@ -6,11 +6,11 @@ import {
   IdlAccount,
   IdlInstruction,
   IdlAccountItem,
-} from "../idl";
-import { IdlError } from "../error";
-import Coder from '../coder';
-import { toInstruction, validateAccounts } from './common';
-import { RpcAccounts, splitArgsAndCtx } from './context';
+} from "../../idl";
+import { IdlError } from "../../error";
+import Coder from '../../coder';
+import { toInstruction, validateAccounts } from '../common';
+import { RpcAccounts, splitArgsAndCtx } from '../context';
 
 /**
  * Dynamically generated instruction namespace.

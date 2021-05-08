@@ -1,12 +1,12 @@
-import * as base64 from "base64-js";
-import * as assert from "assert";
 import { inflate } from "pako";
 import { PublicKey } from "@solana/web3.js";
 import Provider from "../provider";
 import { Idl, idlAddress, decodeIdlAccount } from "../idl";
-import Coder, { eventDiscriminator } from "../coder";
+import Coder from "../coder";
 import NamespaceFactory, { Rpcs, Ixs, Txs, Accounts, State } from "./namespace";
 import { getProvider } from "../";
+import { decodeUtf8 } from '../utils';
+import { EventParser } from './event';
 
 /**
  * Program is the IDL deserialized representation of a Solana program.
@@ -108,161 +108,20 @@ export class Program {
   public addEventListener<T>(
     eventName: string,
     callback: (event: T, slot: number) => void
-  ): Promise<void> {
-    // Values shared across log handlers.
-    const thisProgramStr = this.programId.toString();
-    const discriminator = eventDiscriminator(eventName);
-    const logStartIndex = "Program log: ".length;
-
-    // Handles logs when the current program being executing is *not* this.
-    const handleSystemLog = (log: string): [string | null, boolean] => {
-      // System component.
-      const logStart = log.split(":")[0];
-      // Recursive call.
-      if (logStart.startsWith(`Program ${this.programId.toString()} invoke`)) {
-        return [this.programId.toString(), false];
-      }
-      // Cpi call.
-      else if (logStart.includes("invoke")) {
-        return ["cpi", false]; // Any string will do.
-      } else {
-        // Did the program finish executing?
-        if (logStart.match(/^Program (.*) consumed .*$/g) !== null) {
-          return [null, true];
-        }
-        return [null, false];
-      }
-    };
-
-    // Handles logs from *this* program.
-    const handleProgramLog = (
-      log: string
-    ): [T | null, string | null, boolean] => {
-      // This is a `msg!` log.
-      if (log.startsWith("Program log:")) {
-        const logStr = log.slice(logStartIndex);
-        const logArr = Buffer.from(base64.toByteArray(logStr));
-        const disc = logArr.slice(0, 8);
-        // Only deserialize if the discriminator implies a proper event.
-        let event = null;
-        if (disc.equals(discriminator)) {
-          event = this.coder.events.decode(eventName, logArr.slice(8));
-        }
-        return [event, null, false];
-      }
-      // System log.
-      else {
-        return [null, ...handleSystemLog(log)];
-      }
-    };
-
-    // Main log handler. Returns a three element array of the event, the
-    // next program that was invoked for CPI, and a boolean indicating if
-    // a program has completed execution (and thus should be popped off the
-    // execution stack).
-    const handleLog = (
-      execution: ExecutionContext,
-      log: string
-    ): [T | null, string | null, boolean] => {
-      // Executing program is this program.
-      if (execution.program() === thisProgramStr) {
-        return handleProgramLog(log);
-      }
-      // Executing program is not this program.
-      else {
-        return [null, ...handleSystemLog(log)];
-      }
-    };
-
-    // Each log given, represents an array of messages emitted by
-    // a single transaction, which can execute many different programs across
-    // CPI boundaries. However, the subscription is only interested in the
-    // events emitted by *this* program. In achieving this, we keep track of the
-    // program execution context by parsing each log and looking for a CPI
-    // `invoke` call. If one exists, we know a new program is executing. So we
-    // push the programId onto a stack and switch the program context. This
-    // allows us to track, for a given log, which program was executing during
-    // its emission, thereby allowing us to know if a given log event was
-    // emitted by *this* program. If it was, then we parse the raw string and
-    // emit the event if the string matches the event being subscribed to.
-    //
-    // @ts-ignore
+  ): number {
+		const eventParser = new EventParser<T>(this.coder, this.programId, eventName);
     return this.provider.connection.onLogs(this.programId, (logs, ctx) => {
       if (logs.err) {
         console.error(logs);
         return;
       }
-
-      const logScanner = new LogScanner(logs.logs);
-      const execution = new ExecutionContext(logScanner.next() as string);
-
-      let log = logScanner.next();
-      while (log !== null) {
-        let [event, newProgram, didPop] = handleLog(execution, log);
-        if (event) {
-          callback(event, ctx.slot);
-        }
-        if (newProgram) {
-          execution.push(newProgram);
-        }
-        if (didPop) {
-          execution.pop();
-        }
-        log = logScanner.next();
-      }
-    });
+			eventParser.parseLogs(logs.logs, (event) => {
+				callback(event, ctx.slot);
+			});
+		});
   }
 
   public async removeEventListener(listener: number): Promise<void> {
-    // @ts-ignore
     return this.provider.connection.removeOnLogsListener(listener);
   }
-}
-
-// Stack frame execution context, allowing one to track what program is
-// executing for a given log.
-class ExecutionContext {
-  stack: string[];
-
-  constructor(log: string) {
-    // Assumes the first log in every transaction is an `invoke` log from the
-    // runtime.
-    const program = /^Program (.*) invoke.*$/g.exec(log)[1];
-    this.stack = [program];
-  }
-
-  program(): string {
-    assert.ok(this.stack.length > 0);
-    return this.stack[this.stack.length - 1];
-  }
-
-  push(newProgram: string) {
-    this.stack.push(newProgram);
-  }
-
-  pop() {
-    assert.ok(this.stack.length > 0);
-    this.stack.pop();
-  }
-}
-
-class LogScanner {
-  constructor(public logs: string[]) {}
-
-  next(): string | null {
-    if (this.logs.length === 0) {
-      return null;
-    }
-    let l = this.logs[0];
-    this.logs = this.logs.slice(1);
-    return l;
-  }
-}
-
-function decodeUtf8(array: Uint8Array): string {
-  const decoder =
-    typeof TextDecoder === "undefined"
-      ? new (require("util").TextDecoder)("utf-8") // Node.
-      : new TextDecoder("utf-8"); // Browser.
-  return decoder.decode(array);
 }

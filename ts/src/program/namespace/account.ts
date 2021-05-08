@@ -8,16 +8,16 @@ import {
   TransactionInstruction,
   Commitment,
 } from "@solana/web3.js";
-import Provider from "../provider";
+import Provider from "../../provider";
 import {
   Idl,
-} from "../idl";
+} from "../../idl";
 import Coder, {
   ACCOUNT_DISCRIMINATOR_SIZE,
   accountDiscriminator,
   accountSize,
-} from "../coder";
-import { Subscription } from './common';
+} from "../../coder";
+import { Subscription } from '../common';
 
 /**
  * Accounts is a dynamically generated object to fetch any given account

@@ -1,14 +1,14 @@
 import camelCase from "camelcase";
 import { PublicKey } from "@solana/web3.js";
-import Coder from "../coder";
-import Provider from "../provider";
-import { Idl } from "../idl";
+import Coder from "../../coder";
+import Provider from "../../provider";
+import { Idl } from "../../idl";
+import { parseIdlErrors } from '../common';
 import StateNamespace, { State } from './state';
 import InstructionNamespace, { Ixs, } from './instruction';
 import TransactionNamespace, { Txs, } from './transaction';
 import RpcNamespace, { Rpcs, } from './rpc';
 import AccountNamespace, { Accounts } from './account';
-import { parseIdlErrors } from './common';
 
 // Re-exports.
 export { State } from './state';

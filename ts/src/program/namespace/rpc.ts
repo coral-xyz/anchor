@@ -1,10 +1,8 @@
-import {
-  TransactionSignature,
-} from "@solana/web3.js";
-import Provider from "../provider";
-import { IdlInstruction } from "../idl";
-import { translateError } from './common';
-import { splitArgsAndCtx } from './context';
+import { TransactionSignature } from "@solana/web3.js";
+import Provider from "../../provider";
+import { IdlInstruction } from "../../idl";
+import { translateError } from '../common';
+import { splitArgsAndCtx } from '../context';
 import { TxFn } from './transaction';
 
 /**
