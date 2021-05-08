@@ -1,16 +1,9 @@
-import {
-  PublicKey,
-  TransactionInstruction,
-} from "@solana/web3.js";
-import {
-  IdlAccount,
-  IdlInstruction,
-  IdlAccountItem,
-} from "../../idl";
+import { PublicKey, TransactionInstruction } from "@solana/web3.js";
+import { IdlAccount, IdlInstruction, IdlAccountItem } from "../../idl";
 import { IdlError } from "../../error";
-import Coder from '../../coder';
-import { toInstruction, validateAccounts } from '../common';
-import { RpcAccounts, splitArgsAndCtx } from '../context';
+import Coder from "../../coder";
+import { toInstruction, validateAccounts } from "../common";
+import { RpcAccounts, splitArgsAndCtx } from "../context";
 
 /**
  * Dynamically generated instruction namespace.
@@ -18,7 +11,6 @@ import { RpcAccounts, splitArgsAndCtx } from '../context';
 export interface Ixs {
   [key: string]: IxFn;
 }
-
 
 /**
  * Ix is a function to create a `TransactionInstruction` generated from an IDL.
@@ -44,7 +36,10 @@ export default class InstructionNamespace {
       validateAccounts(idlIx.accounts, ctx.accounts);
       validateInstruction(idlIx, ...args);
 
-      const keys = InstructionNamespace.accountsArray(ctx.accounts, idlIx.accounts);
+      const keys = InstructionNamespace.accountsArray(
+        ctx.accounts,
+        idlIx.accounts
+      );
 
       if (ctx.remainingAccounts !== undefined) {
         keys.push(...ctx.remainingAccounts);
@@ -71,31 +66,32 @@ export default class InstructionNamespace {
     return ix;
   }
 
-
-	public static accountsArray(
-		ctx: RpcAccounts,
-		accounts: IdlAccountItem[]
-	): any {
-		return accounts
-			.map((acc: IdlAccountItem) => {
-				// Nested accounts.
-				// @ts-ignore
-				const nestedAccounts: IdlAccountItem[] | undefined = acc.accounts;
-				if (nestedAccounts !== undefined) {
-					const rpcAccs = ctx[acc.name] as RpcAccounts;
-					return InstructionNamespace.accountsArray(rpcAccs, nestedAccounts).flat();
-				} else {
-					const account: IdlAccount = acc as IdlAccount;
-					return {
-						pubkey: ctx[acc.name],
-						isWritable: account.isMut,
-						isSigner: account.isSigner,
-					};
-				}
-			})
-			.flat();
-	}
-
+  public static accountsArray(
+    ctx: RpcAccounts,
+    accounts: IdlAccountItem[]
+  ): any {
+    return accounts
+      .map((acc: IdlAccountItem) => {
+        // Nested accounts.
+        // @ts-ignore
+        const nestedAccounts: IdlAccountItem[] | undefined = acc.accounts;
+        if (nestedAccounts !== undefined) {
+          const rpcAccs = ctx[acc.name] as RpcAccounts;
+          return InstructionNamespace.accountsArray(
+            rpcAccs,
+            nestedAccounts
+          ).flat();
+        } else {
+          const account: IdlAccount = acc as IdlAccount;
+          return {
+            pubkey: ctx[acc.name],
+            isWritable: account.isMut,
+            isSigner: account.isSigner,
+          };
+        }
+      })
+      .flat();
+  }
 }
 
 // Throws error if any argument required for the `ix` is not given.

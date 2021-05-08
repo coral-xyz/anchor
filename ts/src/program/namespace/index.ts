@@ -3,19 +3,19 @@ import { PublicKey } from "@solana/web3.js";
 import Coder from "../../coder";
 import Provider from "../../provider";
 import { Idl } from "../../idl";
-import { parseIdlErrors } from '../common';
-import StateNamespace, { State } from './state';
-import InstructionNamespace, { Ixs, } from './instruction';
-import TransactionNamespace, { Txs, } from './transaction';
-import RpcNamespace, { Rpcs, } from './rpc';
-import AccountNamespace, { Accounts } from './account';
+import { parseIdlErrors } from "../common";
+import StateNamespace, { State } from "./state";
+import InstructionNamespace, { Ixs } from "./instruction";
+import TransactionNamespace, { Txs } from "./transaction";
+import RpcNamespace, { Rpcs } from "./rpc";
+import AccountNamespace, { Accounts } from "./account";
 
 // Re-exports.
-export { State } from './state';
-export { Ixs } from './instruction';
-export { Txs, TxFn } from './transaction';
-export { Rpcs, RpcFn } from './rpc';
-export { Accounts, AccountFn, ProgramAccount } from './account';
+export { State } from "./state";
+export { Ixs } from "./instruction";
+export { Txs, TxFn } from "./transaction";
+export { Rpcs, RpcFn } from "./rpc";
+export { Accounts, AccountFn, ProgramAccount } from "./account";
 
 export default class NamespaceFactory {
   /**
@@ -49,7 +49,7 @@ export default class NamespaceFactory {
 
       const name = camelCase(idlIx.name);
 
-			ixFns[name] = ix;
+      ixFns[name] = ix;
       txFns[name] = tx;
       rpcs[name] = rpc;
     });

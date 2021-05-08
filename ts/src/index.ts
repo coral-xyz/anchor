@@ -6,7 +6,7 @@ import { Idl } from "./idl";
 import workspace from "./workspace";
 import utils from "./utils";
 import { Program } from "./program";
-import { ProgramAccount } from './program/namespace';
+import { ProgramAccount } from "./program/namespace";
 
 let _provider: Provider | null = null;
 

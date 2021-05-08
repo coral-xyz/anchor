@@ -5,7 +5,7 @@ import {
   ConfirmOptions,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { IdlInstruction } from '../idl';
+import { IdlInstruction } from "../idl";
 
 /**
  * RpcContext provides all arguments for an RPC/IX invocation that are not
@@ -14,7 +14,7 @@ import { IdlInstruction } from '../idl';
 type RpcContext = {
   // Accounts the instruction will use.
   accounts?: RpcAccounts;
-	// All accounts to pass into an instruction *after* the main `accounts`.
+  // All accounts to pass into an instruction *after* the main `accounts`.
   remainingAccounts?: AccountMeta[];
   // Accounts that must sign the transaction.
   signers?: Array<Account>;
@@ -22,7 +22,7 @@ type RpcContext = {
   instructions?: TransactionInstruction[];
   // RpcOptions.
   options?: RpcOptions;
-	// Private namespace for dev.
+  // Private namespace for dev.
   __private?: { logAccounts: boolean };
 };
 

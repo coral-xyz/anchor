@@ -1,7 +1,7 @@
-import { Transaction } from '@solana/web3.js';
+import { Transaction } from "@solana/web3.js";
 import { IdlInstruction } from "../../idl";
-import { splitArgsAndCtx } from '../context';
-import { IxFn } from './instruction';
+import { splitArgsAndCtx } from "../context";
+import { IxFn } from "./instruction";
 
 /**
  * Dynamically generated transaction namespace.

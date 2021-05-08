@@ -5,8 +5,8 @@ import { Idl, idlAddress, decodeIdlAccount } from "../idl";
 import Coder from "../coder";
 import NamespaceFactory, { Rpcs, Ixs, Txs, Accounts, State } from "./namespace";
 import { getProvider } from "../";
-import { decodeUtf8 } from '../utils';
-import { EventParser } from './event';
+import { decodeUtf8 } from "../utils";
+import { EventParser } from "./event";
 
 /**
  * Program is the IDL deserialized representation of a Solana program.
@@ -109,16 +109,20 @@ export class Program {
     eventName: string,
     callback: (event: T, slot: number) => void
   ): number {
-		const eventParser = new EventParser<T>(this.coder, this.programId, eventName);
+    const eventParser = new EventParser<T>(
+      this.coder,
+      this.programId,
+      eventName
+    );
     return this.provider.connection.onLogs(this.programId, (logs, ctx) => {
       if (logs.err) {
         console.error(logs);
         return;
       }
-			eventParser.parseLogs(logs.logs, (event) => {
-				callback(event, ctx.slot);
-			});
-		});
+      eventParser.parseLogs(logs.logs, (event) => {
+        callback(event, ctx.slot);
+      });
+    });
   }
 
   public async removeEventListener(listener: number): Promise<void> {

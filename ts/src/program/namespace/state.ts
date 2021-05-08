@@ -9,20 +9,17 @@ import {
   Commitment,
 } from "@solana/web3.js";
 import Provider from "../../provider";
-import {
-  Idl,
-  IdlStateMethod,
-} from "../../idl";
+import { Idl, IdlStateMethod } from "../../idl";
 import Coder, { stateDiscriminator } from "../../coder";
-import { Rpcs, Ixs } from './';
+import { Rpcs, Ixs } from "./";
 import {
-	Subscription,
-	translateError,
-	toInstruction,
-	validateAccounts,
-} from '../common';
-import { RpcAccounts, splitArgsAndCtx } from '../context';
-import InstructionNamespace from './instruction';
+  Subscription,
+  translateError,
+  toInstruction,
+  validateAccounts,
+} from "../common";
+import { RpcAccounts, splitArgsAndCtx } from "../context";
+import InstructionNamespace from "./instruction";
 
 export type State = () =>
   | Promise<any>
@@ -76,7 +73,9 @@ export default class StateNamespace {
           m,
           accounts
         );
-        return keys.concat(InstructionNamespace.accountsArray(accounts, m.accounts));
+        return keys.concat(
+          InstructionNamespace.accountsArray(accounts, m.accounts)
+        );
       };
       const ixFn = async (...args: any[]): Promise<TransactionInstruction> => {
         const [ixArgs, ctx] = splitArgsAndCtx(m, [...args]);

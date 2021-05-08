@@ -1,12 +1,7 @@
-import EventEmitter from 'eventemitter3';
-import {
-	Idl,
-  IdlInstruction,
-  IdlAccountItem,
-  IdlStateMethod,
-} from "../idl";
-import { ProgramError } from '../error';
-import { RpcAccounts } from './context';
+import EventEmitter from "eventemitter3";
+import { Idl, IdlInstruction, IdlAccountItem, IdlStateMethod } from "../idl";
+import { ProgramError } from "../error";
+import { RpcAccounts } from "./context";
 
 export type Subscription = {
   listener: number;
@@ -24,9 +19,11 @@ export function parseIdlErrors(idl: Idl): Map<number, string> {
   return errors;
 }
 
-
 // Allow either IdLInstruction or IdlStateMethod since the types share fields.
-export function toInstruction(idlIx: IdlInstruction | IdlStateMethod, ...args: any[]) {
+export function toInstruction(
+  idlIx: IdlInstruction | IdlStateMethod,
+  ...args: any[]
+) {
   if (idlIx.args.length != args.length) {
     throw new Error("Invalid argument length");
   }
@@ -41,7 +38,10 @@ export function toInstruction(idlIx: IdlInstruction | IdlStateMethod, ...args: a
 }
 
 // Throws error if any account required for the `ix` is not given.
-export function validateAccounts(ixAccounts: IdlAccountItem[], accounts: RpcAccounts) {
+export function validateAccounts(
+  ixAccounts: IdlAccountItem[],
+  accounts: RpcAccounts
+) {
   ixAccounts.forEach((acc) => {
     // @ts-ignore
     if (acc.accounts !== undefined) {

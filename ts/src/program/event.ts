@@ -1,4 +1,4 @@
-import { PublicKey } from '@solana/web3.js';
+import { PublicKey } from "@solana/web3.js";
 import * as base64 from "base64-js";
 import * as assert from "assert";
 import Coder, { eventDiscriminator } from "../coder";
@@ -6,17 +6,17 @@ import Coder, { eventDiscriminator } from "../coder";
 const LOG_START_INDEX = "Program log: ".length;
 
 export class EventParser<T> {
-	private coder: Coder;
-	private programId: PublicKey
-	private eventName: string;
-	private discriminator: Buffer;
+  private coder: Coder;
+  private programId: PublicKey;
+  private eventName: string;
+  private discriminator: Buffer;
 
-	constructor(coder: Coder, programId: PublicKey, eventName: string) {
-		this.coder = coder;
+  constructor(coder: Coder, programId: PublicKey, eventName: string) {
+    this.coder = coder;
     this.programId = programId;
-		this.eventName = eventName;
+    this.eventName = eventName;
     this.discriminator = eventDiscriminator(eventName);
-	}
+  }
 
   // Each log given, represents an array of messages emitted by
   // a single transaction, which can execute many different programs across
@@ -29,7 +29,7 @@ export class EventParser<T> {
   // its emission, thereby allowing us to know if a given log event was
   // emitted by *this* program. If it was, then we parse the raw string and
   // emit the event if the string matches the event being subscribed to.
-	public parseLogs(logs: string[], callback: (log: T) => void) {
+  public parseLogs(logs: string[], callback: (log: T) => void) {
     const logScanner = new LogScanner(logs);
     const execution = new ExecutionContext(logScanner.next() as string);
 
@@ -47,7 +47,7 @@ export class EventParser<T> {
       }
       log = logScanner.next();
     }
-	}
+  }
 
   // Handles logs when the current program being executing is *not* this.
   private handleSystemLog(log: string): [string | null, boolean] {
@@ -67,12 +67,10 @@ export class EventParser<T> {
       }
       return [null, false];
     }
-  };
+  }
 
   // Handles logs from *this* program.
-  private handleProgramLog(
-    log: string
-  ): [T | null, string | null, boolean] {
+  private handleProgramLog(log: string): [T | null, string | null, boolean] {
     // This is a `msg!` log.
     if (log.startsWith("Program log:")) {
       const logStr = log.slice(LOG_START_INDEX);
@@ -89,7 +87,7 @@ export class EventParser<T> {
     else {
       return [null, ...this.handleSystemLog(log)];
     }
-  };
+  }
 
   // Main log handler. Returns a three element array of the event, the
   // next program that was invoked for CPI, and a boolean indicating if
@@ -107,9 +105,8 @@ export class EventParser<T> {
     else {
       return [null, ...this.handleSystemLog(log)];
     }
-  };
+  }
 }
-
 
 // Stack frame execution context, allowing one to track what program is
 // executing for a given log.

@@ -9,15 +9,13 @@ import {
   Commitment,
 } from "@solana/web3.js";
 import Provider from "../../provider";
-import {
-  Idl,
-} from "../../idl";
+import { Idl } from "../../idl";
 import Coder, {
   ACCOUNT_DISCRIMINATOR_SIZE,
   accountDiscriminator,
   accountSize,
 } from "../../coder";
-import { Subscription } from '../common';
+import { Subscription } from "../common";
 
 /**
  * Accounts is a dynamically generated object to fetch any given account
@@ -44,7 +42,6 @@ type AccountProps = {
   associated: (...args: PublicKey[]) => Promise<any>;
   associatedAddress: (...args: PublicKey[]) => Promise<PublicKey>;
 };
-
 
 /**
  * Deserialized account owned by a program.
