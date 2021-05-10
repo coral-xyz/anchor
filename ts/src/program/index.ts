@@ -16,8 +16,10 @@ import { decodeUtf8 } from "../utils";
 import { EventParser } from "./event";
 
 /**
- * `Program` provides the IDL deserialized client representation of an Anchor
- *  program.
+ * ## Program
+ *
+ * Program provides the IDL deserialized client representation of an Anchor
+ * program.
  *
  * This API is the one stop shop for all things related to communicating with
  * on-chain programs. Among other things, one can send transactions, fetch
@@ -26,78 +28,16 @@ import { EventParser } from "./event";
  *
  * In addition to field accessors and methods, the object provides a set of
  * dynamically generated properties (internally referred to as namespaces) that
- *  map one-to-one to program methods.
+ * map one-to-one to program instructions and accounts. These namespaces
+ * generally can be used as follows:
  *
- * ## Example
- *
- * To illustrate dynamic namespace generation, consider the following Anchor
- * program writen in Rust. The documentation below will refer to this program in
- * its examples.
- *
- * ```rust
- * #[program]
- * mod counter {
- *
- *     #[state]
- *     pub struct GlobalCounter {
- *       count: u32,
- *     }
- *
- *     impl GlobalCounter {
- *         pub fn new(ctx: Context<New>) -> Result<Self> {
- *             Self {
- *                 count: 0,
- *             }
- *         }
- *
- *         pub fn global_increment(ctx: Context<GlobalIncrement>) -> Result<()> {
- *             ctx.accounts.counter += 1;
- *             Ok(())
- *         }
- *     }
- *
- *    pub fn create_counter(ctx: Context<CreateCounter>, start: u32) -> Result<()> {
- *        ctx.accounts.counter.count = start;
- *        Ok(())
- *    }
- *
- *    pub fn increment(ctx: Context<Increment>) -> Result<()> {
- *        ctx.accounts.counter.count += 1;
- *        Ok(())
- *    }
- * }
- *
- * #[derive(Accounts)]
- * pub struct New {}
- *
- * #[derive(Accounts)]
- * pub struct GlobalIncrement {
- *     counter: ProgramState<'info, GlobalCounter>,
- * }
- *
- * #[derive(Accounts)]
- * pub struct CreateCounter<'info> {
- *     #[account(init)]
- *     pub counter: ProgramAccount<'info, Counter>,
- *     pub rent: Sysvar<'info, Rent>,
- * }
- *
- * #[derive(Accounts)]
- * pub struct Increment<'info> {
- *     #[account(mut)]
- *     pub counter: ProgramAccount<'info,  Counter>,
- * }
- *
- * #[account]
- * pub struct Counter {
- *     pub count: u64,
- * }
- *
- * #[event]
- * pub struct WillCount {
- *     pub current_count: u64,
- * }
+ * ```javascript
+ * program.<namespace>.<program-specific-field>
  * ```
+ *
+ * API specifics are namespace dependent. The examples used in the documentation
+ * below will refer to the two counter examples found
+ * [here](https://project-serum.github.io/anchor/ts/#examples).
  */
 export class Program {
   /**
@@ -125,6 +65,7 @@ export class Program {
    * const txSignature = await program.rpc.increment({
    *   accounts: {
    *     counter,
+	 *     authority,
    *   },
    * });
    * ```
