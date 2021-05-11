@@ -8,7 +8,7 @@ describe("multisig", () => {
   const program = anchor.workspace.Multisig;
 
   it("Tests the multisig program", async () => {
-    const multisig = new anchor.web3.Account();
+    const multisig = anchor.web3.Keypair.generate();
     const [
       multisigSigner,
       nonce,

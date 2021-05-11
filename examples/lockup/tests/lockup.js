@@ -144,7 +144,7 @@ describe("Lockup and Registry", () => {
     const beneficiary = provider.wallet.publicKey;
     const depositAmount = new anchor.BN(100);
 
-    const vault = new anchor.web3.Account();
+    const vault = anchor.web3.Keypair.generate();
     let [
       _vestingSigner,
       nonce,
@@ -668,8 +668,8 @@ describe("Lockup and Registry", () => {
   let vendoredVestingSigner = null;
 
   it("Claims a locked reward", async () => {
-    vendoredVesting = new anchor.web3.Account();
-    vendoredVestingVault = new anchor.web3.Account();
+    vendoredVesting = anchor.web3.Keypair.generate();
+    vendoredVestingVault = anchor.web3.Keypair.generate();
     let [
       _vendoredVestingSigner,
       nonce,
