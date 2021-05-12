@@ -2,7 +2,7 @@ import camelCase from "camelcase";
 import EventEmitter from "eventemitter3";
 import * as bs58 from "bs58";
 import {
-  Account,
+  Keypair,
   PublicKey,
   SystemProgram,
   TransactionInstruction,
@@ -38,7 +38,7 @@ type AccountProps = {
   all: (filter?: Buffer) => Promise<ProgramAccount<any>[]>;
   subscribe: (address: PublicKey, commitment?: Commitment) => EventEmitter;
   unsubscribe: (address: PublicKey) => void;
-  createInstruction: (account: Account) => Promise<TransactionInstruction>;
+  createInstruction: (account: Keypair) => Promise<TransactionInstruction>;
   associated: (...args: PublicKey[]) => Promise<any>;
   associatedAddress: (...args: PublicKey[]) => Promise<PublicKey>;
 };
@@ -93,7 +93,7 @@ export default class AccountFactory {
       // Returns an instruction for creating this account.
       // @ts-ignore
       accountsNamespace["createInstruction"] = async (
-        account: Account,
+        account: Keypair,
         sizeOverride?: number
       ): Promise<TransactionInstruction> => {
         // @ts-ignore
