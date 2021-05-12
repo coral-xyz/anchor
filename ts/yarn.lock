@@ -676,7 +676,7 @@
   dependencies:
     "@sinonjs/commons" "^1.7.0"
 
-"@solana/web3.js@^1.2.0":
+"@solana/web3.js@^1.10.1":
   version "1.10.1"
   resolved "https://registry.yarnpkg.com/@solana/web3.js/-/web3.js-1.10.1.tgz#b3e7197a2628c26c54227963741b1788bb67f7ff"
   integrity sha512-5zepm+AaVfC6uao/WxKT7SlemqgGEp+x7XUv+018RURIx+XEcF+G2ZgjrIbjy5OoXJyfz+wGw8Or2fxsypderA==
