@@ -38,7 +38,7 @@ type AccountProps = {
   all: (filter?: Buffer) => Promise<ProgramAccount<any>[]>;
   subscribe: (address: PublicKey, commitment?: Commitment) => EventEmitter;
   unsubscribe: (address: PublicKey) => void;
-  createInstruction: (account: Keypair) => Promise<TransactionInstruction>;
+  createInstruction: (keypair: Keypair) => Promise<TransactionInstruction>;
   associated: (...args: PublicKey[]) => Promise<any>;
   associatedAddress: (...args: PublicKey[]) => Promise<PublicKey>;
 };
@@ -93,7 +93,7 @@ export default class AccountFactory {
       // Returns an instruction for creating this account.
       // @ts-ignore
       accountsNamespace["createInstruction"] = async (
-        account: Keypair,
+        keypair: Keypair,
         sizeOverride?: number
       ): Promise<TransactionInstruction> => {
         // @ts-ignore
@@ -101,7 +101,7 @@ export default class AccountFactory {
 
         return SystemProgram.createAccount({
           fromPubkey: provider.wallet.publicKey,
-          newAccountPubkey: account.publicKey,
+          newAccountPubkey: keypair.publicKey,
           space: sizeOverride ?? size,
           lamports: await provider.connection.getMinimumBalanceForRentExemption(
             sizeOverride ?? size
