@@ -194,7 +194,7 @@ describe("misc", () => {
   });
 
   it("Can use i8 in the idl", async () => {
-    const data = new anchor.web3.Account();
+    const data = anchor.web3.Keypair.generate();
     await program.rpc.testI8(-3, {
       accounts: {
         data: data.publicKey,
@@ -208,7 +208,7 @@ describe("misc", () => {
   });
 
   it("Can use i16 in the idl", async () => {
-    const data = new anchor.web3.Account();
+    const data = anchor.web3.Keypair.generate();
     await program.rpc.testI16(-2048, {
       accounts: {
         data: data.publicKey,
