@@ -57,22 +57,22 @@ export const getFeedData = async (oracleProgram: Program, priceFeed: web3.Public
 }
 
 export const parseMappingData = (data: Buffer) => {
-  // pyth magic number
+  // Pyth magic number.
   const magic = data.readUInt32LE(0)
-  // program version
+  // Program version.
   const version = data.readUInt32LE(4)
-  // account type
+  // Account type.
   const type = data.readUInt32LE(8)
-  // account used size
+  // Account used size.
   const size = data.readUInt32LE(12)
-  // number of product accounts
+  // Number of product accounts.
   const numProducts = data.readUInt32LE(16)
-  // unused
+  // Unused.
   // const unused = accountInfo.data.readUInt32LE(20)
-  // TODO: check and use this
-  // next mapping account (if any)
+  // TODO: check and use this.
+  // Next mapping account (if any).
   const nextMappingAccount = PKorNull(data.slice(24, 56))
-  // read each symbol account
+  // Read each symbol account.
   let offset = 56
   const productAccountKeys = []
   for (let i = 0; i < numProducts; i++) {
@@ -96,15 +96,15 @@ interface ProductAttributes {
 }
 
 export const parseProductData = (data: Buffer) => {
-  // pyth magic number
+  // Pyth magic number.
   const magic = data.readUInt32LE(0)
-  // program version
+  // Program version.
   const version = data.readUInt32LE(4)
-  // account type
+  // Account type.
   const type = data.readUInt32LE(8)
-  // price account size
+  // Price account size.
   const size = data.readUInt32LE(12)
-  // first price account in list
+  // First price account in list.
   const priceAccountBytes = data.slice(16, 48)
   const priceAccountKey = new web3.PublicKey(priceAccountBytes)
   const product: ProductAttributes = {}
@@ -126,17 +126,17 @@ export const parseProductData = (data: Buffer) => {
 }
 
 const parsePriceInfo = (data: Buffer, exponent: number) => {
-  // aggregate price
+  // Aggregate price.
   const priceComponent = data.readBigUInt64LE(0)
   const price = Number(priceComponent) * 10 ** exponent
-  // aggregate confidence
+  // Aggregate confidence.
   const confidenceComponent = data.readBigUInt64LE(8)
   const confidence = Number(confidenceComponent) * 10 ** exponent
-  // aggregate status
+  // Aggregate status.
   const status = data.readUInt32LE(16)
-  // aggregate corporate action
+  // Aggregate corporate action.
   const corporateAction = data.readUInt32LE(20)
-  // aggregate publish slot
+  // Aggregate publish slot.
   const publishSlot = data.readBigUInt64LE(24)
   return {
     priceComponent,
@@ -150,34 +150,34 @@ const parsePriceInfo = (data: Buffer, exponent: number) => {
 }
 
 export const parsePriceData = (data: Buffer) => {
-  // pyth magic number
+  // Pyth magic number.
   const magic = data.readUInt32LE(0)
-  // program version
+  // Program version.
   const version = data.readUInt32LE(4)
-  // account type
+  // Account type.
   const type = data.readUInt32LE(8)
-  // price account size
+  // Price account size.
   const size = data.readUInt32LE(12)
-  // price or calculation type
+  // Price or calculation type.
   const priceType = data.readUInt32LE(16)
-  // price exponent
+  // Price exponent.
   const exponent = data.readInt32LE(20)
-  // number of component prices
+  // Number of component prices.
   const numComponentPrices = data.readUInt32LE(24)
-  // unused
+  // Unused.
   // const unused = accountInfo.data.readUInt32LE(28)
-  // currently accumulating price slot
+  // Currently accumulating price slot.
   const currentSlot = data.readBigUInt64LE(32)
-  // valid on-chain slot of aggregate price
+  // Valid on-chain slot of aggregate price.
   const validSlot = data.readBigUInt64LE(40)
-  // product id / reference account
+  // Product id / reference account.
   const productAccountKey = new web3.PublicKey(data.slice(48, 80))
-  // next price account in list
+  // Next price account in list.
   const nextPriceAccountKey = new web3.PublicKey(data.slice(80, 112))
-  // aggregate price updater
+  // Aggregate price updater.
   const aggregatePriceUpdaterAccountKey = new web3.PublicKey(data.slice(112, 144))
   const aggregatePriceInfo = parsePriceInfo(data.slice(144, 176), exponent)
-  // price components - up to 16
+  // Urice components - up to 16.
   const priceComponents = []
   let offset = 176
   let shouldContinue = true
