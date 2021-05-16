@@ -11,9 +11,6 @@ incremented for features.
 
 ## [Unreleased]
 
-## Added
-
-* example: Add [Pyth oracle](https://github.com/pyth-network/pyth-client) Anchor interface ([#287](https://github.com/project-serum/anchor/pull/287)).
 ## Features
 
 * ts: Add `program.simulate` namespace ([#266](https://github.com/project-serum/anchor/pull/266)).
