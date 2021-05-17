@@ -223,7 +223,11 @@ fn main() -> Result<()> {
         Command::New { name } => new(name),
         Command::Build { idl, verifiable } => build(idl, verifiable),
         Command::Verify { program_id } => verify(program_id),
-        Command::Deploy { url, keypair, program_name } => deploy(url, keypair, program_name),
+        Command::Deploy {
+            url,
+            keypair,
+            program_name,
+        } => deploy(url, keypair, program_name),
         Command::Upgrade {
             program_id,
             program_filepath,
@@ -1157,11 +1161,19 @@ fn start_test_validator(cfg: &Config, flags: Option<Vec<String>>) -> Result<Chil
 
 // TODO: Testing and deploys should use separate sections of metadata.
 //       Similarly, each network should have separate metadata.
-fn deploy(url: Option<String>, keypair: Option<String>, program_name: Option<String>) -> Result<()> {
+fn deploy(
+    url: Option<String>,
+    keypair: Option<String>,
+    program_name: Option<String>,
+) -> Result<()> {
     _deploy(url, keypair, program_name).map(|_| ())
 }
 
-fn _deploy(url: Option<String>, keypair: Option<String>, program_str: Option<String>) -> Result<Vec<(Pubkey, Program)>> {
+fn _deploy(
+    url: Option<String>,
+    keypair: Option<String>,
+    program_str: Option<String>,
+) -> Result<Vec<(Pubkey, Program)>> {
     with_workspace(|cfg, _path, _cargo| {
         // Fallback to config vars if not provided via CLI.
         let url = url.unwrap_or_else(|| cfg.cluster.url().to_string());
@@ -1177,12 +1189,15 @@ fn _deploy(url: Option<String>, keypair: Option<String>, program_str: Option<Str
             if let Some(single_prog_str) = &program_str {
                 let program_name = program.path.file_name().unwrap().to_str().unwrap();
                 if single_prog_str.as_str() != program_name {
-                    continue
+                    continue;
                 }
             }
             let binary_path = program.binary_path().display().to_string();
 
-            println!("Deploying program {:?}...", program.path.file_name().unwrap().to_str().unwrap());
+            println!(
+                "Deploying program {:?}...",
+                program.path.file_name().unwrap().to_str().unwrap()
+            );
             println!("Program path: {}...", binary_path);
 
             // Write the program's keypair filepath. This forces a new deploy
@@ -1258,7 +1273,12 @@ fn upgrade(program_id: Pubkey, program_filepath: String) -> Result<()> {
     })
 }
 
-fn launch(url: Option<String>, keypair: Option<String>, verifiable: bool, program_name: Option<String>) -> Result<()> {
+fn launch(
+    url: Option<String>,
+    keypair: Option<String>,
+    verifiable: bool,
+    program_name: Option<String>,
+) -> Result<()> {
     // Build and deploy.
     build(None, verifiable)?;
     let programs = _deploy(url.clone(), keypair.clone(), program_name)?;
