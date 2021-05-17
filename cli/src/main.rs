@@ -122,7 +122,6 @@ pub enum Command {
         #[clap(short, long)]
         program_id: Pubkey,
         /// Filepath to the new program binary.
-        #[clap(short, long)]
         program_filepath: String,
     },
     #[cfg(feature = "dev")]
