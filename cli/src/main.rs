@@ -1280,7 +1280,7 @@ fn launch(
 ) -> Result<()> {
     // Build and deploy.
     build(None, verifiable)?;
-    let programs = _deploy(url.clone(), keypair.clone(), program_name)?;
+    let programs = _deploy(url.clone(), keypair.clone(), program_name.clone())?;
 
     with_workspace(|cfg, _path, _cargo| {
         let url = url.unwrap_or_else(|| cfg.cluster.url().to_string());
