@@ -214,6 +214,11 @@ class EventCoder {
    */
   private layouts: Map<string, Layout>;
 
+  /**
+   * Maps base64 encoded event discriminator to event name.
+   */
+  private discriminators: Map<string, string>;
+
   public constructor(idl: Idl) {
     if (idl.events === undefined) {
       this.layouts = new Map();
@@ -233,22 +238,29 @@ class EventCoder {
     });
     // @ts-ignore
     this.layouts = new Map(layouts);
+
+    this.discriminators = new Map<string, string>(
+      idl.events === undefined
+        ? []
+        : idl.events.map((e) => [
+            base64.fromByteArray(eventDiscriminator(e.name)),
+            e.name,
+          ])
+    );
   }
 
-  public encode<T = any>(eventName: string, account: T): Buffer {
-    const buffer = Buffer.alloc(1000); // TODO: use a tighter buffer.
-    const layout = this.layouts.get(eventName);
-    const len = layout.encode(account, buffer);
-    return buffer.slice(0, len);
-  }
+  public decode<T = any>(log: string): T | null {
+    const logArr = Buffer.from(base64.toByteArray(log));
+    const disc = base64.fromByteArray(logArr.slice(0, 8));
 
-  public decode<T = any>(eventName: string, ix: Buffer | string): T {
-    if (typeof ix === "string") {
-      const logArr = Buffer.from(base64.toByteArray(ix));
-      ix = logArr.slice(8);
+    // Only deserialize if the discriminator implies a proper event.
+    const eventName = this.discriminators.get(disc);
+    if (eventName === undefined) {
+      return undefined;
     }
+
     const layout = this.layouts.get(eventName);
-    return layout.decode(ix);
+    return layout.decode(logArr);
   }
 }
 
