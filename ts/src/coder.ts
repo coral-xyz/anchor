@@ -260,7 +260,7 @@ class EventCoder {
     }
 
     const layout = this.layouts.get(eventName);
-    return layout.decode(logArr);
+    return layout.decode(logArr.slice(8));
   }
 }
 
