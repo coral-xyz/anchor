@@ -1,4 +1,5 @@
 import camelCase from "camelcase";
+import * as base64 from "base64-js";
 import { snakeCase } from "snake-case";
 import { Layout } from "buffer-layout";
 import * as sha256 from "js-sha256";
@@ -241,7 +242,11 @@ class EventCoder {
     return buffer.slice(0, len);
   }
 
-  public decode<T = any>(eventName: string, ix: Buffer): T {
+  public decode<T = any>(eventName: string, ix: Buffer | string): T {
+    if (typeof ix === "string") {
+      const logArr = Buffer.from(base64.toByteArray(ix));
+      ix = logArr.slice(8);
+    }
     const layout = this.layouts.get(eventName);
     return layout.decode(ix);
   }
