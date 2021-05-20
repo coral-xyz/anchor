@@ -1,7 +1,7 @@
 import {
   Connection,
   Keypair,
-	Signer,
+  Signer,
   PublicKey,
   Transaction,
   TransactionSignature,
@@ -140,9 +140,7 @@ export default class Provider {
         signers = [];
       }
 
-      const signerKps = signers.filter(
-        (s) => s !== undefined
-      ) as Array<Signer>;
+      const signerKps = signers.filter((s) => s !== undefined) as Array<Signer>;
       const signerPubkeys = [this.wallet.publicKey].concat(
         signerKps.map((s) => s.publicKey)
       );
