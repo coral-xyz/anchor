@@ -18,9 +18,9 @@ incremented for features.
 
 ## Breaking Changes
 
-* ts: Replace deprecated `web3.Account` with `web3.Keypair` ([#274](https://github.com/project-serum/anchor/pull/274)).
 * ts: Event coder `decode` API changed to decode strings directly instead of buffers ([#292](https://github.com/project-serum/anchor/pull/292)).
 * ts: Event coder `encode` API removed ([#292](https://github.com/project-serum/anchor/pull/292)).
+* ts: Replace deprecated `web3.Account` with `web3.Signer` in public APIs ([#296](https://github.com/project-serum/anchor/pull/296)).
 
 ## [0.5.0] - 2021-05-07
 
