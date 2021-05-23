@@ -68,8 +68,8 @@ describe("token", () => {
   it("Set new mint authority", async () => {
     const newMintAuthority = anchor.Keypair.generate();
     await program.rpc.proxySetAuthority(
-      newMintAuthority.PublicKey,
       0, // AuthorityType::MintTokens
+      newMintAuthority.PublicKey,
       {
         accounts: {
           accountOrMint: mint,

@@ -21,11 +21,29 @@ mod token_proxy {
 
     pub fn proxy_set_authority(
         ctx: Context<ProxySetAuthority>,
-        authority_type: token::AuthorityType,
+        authority_type: AuthorityType,
         new_authority: Option<Pubkey>,
     ) -> ProgramResult {
-        token::set_authority(ctx.accounts.into(), authority_type, new_authority)
+        let spl_authority_type = match authority_type {
+            AuthorityType::MintTokens => spl_token::instruction::AuthorityType::MintTokens,
+            AuthorityType::FreezeAccount => spl_token::instruction::AuthorityType::FreezeAccount,
+            AuthorityType::AccountOwner => spl_token::instruction::AuthorityType::AccountOwner,
+            AuthorityType::CloseAccount => spl_token::instruction::AuthorityType::CloseAccount,
+        };
+        token::set_authority(ctx.accounts.into(), spl_authority_type, new_authority)
     }
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub enum AuthorityType {
+    /// Authority to mint new tokens
+    MintTokens,
+    /// Authority to freeze any account associated with the Mint
+    FreezeAccount,
+    /// Owner of a given token account
+    AccountOwner,
+    /// Authority to close a token account
+    CloseAccount,
 }
 
 #[derive(Accounts)]

@@ -1,4 +1,3 @@
-use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
 use anchor_lang::solana_program::account_info::AccountInfo;
 use anchor_lang::solana_program::entrypoint::ProgramResult;
@@ -129,17 +128,9 @@ pub fn initialize_account<'a, 'b, 'c, 'info>(
 
 pub fn set_authority<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, SetAuthority<'info>>,
-    authority_type: AuthorityType,
+    authority_type: spl_token::instruction::AuthorityType,
     new_authority: Option<Pubkey>,
 ) -> ProgramResult {
-    // Convert to SPL compat authority type
-    let spl_authority_type = match authority_type {
-        AuthorityType::MintTokens => spl_token::instruction::AuthorityType::MintTokens,
-        AuthorityType::FreezeAccount => spl_token::instruction::AuthorityType::FreezeAccount,
-        AuthorityType::AccountOwner => spl_token::instruction::AuthorityType::AccountOwner,
-        AuthorityType::CloseAccount => spl_token::instruction::AuthorityType::CloseAccount,
-    };
-
     let mut spl_new_authority: Option<&Pubkey> = None;
     if new_authority.is_some() {
         spl_new_authority = new_authority.as_ref()
@@ -149,7 +140,7 @@ pub fn set_authority<'a, 'b, 'c, 'info>(
         &spl_token::ID,
         ctx.accounts.account_or_mint.key,
         spl_new_authority,
-        spl_authority_type,
+        authority_type,
         ctx.accounts.current_authority.key,
         &[], // TODO: Support multisig signers
     )?;
@@ -162,18 +153,6 @@ pub fn set_authority<'a, 'b, 'c, 'info>(
         ],
         ctx.signer_seeds,
     )
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize)]
-pub enum AuthorityType {
-    /// Authority to mint new tokens
-    MintTokens,
-    /// Authority to freeze any account associated with the Mint
-    FreezeAccount,
-    /// Owner of a given token account
-    AccountOwner,
-    /// Authority to close a token account
-    CloseAccount,
 }
 
 #[derive(Accounts)]
