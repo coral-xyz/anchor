@@ -21,9 +21,10 @@ mod token_proxy {
 
     pub fn proxy_set_authority(
         ctx: Context<ProxySetAuthority>,
-        args: token::SetAuthorityArgs,
+        authority_type: token::AuthorityType,
+        new_authority: Option<Pubkey>,
     ) -> ProgramResult {
-        token::set_authority(ctx.accounts.into(), args)
+        token::set_authority(ctx.accounts.into(), authority_type, new_authority)
     }
 }
 
