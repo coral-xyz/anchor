@@ -79,19 +79,19 @@ export class Program {
    * ## account
    *
    * ```javascript
-   * program.account.<account>(publicKey);
+   * program.account.<account>(address);
    * ```
    *
    * ## Parameters
    *
-   * 1. `publicKey` - The [[PublicKey]] of the account.
+   * 1. `address` - The [[Address]] of the account.
    *
    * ## Example
    *
    * To fetch a `Counter` object from the above example,
    *
    * ```javascript
-   * const counter = await program.account.counter(publicKey);
+   * const counter = await program.account.counter(address);
    * ```
    */
   readonly account: AccountNamespace;
