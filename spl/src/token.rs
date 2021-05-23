@@ -129,15 +129,15 @@ pub fn initialize_account<'a, 'b, 'c, 'info>(
 pub fn set_authority<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, SetAuthority<'info>>,
     new_authority: Option<&Pubkey>,
-    authority_type: spl_token::instruction::AuthorityType
+    authority_type: spl_token::instruction::AuthorityType,
 ) -> ProgramResult {
     let ix = spl_token::instruction::set_authority(
         &spl_token::ID,
         ctx.accounts.account_or_mint.key,
-        new_authority, 
+        new_authority,
         authority_type,
         ctx.accounts.current_authority.key,
-        &[],    // TODO: Support multisig signers
+        &[], // TODO: Support multisig signers
     )?;
     solana_program::program::invoke_signed(
         &ix,
