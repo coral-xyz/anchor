@@ -126,6 +126,30 @@ pub fn initialize_account<'a, 'b, 'c, 'info>(
     )
 }
 
+pub fn set_authority<'a, 'b, 'c, 'info>(
+    ctx: CpiContext<'a, 'b, 'c, 'info, SetAuthority<'info>>,
+    new_authority: Option<&Pubkey>,
+    authority_type: spl_token::instruction::AuthorityType
+) -> ProgramResult {
+    let ix = spl_token::instruction::set_authority(
+        &spl_token::ID,
+        ctx.accounts.account_or_mint.key,
+        new_authority, 
+        authority_type,
+        ctx.accounts.current_authority.key,
+        &[],    // TODO: Support multisig signers
+    )?;
+    solana_program::program::invoke_signed(
+        &ix,
+        &[
+            ctx.accounts.account_or_mint.clone(),
+            ctx.accounts.current_authority.clone(),
+            ctx.program.clone(),
+        ],
+        ctx.signer_seeds,
+    )
+}
+
 #[derive(Accounts)]
 pub struct Transfer<'info> {
     pub from: AccountInfo<'info>,
@@ -159,6 +183,12 @@ pub struct InitializeAccount<'info> {
     pub account: AccountInfo<'info>,
     pub mint: AccountInfo<'info>,
     pub authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct SetAuthority<'info> {
+    pub current_authority: AccountInfo<'info>,
+    pub account_or_mint: AccountInfo<'info>,
 }
 
 #[derive(Clone)]
