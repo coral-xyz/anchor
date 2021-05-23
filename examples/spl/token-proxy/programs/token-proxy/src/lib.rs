@@ -1,7 +1,7 @@
 //! This example demonstrates the use of the `anchor_spl::token` CPI client.
 
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Burn, MintTo, Transfer};
+use anchor_spl::token::{self, Burn, MintTo, SetAuthority, Transfer};
 
 #[program]
 mod token_proxy {
@@ -17,6 +17,14 @@ mod token_proxy {
 
     pub fn proxy_burn(ctx: Context<ProxyBurn>, amount: u64) -> ProgramResult {
         token::burn(ctx.accounts.into(), amount)
+    }
+
+    pub fn proxy_set_authority(
+        ctx: Context<ProxySetAuthority>,
+        new_authority: Option<&Pubkey>,
+        authority_type: spl_token::instruction::AuthorityType
+    ) -> ProgramResult {
+        token::set_authority(ctx.accounts.into(), new_authority, authority_type)
     }
 }
 
@@ -50,6 +58,15 @@ pub struct ProxyBurn<'info> {
     pub mint: AccountInfo<'info>,
     #[account(mut)]
     pub to: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ProxySetAuthority<'info> {
+    #[account(signer)]
+    pub authority: AccountInfo<'info>,
+    #[account(mut)]
+    pub account_or_mint: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
 }
 
@@ -92,3 +109,15 @@ impl<'a, 'b, 'c, 'info> From<&mut ProxyBurn<'info>> for CpiContext<'a, 'b, 'c, '
         CpiContext::new(cpi_program, cpi_accounts)
     }
 }
+
+impl<'a, 'b, 'c, 'info> From<&mut ProxySetAuthority<'info>> for CpiContext<'a, 'b, 'c, 'info, Burn<'info>> {
+    fn from(accounts: &mut ProxySetAuthority<'info>) -> CpiContext<'a, 'b, 'c, 'info, Burn<'info>> {
+        let cpi_accounts = SetAuthority {
+            account_or_mint: accounts.account_or_mint.clone(),
+            current_authority: accounts.current_authority.clone(),
+        };  // TODO: Support multisig signers
+        let cpi_program = accounts.token_program.clone();
+        CpiContext::new(cpi_program, cpi_accounts)
+    }
+}
+
