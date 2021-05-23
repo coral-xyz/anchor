@@ -1,4 +1,5 @@
 use anchor_lang::solana_program;
+use anchor_lang::prelude::*;
 use anchor_lang::solana_program::account_info::AccountInfo;
 use anchor_lang::solana_program::entrypoint::ProgramResult;
 use anchor_lang::solana_program::program_error::ProgramError;
@@ -128,14 +129,26 @@ pub fn initialize_account<'a, 'b, 'c, 'info>(
 
 pub fn set_authority<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, SetAuthority<'info>>,
-    new_authority: Option<&Pubkey>,
-    authority_type: spl_token::instruction::AuthorityType,
+    args: SetAuthorityArgs,
 ) -> ProgramResult {
+    // Convert to SPL compat authority type
+    let spl_authority_type = match args.authority_type {
+        AuthorityType::MintTokens => spl_token::instruction::AuthorityType::MintTokens,
+        AuthorityType::FreezeAccount => spl_token::instruction::AuthorityType::FreezeAccount,
+        AuthorityType::AccountOwner => spl_token::instruction::AuthorityType::AccountOwner,
+        AuthorityType::CloseAccount => spl_token::instruction::AuthorityType::CloseAccount,
+    };
+
+    let mut new_authority: Option<&Pubkey> = None;
+    if args.new_authority.is_some() {
+        new_authority = args.new_authority.as_ref()
+    }
+
     let ix = spl_token::instruction::set_authority(
         &spl_token::ID,
         ctx.accounts.account_or_mint.key,
         new_authority,
-        authority_type,
+        spl_authority_type,
         ctx.accounts.current_authority.key,
         &[], // TODO: Support multisig signers
     )?;
@@ -148,6 +161,24 @@ pub fn set_authority<'a, 'b, 'c, 'info>(
         ],
         ctx.signer_seeds,
     )
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub enum AuthorityType {
+    /// Authority to mint new tokens
+    MintTokens,
+    /// Authority to freeze any account associated with the Mint
+    FreezeAccount,
+    /// Owner of a given token account
+    AccountOwner,
+    /// Authority to close a token account
+    CloseAccount,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct SetAuthorityArgs {
+    pub new_authority: Option<Pubkey>,
+    pub authority_type: AuthorityType,
 }
 
 #[derive(Accounts)]

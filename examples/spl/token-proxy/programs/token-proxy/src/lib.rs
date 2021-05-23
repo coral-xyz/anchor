@@ -21,10 +21,9 @@ mod token_proxy {
 
     pub fn proxy_set_authority(
         ctx: Context<ProxySetAuthority>,
-        new_authority: Option<&Pubkey>,
-        authority_type: spl_token::instruction::AuthorityType
+        args: token::SetAuthorityArgs,
     ) -> ProgramResult {
-        token::set_authority(ctx.accounts.into(), new_authority, authority_type)
+        token::set_authority(ctx.accounts.into(), args)
     }
 }
 
@@ -64,7 +63,7 @@ pub struct ProxyBurn<'info> {
 #[derive(Accounts)]
 pub struct ProxySetAuthority<'info> {
     #[account(signer)]
-    pub authority: AccountInfo<'info>,
+    pub current_authority: AccountInfo<'info>,
     #[account(mut)]
     pub account_or_mint: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
@@ -110,14 +109,17 @@ impl<'a, 'b, 'c, 'info> From<&mut ProxyBurn<'info>> for CpiContext<'a, 'b, 'c, '
     }
 }
 
-impl<'a, 'b, 'c, 'info> From<&mut ProxySetAuthority<'info>> for CpiContext<'a, 'b, 'c, 'info, Burn<'info>> {
-    fn from(accounts: &mut ProxySetAuthority<'info>) -> CpiContext<'a, 'b, 'c, 'info, Burn<'info>> {
+impl<'a, 'b, 'c, 'info> From<&mut ProxySetAuthority<'info>>
+    for CpiContext<'a, 'b, 'c, 'info, SetAuthority<'info>>
+{
+    fn from(
+        accounts: &mut ProxySetAuthority<'info>,
+    ) -> CpiContext<'a, 'b, 'c, 'info, SetAuthority<'info>> {
         let cpi_accounts = SetAuthority {
             account_or_mint: accounts.account_or_mint.clone(),
             current_authority: accounts.current_authority.clone(),
-        };  // TODO: Support multisig signers
+        }; // TODO: Support multisig signers
         let cpi_program = accounts.token_program.clone();
         CpiContext::new(cpi_program, cpi_accounts)
     }
 }
-
