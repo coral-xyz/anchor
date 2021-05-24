@@ -142,7 +142,7 @@ pub fn set_authority<'a, 'b, 'c, 'info>(
         spl_new_authority,
         authority_type,
         ctx.accounts.current_authority.key,
-        &[], // TODO: Support multisig signers
+        &[], // TODO: Support multisig signers.
     )?;
     solana_program::program::invoke_signed(
         &ix,

@@ -66,19 +66,20 @@ describe("token", () => {
   });
 
   it("Set new mint authority", async () => {
-    const newMintAuthority = anchor.Keypair.generate();
+    const newMintAuthority = anchor.web3.Keypair.generate();
     await program.rpc.proxySetAuthority(
-      0, // AuthorityType::MintTokens
-      newMintAuthority.PublicKey,
+      { mintTokens: {} },
+      newMintAuthority.publicKey,
       {
         accounts: {
           accountOrMint: mint,
           currentAuthority: provider.wallet.publicKey,
+          tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
         },
       }
     );
 
-    const mintInfo = getMintInfo(provider, mint);
+    const mintInfo = await getMintInfo(provider, mint);
     assert.ok(mintInfo.mintAuthority.equals(newMintAuthority.publicKey));
   });
 });

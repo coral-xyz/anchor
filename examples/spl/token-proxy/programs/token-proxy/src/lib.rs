@@ -24,13 +24,7 @@ mod token_proxy {
         authority_type: AuthorityType,
         new_authority: Option<Pubkey>,
     ) -> ProgramResult {
-        let spl_authority_type = match authority_type {
-            AuthorityType::MintTokens => spl_token::instruction::AuthorityType::MintTokens,
-            AuthorityType::FreezeAccount => spl_token::instruction::AuthorityType::FreezeAccount,
-            AuthorityType::AccountOwner => spl_token::instruction::AuthorityType::AccountOwner,
-            AuthorityType::CloseAccount => spl_token::instruction::AuthorityType::CloseAccount,
-        };
-        token::set_authority(ctx.accounts.into(), spl_authority_type, new_authority)
+        token::set_authority(ctx.accounts.into(), authority_type.into(), new_authority)
     }
 }
 
@@ -140,5 +134,16 @@ impl<'a, 'b, 'c, 'info> From<&mut ProxySetAuthority<'info>>
         }; // TODO: Support multisig signers
         let cpi_program = accounts.token_program.clone();
         CpiContext::new(cpi_program, cpi_accounts)
+    }
+}
+
+impl From<AuthorityType> for spl_token::instruction::AuthorityType {
+    fn from(authority_ty: AuthorityType) -> spl_token::instruction::AuthorityType {
+        match authority_ty {
+            AuthorityType::MintTokens => spl_token::instruction::AuthorityType::MintTokens,
+            AuthorityType::FreezeAccount => spl_token::instruction::AuthorityType::FreezeAccount,
+            AuthorityType::AccountOwner => spl_token::instruction::AuthorityType::AccountOwner,
+            AuthorityType::CloseAccount => spl_token::instruction::AuthorityType::CloseAccount,
+        }
     }
 }
