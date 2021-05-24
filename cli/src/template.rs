@@ -123,7 +123,7 @@ pub struct Initialize {{}}"#,
     )
 }
 
-pub fn mocha(name: &str) -> String {
+pub fn mocha(program: &str) -> String {
     format!(
         r#"const anchor = require('@project-serum/anchor');
 
@@ -140,12 +140,12 @@ describe('{}', () => {{
   }});
 }});
 "#,
-        name,
-        name.to_camel_case(),
+        program,
+        program.to_camel_case(),
     )
 }
 
-pub fn ts_mocha(name: &str) -> String {
+pub fn ts_mocha(program: &str) -> String {
     format!(
         r#"import * as anchor from '@project-serum/anchor';
 
@@ -162,8 +162,8 @@ describe('{}', () => {{
   }});
 }});
 "#,
-        name,
-        name.to_camel_case(),
+        program,
+        program.to_camel_case(),
     )
 }
 

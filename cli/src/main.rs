@@ -50,6 +50,8 @@ pub enum Command {
     /// Initializes a workspace.
     Init {
         name: String,
+        #[clap(short, long = "program")]
+        programs: Vec<String>,
         #[clap(short, long)]
         typescript: bool,
     },
@@ -235,7 +237,11 @@ pub enum ClusterCommand {
 fn main() -> Result<()> {
     let opts = Opts::parse();
     match opts.command {
-        Command::Init { name, typescript } => init(name, typescript),
+        Command::Init {
+            name,
+            programs,
+            typescript,
+        } => init(name, programs, typescript),
         Command::New { name } => new(name),
         Command::Build { idl, verifiable } => build(idl, verifiable),
         Command::Verify { program_id } => verify(program_id),
@@ -270,7 +276,7 @@ fn main() -> Result<()> {
     }
 }
 
-fn init(name: String, typescript: bool) -> Result<()> {
+fn init(name: String, mut programs: Vec<String>, typescript: bool) -> Result<()> {
     let cfg = Config::discover()?;
 
     if cfg.is_some() {
@@ -294,10 +300,15 @@ fn init(name: String, typescript: bool) -> Result<()> {
     let mut virt_manifest = File::create(".gitignore")?;
     virt_manifest.write_all(template::git_ignore().as_bytes())?;
 
-    // Build the program.
-    fs::create_dir("programs")?;
+    if programs.is_empty() {
+        programs.push(name.clone());
+    }
 
-    new_program(&name)?;
+    // Build the programs.
+    fs::create_dir("programs")?;
+    for program in &programs {
+        new_program(program)?;
+    }
 
     // Build the test suite.
     fs::create_dir("tests")?;
@@ -312,11 +323,15 @@ fn init(name: String, typescript: bool) -> Result<()> {
         let mut deploy = File::create("migrations/deploy.ts")?;
         deploy.write_all(&template::ts_deploy_script().as_bytes())?;
 
-        let mut mocha = File::create(&format!("tests/{}.spec.ts", name))?;
-        mocha.write_all(template::ts_mocha(&name).as_bytes())?;
+        for program in &programs {
+            let mut mocha = File::create(&format!("tests/{}.spec.ts", program))?;
+            mocha.write_all(template::ts_mocha(program).as_bytes())?;
+        }
     } else {
-        let mut mocha = File::create(&format!("tests/{}.js", name))?;
-        mocha.write_all(template::mocha(&name).as_bytes())?;
+        for program in &programs {
+            let mut mocha = File::create(&format!("tests/{}.js", program))?;
+            mocha.write_all(template::mocha(program).as_bytes())?;
+        }
 
         let mut deploy = File::create("migrations/deploy.js")?;
         deploy.write_all(&template::deploy_script().as_bytes())?;
