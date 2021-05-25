@@ -249,15 +249,15 @@ export class Program {
       instruction,
       transaction,
       account,
-      state,
       simulate,
+      state,
     ] = NamespaceFactory.build(idl, this._coder, programId, this._provider);
     this.rpc = rpc;
     this.instruction = instruction;
     this.transaction = transaction;
     this.account = account;
-    this.state = state;
     this.simulate = simulate;
+    this.state = state;
   }
 
   /**

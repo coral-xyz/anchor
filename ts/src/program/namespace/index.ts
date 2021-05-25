@@ -33,8 +33,8 @@ export default class NamespaceFactory {
     InstructionNamespace,
     TransactionNamespace,
     AccountNamespace,
-    StateClient,
-    SimulateNamespace
+    SimulateNamespace,
+    StateClient
   ] {
     const idlErrors = parseIdlErrors(idl);
 
@@ -81,6 +81,6 @@ export default class NamespaceFactory {
       ? AccountFactory.build(idl, coder, programId, provider)
       : {};
 
-    return [rpc, instruction, transaction, account, state, simulate];
+    return [rpc, instruction, transaction, account, simulate, state];
   }
 }

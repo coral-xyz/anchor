@@ -8,28 +8,7 @@ import { EventParser } from "../event";
 import Coder from "../../coder";
 import { Idl } from "../../idl";
 
-/**
- * Dynamically generated simualte namespace.
- */
-export interface SimulateNamespace {
-  [key: string]: SimulateFn;
-}
-
-/**
- * RpcFn is a single method generated from an IDL. It simulates a method
- * against a cluster configured by the provider, returning a list of all the
- * events and raw logs that were emitted during the execution of the
- * method.
- */
-export type SimulateFn = (...args: any[]) => Promise<SimulateResponse>;
-
-type SimulateResponse = {
-  events: Event[];
-  raw: string[];
-};
-
 export default class SimulateFactory {
-  // Builds the rpc namespace.
   public static build(
     idlIx: IdlInstruction,
     txFn: TransactionFn,
@@ -77,3 +56,23 @@ export default class SimulateFactory {
     return simulate;
   }
 }
+
+/**
+ * Dynamically generated simualte namespace.
+ */
+export interface SimulateNamespace {
+  [key: string]: SimulateFn;
+}
+
+/**
+ * RpcFn is a single method generated from an IDL. It simulates a method
+ * against a cluster configured by the provider, returning a list of all the
+ * events and raw logs that were emitted during the execution of the
+ * method.
+ */
+export type SimulateFn = (...args: any[]) => Promise<SimulateResponse>;
+
+type SimulateResponse = {
+  events: Event[];
+  raw: string[];
+};

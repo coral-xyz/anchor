@@ -18,7 +18,6 @@ import RpcNamespaceFactory from "./rpc";
 import TransactionNamespaceFactory from "./transaction";
 
 export default class StateFactory {
-  // Builds the state namespace.
   public static build(
     idl: Idl,
     coder: Coder,

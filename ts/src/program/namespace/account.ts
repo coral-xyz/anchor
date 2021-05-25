@@ -18,7 +18,6 @@ import Coder, {
 import { Subscription, Address, translateAddress } from "../common";
 
 export default class AccountFactory {
-  // Returns the generated accounts namespace.
   public static build(
     idl: Idl,
     coder: Coder,

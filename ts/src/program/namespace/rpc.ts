@@ -5,21 +5,7 @@ import { translateError } from "../common";
 import { splitArgsAndCtx } from "../context";
 import { TransactionFn } from "./transaction";
 
-/**
- * Dynamically generated rpc namespace.
- */
-export interface RpcNamespace {
-  [key: string]: RpcFn;
-}
-
-/**
- * RpcFn is a single RPC method generated from an IDL, sending a transaction
- * paid for and signed by the configured provider.
- */
-export type RpcFn = (...args: any[]) => Promise<TransactionSignature>;
-
 export default class RpcFactory {
-  // Builds the rpc namespace.
   public static build(
     idlIx: IdlInstruction,
     txFn: TransactionFn,
@@ -45,3 +31,16 @@ export default class RpcFactory {
     return rpc;
   }
 }
+
+/**
+ * Dynamically generated rpc namespace.
+ */
+export interface RpcNamespace {
+  [key: string]: RpcFn;
+}
+
+/**
+ * RpcFn is a single RPC method generated from an IDL, sending a transaction
+ * paid for and signed by the configured provider.
+ */
+export type RpcFn = (...args: any[]) => Promise<TransactionSignature>;

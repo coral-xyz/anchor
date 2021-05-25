@@ -3,20 +3,7 @@ import { IdlInstruction } from "../../idl";
 import { splitArgsAndCtx } from "../context";
 import { InstructionFn } from "./instruction";
 
-/**
- * Dynamically generated transaction namespace.
- */
-export interface TransactionNamespace {
-  [key: string]: TransactionFn;
-}
-
-/**
- * Tx is a function to create a `Transaction` for a given program instruction.
- */
-export type TransactionFn = (...args: any[]) => Transaction;
-
 export default class TransactionFactory {
-  // Builds the transaction namespace.
   public static build(
     idlIx: IdlInstruction,
     ixFn: InstructionFn
@@ -34,3 +21,15 @@ export default class TransactionFactory {
     return txFn;
   }
 }
+
+/**
+ * Dynamically generated transaction namespace.
+ */
+export interface TransactionNamespace {
+  [key: string]: TransactionFn;
+}
+
+/**
+ * Tx is a function to create a `Transaction` for a given program instruction.
+ */
+export type TransactionFn = (...args: any[]) => Transaction;

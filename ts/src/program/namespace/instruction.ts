@@ -9,25 +9,7 @@ import {
 } from "../common";
 import { Accounts, splitArgsAndCtx } from "../context";
 
-/**
- * Dynamically generated instruction namespace.
- */
-export interface InstructionNamespace {
-  [key: string]: InstructionFn;
-}
-
-/**
- * Ix is a function to create a `TransactionInstruction` generated from an IDL.
- */
-export type InstructionFn = IxProps & ((...args: any[]) => any);
-type IxProps = {
-  accounts: (ctx: Accounts) => any;
-};
-
-export type InstructionEncodeFn = (ixName: string, ix: any) => Buffer;
-
 export default class InstructionNamespaceFactory {
-  // Builds the instuction namespace.
   public static build(
     idlIx: IdlInstruction,
     encodeFn: InstructionEncodeFn,
@@ -90,6 +72,23 @@ export default class InstructionNamespaceFactory {
       .flat();
   }
 }
+
+/**
+ * Dynamically generated instruction namespace.
+ */
+export interface InstructionNamespace {
+  [key: string]: InstructionFn;
+}
+
+/**
+ * Ix is a function to create a `TransactionInstruction` generated from an IDL.
+ */
+export type InstructionFn = IxProps & ((...args: any[]) => any);
+type IxProps = {
+  accounts: (ctx: Accounts) => any;
+};
+
+export type InstructionEncodeFn = (ixName: string, ix: any) => Buffer;
 
 // Throws error if any argument required for the `ix` is not given.
 function validateInstruction(ix: IdlInstruction, ...args: any[]) {
