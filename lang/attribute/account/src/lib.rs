@@ -83,7 +83,7 @@ pub fn account(
         // Namespace the discriminator to prevent collisions.
         let discriminator_preimage = {
             // For now, zero copy accounts can't be namespaced.
-            if is_zero_copy || namespace.is_empty() {
+            if namespace.is_empty() {
                 format!("account:{}", account_name.to_string())
             } else {
                 format!("{}:{}", namespace, account_name.to_string())
