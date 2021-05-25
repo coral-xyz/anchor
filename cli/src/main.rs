@@ -957,12 +957,12 @@ fn test(
     file: Option<String>,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg, _path, _cargo| {
+        if !skip_build {
+            build(cfg_override, None, false)?;
+        }
         // Bootup validator, if needed.
         let validator_handle = match cfg.provider.cluster.url() {
             "http://127.0.0.1:8899" => {
-                if !skip_build {
-                    build(cfg_override, None, false)?;
-                }
                 let flags = match skip_deploy {
                     true => None,
                     false => Some(genesis_flags(cfg)?),
@@ -974,7 +974,6 @@ fn test(
             }
             _ => {
                 if !skip_deploy {
-                    build(cfg_override, None, false)?;
                     deploy(cfg_override, None)?;
                 }
                 None
