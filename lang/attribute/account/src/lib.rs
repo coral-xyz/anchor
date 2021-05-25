@@ -57,14 +57,19 @@ pub fn account(
     args: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    let namespace = args.to_string().replace("\"", "");
-    let is_zero_copy = match args.into_iter().next() {
-        None => false,
-        Some(tt) => match tt {
-            proc_macro::TokenTree::Literal(_) => false,
-            _ => namespace == "zero_copy",
-        },
-    };
+    let mut namespace = "".to_string();
+    let mut is_zero_copy = false;
+    if args.to_string().split(",").collect::<Vec<_>>().len() > 2 {
+        panic!("Only two args are allowed to the account attribute.")
+    }
+    for arg in args.to_string().split(",") {
+        let ns = arg.to_string().replace("\"", "");
+        if ns == "zero_copy" {
+            is_zero_copy = true;
+        } else {
+            namespace = ns;
+        }
+    }
 
     let account_strct = parse_macro_input!(input as syn::ItemStruct);
     let account_name = &account_strct.ident;
