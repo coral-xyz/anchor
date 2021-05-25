@@ -1,7 +1,6 @@
 import { PublicKey, TransactionInstruction } from "@solana/web3.js";
 import { IdlAccount, IdlInstruction, IdlAccountItem } from "../../idl";
 import { IdlError } from "../../error";
-import Coder from "../../coder";
 import {
   toInstruction,
   validateAccounts,
@@ -25,11 +24,13 @@ type IxProps = {
   accounts: (ctx: Accounts) => any;
 };
 
+export type InstructionEncodeFn = (ixName: string, ix: any) => Buffer;
+
 export default class InstructionNamespaceFactory {
   // Builds the instuction namespace.
   public static build(
     idlIx: IdlInstruction,
-    coder: Coder,
+    encodeFn: InstructionEncodeFn,
     programId: PublicKey
   ): InstructionFn {
     if (idlIx.name === "_inner") {
@@ -41,10 +42,7 @@ export default class InstructionNamespaceFactory {
       validateAccounts(idlIx.accounts, ctx.accounts);
       validateInstruction(idlIx, ...args);
 
-      const keys = InstructionNamespaceFactory.accountsArray(
-        ctx.accounts,
-        idlIx.accounts
-      );
+      const keys = ix.accounts(ctx.accounts);
 
       if (ctx.remainingAccounts !== undefined) {
         keys.push(...ctx.remainingAccounts);
@@ -56,10 +54,7 @@ export default class InstructionNamespaceFactory {
       return new TransactionInstruction({
         keys,
         programId,
-        data: coder.instruction.encode(
-          idlIx.name,
-          toInstruction(idlIx, ...ixArgs)
-        ),
+        data: encodeFn(idlIx.name, toInstruction(idlIx, ...ixArgs)),
       });
     };
 

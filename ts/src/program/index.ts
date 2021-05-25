@@ -8,7 +8,7 @@ import NamespaceFactory, {
   InstructionNamespace,
   TransactionNamespace,
   AccountNamespace,
-  StateNamespace,
+  StateClient,
   SimulateNamespace,
 } from "./namespace";
 import { getProvider } from "../";
@@ -194,7 +194,7 @@ export class Program {
   /**
    * Object with state account accessors and rpcs.
    */
-  readonly state: StateNamespace;
+  readonly state: StateClient;
 
   /**
    * Address of the program.

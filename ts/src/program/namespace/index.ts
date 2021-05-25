@@ -4,7 +4,7 @@ import Coder from "../../coder";
 import Provider from "../../provider";
 import { Idl } from "../../idl";
 import { parseIdlErrors } from "../common";
-import StateFactory, { StateNamespace } from "./state";
+import StateFactory, { StateClient } from "./state";
 import InstructionFactory, { InstructionNamespace } from "./instruction";
 import TransactionFactory, { TransactionNamespace } from "./transaction";
 import RpcFactory, { RpcNamespace } from "./rpc";
@@ -12,7 +12,7 @@ import AccountFactory, { AccountNamespace } from "./account";
 import SimulateFactory, { SimulateNamespace } from "./simulate";
 
 // Re-exports.
-export { StateNamespace, StateClient } from "./state";
+export { StateClient } from "./state";
 export { InstructionNamespace, InstructionFn } from "./instruction";
 export { TransactionNamespace, TransactionFn } from "./transaction";
 export { RpcNamespace, RpcFn } from "./rpc";
@@ -33,7 +33,7 @@ export default class NamespaceFactory {
     InstructionNamespace,
     TransactionNamespace,
     AccountNamespace,
-    StateNamespace,
+    StateClient,
     SimulateNamespace
   ] {
     const idlErrors = parseIdlErrors(idl);
@@ -52,7 +52,11 @@ export default class NamespaceFactory {
     );
 
     idl.instructions.forEach((idlIx) => {
-      const ixItem = InstructionFactory.build(idlIx, coder, programId);
+      const ixItem = InstructionFactory.build(
+        idlIx,
+        (ixName: string, ix: any) => coder.instruction.encode(ixName, ix),
+        programId
+      );
       const txItem = TransactionFactory.build(idlIx, ixItem);
       const rpcItem = RpcFactory.build(idlIx, txItem, idlErrors, provider);
       const simulateItem = SimulateFactory.build(
