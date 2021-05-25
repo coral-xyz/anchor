@@ -35,7 +35,7 @@ describe("basic-4", () => {
       },
     });
     // #endregion instruction
-    const state = await program.state();
+    const state = await program.state.fetch();
     assert.ok(state.count.eq(new anchor.BN(1)));
   });
 });
