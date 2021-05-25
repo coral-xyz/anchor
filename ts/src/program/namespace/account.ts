@@ -29,7 +29,13 @@ export default class AccountFactory {
 
     idl.accounts.forEach((idlAccount) => {
       const name = camelCase(idlAccount.name);
-			accountFns[name] = new AccountClient(idl, idlAccount, coder, programId, provider);
+      accountFns[name] = new AccountClient(
+        idl,
+        idlAccount,
+        coder,
+        programId,
+        provider
+      );
     });
 
     return accountFns;
@@ -45,51 +51,51 @@ export interface AccountNamespace {
 }
 
 export class AccountClient {
-	/**
-	 * Returns the number of bytes in this account.
-	 */
+  /**
+   * Returns the number of bytes in this account.
+   */
   get size(): number {
-		return this._size;
-	}
-	private _size: number;
+    return this._size;
+  }
+  private _size: number;
 
-	get programId(): PublicKey {
-		return this._programId;
-	}
-	private _programId: PublicKey;
+  get programId(): PublicKey {
+    return this._programId;
+  }
+  private _programId: PublicKey;
 
-	get provider(): Provider {
-		return this._provider;
-	}
-	private _provider: Provider;
+  get provider(): Provider {
+    return this._provider;
+  }
+  private _provider: Provider;
 
-	get coder(): Coder {
-		return this._coder;
-	}
-	private _coder: Coder;
+  get coder(): Coder {
+    return this._coder;
+  }
+  private _coder: Coder;
 
-	private _idlAccount: IdlTypeDef;
+  private _idlAccount: IdlTypeDef;
 
-	constructor(
+  constructor(
     idl: Idl,
-		idlAccount: IdlTypeDef,
+    idlAccount: IdlTypeDef,
     coder: Coder,
     programId: PublicKey,
     provider: Provider
-	) {
-		this._idlAccount = idlAccount;
-		this._coder = coder;
-		this._programId = programId;
-		this._provider = provider;
-		this._size = ACCOUNT_DISCRIMINATOR_SIZE + accountSize(idl, idlAccount);
-	}
+  ) {
+    this._idlAccount = idlAccount;
+    this._coder = coder;
+    this._programId = programId;
+    this._provider = provider;
+    this._size = ACCOUNT_DISCRIMINATOR_SIZE + accountSize(idl, idlAccount);
+  }
 
-	/**
-	 * Returns a deserialized account.
-	 *
-	 * @param address The address of the account to fetch.
-	 */
-	async fetch(address: Address): Promise<Object> {
+  /**
+   * Returns a deserialized account.
+   *
+   * @param address The address of the account to fetch.
+   */
+  async fetch(address: Address): Promise<Object> {
     const accountInfo = await this._provider.connection.getAccountInfo(
       translateAddress(address)
     );
@@ -104,11 +110,11 @@ export class AccountClient {
     }
 
     return this._coder.accounts.decode(this._idlAccount.name, accountInfo.data);
-	}
+  }
 
-	/**
-	 * Returns all instances of this account type for the program.
-	 */
+  /**
+   * Returns all instances of this account type for the program.
+   */
   async all(filter?: Buffer): Promise<ProgramAccount<any>[]> {
     let bytes = await accountDiscriminator(this._idlAccount.name);
     if (filter !== undefined) {
@@ -127,24 +133,24 @@ export class AccountClient {
             },
           },
         ],
-      },
+      }
     );
-    return (
-      resp
-        .map(({ pubkey, account }) => {
-          return {
-            publicKey: pubkey,
-            account: this._coder.accounts.decode(this._idlAccount.name, account.data),
-          };
-        })
-    );
-	}
+    return resp.map(({ pubkey, account }) => {
+      return {
+        publicKey: pubkey,
+        account: this._coder.accounts.decode(
+          this._idlAccount.name,
+          account.data
+        ),
+      };
+    });
+  }
 
-	/**
-	 * Returns an `EventEmitter` emitting a "change" event whenever the account
-	 * changes.
-	 */
-  subscribe (address: Address, commitment?: Commitment): EventEmitter {
+  /**
+   * Returns an `EventEmitter` emitting a "change" event whenever the account
+   * changes.
+   */
+  subscribe(address: Address, commitment?: Commitment): EventEmitter {
     if (subscriptions.get(address.toString())) {
       return subscriptions.get(address.toString()).ee;
     }
@@ -154,7 +160,10 @@ export class AccountClient {
     const listener = this._provider.connection.onAccountChange(
       address,
       (acc) => {
-        const account = this._coder.accounts.decode(this._idlAccount.name, acc.data);
+        const account = this._coder.accounts.decode(
+          this._idlAccount.name,
+          acc.data
+        );
         ee.emit("change", account);
       },
       commitment
@@ -166,11 +175,11 @@ export class AccountClient {
     });
 
     return ee;
-	}
+  }
 
-	/**
-	 * Unsubscribes from the account at the given address.
-	 */
+  /**
+   * Unsubscribes from the account at the given address.
+   */
   unsubscribe(address: Address) {
     let sub = subscriptions.get(address.toString());
     if (!sub) {
@@ -185,12 +194,15 @@ export class AccountClient {
         })
         .catch(console.error);
     }
-	}
+  }
 
   /**
-	 * Returns an instruction for creating this account.
-	 */
-  async createInstruction(signer: Signer, sizeOverride?: number): Promise<TransactionInstruction> {
+   * Returns an instruction for creating this account.
+   */
+  async createInstruction(
+    signer: Signer,
+    sizeOverride?: number
+  ): Promise<TransactionInstruction> {
     const size = this.size;
 
     return SystemProgram.createAccount({
@@ -202,21 +214,21 @@ export class AccountClient {
       ),
       programId: this._programId,
     });
-	}
+  }
 
   /**
-	 * Function returning the associated account. Args are keys to associate.
+   * Function returning the associated account. Args are keys to associate.
    * Order matters.
-	 */
+   */
   async associated(...args: PublicKey[]): Promise<any> {
     const addr = await this.associatedAddress(...args);
     return await this.fetch(addr);
-	}
+  }
 
   /**
-	 * Function returning the associated address. Args are keys to associate.
+   * Function returning the associated address. Args are keys to associate.
    * Order matters.
-	 */
+   */
   async associatedAddress(...args: PublicKey[]): Promise<PublicKey> {
     let seeds = [Buffer.from([97, 110, 99, 104, 111, 114])]; // b"anchor".
     args.forEach((arg) => {
@@ -224,7 +236,7 @@ export class AccountClient {
     });
     const [assoc] = await PublicKey.findProgramAddress(seeds, this._programId);
     return assoc;
-	}
+  }
 }
 
 /**
