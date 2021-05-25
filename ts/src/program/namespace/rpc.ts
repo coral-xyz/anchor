@@ -33,12 +33,13 @@ export default class RpcFactory {
 }
 
 /**
- * Dynamically generated rpc namespace, providing async methods to send signed
- * transactions invoking *non*-state methods on an Anchor program.
+ * The namespace provides async methods to send signed transactions for each
+ * *non*-state method on Anchor program.
  *
- * Keys are method names, values are RPC functions.
+ * Keys are method names, values are RPC functions returning a
+ * [[TransactionInstruction]].
  *
- * ## rpc
+ * ## Usage
  *
  * ```javascript
  * rpc.<method>(...args, ctx);
@@ -50,6 +51,7 @@ export default class RpcFactory {
  *    of these arguments depend on the program being used.
  * 2. `ctx`  - [[Context]] non-argument parameters to pass to the method.
  *    Always the last parameter in the method call.
+ * ```
  *
  * ## Example
  *

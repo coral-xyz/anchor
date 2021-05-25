@@ -42,7 +42,24 @@ export default class AccountFactory {
 }
 
 /**
- * Dynamically generated account namespace.
+ * The namespace provides handles to an [[AccountClient]] object for each
+ * account in a program.
+ *
+ * ## Usage
+ *
+ * ```javascript
+ * account.<account-client>
+ * ```
+ *
+ * ## Example
+ *
+ * To fetch a `Counter` account from the above example,
+ *
+ * ```javascript
+ * const counter = await program.account.counter.fetch(address);
+ * ```
+ *
+ * For the full API, see the [[AccountClient]] reference.
  */
 export interface AccountNamespace {
   [key: string]: AccountClient;

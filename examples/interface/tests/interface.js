@@ -39,7 +39,7 @@ describe("interface", () => {
         authProgram: counterAuth.programId,
       },
     });
-    const stateAccount = await counter.state();
+    const stateAccount = await counter.state.fetch();
     assert.ok(stateAccount.count.eq(new anchor.BN(3)));
   });
 });

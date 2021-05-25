@@ -43,45 +43,64 @@ import { Address, translateAddress } from "./common";
 export class Program {
 
 	/**
-	 * The RPC namespace provides async methods for each instruction of an Anchor
-	 * program. Invoking an RPC sends a signed transaction paid for and signed by
-	 * the configured provider.
+	 * Async methods to send signed transactions to *non*-state methods on the
+	 * program, returning a [[TransactionSignature]].
 	 *
-	 * ## rpc
+	 * ## Usage
 	 *
 	 * ```javascript
-	 * program.rpc.<method>(...args, ctx);
+	 * rpc.<method>(...args, ctx);
+	 * ```
+	 *
+	 * ## Parameters
+	 *
+	 * 1. `args` - The positional arguments for the program. The type and number
+	 *    of these arguments depend on the program being used.
+	 * 2. `ctx`  - [[Context]] non-argument parameters to pass to the method.
+	 *    Always the last parameter in the method call.
+	 *
+	 * ## Example
+	 *
+	 * To send a transaction invoking the `increment` method above,
+	 *
+	 * ```javascript
+	 * const txSignature = await program.rpc.increment({
+	 *   accounts: {
+	 *     counter,
+	 *     authority,
+	 *   },
+	 * });
 	 * ```
 	 */
   readonly rpc: RpcNamespace;
 
   /**
-   * Async functions to fetch deserialized program accounts from a cluster.
+   * The namespace provides handles to an [[AccountClient]] object for each
+	 * account in the program.
    *
-   * ## account
+   * ## Usage
    *
    * ```javascript
-   * program.account.<account>(address);
+   * program.account.<account-client>
    * ```
-   *
-   * ## Parameters
-   *
-   * 1. `address` - The [[Address]] of the account.
    *
    * ## Example
    *
-   * To fetch a `Counter` object from the above example,
+   * To fetch a `Counter` account from the above example,
    *
    * ```javascript
-   * const counter = await program.account.counter(address);
+   * const counter = await program.account.counter.fetch(address);
    * ```
+	 *
+	 * For the full API, see the [[AccountClient]] reference.
    */
   readonly account: AccountNamespace;
 
   /**
-   * Functions to build [[TransactionInstruction]] objects for program methods.
+   * The namespace provides functions to build [[TransactionInstruction]]
+	 * objects for each method of a program.
    *
-   * ## instruction
+   * ## Usage
    *
    * ```javascript
    * program.instruction.<method>(...args, ctx);
@@ -109,9 +128,10 @@ export class Program {
   readonly instruction: InstructionNamespace;
 
   /**
-   * Functions to build [[Transaction]] objects.
+   * The namespace provides functions to build [[Transaction]] objects for each
+	 * method of a program.
    *
-   * ## transaction
+   * ## Usage
    *
    * ```javascript
    * program.transaction.<method>(...args, ctx);
@@ -139,8 +159,9 @@ export class Program {
   readonly transaction: TransactionNamespace;
 
   /**
-   * Async functions to simulate instructions against an Anchor program,
-   * returning a list of deserialized events *and* raw program logs.
+   * The namespace provides functions to simulate transactions for each method
+	 * of a program, returning a list of deserialized events *and* raw program
+	 * logs.
    *
    * One can use this to read data calculated from a program on chain, by
    * emitting an event in the program and reading the emitted event client side
@@ -164,7 +185,7 @@ export class Program {
    * To simulate the `increment` method above,
    *
    * ```javascript
-   * const tx = await program.simulate.increment({
+   * const events = await program.simulate.increment({
    *   accounts: {
    *     counter,
    *   },
@@ -174,7 +195,9 @@ export class Program {
   readonly simulate: SimulateNamespace;
 
   /**
-   * Object with state account accessors and rpcs.
+   * A client for the program state. Similar to the base [[Program]] client,
+	 * one can use this to send transactions and read accounts for the state
+	 * abstraction.
    */
   readonly state: StateClient;
 

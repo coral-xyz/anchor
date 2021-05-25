@@ -73,8 +73,34 @@ export default class InstructionNamespaceFactory {
   }
 }
 
-/**
- * Dynamically generated instruction namespace.
+/*
+ * The namespace provides functions to build [[TransactionInstruction]]
+ * objects for each method of a program.
+ *
+ * ## Usage
+ *
+ * ```javascript
+ * instruction.<method>(...args, ctx);
+ * ```
+ *
+ * ## Parameters
+ *
+ * 1. `args` - The positional arguments for the program. The type and number
+ *    of these arguments depend on the program being used.
+ * 2. `ctx`  - [[Context]] non-argument parameters to pass to the method.
+ *    Always the last parameter in the method call.
+ *
+ * ## Example
+ *
+ * To create an instruction for the `increment` method above,
+ *
+ * ```javascript
+ * const tx = await program.instruction.increment({
+ *   accounts: {
+ *     counter,
+ *   },
+ * });
+ * ```
  */
 export interface InstructionNamespace {
   [key: string]: InstructionFn;
