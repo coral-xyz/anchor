@@ -41,36 +41,18 @@ import { Address, translateAddress } from "./common";
  * [here](https://project-serum.github.io/anchor/ts/#examples).
  */
 export class Program {
-  /**
-   * Async methods to send signed transactions invoking *non*-state methods
-   * on an Anchor program.
-   *
-   * ## rpc
-   *
-   * ```javascript
-   * program.rpc.<method>(...args, ctx);
-   * ```
-   *
-   * ## Parameters
-   *
-   * 1. `args` - The positional arguments for the program. The type and number
-   *    of these arguments depend on the program being used.
-   * 2. `ctx`  - [[Context]] non-argument parameters to pass to the method.
-   *    Always the last parameter in the method call.
-   *
-   * ## Example
-   *
-   * To send a transaction invoking the `increment` method above,
-   *
-   * ```javascript
-   * const txSignature = await program.rpc.increment({
-   *   accounts: {
-   *     counter,
-   *     authority,
-   *   },
-   * });
-   * ```
-   */
+
+	/**
+	 * The RPC namespace provides async methods for each instruction of an Anchor
+	 * program. Invoking an RPC sends a signed transaction paid for and signed by
+	 * the configured provider.
+	 *
+	 * ## rpc
+	 *
+	 * ```javascript
+	 * program.rpc.<method>(...args, ctx);
+	 * ```
+	 */
   readonly rpc: RpcNamespace;
 
   /**

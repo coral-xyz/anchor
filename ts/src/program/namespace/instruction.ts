@@ -81,7 +81,9 @@ export interface InstructionNamespace {
 }
 
 /**
- * Ix is a function to create a `TransactionInstruction` generated from an IDL.
+ * Function to create a `TransactionInstruction` generated from an IDL.
+ * Additionally it provides an `accounts` utility method, returning a list
+ * of ordered accounts for the instruction.
  */
 export type InstructionFn = IxProps & ((...args: any[]) => any);
 type IxProps = {

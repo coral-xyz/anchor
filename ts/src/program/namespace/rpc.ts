@@ -33,7 +33,36 @@ export default class RpcFactory {
 }
 
 /**
- * Dynamically generated rpc namespace.
+ * Dynamically generated rpc namespace, providing async methods to send signed
+ * transactions invoking *non*-state methods on an Anchor program.
+ *
+ * Keys are method names, values are RPC functions.
+ *
+ * ## rpc
+ *
+ * ```javascript
+ * rpc.<method>(...args, ctx);
+ * ```
+ *
+ * ## Parameters
+ *
+ * 1. `args` - The positional arguments for the program. The type and number
+ *    of these arguments depend on the program being used.
+ * 2. `ctx`  - [[Context]] non-argument parameters to pass to the method.
+ *    Always the last parameter in the method call.
+ *
+ * ## Example
+ *
+ * To send a transaction invoking the `increment` method above,
+ *
+ * ```javascript
+ * const txSignature = await program.rpc.increment({
+ *   accounts: {
+ *     counter,
+ *     authority,
+ *   },
+ * });
+ * ```
  */
 export interface RpcNamespace {
   [key: string]: RpcFn;

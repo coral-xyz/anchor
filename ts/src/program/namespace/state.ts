@@ -34,31 +34,35 @@ export default class StateFactory {
 
 export class StateClient {
   readonly rpc: RpcNamespace;
-
   readonly instruction: InstructionNamespace;
-
   readonly transaction: TransactionNamespace;
 
+  /**
+   * Returns the program ID owning the state.
+   */
   get programId(): PublicKey {
     return this._programId;
   }
   private _programId: PublicKey;
 
+  /**
+   * Returns the client's wallet and network provider.
+   */
   get provider(): Provider {
     return this._provider;
   }
   private _provider: Provider;
 
+  /**
+   * Returns the coder.
+   */
   get coder(): Coder {
     return this._coder;
   }
 
   private _address: PublicKey;
-
   private _coder: Coder;
-
   private _idl: Idl;
-
   private _sub: Subscription | null;
 
   constructor(
@@ -123,6 +127,9 @@ export class StateClient {
     this.rpc = rpc;
   }
 
+  /**
+   * Returns the deserialized state account.
+   */
   async fetch(): Promise<Object> {
     const addr = this.address();
     const accountInfo = await this.provider.connection.getAccountInfo(addr);
@@ -139,10 +146,17 @@ export class StateClient {
     return this.coder.state.decode(accountInfo.data);
   }
 
+  /**
+   * Returns the state address.
+   */
   address(): PublicKey {
     return this._address;
   }
 
+  /**
+   * Returns an `EventEmitter` with a `"change"` event that's fired whenever
+   * the state account cahnges.
+   */
   subscribe(commitment?: Commitment): EventEmitter {
     if (this._sub !== null) {
       return this._sub.ee;
@@ -166,6 +180,9 @@ export class StateClient {
     return ee;
   }
 
+  /**
+   * Unsubscribes to state changes.
+   */
   unsubscribe() {
     if (this._sub !== null) {
       this.provider.connection
