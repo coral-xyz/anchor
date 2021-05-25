@@ -3,7 +3,7 @@ import Provider from "../../provider";
 import { IdlInstruction } from "../../idl";
 import { translateError } from "../common";
 import { splitArgsAndCtx } from "../context";
-import { TxFn } from "./transaction";
+import { TransactionFn } from "./transaction";
 
 /**
  * Dynamically generated rpc namespace.
@@ -22,7 +22,7 @@ export default class RpcFactory {
   // Builds the rpc namespace.
   public static build(
     idlIx: IdlInstruction,
-    txFn: TxFn,
+    txFn: TransactionFn,
     idlErrors: Map<number, string>,
     provider: Provider
   ): RpcFn {

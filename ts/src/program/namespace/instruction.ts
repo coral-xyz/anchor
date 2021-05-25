@@ -14,13 +14,13 @@ import { Accounts, splitArgsAndCtx } from "../context";
  * Dynamically generated instruction namespace.
  */
 export interface InstructionNamespace {
-  [key: string]: IxFn;
+  [key: string]: InstructionFn;
 }
 
 /**
  * Ix is a function to create a `TransactionInstruction` generated from an IDL.
  */
-export type IxFn = IxProps & ((...args: any[]) => any);
+export type InstructionFn = IxProps & ((...args: any[]) => any);
 type IxProps = {
   accounts: (ctx: Accounts) => any;
 };
@@ -31,7 +31,7 @@ export default class InstructionNamespaceFactory {
     idlIx: IdlInstruction,
     coder: Coder,
     programId: PublicKey
-  ): IxFn {
+  ): InstructionFn {
     if (idlIx.name === "_inner") {
       throw new IdlError("the _inner name is reserved");
     }

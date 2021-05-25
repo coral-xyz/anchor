@@ -12,12 +12,12 @@ import AccountFactory, { AccountNamespace } from "./account";
 import SimulateFactory, { SimulateNamespace } from "./simulate";
 
 // Re-exports.
-export { StateNamespace } from "./state";
-export { InstructionNamespace } from "./instruction";
-export { TransactionNamespace, TxFn } from "./transaction";
+export { StateNamespace, StateClient } from "./state";
+export { InstructionNamespace, InstructionFn } from "./instruction";
+export { TransactionNamespace, TransactionFn } from "./transaction";
 export { RpcNamespace, RpcFn } from "./rpc";
 export { AccountNamespace, AccountClient, ProgramAccount } from "./account";
-export { SimulateNamespace } from "./simulate";
+export { SimulateNamespace, SimulateFn } from "./simulate";
 
 export default class NamespaceFactory {
   /**

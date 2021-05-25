@@ -1,23 +1,26 @@
 import { Transaction } from "@solana/web3.js";
 import { IdlInstruction } from "../../idl";
 import { splitArgsAndCtx } from "../context";
-import { IxFn } from "./instruction";
+import { InstructionFn } from "./instruction";
 
 /**
  * Dynamically generated transaction namespace.
  */
 export interface TransactionNamespace {
-  [key: string]: TxFn;
+  [key: string]: TransactionFn;
 }
 
 /**
- * Tx is a function to create a `Transaction` generate from an IDL.
+ * Tx is a function to create a `Transaction` for a given program instruction.
  */
-export type TxFn = (...args: any[]) => Transaction;
+export type TransactionFn = (...args: any[]) => Transaction;
 
 export default class TransactionFactory {
   // Builds the transaction namespace.
-  public static build(idlIx: IdlInstruction, ixFn: IxFn): TxFn {
+  public static build(
+    idlIx: IdlInstruction,
+    ixFn: InstructionFn
+  ): TransactionFn {
     const txFn = (...args: any[]): Transaction => {
       const [, ctx] = splitArgsAndCtx(idlIx, [...args]);
       const tx = new Transaction();

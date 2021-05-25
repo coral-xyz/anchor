@@ -43,8 +43,7 @@ export default class AccountFactory {
 }
 
 /**
- * Accounts is a dynamically generated object to fetch any given account
- * of a program.
+ * Dynamically generated account namespace.
  */
 export interface AccountNamespace {
   [key: string]: AccountClient;

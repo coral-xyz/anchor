@@ -3,7 +3,7 @@ import Provider from "../../provider";
 import { IdlInstruction } from "../../idl";
 import { translateError } from "../common";
 import { splitArgsAndCtx } from "../context";
-import { TxFn } from "./transaction";
+import { TransactionFn } from "./transaction";
 import { EventParser } from "../event";
 import Coder from "../../coder";
 import { Idl } from "../../idl";
@@ -16,7 +16,10 @@ export interface SimulateNamespace {
 }
 
 /**
- * RpcFn is a single rpc method generated from an IDL.
+ * RpcFn is a single method generated from an IDL. It simulates a method
+ * against a cluster configured by the provider, returning a list of all the
+ * events and raw logs that were emitted during the execution of the
+ * method.
  */
 export type SimulateFn = (...args: any[]) => Promise<SimulateResponse>;
 
@@ -29,7 +32,7 @@ export default class SimulateFactory {
   // Builds the rpc namespace.
   public static build(
     idlIx: IdlInstruction,
-    txFn: TxFn,
+    txFn: TransactionFn,
     idlErrors: Map<number, string>,
     provider: Provider,
     coder: Coder,

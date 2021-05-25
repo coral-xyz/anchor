@@ -21,6 +21,91 @@ import {
 import { Accounts, splitArgsAndCtx } from "../context";
 import InstructionNamespaceFactory from "./instruction";
 
+export class StateClient {
+  get rpc(): RpcNamespace {
+    return this._rpc;
+  }
+  private _rpc: RpcNamespace;
+
+  get instruction(): InstructionNamespace {
+    return this._instruction;
+  }
+  private _instruction: InstructionNamespace;
+
+  get programId(): PublicKey {
+    return this._programId;
+  }
+  private _programId: PublicKey;
+
+  get provider(): Provider {
+    return this._provider;
+  }
+  private _provider: Provider;
+
+  get coder(): Coder {
+    return this._coder;
+  }
+  private _coder: Coder;
+
+  private _idl: Idl;
+
+  private _sub: Subscription | null;
+
+  constructor(
+    idl: Idl,
+    coder: Coder,
+    programId: PublicKey,
+    idlErrors: Map<number, string>,
+    provider: Provider
+  ) {
+    this._idl = idl;
+    this._coder = coder;
+    this._programId = programId;
+    this._provider = provider;
+    this._sub = null;
+  }
+
+  async address(): Promise<PublicKey> {
+    return await programStateAddress(this.programId);
+  }
+
+  subscribe(commitment?: Commitment): EventEmitter {
+    if (this._sub !== null) {
+      return this._sub.ee;
+    }
+    const ee = new EventEmitter();
+
+    this.address().then((address) => {
+      const listener = this.provider.connection.onAccountChange(
+        address,
+        (acc) => {
+          const account = this.coder.state.decode(acc.data);
+          ee.emit("change", account);
+        },
+        commitment
+      );
+
+      this._sub = {
+        ee,
+        listener,
+      };
+    });
+
+    return ee;
+  }
+
+  unsubscribe() {
+    if (this._sub !== null) {
+      this.provider.connection
+        .removeAccountChangeListener(this._sub.listener)
+        .then(async () => {
+          this._sub = null;
+        })
+        .catch(console.error);
+    }
+  }
+}
+
 export type StateNamespace = () =>
   | Promise<any>
   | {
@@ -113,50 +198,6 @@ export default class StateFactory {
 
     state["rpc"] = rpc;
     state["instruction"] = ix;
-    // Calculates the address of the program's global state object account.
-    state["address"] = async (): Promise<PublicKey> =>
-      programStateAddress(programId);
-
-    // Subscription singleton.
-    let sub: null | Subscription = null;
-
-    // Subscribe to account changes.
-    state["subscribe"] = (commitment?: Commitment): EventEmitter => {
-      if (sub !== null) {
-        return sub.ee;
-      }
-      const ee = new EventEmitter();
-
-      state["address"]().then((address) => {
-        const listener = provider.connection.onAccountChange(
-          address,
-          (acc) => {
-            const account = coder.state.decode(acc.data);
-            ee.emit("change", account);
-          },
-          commitment
-        );
-
-        sub = {
-          ee,
-          listener,
-        };
-      });
-
-      return ee;
-    };
-
-    // Unsubscribe from account changes.
-    state["unsubscribe"] = () => {
-      if (sub !== null) {
-        provider.connection
-          .removeAccountChangeListener(sub.listener)
-          .then(async () => {
-            sub = null;
-          })
-          .catch(console.error);
-      }
-    };
 
     return state;
   }
