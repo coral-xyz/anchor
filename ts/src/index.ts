@@ -1,12 +1,18 @@
 import BN from "bn.js";
 import * as web3 from "@solana/web3.js";
 import Provider, { NodeWallet as Wallet } from "./provider";
-import Coder from "./coder";
+import Coder, {
+  InstructionCoder,
+  EventCoder,
+  StateCoder,
+  TypesCoder,
+} from "./coder";
 import { Idl } from "./idl";
 import workspace from "./workspace";
 import utils from "./utils";
 import { Program } from "./program";
 import { Address } from "./program/common";
+import { Event } from "./program/event";
 import {
   ProgramAccount,
   AccountNamespace,
@@ -54,6 +60,11 @@ export {
   Context,
   Accounts,
   Coder,
+  InstructionCoder,
+  EventCoder,
+  StateCoder,
+  TypesCoder,
+  Event,
   setProvider,
   getProvider,
   Provider,

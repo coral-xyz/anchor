@@ -76,7 +76,7 @@ export default class Coder {
 /**
  * Encodes and decodes program instructions.
  */
-class InstructionCoder {
+export class InstructionCoder {
   /**
    * Instruction args layout. Maps namespaced method
    */
@@ -136,7 +136,7 @@ class InstructionCoder {
 /**
  * Encodes and decodes account objects.
  */
-class AccountsCoder {
+export class AccountsCoder {
   /**
    * Maps account type identifier to a layout.
    */
@@ -177,7 +177,7 @@ class AccountsCoder {
 /**
  * Encodes and decodes user defined types.
  */
-class TypesCoder {
+export class TypesCoder {
   /**
    * Maps account type identifier to a layout.
    */
@@ -209,7 +209,7 @@ class TypesCoder {
   }
 }
 
-class EventCoder {
+export class EventCoder {
   /**
    * Maps account type identifier to a layout.
    */
@@ -266,7 +266,7 @@ class EventCoder {
   }
 }
 
-class StateCoder {
+export class StateCoder {
   private layout: Layout;
 
   public constructor(idl: Idl) {
