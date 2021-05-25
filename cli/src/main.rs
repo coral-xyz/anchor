@@ -962,16 +962,21 @@ fn test(
         }
         // Bootup validator, if needed.
         let validator_handle = match cfg.provider.cluster.url() {
-            "http://127.0.0.1:8899" => {
-                let flags = match skip_deploy {
-                    true => None,
-                    false => Some(genesis_flags(cfg)?),
-                };
-                match skip_local_validator {
-                    true => None,
-                    false => Some(start_test_validator(cfg, flags)?),
+            "http://127.0.0.1:8899" => match skip_local_validator {
+                true => {
+                    if !skip_deploy {
+                        deploy(cfg_override, None)?;
+                    }
+                    None
                 }
-            }
+                false => {
+                    let flags = match skip_deploy {
+                        true => None,
+                        false => Some(genesis_flags(cfg)?),
+                    };
+                    Some(start_test_validator(cfg, flags)?)
+                }
+            },
             _ => {
                 if !skip_deploy {
                     deploy(cfg_override, None)?;
