@@ -15,6 +15,10 @@ incremented for features.
 
 * ts: Address metadata is now optional for `anchor.workspace` clients ([#310](https://github.com/project-serum/anchor/pull/310)).
 
+## Breaking Changes
+
+* lang: `#[account(associated)]` now requires `init` to be provided to create an associated account. If not provided, then the address will be assumed to exist, and a constraint will be added to ensure its correctness ([#318](https://github.com/project-serum/anchor/pull/318)).
+
 ## [0.6.0] - 2021-05-23
 
 ## Features

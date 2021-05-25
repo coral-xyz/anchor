@@ -532,8 +532,7 @@ pub fn generate_constraint_associated(
     if c.is_init {
         generate_constraint_associated_init(f, c)
     } else {
-        //        generate_constraint_associated_seeds(f, c)
-        quote! {}
+        generate_constraint_associated_seeds(f, c)
     }
 }
 pub fn generate_constraint_associated_init(
