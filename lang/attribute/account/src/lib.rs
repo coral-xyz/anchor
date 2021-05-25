@@ -63,7 +63,12 @@ pub fn account(
         panic!("Only two args are allowed to the account attribute.")
     }
     for arg in args.to_string().split(",") {
-        let ns = arg.to_string().replace("\"", "");
+        let ns = arg
+            .to_string()
+            .replace("\"", "")
+            .chars()
+            .filter(|c| !c.is_whitespace())
+            .collect();
         if ns == "zero_copy" {
             is_zero_copy = true;
         } else {
