@@ -16,7 +16,7 @@ export { StateNamespace } from "./state";
 export { InstructionNamespace } from "./instruction";
 export { TransactionNamespace, TxFn } from "./transaction";
 export { RpcNamespace, RpcFn } from "./rpc";
-export { AccountNamespace, AccountFn, ProgramAccount } from "./account";
+export { AccountNamespace, AccountClient, ProgramAccount } from "./account";
 export { SimulateNamespace } from "./simulate";
 
 export default class NamespaceFactory {

@@ -7,7 +7,7 @@ import workspace from "./workspace";
 import utils from "./utils";
 import { Program } from "./program";
 import { Address } from "./program/common";
-import { ProgramAccount } from "./program/namespace";
+import { ProgramAccount, AccountNamespace, AccountClient, RpcNamespace, RpcFn } from "./program/namespace";
 import { Context, Accounts } from "./program/context";
 
 let _provider: Provider | null = null;
@@ -26,6 +26,10 @@ function getProvider(): Provider {
 export {
   workspace,
   Program,
+	AccountNamespace,
+	AccountClient,
+	RpcNamespace,
+	RpcFn,
   ProgramAccount,
   Context,
   Accounts,

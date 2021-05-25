@@ -13,7 +13,8 @@ export interface RpcNamespace {
 }
 
 /**
- * RpcFn is a single rpc method generated from an IDL.
+ * RpcFn is a single RPC method generated from an IDL, sending a transaction
+ * paid for and signed by the configured provider.
  */
 export type RpcFn = (...args: any[]) => Promise<TransactionSignature>;
 
