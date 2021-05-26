@@ -4,6 +4,11 @@ import { IdlCoder } from "./idl";
 import { sha256 } from "js-sha256";
 
 /**
+ * Number of bytes of the account discriminator.
+ */
+export const ACCOUNT_DISCRIMINATOR_SIZE = 8;
+
+/**
  * Encodes and decodes account objects.
  */
 export class AccountsCoder {

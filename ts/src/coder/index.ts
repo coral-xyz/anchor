@@ -9,14 +9,13 @@ import { sighash } from "./common";
 export { accountSize } from "./common";
 export { TypesCoder } from "./types";
 export { InstructionCoder } from "./instruction";
-export { AccountsCoder, accountDiscriminator } from "./accounts";
+export {
+  AccountsCoder,
+  accountDiscriminator,
+  ACCOUNT_DISCRIMINATOR_SIZE,
+} from "./accounts";
 export { EventCoder, eventDiscriminator } from "./event";
 export { StateCoder, stateDiscriminator } from "./state";
-
-/**
- * Number of bytes of the account discriminator.
- */
-export const ACCOUNT_DISCRIMINATOR_SIZE = 8;
 
 /**
  * Coder provides a facade for encoding and decoding all IDL related objects.
