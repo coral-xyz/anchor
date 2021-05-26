@@ -2,6 +2,8 @@ import camelCase from "camelcase";
 import { Layout } from "buffer-layout";
 import * as borsh from "@project-serum/borsh";
 import { Idl, IdlField, IdlStateMethod } from "../idl";
+import { IdlCoder } from "./idl";
+import { sighash } from "./common";
 
 /**
  * Namespace for state method function signatures.

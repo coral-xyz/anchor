@@ -6,6 +6,13 @@ import { EventCoder } from "./event";
 import { StateCoder } from "./state";
 import { sighash } from "./common";
 
+export { accountSize } from "./common";
+export { TypesCoder } from "./types";
+export { InstructionCoder } from "./instruction";
+export { AccountsCoder, accountDiscriminator } from "./accounts";
+export { EventCoder, eventDiscriminator } from "./event";
+export { StateCoder, stateDiscriminator } from "./state";
+
 /**
  * Number of bytes of the account discriminator.
  */
