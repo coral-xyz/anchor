@@ -9,7 +9,7 @@ import Coder, {
 } from "./coder";
 import { Idl } from "./idl";
 import workspace from "./workspace";
-import * as utils from "./utils";
+import utils from "./utils";
 import { Program } from "./program";
 import { Address } from "./program/common";
 import { Event } from "./program/event";
@@ -31,10 +31,16 @@ import { Context, Accounts } from "./program/context";
 
 let _provider: Provider | null = null;
 
+/**
+ * Sets the default provider on the client.
+ */
 function setProvider(provider: Provider) {
   _provider = provider;
 }
 
+/**
+ * Returns the default provider being used by the client.
+ */
 function getProvider(): Provider {
   if (_provider === null) {
     return Provider.local();

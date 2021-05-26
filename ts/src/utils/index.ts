@@ -11,4 +11,4 @@ export function decodeUtf8(array: Uint8Array): string {
   return decoder.decode(array);
 }
 
-export { sha256, bs58, rpc, publicKey };
+export default { sha256, bs58, rpc, publicKey };
