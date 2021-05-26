@@ -16,6 +16,7 @@ import Coder, {
   accountSize,
 } from "../../coder";
 import { Subscription, Address, translateAddress } from "../common";
+import { getProvider } from "../../";
 
 export default class AccountFactory {
   public static build(
@@ -31,9 +32,9 @@ export default class AccountFactory {
       accountFns[name] = new AccountClient(
         idl,
         idlAccount,
-        coder,
         programId,
-        provider
+        provider,
+        coder
       );
     });
 
@@ -103,14 +104,14 @@ export class AccountClient {
   constructor(
     idl: Idl,
     idlAccount: IdlTypeDef,
-    coder: Coder,
     programId: PublicKey,
-    provider: Provider
+    provider?: Provider,
+    coder?: Coder
   ) {
     this._idlAccount = idlAccount;
-    this._coder = coder;
     this._programId = programId;
-    this._provider = provider;
+    this._provider = provider ?? getProvider();
+    this._coder = coder ?? new Coder(idl);
     this._size = ACCOUNT_DISCRIMINATOR_SIZE + accountSize(idl, idlAccount);
   }
 

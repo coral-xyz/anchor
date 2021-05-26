@@ -10,7 +10,8 @@ import Provider from "../../provider";
 import { Idl, IdlStateMethod } from "../../idl";
 import Coder, { stateDiscriminator } from "../../coder";
 import { RpcNamespace, InstructionNamespace, TransactionNamespace } from "./";
-import { Subscription, validateAccounts } from "../common";
+import { getProvider } from "../../";
+import { Subscription, validateAccounts, parseIdlErrors } from "../common";
 import { findProgramAddressSync, createWithSeedSync } from "../../utils/pubkey";
 import { Accounts } from "../context";
 import InstructionNamespaceFactory from "./instruction";
@@ -22,13 +23,12 @@ export default class StateFactory {
     idl: Idl,
     coder: Coder,
     programId: PublicKey,
-    idlErrors: Map<number, string>,
     provider: Provider
   ): StateClient | undefined {
     if (idl.state === undefined) {
       return undefined;
     }
-    return new StateClient(idl, coder, programId, idlErrors, provider);
+    return new StateClient(idl, programId, provider, coder);
   }
 }
 
@@ -83,17 +83,16 @@ export class StateClient {
 
   constructor(
     idl: Idl,
-    coder: Coder,
     programId: PublicKey,
-    idlErrors: Map<number, string>,
-    provider: Provider
+    provider?: Provider,
+    coder?: Coder
   ) {
     this._idl = idl;
-    this._coder = coder;
     this._programId = programId;
-    this._provider = provider;
-    this._sub = null;
     this._address = programStateAddress(programId);
+    this._provider = provider ?? getProvider();
+    this._coder = coder ?? new Coder(idl);
+    this._sub = null;
 
     // Build namespaces.
     const [instruction, transaction, rpc] = ((): [
@@ -125,7 +124,7 @@ export class StateClient {
         const rpcItem = RpcNamespaceFactory.build(
           m,
           txItem,
-          idlErrors,
+          parseIdlErrors(idl),
           provider
         );
 

@@ -3,13 +3,13 @@ import { PublicKey } from "@solana/web3.js";
 import Coder from "../../coder";
 import Provider from "../../provider";
 import { Idl } from "../../idl";
-import { parseIdlErrors } from "../common";
 import StateFactory, { StateClient } from "./state";
 import InstructionFactory, { InstructionNamespace } from "./instruction";
 import TransactionFactory, { TransactionNamespace } from "./transaction";
 import RpcFactory, { RpcNamespace } from "./rpc";
 import AccountFactory, { AccountNamespace } from "./account";
 import SimulateFactory, { SimulateNamespace } from "./simulate";
+import { parseIdlErrors } from "../common";
 
 // Re-exports.
 export { StateClient } from "./state";
@@ -36,20 +36,14 @@ export default class NamespaceFactory {
     SimulateNamespace,
     StateClient
   ] {
-    const idlErrors = parseIdlErrors(idl);
-
     const rpc: RpcNamespace = {};
     const instruction: InstructionNamespace = {};
     const transaction: TransactionNamespace = {};
     const simulate: SimulateNamespace = {};
 
-    const state = StateFactory.build(
-      idl,
-      coder,
-      programId,
-      idlErrors,
-      provider
-    );
+    const idlErrors = parseIdlErrors(idl);
+
+    const state = StateFactory.build(idl, coder, programId, provider);
 
     idl.instructions.forEach((idlIx) => {
       const ixItem = InstructionFactory.build(
