@@ -73,7 +73,7 @@ export default class InstructionNamespaceFactory {
   }
 }
 
-/*
+/**
  * The namespace provides functions to build [[TransactionInstruction]]
  * objects for each method of a program.
  *

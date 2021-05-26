@@ -74,25 +74,25 @@ export class AccountClient {
   }
   private _size: number;
 
-	/**
-	 * Returns the program ID owning all accounts.
-	 */
+  /**
+   * Returns the program ID owning all accounts.
+   */
   get programId(): PublicKey {
     return this._programId;
   }
   private _programId: PublicKey;
 
-	/**
-	 * Returns the cleint's wallet and network provider.
-	 */
+  /**
+   * Returns the cleint's wallet and network provider.
+   */
   get provider(): Provider {
     return this._provider;
   }
   private _provider: Provider;
 
-	/**
-	 * Returns the coder.
-	 */
+  /**
+   * Returns the coder.
+   */
   get coder(): Coder {
     return this._coder;
   }

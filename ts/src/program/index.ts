@@ -28,55 +28,56 @@ import { Address, translateAddress } from "./common";
  * changes, and listen to events.
  *
  * In addition to field accessors and methods, the object provides a set of
- * dynamically generated properties (internally referred to as namespaces) that
- * map one-to-one to program instructions and accounts. These namespaces
- * generally can be used as follows:
+ * dynamically generated properties, also known as namespaces, that
+ * map one-to-one to program methods and accounts. These namespaces generally
+ *  can be used as follows:
+ *
+ * ## Usage
  *
  * ```javascript
- * program.<namespace>.<program-specific-field>
+ * program.<namespace>.<program-specific-method>
  * ```
  *
  * API specifics are namespace dependent. The examples used in the documentation
  * below will refer to the two counter examples found
- * [here](https://project-serum.github.io/anchor/ts/#examples).
+ * [here](https://github.com/project-serum/anchor#examples).
  */
 export class Program {
-
-	/**
-	 * Async methods to send signed transactions to *non*-state methods on the
-	 * program, returning a [[TransactionSignature]].
-	 *
-	 * ## Usage
-	 *
-	 * ```javascript
-	 * rpc.<method>(...args, ctx);
-	 * ```
-	 *
-	 * ## Parameters
-	 *
-	 * 1. `args` - The positional arguments for the program. The type and number
-	 *    of these arguments depend on the program being used.
-	 * 2. `ctx`  - [[Context]] non-argument parameters to pass to the method.
-	 *    Always the last parameter in the method call.
-	 *
-	 * ## Example
-	 *
-	 * To send a transaction invoking the `increment` method above,
-	 *
-	 * ```javascript
-	 * const txSignature = await program.rpc.increment({
-	 *   accounts: {
-	 *     counter,
-	 *     authority,
-	 *   },
-	 * });
-	 * ```
-	 */
+  /**
+   * Async methods to send signed transactions to *non*-state methods on the
+   * program, returning a [[TransactionSignature]].
+   *
+   * ## Usage
+   *
+   * ```javascript
+   * rpc.<method>(...args, ctx);
+   * ```
+   *
+   * ## Parameters
+   *
+   * 1. `args` - The positional arguments for the program. The type and number
+   *    of these arguments depend on the program being used.
+   * 2. `ctx`  - [[Context]] non-argument parameters to pass to the method.
+   *    Always the last parameter in the method call.
+   *
+   * ## Example
+   *
+   * To send a transaction invoking the `increment` method above,
+   *
+   * ```javascript
+   * const txSignature = await program.rpc.increment({
+   *   accounts: {
+   *     counter,
+   *     authority,
+   *   },
+   * });
+   * ```
+   */
   readonly rpc: RpcNamespace;
 
   /**
    * The namespace provides handles to an [[AccountClient]] object for each
-	 * account in the program.
+   * account in the program.
    *
    * ## Usage
    *
@@ -91,14 +92,14 @@ export class Program {
    * ```javascript
    * const counter = await program.account.counter.fetch(address);
    * ```
-	 *
-	 * For the full API, see the [[AccountClient]] reference.
+   *
+   * For the full API, see the [[AccountClient]] reference.
    */
   readonly account: AccountNamespace;
 
   /**
    * The namespace provides functions to build [[TransactionInstruction]]
-	 * objects for each method of a program.
+   * objects for each method of a program.
    *
    * ## Usage
    *
@@ -129,7 +130,7 @@ export class Program {
 
   /**
    * The namespace provides functions to build [[Transaction]] objects for each
-	 * method of a program.
+   * method of a program.
    *
    * ## Usage
    *
@@ -160,8 +161,8 @@ export class Program {
 
   /**
    * The namespace provides functions to simulate transactions for each method
-	 * of a program, returning a list of deserialized events *and* raw program
-	 * logs.
+   * of a program, returning a list of deserialized events *and* raw program
+   * logs.
    *
    * One can use this to read data calculated from a program on chain, by
    * emitting an event in the program and reading the emitted event client side
@@ -196,8 +197,8 @@ export class Program {
 
   /**
    * A client for the program state. Similar to the base [[Program]] client,
-	 * one can use this to send transactions and read accounts for the state
-	 * abstraction.
+   * one can use this to send transactions and read accounts for the state
+   * abstraction.
    */
   readonly state: StateClient;
 

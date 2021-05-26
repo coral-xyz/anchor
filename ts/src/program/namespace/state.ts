@@ -11,7 +11,7 @@ import { Idl, IdlStateMethod } from "../../idl";
 import Coder, { stateDiscriminator } from "../../coder";
 import { RpcNamespace, InstructionNamespace, TransactionNamespace } from "./";
 import { Subscription, validateAccounts } from "../common";
-import { findProgramAddressSync, createWithSeedSync } from "../../utils";
+import { findProgramAddressSync, createWithSeedSync } from "../../utils/pubkey";
 import { Accounts } from "../context";
 import InstructionNamespaceFactory from "./instruction";
 import RpcNamespaceFactory from "./rpc";
@@ -32,9 +32,25 @@ export default class StateFactory {
   }
 }
 
+/**
+ * A client for the program state. Similar to the base [[Program]] client,
+ * one can use this to send transactions and read accounts for the state
+ * abstraction.
+ */
 export class StateClient {
+  /**
+   * [[RpcNamespace]] for all state methods.
+   */
   readonly rpc: RpcNamespace;
+
+  /**
+   * [[InstructionNamespace]] for all state methods.
+   */
   readonly instruction: InstructionNamespace;
+
+  /**
+   * [[TransactionNamespace]] for all state methods.
+   */
   readonly transaction: TransactionNamespace;
 
   /**
