@@ -1,12 +1,20 @@
-//! DSL syntax tokens.
-
 #[cfg(feature = "idl")]
 use crate::idl::{IdlAccount, IdlAccountItem, IdlAccounts};
 use anyhow::Result;
+use codegen::accounts as accounts_codegen;
+use codegen::program as program_codegen;
 #[cfg(feature = "idl")]
 use heck::MixedCase;
-use quote::quote;
+use parser::accounts as accounts_parser;
+use parser::program as program_parser;
+use proc_macro2::Span;
+use quote::{quote, ToTokens};
 use std::collections::HashMap;
+use std::ops::Deref;
+use syn::parse::{Parse, ParseStream, Result as ParseResult};
+use syn::punctuated::Punctuated;
+use syn::spanned::Spanned;
+use syn::{Expr, Ident, ItemMod, ItemStruct, LitStr, Token};
 
 pub mod codegen;
 #[cfg(feature = "hash")]
@@ -23,6 +31,25 @@ pub struct Program {
     pub ixs: Vec<Ix>,
     pub name: syn::Ident,
     pub program_mod: syn::ItemMod,
+}
+
+impl Parse for Program {
+    fn parse(input: ParseStream) -> ParseResult<Self> {
+        let program_mod = <ItemMod as Parse>::parse(input)?;
+        program_parser::parse(program_mod)
+    }
+}
+
+impl From<&Program> for proc_macro2::TokenStream {
+    fn from(program: &Program) -> Self {
+        program_codegen::generate(program)
+    }
+}
+
+impl ToTokens for Program {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        tokens.extend::<proc_macro2::TokenStream>(self.into());
+    }
 }
 
 // State struct singleton.
@@ -77,6 +104,25 @@ pub struct AccountsStruct {
     pub fields: Vec<AccountField>,
 }
 
+impl Parse for AccountsStruct {
+    fn parse(input: ParseStream) -> ParseResult<Self> {
+        let strct = <ItemStruct as Parse>::parse(input)?;
+        accounts_parser::parse(&strct)
+    }
+}
+
+impl From<&AccountsStruct> for proc_macro2::TokenStream {
+    fn from(accounts: &AccountsStruct) -> Self {
+        accounts_codegen::generate(accounts)
+    }
+}
+
+impl ToTokens for AccountsStruct {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        tokens.extend::<proc_macro2::TokenStream>(self.into());
+    }
+}
+
 impl AccountsStruct {
     pub fn new(strct: syn::ItemStruct, fields: Vec<AccountField>) -> Self {
         let ident = strct.ident.clone();
@@ -104,7 +150,7 @@ impl AccountsStruct {
                         tys.push(pty.account_ident.to_string());
                     }
                 }
-                AccountField::AccountsStruct(comp_f) => {
+                AccountField::CompositeField(comp_f) => {
                     let accs = global_accs.get(&comp_f.symbol).ok_or_else(|| {
                         anyhow::format_err!("Invalid account type: {}", comp_f.symbol)
                     })?;
@@ -123,10 +169,10 @@ impl AccountsStruct {
         self.fields
             .iter()
             .map(|acc: &AccountField| match acc {
-                AccountField::AccountsStruct(comp_f) => {
+                AccountField::CompositeField(comp_f) => {
                     let accs_strct = global_accs
                         .get(&comp_f.symbol)
-                        .expect("Could not reslve Accounts symbol");
+                        .expect("Could not resolve Accounts symbol");
                     let accounts = accs_strct.idl_accounts(global_accs);
                     IdlAccountItem::IdlAccounts(IdlAccounts {
                         name: comp_f.ident.to_string().to_mixed_case(),
@@ -135,8 +181,8 @@ impl AccountsStruct {
                 }
                 AccountField::Field(acc) => IdlAccountItem::IdlAccount(IdlAccount {
                     name: acc.ident.to_string().to_mixed_case(),
-                    is_mut: acc.is_mut,
-                    is_signer: acc.is_signer,
+                    is_mut: acc.constraints.is_mutable(),
+                    is_signer: acc.constraints.is_signer(),
                 }),
             })
             .collect::<Vec<_>>()
@@ -145,40 +191,23 @@ impl AccountsStruct {
 
 #[derive(Debug)]
 pub enum AccountField {
-    // Use a `String` instead of the `AccountsStruct` because all
-    // accounts structs aren't visible to a single derive macro.
-    //
-    // When we need the global context, we fill in the String with the
-    // appropriate values. See, `account_tys` as an example.
-    AccountsStruct(CompositeField), // Composite
-    Field(Field),                   // Primitive
+    Field(Field),
+    CompositeField(CompositeField),
+}
+
+#[derive(Debug)]
+pub struct Field {
+    pub ident: syn::Ident,
+    pub ty: Ty,
+    pub constraints: ConstraintGroup,
 }
 
 #[derive(Debug)]
 pub struct CompositeField {
     pub ident: syn::Ident,
     pub symbol: String,
-    pub constraints: Vec<Constraint>,
+    pub constraints: ConstraintGroup,
     pub raw_field: syn::Field,
-}
-
-// An account in the accounts struct.
-#[derive(Debug)]
-pub struct Field {
-    pub ident: syn::Ident,
-    pub ty: Ty,
-    pub constraints: Vec<Constraint>,
-    pub is_mut: bool,
-    pub is_signer: bool,
-    pub is_init: bool,
-    // TODO: move associated out of the constraints and put into tis own
-    //       field + struct.
-    // Used by the associated attribute only.
-    pub payer: Option<syn::Ident>,
-    // Used by the associated attribute only.
-    pub space: Option<proc_macro2::TokenStream>,
-    // Used by the associated attribute only.
-    pub associated_seeds: Vec<syn::Ident>,
 }
 
 impl Field {
@@ -296,61 +325,200 @@ pub struct LoaderTy {
     pub account_ident: syn::Ident,
 }
 
-// An access control constraint for an account.
-#[derive(Debug)]
-pub enum Constraint {
-    Signer(ConstraintSigner),
-    BelongsTo(ConstraintBelongsTo),
-    Literal(ConstraintLiteral),
-    Owner(ConstraintOwner),
-    RentExempt(ConstraintRentExempt),
-    Seeds(ConstraintSeeds),
-    Executable(ConstraintExecutable),
-    State(ConstraintState),
-    Associated(ConstraintAssociated),
+#[derive(Debug, Default, Clone)]
+pub struct ConstraintGroup {
+    init: Option<Context<ConstraintInit>>,
+    mutable: Option<Context<ConstraintMut>>,
+    signer: Option<Context<ConstraintSigner>>,
+    belongs_to: Vec<Context<ConstraintBelongsTo>>,
+    literal: Vec<Context<ConstraintLiteral>>,
+    raw: Vec<Context<ConstraintRaw>>,
+    owner: Option<Context<ConstraintOwner>>,
+    rent_exempt: Option<Context<ConstraintRentExempt>>,
+    seeds: Option<Context<ConstraintSeeds>>,
+    executable: Option<Context<ConstraintExecutable>>,
+    state: Option<Context<ConstraintState>>,
+    associated: Option<ConstraintAssociatedGroup>,
+}
+
+impl ConstraintGroup {
+    pub fn is_init(&self) -> bool {
+        self.init.is_some()
+    }
+
+    pub fn is_mutable(&self) -> bool {
+        self.mutable.is_some()
+    }
+
+    pub fn is_signer(&self) -> bool {
+        self.signer.is_some()
+    }
+
+    pub fn to_vec(self) -> Vec<Constraint> {
+        let ConstraintGroup {
+            init,
+            mutable,
+            signer,
+            belongs_to,
+            literal,
+            raw,
+            owner,
+            rent_exempt,
+            seeds,
+            executable,
+            state,
+            associated,
+        } = self;
+
+        let mut constraints = Vec::new();
+
+        // The associated cosntraint should always be first since it creates
+        // the account (if also init).
+        if let Some(c) = associated {
+            constraints.push(Constraint::AssociatedGroup(c));
+        }
+        if let Some(c) = init {
+            constraints.push(Constraint::Init(c));
+        }
+        if let Some(c) = mutable {
+            constraints.push(Constraint::Mut(c));
+        }
+        if let Some(c) = signer {
+            constraints.push(Constraint::Signer(c));
+        }
+        constraints.append(
+            &mut belongs_to
+                .into_iter()
+                .map(|c| Constraint::BelongsTo(c))
+                .collect(),
+        );
+        constraints.append(
+            &mut literal
+                .into_iter()
+                .map(|c| Constraint::Literal(c))
+                .collect(),
+        );
+        constraints.append(&mut raw.into_iter().map(|c| Constraint::Raw(c)).collect());
+        if let Some(c) = owner {
+            constraints.push(Constraint::Owner(c));
+        }
+        if let Some(c) = rent_exempt {
+            constraints.push(Constraint::RentExempt(c));
+        }
+        if let Some(c) = seeds {
+            constraints.push(Constraint::Seeds(c));
+        }
+        if let Some(c) = executable {
+            constraints.push(Constraint::Executable(c));
+        }
+        if let Some(c) = state {
+            constraints.push(Constraint::State(c));
+        }
+        constraints
+    }
 }
 
 #[derive(Debug)]
+pub enum Constraint {
+    Init(Context<ConstraintInit>),
+    Mut(Context<ConstraintMut>),
+    Signer(Context<ConstraintSigner>),
+    BelongsTo(Context<ConstraintBelongsTo>),
+    Literal(Context<ConstraintLiteral>),
+    Raw(Context<ConstraintRaw>),
+    Owner(Context<ConstraintOwner>),
+    RentExempt(Context<ConstraintRentExempt>),
+    Seeds(Context<ConstraintSeeds>),
+    Executable(Context<ConstraintExecutable>),
+    State(Context<ConstraintState>),
+    AssociatedGroup(ConstraintAssociatedGroup),
+    Associated(Context<ConstraintAssociated>),
+    AssociatedPayer(Context<ConstraintAssociatedPayer>),
+    AssociatedSpace(Context<ConstraintAssociatedSpace>),
+    AssociatedWith(Context<ConstraintAssociatedWith>),
+}
+
+impl Parse for Constraint {
+    fn parse(stream: ParseStream) -> ParseResult<Self> {
+        accounts_parser::constraint::parse(stream)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintInit {}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintMut {}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintSigner {}
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct ConstraintBelongsTo {
     pub join_target: proc_macro2::Ident,
 }
 
-#[derive(Debug)]
-pub struct ConstraintSigner {}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConstraintLiteral {
-    pub tokens: proc_macro2::TokenStream,
+    pub lit: LitStr,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub struct ConstraintRaw {
+    pub raw: Expr,
+}
+
+#[derive(Debug, Clone)]
 pub struct ConstraintOwner {
     pub owner_target: proc_macro2::Ident,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ConstraintRentExempt {
     Enforce,
     Skip,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConstraintSeeds {
-    pub seeds: proc_macro2::Group,
+    pub seeds: Punctuated<Expr, Token![,]>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConstraintExecutable {}
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConstraintState {
     pub program_target: proc_macro2::Ident,
 }
 
+#[derive(Debug, Clone)]
+pub struct ConstraintAssociatedGroup {
+    pub is_init: bool,
+    pub associated_target: proc_macro2::Ident,
+    pub associated_seeds: Vec<syn::Ident>,
+    pub payer: Option<syn::Ident>,
+    pub space: Option<syn::LitInt>,
+}
+
 #[derive(Debug)]
 pub struct ConstraintAssociated {
-    pub associated_target: proc_macro2::Ident,
-    pub is_init: bool,
+    pub target: proc_macro2::Ident,
+}
+
+#[derive(Debug)]
+pub struct ConstraintAssociatedPayer {
+    pub target: proc_macro2::Ident,
+}
+
+#[derive(Debug)]
+pub struct ConstraintAssociatedWith {
+    pub target: proc_macro2::Ident,
+}
+
+#[derive(Debug)]
+pub struct ConstraintAssociatedSpace {
+    pub space: syn::LitInt,
 }
 
 #[derive(Debug)]
@@ -364,6 +532,33 @@ pub struct Error {
 #[derive(Debug)]
 pub struct ErrorCode {
     pub id: u32,
-    pub ident: syn::Ident,
+    pub ident: Ident,
     pub msg: Option<String>,
+}
+
+// Syntaxt context object for preserving metadata about the inner item.
+#[derive(Debug, Clone)]
+pub struct Context<T> {
+    span: Span,
+    inner: T,
+}
+
+impl<T> Context<T> {
+    pub fn new(span: Span, inner: T) -> Self {
+        Self { span, inner }
+    }
+}
+
+impl<T> Deref for Context<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<T> Spanned for Context<T> {
+    fn span(&self) -> proc_macro2::Span {
+        self.span
+    }
 }
