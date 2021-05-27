@@ -98,7 +98,6 @@ export default class Provider {
     ).blockhash;
 
     await this.wallet.signTransaction(tx);
-
     signers
       .filter((s) => s !== undefined)
       .forEach((kp) => {
