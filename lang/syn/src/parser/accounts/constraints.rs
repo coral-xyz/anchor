@@ -29,7 +29,7 @@ pub fn is_account(attr: &&syn::Attribute) -> bool {
 }
 
 // Parses a single constraint from a parse stream for `#[account(<STREAM>)]`.
-pub fn parse_item(stream: ParseStream) -> ParseResult<ConstraintToken> {
+pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
     let is_lit = stream.peek(LitStr);
     if is_lit {
         let lit: LitStr = stream.parse()?;

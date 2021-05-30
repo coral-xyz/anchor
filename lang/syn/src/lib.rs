@@ -294,7 +294,7 @@ pub enum ConstraintToken {
 
 impl Parse for ConstraintToken {
     fn parse(stream: ParseStream) -> ParseResult<Self> {
-        accounts_parser::constraints::parse_item(stream)
+        accounts_parser::constraints::parse_token(stream)
     }
 }
 
