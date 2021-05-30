@@ -1,16 +1,13 @@
 use crate::{
     CompositeField, Constraint, ConstraintAssociatedGroup, ConstraintBelongsTo,
-    ConstraintExecutable, ConstraintInit, ConstraintLiteral, ConstraintMut, ConstraintOwner,
-    ConstraintRaw, ConstraintRentExempt, ConstraintSeeds, ConstraintSigner, ConstraintState, Field,
-    Ty,
+    ConstraintExecutable, ConstraintGroup, ConstraintInit, ConstraintLiteral, ConstraintMut,
+    ConstraintOwner, ConstraintRaw, ConstraintRentExempt, ConstraintSeeds, ConstraintSigner,
+    ConstraintState, Field, Ty,
 };
 use quote::quote;
 
 pub fn generate(f: &Field) -> proc_macro2::TokenStream {
-    let checks: Vec<proc_macro2::TokenStream> = f
-        .constraints
-        .clone()
-        .to_vec()
+    let checks: Vec<proc_macro2::TokenStream> = linearize(&f.constraints)
         .iter()
         .map(|c| generate_constraint(f, c))
         .collect();
@@ -20,10 +17,7 @@ pub fn generate(f: &Field) -> proc_macro2::TokenStream {
 }
 
 pub fn generate_composite(f: &CompositeField) -> proc_macro2::TokenStream {
-    let checks: Vec<proc_macro2::TokenStream> = f
-        .constraints
-        .clone()
-        .to_vec()
+    let checks: Vec<proc_macro2::TokenStream> = linearize(&f.constraints)
         .iter()
         .filter_map(|c| match c {
             Constraint::Raw(_) => Some(c),
@@ -35,6 +29,72 @@ pub fn generate_composite(f: &CompositeField) -> proc_macro2::TokenStream {
     quote! {
         #(#checks)*
     }
+}
+
+// Linearizes the constraint group so that constraints with dependencies
+// run after those without.
+//
+// The associated cosntraint should always be first since it may also create
+// an account with a PDA.
+pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
+    let ConstraintGroup {
+        init,
+        mutable,
+        signer,
+        belongs_to,
+        literal,
+        raw,
+        owner,
+        rent_exempt,
+        seeds,
+        executable,
+        state,
+        associated,
+    } = c_group.clone();
+
+    let mut constraints = Vec::new();
+
+    if let Some(c) = associated {
+        constraints.push(Constraint::AssociatedGroup(c));
+    }
+    if let Some(c) = init {
+        constraints.push(Constraint::Init(c));
+    }
+    if let Some(c) = mutable {
+        constraints.push(Constraint::Mut(c));
+    }
+    if let Some(c) = signer {
+        constraints.push(Constraint::Signer(c));
+    }
+    constraints.append(
+        &mut belongs_to
+            .into_iter()
+            .map(|c| Constraint::BelongsTo(c))
+            .collect(),
+    );
+    constraints.append(
+        &mut literal
+            .into_iter()
+            .map(|c| Constraint::Literal(c))
+            .collect(),
+    );
+    constraints.append(&mut raw.into_iter().map(|c| Constraint::Raw(c)).collect());
+    if let Some(c) = owner {
+        constraints.push(Constraint::Owner(c));
+    }
+    if let Some(c) = rent_exempt {
+        constraints.push(Constraint::RentExempt(c));
+    }
+    if let Some(c) = seeds {
+        constraints.push(Constraint::Seeds(c));
+    }
+    if let Some(c) = executable {
+        constraints.push(Constraint::Executable(c));
+    }
+    if let Some(c) = state {
+        constraints.push(Constraint::State(c));
+    }
+    constraints
 }
 
 fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {

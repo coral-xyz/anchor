@@ -3,7 +3,7 @@ use codegen::program as program_codegen;
 use parser::accounts as accounts_parser;
 use parser::program as program_parser;
 use proc_macro2::{Span, TokenStream};
-use quote::{quote, ToTokens};
+use quote::ToTokens;
 use std::ops::Deref;
 use syn::parse::{Parse, ParseStream, Result as ParseResult};
 use syn::punctuated::Punctuated;
@@ -140,77 +140,16 @@ pub enum AccountField {
 #[derive(Debug)]
 pub struct Field {
     pub ident: Ident,
-    pub ty: Ty,
     pub constraints: ConstraintGroup,
+    pub ty: Ty,
 }
 
 #[derive(Debug)]
 pub struct CompositeField {
     pub ident: Ident,
-    pub symbol: String,
     pub constraints: ConstraintGroup,
+    pub symbol: String,
     pub raw_field: syn::Field,
-}
-
-impl Field {
-    pub fn typed_ident(&self) -> TokenStream {
-        let name = &self.ident;
-
-        let ty = match &self.ty {
-            Ty::AccountInfo => quote! { AccountInfo },
-            Ty::ProgramState(ty) => {
-                let account = &ty.account_ident;
-                quote! {
-                    ProgramState<#account>
-                }
-            }
-            Ty::CpiState(ty) => {
-                let account = &ty.account_ident;
-                quote! {
-                    CpiState<#account>
-                }
-            }
-            Ty::ProgramAccount(ty) => {
-                let account = &ty.account_ident;
-                quote! {
-                    ProgramAccount<#account>
-                }
-            }
-            Ty::Loader(ty) => {
-                let account = &ty.account_ident;
-                quote! {
-                    Loader<#account>
-                }
-            }
-            Ty::CpiAccount(ty) => {
-                let account = &ty.account_ident;
-                quote! {
-                    CpiAccount<#account>
-                }
-            }
-            Ty::Sysvar(ty) => {
-                let account = match ty {
-                    SysvarTy::Clock => quote! {Clock},
-                    SysvarTy::Rent => quote! {Rent},
-                    SysvarTy::EpochSchedule => quote! {EpochSchedule},
-                    SysvarTy::Fees => quote! {Fees},
-                    SysvarTy::RecentBlockhashes => quote! {RecentBlockhashes},
-                    SysvarTy::SlotHashes => quote! {SlotHashes},
-                    SysvarTy::SlotHistory => quote! {SlotHistory},
-                    SysvarTy::StakeHistory => quote! {StakeHistory},
-                    SysvarTy::Instructions => quote! {Instructions},
-                    SysvarTy::Rewards => quote! {Rewards},
-                };
-                quote! {
-                    Sysvar<#account>
-                }
-            }
-        };
-
-        quote! {
-            #name: #ty
-        }
-    }
 }
 
 // A type of an account field.
@@ -288,15 +227,15 @@ pub struct ConstraintGroup {
     init: Option<ConstraintInit>,
     mutable: Option<ConstraintMut>,
     signer: Option<ConstraintSigner>,
-    belongs_to: Vec<ConstraintBelongsTo>,
-    literal: Vec<ConstraintLiteral>,
-    raw: Vec<ConstraintRaw>,
     owner: Option<ConstraintOwner>,
     rent_exempt: Option<ConstraintRentExempt>,
     seeds: Option<ConstraintSeeds>,
     executable: Option<ConstraintExecutable>,
     state: Option<ConstraintState>,
     associated: Option<ConstraintAssociatedGroup>,
+    belongs_to: Vec<ConstraintBelongsTo>,
+    literal: Vec<ConstraintLiteral>,
+    raw: Vec<ConstraintRaw>,
 }
 
 impl ConstraintGroup {
@@ -310,69 +249,6 @@ impl ConstraintGroup {
 
     pub fn is_signer(&self) -> bool {
         self.signer.is_some()
-    }
-
-    pub fn to_vec(self) -> Vec<Constraint> {
-        let ConstraintGroup {
-            init,
-            mutable,
-            signer,
-            belongs_to,
-            literal,
-            raw,
-            owner,
-            rent_exempt,
-            seeds,
-            executable,
-            state,
-            associated,
-        } = self;
-
-        let mut constraints = Vec::new();
-
-        // The associated cosntraint should always be first since it creates
-        // the account (if also init).
-        if let Some(c) = associated {
-            constraints.push(Constraint::AssociatedGroup(c));
-        }
-        if let Some(c) = init {
-            constraints.push(Constraint::Init(c));
-        }
-        if let Some(c) = mutable {
-            constraints.push(Constraint::Mut(c));
-        }
-        if let Some(c) = signer {
-            constraints.push(Constraint::Signer(c));
-        }
-        constraints.append(
-            &mut belongs_to
-                .into_iter()
-                .map(|c| Constraint::BelongsTo(c))
-                .collect(),
-        );
-        constraints.append(
-            &mut literal
-                .into_iter()
-                .map(|c| Constraint::Literal(c))
-                .collect(),
-        );
-        constraints.append(&mut raw.into_iter().map(|c| Constraint::Raw(c)).collect());
-        if let Some(c) = owner {
-            constraints.push(Constraint::Owner(c));
-        }
-        if let Some(c) = rent_exempt {
-            constraints.push(Constraint::RentExempt(c));
-        }
-        if let Some(c) = seeds {
-            constraints.push(Constraint::Seeds(c));
-        }
-        if let Some(c) = executable {
-            constraints.push(Constraint::Executable(c));
-        }
-        if let Some(c) = state {
-            constraints.push(Constraint::State(c));
-        }
-        constraints
     }
 }
 
@@ -525,7 +401,7 @@ impl<T> Deref for Context<T> {
 }
 
 impl<T> Spanned for Context<T> {
-    fn span(&self) -> proc_macro2::Span {
+    fn span(&self) -> Span {
         self.span
     }
 }
