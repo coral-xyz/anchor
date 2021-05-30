@@ -26,10 +26,11 @@ pub fn generate_composite(f: &CompositeField) -> proc_macro2::TokenStream {
         .to_vec()
         .iter()
         .filter_map(|c| match c {
-            Constraint::Literal(c) => Some(c),
-            _ => panic!("Invariant violation"),
+            Constraint::Raw(_) => Some(c),
+            Constraint::Literal(_) => Some(c),
+            _ => panic!("Invariant violation: composite constraints can only be raw or literals"),
         })
-        .map(|c| generate_constraint_literal(c))
+        .map(|c| generate_constraint_composite(f, c))
         .collect();
     quote! {
         #(#checks)*
@@ -50,12 +51,14 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::Executable(c) => generate_constraint_executable(f, c),
         Constraint::State(c) => generate_constraint_state(f, c),
         Constraint::AssociatedGroup(c) => generate_constraint_associated(f, c),
-        Constraint::Associated(_)
-        | Constraint::AssociatedPayer(_)
-        | Constraint::AssociatedWith(_)
-        | Constraint::AssociatedSpace(_) => {
-            panic!("Invariant violation: invalid constraint provided")
-        }
+    }
+}
+
+fn generate_constraint_composite(_f: &CompositeField, c: &Constraint) -> proc_macro2::TokenStream {
+    match c {
+        Constraint::Raw(c) => generate_constraint_raw(c),
+        Constraint::Literal(c) => generate_constraint_literal(c),
+        _ => panic!("Invariant violation"),
     }
 }
 
@@ -218,6 +221,7 @@ pub fn generate_constraint_associated(
         generate_constraint_associated_seeds(f, c)
     }
 }
+
 pub fn generate_constraint_associated_init(
     f: &Field,
     c: &ConstraintAssociatedGroup,

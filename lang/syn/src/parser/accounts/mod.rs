@@ -1,14 +1,11 @@
 use crate::{
-    AccountField, AccountsStruct, CompositeField, Constraint, ConstraintGroup, CpiAccountTy,
-    CpiStateTy, Field, LoaderTy, ProgramAccountTy, ProgramStateTy, SysvarTy, Ty,
+    AccountField, AccountsStruct, CompositeField, CpiAccountTy, CpiStateTy, Field, LoaderTy,
+    ProgramAccountTy, ProgramStateTy, SysvarTy, Ty,
 };
-use constraint::ConstraintGroupBuilder;
 use syn::parse::{Error as ParseError, Result as ParseResult};
-use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::token::Comma;
 
-pub mod constraint;
+pub mod constraints;
 
 pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
     let fields = match &strct.fields {
@@ -28,7 +25,7 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
 }
 
 pub fn parse_account_field(f: &syn::Field) -> ParseResult<AccountField> {
-    let constraints = parse_constraints(f)?;
+    let constraints = constraints::parse(f)?;
 
     let ident = f.ident.clone().unwrap();
     let account_field = match is_field_primitive(f)? {
@@ -48,22 +45,6 @@ pub fn parse_account_field(f: &syn::Field) -> ParseResult<AccountField> {
         }),
     };
     Ok(account_field)
-}
-
-pub fn parse_constraints(f: &syn::Field) -> ParseResult<ConstraintGroup> {
-    let mut constraints = ConstraintGroupBuilder::default();
-    for attr in f.attrs.iter().filter(is_account) {
-        for c in attr.parse_args_with(Punctuated::<Constraint, Comma>::parse_terminated)? {
-            constraints.add(c)?;
-        }
-    }
-    constraints.build()
-}
-
-pub fn is_account(attr: &&syn::Attribute) -> bool {
-    attr.path
-        .get_ident()
-        .map_or(false, |ident| ident == "account")
 }
 
 fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {

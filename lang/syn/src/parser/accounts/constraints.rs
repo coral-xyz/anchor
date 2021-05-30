@@ -1,21 +1,39 @@
 use crate::{
-    Constraint, ConstraintAssociated, ConstraintAssociatedGroup, ConstraintAssociatedPayer,
+    ConstraintAssociated, ConstraintAssociatedGroup, ConstraintAssociatedPayer,
     ConstraintAssociatedSpace, ConstraintAssociatedWith, ConstraintBelongsTo, ConstraintExecutable,
     ConstraintGroup, ConstraintInit, ConstraintLiteral, ConstraintMut, ConstraintOwner,
     ConstraintRaw, ConstraintRentExempt, ConstraintSeeds, ConstraintSigner, ConstraintState,
-    Context,
+    ConstraintToken, Context,
 };
 use syn::ext::IdentExt;
 use syn::parse::{Error as ParseError, Parse, ParseStream, Result as ParseResult};
+use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
+use syn::token::Comma;
 use syn::{bracketed, Expr, Ident, LitStr, Token};
 
+pub fn parse(f: &syn::Field) -> ParseResult<ConstraintGroup> {
+    let mut constraints = ConstraintGroupBuilder::default();
+    for attr in f.attrs.iter().filter(is_account) {
+        for c in attr.parse_args_with(Punctuated::<ConstraintToken, Comma>::parse_terminated)? {
+            constraints.add(c)?;
+        }
+    }
+    constraints.build()
+}
+
+pub fn is_account(attr: &&syn::Attribute) -> bool {
+    attr.path
+        .get_ident()
+        .map_or(false, |ident| ident == "account")
+}
+
 // Parses a single constraint from a parse stream for `#[account(<STREAM>)]`.
-pub fn parse(stream: ParseStream) -> ParseResult<Constraint> {
+pub fn parse_item(stream: ParseStream) -> ParseResult<ConstraintToken> {
     let is_lit = stream.peek(LitStr);
     if is_lit {
         let lit: LitStr = stream.parse()?;
-        let c = Constraint::Literal(Context::new(lit.span(), ConstraintLiteral { lit }));
+        let c = ConstraintToken::Literal(Context::new(lit.span(), ConstraintLiteral { lit }));
         return Ok(c);
     }
 
@@ -23,27 +41,29 @@ pub fn parse(stream: ParseStream) -> ParseResult<Constraint> {
     let kw = ident.to_string();
 
     let c = match kw.as_str() {
-        "init" => Constraint::Init(Context::new(ident.span(), ConstraintInit {})),
-        "mut" => Constraint::Mut(Context::new(ident.span(), ConstraintMut {})),
-        "signer" => Constraint::Signer(Context::new(ident.span(), ConstraintSigner {})),
-        "executable" => Constraint::Executable(Context::new(ident.span(), ConstraintExecutable {})),
+        "init" => ConstraintToken::Init(Context::new(ident.span(), ConstraintInit {})),
+        "mut" => ConstraintToken::Mut(Context::new(ident.span(), ConstraintMut {})),
+        "signer" => ConstraintToken::Signer(Context::new(ident.span(), ConstraintSigner {})),
+        "executable" => {
+            ConstraintToken::Executable(Context::new(ident.span(), ConstraintExecutable {}))
+        }
         _ => {
             stream.parse::<Token![=]>()?;
             let span = ident.span().join(stream.span()).unwrap_or(ident.span());
             match kw.as_str() {
-                "belongs_to" | "has_one" => Constraint::BelongsTo(Context::new(
+                "belongs_to" | "has_one" => ConstraintToken::BelongsTo(Context::new(
                     span,
                     ConstraintBelongsTo {
                         join_target: stream.parse()?,
                     },
                 )),
-                "owner" => Constraint::Owner(Context::new(
+                "owner" => ConstraintToken::Owner(Context::new(
                     span,
                     ConstraintOwner {
                         owner_target: stream.parse()?,
                     },
                 )),
-                "rent_exempt" => Constraint::RentExempt(Context::new(
+                "rent_exempt" => ConstraintToken::RentExempt(Context::new(
                     span,
                     match stream.parse::<Ident>()?.to_string().as_str() {
                         "skip" => ConstraintRentExempt::Skip,
@@ -56,31 +76,31 @@ pub fn parse(stream: ParseStream) -> ParseResult<Constraint> {
                         }
                     },
                 )),
-                "state" => Constraint::State(Context::new(
+                "state" => ConstraintToken::State(Context::new(
                     span,
                     ConstraintState {
                         program_target: stream.parse()?,
                     },
                 )),
-                "associated" => Constraint::Associated(Context::new(
+                "associated" => ConstraintToken::Associated(Context::new(
                     span,
                     ConstraintAssociated {
                         target: stream.parse()?,
                     },
                 )),
-                "payer" => Constraint::AssociatedPayer(Context::new(
+                "payer" => ConstraintToken::AssociatedPayer(Context::new(
                     span,
                     ConstraintAssociatedPayer {
                         target: stream.parse()?,
                     },
                 )),
-                "with" => Constraint::AssociatedWith(Context::new(
+                "with" => ConstraintToken::AssociatedWith(Context::new(
                     span,
                     ConstraintAssociatedWith {
                         target: stream.parse()?,
                     },
                 )),
-                "space" => Constraint::AssociatedSpace(Context::new(
+                "space" => ConstraintToken::AssociatedSpace(Context::new(
                     span,
                     ConstraintAssociatedSpace {
                         space: stream.parse()?,
@@ -89,14 +109,14 @@ pub fn parse(stream: ParseStream) -> ParseResult<Constraint> {
                 "seeds" => {
                     let seeds;
                     let bracket = bracketed!(seeds in stream);
-                    Constraint::Seeds(Context::new(
+                    ConstraintToken::Seeds(Context::new(
                         span.join(bracket.span).unwrap_or(span),
                         ConstraintSeeds {
                             seeds: seeds.parse_terminated(Expr::parse)?,
                         },
                     ))
                 }
-                "constraint" => Constraint::Raw(Context::new(
+                "constraint" => ConstraintToken::Raw(Context::new(
                     span,
                     ConstraintRaw {
                         raw: stream.parse()?,
@@ -168,19 +188,32 @@ impl ConstraintGroupBuilder {
             associated_with,
         } = self;
 
+        // Converts Option<Context<T>> -> Option<T>.
+        macro_rules! into_inner {
+            ($opt:ident) => {
+                $opt.map(|c| c.into_inner())
+            };
+        }
+        // Converts Vec<Context<T>> - Vec<T>.
+        macro_rules! into_inner_vec {
+            ($opt:ident) => {
+                $opt.into_iter().map(|c| c.into_inner()).collect()
+            };
+        }
+
         let is_init = init.is_some();
         Ok(ConstraintGroup {
-            init,
-            mutable,
-            signer,
-            belongs_to,
-            literal,
-            raw,
-            owner,
-            rent_exempt,
-            seeds,
-            executable,
-            state,
+            init: into_inner!(init),
+            mutable: into_inner!(mutable),
+            signer: into_inner!(signer),
+            belongs_to: into_inner_vec!(belongs_to),
+            literal: into_inner_vec!(literal),
+            raw: into_inner_vec!(raw),
+            owner: into_inner!(owner),
+            rent_exempt: into_inner!(rent_exempt),
+            seeds: into_inner!(seeds),
+            executable: into_inner!(executable),
+            state: into_inner!(state),
             associated: associated.map(|associated| ConstraintAssociatedGroup {
                 is_init,
                 associated_target: associated.target.clone(),
@@ -191,24 +224,24 @@ impl ConstraintGroupBuilder {
         })
     }
 
-    pub fn add(&mut self, c: Constraint) -> ParseResult<()> {
+    pub fn add(&mut self, c: ConstraintToken) -> ParseResult<()> {
         match c {
-            Constraint::Init(c) => self.add_init(c),
-            Constraint::Mut(c) => self.add_mut(c),
-            Constraint::Signer(c) => self.add_signer(c),
-            Constraint::BelongsTo(c) => self.add_belongs_to(c),
-            Constraint::Literal(c) => self.add_literal(c),
-            Constraint::Raw(c) => self.add_raw(c),
-            Constraint::Owner(c) => self.add_owner(c),
-            Constraint::RentExempt(c) => self.add_rent_exempt(c),
-            Constraint::Seeds(c) => self.add_seeds(c),
-            Constraint::Executable(c) => self.add_executable(c),
-            Constraint::State(c) => self.add_state(c),
-            Constraint::Associated(c) => self.add_associated(c),
-            Constraint::AssociatedPayer(c) => self.add_associated_payer(c),
-            Constraint::AssociatedSpace(c) => self.add_associated_space(c),
-            Constraint::AssociatedWith(c) => self.add_associated_with(c),
-            Constraint::AssociatedGroup(_) => panic!("Invariant violation"),
+            ConstraintToken::Init(c) => self.add_init(c),
+            ConstraintToken::Mut(c) => self.add_mut(c),
+            ConstraintToken::Signer(c) => self.add_signer(c),
+            ConstraintToken::BelongsTo(c) => self.add_belongs_to(c),
+            ConstraintToken::Literal(c) => self.add_literal(c),
+            ConstraintToken::Raw(c) => self.add_raw(c),
+            ConstraintToken::Owner(c) => self.add_owner(c),
+            ConstraintToken::RentExempt(c) => self.add_rent_exempt(c),
+            ConstraintToken::Seeds(c) => self.add_seeds(c),
+            ConstraintToken::Executable(c) => self.add_executable(c),
+            ConstraintToken::State(c) => self.add_state(c),
+            ConstraintToken::Associated(c) => self.add_associated(c),
+            ConstraintToken::AssociatedPayer(c) => self.add_associated_payer(c),
+            ConstraintToken::AssociatedSpace(c) => self.add_associated_space(c),
+            ConstraintToken::AssociatedWith(c) => self.add_associated_with(c),
+            ConstraintToken::AssociatedGroup(_) => panic!("Invariant violation"),
         }
     }
 

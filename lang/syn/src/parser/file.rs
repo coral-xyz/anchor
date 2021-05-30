@@ -1,6 +1,6 @@
 use crate::idl::*;
 use crate::parser::{self, accounts, error, program};
-use crate::{AccountsStruct, StateIx};
+use crate::{AccountField, AccountsStruct, StateIx};
 use anyhow::Result;
 use heck::MixedCase;
 use quote::ToTokens;
@@ -52,7 +52,7 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Idl> {
                                     .collect::<Vec<_>>();
                                 let accounts_strct =
                                     accs.get(&method.anchor_ident.to_string()).unwrap();
-                                let accounts = accounts_strct.idl_accounts(&accs);
+                                let accounts = idl_accounts(accounts_strct, &accs);
                                 IdlStateMethod {
                                     name,
                                     args,
@@ -91,7 +91,7 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Idl> {
                         })
                         .collect();
                     let accounts_strct = accs.get(&anchor_ident.to_string()).unwrap();
-                    let accounts = accounts_strct.idl_accounts(&accs);
+                    let accounts = idl_accounts(&accounts_strct, &accs);
                     IdlStateMethod {
                         name,
                         args,
@@ -159,7 +159,7 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Idl> {
                 .collect::<Vec<_>>();
             // todo: don't unwrap
             let accounts_strct = accs.get(&ix.anchor_ident.to_string()).unwrap();
-            let accounts = accounts_strct.idl_accounts(&accs);
+            let accounts = idl_accounts(accounts_strct, &accs);
             IdlIx {
                 name: ix.ident.to_string().to_mixed_case(),
                 accounts,
@@ -438,4 +438,31 @@ fn to_idl_type(f: &syn::Field) -> IdlType {
     let mut tts = proc_macro2::TokenStream::new();
     f.ty.to_tokens(&mut tts);
     tts.to_string().parse().unwrap()
+}
+
+fn idl_accounts(
+    accounts: &AccountsStruct,
+    global_accs: &HashMap<String, AccountsStruct>,
+) -> Vec<IdlAccountItem> {
+    accounts
+        .fields
+        .iter()
+        .map(|acc: &AccountField| match acc {
+            AccountField::CompositeField(comp_f) => {
+                let accs_strct = global_accs
+                    .get(&comp_f.symbol)
+                    .expect("Could not resolve Accounts symbol");
+                let accounts = idl_accounts(accs_strct, global_accs);
+                IdlAccountItem::IdlAccounts(IdlAccounts {
+                    name: comp_f.ident.to_string().to_mixed_case(),
+                    accounts,
+                })
+            }
+            AccountField::Field(acc) => IdlAccountItem::IdlAccount(IdlAccount {
+                name: acc.ident.to_string().to_mixed_case(),
+                is_mut: acc.constraints.is_mutable(),
+                is_signer: acc.constraints.is_signer(),
+            }),
+        })
+        .collect::<Vec<_>>()
 }
