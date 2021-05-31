@@ -35,8 +35,6 @@ incremented for features.
 * lang: Associated constraints no longer automatically implement `mut` ([#341](https://github.com/project-serum/anchor/pull/341)).
 * lang: Associated `space` constraints must now be literal integers instead of literal strings ([#341](https://github.com/project-serum/anchor/pull/341)).
 
-### Fixes
-
 ## [0.6.0] - 2021-05-23
 
 ### Features
