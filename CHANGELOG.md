@@ -11,6 +11,10 @@ incremented for features.
 
 ## [Unreleased]
 
+### Fixes
+
+* lang: Allows one to use `remaining_accounts` with `CpiContext` by implementing the `ToAccountMetas` trait on `CpiContext` ([#351](https://github.com/project-serum/anchor/pull/351/files)).
+
 ## [0.7.0] - 2021-05-31
 
 ### Features
