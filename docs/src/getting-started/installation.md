@@ -20,6 +20,10 @@ See the solana [docs](https://docs.solana.com/cli/install-solana-cli-tools) for 
 ```bash
 sh -c "$(curl -sSfL https://release.solana.com/v1.6.9/install)"
 ```
+## Run a local Solana validator
+```bash
+solana-test-validator
+```
 
 ## Install Mocha
 
