@@ -14,8 +14,8 @@ For an introduction to software development in Solana, see the [programming mode
 After [installing the Anchor dev environment](./installation.md), you can walk through the  [tutorials](../tutorials/tutorial-0.md) or jump straight to an
  [example](https://github.com/project-serum/anchor/blob/master/examples/tutorial/basic-2/programs/basic-2/src/lib.rs). 
  
-
-Here, we'll walk through several tutorials demonstrating how to use Anchor. To skip the tutorials and jump straight to examples, go [here](https://github.com/project-serum/anchor/blob/master/examples). For an introduction to Solana, see the [docs](https://docs.solana.com/developing/programming-model/overview).
+Here, we'll walkthrough several tutorials demonstrating how to use Anchor. To skip the tutorials and jump straight to a full example, checkout the
+[quickstart](./quick-start.md) or go [here](https://github.com/project-serum/anchor/blob/master/examples/tutorial/basic-2/programs/basic-2/src/lib.rs). For an introduction to Solana, see the [docs](https://docs.solana.com/developing/programming-model/overview).
 
 ::: tip NOTE
 Anchor is in active development, so all APIs are subject to change. If you are one of the early developers to try it out and have feedback, please reach out by [filing an issue](https://github.com/project-serum/anchor/issues/new). This documentation is a work in progress and is expected to change dramatically as features continue to be built out. If you have any problems, consult the [source](https://github.com/project-serum/anchor) or feel free to ask questions on the [Serum Discord](https://discord.gg/rg5ZZPmmTm).
