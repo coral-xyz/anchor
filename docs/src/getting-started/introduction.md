@@ -9,11 +9,6 @@ Anchor is a framework for Solana's [Sealevel](https://medium.com/solana-labs/sea
 
 If you're familiar with developing in Ethereum's [Solidity](https://docs.soliditylang.org/en/v0.7.4/), [Truffle](https://www.trufflesuite.com/), [web3.js](https://github.com/ethereum/web3.js) or Parity's [Ink!](https://github.com/paritytech/ink), then the experience will be familiar. Although the DSL syntax and semantics are targeted at Solana, the high level flow of writing RPC request handlers, emitting an IDL, and generating clients from IDL is the same.
 
-For an introduction to software development in Solana, see the [programming model overview](https://docs.solana.com/developing/programming-model/overview).
-
-After [installing the Anchor dev environment](./installation.md), you can walk through the  [tutorials](../tutorials/tutorial-0.md) or jump straight to an
- [example](https://github.com/project-serum/anchor/blob/master/examples/tutorial/basic-2/programs/basic-2/src/lib.rs). 
- 
 Here, we'll walkthrough several tutorials demonstrating how to use Anchor. To skip the tutorials and jump straight to a full example, checkout the
 [quickstart](./quick-start.md) or go [here](https://github.com/project-serum/anchor/blob/master/examples/tutorial/basic-2/programs/basic-2/src/lib.rs). For an introduction to Solana, see the [docs](https://docs.solana.com/developing/programming-model/overview).
 

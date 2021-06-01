@@ -21,12 +21,6 @@ See the solana [docs](https://docs.solana.com/cli/install-solana-cli-tools) for 
 sh -c "$(curl -sSfL https://release.solana.com/v1.6.9/install)"
 ```
 
-## Install project-serum/anchor
-```bash
-npm install @project-serum/anchor
-```
-
-
 ## Install Mocha
 
 Program integration tests are run using [Mocha](https://mochajs.org/).
