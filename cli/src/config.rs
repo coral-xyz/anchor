@@ -17,6 +17,7 @@ pub struct Config {
     pub provider: ProviderConfig,
     pub clusters: ClustersConfig,
     pub test: Option<Test>,
+    pub programs: BTreeMap<Pubkey, PathBuf>,
 }
 
 #[derive(Debug, Default)]
@@ -61,16 +62,19 @@ impl Config {
             let mut anchor_toml = None;
             for f in files {
                 let p = f?.path();
-                if let Some(filename) = p.file_name() {
-                    if filename.to_str() == Some("Cargo.toml") {
+
+                match p.file_name().and_then(|f| f.to_str()) {
+                    Some("Cargo.toml") => {
                         cargo_toml_level = Some(p);
-                    } else if filename.to_str() == Some("Anchor.toml") {
+                    }
+                    Some("Anchor.toml") => {
                         let mut cfg_file = File::open(&p)?;
                         let mut cfg_contents = String::new();
                         cfg_file.read_to_string(&mut cfg_contents)?;
                         let cfg = cfg_contents.parse()?;
                         anchor_toml = Some((cfg, p));
                     }
+                    Some(_) | None => {}
                 }
             }
 
@@ -101,6 +105,7 @@ struct _Config {
     provider: Provider,
     test: Option<Test>,
     clusters: Option<BTreeMap<String, BTreeMap<String, String>>>,
+    programs: Option<BTreeMap<String, String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -126,6 +131,7 @@ impl ToString for Config {
             },
             test: self.test.clone(),
             clusters,
+            programs: Some(ser_programs(&self.programs)).filter(|programs| !programs.is_empty()),
         };
 
         toml::to_string(&cfg).expect("Must be well formed")
@@ -147,6 +153,11 @@ impl FromStr for Config {
             clusters: cfg
                 .clusters
                 .map_or(Ok(BTreeMap::new()), |c| deser_clusters(c))?,
+            programs: cfg
+                .programs
+                .map(deser_programs)
+                .transpose()?
+                .unwrap_or_default(),
         })
     }
 }
@@ -189,6 +200,28 @@ fn deser_clusters(
             Ok((cluster, programs))
         })
         .collect::<Result<BTreeMap<Cluster, BTreeMap<String, ProgramDeployment>>>>()
+}
+
+fn ser_programs(programs: &BTreeMap<Pubkey, PathBuf>) -> BTreeMap<String, String> {
+    programs
+        .iter()
+        .map(|(pubkey, path)| {
+            let program = pubkey.to_string();
+            let path = path.display().to_string();
+            (program, path)
+        })
+        .collect()
+}
+
+fn deser_programs(programs: BTreeMap<String, String>) -> Result<BTreeMap<Pubkey, PathBuf>> {
+    programs
+        .into_iter()
+        .map(|(program, path)| {
+            let pubkey: Pubkey = program.parse()?;
+            let path: PathBuf = shellexpand::tilde(&path).parse()?;
+            Ok((pubkey, path))
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

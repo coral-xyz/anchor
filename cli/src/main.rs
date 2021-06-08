@@ -1096,6 +1096,11 @@ fn genesis_flags(cfg: &Config) -> Result<Vec<String>> {
             .with_extension("json");
         write_idl(&program.idl, OutFile::File(idl_out))?;
     }
+    for (program, path) in &cfg.programs {
+        flags.push("--bpf-program".to_string());
+        flags.push(program.to_string());
+        flags.push(path.display().to_string());
+    }
     if let Some(test) = cfg.test.as_ref() {
         for entry in &test.genesis {
             flags.push("--bpf-program".to_string());
@@ -1156,6 +1161,8 @@ fn start_test_validator(cfg: &Config, flags: Option<Vec<String>>) -> Result<Chil
     if Path::new(test_ledger_log_filename).exists() {
         std::fs::remove_file(test_ledger_log_filename)?;
     }
+
+    println!("flags: {:?}", flags);
 
     // Start a validator for testing.
     let test_validator_stdout = File::create(test_ledger_log_filename)?;
