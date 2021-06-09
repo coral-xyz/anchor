@@ -233,7 +233,7 @@ pub fn generate_constraint_seeds(f: &Field, c: &ConstraintSeeds) -> proc_macro2:
         let program_signer = Pubkey::create_program_address(
             &[#seeds],
             program_id,
-        ).map_err(|_| anchor_lang::__private::ErrorCode::ConstraintSeeds.into())?;
+        ).map_err(|_| anchor_lang::__private::ErrorCode::ConstraintSeeds)?;
         if #name.to_account_info().key != &program_signer {
             return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
         }
