@@ -21,7 +21,7 @@ incremented for features.
 
 ### Breaking
 
-* lang, ts: Framework defined error codes are introduced, reserving error codes 0-300 for Anchor, and 200-300 for user defined error codes ([#354](https://github.com/project-serum/anchor/pull/354)).
+* lang, ts: Framework defined error codes are introduced, reserving error codes 0-300 for Anchor, and 300 and up for user defined error codes ([#354](https://github.com/project-serum/anchor/pull/354)).
 
 ## [0.7.0] - 2021-05-31
 
