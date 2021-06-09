@@ -1,13 +1,14 @@
 use crate::error::ErrorCode;
 use crate::{
-    AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AccountsInit, CpiAccount,
-    ToAccountInfo, ToAccountInfos, ToAccountMetas,
+    AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, AccountsInit,
+    CpiAccount, ToAccountInfo, ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
+use std::io::Write;
 use std::ops::{Deref, DerefMut};
 
 /// Boxed container for a deserialized `account`. Use this to reference any
@@ -116,6 +117,29 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info
         let dst: &mut [u8] = &mut data;
         let mut cursor = std::io::Cursor::new(dst);
         self.inner.account.try_serialize(&mut cursor)?;
+        Ok(())
+    }
+}
+
+impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsClose<'info>
+    for ProgramAccount<'info, T>
+{
+    fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult {
+        let info = self.to_account_info();
+
+        // Transfer tokens from this account to the sol_destination.
+        let dest_starting_lamports = sol_destination.lamports();
+        **sol_destination.lamports.borrow_mut() =
+            dest_starting_lamports.checked_add(info.lamports()).unwrap();
+        **info.lamports.borrow_mut() = 0;
+
+        // Mark the account discriminator as closed.
+        let mut data = info.try_borrow_mut_data()?;
+        let dst: &mut [u8] = &mut data;
+        let mut cursor = std::io::Cursor::new(dst);
+        cursor
+            .write_all(&crate::__private::CLOSED_ACCOUNT_DISCRIMINATOR)
+            .map_err(|_| ErrorCode::AccountDidNotSerialize)?;
         Ok(())
     }
 }
