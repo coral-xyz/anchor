@@ -28,21 +28,21 @@ impl FromStr for Cluster {
             "d" | "devnet" => Ok(Cluster::Devnet),
             "l" | "localnet" => Ok(Cluster::Localnet),
             "g" | "debug" => Ok(Cluster::Debug),
-						url if url.contains("http") => {
-								let http_url = url;
+            url if url.contains("http") => {
+                let http_url = url;
 
-								// Websocket port is always +1 the http port.
-								let mut ws_url = Url::parse(http_url)?;
-								if let Some(port) = ws_url.port() {
-										ws_url.set_port(Some(port + 1))
-												.map_err(|_| anyhow!("Unable to set port"))?;
-								} else {
-										ws_url.set_port(Some(8900))
-												.map_err(|_| anyhow!("Unable to set port"))?;
-								}
+                // Websocket port is always +1 the http port.
+                let mut ws_url = Url::parse(http_url)?;
+                if let Some(port) = ws_url.port() {
+                    ws_url.set_port(Some(port + 1))
+                        .map_err(|_| anyhow!("Unable to set port"))?;
+                } else {
+                    ws_url.set_port(Some(8900))
+                        .map_err(|_| anyhow!("Unable to set port"))?;
+                }
 
-								Ok(Cluster::Custom(http_url.to_string(), ws_url.to_string()))
-						}
+                Ok(Cluster::Custom(http_url.to_string(), ws_url.to_string()))
+            }
             _ => Err(anyhow::Error::msg(
                 "Cluster must be one of [localnet, testnet, mainnet, devnet] or be an http or https url\n",
             )),
