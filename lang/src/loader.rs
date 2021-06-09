@@ -178,22 +178,7 @@ impl<'info, T: ZeroCopy> AccountsExit<'info> for Loader<'info, T> {
 
 impl<'info, T: ZeroCopy> AccountsClose<'info> for Loader<'info, T> {
     fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult {
-        let info = self.to_account_info();
-
-        // Transfer tokens from this account to the sol_destination.
-        let dest_starting_lamports = sol_destination.lamports();
-        **sol_destination.lamports.borrow_mut() =
-            dest_starting_lamports.checked_add(info.lamports()).unwrap();
-        **info.lamports.borrow_mut() = 0;
-
-        // Mark the account discriminator as closed.
-        let mut data = info.try_borrow_mut_data()?;
-        let dst: &mut [u8] = &mut data;
-        let mut cursor = std::io::Cursor::new(dst);
-        cursor
-            .write_all(&crate::__private::CLOSED_ACCOUNT_DISCRIMINATOR)
-            .map_err(|_| ErrorCode::AccountDidNotSerialize)?;
-        Ok(())
+        crate::common::close(self.to_account_info(), sol_destination)
     }
 }
 

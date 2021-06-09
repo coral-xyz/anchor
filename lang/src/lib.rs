@@ -33,6 +33,7 @@ use std::io::Write;
 
 mod account_info;
 mod boxed;
+mod common;
 mod context;
 mod cpi_account;
 mod cpi_state;
