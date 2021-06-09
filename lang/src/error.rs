@@ -26,7 +26,7 @@ pub enum ErrorCode {
     ConstraintBelongsTo,
     #[msg("A signer constraint as violated")]
     ConstraintSigner,
-    #[msg("A raw constraint was violatged")]
+    #[msg("A raw constraint was violated")]
     ConstraintRaw,
     #[msg("An owner constraint was violated")]
     ConstraintOwner,
