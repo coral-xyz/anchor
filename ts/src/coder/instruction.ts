@@ -1,6 +1,7 @@
 import camelCase from "camelcase";
 import { Layout } from "buffer-layout";
 import * as borsh from "@project-serum/borsh";
+import * as bs58 from "bs58";
 import { Idl, IdlField, IdlStateMethod } from "../idl";
 import { IdlCoder } from "./idl";
 import { sighash } from "./common";
@@ -24,8 +25,35 @@ export class InstructionCoder {
    */
   private ixLayout: Map<string, Layout>;
 
+  // Base58 encoded sighash to instruction layout.
+  private sighashLayouts: Map<string, Layout>;
+
   public constructor(idl: Idl) {
     this.ixLayout = InstructionCoder.parseIxLayout(idl);
+
+    const sighashLayouts = new Map<string, Layout>();
+    idl.instructions.forEach((ix) => {
+      const sh = sighash(SIGHASH_GLOBAL_NAMESPACE, ix.name);
+      sighashLayouts.set(bs58.encode(sh), this.ixLayout.get(ix.name));
+    });
+
+    if (idl.state) {
+      idl.state.methods.map((ix) => {
+        const sh = sighash(SIGHASH_STATE_NAMESPACE, ix.name);
+        sighashLayouts.set(bs58.encode(sh), this.ixLayout.get(ix.name));
+      });
+    }
+
+    this.sighashLayouts = sighashLayouts;
+  }
+
+  public decode(ix: Buffer | string): Object | undefined {
+    if (typeof ix === "string") {
+      ix = bs58.decode(ix);
+    }
+    let sighash = bs58.encode(ix.slice(0, 8));
+    let data = ix.slice(8);
+    return this.sighashLayouts.get(sighash)?.decode(data);
   }
 
   /**
