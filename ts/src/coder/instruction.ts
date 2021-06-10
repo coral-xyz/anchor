@@ -300,8 +300,41 @@ class InstructionFormatter {
         .join(", ");
       return "{ " + fields + " }";
     } else {
-      // todo
-      return "{}";
+      if (typeDef.type.variants.length === 0) {
+        return "{}";
+      }
+      // Struct enum.
+      if (typeDef.type.variants[0].name) {
+        const variant = Object.keys(data)[0];
+        const enumType = data[variant];
+        const namedFields = Object.keys(enumType)
+          .map((f) => {
+            const fieldData = enumType[f];
+            const idlField = typeDef.type.variants[variant]?.filter(
+              (v: IdlField) => v.name === f
+            )[0];
+            if (idlField === undefined) {
+              throw new Error("Unable to find variant");
+            }
+            return (
+              f +
+              ": " +
+              InstructionFormatter.formatIdlData(idlField, fieldData, types)
+            );
+          })
+          .join(", ");
+
+        const variantName = camelCase(variant, { pascalCase: true });
+        if (namedFields.length === 0) {
+          return variantName;
+        }
+        return `${variantName} { ${namedFields} }`;
+      }
+      // Tuple enum.
+      else {
+        // TODO.
+        return "Tuple formatting not yet implemented";
+      }
     }
   }
 
