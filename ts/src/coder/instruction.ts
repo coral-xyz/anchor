@@ -2,9 +2,18 @@ import camelCase from "camelcase";
 import { Layout } from "buffer-layout";
 import * as borsh from "@project-serum/borsh";
 import * as bs58 from "bs58";
-import { Idl, IdlField, IdlStateMethod, IdlType, IdlTypeDef } from "../idl";
+import {
+  Idl,
+  IdlField,
+  IdlStateMethod,
+  IdlType,
+  IdlTypeDef,
+  IdlAccount,
+  IdlAccountItem,
+} from "../idl";
 import { IdlCoder } from "./idl";
 import { sighash } from "./common";
+import { AccountMeta, PublicKey } from "@solana/web3.js";
 
 /**
  * Namespace for state method function signatures.
@@ -49,22 +58,6 @@ export class InstructionCoder {
     }
 
     this.sighashLayouts = sighashLayouts;
-  }
-
-  public decode(ix: Buffer | string): Instruction | null {
-    if (typeof ix === "string") {
-      ix = bs58.decode(ix);
-    }
-    let sighash = bs58.encode(ix.slice(0, 8));
-    let data = ix.slice(8);
-    const decoder = this.sighashLayouts.get(sighash);
-    if (!decoder) {
-      return null;
-    }
-    return {
-      data: decoder.layout.decode(data),
-      name: decoder.name,
-    };
   }
 
   /**
@@ -113,27 +106,102 @@ export class InstructionCoder {
     return new Map(ixLayouts);
   }
 
-  public formatFields(
-    ix: Instruction
-  ): { name: string; type: string; data: string }[] {
-    const idlIx = this.idl.instructions.filter((i) => ix.name === i.name)[0];
-    if (idlIx === undefined) {
-      throw new Error("Invalid instruction given");
+  /**
+   * Dewcodes a program instruction.
+   */
+  public decode(ix: Buffer | string): Instruction | null {
+    if (typeof ix === "string") {
+      ix = bs58.decode(ix);
     }
-    return idlIx.args.map((idlField) => {
+    let sighash = bs58.encode(ix.slice(0, 8));
+    let data = ix.slice(8);
+    const decoder = this.sighashLayouts.get(sighash);
+    if (!decoder) {
+      return null;
+    }
+    return {
+      data: decoder.layout.decode(data),
+      name: decoder.name,
+    };
+  }
+
+  /**
+   * Returns a formatted table of all the fields in the given instruction data.
+   */
+  public format(
+    ix: Instruction,
+    accountMetas: AccountMeta[]
+  ): InstructionDisplay | null {
+    return InstructionFormatter.format(ix, accountMetas, this.idl);
+  }
+}
+
+export type Instruction = {
+  name: string;
+  data: Object;
+};
+
+export type InstructionDisplay = {
+  args: { name: string; type: string; data: string }[];
+  accounts: {
+    name?: string;
+    pubkey: PublicKey;
+    isSigner: boolean;
+    isWritable: boolean;
+  }[];
+};
+
+class InstructionFormatter {
+  public static format(
+    ix: Instruction,
+    accountMetas: AccountMeta[],
+    idl: Idl
+  ): InstructionDisplay | null {
+    const idlIx = idl.instructions.filter((i) => ix.name === i.name)[0];
+    if (idlIx === undefined) {
+      console.error("Invalid instruction given");
+      return null;
+    }
+
+    const args = idlIx.args.map((idlField) => {
       return {
         name: idlField.name,
-        type: this.formatIdlType(idlField.type),
-        data: this.formatIdlData(
+        type: InstructionFormatter.formatIdlType(idlField.type),
+        data: InstructionFormatter.formatIdlData(
           idlField,
           ix.data[idlField.name],
-          this.idl.types
+          idl.types
         ),
       };
     });
+
+    const flatIdlAccounts = InstructionFormatter.flattenIdlAccounts(
+      idlIx.accounts
+    );
+
+    const accounts = accountMetas.map((meta, idx) => {
+      if (idx < flatIdlAccounts.length) {
+        return {
+          name: flatIdlAccounts[idx].name,
+          ...meta,
+        };
+      }
+      // "Remaining accounts" are unnamed in Anchor.
+      else {
+        return {
+          name: undefined,
+          ...meta,
+        };
+      }
+    });
+
+    return {
+      args,
+      accounts,
+    };
   }
 
-  private formatIdlType(idlType: IdlType): string {
+  private static formatIdlType(idlType: IdlType): string {
     if (typeof idlType === "string") {
       return idlType as string;
     }
@@ -155,7 +223,7 @@ export class InstructionCoder {
     }
   }
 
-  private formatIdlData(
+  private static formatIdlData(
     idlField: IdlField,
     data: Object,
     types?: IdlTypeDef[]
@@ -169,7 +237,8 @@ export class InstructionCoder {
       return (
         "[" +
         data
-          .map((d) =>
+          // @ts-ignore
+          .map((d: IdlField) =>
             this.formatIdlData(
               // @ts-ignore
               { name: "", type: idlField.type.vec },
@@ -202,18 +271,21 @@ export class InstructionCoder {
         // @ts-ignore
         throw new Error(`Type not found: ${idlField.type.defined}`);
       }
-      return this.formatIdlDataDefined(filtered[0], data, types);
+      return InstructionFormatter.formatIdlDataDefined(
+        filtered[0],
+        data,
+        types
+      );
     }
 
     return "unknown";
   }
 
-  private formatIdlDataDefined(
+  private static formatIdlDataDefined(
     typeDef: IdlTypeDef,
     data: Object,
     types: IdlTypeDef[]
   ): string {
-    console.log(data);
     if (typeDef.type.kind === "struct") {
       const fields = Object.keys(data)
         .map((k) => {
@@ -221,7 +293,9 @@ export class InstructionCoder {
           if (f === undefined) {
             throw new Error("Unable to find type");
           }
-          return k + ": " + this.formatIdlData(f, data[k], types);
+          return (
+            k + ": " + InstructionFormatter.formatIdlData(f, data[k], types)
+          );
         })
         .join(", ");
       return "{ " + fields + " }";
@@ -230,9 +304,19 @@ export class InstructionCoder {
       return "{}";
     }
   }
-}
 
-export type Instruction = {
-  name: string;
-  data: Object;
-};
+  private static flattenIdlAccounts(accounts: IdlAccountItem[]): IdlAccount[] {
+    // @ts-ignore
+    return accounts
+      .map((account) => {
+        // @ts-ignore
+        if (account.accounts) {
+          // @ts-ignore
+          return InstructionFormatter.flattenIdlAccounts(account.accounts);
+        } else {
+          return account;
+        }
+      })
+      .flat();
+  }
+}
