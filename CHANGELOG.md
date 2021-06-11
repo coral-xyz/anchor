@@ -17,6 +17,7 @@ incremented for features.
 * cli, client: Parse custom cluster urls from str ([#369](https://github.com/project-serum/anchor/pull/369)).
 * cli, client, lang: Update solana toolchain to v1.7.1 ([#368](https://github.com/project-serum/anchor/pull/369)).
 * ts: Instruction decoding and formatting ([#372](https://github.com/project-serum/anchor/pull/372)).
+* lang: Add `#[account(close = <destination>)]` constraint for closing accounts and sending the rent exemption lamports to a specified destination account ([#371](https://github.com/project-serum/anchor/pull/371)).
 
 ### Fixes
 
