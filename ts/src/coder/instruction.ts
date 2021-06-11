@@ -209,12 +209,12 @@ class InstructionFormatter {
     // @ts-ignore
     if (idlType.vec) {
       // @ts-ignore
-      return `vec<${this.formatIdlType(idlType.vec)}>`;
+      return `Vec<${this.formatIdlType(idlType.vec)}>`;
     }
     // @ts-ignore
     if (idlType.option) {
       // @ts-ignore
-      return `option<${this.formatIdlType(idlType.option)}>`;
+      return `Option<${this.formatIdlType(idlType.option)}>`;
     }
     // @ts-ignore
     if (idlType.defined) {
