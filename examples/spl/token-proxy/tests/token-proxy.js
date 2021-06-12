@@ -1,4 +1,5 @@
 const anchor = require("@project-serum/anchor");
+const Token = require("@solana/spl-token");
 const assert = require("assert");
 
 describe("token", () => {
@@ -84,8 +85,23 @@ describe("token", () => {
   });
 
   it("Create an associated token account", async () => {
-    await program.rpc.proxyCreateAssociatedTokenAccount({
-      accounts: {},
+    const associatedTokenAccount = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TokenInstructions.TOKEN_PROGRAM_ID,
+      mint,
+      provider.wallet.publicKey
+    );
+    await await program.rpc.proxyCreateAssociatedTokenAccount({
+      accounts: {
+        feePayer: provider.wallet.publicKey,
+        associatedTokenAccount,
+        baseAccount: provider.wallet.publicKey,
+        mint,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        associatedTokenAccountProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+      },
     });
   });
 });
@@ -95,6 +111,7 @@ describe("token", () => {
 
 const serumCmn = require("@project-serum/common");
 const TokenInstructions = require("@project-serum/serum").TokenInstructions;
+const { ASSOCIATED_TOKEN_PROGRAM_ID } = require("@solana/spl-token");
 
 // TODO: remove this constant once @project-serum/serum uses the same version
 //       of @solana/web3.js as anchor (or switch packages).

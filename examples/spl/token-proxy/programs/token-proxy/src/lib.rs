@@ -92,7 +92,7 @@ pub struct ProxyCreateAssociatedTokenAccount<'info> {
     #[account(mut, signer)]
     pub fee_payer: AccountInfo<'info>,
     #[account(mut)]
-    pub assocated_token_account: AccountInfo<'info>,
+    pub associated_token_account: AccountInfo<'info>,
     pub base_account: AccountInfo<'info>,
     pub mint: AccountInfo<'info>,
     pub system_program: AccountInfo<'info>,
