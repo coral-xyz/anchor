@@ -1,6 +1,7 @@
 //! This example demonstrates the use of the `anchor_spl::token` CPI client.
 
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token_account::{self, CreateAssociatedTokenAccount};
 use anchor_spl::token::{self, Burn, MintTo, SetAuthority, Transfer};
 
 #[program]
@@ -25,6 +26,10 @@ mod token_proxy {
         new_authority: Option<Pubkey>,
     ) -> ProgramResult {
         token::set_authority(ctx.accounts.into(), authority_type.into(), new_authority)
+    }
+
+    pub fn proxy_create_associated_token_account(ctx: Context<ProxyCreateAssociatedTokenAccount>) -> ProgramResult {
+        associated_token_account::create_associated_token_account(ctx.accounts.into())
     }
 }
 
@@ -80,6 +85,20 @@ pub struct ProxySetAuthority<'info> {
     #[account(mut)]
     pub account_or_mint: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ProxyCreateAssociatedTokenAccount<'info> {
+    #[account(mut, signer)]
+    pub fee_payer: AccountInfo<'info>,
+    #[account(mut)]
+    pub assocated_token_account: AccountInfo<'info>,
+    pub base_account: AccountInfo<'info>,
+    pub mint: AccountInfo<'info>,
+    pub system_program: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub associated_token_account_program: AccountInfo<'info>,
 }
 
 impl<'a, 'b, 'c, 'info> From<&mut ProxyTransfer<'info>>
@@ -145,5 +164,25 @@ impl From<AuthorityType> for spl_token::instruction::AuthorityType {
             AuthorityType::AccountOwner => spl_token::instruction::AuthorityType::AccountOwner,
             AuthorityType::CloseAccount => spl_token::instruction::AuthorityType::CloseAccount,
         }
+    }
+}
+
+impl<'a, 'b, 'c, 'info> From<&mut ProxyCreateAssociatedTokenAccount<'info>>
+    for CpiContext<'a, 'b, 'c, 'info, CreateAssociatedTokenAccount<'info>>
+{
+    fn from(
+        accounts: &mut ProxyCreateAssociatedTokenAccount<'info>,
+    ) -> CpiContext<'a, 'b, 'c, 'info, CreateAssociatedTokenAccount<'info>> {
+        let cpi_accounts = CreateAssociatedTokenAccount {
+            fee_payer: accounts.fee_payer.clone(),
+            assocated_token_account: accounts.assocated_token_account.clone(),
+            base_account: accounts.base_account.clone(),
+            mint: accounts.mint.clone(),
+            system_program: accounts.system_program.clone(),
+            token_program: accounts.token_program.clone(),
+            rent: accounts.rent.clone(),
+        };
+        let cpi_program = accounts.associated_token_account_program.clone();
+        CpiContext::new(cpi_program, cpi_accounts)
     }
 }

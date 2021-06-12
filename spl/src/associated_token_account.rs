@@ -1,14 +1,19 @@
-use anchor_lang::{Accounts, CpiContext};
+use anchor_lang::solana_program::account_info::AccountInfo;
+use anchor_lang::solana_program::entrypoint::ProgramResult;
+use anchor_lang::solana_program::rent::Rent;
+use anchor_lang::{Accounts, CpiContext, Sysvar, ToAccountInfo};
+
+pub use spl_associated_token_account::ID;
 
 pub fn create_associated_token_account<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, CreateAssociatedTokenAccount<'info>>,
 ) -> ProgramResult {
     let ix = spl_associated_token_account::create_associated_token_account(
-        funding_address: &Pubkey,
-        wallet_address: &Pubkey,
-        spl_token_mint_address: &Pubkey
-    )
-   
+        ctx.accounts.fee_payer.to_account_info().key,
+        ctx.accounts.base_account.to_account_info().key,
+        ctx.accounts.mint.to_account_info().key,
+    );
+
     solana_program::program::invoke_signed(
         &ix,
         &[
@@ -18,7 +23,7 @@ pub fn create_associated_token_account<'a, 'b, 'c, 'info>(
             ctx.accounts.mint.clone(),
             ctx.accounts.system_program.clone(),
             ctx.accounts.token_program.clone(),
-            ctx.accounts.rent.clone(),
+            ctx.accounts.rent.to_account_info(),
         ],
         ctx.signer_seeds,
     )

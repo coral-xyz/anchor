@@ -82,6 +82,12 @@ describe("token", () => {
     const mintInfo = await getMintInfo(provider, mint);
     assert.ok(mintInfo.mintAuthority.equals(newMintAuthority.publicKey));
   });
+
+  it("Create an associated token account", async () => {
+    await program.rpc.proxyCreateAssociatedTokenAccount({
+      accounts: {},
+    });
+  });
 });
 
 // SPL token client boilerplate for test initialization. Everything below here is
