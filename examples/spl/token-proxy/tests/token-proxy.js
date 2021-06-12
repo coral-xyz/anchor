@@ -91,7 +91,7 @@ describe("token", () => {
       mint,
       provider.wallet.publicKey
     );
-    await await program.rpc.proxyCreateAssociatedTokenAccount({
+    await program.rpc.proxyCreateAssociatedTokenAccount({
       accounts: {
         feePayer: provider.wallet.publicKey,
         associatedTokenAccount,
