@@ -204,6 +204,7 @@ dependencies = [
  "lazy_static",
  "serum_dex",
  "solana-program",
+ "spl-associated-token-account",
  "spl-token 3.1.0",
 ]
 
