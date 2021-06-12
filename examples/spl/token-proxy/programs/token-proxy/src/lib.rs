@@ -175,7 +175,7 @@ impl<'a, 'b, 'c, 'info> From<&mut ProxyCreateAssociatedTokenAccount<'info>>
     ) -> CpiContext<'a, 'b, 'c, 'info, CreateAssociatedTokenAccount<'info>> {
         let cpi_accounts = CreateAssociatedTokenAccount {
             fee_payer: accounts.fee_payer.clone(),
-            assocated_token_account: accounts.assocated_token_account.clone(),
+            assocated_token_account: accounts.associated_token_account.clone(),
             base_account: accounts.base_account.clone(),
             mint: accounts.mint.clone(),
             system_program: accounts.system_program.clone(),
