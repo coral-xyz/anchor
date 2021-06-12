@@ -103,6 +103,17 @@ describe("token", () => {
         associatedTokenAccountProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
       },
     });
+
+    const associatedTokenAccountInfo = await getTokenAccount(
+      provider,
+      associatedTokenAccount
+    );
+
+    assert.ok(associatedTokenAccountInfo.isInitialized);
+    assert.ok(associatedTokenAccountInfo.mint.equals(mint));
+    assert.ok(
+      associatedTokenAccountInfo.owner.equals(provider.wallet.publicKey)
+    );
   });
 });
 
