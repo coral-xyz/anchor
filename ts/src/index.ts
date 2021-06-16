@@ -17,7 +17,7 @@ import workspace from "./workspace";
 import * as utils from "./utils";
 import { Program } from "./program";
 import { Address } from "./program/common";
-import { Event } from "./program/event";
+import { Event, EventParser } from "./program/event";
 import {
   ProgramAccount,
   AccountNamespace,
@@ -67,4 +67,5 @@ export {
   utils,
   Wallet,
   Address,
+  EventParser,
 };

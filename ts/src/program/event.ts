@@ -1,13 +1,22 @@
 import { PublicKey } from "@solana/web3.js";
 import * as assert from "assert";
+import { IdlEvent, IdlEventField } from "src/idl";
 import Coder from "../coder";
+import { DecodeType } from "./namespace/types";
 
 const LOG_START_INDEX = "Program log: ".length;
 
 // Deserialized event.
-export type Event = {
-  name: string;
-  data: Object;
+export type Event<
+  E extends IdlEvent = IdlEvent,
+  Defined = Record<string, never>
+> = {
+  name: E["name"];
+  data: EventData<E["fields"][number], Defined>;
+};
+
+type EventData<T extends IdlEventField, Defined> = {
+  [N in T["name"]]: DecodeType<(T & { name: N })["type"], Defined>;
 };
 
 export class EventParser {

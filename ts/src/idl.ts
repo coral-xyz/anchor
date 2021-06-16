@@ -111,7 +111,7 @@ type IdlEnumFieldsNamed = IdlField[];
 
 type IdlEnumFieldsTuple = IdlType[];
 
-type IdlErrorCode = {
+export type IdlErrorCode = {
   code: number;
   name: string;
   msg?: string;

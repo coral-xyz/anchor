@@ -42,7 +42,7 @@ import { Address, translateAddress } from "./common";
  * below will refer to the two counter examples found
  * [here](https://github.com/project-serum/anchor#examples).
  */
-export class Program {
+export class Program<IDL extends Idl = Idl> {
   /**
    * Async methods to send signed transactions to *non*-state methods on the
    * program, returning a [[TransactionSignature]].
@@ -73,7 +73,7 @@ export class Program {
    * });
    * ```
    */
-  readonly rpc: RpcNamespace;
+  readonly rpc: RpcNamespace<IDL>;
 
   /**
    * The namespace provides handles to an [[AccountClient]] object for each
@@ -126,7 +126,7 @@ export class Program {
    * });
    * ```
    */
-  readonly instruction: InstructionNamespace;
+  readonly instruction: InstructionNamespace<IDL>;
 
   /**
    * The namespace provides functions to build [[Transaction]] objects for each
@@ -157,7 +157,7 @@ export class Program {
    * });
    * ```
    */
-  readonly transaction: TransactionNamespace;
+  readonly transaction: TransactionNamespace<IDL>;
 
   /**
    * The namespace provides functions to simulate transactions for each method
@@ -193,7 +193,7 @@ export class Program {
    * });
    * ```
    */
-  readonly simulate: SimulateNamespace;
+  readonly simulate: SimulateNamespace<IDL>;
 
   /**
    * A client for the program state. Similar to the base [[Program]] client,
@@ -213,10 +213,10 @@ export class Program {
   /**
    * IDL defining the program's interface.
    */
-  public get idl(): Idl {
+  public get idl(): IDL {
     return this._idl;
   }
-  private _idl: Idl;
+  private _idl: IDL;
 
   /**
    * Coder for serializing requests.
@@ -240,7 +240,7 @@ export class Program {
    * @param provider  The network and wallet context to use. If not provided
    *                  then uses [[getProvider]].
    */
-  public constructor(idl: Idl, programId: Address, provider?: Provider) {
+  public constructor(idl: IDL, programId: Address, provider?: Provider) {
     programId = translateAddress(programId);
 
     // Fields.
@@ -275,10 +275,13 @@ export class Program {
    * @param programId The on-chain address of the program.
    * @param provider  The network and wallet context.
    */
-  public static async at(address: Address, provider?: Provider) {
+  public static async at<IDL extends Idl = Idl>(
+    address: Address,
+    provider?: Provider
+  ) {
     const programId = translateAddress(address);
 
-    const idl = await Program.fetchIdl(programId, provider);
+    const idl = await Program.fetchIdl<IDL>(programId, provider);
     return new Program(idl, programId, provider);
   }
 
@@ -291,7 +294,10 @@ export class Program {
    * @param programId The on-chain address of the program.
    * @param provider  The network and wallet context.
    */
-  public static async fetchIdl(address: Address, provider?: Provider) {
+  public static async fetchIdl<IDL extends Idl = Idl>(
+    address: Address,
+    provider?: Provider
+  ): Promise<IDL> {
     provider = provider ?? getProvider();
     const programId = translateAddress(address);
 

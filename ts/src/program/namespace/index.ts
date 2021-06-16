@@ -2,7 +2,7 @@ import camelCase from "camelcase";
 import { PublicKey } from "@solana/web3.js";
 import Coder from "../../coder";
 import Provider from "../../provider";
-import { Idl } from "../../idl";
+import { Idl, IdlInstruction } from "../../idl";
 import StateFactory, { StateClient } from "./state";
 import InstructionFactory, { InstructionNamespace } from "./instruction";
 import TransactionFactory, { TransactionNamespace } from "./transaction";
@@ -23,17 +23,17 @@ export default class NamespaceFactory {
   /**
    * Generates all namespaces for a given program.
    */
-  public static build(
-    idl: Idl,
+  public static build<IDL extends Idl>(
+    idl: IDL,
     coder: Coder,
     programId: PublicKey,
     provider: Provider
   ): [
-    RpcNamespace,
-    InstructionNamespace,
-    TransactionNamespace,
+    RpcNamespace<IDL>,
+    InstructionNamespace<IDL>,
+    TransactionNamespace<IDL>,
     AccountNamespace,
-    SimulateNamespace,
+    SimulateNamespace<IDL>,
     StateClient
   ] {
     const rpc: RpcNamespace = {};
@@ -45,10 +45,10 @@ export default class NamespaceFactory {
 
     const state = StateFactory.build(idl, coder, programId, provider);
 
-    idl.instructions.forEach((idlIx) => {
+    idl.instructions.forEach(<I extends IdlInstruction>(idlIx: I) => {
       const ixItem = InstructionFactory.build(
         idlIx,
-        (ixName: string, ix: any) => coder.instruction.encode(ixName, ix),
+        (ixName, ix) => coder.instruction.encode(ixName, ix),
         programId
       );
       const txItem = TransactionFactory.build(idlIx, ixItem);
@@ -75,6 +75,13 @@ export default class NamespaceFactory {
       ? AccountFactory.build(idl, coder, programId, provider)
       : {};
 
-    return [rpc, instruction, transaction, account, simulate, state];
+    return [
+      rpc as RpcNamespace<IDL>,
+      instruction as InstructionNamespace<IDL>,
+      transaction as TransactionNamespace<IDL>,
+      account,
+      simulate as SimulateNamespace<IDL>,
+      state,
+    ];
   }
 }

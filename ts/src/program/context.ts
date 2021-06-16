@@ -5,16 +5,16 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import { Address } from "./common";
-import { IdlInstruction } from "../idl";
+import { IdlAccountItem, IdlAccounts, IdlInstruction } from "../idl";
 
 /**
  * Context provides all non-argument inputs for generating Anchor transactions.
  */
-export type Context = {
+export type Context<A extends Accounts = Accounts> = {
   /**
    * Accounts used in the instruction context.
    */
-  accounts?: Accounts;
+  accounts?: A;
 
   /**
    * All accounts to pass into an instruction *after* the main `accounts`.
@@ -55,9 +55,13 @@ export type Context = {
  * If multiple accounts are nested in the rust program, then they should be
  * nested here.
  */
-export type Accounts = {
-  [key: string]: Address | Accounts;
+export type Accounts<A extends IdlAccountItem[] = IdlAccountItem[]> = {
+  [K in A[number]["name"]]: Account<A[number]>;
 };
+
+type Account<A extends IdlAccountItem> = A extends IdlAccounts
+  ? Accounts<NonNullable<A["accounts"]>>
+  : Address;
 
 export function splitArgsAndCtx(
   idlIx: IdlInstruction,

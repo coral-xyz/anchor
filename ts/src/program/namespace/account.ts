@@ -19,8 +19,8 @@ import { Subscription, Address, translateAddress } from "../common";
 import { getProvider } from "../../";
 
 export default class AccountFactory {
-  public static build(
-    idl: Idl,
+  public static build<IDL extends Idl>(
+    idl: IDL,
     coder: Coder,
     programId: PublicKey,
     provider: Provider
@@ -29,7 +29,7 @@ export default class AccountFactory {
 
     idl.accounts.forEach((idlAccount) => {
       const name = camelCase(idlAccount.name);
-      accountFns[name] = new AccountClient(
+      accountFns[name] = new AccountClient<IDL>(
         idl,
         idlAccount,
         programId,
@@ -62,11 +62,11 @@ export default class AccountFactory {
  *
  * For the full API, see the [[AccountClient]] reference.
  */
-export interface AccountNamespace {
-  [key: string]: AccountClient;
+export interface AccountNamespace<IDL extends Idl = Idl> {
+  [key: string]: AccountClient<IDL>;
 }
 
-export class AccountClient {
+export class AccountClient<IDL extends Idl = Idl> {
   /**
    * Returns the number of bytes in this account.
    */
@@ -99,11 +99,11 @@ export class AccountClient {
   }
   private _coder: Coder;
 
-  private _idlAccount: IdlTypeDef;
+  private _idlAccount: IDL["accounts"][number];
 
   constructor(
-    idl: Idl,
-    idlAccount: IdlTypeDef,
+    idl: IDL,
+    idlAccount: IDL["accounts"][number],
     programId: PublicKey,
     provider?: Provider,
     coder?: Coder
