@@ -5,9 +5,10 @@ import {
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
   Commitment,
+  AccountMeta,
 } from "@solana/web3.js";
 import Provider from "../../provider";
-import { Idl, IdlStateMethod } from "../../idl";
+import { Idl, IdlAccountItem, IdlInstruction, IdlStateMethod } from "../../idl";
 import Coder, { stateDiscriminator } from "../../coder";
 import { RpcNamespace, InstructionNamespace, TransactionNamespace } from "./";
 import { getProvider } from "../../";
@@ -19,12 +20,12 @@ import RpcNamespaceFactory from "./rpc";
 import TransactionNamespaceFactory from "./transaction";
 
 export default class StateFactory {
-  public static build(
-    idl: Idl,
+  public static build<IDL extends Idl>(
+    idl: IDL,
     coder: Coder,
     programId: PublicKey,
     provider: Provider
-  ): StateClient | undefined {
+  ): StateClient<IDL> | undefined {
     if (idl.state === undefined) {
       return undefined;
     }
@@ -37,21 +38,27 @@ export default class StateFactory {
  * one can use this to send transactions and read accounts for the state
  * abstraction.
  */
-export class StateClient {
+export class StateClient<IDL extends Idl> {
   /**
    * [[RpcNamespace]] for all state methods.
    */
-  readonly rpc: RpcNamespace;
+  readonly rpc: RpcNamespace<IDL, IDL["state"]["methods"][number]>;
 
   /**
    * [[InstructionNamespace]] for all state methods.
    */
-  readonly instruction: InstructionNamespace;
+  readonly instruction: InstructionNamespace<
+    IDL,
+    IDL["state"]["methods"][number]
+  >;
 
   /**
    * [[TransactionNamespace]] for all state methods.
    */
-  readonly transaction: TransactionNamespace;
+  readonly transaction: TransactionNamespace<
+    IDL,
+    IDL["state"]["methods"][number]
+  >;
 
   /**
    * Returns the program ID owning the state.
@@ -78,11 +85,11 @@ export class StateClient {
 
   private _address: PublicKey;
   private _coder: Coder;
-  private _idl: Idl;
+  private _idl: IDL;
   private _sub: Subscription | null;
 
   constructor(
-    idl: Idl,
+    idl: IDL,
     programId: PublicKey,
     provider?: Provider,
     coder?: Coder
@@ -96,46 +103,57 @@ export class StateClient {
 
     // Build namespaces.
     const [instruction, transaction, rpc] = ((): [
-      InstructionNamespace,
-      TransactionNamespace,
-      RpcNamespace
+      InstructionNamespace<IDL, IDL["state"]["methods"][number]>,
+      TransactionNamespace<IDL, IDL["state"]["methods"][number]>,
+      RpcNamespace<IDL, IDL["state"]["methods"][number]>
     ] => {
       let instruction: InstructionNamespace = {};
       let transaction: TransactionNamespace = {};
       let rpc: RpcNamespace = {};
 
-      idl.state.methods.forEach((m: IdlStateMethod) => {
-        // Build instruction method.
-        const ixItem = InstructionNamespaceFactory.build(
-          m,
-          (ixName: string, ix: any) =>
-            coder.instruction.encodeState(ixName, ix),
-          programId
-        );
-        ixItem["accounts"] = (accounts: Accounts) => {
-          const keys = stateInstructionKeys(programId, provider, m, accounts);
-          return keys.concat(
-            InstructionNamespaceFactory.accountsArray(accounts, m.accounts)
+      idl.state.methods.forEach(
+        <I extends IDL["state"]["methods"][number]>(m: I) => {
+          // Build instruction method.
+          const ixItem = InstructionNamespaceFactory.build<IDL, I>(
+            m,
+            (ixName, ix) => coder.instruction.encodeState(ixName, ix),
+            programId
           );
-        };
-        // Build transaction method.
-        const txItem = TransactionNamespaceFactory.build(m, ixItem);
-        // Build RPC method.
-        const rpcItem = RpcNamespaceFactory.build(
-          m,
-          txItem,
-          parseIdlErrors(idl),
-          provider
-        );
+          ixItem["accounts"] = (accounts) => {
+            const keys = stateInstructionKeys(programId, provider, m, accounts);
+            return keys.concat(
+              InstructionNamespaceFactory.accountsArray(accounts, m.accounts)
+            );
+          };
+          // Build transaction method.
+          const txItem = TransactionNamespaceFactory.build(m, ixItem);
+          // Build RPC method.
+          const rpcItem = RpcNamespaceFactory.build(
+            m,
+            txItem,
+            parseIdlErrors(idl),
+            provider
+          );
 
-        // Attach them all to their respective namespaces.
-        const name = camelCase(m.name);
-        instruction[name] = ixItem;
-        transaction[name] = txItem;
-        rpc[name] = rpcItem;
-      });
+          // Attach them all to their respective namespaces.
+          const name = camelCase(m.name);
+          instruction[name] = ixItem;
+          transaction[name] = txItem;
+          rpc[name] = rpcItem;
+        }
+      );
 
-      return [instruction, transaction, rpc];
+      return [
+        instruction as InstructionNamespace<
+          IDL,
+          IDL["state"]["methods"][number]
+        >,
+        transaction as TransactionNamespace<
+          IDL,
+          IDL["state"]["methods"][number]
+        >,
+        rpc as RpcNamespace<IDL, IDL["state"]["methods"][number]>,
+      ];
     })();
     this.instruction = instruction;
     this.transaction = transaction;
@@ -218,12 +236,12 @@ function programStateAddress(programId: PublicKey): PublicKey {
 
 // Returns the common keys that are prepended to all instructions targeting
 // the "state" of a program.
-function stateInstructionKeys(
+function stateInstructionKeys<M extends IdlStateMethod>(
   programId: PublicKey,
   provider: Provider,
-  m: IdlStateMethod,
-  accounts: Accounts
-) {
+  m: M,
+  accounts: Accounts<M["accounts"][number]>
+): AccountMeta[] {
   if (m.name === "new") {
     // Ctor `new` method.
     const [programSigner] = findProgramAddressSync([], programId);

@@ -4,10 +4,14 @@ import { Idl, IdlInstruction } from "../../idl";
 import { splitArgsAndCtx } from "../context";
 import { TransactionFn } from "./transaction";
 import { ProgramError } from "../../error";
-import { InstructionContextFn, MakeInstructionsNamespace } from "./types";
+import {
+  AllInstructions,
+  InstructionContextFn,
+  MakeInstructionsNamespace,
+} from "./types";
 
 export default class RpcFactory {
-  public static build<IDL extends Idl, I extends IDL["instructions"][number]>(
+  public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
     idlIx: I,
     txFn: TransactionFn<IDL, I>,
     idlErrors: Map<number, string>,
@@ -67,11 +71,10 @@ export default class RpcFactory {
  * });
  * ```
  */
-export type RpcNamespace<IDL extends Idl = Idl> = MakeInstructionsNamespace<
-  IDL,
-  IDL["instructions"][number],
-  Promise<TransactionSignature>
->;
+export type RpcNamespace<
+  IDL extends Idl = Idl,
+  I extends AllInstructions<IDL> = AllInstructions<IDL>
+> = MakeInstructionsNamespace<IDL, I, Promise<TransactionSignature>>;
 
 /**
  * RpcFn is a single RPC method generated from an IDL, sending a transaction
@@ -79,5 +82,5 @@ export type RpcNamespace<IDL extends Idl = Idl> = MakeInstructionsNamespace<
  */
 export type RpcFn<
   IDL extends Idl = Idl,
-  I extends IDL["instructions"][number] = IDL["instructions"][number]
+  I extends AllInstructions<IDL> = AllInstructions<IDL>
 > = InstructionContextFn<IDL, I, Promise<TransactionSignature>>;

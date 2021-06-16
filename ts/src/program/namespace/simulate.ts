@@ -10,7 +10,7 @@ import {
   AllInstructions,
   IdlTypes,
   InstructionContextFn,
-  MakeAllInstructionsNamespace,
+  MakeInstructionsNamespace,
 } from "./types";
 import { Event } from "../event";
 
@@ -98,9 +98,11 @@ export default class SimulateFactory {
  * ```
  */
 export type SimulateNamespace<
-  IDL extends Idl = Idl
-> = MakeAllInstructionsNamespace<
+  IDL extends Idl = Idl,
+  I extends AllInstructions<IDL> = AllInstructions<IDL>
+> = MakeInstructionsNamespace<
   IDL,
+  I,
   Promise<SimulateResponse<IDL["events"][number], IdlTypes<IDL>>>
 >;
 

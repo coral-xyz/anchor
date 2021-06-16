@@ -13,16 +13,17 @@ import {
 } from "../common";
 import { Accounts, splitArgsAndCtx } from "../context";
 import {
+  AllInstructions,
   AllInstructionsMap,
   InstructionContextFn,
   InstructionContextFnArgs,
-  MakeAllInstructionsNamespace,
+  MakeInstructionsNamespace,
 } from "./types";
 
 export default class InstructionNamespaceFactory {
-  public static build<IDL extends Idl, I extends IdlInstruction>(
+  public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
     idlIx: I,
-    encodeFn: InstructionEncodeFn,
+    encodeFn: InstructionEncodeFn<I>,
     programId: PublicKey
   ): InstructionFn<IDL, I> {
     if (idlIx.name === "_inner") {
@@ -53,7 +54,7 @@ export default class InstructionNamespaceFactory {
     };
 
     // Utility fn for ordering the accounts for this instruction.
-    ix["accounts"] = (accs: Accounts<I["accounts"]>) => {
+    ix["accounts"] = (accs: Accounts<I["accounts"][number]>) => {
       return InstructionNamespaceFactory.accountsArray(accs, idlIx.accounts);
     };
 
@@ -116,14 +117,16 @@ export default class InstructionNamespaceFactory {
  * ```
  */
 export type InstructionNamespace<
-  IDL extends Idl = Idl
-> = MakeAllInstructionsNamespace<
+  IDL extends Idl = Idl,
+  I extends IdlInstruction = IDL["instructions"][number]
+> = MakeInstructionsNamespace<
   IDL,
+  I,
   TransactionInstruction,
   {
     [M in keyof AllInstructionsMap<IDL>]: {
       accounts: (
-        ctx: Accounts<AllInstructionsMap<IDL>[M]["accounts"]>
+        ctx: Accounts<AllInstructionsMap<IDL>[M]["accounts"][number]>
       ) => unknown;
     };
   }
@@ -136,9 +139,9 @@ export type InstructionNamespace<
  */
 export type InstructionFn<
   IDL extends Idl = Idl,
-  I extends IdlInstruction = IdlInstruction
+  I extends AllInstructions<IDL> = AllInstructions<IDL>
 > = InstructionContextFn<IDL, I, TransactionInstruction> &
-  IxProps<Accounts<I["accounts"]>>;
+  IxProps<Accounts<I["accounts"][number]>>;
 
 type IxProps<A extends Accounts> = {
   /**

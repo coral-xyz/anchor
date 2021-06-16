@@ -10,6 +10,7 @@ import RpcFactory, { RpcNamespace } from "./rpc";
 import AccountFactory, { AccountNamespace } from "./account";
 import SimulateFactory, { SimulateNamespace } from "./simulate";
 import { parseIdlErrors } from "../common";
+import { AllInstructions } from "./types";
 
 // Re-exports.
 export { StateClient } from "./state";
@@ -32,9 +33,9 @@ export default class NamespaceFactory {
     RpcNamespace<IDL>,
     InstructionNamespace<IDL>,
     TransactionNamespace<IDL>,
-    AccountNamespace,
+    AccountNamespace<IDL>,
     SimulateNamespace<IDL>,
-    StateClient
+    StateClient<IDL>
   ] {
     const rpc: RpcNamespace = {};
     const instruction: InstructionNamespace = {};
@@ -45,8 +46,8 @@ export default class NamespaceFactory {
 
     const state = StateFactory.build(idl, coder, programId, provider);
 
-    idl.instructions.forEach(<I extends IdlInstruction>(idlIx: I) => {
-      const ixItem = InstructionFactory.build(
+    idl.instructions.forEach(<I extends AllInstructions<IDL>>(idlIx: I) => {
+      const ixItem = InstructionFactory.build<IDL, I>(
         idlIx,
         (ixName, ix) => coder.instruction.encode(ixName, ix),
         programId

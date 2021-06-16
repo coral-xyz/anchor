@@ -5,7 +5,7 @@ import { InstructionFn } from "./instruction";
 import {
   AllInstructions,
   InstructionContextFn,
-  MakeAllInstructionsNamespace,
+  MakeInstructionsNamespace,
 } from "./types";
 
 export default class TransactionFactory {
@@ -57,8 +57,9 @@ export default class TransactionFactory {
  * ```
  */
 export type TransactionNamespace<
-  IDL extends Idl = Idl
-> = MakeAllInstructionsNamespace<IDL, Transaction>;
+  IDL extends Idl = Idl,
+  I extends AllInstructions<IDL> = AllInstructions<IDL>
+> = MakeInstructionsNamespace<IDL, I, Transaction>;
 
 /**
  * Tx is a function to create a `Transaction` for a given program instruction.

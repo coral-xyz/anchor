@@ -55,12 +55,12 @@ export type Context<A extends Accounts = Accounts> = {
  * If multiple accounts are nested in the rust program, then they should be
  * nested here.
  */
-export type Accounts<A extends IdlAccountItem[] = IdlAccountItem[]> = {
-  [K in A[number]["name"]]: Account<A[number]>;
+export type Accounts<A extends IdlAccountItem = IdlAccountItem> = {
+  [N in A["name"]]: Account<A & { name: N }>;
 };
 
 type Account<A extends IdlAccountItem> = A extends IdlAccounts
-  ? Accounts<NonNullable<A["accounts"]>>
+  ? Accounts<A["accounts"][number]>
   : Address;
 
 export function splitArgsAndCtx(

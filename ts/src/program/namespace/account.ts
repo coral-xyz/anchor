@@ -24,7 +24,7 @@ export default class AccountFactory {
     coder: Coder,
     programId: PublicKey,
     provider: Provider
-  ): AccountNamespace {
+  ): AccountNamespace<IDL> {
     const accountFns: AccountNamespace = {};
 
     idl.accounts.forEach((idlAccount) => {
@@ -38,7 +38,7 @@ export default class AccountFactory {
       );
     });
 
-    return accountFns;
+    return accountFns as AccountNamespace<IDL>;
   }
 }
 

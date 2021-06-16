@@ -24,14 +24,6 @@ export type AllInstructionsMap<IDL extends Idl> = InstructionMap<
   AllInstructions<IDL>
 >;
 
-export type MakeAllInstructionsNamespace<
-  IDL extends Idl,
-  Ret,
-  Mk extends { [M in keyof InstructionMap<AllInstructions<IDL>>]: unknown } = {
-    [M in keyof InstructionMap<AllInstructions<IDL>>]: unknown;
-  }
-> = MakeInstructionsNamespace<IDL, AllInstructions<IDL>, Ret, Mk>;
-
 export type MakeInstructionsNamespace<
   IDL extends Idl,
   I extends IdlInstruction,
@@ -51,11 +43,14 @@ export type MakeInstructionsNamespace<
 export type InstructionContextFnArgs<
   IDL extends Idl,
   I extends IDL["instructions"][number]
-> = [...ArgsTuple<I["args"], IdlTypes<IDL>>, Context<Accounts<I["accounts"]>>];
+> = [
+  ...ArgsTuple<I["args"], IdlTypes<IDL>>,
+  Context<Accounts<I["accounts"][number]>>
+];
 
 export type InstructionContextFn<
   IDL extends Idl,
-  I extends IDL["instructions"][number],
+  I extends AllInstructions<IDL>,
   Ret
 > = (...args: InstructionContextFnArgs<IDL, I>) => Ret;
 
