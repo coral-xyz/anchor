@@ -1,4 +1,8 @@
-import { PublicKey, TransactionInstruction } from "@solana/web3.js";
+import {
+  AccountMeta,
+  PublicKey,
+  TransactionInstruction,
+} from "@solana/web3.js";
 import { IdlAccount, IdlInstruction, IdlAccountItem } from "../../idl";
 import { IdlError } from "../../error";
 import {
@@ -48,17 +52,18 @@ export default class InstructionNamespaceFactory {
     return ix;
   }
 
-  public static accountsArray(ctx: Accounts, accounts: IdlAccountItem[]): any {
+  public static accountsArray(
+    ctx: Accounts,
+    accounts: IdlAccountItem[]
+  ): AccountMeta[] {
     return accounts
       .map((acc: IdlAccountItem) => {
         // Nested accounts.
-        // @ts-ignore
-        const nestedAccounts: IdlAccountItem[] | undefined = acc.accounts;
-        if (nestedAccounts !== undefined) {
+        if ("accounts" in acc) {
           const rpcAccs = ctx[acc.name] as Accounts;
           return InstructionNamespaceFactory.accountsArray(
             rpcAccs,
-            nestedAccounts
+            acc.accounts
           ).flat();
         } else {
           const account: IdlAccount = acc as IdlAccount;
