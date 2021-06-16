@@ -54,7 +54,7 @@ export default class InstructionNamespaceFactory {
 
   public static accountsArray(
     ctx: Accounts,
-    accounts: IdlAccountItem[]
+    accounts: readonly IdlAccountItem[]
   ): AccountMeta[] {
     return accounts
       .map((acc: IdlAccountItem) => {
@@ -118,7 +118,7 @@ export interface InstructionNamespace {
  */
 export type InstructionFn = IxProps & ((...args: any[]) => any);
 type IxProps = {
-  accounts: (ctx: Accounts) => any;
+  accounts: (ctx: Accounts) => readonly AccountMeta[];
 };
 
 export type InstructionEncodeFn = (ixName: string, ix: any) => Buffer;
