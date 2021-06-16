@@ -18,6 +18,7 @@ import { Accounts } from "../context";
 import InstructionNamespaceFactory from "./instruction";
 import RpcNamespaceFactory from "./rpc";
 import TransactionNamespaceFactory from "./transaction";
+import { IdlTypes, TypeDef } from "./types";
 
 export default class StateFactory {
   public static build<IDL extends Idl>(
@@ -38,7 +39,10 @@ export default class StateFactory {
  * one can use this to send transactions and read accounts for the state
  * abstraction.
  */
-export class StateClient<IDL extends Idl> {
+export class StateClient<
+  IDL extends Idl,
+  T = TypeDef<IDL["state"]["struct"], IdlTypes<IDL>>
+> {
   /**
    * [[RpcNamespace]] for all state methods.
    */
@@ -163,7 +167,7 @@ export class StateClient<IDL extends Idl> {
   /**
    * Returns the deserialized state account.
    */
-  async fetch(): Promise<Object> {
+  async fetch(): Promise<T> {
     const addr = this.address();
     const accountInfo = await this.provider.connection.getAccountInfo(addr);
     if (accountInfo === null) {

@@ -17,6 +17,7 @@ import Coder, {
 } from "../../coder";
 import { Subscription, Address, translateAddress } from "../common";
 import { getProvider } from "../../";
+import { IdlTypes, TypeDef } from "./types";
 
 export default class AccountFactory {
   public static build<IDL extends Idl>(
@@ -66,7 +67,11 @@ export interface AccountNamespace<IDL extends Idl = Idl> {
   [key: string]: AccountClient<IDL>;
 }
 
-export class AccountClient<IDL extends Idl = Idl> {
+export class AccountClient<
+  IDL extends Idl = Idl,
+  A extends IDL["accounts"][number] = IDL["accounts"][number],
+  T = TypeDef<A, IdlTypes<IDL>>
+> {
   /**
    * Returns the number of bytes in this account.
    */
@@ -99,11 +104,11 @@ export class AccountClient<IDL extends Idl = Idl> {
   }
   private _coder: Coder;
 
-  private _idlAccount: IDL["accounts"][number];
+  private _idlAccount: A;
 
   constructor(
     idl: IDL,
-    idlAccount: IDL["accounts"][number],
+    idlAccount: A,
     programId: PublicKey,
     provider?: Provider,
     coder?: Coder
@@ -120,7 +125,7 @@ export class AccountClient<IDL extends Idl = Idl> {
    *
    * @param address The address of the account to fetch.
    */
-  async fetch(address: Address): Promise<Object> {
+  async fetch(address: Address): Promise<T> {
     const accountInfo = await this._provider.connection.getAccountInfo(
       translateAddress(address)
     );
@@ -134,13 +139,16 @@ export class AccountClient<IDL extends Idl = Idl> {
       throw new Error("Invalid account discriminator");
     }
 
-    return this._coder.accounts.decode(this._idlAccount.name, accountInfo.data);
+    return this._coder.accounts.decode<T>(
+      this._idlAccount.name,
+      accountInfo.data
+    );
   }
 
   /**
    * Returns all instances of this account type for the program.
    */
-  async all(filter?: Buffer): Promise<ProgramAccount<any>[]> {
+  async all(filter?: Buffer): Promise<ProgramAccount<T>[]> {
     let bytes = await accountDiscriminator(this._idlAccount.name);
     if (filter !== undefined) {
       bytes = Buffer.concat([bytes, filter]);
@@ -245,7 +253,7 @@ export class AccountClient<IDL extends Idl = Idl> {
    * Function returning the associated account. Args are keys to associate.
    * Order matters.
    */
-  async associated(...args: PublicKey[]): Promise<any> {
+  async associated(...args: PublicKey[]): Promise<T> {
     const addr = await this.associatedAddress(...args);
     return await this.fetch(addr);
   }

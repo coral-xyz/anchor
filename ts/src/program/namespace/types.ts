@@ -1,4 +1,4 @@
-import { PublicKey, TransactionInstruction } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { Idl } from "src";
 import { IdlField, IdlInstruction, IdlType, IdlTypeDef } from "../../idl";
@@ -86,7 +86,7 @@ type FieldsOfType<I extends IdlTypeDef> = NonNullable<
   I["type"]["fields"]
 >[number];
 
-type TypeDef<I extends IdlTypeDef, Defined> = {
+export type TypeDef<I extends IdlTypeDef, Defined> = {
   [F in FieldsOfType<I>["name"]]: DecodeType<
     (FieldsOfType<I> & { name: F })["type"],
     Defined
