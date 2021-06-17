@@ -11,6 +11,18 @@ incremented for features.
 
 ## [Unreleased]
 
+## [0.9.0] - 2021-06-15
+
+### Features
+
+* lang: Instruction data is now available to accounts constraints ([#386](https://github.com/project-serum/anchor/pull/386)).
+* lang: Initialize program derived addresses with accounts constraints ([#386](https://github.com/project-serum/anchor/pull/386)).
+
+### Breaking Changes
+
+* lang: Event field names in IDLs are now mixed case. ([#379](https://github.com/project-serum/anchor/pull/379)).
+* lang: Accounts trait now accepts an additional `&[u8]` parameter ([#386](https://github.com/project-serum/anchor/pull/386)).
+
 ## [0.8.0] - 2021-06-10
 
 ### Features
