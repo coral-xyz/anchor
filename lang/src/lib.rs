@@ -43,9 +43,9 @@ mod error;
 pub mod idl;
 mod loader;
 mod program_account;
-mod state;
+pub mod state;
 mod sysvar;
-mod vec;
+pub mod vec;
 
 pub use crate::context::{Context, CpiContext, CpiStateContext};
 pub use crate::cpi_account::CpiAccount;
