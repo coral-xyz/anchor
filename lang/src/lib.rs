@@ -32,6 +32,7 @@ use solana_program::pubkey::Pubkey;
 use std::io::Write;
 
 mod account_info;
+mod account_meta;
 mod boxed;
 mod common;
 mod context;
@@ -45,7 +46,7 @@ mod loader;
 mod program_account;
 pub mod state;
 mod sysvar;
-pub mod vec;
+mod vec;
 
 pub use crate::context::{Context, CpiContext, CpiStateContext};
 pub use crate::cpi_account::CpiAccount;
