@@ -17,3 +17,9 @@ impl<T: ToAccountMetas> ToAccountMetas for Vec<T> {
             .collect()
     }
 }
+
+impl ToAccountMetas for AccountMeta {
+    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
+        self.clone().to_account_metas(is_signer)
+    }
+}
