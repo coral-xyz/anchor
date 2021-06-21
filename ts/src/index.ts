@@ -18,6 +18,7 @@ import * as utils from "./utils";
 import { Program } from "./program";
 import { Address } from "./program/common";
 import { Event } from "./program/event";
+export * from "./error";
 import {
   ProgramAccount,
   AccountNamespace,
