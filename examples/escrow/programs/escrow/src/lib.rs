@@ -88,19 +88,6 @@ pub mod escrow {
             Some(ctx.accounts.escrow_account.initializer_key),
         )?;
 
-        // Close escrow account and transfer lamports back to creator
-        let mut initializer_lamports = ctx.accounts.initializer.try_borrow_mut_lamports()?;
-        **initializer_lamports = initializer_lamports
-            .checked_add(ctx.accounts.escrow_account.to_account_info().lamports())
-            .ok_or(ProgramError::Custom(1))?;
-
-        **ctx
-            .accounts
-            .escrow_account
-            .to_account_info()
-            .lamports
-            .borrow_mut() = 0;
-
         Ok(())
     }
 
@@ -180,22 +167,6 @@ pub mod escrow {
             Some(ctx.accounts.escrow_account.initializer_key),
         )?;
 
-        // Close escrow account and transfer lamports back to creator
-        let mut initializer_lamports = ctx
-            .accounts
-            .initializer_main_account
-            .try_borrow_mut_lamports()?;
-        **initializer_lamports = initializer_lamports
-            .checked_add(ctx.accounts.escrow_account.to_account_info().lamports())
-            .ok_or(ProgramError::Custom(1))?;
-
-        **ctx
-            .accounts
-            .escrow_account
-            .to_account_info()
-            .lamports
-            .borrow_mut() = 0;
-
         Ok(())
     }
 }
@@ -234,7 +205,8 @@ pub struct Exchange<'info> {
         constraint = escrow_account.taker_amount <= taker_deposit_token_account.amount,
         constraint = escrow_account.initializer_deposit_token_account == *pda_deposit_token_account.to_account_info().key,
         constraint = escrow_account.initializer_receive_token_account == *initializer_receive_token_account.to_account_info().key,
-        constraint = escrow_account.initializer_key == *initializer_main_account.key
+        constraint = escrow_account.initializer_key == *initializer_main_account.key,
+        close = initializer_main_account
     )]
     pub escrow_account: ProgramAccount<'info, EscrowAccount>,
     pub pda_account: AccountInfo<'info>,
@@ -249,7 +221,8 @@ pub struct CancelEscrow<'info> {
     pub pda_account: AccountInfo<'info>,
     #[account(mut,
         constraint = escrow_account.initializer_key == *initializer.key,
-        constraint = escrow_account.initializer_deposit_token_account == *pda_deposit_token_account.to_account_info().key
+        constraint = escrow_account.initializer_deposit_token_account == *pda_deposit_token_account.to_account_info().key,
+        close = initializer
     )]
     pub escrow_account: ProgramAccount<'info, EscrowAccount>,
     pub token_program: AccountInfo<'info>,
