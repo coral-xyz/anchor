@@ -120,7 +120,7 @@ pub mod escrow {
 
         token::transfer(
             transfer_to_taker_context,
-            ctx.accounts.pda_deposit_token_account.amount,
+            ctx.accounts.escrow_account.initializer_amount,
         )?;
 
         // Transferring from taker to initializer
