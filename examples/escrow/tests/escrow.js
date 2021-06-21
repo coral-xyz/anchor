@@ -231,8 +231,7 @@ describe("escrow", () => {
     // Check that the new owner is the PDA
     assert.ok(_initializerTokenAccountA.owner.equals(pda));
 
-    // Cancel the escrow, and the owner should be the initializer
-    // Get the PDA that is assigned authority to token account
+    // Cancel the escrow, and the new owner should be the provider public key
     await program.rpc.cancelEscrow({
       accounts: {
         initializer: provider.wallet.publicKey,
@@ -248,7 +247,6 @@ describe("escrow", () => {
       initializerTokenAccountA
     );
 
-    // Check that the new owner is the PDA
     assert.ok(
       _initializerTokenAccountA.owner.equals(provider.wallet.publicKey)
     );
