@@ -1,5 +1,7 @@
+use crate::error::ErrorCode;
 use crate::{
-    Accounts, AccountsExit, AccountsInit, ToAccountInfo, ToAccountInfos, ToAccountMetas, ZeroCopy,
+    Accounts, AccountsClose, AccountsExit, AccountsInit, ToAccountInfo, ToAccountInfos,
+    ToAccountMetas, ZeroCopy,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
@@ -44,7 +46,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         let mut disc_bytes = [0u8; 8];
         disc_bytes.copy_from_slice(&data[..8]);
         if disc_bytes != T::discriminator() {
-            return Err(ProgramError::InvalidAccountData);
+            return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
         Ok(Loader::new(acc_info.clone()))
@@ -60,7 +62,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         disc_bytes.copy_from_slice(&data[..8]);
         let discriminator = u64::from_le_bytes(disc_bytes);
         if discriminator != 0 {
-            return Err(ProgramError::InvalidAccountData);
+            return Err(ErrorCode::AccountDiscriminatorAlreadySet.into());
         }
 
         Ok(Loader::new(acc_info.clone()))
@@ -73,7 +75,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         let mut disc_bytes = [0u8; 8];
         disc_bytes.copy_from_slice(&data[..8]);
         if disc_bytes != T::discriminator() {
-            return Err(ProgramError::InvalidAccountData);
+            return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
         Ok(Ref::map(data, |data| bytemuck::from_bytes(&data[8..])))
@@ -84,7 +86,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
         if !self.acc_info.is_writable {
-            return Err(ProgramError::Custom(87)); // todo: proper error
+            return Err(ErrorCode::AccountNotMutable.into());
         }
 
         let data = self.acc_info.try_borrow_mut_data()?;
@@ -92,7 +94,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         let mut disc_bytes = [0u8; 8];
         disc_bytes.copy_from_slice(&data[..8]);
         if disc_bytes != T::discriminator() {
-            return Err(ProgramError::InvalidAccountData);
+            return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
         Ok(RefMut::map(data, |data| {
@@ -106,7 +108,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
         if !self.acc_info.is_writable {
-            return Err(ProgramError::Custom(87)); // todo: proper error
+            return Err(ErrorCode::AccountNotMutable.into());
         }
 
         let data = self.acc_info.try_borrow_mut_data()?;
@@ -116,7 +118,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         disc_bytes.copy_from_slice(&data[..8]);
         let discriminator = u64::from_le_bytes(disc_bytes);
         if discriminator != 0 {
-            return Err(ProgramError::InvalidAccountData);
+            return Err(ErrorCode::AccountDiscriminatorAlreadySet.into());
         }
 
         Ok(RefMut::map(data, |data| {
@@ -130,15 +132,16 @@ impl<'info, T: ZeroCopy> Accounts<'info> for Loader<'info, T> {
     fn try_accounts(
         program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
+        _ix_data: &[u8],
     ) -> Result<Self, ProgramError> {
         if accounts.is_empty() {
-            return Err(ProgramError::NotEnoughAccountKeys);
+            return Err(ErrorCode::AccountNotEnoughKeys.into());
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
         let l = Loader::try_from(account)?;
         if l.acc_info.owner != program_id {
-            return Err(ProgramError::Custom(1)); // todo: proper error
+            return Err(ErrorCode::AccountNotProgramOwned.into());
         }
         Ok(l)
     }
@@ -151,13 +154,13 @@ impl<'info, T: ZeroCopy> AccountsInit<'info> for Loader<'info, T> {
         accounts: &mut &[AccountInfo<'info>],
     ) -> Result<Self, ProgramError> {
         if accounts.is_empty() {
-            return Err(ProgramError::NotEnoughAccountKeys);
+            return Err(ErrorCode::AccountNotEnoughKeys.into());
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
         let l = Loader::try_from_init(account)?;
         if l.acc_info.owner != program_id {
-            return Err(ProgramError::Custom(1)); // todo: proper error
+            return Err(ErrorCode::AccountNotProgramOwned.into());
         }
         Ok(l)
     }
@@ -171,6 +174,12 @@ impl<'info, T: ZeroCopy> AccountsExit<'info> for Loader<'info, T> {
         let mut cursor = std::io::Cursor::new(dst);
         cursor.write_all(&T::discriminator()).unwrap();
         Ok(())
+    }
+}
+
+impl<'info, T: ZeroCopy> AccountsClose<'info> for Loader<'info, T> {
+    fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult {
+        crate::common::close(self.to_account_info(), sol_destination)
     }
 }
 

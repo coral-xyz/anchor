@@ -1,6 +1,7 @@
+use crate::error::ErrorCode;
 use crate::{
-    AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AccountsInit, CpiAccount,
-    ToAccountInfo, ToAccountInfos, ToAccountMetas,
+    AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, AccountsInit,
+    CpiAccount, ToAccountInfo, ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
@@ -52,7 +53,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
         disc_bytes.copy_from_slice(&data[..8]);
         let discriminator = u64::from_le_bytes(disc_bytes);
         if discriminator != 0 {
-            return Err(ProgramError::InvalidAccountData);
+            return Err(ErrorCode::AccountDiscriminatorAlreadySet.into());
         }
 
         Ok(ProgramAccount::new(
@@ -70,15 +71,16 @@ where
     fn try_accounts(
         program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
+        _ix_data: &[u8],
     ) -> Result<Self, ProgramError> {
         if accounts.is_empty() {
-            return Err(ProgramError::NotEnoughAccountKeys);
+            return Err(ErrorCode::AccountNotEnoughKeys.into());
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
         let pa = ProgramAccount::try_from(account)?;
         if pa.inner.info.owner != program_id {
-            return Err(ProgramError::Custom(1)); // todo: proper error
+            return Err(ErrorCode::AccountNotProgramOwned.into());
         }
         Ok(pa)
     }
@@ -94,13 +96,13 @@ where
         accounts: &mut &[AccountInfo<'info>],
     ) -> Result<Self, ProgramError> {
         if accounts.is_empty() {
-            return Err(ProgramError::NotEnoughAccountKeys);
+            return Err(ErrorCode::AccountNotEnoughKeys.into());
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
         let pa = ProgramAccount::try_from_init(account)?;
         if pa.inner.info.owner != program_id {
-            return Err(ProgramError::Custom(1)); // todo: proper error
+            return Err(ErrorCode::AccountNotProgramOwned.into());
         }
         Ok(pa)
     }
@@ -116,6 +118,14 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info
         let mut cursor = std::io::Cursor::new(dst);
         self.inner.account.try_serialize(&mut cursor)?;
         Ok(())
+    }
+}
+
+impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsClose<'info>
+    for ProgramAccount<'info, T>
+{
+    fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult {
+        crate::common::close(self.to_account_info(), sol_destination)
     }
 }
 

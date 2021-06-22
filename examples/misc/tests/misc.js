@@ -1,4 +1,5 @@
 const anchor = require("@project-serum/anchor");
+const PublicKey = anchor.web3.PublicKey;
 const serumCmn = require("@project-serum/common");
 const assert = require("assert");
 
@@ -15,6 +16,14 @@ describe("misc", () => {
     const accountInfo = await program.provider.connection.getAccountInfo(addr);
     assert.ok(state.v.equals(Buffer.from([])));
     assert.ok(accountInfo.data.length === 99);
+  });
+
+  it("Can use remaining accounts for a state instruction", async () => {
+    await program.state.rpc.remainingAccounts({
+      remainingAccounts: [
+        { pubkey: misc2Program.programId, isWritable: false, isSigner: false },
+      ],
+    });
   });
 
   const data = anchor.web3.Keypair.generate();
@@ -257,7 +266,140 @@ describe("misc", () => {
   });
 
   it("Can use base58 strings to fetch an account", async () => {
-    const dataAccount = await program.account.dataI16.fetch(dataPubkey.toString());
+    const dataAccount = await program.account.dataI16.fetch(
+      dataPubkey.toString()
+    );
     assert.ok(dataAccount.data === -2048);
+  });
+
+  it("Should fail to close an account when sending lamports to itself", async () => {
+    try {
+      await program.rpc.testClose({
+        accounts: {
+          data: data.publicKey,
+          solDest: data.publicKey,
+        },
+      });
+      assert.ok(false);
+    } catch (err) {
+      const errMsg = "A close constraint was violated";
+      assert.equal(err.toString(), errMsg);
+      assert.equal(err.msg, errMsg);
+      assert.equal(err.code, 151);
+    }
+  });
+
+  it("Can close an account", async () => {
+    const openAccount = await program.provider.connection.getAccountInfo(
+      data.publicKey
+    );
+    assert.ok(openAccount !== null);
+
+    let beforeBalance = (
+      await program.provider.connection.getAccountInfo(
+        program.provider.wallet.publicKey
+      )
+    ).lamports;
+
+    await program.rpc.testClose({
+      accounts: {
+        data: data.publicKey,
+        solDest: program.provider.wallet.publicKey,
+      },
+    });
+
+    let afterBalance = (
+      await program.provider.connection.getAccountInfo(
+        program.provider.wallet.publicKey
+      )
+    ).lamports;
+
+    // Retrieved rent exemption sol.
+    assert.ok(afterBalance > beforeBalance);
+
+    const closedAccount = await program.provider.connection.getAccountInfo(
+      data.publicKey
+    );
+    assert.ok(closedAccount === null);
+  });
+
+  it("Can use instruction data in accounts constraints", async () => {
+    // b"my-seed"
+    const seed = Buffer.from([109, 121, 45, 115, 101, 101, 100]);
+    const [myPda, nonce] = await PublicKey.findProgramAddress(
+      [seed, anchor.web3.SYSVAR_RENT_PUBKEY.toBuffer()],
+      program.programId
+    );
+
+    await program.rpc.testInstructionConstraint(nonce, {
+      accounts: {
+        myPda,
+        myAccount: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+    });
+  });
+
+  it("Can create a PDA account with instruction data", async () => {
+    const seed = Buffer.from([1, 2, 3, 4]);
+    const domain = "my-domain";
+    const foo = anchor.web3.SYSVAR_RENT_PUBKEY;
+    const [myPda, nonce] = await PublicKey.findProgramAddress(
+      [
+        Buffer.from(anchor.utils.bytes.utf8.encode("my-seed")),
+        Buffer.from(anchor.utils.bytes.utf8.encode(domain)),
+        foo.toBuffer(),
+        seed,
+      ],
+      program.programId
+    );
+
+    await program.rpc.testPdaInit(domain, seed, nonce, {
+      accounts: {
+        myPda,
+        myPayer: program.provider.wallet.publicKey,
+        foo,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+    });
+
+    const myPdaAccount = await program.account.dataU16.fetch(myPda);
+    assert.ok(myPdaAccount.data === 6);
+  });
+
+  it("Can create a zero copy PDA account", async () => {
+    const [myPda, nonce] = await PublicKey.findProgramAddress(
+      [Buffer.from(anchor.utils.bytes.utf8.encode("my-seed"))],
+      program.programId
+    );
+    await program.rpc.testPdaInitZeroCopy(nonce, {
+      accounts: {
+        myPda,
+        myPayer: program.provider.wallet.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+    });
+
+    const myPdaAccount = await program.account.dataZeroCopy.fetch(myPda);
+    assert.ok(myPdaAccount.data === 9);
+    assert.ok((myPdaAccount.bump = nonce));
+  });
+
+  it("Can write to a zero copy PDA account", async () => {
+    const [myPda, bump] = await PublicKey.findProgramAddress(
+      [Buffer.from(anchor.utils.bytes.utf8.encode("my-seed"))],
+      program.programId
+    );
+    await program.rpc.testPdaMutZeroCopy({
+      accounts: {
+        myPda,
+        myPayer: program.provider.wallet.publicKey,
+      },
+    });
+
+    const myPdaAccount = await program.account.dataZeroCopy.fetch(myPda);
+    assert.ok(myPdaAccount.data === 1234);
+    assert.ok((myPdaAccount.bump = bump));
   });
 });

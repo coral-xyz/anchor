@@ -11,6 +11,8 @@ use std::iter::FromIterator;
 use std::path::Path;
 
 const DERIVE_NAME: &str = "Accounts";
+// TODO: sharee this with `anchor_lang` crate.
+const ERROR_CODE_OFFSET: u32 = 300;
 
 // Parse an entire interface file.
 pub fn parse(filename: impl AsRef<Path>) -> Result<Idl> {
@@ -128,12 +130,12 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Idl> {
             }
         },
     };
-    let error = parse_error_enum(&f).map(|mut e| error::parse(&mut e));
+    let error = parse_error_enum(&f).map(|mut e| error::parse(&mut e, None));
     let error_codes = error.as_ref().map(|e| {
         e.codes
             .iter()
             .map(|code| IdlErrorCode {
-                code: 100 + code.id,
+                code: ERROR_CODE_OFFSET + code.id,
                 name: code.ident.to_string(),
                 msg: code.msg.clone(),
             })
@@ -184,7 +186,7 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Idl> {
                         Some(i) => parser::tts_to_string(&i.path) == "index",
                     };
                     IdlEventField {
-                        name: f.ident.clone().unwrap().to_string(),
+                        name: f.ident.clone().unwrap().to_string().to_mixed_case(),
                         ty: parser::tts_to_string(&f.ty).to_string().parse().unwrap(),
                         index,
                     }

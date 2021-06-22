@@ -1,3 +1,4 @@
+use crate::error::ErrorCode;
 use crate::{
     AccountDeserialize, AccountSerialize, Accounts, AccountsExit, CpiStateContext, ProgramState,
     ToAccountInfo, ToAccountInfos, ToAccountMetas,
@@ -65,9 +66,10 @@ where
     fn try_accounts(
         _program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
+        _ix_data: &[u8],
     ) -> Result<Self, ProgramError> {
         if accounts.is_empty() {
-            return Err(ProgramError::NotEnoughAccountKeys);
+            return Err(ErrorCode::AccountNotEnoughKeys.into());
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];

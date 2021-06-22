@@ -25,13 +25,16 @@ extern crate self as anchor_lang;
 
 use bytemuck::{Pod, Zeroable};
 use solana_program::account_info::AccountInfo;
+use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::io::Write;
 
 mod account_info;
+mod account_meta;
 mod boxed;
+mod common;
 mod context;
 mod cpi_account;
 mod cpi_state;
@@ -41,7 +44,7 @@ mod error;
 pub mod idl;
 mod loader;
 mod program_account;
-mod state;
+pub mod state;
 mod sysvar;
 mod vec;
 
@@ -85,6 +88,7 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
     fn try_accounts(
         program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
+        ix_data: &[u8],
     ) -> Result<Self, ProgramError>;
 }
 
@@ -92,7 +96,13 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
 /// should be done here.
 pub trait AccountsExit<'info>: ToAccountMetas + ToAccountInfos<'info> {
     /// `program_id` is the currently executing program.
-    fn exit(&self, program_id: &Pubkey) -> solana_program::entrypoint::ProgramResult;
+    fn exit(&self, program_id: &Pubkey) -> ProgramResult;
+}
+
+/// The close procedure to initiate garabage collection of an account, allowing
+/// one to retrieve the rent exemption.
+pub trait AccountsClose<'info>: ToAccountInfos<'info> {
+    fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult;
 }
 
 /// A data structure of accounts providing a one time deserialization upon
@@ -239,7 +249,7 @@ pub mod __private {
     use solana_program::pubkey::Pubkey;
 
     pub use crate::ctor::Ctor;
-    pub use crate::error::Error;
+    pub use crate::error::{Error, ErrorCode};
     pub use anchor_attribute_account::ZeroCopyAccessor;
     pub use anchor_attribute_event::EventIndex;
     pub use base64;
@@ -248,6 +258,9 @@ pub mod __private {
     pub mod state {
         pub use crate::state::*;
     }
+
+    // The starting point for user defined error codes.
+    pub const ERROR_CODE_OFFSET: u32 = 300;
 
     // Calculates the size of an account, which may be larger than the deserialized
     // data in it. This trait is currently only used for `#[state]` accounts.
@@ -272,4 +285,5 @@ pub mod __private {
     }
 
     pub use crate::state::PROGRAM_STATE_SEED;
+    pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
 }

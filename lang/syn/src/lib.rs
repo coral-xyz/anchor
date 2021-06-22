@@ -5,9 +5,11 @@ use parser::program as program_parser;
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
 use std::ops::Deref;
-use syn::parse::{Parse, ParseStream, Result as ParseResult};
+use syn::ext::IdentExt;
+use syn::parse::{Error as ParseError, Parse, ParseStream, Result as ParseResult};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
+use syn::token::Comma;
 use syn::{
     Expr, Generics, Ident, ImplItemMethod, ItemEnum, ItemFn, ItemImpl, ItemMod, ItemStruct, LitInt,
     LitStr, PatType, Token,
@@ -98,6 +100,8 @@ pub struct AccountsStruct {
     pub generics: Generics,
     // Fields on the accounts struct.
     pub fields: Vec<AccountField>,
+    // Instruction data api expression.
+    instruction_api: Option<Punctuated<Expr, Comma>>,
 }
 
 impl Parse for AccountsStruct {
@@ -120,13 +124,18 @@ impl ToTokens for AccountsStruct {
 }
 
 impl AccountsStruct {
-    pub fn new(strct: ItemStruct, fields: Vec<AccountField>) -> Self {
+    pub fn new(
+        strct: ItemStruct,
+        fields: Vec<AccountField>,
+        instruction_api: Option<Punctuated<Expr, Comma>>,
+    ) -> Self {
         let ident = strct.ident.clone();
         let generics = strct.generics;
         Self {
             ident,
             generics,
             fields,
+            instruction_api,
         }
     }
 }
@@ -141,6 +150,7 @@ pub enum AccountField {
 pub struct Field {
     pub ident: Ident,
     pub constraints: ConstraintGroup,
+    pub instruction_constraints: ConstraintGroup,
     pub ty: Ty,
 }
 
@@ -148,6 +158,7 @@ pub struct Field {
 pub struct CompositeField {
     pub ident: Ident,
     pub constraints: ConstraintGroup,
+    pub instruction_constraints: ConstraintGroup,
     pub symbol: String,
     pub raw_field: syn::Field,
 }
@@ -212,6 +223,26 @@ pub struct Error {
     pub raw_enum: ItemEnum,
     pub ident: Ident,
     pub codes: Vec<ErrorCode>,
+    pub args: Option<ErrorArgs>,
+}
+
+#[derive(Debug)]
+pub struct ErrorArgs {
+    pub offset: LitInt,
+}
+
+impl Parse for ErrorArgs {
+    fn parse(stream: ParseStream) -> ParseResult<Self> {
+        let offset_span = stream.span();
+        let offset = stream.call(Ident::parse_any)?;
+        if offset.to_string().as_str() != "offset" {
+            return Err(ParseError::new(offset_span, "expected keyword offset"));
+        }
+        stream.parse::<Token![=]>()?;
+        Ok(ErrorArgs {
+            offset: stream.parse()?,
+        })
+    }
 }
 
 #[derive(Debug)]
@@ -229,13 +260,14 @@ pub struct ConstraintGroup {
     signer: Option<ConstraintSigner>,
     owner: Option<ConstraintOwner>,
     rent_exempt: Option<ConstraintRentExempt>,
-    seeds: Option<ConstraintSeeds>,
+    seeds: Option<ConstraintSeedsGroup>,
     executable: Option<ConstraintExecutable>,
     state: Option<ConstraintState>,
     associated: Option<ConstraintAssociatedGroup>,
     belongs_to: Vec<ConstraintBelongsTo>,
     literal: Vec<ConstraintLiteral>,
     raw: Vec<ConstraintRaw>,
+    close: Option<ConstraintClose>,
 }
 
 impl ConstraintGroup {
@@ -249,6 +281,10 @@ impl ConstraintGroup {
 
     pub fn is_signer(&self) -> bool {
         self.signer.is_some()
+    }
+
+    pub fn is_close(&self) -> bool {
+        self.close.is_some()
     }
 }
 
@@ -265,10 +301,11 @@ pub enum Constraint {
     Raw(ConstraintRaw),
     Owner(ConstraintOwner),
     RentExempt(ConstraintRentExempt),
-    Seeds(ConstraintSeeds),
+    Seeds(ConstraintSeedsGroup),
     Executable(ConstraintExecutable),
     State(ConstraintState),
     AssociatedGroup(ConstraintAssociatedGroup),
+    Close(ConstraintClose),
 }
 
 // Constraint token is a single keyword in a `#[account(<TOKEN>)]` attribute.
@@ -285,7 +322,7 @@ pub enum ConstraintToken {
     Seeds(Context<ConstraintSeeds>),
     Executable(Context<ConstraintExecutable>),
     State(Context<ConstraintState>),
-    AssociatedGroup(ConstraintAssociatedGroup),
+    Close(Context<ConstraintClose>),
     Associated(Context<ConstraintAssociated>),
     AssociatedPayer(Context<ConstraintAssociatedPayer>),
     AssociatedSpace(Context<ConstraintAssociatedSpace>),
@@ -334,6 +371,14 @@ pub enum ConstraintRentExempt {
 }
 
 #[derive(Debug, Clone)]
+pub struct ConstraintSeedsGroup {
+    pub is_init: bool,
+    pub seeds: Punctuated<Expr, Token![,]>,
+    pub payer: Option<Ident>,
+    pub space: Option<LitInt>,
+}
+
+#[derive(Debug, Clone)]
 pub struct ConstraintSeeds {
     pub seeds: Punctuated<Expr, Token![,]>,
 }
@@ -355,24 +400,29 @@ pub struct ConstraintAssociatedGroup {
     pub space: Option<LitInt>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConstraintAssociated {
     pub target: Ident,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConstraintAssociatedPayer {
     pub target: Ident,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConstraintAssociatedWith {
     pub target: Ident,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConstraintAssociatedSpace {
     pub space: LitInt,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintClose {
+    pub sol_dest: Ident,
 }
 
 // Syntaxt context object for preserving metadata about the inner item.

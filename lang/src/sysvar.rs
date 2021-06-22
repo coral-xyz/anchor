@@ -1,3 +1,4 @@
+use crate::error::ErrorCode;
 use crate::{Accounts, AccountsExit, ToAccountInfo, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
@@ -36,9 +37,10 @@ impl<'info, T: solana_program::sysvar::Sysvar> Accounts<'info> for Sysvar<'info,
     fn try_accounts(
         _program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
+        _ix_data: &[u8],
     ) -> Result<Self, ProgramError> {
         if accounts.is_empty() {
-            return Err(ProgramError::NotEnoughAccountKeys);
+            return Err(ErrorCode::AccountNotEnoughKeys.into());
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];

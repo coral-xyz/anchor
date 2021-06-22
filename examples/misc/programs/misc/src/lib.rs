@@ -2,7 +2,7 @@
 //! It's not too instructive/coherent by itself, so please see other examples.
 
 use anchor_lang::prelude::*;
-use misc2::misc2::MyState;
+use misc2::misc2::MyState as Misc2State;
 use misc2::Auth;
 
 #[program]
@@ -19,6 +19,13 @@ pub mod misc {
     impl MyState {
         pub fn new(_ctx: Context<Ctor>) -> Result<Self, ProgramError> {
             Ok(Self { v: vec![] })
+        }
+
+        pub fn remaining_accounts(&mut self, ctx: Context<RemainingAccounts>) -> ProgramResult {
+            if ctx.remaining_accounts.len() != 1 {
+                return Err(ProgramError::Custom(1)); // Arbitrary error.
+            }
+            Ok(())
         }
     }
 
@@ -82,10 +89,87 @@ pub mod misc {
         ctx.accounts.data.data = data;
         Ok(())
     }
+
+    pub fn test_close(_ctx: Context<TestClose>) -> ProgramResult {
+        Ok(())
+    }
+
+    pub fn test_instruction_constraint(
+        _ctx: Context<TestInstructionConstraint>,
+        _nonce: u8,
+    ) -> ProgramResult {
+        Ok(())
+    }
+
+    pub fn test_pda_init(
+        ctx: Context<TestPdaInit>,
+        _domain: String,
+        _seed: Vec<u8>,
+        _bump: u8,
+    ) -> ProgramResult {
+        ctx.accounts.my_pda.data = 6;
+        Ok(())
+    }
+
+    pub fn test_pda_init_zero_copy(ctx: Context<TestPdaInitZeroCopy>, bump: u8) -> ProgramResult {
+        let mut acc = ctx.accounts.my_pda.load_init()?;
+        acc.data = 9;
+        acc.bump = bump;
+        Ok(())
+    }
+
+    pub fn test_pda_mut_zero_copy(ctx: Context<TestPdaMutZeroCopy>) -> ProgramResult {
+        let mut acc = ctx.accounts.my_pda.load_mut()?;
+        acc.data = 1234;
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+#[instruction(nonce: u8)]
+pub struct TestInstructionConstraint<'info> {
+    #[account(seeds = [b"my-seed", my_account.key.as_ref(), &[nonce]])]
+    pub my_pda: AccountInfo<'info>,
+    pub my_account: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(domain: String, seed: Vec<u8>, bump: u8)]
+pub struct TestPdaInit<'info> {
+    #[account(
+        init,
+        seeds = [b"my-seed", domain.as_bytes(), foo.key.as_ref(), &seed, &[bump]],
+        payer = my_payer,
+    )]
+    my_pda: ProgramAccount<'info, DataU16>,
+    my_payer: AccountInfo<'info>,
+    foo: AccountInfo<'info>,
+    rent: Sysvar<'info, Rent>,
+    system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(bump: u8)]
+pub struct TestPdaInitZeroCopy<'info> {
+    #[account(init, seeds = [b"my-seed".as_ref(), &[bump]], payer = my_payer)]
+    my_pda: Loader<'info, DataZeroCopy>,
+    my_payer: AccountInfo<'info>,
+    rent: Sysvar<'info, Rent>,
+    system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestPdaMutZeroCopy<'info> {
+    #[account(mut, seeds = [b"my-seed".as_ref(), &[my_pda.load()?.bump]])]
+    my_pda: Loader<'info, DataZeroCopy>,
+    my_payer: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct Ctor {}
+
+#[derive(Accounts)]
+pub struct RemainingAccounts {}
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
@@ -112,9 +196,16 @@ pub struct TestStateCpi<'info> {
     #[account(signer)]
     authority: AccountInfo<'info>,
     #[account(mut, state = misc2_program)]
-    cpi_state: CpiState<'info, MyState>,
+    cpi_state: CpiState<'info, Misc2State>,
     #[account(executable)]
     misc2_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestClose<'info> {
+    #[account(mut, close = sol_dest)]
+    data: ProgramAccount<'info, Data>,
+    sol_dest: AccountInfo<'info>,
 }
 
 // `my_account` is the associated token account being created.
@@ -173,6 +264,7 @@ pub struct TestI8<'info> {
 }
 
 #[associated]
+#[derive(Default)]
 pub struct TestData {
     data: u64,
 }
@@ -184,6 +276,7 @@ pub struct Data {
 }
 
 #[account]
+#[derive(Default)]
 pub struct DataU16 {
     data: u16,
 }
@@ -196,6 +289,13 @@ pub struct DataI8 {
 #[account]
 pub struct DataI16 {
     data: i16,
+}
+
+#[account(zero_copy)]
+#[derive(Default)]
+pub struct DataZeroCopy {
+    data: u16,
+    bump: u8,
 }
 
 #[event]
