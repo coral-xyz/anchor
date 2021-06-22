@@ -47,43 +47,17 @@ pub mod escrow {
         ctx.accounts.escrow_account.taker_amount = taker_amount;
 
         let (pda, _bump_seed) = Pubkey::find_program_address(&[b"escrow"], ctx.program_id);
-        let set_authority_accounts = SetAuthority {
-            account_or_mint: ctx
-                .accounts
-                .initializer_deposit_token_account
-                .to_account_info()
-                .clone(),
-            current_authority: ctx.accounts.initializer.clone(),
-        };
-        let cpi_context =
-            CpiContext::new(ctx.accounts.token_program.clone(), set_authority_accounts);
-
-        token::set_authority(cpi_context, AuthorityType::AccountOwner, Some(pda))?;
+        token::set_authority(ctx.accounts.into(), AuthorityType::AccountOwner, Some(pda))?;
         Ok(())
     }
 
     pub fn cancel_escrow(ctx: Context<CancelEscrow>) -> ProgramResult {
         let (_pda, bump_seed) = Pubkey::find_program_address(&[b"escrow"], ctx.program_id);
-        let set_authority_accounts = SetAuthority {
-            account_or_mint: ctx
-                .accounts
-                .pda_deposit_token_account
-                .to_account_info()
-                .clone(),
-            current_authority: ctx.accounts.pda_account.clone(),
-        };
-
         let seeds = &[&b"escrow"[..], &[bump_seed]];
         let signer = &[&seeds[..]];
 
-        let cpi_context = CpiContext::new_with_signer(
-            ctx.accounts.token_program.clone(),
-            set_authority_accounts,
-            signer,
-        );
-
         token::set_authority(
-            cpi_context,
+            ctx.accounts.into_set_authority_context(signer),
             AuthorityType::AccountOwner,
             Some(ctx.accounts.escrow_account.initializer_key),
         )?;
@@ -94,75 +68,21 @@ pub mod escrow {
     pub fn exchange(ctx: Context<Exchange>) -> ProgramResult {
         // Transferring from initializer to taker
         let (_pda, bump_seed) = Pubkey::find_program_address(&[b"escrow"], ctx.program_id);
-
-        let transfer_to_taker_accounts = Transfer {
-            from: ctx
-                .accounts
-                .pda_deposit_token_account
-                .to_account_info()
-                .clone(),
-            to: ctx
-                .accounts
-                .taker_receive_token_account
-                .to_account_info()
-                .clone(),
-            authority: ctx.accounts.pda_account.clone(),
-        };
-
         let seeds = &[&b"escrow"[..], &[bump_seed]];
         let signer = &[&seeds[..]];
 
-        let transfer_to_taker_context = CpiContext::new_with_signer(
-            ctx.accounts.token_program.clone(),
-            transfer_to_taker_accounts,
-            signer,
-        );
-
         token::transfer(
-            transfer_to_taker_context,
+            ctx.accounts.into_transfer_to_taker_context(signer),
             ctx.accounts.escrow_account.initializer_amount,
         )?;
 
-        // Transferring from taker to initializer
-        let transfer_to_initializer_accounts = Transfer {
-            from: ctx
-                .accounts
-                .taker_deposit_token_account
-                .to_account_info()
-                .clone(),
-            to: ctx
-                .accounts
-                .initializer_receive_token_account
-                .to_account_info()
-                .clone(),
-            authority: ctx.accounts.taker.clone(),
-        };
-
-        let transfer_to_initializer_context = CpiContext::new(
-            ctx.accounts.token_program.clone(),
-            transfer_to_initializer_accounts,
-        );
         token::transfer(
-            transfer_to_initializer_context,
+            ctx.accounts.into_transfer_to_initializer_context(),
             ctx.accounts.escrow_account.taker_amount,
         )?;
 
-        // Set authority back to the initial owner
-        let set_authority_accounts = SetAuthority {
-            account_or_mint: ctx
-                .accounts
-                .pda_deposit_token_account
-                .to_account_info()
-                .clone(),
-            current_authority: ctx.accounts.pda_account.clone(),
-        };
-        let set_authority_context = CpiContext::new_with_signer(
-            ctx.accounts.token_program.clone(),
-            set_authority_accounts,
-            signer,
-        );
         token::set_authority(
-            set_authority_context,
+            ctx.accounts.into_set_authority_context(signer),
             AuthorityType::AccountOwner,
             Some(ctx.accounts.escrow_account.initializer_key),
         )?;
@@ -235,4 +155,79 @@ pub struct EscrowAccount {
     pub initializer_receive_token_account: Pubkey,
     pub initializer_amount: u64,
     pub taker_amount: u64,
+}
+
+impl<'a, 'b, 'c, 'info> From<&mut InitializeEscrow<'info>>
+    for CpiContext<'a, 'b, 'c, 'info, SetAuthority<'info>>
+{
+    fn from(
+        accounts: &mut InitializeEscrow<'info>,
+    ) -> CpiContext<'a, 'b, 'c, 'info, SetAuthority<'info>> {
+        let cpi_accounts = SetAuthority {
+            account_or_mint: accounts
+                .initializer_deposit_token_account
+                .to_account_info()
+                .clone(),
+            current_authority: accounts.initializer.clone(),
+        };
+        let cpi_program = accounts.token_program.clone();
+        CpiContext::new(cpi_program, cpi_accounts)
+    }
+}
+
+impl<'a, 'b, 'c, 'info> CancelEscrow<'info> {
+    fn into_set_authority_context(
+        &self,
+        signer: &'a [&'b [&'c [u8]]],
+    ) -> CpiContext<'a, 'b, 'c, 'info, SetAuthority<'info>> {
+        let cpi_accounts = SetAuthority {
+            account_or_mint: self.pda_deposit_token_account.to_account_info().clone(),
+            current_authority: self.pda_account.clone(),
+        };
+        CpiContext::new_with_signer(self.token_program.clone(), cpi_accounts, signer)
+    }
+}
+
+impl<'a, 'b, 'c, 'info> Exchange<'info> {
+    fn into_set_authority_context(
+        &self,
+        signer: &'a [&'b [&'c [u8]]],
+    ) -> CpiContext<'a, 'b, 'c, 'info, SetAuthority<'info>> {
+        let cpi_accounts = SetAuthority {
+            account_or_mint: self.pda_deposit_token_account.to_account_info().clone(),
+            current_authority: self.pda_account.clone(),
+        };
+        CpiContext::new_with_signer(self.token_program.clone(), cpi_accounts, signer)
+    }
+}
+
+impl<'a, 'b, 'c, 'info> Exchange<'info> {
+    fn into_transfer_to_taker_context(
+        &self,
+        signer: &'a [&'b [&'c [u8]]],
+    ) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
+        let cpi_accounts = Transfer {
+            from: self.pda_deposit_token_account.to_account_info().clone(),
+            to: self.taker_receive_token_account.to_account_info().clone(),
+            authority: self.pda_account.clone(),
+        };
+        CpiContext::new_with_signer(self.token_program.clone(), cpi_accounts, signer)
+    }
+}
+
+impl<'a, 'b, 'c, 'info> Exchange<'info> {
+    fn into_transfer_to_initializer_context(
+        &self,
+    ) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
+        let cpi_accounts = Transfer {
+            from: self.taker_deposit_token_account.to_account_info().clone(),
+            to: self
+                .initializer_receive_token_account
+                .to_account_info()
+                .clone(),
+            authority: self.taker.clone(),
+        };
+
+        CpiContext::new(self.token_program.clone(), cpi_accounts)
+    }
 }
