@@ -100,7 +100,8 @@ pub mod escrow {
 pub struct InitializeEscrow<'info> {
     #[account(signer)]
     pub initializer: AccountInfo<'info>,
-    #[account(mut,
+    #[account(
+        mut,
         constraint = initializer_deposit_token_account.amount >= initializer_amount
     )]
     pub initializer_deposit_token_account: CpiAccount<'info, TokenAccount>,
@@ -125,7 +126,8 @@ pub struct Exchange<'info> {
     pub initializer_receive_token_account: CpiAccount<'info, TokenAccount>,
     #[account(mut)]
     pub initializer_main_account: AccountInfo<'info>,
-    #[account(mut,
+    #[account(
+        mut,
         constraint = escrow_account.taker_amount <= taker_deposit_token_account.amount,
         constraint = escrow_account.initializer_deposit_token_account == *pda_deposit_token_account.to_account_info().key,
         constraint = escrow_account.initializer_receive_token_account == *initializer_receive_token_account.to_account_info().key,
@@ -143,7 +145,8 @@ pub struct CancelEscrow<'info> {
     #[account(mut)]
     pub pda_deposit_token_account: CpiAccount<'info, TokenAccount>,
     pub pda_account: AccountInfo<'info>,
-    #[account(mut,
+    #[account(
+        mut,
         constraint = escrow_account.initializer_key == *initializer.key,
         constraint = escrow_account.initializer_deposit_token_account == *pda_deposit_token_account.to_account_info().key,
         close = initializer
