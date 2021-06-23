@@ -161,12 +161,10 @@ pub struct EscrowAccount {
     pub taker_amount: u64,
 }
 
-impl<'a, 'b, 'c, 'info> From<&mut InitializeEscrow<'info>>
-    for CpiContext<'a, 'b, 'c, 'info, SetAuthority<'info>>
+impl<'info> From<&mut InitializeEscrow<'info>>
+    for CpiContext<'_, '_, '_, 'info, SetAuthority<'info>>
 {
-    fn from(
-        accounts: &mut InitializeEscrow<'info>,
-    ) -> CpiContext<'a, 'b, 'c, 'info, SetAuthority<'info>> {
+    fn from(accounts: &mut InitializeEscrow<'info>) -> Self {
         let cpi_accounts = SetAuthority {
             account_or_mint: accounts
                 .initializer_deposit_token_account
