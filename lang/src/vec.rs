@@ -32,3 +32,41 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Vec<T> {
         )))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::ToAccountInfo;
+    use solana_program::clock::Epoch;
+    use solana_program::pubkey::Pubkey;
+
+    use super::*;
+
+    #[derive(Accounts)]
+    pub struct Test<'info> {
+        #[account(signer)]
+        test: AccountInfo<'info>,
+    }
+
+    #[test]
+    fn test_accounts_trait_for_vec() {
+        let program_id = Pubkey::default();
+
+        let key = Pubkey::default();
+        let mut lamports = 0;
+        let mut data = vec![0; 10];
+        let owner = Pubkey::default();
+        let account = AccountInfo::new(
+            &key,
+            true,
+            true,
+            &mut lamports,
+            &mut data,
+            &owner,
+            false,
+            Epoch::default(),
+        );
+
+        let mut accounts = &[account][..];
+        Vec::<Test>::try_accounts(&program_id, &mut accounts, &[]).unwrap();
+    }
+}
