@@ -1,6 +1,5 @@
 const anchor = require("@project-serum/anchor");
 const PublicKey = anchor.web3.PublicKey;
-const serumCmn = require("@project-serum/common");
 const assert = require("assert");
 
 describe("misc", () => {
