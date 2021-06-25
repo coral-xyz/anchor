@@ -139,16 +139,18 @@ describe("misc", () => {
 
     // Manual associated address calculation for test only. Clients should use
     // the generated methods.
-    const [associatedAccount, nonce] =
-      await anchor.web3.PublicKey.findProgramAddress(
-        [
-          Buffer.from([97, 110, 99, 104, 111, 114]), // b"anchor".
-          program.provider.wallet.publicKey.toBuffer(),
-          state.toBuffer(),
-          data.publicKey.toBuffer(),
-        ],
-        program.programId
-      );
+    const [
+      associatedAccount,
+      nonce,
+    ] = await anchor.web3.PublicKey.findProgramAddress(
+      [
+        Buffer.from([97, 110, 99, 104, 111, 114]), // b"anchor".
+        program.provider.wallet.publicKey.toBuffer(),
+        state.toBuffer(),
+        data.publicKey.toBuffer(),
+      ],
+      program.programId
+    );
     await assert.rejects(
       async () => {
         await program.account.testData.fetch(associatedAccount);
@@ -182,16 +184,18 @@ describe("misc", () => {
 
   it("Can use an associated program account", async () => {
     const state = await program.state.address();
-    const [associatedAccount, nonce] =
-      await anchor.web3.PublicKey.findProgramAddress(
-        [
-          Buffer.from([97, 110, 99, 104, 111, 114]), // b"anchor".
-          program.provider.wallet.publicKey.toBuffer(),
-          state.toBuffer(),
-          data.publicKey.toBuffer(),
-        ],
-        program.programId
-      );
+    const [
+      associatedAccount,
+      nonce,
+    ] = await anchor.web3.PublicKey.findProgramAddress(
+      [
+        Buffer.from([97, 110, 99, 104, 111, 114]), // b"anchor".
+        program.provider.wallet.publicKey.toBuffer(),
+        state.toBuffer(),
+        data.publicKey.toBuffer(),
+      ],
+      program.programId
+    );
     await program.rpc.testAssociatedAccount(new anchor.BN(5), {
       accounts: {
         myAccount: associatedAccount,
@@ -232,14 +236,17 @@ describe("misc", () => {
   it("Can retrieve events when associated account is initialized in simulated transaction", async () => {
     // Manual associated address calculation for test only. Clients should use
     // the generated methods.
-    const [associatedAccount, nonce] =
-      await anchor.web3.PublicKey.findProgramAddress(
-        [
-          Buffer.from([97, 110, 99, 104, 111, 114]), // b"anchor".
-          program.provider.wallet.publicKey.toBuffer(),
-        ],
-        program.programId
-      );
+    const [
+      associatedAccount,
+      nonce,
+    ] = await anchor.web3.PublicKey.findProgramAddress(
+      [
+        Buffer.from([97, 110, 99, 104, 111, 114]), // b"anchor".
+        program.provider.wallet.publicKey.toBuffer(),
+      ],
+      program.programId
+    );
+
     await assert.rejects(
       async () => {
         await program.account.testData.fetch(associatedAccount);
