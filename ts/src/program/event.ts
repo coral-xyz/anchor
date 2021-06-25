@@ -89,11 +89,10 @@ export class EventParser {
     const logStart = log.split(":")[0];
     // Did the program finish executing?
     if (
-      logStart.includes("success") ||
-      logStart.match(/^Program (.*) consumed .*$/g) !== null
+      logStart.match(/^Program (.*) success/g) !== null      
     ) {
       return [null, true];
-      // Recursive call.
+    // Recursive call.
     } else if (
       logStart.startsWith(`Program ${this.programId.toString()} invoke`)
     ) {
