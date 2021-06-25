@@ -1,7 +1,7 @@
 const anchor = require("@project-serum/anchor");
 const serumCmn = require("@project-serum/common");
 const assert = require("assert");
-const { TOKEN_PROGRAM_ID, Token } = require("@solana/spl-token");
+const { TOKEN_PROGRAM_ID } = require("@solana/spl-token");
 
 
 
