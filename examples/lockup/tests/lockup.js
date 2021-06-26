@@ -1,7 +1,7 @@
 const assert = require("assert");
 const anchor = require("@project-serum/anchor");
 const serumCmn = require("@project-serum/common");
-const { TOKEN_PROGRAM_ID, Token } = require("@solana/spl-token");
+const { TOKEN_PROGRAM_ID } = require("@solana/spl-token");
 
 const utils = require("./utils");
 
@@ -117,7 +117,6 @@ describe("Lockup and Registry", () => {
         await lockup.state.rpc.whitelistAdd(e, { accounts });
       },
       (err) => {
-        console.log('errwhite', err);
         assert.equal(err.code, 308);
         assert.equal(err.msg, "Whitelist is full");
         return true;
