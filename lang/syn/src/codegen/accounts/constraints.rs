@@ -461,7 +461,7 @@ pub fn generate_constraint_associated_seeds(
             Ty::ProgramAccount(_) => quote! { #field.__nonce },
             Ty::Loader(_) => {
                 // Zero copy is not deserialized, so the data must be lazy loaded.
-                quote! { #field.load_init()?.__nonce }
+                quote! { #field.load()?.__nonce }
             }
             _ => panic!("Invalid type for initializing a program derived address"),
         };
