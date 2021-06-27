@@ -395,7 +395,7 @@ pub fn generate_pda(
     kind: &PdaKind,
 ) -> proc_macro2::TokenStream {
     let field = &f.ident;
-    let (account_ty, account_wrapper_ty, is_zero_copy) = parse_ty(&f);
+    let (account_ty, account_wrapper_ty, is_zero_copy) = parse_ty(f);
 
     let space = match space {
         // If no explicit space param was given, serialize the type to bytes
