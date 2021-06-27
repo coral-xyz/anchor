@@ -310,7 +310,7 @@ fn init(cfg_override: &ConfigOverride, name: String, typescript: bool) -> Result
         ts_config.write_all(template::ts_config().as_bytes())?;
 
         let mut deploy = File::create("migrations/deploy.ts")?;
-        deploy.write_all(&template::ts_deploy_script().as_bytes())?;
+        deploy.write_all(template::ts_deploy_script().as_bytes())?;
 
         let mut mocha = File::create(&format!("tests/{}.spec.ts", name))?;
         mocha.write_all(template::ts_mocha(&name).as_bytes())?;
@@ -319,7 +319,7 @@ fn init(cfg_override: &ConfigOverride, name: String, typescript: bool) -> Result
         mocha.write_all(template::mocha(&name).as_bytes())?;
 
         let mut deploy = File::create("migrations/deploy.js")?;
-        deploy.write_all(&template::deploy_script().as_bytes())?;
+        deploy.write_all(template::deploy_script().as_bytes())?;
     }
 
     println!("{} initialized", name);
@@ -349,11 +349,11 @@ fn new_program(name: &str) -> Result<()> {
     fs::create_dir(&format!("programs/{}", name))?;
     fs::create_dir(&format!("programs/{}/src/", name))?;
     let mut cargo_toml = File::create(&format!("programs/{}/Cargo.toml", name))?;
-    cargo_toml.write_all(template::cargo_toml(&name).as_bytes())?;
+    cargo_toml.write_all(template::cargo_toml(name).as_bytes())?;
     let mut xargo_toml = File::create(&format!("programs/{}/Xargo.toml", name))?;
     xargo_toml.write_all(template::xargo_toml().as_bytes())?;
     let mut lib_rs = File::create(&format!("programs/{}/src/lib.rs", name))?;
-    lib_rs.write_all(template::lib_rs(&name).as_bytes())?;
+    lib_rs.write_all(template::lib_rs(name).as_bytes())?;
     Ok(())
 }
 
@@ -457,7 +457,7 @@ fn build_cwd_verifiable(workspace_dir: &Path) -> Result<()> {
         .args(&[
             "run",
             "--name",
-            &container_name,
+            container_name,
             "-v",
             &volume_mount,
             &image_name,
@@ -503,7 +503,7 @@ fn build_cwd_verifiable(workspace_dir: &Path) -> Result<()> {
 
     // Remove the docker image.
     let exit = std::process::Command::new("docker")
-        .args(&["rm", &container_name])
+        .args(&["rm", container_name])
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
@@ -539,7 +539,7 @@ fn _build_cwd(idl_out: Option<PathBuf>) -> Result<()> {
 
 fn verify(cfg_override: &ConfigOverride, program_id: Pubkey) -> Result<()> {
     let (cfg, _path, cargo) = Config::discover(cfg_override)?.expect("Not in workspace.");
-    let cargo = cargo.ok_or(anyhow!("Must be inside program subdirectory."))?;
+    let cargo = cargo.ok_or_else(|| anyhow!("Must be inside program subdirectory."))?;
     let program_dir = cargo.parent().unwrap();
 
     // Build the program we want to verify.
@@ -691,7 +691,7 @@ fn idl_init(cfg_override: &ConfigOverride, program_id: Pubkey, idl_filepath: Str
         let bytes = std::fs::read(idl_filepath)?;
         let idl: Idl = serde_json::from_reader(&*bytes)?;
 
-        let idl_address = create_idl_account(&cfg, &keypair, &program_id, &idl)?;
+        let idl_address = create_idl_account(cfg, &keypair, &program_id, &idl)?;
 
         println!("Idl account created: {:?}", idl_address);
         Ok(())
@@ -709,8 +709,8 @@ fn idl_write_buffer(
         let bytes = std::fs::read(idl_filepath)?;
         let idl: Idl = serde_json::from_reader(&*bytes)?;
 
-        let idl_buffer = create_idl_buffer(&cfg, &keypair, &program_id, &idl)?;
-        idl_write(&cfg, &program_id, &idl, idl_buffer)?;
+        let idl_buffer = create_idl_buffer(cfg, &keypair, &program_id, &idl)?;
+        idl_write(cfg, &program_id, &idl, idl_buffer)?;
 
         println!("Idl buffer created: {:?}", idl_buffer);
 
@@ -988,10 +988,8 @@ fn test(
         //
         // In either case, skip the deploy if the user specifies.
         let is_localnet = cfg.provider.cluster == Cluster::Localnet;
-        if !is_localnet || (is_localnet && skip_local_validator) {
-            if !skip_deploy {
-                deploy(cfg_override, None)?;
-            }
+        if (!is_localnet || skip_local_validator) && !skip_deploy {
+            deploy(cfg_override, None)?;
         }
         // Start local test validator, if needed.
         let mut validator_handle = None;
@@ -1004,7 +1002,7 @@ fn test(
         }
 
         // Setup log reader.
-        let log_streams = stream_logs(&cfg.provider.cluster.url());
+        let log_streams = stream_logs(cfg.provider.cluster.url());
 
         // Check to see if yarn is installed, panic if not.
         if use_yarn {
@@ -1327,7 +1325,7 @@ fn launch(
 ) -> Result<()> {
     // Build and deploy.
     build(cfg_override, None, verifiable, program_name.clone())?;
-    let programs = _deploy(cfg_override, program_name.clone())?;
+    let programs = _deploy(cfg_override, program_name)?;
 
     with_workspace(cfg_override, |cfg, _path, _cargo| {
         let keypair = cfg.provider.wallet.to_string();
@@ -1335,7 +1333,7 @@ fn launch(
         // Add metadata to all IDLs.
         for (address, program) in programs {
             // Store the IDL on chain.
-            let idl_address = create_idl_account(&cfg, &keypair, &address, &program.idl)?;
+            let idl_address = create_idl_account(cfg, &keypair, &address, &program.idl)?;
             println!("IDL account created: {}", idl_address.to_string());
         }
 
