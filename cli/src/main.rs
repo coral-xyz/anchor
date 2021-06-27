@@ -1013,57 +1013,35 @@ fn test(
 
         // Run the tests.
         let test_result: Result<_> = {
-            let ts_config_exist = Path::new("tsconfig.json").exists();
-            let mut args = vec!["-t", "1000000"];
-            if let Some(ref file) = file {
-                args.push(file);
-            } else if ts_config_exist {
-                args.push("tests/**/*.spec.ts");
-            } else {
-                args.push("tests/");
-            }
-            let exit = match (ts_config_exist, use_yarn) {
-                (true, true) => std::process::Command::new("yarn")
-                    .arg("ts-mocha")
-                    .arg("-p")
-                    .arg("./tsconfig.json")
-                    .args(args)
-                    .env("ANCHOR_PROVIDER_URL", cfg.provider.cluster.url())
-                    .stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit())
-                    .output()
-                    .map_err(anyhow::Error::from)
-                    .with_context(|| "ts-mocha"),
-                (false, true) => std::process::Command::new("yarn")
-                    .arg("mocha")
-                    .args(args)
-                    .env("ANCHOR_PROVIDER_URL", cfg.provider.cluster.url())
-                    .stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit())
-                    .output()
-                    .map_err(anyhow::Error::from)
-                    .with_context(|| "mocha"),
-                (true, false) => std::process::Command::new("ts-mocha")
-                    .arg("-p")
-                    .arg("./tsconfig.json")
-                    .args(args)
-                    .env("ANCHOR_PROVIDER_URL", cfg.provider.cluster.url())
-                    .stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit())
-                    .output()
-                    .map_err(anyhow::Error::from)
-                    .with_context(|| "ts-mocha"),
-                (false, false) => std::process::Command::new("mocha")
-                    .args(args)
-                    .env("ANCHOR_PROVIDER_URL", cfg.provider.cluster.url())
-                    .stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit())
-                    .output()
-                    .map_err(anyhow::Error::from)
-                    .with_context(|| "mocha"),
-            };
+            let runner = if use_yarn { "yarn" } else { "npx" };
 
-            exit
+            let ts_config_exist = Path::new("tsconfig.json").exists();
+            let cmd = if ts_config_exist { "ts-mocha" } else { "mocha" };
+            let mut args = if ts_config_exist {
+                vec![cmd, "-p", "./tsconfig.json"]
+            } else {
+                vec![cmd]
+            };
+            args.extend_from_slice(&[
+                "-t",
+                "1000000",
+                if let Some(ref file) = file {
+                    file
+                } else if ts_config_exist {
+                    "tests/**/*.spec.ts"
+                } else {
+                    "tests/"
+                },
+            ]);
+
+            std::process::Command::new(runner)
+                .args(args)
+                .env("ANCHOR_PROVIDER_URL", cfg.provider.cluster.url())
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit())
+                .output()
+                .map_err(anyhow::Error::from)
+                .context(cmd)
         };
 
         // Check all errors and shut down.
