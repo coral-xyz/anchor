@@ -310,26 +310,25 @@ pub fn generate_constraint_associated_init(
         },
     };
     let associated_seeds_constraint = generate_constraint_associated_seeds(f, c);
-    let seeds_with_nonce = match c.associated_seeds.len() {
-        0 => quote! {
+    let seeds_with_nonce = if c.associated_seeds.is_empty() {
+        quote! {
             #associated_seeds_constraint
             let seeds = [
                 &b"anchor"[..],
                 #associated_target.to_account_info().key.as_ref(),
                 &[nonce],
             ];
-        },
-        _ => {
-            let seeds = to_seeds_tts(&c.associated_seeds);
-            quote! {
-                #associated_seeds_constraint
-                let seeds = [
-                    &b"anchor"[..],
-                    #associated_target.to_account_info().key.as_ref(),
-                    #seeds
-                    &[nonce],
-                ];
-            }
+        }
+    } else {
+        let seeds = to_seeds_tts(&c.associated_seeds);
+        quote! {
+            #associated_seeds_constraint
+            let seeds = [
+                &b"anchor"[..],
+                #associated_target.to_account_info().key.as_ref(),
+                #seeds
+                &[nonce],
+            ];
         }
     };
     generate_pda(f, seeds_with_nonce, payer, &c.space, true)
@@ -437,22 +436,21 @@ pub fn generate_constraint_associated_seeds(
 ) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let associated_target = c.associated_target.clone();
-    let seeds_no_nonce = match c.associated_seeds.len() {
-        0 => quote! {
+    let seeds_no_nonce = if c.associated_seeds.is_empty() {
+        quote! {
             [
                 &b"anchor"[..],
                 #associated_target.to_account_info().key.as_ref(),
             ]
-        },
-        _ => {
-            let seeds = to_seeds_tts(&c.associated_seeds);
-            quote! {
-                [
-                    &b"anchor"[..],
-                    #associated_target.to_account_info().key.as_ref(),
-                    #seeds
-                ]
-            }
+        }
+    } else {
+        let seeds = to_seeds_tts(&c.associated_seeds);
+        quote! {
+            [
+                &b"anchor"[..],
+                #associated_target.to_account_info().key.as_ref(),
+                #seeds
+            ]
         }
     };
     quote! {
