@@ -269,6 +269,7 @@ pub struct ConstraintGroup {
     literal: Vec<ConstraintLiteral>,
     raw: Vec<ConstraintRaw>,
     close: Option<ConstraintClose>,
+    address: Option<ConstraintAddress>,
 }
 
 impl ConstraintGroup {
@@ -308,6 +309,7 @@ pub enum Constraint {
     State(ConstraintState),
     AssociatedGroup(ConstraintAssociatedGroup),
     Close(ConstraintClose),
+    Address(ConstraintAddress),
 }
 
 // Constraint token is a single keyword in a `#[account(<TOKEN>)]` attribute.
@@ -330,6 +332,9 @@ pub enum ConstraintToken {
     AssociatedPayer(Context<ConstraintAssociatedPayer>),
     AssociatedSpace(Context<ConstraintAssociatedSpace>),
     AssociatedWith(Context<ConstraintAssociatedWith>),
+    Address(Context<ConstraintAddress>),
+    TokenMint(Context<ConstraintTokenMint>),
+    TokenAuthority(Context<ConstraintTokenAuthority>),
 }
 
 impl Parse for ConstraintToken {
@@ -349,7 +354,7 @@ pub struct ConstraintSigner {}
 
 #[derive(Debug, Clone)]
 pub struct ConstraintBelongsTo {
-    pub join_target: Ident,
+    pub join_target: Expr,
 }
 
 #[derive(Debug, Clone)]
@@ -364,7 +369,12 @@ pub struct ConstraintRaw {
 
 #[derive(Debug, Clone)]
 pub struct ConstraintOwner {
-    pub owner_target: Ident,
+    pub owner_target: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintAddress {
+    pub address: Expr,
 }
 
 #[derive(Debug, Clone)]
@@ -378,7 +388,8 @@ pub struct ConstraintSeedsGroup {
     pub is_init: bool,
     pub seeds: Punctuated<Expr, Token![,]>,
     pub payer: Option<Ident>,
-    pub space: Option<LitInt>,
+    pub space: Option<Expr>,
+    pub kind: PdaKind,
 }
 
 #[derive(Debug, Clone)]
@@ -397,15 +408,16 @@ pub struct ConstraintState {
 #[derive(Debug, Clone)]
 pub struct ConstraintAssociatedGroup {
     pub is_init: bool,
-    pub associated_target: Ident,
-    pub associated_seeds: Vec<Ident>,
+    pub associated_target: Expr,
+    pub associated_seeds: Vec<Expr>,
     pub payer: Option<Ident>,
-    pub space: Option<LitInt>,
+    pub space: Option<Expr>,
+    pub kind: PdaKind,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConstraintAssociated {
-    pub target: Ident,
+    pub target: Expr,
 }
 
 #[derive(Debug, Clone)]
@@ -415,17 +427,33 @@ pub struct ConstraintAssociatedPayer {
 
 #[derive(Debug, Clone)]
 pub struct ConstraintAssociatedWith {
-    pub target: Ident,
+    pub target: Expr,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConstraintAssociatedSpace {
-    pub space: LitInt,
+    pub space: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub enum PdaKind {
+    Program,
+    Token { owner: Expr, mint: Expr },
 }
 
 #[derive(Debug, Clone)]
 pub struct ConstraintClose {
     pub sol_dest: Ident,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintTokenMint {
+    mint: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintTokenAuthority {
+    auth: Expr,
 }
 
 // Syntaxt context object for preserving metadata about the inner item.
