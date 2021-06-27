@@ -152,7 +152,7 @@ impl FromStr for Config {
                 cluster: cfg.provider.cluster.parse()?,
                 wallet: shellexpand::tilde(&cfg.provider.wallet).parse()?,
             },
-            scripts: cfg.scripts.unwrap_or_else(|| BTreeMap::new()),
+            scripts: cfg.scripts.unwrap_or_else(BTreeMap::new),
             test: cfg.test,
             clusters: cfg.clusters.map_or(Ok(BTreeMap::new()), deser_clusters)?,
         })

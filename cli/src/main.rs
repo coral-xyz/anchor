@@ -1622,7 +1622,7 @@ fn shell(cfg_override: &ConfigOverride) -> Result<()> {
                 .map(|program| (program.idl.name.clone(), program.idl.clone()))
                 .collect();
             // Insert all manually specified idls into the idl map.
-            cfg.clusters.get(&cfg.provider.cluster).map(|programs| {
+            if let Some(programs) = cfg.clusters.get(&cfg.provider.cluster) {
                 let _ = programs
                     .iter()
                     .map(|(name, pd)| {
@@ -1634,7 +1634,7 @@ fn shell(cfg_override: &ConfigOverride) -> Result<()> {
                         }
                     })
                     .collect::<Vec<_>>();
-            });
+            }
             match cfg.clusters.get(&cfg.provider.cluster) {
                 None => Vec::new(),
                 Some(programs) => programs
@@ -1678,7 +1678,7 @@ fn run(cfg_override: &ConfigOverride, script: String) -> Result<()> {
         let script = cfg
             .scripts
             .get(&script)
-            .ok_or(anyhow!("Unable to find script"))?;
+            .ok_or_else(|| anyhow!("Unable to find script"))?;
         let exit = std::process::Command::new("bash")
             .arg("-c")
             .arg(&script)

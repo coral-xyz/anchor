@@ -395,6 +395,7 @@ impl<'a> RequestBuilder<'a> {
     }
 
     /// Invokes the `#[state]`'s `new` constructor.
+    #[allow(clippy::wrong_self_convention)]
     pub fn new(mut self, args: impl InstructionData) -> Self {
         assert!(self.namespace == RequestNamespace::State { new: false });
         self.namespace = RequestNamespace::State { new: true };

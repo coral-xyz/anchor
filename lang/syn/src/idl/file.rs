@@ -56,8 +56,8 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Idl> {
                                 let accounts = idl_accounts(accounts_strct, &accs);
                                 IdlInstruction {
                                     name,
-                                    args,
                                     accounts,
+                                    args,
                                 }
                             })
                             .collect::<Vec<_>>()
@@ -95,8 +95,8 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Idl> {
                     let accounts = idl_accounts(accounts_strct, &accs);
                     IdlInstruction {
                         name,
-                        args,
                         accounts,
+                        args,
                     }
                 };
 
