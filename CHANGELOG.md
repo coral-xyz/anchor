@@ -11,6 +11,10 @@ incremented for features.
 
 ## [Unreleased]
 
+### Breaking Changes
+
+* cli: Remove `--yarn` flag in favor of using `npx` ([#432](https://github.com/project-serum/anchor/pull/432)).
+
 ## [0.9.0] - 2021-06-15
 
 ### Features
