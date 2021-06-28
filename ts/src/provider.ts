@@ -11,7 +11,7 @@ import {
   SimulatedTransactionResponse,
   Commitment,
 } from "@solana/web3.js";
-import { isBrowser } from "./utils/helpers";
+import { isBrowser } from "./utils/common";
 
 /**
  * The network and wallet context used to send transactions paid for and signed
