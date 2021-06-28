@@ -3,6 +3,7 @@ import * as toml from "toml";
 import { PublicKey } from "@solana/web3.js";
 import { Program } from "./program";
 import { Idl } from "./idl";
+import { isBrowser } from "./utils/helpers";
 
 let _populatedWorkspace = false;
 
@@ -15,6 +16,8 @@ let _populatedWorkspace = false;
  */
 const workspace = new Proxy({} as any, {
   get(workspaceCache: { [key: string]: Program }, programName: string) {
+    if (isBrowser) return;
+
     const fs = require("fs");
     const process = require("process");
 
