@@ -32,6 +32,7 @@ use solana_program::pubkey::Pubkey;
 use std::io::Write;
 
 mod account_info;
+mod account_meta;
 mod boxed;
 mod common;
 mod context;
@@ -43,7 +44,7 @@ mod error;
 pub mod idl;
 mod loader;
 mod program_account;
-mod state;
+pub mod state;
 mod sysvar;
 mod vec;
 
@@ -209,6 +210,25 @@ pub trait Bump {
     fn seed(&self) -> u8;
 }
 
+pub trait Key {
+    fn key(&self) -> Pubkey;
+}
+
+impl<'info, T> Key for T
+where
+    T: ToAccountInfo<'info>,
+{
+    fn key(&self) -> Pubkey {
+        *self.to_account_info().key
+    }
+}
+
+impl Key for Pubkey {
+    fn key(&self) -> Pubkey {
+        *self
+    }
+}
+
 /// The prelude contains all commonly used components of the crate.
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
@@ -285,4 +305,25 @@ pub mod __private {
 
     pub use crate::state::PROGRAM_STATE_SEED;
     pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
+}
+
+/// Returns the program-derived-address seeds used for creating the associated
+/// account.
+#[macro_export]
+macro_rules! associated_seeds {
+    (account = $pda:expr, associated = $associated:expr) => {
+        &[
+            b"anchor".as_ref(),
+            $associated.to_account_info().key.as_ref(),
+            &[anchor_lang::Bump::seed(&*$pda)],
+        ]
+    };
+    (account = $pda:expr, associated = $associated:expr, $(with = $with:expr),+) => {
+        &[
+            b"anchor".as_ref(),
+            $associated.to_account_info().key.as_ref(),
+            $($with.to_account_info().key.as_ref()),+,
+            &[anchor_lang::Bump::seed(&*$pda)][..],
+        ]
+    };
 }
