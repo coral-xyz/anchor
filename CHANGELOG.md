@@ -11,6 +11,10 @@ incremented for features.
 
 ## [Unreleased]
 
+## Features
+
+* cli: Add ability to pass feature flags to `cargo build`.
+
 ## [0.10.0] - 2021-06-27
 
 ### Features

@@ -74,6 +74,9 @@ pub enum Command {
         verifiable: bool,
         #[clap(short, long)]
         program_name: Option<String>,
+        /// Feature flags passed to `cargo build`
+        #[clap(short, long)]
+        cargo_features: Option<String>,
     },
     /// Verifies the on-chain bytecode matches the locally compiled artifact.
     /// Run this command inside a program subdirectory, i.e., in the dir
@@ -81,6 +84,9 @@ pub enum Command {
     Verify {
         /// The deployed program to compare against.
         program_id: Pubkey,
+        /// Feature flags passed to `cargo build`
+        #[clap(short, long)]
+        cargo_features: Option<String>,
     },
     /// Runs integration tests against a localnetwork.
     Test {
@@ -97,6 +103,9 @@ pub enum Command {
         #[clap(long)]
         skip_build: bool,
         file: Option<String>,
+        /// Feature flags passed to `cargo build`
+        #[clap(short, long)]
+        cargo_features: Option<String>,
     },
     /// Creates a new program.
     New { name: String },
@@ -120,6 +129,9 @@ pub enum Command {
         verifiable: bool,
         #[clap(short, long)]
         program_name: Option<String>,
+        /// Feature flags passed to `cargo build`
+        #[clap(short, long)]
+        cargo_features: Option<String>,
     },
     /// Upgrades a single program. The configured wallet must be the upgrade
     /// authority.
@@ -238,8 +250,18 @@ fn main() -> Result<()> {
             idl,
             verifiable,
             program_name,
-        } => build(&opts.cfg_override, idl, verifiable, program_name),
-        Command::Verify { program_id } => verify(&opts.cfg_override, program_id),
+            cargo_features,
+        } => build(
+            &opts.cfg_override,
+            idl,
+            verifiable,
+            program_name,
+            cargo_features,
+        ),
+        Command::Verify {
+            program_id,
+            cargo_features,
+        } => verify(&opts.cfg_override, program_id, cargo_features),
         Command::Deploy { program_name } => deploy(&opts.cfg_override, program_name),
         Command::Upgrade {
             program_id,
@@ -250,18 +272,21 @@ fn main() -> Result<()> {
         Command::Launch {
             verifiable,
             program_name,
-        } => launch(&opts.cfg_override, verifiable, program_name),
+            cargo_features,
+        } => launch(&opts.cfg_override, verifiable, program_name, cargo_features),
         Command::Test {
             skip_deploy,
             skip_local_validator,
             skip_build,
             file,
+            cargo_features,
         } => test(
             &opts.cfg_override,
             skip_deploy,
             skip_local_validator,
             skip_build,
             file,
+            cargo_features,
         ),
         #[cfg(feature = "dev")]
         Command::Airdrop => airdrop(cfg_override),
@@ -363,6 +388,7 @@ fn build(
     idl: Option<String>,
     verifiable: bool,
     program_name: Option<String>,
+    cargo_features: Option<String>,
 ) -> Result<()> {
     if let Some(program_name) = program_name {
         for program in read_all_programs()? {
@@ -385,8 +411,8 @@ fn build(
         }
     };
     match cargo {
-        None => build_all(&cfg, path, idl_out, verifiable)?,
-        Some(ct) => build_cwd(path.as_path(), ct, idl_out, verifiable)?,
+        None => build_all(&cfg, path, idl_out, verifiable, cargo_features)?,
+        Some(ct) => build_cwd(path.as_path(), ct, idl_out, verifiable, &cargo_features)?,
     };
 
     set_workspace_dir_or_exit();
@@ -399,6 +425,7 @@ fn build_all(
     cfg_path: PathBuf,
     idl_out: Option<PathBuf>,
     verifiable: bool,
+    cargo_features: Option<String>,
 ) -> Result<()> {
     let cur_dir = std::env::current_dir()?;
     let r = match cfg_path.parent() {
@@ -412,6 +439,7 @@ fn build_all(
                     p.join("Cargo.toml"),
                     idl_out.clone(),
                     verifiable,
+                    &cargo_features,
                 )?;
             }
             Ok(())
@@ -427,20 +455,21 @@ fn build_cwd(
     cargo_toml: PathBuf,
     idl_out: Option<PathBuf>,
     verifiable: bool,
+    cargo_features: &Option<String>,
 ) -> Result<()> {
     match cargo_toml.parent() {
         None => return Err(anyhow!("Unable to find parent")),
         Some(p) => std::env::set_current_dir(&p)?,
     };
     match verifiable {
-        false => _build_cwd(idl_out),
-        true => build_cwd_verifiable(cfg_path.parent().unwrap()),
+        false => _build_cwd(idl_out, cargo_features),
+        true => build_cwd_verifiable(cfg_path.parent().unwrap(), cargo_features),
     }
 }
 
 // Builds an anchor program in a docker image and copies the build artifacts
 // into the `target/` directory.
-fn build_cwd_verifiable(workspace_dir: &Path) -> Result<()> {
+fn build_cwd_verifiable(workspace_dir: &Path, cargo_features: &Option<String>) -> Result<()> {
     // Docker vars.
     let container_name = "anchor-program";
     let image_name = format!("projectserum/build:v{}", DOCKER_BUILDER_VERSION);
@@ -453,18 +482,25 @@ fn build_cwd_verifiable(workspace_dir: &Path) -> Result<()> {
     fs::create_dir_all(workspace_dir.join("target/deploy"))?;
     fs::create_dir_all(workspace_dir.join("target/idl"))?;
 
+    let mut args = vec![
+        "run",
+        "--name",
+        container_name,
+        "-v",
+        &volume_mount,
+        &image_name,
+        "anchor",
+        "build",
+    ];
+
+    if let Some(ref cargo_features) = cargo_features {
+        args.push("--features");
+        args.push(cargo_features.as_str());
+    }
+
     // Build the program in docker.
     let exit = std::process::Command::new("docker")
-        .args(&[
-            "run",
-            "--name",
-            container_name,
-            "-v",
-            &volume_mount,
-            &image_name,
-            "anchor",
-            "build",
-        ])
+        .args(args)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
@@ -516,9 +552,15 @@ fn build_cwd_verifiable(workspace_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-fn _build_cwd(idl_out: Option<PathBuf>) -> Result<()> {
+fn _build_cwd(idl_out: Option<PathBuf>, cargo_features: &Option<String>) -> Result<()> {
+    let mut args = vec!["build-bpf"];
+    if let Some(ref cargo_features) = cargo_features {
+        args.push("--features");
+        args.push(cargo_features.as_str());
+    }
+
     let exit = std::process::Command::new("cargo")
-        .arg("build-bpf")
+        .args(args)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
@@ -538,14 +580,18 @@ fn _build_cwd(idl_out: Option<PathBuf>) -> Result<()> {
     write_idl(&idl, OutFile::File(out))
 }
 
-fn verify(cfg_override: &ConfigOverride, program_id: Pubkey) -> Result<()> {
+fn verify(
+    cfg_override: &ConfigOverride,
+    program_id: Pubkey,
+    cargo_features: Option<String>,
+) -> Result<()> {
     let (cfg, _path, cargo) = Config::discover(cfg_override)?.expect("Not in workspace.");
     let cargo = cargo.ok_or_else(|| anyhow!("Must be inside program subdirectory."))?;
     let program_dir = cargo.parent().unwrap();
 
     // Build the program we want to verify.
     let cur_dir = std::env::current_dir()?;
-    build(cfg_override, None, true, None)?;
+    build(cfg_override, None, true, None, cargo_features)?;
     std::env::set_current_dir(&cur_dir)?;
 
     let local_idl = extract_idl("src/lib.rs")?;
@@ -974,11 +1020,12 @@ fn test(
     skip_local_validator: bool,
     skip_build: bool,
     file: Option<String>,
+    cargo_features: Option<String>,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg, _path, _cargo| {
         // Build if needed.
         if !skip_build {
-            build(cfg_override, None, false, None)?;
+            build(cfg_override, None, false, None, cargo_features)?;
         }
 
         // Run the deploy against the cluster in two cases:
@@ -1293,9 +1340,16 @@ fn launch(
     cfg_override: &ConfigOverride,
     verifiable: bool,
     program_name: Option<String>,
+    cargo_features: Option<String>,
 ) -> Result<()> {
     // Build and deploy.
-    build(cfg_override, None, verifiable, program_name.clone())?;
+    build(
+        cfg_override,
+        None,
+        verifiable,
+        program_name.clone(),
+        cargo_features,
+    )?;
     let programs = _deploy(cfg_override, program_name)?;
 
     with_workspace(cfg_override, |cfg, _path, _cargo| {
