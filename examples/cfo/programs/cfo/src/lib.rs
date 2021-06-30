@@ -61,7 +61,7 @@ pub mod cfo {
             account = ctx.accounts.officer,
             associated = ctx.accounts.dex.dex_program
         };
-        let cpi_ctx: CpiContext<'_, '_, '_, 'info, dex::SweepFees<'info>> = (&*ctx.accounts).into();
+        let cpi_ctx = CpiContext::from(&*ctx.accounts);
         dex::sweep_fees(cpi_ctx.with_signer(&[seeds]))?;
         Ok(())
     }
@@ -77,7 +77,7 @@ pub mod cfo {
             account = ctx.accounts.officer,
             associated = ctx.accounts.dex_program
         };
-        let cpi_ctx: CpiContext<'_, '_, '_, 'info, swap::Swap<'info>> = (&*ctx.accounts).into();
+        let cpi_ctx = CpiContext::from(&*ctx.accounts);
         swap::cpi::swap(
             cpi_ctx.with_signer(&[seeds]),
             swap::Side::Bid,
@@ -98,7 +98,7 @@ pub mod cfo {
             account = ctx.accounts.officer,
             associated = ctx.accounts.dex_program
         };
-        let cpi_ctx: CpiContext<'_, '_, '_, 'info, swap::Swap<'info>> = (&*ctx.accounts).into();
+        let cpi_ctx = CpiContext::from(&*ctx.accounts);
         swap::cpi::swap(
             cpi_ctx.with_signer(&[seeds]),
             swap::Side::Bid,
