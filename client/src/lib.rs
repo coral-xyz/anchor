@@ -445,11 +445,9 @@ impl<'a> RequestBuilder<'a> {
             });
         }
 
-        let mut signers: Vec<&dyn Signer> = Vec::with_capacity(self.signers.len() + 1);
+        let mut signers = Vec::with_capacity(1 + self.signers.len());
         signers.push(&self.payer);
-        for i in 0..self.signers.len() {
-            signers.push(self.signers[i]);
-        }
+        signers.extend_from_slice(&self.signers);
 
         let rpc_client = RpcClient::new_with_commitment(self.cluster, self.options);
 
