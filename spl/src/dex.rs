@@ -13,6 +13,7 @@ anchor_lang::solana_program::declare_id!("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9P
 #[cfg(feature = "devnet")]
 anchor_lang::solana_program::declare_id!("DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY");
 
+#[allow(clippy::too_many_arguments)]
 pub fn new_order_v3<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, NewOrderV3<'info>>,
     side: Side,
@@ -24,7 +25,7 @@ pub fn new_order_v3<'info>(
     client_order_id: u64,
     limit: u16,
 ) -> ProgramResult {
-    let referral = ctx.remaining_accounts.iter().next();
+    let referral = ctx.remaining_accounts.get(0);
     let ix = serum_dex::instruction::new_order(
         ctx.accounts.market.key,
         ctx.accounts.open_orders.key,
@@ -60,7 +61,7 @@ pub fn new_order_v3<'info>(
 pub fn settle_funds<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, SettleFunds<'info>>,
 ) -> ProgramResult {
-    let referral = ctx.remaining_accounts.iter().next();
+    let referral = ctx.remaining_accounts.get(0);
     let ix = serum_dex::instruction::settle_funds(
         &ID,
         ctx.accounts.market.key,
@@ -108,6 +109,24 @@ pub fn close_open_orders<'info>(
         ctx.accounts.authority.key,
         ctx.accounts.destination.key,
         ctx.accounts.market.key,
+    )?;
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )?;
+    Ok(())
+}
+
+pub fn sweep_fees<'info>(ctx: CpiContext<'_, '_, '_, 'info, SweepFees<'info>>) -> ProgramResult {
+    let ix = serum_dex::instruction::sweep_fees(
+        &ID,
+        ctx.accounts.market.key,
+        ctx.accounts.pc_vault.key,
+        ctx.accounts.sweep_authority.key,
+        ctx.accounts.sweep_receiver.key,
+        ctx.accounts.vault_signer.key,
+        ctx.accounts.token_program.key,
     )?;
     solana_program::program::invoke_signed(
         &ix,
@@ -166,4 +185,14 @@ pub struct CloseOpenOrders<'info> {
     pub authority: AccountInfo<'info>,
     pub destination: AccountInfo<'info>,
     pub market: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct SweepFees<'info> {
+    pub market: AccountInfo<'info>,
+    pub pc_vault: AccountInfo<'info>,
+    pub sweep_authority: AccountInfo<'info>,
+    pub sweep_receiver: AccountInfo<'info>,
+    pub vault_signer: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
 }
