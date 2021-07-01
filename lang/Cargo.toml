@@ -21,6 +21,17 @@ anchor-debug = [
     "anchor-attribute-state/anchor-debug",
     "anchor-derive-accounts/anchor-debug"
 ]
+#
+# WARNING: This is dangerous to use. Do not use if you don't know
+#          what you're doing. This will introduce a semver incompatible
+#          change meant for programs deployed with Anchor v0.6.0 and below,
+#          but who want to use the latest version of Anchor.
+#
+#          If you have multiple programs that all depend on each other, make
+#          sure they are all using this feature together. Otherwise, it probably
+#          won't do what you're expecting.
+#
+anchor-deprecated-state = ["anchor-attribute-state/anchor-deprecated-state"]
 
 [dependencies]
 anchor-attribute-access-control = { path = "./attribute/access-control", version = "0.10.0" }
