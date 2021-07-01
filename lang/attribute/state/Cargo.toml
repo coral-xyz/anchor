@@ -12,7 +12,6 @@ proc-macro = true
 
 [features]
 anchor-debug = ["anchor-syn/anchor-debug"]
-anchor-deprecated-state = []
 
 [dependencies]
 proc-macro2 = "1.0"

@@ -11,7 +11,9 @@ name = "lockup"
 [features]
 no-entrypoint = []
 cpi = ["no-entrypoint"]
+anchor-deprecated-state = []
+default = ["anchor-deprecated-state"]
 
 [dependencies]
-anchor-lang = { path = "../../../../lang", features = ["anchor-deprecated-state"] }
+anchor-lang = { path = "../../../../lang" }
 anchor-spl = { path = "../../../../spl" }
