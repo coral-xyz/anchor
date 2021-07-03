@@ -1,6 +1,6 @@
 use crate::{
-    CompositeField, Constraint, ConstraintAddress, ConstraintAssociatedGroup, ConstraintHasOne,
-    ConstraintClose, ConstraintExecutable, ConstraintGroup, ConstraintInit, ConstraintLiteral,
+    CompositeField, Constraint, ConstraintAddress, ConstraintAssociatedGroup, ConstraintClose,
+    ConstraintExecutable, ConstraintGroup, ConstraintHasOne, ConstraintInit, ConstraintLiteral,
     ConstraintMut, ConstraintOwner, ConstraintRaw, ConstraintRentExempt, ConstraintSeedsGroup,
     ConstraintSigner, ConstraintState, Field, PdaKind, Ty,
 };
@@ -157,10 +157,7 @@ pub fn generate_constraint_mut(f: &Field, _c: &ConstraintMut) -> proc_macro2::To
     }
 }
 
-pub fn generate_constraint_has_one(
-    f: &Field,
-    c: &ConstraintHasOne,
-) -> proc_macro2::TokenStream {
+pub fn generate_constraint_has_one(f: &Field, c: &ConstraintHasOne) -> proc_macro2::TokenStream {
     let target = c.join_target.clone();
     let ident = &f.ident;
     let field = match &f.ty {

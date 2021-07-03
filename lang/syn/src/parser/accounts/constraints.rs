@@ -1,7 +1,7 @@
 use crate::{
     ConstraintAddress, ConstraintAssociated, ConstraintAssociatedGroup, ConstraintAssociatedPayer,
-    ConstraintAssociatedSpace, ConstraintAssociatedWith, ConstraintHasOne, ConstraintClose,
-    ConstraintExecutable, ConstraintGroup, ConstraintInit, ConstraintLiteral, ConstraintMut,
+    ConstraintAssociatedSpace, ConstraintAssociatedWith, ConstraintClose, ConstraintExecutable,
+    ConstraintGroup, ConstraintHasOne, ConstraintInit, ConstraintLiteral, ConstraintMut,
     ConstraintOwner, ConstraintRaw, ConstraintRentExempt, ConstraintSeeds, ConstraintSeedsGroup,
     ConstraintSigner, ConstraintState, ConstraintToken, ConstraintTokenAuthority,
     ConstraintTokenMint, Context, PdaKind, Ty,
@@ -82,7 +82,12 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                 .unwrap_or_else(|| ident.span());
             match kw.as_str() {
                 // Deprecated since 0.11
-                "belongs_to" => return Err(ParseError::new(ident.span(), "belongs_to is deprecated, please use has_one")),
+                "belongs_to" => {
+                    return Err(ParseError::new(
+                        ident.span(),
+                        "belongs_to is deprecated, please use has_one",
+                    ))
+                }
                 "has_one" => ConstraintToken::HasOne(Context::new(
                     span,
                     ConstraintHasOne {
@@ -485,10 +490,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             .count()
             > 0
         {
-            return Err(ParseError::new(
-                c.span(),
-                "has_one target already provided",
-            ));
+            return Err(ParseError::new(c.span(), "has_one target already provided"));
         }
         self.has_one.push(c);
         Ok(())
