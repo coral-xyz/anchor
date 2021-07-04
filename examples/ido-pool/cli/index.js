@@ -16,83 +16,6 @@ const TOKEN_PROGRAM_ID = new anchor.web3.PublicKey(
   TokenInstructions.TOKEN_PROGRAM_ID.toString()
 );
 
-
-async function createMint(provider, authority, decimals=9) {
-  if (authority === undefined) {
-    authority = provider.wallet.publicKey;
-  }
-  const mint = new anchor.web3.Account();
-  const instructions = await createMintInstructions(
-    provider,
-    authority,
-    mint.publicKey,
-    decimals
-  );
-
-  const tx = new anchor.web3.Transaction();
-  tx.add(...instructions);
-
-  await provider.send(tx, [mint]);
-
-  return mint.publicKey;
-}
-
-async function createMintInstructions(provider, authority, mint, decimals) {
-  let instructions = [
-    anchor.web3.SystemProgram.createAccount({
-      fromPubkey: provider.wallet.publicKey,
-      newAccountPubkey: mint,
-      space: 82,
-      lamports: await provider.connection.getMinimumBalanceForRentExemption(82),
-      programId: TOKEN_PROGRAM_ID,
-    }),
-    TokenInstructions.initializeMint({
-      mint,
-      decimals,
-      mintAuthority: authority,
-    }),
-  ];
-  return instructions;
-}
-
-async function createTokenAccount(provider, mint, owner) {
-  const vault = new anchor.web3.Account();
-  const tx = new anchor.web3.Transaction();
-  console.log('createTokenAccount', vault.publicKey.toString(), mint.toString(), owner.toString());
-
-  tx.add(
-    ...(await createTokenAccountInstrs(provider, vault.publicKey, mint, owner))
-  );
-  await provider.send(tx, [vault]);
-  return vault.publicKey;
-}
-
-async function createTokenAccountInstrs(
-  provider,
-  newAccountPubkey,
-  mint,
-  owner,
-  lamports
-) {
-  if (lamports === undefined) {
-    lamports = await provider.connection.getMinimumBalanceForRentExemption(165);
-  }
-  return [
-    anchor.web3.SystemProgram.createAccount({
-      fromPubkey: provider.wallet.publicKey,
-      newAccountPubkey,
-      space: 165,
-      lamports,
-      programId: TOKEN_PROGRAM_ID,
-    }),
-    TokenInstructions.initializeAccount({
-      account: newAccountPubkey,
-      mint,
-      owner,
-    }),
-  ];
-}
-
 async function initPool(
   usdcMint, watermelonMint, creatorWatermelon, watermelonIdoAmount,
   startIdoTs, endDepositsTs, endIdoTs) {
@@ -109,9 +32,9 @@ async function initPool(
 
   // Pool doesn't need a Redeemable SPL token account because it only
   // burns and mints redeemable tokens, it never stores them.
-  redeemableMint = await createMint(provider, poolSigner, mintInfo.decimals);
-  poolWatermelon = await createTokenAccount(provider, watermelonMint, poolSigner);
-  poolUsdc = await createTokenAccount(provider, usdcMint, poolSigner);
+  redeemableMint = await serum.createMint(provider, poolSigner, mintInfo.decimals);
+  poolWatermelon = await serum.createTokenAccount(provider, watermelonMint, poolSigner);
+  poolUsdc = await serum.createTokenAccount(provider, usdcMint, poolSigner);
   poolAccount = new anchor.web3.Account();
   distributionAuthority = provider.wallet.publicKey;
 
