@@ -30,6 +30,7 @@ pub struct Program {
     pub ixs: Vec<Ix>,
     pub name: Ident,
     pub program_mod: ItemMod,
+    pub fallback_fn: Option<FallbackFn>,
 }
 
 impl Parse for Program {
@@ -90,6 +91,11 @@ pub struct Ix {
 pub struct IxArg {
     pub name: Ident,
     pub raw_arg: PatType,
+}
+
+#[derive(Debug)]
+pub struct FallbackFn {
+    raw_method: ItemFn,
 }
 
 #[derive(Debug)]
@@ -265,7 +271,7 @@ pub struct ConstraintGroup {
     executable: Option<ConstraintExecutable>,
     state: Option<ConstraintState>,
     associated: Option<ConstraintAssociatedGroup>,
-    belongs_to: Vec<ConstraintBelongsTo>,
+    has_one: Vec<ConstraintHasOne>,
     literal: Vec<ConstraintLiteral>,
     raw: Vec<ConstraintRaw>,
     close: Option<ConstraintClose>,
@@ -299,7 +305,7 @@ pub enum Constraint {
     Init(ConstraintInit),
     Mut(ConstraintMut),
     Signer(ConstraintSigner),
-    BelongsTo(ConstraintBelongsTo),
+    HasOne(ConstraintHasOne),
     Literal(ConstraintLiteral),
     Raw(ConstraintRaw),
     Owner(ConstraintOwner),
@@ -319,7 +325,7 @@ pub enum ConstraintToken {
     Init(Context<ConstraintInit>),
     Mut(Context<ConstraintMut>),
     Signer(Context<ConstraintSigner>),
-    BelongsTo(Context<ConstraintBelongsTo>),
+    HasOne(Context<ConstraintHasOne>),
     Literal(Context<ConstraintLiteral>),
     Raw(Context<ConstraintRaw>),
     Owner(Context<ConstraintOwner>),
@@ -353,7 +359,7 @@ pub struct ConstraintMut {}
 pub struct ConstraintSigner {}
 
 #[derive(Debug, Clone)]
-pub struct ConstraintBelongsTo {
+pub struct ConstraintHasOne {
     pub join_target: Expr,
 }
 

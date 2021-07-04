@@ -11,9 +11,17 @@ incremented for features.
 
 ## [Unreleased]
 
+## [0.11.0] - 2021-07-03
+
+### Features
+
+* lang: Add fallback functions ([#457](https://github.com/project-serum/anchor/pull/457)).
+* lang: Add feature flag for using the old state account discriminator. This is a temporary flag for those with programs built prior to v0.7.0 but want to use the latest Anchor version. Expect this to be removed in a future version ([#446](https://github.com/project-serum/anchor/pull/446)).
+
 ### Breaking Changes
 
 * cli: Remove `.spec` suffix on TypeScript tests files ([#441](https://github.com/project-serum/anchor/pull/441)).
+* lang: Remove `belongs_to` constraint ([#459](https://github.com/project-serum/anchor/pull/459)).
 
 ## [0.10.0] - 2021-06-27
 
