@@ -30,6 +30,7 @@ pub struct Program {
     pub ixs: Vec<Ix>,
     pub name: Ident,
     pub program_mod: ItemMod,
+    pub fallback_fn: Option<FallbackFn>,
 }
 
 impl Parse for Program {
@@ -93,6 +94,11 @@ pub struct IxArg {
 }
 
 #[derive(Debug)]
+pub struct FallbackFn {
+    raw_method: ItemFn,
+}
+
+#[derive(Debug)]
 pub struct AccountsStruct {
     // Name of the accounts struct.
     pub ident: Ident,
@@ -140,6 +146,7 @@ impl AccountsStruct {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 pub enum AccountField {
     Field(Field),
@@ -264,10 +271,11 @@ pub struct ConstraintGroup {
     executable: Option<ConstraintExecutable>,
     state: Option<ConstraintState>,
     associated: Option<ConstraintAssociatedGroup>,
-    belongs_to: Vec<ConstraintBelongsTo>,
+    has_one: Vec<ConstraintHasOne>,
     literal: Vec<ConstraintLiteral>,
     raw: Vec<ConstraintRaw>,
     close: Option<ConstraintClose>,
+    address: Option<ConstraintAddress>,
 }
 
 impl ConstraintGroup {
@@ -291,12 +299,13 @@ impl ConstraintGroup {
 // A single account constraint *after* merging all tokens into a well formed
 // constraint. Some constraints like "associated" are defined by multiple
 // tokens, so a merging phase is required.
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 pub enum Constraint {
     Init(ConstraintInit),
     Mut(ConstraintMut),
     Signer(ConstraintSigner),
-    BelongsTo(ConstraintBelongsTo),
+    HasOne(ConstraintHasOne),
     Literal(ConstraintLiteral),
     Raw(ConstraintRaw),
     Owner(ConstraintOwner),
@@ -306,15 +315,17 @@ pub enum Constraint {
     State(ConstraintState),
     AssociatedGroup(ConstraintAssociatedGroup),
     Close(ConstraintClose),
+    Address(ConstraintAddress),
 }
 
 // Constraint token is a single keyword in a `#[account(<TOKEN>)]` attribute.
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 pub enum ConstraintToken {
     Init(Context<ConstraintInit>),
     Mut(Context<ConstraintMut>),
     Signer(Context<ConstraintSigner>),
-    BelongsTo(Context<ConstraintBelongsTo>),
+    HasOne(Context<ConstraintHasOne>),
     Literal(Context<ConstraintLiteral>),
     Raw(Context<ConstraintRaw>),
     Owner(Context<ConstraintOwner>),
@@ -327,6 +338,9 @@ pub enum ConstraintToken {
     AssociatedPayer(Context<ConstraintAssociatedPayer>),
     AssociatedSpace(Context<ConstraintAssociatedSpace>),
     AssociatedWith(Context<ConstraintAssociatedWith>),
+    Address(Context<ConstraintAddress>),
+    TokenMint(Context<ConstraintTokenMint>),
+    TokenAuthority(Context<ConstraintTokenAuthority>),
 }
 
 impl Parse for ConstraintToken {
@@ -345,8 +359,8 @@ pub struct ConstraintMut {}
 pub struct ConstraintSigner {}
 
 #[derive(Debug, Clone)]
-pub struct ConstraintBelongsTo {
-    pub join_target: Ident,
+pub struct ConstraintHasOne {
+    pub join_target: Expr,
 }
 
 #[derive(Debug, Clone)]
@@ -361,7 +375,12 @@ pub struct ConstraintRaw {
 
 #[derive(Debug, Clone)]
 pub struct ConstraintOwner {
-    pub owner_target: Ident,
+    pub owner_target: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintAddress {
+    pub address: Expr,
 }
 
 #[derive(Debug, Clone)]
@@ -375,7 +394,8 @@ pub struct ConstraintSeedsGroup {
     pub is_init: bool,
     pub seeds: Punctuated<Expr, Token![,]>,
     pub payer: Option<Ident>,
-    pub space: Option<LitInt>,
+    pub space: Option<Expr>,
+    pub kind: PdaKind,
 }
 
 #[derive(Debug, Clone)]
@@ -394,15 +414,16 @@ pub struct ConstraintState {
 #[derive(Debug, Clone)]
 pub struct ConstraintAssociatedGroup {
     pub is_init: bool,
-    pub associated_target: Ident,
-    pub associated_seeds: Vec<Ident>,
+    pub associated_target: Expr,
+    pub associated_seeds: Vec<Expr>,
     pub payer: Option<Ident>,
-    pub space: Option<LitInt>,
+    pub space: Option<Expr>,
+    pub kind: PdaKind,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConstraintAssociated {
-    pub target: Ident,
+    pub target: Expr,
 }
 
 #[derive(Debug, Clone)]
@@ -412,17 +433,34 @@ pub struct ConstraintAssociatedPayer {
 
 #[derive(Debug, Clone)]
 pub struct ConstraintAssociatedWith {
-    pub target: Ident,
+    pub target: Expr,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConstraintAssociatedSpace {
-    pub space: LitInt,
+    pub space: Expr,
+}
+
+#[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
+pub enum PdaKind {
+    Program,
+    Token { owner: Expr, mint: Expr },
 }
 
 #[derive(Debug, Clone)]
 pub struct ConstraintClose {
     pub sol_dest: Ident,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintTokenMint {
+    mint: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintTokenAuthority {
+    auth: Expr,
 }
 
 // Syntaxt context object for preserving metadata about the inner item.

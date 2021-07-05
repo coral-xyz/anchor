@@ -96,9 +96,6 @@ pub enum Command {
         /// use this to save time when running test and the program code is not altered.
         #[clap(long)]
         skip_build: bool,
-        /// Use this flag if you want to use yarn as your package manager.
-        #[clap(long)]
-        yarn: bool,
         file: Option<String>,
     },
     /// Creates a new program.
@@ -147,6 +144,11 @@ pub enum Command {
     /// Starts a node shell with an Anchor client setup according to the local
     /// config.
     Shell,
+    /// Runs the script defined by the current workspace's Anchor.toml.
+    Run {
+        /// The name of the script to run.
+        script: String,
+    },
 }
 
 #[derive(Debug, Clap)]
@@ -253,20 +255,19 @@ fn main() -> Result<()> {
             skip_deploy,
             skip_local_validator,
             skip_build,
-            yarn,
             file,
         } => test(
             &opts.cfg_override,
             skip_deploy,
             skip_local_validator,
             skip_build,
-            yarn,
             file,
         ),
         #[cfg(feature = "dev")]
         Command::Airdrop => airdrop(cfg_override),
         Command::Cluster { subcmd } => cluster(subcmd),
         Command::Shell => shell(&opts.cfg_override),
+        Command::Run { script } => run(&opts.cfg_override, script),
     }
 }
 
@@ -310,16 +311,16 @@ fn init(cfg_override: &ConfigOverride, name: String, typescript: bool) -> Result
         ts_config.write_all(template::ts_config().as_bytes())?;
 
         let mut deploy = File::create("migrations/deploy.ts")?;
-        deploy.write_all(&template::ts_deploy_script().as_bytes())?;
+        deploy.write_all(template::ts_deploy_script().as_bytes())?;
 
-        let mut mocha = File::create(&format!("tests/{}.spec.ts", name))?;
+        let mut mocha = File::create(&format!("tests/{}.ts", name))?;
         mocha.write_all(template::ts_mocha(&name).as_bytes())?;
     } else {
         let mut mocha = File::create(&format!("tests/{}.js", name))?;
         mocha.write_all(template::mocha(&name).as_bytes())?;
 
         let mut deploy = File::create("migrations/deploy.js")?;
-        deploy.write_all(&template::deploy_script().as_bytes())?;
+        deploy.write_all(template::deploy_script().as_bytes())?;
     }
 
     println!("{} initialized", name);
@@ -349,11 +350,11 @@ fn new_program(name: &str) -> Result<()> {
     fs::create_dir(&format!("programs/{}", name))?;
     fs::create_dir(&format!("programs/{}/src/", name))?;
     let mut cargo_toml = File::create(&format!("programs/{}/Cargo.toml", name))?;
-    cargo_toml.write_all(template::cargo_toml(&name).as_bytes())?;
+    cargo_toml.write_all(template::cargo_toml(name).as_bytes())?;
     let mut xargo_toml = File::create(&format!("programs/{}/Xargo.toml", name))?;
     xargo_toml.write_all(template::xargo_toml().as_bytes())?;
     let mut lib_rs = File::create(&format!("programs/{}/src/lib.rs", name))?;
-    lib_rs.write_all(template::lib_rs(&name).as_bytes())?;
+    lib_rs.write_all(template::lib_rs(name).as_bytes())?;
     Ok(())
 }
 
@@ -457,7 +458,7 @@ fn build_cwd_verifiable(workspace_dir: &Path) -> Result<()> {
         .args(&[
             "run",
             "--name",
-            &container_name,
+            container_name,
             "-v",
             &volume_mount,
             &image_name,
@@ -503,7 +504,7 @@ fn build_cwd_verifiable(workspace_dir: &Path) -> Result<()> {
 
     // Remove the docker image.
     let exit = std::process::Command::new("docker")
-        .args(&["rm", &container_name])
+        .args(&["rm", container_name])
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
@@ -539,7 +540,7 @@ fn _build_cwd(idl_out: Option<PathBuf>) -> Result<()> {
 
 fn verify(cfg_override: &ConfigOverride, program_id: Pubkey) -> Result<()> {
     let (cfg, _path, cargo) = Config::discover(cfg_override)?.expect("Not in workspace.");
-    let cargo = cargo.ok_or(anyhow!("Must be inside program subdirectory."))?;
+    let cargo = cargo.ok_or_else(|| anyhow!("Must be inside program subdirectory."))?;
     let program_dir = cargo.parent().unwrap();
 
     // Build the program we want to verify.
@@ -691,7 +692,7 @@ fn idl_init(cfg_override: &ConfigOverride, program_id: Pubkey, idl_filepath: Str
         let bytes = std::fs::read(idl_filepath)?;
         let idl: Idl = serde_json::from_reader(&*bytes)?;
 
-        let idl_address = create_idl_account(&cfg, &keypair, &program_id, &idl)?;
+        let idl_address = create_idl_account(cfg, &keypair, &program_id, &idl)?;
 
         println!("Idl account created: {:?}", idl_address);
         Ok(())
@@ -709,8 +710,8 @@ fn idl_write_buffer(
         let bytes = std::fs::read(idl_filepath)?;
         let idl: Idl = serde_json::from_reader(&*bytes)?;
 
-        let idl_buffer = create_idl_buffer(&cfg, &keypair, &program_id, &idl)?;
-        idl_write(&cfg, &program_id, &idl, idl_buffer)?;
+        let idl_buffer = create_idl_buffer(cfg, &keypair, &program_id, &idl)?;
+        idl_write(cfg, &program_id, &idl, idl_buffer)?;
 
         println!("Idl buffer created: {:?}", idl_buffer);
 
@@ -972,7 +973,6 @@ fn test(
     skip_deploy: bool,
     skip_local_validator: bool,
     skip_build: bool,
-    use_yarn: bool,
     file: Option<String>,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg, _path, _cargo| {
@@ -988,10 +988,8 @@ fn test(
         //
         // In either case, skip the deploy if the user specifies.
         let is_localnet = cfg.provider.cluster == Cluster::Localnet;
-        if !is_localnet || (is_localnet && skip_local_validator) {
-            if !skip_deploy {
-                deploy(cfg_override, None)?;
-            }
+        if (!is_localnet || skip_local_validator) && !skip_deploy {
+            deploy(cfg_override, None)?;
         }
         // Start local test validator, if needed.
         let mut validator_handle = None;
@@ -1004,66 +1002,37 @@ fn test(
         }
 
         // Setup log reader.
-        let log_streams = stream_logs(&cfg.provider.cluster.url());
-
-        // Check to see if yarn is installed, panic if not.
-        if use_yarn {
-            which::which("yarn").unwrap();
-        }
+        let log_streams = stream_logs(cfg.provider.cluster.url());
 
         // Run the tests.
         let test_result: Result<_> = {
             let ts_config_exist = Path::new("tsconfig.json").exists();
-            let mut args = vec!["-t", "1000000"];
-            if let Some(ref file) = file {
-                args.push(file);
-            } else if ts_config_exist {
-                args.push("tests/**/*.spec.ts");
+            let cmd = if ts_config_exist { "ts-mocha" } else { "mocha" };
+            let mut args = if ts_config_exist {
+                vec![cmd, "-p", "./tsconfig.json"]
             } else {
-                args.push("tests/");
-            }
-            let exit = match (ts_config_exist, use_yarn) {
-                (true, true) => std::process::Command::new("yarn")
-                    .arg("ts-mocha")
-                    .arg("-p")
-                    .arg("./tsconfig.json")
-                    .args(args)
-                    .env("ANCHOR_PROVIDER_URL", cfg.provider.cluster.url())
-                    .stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit())
-                    .output()
-                    .map_err(anyhow::Error::from)
-                    .with_context(|| "ts-mocha"),
-                (false, true) => std::process::Command::new("yarn")
-                    .arg("mocha")
-                    .args(args)
-                    .env("ANCHOR_PROVIDER_URL", cfg.provider.cluster.url())
-                    .stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit())
-                    .output()
-                    .map_err(anyhow::Error::from)
-                    .with_context(|| "mocha"),
-                (true, false) => std::process::Command::new("ts-mocha")
-                    .arg("-p")
-                    .arg("./tsconfig.json")
-                    .args(args)
-                    .env("ANCHOR_PROVIDER_URL", cfg.provider.cluster.url())
-                    .stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit())
-                    .output()
-                    .map_err(anyhow::Error::from)
-                    .with_context(|| "ts-mocha"),
-                (false, false) => std::process::Command::new("mocha")
-                    .args(args)
-                    .env("ANCHOR_PROVIDER_URL", cfg.provider.cluster.url())
-                    .stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit())
-                    .output()
-                    .map_err(anyhow::Error::from)
-                    .with_context(|| "mocha"),
+                vec![cmd]
             };
+            args.extend_from_slice(&[
+                "-t",
+                "1000000",
+                if let Some(ref file) = file {
+                    file
+                } else if ts_config_exist {
+                    "tests/**/*.ts"
+                } else {
+                    "tests/"
+                },
+            ]);
 
-            exit
+            std::process::Command::new("npx")
+                .args(args)
+                .env("ANCHOR_PROVIDER_URL", cfg.provider.cluster.url())
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit())
+                .output()
+                .map_err(anyhow::Error::from)
+                .context(cmd)
         };
 
         // Check all errors and shut down.
@@ -1327,7 +1296,7 @@ fn launch(
 ) -> Result<()> {
     // Build and deploy.
     build(cfg_override, None, verifiable, program_name.clone())?;
-    let programs = _deploy(cfg_override, program_name.clone())?;
+    let programs = _deploy(cfg_override, program_name)?;
 
     with_workspace(cfg_override, |cfg, _path, _cargo| {
         let keypair = cfg.provider.wallet.to_string();
@@ -1335,7 +1304,7 @@ fn launch(
         // Add metadata to all IDLs.
         for (address, program) in programs {
             // Store the IDL on chain.
-            let idl_address = create_idl_account(&cfg, &keypair, &address, &program.idl)?;
+            let idl_address = create_idl_account(cfg, &keypair, &address, &program.idl)?;
             println!("IDL account created: {}", idl_address.to_string());
         }
 
@@ -1499,42 +1468,36 @@ fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
 
         let url = cfg.provider.cluster.url().to_string();
         let cur_dir = std::env::current_dir()?;
-        let module_path = cur_dir.join("migrations/deploy.js");
 
-        let ts_config_exist = Path::new("tsconfig.json").exists();
-        let ts_deploy_file_exists = Path::new("migrations/deploy.ts").exists();
-
-        if ts_config_exist && ts_deploy_file_exists {
-            let ts_module_path = cur_dir.join("migrations/deploy.ts");
-            let exit = std::process::Command::new("tsc")
-                .arg(&ts_module_path)
-                .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit())
-                .output()?;
-            if !exit.status.success() {
-                std::process::exit(exit.status.code().unwrap());
-            }
-        };
-
-        let deploy_script_host_str =
-            template::deploy_script_host(&url, &module_path.display().to_string());
+        let use_ts =
+            Path::new("tsconfig.json").exists() && Path::new("migrations/deploy.ts").exists();
 
         if !Path::new(".anchor").exists() {
             fs::create_dir(".anchor")?;
         }
         std::env::set_current_dir(".anchor")?;
 
-        std::fs::write("deploy.js", deploy_script_host_str)?;
-        let exit = std::process::Command::new("node")
-            .arg("deploy.js")
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .output()?;
-
-        if ts_config_exist && ts_deploy_file_exists {
-            std::fs::remove_file(&module_path)
-                .map_err(|_| anyhow!("Unable to remove file {}", module_path.display()))?;
-        }
+        let exit = if use_ts {
+            let module_path = cur_dir.join("migrations/deploy.ts");
+            let deploy_script_host_str =
+                template::deploy_ts_script_host(&url, &module_path.display().to_string());
+            std::fs::write("deploy.ts", deploy_script_host_str)?;
+            std::process::Command::new("ts-node")
+                .arg("deploy.ts")
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit())
+                .output()?
+        } else {
+            let module_path = cur_dir.join("migrations/deploy.js");
+            let deploy_script_host_str =
+                template::deploy_js_script_host(&url, &module_path.display().to_string());
+            std::fs::write("deploy.js", deploy_script_host_str)?;
+            std::process::Command::new("node")
+                .arg("deploy.js")
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit())
+                .output()?
+        };
 
         if !exit.status.success() {
             println!("Deploy failed.");
@@ -1613,17 +1576,31 @@ fn cluster(_cmd: ClusterCommand) -> Result<()> {
 fn shell(cfg_override: &ConfigOverride) -> Result<()> {
     with_workspace(cfg_override, |cfg, _path, _cargo| {
         let programs = {
-            let idls: HashMap<String, Idl> = read_all_programs()?
+            let mut idls: HashMap<String, Idl> = read_all_programs()?
                 .iter()
                 .map(|program| (program.idl.name.clone(), program.idl.clone()))
                 .collect();
+            // Insert all manually specified idls into the idl map.
+            if let Some(programs) = cfg.clusters.get(&cfg.provider.cluster) {
+                let _ = programs
+                    .iter()
+                    .map(|(name, pd)| {
+                        if let Some(idl_fp) = &pd.idl {
+                            let file_str =
+                                std::fs::read_to_string(idl_fp).expect("Unable to read IDL file");
+                            let idl = serde_json::from_str(&file_str).expect("Idl not readable");
+                            idls.insert(name.clone(), idl);
+                        }
+                    })
+                    .collect::<Vec<_>>();
+            }
             match cfg.clusters.get(&cfg.provider.cluster) {
                 None => Vec::new(),
                 Some(programs) => programs
                     .iter()
                     .map(|(name, program_deployment)| ProgramWorkspace {
                         name: name.to_string(),
-                        program_id: program_deployment.program_id,
+                        program_id: program_deployment.address,
                         idl: match idls.get(name) {
                             None => {
                                 println!("Unable to find IDL for {}", name);
@@ -1650,6 +1627,26 @@ fn shell(cfg_override: &ConfigOverride) -> Result<()> {
         if !child.wait()?.success() {
             println!("Error running node shell");
             return Ok(());
+        }
+        Ok(())
+    })
+}
+
+fn run(cfg_override: &ConfigOverride, script: String) -> Result<()> {
+    with_workspace(cfg_override, |cfg, _path, _cargo| {
+        let script = cfg
+            .scripts
+            .get(&script)
+            .ok_or_else(|| anyhow!("Unable to find script"))?;
+        let exit = std::process::Command::new("bash")
+            .arg("-c")
+            .arg(&script)
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .unwrap();
+        if !exit.status.success() {
+            std::process::exit(exit.status.code().unwrap_or(1));
         }
         Ok(())
     })

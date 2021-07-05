@@ -5,7 +5,7 @@ module.exports = {
   /**
    * Ref：https://v1.vuepress.vuejs.org/config/#title
    */
-  title: "Anchor",
+  title: "⚓ Anchor",
   /**
    * Ref：https://v1.vuepress.vuejs.org/config/#description
    */
@@ -48,7 +48,14 @@ module.exports = {
       },
       {
         collapsable: false,
-        title: "Programs",
+        title: "Teams",
+        children: [
+          "/getting-started/projects",
+        ],
+      },
+      {
+        collapsable: false,
+        title: "Tutorials",
         children: [
           "/tutorials/tutorial-0",
           "/tutorials/tutorial-1",

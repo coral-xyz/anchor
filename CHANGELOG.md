@@ -11,6 +11,32 @@ incremented for features.
 
 ## [Unreleased]
 
+## [0.11.0] - 2021-07-03
+
+### Features
+
+* lang: Add fallback functions ([#457](https://github.com/project-serum/anchor/pull/457)).
+* lang: Add feature flag for using the old state account discriminator. This is a temporary flag for those with programs built prior to v0.7.0 but want to use the latest Anchor version. Expect this to be removed in a future version ([#446](https://github.com/project-serum/anchor/pull/446)).
+
+### Breaking Changes
+
+* cli: Remove `.spec` suffix on TypeScript tests files ([#441](https://github.com/project-serum/anchor/pull/441)).
+* lang: Remove `belongs_to` constraint ([#459](https://github.com/project-serum/anchor/pull/459)).
+
+## [0.10.0] - 2021-06-27
+
+### Features
+
+* lang: Add `#[account(address = <expr>)]` constraint for asserting the address of an account ([#400](https://github.com/project-serum/anchor/pull/400)).
+* lang: Add `#[account(init, token = <mint-target>, authority = <token-owner-target>...)]` constraint for initializing SPL token accounts as program derived addresses for the program. Can be used when initialized via `seeds` or `associated` ([#400](https://github.com/project-serum/anchor/pull/400)).
+* lang: Add `associated_seeds!` macro for generating signer seeds for CPIs signed by an `#[account(associated = <target>)]` account ([#400](https://github.com/project-serum/anchor/pull/400)).
+* cli: Add `[scripts]` section to the Anchor.toml for specifying workspace scripts that can be run via `anchor run <script>` ([#400](https://github.com/project-serum/anchor/pull/400)).
+* cli: `[clusters.<network>]` table entries can now also use `{ address = <base58-str>, idl = <filepath-str> }` to specify workspace programs ([#400](https://github.com/project-serum/anchor/pull/400)).
+
+### Breaking Changes
+
+* cli: Remove `--yarn` flag in favor of using `npx` ([#432](https://github.com/project-serum/anchor/pull/432)).
+
 ## [0.9.0] - 2021-06-15
 
 ### Features

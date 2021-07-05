@@ -6,13 +6,13 @@ cache: cargo
 env:
   global:
     - NODE_VERSION="14.7.0"
-    - SOLANA_CLI_VERSION="1.7.1"
+    - SOLANA_CLI_VERSION="1.7.4"
 git:
   submodules: true
 
 _defaults: &defaults
   before_install:
-  - rustup component add rustfmt
+  - rustup component add rustfmt clippy
   - nvm install $NODE_VERSION
   - sudo apt-get install -y pkg-config build-essential libudev-dev
 
@@ -22,6 +22,7 @@ _examples: &examples
   - npm install -g mocha
   - npm install -g ts-mocha
   - npm install -g typescript
+  - npm install -g ts-node
   - npm install -g buffer
   - cd ts && yarn && yarn build && npm link && cd ../
   - npm install -g @project-serum/serum
@@ -41,6 +42,7 @@ jobs:
       script:
         - cargo build
         - cargo fmt -- --check
+        - cargo clippy --all-targets -- -D warnings
         - cargo test
     - <<: *examples
       name: Runs the examples 1
@@ -64,6 +66,7 @@ jobs:
         - pushd examples/chat && yarn && anchor test && popd
         - pushd examples/ido-pool && yarn && anchor test && popd
         - pushd examples/swap/deps/serum-dex/dex && cargo build-bpf && cd ../../../ && anchor test && popd
+        - pushd examples/cfo && anchor run test && popd
     - <<: *examples
       name: Runs the examples 3
       script:
