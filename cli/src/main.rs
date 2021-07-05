@@ -1469,7 +1469,8 @@ fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
         let url = cfg.provider.cluster.url().to_string();
         let cur_dir = std::env::current_dir()?;
 
-        let use_ts = Path::new("tsconfig.json").exists() && Path::new("migrations/deploy.ts").exists();
+        let use_ts =
+            Path::new("tsconfig.json").exists() && Path::new("migrations/deploy.ts").exists();
 
         if !Path::new(".anchor").exists() {
             fs::create_dir(".anchor")?;
@@ -1479,13 +1480,13 @@ fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
         let exit = if use_ts {
             let module_path = cur_dir.join("migrations/deploy.ts");
             let deploy_script_host_str =
-            template::deploy_ts_script_host(&url, &module_path.display().to_string());
+                template::deploy_ts_script_host(&url, &module_path.display().to_string());
             std::fs::write("deploy.ts", deploy_script_host_str)?;
             std::process::Command::new("ts-node")
-            .arg("deploy.ts")
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .output()?
+                .arg("deploy.ts")
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit())
+                .output()?
         } else {
             let module_path = cur_dir.join("migrations/deploy.js");
             let deploy_script_host_str =
