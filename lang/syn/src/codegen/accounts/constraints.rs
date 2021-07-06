@@ -355,27 +355,49 @@ pub fn generate_constraint_associated_init(
     )
 }
 
-fn parse_ty(f: &Field) -> (&syn::TypePath, proc_macro2::TokenStream, bool) {
+fn parse_ty(f: &Field) -> (proc_macro2::TokenStream, proc_macro2::TokenStream, bool) {
     match &f.ty {
-        Ty::ProgramAccount(ty) => (
-            &ty.account_type_path,
+        Ty::ProgramAccount(ty) => {
+            let ident = &ty.account_type_path;
+            (
+                quote! {
+                    #ident
+                },
+                quote! {
+                    anchor_lang::ProgramAccount
+                },
+                false,
+            )
+        }
+        Ty::Loader(ty) => {
+            let ident = &ty.account_type_path;
+            (
+                quote! {
+                    #ident
+                },
+                quote! {
+                    anchor_lang::Loader
+                },
+                true,
+            )
+        }
+        Ty::CpiAccount(ty) => {
+            let ident = &ty.account_type_path;
+            (
+                quote! {
+                    #ident
+                },
+                quote! {
+                    anchor_lang::CpiAccount
+                },
+                false,
+            )
+        }
+        Ty::AccountInfo => (
             quote! {
-                anchor_lang::ProgramAccount
+                AccountInfo
             },
-            false,
-        ),
-        Ty::Loader(ty) => (
-            &ty.account_type_path,
-            quote! {
-                anchor_lang::Loader
-            },
-            true,
-        ),
-        Ty::CpiAccount(ty) => (
-            &ty.account_type_path,
-            quote! {
-                anchor_lang::CpiAccount
-            },
+            quote! {},
             false,
         ),
         _ => panic!("Invalid type for initializing a program derived address"),
@@ -431,9 +453,30 @@ pub fn generate_pda(
         },
     };
 
+    let (combined_account_ty, try_from) = match f.ty {
+        Ty::AccountInfo => (
+            quote! {
+                AccountInfo
+            },
+            quote! {
+                #field.to_account_info()
+            },
+        ),
+        _ => (
+            quote! {
+                #account_wrapper_ty<#account_ty>
+            },
+            quote! {
+                #account_wrapper_ty::try_from_init(
+                    &#field.to_account_info(),
+                )?
+            },
+        ),
+    };
+
     match kind {
         PdaKind::Token { owner, mint } => quote! {
-            let #field: #account_wrapper_ty<#account_ty> = {
+            let #field: #combined_account_ty = {
                 #space
                 #payer
                 #seeds_constraint
@@ -500,9 +543,19 @@ pub fn generate_pda(
                 )?
             };
         },
-        PdaKind::Program => {
+        PdaKind::Program { owner } => {
+            // Owner of the account being created. If not specified,
+            // default to the currently executing program.
+            let owner = match owner {
+                None => quote! {
+                    program_id
+                },
+                Some(o) => quote! {
+                    &#o
+                },
+            };
             quote! {
-                let #field: #account_wrapper_ty<#account_ty> = {
+                let #field = {
                     #space
                     #payer
                     #seeds_constraint
@@ -513,9 +566,8 @@ pub fn generate_pda(
                         #field.to_account_info().key,
                         lamports,
                         space as u64,
-                        program_id,
+                        #owner,
                     );
-
 
                     anchor_lang::solana_program::program::invoke_signed(
                         &ix,
@@ -533,9 +585,7 @@ pub fn generate_pda(
 
                     // For now, we assume all accounts created with the `associated`
                     // attribute have a `nonce` field in their account.
-                    let mut pa: #account_wrapper_ty<#account_ty> = #account_wrapper_ty::try_from_init(
-                        &#field.to_account_info(),
-                    )?;
+                    let mut pa: #combined_account_ty = #try_from;
 
                     #nonce_assignment
                     pa

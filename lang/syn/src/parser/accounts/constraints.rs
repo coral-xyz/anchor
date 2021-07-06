@@ -316,6 +316,14 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             };
         }
 
+        let (owner, pda_owner) = {
+            if seeds.is_some() || associated.is_some() {
+                (None, owner.map(|o| o.owner_target.clone()))
+            } else {
+                (owner, None)
+            }
+        };
+
         let is_init = init.is_some();
         Ok(ConstraintGroup {
             init: into_inner!(init),
@@ -334,7 +342,9 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                         payer: into_inner!(associated_payer.clone()).map(|a| a.target),
                         space: associated_space.clone().map(|s| s.space.clone()),
                         kind: match &token_mint {
-                            None => PdaKind::Program,
+                            None => PdaKind::Program {
+                                owner: pda_owner.clone(),
+                            },
                             Some(tm) => PdaKind::Token {
                                 mint: tm.clone().into_inner().mint,
                                 owner: match &token_authority {
@@ -358,7 +368,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 payer: associated_payer.map(|p| p.target.clone()),
                 space: associated_space.map(|s| s.space.clone()),
                 kind: match token_mint {
-                    None => PdaKind::Program,
+                    None => PdaKind::Program { owner: pda_owner },
                     Some(tm) => PdaKind::Token {
                         mint: tm.into_inner().mint,
                         owner: match token_authority {

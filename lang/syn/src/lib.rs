@@ -444,7 +444,7 @@ pub struct ConstraintAssociatedSpace {
 #[derive(Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum PdaKind {
-    Program,
+    Program { owner: Option<Expr> },
     Token { owner: Expr, mint: Expr },
 }
 

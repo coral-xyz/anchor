@@ -72,6 +72,7 @@ jobs:
       script:
         - pushd examples/escrow && yarn && anchor test && popd
         - pushd examples/pyth && yarn && anchor test && popd
+        - pushd examples/permissioned-markets && anchor run test && popd
         - pushd examples/tutorial/basic-0 && anchor test && popd
         - pushd examples/tutorial/basic-1 && anchor test && popd
         - pushd examples/tutorial/basic-2 && anchor test && popd
