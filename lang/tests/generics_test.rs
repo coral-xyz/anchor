@@ -23,8 +23,11 @@ pub struct Account<const N: usize> {
 
 #[associated]
 #[derive(Default)]
-pub struct Associated<T> where T: BorshDeserialize + BorshSerialize + Default{
-    pub data: T
+pub struct Associated<T>
+where
+    T: BorshDeserialize + BorshSerialize + Default,
+{
+    pub data: T,
 }
 
 #[derive(Copy, Clone)]
