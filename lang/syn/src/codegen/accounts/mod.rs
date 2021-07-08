@@ -2,7 +2,7 @@ use crate::AccountsStruct;
 use quote::quote;
 use std::iter;
 use syn::punctuated::Punctuated;
-use syn::Token;
+use syn::{ConstParam, LifetimeDef, Token, TypeParam};
 use syn::{GenericParam, PredicateLifetime, WhereClause, WherePredicate};
 
 mod __client_accounts;
@@ -62,7 +62,31 @@ fn generics(accs: &AccountsStruct) -> ParsedGenerics {
                 .collect()
         },
         trait_generics: iter::once(trait_lifetime).collect(),
-        struct_generics: accs.generics.params.clone(),
+        struct_generics: accs
+            .generics
+            .params
+            .clone()
+            .into_iter()
+            .map(|param: GenericParam| match param {
+                GenericParam::Const(ConstParam { ident, .. })
+                | GenericParam::Type(TypeParam { ident, .. }) => GenericParam::Type(TypeParam {
+                    attrs: vec![],
+                    ident,
+                    colon_token: None,
+                    bounds: Default::default(),
+                    eq_token: None,
+                    default: None,
+                }),
+                GenericParam::Lifetime(LifetimeDef { lifetime, .. }) => {
+                    GenericParam::Lifetime(LifetimeDef {
+                        attrs: vec![],
+                        lifetime,
+                        colon_token: None,
+                        bounds: Default::default(),
+                    })
+                }
+            })
+            .collect(),
         where_clause,
     }
 }

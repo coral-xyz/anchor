@@ -93,6 +93,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     };
 
     quote! {
+        #[automatically_derived]
         impl<#combined_generics> anchor_lang::Accounts<#trait_generics> for #name<#struct_generics> #where_clause {
             #[inline(never)]
             fn try_accounts(
@@ -138,31 +139,31 @@ fn typed_ident(field: &Field) -> TokenStream {
     let ty = match &field.ty {
         Ty::AccountInfo => quote! { AccountInfo },
         Ty::ProgramState(ty) => {
-            let account = &ty.account_ident;
+            let account = &ty.account_type_path;
             quote! {
                 ProgramState<#account>
             }
         }
         Ty::CpiState(ty) => {
-            let account = &ty.account_ident;
+            let account = &ty.account_type_path;
             quote! {
                 CpiState<#account>
             }
         }
         Ty::ProgramAccount(ty) => {
-            let account = &ty.account_ident;
+            let account = &ty.account_type_path;
             quote! {
                 ProgramAccount<#account>
             }
         }
         Ty::Loader(ty) => {
-            let account = &ty.account_ident;
+            let account = &ty.account_type_path;
             quote! {
                 Loader<#account>
             }
         }
         Ty::CpiAccount(ty) => {
-            let account = &ty.account_ident;
+            let account = &ty.account_type_path;
             quote! {
                 CpiAccount<#account>
             }
