@@ -312,6 +312,7 @@ pub fn derive_zero_copy_accessor(item: proc_macro::TokenStream) -> proc_macro::T
         })
         .collect();
     proc_macro::TokenStream::from(quote! {
+        #[automatically_derived]
         impl #impl_gen #account_name #ty_gen #where_clause {
             #(#methods)*
         }
