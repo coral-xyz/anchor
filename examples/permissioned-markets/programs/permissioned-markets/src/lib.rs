@@ -202,7 +202,8 @@ pub struct InitAccount<'info> {
     pub open_orders_init_authority: AccountInfo<'info>,
     #[account(
         init,
-        seeds = [b"open-orders", market.key.as_ref(), authority.key.as_ref(), &[bump]],
+        seeds = [b"open-orders", market.key.as_ref(), authority.key.as_ref()],
+        bump = bump,
         payer = authority,
         owner = dex::ID,
         space = size_of::<OpenOrders>() + SERUM_PADDING,

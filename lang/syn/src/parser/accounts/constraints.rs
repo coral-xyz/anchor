@@ -1,11 +1,4 @@
-use crate::{
-    ConstraintAddress, ConstraintAssociated, ConstraintAssociatedGroup, ConstraintAssociatedPayer,
-    ConstraintAssociatedSpace, ConstraintAssociatedWith, ConstraintClose, ConstraintExecutable,
-    ConstraintGroup, ConstraintHasOne, ConstraintInit, ConstraintLiteral, ConstraintMut,
-    ConstraintOwner, ConstraintRaw, ConstraintRentExempt, ConstraintSeeds, ConstraintSeedsGroup,
-    ConstraintSigner, ConstraintState, ConstraintToken, ConstraintTokenAuthority,
-    ConstraintTokenMint, Context, PdaKind, Ty,
-};
+use crate::*;
 use syn::ext::IdentExt;
 use syn::parse::{Error as ParseError, Parse, ParseStream, Result as ParseResult};
 use syn::punctuated::Punctuated;
@@ -183,6 +176,12 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         auth: stream.parse()?,
                     },
                 )),
+                "bump" => ConstraintToken::Bump(Context::new(
+                    ident.span(),
+                    ConstraintTokenBump {
+                        bump: stream.parse()?,
+                    },
+                )),
                 _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
             }
         }
@@ -213,6 +212,7 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub address: Option<Context<ConstraintAddress>>,
     pub token_mint: Option<Context<ConstraintTokenMint>>,
     pub token_authority: Option<Context<ConstraintTokenAuthority>>,
+    pub bump: Option<Context<ConstraintTokenBump>>,
 }
 
 impl<'ty> ConstraintGroupBuilder<'ty> {
@@ -238,6 +238,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             address: None,
             token_mint: None,
             token_authority: None,
+            bump: None,
         }
     }
     pub fn build(mut self) -> ParseResult<ConstraintGroup> {
@@ -298,6 +299,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             address,
             token_mint,
             token_authority,
+            bump,
         } = self;
 
         // Converts Option<Context<T>> -> Option<T>.
@@ -356,6 +358,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                                 },
                             },
                         },
+                        bump: into_inner!(bump).map(|b| b.bump),
                     })
                 })
                 .transpose()?,
@@ -404,6 +407,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::Address(c) => self.add_address(c),
             ConstraintToken::TokenAuthority(c) => self.add_token_authority(c),
             ConstraintToken::TokenMint(c) => self.add_token_mint(c),
+            ConstraintToken::Bump(c) => self.add_bump(c),
         }
     }
 
@@ -456,6 +460,20 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ));
         }
         self.token_mint.replace(c);
+        Ok(())
+    }
+
+    fn add_bump(&mut self, c: Context<ConstraintTokenBump>) -> ParseResult<()> {
+        if self.bump.is_some() {
+            return Err(ParseError::new(c.span(), "bump already provided"));
+        }
+        if self.seeds.is_none() {
+            return Err(ParseError::new(
+                c.span(),
+                "seeds must be provided before bump",
+            ));
+        }
+        self.bump.replace(c);
         Ok(())
     }
 

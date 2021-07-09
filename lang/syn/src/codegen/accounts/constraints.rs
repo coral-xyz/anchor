@@ -265,8 +265,13 @@ fn generate_constraint_seeds_init(f: &Field, c: &ConstraintSeedsGroup) -> proc_m
     let seeds_constraint = generate_constraint_seeds_address(f, c);
     let seeds_with_nonce = {
         let s = &c.seeds;
-        quote! {
-            [#s]
+        match c.bump.as_ref() {
+            None => quote! {
+                [#s]
+            },
+            Some(b) => quote! {
+                [#s, &[#b]]
+            },
         }
     };
     generate_pda(
@@ -285,14 +290,47 @@ fn generate_constraint_seeds_address(
     c: &ConstraintSeedsGroup,
 ) -> proc_macro2::TokenStream {
     let name = &f.ident;
-    let seeds = &c.seeds;
-    quote! {
-        let __program_signer = Pubkey::create_program_address(
-            &[#seeds],
-            program_id,
-        ).map_err(|_| anchor_lang::__private::ErrorCode::ConstraintSeeds)?;
-        if #name.to_account_info().key != &__program_signer {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+
+    // If the bump is provided on *initialization*, then force it to be the
+    // canonical nonce.
+    if c.is_init && c.bump.is_some() {
+        let s = &c.seeds;
+        let b = c.bump.as_ref().unwrap();
+        quote! {
+            let (__program_signer, __bump) = anchor_lang::solana_program::pubkey::Pubkey::find_program_address(
+                &[#s],
+                program_id,
+            );
+            if #name.to_account_info().key != &__program_signer {
+                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+            }
+            if __bump != #b {
+                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+            }
+        }
+    } else {
+        let seeds = match c.bump.as_ref() {
+            None => {
+                let s = &c.seeds;
+                quote! {
+                    [#s]
+                }
+            }
+            Some(b) => {
+                let s = &c.seeds;
+                quote! {
+                    [#s, &[#b]]
+                }
+            }
+        };
+        quote! {
+            let __program_signer = Pubkey::create_program_address(
+                &#seeds,
+                program_id,
+            ).map_err(|_| anchor_lang::__private::ErrorCode::ConstraintSeeds)?;
+            if #name.to_account_info().key != &__program_signer {
+                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+            }
         }
     }
 }
