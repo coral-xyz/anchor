@@ -22,7 +22,7 @@ incremented for features.
 
 ### Breaking
 
-* lang: A new `bump` keyword is added to the accounts constraints, which is used in conjunction with *both* `init` and `seeds`. When all are provided, then the `bump` is added to the seeds *and* the program executes `find_program_address` to ensure that the specified bump is the canonical bump ([#483](https://github.com/project-serum/anchor/pull/483)).
+* lang: A new `bump` keyword is added to the accounts constraints, which is used to add an optional bump seed to the end of a `seeds` array. When used in conjunction with *both* `init` and `seeds`, then the program executes `find_program_address` to assert that the given bump is the canonical bump ([#483](https://github.com/project-serum/anchor/pull/483)).
 
 ## [0.11.0] - 2021-07-03
 
