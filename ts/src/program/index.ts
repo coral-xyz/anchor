@@ -330,7 +330,7 @@ export class Program {
       throw new Error(`Event listener for ${eventName} already exists!`);
     }
 
-    this._eventCallbacks[eventName] = callback;
+    this._eventCallbacks.set(eventName, callback);
 
     if (this._onLogsSubscriptionId == undefined) {
       this._onLogsSubscriptionId = this._provider.connection.onLogs(this._programId, (logs, ctx) => {
@@ -339,8 +339,8 @@ export class Program {
           return;
         }
         this._eventParser.parseLogs(logs.logs, (event) => {
-          if (event.name in this._eventCallbacks) {
-            this._eventCallbacks[event.name](event.data, ctx.slot);
+          if (this._eventCallbacks.has(event.name)) {
+            this._eventCallbacks.get(event.name)(event.data, ctx.slot);
           }
         });
       });
@@ -350,13 +350,13 @@ export class Program {
   /**
    * Unsubscribes from the given eventName.
    */
-  public async removeEventListener(eventName: string): Promise<void> {
+  public async removeEventListener(eventName: string) {
     if (!this._eventCallbacks.delete(eventName)){
       throw new Error(`Event listener for ${eventName} doesn't exist!`);
     };
 
     if (this._eventCallbacks.size == 0) {
-      this._provider.connection.removeOnLogsListener(this._onLogsSubscriptionId);
+      await this._provider.connection.removeOnLogsListener(this._onLogsSubscriptionId);
       this._onLogsSubscriptionId = undefined;
     }
   }

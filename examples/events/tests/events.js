@@ -8,15 +8,13 @@ describe("events", () => {
   it("Is initialized!", async () => {
     const program = anchor.workspace.Events;
 
-    let listener = null;
-
     let [event, slot] = await new Promise((resolve, _reject) => {
-      listener = program.addEventListener("MyEvent", (event, slot) => {
+      program.addEventListener("MyEvent", (event, slot) => {
         resolve([event, slot]);
       });
       program.rpc.initialize();
     });
-    await program.removeEventListener(listener);
+    await program.removeEventListener("MyEvent");
 
     assert.ok(slot > 0);
     assert.ok(event.data.toNumber() === 5);
