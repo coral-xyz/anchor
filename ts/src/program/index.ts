@@ -227,6 +227,21 @@ export class Program {
   private _coder: Coder;
 
   /**
+   * Event parser to handle onLogs callbacks.
+   */
+   private _eventParser: EventParser;
+
+   /**
+    * Mapping of event name to function invoke when event occurs.
+    */
+   private _eventCallbacks: Map<string, (event: any, slot: number) => void>;
+
+   /**
+    * The subscription id from the connection onLogs subscription.
+    */
+   private _onLogsSubscriptionId: number | undefined;
+
+  /**
    * Wallet and network provider.
    */
   public get provider(): Provider {
@@ -304,28 +319,42 @@ export class Program {
    * @param callback  The function to invoke whenever the event is emitted from
    *                  program logs.
    */
-  public addEventListener(
+   public addEventListener(
     eventName: string,
     callback: (event: any, slot: number) => void
-  ): number {
-    const eventParser = new EventParser(this._coder, this._programId);
-    return this._provider.connection.onLogs(this._programId, (logs, ctx) => {
-      if (logs.err) {
-        console.error(logs);
-        return;
-      }
-      eventParser.parseLogs(logs.logs, (event) => {
-        if (event.name === eventName) {
-          callback(event.data, ctx.slot);
+  ): void {
+    if (eventName in this._eventCallbacks){
+      throw new Error(`Event listener for $(eventName) already exists!`);
+    }
+
+    this._eventCallbacks[eventName] = callback;
+
+    if (this._onLogsSubscriptionId == undefined) {
+      this._onLogsSubscriptionId = this._provider.connection.onLogs(this._programId, (logs, ctx) => {
+        if (logs.err) {
+          console.error(logs);
+          return;
         }
+        this._eventParser.parseLogs(logs.logs, (event) => {
+          if (event.name in this._eventCallbacks) {
+            this._eventCallbacks[event.name](event.data, ctx.slot);
+          }
+        });
       });
-    });
+    }
   }
 
   /**
-   * Unsubscribes from the given event listener.
+   * Unsubscribes from the given eventName.
    */
-  public async removeEventListener(listener: number): Promise<void> {
-    return this._provider.connection.removeOnLogsListener(listener);
+  public async removeEventListener(eventName: string): Promise<void> {
+    if (!this._eventCallbacks.delete(eventName)){
+      throw new Error(`Event listener for $(eventName) doesn't exist!`);
+    };
+
+    if (this._eventCallbacks.size == 0) {
+      this._provider.connection.removeOnLogsListener(this._onLogsSubscriptionId);
+      this._onLogsSubscriptionId = undefined;
+    }
   }
 }
