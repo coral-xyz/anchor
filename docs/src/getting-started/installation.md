@@ -26,7 +26,7 @@ sh -c "$(curl -sSfL https://release.solana.com/v1.7.4/install)"
 Program integration tests are run using [Mocha](https://mochajs.org/).
 
 ```bash
-npm install -g mocha
+npm install mocha
 ```
 
 ## Install Anchor
@@ -46,7 +46,7 @@ sudo apt-get update && sudo apt-get upgrade && sudo apt-get install -y pkg-confi
 To install the JavaScript package.
 
 ```bash
-npm install -g @project-serum/anchor
+npm install @project-serum/anchor
 ```
 
 Make sure your `NODE_PATH` is set properly so that globally installed modules
