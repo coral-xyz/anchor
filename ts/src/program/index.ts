@@ -356,7 +356,7 @@ export class Program {
     };
 
     if (this._eventCallbacks.size == 0) {
-      await this._provider.connection.removeOnLogsListener(this._onLogsSubscriptionId);
+      this._provider.connection.removeOnLogsListener(this._onLogsSubscriptionId);
       this._onLogsSubscriptionId = undefined;
     }
   }
