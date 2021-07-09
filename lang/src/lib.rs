@@ -329,6 +329,27 @@ macro_rules! associated_seeds {
 }
 
 /// Ensures a condition is true, otherwise returns the given error.
+/// Use this with a custom error type.
+///
+/// # Example
+///
+/// After defining an `ErrorCode`
+///
+/// ```
+/// #[error]
+/// pub struct ErrorCode {
+///     InvalidArgument,
+/// }
+/// ```
+///
+/// One can write a `require` assertion as
+///
+/// ```
+/// require!(condition, InvalidArgument);
+/// ```
+///
+/// which would exit the program with the `InvalidArgument` error code if
+/// `condition` is false.
 #[macro_export]
 macro_rules! require {
     ($invariant:expr, $error:tt $(,)?) => {
