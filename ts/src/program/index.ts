@@ -263,6 +263,9 @@ export class Program {
     this._programId = programId;
     this._provider = provider ?? getProvider();
     this._coder = new Coder(idl);
+    this._eventParser = new EventParser(this._coder, this._programId);
+    this._eventCallbacks = new Map();
+    this._onLogsSubscriptionId = undefined;
 
     // Dynamic namespaces.
     const [rpc, instruction, transaction, account, simulate, state] =
@@ -324,7 +327,7 @@ export class Program {
     callback: (event: any, slot: number) => void
   ): void {
     if (eventName in this._eventCallbacks){
-      throw new Error(`Event listener for $(eventName) already exists!`);
+      throw new Error(`Event listener for ${eventName} already exists!`);
     }
 
     this._eventCallbacks[eventName] = callback;
@@ -349,7 +352,7 @@ export class Program {
    */
   public async removeEventListener(eventName: string): Promise<void> {
     if (!this._eventCallbacks.delete(eventName)){
-      throw new Error(`Event listener for $(eventName) doesn't exist!`);
+      throw new Error(`Event listener for ${eventName} doesn't exist!`);
     };
 
     if (this._eventCallbacks.size == 0) {
