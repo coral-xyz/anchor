@@ -87,9 +87,10 @@ export class EventParser {
   private handleSystemLog(log: string): [string | null, boolean] {
     // System component.
     const logStart = log.split(":")[0];
+
     // Did the program finish executing?
     if (
-      logStart.match(/^Program (.*) success/g) !== null      
+      logStart.match(/^Program (.*) success/g) !== null
     ) {
       return [null, true];
     // Recursive call.
@@ -97,7 +98,9 @@ export class EventParser {
       logStart.startsWith(`Program ${this.programId.toString()} invoke`)
     ) {
       return [this.programId.toString(), false];
-    } else if (logStart.includes("invoke")) {
+    }
+    // CPI call.
+    else if (logStart.includes("invoke")) {
       return ["cpi", false]; // Any string will do.
     } else {
       return [null, false];

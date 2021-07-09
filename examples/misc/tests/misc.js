@@ -239,27 +239,17 @@ describe("misc", () => {
   });
 
   it("Can retrieve events when associated account is initialized in simulated transaction", async () => {
-    // Manual associated address calculation for test only. Clients should use
-    // the generated methods.
-    const [
-      associatedAccount,
-      nonce,
-    ] = await anchor.web3.PublicKey.findProgramAddress(
-      [
-        Buffer.from([97, 110, 99, 104, 111, 114]), // b"anchor".
-        program.provider.wallet.publicKey.toBuffer(),
-      ],
-      program.programId
+    const myAccount = await program.account.testData.associatedAddress(
+      program.provider.wallet.publicKey
     );
-
     await assert.rejects(
       async () => {
-        await program.account.testData.fetch(associatedAccount);
+        await program.account.testData.fetch(myAccount);
       },
       (err) => {
         assert.ok(
           err.toString() ===
-            `Error: Account does not exist ${associatedAccount.toString()}`
+            `Error: Account does not exist ${myAccount.toString()}`
         );
         return true;
       }
@@ -267,7 +257,7 @@ describe("misc", () => {
 
     const resp = await program.simulate.testSimulateAssociatedAccount(44, {
       accounts: {
-        myAccount: associatedAccount,
+        myAccount,
         authority: program.provider.wallet.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
@@ -294,9 +284,7 @@ describe("misc", () => {
     assert.ok(resp.events[2].name === "E3");
     assert.ok(resp.events[2].data.data === 9);
     assert.ok(resp.events[3].name === "E4");
-    assert.ok(
-      resp.events[3].data.data.toBase58() === associatedAccount.toBase58()
-    );
+    assert.ok(resp.events[3].data.data.toBase58() === myAccount.toBase58());
   });
 
   it("Can use i8 in the idl", async () => {
