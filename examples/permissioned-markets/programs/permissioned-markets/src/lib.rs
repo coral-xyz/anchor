@@ -1,3 +1,5 @@
+// Note. This example depends on unreleased Serum DEX changes.
+
 use anchor_lang::prelude::*;
 use anchor_spl::dex;
 use serum_dex::instruction::MarketInstruction;
