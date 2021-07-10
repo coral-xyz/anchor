@@ -1,3 +1,5 @@
+#![warn(missing_debug_implementations, unused_import_braces)]
+
 use codegen::accounts as accounts_codegen;
 use codegen::program as program_codegen;
 use parser::accounts as accounts_parser;
@@ -31,6 +33,7 @@ pub struct Program {
     pub name: Ident,
     pub program_mod: ItemMod,
     pub fallback_fn: Option<FallbackFn>,
+    pub program_arguments: ProgramArguments,
 }
 
 impl Parse for Program {
@@ -50,6 +53,26 @@ impl ToTokens for Program {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         tokens.extend::<TokenStream>(self.into());
     }
+}
+
+mod program_argument{
+    use super::*;
+
+    pub const NO_ENTRYPOINT_IDENT: &str = "no_entrypoint_feature";
+    pub fn default_no_entrypoint() -> LitStr{
+        syn::parse_str("no-entrypoint").unwrap()
+    }
+
+    pub const NO_IDL_IDENT: &str = "no_idl_feature";
+    pub fn default_no_idl() -> LitStr {
+        syn::parse_str("no-idl").unwrap()
+    }
+}
+
+#[derive(Debug)]
+pub struct ProgramArguments{
+    no_entrypoint: LitStr,
+    no_idl: LitStr,
 }
 
 #[derive(Debug)]

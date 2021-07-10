@@ -6,8 +6,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
     let fallback_maybe = dispatch::gen_fallback(program).unwrap_or(quote! {
         Err(anchor_lang::__private::ErrorCode::InstructionMissing.into());
     });
+    let no_entrypoint = &program.program_arguments.no_entrypoint;
     quote! {
-        #[cfg(not(feature = "no-entrypoint"))]
+        #[cfg(not(feature = #no_entrypoint))]
         anchor_lang::solana_program::entrypoint!(entry);
         /// The Anchor codegen exposes a programming model where a user defines
         /// a set of methods inside of a `#[program]` module in a way similar
@@ -49,7 +50,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         ///
         /// The `entry` function here, defines the standard entry to a Solana
         /// program, where execution begins.
-        #[cfg(not(feature = "no-entrypoint"))]
+        #[cfg(not(feature = #no_entrypoint))]
         pub fn entry(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
             #[cfg(feature = "anchor-debug")]
             {

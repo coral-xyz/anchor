@@ -11,7 +11,7 @@ pub const HASH_BYTES: usize = 32;
 #[repr(transparent)]
 pub struct Hash(pub [u8; HASH_BYTES]);
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Hasher {
     hasher: Sha256,
 }

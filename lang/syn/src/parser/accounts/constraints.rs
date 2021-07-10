@@ -190,7 +190,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
     Ok(c)
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct ConstraintGroupBuilder<'ty> {
     pub f_ty: Option<&'ty Ty>,
     pub init: Option<Context<ConstraintInit>>,

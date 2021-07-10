@@ -128,14 +128,12 @@ pub trait ToAccountMetas {
     fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta>;
 }
 
-/// Transformation to
-/// [`AccountInfo`](../solana_program/account_info/struct.AccountInfo.html)
-/// structs.
+/// Transformation to [`AccountInfo`] structs.
 pub trait ToAccountInfos<'info> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>>;
 }
 
-/// Transformation to an `AccountInfo` struct.
+/// Transformation to an [`AccountInfo`] struct.
 pub trait ToAccountInfo<'info> {
     fn to_account_info(&self) -> AccountInfo<'info>;
 }

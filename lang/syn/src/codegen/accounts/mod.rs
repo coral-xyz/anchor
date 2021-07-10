@@ -3,7 +3,7 @@ use quote::quote;
 use std::iter;
 use syn::punctuated::Punctuated;
 use syn::{ConstParam, LifetimeDef, Token, TypeParam};
-use syn::{GenericParam, PredicateLifetime, WhereClause, WherePredicate};
+use syn::{GenericParam, WhereClause};
 
 mod __client_accounts;
 mod constraints;
@@ -38,19 +38,10 @@ fn generics(accs: &AccountsStruct) -> ParsedGenerics {
         .cloned()
         .unwrap_or_else(|| syn::parse_str("'info").expect("Could not parse lifetime"));
 
-    let mut where_clause = accs.generics.where_clause.clone().unwrap_or(WhereClause {
+    let where_clause = accs.generics.where_clause.clone().unwrap_or(WhereClause {
         where_token: Default::default(),
         predicates: Default::default(),
     });
-    for lifetime in accs.generics.lifetimes().map(|def| &def.lifetime) {
-        where_clause
-            .predicates
-            .push(WherePredicate::Lifetime(PredicateLifetime {
-                lifetime: lifetime.clone(),
-                colon_token: Default::default(),
-                bounds: iter::once(trait_lifetime.lifetime.clone()).collect(),
-            }))
-    }
     let trait_lifetime = GenericParam::Lifetime(trait_lifetime);
 
     ParsedGenerics {

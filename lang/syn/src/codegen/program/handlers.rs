@@ -8,14 +8,15 @@ use quote::quote;
 // so.
 pub fn generate(program: &Program) -> proc_macro2::TokenStream {
     let program_name = &program.name;
+    let no_idl = &program.program_arguments.no_idl;
     let non_inlined_idl: proc_macro2::TokenStream = {
         quote! {
-            // Entry for all IDL related instructions. Use the "no-idl" feature
+            // Entry for all IDL related instructions. Use the #no_idl feature
             // to eliminate this code, for example, if one wants to make the
             // IDL no longer mutable or if one doesn't want to store the IDL
             // on chain.
             #[inline(never)]
-            #[cfg(not(feature = "no-idl"))]
+            #[cfg(not(feature = #no_idl))]
             pub fn __idl_dispatch(program_id: &Pubkey, accounts: &[AccountInfo], idl_ix_data: &[u8]) -> ProgramResult {
                 let mut accounts = accounts;
                 let mut data: &[u8] = idl_ix_data;
@@ -59,7 +60,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             }
 
             #[inline(never)]
-            #[cfg(feature = "no-idl")]
+            #[cfg(feature = #no_idl)]
             pub fn __idl_dispatch(program_id: &Pubkey, accounts: &[AccountInfo], idl_ix_data: &[u8]) -> ProgramResult {
                 Err(anchor_lang::__private::ErrorCode::IdlInstructionStub.into())
             }

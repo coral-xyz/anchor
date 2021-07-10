@@ -3,6 +3,8 @@ use crate::Program;
 use quote::quote;
 
 pub fn generate(program: &Program) -> proc_macro2::TokenStream {
+    let no_idl = &program.program_arguments.no_idl;
+
     // Dispatch the state constructor.
     let ctor_state_dispatch_arm = match &program.state {
         None => quote! { /* no-op */ },
@@ -152,7 +154,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
             // If the method identifier is the IDL tag, then execute an IDL
             // instruction, injected into all Anchor programs.
-            if cfg!(not(feature = "no-idl")) {
+            if cfg!(not(feature = #no_idl)) {
                 if sighash == anchor_lang::idl::IDL_IX_TAG.to_le_bytes() {
                     return __private::__idl::__idl_dispatch(
                         program_id,

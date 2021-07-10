@@ -1,6 +1,10 @@
-use crate::Program;
-use syn::parse::{Error as ParseError, Result as ParseResult};
+use crate::{Program, ProgramArguments, program_argument};
+use syn::parse::{Error as ParseError, Result as ParseResult, Parse, ParseStream};
 use syn::spanned::Spanned;
+use syn::{parenthesized, Token, LitStr, Ident, token};
+use syn::punctuated::Punctuated;
+use quote::ToTokens;
+use proc_macro2::TokenStream;
 
 mod instructions;
 mod state;
@@ -8,13 +12,106 @@ mod state;
 pub fn parse(program_mod: syn::ItemMod) -> ParseResult<Program> {
     let state = state::parse(&program_mod)?;
     let (ixs, fallback_fn) = instructions::parse(&program_mod)?;
+    let program_attr = program_mod.attrs.iter()
+        .find(|attr |attr.path == syn::parse_str("program").unwrap())
+        .unwrap();
+    let program_arguments = syn::parse2(program_attr.tokens.clone())?;
     Ok(Program {
         state,
         ixs,
         name: program_mod.ident.clone(),
         program_mod,
         fallback_fn,
+        program_arguments,
     })
+}
+
+#[derive(Default)]
+struct ProgramArgumentsOption{
+    no_entrypoint: Option<LitStr>,
+    no_idl: Option<LitStr>,
+}
+impl From<ProgramArgumentsOption> for ProgramArguments{
+    fn from(from: ProgramArgumentsOption) -> Self {
+        Self{
+            no_entrypoint: from.no_entrypoint.unwrap_or_else(program_argument::default_no_entrypoint),
+            no_idl: from.no_idl.unwrap_or_else(program_argument::default_no_idl),
+        }
+    }
+}
+impl Parse for ProgramArguments{
+    fn parse(input: ParseStream) -> ParseResult<Self> {
+        if input.peek(token::Paren) {
+            let content;
+            parenthesized!(content in input);
+            let seperated: Punctuated<ProgramArgument, Token![,]> = Punctuated::parse_terminated(&content)?;
+            let mut optional = ProgramArgumentsOption::default();
+            for argument in seperated {
+                match argument.clone() {
+                    ProgramArgument::NoEntrypoint { name, .. } => if optional.no_entrypoint.replace(name).is_some() {
+                        return Err(ParseError::new_spanned(argument, format!("Multiple `{}` arguments, can only have one.", program_argument::NO_ENTRYPOINT_IDENT)));
+                    },
+                    ProgramArgument::NoIdl { name, .. } => if optional.no_idl.replace(name).is_some(){
+                        return Err(ParseError::new_spanned(argument, format!("Multiple `{}` arguments, can only have one.", program_argument::NO_IDL_IDENT)));
+                    }
+                }
+            }
+            Ok(optional.into())
+        }
+        else{
+            // Remove this branch if required arguments are added
+            Ok(ProgramArgumentsOption::default().into())
+        }
+    }
+}
+
+#[derive(Clone)]
+enum ProgramArgument{
+    NoEntrypoint{
+        ident: Ident,
+        equals: Token![=],
+        name: LitStr,
+    },
+    NoIdl{
+        ident: Ident,
+        equals: Token![=],
+        name: LitStr,
+    }
+}
+impl Parse for ProgramArgument{
+    fn parse(input: ParseStream) -> ParseResult<Self> {
+        let ident: Ident = input.parse()?;
+        let ident_name = ident.to_string();
+        Ok(match ident_name.as_str(){
+            program_argument::NO_ENTRYPOINT_IDENT => Self::NoEntrypoint {
+                ident,
+                equals: input.parse()?,
+                name: input.parse()?,
+            },
+            program_argument::NO_IDL_IDENT => Self::NoIdl {
+                ident,
+                equals: input.parse()?,
+                name: input.parse()?,
+            },
+            _ => return Err(ParseError::new_spanned(ident, format!("Unknown program argument: {}", ident_name)))
+        })
+    }
+}
+impl ToTokens for ProgramArgument{
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self{
+            Self::NoEntrypoint { ident, equals, name } => {
+                ident.to_tokens(tokens);
+                equals.to_tokens(tokens);
+                name.to_tokens(tokens);
+            },
+            Self::NoIdl { ident, equals, name } => {
+                ident.to_tokens(tokens);
+                equals.to_tokens(tokens);
+                name.to_tokens(tokens);
+            }
+        }
+    }
 }
 
 fn ctx_accounts_ident(path_ty: &syn::PatType) -> ParseResult<proc_macro2::Ident> {
