@@ -20,6 +20,7 @@ incremented for features.
 ### Fixes
 
 * lang: Preserve all instruction data for fallback functions ([#483](https://github.com/project-serum/anchor/pull/483)).
+* ts: Event listener not firing when creating associated accounts ([#356](https://github.com/project-serum/anchor/issues/356)).
 
 ## [0.11.0] - 2021-07-03
 
