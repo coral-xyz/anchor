@@ -1,10 +1,10 @@
-use crate::{Program, ProgramArguments, program_argument};
-use syn::parse::{Error as ParseError, Result as ParseResult, Parse, ParseStream};
-use syn::spanned::Spanned;
-use syn::{parenthesized, Token, LitStr, Ident, token};
-use syn::punctuated::Punctuated;
-use quote::ToTokens;
+use crate::{program_argument, Program, ProgramArguments};
 use proc_macro2::TokenStream;
+use quote::ToTokens;
+use syn::parse::{Error as ParseError, Parse, ParseStream, Result as ParseResult};
+use syn::punctuated::Punctuated;
+use syn::spanned::Spanned;
+use syn::{parenthesized, token, Ident, LitStr, Token};
 
 mod instructions;
 mod state;
@@ -12,8 +12,10 @@ mod state;
 pub fn parse(program_mod: syn::ItemMod) -> ParseResult<Program> {
     let state = state::parse(&program_mod)?;
     let (ixs, fallback_fn) = instructions::parse(&program_mod)?;
-    let program_attr = program_mod.attrs.iter()
-        .find(|attr |attr.path == syn::parse_str("program").unwrap())
+    let program_attr = program_mod
+        .attrs
+        .iter()
+        .find(|attr| attr.path == syn::parse_str("program").unwrap())
         .unwrap();
     let program_arguments = syn::parse2(program_attr.tokens.clone())?;
     Ok(Program {
@@ -27,38 +29,56 @@ pub fn parse(program_mod: syn::ItemMod) -> ParseResult<Program> {
 }
 
 #[derive(Default)]
-struct ProgramArgumentsOption{
+struct ProgramArgumentsOption {
     no_entrypoint: Option<LitStr>,
     no_idl: Option<LitStr>,
 }
-impl From<ProgramArgumentsOption> for ProgramArguments{
+impl From<ProgramArgumentsOption> for ProgramArguments {
     fn from(from: ProgramArgumentsOption) -> Self {
-        Self{
-            no_entrypoint: from.no_entrypoint.unwrap_or_else(program_argument::default_no_entrypoint),
+        Self {
+            no_entrypoint: from
+                .no_entrypoint
+                .unwrap_or_else(program_argument::default_no_entrypoint),
             no_idl: from.no_idl.unwrap_or_else(program_argument::default_no_idl),
         }
     }
 }
-impl Parse for ProgramArguments{
+impl Parse for ProgramArguments {
     fn parse(input: ParseStream) -> ParseResult<Self> {
         if input.peek(token::Paren) {
             let content;
             parenthesized!(content in input);
-            let seperated: Punctuated<ProgramArgument, Token![,]> = Punctuated::parse_terminated(&content)?;
+            let seperated: Punctuated<ProgramArgument, Token![,]> =
+                Punctuated::parse_terminated(&content)?;
             let mut optional = ProgramArgumentsOption::default();
             for argument in seperated {
                 match argument.clone() {
-                    ProgramArgument::NoEntrypoint { name, .. } => if optional.no_entrypoint.replace(name).is_some() {
-                        return Err(ParseError::new_spanned(argument, format!("Multiple `{}` arguments, can only have one.", program_argument::NO_ENTRYPOINT_IDENT)));
-                    },
-                    ProgramArgument::NoIdl { name, .. } => if optional.no_idl.replace(name).is_some(){
-                        return Err(ParseError::new_spanned(argument, format!("Multiple `{}` arguments, can only have one.", program_argument::NO_IDL_IDENT)));
+                    ProgramArgument::NoEntrypoint { name, .. } => {
+                        if optional.no_entrypoint.replace(name).is_some() {
+                            return Err(ParseError::new_spanned(
+                                argument,
+                                format!(
+                                    "Multiple `{}` arguments, can only have one.",
+                                    program_argument::NO_ENTRYPOINT_IDENT
+                                ),
+                            ));
+                        }
+                    }
+                    ProgramArgument::NoIdl { name, .. } => {
+                        if optional.no_idl.replace(name).is_some() {
+                            return Err(ParseError::new_spanned(
+                                argument,
+                                format!(
+                                    "Multiple `{}` arguments, can only have one.",
+                                    program_argument::NO_IDL_IDENT
+                                ),
+                            ));
+                        }
                     }
                 }
             }
             Ok(optional.into())
-        }
-        else{
+        } else {
             // Remove this branch if required arguments are added
             Ok(ProgramArgumentsOption::default().into())
         }
@@ -66,23 +86,23 @@ impl Parse for ProgramArguments{
 }
 
 #[derive(Clone)]
-enum ProgramArgument{
-    NoEntrypoint{
+enum ProgramArgument {
+    NoEntrypoint {
         ident: Ident,
         equals: Token![=],
         name: LitStr,
     },
-    NoIdl{
+    NoIdl {
         ident: Ident,
         equals: Token![=],
         name: LitStr,
-    }
+    },
 }
-impl Parse for ProgramArgument{
+impl Parse for ProgramArgument {
     fn parse(input: ParseStream) -> ParseResult<Self> {
         let ident: Ident = input.parse()?;
         let ident_name = ident.to_string();
-        Ok(match ident_name.as_str(){
+        Ok(match ident_name.as_str() {
             program_argument::NO_ENTRYPOINT_IDENT => Self::NoEntrypoint {
                 ident,
                 equals: input.parse()?,
@@ -93,19 +113,32 @@ impl Parse for ProgramArgument{
                 equals: input.parse()?,
                 name: input.parse()?,
             },
-            _ => return Err(ParseError::new_spanned(ident, format!("Unknown program argument: {}", ident_name)))
+            _ => {
+                return Err(ParseError::new_spanned(
+                    ident,
+                    format!("Unknown program argument: {}", ident_name),
+                ))
+            }
         })
     }
 }
-impl ToTokens for ProgramArgument{
+impl ToTokens for ProgramArgument {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        match self{
-            Self::NoEntrypoint { ident, equals, name } => {
+        match self {
+            Self::NoEntrypoint {
+                ident,
+                equals,
+                name,
+            } => {
                 ident.to_tokens(tokens);
                 equals.to_tokens(tokens);
                 name.to_tokens(tokens);
-            },
-            Self::NoIdl { ident, equals, name } => {
+            }
+            Self::NoIdl {
+                ident,
+                equals,
+                name,
+            } => {
                 ident.to_tokens(tokens);
                 equals.to_tokens(tokens);
                 name.to_tokens(tokens);

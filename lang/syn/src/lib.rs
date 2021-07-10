@@ -55,11 +55,11 @@ impl ToTokens for Program {
     }
 }
 
-mod program_argument{
+mod program_argument {
     use super::*;
 
     pub const NO_ENTRYPOINT_IDENT: &str = "no_entrypoint_feature";
-    pub fn default_no_entrypoint() -> LitStr{
+    pub fn default_no_entrypoint() -> LitStr {
         syn::parse_str("no-entrypoint").unwrap()
     }
 
@@ -70,7 +70,7 @@ mod program_argument{
 }
 
 #[derive(Debug)]
-pub struct ProgramArguments{
+pub struct ProgramArguments {
     no_entrypoint: LitStr,
     no_idl: LitStr,
 }
