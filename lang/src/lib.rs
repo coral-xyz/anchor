@@ -335,7 +335,7 @@ macro_rules! associated_seeds {
 ///
 /// After defining an `ErrorCode`
 ///
-/// ```
+/// ```ignore
 /// #[error]
 /// pub struct ErrorCode {
 ///     InvalidArgument,
@@ -344,7 +344,7 @@ macro_rules! associated_seeds {
 ///
 /// One can write a `require` assertion as
 ///
-/// ```
+/// ```ignore
 /// require!(condition, InvalidArgument);
 /// ```
 ///
