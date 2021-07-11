@@ -83,6 +83,10 @@ fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
 fn parse_ty(f: &syn::Field) -> ParseResult<Ty> {
     let path = match &f.ty {
         syn::Type::Path(ty_path) => ty_path.path.clone(),
+        syn::Type::Reference(ty_ref) => match *ty_ref.elem.clone() {
+            syn::Type::Path(ty_path) => ty_path.path.clone(),
+            _ => return Err(ParseError::new(f.ty.span(), "invalid account type given")),
+        },
         _ => return Err(ParseError::new(f.ty.span(), "invalid account type given")),
     };
     let ty = match ident_string(f)?.as_str() {
@@ -100,20 +104,38 @@ fn parse_ty(f: &syn::Field) -> ParseResult<Ty> {
 }
 
 fn ident_string(f: &syn::Field) -> ParseResult<String> {
-    let path = match &f.ty {
-        syn::Type::Path(ty_path) => ty_path.path.clone(),
-        _ => return Err(ParseError::new(f.ty.span(), "invalid type")),
-    };
-    // TODO: allow segmented paths.
-    if path.segments.len() != 1 {
-        return Err(ParseError::new(
-            f.ty.span(),
-            "segmented paths are not currently allowed",
-        ));
-    }
+    match &f.ty {
+        syn::Type::Path(ty_path) => {
+            let path = ty_path.path.clone();
+            // TODO: allow segmented paths.
+            if path.segments.len() != 1 {
+                return Err(ParseError::new(
+                    f.ty.span(),
+                    "segmented paths are not currently allowed",
+                ));
+            }
 
-    let segments = &path.segments[0];
-    Ok(segments.ident.to_string())
+            let segments = &path.segments[0];
+            Ok(segments.ident.to_string())
+        }
+        syn::Type::Reference(ty_ref) => match *ty_ref.elem.clone() {
+            syn::Type::Path(ty_path) => {
+                let path = ty_path.path.clone();
+                // TODO: allow segmented paths.
+                if path.segments.len() != 1 {
+                    return Err(ParseError::new(
+                        f.ty.span(),
+                        "segmented paths are not currently allowed",
+                    ));
+                }
+
+                let segments = &path.segments[0];
+                Ok(segments.ident.to_string())
+            }
+            _ => return Err(ParseError::new(f.ty.span(), "invalid type")),
+        },
+        _ => return Err(ParseError::new(f.ty.span(), "invalid type")),
+    }
 }
 
 fn parse_program_state(path: &syn::Path) -> ParseResult<ProgramStateTy> {
