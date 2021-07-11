@@ -293,10 +293,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                     .mutable
                     .replace(Context::new(i.span(), ConstraintMut {})),
             };
-            if self.rent_exempt.is_none() {
-                self.rent_exempt
-                    .replace(Context::new(i.span(), ConstraintRentExempt::Enforce));
-            }
         }
 
         // Seeds.
@@ -738,7 +734,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         if self.seeds.is_none() {
             return Err(ParseError::new(
                 c.span(),
-                "associated or seeds must be provided before space",
+                "init must be provided before space",
             ));
         }
         if self.space.is_some() {
