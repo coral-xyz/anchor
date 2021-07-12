@@ -11,6 +11,46 @@ incremented for features.
 
 ## [Unreleased]
 
+## [0.11.1] - 2021-07-09
+
+### Features
+
+* lang: Adds `require` macro for specifying assertions that return error codes on failure ([#483](https://github.com/project-serum/anchor/pull/483)).
+* lang: Allow one to specify arbitrary programs as the owner when creating PDA ([#483](https://github.com/project-serum/anchor/pull/483)).
+* lang: A new `bump` keyword is added to the accounts constraints, which is used to add an optional bump seed to the end of a `seeds` array. When used in conjunction with *both* `init` and `seeds`, then the program executes `find_program_address` to assert that the given bump is the canonical bump ([#483](https://github.com/project-serum/anchor/pull/483)).
+
+### Fixes
+
+* lang: Preserve all instruction data for fallback functions ([#483](https://github.com/project-serum/anchor/pull/483)).
+* ts: Event listener not firing when creating associated accounts ([#356](https://github.com/project-serum/anchor/issues/356)).
+
+## [0.11.0] - 2021-07-03
+
+### Features
+
+* lang: Add fallback functions ([#457](https://github.com/project-serum/anchor/pull/457)).
+* lang: Add feature flag for using the old state account discriminator. This is a temporary flag for those with programs built prior to v0.7.0 but want to use the latest Anchor version. Expect this to be removed in a future version ([#446](https://github.com/project-serum/anchor/pull/446)).
+* lang: Add generic support to Accounts ([#496](https://github.com/project-serum/anchor/pull/496)).
+
+### Breaking Changes
+
+* cli: Remove `.spec` suffix on TypeScript tests files ([#441](https://github.com/project-serum/anchor/pull/441)).
+* lang: Remove `belongs_to` constraint ([#459](https://github.com/project-serum/anchor/pull/459)).
+
+## [0.10.0] - 2021-06-27
+
+### Features
+
+* lang: Add `#[account(address = <expr>)]` constraint for asserting the address of an account ([#400](https://github.com/project-serum/anchor/pull/400)).
+* lang: Add `#[account(init, token = <mint-target>, authority = <token-owner-target>...)]` constraint for initializing SPL token accounts as program derived addresses for the program. Can be used when initialized via `seeds` or `associated` ([#400](https://github.com/project-serum/anchor/pull/400)).
+* lang: Add `associated_seeds!` macro for generating signer seeds for CPIs signed by an `#[account(associated = <target>)]` account ([#400](https://github.com/project-serum/anchor/pull/400)).
+* cli: Add `[scripts]` section to the Anchor.toml for specifying workspace scripts that can be run via `anchor run <script>` ([#400](https://github.com/project-serum/anchor/pull/400)).
+* cli: `[clusters.<network>]` table entries can now also use `{ address = <base58-str>, idl = <filepath-str> }` to specify workspace programs ([#400](https://github.com/project-serum/anchor/pull/400)).
+
+### Breaking Changes
+
+* cli: Remove `--yarn` flag in favor of using `npx` ([#432](https://github.com/project-serum/anchor/pull/432)).
+
 ## [0.9.0] - 2021-06-15
 
 ### Features

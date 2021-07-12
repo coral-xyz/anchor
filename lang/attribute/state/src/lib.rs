@@ -46,24 +46,22 @@ pub fn state(
                     }
                 }
             }
-        } else {
-            if is_zero_copy {
-                quote! {
-                    impl anchor_lang::__private::AccountSize for #struct_ident {
-                        fn size(&self) -> std::result::Result<u64, anchor_lang::solana_program::program_error::ProgramError> {
-                            let len = anchor_lang::__private::bytemuck::bytes_of(self).len() as u64;
-                            Ok(8 + len)
-                        }
+        } else if is_zero_copy {
+            quote! {
+                impl anchor_lang::__private::AccountSize for #struct_ident {
+                    fn size(&self) -> std::result::Result<u64, anchor_lang::solana_program::program_error::ProgramError> {
+                        let len = anchor_lang::__private::bytemuck::bytes_of(self).len() as u64;
+                        Ok(8 + len)
                     }
                 }
-            } else {
-                let size = proc_macro2::TokenStream::from(args.clone());
-                // Size override given to the macro. Use it.
-                quote! {
-                    impl anchor_lang::__private::AccountSize for #struct_ident {
-                        fn size(&self) -> std::result::Result<u64, anchor_lang::solana_program::program_error::ProgramError> {
-                            Ok(#size)
-                        }
+            }
+        } else {
+            let size = proc_macro2::TokenStream::from(args);
+            // Size override given to the macro. Use it.
+            quote! {
+                impl anchor_lang::__private::AccountSize for #struct_ident {
+                    fn size(&self) -> std::result::Result<u64, anchor_lang::solana_program::program_error::ProgramError> {
+                        Ok(#size)
                     }
                 }
             }
@@ -71,8 +69,14 @@ pub fn state(
     };
 
     let attribute = match is_zero_copy {
-        false => quote! {#[account("state")]},
-        true => quote! {#[account("state", zero_copy)]},
+        false => quote! {
+            #[cfg_attr(feature = "anchor-deprecated-state", account)]
+            #[cfg_attr(not(feature = "anchor-deprecated-state"), account("state"))]
+        },
+        true => quote! {
+            #[cfg_attr(feature = "anchor-deprecated-state", account(zero_copy))]
+            #[cfg_attr(not(feature = "anchor-deprecated-state"), account("state", zero_copy))]
+        },
     };
 
     proc_macro::TokenStream::from(quote! {

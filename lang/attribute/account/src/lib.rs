@@ -1,7 +1,7 @@
 extern crate proc_macro;
 
 use quote::quote;
-use syn::parse_macro_input;
+use syn::{parse_macro_input, parse_quote};
 
 /// A data structure representing a Solana account, implementing various traits:
 ///
@@ -59,10 +59,10 @@ pub fn account(
 ) -> proc_macro::TokenStream {
     let mut namespace = "".to_string();
     let mut is_zero_copy = false;
-    if args.to_string().split(",").collect::<Vec<_>>().len() > 2 {
+    if args.to_string().split(',').count() > 2 {
         panic!("Only two args are allowed to the account attribute.")
     }
-    for arg in args.to_string().split(",") {
+    for arg in args.to_string().split(',') {
         let ns = arg
             .to_string()
             .replace("\"", "")
@@ -78,6 +78,7 @@ pub fn account(
 
     let account_strct = parse_macro_input!(input as syn::ItemStruct);
     let account_name = &account_strct.ident;
+    let (impl_gen, type_gen, where_clause) = account_strct.generics.split_for_impl();
 
     let discriminator: proc_macro2::TokenStream = {
         // Namespace the discriminator to prevent collisions.
@@ -103,12 +104,16 @@ pub fn account(
                 #[zero_copy]
                 #account_strct
 
-                unsafe impl anchor_lang::__private::bytemuck::Pod for #account_name {}
-                unsafe impl anchor_lang::__private::bytemuck::Zeroable for #account_name {}
+                #[automatically_derived]
+                unsafe impl #impl_gen anchor_lang::__private::bytemuck::Pod for #account_name #type_gen #where_clause {}
+                #[automatically_derived]
+                unsafe impl #impl_gen anchor_lang::__private::bytemuck::Zeroable for #account_name #type_gen #where_clause {}
 
-                impl anchor_lang::ZeroCopy for #account_name {}
+                #[automatically_derived]
+                impl #impl_gen anchor_lang::ZeroCopy for #account_name #type_gen #where_clause {}
 
-                impl anchor_lang::Discriminator for #account_name {
+                #[automatically_derived]
+                impl #impl_gen anchor_lang::Discriminator for #account_name #type_gen #where_clause {
                     fn discriminator() -> [u8; 8] {
                         #discriminator
                     }
@@ -116,7 +121,8 @@ pub fn account(
 
                 // This trait is useful for clients deserializing accounts.
                 // It's expected on-chain programs deserialize via zero-copy.
-                impl anchor_lang::AccountDeserialize for #account_name {
+                #[automatically_derived]
+                impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
                     fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
                         if buf.len() < #discriminator.len() {
                             return Err(anchor_lang::__private::ErrorCode::AccountDiscriminatorNotFound.into());
@@ -142,7 +148,8 @@ pub fn account(
                 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
                 #account_strct
 
-                impl anchor_lang::AccountSerialize for #account_name {
+                #[automatically_derived]
+                impl #impl_gen anchor_lang::AccountSerialize for #account_name #type_gen #where_clause {
                     fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> std::result::Result<(), ProgramError> {
                         writer.write_all(&#discriminator).map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotSerialize)?;
                         AnchorSerialize::serialize(
@@ -154,7 +161,8 @@ pub fn account(
                     }
                 }
 
-                impl anchor_lang::AccountDeserialize for #account_name {
+                #[automatically_derived]
+                impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
                     fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
                         if buf.len() < #discriminator.len() {
                             return Err(anchor_lang::__private::ErrorCode::AccountDiscriminatorNotFound.into());
@@ -173,7 +181,8 @@ pub fn account(
                     }
                 }
 
-                impl anchor_lang::Discriminator for #account_name {
+                #[automatically_derived]
+                impl #impl_gen anchor_lang::Discriminator for #account_name #type_gen #where_clause {
                     fn discriminator() -> [u8; 8] {
                         #discriminator
                     }
@@ -206,6 +215,7 @@ pub fn associated(
 ) -> proc_macro::TokenStream {
     let mut account_strct = parse_macro_input!(input as syn::ItemStruct);
     let account_name = &account_strct.ident;
+    let (impl_gen, ty_gen, where_clause) = account_strct.generics.split_for_impl();
 
     // Add a `__nonce: u8` field to the struct to hold the bump seed for
     // the program dervied address.
@@ -218,7 +228,12 @@ pub fn associated(
             });
             fields.named.push(syn::Field {
                 attrs: Vec::new(),
-                vis: syn::Visibility::Inherited,
+                vis: syn::Visibility::Restricted(syn::VisRestricted {
+                    pub_token: syn::token::Pub::default(),
+                    paren_token: syn::token::Paren::default(),
+                    in_token: None,
+                    path: Box::new(parse_quote!(crate)),
+                }),
                 ident: Some(syn::Ident::new("__nonce", proc_macro2::Span::call_site())),
                 colon_token: Some(syn::token::Colon {
                     spans: [proc_macro2::Span::call_site()],
@@ -240,7 +255,8 @@ pub fn associated(
         #[anchor_lang::account(#args)]
         #account_strct
 
-        impl anchor_lang::Bump for #account_name {
+        #[automatically_derived]
+        impl #impl_gen anchor_lang::Bump for #account_name #ty_gen #where_clause {
             fn seed(&self) -> u8 {
                 self.__nonce
             }
@@ -252,6 +268,7 @@ pub fn associated(
 pub fn derive_zero_copy_accessor(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let account_strct = parse_macro_input!(item as syn::ItemStruct);
     let account_name = &account_strct.ident;
+    let (impl_gen, ty_gen, where_clause) = account_strct.generics.split_for_impl();
 
     let fields = match &account_strct.fields {
         syn::Fields::Named(n) => n,
@@ -264,14 +281,7 @@ pub fn derive_zero_copy_accessor(item: proc_macro::TokenStream) -> proc_macro::T
             field
                 .attrs
                 .iter()
-                .filter(|attr| {
-                    let name = anchor_syn::parser::tts_to_string(&attr.path);
-                    if name != "accessor" {
-                        return false;
-                    }
-                    return true;
-                })
-                .next()
+                .find(|attr| anchor_syn::parser::tts_to_string(&attr.path) == "accessor")
                 .map(|attr| {
                     let mut tts = attr.tokens.clone().into_iter();
                     let g_stream = match tts.next().expect("Must have a token group") {
@@ -302,7 +312,8 @@ pub fn derive_zero_copy_accessor(item: proc_macro::TokenStream) -> proc_macro::T
         })
         .collect();
     proc_macro::TokenStream::from(quote! {
-        impl #account_name {
+        #[automatically_derived]
+        impl #impl_gen #account_name #ty_gen #where_clause {
             #(#methods)*
         }
     })

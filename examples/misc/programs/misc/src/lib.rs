@@ -2,6 +2,7 @@
 //! It's not too instructive/coherent by itself, so please see other examples.
 
 use anchor_lang::prelude::*;
+use anchor_spl::token::{Mint, TokenAccount};
 use misc2::misc2::MyState as Misc2State;
 use misc2::Auth;
 
@@ -80,6 +81,20 @@ pub mod misc {
         Ok(())
     }
 
+    pub fn test_simulate_associated_account(
+        ctx: Context<TestSimulateAssociatedAccount>,
+        data: u32,
+    ) -> ProgramResult {
+        let associated_account = *ctx.accounts.my_account.to_account_info().key;
+        emit!(E1 { data });
+        emit!(E2 { data: 1234 });
+        emit!(E3 { data: 9 });
+        emit!(E4 {
+            data: associated_account
+        });
+        Ok(())
+    }
+
     pub fn test_i8(ctx: Context<TestI8>, data: i8) -> ProgramResult {
         ctx.accounts.data.data = data;
         Ok(())
@@ -123,6 +138,37 @@ pub mod misc {
         acc.data = 1234;
         Ok(())
     }
+
+    pub fn test_token_seeds_init(_ctx: Context<TestTokenSeedsInit>, _nonce: u8) -> ProgramResult {
+        Ok(())
+    }
+
+    pub fn default<'info>(
+        _program_id: &Pubkey,
+        _accounts: &[AccountInfo<'info>],
+        _data: &[u8],
+    ) -> ProgramResult {
+        Err(ProgramError::Custom(1234))
+    }
+}
+
+#[derive(Accounts)]
+#[instruction(nonce: u8)]
+pub struct TestTokenSeedsInit<'info> {
+    #[account(
+        init,
+        token = mint,
+        authority = authority,
+        seeds = [b"my-token-seed".as_ref(), &[nonce]],
+        payer = authority,
+        space = TokenAccount::LEN,
+    )]
+    pub my_pda: CpiAccount<'info, TokenAccount>,
+    pub mint: CpiAccount<'info, Mint>,
+    pub authority: AccountInfo<'info>,
+    pub system_program: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub token_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -219,7 +265,7 @@ pub struct TestClose<'info> {
 // the program.
 #[derive(Accounts)]
 pub struct TestInitAssociatedAccount<'info> {
-    #[account(init, associated = authority, with = state, with = data)]
+    #[account(init, associated = authority, with = state, with = data, with = b"my-seed")]
     my_account: ProgramAccount<'info, TestData>,
     #[account(mut, signer)]
     authority: AccountInfo<'info>,
@@ -231,7 +277,7 @@ pub struct TestInitAssociatedAccount<'info> {
 
 #[derive(Accounts)]
 pub struct TestAssociatedAccount<'info> {
-    #[account(mut, associated = authority, with = state, with = data)]
+    #[account(mut, associated = authority, with = state, with = data, with = b"my-seed")]
     my_account: ProgramAccount<'info, TestData>,
     #[account(mut, signer)]
     authority: AccountInfo<'info>,
@@ -255,6 +301,16 @@ pub struct TestI16<'info> {
 
 #[derive(Accounts)]
 pub struct TestSimulate {}
+
+#[derive(Accounts)]
+pub struct TestSimulateAssociatedAccount<'info> {
+    #[account(init, associated = authority)]
+    my_account: ProgramAccount<'info, TestData>,
+    #[account(mut, signer)]
+    authority: AccountInfo<'info>,
+    rent: Sysvar<'info, Rent>,
+    system_program: AccountInfo<'info>,
+}
 
 #[derive(Accounts)]
 pub struct TestI8<'info> {
@@ -311,4 +367,9 @@ pub struct E2 {
 #[event]
 pub struct E3 {
     data: u32,
+}
+
+#[event]
+pub struct E4 {
+    data: Pubkey,
 }
