@@ -343,37 +343,52 @@ fn parse_account_derives(ctx: &CrateContext) -> HashMap<String, AccountsStruct> 
 fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
     ctx.structs()
         .filter_map(|item_strct| {
-            for attr in &item_strct.attrs {
-                if attr.tokens.to_string().contains(DERIVE_NAME) {
-                    return None;
-                }
-            }
-            if let syn::Visibility::Public(_) = &item_strct.vis {
-                let name = item_strct.ident.to_string();
-                let fields = match &item_strct.fields {
-                    syn::Fields::Named(fields) => fields
-                        .named
-                        .iter()
-                        .map(|f: &syn::Field| {
-                            let mut tts = proc_macro2::TokenStream::new();
-                            f.ty.to_tokens(&mut tts);
-                            Ok(IdlField {
-                                name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
-                                ty: tts.to_string().parse()?,
-                            })
-                        })
-                        .collect::<Result<Vec<IdlField>>>(),
-                    f => panic!("Only named structs are allowed. Got {} {:?}", &name, f),
-                };
+            // Only take serializable types
+            let serializable = item_strct.attrs.iter().any(|attr| {
+                let attr_string = attr.tokens.to_string();
+                let attr_name = attr.path.segments.last().unwrap().ident.to_string();
+                let attr_serializable = ["account", "associated", "event", "zero_copy"];
 
-                return Some(fields.map(|fields| IdlTypeDefinition {
-                    name,
-                    ty: IdlTypeDefinitionTy::Struct { fields },
-                }));
+                let derived_serializable = attr_name == "derive"
+                    && attr_string.contains("AnchorSerialize")
+                    && attr_string.contains("AnchorDeserialize");
+
+                attr_serializable.iter().any(|a| *a == attr_name) || derived_serializable
+            });
+
+            if !serializable {
+                return None;
             }
-            None
+
+            // Only take public types
+            match &item_strct.vis {
+                syn::Visibility::Public(_) => (),
+                _ => return None,
+            }
+
+            let name = item_strct.ident.to_string();
+            let fields = match &item_strct.fields {
+                syn::Fields::Named(fields) => fields
+                    .named
+                    .iter()
+                    .map(|f: &syn::Field| {
+                        let mut tts = proc_macro2::TokenStream::new();
+                        f.ty.to_tokens(&mut tts);
+                        Ok(IdlField {
+                            name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
+                            ty: tts.to_string().parse()?,
+                        })
+                    })
+                    .collect::<Result<Vec<IdlField>>>(),
+                _ => panic!("Only named structs are allowed."),
+            };
+
+            Some(fields.map(|fields| IdlTypeDefinition {
+                name,
+                ty: IdlTypeDefinitionTy::Struct { fields },
+            }))
         })
-        .chain(ctx.enums().filter_map(|enm| {
+        .chain(ctx.enums().map(|enm| {
             let name = enm.ident.to_string();
             let variants = enm
                 .variants
@@ -403,10 +418,10 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
                     IdlEnumVariant { name, fields }
                 })
                 .collect::<Vec<IdlEnumVariant>>();
-            Some(Ok(IdlTypeDefinition {
+            Ok(IdlTypeDefinition {
                 name,
                 ty: IdlTypeDefinitionTy::Enum { variants },
-            }))
+            })
         }))
         .collect()
 }
