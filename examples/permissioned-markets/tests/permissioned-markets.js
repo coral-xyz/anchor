@@ -18,7 +18,7 @@ describe("permissioned-markets", () => {
   anchor.setProvider(provider);
   const program = anchor.workspace.PermissionedMarkets;
 
-  // Token clients.
+  // Token client.
   let usdcClient;
 
   // Global DEX accounts and clients shared accross all tests.
@@ -101,40 +101,29 @@ describe("permissioned-markets", () => {
   it("Posts a bid on the orderbook", async () => {
     const size = 1;
     const price = 1;
-
-    // The amount of USDC transferred into the dex for the trade.
     usdcPosted = new BN(marketClient._decoded.quoteLotSize.toNumber()).mul(
       marketClient
         .baseSizeNumberToLots(size)
         .mul(marketClient.priceNumberToLots(price))
     );
 
-    // Note: Prepend delegate approve to the tx since the owner of the token
-    //       account must match the owner of the open orders account. We
-    //       can probably hide this in the serum client.
     const tx = new Transaction();
     tx.add(
-      Token.createApproveInstruction(
-        TOKEN_PROGRAM_ID,
-        usdcAccount,
-        openOrders,
-        program.provider.wallet.publicKey,
-        [],
-        usdcPosted.toNumber()
-      )
-    );
-    tx.add(
-      marketClient.makePlaceOrderInstruction(program.provider.connection, {
-        owner: program.provider.wallet.publicKey,
-        payer: usdcAccount,
-        side: "buy",
+      ...marketClient.makePlaceOrderInstructionPermissioned(
+        program.provider.connection,
         price,
-        size,
-        orderType: "postOnly",
-        clientId: new BN(999),
-        openOrdersAddressKey: openOrders,
-        selfTradeBehavior: "abortTransaction",
-      })
+        {
+          owner: program.provider.wallet.publicKey,
+          payer: usdcAccount,
+          side: "buy",
+          price,
+          size,
+          orderType: "postOnly",
+          clientId: new BN(999),
+          openOrdersAddressKey: openOrders,
+          selfTradeBehavior: "abortTransaction",
+        }
+      )
     );
     await provider.send(tx);
   });
