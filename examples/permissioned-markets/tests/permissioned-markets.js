@@ -24,21 +24,27 @@ describe("permissioned-markets", () => {
   let marketClient, tokenAccount, usdcAccount;
   let openOrders, openOrdersBump, openOrdersInitAuthority, openOrdersBumpinit;
   let usdcPosted;
-  let marketMakerOpenOrders;
 
   it("BOILERPLATE: Initializes an orderbook", async () => {
-    const {
-      marketMakerOpenOrders: mmOo,
-      marketA,
-      godA,
-      godUsdc,
-      usdc,
-    } = await initMarket({ provider });
+    const getAuthority = async (market) => {
+      return (
+        await PublicKey.findProgramAddress(
+          [
+            anchor.utils.bytes.utf8.encode("open-orders-init"),
+            market.toBuffer(),
+          ],
+          program.programId
+        )
+      )[0];
+    };
+    const { marketA, godA, godUsdc, usdc } = await initMarket({
+      provider,
+      getAuthority,
+    });
     marketClient = marketA;
     marketClient._programId = program.programId;
     usdcAccount = godUsdc;
     tokenAccount = godA;
-    marketMakerOpenOrders = mmOo;
 
     usdcClient = new Token(
       provider.connection,

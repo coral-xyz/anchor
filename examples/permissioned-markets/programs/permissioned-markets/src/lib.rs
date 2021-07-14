@@ -227,8 +227,6 @@ impl<'info> From<&InitAccount<'info>>
     for CpiContext<'_, '_, '_, 'info, dex::InitOpenOrders<'info>>
 {
     fn from(accs: &InitAccount<'info>) -> Self {
-        // TODO: add the open orders init authority account here once the
-        //       dex is upgraded.
         let accounts = dex::InitOpenOrders {
             open_orders: accs.open_orders.clone(),
             authority: accs.open_orders.clone(),
@@ -237,6 +235,7 @@ impl<'info> From<&InitAccount<'info>>
         };
         let program = accs.dex_program.clone();
         CpiContext::new(program, accounts)
+            .with_remaining_accounts(vec![accs.open_orders_init_authority.clone()])
     }
 }
 

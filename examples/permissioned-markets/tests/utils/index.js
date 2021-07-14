@@ -6,22 +6,22 @@
 
 const Token = require("@solana/spl-token").Token;
 const TOKEN_PROGRAM_ID = require("@solana/spl-token").TOKEN_PROGRAM_ID;
-const TokenInstructions = require("@project-serum/serum").TokenInstructions;
-const { Market, OpenOrders } = require("@project-serum/serum");
-const DexInstructions = require("@project-serum/serum").DexInstructions;
-const web3 = require("@project-serum/anchor").web3;
-const Connection = web3.Connection;
+// const serum = require('@project-serum/serum');
+const serum = require("/home/armaniferrante/Documents/code/src/github.com/project-serum/serum-ts/packages/serum");
+const { DexInstructions, TokenInstructions, Market, OpenOrders } = serum;
 const anchor = require("@project-serum/anchor");
 const BN = anchor.BN;
-const serumCmn = require("@project-serum/common");
+const web3 = anchor.web3;
+const Connection = web3.Connection;
 const Account = web3.Account;
 const Transaction = web3.Transaction;
 const PublicKey = web3.PublicKey;
 const SystemProgram = web3.SystemProgram;
+const serumCmn = require("@project-serum/common");
 const DEX_PID = new PublicKey("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin");
 const MARKET_MAKER = new Account();
 
-async function initMarket({ provider }) {
+async function initMarket({ provider, getAuthority }) {
   // Setup mints with initial tokens owned by the provider.
   const decimals = 6;
   const [MINT_A, GOD_A] = await serumCmn.createMintAndVault(
@@ -79,22 +79,13 @@ async function initMarket({ provider }) {
     bids,
     asks,
     provider,
+    getAuthority,
   });
-
-  const marketMakerOpenOrders = (
-    await OpenOrders.findForMarketAndOwner(
-      provider.connection,
-      MARKET_A_USDC.address,
-      marketMaker.account.publicKey,
-      DEX_PID
-    )
-  )[0].address;
 
   return {
     marketA: MARKET_A_USDC,
     vaultSigner,
     marketMaker,
-    marketMakerOpenOrders,
     mintA: MINT_A,
     usdc: USDC,
     godA: GOD_A,
@@ -171,6 +162,7 @@ async function setupMarket({
   quoteMint,
   bids,
   asks,
+  getAuthority,
 }) {
   const [marketAPublicKey, vaultOwner] = await listMarket({
     connection: provider.connection,
@@ -181,6 +173,7 @@ async function setupMarket({
     quoteLotSize: 100,
     dexProgramId: DEX_PID,
     feeRateBps: 0,
+    getAuthority,
   });
   const MARKET_A_USDC = await Market.load(
     provider.connection,
@@ -188,48 +181,6 @@ async function setupMarket({
     { commitment: "recent" },
     DEX_PID
   );
-  for (let k = 0; k < asks.length; k += 1) {
-    let ask = asks[k];
-    const {
-      transaction,
-      signers,
-    } = await MARKET_A_USDC.makePlaceOrderTransaction(provider.connection, {
-      owner: marketMaker.account,
-      payer: marketMaker.baseToken,
-      side: "sell",
-      price: ask[0],
-      size: ask[1],
-      orderType: "postOnly",
-      clientId: undefined,
-      openOrdersAddressKey: undefined,
-      openOrdersAccount: undefined,
-      feeDiscountPubkey: null,
-      selfTradeBehavior: "abortTransaction",
-    });
-    await provider.send(transaction, signers.concat(marketMaker.account));
-  }
-
-  for (let k = 0; k < bids.length; k += 1) {
-    let bid = bids[k];
-    const {
-      transaction,
-      signers,
-    } = await MARKET_A_USDC.makePlaceOrderTransaction(provider.connection, {
-      owner: marketMaker.account,
-      payer: marketMaker.quoteToken,
-      side: "buy",
-      price: bid[0],
-      size: bid[1],
-      orderType: "postOnly",
-      clientId: undefined,
-      openOrdersAddressKey: undefined,
-      openOrdersAccount: undefined,
-      feeDiscountPubkey: null,
-      selfTradeBehavior: "abortTransaction",
-    });
-    await provider.send(transaction, signers.concat(marketMaker.account));
-  }
-
   return [MARKET_A_USDC, vaultOwner];
 }
 
@@ -242,6 +193,7 @@ async function listMarket({
   quoteLotSize,
   dexProgramId,
   feeRateBps,
+  getAuthority,
 }) {
   const market = new Account();
   const requestQueue = new Account();
@@ -290,10 +242,8 @@ async function listMarket({
     SystemProgram.createAccount({
       fromPubkey: wallet.publicKey,
       newAccountPubkey: market.publicKey,
-      lamports: await connection.getMinimumBalanceForRentExemption(
-        Market.getLayout(dexProgramId).span
-      ),
-      space: Market.getLayout(dexProgramId).span,
+      lamports: await connection.getMinimumBalanceForRentExemption(388 + 32),
+      space: 388 + 32,
       programId: dexProgramId,
     }),
     SystemProgram.createAccount({
@@ -340,25 +290,19 @@ async function listMarket({
       vaultSignerNonce,
       quoteDustThreshold,
       programId: dexProgramId,
+      authority: await getAuthority(market.publicKey),
     })
   );
 
-  const signedTransactions = await signTransactions({
-    transactionsAndSigners: [
-      { transaction: tx1, signers: [baseVault, quoteVault] },
-      {
-        transaction: tx2,
-        signers: [market, requestQueue, eventQueue, bids, asks],
-      },
-    ],
-    wallet,
-    connection,
-  });
-  for (let signedTransaction of signedTransactions) {
-    await sendAndConfirmRawTransaction(
-      connection,
-      signedTransaction.serialize()
-    );
+  const transactions = [
+    { transaction: tx1, signers: [baseVault, quoteVault] },
+    {
+      transaction: tx2,
+      signers: [market, requestQueue, eventQueue, bids, asks],
+    },
+  ];
+  for (let tx of transactions) {
+    await anchor.getProvider().send(tx.transaction, tx.signers);
   }
   const acc = await connection.getAccountInfo(market.publicKey);
 
@@ -384,17 +328,6 @@ async function signTransactions({
   return await wallet.signAllTransactions(
     transactionsAndSigners.map(({ transaction }) => transaction)
   );
-}
-
-async function sendAndConfirmRawTransaction(
-  connection,
-  raw,
-  commitment = "recent"
-) {
-  let tx = await connection.sendRawTransaction(raw, {
-    skipPreflight: true,
-  });
-  return await connection.confirmTransaction(tx, commitment);
 }
 
 async function getVaultOwnerAndNonce(marketPublicKey, dexProgramId = DEX_PID) {
