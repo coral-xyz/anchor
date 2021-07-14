@@ -111,7 +111,6 @@ describe("permissioned-markets", () => {
     tx.add(
       ...marketClient.makePlaceOrderInstructionPermissioned(
         program.provider.connection,
-        price,
         {
           owner: program.provider.wallet.publicKey,
           payer: usdcAccount,
