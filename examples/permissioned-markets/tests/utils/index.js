@@ -8,7 +8,12 @@ const Token = require("@solana/spl-token").Token;
 const TOKEN_PROGRAM_ID = require("@solana/spl-token").TOKEN_PROGRAM_ID;
 // const serum = require('@project-serum/serum');
 const serum = require("/home/armaniferrante/Documents/code/src/github.com/project-serum/serum-ts/packages/serum");
-const { DexInstructions, TokenInstructions, Market, OpenOrders } = serum;
+const {
+  DexInstructions,
+  TokenInstructions,
+  PermissionedMarket,
+  OpenOrders,
+} = serum;
 const anchor = require("@project-serum/anchor");
 const BN = anchor.BN;
 const web3 = anchor.web3;
@@ -81,7 +86,6 @@ async function initMarket({ provider, getAuthority }) {
     provider,
     getAuthority,
   });
-
   return {
     marketA: MARKET_A_USDC,
     vaultSigner,
@@ -175,11 +179,12 @@ async function setupMarket({
     feeRateBps: 0,
     getAuthority,
   });
-  const MARKET_A_USDC = await Market.load(
+  const MARKET_A_USDC = await PermissionedMarket.load(
     provider.connection,
     marketAPublicKey,
     { commitment: "recent" },
-    DEX_PID
+    DEX_PID,
+    anchor.workspace.PermissionedMarkets.programId
   );
   return [MARKET_A_USDC, vaultOwner];
 }
@@ -242,8 +247,10 @@ async function listMarket({
     SystemProgram.createAccount({
       fromPubkey: wallet.publicKey,
       newAccountPubkey: market.publicKey,
-      lamports: await connection.getMinimumBalanceForRentExemption(388 + 32),
-      space: 388 + 32,
+      lamports: await connection.getMinimumBalanceForRentExemption(
+        PermissionedMarket.getLayout(dexProgramId).span
+      ),
+      space: PermissionedMarket.getLayout(dexProgramId).span,
       programId: dexProgramId,
     }),
     SystemProgram.createAccount({

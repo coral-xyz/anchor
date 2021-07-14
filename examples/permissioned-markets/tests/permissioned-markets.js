@@ -1,10 +1,11 @@
 const assert = require("assert");
 const { Token, TOKEN_PROGRAM_ID } = require("@solana/spl-token");
 const anchor = require("@project-serum/anchor");
-const serum = require("@project-serum/serum");
+//const serum = require("@project-serum/serum");
+const serum = require("/home/armaniferrante/Documents/code/src/github.com/project-serum/serum-ts/packages/serum");
 const { BN } = anchor;
 const { Transaction, TransactionInstruction } = anchor.web3;
-const { DexInstructions, OpenOrders, Market } = serum;
+const { DexInstructions, OpenOrders } = serum;
 const { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } = anchor.web3;
 const { initMarket, sleep } = require("./utils");
 
@@ -42,7 +43,6 @@ describe("permissioned-markets", () => {
       getAuthority,
     });
     marketClient = marketA;
-    marketClient._programId = program.programId;
     usdcAccount = godUsdc;
     tokenAccount = godA;
 
@@ -124,19 +124,17 @@ describe("permissioned-markets", () => {
       )
     );
     tx.add(
-      serumProxy(
-        marketClient.makePlaceOrderInstruction(program.provider.connection, {
-          owner: program.provider.wallet.publicKey,
-          payer: usdcAccount,
-          side: "buy",
-          price,
-          size,
-          orderType: "postOnly",
-          clientId: new BN(999),
-          openOrdersAddressKey: openOrders,
-          selfTradeBehavior: "abortTransaction",
-        })
-      )
+      marketClient.makePlaceOrderInstruction(program.provider.connection, {
+        owner: program.provider.wallet.publicKey,
+        payer: usdcAccount,
+        side: "buy",
+        price,
+        size,
+        orderType: "postOnly",
+        clientId: new BN(999),
+        openOrdersAddressKey: openOrders,
+        selfTradeBehavior: "abortTransaction",
+      })
     );
     await provider.send(tx);
   });
@@ -152,15 +150,11 @@ describe("permissioned-markets", () => {
     // When.
     const tx = new Transaction();
     tx.add(
-      serumProxy(
-        (
-          await marketClient.makeCancelOrderByClientIdTransaction(
-            program.provider.connection,
-            program.provider.wallet.publicKey,
-            openOrders,
-            new BN(999)
-          )
-        ).instructions[0]
+      await marketClient.makeCancelOrderByClientIdInstruction(
+        program.provider.connection,
+        program.provider.wallet.publicKey,
+        openOrders,
+        new BN(999)
       )
     );
     await provider.send(tx);
@@ -171,7 +165,6 @@ describe("permissioned-markets", () => {
       openOrders,
       DEX_PID
     );
-
     assert.ok(beforeOoAccount.quoteTokenFree.eq(new BN(0)));
     assert.ok(beforeOoAccount.quoteTokenTotal.eq(usdcPosted));
     assert.ok(afterOoAccount.quoteTokenFree.eq(usdcPosted));
@@ -185,17 +178,7 @@ describe("permissioned-markets", () => {
     let eq = await marketClient.loadEventQueue(provider.connection);
     while (eq.length > 0) {
       const tx = new Transaction();
-      tx.add(
-        DexInstructions.consumeEvents({
-          market: marketClient._decoded.ownAddress,
-          eventQueue: marketClient._decoded.eventQueue,
-          coinFee: marketClient._decoded.eventQueue,
-          pcFee: marketClient._decoded.eventQueue,
-          openOrdersAccounts: [eq[0].openOrders],
-          limit: 1,
-          programId: DEX_PID,
-        })
-      );
+      tx.add(marketClient.makeConsumeEventsInstruction([eq[0].openOrders], 1));
       await provider.send(tx);
       eq = await marketClient.loadEventQueue(provider.connection);
     }
@@ -208,29 +191,12 @@ describe("permissioned-markets", () => {
     // When.
     const tx = new Transaction();
     tx.add(
-      serumProxy(
-        DexInstructions.settleFunds({
-          market: marketClient._decoded.ownAddress,
-          openOrders,
-          owner: provider.wallet.publicKey,
-          baseVault: marketClient._decoded.baseVault,
-          quoteVault: marketClient._decoded.quoteVault,
-          baseWallet: tokenAccount,
-          quoteWallet: usdcAccount,
-          vaultSigner: await PublicKey.createProgramAddress(
-            [
-              marketClient.address.toBuffer(),
-              marketClient._decoded.vaultSignerNonce.toArrayLike(
-                Buffer,
-                "le",
-                8
-              ),
-            ],
-            DEX_PID
-          ),
-          programId: program.programId,
-          referrerQuoteWallet: usdcAccount,
-        })
+      await marketClient.makeSettleFundsInstruction(
+        openOrders,
+        provider.wallet.publicKey,
+        tokenAccount,
+        usdcAccount,
+        usdcAccount
       )
     );
     await provider.send(tx);
@@ -252,14 +218,10 @@ describe("permissioned-markets", () => {
     // When.
     const tx = new Transaction();
     tx.add(
-      serumProxy(
-        DexInstructions.closeOpenOrders({
-          market: marketClient._decoded.ownAddress,
-          openOrders,
-          owner: program.provider.wallet.publicKey,
-          solWallet: program.provider.wallet.publicKey,
-          programId: program.programId,
-        })
+      marketClient.makeCloseOpenOrdersInstruction(
+        openOrders,
+        provider.wallet.publicKey,
+        provider.wallet.publicKey
       )
     );
     await provider.send(tx);
@@ -275,16 +237,3 @@ describe("permissioned-markets", () => {
     assert.ok(closedAccount === null);
   });
 });
-
-// Adds the serum dex account to the instruction so that proxies can
-// relay (CPI requires the executable account).
-//
-// TODO: we should add flag in the dex client that says if a proxy is being
-//       used, and if so, do this automatically.
-function serumProxy(ix) {
-  ix.keys = [
-    { pubkey: DEX_PID, isWritable: false, isSigner: false },
-    ...ix.keys,
-  ];
-  return ix;
-}
