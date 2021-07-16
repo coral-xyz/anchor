@@ -34,11 +34,10 @@ pub mod permissioned_markets_middleware {
     }
 }
 
-// Performs token-based authorization, confirming the identity of the user.
-// The identity token must be given as the fist account.
-//
-// The rent sysvar as the identity token as a dummy example.
+/// Performs token-based authorization, confirming the identity of the user.
+/// The identity token must be given as the fist account.
 struct Identity;
+
 impl MarketMiddleware for Identity {
     /// Accounts:
     ///
