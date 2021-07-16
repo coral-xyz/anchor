@@ -26,7 +26,7 @@ const serumCmn = require("@project-serum/common");
 const DEX_PID = new PublicKey("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin");
 const MARKET_MAKER = new Account();
 
-async function initMarket({ provider, getAuthority }) {
+async function initMarket({ provider, getAuthority, proxyProgramId }) {
   // Setup mints with initial tokens owned by the provider.
   const decimals = 6;
   const [MINT_A, GOD_A] = await serumCmn.createMintAndVault(
@@ -85,6 +85,7 @@ async function initMarket({ provider, getAuthority }) {
     asks,
     provider,
     getAuthority,
+    proxyProgramId,
   });
   return {
     marketA: MARKET_A_USDC,
@@ -167,6 +168,7 @@ async function setupMarket({
   bids,
   asks,
   getAuthority,
+  proxyProgramId,
 }) {
   const [marketAPublicKey, vaultOwner] = await listMarket({
     connection: provider.connection,
@@ -184,7 +186,7 @@ async function setupMarket({
     marketAPublicKey,
     { commitment: "recent" },
     DEX_PID,
-    anchor.workspace.PermissionedMarkets.programId
+    proxyProgramId
   );
   return [MARKET_A_USDC, vaultOwner];
 }

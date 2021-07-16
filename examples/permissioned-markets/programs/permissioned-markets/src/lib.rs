@@ -64,7 +64,6 @@ pub mod permissioned_markets {
     ) -> ProgramResult {
         require!(accounts.len() >= 1, NotEnoughAccounts);
 
-        let dex_acc_info = &accounts[0];
         let dex_accounts = &accounts[1..];
         let mut acc_infos = dex_accounts.to_vec();
 
@@ -180,7 +179,6 @@ pub mod permissioned_markets {
                 is_writable: acc.is_writable,
             })
             .collect();
-        acc_infos.push(dex_acc_info.clone());
         let ix = Instruction {
             data: data.to_vec(),
             accounts: dex_accounts,
@@ -200,8 +198,10 @@ pub mod permissioned_markets {
 #[derive(Accounts)]
 #[instruction(bump: u8, bump_init: u8)]
 pub struct InitAccount<'info> {
-    #[account(seeds = [b"open-orders-init", market.key.as_ref(), &[bump_init]])]
-    pub open_orders_init_authority: AccountInfo<'info>,
+    #[account(address = dex::ID)]
+    pub dex_program: AccountInfo<'info>,
+    #[account(address = system_program::ID)]
+    pub system_program: AccountInfo<'info>,
     #[account(
         init,
         seeds = [b"open-orders", market.key.as_ref(), authority.key.as_ref()],
@@ -215,10 +215,8 @@ pub struct InitAccount<'info> {
     pub authority: AccountInfo<'info>,
     pub market: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
-    #[account(address = system_program::ID)]
-    pub system_program: AccountInfo<'info>,
-    #[account(address = dex::ID)]
-    pub dex_program: AccountInfo<'info>,
+    #[account(seeds = [b"open-orders-init", market.key.as_ref(), &[bump_init]])]
+    pub open_orders_init_authority: AccountInfo<'info>,
 }
 
 // CpiContext transformations.
@@ -267,8 +265,15 @@ pub enum ErrorCode {
     NotEnoughAccounts,
 }
 
-// Macros.
+// Utils.
 
+fn prepare_pda<'info>(acc_info: &AccountInfo<'info>) -> AccountInfo<'info> {
+    let mut acc_info = acc_info.clone();
+    acc_info.is_signer = true;
+    acc_info
+}
+
+// Macros.
 /// Returns the seeds used for creating the open orders account PDA.
 #[macro_export]
 macro_rules! open_orders_authority {
@@ -317,14 +322,6 @@ macro_rules! open_orders_init_authority {
     (program = $program:expr, market = $market:expr, bump = $bump:expr) => {
         &[b"open-orders-init".as_ref(), $market.as_ref(), &[$bump]]
     };
-}
-
-// Utils.
-
-fn prepare_pda<'info>(acc_info: &AccountInfo<'info>) -> AccountInfo<'info> {
-    let mut acc_info = acc_info.clone();
-    acc_info.is_signer = true;
-    acc_info
 }
 
 // Constants.
