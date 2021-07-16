@@ -36,12 +36,14 @@ pub mod permissioned_markets {
         let cpi_ctx = CpiContext::from(&*ctx.accounts);
         let seeds = open_orders_authority! {
             program = ctx.program_id,
+            dex_program = ctx.accounts.dex_program.key,
             market = ctx.accounts.market.key,
             authority = ctx.accounts.authority.key,
             bump = bump
         };
         let seeds_init = open_orders_init_authority! {
             program = ctx.program_id,
+            dex_program = ctx.accounts.dex_program.key,
             market = ctx.accounts.market.key,
             bump = bump_init
         };
@@ -64,6 +66,8 @@ pub mod permissioned_markets {
         data: &[u8],
     ) -> ProgramResult {
         require!(accounts.len() >= 1, NotEnoughAccounts);
+
+        let dex = &accounts[0];
 
         // Use the rent sysvar as a dummy auth token for the example.
         let auth_token = &accounts[1];
@@ -193,6 +197,7 @@ pub mod permissioned_markets {
         };
         let seeds = open_orders_authority! {
             program = program_id,
+            dex_program = dex.key,
             market = market,
             authority = user
         };
@@ -211,7 +216,7 @@ pub struct InitAccount<'info> {
     pub system_program: AccountInfo<'info>,
     #[account(
         init,
-        seeds = [b"open-orders", market.key.as_ref(), authority.key.as_ref()],
+        seeds = [b"open-orders", dex_program.key.as_ref(), market.key.as_ref(), authority.key.as_ref()],
         bump = bump,
         payer = authority,
         owner = dex::ID,
@@ -222,7 +227,10 @@ pub struct InitAccount<'info> {
     pub authority: AccountInfo<'info>,
     pub market: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
-    #[account(seeds = [b"open-orders-init", market.key.as_ref(), &[bump_init]])]
+    #[account(
+				seeds = [b"open-orders-init", dex_program.key.as_ref(), market.key.as_ref()],
+				bump = bump_init,
+		)]
     pub open_orders_init_authority: AccountInfo<'info>,
 }
 
@@ -283,25 +291,40 @@ fn prepare_pda<'info>(acc_info: &AccountInfo<'info>) -> AccountInfo<'info> {
 }
 
 // Macros.
-/// Returns the seeds used for creating the open orders account PDA.
+
+/// Returns the seeds used for a user's open orders account PDA.
 #[macro_export]
 macro_rules! open_orders_authority {
-    (program = $program:expr, market = $market:expr, authority = $authority:expr, bump = $bump:expr) => {
+    (
+        program = $program:expr,
+        dex_program = $dex_program:expr,
+        market = $market:expr,
+        authority = $authority:expr,
+        bump = $bump:expr
+    ) => {
         &[
             b"open-orders".as_ref(),
+            $dex_program.as_ref(),
             $market.as_ref(),
             $authority.as_ref(),
             &[$bump],
         ]
     };
-    (program = $program:expr, market = $market:expr, authority = $authority:expr) => {
+    (
+        program = $program:expr,
+        dex_program = $dex_program:expr,
+        market = $market:expr,
+        authority = $authority:expr
+    ) => {
         &[
             b"open-orders".as_ref(),
+            $dex_program.as_ref(),
             $market.as_ref(),
             $authority.as_ref(),
             &[Pubkey::find_program_address(
                 &[
                     b"open-orders".as_ref(),
+                    $dex_program.as_ref(),
                     $market.as_ref(),
                     $authority.as_ref(),
                 ],
@@ -317,9 +340,24 @@ macro_rules! open_orders_authority {
 /// the DEX market.
 #[macro_export]
 macro_rules! open_orders_init_authority {
-    (program = $program:expr, market = $market:expr) => {
+    (
+        program = $program:expr,
+        dex_program = $dex_program:expr,
+        market = $market:expr,
+        bump = $bump:expr
+    ) => {
         &[
             b"open-orders-init".as_ref(),
+            $dex_program.as_ref().as_ref(),
+            $market.as_ref().as_ref(),
+            &[$bump],
+        ]
+    };
+
+    (program = $program:expr, dex_program = $dex_program:expr, market = $market:expr) => {
+        &[
+            b"open-orders-init".as_ref(),
+            $dex_program.as_ref(),
             $market.as_ref(),
             &[Pubkey::find_program_address(
                 &[b"open-orders-init".as_ref(), $market.as_ref()],
@@ -327,9 +365,6 @@ macro_rules! open_orders_init_authority {
             )
             .1],
         ]
-    };
-    (program = $program:expr, market = $market:expr, bump = $bump:expr) => {
-        &[b"open-orders-init".as_ref(), $market.as_ref(), &[$bump]]
     };
 }
 

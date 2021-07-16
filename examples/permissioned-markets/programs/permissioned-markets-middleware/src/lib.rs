@@ -34,7 +34,7 @@ pub mod permissioned_markets_middleware {
     }
 }
 
-/// Performs token-based authorization, confirming the identity of the user.
+/// Performs token based authorization, confirming the identity of the user.
 /// The identity token must be given as the fist account.
 struct Identity;
 
@@ -117,9 +117,9 @@ pub enum ErrorCode {
     InvalidAuth,
 }
 
-// Consants.
+// Constants.
 
 pub mod referral {
-    // This is a dummy address. Do not use in production.
-    solana_program::declare_id!("2k1bb16Hu7ocviT2KC3wcCgETtnC8tEUuvFBH4C5xStG");
+    // This is a dummy address for testing. Do not use in production.
+    solana_program::declare_id!("3oSfkjQZKCneYvsCTZc9HViGAPqR8pYr4h9YeGB5ZxHf");
 }

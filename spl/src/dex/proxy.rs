@@ -30,11 +30,12 @@ impl<'a> MarketProxy<'a> {
     pub fn run(&self, program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         let mut ix_data = &data[..];
 
-        // First account is the Serum DEX executable--used for CPI only.
+        // First account is the Serum DEX executable--used for CPI.
+        let dex = &accounts[0];
         let acc_infos = (&accounts[1..]).to_vec();
 
         // Request context.
-        let mut ctx = Context::new(program_id, acc_infos, &mut ix_data);
+        let mut ctx = Context::new(program_id, dex.key, acc_infos, &mut ix_data);
 
         // Decode instruction.
         let ix = MarketInstruction::unpack(data);

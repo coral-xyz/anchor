@@ -4,13 +4,15 @@ const anchor = require("@project-serum/anchor");
 //const serum = require("@project-serum/serum");
 const serum = require("/home/armaniferrante/Documents/code/src/github.com/project-serum/serum-ts/packages/serum");
 const { BN } = anchor;
-const { Transaction, TransactionInstruction } = anchor.web3;
+const { Keypair, Transaction, TransactionInstruction } = anchor.web3;
 const { DexInstructions, OpenOrders } = serum;
 const { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } = anchor.web3;
 const { initMarket, sleep } = require("./utils");
 
 const DEX_PID = new PublicKey("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin");
-const REFERRAL = new PublicKey("2k1bb16Hu7ocviT2KC3wcCgETtnC8tEUuvFBH4C5xStG");
+const REFERRAL_AUTHORITY = new PublicKey(
+  "3oSfkjQZKCneYvsCTZc9HViGAPqR8pYr4h9YeGB5ZxHf"
+);
 
 describe("permissioned-markets", () => {
   // Anchor client setup.
@@ -29,6 +31,7 @@ describe("permissioned-markets", () => {
     let marketClient, tokenAccount, usdcAccount;
     let openOrders, openOrdersBump, openOrdersInitAuthority, openOrdersBumpinit;
     let usdcPosted;
+    let referralTokenAddress;
 
     it("BOILERPLATE: Initializes an orderbook", async () => {
       const getAuthority = async (market) => {
@@ -36,6 +39,7 @@ describe("permissioned-markets", () => {
           await PublicKey.findProgramAddress(
             [
               anchor.utils.bytes.utf8.encode("open-orders-init"),
+              DEX_PID.toBuffer(),
               market.toBuffer(),
             ],
             program.programId
@@ -57,12 +61,15 @@ describe("permissioned-markets", () => {
         TOKEN_PROGRAM_ID,
         provider.wallet.payer
       );
+
+      referral = await usdcClient.createAccount(REFERRAL_AUTHORITY);
     });
 
     it("BOILERPLATE: Calculates open orders addresses", async () => {
       const [_openOrders, bump] = await PublicKey.findProgramAddress(
         [
           anchor.utils.bytes.utf8.encode("open-orders"),
+          DEX_PID.toBuffer(),
           marketClient.address.toBuffer(),
           program.provider.wallet.publicKey.toBuffer(),
         ],
@@ -74,6 +81,7 @@ describe("permissioned-markets", () => {
       ] = await PublicKey.findProgramAddress(
         [
           anchor.utils.bytes.utf8.encode("open-orders-init"),
+          DEX_PID.toBuffer(),
           marketClient.address.toBuffer(),
         ],
         program.programId
@@ -202,7 +210,7 @@ describe("permissioned-markets", () => {
           provider.wallet.publicKey,
           tokenAccount,
           usdcAccount,
-          usdcAccount
+          referral
         )
       );
       await provider.send(tx);

@@ -1,4 +1,4 @@
-use crate::{dex, open_orders_authority, open_orders_init_authority};
+use crate::{dex, open_orders_authority, open_orders_init_authority, token};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::system_program;
 use anchor_lang::Accounts;
@@ -9,6 +9,7 @@ use std::mem::size_of;
 /// Per request context. Can be used to share data between middleware handlers.
 pub struct Context<'a, 'info> {
     pub program_id: &'a Pubkey,
+    pub dex_program_id: &'a Pubkey,
     pub accounts: Vec<AccountInfo<'info>>,
     pub data: &'a mut &'a [u8],
     pub seeds: Vec<Vec<Vec<u8>>>,
@@ -17,11 +18,13 @@ pub struct Context<'a, 'info> {
 impl<'a, 'info> Context<'a, 'info> {
     pub fn new(
         program_id: &'a Pubkey,
+        dex_program_id: &'a Pubkey,
         accounts: Vec<AccountInfo<'info>>,
         data: &'a mut &'a [u8],
     ) -> Self {
         Self {
             program_id,
+            dex_program_id,
             accounts,
             data,
             seeds: Vec::new(),
@@ -88,13 +91,18 @@ impl MarketMiddleware for OpenOrdersPda {
         let (_, bump) = Pubkey::find_program_address(
             &[
                 b"open-orders".as_ref(),
+                ctx.dex_program_id.as_ref(),
                 market.key.as_ref(),
                 user.key.as_ref(),
             ],
             ctx.program_id,
         );
         let (_, bump_init) = Pubkey::find_program_address(
-            &[b"open-orders-init".as_ref(), ctx.accounts[4].key.as_ref()],
+            &[
+                b"open-orders-init".as_ref(),
+                ctx.dex_program_id.as_ref(),
+                market.key.as_ref(),
+            ],
             ctx.program_id,
         );
 
@@ -105,12 +113,14 @@ impl MarketMiddleware for OpenOrdersPda {
         // Add signer to context.
         ctx.seeds.push(open_orders_authority! {
             program = ctx.program_id,
+            dex_program = ctx.dex_program_id,
             market = market.key,
             authority = user.key,
             bump = bump
         });
         ctx.seeds.push(open_orders_init_authority! {
             program = ctx.program_id,
+            dex_program = ctx.dex_program_id,
             market = market.key,
             bump = bump_init
         });
@@ -137,6 +147,7 @@ impl MarketMiddleware for OpenOrdersPda {
 
         ctx.seeds.push(open_orders_authority! {
             program = ctx.program_id,
+            dex_program = ctx.dex_program_id,
             market = market.key,
             authority = user.key
         });
@@ -158,6 +169,7 @@ impl MarketMiddleware for OpenOrdersPda {
 
         ctx.seeds.push(open_orders_authority! {
             program = ctx.program_id,
+            dex_program = ctx.dex_program_id,
             market = market.key,
             authority = user.key
         });
@@ -179,6 +191,7 @@ impl MarketMiddleware for OpenOrdersPda {
 
         ctx.seeds.push(open_orders_authority! {
             program = ctx.program_id,
+            dex_program = ctx.dex_program_id,
             market = market.key,
             authority = user.key
         });
@@ -200,6 +213,7 @@ impl MarketMiddleware for OpenOrdersPda {
 
         ctx.seeds.push(open_orders_authority! {
             program = ctx.program_id,
+            dex_program = ctx.dex_program_id,
             market = market.key,
             authority = user.key
         });
@@ -221,6 +235,7 @@ impl MarketMiddleware for OpenOrdersPda {
 
         ctx.seeds.push(open_orders_authority! {
             program = ctx.program_id,
+            dex_program = ctx.dex_program_id,
             market = market.key,
             authority = user.key
         });
@@ -281,11 +296,8 @@ impl MarketMiddleware for ReferralFees {
     ///
     /// .. serum_dex::MarketInstruction::SettleFunds.
     fn settle_funds(&self, ctx: &mut Context) -> ProgramResult {
-        let referral = &ctx.accounts[9];
-        let enabled = false;
-        if enabled {
-            require!(referral.key == &self.referral, ErrorCode::InvalidReferral);
-        }
+        let referral = token::accessor::authority(&ctx.accounts[9])?;
+        require!(referral == self.referral, ErrorCode::InvalidReferral);
         Ok(())
     }
 }
@@ -295,23 +307,37 @@ impl MarketMiddleware for ReferralFees {
 /// Returns the seeds used for a user's open orders account PDA.
 #[macro_export]
 macro_rules! open_orders_authority {
-    (program = $program:expr, market = $market:expr, authority = $authority:expr, bump = $bump:expr) => {
+    (
+        program = $program:expr,
+        dex_program = $dex_program:expr,
+        market = $market:expr,
+        authority = $authority:expr,
+        bump = $bump:expr
+    ) => {
         vec![
             b"open-orders".to_vec(),
+            $dex_program.as_ref().to_vec(),
             $market.as_ref().to_vec(),
             $authority.as_ref().to_vec(),
             vec![$bump],
         ]
     };
-    (program = $program:expr, market = $market:expr, authority = $authority:expr) => {
+    (
+        program = $program:expr,
+        dex_program = $dex_program:expr,
+        market = $market:expr,
+        authority = $authority:expr
+    ) => {
         vec![
             b"open-orders".to_vec(),
+            $dex_program.as_ref().to_vec(),
             $market.as_ref().to_vec(),
             $authority.as_ref().to_vec(),
             vec![
                 Pubkey::find_program_address(
                     &[
                         b"open-orders".as_ref(),
+                        $dex_program.as_ref(),
                         $market.as_ref(),
                         $authority.as_ref(),
                     ],
@@ -328,22 +354,15 @@ macro_rules! open_orders_authority {
 /// the DEX market.
 #[macro_export]
 macro_rules! open_orders_init_authority {
-    (program = $program:expr, market = $market:expr) => {
+    (
+        program = $program:expr,
+        dex_program = $dex_program:expr,
+        market = $market:expr,
+        bump = $bump:expr
+    ) => {
         vec![
             b"open-orders-init".to_vec(),
-            $market.as_ref().to_vec(),
-            vec![
-                Pubkey::find_program_address(
-                    &[b"open-orders-init".as_ref(), $market.as_ref()],
-                    $program,
-                )
-                .1,
-            ],
-        ]
-    };
-    (program = $program:expr, market = $market:expr, bump = $bump:expr) => {
-        vec![
-            b"open-orders-init".to_vec(),
+            $dex_program.as_ref().to_vec(),
             $market.as_ref().to_vec(),
             vec![$bump],
         ]
@@ -377,7 +396,7 @@ pub struct InitAccount<'info> {
     pub system_program: AccountInfo<'info>,
     #[account(
         init,
-        seeds = [b"open-orders", market.key.as_ref(), authority.key.as_ref()],
+        seeds = [b"open-orders", dex_program.key.as_ref(), market.key.as_ref(), authority.key.as_ref()],
         bump = bump,
         payer = authority,
         owner = dex::ID,
@@ -388,7 +407,10 @@ pub struct InitAccount<'info> {
     pub authority: AccountInfo<'info>,
     pub market: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
-    #[account(seeds = [b"open-orders-init", market.key.as_ref(), &[bump_init]])]
+    #[account(
+        seeds = [b"open-orders-init", dex_program.key.as_ref(), market.key.as_ref()],
+        bump = bump_init,
+    )]
     pub open_orders_init_authority: AccountInfo<'info>,
 }
 
