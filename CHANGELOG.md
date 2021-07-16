@@ -11,6 +11,10 @@ incremented for features.
 
 ## [Unreleased]
 
+### Breaking Changes
+
+* lang: Mutate instead return new one in `CpiAccount::reload` ([#526](https://github.com/project-serum/anchor/pull/526)).
+
 ## [0.11.1] - 2021-07-09
 
 ### Features
