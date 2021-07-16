@@ -7,6 +7,7 @@ use serum_dex::state::OpenOrders;
 use solana_program::instruction::Instruction;
 use solana_program::program;
 use solana_program::system_program;
+use solana_program::sysvar::rent;
 use std::mem::size_of;
 
 /// This demonstrates how to create "permissioned markets" on Serum. A
@@ -64,8 +65,14 @@ pub mod permissioned_markets {
     ) -> ProgramResult {
         require!(accounts.len() >= 1, NotEnoughAccounts);
 
-        let dex_accounts = &accounts[1..];
-        let mut acc_infos = dex_accounts.to_vec();
+        // Use the rent sysvar as a dummy auth token for the example.
+        let auth_token = &accounts[1];
+        if auth_token.key != &rent::ID {
+            return Err(ErrorCode::InvalidAuthToken.into());
+        }
+
+        // First account is the Serum DEX executable--used for CPI only.
+        let mut acc_infos = (&accounts[2..]).to_vec();
 
         // Decode instruction.
         let ix = MarketInstruction::unpack(data).ok_or_else(|| ErrorCode::CannotUnpack)?;
@@ -74,7 +81,7 @@ pub mod permissioned_markets {
         // position, for the program's PDA (the real authority).
         let (market, user) = match ix {
             MarketInstruction::NewOrderV3(_) => {
-                require!(dex_accounts.len() >= 12, NotEnoughAccounts);
+                require!(acc_infos.len() >= 12, NotEnoughAccounts);
 
                 let (market, user) = {
                     let market = &acc_infos[0];
@@ -92,7 +99,7 @@ pub mod permissioned_markets {
                 (market, user)
             }
             MarketInstruction::CancelOrderV2(_) => {
-                require!(dex_accounts.len() >= 6, NotEnoughAccounts);
+                require!(acc_infos.len() >= 6, NotEnoughAccounts);
 
                 let (market, user) = {
                     let market = &acc_infos[0];
@@ -110,7 +117,7 @@ pub mod permissioned_markets {
                 (market, user)
             }
             MarketInstruction::CancelOrderByClientIdV2(_) => {
-                require!(dex_accounts.len() >= 6, NotEnoughAccounts);
+                require!(acc_infos.len() >= 6, NotEnoughAccounts);
 
                 let (market, user) = {
                     let market = &acc_infos[0];
@@ -128,12 +135,12 @@ pub mod permissioned_markets {
                 (market, user)
             }
             MarketInstruction::SettleFunds => {
-                require!(dex_accounts.len() >= 10, NotEnoughAccounts);
+                require!(acc_infos.len() >= 10, NotEnoughAccounts);
 
                 let (market, user) = {
                     let market = &acc_infos[0];
                     let user = &acc_infos[2];
-                    let referral = &dex_accounts[9];
+                    let referral = &acc_infos[9];
 
                     if !DISABLE_REFERRAL && referral.key != &referral::ID {
                         return Err(ErrorCode::InvalidReferral.into());
@@ -150,7 +157,7 @@ pub mod permissioned_markets {
                 (market, user)
             }
             MarketInstruction::CloseOpenOrders => {
-                require!(dex_accounts.len() >= 4, NotEnoughAccounts);
+                require!(acc_infos.len() >= 4, NotEnoughAccounts);
 
                 let (market, user) = {
                     let market = &acc_infos[3];
@@ -263,6 +270,8 @@ pub enum ErrorCode {
     UnauthorizedUser,
     #[msg("Not enough accounts were provided")]
     NotEnoughAccounts,
+    #[msg("Invalid auth token provided")]
+    InvalidAuthToken,
 }
 
 // Utils.

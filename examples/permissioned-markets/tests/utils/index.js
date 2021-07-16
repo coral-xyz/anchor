@@ -17,11 +17,14 @@ const {
 const anchor = require("@project-serum/anchor");
 const BN = anchor.BN;
 const web3 = anchor.web3;
-const Connection = web3.Connection;
-const Account = web3.Account;
-const Transaction = web3.Transaction;
-const PublicKey = web3.PublicKey;
-const SystemProgram = web3.SystemProgram;
+const {
+  SYSVAR_RENT_PUBKEY,
+  COnnection,
+  Account,
+  Transaction,
+  PublicKey,
+  SystemProgram,
+} = web3;
 const serumCmn = require("@project-serum/common");
 const DEX_PID = new PublicKey("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin");
 const MARKET_MAKER = new Account();
@@ -186,7 +189,9 @@ async function setupMarket({
     marketAPublicKey,
     { commitment: "recent" },
     DEX_PID,
-    proxyProgramId
+    proxyProgramId,
+    // Preload a dummy auth token for testing.
+    [{ pubkey: SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false }]
   );
   return [MARKET_A_USDC, vaultOwner];
 }

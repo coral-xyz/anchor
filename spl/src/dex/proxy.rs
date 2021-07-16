@@ -84,6 +84,7 @@ impl<'a> MarketProxy<'a> {
                 return Ok(());
             }
         };
+
         // Extract the middleware adjusted context.
         let Context {
             seeds,

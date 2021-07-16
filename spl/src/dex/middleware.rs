@@ -75,6 +75,11 @@ impl OpenOrdersPda {
 }
 
 impl MarketMiddleware for OpenOrdersPda {
+    /// Accounts:
+    ///
+    /// 0. Dex program.
+    /// 1. System program.
+    /// .. serum_dex::MarketInstruction::InitOpenOrders.
     fn init_open_orders<'a, 'info>(&self, ctx: &mut Context<'a, 'info>) -> ProgramResult {
         let market = &ctx.accounts[4];
         let user = &ctx.accounts[3];
@@ -120,6 +125,9 @@ impl MarketMiddleware for OpenOrdersPda {
         Ok(())
     }
 
+    /// Accounts:
+    ///
+    /// .. serum_dex::MarketInstruction::NewOrderV3.
     fn new_order_v3(&self, ctx: &mut Context, _ix: &NewOrderInstructionV3) -> ProgramResult {
         let market = &ctx.accounts[0];
         let user = &ctx.accounts[7];
@@ -138,6 +146,9 @@ impl MarketMiddleware for OpenOrdersPda {
         Ok(())
     }
 
+    /// Accounts:
+    ///
+    /// .. serum_dex::MarketInstruction::CancelOrderV2.
     fn cancel_order_v2(&self, ctx: &mut Context, _ix: &CancelOrderInstructionV2) -> ProgramResult {
         let market = &ctx.accounts[0];
         let user = &ctx.accounts[4];
@@ -156,6 +167,9 @@ impl MarketMiddleware for OpenOrdersPda {
         Ok(())
     }
 
+    /// Accounts:
+    ///
+    /// .. serum_dex::MarketInstruction::CancelOrderByClientIdV2.
     fn cancel_order_by_client_id_v2(&self, ctx: &mut Context, _client_id: u64) -> ProgramResult {
         let market = &ctx.accounts[0];
         let user = &ctx.accounts[4];
@@ -174,6 +188,9 @@ impl MarketMiddleware for OpenOrdersPda {
         Ok(())
     }
 
+    /// Accounts:
+    ///
+    /// .. serum_dex::MarketInstruction::SettleFunds.
     fn settle_funds(&self, ctx: &mut Context) -> ProgramResult {
         let market = &ctx.accounts[0];
         let user = &ctx.accounts[2];
@@ -192,6 +209,9 @@ impl MarketMiddleware for OpenOrdersPda {
         Ok(())
     }
 
+    /// Accounts:
+    ///
+    /// .. serum_dex::MarketInstruction::CloseOpenOrders.
     fn close_open_orders(&self, ctx: &mut Context) -> ProgramResult {
         let market = &ctx.accounts[3];
         let user = &ctx.accounts[1];
@@ -257,6 +277,9 @@ impl ReferralFees {
 }
 
 impl MarketMiddleware for ReferralFees {
+    /// Accounts:
+    ///
+    /// .. serum_dex::MarketInstruction::SettleFunds.
     fn settle_funds(&self, ctx: &mut Context) -> ProgramResult {
         let referral = &ctx.accounts[9];
         let enabled = false;
