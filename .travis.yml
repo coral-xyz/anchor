@@ -46,7 +46,7 @@ jobs:
         - cargo test
         - pushd ts && yarn && popd
         - pushd ts && yarn test && popd
-        - pusdh ts && yarn lint && popd
+        - pushd ts && yarn lint && popd
     - <<: *examples
       name: Runs the examples 1
       script:
