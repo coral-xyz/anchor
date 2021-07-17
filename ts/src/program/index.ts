@@ -1,5 +1,5 @@
 import { inflate } from "pako";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, Commitment, GetProgramAccountsFilter, KeyedAccountInfo, Context } from "@solana/web3.js";
 import Provider from "../provider";
 import { Idl, idlAddress, decodeIdlAccount } from "../idl";
 import Coder from "../coder";
@@ -15,7 +15,7 @@ import { getProvider } from "../";
 import { utf8 } from "../utils/bytes";
 import { EventParser } from "./event";
 import { Address, translateAddress } from "./common";
-
+import EventEmitter from "eventemitter3";
 /**
  * ## Program
  *
@@ -327,5 +327,45 @@ export class Program {
    */
   public async removeEventListener(listener: number): Promise<void> {
     return this._provider.connection.removeOnLogsListener(listener);
+  }
+
+  
+  /**
+   * Returns an `EventEmitter` emitting a "change" event whenever an account owned by this program
+   * changes, and a `number` representing the subscription id, needed to cancel the event subscription.
+   * 
+   * @param commitment Specify the commitment level account changes must reach before notification
+   * @param filters The program account filters to pass into the RPC method
+   * @return [EventEmitter, subscription id]
+   */
+  public subscribe(commitment?: Commitment, filters?: GetProgramAccountsFilter[]): [EventEmitter, number] {
+    const ee = new EventEmitter();
+    const subscriptionId = this._provider.connection.onProgramAccountChange(this.programId, 
+      async (keyedAccountInfo: KeyedAccountInfo, context: Context) => {
+        const acc = keyedAccountInfo.accountInfo;
+        const disc = acc.data.slice(0, 8);
+        
+        const accountName = this._coder.accounts.getAccountName(disc);
+        let accountData: any;
+        if (accountName) {
+          accountData = this._coder.accounts.decode(
+            accountName,
+            acc.data
+          );
+        } else {
+          accountData = acc.data;
+        }
+        const slot = context.slot
+        ee.emit("change", { address: keyedAccountInfo.accountId, name: accountName, data: accountData, slot});
+      }, commitment);
+    return [ee, subscriptionId];
+  }
+  /**
+   * Unsubscribe from program account events registered with `subscribe()`
+   *
+   * @param id subscription id to deregister
+   */
+  public async unsubscribe(id: number) {
+    return await this._provider.connection.removeProgramAccountChangeListener(id);
   }
 }
