@@ -11,7 +11,6 @@ pub struct Context<'a, 'info> {
     pub program_id: &'a Pubkey,
     pub dex_program_id: &'a Pubkey,
     pub accounts: Vec<AccountInfo<'info>>,
-    pub data: &'a mut &'a [u8],
     pub seeds: Vec<Vec<Vec<u8>>>,
 }
 
@@ -20,13 +19,11 @@ impl<'a, 'info> Context<'a, 'info> {
         program_id: &'a Pubkey,
         dex_program_id: &'a Pubkey,
         accounts: Vec<AccountInfo<'info>>,
-        data: &'a mut &'a [u8],
     ) -> Self {
         Self {
             program_id,
             dex_program_id,
             accounts,
-            data,
             seeds: Vec::new(),
         }
     }
@@ -35,6 +32,15 @@ impl<'a, 'info> Context<'a, 'info> {
 /// Implementing this trait allows one to hook into requests to the Serum DEX
 /// via a frontend proxy.
 pub trait MarketMiddleware {
+    /// Called before any instruction, giving middleware access to the raw
+    /// instruction data. This can be used to access extra data that is
+    /// prepended to the DEX data, allowing one to expand the capabilities of
+    /// any instruction by reading the instruction data here and then
+    /// using it in any of the method handlers.
+    fn instruction(&mut self, _data: &mut &[u8]) -> ProgramResult {
+        Ok(())
+    }
+
     fn init_open_orders(&self, _ctx: &mut Context) -> ProgramResult {
         Ok(())
     }
@@ -67,9 +73,18 @@ pub trait MarketMiddleware {
 
 /// Checks that the given open orders account signs the transaction and then
 /// replaces it with the open orders account, which must be a PDA.
-pub struct OpenOrdersPda;
+pub struct OpenOrdersPda {
+    bump: u8,
+    bump_init: u8,
+}
 
 impl OpenOrdersPda {
+    pub fn new() -> Self {
+        Self {
+            bump: 0,
+            bump_init: 0,
+        }
+    }
     fn prepare_pda<'info>(acc_info: &AccountInfo<'info>) -> AccountInfo<'info> {
         let mut acc_info = acc_info.clone();
         acc_info.is_signer = true;
@@ -78,37 +93,38 @@ impl OpenOrdersPda {
 }
 
 impl MarketMiddleware for OpenOrdersPda {
+    fn instruction(&mut self, data: &mut &[u8]) -> ProgramResult {
+        // Strip the discriminator.
+        let disc = data[0];
+        *data = &data[1..];
+
+        // Discriminator == 0 implies it's the init instruction.
+        if disc == 0 {
+            self.bump = data[0];
+            self.bump_init = data[1];
+            *data = &data[2..];
+        }
+        Ok(())
+    }
+
     /// Accounts:
     ///
     /// 0. Dex program.
     /// 1. System program.
     /// .. serum_dex::MarketInstruction::InitOpenOrders.
+    ///
+    /// Data:
+    ///
+    /// 0.   Discriminant.
+    /// 1..2 Borsh(struct { bump: u8, bump_init: u8 }).
+    /// ..
     fn init_open_orders<'a, 'info>(&self, ctx: &mut Context<'a, 'info>) -> ProgramResult {
         let market = &ctx.accounts[4];
         let user = &ctx.accounts[3];
 
-        // Find canonical bump seeds.
-        let (_, bump) = Pubkey::find_program_address(
-            &[
-                b"open-orders".as_ref(),
-                ctx.dex_program_id.as_ref(),
-                market.key.as_ref(),
-                user.key.as_ref(),
-            ],
-            ctx.program_id,
-        );
-        let (_, bump_init) = Pubkey::find_program_address(
-            &[
-                b"open-orders-init".as_ref(),
-                ctx.dex_program_id.as_ref(),
-                market.key.as_ref(),
-            ],
-            ctx.program_id,
-        );
-
         // Initialize PDA.
         let mut accounts = &ctx.accounts[..];
-        InitAccount::try_accounts(ctx.program_id, &mut accounts, &[bump, bump_init])?;
+        InitAccount::try_accounts(ctx.program_id, &mut accounts, &[self.bump, self.bump_init])?;
 
         // Add signer to context.
         ctx.seeds.push(open_orders_authority! {
@@ -116,13 +132,13 @@ impl MarketMiddleware for OpenOrdersPda {
             dex_program = ctx.dex_program_id,
             market = market.key,
             authority = user.key,
-            bump = bump
+            bump = self.bump
         });
         ctx.seeds.push(open_orders_init_authority! {
             program = ctx.program_id,
             dex_program = ctx.dex_program_id,
             market = market.key,
-            bump = bump_init
+            bump = self.bump_init
         });
 
         // Chop off the first two accounts needed for initializing the PDA.
@@ -137,7 +153,12 @@ impl MarketMiddleware for OpenOrdersPda {
 
     /// Accounts:
     ///
-    /// .. serum_dex::MarketInstruction::NewOrderV3.
+    /// ..
+    ///
+    /// Data:
+    ///
+    /// 0.   Discriminant.
+    /// ..
     fn new_order_v3(&self, ctx: &mut Context, _ix: &NewOrderInstructionV3) -> ProgramResult {
         let market = &ctx.accounts[0];
         let user = &ctx.accounts[7];
@@ -159,7 +180,12 @@ impl MarketMiddleware for OpenOrdersPda {
 
     /// Accounts:
     ///
-    /// .. serum_dex::MarketInstruction::CancelOrderV2.
+    /// ..
+    ///
+    /// Data:
+    ///
+    /// 0.   Discriminant.
+    /// ..
     fn cancel_order_v2(&self, ctx: &mut Context, _ix: &CancelOrderInstructionV2) -> ProgramResult {
         let market = &ctx.accounts[0];
         let user = &ctx.accounts[4];
@@ -181,7 +207,12 @@ impl MarketMiddleware for OpenOrdersPda {
 
     /// Accounts:
     ///
-    /// .. serum_dex::MarketInstruction::CancelOrderByClientIdV2.
+    /// ..
+    ///
+    /// Data:
+    ///
+    /// 0.   Discriminant.
+    /// ..
     fn cancel_order_by_client_id_v2(&self, ctx: &mut Context, _client_id: u64) -> ProgramResult {
         let market = &ctx.accounts[0];
         let user = &ctx.accounts[4];
@@ -203,7 +234,12 @@ impl MarketMiddleware for OpenOrdersPda {
 
     /// Accounts:
     ///
-    /// .. serum_dex::MarketInstruction::SettleFunds.
+    /// ..
+    ///
+    /// Data:
+    ///
+    /// 0.   Discriminant.
+    /// ..
     fn settle_funds(&self, ctx: &mut Context) -> ProgramResult {
         let market = &ctx.accounts[0];
         let user = &ctx.accounts[2];
@@ -225,7 +261,12 @@ impl MarketMiddleware for OpenOrdersPda {
 
     /// Accounts:
     ///
-    /// .. serum_dex::MarketInstruction::CloseOpenOrders.
+    /// ..
+    ///
+    /// Data:
+    ///
+    /// 0.   Discriminant.
+    /// ..
     fn close_open_orders(&self, ctx: &mut Context) -> ProgramResult {
         let market = &ctx.accounts[3];
         let user = &ctx.accounts[1];

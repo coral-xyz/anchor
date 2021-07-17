@@ -6,12 +6,14 @@
 
 const Token = require("@solana/spl-token").Token;
 const TOKEN_PROGRAM_ID = require("@solana/spl-token").TOKEN_PROGRAM_ID;
-const serum = require('@project-serum/serum');
+//const serum = require('@project-serum/serum');
+const serum = require("/home/armaniferrante/Documents/code/src/github.com/project-serum/serum-ts/packages/serum");
 const {
   DexInstructions,
   TokenInstructions,
-  PermissionedMarket,
+  MarketProxy,
   OpenOrders,
+  OpenOrdersPda,
 } = serum;
 const anchor = require("@project-serum/anchor");
 const BN = anchor.BN;
@@ -28,7 +30,12 @@ const serumCmn = require("@project-serum/common");
 const DEX_PID = new PublicKey("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin");
 const MARKET_MAKER = new Account();
 
-async function initMarket({ provider, getAuthority, proxyProgramId }) {
+async function initMarket({
+  provider,
+  getAuthority,
+  proxyProgramId,
+  marketLoader,
+}) {
   // Setup mints with initial tokens owned by the provider.
   const decimals = 6;
   const [MINT_A, GOD_A] = await serumCmn.createMintAndVault(
@@ -88,6 +95,7 @@ async function initMarket({ provider, getAuthority, proxyProgramId }) {
     provider,
     getAuthority,
     proxyProgramId,
+    marketLoader,
   });
   return {
     marketA: MARKET_A_USDC,
@@ -171,6 +179,7 @@ async function setupMarket({
   asks,
   getAuthority,
   proxyProgramId,
+  marketLoader,
 }) {
   const [marketAPublicKey, vaultOwner] = await listMarket({
     connection: provider.connection,
@@ -183,15 +192,7 @@ async function setupMarket({
     feeRateBps: 0,
     getAuthority,
   });
-  const MARKET_A_USDC = await PermissionedMarket.load(
-    provider.connection,
-    marketAPublicKey,
-    { commitment: "recent" },
-    DEX_PID,
-    proxyProgramId,
-    // Preload a dummy auth token for testing.
-    [{ pubkey: SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false }]
-  );
+  const MARKET_A_USDC = await marketLoader(marketAPublicKey);
   return [MARKET_A_USDC, vaultOwner];
 }
 
@@ -254,9 +255,9 @@ async function listMarket({
       fromPubkey: wallet.publicKey,
       newAccountPubkey: market.publicKey,
       lamports: await connection.getMinimumBalanceForRentExemption(
-        PermissionedMarket.getLayout(dexProgramId).span
+        MarketProxy.getLayout(dexProgramId).span
       ),
-      space: PermissionedMarket.getLayout(dexProgramId).span,
+      space: MarketProxy.getLayout(dexProgramId).span,
       programId: dexProgramId,
     }),
     SystemProgram.createAccount({

@@ -70,8 +70,10 @@ pub mod permissioned_markets {
         let dex = &accounts[0];
 
         // Use the rent sysvar as a dummy auth token for the example.
+        //
+        // Disabled.
         let auth_token = &accounts[1];
-        if auth_token.key != &rent::ID {
+        if false && auth_token.key != &rent::ID {
             return Err(ErrorCode::InvalidAuthToken.into());
         }
 

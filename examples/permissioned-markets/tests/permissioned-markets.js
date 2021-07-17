@@ -1,17 +1,59 @@
 const assert = require("assert");
 const { Token, TOKEN_PROGRAM_ID } = require("@solana/spl-token");
 const anchor = require("@project-serum/anchor");
-const serum = require("@project-serum/serum");
+//const serum = require("@project-serum/serum");
+const serum = require("/home/armaniferrante/Documents/code/src/github.com/project-serum/serum-ts/packages/serum");
 const { BN } = anchor;
-const { Keypair, Transaction, TransactionInstruction } = anchor.web3;
-const { DexInstructions, OpenOrders } = serum;
-const { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } = anchor.web3;
+const {
+  Keypair,
+  Transaction,
+  TransactionInstruction,
+  PublicKey,
+  SystemProgram,
+  SYSVAR_RENT_PUBKEY,
+} = anchor.web3;
+const {
+  DexInstructions,
+  OpenOrders,
+  MarketProxy,
+  OpenOrdersPda,
+  Logger,
+  ReferralFees,
+} = serum;
 const { initMarket, sleep } = require("./utils");
 
 const DEX_PID = new PublicKey("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin");
 const REFERRAL_AUTHORITY = new PublicKey(
   "3oSfkjQZKCneYvsCTZc9HViGAPqR8pYr4h9YeGB5ZxHf"
 );
+
+// Dummy identity middleware used for testing.
+class Identity {
+  initOpenOrders(ix) {
+    this.proxy(ix);
+  }
+  newOrderV3(ix) {
+    this.proxy(ix);
+  }
+  cancelOrderV2(ix) {
+    this.proxy(ix);
+  }
+  cancelOrderByClientIdV2(ix) {
+    this.proxy(ix);
+  }
+  settleFunds(ix) {
+    this.proxy(ix);
+  }
+  closeOpenOrders(ix) {
+    this.proxy(ix);
+  }
+  proxy(ix) {
+    ix.keys = [
+      { pubkey: SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false },
+      ...ix.keys,
+    ];
+  }
+}
 
 describe("permissioned-markets", () => {
   // Anchor client setup.
@@ -45,10 +87,35 @@ describe("permissioned-markets", () => {
           )
         )[0];
       };
+      const marketLoader = async (market) => {
+        let middleware;
+        if (index === 0) {
+          middleware = [new Identity()];
+        } else {
+          middleware = [
+            new OpenOrdersPda({
+              proxyProgramId: program.programId,
+              dexProgramId: DEX_PID,
+            }),
+            new ReferralFees(),
+            new Identity(),
+            new Logger(),
+          ];
+        }
+        return await await MarketProxy.load(
+          provider.connection,
+          market,
+          { commitment: "recent" },
+          DEX_PID,
+          program.programId,
+          middleware
+        );
+      };
       const { marketA, godA, godUsdc, usdc } = await initMarket({
         provider,
         getAuthority,
         proxyProgramId: program.programId,
+        marketLoader,
       });
       marketClient = marketA;
       usdcAccount = godUsdc;
@@ -111,7 +178,9 @@ describe("permissioned-markets", () => {
         tx.add(
           await marketClient.makeInitOpenOrdersInstruction(
             program.provider.wallet.publicKey,
-            marketClient.address
+            marketClient.address,
+            marketClient.address, // Dummy.
+            marketClient.address // Dummy.
           )
         );
         await provider.send(tx);
@@ -162,7 +231,6 @@ describe("permissioned-markets", () => {
       const tx = new Transaction();
       tx.add(
         await marketClient.makeCancelOrderByClientIdInstruction(
-          program.provider.connection,
           program.provider.wallet.publicKey,
           openOrders,
           new BN(999)

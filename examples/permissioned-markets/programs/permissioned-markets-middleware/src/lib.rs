@@ -26,10 +26,10 @@ pub mod permissioned_markets_middleware {
     use super::*;
     pub fn entry(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         MarketProxy::new()
-            .middleware(&Logger)
-            .middleware(&Identity)
-            .middleware(&ReferralFees::new(referral::ID))
-            .middleware(&OpenOrdersPda)
+            .middleware(&mut Logger)
+            .middleware(&mut Identity)
+            .middleware(&mut ReferralFees::new(referral::ID))
+            .middleware(&mut OpenOrdersPda::new())
             .run(program_id, accounts, data)
     }
 }

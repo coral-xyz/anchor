@@ -8,8 +8,12 @@ use serum_dex::instruction::*;
 /// Serum orderbook, allowing one to implement a middleware for the purposes
 /// of intercepting and modifying requests before being relayed to the
 /// orderbook.
+///
+/// The only requirement for a middleware is that, when all are done processing,
+/// a valid DEX instruction--accounts and instruction data--must be left to
+/// forward to the orderbook program.
 pub struct MarketProxy<'a> {
-    middlewares: Vec<&'a dyn MarketMiddleware>,
+    middlewares: Vec<&'a mut dyn MarketMiddleware>,
 }
 
 impl<'a> MarketProxy<'a> {
@@ -21,24 +25,34 @@ impl<'a> MarketProxy<'a> {
     }
 
     /// Builder method for adding a middleware to the proxy.
-    pub fn middleware(mut self, mw: &'a dyn MarketMiddleware) -> Self {
+    pub fn middleware(mut self, mw: &'a mut dyn MarketMiddleware) -> Self {
         self.middlewares.push(mw);
         self
     }
 
     /// Entrypoint to the program.
-    pub fn run(&self, program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+    pub fn run(
+        mut self,
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+        data: &[u8],
+    ) -> ProgramResult {
         let mut ix_data = &data[..];
 
         // First account is the Serum DEX executable--used for CPI.
         let dex = &accounts[0];
         let acc_infos = (&accounts[1..]).to_vec();
 
+        // Process the instruction data.
+        for mw in &mut self.middlewares {
+            mw.instruction(&mut ix_data)?;
+        }
+
         // Request context.
-        let mut ctx = Context::new(program_id, dex.key, acc_infos, &mut ix_data);
+        let mut ctx = Context::new(program_id, dex.key, acc_infos);
 
         // Decode instruction.
-        let ix = MarketInstruction::unpack(data);
+        let ix = MarketInstruction::unpack(ix_data);
 
         // Method dispatch.
         match ix {
@@ -88,10 +102,7 @@ impl<'a> MarketProxy<'a> {
 
         // Extract the middleware adjusted context.
         let Context {
-            seeds,
-            accounts,
-            data,
-            ..
+            seeds, accounts, ..
         } = ctx;
 
         // Convert the signer seeds into a slice.
@@ -117,7 +128,7 @@ impl<'a> MarketProxy<'a> {
             })
             .collect();
         let ix = anchor_lang::solana_program::instruction::Instruction {
-            data: data.to_vec(),
+            data: ix_data.to_vec(),
             accounts: dex_accounts,
             program_id: dex::ID,
         };
