@@ -27,6 +27,276 @@ const REFERRAL_AUTHORITY = new PublicKey(
   "3oSfkjQZKCneYvsCTZc9HViGAPqR8pYr4h9YeGB5ZxHf"
 );
 
+describe("permissioned-markets", () => {
+  // Anchor client setup.
+  const provider = anchor.Provider.env();
+  anchor.setProvider(provider);
+  const programs = [
+    anchor.workspace.PermissionedMarkets,
+    anchor.workspace.PermissionedMarketsMiddleware,
+  ];
+
+  programs.forEach((program, index) => {
+    // Token client.
+    let usdcClient;
+
+    // Global DEX accounts and clients shared accross all tests.
+    let marketProxy, tokenAccount, usdcAccount;
+    let openOrders, openOrdersBump, openOrdersInitAuthority, openOrdersBumpinit;
+    let usdcPosted;
+    let referralTokenAddress;
+
+    it("BOILERPLATE: Initializes an orderbook", async () => {
+      const getAuthority = async (market) => {
+        return (
+          await PublicKey.findProgramAddress(
+            [
+              anchor.utils.bytes.utf8.encode("open-orders-init"),
+              DEX_PID.toBuffer(),
+              market.toBuffer(),
+            ],
+            program.programId
+          )
+        )[0];
+      };
+      const marketLoader = async (market) => {
+        let middleware;
+        if (index === 0) {
+          middleware = [
+            new OpenOrdersPda({
+              proxyProgramId: program.programId,
+              dexProgramId: DEX_PID,
+            }),
+            new Identity(),
+          ];
+        } else {
+          middleware = [
+            new OpenOrdersPda({
+              proxyProgramId: program.programId,
+              dexProgramId: DEX_PID,
+            }),
+            new ReferralFees(),
+            new Identity(),
+            new Logger(),
+          ];
+        }
+        return await await MarketProxy.load(
+          provider.connection,
+          market,
+          { commitment: "recent" },
+          DEX_PID,
+          program.programId,
+          middleware
+        );
+      };
+      const { marketA, godA, godUsdc, usdc } = await initMarket({
+        provider,
+        getAuthority,
+        proxyProgramId: program.programId,
+        marketLoader,
+      });
+      marketProxy = marketA;
+      usdcAccount = godUsdc;
+      tokenAccount = godA;
+
+      usdcClient = new Token(
+        provider.connection,
+        usdc,
+        TOKEN_PROGRAM_ID,
+        provider.wallet.payer
+      );
+
+      referral = await usdcClient.createAccount(REFERRAL_AUTHORITY);
+    });
+
+    it("BOILERPLATE: Calculates open orders addresses", async () => {
+      const [_openOrders, bump] = await PublicKey.findProgramAddress(
+        [
+          anchor.utils.bytes.utf8.encode("open-orders"),
+          DEX_PID.toBuffer(),
+          marketProxy.market.address.toBuffer(),
+          program.provider.wallet.publicKey.toBuffer(),
+        ],
+        program.programId
+      );
+      const [
+        _openOrdersInitAuthority,
+        bumpInit,
+      ] = await PublicKey.findProgramAddress(
+        [
+          anchor.utils.bytes.utf8.encode("open-orders-init"),
+          DEX_PID.toBuffer(),
+          marketProxy.market.address.toBuffer(),
+        ],
+        program.programId
+      );
+
+      // Save global variables re-used across tests.
+      openOrders = _openOrders;
+      openOrdersBump = bump;
+      openOrdersInitAuthority = _openOrdersInitAuthority;
+      openOrdersBumpInit = bumpInit;
+    });
+
+    it("Creates an open orders account", async () => {
+      if (false && index === 0) {
+        await program.rpc.initAccount(openOrdersBump, openOrdersBumpInit, {
+          accounts: {
+            openOrdersInitAuthority,
+            openOrders,
+            authority: program.provider.wallet.publicKey,
+            market: marketProxy.market.address,
+            rent: SYSVAR_RENT_PUBKEY,
+            systemProgram: SystemProgram.programId,
+            dexProgram: DEX_PID,
+          },
+        });
+      } else {
+        const tx = new Transaction();
+        tx.add(
+          await marketProxy.instruction.initOpenOrders(
+            program.provider.wallet.publicKey,
+            marketProxy.market.address,
+            marketProxy.market.address, // Dummy.
+            marketProxy.market.address // Dummy.
+          )
+        );
+        await provider.send(tx);
+      }
+
+      const account = await provider.connection.getAccountInfo(openOrders);
+      assert.ok(account.owner.toString() === DEX_PID.toString());
+    });
+
+    it("Posts a bid on the orderbook", async () => {
+      const size = 1;
+      const price = 1;
+      usdcPosted = new BN(
+        marketProxy.market._decoded.quoteLotSize.toNumber()
+      ).mul(
+        marketProxy.market
+          .baseSizeNumberToLots(size)
+          .mul(marketProxy.market.priceNumberToLots(price))
+      );
+
+      const tx = new Transaction();
+      tx.add(
+        ...marketProxy.instruction.newOrderV3({
+          owner: program.provider.wallet.publicKey,
+          payer: usdcAccount,
+          side: "buy",
+          price,
+          size,
+          orderType: "postOnly",
+          clientId: new BN(999),
+          openOrdersAddressKey: openOrders,
+          selfTradeBehavior: "abortTransaction",
+        })
+      );
+      await provider.send(tx);
+    });
+
+    it("Cancels a bid on the orderbook", async () => {
+      // Given.
+      const beforeOoAccount = await OpenOrders.load(
+        provider.connection,
+        openOrders,
+        DEX_PID
+      );
+
+      // When.
+      const tx = new Transaction();
+      tx.add(
+        await marketProxy.instruction.cancelOrderByClientId(
+          program.provider.wallet.publicKey,
+          openOrders,
+          new BN(999)
+        )
+      );
+      await provider.send(tx);
+
+      // Then.
+      const afterOoAccount = await OpenOrders.load(
+        provider.connection,
+        openOrders,
+        DEX_PID
+      );
+      assert.ok(beforeOoAccount.quoteTokenFree.eq(new BN(0)));
+      assert.ok(beforeOoAccount.quoteTokenTotal.eq(usdcPosted));
+      assert.ok(afterOoAccount.quoteTokenFree.eq(usdcPosted));
+      assert.ok(afterOoAccount.quoteTokenTotal.eq(usdcPosted));
+    });
+
+    // Need to crank the cancel so that we can close later.
+    it("Cranks the cancel transaction", async () => {
+      // TODO: can do this in a single transaction if we covert the pubkey bytes
+      //       into a [u64; 4] array and sort. I'm lazy though.
+      let eq = await marketProxy.market.loadEventQueue(provider.connection);
+      while (eq.length > 0) {
+        const tx = new Transaction();
+        tx.add(
+          marketProxy.market.makeConsumeEventsInstruction([eq[0].openOrders], 1)
+        );
+        await provider.send(tx);
+        eq = await marketProxy.market.loadEventQueue(provider.connection);
+      }
+    });
+
+    it("Settles funds on the orderbook", async () => {
+      // Given.
+      const beforeTokenAccount = await usdcClient.getAccountInfo(usdcAccount);
+
+      // When.
+      const tx = new Transaction();
+      tx.add(
+        await marketProxy.instruction.settleFunds(
+          openOrders,
+          provider.wallet.publicKey,
+          tokenAccount,
+          usdcAccount,
+          referral
+        )
+      );
+      await provider.send(tx);
+
+      // Then.
+      const afterTokenAccount = await usdcClient.getAccountInfo(usdcAccount);
+      assert.ok(
+        afterTokenAccount.amount.sub(beforeTokenAccount.amount).toNumber() ===
+          usdcPosted.toNumber()
+      );
+    });
+
+    it("Closes an open orders account", async () => {
+      // Given.
+      const beforeAccount = await program.provider.connection.getAccountInfo(
+        program.provider.wallet.publicKey
+      );
+
+      // When.
+      const tx = new Transaction();
+      tx.add(
+        marketProxy.instruction.closeOpenOrders(
+          openOrders,
+          provider.wallet.publicKey,
+          provider.wallet.publicKey
+        )
+      );
+      await provider.send(tx);
+
+      // Then.
+      const afterAccount = await program.provider.connection.getAccountInfo(
+        program.provider.wallet.publicKey
+      );
+      const closedAccount = await program.provider.connection.getAccountInfo(
+        openOrders
+      );
+      assert.ok(23352768 === afterAccount.lamports - beforeAccount.lamports);
+      assert.ok(closedAccount === null);
+    });
+  });
+});
+
 // Dummy identity middleware used for testing.
 class Identity {
   initOpenOrders(ix) {
@@ -54,268 +324,3 @@ class Identity {
     ];
   }
 }
-
-describe("permissioned-markets", () => {
-  // Anchor client setup.
-  const provider = anchor.Provider.env();
-  anchor.setProvider(provider);
-  const programs = [
-    anchor.workspace.PermissionedMarkets,
-    anchor.workspace.PermissionedMarketsMiddleware,
-  ];
-
-  programs.forEach((program, index) => {
-    // Token client.
-    let usdcClient;
-
-    // Global DEX accounts and clients shared accross all tests.
-    let marketClient, tokenAccount, usdcAccount;
-    let openOrders, openOrdersBump, openOrdersInitAuthority, openOrdersBumpinit;
-    let usdcPosted;
-    let referralTokenAddress;
-
-    it("BOILERPLATE: Initializes an orderbook", async () => {
-      const getAuthority = async (market) => {
-        return (
-          await PublicKey.findProgramAddress(
-            [
-              anchor.utils.bytes.utf8.encode("open-orders-init"),
-              DEX_PID.toBuffer(),
-              market.toBuffer(),
-            ],
-            program.programId
-          )
-        )[0];
-      };
-      const marketLoader = async (market) => {
-        let middleware;
-        if (index === 0) {
-          middleware = [new Identity()];
-        } else {
-          middleware = [
-            new OpenOrdersPda({
-              proxyProgramId: program.programId,
-              dexProgramId: DEX_PID,
-            }),
-            new ReferralFees(),
-            new Identity(),
-            new Logger(),
-          ];
-        }
-        return await await MarketProxy.load(
-          provider.connection,
-          market,
-          { commitment: "recent" },
-          DEX_PID,
-          program.programId,
-          middleware
-        );
-      };
-      const { marketA, godA, godUsdc, usdc } = await initMarket({
-        provider,
-        getAuthority,
-        proxyProgramId: program.programId,
-        marketLoader,
-      });
-      marketClient = marketA;
-      usdcAccount = godUsdc;
-      tokenAccount = godA;
-
-      usdcClient = new Token(
-        provider.connection,
-        usdc,
-        TOKEN_PROGRAM_ID,
-        provider.wallet.payer
-      );
-
-      referral = await usdcClient.createAccount(REFERRAL_AUTHORITY);
-    });
-
-    it("BOILERPLATE: Calculates open orders addresses", async () => {
-      const [_openOrders, bump] = await PublicKey.findProgramAddress(
-        [
-          anchor.utils.bytes.utf8.encode("open-orders"),
-          DEX_PID.toBuffer(),
-          marketClient.address.toBuffer(),
-          program.provider.wallet.publicKey.toBuffer(),
-        ],
-        program.programId
-      );
-      const [
-        _openOrdersInitAuthority,
-        bumpInit,
-      ] = await PublicKey.findProgramAddress(
-        [
-          anchor.utils.bytes.utf8.encode("open-orders-init"),
-          DEX_PID.toBuffer(),
-          marketClient.address.toBuffer(),
-        ],
-        program.programId
-      );
-
-      // Save global variables re-used across tests.
-      openOrders = _openOrders;
-      openOrdersBump = bump;
-      openOrdersInitAuthority = _openOrdersInitAuthority;
-      openOrdersBumpInit = bumpInit;
-    });
-
-    it("Creates an open orders account", async () => {
-      if (index === 0) {
-        await program.rpc.initAccount(openOrdersBump, openOrdersBumpInit, {
-          accounts: {
-            openOrdersInitAuthority,
-            openOrders,
-            authority: program.provider.wallet.publicKey,
-            market: marketClient.address,
-            rent: SYSVAR_RENT_PUBKEY,
-            systemProgram: SystemProgram.programId,
-            dexProgram: DEX_PID,
-          },
-        });
-      } else {
-        const tx = new Transaction();
-        tx.add(
-          await marketClient.makeInitOpenOrdersInstruction(
-            program.provider.wallet.publicKey,
-            marketClient.address,
-            marketClient.address, // Dummy.
-            marketClient.address // Dummy.
-          )
-        );
-        await provider.send(tx);
-      }
-
-      const account = await provider.connection.getAccountInfo(openOrders);
-      assert.ok(account.owner.toString() === DEX_PID.toString());
-    });
-
-    it("Posts a bid on the orderbook", async () => {
-      const size = 1;
-      const price = 1;
-      usdcPosted = new BN(marketClient._decoded.quoteLotSize.toNumber()).mul(
-        marketClient
-          .baseSizeNumberToLots(size)
-          .mul(marketClient.priceNumberToLots(price))
-      );
-
-      const tx = new Transaction();
-      tx.add(
-        ...marketClient.makePlaceOrderInstructionPermissioned(
-          program.provider.connection,
-          {
-            owner: program.provider.wallet.publicKey,
-            payer: usdcAccount,
-            side: "buy",
-            price,
-            size,
-            orderType: "postOnly",
-            clientId: new BN(999),
-            openOrdersAddressKey: openOrders,
-            selfTradeBehavior: "abortTransaction",
-          }
-        )
-      );
-      await provider.send(tx);
-    });
-
-    it("Cancels a bid on the orderbook", async () => {
-      // Given.
-      const beforeOoAccount = await OpenOrders.load(
-        provider.connection,
-        openOrders,
-        DEX_PID
-      );
-
-      // When.
-      const tx = new Transaction();
-      tx.add(
-        await marketClient.makeCancelOrderByClientIdInstruction(
-          program.provider.wallet.publicKey,
-          openOrders,
-          new BN(999)
-        )
-      );
-      await provider.send(tx);
-
-      // Then.
-      const afterOoAccount = await OpenOrders.load(
-        provider.connection,
-        openOrders,
-        DEX_PID
-      );
-      assert.ok(beforeOoAccount.quoteTokenFree.eq(new BN(0)));
-      assert.ok(beforeOoAccount.quoteTokenTotal.eq(usdcPosted));
-      assert.ok(afterOoAccount.quoteTokenFree.eq(usdcPosted));
-      assert.ok(afterOoAccount.quoteTokenTotal.eq(usdcPosted));
-    });
-
-    // Need to crank the cancel so that we can close later.
-    it("Cranks the cancel transaction", async () => {
-      // TODO: can do this in a single transaction if we covert the pubkey bytes
-      //       into a [u64; 4] array and sort. I'm lazy though.
-      let eq = await marketClient.loadEventQueue(provider.connection);
-      while (eq.length > 0) {
-        const tx = new Transaction();
-        tx.add(
-          marketClient.makeConsumeEventsInstruction([eq[0].openOrders], 1)
-        );
-        await provider.send(tx);
-        eq = await marketClient.loadEventQueue(provider.connection);
-      }
-    });
-
-    it("Settles funds on the orderbook", async () => {
-      // Given.
-      const beforeTokenAccount = await usdcClient.getAccountInfo(usdcAccount);
-
-      // When.
-      const tx = new Transaction();
-      tx.add(
-        await marketClient.makeSettleFundsInstruction(
-          openOrders,
-          provider.wallet.publicKey,
-          tokenAccount,
-          usdcAccount,
-          referral
-        )
-      );
-      await provider.send(tx);
-
-      // Then.
-      const afterTokenAccount = await usdcClient.getAccountInfo(usdcAccount);
-      assert.ok(
-        afterTokenAccount.amount.sub(beforeTokenAccount.amount).toNumber() ===
-          usdcPosted.toNumber()
-      );
-    });
-
-    it("Closes an open orders account", async () => {
-      // Given.
-      const beforeAccount = await program.provider.connection.getAccountInfo(
-        program.provider.wallet.publicKey
-      );
-
-      // When.
-      const tx = new Transaction();
-      tx.add(
-        marketClient.makeCloseOpenOrdersInstruction(
-          openOrders,
-          provider.wallet.publicKey,
-          provider.wallet.publicKey
-        )
-      );
-      await provider.send(tx);
-
-      // Then.
-      const afterAccount = await program.provider.connection.getAccountInfo(
-        program.provider.wallet.publicKey
-      );
-      const closedAccount = await program.provider.connection.getAccountInfo(
-        openOrders
-      );
-      assert.ok(23352768 === afterAccount.lamports - beforeAccount.lamports);
-      assert.ok(closedAccount === null);
-    });
-  });
-});

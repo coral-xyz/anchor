@@ -10,17 +10,40 @@ use solana_program::entrypoint::ProgramResult;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::rent;
 
-/// A simplified version of the `programs/permissioned-markets` example, using
-/// the `MarketProxy` abstraction.
+/// # Permissioned Markets
+///
+/// This demonstrates how to create "permissioned markets" on Serum via a proxy.
+/// A permissioned market is a regular Serum market with an additional
+/// open orders authority, which must sign every transaction to create or
+/// close an open orders account.
+///
+/// In practice, what this means is that one can create a program that acts
+/// as this authority *and* that marks its own PDAs as the *owner* of all
+/// created open orders accounts, making the program the sole arbiter over
+/// who can trade on a given market.
+///
+/// For example, this example forces all trades that execute on this market
+/// to set the referral to a hardcoded address, i.e., `fee_owner::ID`.
+///
+/// # Extending the proxy via middleware
 ///
 /// To implement a custom proxy, one can implement the `MarketMiddleware` trait
 /// to intercept, modify, and perform any access control on DEX requests before
-/// they get forwarded to the orderbook.
+/// they get forwarded to the orderbook. These middleware can be mixed and
+/// matched. Note, however, that the order of middleware matters since they can
+/// mutate the request.
 ///
-/// These middleware can be mixed and matched. Note, however, that the order
-/// of each middleware matters. Some like the `Identity` middleware provided
-/// here expect different accounts and data.
+/// One useful pattern is to treat the request like layers of an onion, where
+/// each middleware unwraps the request by stripping accounts and instruction
+/// data before relaying it to the next middleware and ultimately to the
+/// orderbook. This allows one to easily extend the behavior of a proxy by
+/// adding a custom middleware that may process information that is unknown to
+/// any other middleware or to the DEX.
 ///
+/// After adding a middleware, the only additional requirement, of course, is
+/// to make sure the client sending transactions does the same, but in reverse.
+/// It should wrap the transaction in the opposite order. For convenience, an
+/// identical abstraction is provided in the JavaScript client.
 #[program]
 pub mod permissioned_markets_middleware {
     use super::*;

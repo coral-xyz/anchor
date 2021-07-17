@@ -10,18 +10,11 @@ use solana_program::system_program;
 use solana_program::sysvar::rent;
 use std::mem::size_of;
 
-/// This demonstrates how to create "permissioned markets" on Serum. A
-/// permissioned market is a regular Serum market with an additional
-/// open orders authority, which must sign every transaction to create or
-/// close an open orders account.
+/// A low level example of permissioned markets.
 ///
-/// In practice, what this means is that one can create a program that acts
-/// as this authority *and* that marks its own PDAs as the *owner* of all
-/// created open orders accounts, making the program the sole arbiter over
-/// who can trade on a given market.
-///
-/// For example, this example forces all trades that execute on this market
-/// to set the referral to a hardcoded address, i.e., `fee_owner::ID`.
+/// It's recommended to instead study `programs/permissioned-markets-middleware`
+/// in this workspace, which achieves the same functionality in a simpler, more
+/// extendable fashion via a middleware abstraction.
 #[program]
 pub mod permissioned_markets {
     use super::*;
@@ -63,22 +56,45 @@ pub mod permissioned_markets {
     pub fn dex_instruction(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
-        data: &[u8],
+        mut data: &[u8],
     ) -> ProgramResult {
         require!(accounts.len() >= 1, NotEnoughAccounts);
 
-        let dex = &accounts[0];
+        // Strip instruction data.
+        let (bump, bump_init) = {
+            // Strip the discriminator off the data, which is provided by the client
+            // for prepending extra instruction data.
+            let disc = data[0];
+            data = &data[1..];
 
-        // Use the rent sysvar as a dummy auth token for the example.
-        //
-        // Disabled.
-        let auth_token = &accounts[1];
-        if false && auth_token.key != &rent::ID {
-            return Err(ErrorCode::InvalidAuthToken.into());
-        }
+            // For the init open orders instruction, bump seeds are provided.
+            if disc == 0 {
+                let bump = data[0];
+                let bump_init = data[1];
+                data = &data[2..]; // Strip bumps off.
+                (bump, bump_init)
+            } else {
+                (0, 0)
+            }
+        };
 
-        // First account is the Serum DEX executable--used for CPI only.
-        let mut acc_infos = (&accounts[2..]).to_vec();
+        // Strip accounts.
+        let (dex, mut acc_infos) = {
+            // First account is the dex executable--used for CPI.
+            let dex = &accounts[0];
+
+            // Second account is the auth token.
+            let auth_token = &accounts[1];
+            if false && auth_token.key != &rent::ID {
+                // Rent sysvar as dummy example.
+                return Err(ErrorCode::InvalidAuthToken.into());
+            }
+
+            // Strip.
+            let acc_infos = (&accounts[2..]).to_vec();
+
+            (dex, acc_infos)
+        };
 
         // Decode instruction.
         let ix = MarketInstruction::unpack(data).ok_or_else(|| ErrorCode::CannotUnpack)?;
@@ -86,6 +102,26 @@ pub mod permissioned_markets {
         // Swap the user's account, which is in the open orders authority
         // position, for the program's PDA (the real authority).
         let (market, user) = match ix {
+            MarketInstruction::InitOpenOrders => {
+                let (market, user) = {
+                    let market = &acc_infos[4];
+                    let user = &acc_infos[3];
+
+                    // Initialize PDA.
+                    let mut accounts = &acc_infos[..];
+                    InitAccount::try_accounts(program_id, &mut accounts, &[bump, bump_init])?;
+
+                    (*market.key, *user.key)
+                };
+                // Chop off the first two accounts used initializing the PDA.
+                acc_infos = (&acc_infos[2..]).to_vec();
+
+                // Set signers.
+                acc_infos[1] = prepare_pda(&acc_infos[0]);
+                acc_infos[4].is_signer = true;
+
+                (market, user)
+            }
             MarketInstruction::NewOrderV3(_) => {
                 require!(acc_infos.len() >= 12, NotEnoughAccounts);
 
@@ -203,7 +239,12 @@ pub mod permissioned_markets {
             market = market,
             authority = user
         };
-        program::invoke_signed(&ix, &acc_infos, &[seeds])
+        let seeds_init = open_orders_init_authority! {
+            program = program_id,
+            dex_program = dex.key,
+            market = market
+        };
+        program::invoke_signed(&ix, &acc_infos, &[seeds, seeds_init])
     }
 }
 

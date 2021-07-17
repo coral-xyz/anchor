@@ -14,6 +14,7 @@ const {
   MarketProxy,
   OpenOrders,
   OpenOrdersPda,
+  MARKET_STATE_LAYOUT_V3,
 } = serum;
 const anchor = require("@project-serum/anchor");
 const BN = anchor.BN;
@@ -255,9 +256,9 @@ async function listMarket({
       fromPubkey: wallet.publicKey,
       newAccountPubkey: market.publicKey,
       lamports: await connection.getMinimumBalanceForRentExemption(
-        MarketProxy.getLayout(dexProgramId).span
+        MARKET_STATE_LAYOUT_V3.span
       ),
-      space: MarketProxy.getLayout(dexProgramId).span,
+      space: MARKET_STATE_LAYOUT_V3.span,
       programId: dexProgramId,
     }),
     SystemProgram.createAccount({
