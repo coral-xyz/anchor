@@ -484,6 +484,8 @@ pub enum ErrorCode {
     UnauthorizedUser,
     #[msg("Not enough accounts were provided")]
     NotEnoughAccounts,
+    #[msg("Invalid target program ID")]
+    InvalidTargetProgram,
 }
 
 #[derive(Accounts)]

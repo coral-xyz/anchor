@@ -16,6 +16,10 @@ use std::mem::size_of;
 /// It's recommended to instead study `programs/permissioned-markets-middleware`
 /// in this workspace, which achieves the same functionality in a simpler, more
 /// extendable fashion via a middleware abstraction.
+///
+/// This example is provided as a (very) rough guide for how to might implement
+/// a permissioned market in a raw program, which may be useful in the
+/// unexpected case that the middleware abstraction does not fit ones use case.
 #[program]
 pub mod permissioned_markets {
     use super::*;
@@ -320,9 +324,9 @@ pub struct InitAccount<'info> {
     pub market: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
     #[account(
-				seeds = [b"open-orders-init", dex_program.key.as_ref(), market.key.as_ref()],
-				bump = bump_init,
-		)]
+        seeds = [b"open-orders-init", dex_program.key.as_ref(), market.key.as_ref()],
+        bump = bump_init,
+    )]
     pub open_orders_init_authority: AccountInfo<'info>,
 }
 
