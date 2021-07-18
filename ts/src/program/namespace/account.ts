@@ -254,7 +254,7 @@ export class AccountClient<
    * Function returning the associated account. Args are keys to associate.
    * Order matters.
    */
-  async associated(...args: Array<PublicKey | Buffer>): Promise<any> {
+  async associated(...args: Array<PublicKey | Buffer>): Promise<T> {
     const addr = await this.associatedAddress(...args);
     return await this.fetch(addr);
   }
