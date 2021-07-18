@@ -15,10 +15,10 @@ const {
 const {
   DexInstructions,
   OpenOrders,
-  MarketProxy,
   OpenOrdersPda,
   Logger,
   ReferralFees,
+  MarketProxyBuilder,
 } = serum;
 const { initMarket, sleep } = require("./utils");
 
@@ -60,34 +60,23 @@ describe("permissioned-markets", () => {
         )[0];
       };
       const marketLoader = async (market) => {
-        let middleware;
-        if (index === 0) {
-          middleware = [
+        return new MarketProxyBuilder()
+          .middleware(
             new OpenOrdersPda({
               proxyProgramId: program.programId,
               dexProgramId: DEX_PID,
-            }),
-            new Identity(),
-          ];
-        } else {
-          middleware = [
-            new OpenOrdersPda({
-              proxyProgramId: program.programId,
-              dexProgramId: DEX_PID,
-            }),
-            new ReferralFees(),
-            new Identity(),
-            new Logger(),
-          ];
-        }
-        return await await MarketProxy.load(
-          provider.connection,
-          market,
-          { commitment: "recent" },
-          DEX_PID,
-          program.programId,
-          middleware
-        );
+            })
+          )
+          .middleware(new ReferralFees())
+          .middleware(new Identity())
+          .middleware(new Logger())
+          .load({
+            connection: provider.connection,
+            market,
+            dexProgramId: DEX_PID,
+            proxyProgramId: program.programId,
+            options: { commitment: "recent" },
+          });
       };
       const { marketA, godA, godUsdc, usdc } = await initMarket({
         provider,
