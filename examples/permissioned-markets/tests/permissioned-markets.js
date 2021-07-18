@@ -1,8 +1,7 @@
 const assert = require("assert");
 const { Token, TOKEN_PROGRAM_ID } = require("@solana/spl-token");
 const anchor = require("@project-serum/anchor");
-//const serum = require("@project-serum/serum");
-const serum = require("/home/armaniferrante/Documents/code/src/github.com/project-serum/serum-ts/packages/serum");
+const serum = require("@project-serum/serum");
 const { BN } = anchor;
 const {
   Keypair,

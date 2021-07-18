@@ -6,8 +6,7 @@
 
 const Token = require("@solana/spl-token").Token;
 const TOKEN_PROGRAM_ID = require("@solana/spl-token").TOKEN_PROGRAM_ID;
-//const serum = require('@project-serum/serum');
-const serum = require("/home/armaniferrante/Documents/code/src/github.com/project-serum/serum-ts/packages/serum");
+const serum = require('@project-serum/serum');
 const {
   DexInstructions,
   TokenInstructions,
