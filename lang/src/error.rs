@@ -22,8 +22,8 @@ pub enum ErrorCode {
     // Constraints.
     #[msg("A mut constraint was violated")]
     ConstraintMut = 140,
-    #[msg("A belongs to constraint was violated")]
-    ConstraintBelongsTo,
+    #[msg("A has one constraint was violated")]
+    ConstraintHasOne,
     #[msg("A signer constraint as violated")]
     ConstraintSigner,
     #[msg("A raw constraint was violated")]
@@ -44,6 +44,8 @@ pub enum ErrorCode {
     ConstraintAssociatedInit,
     #[msg("A close constraint was violated")]
     ConstraintClose,
+    #[msg("An address constraint was violated")]
+    ConstraintAddress,
 
     // Accounts.
     #[msg("The account discriminator was already set on this account")]

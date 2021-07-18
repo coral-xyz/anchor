@@ -18,6 +18,7 @@ import Coder, {
 import { Subscription, Address, translateAddress } from "../common";
 import { getProvider } from "../../";
 import { IdlTypes, TypeDef } from "./types";
+import * as pubkeyUtil from "../../utils/pubkey";
 
 export default class AccountFactory {
   public static build<IDL extends Idl>(
@@ -253,7 +254,7 @@ export class AccountClient<
    * Function returning the associated account. Args are keys to associate.
    * Order matters.
    */
-  async associated(...args: PublicKey[]): Promise<T> {
+  async associated(...args: Array<PublicKey | Buffer>): Promise<any> {
     const addr = await this.associatedAddress(...args);
     return await this.fetch(addr);
   }
@@ -262,13 +263,10 @@ export class AccountClient<
    * Function returning the associated address. Args are keys to associate.
    * Order matters.
    */
-  async associatedAddress(...args: PublicKey[]): Promise<PublicKey> {
-    let seeds = [Buffer.from([97, 110, 99, 104, 111, 114])]; // b"anchor".
-    args.forEach((arg) => {
-      seeds.push(translateAddress(arg).toBuffer());
-    });
-    const [assoc] = await PublicKey.findProgramAddress(seeds, this._programId);
-    return assoc;
+  async associatedAddress(
+    ...args: Array<PublicKey | Buffer>
+  ): Promise<PublicKey> {
+    return await pubkeyUtil.associated(this._programId, ...args);
   }
 }
 

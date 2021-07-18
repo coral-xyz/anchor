@@ -38,7 +38,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         let name = &ix.raw_method.sig.ident.to_string();
                         let ix_method_name: proc_macro2::TokenStream =
                             { format!("__{}", name).parse().unwrap() };
-                        let sighash_arr = sighash(SIGHASH_STATE_NAMESPACE, &name);
+                        let sighash_arr = sighash(SIGHASH_STATE_NAMESPACE, name);
                         let sighash_tts: proc_macro2::TokenStream =
                             format!("{:?}", sighash_arr).parse().unwrap();
                         quote! {
@@ -113,7 +113,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             }
         })
         .collect();
-
+    let fallback_fn = gen_fallback(program).unwrap_or(quote! {
+        Err(anchor_lang::__private::ErrorCode::InstructionFallbackNotFound.into())
+    });
     quote! {
         /// Performs method dispatch.
         ///
@@ -133,7 +135,21 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         /// With this 8 byte identifier, Anchor performs method dispatch,
         /// matching the given 8 byte identifier to the associated method
         /// handler, which leads to user defined code being eventually invoked.
-        fn dispatch(program_id: &Pubkey, accounts: &[AccountInfo], sighash: [u8; 8], ix_data: &[u8]) -> ProgramResult {
+        fn dispatch(
+            program_id: &Pubkey,
+            accounts: &[AccountInfo],
+            data: &[u8],
+        ) -> ProgramResult {
+            // Split the instruction data into the first 8 byte method
+            // identifier (sighash) and the serialized instruction data.
+            let mut ix_data: &[u8] = data;
+            let sighash: [u8; 8] = {
+                let mut sighash: [u8; 8] = [0; 8];
+                sighash.copy_from_slice(&ix_data[..8]);
+                ix_data = &ix_data[8..];
+                sighash
+            };
+
             // If the method identifier is the IDL tag, then execute an IDL
             // instruction, injected into all Anchor programs.
             if cfg!(not(feature = "no-idl")) {
@@ -152,10 +168,20 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 #(#trait_dispatch_arms)*
                 #(#global_dispatch_arms)*
                 _ => {
-                    msg!("Fallback functions are not supported. If you have a use case, please file an issue.");
-                    Err(anchor_lang::__private::ErrorCode::InstructionFallbackNotFound.into())
+                    #fallback_fn
                 }
             }
         }
     }
+}
+
+pub fn gen_fallback(program: &Program) -> Option<proc_macro2::TokenStream> {
+    program.fallback_fn.as_ref().map(|fallback_fn| {
+        let program_name = &program.name;
+        let method = &fallback_fn.raw_method;
+        let fn_name = &method.sig.ident;
+        quote! {
+            #program_name::#fn_name(program_id, accounts, data)
+        }
+    })
 }

@@ -1,11 +1,12 @@
 use crate::{
-    CompositeField, Constraint, ConstraintAssociatedGroup, ConstraintBelongsTo, ConstraintClose,
-    ConstraintExecutable, ConstraintGroup, ConstraintInit, ConstraintLiteral, ConstraintMut,
-    ConstraintOwner, ConstraintRaw, ConstraintRentExempt, ConstraintSeedsGroup, ConstraintSigner,
-    ConstraintState, Field, Ty,
+    CompositeField, Constraint, ConstraintAddress, ConstraintAssociatedGroup, ConstraintClose,
+    ConstraintExecutable, ConstraintGroup, ConstraintHasOne, ConstraintInit, ConstraintLiteral,
+    ConstraintMut, ConstraintOwner, ConstraintRaw, ConstraintRentExempt, ConstraintSeedsGroup,
+    ConstraintSigner, ConstraintState, Field, PdaKind, Ty,
 };
+use proc_macro2_diagnostics::SpanDiagnosticExt;
 use quote::quote;
-use syn::LitInt;
+use syn::Expr;
 
 pub fn generate(f: &Field) -> proc_macro2::TokenStream {
     let checks: Vec<proc_macro2::TokenStream> = linearize(&f.constraints)
@@ -42,7 +43,7 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
         init,
         mutable,
         signer,
-        belongs_to,
+        has_one,
         literal,
         raw,
         owner,
@@ -52,6 +53,7 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
         state,
         associated,
         close,
+        address,
     } = c_group.clone();
 
     let mut constraints = Vec::new();
@@ -71,19 +73,9 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
     if let Some(c) = signer {
         constraints.push(Constraint::Signer(c));
     }
-    constraints.append(
-        &mut belongs_to
-            .into_iter()
-            .map(|c| Constraint::BelongsTo(c))
-            .collect(),
-    );
-    constraints.append(
-        &mut literal
-            .into_iter()
-            .map(|c| Constraint::Literal(c))
-            .collect(),
-    );
-    constraints.append(&mut raw.into_iter().map(|c| Constraint::Raw(c)).collect());
+    constraints.append(&mut has_one.into_iter().map(Constraint::HasOne).collect());
+    constraints.append(&mut literal.into_iter().map(Constraint::Literal).collect());
+    constraints.append(&mut raw.into_iter().map(Constraint::Raw).collect());
     if let Some(c) = owner {
         constraints.push(Constraint::Owner(c));
     }
@@ -99,6 +91,9 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
     if let Some(c) = close {
         constraints.push(Constraint::Close(c));
     }
+    if let Some(c) = address {
+        constraints.push(Constraint::Address(c));
+    }
     constraints
 }
 
@@ -106,7 +101,7 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
     match c {
         Constraint::Init(c) => generate_constraint_init(f, c),
         Constraint::Mut(c) => generate_constraint_mut(f, c),
-        Constraint::BelongsTo(c) => generate_constraint_belongs_to(f, c),
+        Constraint::HasOne(c) => generate_constraint_has_one(f, c),
         Constraint::Signer(c) => generate_constraint_signer(f, c),
         Constraint::Literal(c) => generate_constraint_literal(c),
         Constraint::Raw(c) => generate_constraint_raw(c),
@@ -117,6 +112,7 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::State(c) => generate_constraint_state(f, c),
         Constraint::AssociatedGroup(c) => generate_constraint_associated(f, c),
         Constraint::Close(c) => generate_constraint_close(f, c),
+        Constraint::Address(c) => generate_constraint_address(f, c),
     }
 }
 
@@ -125,6 +121,16 @@ fn generate_constraint_composite(_f: &CompositeField, c: &Constraint) -> proc_ma
         Constraint::Raw(c) => generate_constraint_raw(c),
         Constraint::Literal(c) => generate_constraint_literal(c),
         _ => panic!("Invariant violation"),
+    }
+}
+
+fn generate_constraint_address(f: &Field, c: &ConstraintAddress) -> proc_macro2::TokenStream {
+    let field = &f.ident;
+    let addr = &c.address;
+    quote! {
+        if #field.to_account_info().key != &#addr {
+            return Err(anchor_lang::__private::ErrorCode::ConstraintAddress.into());
+        }
     }
 }
 
@@ -151,10 +157,7 @@ pub fn generate_constraint_mut(f: &Field, _c: &ConstraintMut) -> proc_macro2::To
     }
 }
 
-pub fn generate_constraint_belongs_to(
-    f: &Field,
-    c: &ConstraintBelongsTo,
-) -> proc_macro2::TokenStream {
+pub fn generate_constraint_has_one(f: &Field, c: &ConstraintHasOne) -> proc_macro2::TokenStream {
     let target = c.join_target.clone();
     let ident = &f.ident;
     let field = match &f.ty {
@@ -163,7 +166,7 @@ pub fn generate_constraint_belongs_to(
     };
     quote! {
         if &#field.#target != #target.to_account_info().key {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintBelongsTo.into());
+            return Err(anchor_lang::__private::ErrorCode::ConstraintHasOne.into());
         }
     }
 }
@@ -192,8 +195,13 @@ pub fn generate_constraint_signer(f: &Field, _c: &ConstraintSigner) -> proc_macr
 pub fn generate_constraint_literal(c: &ConstraintLiteral) -> proc_macro2::TokenStream {
     let lit: proc_macro2::TokenStream = {
         let lit = &c.lit;
-        let lit_ts: proc_macro2::TokenStream = quote! {#lit};
-        lit_ts.to_string().replace("\"", "").parse().unwrap()
+        let constraint = lit.value().replace("\"", "");
+        let message = format!(
+            "Deprecated. Should be used with constraint: #[account(constraint = {})]",
+            constraint,
+        );
+        lit.span().warning(message).emit_as_item_tokens();
+        constraint.parse().unwrap()
     };
     quote! {
         if !(#lit) {
@@ -226,11 +234,8 @@ pub fn generate_constraint_rent_exempt(
     c: &ConstraintRentExempt,
 ) -> proc_macro2::TokenStream {
     let ident = &f.ident;
-    let info = match f.ty {
-        Ty::AccountInfo => quote! { #ident },
-        Ty::ProgramAccount(_) => quote! { #ident.to_account_info() },
-        Ty::Loader(_) => quote! { #ident.to_account_info() },
-        _ => panic!("Invalid syntax: rent exemption cannot be specified."),
+    let info = quote! {
+        #ident.to_account_info()
     };
     match c {
         ConstraintRentExempt::Skip => quote! {},
@@ -257,15 +262,27 @@ fn generate_constraint_seeds_init(f: &Field, c: &ConstraintSeedsGroup) -> proc_m
             let payer = #p.to_account_info();
         }
     };
+    let seeds_constraint = generate_constraint_seeds_address(f, c);
     let seeds_with_nonce = {
         let s = &c.seeds;
-        let seeds_constraint = generate_constraint_seeds_address(f, c);
-        quote! {
-            #seeds_constraint
-            let seeds = [#s];
+        match c.bump.as_ref() {
+            None => quote! {
+                [#s]
+            },
+            Some(b) => quote! {
+                [#s, &[#b]]
+            },
         }
     };
-    generate_pda(f, seeds_with_nonce, payer, &c.space, false)
+    generate_pda(
+        f,
+        seeds_constraint,
+        seeds_with_nonce,
+        payer,
+        &c.space,
+        false,
+        &c.kind,
+    )
 }
 
 fn generate_constraint_seeds_address(
@@ -273,14 +290,47 @@ fn generate_constraint_seeds_address(
     c: &ConstraintSeedsGroup,
 ) -> proc_macro2::TokenStream {
     let name = &f.ident;
-    let seeds = &c.seeds;
-    quote! {
-        let __program_signer = Pubkey::create_program_address(
-            &[#seeds],
-            program_id,
-        ).map_err(|_| anchor_lang::__private::ErrorCode::ConstraintSeeds)?;
-        if #name.to_account_info().key != &__program_signer {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+
+    // If the bump is provided on *initialization*, then force it to be the
+    // canonical nonce.
+    if c.is_init && c.bump.is_some() {
+        let s = &c.seeds;
+        let b = c.bump.as_ref().unwrap();
+        quote! {
+            let (__program_signer, __bump) = anchor_lang::solana_program::pubkey::Pubkey::find_program_address(
+                &[#s],
+                program_id,
+            );
+            if #name.to_account_info().key != &__program_signer {
+                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+            }
+            if __bump != #b {
+                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+            }
+        }
+    } else {
+        let seeds = match c.bump.as_ref() {
+            None => {
+                let s = &c.seeds;
+                quote! {
+                    [#s]
+                }
+            }
+            Some(b) => {
+                let s = &c.seeds;
+                quote! {
+                    [#s, &[#b]]
+                }
+            }
+        };
+        quote! {
+            let __program_signer = Pubkey::create_program_address(
+                &#seeds,
+                program_id,
+            ).map_err(|_| anchor_lang::__private::ErrorCode::ConstraintSeeds)?;
+            if #name.to_account_info().key != &__program_signer {
+                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+            }
         }
     }
 }
@@ -309,45 +359,100 @@ pub fn generate_constraint_associated_init(
             let payer = #p.to_account_info();
         },
     };
-    let associated_seeds_constraint = generate_constraint_associated_seeds(f, c);
-    let seeds_with_nonce = match c.associated_seeds.len() {
-        0 => quote! {
-            #associated_seeds_constraint
-            let seeds = [
-                &b"anchor"[..],
-                #associated_target.to_account_info().key.as_ref(),
-                &[nonce],
-            ];
-        },
-        _ => {
+    let seeds_constraint = generate_constraint_associated_seeds(f, c);
+    let seeds_with_nonce = {
+        if c.associated_seeds.is_empty() {
+            quote! {
+                [
+                    &b"anchor"[..],
+                    #associated_target.to_account_info().key.as_ref(),
+                    &[nonce],
+                ]
+            }
+        } else {
             let seeds = to_seeds_tts(&c.associated_seeds);
             quote! {
-                #associated_seeds_constraint
-                let seeds = [
+                [
                     &b"anchor"[..],
                     #associated_target.to_account_info().key.as_ref(),
                     #seeds
                     &[nonce],
-                ];
+                ]
             }
         }
     };
-    generate_pda(f, seeds_with_nonce, payer, &c.space, true)
+
+    generate_pda(
+        f,
+        seeds_constraint,
+        seeds_with_nonce,
+        payer,
+        &c.space,
+        true,
+        &c.kind,
+    )
+}
+
+fn parse_ty(f: &Field) -> (proc_macro2::TokenStream, proc_macro2::TokenStream, bool) {
+    match &f.ty {
+        Ty::ProgramAccount(ty) => {
+            let ident = &ty.account_type_path;
+            (
+                quote! {
+                    #ident
+                },
+                quote! {
+                    anchor_lang::ProgramAccount
+                },
+                false,
+            )
+        }
+        Ty::Loader(ty) => {
+            let ident = &ty.account_type_path;
+            (
+                quote! {
+                    #ident
+                },
+                quote! {
+                    anchor_lang::Loader
+                },
+                true,
+            )
+        }
+        Ty::CpiAccount(ty) => {
+            let ident = &ty.account_type_path;
+            (
+                quote! {
+                    #ident
+                },
+                quote! {
+                    anchor_lang::CpiAccount
+                },
+                false,
+            )
+        }
+        Ty::AccountInfo => (
+            quote! {
+                AccountInfo
+            },
+            quote! {},
+            false,
+        ),
+        _ => panic!("Invalid type for initializing a program derived address"),
+    }
 }
 
 pub fn generate_pda(
     f: &Field,
+    seeds_constraint: proc_macro2::TokenStream,
     seeds_with_nonce: proc_macro2::TokenStream,
     payer: proc_macro2::TokenStream,
-    space: &Option<LitInt>,
+    space: &Option<Expr>,
     assign_nonce: bool,
+    kind: &PdaKind,
 ) -> proc_macro2::TokenStream {
     let field = &f.ident;
-    let (account_ty, is_zero_copy) = match &f.ty {
-        Ty::ProgramAccount(ty) => (&ty.account_ident, false),
-        Ty::Loader(ty) => (&ty.account_ident, true),
-        _ => panic!("Invalid type for initializing a program derived address"),
-    };
+    let (account_ty, account_wrapper_ty, is_zero_copy) = parse_ty(f);
 
     let space = match space {
         // If no explicit space param was given, serialize the type to bytes
@@ -370,64 +475,161 @@ pub fn generate_pda(
         },
     };
 
-    let account_wrapper_ty = match is_zero_copy {
-        false => quote! {
-            anchor_lang::ProgramAccount
-        },
-        true => quote! {
-            anchor_lang::Loader
-        },
-    };
     let nonce_assignment = match assign_nonce {
         false => quote! {},
-        true => match is_zero_copy {
-            false => quote! {
-                pa.__nonce = nonce;
-            },
-            // Zero copy is not deserialized, so the data must be lazy loaded.
-            true => quote! {
-                pa.load_init()?.__nonce = nonce;
+        true => match &f.ty {
+            Ty::CpiAccount(_) => quote! {},
+            _ => match is_zero_copy {
+                false => quote! {
+                    pa.__nonce = nonce;
+                },
+                // Zero copy is not deserialized, so the data must be lazy loaded.
+                true => quote! {
+                    pa.load_init()?.__nonce = nonce;
+                },
             },
         },
     };
 
-    quote! {
-        let #field: #account_wrapper_ty<#account_ty> = {
-            #space
-            #payer
+    let (combined_account_ty, try_from) = match f.ty {
+        Ty::AccountInfo => (
+            quote! {
+                AccountInfo
+            },
+            quote! {
+                #field.to_account_info()
+            },
+        ),
+        _ => (
+            quote! {
+                #account_wrapper_ty<#account_ty>
+            },
+            quote! {
+                #account_wrapper_ty::try_from_init(
+                    &#field.to_account_info(),
+                )?
+            },
+        ),
+    };
 
-            let lamports = rent.minimum_balance(space);
-            let ix = anchor_lang::solana_program::system_instruction::create_account(
-                payer.to_account_info().key,
-                #field.to_account_info().key,
-                lamports,
-                space as u64,
-                program_id,
-            );
+    match kind {
+        PdaKind::Token { owner, mint } => quote! {
+            let #field: #combined_account_ty = {
+                #space
+                #payer
+                #seeds_constraint
 
-            #seeds_with_nonce
-            let signer = &[&seeds[..]];
-            anchor_lang::solana_program::program::invoke_signed(
-                &ix,
-                &[
+                // Fund the account for rent exemption.
+                let required_lamports = rent
+                    .minimum_balance(anchor_spl::token::TokenAccount::LEN)
+                    .max(1)
+                    .saturating_sub(#field.to_account_info().lamports());
+                if required_lamports > 0 {
+                    anchor_lang::solana_program::program::invoke(
+                        &anchor_lang::solana_program::system_instruction::transfer(
+                            payer.to_account_info().key,
+                            #field.to_account_info().key,
+                            required_lamports,
+                        ),
+                        &[
+                            payer.to_account_info(),
+                            #field.to_account_info(),
+                            system_program.to_account_info().clone(),
+                        ],
+                    )?;
+                }
 
-                    #field.to_account_info(),
-                    payer.to_account_info(),
-                    system_program.to_account_info(),
-                ],
-                signer,
-            ).map_err(|e| {
-                anchor_lang::solana_program::msg!("Unable to create associated account");
-                e
-            })?;
-            // For now, we assume all accounts created with the `associated`
-            // attribute have a `nonce` field in their account.
-            let mut pa: #account_wrapper_ty<#account_ty> = #account_wrapper_ty::try_from_init(
-                &#field.to_account_info(),
-            )?;
-            #nonce_assignment
-            pa
-        };
+                // Allocate space.
+                anchor_lang::solana_program::program::invoke_signed(
+                    &anchor_lang::solana_program::system_instruction::allocate(
+                        #field.to_account_info().key,
+                        anchor_spl::token::TokenAccount::LEN as u64,
+                    ),
+                    &[
+                        #field.to_account_info(),
+                        system_program.clone(),
+                    ],
+                    &[&#seeds_with_nonce[..]],
+                )?;
+
+                // Assign to the spl token program.
+                let __ix = anchor_lang::solana_program::system_instruction::assign(
+                    #field.to_account_info().key,
+                    token_program.to_account_info().key,
+                );
+                anchor_lang::solana_program::program::invoke_signed(
+                    &__ix,
+                    &[
+                        #field.to_account_info(),
+                        system_program.to_account_info(),
+                    ],
+                    &[&#seeds_with_nonce[..]],
+                )?;
+
+                // Initialize the token account.
+                let cpi_program = token_program.to_account_info();
+                let accounts = anchor_spl::token::InitializeAccount {
+                    account: #field.to_account_info(),
+                    mint: #mint.to_account_info(),
+                    authority: #owner.to_account_info(),
+                    rent: rent.to_account_info(),
+                };
+                let cpi_ctx = CpiContext::new(cpi_program, accounts);
+                anchor_spl::token::initialize_account(cpi_ctx)?;
+                anchor_lang::CpiAccount::try_from_init(
+                    &#field.to_account_info(),
+                )?
+            };
+        },
+        PdaKind::Program { owner } => {
+            // Owner of the account being created. If not specified,
+            // default to the currently executing program.
+            let owner = match owner {
+                None => quote! {
+                    program_id
+                },
+                Some(o) => quote! {
+                    &#o
+                },
+            };
+            quote! {
+                let #field = {
+                    #space
+                    #payer
+                    #seeds_constraint
+
+                    let lamports = rent.minimum_balance(space);
+                    let ix = anchor_lang::solana_program::system_instruction::create_account(
+                        payer.to_account_info().key,
+                        #field.to_account_info().key,
+                        lamports,
+                        space as u64,
+                        #owner,
+                    );
+
+                    anchor_lang::solana_program::program::invoke_signed(
+                        &ix,
+                        &[
+
+                            #field.to_account_info(),
+                            payer.to_account_info(),
+                            system_program.to_account_info(),
+                        ],
+                        &[&#seeds_with_nonce[..]]
+                    ).map_err(|e| {
+                        anchor_lang::solana_program::msg!("Unable to create associated account");
+                        e
+                    })?;
+
+                    // For now, we assume all accounts created with the `associated`
+                    // attribute have a `nonce` field in their account.
+                    let mut pa: #combined_account_ty = #try_from;
+
+                    #nonce_assignment
+                    pa
+                };
+            }
+        }
     }
 }
 
@@ -437,29 +639,50 @@ pub fn generate_constraint_associated_seeds(
 ) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let associated_target = c.associated_target.clone();
-    let seeds_no_nonce = match c.associated_seeds.len() {
-        0 => quote! {
-            [
-                &b"anchor"[..],
-                #associated_target.to_account_info().key.as_ref(),
-            ]
-        },
-        _ => {
-            let seeds = to_seeds_tts(&c.associated_seeds);
-            quote! {
-                [
-                    &b"anchor"[..],
-                    #associated_target.to_account_info().key.as_ref(),
-                    #seeds
-                ]
+    let seeds_no_nonce = if c.associated_seeds.is_empty() {
+        quote! {
+            &b"anchor"[..],
+            #associated_target.to_account_info().key.as_ref(),
+        }
+    } else {
+        let seeds = to_seeds_tts(&c.associated_seeds);
+        quote! {
+            &b"anchor"[..],
+            #associated_target.to_account_info().key.as_ref(),
+            #seeds
+        }
+    };
+
+    let is_find_nonce = match &f.ty {
+        Ty::CpiAccount(_) => true,
+        Ty::AccountInfo => true,
+        _ => c.is_init,
+    };
+    let associated_field = if is_find_nonce {
+        quote! {
+            let (__associated_field, nonce) = Pubkey::find_program_address(
+                &[#seeds_no_nonce],
+                program_id,
+            );
+        }
+    } else {
+        let nonce = match &f.ty {
+            Ty::ProgramAccount(_) => quote! { #field.__nonce },
+            Ty::Loader(_) => {
+                // Zero copy is not deserialized, so the data must be lazy loaded.
+                quote! { #field.load()?.__nonce }
             }
+            _ => panic!("Invalid type for initializing a program derived address"),
+        };
+        quote! {
+            let __associated_field = Pubkey::create_program_address(
+                &[#seeds_no_nonce &[#nonce]],
+                program_id,
+            )?;
         }
     };
     quote! {
-        let (__associated_field, nonce) = Pubkey::find_program_address(
-            &#seeds_no_nonce,
-            program_id,
-        );
+        #associated_field
         if &__associated_field != #field.to_account_info().key {
             return Err(anchor_lang::__private::ErrorCode::ConstraintAssociatedInit.into());
         }
@@ -482,7 +705,7 @@ pub fn generate_constraint_state(f: &Field, c: &ConstraintState) -> proc_macro2:
     let program_target = c.program_target.clone();
     let ident = &f.ident;
     let account_ty = match &f.ty {
-        Ty::CpiState(ty) => &ty.account_ident,
+        Ty::CpiState(ty) => &ty.account_type_path,
         _ => panic!("Invalid state constraint"),
     };
     quote! {
@@ -498,16 +721,27 @@ pub fn generate_constraint_state(f: &Field, c: &ConstraintState) -> proc_macro2:
 }
 
 // Returns the inner part of the seeds slice as a token stream.
-fn to_seeds_tts(seeds: &[syn::Ident]) -> proc_macro2::TokenStream {
-    assert!(seeds.len() > 0);
+fn to_seeds_tts(seeds: &[syn::Expr]) -> proc_macro2::TokenStream {
+    assert!(!seeds.is_empty());
     let seed_0 = &seeds[0];
-    let mut tts = quote! {
-        #seed_0.to_account_info().key.as_ref(),
+    let mut tts = match seed_0 {
+        syn::Expr::Path(_) => quote! {
+            anchor_lang::Key::key(&#seed_0).as_ref(),
+        },
+        _ => quote! {
+            #seed_0,
+        },
     };
     for seed in &seeds[1..] {
-        tts = quote! {
-            #tts
-            #seed.to_account_info().key.as_ref(),
+        tts = match seed {
+            syn::Expr::Path(_) => quote! {
+                #tts
+                anchor_lang::Key::key(&#seed).as_ref(),
+            },
+            _ => quote! {
+                #tts
+                #seed,
+            },
         };
     }
     tts

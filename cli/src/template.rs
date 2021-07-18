@@ -38,10 +38,38 @@ anchor-lang = "{2}"
     )
 }
 
-pub fn deploy_script_host(cluster_url: &str, script_path: &str) -> String {
+pub fn deploy_js_script_host(cluster_url: &str, script_path: &str) -> String {
     format!(
         r#"
 const anchor = require('@project-serum/anchor');
+
+// Deploy script defined by the user.
+const userScript = require("{0}");
+
+async function main() {{
+    const url = "{1}";
+    const preflightCommitment = 'recent';
+    const connection = new anchor.web3.Connection(url, preflightCommitment);
+    const wallet = anchor.Wallet.local();
+
+    const provider = new anchor.Provider(connection, wallet, {{
+        preflightCommitment,
+        commitment: 'recent',
+    }});
+
+    // Run the user's deploy script.
+    userScript(provider);
+}}
+main();
+"#,
+        script_path, cluster_url,
+    )
+}
+
+pub fn deploy_ts_script_host(cluster_url: &str, script_path: &str) -> String {
+    format!(
+        r#"
+import * as anchor from '@project-serum/anchor';
 
 // Deploy script defined by the user.
 const userScript = require("{0}");
@@ -102,7 +130,8 @@ module.exports = async function (provider) {
 
 pub fn xargo_toml() -> &'static str {
     r#"[target.bpfel-unknown-unknown.dependencies.std]
-features = []"#
+features = []
+"#
 }
 
 pub fn lib_rs(name: &str) -> String {
@@ -118,7 +147,8 @@ pub mod {} {{
 }}
 
 #[derive(Accounts)]
-pub struct Initialize {{}}"#,
+pub struct Initialize {{}}
+"#,
         name.to_snake_case(),
     )
 }

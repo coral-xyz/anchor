@@ -58,7 +58,7 @@ const LangErrorCode = {
 
   // Constraints.
   ConstraintMut: 140,
-  ConstraintBelongsTo: 141,
+  ConstraintHasOne: 141,
   ConstraintSigner: 142,
   ConstraintRaw: 143,
   ConstraintOwner: 144,
@@ -69,6 +69,7 @@ const LangErrorCode = {
   ConstraintAssociated: 149,
   ConstraintAssociatedInit: 150,
   ConstraintClose: 151,
+  ConstraintAddress: 152,
 
   // Accounts.
   AccountDiscriminatorAlreadySet: 160,
@@ -118,7 +119,7 @@ const LangErrorMessage = new Map([
 
   // Constraints.
   [LangErrorCode.ConstraintMut, "A mut constraint was violated"],
-  [LangErrorCode.ConstraintBelongsTo, "A belongs_to constraint was violated"],
+  [LangErrorCode.ConstraintHasOne, "A has_one constraint was violated"],
   [LangErrorCode.ConstraintSigner, "A signer constraint was violated"],
   [LangErrorCode.ConstraintRaw, "A raw constraint as violated"],
   [LangErrorCode.ConstraintOwner, "An owner constraint was violated"],
@@ -132,6 +133,7 @@ const LangErrorMessage = new Map([
     "An associated init constraint was violated",
   ],
   [LangErrorCode.ConstraintClose, "A close constraint was violated"],
+  [LangErrorCode.ConstraintAddress, "An address constraint was violated"],
 
   // Accounts.
   [

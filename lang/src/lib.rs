@@ -210,14 +210,33 @@ pub trait Bump {
     fn seed(&self) -> u8;
 }
 
+pub trait Key {
+    fn key(&self) -> Pubkey;
+}
+
+impl<'info, T> Key for T
+where
+    T: ToAccountInfo<'info>,
+{
+    fn key(&self) -> Pubkey {
+        *self.to_account_info().key
+    }
+}
+
+impl Key for Pubkey {
+    fn key(&self) -> Pubkey {
+        *self
+    }
+}
+
 /// The prelude contains all commonly used components of the crate.
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
     pub use super::{
-        access_control, account, associated, emit, error, event, interface, program, state,
-        zero_copy, AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AccountsInit,
-        AnchorDeserialize, AnchorSerialize, Context, CpiAccount, CpiContext, CpiState,
-        CpiStateContext, Loader, ProgramAccount, ProgramState, Sysvar, ToAccountInfo,
+        access_control, account, associated, emit, error, event, interface, program, require,
+        state, zero_copy, AccountDeserialize, AccountSerialize, Accounts, AccountsExit,
+        AccountsInit, AnchorDeserialize, AnchorSerialize, Context, CpiAccount, CpiContext,
+        CpiState, CpiStateContext, Loader, ProgramAccount, ProgramState, Sysvar, ToAccountInfo,
         ToAccountInfos, ToAccountMetas,
     };
 
@@ -286,4 +305,56 @@ pub mod __private {
 
     pub use crate::state::PROGRAM_STATE_SEED;
     pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
+}
+
+/// Returns the program-derived-address seeds used for creating the associated
+/// account.
+#[macro_export]
+macro_rules! associated_seeds {
+    (account = $pda:expr, associated = $associated:expr) => {
+        &[
+            b"anchor".as_ref(),
+            $associated.to_account_info().key.as_ref(),
+            &[anchor_lang::Bump::seed(&*$pda)],
+        ]
+    };
+    (account = $pda:expr, associated = $associated:expr, $(with = $with:expr),+) => {
+        &[
+            b"anchor".as_ref(),
+            $associated.to_account_info().key.as_ref(),
+            $($with.to_account_info().key.as_ref()),+,
+            &[anchor_lang::Bump::seed(&*$pda)][..],
+        ]
+    };
+}
+
+/// Ensures a condition is true, otherwise returns the given error.
+/// Use this with a custom error type.
+///
+/// # Example
+///
+/// After defining an `ErrorCode`
+///
+/// ```ignore
+/// #[error]
+/// pub struct ErrorCode {
+///     InvalidArgument,
+/// }
+/// ```
+///
+/// One can write a `require` assertion as
+///
+/// ```ignore
+/// require!(condition, InvalidArgument);
+/// ```
+///
+/// which would exit the program with the `InvalidArgument` error code if
+/// `condition` is false.
+#[macro_export]
+macro_rules! require {
+    ($invariant:expr, $error:tt $(,)?) => {
+        if !($invariant) {
+            return Err(crate::ErrorCode::$error.into());
+        }
+    };
 }

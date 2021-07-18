@@ -14,12 +14,11 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
     let instruction_api: Option<Punctuated<Expr, Comma>> = strct
         .attrs
         .iter()
-        .filter(|a| {
+        .find(|a| {
             a.path
                 .get_ident()
                 .map_or(false, |ident| ident == "instruction")
         })
-        .next()
         .map(|ix_attr| ix_attr.parse_args_with(Punctuated::<Expr, Comma>::parse_terminated))
         .transpose()?;
     let fields = match &strct.fields {
@@ -68,11 +67,16 @@ pub fn parse_account_field(f: &syn::Field, has_instruction_api: bool) -> ParseRe
 }
 
 fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
-    let r = match ident_string(f)?.as_str() {
-        "ProgramState" | "ProgramAccount" | "CpiAccount" | "Sysvar" | "AccountInfo"
-        | "CpiState" | "Loader" => true,
-        _ => false,
-    };
+    let r = matches!(
+        ident_string(f)?.as_str(),
+        "ProgramState"
+            | "ProgramAccount"
+            | "CpiAccount"
+            | "Sysvar"
+            | "AccountInfo"
+            | "CpiState"
+            | "Loader"
+    );
     Ok(r)
 }
 
@@ -113,31 +117,41 @@ fn ident_string(f: &syn::Field) -> ParseResult<String> {
 }
 
 fn parse_program_state(path: &syn::Path) -> ParseResult<ProgramStateTy> {
-    let account_ident = parse_account(&path)?;
-    Ok(ProgramStateTy { account_ident })
+    let account_ident = parse_account(path)?;
+    Ok(ProgramStateTy {
+        account_type_path: account_ident,
+    })
 }
 
 fn parse_cpi_state(path: &syn::Path) -> ParseResult<CpiStateTy> {
-    let account_ident = parse_account(&path)?;
-    Ok(CpiStateTy { account_ident })
+    let account_ident = parse_account(path)?;
+    Ok(CpiStateTy {
+        account_type_path: account_ident,
+    })
 }
 
 fn parse_cpi_account(path: &syn::Path) -> ParseResult<CpiAccountTy> {
     let account_ident = parse_account(path)?;
-    Ok(CpiAccountTy { account_ident })
+    Ok(CpiAccountTy {
+        account_type_path: account_ident,
+    })
 }
 
 fn parse_program_account(path: &syn::Path) -> ParseResult<ProgramAccountTy> {
     let account_ident = parse_account(path)?;
-    Ok(ProgramAccountTy { account_ident })
+    Ok(ProgramAccountTy {
+        account_type_path: account_ident,
+    })
 }
 
 fn parse_program_account_zero_copy(path: &syn::Path) -> ParseResult<LoaderTy> {
     let account_ident = parse_account(path)?;
-    Ok(LoaderTy { account_ident })
+    Ok(LoaderTy {
+        account_type_path: account_ident,
+    })
 }
 
-fn parse_account(path: &syn::Path) -> ParseResult<syn::Ident> {
+fn parse_account(path: &syn::Path) -> ParseResult<syn::TypePath> {
     let segments = &path.segments[0];
     match &segments.arguments {
         syn::PathArguments::AngleBracketed(args) => {
@@ -149,32 +163,17 @@ fn parse_account(path: &syn::Path) -> ParseResult<syn::Ident> {
                 ));
             }
             match &args.args[1] {
-                syn::GenericArgument::Type(syn::Type::Path(ty_path)) => {
-                    // TODO: allow segmented paths.
-                    if ty_path.path.segments.len() != 1 {
-                        return Err(ParseError::new(
-                            ty_path.path.span(),
-                            "segmented paths are not currently allowed",
-                        ));
-                    }
-
-                    let path_segment = &ty_path.path.segments[0];
-                    Ok(path_segment.ident.clone())
-                }
-                _ => {
-                    return Err(ParseError::new(
-                        args.args[1].span(),
-                        "first bracket argument must be a lifetime",
-                    ))
-                }
+                syn::GenericArgument::Type(syn::Type::Path(ty_path)) => Ok(ty_path.clone()),
+                _ => Err(ParseError::new(
+                    args.args[1].span(),
+                    "first bracket argument must be a lifetime",
+                )),
             }
         }
-        _ => {
-            return Err(ParseError::new(
-                segments.arguments.span(),
-                "expected angle brackets with a lifetime and type",
-            ))
-        }
+        _ => Err(ParseError::new(
+            segments.arguments.span(),
+            "expected angle brackets with a lifetime and type",
+        )),
     }
 }
 

@@ -1,7 +1,7 @@
 const anchor = require("@project-serum/anchor");
 const PublicKey = anchor.web3.PublicKey;
-const serumCmn = require("@project-serum/common");
 const assert = require("assert");
+const { TOKEN_PROGRAM_ID, Token } = require("@solana/spl-token");
 
 describe("misc", () => {
   // Configure the client to use the local cluster.
@@ -145,10 +145,11 @@ describe("misc", () => {
       nonce,
     ] = await anchor.web3.PublicKey.findProgramAddress(
       [
-        Buffer.from([97, 110, 99, 104, 111, 114]), // b"anchor".
+        anchor.utils.bytes.utf8.encode("anchor"),
         program.provider.wallet.publicKey.toBuffer(),
         state.toBuffer(),
         data.publicKey.toBuffer(),
+        anchor.utils.bytes.utf8.encode("my-seed"),
       ],
       program.programId
     );
@@ -178,7 +179,8 @@ describe("misc", () => {
     const account = await program.account.testData.associated(
       program.provider.wallet.publicKey,
       state,
-      data.publicKey
+      data.publicKey,
+      anchor.utils.bytes.utf8.encode("my-seed")
     );
     assert.ok(account.data.toNumber() === 1234);
   });
@@ -190,10 +192,11 @@ describe("misc", () => {
       nonce,
     ] = await anchor.web3.PublicKey.findProgramAddress(
       [
-        Buffer.from([97, 110, 99, 104, 111, 114]), // b"anchor".
+        anchor.utils.bytes.utf8.encode("anchor"),
         program.provider.wallet.publicKey.toBuffer(),
         state.toBuffer(),
         data.publicKey.toBuffer(),
+        anchor.utils.bytes.utf8.encode("my-seed"),
       ],
       program.programId
     );
@@ -209,7 +212,8 @@ describe("misc", () => {
     const account = await program.account.testData.associated(
       program.provider.wallet.publicKey,
       state,
-      data.publicKey
+      data.publicKey,
+      anchor.utils.bytes.utf8.encode("my-seed")
     );
     assert.ok(account.data.toNumber() === 5);
   });
@@ -224,6 +228,7 @@ describe("misc", () => {
       "Program Z2Ddx1Lcd8CHTV9tkWtNnFQrSz6kxz2H38wrr18zZRZ consumed 4819 of 200000 compute units",
       "Program Z2Ddx1Lcd8CHTV9tkWtNnFQrSz6kxz2H38wrr18zZRZ success",
     ];
+
     assert.ok(JSON.stringify(expectedRaw), resp.raw);
     assert.ok(resp.events[0].name === "E1");
     assert.ok(resp.events[0].data.data === 44);
@@ -231,6 +236,55 @@ describe("misc", () => {
     assert.ok(resp.events[1].data.data === 1234);
     assert.ok(resp.events[2].name === "E3");
     assert.ok(resp.events[2].data.data === 9);
+  });
+
+  it("Can retrieve events when associated account is initialized in simulated transaction", async () => {
+    const myAccount = await program.account.testData.associatedAddress(
+      program.provider.wallet.publicKey
+    );
+    await assert.rejects(
+      async () => {
+        await program.account.testData.fetch(myAccount);
+      },
+      (err) => {
+        assert.ok(
+          err.toString() ===
+            `Error: Account does not exist ${myAccount.toString()}`
+        );
+        return true;
+      }
+    );
+
+    const resp = await program.simulate.testSimulateAssociatedAccount(44, {
+      accounts: {
+        myAccount,
+        authority: program.provider.wallet.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+    });
+
+    const expectedRaw = [
+      "Program Fv6oRfzWETatiMymBvTs1JpRspZz3DbBfjZJEvUTDL1g invoke [1]",
+      "Program 11111111111111111111111111111111 invoke [2]",
+      "Program 11111111111111111111111111111111 success",
+      "Program log: NgyCA9omwbMsAAAA",
+      "Program log: fPhuIELK/k7SBAAA",
+      "Program log: jvbowsvlmkcJAAAA",
+      "Program log: mg+zq/K0sXRV+N/AsG9XLERDZ+J6eQAnnzoQVHlicBQBnGr65KE5Kw==",
+      "Program Fv6oRfzWETatiMymBvTs1JpRspZz3DbBfjZJEvUTDL1g consumed 20460 of 200000 compute units",
+      "Program Fv6oRfzWETatiMymBvTs1JpRspZz3DbBfjZJEvUTDL1g success",
+    ];
+
+    assert.ok(JSON.stringify(expectedRaw), resp.raw);
+    assert.ok(resp.events[0].name === "E1");
+    assert.ok(resp.events[0].data.data === 44);
+    assert.ok(resp.events[1].name === "E2");
+    assert.ok(resp.events[1].data.data === 1234);
+    assert.ok(resp.events[2].name === "E3");
+    assert.ok(resp.events[2].data.data === 9);
+    assert.ok(resp.events[3].name === "E4");
+    assert.ok(resp.events[3].data.data.toBase58() === myAccount.toBase58());
   });
 
   it("Can use i8 in the idl", async () => {
@@ -401,5 +455,49 @@ describe("misc", () => {
     const myPdaAccount = await program.account.dataZeroCopy.fetch(myPda);
     assert.ok(myPdaAccount.data === 1234);
     assert.ok((myPdaAccount.bump = bump));
+  });
+
+  it("Can create a token account from seeds pda", async () => {
+    const mint = await Token.createMint(
+      program.provider.connection,
+      program.provider.wallet.payer,
+      program.provider.wallet.publicKey,
+      null,
+      0,
+      TOKEN_PROGRAM_ID
+    );
+    const [myPda, bump] = await PublicKey.findProgramAddress(
+      [Buffer.from(anchor.utils.bytes.utf8.encode("my-token-seed"))],
+      program.programId
+    );
+    await program.rpc.testTokenSeedsInit(bump, {
+      accounts: {
+        myPda,
+        mint: mint.publicKey,
+        authority: program.provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      },
+    });
+
+    const account = await mint.getAccountInfo(myPda);
+    assert.ok(account.state === 1);
+    assert.ok(account.amount.toNumber() === 0);
+    assert.ok(account.isInitialized);
+    assert.ok(account.owner.equals(program.provider.wallet.publicKey));
+    assert.ok(account.mint.equals(mint.publicKey));
+  });
+
+  it("Can execute a fallback function", async () => {
+    await assert.rejects(
+      async () => {
+        await anchor.utils.rpc.invoke(program.programId);
+      },
+      (err) => {
+        assert.ok(err.toString().includes("custom program error: 0x4d2"));
+        return true;
+      }
+    );
   });
 });

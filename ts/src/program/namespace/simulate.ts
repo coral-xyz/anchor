@@ -2,7 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 import Provider from "../../provider";
 import { splitArgsAndCtx } from "../context";
 import { TransactionFn } from "./transaction";
-import { EventParser } from "../event";
+import { EventParser, Event } from "../event";
 import Coder from "../../coder";
 import { Idl, IdlEvent } from "../../idl";
 import { ProgramError } from "../../error";
