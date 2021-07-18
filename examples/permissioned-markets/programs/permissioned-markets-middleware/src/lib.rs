@@ -23,7 +23,7 @@ use solana_program::sysvar::rent;
 /// who can trade on a given market.
 ///
 /// For example, this example forces all trades that execute on this market
-/// to set the referral to a hardcoded address, i.e., `fee_owner::ID`.
+/// to set the referral to a hardcoded address, i.e., `referral::ID`.
 ///
 /// # Extending the proxy via middleware
 ///

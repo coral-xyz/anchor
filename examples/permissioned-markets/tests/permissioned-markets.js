@@ -139,30 +139,16 @@ describe("permissioned-markets", () => {
     });
 
     it("Creates an open orders account", async () => {
-      if (false && index === 0) {
-        await program.rpc.initAccount(openOrdersBump, openOrdersBumpInit, {
-          accounts: {
-            openOrdersInitAuthority,
-            openOrders,
-            authority: program.provider.wallet.publicKey,
-            market: marketProxy.market.address,
-            rent: SYSVAR_RENT_PUBKEY,
-            systemProgram: SystemProgram.programId,
-            dexProgram: DEX_PID,
-          },
-        });
-      } else {
-        const tx = new Transaction();
-        tx.add(
-          await marketProxy.instruction.initOpenOrders(
-            program.provider.wallet.publicKey,
-            marketProxy.market.address,
-            marketProxy.market.address, // Dummy.
-            marketProxy.market.address // Dummy.
-          )
-        );
-        await provider.send(tx);
-      }
+      const tx = new Transaction();
+      tx.add(
+        await marketProxy.instruction.initOpenOrders(
+          program.provider.wallet.publicKey,
+          marketProxy.market.address,
+          marketProxy.market.address, // Dummy. Replaced by middleware.
+          marketProxy.market.address // Dummy. Replaced by middleware.
+        )
+      );
+      await provider.send(tx);
 
       const account = await provider.connection.getAccountInfo(openOrders);
       assert.ok(account.owner.toString() === DEX_PID.toString());
@@ -181,7 +167,7 @@ describe("permissioned-markets", () => {
 
       const tx = new Transaction();
       tx.add(
-        ...marketProxy.instruction.newOrderV3({
+        marketProxy.instruction.newOrderV3({
           owner: program.provider.wallet.publicKey,
           payer: usdcAccount,
           side: "buy",

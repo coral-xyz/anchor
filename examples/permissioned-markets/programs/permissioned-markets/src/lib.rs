@@ -3,6 +3,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::dex;
 use serum_dex::instruction::MarketInstruction;
+use serum_dex::matching::Side;
 use serum_dex::state::OpenOrders;
 use solana_program::instruction::Instruction;
 use solana_program::program;
@@ -19,39 +20,6 @@ use std::mem::size_of;
 pub mod permissioned_markets {
     use super::*;
 
-    /// Creates an open orders account controlled by this program on behalf of
-    /// the user.
-    ///
-    /// Note that although the owner of the open orders account is the dex
-    /// program, This instruction must be executed within this program, rather
-    /// than a relay, because it initializes a PDA.
-    pub fn init_account(ctx: Context<InitAccount>, bump: u8, bump_init: u8) -> Result<()> {
-        let cpi_ctx = CpiContext::from(&*ctx.accounts);
-        let seeds = open_orders_authority! {
-            program = ctx.program_id,
-            dex_program = ctx.accounts.dex_program.key,
-            market = ctx.accounts.market.key,
-            authority = ctx.accounts.authority.key,
-            bump = bump
-        };
-        let seeds_init = open_orders_init_authority! {
-            program = ctx.program_id,
-            dex_program = ctx.accounts.dex_program.key,
-            market = ctx.accounts.market.key,
-            bump = bump_init
-        };
-        dex::init_open_orders(cpi_ctx.with_signer(&[seeds, seeds_init]))?;
-        Ok(())
-    }
-
-    /// Fallback function to relay calls to the serum DEX.
-    ///
-    /// For instructions requiring an open orders authority, checks for
-    /// a user signature and then swaps the account info for one controlled
-    /// by the program.
-    ///
-    /// Note: the "authority" of each open orders account is the account
-    ///       itself, since it's a PDA.
     #[access_control(is_serum(accounts))]
     pub fn dex_instruction(
         program_id: &Pubkey,
@@ -61,7 +29,7 @@ pub mod permissioned_markets {
         require!(accounts.len() >= 1, NotEnoughAccounts);
 
         // Strip instruction data.
-        let (bump, bump_init) = {
+        let bumps = {
             // Strip the discriminator off the data, which is provided by the client
             // for prepending extra instruction data.
             let disc = data[0];
@@ -72,9 +40,9 @@ pub mod permissioned_markets {
                 let bump = data[0];
                 let bump_init = data[1];
                 data = &data[2..]; // Strip bumps off.
-                (bump, bump_init)
+                Some((bump, bump_init))
             } else {
-                (0, 0)
+                None
             }
         };
 
@@ -85,7 +53,7 @@ pub mod permissioned_markets {
 
             // Second account is the auth token.
             let auth_token = &accounts[1];
-            if false && auth_token.key != &rent::ID {
+            if auth_token.key != &rent::ID {
                 // Rent sysvar as dummy example.
                 return Err(ErrorCode::InvalidAuthToken.into());
             }
@@ -95,6 +63,9 @@ pub mod permissioned_markets {
 
             (dex, acc_infos)
         };
+
+        let mut pre_instruction: Option<(Instruction, Vec<AccountInfo>, Vec<Vec<Vec<u8>>>)> = None;
+        let mut post_instruction: Option<(Instruction, Vec<AccountInfo>, Vec<Vec<Vec<u8>>>)> = None;
 
         // Decode instruction.
         let ix = MarketInstruction::unpack(data).ok_or_else(|| ErrorCode::CannotUnpack)?;
@@ -107,9 +78,11 @@ pub mod permissioned_markets {
                     let market = &acc_infos[4];
                     let user = &acc_infos[3];
 
+                    let (bump, bump_init) = bumps.as_ref().unwrap();
+
                     // Initialize PDA.
                     let mut accounts = &acc_infos[..];
-                    InitAccount::try_accounts(program_id, &mut accounts, &[bump, bump_init])?;
+                    InitAccount::try_accounts(program_id, &mut accounts, &[*bump, *bump_init])?;
 
                     (*market.key, *user.key)
                 };
@@ -122,7 +95,7 @@ pub mod permissioned_markets {
 
                 (market, user)
             }
-            MarketInstruction::NewOrderV3(_) => {
+            MarketInstruction::NewOrderV3(ix) => {
                 require!(acc_infos.len() >= 12, NotEnoughAccounts);
 
                 let (market, user) = {
@@ -135,6 +108,54 @@ pub mod permissioned_markets {
 
                     (*market.key, *user.key)
                 };
+
+                // Pre-instruction to approve delegate.
+                {
+                    let market = &acc_infos[0];
+                    let user = &acc_infos[7];
+                    let open_orders = &acc_infos[1];
+                    let token_account_payer = &acc_infos[6];
+                    let amount = match ix.side {
+                        Side::Bid => ix.max_native_pc_qty_including_fees.get(),
+                        Side::Ask => {
+                            // +5 for padding.
+                            let coin_lot_idx = 5 + 43 * 8;
+                            let data = market.try_borrow_data()?;
+                            let mut coin_lot_array = [0u8; 8];
+                            coin_lot_array.copy_from_slice(&data[coin_lot_idx..coin_lot_idx + 8]);
+                            let coin_lot_size = u64::from_le_bytes(coin_lot_array);
+                            ix.max_coin_qty.get().checked_mul(coin_lot_size).unwrap()
+                        }
+                    };
+                    let ix = spl_token::instruction::approve(
+                        &spl_token::ID,
+                        token_account_payer.key,
+                        open_orders.key,
+                        user.key,
+                        &[],
+                        amount,
+                    )?;
+                    let accounts = vec![
+                        token_account_payer.clone(),
+                        open_orders.clone(),
+                        user.clone(),
+                    ];
+                    pre_instruction = Some((ix, accounts, Vec::new()));
+                };
+
+                // Post-instruction to revoke delegate.
+                {
+                    let user = &acc_infos[7];
+                    let token_account_payer = &acc_infos[6];
+                    let ix = spl_token::instruction::revoke(
+                        &spl_token::ID,
+                        token_account_payer.key,
+                        user.key,
+                        &[],
+                    )?;
+                    let accounts = vec![token_account_payer.clone(), user.clone()];
+                    post_instruction = Some((ix, accounts, Vec::new()));
+                }
 
                 acc_infos[7] = prepare_pda(&acc_infos[1]);
 
@@ -219,6 +240,19 @@ pub mod permissioned_markets {
             _ => return Err(ErrorCode::InvalidInstruction.into()),
         };
 
+        // Execute pre instruction.
+        if let Some((ix, accounts, seeds)) = pre_instruction {
+            let tmp_signers: Vec<Vec<&[u8]>> = seeds
+                .iter()
+                .map(|seeds| {
+                    let seeds: Vec<&[u8]> = seeds.iter().map(|seed| &seed[..]).collect();
+                    seeds
+                })
+                .collect();
+            let signers: Vec<&[&[u8]]> = tmp_signers.iter().map(|seeds| &seeds[..]).collect();
+            program::invoke_signed(&ix, &accounts, &signers)?;
+        }
+
         // CPI to the dex.
         let dex_accounts = acc_infos
             .iter()
@@ -244,7 +278,22 @@ pub mod permissioned_markets {
             dex_program = dex.key,
             market = market
         };
-        program::invoke_signed(&ix, &acc_infos, &[seeds, seeds_init])
+        program::invoke_signed(&ix, &acc_infos, &[seeds, seeds_init])?;
+
+        // Execute post instruction.
+        if let Some((ix, accounts, seeds)) = post_instruction {
+            let tmp_signers: Vec<Vec<&[u8]>> = seeds
+                .iter()
+                .map(|seeds| {
+                    let seeds: Vec<&[u8]> = seeds.iter().map(|seed| &seed[..]).collect();
+                    seeds
+                })
+                .collect();
+            let signers: Vec<&[&[u8]]> = tmp_signers.iter().map(|seeds| &seeds[..]).collect();
+            program::invoke_signed(&ix, &accounts, &signers)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -275,24 +324,6 @@ pub struct InitAccount<'info> {
 				bump = bump_init,
 		)]
     pub open_orders_init_authority: AccountInfo<'info>,
-}
-
-// CpiContext transformations.
-
-impl<'info> From<&InitAccount<'info>>
-    for CpiContext<'_, '_, '_, 'info, dex::InitOpenOrders<'info>>
-{
-    fn from(accs: &InitAccount<'info>) -> Self {
-        let accounts = dex::InitOpenOrders {
-            open_orders: accs.open_orders.clone(),
-            authority: accs.open_orders.clone(),
-            market: accs.market.clone(),
-            rent: accs.rent.to_account_info(),
-        };
-        let program = accs.dex_program.clone();
-        CpiContext::new(program, accounts)
-            .with_remaining_accounts(vec![accs.open_orders_init_authority.clone()])
-    }
 }
 
 // Access control modifiers.
@@ -403,7 +434,11 @@ macro_rules! open_orders_init_authority {
             $dex_program.as_ref(),
             $market.as_ref(),
             &[Pubkey::find_program_address(
-                &[b"open-orders-init".as_ref(), $market.as_ref()],
+                &[
+                    b"open-orders-init".as_ref(),
+                    $dex_program.as_ref(),
+                    $market.as_ref(),
+                ],
                 $program,
             )
             .1],

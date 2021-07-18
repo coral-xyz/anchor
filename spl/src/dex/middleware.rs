@@ -1,8 +1,10 @@
 use crate::{dex, open_orders_authority, open_orders_init_authority, token};
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::instruction::Instruction;
 use anchor_lang::solana_program::system_program;
 use anchor_lang::Accounts;
 use serum_dex::instruction::*;
+use serum_dex::matching::Side;
 use serum_dex::state::OpenOrders;
 use std::mem::size_of;
 
@@ -11,8 +13,14 @@ pub struct Context<'a, 'info> {
     pub program_id: &'a Pubkey,
     pub dex_program_id: &'a Pubkey,
     pub accounts: Vec<AccountInfo<'info>>,
-    pub seeds: Vec<Vec<Vec<u8>>>,
+    pub seeds: Seeds,
+    // Instructions to execute *prior* to the DEX relay CPI.
+    pub pre_instructions: Vec<(Instruction, Vec<AccountInfo<'info>>, Seeds)>,
+    // Instructions to execution *after* the DEX relay CPI.
+    pub post_instructions: Vec<(Instruction, Vec<AccountInfo<'info>>, Seeds)>,
 }
+
+type Seeds = Vec<Vec<Vec<u8>>>;
 
 impl<'a, 'info> Context<'a, 'info> {
     pub fn new(
@@ -25,6 +33,8 @@ impl<'a, 'info> Context<'a, 'info> {
             dex_program_id,
             accounts,
             seeds: Vec::new(),
+            pre_instructions: Vec::new(),
+            post_instructions: Vec::new(),
         }
     }
 }
@@ -159,21 +169,69 @@ impl MarketMiddleware for OpenOrdersPda {
     ///
     /// 0.   Discriminant.
     /// ..
-    fn new_order_v3(&self, ctx: &mut Context, _ix: &NewOrderInstructionV3) -> ProgramResult {
-        let market = &ctx.accounts[0];
+    fn new_order_v3(&self, ctx: &mut Context, ix: &NewOrderInstructionV3) -> ProgramResult {
+        // The user must authorize the tx.
         let user = &ctx.accounts[7];
         if !user.is_signer {
             return Err(ErrorCode::UnauthorizedUser.into());
         }
 
+        let market = &ctx.accounts[0];
+        let open_orders = &ctx.accounts[1];
+        let token_account_payer = &ctx.accounts[6];
+
+        // Pre: Give the PDA delegate access.
+        let pre_instruction = {
+            let amount = match ix.side {
+                Side::Bid => ix.max_native_pc_qty_including_fees.get(),
+                Side::Ask => {
+                    // +5 for padding.
+                    let coin_lot_idx = 5 + 43 * 8;
+                    let data = market.try_borrow_data()?;
+                    let mut coin_lot_array = [0u8; 8];
+                    coin_lot_array.copy_from_slice(&data[coin_lot_idx..coin_lot_idx + 8]);
+                    let coin_lot_size = u64::from_le_bytes(coin_lot_array);
+                    ix.max_coin_qty.get().checked_mul(coin_lot_size).unwrap()
+                }
+            };
+            let ix = spl_token::instruction::approve(
+                &spl_token::ID,
+                token_account_payer.key,
+                open_orders.key,
+                user.key,
+                &[],
+                amount,
+            )?;
+            let accounts = vec![
+                token_account_payer.clone(),
+                open_orders.clone(),
+                user.clone(),
+            ];
+            (ix, accounts, Vec::new())
+        };
+        ctx.pre_instructions.push(pre_instruction);
+
+        // Post: Revoke the PDA's delegate access.
+        let post_instruction = {
+            let ix = spl_token::instruction::revoke(
+                &spl_token::ID,
+                token_account_payer.key,
+                user.key,
+                &[],
+            )?;
+            let accounts = vec![token_account_payer.clone(), user.clone()];
+            (ix, accounts, Vec::new())
+        };
+        ctx.post_instructions.push(post_instruction);
+
+        // Proxy: PDA must sign the new order.
         ctx.seeds.push(open_orders_authority! {
             program = ctx.program_id,
             dex_program = ctx.dex_program_id,
             market = market.key,
             authority = user.key
         });
-
-        ctx.accounts[7] = Self::prepare_pda(&ctx.accounts[1]);
+        ctx.accounts[7] = Self::prepare_pda(open_orders);
 
         Ok(())
     }

@@ -1,6 +1,7 @@
 use crate::dex;
 use crate::dex::middleware::{Context, ErrorCode, MarketMiddleware};
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::program;
 use anchor_lang::solana_program::pubkey::Pubkey;
 use serum_dex::instruction::*;
 
@@ -102,36 +103,67 @@ impl<'a> MarketProxy<'a> {
 
         // Extract the middleware adjusted context.
         let Context {
-            seeds, accounts, ..
+            seeds,
+            accounts,
+            pre_instructions,
+            post_instructions,
+            ..
         } = ctx;
 
-        // Convert the signer seeds into a slice.
-        //
-        // This is wasteful but is there a better way to have signer seeds
-        // appendable by middleware handlers?
-        let tmp_signers: Vec<Vec<&[u8]>> = seeds
-            .iter()
-            .map(|seeds| {
-                let seeds: Vec<&[u8]> = seeds.iter().map(|seed| &seed[..]).collect();
-                seeds
-            })
-            .collect();
-        let signers: Vec<&[&[u8]]> = tmp_signers.iter().map(|seeds| &seeds[..]).collect();
+        // Execute pre instructions.
+        for (ix, acc_infos, seeds) in pre_instructions {
+            let tmp_signers: Vec<Vec<&[u8]>> = seeds
+                .iter()
+                .map(|seeds| {
+                    let seeds: Vec<&[u8]> = seeds.iter().map(|seed| &seed[..]).collect();
+                    seeds
+                })
+                .collect();
+            let signers: Vec<&[&[u8]]> = tmp_signers.iter().map(|seeds| &seeds[..]).collect();
+            program::invoke_signed(&ix, &acc_infos, &signers)?;
+        }
 
-        // CPI to the DEX.
-        let dex_accounts = accounts
-            .iter()
-            .map(|acc| AccountMeta {
-                pubkey: *acc.key,
-                is_signer: acc.is_signer,
-                is_writable: acc.is_writable,
-            })
-            .collect();
-        let ix = anchor_lang::solana_program::instruction::Instruction {
-            data: ix_data.to_vec(),
-            accounts: dex_accounts,
-            program_id: dex::ID,
-        };
-        anchor_lang::solana_program::program::invoke_signed(&ix, &accounts, &signers)
+        // Execute the main dex relay.
+        {
+            let tmp_signers: Vec<Vec<&[u8]>> = seeds
+                .iter()
+                .map(|seeds| {
+                    let seeds: Vec<&[u8]> = seeds.iter().map(|seed| &seed[..]).collect();
+                    seeds
+                })
+                .collect();
+            let signers: Vec<&[&[u8]]> = tmp_signers.iter().map(|seeds| &seeds[..]).collect();
+
+            // CPI to the DEX.
+            let dex_accounts = accounts
+                .iter()
+                .map(|acc| AccountMeta {
+                    pubkey: *acc.key,
+                    is_signer: acc.is_signer,
+                    is_writable: acc.is_writable,
+                })
+                .collect();
+            let ix = anchor_lang::solana_program::instruction::Instruction {
+                data: ix_data.to_vec(),
+                accounts: dex_accounts,
+                program_id: dex::ID,
+            };
+            program::invoke_signed(&ix, &accounts, &signers)?;
+        }
+
+        // Execute post instructions.
+        for (ix, acc_infos, seeds) in post_instructions {
+            let tmp_signers: Vec<Vec<&[u8]>> = seeds
+                .iter()
+                .map(|seeds| {
+                    let seeds: Vec<&[u8]> = seeds.iter().map(|seed| &seed[..]).collect();
+                    seeds
+                })
+                .collect();
+            let signers: Vec<&[&[u8]]> = tmp_signers.iter().map(|seeds| &seeds[..]).collect();
+            program::invoke_signed(&ix, &acc_infos, &signers)?;
+        }
+
+        Ok(())
     }
 }

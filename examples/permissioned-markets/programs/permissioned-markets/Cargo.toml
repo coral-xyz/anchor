@@ -19,3 +19,4 @@ anchor-lang = { path = "../../../../lang" }
 anchor-spl = { path = "../../../../spl" }
 serum_dex = { path = "../../deps/serum-dex/dex", features = ["no-entrypoint"] }
 solana-program = "1.7.4"
+spl-token = { version = "3.1.1", features = ["no-entrypoint"] }
