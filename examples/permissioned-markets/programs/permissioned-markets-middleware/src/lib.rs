@@ -1,10 +1,10 @@
 // Note. This example depends on unreleased Serum DEX changes.
 
 use anchor_lang::prelude::*;
+use anchor_spl::dex::serum_dex::instruction::{CancelOrderInstructionV2, NewOrderInstructionV3};
 use anchor_spl::dex::{
     Context, Logger, MarketMiddleware, MarketProxy, OpenOrdersPda, ReferralFees,
 };
-use serum_dex::instruction::{CancelOrderInstructionV2, NewOrderInstructionV3};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::pubkey::Pubkey;

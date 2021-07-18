@@ -17,5 +17,4 @@ default = []
 [dependencies]
 anchor-lang = { path = "../../../../lang" }
 anchor-spl = { path = "../../../../spl" }
-serum_dex = { path = "../../deps/serum-dex/dex", features = ["no-entrypoint"] }
 solana-program = "1.7.4"
