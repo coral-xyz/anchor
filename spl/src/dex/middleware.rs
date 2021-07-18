@@ -83,6 +83,7 @@ pub trait MarketMiddleware {
 
 /// Checks that the given open orders account signs the transaction and then
 /// replaces it with the open orders account, which must be a PDA.
+#[derive(Default)]
 pub struct OpenOrdersPda {
     bump: u8,
     bump_init: u8,

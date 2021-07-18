@@ -15,11 +15,19 @@ use std::mem::size_of;
 ///
 /// It's recommended to instead study `programs/permissioned-markets-middleware`
 /// in this workspace, which achieves the same functionality in a simpler, more
-/// extendable fashion via a middleware abstraction.
+/// extendable fashion via a middleware abstraction. This program achieves
+/// mostly the same proxy + middleware functionality, but in a much uglier way.
 ///
 /// This example is provided as a (very) rough guide for how to might implement
 /// a permissioned market in a raw program, which may be useful in the
 /// unexpected case that the middleware abstraction does not fit ones use case.
+///
+/// Note that a fallback function is used here as the entrypoint instead of
+/// higher level Anchor instruction handers. This is done to keep the example
+/// consistent with `programs/permissioned-markets-middleware`. A program
+/// with explicit instruction handlers would work, though then one would lose
+/// the middleware abstraction, which may or may not be acceptibl depending on
+/// your use case.
 #[program]
 pub mod permissioned_markets {
     use super::*;
@@ -30,7 +38,7 @@ pub mod permissioned_markets {
         accounts: &[AccountInfo],
         mut data: &[u8],
     ) -> ProgramResult {
-        require!(accounts.len() >= 1, NotEnoughAccounts);
+        require!(!accounts.is_empty(), NotEnoughAccounts);
 
         // Strip instruction data.
         let bumps = {
@@ -68,11 +76,11 @@ pub mod permissioned_markets {
             (dex, acc_infos)
         };
 
-        let mut pre_instruction: Option<(Instruction, Vec<AccountInfo>, Vec<Vec<Vec<u8>>>)> = None;
-        let mut post_instruction: Option<(Instruction, Vec<AccountInfo>, Vec<Vec<Vec<u8>>>)> = None;
+        let mut pre_instruction: Option<CpiInstruction> = None;
+        let mut post_instruction: Option<CpiInstruction> = None;
 
         // Decode instruction.
-        let ix = MarketInstruction::unpack(data).ok_or_else(|| ErrorCode::CannotUnpack)?;
+        let ix = MarketInstruction::unpack(data).ok_or(ErrorCode::CannotUnpack)?;
 
         // Swap the user's account, which is in the open orders authority
         // position, for the program's PDA (the real authority).
@@ -332,7 +340,7 @@ pub struct InitAccount<'info> {
 
 // Access control modifiers.
 
-fn is_serum<'info>(accounts: &[AccountInfo<'info>]) -> Result<()> {
+fn is_serum(accounts: &[AccountInfo]) -> Result<()> {
     let dex_acc_info = &accounts[0];
     if dex_acc_info.key != &dex::ID {
         return Err(ErrorCode::InvalidDexPid.into());
@@ -465,3 +473,5 @@ const DISABLE_REFERRAL: bool = true;
 pub mod referral {
     solana_program::declare_id!("2k1bb16Hu7ocviT2KC3wcCgETtnC8tEUuvFBH4C5xStG");
 }
+
+type CpiInstruction<'info> = (Instruction, Vec<AccountInfo<'info>>, Vec<Vec<Vec<u8>>>);

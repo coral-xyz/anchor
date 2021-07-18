@@ -13,6 +13,7 @@ use serum_dex::instruction::*;
 /// The only requirement for a middleware is that, when all are done processing,
 /// a valid DEX instruction--accounts and instruction data--must be left to
 /// forward to the orderbook program.
+#[derive(Default)]
 pub struct MarketProxy<'a> {
     middlewares: Vec<&'a mut dyn MarketMiddleware>,
 }
@@ -38,7 +39,7 @@ impl<'a> MarketProxy<'a> {
         accounts: &[AccountInfo],
         data: &[u8],
     ) -> ProgramResult {
-        let mut ix_data = &data[..];
+        let mut ix_data = data;
 
         // First account is the Serum DEX executable--used for CPI.
         let dex = &accounts[0];

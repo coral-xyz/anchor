@@ -45,6 +45,12 @@ use solana_program::sysvar::rent;
 /// to make sure the client sending transactions does the same, but in reverse.
 /// It should wrap the transaction in the opposite order. For convenience, an
 /// identical abstraction is provided in the JavaScript client.
+///
+/// # Alternatives to middleware
+///
+/// Note that this middleware abstraction is not required to host a
+/// permissioned market. One could write a regular program that manages the PDAs
+/// and CPI invocations onesself, if desired.
 #[program]
 pub mod permissioned_markets_middleware {
     use super::*;
