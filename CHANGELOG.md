@@ -13,7 +13,7 @@ incremented for features.
 
 ### Breaking Changes
 
-* lang: Mutate instead return new one in `CpiAccount::reload` ([#526](https://github.com/project-serum/anchor/pull/526)).
+* lang: `CpiAccount::reload` mutates the existing struct instead of returning a new one ([#526](https://github.com/project-serum/anchor/pull/526)).
 
 ## [0.11.1] - 2021-07-09
 
