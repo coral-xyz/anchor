@@ -113,7 +113,7 @@ pub fn init_open_orders<'info>(
         ctx.accounts.open_orders.key,
         ctx.accounts.authority.key,
         ctx.accounts.market.key,
-        ctx.remaining_accounts.first().map(|acc| acc.key),
+        // ctx.remaining_accounts.first().map(|acc| acc.key),
     )?;
     solana_program::program::invoke_signed(
         &ix,
@@ -181,16 +181,6 @@ pub struct NewOrderV3<'info> {
     pub rent: AccountInfo<'info>,
 }
 
-
-#[derive(Accounts)]
-pub struct CancelOrderV2<'info> {
-    pub market: AccountInfo<'info>,
-    pub market_bids: AccountInfo<'info>,
-    pub market_asks: AccountInfo<'info>,
-    pub open_orders: AccountInfo<'info>,
-    pub open_orders_authority: AccountInfo<'info>,
-    pub event_queue: AccountInfo<'info>,
-}
 
 #[derive(Accounts)]
 pub struct CancelOrderV2<'info> {
