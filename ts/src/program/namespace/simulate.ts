@@ -12,7 +12,6 @@ import {
   InstructionContextFn,
   MakeInstructionsNamespace,
 } from "./types";
-import { Event } from "../event";
 
 export default class SimulateFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
