@@ -1,20 +1,20 @@
-const anchor = require("@project-serum/anchor");
-const { TOKEN_PROGRAM_ID, Token } = require("@solana/spl-token");
-const assert = require("assert");
+import * as anchor from "@project-serum/anchor";
+import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
+import {assert} from "chai";
 
 describe("escrow", () => {
   const provider = anchor.Provider.env();
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.Escrow;
+  const program = anchor.workspace.Escrow as anchor.Program;
 
-  let mintA = null;
-  let mintB = null;
-  let initializerTokenAccountA = null;
-  let initializerTokenAccountB = null;
-  let takerTokenAccountA = null;
-  let takerTokenAccountB = null;
-  let pda = null;
+  let mintA : Token = null;
+  let mintB : Token = null;
+  let initializerTokenAccountA : anchor.web3.PublicKey = null;
+  let initializerTokenAccountB : anchor.web3.PublicKey = null;
+  let takerTokenAccountA : anchor.web3.PublicKey = null;
+  let takerTokenAccountB : anchor.web3.PublicKey = null;
+  let pda : anchor.web3.PublicKey = null;
 
   const takerAmount = 1000;
   const initializerAmount = 500;
