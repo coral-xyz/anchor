@@ -2,11 +2,13 @@ import * as anchor from "@project-serum/anchor";
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import {assert} from "chai";
 
+import {EscrowIDL} from "./types/escrow";
+
 describe("escrow", () => {
   const provider = anchor.Provider.env();
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.Escrow as anchor.Program;
+  const program = anchor.workspace.Escrow as anchor.Program<EscrowIDL>;
 
   let mintA : Token = null;
   let mintB : Token = null;
