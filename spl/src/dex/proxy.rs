@@ -96,7 +96,7 @@ impl<'a> MarketProxy<'a> {
                 }
             }
             Some(MarketInstruction::Prune) => {
-                require!(ctx.accounts.len() >= 6, ErrorCode::NotEnoughAccounts);
+                require!(ctx.accounts.len() >= 7, ErrorCode::NotEnoughAccounts);
                 for mw in &self.middlewares {
                     mw.prune(&mut ctx)?;
                 }
