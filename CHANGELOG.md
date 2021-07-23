@@ -11,6 +11,10 @@ incremented for features.
 
 ## [Unreleased]
 
+### Features
+
+* cli: Add keys `include` / `exclude` in config `programs` section ([#546](https://github.com/project-serum/anchor/pull/546)).
+
 ### Breaking Changes
 
 * lang: `CpiAccount::reload` mutates the existing struct instead of returning a new one ([#526](https://github.com/project-serum/anchor/pull/526)).

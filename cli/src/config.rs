@@ -19,6 +19,7 @@ pub struct Config {
     pub clusters: ClustersConfig,
     pub scripts: ScriptsConfig,
     pub test: Option<Test>,
+    pub programs: ProgramsConfig,
 }
 
 #[derive(Debug, Default)]
@@ -30,6 +31,12 @@ pub struct ProviderConfig {
 pub type ScriptsConfig = BTreeMap<String, String>;
 
 pub type ClustersConfig = BTreeMap<Cluster, BTreeMap<String, ProgramDeployment>>;
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct ProgramsConfig {
+    pub include: Vec<String>,
+    pub exclude: Vec<String>,
+}
 
 impl Config {
     pub fn discover(
@@ -96,6 +103,46 @@ impl Config {
         solana_sdk::signature::read_keypair_file(&self.provider.wallet.to_string())
             .map_err(|_| anyhow!("Unable to read keypair file"))
     }
+
+    pub fn get_program_list(&self, path: PathBuf) -> Result<Vec<PathBuf>> {
+        let mut programs = vec![];
+        for f in fs::read_dir(path)? {
+            let path = f?.path();
+            let paths = path.as_path().to_string_lossy().into_owned();
+            match (
+                self.programs.include.is_empty(),
+                self.programs.exclude.is_empty(),
+            ) {
+                (true, true) => programs.push(path),
+                (true, false) => {
+                    if !self.programs.exclude.contains(&paths) {
+                        programs.push(path);
+                    }
+                }
+                (false, _) => {
+                    if self.programs.include.contains(&paths) {
+                        programs.push(path);
+                    }
+                }
+            }
+        }
+        Ok(programs)
+    }
+
+    // TODO: this should read idl dir instead of parsing source.
+    pub fn read_all_programs(&self) -> Result<Vec<Program>> {
+        let mut r = vec![];
+        for path in self.get_program_list("programs".into())? {
+            let idl = anchor_syn::idl::file::parse(path.join("src/lib.rs"))?;
+            let lib_name = extract_lib_name(&path.join("Cargo.toml"))?;
+            r.push(Program {
+                lib_name,
+                path,
+                idl,
+            });
+        }
+        Ok(r)
+    }
 }
 
 // Pubkey serializes as a byte array so use this type a hack to serialize
@@ -106,6 +153,7 @@ struct _Config {
     test: Option<Test>,
     scripts: Option<ScriptsConfig>,
     clusters: Option<BTreeMap<String, BTreeMap<String, serde_json::Value>>>,
+    programs: Option<ProgramsConfig>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -135,6 +183,7 @@ impl ToString for Config {
                 false => Some(self.scripts.clone()),
             },
             clusters,
+            programs: Some(self.programs.clone()),
         };
 
         toml::to_string(&cfg).expect("Must be well formed")
@@ -155,6 +204,17 @@ impl FromStr for Config {
             scripts: cfg.scripts.unwrap_or_else(BTreeMap::new),
             test: cfg.test,
             clusters: cfg.clusters.map_or(Ok(BTreeMap::new()), deser_clusters)?,
+            programs: cfg.programs.map(|programs| {
+                let (include, exclude) = match (programs.include.is_empty(), programs.exclude.is_empty()) {
+                    (true, true) => (vec![], vec![]),
+                    (true, false) => (vec![], programs.exclude),
+                    (false, _) => {
+                        println!("Fields `include` and `exclude` in `[programs]` section are not compatible.");
+                        (programs.include, vec![])
+                    }
+                };
+                ProgramsConfig { include, exclude }
+            }).unwrap_or_default()
         })
     }
 }
@@ -222,23 +282,6 @@ pub struct GenesisEntry {
     pub address: String,
     // Filepath to the compiled program to embed into the genesis.
     pub program: String,
-}
-
-// TODO: this should read idl dir instead of parsing source.
-pub fn read_all_programs() -> Result<Vec<Program>> {
-    let files = fs::read_dir("programs")?;
-    let mut r = vec![];
-    for f in files {
-        let path = f?.path();
-        let idl = anchor_syn::idl::file::parse(path.join("src/lib.rs"))?;
-        let lib_name = extract_lib_name(&path.join("Cargo.toml"))?;
-        r.push(Program {
-            lib_name,
-            path,
-            idl,
-        });
-    }
-    Ok(r)
 }
 
 pub fn extract_lib_name(path: impl AsRef<Path>) -> Result<String> {
