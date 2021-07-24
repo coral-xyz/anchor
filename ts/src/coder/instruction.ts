@@ -109,7 +109,10 @@ export class InstructionCoder {
   /**
    * Dewcodes a program instruction.
    */
-  public decode(ix: Buffer | string, encoding: "hex" | "base58" = "hex"): Instruction | null {
+  public decode(
+    ix: Buffer | string,
+    encoding: "hex" | "base58" = "hex"
+  ): Instruction | null {
     if (typeof ix === "string") {
       ix = encoding === "hex" ? Buffer.from(ix, "hex") : bs58.decode(ix);
     }
