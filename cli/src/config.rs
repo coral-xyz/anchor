@@ -110,19 +110,24 @@ impl Config {
         let mut programs = vec![];
         for f in fs::read_dir(path)? {
             let path = f?.path();
-            let paths = path.as_path().to_string_lossy().into_owned();
+            let program = path
+                .components()
+                .last()
+                .map(|c| c.as_os_str().to_string_lossy().into_owned())
+                .expect("failed to get program from path");
+
             match (
                 self.programs.include.is_empty(),
                 self.programs.exclude.is_empty(),
             ) {
                 (true, true) => programs.push(path),
                 (true, false) => {
-                    if !self.programs.exclude.contains(&paths) {
+                    if !self.programs.exclude.contains(&program) {
                         programs.push(path);
                     }
                 }
                 (false, _) => {
-                    if self.programs.include.contains(&paths) {
+                    if self.programs.include.contains(&program) {
                         programs.push(path);
                     }
                 }
@@ -210,8 +215,10 @@ impl FromStr for Config {
                 let (include, exclude) = match (programs.include.is_empty(), programs.exclude.is_empty()) {
                     (true, true) => (vec![], vec![]),
                     (true, false) => (vec![], programs.exclude),
-                    (false, _) => {
-                        println!("Fields `include` and `exclude` in `[programs]` section are not compatible.");
+                    (false, is_empty) => {
+                        if !is_empty {
+                            println!("Fields `include` and `exclude` in `[programs]` section are not compatible, only `include` will be used.");
+                        }
                         (programs.include, vec![])
                     }
                 };
