@@ -34,7 +34,9 @@ pub type ClustersConfig = BTreeMap<Cluster, BTreeMap<String, ProgramDeployment>>
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct ProgramsConfig {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub include: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub exclude: Vec<String>,
 }
 
