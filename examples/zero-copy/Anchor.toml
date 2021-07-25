@@ -2,5 +2,5 @@
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
-[programs]
+[workspace]
 include = ["zero-copy"]

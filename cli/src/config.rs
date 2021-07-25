@@ -19,7 +19,7 @@ pub struct Config {
     pub clusters: ClustersConfig,
     pub scripts: ScriptsConfig,
     pub test: Option<Test>,
-    pub programs: ProgramsConfig,
+    pub workspace: WorkspaceConfig,
 }
 
 #[derive(Debug, Default)]
@@ -33,7 +33,7 @@ pub type ScriptsConfig = BTreeMap<String, String>;
 pub type ClustersConfig = BTreeMap<Cluster, BTreeMap<String, ProgramDeployment>>;
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct ProgramsConfig {
+pub struct WorkspaceConfig {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub include: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -117,17 +117,17 @@ impl Config {
                 .expect("failed to get program from path");
 
             match (
-                self.programs.include.is_empty(),
-                self.programs.exclude.is_empty(),
+                self.workspace.include.is_empty(),
+                self.workspace.exclude.is_empty(),
             ) {
                 (true, true) => programs.push(path),
                 (true, false) => {
-                    if !self.programs.exclude.contains(&program) {
+                    if !self.workspace.exclude.contains(&program) {
                         programs.push(path);
                     }
                 }
                 (false, _) => {
-                    if self.programs.include.contains(&program) {
+                    if self.workspace.include.contains(&program) {
                         programs.push(path);
                     }
                 }
@@ -160,7 +160,7 @@ struct _Config {
     test: Option<Test>,
     scripts: Option<ScriptsConfig>,
     clusters: Option<BTreeMap<String, BTreeMap<String, serde_json::Value>>>,
-    programs: Option<ProgramsConfig>,
+    workspace: Option<WorkspaceConfig>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -190,7 +190,7 @@ impl ToString for Config {
                 false => Some(self.scripts.clone()),
             },
             clusters,
-            programs: Some(self.programs.clone()),
+            workspace: Some(self.workspace.clone()),
         };
 
         toml::to_string(&cfg).expect("Must be well formed")
@@ -211,18 +211,18 @@ impl FromStr for Config {
             scripts: cfg.scripts.unwrap_or_else(BTreeMap::new),
             test: cfg.test,
             clusters: cfg.clusters.map_or(Ok(BTreeMap::new()), deser_clusters)?,
-            programs: cfg.programs.map(|programs| {
-                let (include, exclude) = match (programs.include.is_empty(), programs.exclude.is_empty()) {
+            workspace: cfg.workspace.map(|workspace| {
+                let (include, exclude) = match (workspace.include.is_empty(), workspace.exclude.is_empty()) {
                     (true, true) => (vec![], vec![]),
-                    (true, false) => (vec![], programs.exclude),
+                    (true, false) => (vec![], workspace.exclude),
                     (false, is_empty) => {
                         if !is_empty {
-                            println!("Fields `include` and `exclude` in `[programs]` section are not compatible, only `include` will be used.");
+                            println!("Fields `include` and `exclude` in `[workspace]` section are not compatible, only `include` will be used.");
                         }
-                        (programs.include, vec![])
+                        (workspace.include, vec![])
                     }
                 };
-                ProgramsConfig { include, exclude }
+                WorkspaceConfig { include, exclude }
             }).unwrap_or_default()
         })
     }
