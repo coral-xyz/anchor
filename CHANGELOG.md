@@ -11,6 +11,11 @@ incremented for features.
 
 ## [Unreleased]
 
+### Breaking
+
+* cli: `[clusters.<network>]` Anchor.toml section has been renamed to `[programs.<network>]` ([#570](https://github.com/project-serum/anchor/pull/570)).
+* cli: `[workspace]` member and exclude arrays must now be filepaths relative to the workpsace root ([#570](https://github.com/project-serum/anchor/pull/570)).
+
 ## [0.12.0] - 2021-08-03
 
 ### Features
