@@ -3,4 +3,4 @@ cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [workspace]
-include = ["zero-copy"]
+members = ["zero-copy"]

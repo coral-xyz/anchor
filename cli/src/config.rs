@@ -35,7 +35,7 @@ pub type ClustersConfig = BTreeMap<Cluster, BTreeMap<String, ProgramDeployment>>
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct WorkspaceConfig {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub include: Vec<String>,
+    pub members: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub exclude: Vec<String>,
 }
@@ -117,7 +117,7 @@ impl Config {
                 .expect("failed to get program from path");
 
             match (
-                self.workspace.include.is_empty(),
+                self.workspace.members.is_empty(),
                 self.workspace.exclude.is_empty(),
             ) {
                 (true, true) => programs.push(path),
@@ -127,7 +127,7 @@ impl Config {
                     }
                 }
                 (false, _) => {
-                    if self.workspace.include.contains(&program) {
+                    if self.workspace.members.contains(&program) {
                         programs.push(path);
                     }
                 }
@@ -212,17 +212,17 @@ impl FromStr for Config {
             test: cfg.test,
             clusters: cfg.clusters.map_or(Ok(BTreeMap::new()), deser_clusters)?,
             workspace: cfg.workspace.map(|workspace| {
-                let (include, exclude) = match (workspace.include.is_empty(), workspace.exclude.is_empty()) {
+                let (members, exclude) = match (workspace.members.is_empty(), workspace.exclude.is_empty()) {
                     (true, true) => (vec![], vec![]),
                     (true, false) => (vec![], workspace.exclude),
                     (false, is_empty) => {
                         if !is_empty {
-                            println!("Fields `include` and `exclude` in `[workspace]` section are not compatible, only `include` will be used.");
+                            println!("Fields `members` and `exclude` in `[workspace]` section are not compatible, only `members` will be used.");
                         }
-                        (workspace.include, vec![])
+                        (workspace.members, vec![])
                     }
                 };
-                WorkspaceConfig { include, exclude }
+                WorkspaceConfig { members, exclude }
             }).unwrap_or_default()
         })
     }

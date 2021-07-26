@@ -3,5 +3,5 @@ cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [workspace]
-include = ["typescript"]
+members = ["typescript"]
 exclude = ["typescript"]

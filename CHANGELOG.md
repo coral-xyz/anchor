@@ -13,7 +13,7 @@ incremented for features.
 
 ### Features
 
-* cli: Add keys `include` / `exclude` in config `programs` section ([#546](https://github.com/project-serum/anchor/pull/546)).
+* cli: Add keys `members` / `exclude` in config `programs` section ([#546](https://github.com/project-serum/anchor/pull/546)).
 
 ### Breaking Changes
 
