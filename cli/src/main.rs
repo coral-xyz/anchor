@@ -96,6 +96,9 @@ pub enum Command {
         /// use this to save time when running test and the program code is not altered.
         #[clap(long)]
         skip_build: bool,
+        /// Custom command for executing tests instead of mocha runner.
+        #[clap(long)]
+        cmd: Option<String>,
         file: Option<String>,
     },
     /// Creates a new program.
@@ -255,12 +258,14 @@ fn main() -> Result<()> {
             skip_deploy,
             skip_local_validator,
             skip_build,
+            cmd,
             file,
         } => test(
             &opts.cfg_override,
             skip_deploy,
             skip_local_validator,
             skip_build,
+            cmd,
             file,
         ),
         #[cfg(feature = "dev")]
@@ -972,6 +977,7 @@ fn test(
     skip_deploy: bool,
     skip_local_validator: bool,
     skip_build: bool,
+    cmd: Option<String>,
     file: Option<String>,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg, _path, _cargo| {
@@ -1005,26 +1011,32 @@ fn test(
 
         // Run the tests.
         let test_result: Result<_> = {
-            let ts_config_exist = Path::new("tsconfig.json").exists();
-            let cmd = if ts_config_exist { "ts-mocha" } else { "mocha" };
-            let mut args = if ts_config_exist {
-                vec![cmd, "-p", "./tsconfig.json"]
+            let (cmd, program, args) = if let Some(ref cmd) = cmd {
+                let mut args: Vec<&str> = cmd.split(' ').collect();
+                (cmd.clone(), args.remove(0), args)
             } else {
-                vec![cmd]
-            };
-            args.extend_from_slice(&[
-                "-t",
-                "1000000",
-                if let Some(ref file) = file {
-                    file
-                } else if ts_config_exist {
-                    "tests/**/*.ts"
+                let ts_config_exist = Path::new("tsconfig.json").exists();
+                let cmd = if ts_config_exist { "ts-mocha" } else { "mocha" };
+                let mut args = if ts_config_exist {
+                    vec![cmd, "-p", "./tsconfig.json"]
                 } else {
-                    "tests/"
-                },
-            ]);
+                    vec![cmd]
+                };
+                args.extend_from_slice(&[
+                    "-t",
+                    "1000000",
+                    if let Some(ref file) = file {
+                        file
+                    } else if ts_config_exist {
+                        "tests/**/*.ts"
+                    } else {
+                        "tests/"
+                    },
+                ]);
+                (cmd.to_owned(), "npx", args)
+            };
 
-            std::process::Command::new("npx")
+            std::process::Command::new(program)
                 .args(args)
                 .env("ANCHOR_PROVIDER_URL", cfg.provider.cluster.url())
                 .stdout(Stdio::inherit())

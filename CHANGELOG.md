@@ -14,6 +14,7 @@ incremented for features.
 ### Features
 
 * cli: Add keys `members` / `exclude` in config `programs` section ([#546](https://github.com/project-serum/anchor/pull/546)).
+* cli: Allow to use custom command for test instead mocha runner ([#550](https://github.com/project-serum/anchor/pull/550)).
 
 ### Breaking Changes
 
