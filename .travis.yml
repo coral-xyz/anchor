@@ -75,7 +75,7 @@ jobs:
       script:
         - pushd ts && yarn && yarn build && npm link && popd
         - pushd examples/escrow && npm link @project-serum/anchor && yarn && popd
-        - pushd examples/escrow && anchor build && sh ./create-idl-type.sh && anchor test --skip-build && popd
+        - pushd examples/escrow && anchor build && npx ts-node createIDLType.ts && anchor test --skip-build && popd
         - pushd examples/pyth && yarn && anchor test && popd
         - pushd examples/tutorial/basic-0 && anchor test && popd
         - pushd examples/tutorial/basic-1 && anchor test && popd

@@ -72,9 +72,7 @@ export default class NamespaceFactory {
       simulate[name] = simulateItem;
     });
 
-    const account = idl.accounts
-      ? AccountFactory.build(idl, coder, programId, provider)
-      : {};
+    const account = AccountFactory.build(idl, coder, programId, provider);
 
     return [
       rpc as RpcNamespace<IDL>,

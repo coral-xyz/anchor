@@ -24,6 +24,25 @@ export type AllInstructionsMap<IDL extends Idl> = InstructionMap<
   AllInstructions<IDL>
 >;
 
+/**
+ * All accounts for an IDL.
+ */
+export type AllAccounts<IDL extends Idl> = IDL["accounts"][number];
+
+/**
+ * Returns a type of instruction name to the IdlInstruction.
+ */
+export type AccountMap<I extends IdlTypeDef> = {
+  [K in I["name"]]: I & { name: K };
+};
+
+/**
+ * Returns a type of instruction name to the IdlInstruction.
+ */
+export type AllAccountsMap<IDL extends Idl> = AccountMap<
+    AllAccounts<IDL>
+    >;
+
 export type MakeInstructionsNamespace<
   IDL extends Idl,
   I extends IdlInstruction,

@@ -17,7 +17,7 @@ import Coder, {
 } from "../../coder";
 import { Subscription, Address, translateAddress } from "../common";
 import { getProvider } from "../../";
-import { IdlTypes, TypeDef } from "./types";
+import { AllAccountsMap, IdlTypes, TypeDef } from "./types";
 import * as pubkeyUtil from "../../utils/pubkey";
 
 export default class AccountFactory {
@@ -64,8 +64,8 @@ export default class AccountFactory {
  *
  * For the full API, see the [[AccountClient]] reference.
  */
-export interface AccountNamespace<IDL extends Idl = Idl> {
-  [key: string]: AccountClient<IDL>;
+export type AccountNamespace<IDL extends Idl = Idl> = {
+  [M in keyof AllAccountsMap<IDL>]: AccountClient<IDL>
 }
 
 export class AccountClient<
