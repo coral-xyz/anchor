@@ -1069,12 +1069,13 @@ fn genesis_flags(cfg: &Config) -> Result<Vec<String>> {
     for mut program in cfg.read_all_programs()? {
         let binary_path = program.binary_path().display().to_string();
 
-        let address = if let Some(deployment) = clusters.and_then(|m| m.get(&program.idl.name)) {
-            deployment.address.to_string()
-        } else {
-            let kp = Keypair::generate(&mut OsRng);
-            kp.pubkey().to_string()
-        };
+        let address = clusters
+            .and_then(|m| m.get(&program.idl.name))
+            .map(|deployment| deployment.address.to_string())
+            .unwrap_or_else(|| {
+                let kp = Keypair::generate(&mut OsRng);
+                kp.pubkey().to_string()
+            });
 
         flags.push("--bpf-program".to_string());
         flags.push(address.clone());
