@@ -279,7 +279,16 @@ fn init(cfg_override: &ConfigOverride, name: String, typescript: bool) -> Result
     std::env::set_current_dir(&name)?;
     fs::create_dir("app")?;
 
-    let cfg = Config::default();
+    let mut cfg = Config::default();
+    cfg.scripts.insert(
+        "test".to_owned(),
+        if typescript {
+            "ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+        } else {
+            "mocha -t 1000000 tests/"
+        }
+        .to_owned(),
+    );
     let toml = cfg.to_string();
     let mut file = File::create("Anchor.toml")?;
     file.write_all(toml.as_bytes())?;
