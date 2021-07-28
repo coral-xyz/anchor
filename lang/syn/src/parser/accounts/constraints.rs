@@ -176,6 +176,18 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         auth: stream.parse()?,
                     },
                 )),
+                "mint_authority" => ConstraintToken::MintAuthority(Context::new(
+                    ident.span(),
+                    ConstraintMintAuthority {
+                        mint_auth: stream.parse()?,
+                    },
+                )),
+                "mint_decimals" => ConstraintToken::MintDecimals(Context::new(
+                    ident.span(),
+                    ConstraintMintDecimals {
+                        decimals: stream.parse()?,
+                    },
+                )),
                 "bump" => ConstraintToken::Bump(Context::new(
                     ident.span(),
                     ConstraintTokenBump {
@@ -212,6 +224,8 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub address: Option<Context<ConstraintAddress>>,
     pub token_mint: Option<Context<ConstraintTokenMint>>,
     pub token_authority: Option<Context<ConstraintTokenAuthority>>,
+    pub mint_authority: Option<Context<ConstraintMintAuthority>>,
+    pub mint_decimals: Option<Context<ConstraintMintDecimals>>,
     pub bump: Option<Context<ConstraintTokenBump>>,
 }
 
@@ -238,6 +252,8 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             address: None,
             token_mint: None,
             token_authority: None,
+            mint_authority: None,
+            mint_decimals: None,
             bump: None,
         }
     }
@@ -299,6 +315,8 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             address,
             token_mint,
             token_authority,
+            mint_authority,
+            mint_decimals,
             bump,
         } = self;
 
@@ -343,21 +361,34 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                         seeds: c.into_inner().seeds,
                         payer: into_inner!(associated_payer.clone()).map(|a| a.target),
                         space: associated_space.clone().map(|s| s.space.clone()),
-                        kind: match &token_mint {
-                            None => PdaKind::Program {
-                                owner: pda_owner.clone(),
-                            },
-                            Some(tm) => PdaKind::Token {
-                                mint: tm.clone().into_inner().mint,
-                                owner: match &token_authority {
-                                    Some(a) => a.clone().into_inner().auth,
-                                    None => return Err(ParseError::new(
-                                        tm.span(),
-                                        "authority must be provided to initialize a token program derived address"
-                                    )),
+                        kind: if let Some(tm) = &token_mint {
+                                PdaKind::Token {
+                                    mint: tm.clone().into_inner().mint,
+                                    owner: match &token_authority {
+                                        Some(a) => a.clone().into_inner().auth,
+                                        None => return Err(ParseError::new(
+                                            tm.span(),
+                                            "authority must be provided to initialize a token program derived address"
+                                            )),
+                                        },
+                                    }
+                                } else if let Some(d) = &mint_decimals {
+                                    PdaKind::Mint {
+                                        decimals: d.clone().into_inner().decimals,
+                                        owner: match &mint_authority {
+                                            Some(a) => a.clone().into_inner().mint_auth,
+                                            None => return Err(ParseError::new(
+                                                d.span(),
+                                                "authority must be provided to initialize a mint program derived address"
+                                            ))
+
+                                        }
+                                    }
+                                } else {
+                                    PdaKind::Program {
+                                        owner: pda_owner.clone(),
+                                    }
                                 },
-                            },
-                        },
                         bump: into_inner!(bump).map(|b| b.bump),
                     })
                 })
@@ -407,6 +438,8 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::Address(c) => self.add_address(c),
             ConstraintToken::TokenAuthority(c) => self.add_token_authority(c),
             ConstraintToken::TokenMint(c) => self.add_token_mint(c),
+            ConstraintToken::MintAuthority(c) => self.add_mint_authority(c),
+            ConstraintToken::MintDecimals(c) => self.add_mint_decimals(c),
             ConstraintToken::Bump(c) => self.add_bump(c),
         }
     }
@@ -491,6 +524,38 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ));
         }
         self.token_authority.replace(c);
+        Ok(())
+    }
+
+    // TODO are these the right errors to have?
+    fn add_mint_authority(&mut self, c: Context<ConstraintMintAuthority>) -> ParseResult<()> {
+        if self.mint_authority.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "mint authority already provided",
+            ));
+        }
+        if self.mint_decimals.is_none() {
+            return Err(ParseError::new(
+                c.span(),
+                "mint decimals must be provided before authority",
+            ));
+        }
+        self.mint_authority.replace(c);
+        Ok(())
+    }
+
+    fn add_mint_decimals(&mut self, c: Context<ConstraintMintDecimals>) -> ParseResult<()> {
+        if self.mint_decimals.is_some() {
+            return Err(ParseError::new(c.span(), "mint decimals already provided"));
+        }
+        if self.init.is_none() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before mint decimals",
+            ));
+        }
+        self.mint_decimals.replace(c);
         Ok(())
     }
 
