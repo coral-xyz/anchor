@@ -65,8 +65,8 @@ export default class AccountFactory {
  * For the full API, see the [[AccountClient]] reference.
  */
 export type AccountNamespace<IDL extends Idl = Idl> = {
-  [M in keyof AllAccountsMap<IDL>]: AccountClient<IDL>
-}
+  [M in keyof AllAccountsMap<IDL>]: AccountClient<IDL>;
+};
 
 export class AccountClient<
   IDL extends Idl = Idl,

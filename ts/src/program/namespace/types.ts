@@ -39,9 +39,7 @@ export type AccountMap<I extends IdlTypeDef> = {
 /**
  * Returns a type of instruction name to the IdlInstruction.
  */
-export type AllAccountsMap<IDL extends Idl> = AccountMap<
-    AllAccounts<IDL>
-    >;
+export type AllAccountsMap<IDL extends Idl> = AccountMap<AllAccounts<IDL>>;
 
 export type MakeInstructionsNamespace<
   IDL extends Idl,
