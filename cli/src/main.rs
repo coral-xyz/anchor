@@ -96,6 +96,8 @@ pub enum Command {
         /// use this to save time when running test and the program code is not altered.
         #[clap(long)]
         skip_build: bool,
+        #[clap(multiple = true)]
+        args: Vec<String>,
     },
     /// Creates a new program.
     New { name: String },
@@ -254,11 +256,13 @@ fn main() -> Result<()> {
             skip_deploy,
             skip_local_validator,
             skip_build,
+            args,
         } => test(
             &opts.cfg_override,
             skip_deploy,
             skip_local_validator,
             skip_build,
+            args,
         ),
         #[cfg(feature = "dev")]
         Command::Airdrop => airdrop(cfg_override),
@@ -978,6 +982,7 @@ fn test(
     skip_deploy: bool,
     skip_local_validator: bool,
     skip_build: bool,
+    extra_args: Vec<String>,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg, _path, _cargo| {
         // Build if needed.
@@ -1015,7 +1020,10 @@ fn test(
                 .get("test")
                 .expect("Not able to find command for `test`")
                 .clone();
-            let mut args: Vec<&str> = cmd.split(' ').collect();
+            let mut args: Vec<&str> = cmd
+                .split(' ')
+                .chain(extra_args.iter().map(|arg| arg.as_str()))
+                .collect();
             let program = args.remove(0);
 
             std::process::Command::new(program)
