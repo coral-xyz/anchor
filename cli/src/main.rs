@@ -96,7 +96,6 @@ pub enum Command {
         /// use this to save time when running test and the program code is not altered.
         #[clap(long)]
         skip_build: bool,
-        file: Option<String>,
     },
     /// Creates a new program.
     New { name: String },
@@ -255,13 +254,11 @@ fn main() -> Result<()> {
             skip_deploy,
             skip_local_validator,
             skip_build,
-            file,
         } => test(
             &opts.cfg_override,
             skip_deploy,
             skip_local_validator,
             skip_build,
-            file,
         ),
         #[cfg(feature = "dev")]
         Command::Airdrop => airdrop(cfg_override),
@@ -972,7 +969,6 @@ fn test(
     skip_deploy: bool,
     skip_local_validator: bool,
     skip_build: bool,
-    file: Option<String>,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg, _path, _cargo| {
         // Build if needed.
@@ -1005,30 +1001,13 @@ fn test(
 
         // Run the tests.
         let test_result: Result<_> = {
-            let (cmd, program, args) = if let Some(cmd) = cfg.scripts.get("test") {
-                let mut args: Vec<&str> = cmd.split(' ').collect();
-                (cmd.clone(), args.remove(0), args)
-            } else {
-                let ts_config_exist = Path::new("tsconfig.json").exists();
-                let cmd = if ts_config_exist { "ts-mocha" } else { "mocha" };
-                let mut args = if ts_config_exist {
-                    vec![cmd, "-p", "./tsconfig.json"]
-                } else {
-                    vec![cmd]
-                };
-                args.extend_from_slice(&[
-                    "-t",
-                    "1000000",
-                    if let Some(ref file) = file {
-                        file
-                    } else if ts_config_exist {
-                        "tests/**/*.ts"
-                    } else {
-                        "tests/"
-                    },
-                ]);
-                (cmd.to_owned(), "npx", args)
-            };
+            let cmd = cfg
+                .scripts
+                .get("test")
+                .expect("Not able to find command for `test`")
+                .clone();
+            let mut args: Vec<&str> = cmd.split(' ').collect();
+            let program = args.remove(0);
 
             std::process::Command::new(program)
                 .args(args)
