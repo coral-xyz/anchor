@@ -11,8 +11,13 @@ incremented for features.
 
 ## [Unreleased]
 
+### Features
+
+* cli: Add keys `members` / `exclude` in config `programs` section ([#546](https://github.com/project-serum/anchor/pull/546)).
+
 ### Breaking Changes
 
+* ts: Use `hex` by default for decoding Instruction ([#547](https://github.com/project-serum/anchor/pull/547)).
 * lang: `CpiAccount::reload` mutates the existing struct instead of returning a new one ([#526](https://github.com/project-serum/anchor/pull/526)).
 
 ## [0.11.1] - 2021-07-09
