@@ -229,17 +229,17 @@ export class Program {
   /**
    * Event parser to handle onLogs callbacks.
    */
-   private _eventParser: EventParser;
+  private _eventParser: EventParser;
 
-   /**
-    * Mapping of event name to function invoke when event occurs.
-    */
-   private _eventCallbacks: Map<string, (event: any, slot: number) => void>;
+  /**
+   * Mapping of event name to function invoke when event occurs.
+   */
+  private _eventCallbacks: Map<string, (event: any, slot: number) => void>;
 
-   /**
-    * The subscription id from the connection onLogs subscription.
-    */
-   private _onLogsSubscriptionId: number | undefined;
+  /**
+   * The subscription id from the connection onLogs subscription.
+   */
+  private _onLogsSubscriptionId: number | undefined;
 
   /**
    * Wallet and network provider.
@@ -268,8 +268,14 @@ export class Program {
     this._onLogsSubscriptionId = undefined;
 
     // Dynamic namespaces.
-    const [rpc, instruction, transaction, account, simulate, state] =
-      NamespaceFactory.build(idl, this._coder, programId, this._provider);
+    const [
+      rpc,
+      instruction,
+      transaction,
+      account,
+      simulate,
+      state,
+    ] = NamespaceFactory.build(idl, this._coder, programId, this._provider);
     this.rpc = rpc;
     this.instruction = instruction;
     this.transaction = transaction;
@@ -322,28 +328,31 @@ export class Program {
    * @param callback  The function to invoke whenever the event is emitted from
    *                  program logs.
    */
-   public addEventListener(
+  public addEventListener(
     eventName: string,
     callback: (event: any, slot: number) => void
   ): void {
-    if (eventName in this._eventCallbacks){
+    if (eventName in this._eventCallbacks) {
       throw new Error(`Event listener for ${eventName} already exists!`);
     }
 
     this._eventCallbacks.set(eventName, callback);
 
     if (this._onLogsSubscriptionId == undefined) {
-      this._onLogsSubscriptionId = this._provider.connection.onLogs(this._programId, (logs, ctx) => {
-        if (logs.err) {
-          console.error(logs);
-          return;
-        }
-        this._eventParser.parseLogs(logs.logs, (event) => {
-          if (this._eventCallbacks.has(event.name)) {
-            this._eventCallbacks.get(event.name)(event.data, ctx.slot);
+      this._onLogsSubscriptionId = this._provider.connection.onLogs(
+        this._programId,
+        (logs, ctx) => {
+          if (logs.err) {
+            console.error(logs);
+            return;
           }
-        });
-      });
+          this._eventParser.parseLogs(logs.logs, (event) => {
+            if (this._eventCallbacks.has(event.name)) {
+              this._eventCallbacks.get(event.name)(event.data, ctx.slot);
+            }
+          });
+        }
+      );
     }
   }
 
@@ -351,12 +360,14 @@ export class Program {
    * Unsubscribes from the given eventName.
    */
   public async removeEventListener(eventName: string) {
-    if (!this._eventCallbacks.delete(eventName)){
+    if (!this._eventCallbacks.delete(eventName)) {
       throw new Error(`Event listener for ${eventName} doesn't exist!`);
-    };
+    }
 
     if (this._eventCallbacks.size == 0) {
-      this._provider.connection.removeOnLogsListener(this._onLogsSubscriptionId);
+      this._provider.connection.removeOnLogsListener(
+        this._onLogsSubscriptionId
+      );
       this._onLogsSubscriptionId = undefined;
     }
   }
