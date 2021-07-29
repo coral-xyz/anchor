@@ -13,7 +13,7 @@ import NamespaceFactory, {
 } from "./namespace";
 import { getProvider } from "../";
 import { utf8 } from "../utils/bytes";
-import { EventParser } from "./event";
+import { EventManager } from "./event";
 import { Address, translateAddress } from "./common";
 
 /**
@@ -227,27 +227,17 @@ export class Program {
   private _coder: Coder;
 
   /**
-   * Event parser to handle onLogs callbacks.
-   */
-  private _eventParser: EventParser;
-
-  /**
-   * Mapping of event name to function invoke when event occurs.
-   */
-  private _eventCallbacks: Map<string, (event: any, slot: number) => void>;
-
-  /**
-   * The subscription id from the connection onLogs subscription.
-   */
-  private _onLogsSubscriptionId: number | undefined;
-
-  /**
    * Wallet and network provider.
    */
   public get provider(): Provider {
     return this._provider;
   }
   private _provider: Provider;
+
+  /**
+   * Handles event subscriptions.
+   */
+  private _events: EventManager;
 
   /**
    * @param idl       The interface definition.
@@ -263,9 +253,11 @@ export class Program {
     this._programId = programId;
     this._provider = provider ?? getProvider();
     this._coder = new Coder(idl);
-    this._eventParser = new EventParser(this._coder, this._programId);
-    this._eventCallbacks = new Map();
-    this._onLogsSubscriptionId = undefined;
+    this._events = new EventManager(
+      this._programId,
+      this._provider,
+      this._coder
+    );
 
     // Dynamic namespaces.
     const [
@@ -332,43 +324,13 @@ export class Program {
     eventName: string,
     callback: (event: any, slot: number) => void
   ): void {
-    if (eventName in this._eventCallbacks) {
-      throw new Error(`Event listener for ${eventName} already exists!`);
-    }
-
-    this._eventCallbacks.set(eventName, callback);
-
-    if (this._onLogsSubscriptionId == undefined) {
-      this._onLogsSubscriptionId = this._provider.connection.onLogs(
-        this._programId,
-        (logs, ctx) => {
-          if (logs.err) {
-            console.error(logs);
-            return;
-          }
-          this._eventParser.parseLogs(logs.logs, (event) => {
-            if (this._eventCallbacks.has(event.name)) {
-              this._eventCallbacks.get(event.name)(event.data, ctx.slot);
-            }
-          });
-        }
-      );
-    }
+    return this._events.addEventListener(eventName, callback);
   }
 
   /**
    * Unsubscribes from the given eventName.
    */
-  public async removeEventListener(eventName: string) {
-    if (!this._eventCallbacks.delete(eventName)) {
-      throw new Error(`Event listener for ${eventName} doesn't exist!`);
-    }
-
-    if (this._eventCallbacks.size == 0) {
-      this._provider.connection.removeOnLogsListener(
-        this._onLogsSubscriptionId
-      );
-      this._onLogsSubscriptionId = undefined;
-    }
+  public async removeEventListener(eventName: string): Promise<void> {
+    return await this._events.removeEventListener(eventName);
   }
 }

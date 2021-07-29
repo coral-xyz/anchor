@@ -1,6 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 import * as assert from "assert";
 import Coder from "../coder";
+import Provider from "../provider";
 
 const LOG_START_INDEX = "Program log: ".length;
 
@@ -10,11 +11,81 @@ export type Event = {
   data: Object;
 };
 
+export class EventManager {
+  private _programId: PublicKey;
+
+  private _provider: Provider;
+
+  /**
+   * Event parser to handle onLogs callbacks.
+   */
+  private _eventParser: EventParser;
+
+  /**
+   * Maps event name to event handler.
+   */
+  private _eventCallbacks: Map<string, (event: any, slot: number) => void>;
+
+  /**
+   * The subscription id from the connection onLogs subscription.
+   */
+  private _onLogsSubscriptionId: number | undefined;
+
+  constructor(programId: PublicKey, provider: Provider, coder: Coder) {
+    this._programId = programId;
+    this._provider = provider;
+    this._eventParser = new EventParser(programId, coder);
+    this._eventCallbacks = new Map();
+  }
+
+  public addEventListener(
+    eventName: string,
+    callback: (event: any, slot: number) => void
+  ) {
+    if (eventName in this._eventCallbacks) {
+      throw new Error(`Event listener for ${eventName} already exists!`);
+    }
+
+    this._eventCallbacks.set(eventName, callback);
+
+    if (this._onLogsSubscriptionId !== undefined) {
+      return;
+    }
+    this._onLogsSubscriptionId = this._provider.connection.onLogs(
+      this._programId,
+      (logs, ctx) => {
+        if (logs.err) {
+          console.error(logs);
+          return;
+        }
+        this._eventParser.parseLogs(logs.logs, (event) => {
+          if (this._eventCallbacks.has(event.name)) {
+            this._eventCallbacks.get(event.name)(event.data, ctx.slot);
+          }
+        });
+      }
+    );
+  }
+
+  public async removeEventListener(eventName: string): Promise<void> {
+    if (!this._eventCallbacks.delete(eventName)) {
+      throw new Error(`Event listener for ${eventName} doesn't exist!`);
+    }
+
+    if (this._eventCallbacks.size == 0) {
+      this._onLogsSubscriptionId = undefined;
+      await this._provider.connection.removeOnLogsListener(
+        this._onLogsSubscriptionId
+      );
+    }
+  }
+}
+
 export class EventParser {
   private coder: Coder;
   private programId: PublicKey;
 
-  constructor(coder: Coder, programId: PublicKey) {
+  constructor(programId: PublicKey, coder: Coder) {
     this.coder = coder;
     this.programId = programId;
   }
