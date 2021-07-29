@@ -15,6 +15,7 @@ incremented for features.
 
 * cli: Add keys `members` / `exclude` in config `programs` section ([#546](https://github.com/project-serum/anchor/pull/546)).
 * cli: Allow to use custom command for test through scripts instead mocha runner ([#550](https://github.com/project-serum/anchor/pull/550)).
+* cli: Allow program address configuration for test command through `clusters.localnet` ([#554](https://github.com/project-serum/anchor/pull/554)).
 * lang: IDLs are now parsed from the entire crate ([#517](https://github.com/project-serum/anchor/pull/517)).
 
 ### Breaking Changes
