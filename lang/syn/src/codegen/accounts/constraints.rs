@@ -641,7 +641,7 @@ pub fn generate_pda(
                     rent: rent.to_account_info(),
                 };
                 let cpi_ctx = CpiContext::new(cpi_program, accounts);
-                anchor_spl::token::initialize_mint(cpi_ctx, #decimals, #owner)?;
+                anchor_spl::token::initialize_mint(cpi_ctx, #decimals, #owner, None)?;
                 anchor_lang::CpiAccount::try_from_init(
                     &#field.to_account_info(),
                 )?
