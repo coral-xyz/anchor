@@ -5,16 +5,18 @@ describe("events", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.Provider.env());
 
+  let listener = null;
+
   it("Is initialized!", async () => {
     const program = anchor.workspace.Events;
 
     let [event, slot] = await new Promise((resolve, _reject) => {
-      program.addEventListener("MyEvent", (event, slot) => {
+      listener = program.addEventListener("MyEvent", (event, slot) => {
         resolve([event, slot]);
       });
       program.rpc.initialize();
     });
-    await program.removeEventListener("MyEvent");
+    await program.removeEventListener(listener);
 
     assert.ok(slot > 0);
     assert.ok(event.data.toNumber() === 5);

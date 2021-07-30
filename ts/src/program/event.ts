@@ -124,6 +124,7 @@ export class EventManager {
       this._eventListeners.delete(eventName);
     }
 
+    // Kill the websocket connection if all listeners have been removed.
     if (this._eventCallbacks.size == 0) {
       assert.ok(this._eventListeners.size === 0);
       this._onLogsSubscriptionId = undefined;
