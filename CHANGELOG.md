@@ -11,6 +11,31 @@ incremented for features.
 
 ## [Unreleased]
 
+### Features
+
+* cli: Add keys `members` / `exclude` in config `programs` section ([#546](https://github.com/project-serum/anchor/pull/546)).
+* cli: Allow to use custom command for test through scripts instead mocha runner ([#550](https://github.com/project-serum/anchor/pull/550)).
+* cli: Allow program address configuration for test command through `clusters.localnet` ([#554](https://github.com/project-serum/anchor/pull/554)).
+* lang: IDLs are now parsed from the entire crate ([#517](https://github.com/project-serum/anchor/pull/517)).
+
+### Breaking Changes
+
+* ts: Use `hex` by default for decoding Instruction ([#547](https://github.com/project-serum/anchor/pull/547)).
+* lang: `CpiAccount::reload` mutates the existing struct instead of returning a new one ([#526](https://github.com/project-serum/anchor/pull/526)).
+
+## [0.11.1] - 2021-07-09
+
+### Features
+
+* lang: Adds `require` macro for specifying assertions that return error codes on failure ([#483](https://github.com/project-serum/anchor/pull/483)).
+* lang: Allow one to specify arbitrary programs as the owner when creating PDA ([#483](https://github.com/project-serum/anchor/pull/483)).
+* lang: A new `bump` keyword is added to the accounts constraints, which is used to add an optional bump seed to the end of a `seeds` array. When used in conjunction with *both* `init` and `seeds`, then the program executes `find_program_address` to assert that the given bump is the canonical bump ([#483](https://github.com/project-serum/anchor/pull/483)).
+
+### Fixes
+
+* lang: Preserve all instruction data for fallback functions ([#483](https://github.com/project-serum/anchor/pull/483)).
+* ts: Event listener not firing when creating associated accounts ([#356](https://github.com/project-serum/anchor/issues/356)).
+
 ## [0.11.0] - 2021-07-03
 
 ### Features
