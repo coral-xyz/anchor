@@ -323,14 +323,14 @@ export class Program {
   public addEventListener(
     eventName: string,
     callback: (event: any, slot: number) => void
-  ): void {
+  ): number {
     return this._events.addEventListener(eventName, callback);
   }
 
   /**
    * Unsubscribes from the given eventName.
    */
-  public async removeEventListener(eventName: string): Promise<void> {
-    return await this._events.removeEventListener(eventName);
+  public async removeEventListener(listener: number): Promise<void> {
+    return await this._events.removeEventListener(listener);
   }
 }

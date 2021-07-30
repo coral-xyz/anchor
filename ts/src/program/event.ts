@@ -11,9 +11,17 @@ export type Event = {
   data: Object;
 };
 
+type EventCallback = (event: any, slot: number) => void;
+
 export class EventManager {
+  /**
+   * Program ID for event subscriptions.
+   */
   private _programId: PublicKey;
 
+  /**
+   * Network and wallet provider.
+   */
   private _provider: Provider;
 
   /**
@@ -22,9 +30,19 @@ export class EventManager {
   private _eventParser: EventParser;
 
   /**
-   * Maps event name to event handler.
+   * Maps event listener id to event name.
    */
-  private _eventCallbacks: Map<string, (event: any, slot: number) => void>;
+  private _eventCallbacks: Map<number, [string, EventCallback]>;
+
+  /**
+   * Maps event name to all handlers for the event.
+   */
+  private _eventListeners: Map<string, Array<number>>;
+
+  /**
+   * The next listener id to allocate.
+   */
+  private _listenerIdCount: number;
 
   /**
    * The subscription id from the connection onLogs subscription.
@@ -36,18 +54,30 @@ export class EventManager {
     this._provider = provider;
     this._eventParser = new EventParser(programId, coder);
     this._eventCallbacks = new Map();
+    this._eventListeners = new Map();
+    this._listenerIdCount = 0;
   }
 
   public addEventListener(
     eventName: string,
     callback: (event: any, slot: number) => void
-  ) {
-    if (eventName in this._eventCallbacks) {
-      throw new Error(`Event listener for ${eventName} already exists!`);
+  ): number {
+    let listener = this._listenerIdCount;
+    this._listenerIdCount += 1;
+
+    // Store the listener into the event map.
+    if (!(eventName in this._eventCallbacks)) {
+      this._eventListeners.set(eventName, []);
     }
+    this._eventListeners.set(
+      eventName,
+      this._eventListeners.get(eventName).concat(listener)
+    );
 
-    this._eventCallbacks.set(eventName, callback);
+    // Store the callback into the listener map.
+    this._eventCallbacks.set(listener, [eventName, callback]);
 
+    // Create the subscription singleton, if needed.
     if (this._onLogsSubscriptionId !== undefined) {
       return;
     }
@@ -59,20 +89,43 @@ export class EventManager {
           return;
         }
         this._eventParser.parseLogs(logs.logs, (event) => {
-          if (this._eventCallbacks.has(event.name)) {
-            this._eventCallbacks.get(event.name)(event.data, ctx.slot);
+          let allListeners = this._eventListeners.get(eventName);
+          if (allListeners) {
+            allListeners.forEach((listener) => {
+              const [, callback] = this._eventCallbacks.get(listener);
+              callback(event.data, ctx.slot);
+            });
           }
         });
       }
     );
+
+    return listener;
   }
 
-  public async removeEventListener(eventName: string): Promise<void> {
-    if (!this._eventCallbacks.delete(eventName)) {
-      throw new Error(`Event listener for ${eventName} doesn't exist!`);
+  public async removeEventListener(listener: number): Promise<void> {
+    // Get the callback.
+    const callback = this._eventCallbacks.get(listener);
+    if (!callback) {
+      throw new Error(`Event listener ${listener} doesn't exist!`);
+    }
+    const [eventName] = callback;
+
+    // Get the listeners.
+    let listeners = this._eventListeners.get(eventName);
+    if (!listeners) {
+      throw new Error(`Event listeners dont' exist for ${eventName}!`);
+    }
+
+    // Update both maps.
+    this._eventCallbacks.delete(listener);
+    listeners = listeners.filter((l) => l !== listener);
+    if (listeners.length === 0) {
+      this._eventListeners.delete(eventName);
     }
 
     if (this._eventCallbacks.size == 0) {
+      assert.ok(this._eventListeners.size === 0);
       this._onLogsSubscriptionId = undefined;
       await this._provider.connection.removeOnLogsListener(
         this._onLogsSubscriptionId
