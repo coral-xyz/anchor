@@ -136,7 +136,7 @@ pub fn initialize_mint<'a, 'b, 'c, 'info>(
     let ix = spl_token::instruction::initialize_mint(
         &spl_token::ID,
         ctx.accounts.mint.key,
-        authority,
+        &authority,
         freeze_authority,
         decimals,
     )?;
@@ -255,6 +255,10 @@ impl Deref for TokenAccount {
 
 #[derive(Clone)]
 pub struct Mint(spl_token::state::Mint);
+
+impl Mint {
+    pub const LEN: usize = spl_token::state::Mint::LEN;
+}
 
 impl anchor_lang::AccountDeserialize for Mint {
     fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {

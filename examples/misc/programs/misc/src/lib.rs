@@ -143,7 +143,7 @@ pub mod misc {
         Ok(())
     }
 
-    pub fn test_token_seeds_init(_ctx: Context<TestTokenSeedsInit>, _nonce: u8) -> ProgramResult {
+    pub fn test_token_seeds_init(_ctx: Context<TestTokenSeedsInit>, _token_bump: u8, _mint_bump: u8) -> ProgramResult {
         Ok(())
     }
 

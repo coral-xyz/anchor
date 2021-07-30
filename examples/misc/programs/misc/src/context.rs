@@ -5,18 +5,26 @@ use anchor_spl::token::{Mint, TokenAccount};
 use misc2::misc2::MyState as Misc2State;
 
 #[derive(Accounts)]
-#[instruction(nonce: u8)]
+#[instruction(token_bump: u8, mint_bump: u8)]
 pub struct TestTokenSeedsInit<'info> {
+    #[account(
+        init,
+        mint_decimals = 6 as u8,
+        mint_authority = authority,
+        seeds = [b"my-mint-seed".as_ref(), &[mint_bump]],
+        payer = authority,
+        space = Mint::LEN,
+    )]
+    pub mint: CpiAccount<'info, Mint>,
     #[account(
         init,
         token = mint,
         authority = authority,
-        seeds = [b"my-token-seed".as_ref(), &[nonce]],
+        seeds = [b"my-token-seed".as_ref(), &[token_bump]],
         payer = authority,
         space = TokenAccount::LEN,
     )]
     pub my_pda: CpiAccount<'info, TokenAccount>,
-    pub mint: CpiAccount<'info, Mint>,
     pub authority: AccountInfo<'info>,
     pub system_program: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,

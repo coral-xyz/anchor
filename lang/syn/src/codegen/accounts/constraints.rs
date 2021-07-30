@@ -581,6 +581,72 @@ pub fn generate_pda(
                 )?
             };
         },
+        PdaKind::Mint { owner, decimals } => quote! {
+            let #field: #combined_account_ty = {
+                #space
+                #payer
+                #seeds_constraint
+
+                // Fund the account for rent exemption.
+                let required_lamports = rent
+                    .minimum_balance(anchor_spl::token::Mint::LEN)
+                    .max(1)
+                    .saturating_sub(#field.to_account_info().lamports());
+                if required_lamports > 0 {
+                    anchor_lang::solana_program::program::invoke(
+                        &anchor_lang::solana_program::system_instruction::transfer(
+                            payer.to_account_info().key,
+                            #field.to_account_info().key,
+                            required_lamports,
+                        ),
+                        &[
+                            payer.to_account_info(),
+                            #field.to_account_info(),
+                            system_program.to_account_info().clone(),
+                        ],
+                    )?;
+                }
+
+                // Allocate space.
+                anchor_lang::solana_program::program::invoke_signed(
+                    &anchor_lang::solana_program::system_instruction::allocate(
+                        #field.to_account_info().key,
+                        anchor_spl::token::Mint::LEN as u64,
+                    ),
+                    &[
+                        #field.to_account_info(),
+                        system_program.clone(),
+                    ],
+                    &[&#seeds_with_nonce[..]],
+                )?;
+
+                // Assign to the spl token program.
+                let __ix = anchor_lang::solana_program::system_instruction::assign(
+                    #field.to_account_info().key,
+                    token_program.to_account_info().key,
+                );
+                anchor_lang::solana_program::program::invoke_signed(
+                    &__ix,
+                    &[
+                        #field.to_account_info(),
+                        system_program.to_account_info(),
+                    ],
+                    &[&#seeds_with_nonce[..]],
+                )?;
+
+                // Initialize the mint account.
+                let cpi_program = token_program.to_account_info();
+                let accounts = anchor_spl::token::InitializeMint {
+                    mint: #field.to_account_info(),
+                    rent: rent.to_account_info(),
+                };
+                let cpi_ctx = CpiContext::new(cpi_program, accounts);
+                anchor_spl::token::initialize_mint(cpi_ctx, #decimals, &#owner.to_account_info().key, None)?;
+                anchor_lang::CpiAccount::try_from_init(
+                    &#field.to_account_info(),
+                )?
+            };
+        },
         PdaKind::Program { owner } => {
             // Owner of the account being created. If not specified,
             // default to the currently executing program.
