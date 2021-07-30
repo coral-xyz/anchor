@@ -611,7 +611,7 @@ pub fn generate_pda(
                 anchor_lang::solana_program::program::invoke_signed(
                     &anchor_lang::solana_program::system_instruction::allocate(
                         #field.to_account_info().key,
-                        anchor_spl::token::TokenAccount::LEN as u64,
+                        anchor_spl::token::Mint::LEN as u64,
                     ),
                     &[
                         #field.to_account_info(),
@@ -641,7 +641,7 @@ pub fn generate_pda(
                     rent: rent.to_account_info(),
                 };
                 let cpi_ctx = CpiContext::new(cpi_program, accounts);
-                anchor_spl::token::initialize_mint(cpi_ctx, #decimals, #owner, None)?;
+                anchor_spl::token::initialize_mint(cpi_ctx, #decimals, &#owner.to_account_info().key, None)?;
                 anchor_lang::CpiAccount::try_from_init(
                     &#field.to_account_info(),
                 )?

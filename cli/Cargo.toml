@@ -26,7 +26,7 @@ serde = { version = "1.0.122", features = ["derive"] }
 solana-sdk = "1.7.4"
 solana-program = "1.7.4"
 solana-client = "1.7.4"
-serum-common = { path = "../../prediction_market/deps/serum-dex", features = ["client"] }
+serum-common = { path = "../../prediction_market/deps/serum-dex/common", features = ["client"] }
 dirs = "3.0"
 heck = "0.3.1"
 flate2 = "1.0.19"

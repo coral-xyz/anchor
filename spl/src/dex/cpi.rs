@@ -232,3 +232,10 @@ pub struct SweepFees<'info> {
     pub vault_signer: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
 }
+
+// #[derive(Clone)]
+// pub struct TokenAccount(spl_token::state::Account);
+
+// impl TokenAccount {
+//     pub const LEN: usize = spl_token::state::Account::LEN;
+// }
