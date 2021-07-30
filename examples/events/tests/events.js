@@ -5,10 +5,10 @@ describe("events", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.Provider.env());
 
-  let listener = null;
-
   it("Is initialized!", async () => {
     const program = anchor.workspace.Events;
+
+    let listener = null;
 
     let [event, slot] = await new Promise((resolve, _reject) => {
       listener = program.addEventListener("MyEvent", (event, slot) => {
