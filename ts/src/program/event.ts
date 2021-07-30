@@ -89,7 +89,7 @@ export class EventManager {
           return;
         }
         this._eventParser.parseLogs(logs.logs, (event) => {
-          let allListeners = this._eventListeners.get(eventName);
+          const allListeners = this._eventListeners.get(eventName);
           if (allListeners) {
             allListeners.forEach((listener) => {
               const [, callback] = this._eventCallbacks.get(listener);
@@ -127,10 +127,10 @@ export class EventManager {
     // Kill the websocket connection if all listeners have been removed.
     if (this._eventCallbacks.size == 0) {
       assert.ok(this._eventListeners.size === 0);
-      this._onLogsSubscriptionId = undefined;
       await this._provider.connection.removeOnLogsListener(
         this._onLogsSubscriptionId
       );
+      this._onLogsSubscriptionId = undefined;
     }
   }
 }
