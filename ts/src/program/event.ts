@@ -30,12 +30,12 @@ export class EventManager {
   private _eventParser: EventParser;
 
   /**
-   * Maps event listener id to event name.
+   * Maps event listener id to [event-name, callback].
    */
   private _eventCallbacks: Map<number, [string, EventCallback]>;
 
   /**
-   * Maps event name to all handlers for the event.
+   * Maps event name to all listeners for the event.
    */
   private _eventListeners: Map<string, Array<number>>;
 
