@@ -12,7 +12,7 @@ use syn::spanned::Spanned;
 use syn::token::Comma;
 use syn::{
     Expr, Generics, Ident, ImplItemMethod, ItemEnum, ItemFn, ItemImpl, ItemMod, ItemStruct, LitInt,
-    LitStr, PatType, Token,
+    LitStr, PatType, Token, TypePath,
 };
 
 pub mod codegen;
@@ -198,30 +198,30 @@ pub enum SysvarTy {
 
 #[derive(Debug, PartialEq)]
 pub struct ProgramStateTy {
-    pub account_ident: Ident,
+    pub account_type_path: TypePath,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct CpiStateTy {
-    pub account_ident: Ident,
+    pub account_type_path: TypePath,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct ProgramAccountTy {
     // The struct type of the account.
-    pub account_ident: Ident,
+    pub account_type_path: TypePath,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct CpiAccountTy {
     // The struct type of the account.
-    pub account_ident: Ident,
+    pub account_type_path: TypePath,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct LoaderTy {
     // The struct type of the account.
-    pub account_ident: Ident,
+    pub account_type_path: TypePath,
 }
 
 #[derive(Debug)]
@@ -341,6 +341,7 @@ pub enum ConstraintToken {
     Address(Context<ConstraintAddress>),
     TokenMint(Context<ConstraintTokenMint>),
     TokenAuthority(Context<ConstraintTokenAuthority>),
+    Bump(Context<ConstraintTokenBump>),
 }
 
 impl Parse for ConstraintToken {
@@ -396,6 +397,7 @@ pub struct ConstraintSeedsGroup {
     pub payer: Option<Ident>,
     pub space: Option<Expr>,
     pub kind: PdaKind,
+    pub bump: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
@@ -444,7 +446,7 @@ pub struct ConstraintAssociatedSpace {
 #[derive(Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum PdaKind {
-    Program,
+    Program { owner: Option<Expr> },
     Token { owner: Expr, mint: Expr },
 }
 
@@ -461,6 +463,11 @@ pub struct ConstraintTokenMint {
 #[derive(Debug, Clone)]
 pub struct ConstraintTokenAuthority {
     auth: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintTokenBump {
+    bump: Expr,
 }
 
 // Syntaxt context object for preserving metadata about the inner item.

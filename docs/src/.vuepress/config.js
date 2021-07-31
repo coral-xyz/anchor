@@ -25,6 +25,8 @@ module.exports = {
     ],
   ],
 
+  theme: "default-prefers-color-scheme",
+
   /**
    * Theme configuration, here is the default theme configuration for VuePress.
    *
@@ -63,7 +65,6 @@ module.exports = {
           "/tutorials/tutorial-3",
           "/tutorials/tutorial-4",
           "/tutorials/tutorial-5",
-          "/tutorials/tutorial-6",
         ],
       },
       {

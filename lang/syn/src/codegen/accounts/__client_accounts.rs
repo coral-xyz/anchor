@@ -105,7 +105,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         ///
         /// To access the struct in this module, one should use the sibling
         /// `accounts` module (also generated), which re-exports this.
-        mod #account_mod_name {
+        pub(crate) mod #account_mod_name {
             use super::*;
             use anchor_lang::prelude::borsh;
             #(#re_exports)*
@@ -115,6 +115,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 #(#account_struct_fields),*
             }
 
+            #[automatically_derived]
             impl anchor_lang::ToAccountMetas for #name {
                 fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<anchor_lang::solana_program::instruction::AccountMeta> {
                     let mut account_metas = vec![];
