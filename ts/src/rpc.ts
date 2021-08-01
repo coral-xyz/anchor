@@ -548,6 +548,7 @@ export class RpcFactory {
                 },
               },
             ],
+            encoding: 'base64',
           },
         ]);
         if (resp.error) {
@@ -556,9 +557,8 @@ export class RpcFactory {
         }
         return (
           resp.result
-            // @ts-ignore
             .map(({ pubkey, account: { data } }) => {
-              data = bs58.decode(data);
+              data = bs58.decode(bs58.encode(Uint8Array.from(atob(data[0]), c => c.charCodeAt(0))));
               return {
                 publicKey: new PublicKey(pubkey),
                 account: coder.accounts.decode(idlAccount.name, data),
