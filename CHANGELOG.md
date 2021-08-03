@@ -11,6 +11,8 @@ incremented for features.
 
 ## [Unreleased]
 
+## [0.12.0] - 2021-08-03
+
 ### Features
 
 * cli: Add keys `members` / `exclude` in config `programs` section ([#546](https://github.com/project-serum/anchor/pull/546)).
