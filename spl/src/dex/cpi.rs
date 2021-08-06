@@ -113,7 +113,7 @@ pub fn init_open_orders<'info>(
         ctx.accounts.open_orders.key,
         ctx.accounts.authority.key,
         ctx.accounts.market.key,
-        // ctx.remaining_accounts.first().map(|acc| acc.key),
+        ctx.remaining_accounts.first().map(|acc| acc.key),
     )?;
     solana_program::program::invoke_signed(
         &ix,
@@ -164,8 +164,10 @@ pub fn initialize_market<'info>(
     coin_lot_size: u64,
     pc_lot_size: u64,
     vault_signer_nonce: u64,
-    pc_dust_threshold: u64
+    pc_dust_threshold: u64,
 ) -> ProgramResult {
+    let authority = ctx.remaining_accounts.get(0);
+    let prune_authority = ctx.remaining_accounts.get(1);
     let ix = serum_dex::instruction::initialize_market(
         ctx.accounts.market.key,
         &ID,
@@ -173,11 +175,12 @@ pub fn initialize_market<'info>(
         ctx.accounts.pc_mint.key,
         ctx.accounts.coin_vault.key,
         ctx.accounts.pc_vault.key,
-        // None, // No authority key for now
+        authority.map(|r| r.key),
+        prune_authority.map(|r| r.key),
         ctx.accounts.bids.key,
         ctx.accounts.asks.key,
-        ctx.accounts.request_queue.key,
-        ctx.accounts.event_queue.key,
+        ctx.accounts.req_q.key,
+        ctx.accounts.event_q.key,
         coin_lot_size,
         pc_lot_size,
         vault_signer_nonce,
@@ -212,7 +215,6 @@ pub struct NewOrderV3<'info> {
     pub token_program: AccountInfo<'info>,
     pub rent: AccountInfo<'info>,
 }
-
 
 #[derive(Accounts)]
 pub struct CancelOrderV2<'info> {
@@ -266,16 +268,15 @@ pub struct SweepFees<'info> {
 }
 
 #[derive(Accounts)]
-pub struct InitializeMarket<'info>{
+pub struct InitializeMarket<'info> {
     pub market: AccountInfo<'info>,
-    pub request_queue: AccountInfo<'info>,
-    pub event_queue: AccountInfo<'info>,
-    pub bids: AccountInfo<'info>,
-    pub asks: AccountInfo<'info>,
-    pub coin_vault: AccountInfo<'info>,
-    pub pc_vault: AccountInfo<'info>,
     pub coin_mint: AccountInfo<'info>,
     pub pc_mint: AccountInfo<'info>,
+    pub coin_vault: AccountInfo<'info>,
+    pub pc_vault: AccountInfo<'info>,
+    pub bids: AccountInfo<'info>,
+    pub asks: AccountInfo<'info>,
+    pub req_q: AccountInfo<'info>,
+    pub event_q: AccountInfo<'info>,
     pub rent: AccountInfo<'info>,
-    // pub authority: AccountInfo<'info>,
 }
