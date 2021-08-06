@@ -9,7 +9,7 @@ use misc2::misc2::MyState as Misc2State;
 pub struct TestTokenSeedsInit<'info> {
     #[account(
         init,
-        mint_decimals = 6 as u8,
+        mint_decimals = 6,
         mint_authority = authority,
         seeds = [b"my-mint-seed".as_ref(), &[mint_bump]],
         payer = authority,
