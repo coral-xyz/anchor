@@ -538,47 +538,7 @@ pub fn generate_pda(
                         system_program.to_account_info().clone(),
                     ],
                     &[&#seeds_with_nonce[..]],
-                )?;                // if required_lamports > 0 {
-                //     anchor_lang::solana_program::program::invoke(
-                //         &anchor_lang::solana_program::system_instruction::transfer(
-                //             payer.to_account_info().key,
-                //             #field.to_account_info().key,
-                //             required_lamports,
-                //         ),
-                //         &[
-                //             payer.to_account_info(),
-                //             #field.to_account_info(),
-                //             system_program.to_account_info().clone(),
-                //         ],
-                //     )?;
-                // }
-
-                // // Allocate space.
-                // anchor_lang::solana_program::program::invoke_signed(
-                //     &anchor_lang::solana_program::system_instruction::allocate(
-                //         #field.to_account_info().key,
-                //         anchor_spl::token::TokenAccount::LEN as u64,
-                //     ),
-                //     &[
-                //         #field.to_account_info(),
-                //         system_program.clone(),
-                //     ],
-                //     &[&#seeds_with_nonce[..]],
-                // )?;
-
-                // // Assign to the spl token program.
-                // let __ix = anchor_lang::solana_program::system_instruction::assign(
-                //     #field.to_account_info().key,
-                //     token_program.to_account_info().key,
-                // );
-                // anchor_lang::solana_program::program::invoke_signed(
-                //     &__ix,
-                //     &[
-                //         #field.to_account_info(),
-                //         system_program.to_account_info(),
-                //     ],
-                //     &[&#seeds_with_nonce[..]],
-                // )?;
+                )?;
 
                 // Initialize the token account.
                 let cpi_program = token_program.to_account_info();

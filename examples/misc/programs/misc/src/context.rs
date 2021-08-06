@@ -18,8 +18,8 @@ pub struct TestTokenSeedsInit<'info> {
     pub mint: CpiAccount<'info, Mint>,
     #[account(
         init,
-        token = mint,
-        authority = authority,
+        token_mint = mint,
+        token_authority = authority,
         seeds = [b"my-token-seed".as_ref(), &[token_bump]],
         payer = authority,
         space = TokenAccount::LEN,

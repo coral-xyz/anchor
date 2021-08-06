@@ -164,13 +164,13 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         address: stream.parse()?,
                     },
                 )),
-                "token" => ConstraintToken::TokenMint(Context::new(
+                "token_mint" => ConstraintToken::TokenMint(Context::new(
                     ident.span(),
                     ConstraintTokenMint {
                         mint: stream.parse()?,
                     },
                 )),
-                "authority" => ConstraintToken::TokenAuthority(Context::new(
+                "token_authority" => ConstraintToken::TokenAuthority(Context::new(
                     ident.span(),
                     ConstraintTokenAuthority {
                         auth: stream.parse()?,
@@ -530,10 +530,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
     // TODO are these the right errors to have?
     fn add_mint_authority(&mut self, c: Context<ConstraintMintAuthority>) -> ParseResult<()> {
         if self.mint_authority.is_some() {
-            return Err(ParseError::new(
-                c.span(),
-                "mint authority already provided",
-            ));
+            return Err(ParseError::new(c.span(), "mint authority already provided"));
         }
         if self.mint_decimals.is_none() {
             return Err(ParseError::new(
