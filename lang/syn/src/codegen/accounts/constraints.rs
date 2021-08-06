@@ -524,6 +524,8 @@ pub fn generate_pda(
                     .minimum_balance(anchor_spl::token::TokenAccount::LEN)
                     .max(1)
                     .saturating_sub(#field.to_account_info().lamports());
+
+                // Create the token account with right amount of lamports and space, and the correct owner.
                 anchor_lang::solana_program::program::invoke_signed(
                     &anchor_lang::solana_program::system_instruction::create_account(
                         payer.to_account_info().key,
@@ -566,6 +568,8 @@ pub fn generate_pda(
                     .minimum_balance(anchor_spl::token::Mint::LEN)
                     .max(1)
                     .saturating_sub(#field.to_account_info().lamports());
+
+                // Create the token account with right amount of lamports and space, and the correct owner.
                 anchor_lang::solana_program::program::invoke_signed(
                     &anchor_lang::solana_program::system_instruction::create_account(
                         payer.to_account_info().key,
