@@ -71,6 +71,8 @@ pub enum Command {
     Verify {
         /// The deployed program to compare against.
         program_id: Pubkey,
+        #[clap(short, long)]
+        program_name: Option<String>,
     },
     /// Runs integration tests against a localnetwork.
     Test {
@@ -246,7 +248,10 @@ pub fn entry(opts: Opts) -> Result<()> {
             None,
             None,
         ),
-        Command::Verify { program_id } => verify(&opts.cfg_override, program_id),
+        Command::Verify {
+            program_id,
+            program_name,
+        } => verify(&opts.cfg_override, program_id, program_name),
         Command::Deploy { program_name } => deploy(&opts.cfg_override, program_name),
         Command::Upgrade {
             program_id,
@@ -536,8 +541,8 @@ fn build_cwd_verifiable(
     }
 
     // Build the idl.
-    println!("Extracting the IDL");
-    if let Some(idl) = extract_idl("src/lib.rs")? {
+    if let Ok(Some(idl)) = extract_idl("src/lib.rs") {
+        println!("Extracting the IDL");
         let out_file = workspace_dir.join(format!("target/idl/{}.json", idl.name));
         write_idl(&idl, OutFile::File(out_file))?;
     }
@@ -677,9 +682,49 @@ fn _build_cwd(idl_out: Option<PathBuf>) -> Result<()> {
     Ok(())
 }
 
-fn verify(cfg_override: &ConfigOverride, program_id: Pubkey) -> Result<()> {
+fn verify(
+    cfg_override: &ConfigOverride,
+    program_id: Pubkey,
+    program_name: Option<String>,
+) -> Result<()> {
+    // Change directories to the given `program_name`, if given.
+    let (cfg, _cargo) = Config::discover(cfg_override)?.expect("Not in workspace.");
+    let mut did_find_program = false;
+    if let Some(program_name) = program_name.as_ref() {
+        for program in cfg.read_all_programs()? {
+            let cargo_toml = program.path.join("Cargo.toml");
+            if !cargo_toml.exists() {
+                return Err(anyhow!(
+                    "Did not find Cargo.toml at the path: {}",
+                    program.path.display()
+                ));
+            }
+            let p_lib_name = config::extract_lib_name(&cargo_toml)?;
+            if program_name.as_str() == p_lib_name {
+                let program_path = cfg
+                    .path()
+                    .parent()
+                    .unwrap()
+                    .canonicalize()?
+                    .join(program.path);
+                std::env::set_current_dir(&program_path)?;
+                did_find_program = true;
+                break;
+            }
+        }
+    }
+    if !did_find_program && program_name.is_some() {
+        return Err(anyhow!(
+            "{} is not part of the workspace",
+            program_name.as_ref().unwrap()
+        ));
+    }
+
+    // Proceed with the command.
     let (cfg, cargo) = Config::discover(cfg_override)?.expect("Not in workspace.");
-    let cargo = cargo.ok_or_else(|| anyhow!("Must be inside program subdirectory."))?;
+    let cargo = cargo.ok_or_else(|| {
+        anyhow!("Must be inside program subdirectory if no program name is given.")
+    })?;
     let program_dir = cargo.parent().unwrap();
 
     // Build the program we want to verify.
@@ -700,8 +745,11 @@ fn verify(cfg_override: &ConfigOverride, program_id: Pubkey) -> Result<()> {
             Some(lib) => lib.name.ok_or_else(|| anyhow!("Name not provided"))?,
         }
     };
-    let bin_path = program_dir
-        .join("../../target/deploy/")
+    let bin_path = cfg
+        .path()
+        .parent()
+        .ok_or_else(|| anyhow!("Unable to find workspace root"))?
+        .join("target/deploy/")
         .join(format!("{}.so", binary_name));
 
     let bin_ver = verify_bin(program_id, &bin_path, cfg.provider.cluster.url())?;

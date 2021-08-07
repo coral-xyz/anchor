@@ -50,7 +50,7 @@ impl<T> std::convert::AsRef<T> for WithPath<T> {
 
 impl WithPath<Config> {
     pub fn get_program_list(&self) -> Result<Vec<PathBuf>> {
-        // Canopnicalize the workspace filepaths to compare with relative paths.
+        // Canonicalize the workspace filepaths to compare with relative paths.
         let (members, exclude) = self.canonicalize_workspace()?;
 
         // Get all candidate programs.
@@ -219,12 +219,17 @@ impl Config {
                 }
             }
 
-            if let Some((cfg, parent)) = anchor_toml {
-                return Ok(Some((WithPath::new(cfg, parent), cargo_toml)));
+            // Set the Cargo.toml if it's for a single package, i.e., not the
+            // root workspace Cargo.toml.
+            if cargo_toml.is_none() && cargo_toml_level.is_some() {
+                let toml = cargo_toml::Manifest::from_path(cargo_toml_level.as_ref().unwrap())?;
+                if toml.workspace.is_none() {
+                    cargo_toml = cargo_toml_level;
+                }
             }
 
-            if cargo_toml.is_none() {
-                cargo_toml = cargo_toml_level;
+            if let Some((cfg, parent)) = anchor_toml {
+                return Ok(Some((WithPath::new(cfg, parent), cargo_toml)));
             }
 
             cwd_opt = cwd.parent();
