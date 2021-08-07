@@ -1,14 +1,6 @@
-anchor-version = "0.11.0"
-
-[registry]
-url = "http://localhost:8080"
-
 [provider]
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"
-
-[programs.mainnet]
-swap = { address = "22Y43yTVxuUkoRKdm9thyRhQ3SdgQS7c7kB6UNCiaczD", path = "./deps/serum-dex/dex/target/deploy/serum_dex.so" }
 
 [[test.genesis]]
 address = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"
