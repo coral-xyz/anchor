@@ -9,11 +9,21 @@ use quote::quote;
 use syn::Expr;
 
 pub fn generate(f: &Field) -> proc_macro2::TokenStream {
-    let checks: Vec<proc_macro2::TokenStream> = linearize(&f.constraints)
+    let constraints = linearize(&f.constraints);
+
+    let rent = constraints
+        .iter()
+        .any(|c| matches!(c, Constraint::RentExempt(ConstraintRentExempt::Enforce)))
+        .then(|| quote! { let __anchor_rent = Rent::get()?; })
+        .unwrap_or_else(|| quote! {});
+
+    let checks: Vec<proc_macro2::TokenStream> = constraints
         .iter()
         .map(|c| generate_constraint(f, c))
         .collect();
+
     quote! {
+        #rent
         #(#checks)*
     }
 }
@@ -240,7 +250,7 @@ pub fn generate_constraint_rent_exempt(
     match c {
         ConstraintRentExempt::Skip => quote! {},
         ConstraintRentExempt::Enforce => quote! {
-            if !rent.is_exempt(#info.lamports(), #info.try_data_len()?) {
+            if !__anchor_rent.is_exempt(#info.lamports(), #info.try_data_len()?) {
                 return Err(anchor_lang::__private::ErrorCode::ConstraintRentExempt.into());
             }
         },
