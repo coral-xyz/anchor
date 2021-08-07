@@ -11,6 +11,13 @@ incremented for features.
 
 ## [Unreleased]
 
+### Features
+
+* cli: Adds a [registry] section in the Anchor toml ([#570](https://github.com/project-serum/anchor/pull/570)).
+* cli: Adds the anchor login <api-token> command ([#570](https://github.com/project-serum/anchor/pull/570)).
+* cli: Adds the anchor publish <package> command ([#570](https://github.com/project-serum/anchor/pull/570)).
+* cli: Adds a root level anchor_version field to the Anchor.toml for specifying the cli version to build with for verifiable build ([#570](https://github.com/project-serum/anchor/pull/570)).
+
 ### Breaking
 
 * cli: `[clusters.<network>]` Anchor.toml section has been renamed to `[programs.<network>]` ([#570](https://github.com/project-serum/anchor/pull/570)).
