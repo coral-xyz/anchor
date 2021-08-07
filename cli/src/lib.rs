@@ -502,7 +502,7 @@ fn build_cwd_verifiable(
     let container_name = "anchor-program";
 
     // Build the binary in docker.
-    let result = docker_build(cfg, &container_name, cargo_toml, stdout, stderr);
+    let result = docker_build(cfg, container_name, cargo_toml, stdout, stderr);
 
     // Wipe the generated docker-target dir.
     println!("Cleaning up the docker target directory");
@@ -539,7 +539,7 @@ fn build_cwd_verifiable(
     println!("Extracting the IDL");
     if let Some(idl) = extract_idl("src/lib.rs")? {
         let out_file = workspace_dir.join(format!("target/idl/{}.json", idl.name));
-        write_idl(&idl, OutFile::File(out_file.into()))?;
+        write_idl(&idl, OutFile::File(out_file))?;
     }
 
     result
@@ -555,11 +555,7 @@ fn docker_build(
     let binary_name = config::extract_lib_name(&cargo_toml)?;
 
     // Docker vars.
-    let version = cfg
-        .anchor_version
-        .clone()
-        .unwrap_or(DOCKER_BUILDER_VERSION.to_string());
-    let image_name = format!("projectserum/build:v{}", version);
+    let image_name = cfg.docker();
     println!("Using image {:?}", image_name);
     let volume_mount = format!(
         "{}:/workdir",
@@ -594,7 +590,7 @@ fn docker_build(
         cargo_toml.canonicalize()?,
         cfg.path().parent().unwrap().canonicalize()?,
     )
-    .ok_or(anyhow!("Unable to diff paths"))?;
+    .ok_or_else(|| anyhow!("Unable to diff paths"))?;
     println!(
         "Building {} manifest: {:?}",
         binary_name,
@@ -698,10 +694,10 @@ fn verify(cfg_override: &ConfigOverride, program_id: Pubkey) -> Result<()> {
             None => {
                 cargo_toml
                     .package
-                    .ok_or(anyhow!("Package section not provided"))?
+                    .ok_or_else(|| anyhow!("Package section not provided"))?
                     .name
             }
-            Some(lib) => lib.name.ok_or(anyhow!("Name not provided"))?,
+            Some(lib) => lib.name.ok_or_else(|| anyhow!("Name not provided"))?,
         }
     };
     let bin_path = program_dir
@@ -1125,7 +1121,7 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
 }
 
 fn idl_parse(file: String, out: Option<String>) -> Result<()> {
-    let idl = extract_idl(&file)?.ok_or(anyhow!("IDL not parsed"))?;
+    let idl = extract_idl(&file)?.ok_or_else(|| anyhow!("IDL not parsed"))?;
     let out = match out {
         None => OutFile::Stdout,
         Some(out) => OutFile::File(PathBuf::from(out)),
@@ -1271,7 +1267,7 @@ fn genesis_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
             let idl_out = PathBuf::from("target/idl")
                 .join(&idl.name)
                 .with_extension("json");
-            write_idl(&idl, OutFile::File(idl_out))?;
+            write_idl(idl, OutFile::File(idl_out))?;
         }
     }
     if let Some(test) = cfg.test.as_ref() {
@@ -1438,7 +1434,7 @@ fn _deploy(
                 let idl_out = PathBuf::from("target/idl")
                     .join(&idl.name)
                     .with_extension("json");
-                write_idl(&idl, OutFile::File(idl_out))?;
+                write_idl(idl, OutFile::File(idl_out))?;
             }
 
             programs.push((program_kp.pubkey(), program))
@@ -1937,10 +1933,10 @@ fn publish(cfg_override: &ConfigOverride, program_name: String) -> Result<()> {
     // All workspace programs.
     for path in cfg.get_program_list()? {
         let mut relative_path = pathdiff::diff_paths(path, cfg.path().parent().unwrap())
-            .ok_or(anyhow!("Unable to diff paths"))?;
+            .ok_or_else(|| anyhow!("Unable to diff paths"))?;
 
         // HACK for workspaces wtih single programs. Change this.
-        if relative_path.display().to_string() == "".to_string() {
+        if relative_path.display().to_string() == *"" {
             relative_path = "src".into();
         }
         tar.append_dir_all(relative_path.clone(), relative_path)?;
@@ -1965,7 +1961,10 @@ fn publish(cfg_override: &ConfigOverride, program_name: String) -> Result<()> {
     if resp.status() == 200 {
         println!("Build triggered");
     } else {
-        println!("{:?}", resp.text().unwrap_or("Server error".to_string()));
+        println!(
+            "{:?}",
+            resp.text().unwrap_or_else(|_| "Server error".to_string())
+        );
     }
 
     Ok(())

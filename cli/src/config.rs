@@ -40,8 +40,10 @@ impl<T> WithPath<T> {
     pub fn into_inner(self) -> T {
         self.inner
     }
+}
 
-    pub fn as_ref(&self) -> &T {
+impl<T> std::convert::AsRef<T> for WithPath<T> {
+    fn as_ref(&self) -> &T {
         &self.inner
     }
 }
@@ -163,6 +165,14 @@ pub struct WorkspaceConfig {
 }
 
 impl Config {
+    pub fn docker(&self) -> String {
+        let ver = self
+            .anchor_version
+            .clone()
+            .unwrap_or_else(|| crate::DOCKER_BUILDER_VERSION.to_string());
+        format!("projectserum/build:v{}", ver)
+    }
+
     pub fn discover(
         cfg_override: &ConfigOverride,
     ) -> Result<Option<(WithPath<Config>, Option<PathBuf>)>> {
@@ -210,7 +220,7 @@ impl Config {
             }
 
             if let Some((cfg, parent)) = anchor_toml {
-                return Ok(Some((WithPath::new(cfg, parent.clone()), cargo_toml)));
+                return Ok(Some((WithPath::new(cfg, parent), cargo_toml)));
             }
 
             if cargo_toml.is_none() {
@@ -285,7 +295,7 @@ impl FromStr for Config {
             .map_err(|e| anyhow::format_err!("Unable to deserialize config: {}", e.to_string()))?;
         Ok(Config {
             anchor_version: cfg.anchor_version,
-            registry: cfg.registry.unwrap_or(Default::default()),
+            registry: cfg.registry.unwrap_or_default(),
             provider: ProviderConfig {
                 cluster: cfg.provider.cluster.parse()?,
                 wallet: shellexpand::tilde(&cfg.provider.wallet).parse()?,
@@ -370,7 +380,7 @@ pub fn extract_lib_name(cargo_toml: impl AsRef<Path>) -> Result<String> {
     } else {
         Ok(cargo_toml
             .package
-            .ok_or(anyhow!("Package section not provided"))?
+            .ok_or_else(|| anyhow!("Package section not provided"))?
             .name)
     }
 }
@@ -445,6 +455,7 @@ pub struct AnchorPackage {
     pub name: String,
     pub address: String,
     pub path: String,
+    pub idl: Option<String>,
 }
 
 impl AnchorPackage {
@@ -456,19 +467,21 @@ impl AnchorPackage {
         let program_details = cfg
             .programs
             .get(cluster)
-            .ok_or(anyhow!("Program not provided in Anchor.toml"))?
+            .ok_or_else(|| anyhow!("Program not provided in Anchor.toml"))?
             .get(&name)
-            .ok_or(anyhow!("Program not provided in Anchor.toml"))?;
+            .ok_or_else(|| anyhow!("Program not provided in Anchor.toml"))?;
         let path = program_details
             .path
             .clone()
             // TODO: use a default path if one isn't provided?
-            .ok_or(anyhow!("Path to program binary not provided"))?;
+            .ok_or_else(|| anyhow!("Path to program binary not provided"))?;
+        let idl = program_details.idl.clone();
         let address = program_details.address.to_string();
         Ok(Self {
             name,
             path,
             address,
+            idl,
         })
     }
 }
