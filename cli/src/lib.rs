@@ -460,7 +460,7 @@ pub fn build(
             ct,
             idl_out,
             verifiable,
-            solana_version.clone(),
+            solana_version,
             stdout,
             stderr,
         )?,
