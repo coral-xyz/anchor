@@ -330,6 +330,7 @@ pub struct InitAccount<'info> {
     #[account(signer)]
     pub authority: AccountInfo<'info>,
     pub market: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
     #[account(
         seeds = [b"open-orders-init", dex_program.key.as_ref(), market.key.as_ref()],
         bump = bump_init,
