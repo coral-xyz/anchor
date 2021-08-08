@@ -64,6 +64,10 @@ pub enum Command {
         verifiable: bool,
         #[clap(short, long)]
         program_name: Option<String>,
+        /// Version of the Solana toolchain to use. For --verifiable builds
+        /// only.
+        #[clap(short, long)]
+        solana_version: Option<String>,
     },
     /// Verifies the on-chain bytecode matches the locally compiled artifact.
     /// Run this command inside a program subdirectory, i.e., in the dir
@@ -73,6 +77,10 @@ pub enum Command {
         program_id: Pubkey,
         #[clap(short, long)]
         program_name: Option<String>,
+        /// Version of the Solana toolchain to use. For --verifiable builds
+        /// only.
+        #[clap(short, long)]
+        solana_version: Option<String>,
     },
     /// Runs integration tests against a localnetwork.
     Test {
@@ -240,18 +248,21 @@ pub fn entry(opts: Opts) -> Result<()> {
             idl,
             verifiable,
             program_name,
+            solana_version,
         } => build(
             &opts.cfg_override,
             idl,
             verifiable,
             program_name,
+            solana_version,
             None,
             None,
         ),
         Command::Verify {
             program_id,
             program_name,
-        } => verify(&opts.cfg_override, program_id, program_name),
+            solana_version,
+        } => verify(&opts.cfg_override, program_id, program_name, solana_version),
         Command::Deploy { program_name } => deploy(&opts.cfg_override, program_name),
         Command::Upgrade {
             program_id,
@@ -386,11 +397,13 @@ pub fn build(
     idl: Option<String>,
     verifiable: bool,
     program_name: Option<String>,
+    solana_version: Option<String>,
     stdout: Option<File>, // Used for the package registry server.
     stderr: Option<File>, // Used for the package registry server.
 ) -> Result<()> {
     // Change directories to the given `program_name`, if given.
     let (cfg, _cargo) = Config::discover(cfg_override)?.expect("Not in workspace.");
+
     let mut did_find_program = false;
     if let Some(program_name) = program_name.as_ref() {
         for program in cfg.read_all_programs()? {
@@ -423,7 +436,6 @@ pub fn build(
     }
 
     let (cfg, cargo) = Config::discover(cfg_override)?.expect("Not in workspace.");
-
     let idl_out = match idl {
         Some(idl) => Some(PathBuf::from(idl)),
         None => {
@@ -435,9 +447,23 @@ pub fn build(
             Some(cfg_parent.join("target/idl"))
         }
     };
+
+    let solana_version = match solana_version.is_some() {
+        true => solana_version,
+        false => cfg.solana_version.clone(),
+    };
+
     match cargo {
-        None => build_all(&cfg, cfg.path(), idl_out, verifiable)?,
-        Some(ct) => build_cwd(&cfg, ct, idl_out, verifiable, stdout, stderr)?,
+        None => build_all(&cfg, cfg.path(), idl_out, verifiable, solana_version)?,
+        Some(ct) => build_cwd(
+            &cfg,
+            ct,
+            idl_out,
+            verifiable,
+            solana_version.clone(),
+            stdout,
+            stderr,
+        )?,
     };
 
     set_workspace_dir_or_exit();
@@ -450,6 +476,7 @@ fn build_all(
     cfg_path: &Path,
     idl_out: Option<PathBuf>,
     verifiable: bool,
+    solana_version: Option<String>,
 ) -> Result<()> {
     let cur_dir = std::env::current_dir()?;
     let r = match cfg_path.parent() {
@@ -461,6 +488,7 @@ fn build_all(
                     p.join("Cargo.toml"),
                     idl_out.clone(),
                     verifiable,
+                    solana_version.clone(),
                     None,
                     None,
                 )?;
@@ -478,6 +506,7 @@ fn build_cwd(
     cargo_toml: PathBuf,
     idl_out: Option<PathBuf>,
     verifiable: bool,
+    solana_version: Option<String>,
     stdout: Option<File>,
     stderr: Option<File>,
 ) -> Result<()> {
@@ -487,7 +516,7 @@ fn build_cwd(
     };
     match verifiable {
         false => _build_cwd(idl_out),
-        true => build_cwd_verifiable(cfg, cargo_toml, stdout, stderr),
+        true => build_cwd_verifiable(cfg, cargo_toml, solana_version, stdout, stderr),
     }
 }
 
@@ -496,6 +525,7 @@ fn build_cwd(
 fn build_cwd_verifiable(
     cfg: &WithPath<Config>,
     cargo_toml: PathBuf,
+    solana_version: Option<String>,
     stdout: Option<File>,
     stderr: Option<File>,
 ) -> Result<()> {
@@ -507,7 +537,14 @@ fn build_cwd_verifiable(
     let container_name = "anchor-program";
 
     // Build the binary in docker.
-    let result = docker_build(cfg, container_name, cargo_toml, stdout, stderr);
+    let result = docker_build(
+        cfg,
+        container_name,
+        cargo_toml,
+        solana_version,
+        stdout,
+        stderr,
+    );
 
     // Wipe the generated docker-target dir.
     println!("Cleaning up the docker target directory");
@@ -554,6 +591,7 @@ fn docker_build(
     cfg: &WithPath<Config>,
     container_name: &str,
     cargo_toml: PathBuf,
+    solana_version: Option<String>,
     stdout: Option<File>,
     stderr: Option<File>,
 ) -> Result<()> {
@@ -561,13 +599,13 @@ fn docker_build(
 
     // Docker vars.
     let image_name = cfg.docker();
-    println!("Using image {:?}", image_name);
     let volume_mount = format!(
         "{}:/workdir",
         cfg.path().parent().unwrap().canonicalize()?.display()
     );
+    println!("Using image {:?}", image_name);
 
-    // Start the docker iamge.
+    // Start the docker image running detached in the background.
     println!("Run docker image");
     let exit = std::process::Command::new("docker")
         .args(&[
@@ -591,6 +629,42 @@ fn docker_build(
         return Err(anyhow!("Failed to build program"));
     }
 
+    // Set the solana version in the container, if given. Otherwise use the
+    // default.
+    if let Some(solana_version) = solana_version {
+        println!("Using solana version: {}", solana_version);
+
+        // Fetch the installer.
+        let exit = std::process::Command::new("docker")
+            .args(&[
+                "exec",
+                container_name,
+                "curl",
+                "-sSfL",
+                &format!("https://release.solana.com/v{0}/install", solana_version,),
+                "-o",
+                "solana_installer.sh",
+            ])
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .map_err(|e| anyhow!("Failed to set solana version: {:?}", e))?;
+        if !exit.status.success() {
+            return Err(anyhow!("Failed to set solana version"));
+        }
+
+        // Run the installer.
+        let exit = std::process::Command::new("docker")
+            .args(&["exec", container_name, "sh", "solana_installer.sh"])
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .map_err(|e| anyhow!("Failed to set solana version: {:?}", e))?;
+        if !exit.status.success() {
+            return Err(anyhow!("Failed to set solana version"));
+        }
+    }
+
     let manifest_path = pathdiff::diff_paths(
         cargo_toml.canonicalize()?,
         cfg.path().parent().unwrap().canonicalize()?,
@@ -602,6 +676,7 @@ fn docker_build(
         manifest_path.display().to_string()
     );
 
+    // Execute the build.
     let exit = std::process::Command::new("docker")
         .args(&[
             "exec",
@@ -686,6 +761,7 @@ fn verify(
     cfg_override: &ConfigOverride,
     program_id: Pubkey,
     program_name: Option<String>,
+    solana_version: Option<String>,
 ) -> Result<()> {
     // Change directories to the given `program_name`, if given.
     let (cfg, _cargo) = Config::discover(cfg_override)?.expect("Not in workspace.");
@@ -729,7 +805,18 @@ fn verify(
 
     // Build the program we want to verify.
     let cur_dir = std::env::current_dir()?;
-    build(cfg_override, None, true, None, None, None)?;
+    build(
+        cfg_override,
+        None,
+        true,
+        None,
+        match solana_version.is_some() {
+            true => solana_version,
+            false => cfg.solana_version.clone(),
+        },
+        None,
+        None,
+    )?;
     std::env::set_current_dir(&cur_dir)?;
 
     // Verify binary.
@@ -1211,7 +1298,7 @@ fn test(
     with_workspace(cfg_override, |cfg, _cargo| {
         // Build if needed.
         if !skip_build {
-            build(cfg_override, None, false, None, None, None)?;
+            build(cfg_override, None, false, None, None, None, None)?;
         }
 
         // Run the deploy against the cluster in two cases:
@@ -1536,6 +1623,7 @@ fn launch(
         None,
         verifiable,
         program_name.clone(),
+        None,
         None,
         None,
     )?;
@@ -1949,6 +2037,7 @@ fn publish(cfg_override: &ConfigOverride, program_name: String) -> Result<()> {
         None,
         true,
         Some(program_name.clone()),
+        cfg.solana_version.clone(),
         None,
         None,
     )?;

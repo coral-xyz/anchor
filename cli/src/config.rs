@@ -125,6 +125,7 @@ impl<T> std::ops::DerefMut for WithPath<T> {
 #[derive(Debug, Default)]
 pub struct Config {
     pub anchor_version: Option<String>,
+    pub solana_version: Option<String>,
     pub registry: RegistryConfig,
     pub provider: ProviderConfig,
     pub programs: ProgramsConfig,
@@ -247,6 +248,7 @@ impl Config {
 #[derive(Debug, Serialize, Deserialize)]
 struct _Config {
     anchor_version: Option<String>,
+    solana_version: Option<String>,
     registry: Option<RegistryConfig>,
     provider: Provider,
     test: Option<Test>,
@@ -273,6 +275,7 @@ impl ToString for Config {
         };
         let cfg = _Config {
             anchor_version: self.anchor_version.clone(),
+            solana_version: self.solana_version.clone(),
             registry: Some(self.registry.clone()),
             provider: Provider {
                 cluster: format!("{}", self.provider.cluster),
@@ -300,6 +303,7 @@ impl FromStr for Config {
             .map_err(|e| anyhow::format_err!("Unable to deserialize config: {}", e.to_string()))?;
         Ok(Config {
             anchor_version: cfg.anchor_version,
+            solana_version: cfg.solana_version,
             registry: cfg.registry.unwrap_or_default(),
             provider: ProviderConfig {
                 cluster: cfg.provider.cluster.parse()?,
