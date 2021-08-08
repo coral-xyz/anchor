@@ -40,8 +40,14 @@ impl FromStr for Cluster {
                     ws_url.set_port(Some(8900))
                         .map_err(|_| anyhow!("Unable to set port"))?;
                 }
-                ws_url.set_scheme("ws")
-                    .map_err(|_| anyhow!("Unable to set scheme"))?;
+                if ws_url.scheme() == "https" {
+                    ws_url.set_scheme("wss")
+                        .map_err(|_| anyhow!("Unable to set scheme"))?;
+                } else {
+                    ws_url.set_scheme("ws")
+                        .map_err(|_| anyhow!("Unable to set scheme"))?;
+                }
+
 
                 Ok(Cluster::Custom(http_url.to_string(), ws_url.to_string()))
             }
@@ -129,6 +135,25 @@ mod tests {
         let cluster = Cluster::from_str(url).unwrap();
         assert_eq!(
             Cluster::Custom(url.to_string(), "ws://my-url.com:8900/".to_string()),
+            cluster
+        );
+    }
+
+    #[test]
+    fn test_https_port() {
+        let url = "https://my-url.com:7000/";
+        let cluster = Cluster::from_str(url).unwrap();
+        assert_eq!(
+            Cluster::Custom(url.to_string(), "wss://my-url.com:7001/".to_string()),
+            cluster
+        );
+    }
+    #[test]
+    fn test_https_no_port() {
+        let url = "https://my-url.com/";
+        let cluster = Cluster::from_str(url).unwrap();
+        assert_eq!(
+            Cluster::Custom(url.to_string(), "wss://my-url.com:8900/".to_string()),
             cluster
         );
     }
