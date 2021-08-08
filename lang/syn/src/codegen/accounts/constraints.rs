@@ -530,7 +530,7 @@ pub fn generate_pda(
                 #seeds_constraint
 
                 // Fund the account for rent exemption.
-                let required_lamports = rent
+                let required_lamports = __anchor_rent
                     .minimum_balance(anchor_spl::token::TokenAccount::LEN)
                     .max(1)
                     .saturating_sub(#field.to_account_info().lamports());
@@ -608,7 +608,7 @@ pub fn generate_pda(
                     #payer
                     #seeds_constraint
 
-                    let lamports = rent.minimum_balance(space);
+                    let lamports = __anchor_rent.minimum_balance(space);
                     let ix = anchor_lang::solana_program::system_instruction::create_account(
                         payer.to_account_info().key,
                         #field.to_account_info().key,
