@@ -40,6 +40,8 @@ impl FromStr for Cluster {
                     ws_url.set_port(Some(8900))
                         .map_err(|_| anyhow!("Unable to set port"))?;
                 }
+                ws_url.set_scheme("ws")
+                    .map_err(|_| anyhow!("Unable to set scheme"))?;
 
                 Ok(Cluster::Custom(http_url.to_string(), ws_url.to_string()))
             }
@@ -116,7 +118,7 @@ mod tests {
         let url = "http://my-url.com:7000/";
         let cluster = Cluster::from_str(url).unwrap();
         assert_eq!(
-            Cluster::Custom(url.to_string(), "http://my-url.com:7001/".to_string()),
+            Cluster::Custom(url.to_string(), "ws://my-url.com:7001/".to_string()),
             cluster
         );
     }
@@ -126,7 +128,7 @@ mod tests {
         let url = "http://my-url.com/";
         let cluster = Cluster::from_str(url).unwrap();
         assert_eq!(
-            Cluster::Custom(url.to_string(), "http://my-url.com:8900/".to_string()),
+            Cluster::Custom(url.to_string(), "ws://my-url.com:8900/".to_string()),
             cluster
         );
     }
