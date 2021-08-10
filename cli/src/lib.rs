@@ -531,7 +531,7 @@ fn build_cwd_verifiable(
 ) -> Result<()> {
     // Create output dirs.
     let workspace_dir = cfg.path().parent().unwrap().canonicalize()?;
-    fs::create_dir_all(workspace_dir.join("target/deploy"))?;
+    fs::create_dir_all(workspace_dir.join("target/verifiable"))?;
     fs::create_dir_all(workspace_dir.join("target/idl"))?;
 
     let container_name = "anchor-program";
@@ -718,7 +718,7 @@ fn docker_build(
         .parent()
         .unwrap()
         .canonicalize()?
-        .join(format!("target/deploy/{}.so", binary_name))
+        .join(format!("target/verifiable/{}.so", binary_name))
         .display()
         .to_string();
 
@@ -847,7 +847,7 @@ fn verify(
         .path()
         .parent()
         .ok_or_else(|| anyhow!("Unable to find workspace root"))?
-        .join("target/deploy/")
+        .join("target/verifiable/")
         .join(format!("{}.so", binary_name));
 
     let bin_ver = verify_bin(program_id, &bin_path, cfg.provider.cluster.url())?;
@@ -2114,27 +2114,31 @@ fn publish(cfg_override: &ConfigOverride, program_name: String) -> Result<()> {
 
     // All workspace programs.
     for path in cfg.get_program_list()? {
-        let relative_path = pathdiff::diff_paths(path, cfg.path().parent().unwrap())
-            .ok_or_else(|| anyhow!("Unable to diff paths"))?;
+        let mut dirs = walkdir::WalkDir::new(&path)
+            .into_iter()
+            .filter_entry(|e| !is_hidden(e));
 
-        let mut dirs = walkdir::WalkDir::new(&relative_path).into_iter();
         // Skip the parent dir.
         let _ = dirs.next().unwrap()?;
 
         for entry in dirs {
             let e = entry.map_err(|e| anyhow!("{:?}", e))?;
-            let path_str = e.path().display().to_string();
+
+            let e = pathdiff::diff_paths(e.path(), cfg.path().parent().unwrap())
+                .ok_or_else(|| anyhow!("Unable to diff paths"))?;
+
+            let path_str = e.display().to_string();
 
             // Skip target dir.
             if !path_str.contains("target/") && !path_str.contains("/target") {
                 // Only add the file if it's not empty.
-                let metadata = std::fs::File::open(e.path())?.metadata()?;
+                let metadata = std::fs::File::open(&e)?.metadata()?;
                 if metadata.len() > 0 {
-                    println!("PACKING: {}", e.path().display().to_string());
-                    if e.path().is_dir() {
-                        tar.append_dir_all(e.path(), e.path())?;
+                    println!("PACKING: {}", e.display().to_string());
+                    if e.is_dir() {
+                        tar.append_dir_all(&e, &e)?;
                     } else {
-                        tar.append_path(e.path())?;
+                        tar.append_path(&e)?;
                     }
                 }
             }
@@ -2214,4 +2218,12 @@ fn with_workspace<R>(
     clear_program_keys(cfg_override).unwrap();
 
     r
+}
+
+fn is_hidden(entry: &walkdir::DirEntry) -> bool {
+    entry
+        .file_name()
+        .to_str()
+        .map(|s| s == "." || s.starts_with(".") || s == "target")
+        .unwrap_or(false)
 }

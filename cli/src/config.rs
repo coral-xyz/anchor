@@ -486,7 +486,6 @@ pub struct ProgramWorkspace {
 pub struct AnchorPackage {
     pub name: String,
     pub address: String,
-    pub path: String,
     pub idl: Option<String>,
 }
 
@@ -502,19 +501,9 @@ impl AnchorPackage {
             .ok_or_else(|| anyhow!("Program not provided in Anchor.toml"))?
             .get(&name)
             .ok_or_else(|| anyhow!("Program not provided in Anchor.toml"))?;
-        let path = program_details
-            .path
-            .clone()
-            // TODO: use a default path if one isn't provided?
-            .ok_or_else(|| anyhow!("Path to program binary not provided"))?;
         let idl = program_details.idl.clone();
         let address = program_details.address.to_string();
-        Ok(Self {
-            name,
-            path,
-            address,
-            idl,
-        })
+        Ok(Self { name, address, idl })
     }
 }
 
