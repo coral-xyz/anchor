@@ -2093,34 +2093,55 @@ fn publish(cfg_override: &ConfigOverride, program_name: String) -> Result<()> {
     let mut tar = tar::Builder::new(enc);
 
     // Files that will always be included if they exist.
+    println!("PACKING: Anchor.toml");
     tar.append_path("Anchor.toml")?;
     if cargo_lock.exists() {
+        println!("PACKING: Cargo.lock");
         tar.append_path(cargo_lock)?;
     }
-    if program_cargo_lock.exists() {
-        tar.append_path(program_cargo_lock)?;
-    }
     if Path::new("Cargo.toml").exists() {
+        println!("PACKING: Cargo.toml");
         tar.append_path("Cargo.toml")?;
     }
     if Path::new("LICENSE").exists() {
+        println!("PACKING: LICENSE");
         tar.append_path("LICENSE")?;
     }
     if Path::new("README.md").exists() {
+        println!("PACKING: README.md");
         tar.append_path("README.md")?;
     }
 
     // All workspace programs.
     for path in cfg.get_program_list()? {
-        let mut relative_path = pathdiff::diff_paths(path, cfg.path().parent().unwrap())
+        let relative_path = pathdiff::diff_paths(path, cfg.path().parent().unwrap())
             .ok_or_else(|| anyhow!("Unable to diff paths"))?;
 
-        // HACK for workspaces wtih single programs. Change this.
-        if relative_path.display().to_string() == *"" {
-            relative_path = "src".into();
+        let mut dirs = walkdir::WalkDir::new(&relative_path).into_iter();
+        // Skip the parent dir.
+        let _ = dirs.next().unwrap()?;
+
+        for entry in dirs {
+            let e = entry.map_err(|e| anyhow!("{:?}", e))?;
+            let path_str = e.path().display().to_string();
+
+            // Skip target dir.
+            if !path_str.contains("target/") && !path_str.contains("/target") {
+                // Only add the file if it's not empty.
+                let metadata = std::fs::File::open(e.path())?.metadata()?;
+                if metadata.len() > 0 {
+                    println!("PACKING: {}", e.path().display().to_string());
+                    if e.path().is_dir() {
+                        tar.append_dir_all(e.path(), e.path())?;
+                    } else {
+                        tar.append_path(e.path())?;
+                    }
+                }
+            }
         }
-        tar.append_dir_all(relative_path.clone(), relative_path)?;
     }
+
+    // Tar pack complete.
     tar.into_inner()?;
 
     // Upload the tarball to the server.
