@@ -261,6 +261,7 @@ impl Config {
             // root workspace Cargo.toml.
             if cargo_toml.is_none() && cargo_toml_level.is_some() {
                 let toml = cargo_toml::Manifest::from_path(cargo_toml_level.as_ref().unwrap())?;
+                // TODO: this is what's causing failures.
                 if toml.workspace.is_none() {
                     cargo_toml = cargo_toml_level;
                 }
@@ -434,6 +435,7 @@ pub fn extract_lib_name(cargo_toml: impl AsRef<Path>) -> Result<String> {
 #[derive(Debug, Clone)]
 pub struct Program {
     pub lib_name: String,
+    // Canonicalized path to the program directory.
     pub path: PathBuf,
     pub idl: Option<Idl>,
 }
