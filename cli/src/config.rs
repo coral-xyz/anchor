@@ -97,13 +97,27 @@ impl WithPath<Config> {
             .workspace
             .members
             .iter()
-            .map(|m| PathBuf::from(m).canonicalize().unwrap())
+            .map(|m| {
+                self.path()
+                    .parent()
+                    .unwrap()
+                    .join(m)
+                    .canonicalize()
+                    .unwrap()
+            })
             .collect();
         let exclude = self
             .workspace
             .exclude
             .iter()
-            .map(|m| PathBuf::from(m).canonicalize().unwrap())
+            .map(|m| {
+                self.path()
+                    .parent()
+                    .unwrap()
+                    .join(m)
+                    .canonicalize()
+                    .unwrap()
+            })
             .collect();
         Ok((members, exclude))
     }
