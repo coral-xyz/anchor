@@ -2042,7 +2042,19 @@ fn publish(cfg_override: &ConfigOverride, program_name: String) -> Result<()> {
     // Discover the various workspace configs.
     let (cfg, _cargo_path) = Config::discover(cfg_override)?.expect("Not in workspace.");
 
-    if !Path::new("Cargo.lock").exists() {
+    let program = cfg
+        .get_program(&program_name)?
+        .ok_or_else(|| anyhow!("Workspace member not found"))?;
+
+    let program_cargo_lock = pathdiff::diff_paths(
+        program.path().join("Cargo.lock"),
+        cfg.path().parent().unwrap(),
+    )
+    .ok_or_else(|| anyhow!("Unable to diff Cargo.lock path"))?;
+    let cargo_lock = Path::new("Cargo.lock");
+
+    // There must be a Cargo.lock
+    if !program_cargo_lock.exists() && !cargo_lock.exists() {
         return Err(anyhow!("Cargo.lock must exist for a verifiable build"));
     }
 
@@ -2082,7 +2094,12 @@ fn publish(cfg_override: &ConfigOverride, program_name: String) -> Result<()> {
 
     // Files that will always be included if they exist.
     tar.append_path("Anchor.toml")?;
-    tar.append_path("Cargo.lock")?;
+    if cargo_lock.exists() {
+        tar.append_path(cargo_lock)?;
+    }
+    if program_cargo_lock.exists() {
+        tar.append_path(program_cargo_lock)?;
+    }
     if Path::new("Cargo.toml").exists() {
         tar.append_path("Cargo.toml")?;
     }

@@ -107,6 +107,29 @@ impl WithPath<Config> {
             .collect();
         Ok((members, exclude))
     }
+
+    pub fn get_program(&self, name: &str) -> Result<Option<WithPath<Program>>> {
+        for program in self.read_all_programs()? {
+            let cargo_toml = program.path.join("Cargo.toml");
+            if !cargo_toml.exists() {
+                return Err(anyhow!(
+                    "Did not find Cargo.toml at the path: {}",
+                    program.path.display()
+                ));
+            }
+            let p_lib_name = extract_lib_name(&cargo_toml)?;
+            if name == p_lib_name {
+                let path = self
+                    .path()
+                    .parent()
+                    .unwrap()
+                    .canonicalize()?
+                    .join(&program.path);
+                return Ok(Some(WithPath::new(program, path)));
+            }
+        }
+        return Ok(None);
+    }
 }
 
 impl<T> std::ops::Deref for WithPath<T> {
