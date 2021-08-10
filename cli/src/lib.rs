@@ -1,4 +1,6 @@
-use crate::config::{AnchorPackage, Config, ConfigOverride, Program, ProgramWorkspace, WithPath};
+use crate::config::{
+    AnchorPackage, Config, ConfigOverride, Manifest, Program, ProgramWorkspace, WithPath,
+};
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction};
 use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
@@ -411,7 +413,7 @@ pub fn build(
                     program.path.display()
                 ));
             }
-            let p_lib_name = config::extract_lib_name(&cargo_toml)?;
+            let p_lib_name = Manifest::from_path(&cargo_toml)?.lib_name()?;
             if program_name.as_str() == p_lib_name {
                 std::env::set_current_dir(&program.path)?;
                 did_find_program = true;
@@ -443,17 +445,31 @@ pub fn build(
         true => solana_version,
         false => cfg.solana_version.clone(),
     };
-    match cargo {
-        None => build_all(&cfg, cfg.path(), idl_out, verifiable, solana_version)?,
-        Some(ct) => build_cwd(
+
+    // If the Cargo.toml is in the same directory as the Anchor.toml build
+    // the entire workspace.
+    if cargo.path().parent() == cfg.path().parent() {
+        build_all(
             &cfg,
-            ct,
+            cfg.path(),
             idl_out,
             verifiable,
             solana_version,
             stdout,
             stderr,
-        )?,
+        )?;
+    }
+    // Otherwise, only build the current dir's Cargo.toml.
+    else {
+        build_cwd(
+            &cfg,
+            cargo.path().to_path_buf(),
+            idl_out,
+            verifiable,
+            solana_version,
+            stdout,
+            stderr,
+        )?;
     };
 
     set_workspace_dir_or_exit();
@@ -467,6 +483,8 @@ fn build_all(
     idl_out: Option<PathBuf>,
     verifiable: bool,
     solana_version: Option<String>,
+    stdout: Option<File>, // Used for the package registry server.
+    stderr: Option<File>, // Used for the package registry server.
 ) -> Result<()> {
     let cur_dir = std::env::current_dir()?;
     let r = match cfg_path.parent() {
@@ -479,8 +497,8 @@ fn build_all(
                     idl_out.clone(),
                     verifiable,
                     solana_version.clone(),
-                    None,
-                    None,
+                    stdout.as_ref().map(|f| f.try_clone()).transpose()?,
+                    stderr.as_ref().map(|f| f.try_clone()).transpose()?,
                 )?;
             }
             Ok(())
@@ -506,7 +524,13 @@ fn build_cwd(
     };
     match verifiable {
         false => _build_cwd(idl_out),
-        true => build_cwd_verifiable(cfg, cargo_toml, solana_version, stdout, stderr),
+        true => build_cwd_verifiable(
+            cfg,
+            cargo_toml,
+            solana_version,
+            stdout.into(),
+            stderr.into(),
+        ),
     }
 }
 
@@ -585,7 +609,7 @@ fn docker_build(
     stdout: Option<File>,
     stderr: Option<File>,
 ) -> Result<()> {
-    let binary_name = config::extract_lib_name(&cargo_toml)?;
+    let binary_name = Manifest::from_path(&cargo_toml)?.lib_name()?;
 
     // Docker vars.
     let image_name = cfg.docker();
@@ -776,7 +800,7 @@ fn verify(
                     program.path.display()
                 ));
             }
-            let p_lib_name = config::extract_lib_name(&cargo_toml)?;
+            let p_lib_name = Manifest::from_path(&cargo_toml)?.lib_name()?;
             if program_name.as_str() == p_lib_name {
                 std::env::set_current_dir(&program.path)?;
                 did_find_program = true;
@@ -793,10 +817,7 @@ fn verify(
 
     // Proceed with the command.
     let (cfg, cargo) = Config::discover(cfg_override)?.expect("Not in workspace.");
-    let cargo = cargo.ok_or_else(|| {
-        anyhow!("Must be inside program subdirectory if no program name is given.")
-    })?;
-    let program_dir = cargo.parent().unwrap();
+    let program_dir = cargo.path().parent().unwrap();
 
     // Build the program we want to verify.
     let cur_dir = std::env::current_dir()?;
@@ -815,18 +836,7 @@ fn verify(
     std::env::set_current_dir(&cur_dir)?;
 
     // Verify binary.
-    let binary_name = {
-        let cargo_toml = cargo_toml::Manifest::from_path(&cargo)?;
-        match cargo_toml.lib {
-            None => {
-                cargo_toml
-                    .package
-                    .ok_or_else(|| anyhow!("Package section not provided"))?
-                    .name
-            }
-            Some(lib) => lib.name.ok_or_else(|| anyhow!("Name not provided"))?,
-        }
-    };
+    let binary_name = cargo.lib_name()?;
     let bin_path = cfg
         .path()
         .parent()
