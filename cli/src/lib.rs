@@ -437,7 +437,15 @@ pub fn build(
             stderr,
         )?,
         // If the Cargo.toml is at the root, build the entire workspace.
-        Some(cargo) if cargo.path().parent() == cfg.path().parent() => {}
+        Some(cargo) if cargo.path().parent() == cfg.path().parent() => build_all(
+            &cfg,
+            cfg.path(),
+            idl_out,
+            verifiable,
+            solana_version,
+            stdout,
+            stderr,
+        )?,
         // Cargo.toml represents a single package. Build it.
         Some(cargo) => build_cwd(
             &cfg,
