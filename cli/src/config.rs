@@ -78,6 +78,29 @@ impl Manifest {
                 .to_string())
         }
     }
+
+    // Climbs each parent directory until we find a Cargo.toml.
+    pub fn discover() -> Result<Option<WithPath<Manifest>>> {
+        let _cwd = std::env::current_dir()?;
+        let mut cwd_opt = Some(_cwd.as_path());
+
+        while let Some(cwd) = cwd_opt {
+            for f in fs::read_dir(cwd)? {
+                let p = f?.path();
+                if let Some(filename) = p.file_name() {
+                    if filename.to_str() == Some("Cargo.toml") {
+                        let m = WithPath::new(Manifest::from_path(&p)?, p);
+                        return Ok(Some(m));
+                    }
+                }
+            }
+
+            // Not found. Go up a directory level.
+            cwd_opt = cwd.parent();
+        }
+
+        Ok(None)
+    }
 }
 
 impl Deref for Manifest {
@@ -251,77 +274,49 @@ impl Config {
         format!("projectserum/build:v{}", ver)
     }
 
-    pub fn discover(
-        cfg_override: &ConfigOverride,
-    ) -> Result<Option<(WithPath<Config>, WithPath<Manifest>)>> {
+    pub fn discover(cfg_override: &ConfigOverride) -> Result<Option<WithPath<Config>>> {
         Config::_discover().map(|opt| {
-            opt.map(|(mut cfg, cargo_toml)| {
+            opt.map(|mut cfg| {
                 if let Some(cluster) = cfg_override.cluster.clone() {
                     cfg.provider.cluster = cluster;
                 }
-
                 if let Some(wallet) = cfg_override.wallet.clone() {
                     cfg.provider.wallet = wallet;
                 }
-                (cfg, cargo_toml)
+                cfg
             })
         })
     }
 
-    // Searches all parent directories for an Anchor.toml file. Also returns
-    // the first Cargo.toml found while looking.
-    fn _discover() -> Result<Option<(WithPath<Config>, WithPath<Manifest>)>> {
+    // Climbs each parent directory until we find an Anchor.toml.
+    fn _discover() -> Result<Option<WithPath<Config>>> {
         let _cwd = std::env::current_dir()?;
         let mut cwd_opt = Some(_cwd.as_path());
 
-        // Set to true if we ever see a Cargo.toml file when climbing the
-        // parent directories.
-        let mut cargo_toml = None;
-
         while let Some(cwd) = cwd_opt {
-            let mut cargo_toml_level = None;
-            let mut anchor_toml = None;
-
-            // For all files in the currdir, does an Anchor.toml or Cargo.toml
-            // exist?
             for f in fs::read_dir(cwd)? {
                 let p = f?.path();
                 if let Some(filename) = p.file_name() {
-                    if filename.to_str() == Some("Cargo.toml") {
-                        cargo_toml_level = Some(p);
-                    } else if filename.to_str() == Some("Anchor.toml") {
-                        let mut cfg_file = File::open(&p)?;
-                        let mut cfg_contents = String::new();
-                        cfg_file.read_to_string(&mut cfg_contents)?;
-                        let cfg = cfg_contents.parse()?;
-                        anchor_toml = Some((cfg, p));
+                    if filename.to_str() == Some("Anchor.toml") {
+                        let cfg = Config::from_path(&p)?;
+                        return Ok(Some(WithPath::new(cfg, p)));
                     }
                 }
             }
 
-            // Cargo.toml found.
-            if cargo_toml.is_none() && cargo_toml_level.is_some() {
-                let path = cargo_toml_level.as_ref().unwrap();
-                let toml = Manifest::from_path(path)?;
-                cargo_toml = Some(WithPath::new(toml, path.to_path_buf()));
-            }
-
-            // Found the Anchor.toml so we're done.
-            if let Some((cfg, parent)) = anchor_toml {
-                let anchor_toml = WithPath::new(cfg, parent);
-
-                if let Some(cargo_toml) = cargo_toml {
-                    return Ok(Some((anchor_toml, cargo_toml)));
-                }
-
-                return Err(anyhow!("Cargo.toml not found in Anchor workspace"));
-            }
-
-            // Not found. Go up a directory level.
             cwd_opt = cwd.parent();
         }
 
         Ok(None)
+    }
+
+    fn from_path(p: impl AsRef<Path>) -> Result<Self> {
+        let mut cfg_file = File::open(&p)?;
+        let mut cfg_contents = String::new();
+        cfg_file.read_to_string(&mut cfg_contents)?;
+        let cfg = cfg_contents.parse()?;
+
+        Ok(cfg)
     }
 
     pub fn wallet_kp(&self) -> Result<Keypair> {

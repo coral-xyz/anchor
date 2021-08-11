@@ -400,35 +400,14 @@ pub fn build(
     stdout: Option<File>, // Used for the package registry server.
     stderr: Option<File>, // Used for the package registry server.
 ) -> Result<()> {
-    // Change directories to the given `program_name`, if given.
-    let (cfg, _) = Config::discover(cfg_override)?.expect("Not in workspace.");
-
-    let mut did_find_program = false;
+    // Change to the workspace member directory, if needed.
     if let Some(program_name) = program_name.as_ref() {
-        for program in cfg.read_all_programs()? {
-            let cargo_toml = program.path.join("Cargo.toml");
-            if !cargo_toml.exists() {
-                return Err(anyhow!(
-                    "Did not find Cargo.toml at the path: {}",
-                    program.path.display()
-                ));
-            }
-            let p_lib_name = Manifest::from_path(&cargo_toml)?.lib_name()?;
-            if program_name.as_str() == p_lib_name {
-                std::env::set_current_dir(&program.path)?;
-                did_find_program = true;
-                break;
-            }
-        }
-    }
-    if !did_find_program && program_name.is_some() {
-        return Err(anyhow!(
-            "{} is not part of the workspace",
-            program_name.as_ref().unwrap()
-        ));
+        cd_member(cfg_override, program_name)?;
     }
 
-    let (cfg, cargo) = Config::discover(cfg_override)?.expect("Not in workspace.");
+    let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
+    let cargo = Manifest::discover()?;
+
     let idl_out = match idl {
         Some(idl) => Some(PathBuf::from(idl)),
         None => {
@@ -446,10 +425,9 @@ pub fn build(
         false => cfg.solana_version.clone(),
     };
 
-    // If the Cargo.toml is in the same directory as the Anchor.toml build
-    // the entire workspace.
-    if cargo.path().parent() == cfg.path().parent() {
-        build_all(
+    match cargo {
+        // No Cargo.toml so build the entire workspace.
+        None => build_all(
             &cfg,
             cfg.path(),
             idl_out,
@@ -457,11 +435,11 @@ pub fn build(
             solana_version,
             stdout,
             stderr,
-        )?;
-    }
-    // Otherwise, only build the current dir's Cargo.toml.
-    else {
-        build_cwd(
+        )?,
+        // If the Cargo.toml is at the root, build the entire workspace.
+        Some(cargo) if cargo.path().parent() == cfg.path().parent() => {}
+        // Cargo.toml represents a single package. Build it.
+        Some(cargo) => build_cwd(
             &cfg,
             cargo.path().to_path_buf(),
             idl_out,
@@ -469,8 +447,8 @@ pub fn build(
             solana_version,
             stdout,
             stderr,
-        )?;
-    };
+        )?,
+    }
 
     set_workspace_dir_or_exit();
 
@@ -788,36 +766,14 @@ fn verify(
     program_name: Option<String>,
     solana_version: Option<String>,
 ) -> Result<()> {
-    // Change directories to the given `program_name`, if given.
-    let (cfg, _) = Config::discover(cfg_override)?.expect("Not in workspace.");
-    let mut did_find_program = false;
+    // Change to the workspace member directory, if needed.
     if let Some(program_name) = program_name.as_ref() {
-        for program in cfg.read_all_programs()? {
-            let cargo_toml = program.path.join("Cargo.toml");
-            if !cargo_toml.exists() {
-                return Err(anyhow!(
-                    "Did not find Cargo.toml at the path: {}",
-                    program.path.display()
-                ));
-            }
-            let p_lib_name = Manifest::from_path(&cargo_toml)?.lib_name()?;
-            if program_name.as_str() == p_lib_name {
-                std::env::set_current_dir(&program.path)?;
-                did_find_program = true;
-                break;
-            }
-        }
-    }
-    if !did_find_program && program_name.is_some() {
-        return Err(anyhow!(
-            "{} is not part of the workspace",
-            program_name.as_ref().unwrap()
-        ));
+        cd_member(cfg_override, program_name)?;
     }
 
     // Proceed with the command.
-    let (cfg, cargo) = Config::discover(cfg_override)?.expect("Not in workspace.");
-    let program_dir = cargo.path().parent().unwrap();
+    let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
+    let cargo = Manifest::discover()?.ok_or_else(|| anyhow!("Cargo.toml not found"))?;
 
     // Build the program we want to verify.
     let cur_dir = std::env::current_dir()?;
@@ -853,7 +809,6 @@ fn verify(
     // Verify IDL (only if it's not a buffer account).
     if let Some(local_idl) = extract_idl("src/lib.rs")? {
         if bin_ver.state != BinVerificationState::Buffer {
-            std::env::set_current_dir(program_dir)?;
             let deployed_idl = fetch_idl(cfg_override, program_id)?;
             if local_idl != deployed_idl {
                 println!("Error: IDLs don't match");
@@ -865,6 +820,27 @@ fn verify(
     println!("{} is verified.", program_id);
 
     Ok(())
+}
+
+fn cd_member(cfg_override: &ConfigOverride, program_name: &String) -> Result<()> {
+    // Change directories to the given `program_name`, if given.
+    let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
+
+    for program in cfg.read_all_programs()? {
+        let cargo_toml = program.path.join("Cargo.toml");
+        if !cargo_toml.exists() {
+            return Err(anyhow!(
+                "Did not find Cargo.toml at the path: {}",
+                program.path.display()
+            ));
+        }
+        let p_lib_name = Manifest::from_path(&cargo_toml)?.lib_name()?;
+        if program_name.as_str() == p_lib_name {
+            std::env::set_current_dir(&program.path)?;
+            return Ok(());
+        }
+    }
+    return Err(anyhow!("{} is not part of the workspace", program_name,));
 }
 
 pub fn verify_bin(program_id: Pubkey, bin_path: &Path, cluster: &str) -> Result<BinVerification> {
@@ -948,7 +924,7 @@ pub enum BinVerificationState {
 
 // Fetches an IDL for the given program_id.
 fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
-    let (cfg, _) = Config::discover(cfg_override)?.expect("Inside a workspace");
+    let cfg = Config::discover(cfg_override)?.expect("Inside a workspace");
     let client = RpcClient::new(cfg.provider.cluster.url().to_string());
 
     let mut account = client
@@ -1672,7 +1648,7 @@ fn launch(
 // The Solana CLI doesn't redeploy a program if this file exists.
 // So remove it to make all commands explicit.
 fn clear_program_keys(cfg_override: &ConfigOverride) -> Result<()> {
-    let (config, _) = Config::discover(cfg_override).unwrap_or_default().unwrap();
+    let config = Config::discover(cfg_override).unwrap_or_default().unwrap();
 
     for program in config.read_all_programs()? {
         let anchor_keypair_path = program.anchor_keypair_path();
@@ -1875,7 +1851,7 @@ fn set_workspace_dir_or_exit() {
             println!("Not in anchor workspace.");
             std::process::exit(1);
         }
-        Some((cfg, _)) => {
+        Some(cfg) => {
             match cfg.path().parent() {
                 None => {
                     println!("Unable to make new program");
@@ -2026,7 +2002,7 @@ fn login(_cfg_override: &ConfigOverride, token: String) -> Result<()> {
 
 fn publish(cfg_override: &ConfigOverride, program_name: String) -> Result<()> {
     // Discover the various workspace configs.
-    let (cfg, _) = Config::discover(cfg_override)?.expect("Not in workspace.");
+    let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
 
     let program = cfg
         .get_program(&program_name)?
@@ -2191,7 +2167,7 @@ fn with_workspace<R>(cfg_override: &ConfigOverride, f: impl FnOnce(&WithPath<Con
 
     clear_program_keys(cfg_override).unwrap();
 
-    let (cfg, _) = Config::discover(cfg_override)
+    let cfg = Config::discover(cfg_override)
         .expect("Previously set the workspace dir")
         .expect("Anchor.toml must always exist");
 
