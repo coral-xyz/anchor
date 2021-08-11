@@ -23,8 +23,10 @@ anchor build --verifiable
 To verify a build against a program deployed on mainnet, run
 
 ```bash
-anchor verify <program-id>
+anchor verify -p <lib-name> <program-id>
 ```
+
+where the `<lib-name>` is defined by you rprogram's Cargo.toml.
 
 If the program has an IDL, it will also check the IDL deployed on chain matches.
 
