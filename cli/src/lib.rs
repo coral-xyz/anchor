@@ -502,13 +502,7 @@ fn build_cwd(
     };
     match verifiable {
         false => _build_cwd(idl_out),
-        true => build_cwd_verifiable(
-            cfg,
-            cargo_toml,
-            solana_version,
-            stdout.into(),
-            stderr.into(),
-        ),
+        true => build_cwd_verifiable(cfg, cargo_toml, solana_version, stdout, stderr),
     }
 }
 
@@ -822,7 +816,7 @@ fn verify(
     Ok(())
 }
 
-fn cd_member(cfg_override: &ConfigOverride, program_name: &String) -> Result<()> {
+fn cd_member(cfg_override: &ConfigOverride, program_name: &str) -> Result<()> {
     // Change directories to the given `program_name`, if given.
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
 
@@ -835,7 +829,7 @@ fn cd_member(cfg_override: &ConfigOverride, program_name: &String) -> Result<()>
             ));
         }
         let p_lib_name = Manifest::from_path(&cargo_toml)?.lib_name()?;
-        if program_name.as_str() == p_lib_name {
+        if program_name == p_lib_name {
             std::env::set_current_dir(&program.path)?;
             return Ok(());
         }
@@ -2183,6 +2177,6 @@ fn is_hidden(entry: &walkdir::DirEntry) -> bool {
     entry
         .file_name()
         .to_str()
-        .map(|s| s == "." || s.starts_with(".") || s == "target")
+        .map(|s| s == "." || s.starts_with('.') || s == "target")
         .unwrap_or(false)
 }

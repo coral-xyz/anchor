@@ -55,7 +55,7 @@ pub struct Manifest(cargo_toml::Manifest);
 impl Manifest {
     pub fn from_path(p: impl AsRef<Path>) -> Result<Self> {
         cargo_toml::Manifest::from_path(p)
-            .map(|m| Manifest(m))
+            .map(Manifest)
             .map_err(Into::into)
     }
 
@@ -205,7 +205,7 @@ impl WithPath<Config> {
                 return Ok(Some(WithPath::new(program, path)));
             }
         }
-        return Ok(None);
+        Ok(None)
     }
 }
 
