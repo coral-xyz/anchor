@@ -197,7 +197,7 @@ pub fn interface(
             let sighash_tts: proc_macro2::TokenStream =
                 format!("{:?}", sighash_arr).parse().unwrap();
             quote! {
-                pub fn #method_name<'a,'b, 'c, 'info, T: anchor_lang::ToAccountMetas + anchor_lang::ToAccountInfos<'info>>(
+                pub fn #method_name<'a,'b, 'c, 'info, T: anchor_lang::Accounts<'info> + anchor_lang::ToAccountMetas + anchor_lang::ToAccountInfos<'info>>(
                     ctx: anchor_lang::CpiContext<'a, 'b, 'c, 'info, T>,
                     #(#args),*
                 ) -> anchor_lang::solana_program::entrypoint::ProgramResult {
