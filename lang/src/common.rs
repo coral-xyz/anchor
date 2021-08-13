@@ -1,6 +1,7 @@
 use crate::error::ErrorCode;
-use solana_program::account_info::AccountInfo;
-use solana_program::entrypoint::ProgramResult;
+use solana_program::{
+    account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey, system_program,
+};
 use std::io::Write;
 
 pub fn close<'info>(
@@ -20,5 +21,16 @@ pub fn close<'info>(
     cursor
         .write_all(&crate::__private::CLOSED_ACCOUNT_DISCRIMINATOR)
         .map_err(|_| ErrorCode::AccountDidNotSerialize)?;
+
+    // Reassign address to the system program so it cannot be hijacked
+
+    // This is safe since
+    // 1. bpf VM is single-threaded
+    // 2. KeyedAccount's pubkey is serialized to BPF's INPUT buffer per VM
+    unsafe {
+        let const_ptr = info.owner as *const Pubkey;
+        let mut_ptr = const_ptr as *mut Pubkey;
+        *mut_ptr = system_program::id();
+    }
     Ok(())
 }
