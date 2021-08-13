@@ -410,7 +410,7 @@ pub fn build(
     let cargo = Manifest::discover()?;
 
     let idl_out = match idl {
-        Some(idl) => Some(PathBuf::from(idl)),
+        Some(idl) => Some(PathBuf::from(idl).canonicalize()?),
         None => {
             let cfg_parent = match cfg.path().parent() {
                 None => return Err(anyhow!("Invalid Anchor.toml")),
@@ -754,7 +754,7 @@ fn _build_cwd(idl_out: Option<PathBuf>) -> Result<()> {
     if let Some(idl) = extract_idl("src/lib.rs")? {
         let out = match idl_out {
             None => PathBuf::from(".").join(&idl.name).with_extension("json"),
-            Some(o) => PathBuf::from(&o.join(&idl.name).with_extension("json")),
+            Some(o) => o.join(&idl.name).with_extension("json"),
         };
 
         write_idl(&idl, OutFile::File(out))?;
