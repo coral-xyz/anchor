@@ -306,6 +306,8 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                     .replace(Context::new(i.span(), ConstraintRentExempt::Enforce));
             }
         }
+
+        // Seeds.
         if let Some(i) = &self.seeds {
             if self.init.is_some() && self.associated_payer.is_none() {
                 return Err(ParseError::new(
@@ -315,7 +317,15 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             }
         }
 
+        // Token.
         if let Some(token_mint) = &self.token_mint {
+            if self.token_authority.is_none() {
+                return Err(ParseError::new(
+                    token_mint.span(),
+                    "token authority must be provided if token mint is",
+                ));
+            }
+
             if self.init.is_none() || (self.associated.is_none() && self.seeds.is_none()) {
                 return Err(ParseError::new(
                     token_mint.span(),
@@ -323,21 +333,44 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 ));
             }
         }
-
-        if self.init.is_some() && self.seeds.is_some() {
-            if self.token_mint.is_some() && self.mint_authority.is_some() {
-                if self.associated_space.is_some() {
-                    return Err(ParseError::new(
-                        self.init
-                            .as_ref()
-                            .unwrap()
-                            .span()
-                            .join(self.seeds.as_ref().unwrap().span())
-                            .unwrap(),
-                        "space is not required for initializing an spl token account",
-                    ));
-                }
+        if let Some(token_authority) = &self.token_authority {
+            if self.token_mint.is_none() {
+                return Err(ParseError::new(
+                    token_authority.span(),
+                    "token authority must be provided if token mint is",
+                ));
             }
+        }
+
+        // Mint.
+        if let Some(mint_decimals) = &self.mint_decimals {
+            if self.mint_authority.is_none() {
+                return Err(ParseError::new(
+                    mint_decimals.span(),
+                    "mint authority must be provided if mint decimals is",
+                ));
+            }
+        }
+        if let Some(mint_authority) = &self.mint_authority {
+            if self.mint_decimals.is_none() {
+                return Err(ParseError::new(
+                    mint_authority.span(),
+                    "mint decimals must be provided if mint authority is",
+                ));
+            }
+        }
+
+        // SPL Space.
+        if self.init.is_some()
+            && self.seeds.is_some()
+            && self.token_mint.is_some()
+            && (self.mint_authority.is_some() || self.token_authority.is_some())
+            && self.associated_space.is_some()
+        {
+            return Err(ParseError::new(
+                self.associated_space.as_ref().unwrap().span(),
+                "space is not required for initializing an spl account",
+            ));
         }
 
         let ConstraintGroupBuilder {
@@ -563,25 +596,18 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 "token authority already provided",
             ));
         }
-        if self.token_mint.is_none() {
-            return Err(ParseError::new(
-                c.span(),
-                "token must bne provided before authority",
-            ));
-        }
         self.token_authority.replace(c);
         Ok(())
     }
 
-    // TODO are these the right errors to have?
     fn add_mint_authority(&mut self, c: Context<ConstraintMintAuthority>) -> ParseResult<()> {
         if self.mint_authority.is_some() {
             return Err(ParseError::new(c.span(), "mint authority already provided"));
         }
-        if self.mint_decimals.is_none() {
+        if self.init.is_none() {
             return Err(ParseError::new(
                 c.span(),
-                "mint decimals must be provided before authority",
+                "init must be provided before mint authority",
             ));
         }
         self.mint_authority.replace(c);
