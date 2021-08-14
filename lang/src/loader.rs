@@ -166,6 +166,12 @@ impl<'info, T: ZeroCopy> ToAccountMetas for Loader<'info, T> {
     }
 }
 
+impl<'info, T: ZeroCopy> AsRef<AccountInfo<'info>> for Loader<'info, T> {
+    fn as_ref(&self) -> &AccountInfo<'info> {
+        &self.acc_info
+    }
+}
+
 impl<'info, T: ZeroCopy> ToAccountInfos<'info> for Loader<'info, T> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         vec![self.acc_info.clone()]

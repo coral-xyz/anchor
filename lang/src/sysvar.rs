@@ -60,6 +60,12 @@ impl<'info, T: solana_program::sysvar::Sysvar> ToAccountInfos<'info> for Sysvar<
     }
 }
 
+impl<'info, T: solana_program::sysvar::Sysvar> AsRef<AccountInfo<'info>> for Sysvar<'info, T> {
+    fn as_ref(&self) -> &AccountInfo<'info> {
+        &self.info
+    }
+}
+
 impl<'a, T: solana_program::sysvar::Sysvar> Deref for Sysvar<'a, T> {
     type Target = T;
 
