@@ -464,27 +464,6 @@ pub fn generate_pda(
     let field = &f.ident;
     let (account_ty, account_wrapper_ty, is_zero_copy) = parse_ty(f);
 
-    let space = match space {
-        // If no explicit space param was given, serialize the type to bytes
-        // and take the length (with +8 for the discriminator.)
-        None => match is_zero_copy {
-            false => {
-                quote! {
-                    let space = 8 + #account_ty::default().try_to_vec().unwrap().len();
-                }
-            }
-            true => {
-                quote! {
-                    let space = 8 + anchor_lang::__private::bytemuck::bytes_of(&#account_ty::default()).len();
-                }
-            }
-        },
-        // Explicit account size given. Use it.
-        Some(s) => quote! {
-            let space = #s;
-        },
-    };
-
     let nonce_assignment = match assign_nonce {
         false => quote! {},
         true => match &f.ty {
@@ -525,7 +504,6 @@ pub fn generate_pda(
     match kind {
         PdaKind::Token { owner, mint } => quote! {
             let #field: #combined_account_ty = {
-                #space
                 #payer
                 #seeds_constraint
 
@@ -569,7 +547,6 @@ pub fn generate_pda(
         },
         PdaKind::Mint { owner, decimals } => quote! {
             let #field: #combined_account_ty = {
-                #space
                 #payer
                 #seeds_constraint
 
@@ -610,6 +587,27 @@ pub fn generate_pda(
             };
         },
         PdaKind::Program { owner } => {
+            let space = match space {
+                // If no explicit space param was given, serialize the type to bytes
+                // and take the length (with +8 for the discriminator.)
+                None => match is_zero_copy {
+                    false => {
+                        quote! {
+                                let space = 8 + #account_ty::default().try_to_vec().unwrap().len();
+                        }
+                    }
+                    true => {
+                        quote! {
+                                let space = 8 + anchor_lang::__private::bytemuck::bytes_of(&#account_ty::default()).len();
+                        }
+                    }
+                },
+                // Explicit account size given. Use it.
+                Some(s) => quote! {
+                        let space = #s;
+                },
+            };
+
             // Owner of the account being created. If not specified,
             // default to the currently executing program.
             let owner = match owner {

@@ -9,20 +9,18 @@ use misc2::misc2::MyState as Misc2State;
 pub struct TestTokenSeedsInit<'info> {
     #[account(
         init,
-        mint_decimals = 6,
-        mint_authority = authority,
         seeds = [b"my-mint-seed".as_ref(), &[mint_bump]],
         payer = authority,
-        space = Mint::LEN,
+        mint::decimals = 6,
+        mint::authority = authority,
     )]
     pub mint: CpiAccount<'info, Mint>,
     #[account(
         init,
-        token_mint = mint,
-        token_authority = authority,
         seeds = [b"my-token-seed".as_ref(), &[token_bump]],
         payer = authority,
-        space = TokenAccount::LEN,
+        token::mint = mint,
+        token::authority = authority,
     )]
     pub my_pda: CpiAccount<'info, TokenAccount>,
     pub authority: AccountInfo<'info>,

@@ -67,6 +67,60 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
         "executable" => {
             ConstraintToken::Executable(Context::new(ident.span(), ConstraintExecutable {}))
         }
+        "mint" => {
+            stream.parse::<Token![:]>()?;
+            stream.parse::<Token![:]>()?;
+            let kw = stream.call(Ident::parse_any)?.to_string();
+            stream.parse::<Token![=]>()?;
+
+            let span = ident
+                .span()
+                .join(stream.span())
+                .unwrap_or_else(|| ident.span());
+
+            match kw.as_str() {
+                "authority" => ConstraintToken::MintAuthority(Context::new(
+                    span,
+                    ConstraintMintAuthority {
+                        mint_auth: stream.parse()?,
+                    },
+                )),
+                "decimals" => ConstraintToken::MintDecimals(Context::new(
+                    span,
+                    ConstraintMintDecimals {
+                        decimals: stream.parse()?,
+                    },
+                )),
+                _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
+            }
+        }
+        "token" => {
+            stream.parse::<Token![:]>()?;
+            stream.parse::<Token![:]>()?;
+            let kw = stream.call(Ident::parse_any)?.to_string();
+            stream.parse::<Token![=]>()?;
+
+            let span = ident
+                .span()
+                .join(stream.span())
+                .unwrap_or_else(|| ident.span());
+
+            match kw.as_str() {
+                "mint" => ConstraintToken::TokenMint(Context::new(
+                    span,
+                    ConstraintTokenMint {
+                        mint: stream.parse()?,
+                    },
+                )),
+                "authority" => ConstraintToken::TokenAuthority(Context::new(
+                    span,
+                    ConstraintTokenAuthority {
+                        auth: stream.parse()?,
+                    },
+                )),
+                _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
+            }
+        }
         _ => {
             stream.parse::<Token![=]>()?;
             let span = ident
@@ -162,30 +216,6 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                     span,
                     ConstraintAddress {
                         address: stream.parse()?,
-                    },
-                )),
-                "token_mint" => ConstraintToken::TokenMint(Context::new(
-                    ident.span(),
-                    ConstraintTokenMint {
-                        mint: stream.parse()?,
-                    },
-                )),
-                "token_authority" => ConstraintToken::TokenAuthority(Context::new(
-                    ident.span(),
-                    ConstraintTokenAuthority {
-                        auth: stream.parse()?,
-                    },
-                )),
-                "mint_authority" => ConstraintToken::MintAuthority(Context::new(
-                    ident.span(),
-                    ConstraintMintAuthority {
-                        mint_auth: stream.parse()?,
-                    },
-                )),
-                "mint_decimals" => ConstraintToken::MintDecimals(Context::new(
-                    ident.span(),
-                    ConstraintMintDecimals {
-                        decimals: stream.parse()?,
                     },
                 )),
                 "bump" => ConstraintToken::Bump(Context::new(
@@ -291,6 +321,22 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                     token_mint.span(),
                     "init is required for a pda token",
                 ));
+            }
+        }
+
+        if self.init.is_some() && self.seeds.is_some() {
+            if self.token_mint.is_some() && self.mint_authority.is_some() {
+                if self.associated_space.is_some() {
+                    return Err(ParseError::new(
+                        self.init
+                            .as_ref()
+                            .unwrap()
+                            .span()
+                            .join(self.seeds.as_ref().unwrap().span())
+                            .unwrap(),
+                        "space is not required for initializing an spl token account",
+                    ));
+                }
             }
         }
 
