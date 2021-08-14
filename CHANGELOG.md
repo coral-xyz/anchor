@@ -11,6 +11,12 @@ incremented for features.
 
 ## [Unreleased]
 
+* lang: Add constraints for initializing mint accounts as pdas, `#[account(init, seeds = [...], mint::decimals = <expr>, mint::authority = <expr>)]` ([#](https://github.com/project-serum/anchor/pull/562)).
+
+### Breaking Changes
+
+* lang: Change `#[account(init, seeds = [...], token = <expr>, authority = <expr>)]` to `#[account(init, token::mint = <expr> token::authority = <expr>)]` ([#](https://github.com/project-serum/anchor/pull/562)).
+
 ## [0.13.0] - 2021-08-08
 
 ### Features
