@@ -596,6 +596,12 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 "token authority already provided",
             ));
         }
+        if self.init.is_none() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before token authority",
+            ));
+        }
         self.token_authority.replace(c);
         Ok(())
     }
