@@ -291,11 +291,11 @@ fn generate_constraint_seeds_address(
     c: &ConstraintSeedsGroup,
 ) -> proc_macro2::TokenStream {
     let name = &f.ident;
+    let s = &c.seeds;
 
     // If the bump is provided on *initialization*, then force it to be the
     // canonical nonce.
     if c.is_init && c.bump.is_some() && c.bump.as_ref().unwrap().is_some() {
-        let s = &c.seeds;
         let b = c.bump.as_ref().unwrap().as_ref().unwrap();
         quote! {
             let (__program_signer, __bump) = anchor_lang::solana_program::pubkey::Pubkey::find_program_address(
@@ -310,8 +310,6 @@ fn generate_constraint_seeds_address(
             }
         }
     } else {
-        let s = &c.seeds;
-
         let seeds = match c.bump.as_ref() {
             // Bump keyword not given, so just use the seeds.
             None => {
