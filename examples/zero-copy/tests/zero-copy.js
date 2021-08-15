@@ -136,12 +136,18 @@ describe("zero-copy", () => {
       },
     });
 
-    const bar = await PublicKey.findProgramAddress(
-      [program.provider.wallet.publicKey.toBuffer(), foo.publicKey.toBuffer()],
-      program.programId
-    );
-    assert.ok(bar.authority.equals(program.provider.wallet.publicKey));
-    assert.ok(bar.data.toNumber() === 0);
+    const bar = (
+      await PublicKey.findProgramAddress(
+        [
+          program.provider.wallet.publicKey.toBuffer(),
+          foo.publicKey.toBuffer(),
+        ],
+        program.programId
+      )
+    )[0];
+    const barAccount = await program.account.bar.fetch(bar);
+    assert.ok(barAccount.authority.equals(program.provider.wallet.publicKey));
+    assert.ok(barAccount.data.toNumber() === 0);
   });
 
   it("Updates an associated zero copy account", async () => {
