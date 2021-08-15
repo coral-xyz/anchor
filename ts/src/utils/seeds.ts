@@ -1,5 +1,5 @@
-import {utils} from "../index";
-import {PublicKey} from "@solana/web3.js";
+import { utils } from "../index";
+import { PublicKey } from "@solana/web3.js";
 
 /**
  * can be used like that:
@@ -14,11 +14,11 @@ import {PublicKey} from "@solana/web3.js";
  *     )
  */
 export function from(...stringSeeds: (string | PublicKey)[]): Buffer[] {
-  return stringSeeds.map(it => {
-    if (typeof it === 'string') {
+  return stringSeeds.map((it) => {
+    if (typeof it === "string") {
       return Buffer.from(utils.bytes.utf8.encode(it));
     } else {
       return it.toBuffer();
     }
-  })
+  });
 }
