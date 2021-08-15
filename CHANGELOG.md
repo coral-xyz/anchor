@@ -11,11 +11,30 @@ incremented for features.
 
 ## [Unreleased]
 
+### Features
+
+* lang: Ignore `Unnamed` structs instead of panic ([#605](https://github.com/project-serum/anchor/pull/605)).
 * lang: Add constraints for initializing mint accounts as pdas, `#[account(init, seeds = [...], mint::decimals = <expr>, mint::authority = <expr>)]` ([#](https://github.com/project-serum/anchor/pull/562)).
 
 ### Breaking Changes
 
 * lang: Change `#[account(init, seeds = [...], token = <expr>, authority = <expr>)]` to `#[account(init, token::mint = <expr> token::authority = <expr>)]` ([#](https://github.com/project-serum/anchor/pull/562)).
+
+## [0.13.2] - 2021-08-11
+
+### Fixes
+
+* cli: Fix `anchor init` command "Workspace not found" regression ([#598](https://github.com/project-serum/anchor/pull/598)).
+
+## [0.13.1] - 2021-08-10
+
+### Features
+
+* cli: Programs embedded into genesis during tests will produce program logs.
+
+### Fixes
+
+* cli: Allows Cargo.lock to exist in workspace subdirectories when publishing ([#593](https://github.com/project-serum/anchor/pull/593)).
 
 ## [0.13.0] - 2021-08-08
 
