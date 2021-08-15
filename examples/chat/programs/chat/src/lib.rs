@@ -39,12 +39,12 @@ pub mod chat {
 #[instruction(name: String, bump: u8)]
 pub struct CreateUser<'info> {
     #[account(
-				init,
-				seeds = [authority.key().as_ref()],
-				bump = bump,
-				payer = authority,
-				space = 320,
-		)]
+        init,
+        seeds = [authority.key().as_ref()],
+        bump = bump,
+        payer = authority,
+        space = 320,
+    )]
     user: ProgramAccount<'info, User>,
     #[account(signer)]
     authority: AccountInfo<'info>,
@@ -60,9 +60,9 @@ pub struct CreateChatRoom<'info> {
 #[derive(Accounts)]
 pub struct SendMessage<'info> {
     #[account(
-				seeds = [authority.key().as_ref(), &[user.bump]],
-				has_one = authority,
-		)]
+        seeds = [authority.key().as_ref(), &[user.bump]],
+        has_one = authority,
+    )]
     user: ProgramAccount<'info, User>,
     #[account(signer)]
     authority: AccountInfo<'info>,

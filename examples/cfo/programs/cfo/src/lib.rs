@@ -298,16 +298,16 @@ pub mod cfo {
 #[instruction(bumps: OfficerBumps)]
 pub struct CreateOfficer<'info> {
     #[account(
-				init,
-				seeds = [dex_program.key.as_ref()],
-				bump = bumps.bump,
-				payer = authority,
-		)]
+        init,
+        seeds = [dex_program.key.as_ref()],
+        bump = bumps.bump,
+        payer = authority,
+    )]
     officer: ProgramAccount<'info, Officer>,
     #[account(
         init,
         seeds = [b"vault", officer.key().as_ref()],
-				bump = bumps.srm,
+        bump = bumps.srm,
         payer = authority,
         token::mint = mint,
         token::authority = officer,
@@ -316,7 +316,7 @@ pub struct CreateOfficer<'info> {
     #[account(
         init,
         seeds = [b"stake", officer.key().as_ref()],
-				bump = bumps.stake,
+        bump = bumps.stake,
         payer = authority,
         token::mint = mint,
         token::authority = officer,
@@ -325,7 +325,7 @@ pub struct CreateOfficer<'info> {
     #[account(
         init,
         seeds = [b"treasury", officer.key().as_ref()],
-				bump = bumps.treasury,
+        bump = bumps.treasury,
         payer = authority,
         token::mint = mint,
         token::authority = officer,
@@ -355,8 +355,8 @@ pub struct CreateOfficerToken<'info> {
     officer: ProgramAccount<'info, Officer>,
     #[account(
         init,
-				seeds = [officer.key().as_ref(), mint.key().as_ref()],
-				bump = bump,
+        seeds = [officer.key().as_ref(), mint.key().as_ref()],
+        bump = bump,
         token::mint = mint,
         token::authority = officer,
         payer = payer,
@@ -450,7 +450,7 @@ pub struct SwapToSrm<'info> {
     quote_vault: AccountInfo<'info>,
     #[account(
         seeds = [officer.key().as_ref(), mint::SRM.as_ref()],
-				bump,
+        bump,
         constraint = &officer.treasury != from_vault.key,
         constraint = &officer.stake != from_vault.key,
     )]
@@ -529,8 +529,8 @@ pub struct DropStakeReward<'info> {
     )]
     officer: ProgramAccount<'info, Officer>,
     #[account(
-				seeds = [b"stake", officer.key().as_ref(), &[officer.bumps.stake]]
-		)]
+        seeds = [b"stake", officer.key().as_ref(), &[officer.bumps.stake]]
+    )]
     stake: CpiAccount<'info, TokenAccount>,
     #[cfg_attr(
         not(feature = "test"),
