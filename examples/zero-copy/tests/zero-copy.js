@@ -131,7 +131,6 @@ describe("zero-copy", () => {
         )[0],
         authority: program.provider.wallet.publicKey,
         foo: foo.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
     });

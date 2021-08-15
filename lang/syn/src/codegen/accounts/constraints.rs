@@ -268,11 +268,30 @@ fn generate_constraint_seeds_init(f: &Field, c: &ConstraintSeedsGroup) -> proc_m
     let seeds_with_nonce = {
         let s = &c.seeds;
         match c.bump.as_ref() {
+            // Bump keyword not given. Just use the seeds.
             None => quote! {
                 [#s]
             },
-            Some(b) => quote! {
-                [#s, &[#b]]
+            // Bump keyword given.
+            Some(bump) => match bump {
+                // Bump target not given. Use the canonical bump.
+                None => {
+                    quote! {
+                        [
+                            #s,
+                            &[
+                                Pubkey::find_program_address(
+                                    &[#s],
+                                    program_id,
+                                ).1
+                            ]
+                        ]
+                    }
+                }
+                // Bump target given. Use it.
+                Some(b) => quote! {
+                    [#s, &[#b]]
+                },
             },
         }
     };
