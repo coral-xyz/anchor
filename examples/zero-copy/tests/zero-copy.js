@@ -1,4 +1,5 @@
-const anchor = require("@project-serum/anchor");
+//const anchor = require("@project-serum/anchor");
+const anchor = require("/home/armaniferrante/Documents/code/src/github.com/project-serum/anchor/ts");
 const PublicKey = anchor.web3.PublicKey;
 const BN = anchor.BN;
 const assert = require("assert");
@@ -120,10 +121,15 @@ describe("zero-copy", () => {
   it("Creates an associated zero copy account", async () => {
     await program.rpc.createBar({
       accounts: {
-        bar: await program.account.bar.associatedAddress(
-          program.provider.wallet.publicKey,
-          foo.publicKey
-        ),
+        bar: (
+          await PublicKey.findProgramAddress(
+            [
+              program.provider.wallet.publicKey.toBuffer(),
+              foo.publicKey.toBuffer(),
+            ],
+            program.programId
+          )
+        )[0],
         authority: program.provider.wallet.publicKey,
         foo: foo.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
@@ -131,31 +137,34 @@ describe("zero-copy", () => {
       },
     });
 
-    const bar = await program.account.bar.associated(
-      program.provider.wallet.publicKey,
-      foo.publicKey
+    const bar = await PublicKey.findProgramAddress(
+      [program.provider.wallet.publicKey.toBuffer(), foo.publicKey.toBuffer()],
+      program.programId
     );
     assert.ok(bar.authority.equals(program.provider.wallet.publicKey));
     assert.ok(bar.data.toNumber() === 0);
   });
 
   it("Updates an associated zero copy account", async () => {
+    const bar = (
+      await PublicKey.findProgramAddress(
+        [
+          program.provider.wallet.publicKey.toBuffer(),
+          foo.publicKey.toBuffer(),
+        ],
+        program.programId
+      )
+    )[0];
     await program.rpc.updateBar(new BN(99), {
       accounts: {
-        bar: await program.account.bar.associatedAddress(
-          program.provider.wallet.publicKey,
-          foo.publicKey
-        ),
+        bar,
         authority: program.provider.wallet.publicKey,
         foo: foo.publicKey,
       },
     });
-    const bar = await program.account.bar.associated(
-      program.provider.wallet.publicKey,
-      foo.publicKey
-    );
-    assert.ok(bar.authority.equals(program.provider.wallet.publicKey));
-    assert.ok(bar.data.toNumber() === 99);
+    const barAccount = await program.account.bar.fetch(bar);
+    assert.ok(barAccount.authority.equals(program.provider.wallet.publicKey));
+    assert.ok(barAccount.data.toNumber() === 99);
   });
 
   const eventQ = anchor.web3.Keypair.generate();
