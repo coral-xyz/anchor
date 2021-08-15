@@ -1,5 +1,4 @@
-//const anchor = require("@project-serum/anchor");
-const anchor = require("/home/armaniferrante/Documents/code/src/github.com/project-serum/anchor/ts");
+const anchor = require("@project-serum/anchor");
 const PublicKey = anchor.web3.PublicKey;
 const BN = anchor.BN;
 const assert = require("assert");
