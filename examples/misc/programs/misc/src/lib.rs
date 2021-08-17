@@ -120,20 +120,20 @@ pub mod misc {
     ) -> ProgramResult {
         Ok(())
     }
+    /*
+        pub fn test_init_aux_account(ctx: Context<TestInitAuxAccount>, input: u16) -> ProgramResult {
+            ctx.accounts.my_account.data = input;
+            Ok(())
+        }
 
-    pub fn test_init_aux_account(ctx: Context<TestInitAuxAccount>, input: u16) -> ProgramResult {
-        ctx.accounts.my_account.data = input;
-        Ok(())
-    }
-
-    pub fn test_init_aux_account_size(
-        ctx: Context<TestInitAuxAccountSize>,
-        input: u16,
-    ) -> ProgramResult {
-        ctx.accounts.my_account.data = input;
-        Ok(())
-    }
-
+        pub fn test_init_aux_account_size(
+            ctx: Context<TestInitAuxAccountSize>,
+            input: u16,
+        ) -> ProgramResult {
+            ctx.accounts.my_account.data = input;
+            Ok(())
+        }
+    */
     pub fn default<'info>(
         _program_id: &Pubkey,
         _accounts: &[AccountInfo<'info>],

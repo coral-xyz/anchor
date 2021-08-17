@@ -62,7 +62,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
 
     let c = match kw.as_str() {
         "init" => ConstraintToken::Init(Context::new(ident.span(), ConstraintInit {})),
-        "zeroed" => ConstraintToken::Zeroed(Context::new(ident.span(), ConstraintZeroed {})),
+        "zero" => ConstraintToken::Zeroed(Context::new(ident.span(), ConstraintZeroed {})),
         "mut" => ConstraintToken::Mut(Context::new(ident.span(), ConstraintMut {})),
         "signer" => ConstraintToken::Signer(Context::new(ident.span(), ConstraintSigner {})),
         "executable" => {
@@ -293,6 +293,11 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                     .mutable
                     .replace(Context::new(i.span(), ConstraintMut {})),
             };
+            // Rent exempt if not explicitly skipped.
+            if self.rent_exempt.is_none() {
+                self.rent_exempt
+                    .replace(Context::new(i.span(), ConstraintRentExempt::Enforce));
+            }
         }
 
         // Seeds.
@@ -308,6 +313,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                     .mutable
                     .replace(Context::new(z.span(), ConstraintMut {})),
             };
+            // Rent exempt if not explicitly skipped.
             if self.rent_exempt.is_none() {
                 self.rent_exempt
                     .replace(Context::new(z.span(), ConstraintRentExempt::Enforce));
