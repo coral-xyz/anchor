@@ -49,10 +49,6 @@ pub mod tictactoe {
     }
 
     pub fn status(ctx: Context<Status>) -> ProgramResult {
-        msg!("{}", ctx.accounts.game.game_state);
-        msg!("{}", ctx.accounts.game.player_o);
-        msg!("{}", ctx.accounts.game.player_x);
-        msg!("{:?}", ctx.accounts.game.board);
         Ok(())
     }
 }
@@ -85,7 +81,7 @@ pub struct Initialize<'info> {
 pub struct Playerjoin<'info> {
     #[account(signer)]
     player_o: AccountInfo<'info>,
-    #[account(mut,constraint = game.game_state != 0 && game.player_x != Pubkey::from_str("11111111111111111111111111111111").unwrap())]
+    #[account(mut,constraint = game.game_state != 0 && game.player_x != Pubkey::default())]
     game: ProgramAccount<'info, Game>,
 }
 
@@ -147,6 +143,27 @@ pub struct Game {
     player_o: Pubkey,
     game_state: u8,
     board: [u8; 9],
+}
+
+#[event]
+pub struct GameStatus {
+    keep_alive: [u64; 2],
+    player_x: Pubkey,
+    player_o: Pubkey,
+    game_state: u8,
+    board: [u8; 9],
+}
+
+impl From<GameStatus> for Game {
+    fn from(status: GameStatus) -> Self {
+        Self {
+            keep_alive: status.keep_alive,
+            player_x: status.player_x,
+            player_o: status.player_o,
+            game_state: status.game_state,
+            board: status.board,
+        }
+    }
 }
 
 impl Game {
