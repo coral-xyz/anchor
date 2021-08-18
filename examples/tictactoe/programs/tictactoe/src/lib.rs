@@ -81,7 +81,7 @@ pub struct Initialize<'info> {
 pub struct Playerjoin<'info> {
     #[account(signer)]
     player_o: AccountInfo<'info>,
-    #[account(mut,constraint = game.game_state != 0 && game.player_x != Pubkey::default())]
+    #[account(mut, constraint = game.game_state != 0 && game.player_x != Pubkey::default())]
     game: ProgramAccount<'info, Game>,
 }
 
@@ -169,15 +169,15 @@ impl From<GameStatus> for Game {
 impl Game {
     pub fn status(self: &mut Game, x_or_o: u8) {
         let winner =
-            // Check rows
+            // Check rows.
             Game::same(x_or_o, &self.board[0..3])
             || Game::same(x_or_o, &self.board[3..6])
             || Game::same(x_or_o, &self.board[6..9])
-            // Check columns
+            // Check columns.
             || Game::same(x_or_o, &[self.board[0], self.board[3], self.board[6]])
             || Game::same(x_or_o, &[self.board[1], self.board[4], self.board[7]])
             || Game::same(x_or_o, &[self.board[2], self.board[5], self.board[8]])
-            // Check both diagonals
+            // Check both diagonals.
             || Game::same(x_or_o, &[self.board[0], self.board[4], self.board[8]])
             || Game::same(x_or_o, &[self.board[2], self.board[4], self.board[6]]);
 
