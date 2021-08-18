@@ -20,6 +20,7 @@ pub struct Idl {
     pub errors: Option<Vec<IdlErrorCode>>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub metadata: Option<JsonValue>,
+    pub context: IdlContext,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -29,10 +30,23 @@ pub struct IdlState {
     pub methods: Vec<IdlInstruction>,
 }
 
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct IdlContext {
+    pub accounts: Vec<IdlContextAccounts>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct IdlContextAccounts {
+    pub symbol: String,
+    pub accounts: Vec<IdlAccountItem>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct IdlInstruction {
     pub name: String,
-    pub accounts: Vec<IdlAccountItem>,
+    pub accounts_symbol: String,
     pub args: Vec<IdlField>,
 }
 
@@ -41,7 +55,6 @@ pub struct IdlInstruction {
 pub struct IdlAccounts {
     pub name: String,
     pub symbol: String,
-    pub accounts: Vec<IdlAccountItem>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

@@ -49,12 +49,9 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Option<Idl>> {
                                         }
                                     })
                                     .collect::<Vec<_>>();
-                                let accounts_strct =
-                                    accs.get(&method.anchor_ident.to_string()).unwrap();
-                                let accounts = idl_accounts(accounts_strct, &accs);
                                 IdlInstruction {
                                     name,
-                                    accounts,
+                                    accounts_symbol: method.anchor_ident.to_string(),
                                     args,
                                 }
                             })
@@ -89,11 +86,9 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Option<Idl>> {
                             _ => panic!("Invalid syntax"),
                         })
                         .collect();
-                    let accounts_strct = accs.get(&anchor_ident.to_string()).unwrap();
-                    let accounts = idl_accounts(accounts_strct, &accs);
                     IdlInstruction {
                         name,
-                        accounts,
+                        accounts_symbol: anchor_ident.to_string(),
                         args,
                     }
                 };
@@ -156,12 +151,9 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Option<Idl>> {
                     }
                 })
                 .collect::<Vec<_>>();
-            // todo: don't unwrap
-            let accounts_strct = accs.get(&ix.anchor_ident.to_string()).unwrap();
-            let accounts = idl_accounts(accounts_strct, &accs);
             IdlInstruction {
                 name: ix.ident.to_string().to_mixed_case(),
-                accounts,
+                accounts_symbol: ix.anchor_ident.to_string(),
                 args,
             }
         })
@@ -222,6 +214,11 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Option<Idl>> {
         }
     }
 
+
+    let account_context = idl_accounts_context(&accs);
+
+    let context = IdlContext { accounts: account_context};
+
     Ok(Some(Idl {
         version: "0.0.0".to_string(),
         name: p.name.to_string(),
@@ -236,6 +233,7 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Option<Idl>> {
         },
         errors: error_codes,
         metadata: None,
+        context: context,
     }))
 }
 
@@ -437,30 +435,28 @@ fn to_idl_type(f: &syn::Field) -> IdlType {
     tts.to_string().parse().unwrap()
 }
 
-fn idl_accounts(
-    accounts: &AccountsStruct,
-    global_accs: &HashMap<String, AccountsStruct>,
-) -> Vec<IdlAccountItem> {
-    accounts
-        .fields
-        .iter()
-        .map(|acc: &AccountField| match acc {
-            AccountField::CompositeField(comp_f) => {
-                let accs_strct = global_accs
-                    .get(&comp_f.symbol)
-                    .expect("Could not resolve Accounts symbol");
-                let accounts = idl_accounts(accs_strct, global_accs);
-                IdlAccountItem::IdlAccounts(IdlAccounts {
-                    name: comp_f.ident.to_string().to_mixed_case(),
-                    symbol: comp_f.symbol.to_string().to_mixed_case(),
-                    accounts,
+
+fn idl_accounts_context(global_accs: &HashMap<String, AccountsStruct>) -> Vec<IdlContextAccounts> {
+    global_accs
+    .iter()
+    .map(|(_, acc)| IdlContextAccounts {
+        symbol: acc.ident.to_string().to_mixed_case(),
+        accounts: acc.fields
+            .iter()
+            .map(|field: &AccountField| match field {
+                AccountField::CompositeField(comp_f) => {
+                    IdlAccountItem::IdlAccounts(IdlAccounts {
+                        name: comp_f.ident.to_string().to_mixed_case(),
+                        symbol: comp_f.symbol.to_string().to_mixed_case(),
+                    })
+                }
+                AccountField::Field(acc) => IdlAccountItem::IdlAccount(IdlAccount {
+                    name: acc.ident.to_string().to_mixed_case(),
+                    is_mut: acc.constraints.is_mutable(),
+                    is_signer: acc.constraints.is_signer(),
                 })
-            }
-            AccountField::Field(acc) => IdlAccountItem::IdlAccount(IdlAccount {
-                name: acc.ident.to_string().to_mixed_case(),
-                is_mut: acc.constraints.is_mutable(),
-                is_signer: acc.constraints.is_signer(),
-            }),
-        })
-        .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>(),
+    })
+    .collect::<Vec<_>>()
 }
