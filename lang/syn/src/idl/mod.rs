@@ -40,6 +40,7 @@ pub struct IdlInstruction {
 #[serde(rename_all = "camelCase")]
 pub struct IdlAccounts {
     pub name: String,
+    pub symbol: String,
     pub accounts: Vec<IdlAccountItem>,
 }
 

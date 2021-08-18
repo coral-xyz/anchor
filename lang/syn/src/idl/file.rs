@@ -452,6 +452,7 @@ fn idl_accounts(
                 let accounts = idl_accounts(accs_strct, global_accs);
                 IdlAccountItem::IdlAccounts(IdlAccounts {
                     name: comp_f.ident.to_string().to_mixed_case(),
+                    symbol: comp_f.symbol.to_string().to_mixed_case(),
                     accounts,
                 })
             }
