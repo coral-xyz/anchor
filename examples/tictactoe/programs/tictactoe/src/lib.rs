@@ -81,7 +81,7 @@ pub struct Initialize<'info> {
 pub struct Playerjoin<'info> {
     #[account(signer)]
     player_o: AccountInfo<'info>,
-    #[account(mut,constraint = game.game_state != 0 && game.player_x != Pubkey::default())]
+    #[account(mut, constraint = game.game_state != 0 && game.player_x != Pubkey::default())]
     game: ProgramAccount<'info, Game>,
 }
 
