@@ -17,7 +17,6 @@ const BOARD_ITEM_O: u8 = 2; // Player O
 pub mod tictactoe {
     use super::*;
 
-    #[access_control(Initializedashboard::accounts(&ctx))]
     pub fn initialize_dashboard(ctx: Context<Initializedashboard>) -> ProgramResult {
         let dashboard = &mut ctx.accounts.dashboard;
         dashboard.game_count = 0;
@@ -25,7 +24,6 @@ pub mod tictactoe {
         Ok(())
     }
 
-    #[access_control(Initialize::accounts(&ctx))]
     pub fn initialize(ctx: Context<Initialize>) -> ProgramResult {
         let dashboard = &mut ctx.accounts.dashboard;
         let game = &mut ctx.accounts.game;
@@ -35,7 +33,6 @@ pub mod tictactoe {
         Ok(())
     }
 
-    #[access_control(Playerjoin::accounts(&ctx))]
     pub fn player_join(ctx: Context<Playerjoin>) -> ProgramResult {
         let game = &mut ctx.accounts.game;
         game.player_o = *ctx.accounts.player_o.key;
@@ -43,7 +40,6 @@ pub mod tictactoe {
         Ok(())
     }
 
-    #[access_control(Playermove::accounts(&ctx,x_or_o,player_move))]
     pub fn player_move(ctx: Context<Playermove>, x_or_o: u8, player_move: u8) -> ProgramResult {
         let game = &mut ctx.accounts.game;
         game.board[player_move as usize] = x_or_o;
@@ -74,12 +70,6 @@ pub struct Initializedashboard<'info> {
     authority: AccountInfo<'info>,
 }
 
-impl<'info> Initializedashboard<'info> {
-    pub fn accounts(ctx: &Context<Initializedashboard>) -> Result<()> {
-        Ok(())
-    }
-}
-
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(signer)]
@@ -90,30 +80,12 @@ pub struct Initialize<'info> {
     game: ProgramAccount<'info, Game>,
 }
 
-impl<'info> Initialize<'info> {
-    pub fn accounts(ctx: &Context<Initialize>) -> Result<()> {
-        Ok(())
-    }
-}
-
 #[derive(Accounts)]
 pub struct Playerjoin<'info> {
     #[account(signer)]
     player_o: AccountInfo<'info>,
-    #[account(mut)]
+    #[account(mut,constraint = game.game_state != 0 && game.player_x != Pubkey::from_str("11111111111111111111111111111111").unwrap())]
     game: ProgramAccount<'info, Game>,
-}
-
-impl<'info> Playerjoin<'info> {
-    pub fn accounts(ctx: &Context<Playerjoin>) -> Result<()> {
-        if ctx.accounts.game.game_state != 0
-            && ctx.accounts.game.player_x
-                != Pubkey::from_str("11111111111111111111111111111111").unwrap()
-        {
-            return Err(ErrorCode::Gamestate.into());
-        }
-        Ok(())
-    }
 }
 
 #[derive(Accounts)]
