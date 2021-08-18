@@ -233,7 +233,7 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Option<Idl>> {
         },
         errors: error_codes,
         metadata: None,
-        context: context,
+        context,
     }))
 }
 
