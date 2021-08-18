@@ -169,7 +169,7 @@ impl From<GameStatus> for Game {
 impl Game {
     pub fn status(self: &mut Game, x_or_o: u8) {
         let winner =
-            // Check rows
+            // Check rows.
             Game::same(x_or_o, &self.board[0..3])
             || Game::same(x_or_o, &self.board[3..6])
             || Game::same(x_or_o, &self.board[6..9])
