@@ -173,7 +173,7 @@ impl Game {
             Game::same(x_or_o, &self.board[0..3])
             || Game::same(x_or_o, &self.board[3..6])
             || Game::same(x_or_o, &self.board[6..9])
-            // Check columns
+            // Check columns.
             || Game::same(x_or_o, &[self.board[0], self.board[3], self.board[6]])
             || Game::same(x_or_o, &[self.board[1], self.board[4], self.board[7]])
             || Game::same(x_or_o, &[self.board[2], self.board[5], self.board[8]])
