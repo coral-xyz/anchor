@@ -184,6 +184,28 @@ describe('{}', () => {{
     )
 }
 
+pub fn package_json() -> &'static str {
+    r#"{
+        "dependencies": {
+          "@project-serum/anchor": "^0.13.2",
+          "chai": "^4.3.4",
+          "mocha": "^9.0.3"
+        }
+      }      
+    "#
+}
+
+pub fn ts_package_json() -> &'static str {
+    r#"{
+        "dependencies": {
+          "@project-serum/anchor": "^0.13.2",
+          "chai": "^4.3.4",
+          "mocha": "^9.0.3"
+        }
+      }      
+    "#
+}
+
 pub fn ts_mocha(name: &str) -> String {
     format!(
         r#"import * as anchor from '@project-serum/anchor';
