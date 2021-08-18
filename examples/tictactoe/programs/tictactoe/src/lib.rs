@@ -40,6 +40,7 @@ pub mod tictactoe {
         Ok(())
     }
 
+    #[access_control(Playermove::accounts(&ctx, x_or_o, player_move))]
     pub fn player_move(ctx: Context<Playermove>, x_or_o: u8, player_move: u8) -> ProgramResult {
         let game = &mut ctx.accounts.game;
         game.board[player_move as usize] = x_or_o;
