@@ -371,7 +371,7 @@ fn init(cfg_override: &ConfigOverride, name: String, typescript: bool) -> Result
         .map_err(|e| anyhow::format_err!("yarn install failed: {}", e.to_string()))?;
     if !yarn_result.status.success() {
         println!("Failed yarn install will attempt to npm install");
-        std::process::Command::new("yarn")
+        std::process::Command::new("npm")
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .output()
