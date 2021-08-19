@@ -363,7 +363,7 @@ fn init(cfg_override: &ConfigOverride, name: String, typescript: bool) -> Result
         deploy.write_all(template::deploy_script().as_bytes())?;
     }
 
-    // Install node modules
+    // Install node modules.
     let yarn_result = std::process::Command::new("yarn")
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
