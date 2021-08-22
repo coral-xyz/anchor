@@ -15,6 +15,7 @@ incremented for features.
 
 * lang: Ignore `Unnamed` structs instead of panic ([#605](https://github.com/project-serum/anchor/pull/605)).
 * lang: Add constraints for initializing mint accounts as pdas, `#[account(init, seeds = [...], mint::decimals = <expr>, mint::authority = <expr>)]` ([#](https://github.com/project-serum/anchor/pull/562)).
+* cli: Added more informative error if non-existent program passed in genesis configuration.
 
 ### Breaking Changes
 

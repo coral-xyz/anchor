@@ -1411,6 +1411,13 @@ fn genesis_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
     }
     if let Some(test) = cfg.test.as_ref() {
         for entry in &test.genesis {
+            let program_path = Path::new(&entry.program);
+            if !program_path.exists() {
+                return Err(anyhow!(
+                    "Program in genesis does not exist at path: {}",
+                    program_path.display()
+                ));
+            }
             flags.push("--bpf-program".to_string());
             flags.push(entry.address.clone());
             flags.push(entry.program.clone());
