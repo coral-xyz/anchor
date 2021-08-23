@@ -23,7 +23,7 @@ describe("events", () => {
   });
 
   it("Multiple events", async () => {
-    // Sleep so we don't get this transaction has already been processed 
+    // Sleep so we don't get this transaction has already been processed.
     await sleep(2000);
 
     let listenerOne = null;
