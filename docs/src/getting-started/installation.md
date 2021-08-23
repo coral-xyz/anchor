@@ -61,7 +61,7 @@ anchor --version
 To initialize a new project, simply run:
 
 ```bash
-anchor init newprojectname
+anchor init <new-project-name>
 ```
 
 ## Minimum version requirements
