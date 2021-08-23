@@ -58,6 +58,8 @@ Now verify the CLI is installed properly.
 anchor --version
 ```
 
+## Start a Project
+
 To initialize a new project, simply run:
 
 ```bash
