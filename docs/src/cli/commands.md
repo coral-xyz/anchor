@@ -93,7 +93,13 @@ of all workspace programs before running them.
 If the configured network is a localnet, then automatically starts the localnetwork and runs
 the test.
 
-When running tests we stream program logs to .anchor/program-logs/<address>.<program-name>.log
+::: tip Note
+Be sure to shutdown any other local validators, otherwise `anchor test` will fail to run.
+
+If you'd prefer to run the program against your local validator use `anchor test --skip-local-validator`.
+:::
+
+When running tests we stream program logs to `.anchor/program-logs/<address>.<program-name>.log`
 
 ::: tip Note
 The Anchor workflow [recommends](https://www.parity.io/paritys-checklist-for-secure-smart-contract-development/)

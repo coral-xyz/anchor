@@ -1,12 +1,12 @@
 [package]
-name = "basic-5"
+name = "tictactoe"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2018"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "basic_5"
+name = "tictactoe"
 
 [features]
 no-entrypoint = []
@@ -15,4 +15,5 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = { path = "../../../../../lang" }
+anchor-lang = { path = "../../../../lang" }
+anchor-spl = { path = "../../../../spl" }

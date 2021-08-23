@@ -34,7 +34,7 @@ npm install -g mocha
 For now, we can use Cargo to install the CLI.
 
 ```bash
-cargo install --git https://github.com/project-serum/anchor --tag v0.12.0 anchor-cli --locked
+cargo install --git https://github.com/project-serum/anchor --tag v0.13.2 anchor-cli --locked
 ```
 
 On Linux systems you may need to install additional dependencies if `cargo install` fails. On Ubuntu,
@@ -51,6 +51,20 @@ npm install -g @project-serum/anchor
 
 Make sure your `NODE_PATH` is set properly so that globally installed modules
 can be resolved.
+
+Now verify the CLI is installed properly.
+
+```bash
+anchor --version
+```
+
+## Start a Project
+
+To initialize a new project, simply run:
+
+```bash
+anchor init <new-project-name>
+```
 
 ## Minimum version requirements
 

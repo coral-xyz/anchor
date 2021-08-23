@@ -135,89 +135,6 @@ describe("misc", () => {
     assert.ok(stateAccount.auth.equals(program.provider.wallet.publicKey));
   });
 
-  it("Can init an associated program account", async () => {
-    const state = await program.state.address();
-
-    // Manual associated address calculation for test only. Clients should use
-    // the generated methods.
-    const [
-      associatedAccount,
-      nonce,
-    ] = await anchor.web3.PublicKey.findProgramAddress(
-      [
-        anchor.utils.bytes.utf8.encode("anchor"),
-        program.provider.wallet.publicKey.toBuffer(),
-        state.toBuffer(),
-        data.publicKey.toBuffer(),
-        anchor.utils.bytes.utf8.encode("my-seed"),
-      ],
-      program.programId
-    );
-    await assert.rejects(
-      async () => {
-        await program.account.testData.fetch(associatedAccount);
-      },
-      (err) => {
-        assert.ok(
-          err.toString() ===
-            `Error: Account does not exist ${associatedAccount.toString()}`
-        );
-        return true;
-      }
-    );
-    await program.rpc.testInitAssociatedAccount(new anchor.BN(1234), {
-      accounts: {
-        myAccount: associatedAccount,
-        authority: program.provider.wallet.publicKey,
-        state,
-        data: data.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      },
-    });
-    // Try out the generated associated method.
-    const account = await program.account.testData.associated(
-      program.provider.wallet.publicKey,
-      state,
-      data.publicKey,
-      anchor.utils.bytes.utf8.encode("my-seed")
-    );
-    assert.ok(account.data.toNumber() === 1234);
-  });
-
-  it("Can use an associated program account", async () => {
-    const state = await program.state.address();
-    const [
-      associatedAccount,
-      nonce,
-    ] = await anchor.web3.PublicKey.findProgramAddress(
-      [
-        anchor.utils.bytes.utf8.encode("anchor"),
-        program.provider.wallet.publicKey.toBuffer(),
-        state.toBuffer(),
-        data.publicKey.toBuffer(),
-        anchor.utils.bytes.utf8.encode("my-seed"),
-      ],
-      program.programId
-    );
-    await program.rpc.testAssociatedAccount(new anchor.BN(5), {
-      accounts: {
-        myAccount: associatedAccount,
-        authority: program.provider.wallet.publicKey,
-        state,
-        data: data.publicKey,
-      },
-    });
-    // Try out the generated associated method.
-    const account = await program.account.testData.associated(
-      program.provider.wallet.publicKey,
-      state,
-      data.publicKey,
-      anchor.utils.bytes.utf8.encode("my-seed")
-    );
-    assert.ok(account.data.toNumber() === 5);
-  });
-
   it("Can retrieve events when simulating a transaction", async () => {
     const resp = await program.simulate.testSimulate(44);
     const expectedRaw = [
@@ -236,55 +153,6 @@ describe("misc", () => {
     assert.ok(resp.events[1].data.data === 1234);
     assert.ok(resp.events[2].name === "E3");
     assert.ok(resp.events[2].data.data === 9);
-  });
-
-  it("Can retrieve events when associated account is initialized in simulated transaction", async () => {
-    const myAccount = await program.account.testData.associatedAddress(
-      program.provider.wallet.publicKey
-    );
-    await assert.rejects(
-      async () => {
-        await program.account.testData.fetch(myAccount);
-      },
-      (err) => {
-        assert.ok(
-          err.toString() ===
-            `Error: Account does not exist ${myAccount.toString()}`
-        );
-        return true;
-      }
-    );
-
-    const resp = await program.simulate.testSimulateAssociatedAccount(44, {
-      accounts: {
-        myAccount,
-        authority: program.provider.wallet.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      },
-    });
-
-    const expectedRaw = [
-      "Program Fv6oRfzWETatiMymBvTs1JpRspZz3DbBfjZJEvUTDL1g invoke [1]",
-      "Program 11111111111111111111111111111111 invoke [2]",
-      "Program 11111111111111111111111111111111 success",
-      "Program log: NgyCA9omwbMsAAAA",
-      "Program log: fPhuIELK/k7SBAAA",
-      "Program log: jvbowsvlmkcJAAAA",
-      "Program log: mg+zq/K0sXRV+N/AsG9XLERDZ+J6eQAnnzoQVHlicBQBnGr65KE5Kw==",
-      "Program Fv6oRfzWETatiMymBvTs1JpRspZz3DbBfjZJEvUTDL1g consumed 20460 of 200000 compute units",
-      "Program Fv6oRfzWETatiMymBvTs1JpRspZz3DbBfjZJEvUTDL1g success",
-    ];
-
-    assert.ok(JSON.stringify(expectedRaw), resp.raw);
-    assert.ok(resp.events[0].name === "E1");
-    assert.ok(resp.events[0].data.data === 44);
-    assert.ok(resp.events[1].name === "E2");
-    assert.ok(resp.events[1].data.data === 1234);
-    assert.ok(resp.events[2].name === "E3");
-    assert.ok(resp.events[2].data.data === 9);
-    assert.ok(resp.events[3].name === "E4");
-    assert.ok(resp.events[3].data.data.toBase58() === myAccount.toBase58());
   });
 
   it("Can use i8 in the idl", async () => {
@@ -458,22 +326,18 @@ describe("misc", () => {
   });
 
   it("Can create a token account from seeds pda", async () => {
-    const mint = await Token.createMint(
-      program.provider.connection,
-      program.provider.wallet.payer,
-      program.provider.wallet.publicKey,
-      null,
-      0,
-      TOKEN_PROGRAM_ID
+    const [mint, mint_bump] = await PublicKey.findProgramAddress(
+      [Buffer.from(anchor.utils.bytes.utf8.encode("my-mint-seed"))],
+      program.programId
     );
-    const [myPda, bump] = await PublicKey.findProgramAddress(
+    const [myPda, token_bump] = await PublicKey.findProgramAddress(
       [Buffer.from(anchor.utils.bytes.utf8.encode("my-token-seed"))],
       program.programId
     );
-    await program.rpc.testTokenSeedsInit(bump, {
+    await program.rpc.testTokenSeedsInit(token_bump, mint_bump, {
       accounts: {
         myPda,
-        mint: mint.publicKey,
+        mint,
         authority: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
@@ -481,12 +345,18 @@ describe("misc", () => {
       },
     });
 
-    const account = await mint.getAccountInfo(myPda);
+    const mintAccount = new Token(
+      program.provider.connection,
+      mint,
+      TOKEN_PROGRAM_ID,
+      program.provider.wallet.payer
+    );
+    const account = await mintAccount.getAccountInfo(myPda);
     assert.ok(account.state === 1);
     assert.ok(account.amount.toNumber() === 0);
     assert.ok(account.isInitialized);
     assert.ok(account.owner.equals(program.provider.wallet.publicKey));
-    assert.ok(account.mint.equals(mint.publicKey));
+    assert.ok(account.mint.equals(mint));
   });
 
   it("Can execute a fallback function", async () => {

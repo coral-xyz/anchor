@@ -11,6 +11,15 @@ members = [
 "#
 }
 
+pub fn credentials(token: &str) -> String {
+    format!(
+        r#"[registry]
+token = "{}"
+"#,
+        token
+    )
+}
+
 pub fn cargo_toml(name: &str) -> String {
     format!(
         r#"[package]
@@ -172,6 +181,41 @@ describe('{}', () => {{
 "#,
         name,
         name.to_camel_case(),
+    )
+}
+
+pub fn package_json() -> String {
+    format!(
+        r#"{{
+    "dependencies": {{
+        "@project-serum/anchor": "^{0}"
+    }},
+    "devDependencies": {{
+        "chai": "^4.3.4",
+        "mocha": "^9.0.3"
+    }}
+}}      
+"#,
+        VERSION
+    )
+}
+
+pub fn ts_package_json() -> String {
+    format!(
+        r#"{{
+    "dependencies": {{
+        "@project-serum/anchor": "^{0}"
+    }},
+    "devDependencies": {{
+        "chai": "^4.3.4",
+        "mocha": "^9.0.3",
+        "ts-mocha": "^8.0.0",
+        "@types/mocha": "^9.0.0",
+        "typescript": "^4.3.5"
+    }}
+}}     
+"#,
+        VERSION
     )
 }
 
