@@ -126,6 +126,18 @@ pub struct TestSimulate {}
 
 #[derive(Accounts)]
 pub struct TestI8<'info> {
+    #[account(zero)]
+    pub data: ProgramAccount<'info, DataI8>,
+}
+
+#[derive(Accounts)]
+pub struct TestInit<'info> {
     #[account(init)]
     pub data: ProgramAccount<'info, DataI8>,
+}
+
+#[derive(Accounts)]
+pub struct TestInitZeroCopy<'info> {
+    #[account(init)]
+    pub data: Loader<'info, DataZeroCopy>,
 }

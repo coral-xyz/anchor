@@ -30,7 +30,10 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     }
                 }
                 AccountField::Field(f) => {
-                    if is_pda_init(af) {
+										// `init` and `zero` acccounts are special cased as they are
+										// deserialized by constraints. Here, we just take out the
+										// AccountInfo for later use at constraint validation time.
+                    if is_pda_init(af) || f.constraints.zeroed.is_some() {
                         let name = &f.ident;
                         quote!{
                             let #name = &accounts[0];
@@ -38,17 +41,10 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                         }
                     } else {
                         let name = typed_ident(f);
-                        match f.constraints.is_init() || f.constraints.is_zeroed() {
-                            false => quote! {
-                                #[cfg(feature = "anchor-debug")]
-                                ::solana_program::log::sol_log(stringify!(#name));
-                                let #name = anchor_lang::Accounts::try_accounts(program_id, accounts, ix_data)?;
-                            },
-                            true => quote! {
-                                #[cfg(feature = "anchor-debug")]
-                                ::solana_program::log::sol_log(stringify!(#name));
-                                let #name = anchor_lang::AccountsInit::try_accounts_init(program_id, accounts)?;
-                            },
+												quote! {
+                            #[cfg(feature = "anchor-debug")]
+                            ::solana_program::log::sol_log(stringify!(#name));
+                            let #name = anchor_lang::Accounts::try_accounts(program_id, accounts, ix_data)?;
                         }
                     }
                 }
@@ -108,18 +104,6 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 Ok(#accounts_instance)
             }
         }
-    }
-}
-
-fn is_pda_init(af: &AccountField) -> bool {
-    match af {
-        AccountField::CompositeField(_s) => false,
-        AccountField::Field(f) => f
-            .constraints
-            .seeds
-            .as_ref()
-            .map(|f| f.is_init)
-            .unwrap_or(false),
     }
 }
 
@@ -237,5 +221,17 @@ pub fn generate_accounts_instance(accs: &AccountsStruct) -> proc_macro2::TokenSt
         #name {
             #(#return_tys),*
         }
+    }
+}
+
+fn is_pda_init(af: &AccountField) -> bool {
+    match af {
+        AccountField::CompositeField(_s) => false,
+        AccountField::Field(f) => f
+            .constraints
+            .seeds
+            .as_ref()
+            .map(|f| f.is_init)
+            .unwrap_or(false),
     }
 }

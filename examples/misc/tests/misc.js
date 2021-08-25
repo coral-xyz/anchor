@@ -370,4 +370,16 @@ describe("misc", () => {
       }
     );
   });
+
+		/*
+		it("Can init a random account", async () => {
+				const data = anchor.web3.Keypair.generate();
+				await program.rpc.testInit({
+						accounts: {
+								data: data.publicKey,
+						},
+						signers: [data],
+				});
+		});
+		*/
 });

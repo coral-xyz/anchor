@@ -106,9 +106,8 @@ pub trait AccountsClose<'info>: ToAccountInfos<'info> {
 }
 
 /// A data structure of accounts providing a one time deserialization upon
-/// account initialization, i.e., when the data array for a given account is
-/// zeroed. Any subsequent call to `try_accounts_init` should fail. For all
-/// subsequent deserializations, it's expected that [`Accounts`] is used.
+/// account initialization, i.e., when the discriminant for a given account is
+/// zeroed.
 pub trait AccountsInit<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
     fn try_accounts_init(
         program_id: &Pubkey,

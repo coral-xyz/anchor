@@ -128,4 +128,12 @@ pub mod misc {
     ) -> ProgramResult {
         Err(ProgramError::Custom(1234))
     }
+
+    pub fn test_init(ctx: Context<TestInit>) -> ProgramResult {
+        Ok(())
+    }
+
+    pub fn test_init_zero_copy(ctx: Context<TestInitZeroCopy>) -> ProgramResult {
+        Ok(())
+    }
 }

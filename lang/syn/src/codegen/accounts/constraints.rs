@@ -60,14 +60,14 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
 
     let mut constraints = Vec::new();
 
+    if let Some(c) = zeroed {
+        constraints.push(Constraint::Zeroed(c));
+    }
     if let Some(c) = seeds {
         constraints.push(Constraint::Seeds(c));
     }
     if let Some(c) = init {
         constraints.push(Constraint::Init(c));
-    }
-    if let Some(c) = zeroed {
-        constraints.push(Constraint::Zeroed(c));
     }
     if let Some(c) = mutable {
         constraints.push(Constraint::Mut(c));
@@ -137,13 +137,27 @@ fn generate_constraint_address(f: &Field, c: &ConstraintAddress) -> proc_macro2:
 }
 
 pub fn generate_constraint_init(_f: &Field, _c: &ConstraintInit) -> proc_macro2::TokenStream {
+    // todo
     quote! {}
 }
 
-pub fn generate_constraint_zeroed(_f: &Field, _c: &ConstraintZeroed) -> proc_macro2::TokenStream {
-    // No constraint. The zero discriminator is checked in `try_accounts_init`
-    // currently.
-    quote! {}
+pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macro2::TokenStream {
+    let field = &f.ident;
+    let (account_ty, account_wrapper_ty, _) = parse_ty(f);
+    quote! {
+        let #field: #account_wrapper_ty<#account_ty> = {
+            let mut __data: &[u8] = &#field.try_borrow_data()?;
+            let mut __disc_bytes = [0u8; 8];
+            __disc_bytes.copy_from_slice(&__data[..8]);
+            let __discriminator = u64::from_le_bytes(__disc_bytes);
+            if __discriminator != 0 {
+                return Err(anchor_lang::__private::ErrorCode::ConstraintZero.into());
+            }
+            #account_wrapper_ty::try_from_unchecked(
+                &#field,
+            )?
+        };
+    }
 }
 
 pub fn generate_constraint_close(f: &Field, c: &ConstraintClose) -> proc_macro2::TokenStream {
@@ -452,7 +466,7 @@ pub fn generate_pda(
                 #account_wrapper_ty<#account_ty>
             },
             quote! {
-                #account_wrapper_ty::try_from_init(
+                #account_wrapper_ty::try_from_unchecked(
                     &#field.to_account_info(),
                 )?
             },
@@ -498,7 +512,7 @@ pub fn generate_pda(
                 };
                 let cpi_ctx = CpiContext::new(cpi_program, accounts);
                 anchor_spl::token::initialize_account(cpi_ctx)?;
-                anchor_lang::CpiAccount::try_from_init(
+                anchor_lang::CpiAccount::try_from_unchecked(
                     &#field.to_account_info(),
                 )?
             };
@@ -539,7 +553,7 @@ pub fn generate_pda(
                 };
                 let cpi_ctx = CpiContext::new(cpi_program, accounts);
                 anchor_spl::token::initialize_mint(cpi_ctx, #decimals, &#owner.to_account_info().key, None)?;
-                anchor_lang::CpiAccount::try_from_init(
+                anchor_lang::CpiAccount::try_from_unchecked(
                     &#field.to_account_info(),
                 )?
             };

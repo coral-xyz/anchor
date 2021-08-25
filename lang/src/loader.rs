@@ -54,17 +54,9 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
 
     /// Constructs a new `Loader` from an uninitialized account.
     #[inline(never)]
-    pub fn try_from_init(acc_info: &AccountInfo<'info>) -> Result<Loader<'info, T>, ProgramError> {
-        let data = acc_info.try_borrow_data()?;
-
-        // The discriminator should be zero, since we're initializing.
-        let mut disc_bytes = [0u8; 8];
-        disc_bytes.copy_from_slice(&data[..8]);
-        let discriminator = u64::from_le_bytes(disc_bytes);
-        if discriminator != 0 {
-            return Err(ErrorCode::AccountDiscriminatorAlreadySet.into());
-        }
-
+    pub fn try_from_unchecked(
+        acc_info: &AccountInfo<'info>,
+    ) -> Result<Loader<'info, T>, ProgramError> {
         Ok(Loader::new(acc_info.clone()))
     }
 
@@ -158,7 +150,7 @@ impl<'info, T: ZeroCopy> AccountsInit<'info> for Loader<'info, T> {
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
-        let l = Loader::try_from_init(account)?;
+        let l = Loader::try_from_unchecked(account)?;
         if l.acc_info.owner != program_id {
             return Err(ErrorCode::AccountNotProgramOwned.into());
         }
