@@ -141,6 +141,8 @@ pub fn generate_constraint_init(_f: &Field, _c: &ConstraintInit) -> proc_macro2:
 }
 
 pub fn generate_constraint_zeroed(_f: &Field, _c: &ConstraintZeroed) -> proc_macro2::TokenStream {
+    // No constraint. The zero discriminator is checked in `try_accounts_init`
+    // currently.
     quote! {}
 }
 
