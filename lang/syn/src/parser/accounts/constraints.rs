@@ -436,14 +436,14 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
 
         let is_init = init.is_some();
         Ok(ConstraintGroup {
-						// The init constraint is only used if there are no seeds.
-						// If there are seeds, then we're initializing a PDA, which is
-						// handled separately.
+            // The init constraint is only used if there are no seeds.
+            // If there are seeds, then we're initializing a PDA, which is
+            // handled separately.
             init: if seeds.is_none() {
-								into_inner!(init)
-						} else {
-								None
-						},
+                into_inner!(init)
+            } else {
+                None
+            },
             zeroed: into_inner!(zeroed),
             mutable: into_inner!(mutable),
             signer: into_inner!(signer),

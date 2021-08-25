@@ -30,9 +30,9 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     }
                 }
                 AccountField::Field(f) => {
-										// `init` and `zero` acccounts are special cased as they are
-										// deserialized by constraints. Here, we just take out the
-										// AccountInfo for later use at constraint validation time.
+                    // `init` and `zero` acccounts are special cased as they are
+                    // deserialized by constraints. Here, we just take out the
+                    // AccountInfo for later use at constraint validation time.
                     if is_pda_init(af) || f.constraints.zeroed.is_some() {
                         let name = &f.ident;
                         quote!{
@@ -41,7 +41,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                         }
                     } else {
                         let name = typed_ident(f);
-												quote! {
+                        quote! {
                             #[cfg(feature = "anchor-debug")]
                             ::solana_program::log::sol_log(stringify!(#name));
                             let #name = anchor_lang::Accounts::try_accounts(program_id, accounts, ix_data)?;
