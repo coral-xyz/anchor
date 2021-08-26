@@ -24,6 +24,7 @@ incremented for features.
 * lang: `#[account(init)]` now creates the account inside the same instruction to be consistent with initializing PDAs. To maintain the old behavior of `init`, replace it with `#[account(zero)]` ([#641](https://github.com/project-serum/anchor/pull/641)).
 * lang: `bump` must be provided when using the `seeds` constraint. This has been added as an extra safety constraint to ensure that whenever a PDA is initialized via a constraint the bump used is the one created by `Pubkey::find_program_address` ([#641](https://github.com/project-serum/anchor/pull/641)).
 * lang: `try_from_init` has been removed from `Loader`, `ProgramAccount`, and `CpiAccount`  and replaced with `try_from_unchecked` ([#641](https://github.com/project-serum/anchor/pull/641)).
+* lang: Remove `AccountsInit` trait ([#641](https://github.com/project-serum/anchor/pull/641)).
 
 ## [0.13.2] - 2021-08-11
 

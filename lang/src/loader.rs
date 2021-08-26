@@ -1,7 +1,6 @@
 use crate::error::ErrorCode;
 use crate::{
-    Accounts, AccountsClose, AccountsExit, AccountsInit, ToAccountInfo, ToAccountInfos,
-    ToAccountMetas, ZeroCopy,
+    Accounts, AccountsClose, AccountsExit, ToAccountInfo, ToAccountInfos, ToAccountMetas, ZeroCopy,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
@@ -132,25 +131,6 @@ impl<'info, T: ZeroCopy> Accounts<'info> for Loader<'info, T> {
         let account = &accounts[0];
         *accounts = &accounts[1..];
         let l = Loader::try_from(account)?;
-        if l.acc_info.owner != program_id {
-            return Err(ErrorCode::AccountNotProgramOwned.into());
-        }
-        Ok(l)
-    }
-}
-
-impl<'info, T: ZeroCopy> AccountsInit<'info> for Loader<'info, T> {
-    #[inline(never)]
-    fn try_accounts_init(
-        program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
-    ) -> Result<Self, ProgramError> {
-        if accounts.is_empty() {
-            return Err(ErrorCode::AccountNotEnoughKeys.into());
-        }
-        let account = &accounts[0];
-        *accounts = &accounts[1..];
-        let l = Loader::try_from_unchecked(account)?;
         if l.acc_info.owner != program_id {
             return Err(ErrorCode::AccountNotProgramOwned.into());
         }

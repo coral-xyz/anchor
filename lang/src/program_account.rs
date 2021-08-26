@@ -1,7 +1,7 @@
 use crate::error::ErrorCode;
 use crate::{
-    AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, AccountsInit,
-    CpiAccount, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+    AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, CpiAccount,
+    ToAccountInfo, ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
@@ -76,28 +76,6 @@ where
         let account = &accounts[0];
         *accounts = &accounts[1..];
         let pa = ProgramAccount::try_from(account)?;
-        if pa.inner.info.owner != program_id {
-            return Err(ErrorCode::AccountNotProgramOwned.into());
-        }
-        Ok(pa)
-    }
-}
-
-impl<'info, T> AccountsInit<'info> for ProgramAccount<'info, T>
-where
-    T: AccountSerialize + AccountDeserialize + Clone,
-{
-    #[inline(never)]
-    fn try_accounts_init(
-        program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
-    ) -> Result<Self, ProgramError> {
-        if accounts.is_empty() {
-            return Err(ErrorCode::AccountNotEnoughKeys.into());
-        }
-        let account = &accounts[0];
-        *accounts = &accounts[1..];
-        let pa = ProgramAccount::try_from_unchecked(account)?;
         if pa.inner.info.owner != program_id {
             return Err(ErrorCode::AccountNotProgramOwned.into());
         }
