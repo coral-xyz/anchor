@@ -465,7 +465,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         Ok(ConstraintGroup {
             init: init.as_ref().map(|_| Ok(ConstraintInitGroup {
                 seeds: seeds.clone(),
-								payer: into_inner!(payer.clone()).map(|a| a.target),
+                payer: into_inner!(payer.clone()).map(|a| a.target),
                 space: space.clone().map(|s| s.space.clone()),
                 kind: if let Some(tm) = &token_mint {
                     InitKind::Token {
@@ -508,7 +508,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             close: into_inner!(close),
             address: into_inner!(address),
             seeds,
-				})
+        })
     }
 
     pub fn add(&mut self, c: ConstraintToken) -> ParseResult<()> {
