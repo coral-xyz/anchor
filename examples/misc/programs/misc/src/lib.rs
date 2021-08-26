@@ -130,10 +130,14 @@ pub mod misc {
     }
 
     pub fn test_init(ctx: Context<TestInit>) -> ProgramResult {
+        ctx.accounts.data.data = 3;
         Ok(())
     }
 
     pub fn test_init_zero_copy(ctx: Context<TestInitZeroCopy>) -> ProgramResult {
+        let mut data = ctx.accounts.data.load_init()?;
+        data.data = 10;
+        data.bump = 2;
         Ok(())
     }
 }

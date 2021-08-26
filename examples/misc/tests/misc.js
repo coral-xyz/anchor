@@ -371,15 +371,33 @@ describe("misc", () => {
     );
   });
 
-		/*
-		it("Can init a random account", async () => {
-				const data = anchor.web3.Keypair.generate();
-				await program.rpc.testInit({
-						accounts: {
-								data: data.publicKey,
-						},
-						signers: [data],
-				});
-		});
-		*/
+  it("Can init a random account", async () => {
+    const data = anchor.web3.Keypair.generate();
+    await program.rpc.testInit({
+      accounts: {
+        data: data.publicKey,
+        payer: program.provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+      signers: [data],
+    });
+
+    const account = await program.account.dataI8.fetch(data.publicKey);
+    assert.ok(account.data === 3);
+  });
+
+  it("Can init a random zero copy account", async () => {
+    const data = anchor.web3.Keypair.generate();
+    await program.rpc.testInitZeroCopy({
+      accounts: {
+        data: data.publicKey,
+        payer: program.provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+      signers: [data],
+    });
+    const account = await program.account.dataZeroCopy.fetch(data.publicKey);
+    assert.ok(account.data === 10);
+    assert.ok(account.bump === 2);
+  });
 });

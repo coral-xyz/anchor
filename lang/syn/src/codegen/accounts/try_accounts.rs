@@ -33,7 +33,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     // `init` and `zero` acccounts are special cased as they are
                     // deserialized by constraints. Here, we just take out the
                     // AccountInfo for later use at constraint validation time.
-                    if is_pda_init(af) || f.constraints.zeroed.is_some() {
+                    if is_init(af) || f.constraints.zeroed.is_some() {
                         let name = &f.ident;
                         quote!{
                             let #name = &accounts[0];
@@ -167,17 +167,17 @@ fn typed_ident(field: &Field) -> TokenStream {
 }
 
 pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
-    let non_pda_fields: Vec<&AccountField> =
-        accs.fields.iter().filter(|af| !is_pda_init(af)).collect();
+    let non_init_fields: Vec<&AccountField> =
+        accs.fields.iter().filter(|af| !is_init(af)).collect();
 
     // Deserialization for each pda init field. This must be after
     // the inital extraction from the accounts slice and before access_checks.
-    let init_pda_fields: Vec<proc_macro2::TokenStream> = accs
+    let init_fields: Vec<proc_macro2::TokenStream> = accs
         .fields
         .iter()
         .filter_map(|af| match af {
             AccountField::CompositeField(_s) => None,
-            AccountField::Field(f) => match is_pda_init(af) {
+            AccountField::Field(f) => match is_init(af) {
                 false => None,
                 true => Some(f),
             },
@@ -186,7 +186,7 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         .collect();
 
     // Constraint checks for each account fields.
-    let access_checks: Vec<proc_macro2::TokenStream> = non_pda_fields
+    let access_checks: Vec<proc_macro2::TokenStream> = non_init_fields
         .iter()
         .map(|af: &&AccountField| match af {
             AccountField::Field(f) => constraints::generate(f),
@@ -195,7 +195,7 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         .collect();
 
     quote! {
-        #(#init_pda_fields)*
+        #(#init_fields)*
         #(#access_checks)*
     }
 }
@@ -224,14 +224,9 @@ pub fn generate_accounts_instance(accs: &AccountsStruct) -> proc_macro2::TokenSt
     }
 }
 
-fn is_pda_init(af: &AccountField) -> bool {
+fn is_init(af: &AccountField) -> bool {
     match af {
         AccountField::CompositeField(_s) => false,
-        AccountField::Field(f) => f
-            .constraints
-            .seeds
-            .as_ref()
-            .map(|f| f.is_init)
-            .unwrap_or(false),
+        AccountField::Field(f) => f.constraints.init.is_some(),
     }
 }
