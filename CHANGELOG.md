@@ -21,6 +21,8 @@ incremented for features.
 * lang: Change `#[account(init, seeds = [...], token = <expr>, authority = <expr>)]` to `#[account(init, token::mint = <expr> token::authority = <expr>)]` ([#](https://github.com/project-serum/anchor/pull/562)).
 * lang: `#[associated]` and `#[account(associated = <target>, with = <target>)]` are both removed.
 * cli: Removed `anchor launch` command
+* lang: `#[account(init)]` now creates the account inside the same instruction to be consistent with initializing PDAs. To maintain the old behavior of `init`, replace it with `#[account(zero)]` ([#641](https://github.com/project-serum/anchor/pull/641)).
+* lang: `bump` must be provided when using the `seeds` constraint. This has been added as an extra safety constraint to ensure that whenever a PDA is initialized via a constraint the bump used is the one created by `Pubkey::find_program_address`.
 
 ## [0.13.2] - 2021-08-11
 

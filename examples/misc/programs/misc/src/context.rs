@@ -10,7 +10,7 @@ pub struct TestTokenSeedsInit<'info> {
     #[account(
         init,
         seeds = [b"my-mint-seed".as_ref()],
-				bump = mint_bump,
+        bump = mint_bump,
         payer = authority,
         mint::decimals = 6,
         mint::authority = authority,
@@ -19,7 +19,7 @@ pub struct TestTokenSeedsInit<'info> {
     #[account(
         init,
         seeds = [b"my-token-seed".as_ref()],
-				bump = token_bump,
+        bump = token_bump,
         payer = authority,
         token::mint = mint,
         token::authority = authority,
@@ -35,9 +35,9 @@ pub struct TestTokenSeedsInit<'info> {
 #[instruction(nonce: u8)]
 pub struct TestInstructionConstraint<'info> {
     #[account(
-				seeds = [b"my-seed", my_account.key.as_ref()],
-				bump = nonce,
-		)]
+        seeds = [b"my-seed", my_account.key.as_ref()],
+        bump = nonce,
+    )]
     pub my_pda: AccountInfo<'info>,
     pub my_account: AccountInfo<'info>,
 }
@@ -48,7 +48,7 @@ pub struct TestPdaInit<'info> {
     #[account(
         init,
         seeds = [b"my-seed", domain.as_bytes(), foo.key.as_ref(), &seed],
-				bump = bump,
+        bump = bump,
         payer = my_payer,
     )]
     pub my_pda: ProgramAccount<'info, DataU16>,
@@ -61,11 +61,11 @@ pub struct TestPdaInit<'info> {
 #[instruction(bump: u8)]
 pub struct TestPdaInitZeroCopy<'info> {
     #[account(
-				init,
-				seeds = [b"my-seed".as_ref()],
-				bump = bump,
-				payer = my_payer,
-		)]
+        init,
+        seeds = [b"my-seed".as_ref()],
+        bump = bump,
+        payer = my_payer,
+    )]
     pub my_pda: Loader<'info, DataZeroCopy>,
     pub my_payer: AccountInfo<'info>,
     pub system_program: AccountInfo<'info>,
@@ -74,10 +74,10 @@ pub struct TestPdaInitZeroCopy<'info> {
 #[derive(Accounts)]
 pub struct TestPdaMutZeroCopy<'info> {
     #[account(
-				mut,
-				seeds = [b"my-seed".as_ref()],
-				bump = my_pda.load()?.bump,
-		)]
+        mut,
+        seeds = [b"my-seed".as_ref()],
+        bump = my_pda.load()?.bump,
+    )]
     pub my_pda: Loader<'info, DataZeroCopy>,
     pub my_payer: AccountInfo<'info>,
 }
