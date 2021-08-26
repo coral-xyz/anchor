@@ -505,7 +505,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             state: into_inner!(state),
             close: into_inner!(close),
             address: into_inner!(address),
-            seeds: seeds,
+            seeds,
 				})
     }
 
