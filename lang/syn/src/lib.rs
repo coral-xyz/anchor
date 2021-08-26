@@ -406,7 +406,7 @@ pub struct ConstraintInitGroup {
 pub struct ConstraintSeedsGroup {
     pub is_init: bool,
     pub seeds: Punctuated<Expr, Token![,]>,
-    pub bump: Option<Option<Expr>>, // Some(None) => bump was given without a target.
+    pub bump: Option<Expr>, // None => bump was given without a target.
 }
 
 #[derive(Debug, Clone)]

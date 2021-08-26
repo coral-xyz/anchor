@@ -458,7 +458,9 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         let seeds = seeds.map(|c| ConstraintSeedsGroup {
             is_init: init.is_some(),
             seeds: c.seeds.clone(),
-            bump: into_inner!(bump).map(|b| b.bump),
+            bump: into_inner!(bump)
+                .map(|b| b.bump)
+                .expect("bump must be provided with seeds"),
         });
         Ok(ConstraintGroup {
             init: init.as_ref().map(|_| Ok(ConstraintInitGroup {

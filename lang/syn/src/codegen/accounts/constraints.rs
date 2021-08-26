@@ -282,72 +282,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
         Some(c) => {
             let s = &c.seeds;
             let inner = match c.bump.as_ref() {
-                // Bump keyword not given. Just use the seeds.
-                None => quote! {
-                    [#s]
-                },
-                // Bump keyword given.
-                Some(bump) => match bump {
-                    // Bump target not given. Use the canonical bump.
-                    None => {
-                        quote! {
-                            [
-                                #s,
-                                &[
-                                    Pubkey::find_program_address(
-                                        &[#s],
-                                        program_id,
-                                    ).1
-                                ]
-                            ]
-                        }
-                    }
-                    // Bump target given. Use it.
-                    Some(b) => quote! {
-                        [#s, &[#b]]
-                    },
-                },
-            };
-            quote! {
-                    &#inner[..]
-            }
-        }
-    };
-    generate_pda(f, seeds_with_nonce, payer, &c.space, &c.kind)
-}
-
-// TODO: do we want to simply error if the bump is not provided?
-fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2::TokenStream {
-    let name = &f.ident;
-    let s = &c.seeds;
-
-    // If the bump is provided with init, then force it to be the canonical
-    // nonce.
-    if c.is_init && c.bump.is_some() && c.bump.as_ref().unwrap().is_some() {
-        let b = c.bump.as_ref().unwrap().as_ref().unwrap();
-        quote! {
-            let (__program_signer, __bump) = anchor_lang::solana_program::pubkey::Pubkey::find_program_address(
-                &[#s],
-                program_id,
-            );
-            if #name.to_account_info().key != &__program_signer {
-                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
-            }
-            if __bump != #b {
-                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
-            }
-        }
-    } else {
-        let seeds = match c.bump.as_ref() {
-            // Bump keyword not given, so just use the seeds.
-            None => {
-                quote! {
-                    [#s]
-                }
-            }
-            // Bump keyword given.
-            Some(bump) => match bump {
-                // Bump target not given. Find it.
+                // Bump target not given. Use the canonical bump.
                 None => {
                     quote! {
                         [
@@ -362,12 +297,60 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
                     }
                 }
                 // Bump target given. Use it.
-                Some(b) => {
-                    quote! {
-                        [#s, &[#b]]
-                    }
+                Some(b) => quote! {
+                    [#s, &[#b]]
+                },
+            };
+            quote! {
+                &#inner[..]
+            }
+        }
+    };
+    generate_pda(f, seeds_with_nonce, payer, &c.space, &c.kind)
+}
+
+fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2::TokenStream {
+    let name = &f.ident;
+    let s = &c.seeds;
+
+    // If the bump is provided with init *and target*, then force it to be the
+    // canonical bump.
+    if c.is_init && c.bump.is_some() {
+        let b = c.bump.as_ref().unwrap();
+        quote! {
+            let (__program_signer, __bump) = anchor_lang::solana_program::pubkey::Pubkey::find_program_address(
+                &[#s],
+                program_id,
+            );
+            if #name.to_account_info().key != &__program_signer {
+                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+            }
+            if __bump != #b {
+                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+            }
+        }
+    } else {
+        let seeds = match c.bump.as_ref() {
+            // Bump target not given. Find it.
+            None => {
+                quote! {
+                    [
+                        #s,
+                        &[
+                            Pubkey::find_program_address(
+                                &[#s],
+                                program_id,
+                            ).1
+                        ]
+                    ]
                 }
-            },
+            }
+            // Bump target given. Use it.
+            Some(b) => {
+                quote! {
+                    [#s, &[#b]]
+                }
+            }
         };
         quote! {
             let __program_signer = Pubkey::create_program_address(
