@@ -217,7 +217,7 @@ pub struct CreateVesting<'info> {
     #[account(signer)]
     depositor_authority: AccountInfo<'info>,
     // Misc.
-    #[account("token_program.key == &token::ID")]
+    #[account(constraint = token_program.key == &token::ID)]
     token_program: AccountInfo<'info>,
     clock: Sysvar<'info, Clock>,
 }
