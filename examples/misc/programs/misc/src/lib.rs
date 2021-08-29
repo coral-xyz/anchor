@@ -140,4 +140,14 @@ pub mod misc {
         data.bump = 2;
         Ok(())
     }
+
+    pub fn test_init_mint(ctx: Context<TestInitMint>) -> ProgramResult {
+        assert!(ctx.accounts.mint.decimals == 6);
+        Ok(())
+    }
+
+    pub fn test_init_token(ctx: Context<TestInitToken>) -> ProgramResult {
+        assert!(ctx.accounts.token.mint == ctx.accounts.mint.key());
+        Ok(())
+    }
 }

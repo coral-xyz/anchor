@@ -162,3 +162,26 @@ pub struct TestInitZeroCopy<'info> {
     pub payer: AccountInfo<'info>,
     pub system_program: AccountInfo<'info>,
 }
+
+#[derive(Accounts)]
+pub struct TestInitMint<'info> {
+    #[account(init, mint::decimals = 6, mint::authority = payer, payer = payer)]
+    pub mint: CpiAccount<'info, Mint>,
+    #[account(signer)]
+    pub payer: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestInitToken<'info> {
+    #[account(init, token::mint = mint, token::authority = payer, payer = payer)]
+    pub token: CpiAccount<'info, TokenAccount>,
+    pub mint: CpiAccount<'info, Mint>,
+    #[account(signer)]
+    pub payer: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+}
