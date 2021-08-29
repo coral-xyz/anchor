@@ -252,9 +252,9 @@ pub struct Withdraw<'info> {
     #[account(mut)]
     vault: CpiAccount<'info, TokenAccount>,
     #[account(
-				seeds = [vesting.to_account_info().key.as_ref()],
-				bump = vesting.nonce,
-		)]
+        seeds = [vesting.to_account_info().key.as_ref()],
+        bump = vesting.nonce,
+    )]
     vesting_signer: AccountInfo<'info>,
     // Withdraw receiving target..
     #[account(mut)]
@@ -288,9 +288,9 @@ pub struct WhitelistTransfer<'info> {
     #[account(mut, constraint = &vault.owner == vesting_signer.key)]
     vault: CpiAccount<'info, TokenAccount>,
     #[account(
-				seeds = [vesting.to_account_info().key.as_ref()],
-				bump = vesting.nonce,
-		)]
+        seeds = [vesting.to_account_info().key.as_ref()],
+        bump = vesting.nonce,
+    )]
     vesting_signer: AccountInfo<'info>,
     #[account("token_program.key == &token::ID")]
     token_program: AccountInfo<'info>,

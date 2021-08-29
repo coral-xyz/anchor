@@ -727,7 +727,7 @@ pub struct DepositLocked<'info> {
     member_vault: CpiAccount<'info, TokenAccount>,
     #[account(
         seeds = [registrar.to_account_info().key.as_ref(), member.to_account_info().key.as_ref()],
-				bump = member.nonce,
+        bump = member.nonce,
     )]
     member_signer: AccountInfo<'info>,
 
@@ -762,13 +762,13 @@ pub struct Stake<'info> {
     // Program signers.
     #[account(
         seeds = [registrar.to_account_info().key.as_ref(), member.to_account_info().key.as_ref()],
-				bump = member.nonce,
+        bump = member.nonce,
     )]
     member_signer: AccountInfo<'info>,
     #[account(
-				seeds = [registrar.to_account_info().key.as_ref()],
-				bump = registrar.nonce,
-		)]
+        seeds = [registrar.to_account_info().key.as_ref()],
+        bump = registrar.nonce,
+    )]
     registrar_signer: AccountInfo<'info>,
 
     // Misc.
@@ -801,7 +801,7 @@ pub struct StartUnstake<'info> {
     // Programmatic signers.
     #[account(
         seeds = [registrar.to_account_info().key.as_ref(), member.to_account_info().key.as_ref()],
-				bump = member.nonce,
+        bump = member.nonce,
     )]
     member_signer: AccountInfo<'info>,
 
@@ -833,7 +833,7 @@ pub struct EndUnstake<'info> {
 
     #[account(
         seeds = [registrar.to_account_info().key.as_ref(), member.to_account_info().key.as_ref()],
-				bump = member.nonce,
+        bump = member.nonce,
     )]
     member_signer: AccountInfo<'info>,
 
@@ -855,7 +855,7 @@ pub struct Withdraw<'info> {
     vault: CpiAccount<'info, TokenAccount>,
     #[account(
         seeds = [registrar.to_account_info().key.as_ref(), member.to_account_info().key.as_ref()],
-				bump = member.nonce,
+        bump = member.nonce,
     )]
     member_signer: AccountInfo<'info>,
     // Receiver.
@@ -887,7 +887,7 @@ pub struct WithdrawLocked<'info> {
     member_vault: CpiAccount<'info, TokenAccount>,
     #[account(
         seeds = [registrar.to_account_info().key.as_ref(), member.to_account_info().key.as_ref()],
-				bump = member.nonce,
+        bump = member.nonce,
     )]
     member_signer: AccountInfo<'info>,
 
@@ -980,7 +980,7 @@ pub struct ClaimRewardCommon<'info> {
     vault: AccountInfo<'info>,
     #[account(
         seeds = [registrar.to_account_info().key.as_ref(), vendor.to_account_info().key.as_ref()],
-				bump = vendor.nonce,
+        bump = vendor.nonce,
     )]
     vendor_signer: AccountInfo<'info>,
     // Misc.
@@ -1000,7 +1000,7 @@ pub struct ExpireReward<'info> {
     vault: CpiAccount<'info, TokenAccount>,
     #[account(
         seeds = [registrar.to_account_info().key.as_ref(), vendor.to_account_info().key.as_ref()],
-				bump = vendor.nonce
+        bump = vendor.nonce
     )]
     vendor_signer: AccountInfo<'info>,
     // Receiver.
