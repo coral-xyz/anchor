@@ -229,6 +229,17 @@ impl Key for Pubkey {
     }
 }
 
+impl ToAccountMetas for Pubkey {
+    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
+        vec![
+            anchor_lang::solana_program::instruction::AccountMeta::new_readonly(
+                self.clone(),
+                is_signer.unwrap_or(false),
+            ),
+        ]
+    }
+}
+
 /// The prelude contains all commonly used components of the crate.
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {

@@ -1,5 +1,7 @@
-use crate::{Accounts, ToAccountInfos, ToAccountMetas};
+
+use crate::{Accounts, AccountsExit, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
+use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
@@ -32,6 +34,22 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Vec<T> {
     }
 }
 
+impl<'info, T: AccountsExit<'info>> AccountsExit<'info> for Vec<T> {
+    fn exit(&self, program_id: &Pubkey) -> ProgramResult {
+        let res: Result<Vec<_>, ProgramError> = self
+            .iter()
+            .map(|account| account.exit(program_id))
+            .collect();
+        res.map(|_| ())
+    }
+}
+
+pub mod __client_accounts_vec {
+    use super::*;
+    use anchor_lang::prelude::borsh;
+
+    pub type Vec<T> = std::vec::Vec<T>;
+}
 #[cfg(test)]
 mod tests {
     use crate::ToAccountInfo;
@@ -91,5 +109,16 @@ mod tests {
 
         let mut accounts = &[][..];
         Vec::<Test>::try_accounts(&program_id, &mut accounts, &[]).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_accounts_exit_trait_for_exit_fails() {
+        todo!()
+    }
+
+    #[test]
+    fn test_accounts_exit_trait_for_vec() {
+        todo!()
     }
 }
