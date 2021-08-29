@@ -450,18 +450,33 @@ pub fn generate_pda(
             let #field: #combined_account_ty = {
                 #payer
 
-                // Fund the account for rent exemption.
-                let required_lamports = __anchor_rent
-                    .minimum_balance(anchor_spl::token::TokenAccount::LEN)
-                    .max(1)
-                    .saturating_sub(#field.to_account_info().lamports());
+                // If the account being initialized already has lamports, then
+                // return them all back to the payer so that the account has
+                // zero lamports when the system program's create instruction
+                // is eventually called.
+                let __current_lamports = #field.to_account_info().lamports();
+                if __current_lamports > 0 {
+                    anchor_lang::solana_program::program::invoke(
+                        &anchor_lang::solana_program::system_instruction::transfer(
+                            #field.to_account_info().key,
+                            payer.to_account_info().key,
+                            __current_lamports,
+                        ),
+                        &[
+                            #field.to_account_info(),
+                            payer.to_account_info(),
+                            system_program.to_account_info().clone(),
+                        ],
+                    )?;
+                }
 
                 // Create the token account with right amount of lamports and space, and the correct owner.
+                let lamports = rent.minimum_balance(anchor_spl::token::TokenAccount::LEN);
                 anchor_lang::solana_program::program::invoke_signed(
                     &anchor_lang::solana_program::system_instruction::create_account(
                         payer.to_account_info().key,
                         #field.to_account_info().key,
-                        required_lamports,
+                        lamports,
                         anchor_spl::token::TokenAccount::LEN as u64,
                         token_program.to_account_info().key,
                     ),
@@ -492,18 +507,33 @@ pub fn generate_pda(
             let #field: #combined_account_ty = {
                 #payer
 
-                // Fund the account for rent exemption.
-                let required_lamports = rent
-                    .minimum_balance(anchor_spl::token::Mint::LEN)
-                    .max(1)
-                    .saturating_sub(#field.to_account_info().lamports());
+                // If the account being initialized already has lamports, then
+                // return them all back to the payer so that the account has
+                // zero lamports when the system program's create instruction
+                // is eventually called.
+                let __current_lamports = #field.to_account_info().lamports();
+                if __current_lamports > 0 {
+                    anchor_lang::solana_program::program::invoke(
+                        &anchor_lang::solana_program::system_instruction::transfer(
+                            #field.to_account_info().key,
+                            payer.to_account_info().key,
+                            __current_lamports,
+                        ),
+                        &[
+                            #field.to_account_info(),
+                            payer.to_account_info(),
+                            system_program.to_account_info().clone(),
+                        ],
+                    )?;
+                }
 
                 // Create the token account with right amount of lamports and space, and the correct owner.
+                let lamports = rent.minimum_balance(anchor_spl::token::Mint::LEN);
                 anchor_lang::solana_program::program::invoke_signed(
                     &anchor_lang::solana_program::system_instruction::create_account(
                         payer.to_account_info().key,
                         #field.to_account_info().key,
-                        required_lamports,
+                        lamports,
                         anchor_spl::token::Mint::LEN as u64,
                         token_program.to_account_info().key,
                     ),
@@ -564,6 +594,26 @@ pub fn generate_pda(
                 let #field = {
                     #space
                     #payer
+
+                    // If the account being initialized already has lamports, then
+                    // return them all back to the payer so that the account has
+                    // zero lamports when the system program's create instruction
+                    // is eventually called.
+                    let __current_lamports = #field.to_account_info().lamports();
+                    if __current_lamports > 0 {
+                        anchor_lang::solana_program::program::invoke(
+                            &anchor_lang::solana_program::system_instruction::transfer(
+                                #field.to_account_info().key,
+                                payer.to_account_info().key,
+                                __current_lamports,
+                            ),
+                            &[
+                                #field.to_account_info(),
+                                payer.to_account_info(),
+                                system_program.to_account_info().clone(),
+                            ],
+                        )?;
+                    }
 
                     let lamports = __anchor_rent.minimum_balance(space);
                     let ix = anchor_lang::solana_program::system_instruction::create_account(
