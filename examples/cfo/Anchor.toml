@@ -19,7 +19,7 @@ build = "anchor run build-deps && anchor build"
 build-deps = "anchor run build-dex && anchor run build-swap && anchor run build-stake"
 build-dex = "pushd deps/serum-dex/dex/ && cargo build-bpf && popd"
 build-swap = "cd deps/swap && pwd && anchor build && cd ../../"
-build-stake = "pushd deps/stake && yarn && yarn build && popd"
+build-stake = "pushd deps/stake && anchor build && popd"
 #
 # Runs a localnet with all the programs deployed.
 #
