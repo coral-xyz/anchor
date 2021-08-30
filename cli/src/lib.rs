@@ -1398,12 +1398,15 @@ fn genesis_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
         }
     }
     if let Some(test) = cfg.test.as_ref() {
-        for entry in &test.genesis {
-            flags.push("--bpf-program".to_string());
-            flags.push(entry.address.clone());
-            flags.push(entry.program.clone());
+        if let Some(genesis) = &test.genesis {
+            for entry in genesis {
+                flags.push("--bpf-program".to_string());
+                flags.push(entry.address.clone());
+                flags.push(entry.program.clone());
+            }
         }
     }
+
     Ok(flags)
 }
 
@@ -1439,17 +1442,19 @@ fn stream_logs(config: &WithPath<Config>) -> Result<Vec<std::process::Child>> {
         handles.push(child);
     }
     if let Some(test) = config.test.as_ref() {
-        for entry in &test.genesis {
-            let log_file = File::create(format!("{}/{}.log", program_logs_dir, entry.address))?;
-            let stdio = std::process::Stdio::from(log_file);
-            let child = std::process::Command::new("solana")
-                .arg("logs")
-                .arg(entry.address.clone())
-                .arg("--url")
-                .arg(config.provider.cluster.url())
-                .stdout(stdio)
-                .spawn()?;
-            handles.push(child);
+        if let Some(genesis) = &test.genesis {
+            for entry in genesis {
+                let log_file = File::create(format!("{}/{}.log", program_logs_dir, entry.address))?;
+                let stdio = std::process::Stdio::from(log_file);
+                let child = std::process::Command::new("solana")
+                    .arg("logs")
+                    .arg(entry.address.clone())
+                    .arg("--url")
+                    .arg(config.provider.cluster.url())
+                    .stdout(stdio)
+                    .spawn()?;
+                handles.push(child);
+            }
         }
     }
 
