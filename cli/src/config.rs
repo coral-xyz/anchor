@@ -451,7 +451,8 @@ fn deser_programs(
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Test {
-    pub genesis: Vec<GenesisEntry>,
+    pub genesis: Option<Vec<GenesisEntry>>,
+    pub validator: Validator
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -460,6 +461,33 @@ pub struct GenesisEntry {
     pub address: String,
     // Filepath to the compiled program to embed into the genesis.
     pub program: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Validator {
+    // Range to use for dynamically assigned ports.
+    pub dynamic_port_range: Option<String>,
+    // Enable the faucet on this port.
+    pub faucet_port: Option<u16>,
+    // Give the faucet address this much SOL in genesis.
+    pub faucet_sol: Option<String>,
+    // URL for Solana's JSON RPC or moniker.
+    pub url: Option<String>,
+    // Directory for ledger storage.
+    #[serde(default = "default_ledger_directory")]
+    pub ledger: Option<String>,
+    // Keep this amount of shreds in root slots.
+    pub limit_ledger_size: Option<String>,
+    // Enable JSON RPC on this port, and the next port for the RPC websocket.
+    pub rpc_port: Option<String>,
+    // Override the number of slots in an epoch.
+    pub slots_per_epoch: Option<String>,
+    // Warp the ledger to WARP_SLOT after starting the validator.
+    pub warp_slot: Option<String>,
+}
+
+fn default_ledger_directory() -> Option<String> {
+    Some(".anchor/test-ledger".to_string())
 }
 
 #[derive(Debug, Clone)]
