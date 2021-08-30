@@ -47,6 +47,16 @@ export type Context = {
 };
 
 /**
+ * The type which is passed in for an array of accounts. Thus, whether the account is a signer of is mutable
+ * can be determined from the frontend
+ */
+export type AccountsArray = {
+  address: Address;
+  isSigner?: boolean;
+  isWriteable?: boolean;
+}[];
+
+/**
  * A set of accounts mapping one-to-one to the program's accounts struct, i.e.,
  * the type deriving `#[derive(Accounts)]`.
  *
@@ -56,7 +66,7 @@ export type Context = {
  * nested here.
  */
 export type Accounts = {
-  [key: string]: Address | Accounts;
+  [key: string]: Address | Accounts | AccountsArray;
 };
 
 export function splitArgsAndCtx(

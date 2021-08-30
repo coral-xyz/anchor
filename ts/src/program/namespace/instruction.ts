@@ -1,5 +1,10 @@
 import { PublicKey, TransactionInstruction } from "@solana/web3.js";
-import { IdlAccount, IdlInstruction, IdlAccountItem } from "../../idl";
+import {
+  IdlAccount,
+  IdlInstruction,
+  IdlAccountItem,
+  IdlAccountsVec,
+} from "../../idl";
 import { IdlError } from "../../error";
 import {
   toInstruction,
@@ -7,7 +12,7 @@ import {
   translateAddress,
   Address,
 } from "../common";
-import { Accounts, splitArgsAndCtx } from "../context";
+import { Accounts, AccountsArray, splitArgsAndCtx } from "../context";
 
 export default class InstructionNamespaceFactory {
   public static build(
@@ -60,6 +65,16 @@ export default class InstructionNamespaceFactory {
             rpcAccs,
             nestedAccounts
           ).flat();
+        } else if ((acc as IdlAccountsVec).dummyVecIndicator) {
+          const account: IdlAccountsVec = acc as IdlAccountsVec;
+          const accountInfos = ctx[acc.name] as AccountsArray;
+          return accountInfos.map((info) => {
+            return {
+              pubkey: translateAddress(info.address),
+              isWriteable: info.isWriteable ?? false,
+              isSigner: info.isSigner ?? false,
+            };
+          });
         } else {
           const account: IdlAccount = acc as IdlAccount;
           return {
