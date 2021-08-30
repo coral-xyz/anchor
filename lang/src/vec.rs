@@ -1,4 +1,3 @@
-
 use crate::{Accounts, AccountsExit, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
@@ -23,13 +22,21 @@ impl<T: ToAccountMetas> ToAccountMetas for Vec<T> {
 }
 
 impl<'info, T: Accounts<'info>> Accounts<'info> for Vec<T> {
+    /// try_accounts for Vec consumes the rest of the accounts, thus a vector should always be at the end of the struct
+    // TODO:!!!! (maybe have ix_data give it)
     fn try_accounts(
         program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         ix_data: &[u8],
     ) -> Result<Self, ProgramError> {
         let mut vec: Vec<T> = Vec::new();
-        T::try_accounts(program_id, accounts, ix_data).map(|item| vec.push(item))?;
+        while accounts.len() != 0 {
+            // let data: &[u8] = &.try_borrow_data()?;
+            // let mut disc_bytes = [0u8; 8];
+            // disc_bytes.copy_from_slice(&data[..8]);
+            T::try_accounts(program_id, accounts, ix_data).map(|item| vec.push(item))?;
+        }
+
         Ok(vec)
     }
 }

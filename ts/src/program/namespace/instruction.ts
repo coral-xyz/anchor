@@ -71,7 +71,7 @@ export default class InstructionNamespaceFactory {
           return accountInfos.map((info) => {
             return {
               pubkey: translateAddress(info.address),
-              isWriteable: info.isWriteable ?? false,
+              isWritable: info.isWriteable ?? false,
               isSigner: info.isSigner ?? false,
             };
           });
