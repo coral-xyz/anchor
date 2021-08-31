@@ -1,6 +1,7 @@
 use crate::error::ErrorCode;
 use crate::{
-    Accounts, AccountsClose, AccountsExit, ToAccountInfo, ToAccountInfos, ToAccountMetas, ZeroCopy,
+    Accounts, AccountsClose, AccountsExit, Key, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+    ZeroCopy,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
@@ -181,5 +182,11 @@ impl<'info, T: ZeroCopy> ToAccountInfos<'info> for Loader<'info, T> {
 impl<'info, T: ZeroCopy> ToAccountInfo<'info> for Loader<'info, T> {
     fn to_account_info(&self) -> AccountInfo<'info> {
         self.acc_info.clone()
+    }
+}
+
+impl<'info, T: ZeroCopy> Key for Loader<'info, T> {
+    fn key(&self) -> Pubkey {
+        *self.acc_info.key
     }
 }

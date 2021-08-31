@@ -1,6 +1,6 @@
 use crate::error::ErrorCode;
 use crate::{
-    AccountDeserialize, AccountSerialize, Accounts, AccountsExit, CpiAccount, ToAccountInfo,
+    AccountDeserialize, AccountSerialize, Accounts, AccountsExit, CpiAccount, Key, ToAccountInfo,
     ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
@@ -158,4 +158,10 @@ pub fn address(program_id: &Pubkey) -> Pubkey {
     let seed = PROGRAM_STATE_SEED;
     let owner = program_id;
     Pubkey::create_with_seed(&base, seed, owner).unwrap()
+}
+
+impl<'info, T: AccountSerialize + AccountDeserialize + Clone> Key for ProgramState<'info, T> {
+    fn key(&self) -> Pubkey {
+        *self.inner.info.key
+    }
 }
