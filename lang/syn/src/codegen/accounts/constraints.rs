@@ -538,12 +538,8 @@ pub fn generate_pda(
                     &#o
                 },
             };
-            let create_account = generate_create_account(
-                field,
-                quote! {space},
-                owner.clone(),
-                seeds_with_nonce.clone(),
-            );
+            let create_account =
+                generate_create_account(field, quote! {space}, owner, seeds_with_nonce);
             quote! {
                 let #field = {
                     #space

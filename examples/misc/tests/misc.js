@@ -399,7 +399,7 @@ describe("misc", () => {
         anchor.web3.SystemProgram.transfer({
           fromPubkey: program.provider.wallet.publicKey,
           toPubkey: data.publicKey,
-          lamports: 1000,
+          lamports: 4039280,
         }),
       ],
     });
@@ -465,7 +465,7 @@ describe("misc", () => {
         anchor.web3.SystemProgram.transfer({
           fromPubkey: program.provider.wallet.publicKey,
           toPubkey: mint.publicKey,
-          lamports: 1000,
+          lamports: 4039280,
         }),
       ],
     });
@@ -525,7 +525,41 @@ describe("misc", () => {
         anchor.web3.SystemProgram.transfer({
           fromPubkey: program.provider.wallet.publicKey,
           toPubkey: token.publicKey,
-          lamports: 1000,
+          lamports: 4039280,
+        }),
+      ],
+    });
+    const client = new Token(
+      program.provider.connection,
+      mint.publicKey,
+      TOKEN_PROGRAM_ID,
+      program.provider.wallet.payer
+    );
+    const account = await client.getAccountInfo(token.publicKey);
+    assert.ok(account.state === 1);
+    assert.ok(account.amount.toNumber() === 0);
+    assert.ok(account.isInitialized);
+    assert.ok(account.owner.equals(program.provider.wallet.publicKey));
+    assert.ok(account.mint.equals(mint.publicKey));
+  });
+
+  it("Can create a random token with prefunding under the rent exemption", async () => {
+    const token = anchor.web3.Keypair.generate();
+    await program.rpc.testInitToken({
+      accounts: {
+        token: token.publicKey,
+        mint: mint.publicKey,
+        payer: program.provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [token],
+      instructions: [
+        anchor.web3.SystemProgram.transfer({
+          fromPubkey: program.provider.wallet.publicKey,
+          toPubkey: token.publicKey,
+          lamports: 1,
         }),
       ],
     });
