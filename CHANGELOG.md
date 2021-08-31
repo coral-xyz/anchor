@@ -15,6 +15,8 @@ incremented for features.
 
 * lang: Ignore `Unnamed` structs instead of panic ([#605](https://github.com/project-serum/anchor/pull/605)).
 * lang: Add constraints for initializing mint accounts as pdas, `#[account(init, seeds = [...], mint::decimals = <expr>, mint::authority = <expr>)]` ([#562](https://github.com/project-serum/anchor/pull/562)).
+* lang: Add `AsRef<AccountInfo>` for `AccountInfo` wrappers ([#652](https://github.com/project-serum/anchor/pull/652)).
+* lang: Optimize `trait Key` by removing `AccountInfo` cloning ([#652](https://github.com/project-serum/anchor/pull/652)).
 * cli, client, lang: Update solana toolchain to v1.7.11 ([#653](https://github.com/project-serum/anchor/pull/653)).
 
 ### Breaking Changes
