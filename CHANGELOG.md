@@ -21,7 +21,6 @@ incremented for features.
 
 ### Breaking Changes
 
-* lang: `try_from` methods for `ProgramAccount`, `Loader`, and `ProgramState` now take in an additional `program_id: &Pubkey` parameter ([#]()).
 * lang: Change `#[account(init, seeds = [...], token = <expr>, authority = <expr>)]` to `#[account(init, token::mint = <expr> token::authority = <expr>)]` ([#562](https://github.com/project-serum/anchor/pull/562)).
 * lang: `#[associated]` and `#[account(associated = <target>, with = <target>)]` are both removed ([#612](https://github.com/project-serum/anchor/pull/612)).
 * cli: Removed `anchor launch` command ([#634](https://github.com/project-serum/anchor/pull/634)).
@@ -29,6 +28,7 @@ incremented for features.
 * lang: `bump` must be provided when using the `seeds` constraint. This has been added as an extra safety constraint to ensure that whenever a PDA is initialized via a constraint the bump used is the one created by `Pubkey::find_program_address` ([#641](https://github.com/project-serum/anchor/pull/641)).
 * lang: `try_from_init` has been removed from `Loader`, `ProgramAccount`, and `CpiAccount`  and replaced with `try_from_unchecked` ([#641](https://github.com/project-serum/anchor/pull/641)).
 * lang: Remove `AccountsInit` trait ([#641](https://github.com/project-serum/anchor/pull/641)).
+* lang: `try_from` methods for `ProgramAccount`, `Loader`, and `ProgramState` now take in an additional `program_id: &Pubkey` parameter ([#660](https://github.com/project-serum/anchor/pull/660)).
 
 ## [0.13.2] - 2021-08-11
 
