@@ -33,7 +33,10 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramState<'a, T> {
 
     /// Deserializes the given `info` into a `ProgramState`.
     #[inline(never)]
-    pub fn try_from(program_id: &Pubkey, info: &AccountInfo<'a>) -> Result<ProgramState<'a, T>, ProgramError> {
+    pub fn try_from(
+        program_id: &Pubkey,
+        info: &AccountInfo<'a>,
+    ) -> Result<ProgramState<'a, T>, ProgramError> {
         if info.owner != program_id {
             return Err(ErrorCode::AccountNotProgramOwned.into());
         }

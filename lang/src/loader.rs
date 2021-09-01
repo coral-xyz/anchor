@@ -39,7 +39,10 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
 
     /// Constructs a new `Loader` from a previously initialized account.
     #[inline(never)]
-    pub fn try_from(program_id: &Pubkey, acc_info: &AccountInfo<'info>) -> Result<Loader<'info, T>, ProgramError> {
+    pub fn try_from(
+        program_id: &Pubkey,
+        acc_info: &AccountInfo<'info>,
+    ) -> Result<Loader<'info, T>, ProgramError> {
         if acc_info.owner != program_id {
             return Err(ErrorCode::AccountNotProgramOwned.into());
         }

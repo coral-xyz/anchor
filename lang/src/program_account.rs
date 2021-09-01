@@ -32,7 +32,10 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
 
     /// Deserializes the given `info` into a `ProgramAccount`.
     #[inline(never)]
-    pub fn try_from(program_id: &Pubkey, info: &AccountInfo<'a>) -> Result<ProgramAccount<'a, T>, ProgramError> {
+    pub fn try_from(
+        program_id: &Pubkey,
+        info: &AccountInfo<'a>,
+    ) -> Result<ProgramAccount<'a, T>, ProgramError> {
         if info.owner != program_id {
             return Err(ErrorCode::AccountNotProgramOwned.into());
         }
@@ -42,7 +45,6 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
             T::try_deserialize(&mut data)?,
         ))
     }
-
 
     /// Deserializes the given `info` into a `ProgramAccount` without checking
     /// the account discriminator. Be careful when using this and avoid it if
