@@ -452,7 +452,7 @@ fn deser_programs(
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Test {
     pub genesis: Option<Vec<GenesisEntry>>,
-    pub validator: Validator
+    pub validator: Validator,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -466,28 +466,29 @@ pub struct GenesisEntry {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Validator {
     // Range to use for dynamically assigned ports.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dynamic_port_range: Option<String>,
     // Enable the faucet on this port.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub faucet_port: Option<u16>,
     // Give the faucet address this much SOL in genesis.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub faucet_sol: Option<String>,
     // URL for Solana's JSON RPC or moniker.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
-    // Directory for ledger storage.
-    #[serde(default = "default_ledger_directory")]
-    pub ledger: Option<String>,
     // Keep this amount of shreds in root slots.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub limit_ledger_size: Option<String>,
     // Enable JSON RPC on this port, and the next port for the RPC websocket.
-    pub rpc_port: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rpc_port: Option<u16>,
     // Override the number of slots in an epoch.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub slots_per_epoch: Option<String>,
     // Warp the ledger to WARP_SLOT after starting the validator.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub warp_slot: Option<String>,
-}
-
-fn default_ledger_directory() -> Option<String> {
-    Some(".anchor/test-ledger".to_string())
 }
 
 #[derive(Debug, Clone)]
