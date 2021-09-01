@@ -24,7 +24,7 @@ struct Inner<'info, T: AccountSerialize + AccountDeserialize + Clone> {
 }
 
 impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T> {
-    pub fn new(info: AccountInfo<'a>, account: T) -> ProgramAccount<'a, T> {
+    fn new(info: AccountInfo<'a>, account: T) -> ProgramAccount<'a, T> {
         Self {
             inner: Box::new(Inner { info, account }),
         }

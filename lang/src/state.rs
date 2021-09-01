@@ -25,7 +25,7 @@ struct Inner<'info, T: AccountSerialize + AccountDeserialize + Clone> {
 }
 
 impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramState<'a, T> {
-    pub fn new(info: AccountInfo<'a>, account: T) -> ProgramState<'a, T> {
+    fn new(info: AccountInfo<'a>, account: T) -> ProgramState<'a, T> {
         Self {
             inner: Box::new(Inner { info, account }),
         }
@@ -39,6 +39,10 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramState<'a, T> {
     ) -> Result<ProgramState<'a, T>, ProgramError> {
         if info.owner != program_id {
             return Err(ErrorCode::AccountNotProgramOwned.into());
+        }
+        if info.key != &Self::address(program_id) {
+            solana_program::msg!("Invalid state address");
+            return Err(ErrorCode::StateInvalidAddress.into());
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramState::new(
@@ -71,12 +75,6 @@ where
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
-
-        if account.key != &Self::address(program_id) {
-            solana_program::msg!("Invalid state address");
-            return Err(ErrorCode::StateInvalidAddress.into());
-        }
-
         ProgramState::try_from(program_id, account)
     }
 }
