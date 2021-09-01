@@ -32,7 +32,10 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
 
     /// Deserializes the given `info` into a `ProgramAccount`.
     #[inline(never)]
-    pub fn try_from(info: &AccountInfo<'a>) -> Result<ProgramAccount<'a, T>, ProgramError> {
+    pub fn try_from(program_id: &Pubkey, info: &AccountInfo<'a>) -> Result<ProgramAccount<'a, T>, ProgramError> {
+        if info.owner != program_id {
+            return Err(ErrorCode::AccountNotProgramOwned.into());
+        }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramAccount::new(
             info.clone(),
@@ -40,14 +43,18 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
         ))
     }
 
-    /// Deserializes the zero-initialized `info` into a `ProgramAccount` without
-    /// checking the account type. This should only be used upon program account
-    /// initialization (since the entire account data array is zeroed and thus
-    /// no account type is set).
+
+    /// Deserializes the given `info` into a `ProgramAccount` without checking
+    /// the account discriminator. Be careful when using this and avoid it if
+    /// possible.
     #[inline(never)]
     pub fn try_from_unchecked(
+        program_id: &Pubkey,
         info: &AccountInfo<'a>,
     ) -> Result<ProgramAccount<'a, T>, ProgramError> {
+        if info.owner != program_id {
+            return Err(ErrorCode::AccountNotProgramOwned.into());
+        }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramAccount::new(
             info.clone(),
@@ -75,11 +82,7 @@ where
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
-        let pa = ProgramAccount::try_from(account)?;
-        if pa.inner.info.owner != program_id {
-            return Err(ErrorCode::AccountNotProgramOwned.into());
-        }
-        Ok(pa)
+        ProgramAccount::try_from(program_id, account)
     }
 }
 

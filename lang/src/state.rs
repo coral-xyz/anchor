@@ -33,7 +33,10 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramState<'a, T> {
 
     /// Deserializes the given `info` into a `ProgramState`.
     #[inline(never)]
-    pub fn try_from(info: &AccountInfo<'a>) -> Result<ProgramState<'a, T>, ProgramError> {
+    pub fn try_from(program_id: &Pubkey, info: &AccountInfo<'a>) -> Result<ProgramState<'a, T>, ProgramError> {
+        if info.owner != program_id {
+            return Err(ErrorCode::AccountNotProgramOwned.into());
+        }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramState::new(
             info.clone(),
@@ -71,12 +74,7 @@ where
             return Err(ErrorCode::StateInvalidAddress.into());
         }
 
-        let pa = ProgramState::try_from(account)?;
-        if pa.inner.info.owner != program_id {
-            solana_program::msg!("Invalid state owner");
-            return Err(ErrorCode::AccountNotProgramOwned.into());
-        }
-        Ok(pa)
+        ProgramState::try_from(program_id, account)
     }
 }
 
