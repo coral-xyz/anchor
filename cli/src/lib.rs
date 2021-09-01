@@ -1308,7 +1308,7 @@ fn test(
         if is_localnet && (!skip_local_validator) {
             let flags = match skip_deploy {
                 true => None,
-                false => Some(genesis_flags(cfg)?),
+                false => Some(validator_flags(cfg)?),
             };
             validator_handle = Some(start_test_validator(cfg, flags)?);
         }
@@ -1367,7 +1367,7 @@ fn test(
 
 // Returns the solana-test-validator flags to embed the workspace programs
 // in the genesis block. This allows us to run tests without every deploying.
-fn genesis_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
+fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
     let programs = cfg.programs.get(&Cluster::Localnet);
 
     let mut flags = Vec::new();
@@ -1397,6 +1397,7 @@ fn genesis_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
             write_idl(idl, OutFile::File(idl_out))?;
         }
     }
+
     if let Some(test) = cfg.test.as_ref() {
         if let Some(genesis) = &test.genesis {
             for entry in genesis {
@@ -1404,6 +1405,10 @@ fn genesis_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
                 flags.push(entry.address.clone());
                 flags.push(entry.program.clone());
             }
+        }
+        for (key, value) in serde_json::to_value(&test.validator)?.as_object().unwrap() {
+            flags.push(format!("--{}", key.replace("_", "-")));
+            flags.push(value.to_string());
         }
     }
 
@@ -1481,19 +1486,26 @@ fn start_test_validator(cfg: &Config, flags: Option<Vec<String>>) -> Result<Chil
     // Start a validator for testing.
     let test_validator_stdout = File::create(test_ledger_log_filename)?;
     let test_validator_stderr = test_validator_stdout.try_clone()?;
+    let flags = flags.unwrap_or_default();
     let validator_handle = std::process::Command::new("solana-test-validator")
         .arg("--ledger")
         .arg(test_ledger_filename)
         .arg("--mint")
         .arg(cfg.wallet_kp()?.pubkey().to_string())
-        .args(flags.unwrap_or_default())
+        .args(&flags)
         .stdout(Stdio::from(test_validator_stdout))
         .stderr(Stdio::from(test_validator_stderr))
         .spawn()
         .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
 
+    // If a custom port is defined use that for validator ready check.
+    let port = match flags.iter().position(|f| *f == "--rpc-port") {
+        Some(position) => flags[position + 1].clone(),
+        None => "8899".to_string(),
+    };
+
     // Wait for the validator to be ready.
-    let client = RpcClient::new("http://localhost:8899".to_string());
+    let client = RpcClient::new(format!("http://localhost:{}", port));
     let mut count = 0;
     let ms_wait = 5000;
     while count < ms_wait {
