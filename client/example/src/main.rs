@@ -147,13 +147,6 @@ fn basic_2(client: &Client, pid: Pubkey) -> Result<()> {
     // Build and send a transaction.
     program
         .request()
-        .instruction(system_instruction::create_account(
-            &authority,
-            &counter.pubkey(),
-            program.rpc().get_minimum_balance_for_rent_exemption(500)?,
-            500,
-            &pid,
-        ))
         .signer(&counter)
         .accounts(basic_2_accounts::Create {
             counter: counter.pubkey(),
