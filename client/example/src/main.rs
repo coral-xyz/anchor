@@ -98,7 +98,7 @@ fn composite(client: &Client, pid: Pubkey) -> Result<()> {
             dummy_b: dummy_b.pubkey(),
         })
         .args(composite_instruction::Initialize)
-        .send()?;
+        .send(None)?;
 
     // Assert the transaction worked.
     let dummy_a_account: DummyA = program.account(dummy_a.pubkey())?;
@@ -121,7 +121,7 @@ fn composite(client: &Client, pid: Pubkey) -> Result<()> {
             dummy_a: 1234,
             dummy_b: 4321,
         })
-        .send()?;
+        .send(None)?;
 
     // Assert the transaction worked.
     let dummy_a_account: DummyA = program.account(dummy_a.pubkey())?;
@@ -154,7 +154,7 @@ fn basic_2(client: &Client, pid: Pubkey) -> Result<()> {
             system_program: system_program::ID,
         })
         .args(basic_2_instruction::Create { authority })
-        .send()?;
+        .send(None)?;
 
     let counter_account: Counter = program.account(counter.pubkey())?;
 
@@ -179,7 +179,7 @@ fn events(client: &Client, pid: Pubkey) -> Result<()> {
     program
         .request()
         .args(events_instruction::Initialize {})
-        .send()?;
+        .send(None)?;
 
     let event = receiver.recv().unwrap();
     assert_eq!(event.data, 5);
@@ -207,7 +207,7 @@ pub fn basic_4(client: &Client, pid: Pubkey) -> Result<()> {
         .state_request()
         .accounts(basic_4_accounts::Auth { authority })
         .new(basic_4_instruction::state::New)
-        .send()?;
+        .send(None)?;
     let counter_account: CounterState = program.state()?;
     assert_eq!(counter_account.authority, authority);
     assert_eq!(counter_account.count, 0);
@@ -217,7 +217,7 @@ pub fn basic_4(client: &Client, pid: Pubkey) -> Result<()> {
         .state_request()
         .accounts(basic_4_accounts::Auth { authority })
         .args(basic_4_instruction::state::Increment)
-        .send()?;
+        .send(None)?;
     let counter_account: CounterState = program.state()?;
     assert_eq!(counter_account.authority, authority);
     assert_eq!(counter_account.count, 1);
