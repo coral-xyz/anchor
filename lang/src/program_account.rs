@@ -6,6 +6,7 @@ use crate::{
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
+use solana_program::msg;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::ops::{Deref, DerefMut};
@@ -156,6 +157,11 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Deref for ProgramAcco
 
 impl<'a, T: AccountSerialize + AccountDeserialize + Clone> DerefMut for ProgramAccount<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
+        if !self.inner.info.is_writable {
+            msg!("The given ProgramAccount is not mutable");
+            panic!();
+        }
+
         &mut DerefMut::deref_mut(&mut self.inner).account
     }
 }
