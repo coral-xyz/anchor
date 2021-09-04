@@ -13,7 +13,7 @@ incremented for features.
 
 ### Features
 
-* lang: Check that ProgramAccount writable before mut borrow ([#681](https://github.com/project-serum/anchor/pull/681)).
+* lang: Check that ProgramAccount writable before mut borrow (`anchor-debug` only) ([#681](https://github.com/project-serum/anchor/pull/681)).
 
 ## [0.14.0] - 2021-09-02
 
