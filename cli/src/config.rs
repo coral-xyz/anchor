@@ -488,7 +488,7 @@ impl Program {
             .expect("Must have current dir")
             .join(format!("target/deploy/{}-keypair.json", self.lib_name));
         if path.exists() {
-            return Ok(WithPath::new(File::open(&path)?, path.clone()));
+            return Ok(WithPath::new(File::open(&path)?, path));
         }
         let program_kp = Keypair::generate(&mut rand::rngs::OsRng);
         let mut file = File::create(&path)?;
