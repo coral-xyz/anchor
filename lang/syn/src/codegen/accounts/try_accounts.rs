@@ -161,8 +161,14 @@ fn typed_ident(field: &Field) -> TokenStream {
         }
         Ty::Account(ty) => {
             let account = &ty.account_type_path;
-            quote! {
-                Account<#account>
+            if ty.boxed {
+                quote! {
+                    Box<Account<#account>>
+                }
+            } else {
+                quote! {
+                    Account<#account>
+                }
             }
         }
     };

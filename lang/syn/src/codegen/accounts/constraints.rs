@@ -143,22 +143,53 @@ pub fn generate_constraint_init(f: &Field, c: &ConstraintInitGroup) -> proc_macr
 pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let (account_ty, account_wrapper_ty, _) = parse_ty(f);
-    let try_from = match &f.ty {
-        Ty::AccountInfo => quote! { #field },
-        Ty::Account(_) => quote! {
-            #account_wrapper_ty::try_from_unchecked(
-                &#field,
-            )?
-        },
-        _ => quote! {
-            #account_wrapper_ty::try_from_unchecked(
-                program_id,
-                &#field,
-            )?
-        },
+    let (account_combined_ty, try_from) = match &f.ty {
+        Ty::AccountInfo => (
+            quote! {
+                #account_wrapper_ty<#account_ty>
+            },
+            quote! { #field },
+        ),
+        Ty::Account(AccountTy { boxed, .. }) => {
+            if *boxed {
+                (
+                    quote! {
+                        Box<#account_wrapper_ty<#account_ty>>
+                    },
+                    quote! {
+                        Box::new(#account_wrapper_ty::try_from_unchecked(
+                            &#field,
+                        )?)
+                    },
+                )
+            } else {
+                (
+                    quote! {
+                        #account_wrapper_ty<#account_ty>
+                    },
+                    quote! {
+                        #account_wrapper_ty::try_from_unchecked(
+                            &#field,
+                        )?
+                    },
+                )
+            }
+        }
+        _ => (
+            quote! {
+                #account_wrapper_ty<#account_ty>
+            },
+            quote! {
+                #account_wrapper_ty::try_from_unchecked(
+                    program_id,
+                    &#field,
+                )?
+
+            },
+        ),
     };
     quote! {
-        let #field: #account_wrapper_ty<#account_ty> = {
+        let #field: #account_combined_ty = {
             let mut __data: &[u8] = &#field.try_borrow_data()?;
             let mut __disc_bytes = [0u8; 8];
             __disc_bytes.copy_from_slice(&__data[..8]);
@@ -458,16 +489,31 @@ pub fn generate_init(
                 #field.to_account_info()
             },
         ),
-        Ty::Account(_) => (
-            quote! {
-                #account_wrapper_ty<#account_ty>
-            },
-            quote! {
-                #account_wrapper_ty::try_from_unchecked(
-                    &#field.to_account_info(),
-                )?
-            },
-        ),
+        Ty::Account(AccountTy { boxed, .. }) => {
+            if boxed {
+                (
+                    quote! {
+                        Box<#account_wrapper_ty<#account_ty>>
+                    },
+                    quote! {
+                        Box::new(#account_wrapper_ty::try_from_unchecked(
+                            &#field.to_account_info(),
+                        )?)
+                    },
+                )
+            } else {
+                (
+                    quote! {
+                        #account_wrapper_ty<#account_ty>
+                    },
+                    quote! {
+                        #account_wrapper_ty::try_from_unchecked(
+                            &#field.to_account_info(),
+                        )?
+                    },
+                )
+            }
+        }
         _ => {
             let owner_addr = match &kind {
                 InitKind::Program { .. } => {

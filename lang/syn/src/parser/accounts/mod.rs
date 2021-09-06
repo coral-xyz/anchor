@@ -103,6 +103,12 @@ fn ident_string(f: &syn::Field) -> ParseResult<String> {
         syn::Type::Path(ty_path) => ty_path.path.clone(),
         _ => return Err(ParseError::new(f.ty.span(), "invalid type")),
     };
+    if parser::tts_to_string(&path)
+        .replace(" ", "")
+        .starts_with("Box<Account<")
+    {
+        return Ok("Account".to_string());
+    }
     // TODO: allow segmented paths.
     if path.segments.len() != 1 {
         return Err(ParseError::new(
@@ -152,10 +158,52 @@ fn parse_program_account_zero_copy(path: &syn::Path) -> ParseResult<LoaderTy> {
 
 fn parse_account_ty(path: &syn::Path) -> ParseResult<AccountTy> {
     let account_type_path = parse_account(path)?;
-    Ok(AccountTy { account_type_path })
+    let boxed = parser::tts_to_string(&path)
+        .replace(" ", "")
+        .starts_with("Box<Account<");
+    Ok(AccountTy {
+        account_type_path,
+        boxed,
+    })
 }
 
-fn parse_account(path: &syn::Path) -> ParseResult<syn::TypePath> {
+// TODO: this whole method is a hack. Do something more idiomatic.
+fn parse_account(mut path: &syn::Path) -> ParseResult<syn::TypePath> {
+    if parser::tts_to_string(path)
+        .replace(" ", "")
+        .starts_with("Box<Account<")
+    {
+        let segments = &path.segments[0];
+        match &segments.arguments {
+            syn::PathArguments::AngleBracketed(args) => {
+                // Expected: <'info, MyType>.
+                if args.args.len() != 1 {
+                    return Err(ParseError::new(
+                        args.args.span(),
+                        "bracket arguments must be the lifetime and type",
+                    ));
+                }
+                match &args.args[0] {
+                    syn::GenericArgument::Type(syn::Type::Path(ty_path)) => {
+                        path = &ty_path.path;
+                    }
+                    _ => {
+                        return Err(ParseError::new(
+                            args.args[1].span(),
+                            "first bracket argument must be a lifetime",
+                        ))
+                    }
+                }
+            }
+            _ => {
+                return Err(ParseError::new(
+                    segments.arguments.span(),
+                    "expected angle brackets with a lifetime and type",
+                ))
+            }
+        }
+    }
+
     let segments = &path.segments[0];
     match &segments.arguments {
         syn::PathArguments::AngleBracketed(args) => {

@@ -229,6 +229,8 @@ pub struct LoaderTy {
 pub struct AccountTy {
     // The struct type of the account.
     pub account_type_path: TypePath,
+    // True if the account has been boxed via `Box<T>`.
+    pub boxed: bool,
 }
 
 #[derive(Debug)]

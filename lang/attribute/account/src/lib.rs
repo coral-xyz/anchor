@@ -101,7 +101,7 @@ pub fn account(
     };
 
     let owner_impl = {
-        if namespace.is_empty() {
+        if namespace != "internal" && namespace != "state" {
             quote! {
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::Owner for #account_name #type_gen #where_clause {
@@ -159,6 +159,8 @@ pub fn account(
                         Ok(*account)
                     }
                 }
+
+                #owner_impl
             }
         } else {
             quote! {

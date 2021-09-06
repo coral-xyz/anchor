@@ -1,6 +1,4 @@
-use crate::config::{
-    AnchorPackage, Config, ConfigOverride, Manifest, Program, ProgramWorkspace, WithPath,
-};
+use crate::config::{AnchorPackage, Config, ConfigOverride, Manifest, ProgramWorkspace, WithPath};
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction};
 use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};

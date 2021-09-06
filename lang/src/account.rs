@@ -8,6 +8,7 @@ use solana_program::pubkey::Pubkey;
 use std::ops::{Deref, DerefMut};
 
 /// Account container that checks ownership on deserialization.
+#[derive(Clone)]
 pub struct Account<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> {
     account: T,
     info: AccountInfo<'info>,
@@ -41,6 +42,14 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
             info.clone(),
             T::try_deserialize_unchecked(&mut data)?,
         ))
+    }
+
+    /// Reloads the account from storage. This is useful, for example, when
+    /// observing side effects after CPI.
+    pub fn reload(&mut self) -> ProgramResult {
+        let mut data: &[u8] = &self.info.try_borrow_data()?;
+        self.account = T::try_deserialize(&mut data)?;
+        Ok(())
     }
 
     pub fn into_inner(self) -> T {
