@@ -22,18 +22,15 @@ impl<T: ToAccountMetas> ToAccountMetas for Vec<T> {
 }
 
 impl<'info, T: Accounts<'info>> Accounts<'info> for Vec<T> {
-    /// try_accounts for Vec consumes the rest of the accounts, thus a vector should always be at the end of the struct
-    // TODO:!!!! (maybe have ix_data give it)
+    /// try_accounts for Vec consumes the rest of the accounts, thus a vector should always be at the end of the struct and only 1 vector can be used
+    /// per context
     fn try_accounts(
         program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         ix_data: &[u8],
     ) -> Result<Self, ProgramError> {
         let mut vec: Vec<T> = Vec::new();
-        while accounts.len() != 0 {
-            // let data: &[u8] = &.try_borrow_data()?;
-            // let mut disc_bytes = [0u8; 8];
-            // disc_bytes.copy_from_slice(&data[..8]);
+        while !accounts.is_empty() {
             T::try_accounts(program_id, accounts, ix_data).map(|item| vec.push(item))?;
         }
 
@@ -43,11 +40,7 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Vec<T> {
 
 impl<'info, T: AccountsExit<'info>> AccountsExit<'info> for Vec<T> {
     fn exit(&self, program_id: &Pubkey) -> ProgramResult {
-        let res: Result<Vec<_>, ProgramError> = self
-            .iter()
-            .map(|account| account.exit(program_id))
-            .collect();
-        res.map(|_| ())
+        self.iter().try_for_each(|account| account.exit(program_id))
     }
 }
 

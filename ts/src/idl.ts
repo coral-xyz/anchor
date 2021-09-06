@@ -46,6 +46,7 @@ export type IdlAccount = {
 
 export type IdlAccountsVec = {
   name: string;
+  // TODO: vector of mut and signer
   dummyVecIndicator: boolean;
 }
 

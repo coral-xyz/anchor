@@ -143,6 +143,7 @@ export default class Provider {
       tx.feePayer = this.wallet.publicKey;
       tx.recentBlockhash = blockhash.blockhash;
 
+      console.log("AAAAA", signers)
       signers
         .filter((s) => s !== undefined)
         .forEach((kp) => {
