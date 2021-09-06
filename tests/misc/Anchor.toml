@@ -2,6 +2,9 @@
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
+#[programs.localnet]
+#misc = { keypair = "" }
+
 [[test.genesis]]
 address = "FtMNMKp9DZHKWUyVAsj3Q5QV8ow4P3fUPP7ZrWEQJzKr"
 program = "./target/deploy/misc.so"

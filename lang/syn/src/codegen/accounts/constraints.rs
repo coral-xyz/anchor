@@ -143,6 +143,20 @@ pub fn generate_constraint_init(f: &Field, c: &ConstraintInitGroup) -> proc_macr
 pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let (account_ty, account_wrapper_ty, _) = parse_ty(f);
+    let try_from = match &f.ty {
+        Ty::AccountInfo => quote! { #field },
+        Ty::Account(_) => quote! {
+            #account_wrapper_ty::try_from_unchecked(
+                &#field,
+            )?
+        },
+        _ => quote! {
+            #account_wrapper_ty::try_from_unchecked(
+                program_id,
+                &#field,
+            )?
+        },
+    };
     quote! {
         let #field: #account_wrapper_ty<#account_ty> = {
             let mut __data: &[u8] = &#field.try_borrow_data()?;
@@ -152,10 +166,7 @@ pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macr
             if __discriminator != 0 {
                 return Err(anchor_lang::__private::ErrorCode::ConstraintZero.into());
             }
-            #account_wrapper_ty::try_from_unchecked(
-                program_id,
-                &#field,
-            )?
+            #try_from
         };
     }
 }
@@ -198,6 +209,7 @@ pub fn generate_constraint_signer(f: &Field, _c: &ConstraintSigner) -> proc_macr
     let info = match f.ty {
         Ty::AccountInfo => quote! { #ident },
         Ty::ProgramAccount(_) => quote! { #ident.to_account_info() },
+        Ty::Account(_) => quote! { #ident.to_account_info() },
         Ty::Loader(_) => quote! { #ident.to_account_info() },
         Ty::CpiAccount(_) => quote! { #ident.to_account_info() },
         _ => panic!("Invalid syntax: signer cannot be specified."),
@@ -308,7 +320,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
             }
         }
     };
-    generate_pda(f, seeds_with_nonce, payer, &c.space, &c.kind)
+    generate_init(f, seeds_with_nonce, payer, &c.space, &c.kind)
 }
 
 fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2::TokenStream {
@@ -380,6 +392,18 @@ fn parse_ty(f: &Field) -> (proc_macro2::TokenStream, proc_macro2::TokenStream, b
                 false,
             )
         }
+        Ty::Account(ty) => {
+            let ident = &ty.account_type_path;
+            (
+                quote! {
+                    #ident
+                },
+                quote! {
+                    anchor_lang::Account
+                },
+                false,
+            )
+        }
         Ty::Loader(ty) => {
             let ident = &ty.account_type_path;
             (
@@ -415,7 +439,7 @@ fn parse_ty(f: &Field) -> (proc_macro2::TokenStream, proc_macro2::TokenStream, b
     }
 }
 
-pub fn generate_pda(
+pub fn generate_init(
     f: &Field,
     seeds_with_nonce: proc_macro2::TokenStream,
     payer: proc_macro2::TokenStream,
@@ -434,17 +458,41 @@ pub fn generate_pda(
                 #field.to_account_info()
             },
         ),
-        _ => (
+        Ty::Account(_) => (
             quote! {
                 #account_wrapper_ty<#account_ty>
             },
             quote! {
                 #account_wrapper_ty::try_from_unchecked(
-                    program_id,
                     &#field.to_account_info(),
                 )?
             },
         ),
+        _ => {
+            let owner_addr = match &kind {
+                InitKind::Program { .. } => {
+                    quote! {
+                        program_id
+                    }
+                }
+                _ => {
+                    quote! {
+                        &anchor_spl::token::ID
+                    }
+                }
+            };
+            (
+                quote! {
+                    #account_wrapper_ty<#account_ty>
+                },
+                quote! {
+                    #account_wrapper_ty::try_from_unchecked(
+                        #owner_addr,
+                        &#field.to_account_info(),
+                    )?
+                },
+            )
+        }
     };
 
     match kind {
@@ -473,9 +521,8 @@ pub fn generate_pda(
                     };
                     let cpi_ctx = CpiContext::new(cpi_program, accounts);
                     anchor_spl::token::initialize_account(cpi_ctx)?;
-                    anchor_lang::CpiAccount::try_from_unchecked(
-                        &#field.to_account_info(),
-                    )?
+                    let mut pa: #combined_account_ty = #try_from;
+                    pa
                 };
             }
         }
@@ -502,9 +549,8 @@ pub fn generate_pda(
                     };
                     let cpi_ctx = CpiContext::new(cpi_program, accounts);
                     anchor_spl::token::initialize_mint(cpi_ctx, #decimals, &#owner.to_account_info().key, None)?;
-                    anchor_lang::CpiAccount::try_from_unchecked(
-                        &#field.to_account_info(),
-                    )?
+                    let mut pa: #combined_account_ty = #try_from;
+                    pa
                 };
             }
         }

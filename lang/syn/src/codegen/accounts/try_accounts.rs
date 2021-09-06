@@ -159,6 +159,12 @@ fn typed_ident(field: &Field) -> TokenStream {
                 Sysvar<#account>
             }
         }
+        Ty::Account(ty) => {
+            let account = &ty.account_type_path;
+            quote! {
+                Account<#account>
+            }
+        }
     };
 
     quote! {

@@ -1,7 +1,4 @@
-use crate::{
-    AccountField, AccountsStruct, CompositeField, CpiAccountTy, CpiStateTy, Field, LoaderTy,
-    ProgramAccountTy, ProgramStateTy, SysvarTy, Ty,
-};
+use crate::*;
 use syn::parse::{Error as ParseError, Result as ParseResult};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
@@ -76,6 +73,7 @@ fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
             | "AccountInfo"
             | "CpiState"
             | "Loader"
+            | "Account"
     );
     Ok(r)
 }
@@ -93,6 +91,7 @@ fn parse_ty(f: &syn::Field) -> ParseResult<Ty> {
         "Sysvar" => Ty::Sysvar(parse_sysvar(&path)?),
         "AccountInfo" => Ty::AccountInfo,
         "Loader" => Ty::Loader(parse_program_account_zero_copy(&path)?),
+        "Account" => Ty::Account(parse_account_ty(&path)?),
         _ => return Err(ParseError::new(f.ty.span(), "invalid account type given")),
     };
 
@@ -149,6 +148,11 @@ fn parse_program_account_zero_copy(path: &syn::Path) -> ParseResult<LoaderTy> {
     Ok(LoaderTy {
         account_type_path: account_ident,
     })
+}
+
+fn parse_account_ty(path: &syn::Path) -> ParseResult<AccountTy> {
+    let account_type_path = parse_account(path)?;
+    Ok(AccountTy { account_type_path })
 }
 
 fn parse_account(path: &syn::Path) -> ParseResult<syn::TypePath> {

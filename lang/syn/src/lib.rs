@@ -180,6 +180,7 @@ pub enum Ty {
     Loader(LoaderTy),
     CpiAccount(CpiAccountTy),
     Sysvar(SysvarTy),
+    Account(AccountTy),
 }
 
 #[derive(Debug, PartialEq)]
@@ -220,6 +221,12 @@ pub struct CpiAccountTy {
 
 #[derive(Debug, PartialEq)]
 pub struct LoaderTy {
+    // The struct type of the account.
+    pub account_type_path: TypePath,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct AccountTy {
     // The struct type of the account.
     pub account_type_path: TypePath,
 }
