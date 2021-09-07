@@ -165,7 +165,7 @@ pub struct Field {
 impl Field {
     pub fn ty_decl(&self) -> proc_macro2::TokenStream {
         let account_ty = self.account_ty();
-        let account_wrapper_ty = self.container_ty();
+        let container_ty = self.container_ty();
         match &self.ty {
             Ty::AccountInfo => quote! {
                 AccountInfo
@@ -173,16 +173,16 @@ impl Field {
             Ty::Account(AccountTy { boxed, .. }) => {
                 if *boxed {
                     quote! {
-                        Box<#account_wrapper_ty<#account_ty>>
+                        Box<#container_ty<#account_ty>>
                     }
                 } else {
                     quote! {
-                        #account_wrapper_ty<#account_ty>
+                        #container_ty<#account_ty>
                     }
                 }
             }
             _ => quote! {
-                #account_wrapper_ty<#account_ty>
+                #container_ty<#account_ty>
             },
         }
     }
