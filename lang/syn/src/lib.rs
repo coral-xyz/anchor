@@ -163,6 +163,14 @@ pub struct Field {
 }
 
 impl Field {
+    pub fn typed_ident(&self) -> proc_macro2::TokenStream {
+        let name = &self.ident;
+        let ty_decl = self.ty_decl();
+        quote! {
+            #name: #ty_decl
+        }
+    }
+
     pub fn ty_decl(&self) -> proc_macro2::TokenStream {
         let account_ty = self.account_ty();
         let container_ty = self.container_ty();
@@ -179,6 +187,23 @@ impl Field {
                     quote! {
                         #container_ty<#account_ty>
                     }
+                }
+            }
+            Ty::Sysvar(ty) => {
+                let account = match ty {
+                    SysvarTy::Clock => quote! {Clock},
+                    SysvarTy::Rent => quote! {Rent},
+                    SysvarTy::EpochSchedule => quote! {EpochSchedule},
+                    SysvarTy::Fees => quote! {Fees},
+                    SysvarTy::RecentBlockhashes => quote! {RecentBlockhashes},
+                    SysvarTy::SlotHashes => quote! {SlotHashes},
+                    SysvarTy::SlotHistory => quote! {SlotHistory},
+                    SysvarTy::StakeHistory => quote! {StakeHistory},
+                    SysvarTy::Instructions => quote! {Instructions},
+                    SysvarTy::Rewards => quote! {Rewards},
+                };
+                quote! {
+                    Sysvar<#account>
                 }
             }
             _ => quote! {
@@ -243,8 +268,10 @@ impl Field {
             Ty::CpiAccount(_) => quote! {
                 anchor_lang::CpiAccount
             },
+            Ty::Sysvar(_) => quote! { anchor_lang::Sysvar },
+            Ty::CpiState(_) => quote! { anchor_lang::CpiState },
+            Ty::ProgramState(_) => quote! { anchor_lang::ProgramState },
             Ty::AccountInfo => quote! {},
-            _ => panic!("Invalid type for initializing a program derived address"),
         }
     }
 
@@ -278,7 +305,30 @@ impl Field {
                     #ident
                 }
             }
-            _ => panic!("Invalid account ty"),
+            Ty::ProgramState(ty) => {
+                let account = &ty.account_type_path;
+                quote! {
+                    #account
+                }
+            }
+            Ty::CpiState(ty) => {
+                let account = &ty.account_type_path;
+                quote! {
+                    #account
+                }
+            }
+            Ty::Sysvar(ty) => match ty {
+                SysvarTy::Clock => quote! {Clock},
+                SysvarTy::Rent => quote! {Rent},
+                SysvarTy::EpochSchedule => quote! {EpochSchedule},
+                SysvarTy::Fees => quote! {Fees},
+                SysvarTy::RecentBlockhashes => quote! {RecentBlockhashes},
+                SysvarTy::SlotHashes => quote! {SlotHashes},
+                SysvarTy::SlotHistory => quote! {SlotHistory},
+                SysvarTy::StakeHistory => quote! {StakeHistory},
+                SysvarTy::Instructions => quote! {Instructions},
+                SysvarTy::Rewards => quote! {Rewards},
+            },
         }
     }
 }
