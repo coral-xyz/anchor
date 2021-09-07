@@ -15,6 +15,7 @@ incremented for features.
 
 * lang: Add new `Account` type to replace `ProgramAccount` and `CpiAccount`, both of which are deprecated ([#686](https://github.com/project-serum/anchor/pull/686)).
 * lang: Add `Owner` trait, which is automatically implemented by all `#[account]` structs ([#686](https://github.com/project-serum/anchor/pull/686)).
+* lang: Check that ProgramAccount writable before mut borrow (`anchor-debug` only) ([#681](https://github.com/project-serum/anchor/pull/681)).
 
 ### Breaking Changes
 
