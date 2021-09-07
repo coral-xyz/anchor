@@ -162,7 +162,6 @@ pub enum Command {
 #[derive(Debug, Clap)]
 pub enum KeysCommand {
     List,
-    Init,
 }
 
 #[derive(Debug, Clap)]
@@ -1884,8 +1883,6 @@ fn shell(cfg_override: &ConfigOverride) -> Result<()> {
                     .collect::<Vec<_>>();
             }
 
-            // TODO: update to use local keypairs if available.
-
             // Finalize program list with all programs with IDLs.
             match cfg.programs.get(&cfg.provider.cluster) {
                 None => Vec::new(),
@@ -2117,12 +2114,7 @@ fn registry_api_token(_cfg_override: &ConfigOverride) -> Result<String> {
 fn keys(cfg_override: &ConfigOverride, cmd: KeysCommand) -> Result<()> {
     match cmd {
         KeysCommand::List => keys_list(cfg_override),
-        KeysCommand::Init => keys_create(cfg_override),
     }
-}
-
-fn keys_create(cfg_override: &ConfigOverride) -> Result<()> {
-    keys_list(cfg_override)
 }
 
 fn keys_list(cfg_override: &ConfigOverride) -> Result<()> {

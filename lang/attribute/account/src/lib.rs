@@ -101,7 +101,7 @@ pub fn account(
     };
 
     let owner_impl = {
-        if namespace != "internal" && namespace != "state" {
+        if namespace.is_empty() {
             quote! {
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::Owner for #account_name #type_gen #where_clause {
@@ -292,18 +292,8 @@ pub fn zero_copy(
     })
 }
 
-#[proc_macro_attribute]
-pub fn owned_by(
-    _args: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
-    let account_strct = parse_macro_input!(item as syn::ItemStruct);
-
-    proc_macro::TokenStream::from(quote! {
-        #account_strct
-    })
-}
-
+/// Defines the program's ID. This should be used at the root of all Anchor
+/// based programs.
 #[proc_macro]
 pub fn declare_id(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let id = parse_macro_input!(input as id::Id);

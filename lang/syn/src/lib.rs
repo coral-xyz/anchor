@@ -3,6 +3,7 @@ use codegen::program as program_codegen;
 use parser::accounts as accounts_parser;
 use parser::program as program_parser;
 use proc_macro2::{Span, TokenStream};
+use quote::quote;
 use quote::ToTokens;
 use std::ops::Deref;
 use syn::ext::IdentExt;
@@ -159,6 +160,127 @@ pub struct Field {
     pub constraints: ConstraintGroup,
     pub instruction_constraints: ConstraintGroup,
     pub ty: Ty,
+}
+
+impl Field {
+    pub fn ty_decl(&self) -> proc_macro2::TokenStream {
+        let account_ty = self.account_ty();
+        let account_wrapper_ty = self.container_ty();
+        match &self.ty {
+            Ty::AccountInfo => quote! {
+                AccountInfo
+            },
+            Ty::Account(AccountTy { boxed, .. }) => {
+                if *boxed {
+                    quote! {
+                        Box<#account_wrapper_ty<#account_ty>>
+                    }
+                } else {
+                    quote! {
+                        #account_wrapper_ty<#account_ty>
+                    }
+                }
+            }
+            _ => quote! {
+                #account_wrapper_ty<#account_ty>
+            },
+        }
+    }
+
+    // TODO: remove the option once `CpiAccount` is completely removed (not
+    //       just deprecated).
+    pub fn from_account_info(&self, kind: Option<&InitKind>) -> proc_macro2::TokenStream {
+        let field = &self.ident;
+        let container_ty = self.container_ty();
+        match &self.ty {
+            Ty::AccountInfo => quote! { #field.to_account_info() },
+            Ty::Account(AccountTy { boxed, .. }) => {
+                if *boxed {
+                    quote! {
+                        Box::new(#container_ty::try_from_unchecked(
+                            &#field,
+                        )?)
+                    }
+                } else {
+                    quote! {
+                        #container_ty::try_from_unchecked(
+                            &#field,
+                        )?
+                    }
+                }
+            }
+            _ => {
+                let owner_addr = match &kind {
+                    None => quote! { program_id },
+                    Some(InitKind::Program { .. }) => quote! {
+                        program_id
+                    },
+                    _ => quote! {
+                        &anchor_spl::token::ID
+                    },
+                };
+                quote! {
+                    #container_ty::try_from_unchecked(
+                        #owner_addr,
+                        &#field,
+                    )?
+                }
+            }
+        }
+    }
+
+    pub fn container_ty(&self) -> proc_macro2::TokenStream {
+        match &self.ty {
+            Ty::ProgramAccount(_) => quote! {
+                anchor_lang::ProgramAccount
+            },
+            Ty::Account(_) => quote! {
+                anchor_lang::Account
+            },
+            Ty::Loader(_) => quote! {
+                anchor_lang::Loader
+            },
+            Ty::CpiAccount(_) => quote! {
+                anchor_lang::CpiAccount
+            },
+            Ty::AccountInfo => quote! {},
+            _ => panic!("Invalid type for initializing a program derived address"),
+        }
+    }
+
+    // Returns the inner account struct type.
+    pub fn account_ty(&self) -> proc_macro2::TokenStream {
+        match &self.ty {
+            Ty::AccountInfo => quote! {
+                AccountInfo
+            },
+            Ty::ProgramAccount(ty) => {
+                let ident = &ty.account_type_path;
+                quote! {
+                    #ident
+                }
+            }
+            Ty::Account(ty) => {
+                let ident = &ty.account_type_path;
+                quote! {
+                    #ident
+                }
+            }
+            Ty::Loader(ty) => {
+                let ident = &ty.account_type_path;
+                quote! {
+                    #ident
+                }
+            }
+            Ty::CpiAccount(ty) => {
+                let ident = &ty.account_type_path;
+                quote! {
+                    #ident
+                }
+            }
+            _ => panic!("Invalid account ty"),
+        }
+    }
 }
 
 #[derive(Debug)]

@@ -1,6 +1,6 @@
 //! Copied from solana/sdk/macro so that Anchor programs don't need to specify
-//! `solana-program` as an additional crate dependency, but instead can access
-//! it via `anchor_lang::solana_program`.
+//! `solana_program` as an additional crate dependency, but instead can access
+//! it via `anchor_lang::declare_id`.
 //!
 //! Convenience macro to declare a static public key and functions to interact with it
 //!

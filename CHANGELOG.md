@@ -11,6 +11,15 @@ incremented for features.
 
 ## [Unreleased]
 
+### Features
+
+* lang: Add new `Account` type to replace `ProgramAccount` and `CpiAccount`, both of which are deprecated ([#686](https://github.com/project-serum/anchor/pull/686)).
+* lang: Add `Owner` trait, which is automatically implemented by all `#[account]` structs ([#686](https://github.com/project-serum/anchor/pull/686)).
+
+### Breaking Changes
+
+* lang: All programs must now define their program id in source via `declare_id!` ([#686](https://github.com/project-serum/anchor/pull/686)).
+
 ## [0.14.0] - 2021-09-02
 
 ### Features
