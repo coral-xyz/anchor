@@ -447,14 +447,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             };
         }
 
-        let (owner, pda_owner) = {
-            if seeds.is_some() {
-                (None, owner.map(|o| o.owner_target.clone()))
-            } else {
-                (owner, None)
-            }
-        };
-
         let seeds = seeds.map(|c| ConstraintSeedsGroup {
             is_init: init.is_some(),
             seeds: c.seeds.clone(),
@@ -491,7 +483,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                     }
                 } else {
                     InitKind::Program {
-                        owner: pda_owner.clone(),
+                        owner: owner.as_ref().map(|o| o.owner_target.clone()),
                     }
                 },
             })).transpose()?,
