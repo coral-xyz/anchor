@@ -69,27 +69,48 @@ describe("ido-pool", () => {
   let startIdoTs = null;
   let endDepositsTs = null;
   let endIdoTs = null;
+  let poolId = "test_ido";
 
   it("Initializes the IDO pool", async () => {
+    let bumps = new PoolBumps();
+
     // We use the watermelon mint address as the seed, could use something else though.
-    const [_poolSigner, nonce] = await anchor.web3.PublicKey.findProgramAddress(
-      [watermelonMint.toBuffer()],
+    const [poolAccount, poolAccountBump] = await anchor.web3.PublicKey.findProgramAddress(
+      [watermelonMint.toBuffer(), Buffer.from(poolId)],
       program.programId
     );
-    poolSigner = _poolSigner;
+    bumps.poolAccount = poolAccountBump;
+
+    const [redeemableMint, redeemableMintBump] = await anchor.web3.PublicKey.findProgramAddress(
+      [watermelonMint.toBuffer(), Buffer.from(poolId), Buffer.from("reedemable_mint")],
+      program.programId
+    );
+    bumps.redeemableMint = redeemableMintBump;
+
+    const [poolWatermelon, poolWatermelonBump] = await anchor.web3.PublicKey.findProgramAddress(
+      [watermelonMint.toBuffer(), Buffer.from(poolId), Buffer.from("pool_watermelon")],
+      program.programId
+    );
+    bumps.poolWatermelon = poolWatermelonBump;
+
+    const [poolUsdc, poolUsdcBump] = await anchor.web3.PublicKey.findProgramAddress(
+      [watermelonMint.toBuffer(), Buffer.from(poolId), Buffer.from("pool_usdc")],
+      program.programId
+    );
+    bumps.poolUsdc = poolUsdcBump;
 
     // Pool doesn't need a Redeemable SPL token account because it only
     // burns and mints redeemable tokens, it never stores them.
-    redeemableMintToken = await createMint(provider, poolSigner);
-    redeemableMint = redeemableMintToken.publicKey;
-    poolWatermelon = await createTokenAccount(
-      provider,
-      watermelonMint,
-      poolSigner
-    );
-    poolUsdc = await createTokenAccount(provider, usdcMint, poolSigner);
+    // redeemableMintToken = await createMint(provider, poolSigner);
+    // redeemableMint = redeemableMintToken.publicKey;
+    // poolWatermelon = await createTokenAccount(
+    //   provider,
+    //   watermelonMint,
+    //   poolSigner
+    // );
+    // poolUsdc = await createTokenAccount(provider, usdcMint, poolSigner);
 
-    poolAccount = anchor.web3.Keypair.generate();
+    // poolAccount = anchor.web3.Keypair.generate();
     const nowBn = new anchor.BN(Date.now() / 1000);
     startIdoTs = nowBn.add(new anchor.BN(5));
     endDepositsTs = nowBn.add(new anchor.BN(10));
@@ -97,29 +118,27 @@ describe("ido-pool", () => {
 
     // Atomically create the new account and initialize it with the program.
     await program.rpc.initializePool(
+      poolId,
+      bumps,
       watermelonIdoAmount,
-      nonce,
       startIdoTs,
       endDepositsTs,
       endIdoTs,
       {
         accounts: {
-          poolAccount: poolAccount.publicKey,
-          poolSigner,
           distributionAuthority: provider.wallet.publicKey,
           creatorWatermelon,
-          redeemableMint,
+          poolAccount,
+          watermelonMint,
           usdcMint,
+          redeemableMint,
           poolWatermelon,
           poolUsdc,
+          systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
         },
-        signers: [poolAccount],
-        instructions: [
-          await program.account.poolAccount.createInstruction(poolAccount),
-        ],
       }
     );
 
@@ -333,4 +352,11 @@ describe("ido-pool", () => {
     creatorUsdcAccount = await getTokenAccount(provider, creatorUsdc);
     assert.ok(creatorUsdcAccount.amount.eq(totalPoolUsdc));
   });
+
+  function PoolBumps() {
+    this.poolAccount;
+    this.redeemableMint;
+    this.poolWatermelon;
+    this.poolUsdc;
+  }
 });
