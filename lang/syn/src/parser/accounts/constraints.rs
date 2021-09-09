@@ -156,7 +156,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                 "owner" => ConstraintToken::Owner(Context::new(
                     span,
                     ConstraintOwner {
-                        owner_target: stream.parse()?,
+                        owner_address: stream.parse()?,
                     },
                 )),
                 "rent_exempt" => ConstraintToken::RentExempt(Context::new(
@@ -483,7 +483,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                     }
                 } else {
                     InitKind::Program {
-                        owner: owner.as_ref().map(|o| o.owner_target.clone()),
+                        owner: owner.as_ref().map(|o| o.owner_address.clone()),
                     }
                 },
             })).transpose()?,
