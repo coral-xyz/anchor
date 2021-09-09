@@ -1,7 +1,5 @@
 use crate::error::ErrorCode;
-use crate::{
-    AccountDeserialize, Accounts, AccountsExit, ToAccountInfo, ToAccountInfos, ToAccountMetas,
-};
+use crate::*;
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
@@ -17,7 +15,7 @@ pub struct CpiAccount<'a, T: AccountDeserialize + Clone> {
 }
 
 impl<'a, T: AccountDeserialize + Clone> CpiAccount<'a, T> {
-    pub fn new(info: AccountInfo<'a>, account: Box<T>) -> CpiAccount<'a, T> {
+    fn new(info: AccountInfo<'a>, account: Box<T>) -> CpiAccount<'a, T> {
         Self { info, account }
     }
 
@@ -30,7 +28,7 @@ impl<'a, T: AccountDeserialize + Clone> CpiAccount<'a, T> {
         ))
     }
 
-    pub fn try_from_init(info: &AccountInfo<'a>) -> Result<CpiAccount<'a, T>, ProgramError> {
+    pub fn try_from_unchecked(info: &AccountInfo<'a>) -> Result<CpiAccount<'a, T>, ProgramError> {
         Self::try_from(info)
     }
 
@@ -111,5 +109,20 @@ impl<'info, T: AccountDeserialize + Clone> AccountsExit<'info> for CpiAccount<'i
     fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
         // no-op
         Ok(())
+    }
+}
+
+impl<'info, T: AccountDeserialize + Clone> Key for CpiAccount<'info, T> {
+    fn key(&self) -> Pubkey {
+        *self.info.key
+    }
+}
+
+impl<'info, T> From<Account<'info, T>> for CpiAccount<'info, T>
+where
+    T: AccountSerialize + AccountDeserialize + Owner + Clone,
+{
+    fn from(a: Account<'info, T>) -> Self {
+        Self::new(a.to_account_info(), Box::new(a.into_inner()))
     }
 }

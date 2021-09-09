@@ -1,6 +1,6 @@
 use crate::error::ErrorCode;
 use crate::{
-    AccountDeserialize, AccountSerialize, Accounts, AccountsExit, CpiAccount, ToAccountInfo,
+    AccountDeserialize, AccountSerialize, Accounts, AccountsExit, CpiAccount, Key, ToAccountInfo,
     ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
@@ -25,7 +25,7 @@ struct Inner<'info, T: AccountSerialize + AccountDeserialize + Clone> {
 }
 
 impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramState<'a, T> {
-    pub fn new(info: AccountInfo<'a>, account: T) -> ProgramState<'a, T> {
+    fn new(info: AccountInfo<'a>, account: T) -> ProgramState<'a, T> {
         Self {
             inner: Box::new(Inner { info, account }),
         }
@@ -33,7 +33,17 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramState<'a, T> {
 
     /// Deserializes the given `info` into a `ProgramState`.
     #[inline(never)]
-    pub fn try_from(info: &AccountInfo<'a>) -> Result<ProgramState<'a, T>, ProgramError> {
+    pub fn try_from(
+        program_id: &Pubkey,
+        info: &AccountInfo<'a>,
+    ) -> Result<ProgramState<'a, T>, ProgramError> {
+        if info.owner != program_id {
+            return Err(ErrorCode::AccountNotProgramOwned.into());
+        }
+        if info.key != &Self::address(program_id) {
+            solana_program::msg!("Invalid state address");
+            return Err(ErrorCode::StateInvalidAddress.into());
+        }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramState::new(
             info.clone(),
@@ -65,18 +75,7 @@ where
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
-
-        if account.key != &Self::address(program_id) {
-            solana_program::msg!("Invalid state address");
-            return Err(ErrorCode::StateInvalidAddress.into());
-        }
-
-        let pa = ProgramState::try_from(account)?;
-        if pa.inner.info.owner != program_id {
-            solana_program::msg!("Invalid state owner");
-            return Err(ErrorCode::AccountNotProgramOwned.into());
-        }
-        Ok(pa)
+        ProgramState::try_from(program_id, account)
     }
 }
 
@@ -106,6 +105,14 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfo<'inf
 {
     fn to_account_info(&self) -> AccountInfo<'info> {
         self.inner.info.clone()
+    }
+}
+
+impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AsRef<AccountInfo<'info>>
+    for ProgramState<'info, T>
+{
+    fn as_ref(&self) -> &AccountInfo<'info> {
+        &self.inner.info
     }
 }
 
@@ -150,4 +157,10 @@ pub fn address(program_id: &Pubkey) -> Pubkey {
     let seed = PROGRAM_STATE_SEED;
     let owner = program_id;
     Pubkey::create_with_seed(&base, seed, owner).unwrap()
+}
+
+impl<'info, T: AccountSerialize + AccountDeserialize + Clone> Key for ProgramState<'info, T> {
+    fn key(&self) -> Pubkey {
+        *self.inner.info.key
+    }
 }
