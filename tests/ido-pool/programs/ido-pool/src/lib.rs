@@ -85,9 +85,7 @@ pub mod ido_pool {
 
         // Mint Redeemable to user Redeemable account.
         let pool_id = ctx.accounts.pool_account.pool_id.as_ref();
-        let seeds = &[
-            ctx.accounts.watermelon_mint.to_account_info().key.as_ref(),
-            pool_id.trim_ascii_whitespace(),
+        let seeds = &[pool_id.trim_ascii_whitespace(),
             &[ctx.accounts.pool_account.bumps.pool_account],
         ];
         let signer = &[&seeds[..]];
@@ -125,9 +123,7 @@ pub mod ido_pool {
 
         // Transfer USDC from pool account to user.
         let pool_id = ctx.accounts.pool_account.pool_id.as_ref();
-        let seeds = &[
-            ctx.accounts.watermelon_mint.to_account_info().key.as_ref(),
-            pool_id.trim_ascii_whitespace(),
+        let seeds = &[pool_id.trim_ascii_whitespace(),
             &[ctx.accounts.pool_account.bumps.pool_account],
         ];
         let signer = &[&seeds[..]];
@@ -172,9 +168,7 @@ pub mod ido_pool {
 
         // Transfer Watermelon from pool account to user.
         let pool_id = ctx.accounts.pool_account.pool_id.as_ref();
-        let seeds = &[
-            ctx.accounts.watermelon_mint.to_account_info().key.as_ref(),
-            pool_id.trim_ascii_whitespace(),
+        let seeds = &[pool_id.trim_ascii_whitespace(),
             &[ctx.accounts.pool_account.bumps.pool_account],
         ];
         let signer = &[&seeds[..]];
@@ -194,9 +188,7 @@ pub mod ido_pool {
     pub fn withdraw_pool_usdc(ctx: Context<WithdrawPoolUsdc>) -> Result<()> {
         // Transfer total USDC from pool account to creator account.
         let pool_id = ctx.accounts.pool_account.pool_id.as_ref();
-        let seeds = &[
-            ctx.accounts.watermelon_mint.to_account_info().key.as_ref(),
-            pool_id.trim_ascii_whitespace(),
+        let seeds = &[pool_id.trim_ascii_whitespace(),
             &[ctx.accounts.pool_account.bumps.pool_account],
         ];
         let signer = &[&seeds[..]];
@@ -220,38 +212,38 @@ pub struct InitializePool<'info> {
     #[account(signer)]
     pub distribution_authority: AccountInfo<'info>,
     #[account(mut, constraint = creator_watermelon.owner == *distribution_authority.key)]
-    pub creator_watermelon: Account<'info, TokenAccount>,
+    pub creator_watermelon: Box<Account<'info, TokenAccount>>,
     // Pool accounts
     #[account(init,
-        seeds = [watermelon_mint.to_account_info().key.as_ref(), pool_id.as_bytes()],
+        seeds = [pool_id.as_bytes()],
         bump = bumps.pool_account,
         payer = distribution_authority)]
     pub pool_account: Box<Account<'info, PoolAccount>>,
-    pub watermelon_mint: Account<'info, Mint>,
+    pub watermelon_mint: Box<Account<'info, Mint>>,
     // TODO USDC should be a known mint on mainnet so add a check to confirm that
     #[account(constraint = usdc_mint.decimals == redeemable_mint.decimals)]
-    pub usdc_mint: Account<'info, Mint>,
+    pub usdc_mint: Box<Account<'info, Mint>>,
     #[account(init,
         mint::decimals = DECIMALS, 
         mint::authority = pool_account,
-        seeds = [watermelon_mint.to_account_info().key.as_ref(), pool_id.as_bytes(), b"redeemable_mint"],
+        seeds = [pool_id.as_bytes(), b"redeemable_mint"],
         bump = bumps.redeemable_mint,
         payer = distribution_authority)]
-    pub redeemable_mint: Account<'info, Mint>,
+    pub redeemable_mint: Box<Account<'info, Mint>>,
     #[account(init,
         token::mint = watermelon_mint,
         token::authority = pool_account,
-        seeds = [watermelon_mint.to_account_info().key.as_ref(), pool_id.as_bytes(), b"pool_watermelon"],
+        seeds = [pool_id.as_bytes(), b"pool_watermelon"],
         bump = bumps.pool_watermelon,
         payer = distribution_authority)]
-    pub pool_watermelon: Account<'info, TokenAccount>,
+    pub pool_watermelon: Box<Account<'info, TokenAccount>>,
     #[account(init,
         token::mint = usdc_mint,
         token::authority = pool_account,
-        seeds = [watermelon_mint.to_account_info().key.as_ref(), pool_id.as_bytes(), b"pool_usdc"],
+        seeds = [pool_id.as_bytes(), b"pool_usdc"],
         bump = bumps.pool_usdc,
         payer = distribution_authority)]
-    pub pool_usdc: Account<'info, TokenAccount>,
+    pub pool_usdc: Box<Account<'info, TokenAccount>>,
     pub system_program: AccountInfo<'info>,
     #[account(constraint = token_program.key == &token::ID)]
     pub token_program: AccountInfo<'info>,
@@ -279,22 +271,22 @@ pub struct ExchangeUsdcAndRedeemable<'info> {
     #[account(signer)]
     pub user_authority: AccountInfo<'info>,
     #[account(mut, constraint = user_usdc.owner == *user_authority.key)]
-    pub user_usdc: Account<'info, TokenAccount>,
+    pub user_usdc: Box<Account<'info, TokenAccount>>,
     #[account(mut, constraint = user_redeemable.owner == *user_authority.key)]
-    pub user_redeemable: Account<'info, TokenAccount>,
+    pub user_redeemable: Box<Account<'info, TokenAccount>>,
     // Pool Accounts
-    #[account(seeds = [watermelon_mint.to_account_info().key.as_ref(), pool_account.pool_id.as_ref().trim_ascii_whitespace()],
+    #[account(seeds = [pool_account.pool_id.as_ref().trim_ascii_whitespace()],
         bump = pool_account.bumps.pool_account)]
-    pub pool_account: Account<'info, PoolAccount>,
-    pub watermelon_mint: Account<'info, Mint>,
+    pub pool_account: Box<Account<'info, PoolAccount>>,
+    pub watermelon_mint: Box<Account<'info, Mint>>,
     #[account(mut,
-        seeds = [watermelon_mint.to_account_info().key.as_ref(), pool_account.pool_id.as_ref().trim_ascii_whitespace(), b"redeemable_mint"],
+        seeds = [pool_account.pool_id.as_ref().trim_ascii_whitespace(), b"redeemable_mint"],
         bump = pool_account.bumps.redeemable_mint)]
-    pub redeemable_mint: Account<'info, Mint>,
+    pub redeemable_mint: Box<Account<'info, Mint>>,
     #[account(mut,
-        seeds = [watermelon_mint.to_account_info().key.as_ref(), pool_account.pool_id.as_ref().trim_ascii_whitespace(), b"pool_usdc"],
+        seeds = [pool_account.pool_id.as_ref().trim_ascii_whitespace(), b"pool_usdc"],
         bump = pool_account.bumps.pool_usdc)]
-    pub pool_usdc: Account<'info, TokenAccount>,
+    pub pool_usdc: Box<Account<'info, TokenAccount>>,
     // Programs and Sysvars
     #[account(constraint = token_program.key == &token::ID)]
     pub token_program: AccountInfo<'info>,
@@ -304,26 +296,26 @@ pub struct ExchangeUsdcAndRedeemable<'info> {
 // #[derive(Accounts)]
 // pub struct ExchangeUsdcAndRedeemable<'info> {
 //     #[account(has_one = redeemable_mint, has_one = pool_usdc)]
-//     pub pool_account: Account<'info, PoolAccount>,
+//     pub pool_account: Box<Account<'info, PoolAccount>>,
 //     #[account(
 //         seeds = [pool_account.watermelon_mint.as_ref()],
 //         bump = pool_account.nonce,
 //     )]
 //     pool_signer: AccountInfo<'info>,
-//     pub watermelon_mint: Account<'info, Mint>,
+//     pub watermelon_mint: Box<Account<'info, Mint>>,
 //     #[account(
 //         mut,
 //         constraint = redeemable_mint.mint_authority == COption::Some(*pool_signer.key)
 //     )]
-//     pub redeemable_mint: Account<'info, Mint>,
+//     pub redeemable_mint: Box<Account<'info, Mint>>,
 //     #[account(mut, constraint = pool_usdc.owner == *pool_signer.key)]
-//     pub pool_usdc: Account<'info, TokenAccount>,
+//     pub pool_usdc: Box<Account<'info, TokenAccount>>,
 //     #[account(signer)]
 //     pub user_authority: AccountInfo<'info>,
 //     #[account(mut, constraint = user_usdc.owner == *user_authority.key)]
-//     pub user_usdc: Account<'info, TokenAccount>,
+//     pub user_usdc: Box<Account<'info, TokenAccount>>,
 //     #[account(mut, constraint = user_redeemable.owner == *user_authority.key)]
-//     pub user_redeemable: Account<'info, TokenAccount>,
+//     pub user_redeemable: Box<Account<'info, TokenAccount>>,
 //     #[account(constraint = token_program.key == &token::ID)]
 //     pub token_program: AccountInfo<'info>,
 //     pub clock: Sysvar<'info, Clock>,
@@ -335,22 +327,22 @@ pub struct ExchangeRedeemableForWatermelon<'info> {
     #[account(signer)]
     pub user_authority: AccountInfo<'info>,
     #[account(mut, constraint = user_watermelon.owner == *user_authority.key)]
-    pub user_watermelon: Account<'info, TokenAccount>,
+    pub user_watermelon: Box<Account<'info, TokenAccount>>,
     #[account(mut, constraint = user_redeemable.owner == *user_authority.key)]
-    pub user_redeemable: Account<'info, TokenAccount>,
+    pub user_redeemable: Box<Account<'info, TokenAccount>>,
     // Pool Accounts
-    #[account(seeds = [watermelon_mint.to_account_info().key.as_ref(), pool_account.pool_id.as_ref().trim_ascii_whitespace()],
+    #[account(seeds = [pool_account.pool_id.as_ref().trim_ascii_whitespace()],
         bump = pool_account.bumps.pool_account)]
-    pub pool_account: Account<'info, PoolAccount>,
-    pub watermelon_mint: Account<'info, Mint>,
+    pub pool_account: Box<Account<'info, PoolAccount>>,
+    pub watermelon_mint: Box<Account<'info, Mint>>,
     #[account(mut,
-        seeds = [watermelon_mint.to_account_info().key.as_ref(), pool_account.pool_id.as_ref().trim_ascii_whitespace(), b"redeemable_mint"],
+        seeds = [pool_account.pool_id.as_ref().trim_ascii_whitespace(), b"redeemable_mint"],
         bump = pool_account.bumps.redeemable_mint)]
-    pub redeemable_mint: Account<'info, Mint>,
+    pub redeemable_mint: Box<Account<'info, Mint>>,
     #[account(mut,
-        seeds = [watermelon_mint.to_account_info().key.as_ref(), pool_account.pool_id.as_ref().trim_ascii_whitespace(), b"pool_watermelon"],
+        seeds = [pool_account.pool_id.as_ref().trim_ascii_whitespace(), b"pool_watermelon"],
         bump = pool_account.bumps.pool_usdc)]
-    pub pool_watermelon: Account<'info, TokenAccount>,
+    pub pool_watermelon: Box<Account<'info, TokenAccount>>,
     // Programs and Sysvars
     #[account(constraint = token_program.key == &token::ID)]
     pub token_program: AccountInfo<'info>,
@@ -363,16 +355,16 @@ pub struct WithdrawPoolUsdc<'info> {
     #[account(signer)]
     pub distribution_authority: AccountInfo<'info>,
     #[account(mut, constraint = creator_usdc.owner == *distribution_authority.key)]
-    pub creator_usdc: Account<'info, TokenAccount>,
+    pub creator_usdc: Box<Account<'info, TokenAccount>>,
     // Pool Accounts
-    #[account(seeds = [watermelon_mint.to_account_info().key.as_ref(), pool_account.pool_id.as_ref().trim_ascii_whitespace()],
+    #[account(seeds = [pool_account.pool_id.as_ref().trim_ascii_whitespace()],
         bump = pool_account.bumps.pool_account)]
-    pub pool_account: Account<'info, PoolAccount>,
-    pub watermelon_mint: Account<'info, Mint>,
+    pub pool_account: Box<Account<'info, PoolAccount>>,
+    pub watermelon_mint: Box<Account<'info, Mint>>,
     #[account(mut,
-        seeds = [watermelon_mint.to_account_info().key.as_ref(), pool_account.pool_id.as_ref().trim_ascii_whitespace(), b"pool_usdc"],
+        seeds = [pool_account.pool_id.as_ref().trim_ascii_whitespace(), b"pool_usdc"],
         bump = pool_account.bumps.pool_usdc)]
-    pub pool_usdc: Account<'info, TokenAccount>,
+    pub pool_usdc: Box<Account<'info, TokenAccount>>,
     // Program and Sysvars
     #[account(constraint = token_program.key == &token::ID)]
     pub token_program: AccountInfo<'info>,

@@ -76,25 +76,25 @@ describe("ido-pool", () => {
 
     // We use the watermelon mint address as the seed, could use something else though.
     const [poolAccount, poolAccountBump] = await anchor.web3.PublicKey.findProgramAddress(
-      [watermelonMint.toBuffer(), Buffer.from(poolId)],
+      [Buffer.from(poolId)],
       program.programId
     );
     bumps.poolAccount = poolAccountBump;
 
     const [redeemableMint, redeemableMintBump] = await anchor.web3.PublicKey.findProgramAddress(
-      [watermelonMint.toBuffer(), Buffer.from(poolId), Buffer.from("reedemable_mint")],
+      [Buffer.from(poolId), Buffer.from("reedemable_mint")],
       program.programId
     );
     bumps.redeemableMint = redeemableMintBump;
 
     const [poolWatermelon, poolWatermelonBump] = await anchor.web3.PublicKey.findProgramAddress(
-      [watermelonMint.toBuffer(), Buffer.from(poolId), Buffer.from("pool_watermelon")],
+      [Buffer.from(poolId), Buffer.from("pool_watermelon")],
       program.programId
     );
     bumps.poolWatermelon = poolWatermelonBump;
 
     const [poolUsdc, poolUsdcBump] = await anchor.web3.PublicKey.findProgramAddress(
-      [watermelonMint.toBuffer(), Buffer.from(poolId), Buffer.from("pool_usdc")],
+      [Buffer.from(poolId), Buffer.from("pool_usdc")],
       program.programId
     );
     bumps.poolUsdc = poolUsdcBump;
