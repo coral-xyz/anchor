@@ -234,8 +234,8 @@ pub mod prelude {
     pub use super::{
         access_control, account, declare_id, emit, error, event, interface, program, require,
         state, zero_copy, Account, AccountDeserialize, AccountSerialize, Accounts, AccountsExit,
-        AnchorDeserialize, AnchorSerialize, Context, CpiContext, Key, Loader, ProgramAccount,
-        Sysvar, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        AnchorDeserialize, AnchorSerialize, Context, CpiContext, Key, Loader, Owner,
+        ProgramAccount, Sysvar, ToAccountInfo, ToAccountInfos, ToAccountMetas,
     };
 
     #[allow(deprecated)]
