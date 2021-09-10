@@ -55,10 +55,6 @@ pub enum IdlAccountItem {
 #[serde(rename_all = "camelCase")]
 pub struct IdlAccountsVec {
     pub name: String,
-    // TODO: maybe this can be a vector
-    pub is_mut: bool,
-    // TODO: maybe this can be a vector
-    pub is_signer: bool,
     pub _dummy_vec_indicator: bool,
 }
 

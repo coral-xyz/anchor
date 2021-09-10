@@ -453,10 +453,7 @@ fn idl_accounts(
                 if &comp_f.symbol == "Vec" {
                     IdlAccountItem::IdlAccountsVec(IdlAccountsVec {
                         name: comp_f.ident.to_string().to_mixed_case(),
-                        // TODO: how is this to be done?
-                        is_mut: false,
                         _dummy_vec_indicator: true,
-                        is_signer: false
                     })
                 } else {
                     let accs_strct = global_accs.get(&comp_f.symbol).expect(&format!(

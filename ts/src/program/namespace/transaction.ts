@@ -1,6 +1,7 @@
-import { Transaction } from "@solana/web3.js";
+import { AccountMeta, Transaction } from "@solana/web3.js";
 import { IdlInstruction } from "../../idl";
-import { splitArgsAndCtx } from "../context";
+import { translateAddress } from "../common";
+import { AccountsArray, splitArgsAndCtx } from "../context";
 import { InstructionFn } from "./instruction";
 
 export default class TransactionFactory {
