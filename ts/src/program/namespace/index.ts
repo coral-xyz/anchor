@@ -19,6 +19,7 @@ export { TransactionNamespace, TransactionFn } from "./transaction";
 export { RpcNamespace, RpcFn } from "./rpc";
 export { AccountNamespace, AccountClient, ProgramAccount } from "./account";
 export { SimulateNamespace, SimulateFn } from "./simulate";
+export { IdlAccounts, IdlTypes } from "./types";
 
 export default class NamespaceFactory {
   /**

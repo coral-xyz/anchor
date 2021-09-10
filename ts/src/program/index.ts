@@ -9,7 +9,7 @@ import NamespaceFactory, {
   TransactionNamespace,
   AccountNamespace,
   StateClient,
-  SimulateNamespace,
+  SimulateNamespace
 } from "./namespace";
 import { getProvider } from "../";
 import { utf8 } from "../utils/bytes";

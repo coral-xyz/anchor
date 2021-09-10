@@ -119,4 +119,10 @@ export type IdlTypes<T extends Idl> = TypeDefDictionary<
   Record<string, never>
 >;
 
+export type IdlAccounts<T extends Idl> = TypeDefDictionary<
+  NonNullable<T["accounts"]>,
+  Record<string, never>
+>;
+
+
 export type IdlErrorInfo<IDL extends Idl> = NonNullable<IDL["errors"]>[number];

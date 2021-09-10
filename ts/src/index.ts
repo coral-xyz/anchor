@@ -32,6 +32,8 @@ import {
   TransactionFn,
   InstructionNamespace,
   InstructionFn,
+  IdlAccounts,
+  IdlTypes
 } from "./program/namespace";
 import { Context, Accounts } from "./program/context";
 
@@ -69,4 +71,6 @@ export {
   utils,
   Wallet,
   Address,
+  IdlAccounts,
+  IdlTypes
 };
