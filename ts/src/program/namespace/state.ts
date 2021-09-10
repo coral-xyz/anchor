@@ -3,7 +3,6 @@ import camelCase from "camelcase";
 import {
   PublicKey,
   SystemProgram,
-  SYSVAR_RENT_PUBKEY,
   Commitment,
   AccountMeta,
 } from "@solana/web3.js";
@@ -268,11 +267,6 @@ function stateInstructionKeys<M extends IdlStateMethod>(
       },
 
       { pubkey: programId, isWritable: false, isSigner: false },
-      {
-        pubkey: SYSVAR_RENT_PUBKEY,
-        isWritable: false,
-        isSigner: false,
-      },
     ];
   } else {
     validateAccounts(m.accounts, accounts);

@@ -31,6 +31,7 @@ use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::io::Write;
 
+mod account;
 mod account_info;
 mod account_meta;
 mod boxed;
@@ -48,15 +49,27 @@ pub mod state;
 mod sysvar;
 mod vec;
 
-pub use crate::context::{Context, CpiContext, CpiStateContext};
+pub use crate::account::Account;
+#[doc(hidden)]
+#[allow(deprecated)]
+pub use crate::context::CpiStateContext;
+pub use crate::context::{Context, CpiContext};
+#[doc(hidden)]
+#[allow(deprecated)]
 pub use crate::cpi_account::CpiAccount;
+#[doc(hidden)]
+#[allow(deprecated)]
 pub use crate::cpi_state::CpiState;
 pub use crate::loader::Loader;
+#[doc(hidden)]
+#[allow(deprecated)]
 pub use crate::program_account::ProgramAccount;
+#[doc(hidden)]
+#[allow(deprecated)]
 pub use crate::state::ProgramState;
 pub use crate::sysvar::Sysvar;
 pub use anchor_attribute_access_control::access_control;
-pub use anchor_attribute_account::{account, associated, zero_copy};
+pub use anchor_attribute_account::{account, declare_id, zero_copy};
 pub use anchor_attribute_error::error;
 pub use anchor_attribute_event::{emit, event};
 pub use anchor_attribute_interface::interface;
@@ -103,17 +116,6 @@ pub trait AccountsExit<'info>: ToAccountMetas + ToAccountInfos<'info> {
 /// one to retrieve the rent exemption.
 pub trait AccountsClose<'info>: ToAccountInfos<'info> {
     fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult;
-}
-
-/// A data structure of accounts providing a one time deserialization upon
-/// account initialization, i.e., when the data array for a given account is
-/// zeroed. Any subsequent call to `try_accounts_init` should fail. For all
-/// subsequent deserializations, it's expected that [`Accounts`] is used.
-pub trait AccountsInit<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
-    fn try_accounts_init(
-        program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
-    ) -> Result<Self, ProgramError>;
 }
 
 /// Transformation to
@@ -210,17 +212,14 @@ pub trait Bump {
     fn seed(&self) -> u8;
 }
 
-pub trait Key {
-    fn key(&self) -> Pubkey;
+/// Defines an address expected to own an account.
+pub trait Owner {
+    fn owner() -> Pubkey;
 }
 
-impl<'info, T> Key for T
-where
-    T: ToAccountInfo<'info>,
-{
-    fn key(&self) -> Pubkey {
-        *self.to_account_info().key
-    }
+/// Defines the Pubkey of an account.
+pub trait Key {
+    fn key(&self) -> Pubkey;
 }
 
 impl Key for Pubkey {
@@ -233,12 +232,14 @@ impl Key for Pubkey {
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
     pub use super::{
-        access_control, account, associated, emit, error, event, interface, program, require,
-        state, zero_copy, AccountDeserialize, AccountSerialize, Accounts, AccountsExit,
-        AccountsInit, AnchorDeserialize, AnchorSerialize, Context, CpiAccount, CpiContext,
-        CpiState, CpiStateContext, Loader, ProgramAccount, ProgramState, Sysvar, ToAccountInfo,
-        ToAccountInfos, ToAccountMetas,
+        access_control, account, declare_id, emit, error, event, interface, program, require,
+        state, zero_copy, Account, AccountDeserialize, AccountSerialize, Accounts, AccountsExit,
+        AnchorDeserialize, AnchorSerialize, Context, CpiContext, Key, Loader, Owner,
+        ProgramAccount, Sysvar, ToAccountInfo, ToAccountInfos, ToAccountMetas,
     };
+
+    #[allow(deprecated)]
+    pub use super::{CpiAccount, CpiState, CpiStateContext, ProgramState};
 
     pub use borsh;
     pub use solana_program::account_info::{next_account_info, AccountInfo};
@@ -307,27 +308,6 @@ pub mod __private {
     pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
 }
 
-/// Returns the program-derived-address seeds used for creating the associated
-/// account.
-#[macro_export]
-macro_rules! associated_seeds {
-    (account = $pda:expr, associated = $associated:expr) => {
-        &[
-            b"anchor".as_ref(),
-            $associated.to_account_info().key.as_ref(),
-            &[anchor_lang::Bump::seed(&*$pda)],
-        ]
-    };
-    (account = $pda:expr, associated = $associated:expr, $(with = $with:expr),+) => {
-        &[
-            b"anchor".as_ref(),
-            $associated.to_account_info().key.as_ref(),
-            $($with.to_account_info().key.as_ref()),+,
-            &[anchor_lang::Bump::seed(&*$pda)][..],
-        ]
-    };
-}
-
 /// Ensures a condition is true, otherwise returns the given error.
 /// Use this with a custom error type.
 ///
@@ -355,6 +335,11 @@ macro_rules! require {
     ($invariant:expr, $error:tt $(,)?) => {
         if !($invariant) {
             return Err(crate::ErrorCode::$error.into());
+        }
+    };
+    ($invariant:expr, $error:expr $(,)?) => {
+        if !($invariant) {
+            return Err($error.into());
         }
     };
 }

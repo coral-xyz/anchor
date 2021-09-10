@@ -88,7 +88,10 @@ export class InstructionCoder {
     const ixLayouts = stateMethods
       .map((m: IdlStateMethod) => {
         let fieldLayouts = m.args.map((arg: IdlField) => {
-          return IdlCoder.fieldLayout(arg, idl.types);
+          return IdlCoder.fieldLayout(
+            arg,
+            Array.from([...(idl.accounts ?? []), ...(idl.types ?? [])])
+          );
         });
         const name = camelCase(m.name);
         return [name, borsh.struct(fieldLayouts, name)];
@@ -96,7 +99,10 @@ export class InstructionCoder {
       .concat(
         idl.instructions.map((ix) => {
           let fieldLayouts = ix.args.map((arg: IdlField) =>
-            IdlCoder.fieldLayout(arg, idl.types)
+            IdlCoder.fieldLayout(
+              arg,
+              Array.from([...(idl.accounts ?? []), ...(idl.types ?? [])])
+            )
           );
           const name = camelCase(ix.name);
           return [name, borsh.struct(fieldLayouts, name)];
@@ -109,9 +115,12 @@ export class InstructionCoder {
   /**
    * Dewcodes a program instruction.
    */
-  public decode(ix: Buffer | string): Instruction | null {
+  public decode(
+    ix: Buffer | string,
+    encoding: "hex" | "base58" = "hex"
+  ): Instruction | null {
     if (typeof ix === "string") {
-      ix = bs58.decode(ix);
+      ix = encoding === "hex" ? Buffer.from(ix, "hex") : bs58.decode(ix);
     }
     let sighash = bs58.encode(ix.slice(0, 8));
     let data = ix.slice(8);

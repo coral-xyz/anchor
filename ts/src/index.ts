@@ -36,6 +36,7 @@ import {
   IdlTypes
 } from "./program/namespace";
 import { Context, Accounts } from "./program/context";
+import { EventParser } from "./program/event";
 
 export {
   workspace,
@@ -73,4 +74,5 @@ export {
   Address,
   IdlAccounts,
   IdlTypes
+  EventParser,
 };

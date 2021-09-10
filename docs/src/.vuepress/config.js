@@ -64,7 +64,6 @@ module.exports = {
           "/tutorials/tutorial-2",
           "/tutorials/tutorial-3",
           "/tutorials/tutorial-4",
-          "/tutorials/tutorial-5",
         ],
       },
       {
@@ -72,6 +71,14 @@ module.exports = {
         title: "CLI",
         children: [
           "/cli/commands",
+        ],
+      },
+      {
+        collapsable: false,
+        title: "Source Verification",
+        children: [
+          "/getting-started/verification",
+          "/getting-started/publishing",
         ],
       },
     ],

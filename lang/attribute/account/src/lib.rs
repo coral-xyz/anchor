@@ -1,7 +1,9 @@
 extern crate proc_macro;
 
 use quote::quote;
-use syn::{parse_macro_input, parse_quote};
+use syn::parse_macro_input;
+
+mod id;
 
 /// A data structure representing a Solana account, implementing various traits:
 ///
@@ -98,6 +100,21 @@ pub fn account(
         format!("{:?}", discriminator).parse().unwrap()
     };
 
+    let owner_impl = {
+        if namespace.is_empty() {
+            quote! {
+                #[automatically_derived]
+                impl #impl_gen anchor_lang::Owner for #account_name #type_gen #where_clause {
+                    fn owner() -> Pubkey {
+                        crate::ID
+                    }
+                }
+            }
+        } else {
+            quote! {}
+        }
+    };
+
     proc_macro::TokenStream::from({
         if is_zero_copy {
             quote! {
@@ -142,6 +159,8 @@ pub fn account(
                         Ok(*account)
                     }
                 }
+
+                #owner_impl
             }
         } else {
             quote! {
@@ -187,78 +206,8 @@ pub fn account(
                         #discriminator
                     }
                 }
-            }
-        }
-    })
-}
 
-/// Extends the `#[account]` attribute to allow one to create associated
-/// accounts. This includes a `Default` implementation, which means all fields
-/// in an `#[associated]` struct must implement `Default` and an
-/// `anchor_lang::Bump` trait implementation, which allows the account to be
-/// used as a program derived address.
-///
-/// # Zero Copy Deserialization
-///
-/// Similar to the `#[account]` attribute one can enable zero copy
-/// deserialization by using the `zero_copy` argument:
-///
-/// ```ignore
-/// #[associated(zero_copy)]
-/// ```
-///
-/// For more, see the [`account`](./attr.account.html) attribute.
-#[proc_macro_attribute]
-pub fn associated(
-    args: proc_macro::TokenStream,
-    input: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
-    let mut account_strct = parse_macro_input!(input as syn::ItemStruct);
-    let account_name = &account_strct.ident;
-    let (impl_gen, ty_gen, where_clause) = account_strct.generics.split_for_impl();
-
-    // Add a `__nonce: u8` field to the struct to hold the bump seed for
-    // the program dervied address.
-    match &mut account_strct.fields {
-        syn::Fields::Named(fields) => {
-            let mut segments = syn::punctuated::Punctuated::new();
-            segments.push(syn::PathSegment {
-                ident: syn::Ident::new("u8", proc_macro2::Span::call_site()),
-                arguments: syn::PathArguments::None,
-            });
-            fields.named.push(syn::Field {
-                attrs: Vec::new(),
-                vis: syn::Visibility::Restricted(syn::VisRestricted {
-                    pub_token: syn::token::Pub::default(),
-                    paren_token: syn::token::Paren::default(),
-                    in_token: None,
-                    path: Box::new(parse_quote!(crate)),
-                }),
-                ident: Some(syn::Ident::new("__nonce", proc_macro2::Span::call_site())),
-                colon_token: Some(syn::token::Colon {
-                    spans: [proc_macro2::Span::call_site()],
-                }),
-                ty: syn::Type::Path(syn::TypePath {
-                    qself: None,
-                    path: syn::Path {
-                        leading_colon: None,
-                        segments,
-                    },
-                }),
-            });
-        }
-        _ => panic!("Fields must be named"),
-    }
-
-    let args: proc_macro2::TokenStream = args.into();
-    proc_macro::TokenStream::from(quote! {
-        #[anchor_lang::account(#args)]
-        #account_strct
-
-        #[automatically_derived]
-        impl #impl_gen anchor_lang::Bump for #account_name #ty_gen #where_clause {
-            fn seed(&self) -> u8 {
-                self.__nonce
+                #owner_impl
             }
         }
     })
@@ -341,4 +290,12 @@ pub fn zero_copy(
         #[repr(packed)]
         #account_strct
     })
+}
+
+/// Defines the program's ID. This should be used at the root of all Anchor
+/// based programs.
+#[proc_macro]
+pub fn declare_id(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let id = parse_macro_input!(input as id::Id);
+    proc_macro::TokenStream::from(quote! {#id})
 }
