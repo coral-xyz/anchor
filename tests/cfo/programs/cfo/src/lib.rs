@@ -7,6 +7,7 @@ use anchor_spl::mint;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
 use registry::{Registrar, RewardVendorKind};
 use std::convert::TryInto;
+use swap::program::Swap;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
@@ -339,10 +340,9 @@ pub struct CreateOfficer<'info> {
         not(feature = "test"),
         account(address = mint::SRM),
     )]
-    mint: AccountInfo<'info>,
+    mint: Box<Account<'info, Mint>>,
     dex_program: Program<'info, Dex>,
-    #[account(address = swap::ID)]
-    swap_program: AccountInfo<'info>,
+    swap_program: Program<'info, Swap>,
     system_program: Program<'info, System>,
     token_program: Program<'info, Token>,
     rent: Sysvar<'info, Rent>,
@@ -426,8 +426,7 @@ pub struct SwapToUsdc<'info> {
     quote_vault: AccountInfo<'info>,
     #[account(seeds = [officer.key().as_ref(), mint::USDC.as_ref()], bump)]
     usdc_vault: AccountInfo<'info>,
-    #[account(address = swap::ID)]
-    swap_program: AccountInfo<'info>,
+    swap_program: Program<'info, Swap>,
     dex_program: Program<'info, Dex>,
     token_program: Program<'info, Token>,
     #[account(address = tx_instructions::ID)]
@@ -458,8 +457,7 @@ pub struct SwapToSrm<'info> {
         constraint = &officer.stake != from_vault.key,
     )]
     srm_vault: AccountInfo<'info>,
-    #[account(address = swap::ID)]
-    swap_program: AccountInfo<'info>,
+    swap_program: Program<'info, Swap>,
     dex_program: Program<'info, Dex>,
     token_program: Program<'info, Token>,
     #[account(address = tx_instructions::ID)]
