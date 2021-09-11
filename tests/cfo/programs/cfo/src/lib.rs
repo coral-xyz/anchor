@@ -5,6 +5,8 @@ use anchor_lang::solana_program::sysvar::instructions as tx_instructions;
 use anchor_spl::dex::{self, Dex};
 use anchor_spl::mint;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
+use lockup::program::Lockup;
+use registry::program::Registry;
 use registry::{Registrar, RewardVendorKind};
 use std::convert::TryInto;
 use swap::program::Swap;
@@ -534,13 +536,10 @@ pub struct DropStakeReward<'info> {
     mint: AccountInfo<'info>,
     srm: DropStakeRewardPool<'info>,
     msrm: DropStakeRewardPool<'info>,
-    #[account(owner = *registry_program.key)]
     msrm_registrar: Box<Account<'info, Registrar>>,
     token_program: Program<'info, Token>,
-    #[account(address = registry::ID)]
-    registry_program: AccountInfo<'info>,
-    #[account(address = lockup::ID)]
-    lockup_program: AccountInfo<'info>,
+    registry_program: Program<'info, Registry>,
+    lockup_program: Program<'info, Lockup>,
     dex_program: Program<'info, Dex>,
     clock: Sysvar<'info, Clock>,
     rent: Sysvar<'info, Rent>,
