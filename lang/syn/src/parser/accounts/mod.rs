@@ -74,6 +74,7 @@ fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
             | "CpiState"
             | "Loader"
             | "Account"
+            | "Program"
     );
     Ok(r)
 }
@@ -92,6 +93,7 @@ fn parse_ty(f: &syn::Field) -> ParseResult<Ty> {
         "AccountInfo" => Ty::AccountInfo,
         "Loader" => Ty::Loader(parse_program_account_zero_copy(&path)?),
         "Account" => Ty::Account(parse_account_ty(&path)?),
+        "Program" => Ty::Program(parse_program_ty(&path)?),
         _ => return Err(ParseError::new(f.ty.span(), "invalid account type given")),
     };
 
@@ -165,6 +167,11 @@ fn parse_account_ty(path: &syn::Path) -> ParseResult<AccountTy> {
         account_type_path,
         boxed,
     })
+}
+
+fn parse_program_ty(path: &syn::Path) -> ParseResult<ProgramTy> {
+    let account_type_path = parse_account(path)?;
+    Ok(ProgramTy { account_type_path })
 }
 
 // TODO: this whole method is a hack. Do something more idiomatic.
