@@ -60,8 +60,10 @@ pub mod cfo {
 
     /// Transfers fees from the dex to the CFO.
     pub fn sweep_fees<'info>(ctx: Context<'_, '_, '_, 'info, SweepFees<'info>>) -> Result<()> {
-        let dex_program = ctx.accounts.dex.dex_program.key();
-        let seeds = [dex_program.as_ref(), &[ctx.accounts.officer.bumps.bump]];
+        let seeds = [
+            ctx.accounts.dex.dex_program.key.as_ref(),
+            &[ctx.accounts.officer.bumps.bump],
+        ];
         let cpi_ctx = CpiContext::from(&*ctx.accounts);
         dex::sweep_fees(cpi_ctx.with_signer(&[&seeds[..]]))?;
         Ok(())
@@ -74,8 +76,10 @@ pub mod cfo {
         ctx: Context<'_, '_, '_, 'info, SwapToUsdc<'info>>,
         min_exchange_rate: ExchangeRate,
     ) -> Result<()> {
-        let dex_program = ctx.accounts.dex_program.key();
-        let seeds = [dex_program.as_ref(), &[ctx.accounts.officer.bumps.bump]];
+        let seeds = [
+            ctx.accounts.dex_program.key.as_ref(),
+            &[ctx.accounts.officer.bumps.bump],
+        ];
         let cpi_ctx = CpiContext::from(&*ctx.accounts);
         swap::cpi::swap(
             cpi_ctx.with_signer(&[&seeds[..]]),
@@ -93,8 +97,10 @@ pub mod cfo {
         ctx: Context<'_, '_, '_, 'info, SwapToSrm<'info>>,
         min_exchange_rate: ExchangeRate,
     ) -> Result<()> {
-        let dex_program = ctx.accounts.dex_program.key();
-        let seeds = [dex_program.as_ref(), &[ctx.accounts.officer.bumps.bump]];
+        let seeds = [
+            ctx.accounts.dex_program.key.as_ref(),
+            &[ctx.accounts.officer.bumps.bump],
+        ];
         let cpi_ctx: CpiContext<'_, '_, '_, 'info, swap::Swap<'info>> = (&*ctx.accounts).into();
         swap::cpi::swap(
             cpi_ctx.with_signer(&[&seeds[..]]),
@@ -110,8 +116,10 @@ pub mod cfo {
     #[access_control(is_distribution_ready(&ctx.accounts))]
     pub fn distribute<'info>(ctx: Context<'_, '_, '_, 'info, Distribute<'info>>) -> Result<()> {
         let total_fees = ctx.accounts.srm_vault.amount;
-        let dex_program = ctx.accounts.dex_program.key();
-        let seeds = [dex_program.as_ref(), &[ctx.accounts.officer.bumps.bump]];
+        let seeds = [
+            ctx.accounts.dex_program.key.as_ref(),
+            &[ctx.accounts.officer.bumps.bump],
+        ];
 
         // Burn.
         let burn_amount: u64 = u128::from(total_fees)
@@ -176,8 +184,10 @@ pub mod cfo {
                 period_count,
             }
         };
-        let dex_program = ctx.accounts.dex_program.key();
-        let seeds = [dex_program.as_ref(), &[ctx.accounts.officer.bumps.bump]];
+        let seeds = [
+            ctx.accounts.dex_program.key.as_ref(),
+            &[ctx.accounts.officer.bumps.bump],
+        ];
 
         // Total amount staked denominated in SRM (i.e. MSRM is converted to
         // SRM)
@@ -228,7 +238,7 @@ pub mod cfo {
                     ctx.accounts.srm.registrar.to_account_info().key.as_ref(),
                     ctx.accounts.srm.vendor.to_account_info().key.as_ref(),
                 ],
-                &ctx.accounts.token_program.key(),
+                ctx.accounts.token_program.key,
             );
             registry::cpi::drop_reward(
                 ctx.accounts.into_srm_reward().with_signer(&[&seeds[..]]),
@@ -258,7 +268,7 @@ pub mod cfo {
                     ctx.accounts.msrm.registrar.to_account_info().key.as_ref(),
                     ctx.accounts.msrm.vendor.to_account_info().key.as_ref(),
                 ],
-                &ctx.accounts.token_program.key(),
+                ctx.accounts.token_program.key,
             );
             registry::cpi::drop_reward(
                 ctx.accounts.into_msrm_reward().with_signer(&[&seeds[..]]),
@@ -291,7 +301,7 @@ pub mod cfo {
 pub struct CreateOfficer<'info> {
     #[account(
         init,
-        seeds = [dex_program.key().as_ref()],
+        seeds = [dex_program.key.as_ref()],
         bump = bumps.bump,
         payer = authority,
     )]
@@ -371,7 +381,7 @@ pub struct SetDistribution<'info> {
 #[derive(Accounts)]
 pub struct SweepFees<'info> {
     #[account(
-        seeds = [dex.dex_program.key().as_ref()],
+        seeds = [dex.dex_program.key.as_ref()],
         bump = officer.bumps.bump,
     )]
     officer: Account<'info, Officer>,
@@ -401,7 +411,7 @@ pub struct DexAccounts<'info> {
 #[derive(Accounts)]
 pub struct SwapToUsdc<'info> {
     #[account(
-        seeds = [dex_program.key().as_ref()],
+        seeds = [dex_program.key.as_ref()],
         bump = officer.bumps.bump,
     )]
     officer: Account<'info, Officer>,
@@ -428,7 +438,7 @@ pub struct SwapToUsdc<'info> {
 #[derive(Accounts)]
 pub struct SwapToSrm<'info> {
     #[account(
-        seeds = [dex_program.key().as_ref()],
+        seeds = [dex_program.key.as_ref()],
         bump = officer.bumps.bump,
     )]
     officer: Account<'info, Officer>,
