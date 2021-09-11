@@ -87,7 +87,7 @@ pub mod cfo {
         swap::cpi::swap(
             cpi_ctx.with_signer(&[&seeds[..]]),
             swap::Side::Bid,
-            token::accessor::amount(&ctx.accounts.from_vault)?,
+            ctx.accounts.from_vault.amount,
             min_exchange_rate.into(),
         )?;
         Ok(())
@@ -108,7 +108,7 @@ pub mod cfo {
         swap::cpi::swap(
             cpi_ctx.with_signer(&[&seeds[..]]),
             swap::Side::Bid,
-            token::accessor::amount(&ctx.accounts.from_vault)?,
+            ctx.accounts.from_vault.amount,
             min_exchange_rate.into(),
         )?;
         Ok(())
@@ -336,7 +336,7 @@ pub struct CreateOfficer<'info> {
         token::authority = officer,
     )]
     treasury: Box<Account<'info, TokenAccount>>,
-    authority: AccountInfo<'info>,
+    authority: Signer<'info>,
     #[cfg_attr(
         not(feature = "test"),
         account(address = mint::SRM),
@@ -362,8 +362,7 @@ pub struct CreateOfficerToken<'info> {
         payer = payer,
     )]
     token: Account<'info, TokenAccount>,
-    #[account(owner = spl_token::ID)]
-    mint: AccountInfo<'info>,
+    mint: Account<'info, Mint>,
     #[account(mut)]
     payer: Signer<'info>,
     system_program: Program<'info, System>,
@@ -392,10 +391,12 @@ pub struct SweepFees<'info> {
         bump,
     )]
     sweep_vault: Account<'info, TokenAccount>,
-    mint: AccountInfo<'info>,
+    mint: Account<'info, Mint>,
     dex: DexAccounts<'info>,
 }
 
+// Dex accounts are used for CPI only.
+// They are not read or written and so are not validated.
 #[derive(Accounts)]
 pub struct DexAccounts<'info> {
     #[account(mut)]
@@ -414,18 +415,16 @@ pub struct SwapToUsdc<'info> {
         seeds = [dex_program.key.as_ref()],
         bump = officer.bumps.bump,
     )]
-    officer: Account<'info, Officer>,
+    officer: Box<Account<'info, Officer>>,
     market: DexMarketAccounts<'info>,
     #[account(
-        owner = spl_token::ID,
-        constraint = &officer.treasury != from_vault.key,
-        constraint = &officer.stake != from_vault.key,
+        constraint = &officer.treasury != &from_vault.key(),
+        constraint = &officer.stake != &from_vault.key(),
     )]
-    from_vault: AccountInfo<'info>,
-    #[account(owner = spl_token::ID)]
-    quote_vault: AccountInfo<'info>,
+    from_vault: Box<Account<'info, TokenAccount>>,
+    quote_vault: Box<Account<'info, TokenAccount>>,
     #[account(seeds = [officer.key().as_ref(), mint::USDC.as_ref()], bump)]
-    usdc_vault: AccountInfo<'info>,
+    usdc_vault: Box<Account<'info, TokenAccount>>,
     swap_program: Program<'info, Swap>,
     dex_program: Program<'info, Dex>,
     token_program: Program<'info, Token>,
@@ -444,19 +443,18 @@ pub struct SwapToSrm<'info> {
     market: DexMarketAccounts<'info>,
     #[account(
         owner = spl_token::ID,
-        constraint = &officer.treasury != from_vault.key,
-        constraint = &officer.stake != from_vault.key,
+        constraint = &officer.treasury != &from_vault.key(),
+        constraint = &officer.stake != &from_vault.key(),
     )]
-    from_vault: AccountInfo<'info>,
-    #[account(owner = spl_token::ID)]
-    quote_vault: AccountInfo<'info>,
+    from_vault: Account<'info, TokenAccount>,
+    quote_vault: Account<'info, TokenAccount>,
     #[account(
         seeds = [officer.key().as_ref(), mint::SRM.as_ref()],
         bump,
-        constraint = &officer.treasury != from_vault.key,
-        constraint = &officer.stake != from_vault.key,
+        constraint = &officer.treasury != &from_vault.key(),
+        constraint = &officer.stake != &from_vault.key(),
     )]
-    srm_vault: AccountInfo<'info>,
+    srm_vault: Account<'info, TokenAccount>,
     swap_program: Program<'info, Swap>,
     dex_program: Program<'info, Dex>,
     token_program: Program<'info, Token>,
@@ -465,6 +463,8 @@ pub struct SwapToSrm<'info> {
     rent: Sysvar<'info, Rent>,
 }
 
+// Dex accounts are used for CPI only.
+// They are not read or written and so are not validated.
 #[derive(Accounts)]
 pub struct DexMarketAccounts<'info> {
     #[account(mut)]
@@ -628,7 +628,7 @@ impl<'info> From<&SwapToSrm<'info>> for CpiContext<'_, '_, '_, 'info, swap::Swap
                 coin_vault: accs.market.coin_vault.clone(),
                 pc_vault: accs.market.pc_vault.clone(),
                 vault_signer: accs.market.vault_signer.clone(),
-                coin_wallet: accs.srm_vault.clone(),
+                coin_wallet: accs.srm_vault.to_account_info(),
             },
             authority: accs.officer.to_account_info(),
             pc_wallet: accs.from_vault.to_account_info(),
@@ -658,7 +658,7 @@ impl<'info> From<&SwapToUsdc<'info>> for CpiContext<'_, '_, '_, 'info, swap::Swa
                 coin_wallet: accs.from_vault.to_account_info(),
             },
             authority: accs.officer.to_account_info(),
-            pc_wallet: accs.usdc_vault.clone(),
+            pc_wallet: accs.usdc_vault.to_account_info(),
             dex_program: accs.dex_program.to_account_info(),
             token_program: accs.token_program.to_account_info(),
             rent: accs.rent.to_account_info(),
