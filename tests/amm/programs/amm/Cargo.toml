@@ -1,0 +1,28 @@
+[package]
+description = "Created with Anchor"
+edition = "2018"
+name = "amm"
+version = "0.1.0"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "amm"
+
+[features]
+cpi = ["no-entrypoint"]
+default = []
+no-entrypoint = []
+no-idl = []
+
+[dependencies]
+anchor-lang = {path = "../../../../lang"}
+anchor-spl = {path = "../../../../spl"}
+arrayref = "0.3.6"
+solana-program = "1.7.11"
+spl-math = {version = "0.1", features = ["no-entrypoint"]}
+spl-token = {version = "3.1.1", features = ["no-entrypoint"]}
+
+[dev-dependencies]
+proptest = "1.0"
+roots = "0.0.7"
+sim = {path = "./sim"}

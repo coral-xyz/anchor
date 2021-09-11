@@ -1,0 +1,6 @@
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "mocha --require ts-node/register tests/*.ts -t 1000000"

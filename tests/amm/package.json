@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "@project-serum/anchor": "^0.14.0",
+    "@project-serum/serum": "0.13.38",
+    "@solana/spl-token": "^0.1.8",
+    "@solana/web3.js": "^1.24.0",
+    "buffer-layout": "^1.2.0"
+  },
+  "devDependencies": {
+    "@types/mocha": "^9.0.0",
+    "ts-mocha": "^8.0.0"
+  },
+  "scripts": {
+    "test": "mocha --require ts-node/register tests/*.ts"
+  }
+}
