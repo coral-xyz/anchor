@@ -364,8 +364,8 @@ pub struct CreateOfficerToken<'info> {
     token: Account<'info, TokenAccount>,
     #[account(owner = spl_token::ID)]
     mint: AccountInfo<'info>,
-    #[account(mut, signer)]
-    payer: AccountInfo<'info>,
+    #[account(mut)]
+    payer: Signer<'info>,
     system_program: Program<'info, System>,
     token_program: Program<'info, Token>,
     rent: Sysvar<'info, Rent>,
@@ -375,8 +375,7 @@ pub struct CreateOfficerToken<'info> {
 pub struct SetDistribution<'info> {
     #[account(has_one = authority)]
     officer: Account<'info, Officer>,
-    #[account(signer)]
-    authority: AccountInfo<'info>,
+    authority: Signer<'info>,
 }
 
 #[derive(Accounts)]

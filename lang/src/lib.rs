@@ -46,6 +46,7 @@ pub mod idl;
 mod loader;
 mod program;
 mod program_account;
+mod signer;
 pub mod state;
 mod system_program;
 mod sysvar;
@@ -67,6 +68,7 @@ pub use crate::program::Program;
 #[doc(hidden)]
 #[allow(deprecated)]
 pub use crate::program_account::ProgramAccount;
+pub use crate::signer::Signer;
 #[doc(hidden)]
 #[allow(deprecated)]
 pub use crate::state::ProgramState;
@@ -244,7 +246,7 @@ pub mod prelude {
         access_control, account, declare_id, emit, error, event, interface, program, require,
         state, zero_copy, Account, AccountDeserialize, AccountSerialize, Accounts, AccountsExit,
         AnchorDeserialize, AnchorSerialize, Context, CpiContext, Key, Loader, Owner, Program,
-        ProgramAccount, System, Sysvar, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        ProgramAccount, Signer, System, Sysvar, ToAccountInfo, ToAccountInfos, ToAccountMetas,
     };
 
     #[allow(deprecated)]
