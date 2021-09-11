@@ -80,8 +80,8 @@ const LangErrorCode = {
   AccountNotEnoughKeys: 165,
   AccountNotMutable: 166,
   AccountNotProgramOwned: 167,
-	InvalidProgramId: 168,
-	InvalidProgramIdExecutable: 169,
+  InvalidProgramId: 168,
+  InvalidProgramIdExecutable: 169,
 
   // State.
   StateInvalidAddress: 180,
@@ -161,10 +161,7 @@ const LangErrorMessage = new Map([
     LangErrorCode.AccountNotProgramOwned,
     "The given account is not owned by the executing program",
   ],
-  [
-    LangErrorCode.InvalidProgramId,
-    "Program ID was not as expected",
-  ],
+  [LangErrorCode.InvalidProgramId, "Program ID was not as expected"],
   [
     LangErrorCode.InvalidProgramIdExecutable,
     "Program account is not executable",
