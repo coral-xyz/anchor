@@ -74,7 +74,7 @@ pub mod cfo {
 
     /// Convert the CFO's entire non-SRM token balance into USDC.
     /// Assumes USDC is the quote currency.
-    #[access_control(is_not_trading(&ctx.accounts.instructions))]
+    #[access_control(is_not_trading(&ctx.accounts.instrutions))]
     pub fn swap_to_usdc<'info>(
         ctx: Context<'_, '_, '_, 'info, SwapToUsdc<'info>>,
         min_exchange_rate: ExchangeRate,
@@ -336,7 +336,6 @@ pub struct CreateOfficer<'info> {
         token::authority = officer,
     )]
     treasury: Box<Account<'info, TokenAccount>>,
-    #[account(signer)]
     authority: AccountInfo<'info>,
     #[cfg_attr(
         not(feature = "test"),

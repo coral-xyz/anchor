@@ -68,6 +68,8 @@ pub enum ErrorCode {
     AccountNotProgramOwned,
     #[msg("Program ID was not as expected")]
     InvalidProgramId,
+    #[msg("Program account is not executable")]
+    InvalidProgramExecutable,
 
     // State.
     #[msg("The given state account does not have the correct address")]

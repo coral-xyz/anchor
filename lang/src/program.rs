@@ -24,6 +24,9 @@ impl<'a, T: Id + AccountDeserialize + Clone> Program<'a, T> {
         if info.key != &T::id() {
             return Err(ErrorCode::InvalidProgramId.into());
         }
+        if !info.executable {
+            return Err(ErrorCode::InvalidProgramExecutable.into());
+        }
         // Programs have no data so use an empty slice.
         let mut empty = &[][..];
         Ok(Program::new(info.clone(), T::try_deserialize(&mut empty)?))
