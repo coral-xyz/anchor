@@ -271,9 +271,15 @@ async function simulateTransaction(
   let config: any = { encoding: "base64", commitment };
 
   // Sign only when there are signatures, ignoring the case where only the fee payer is present and signature is null
-  if (transaction.signatures.length > 0 && !(transaction.signatures.length === 1 && transaction.signatures[0].signature === null)) {
-      // @ts-ignore
-      transaction.recentBlockhash = await connection._recentBlockhash(
+  if (
+    transaction.signatures.length > 0 &&
+    !(
+      transaction.signatures.length === 1 &&
+      transaction.signatures[0].signature === null
+    )
+  ) {
+    // @ts-ignore
+    transaction.recentBlockhash = await connection._recentBlockhash(
       // @ts-ignore
       connection._disableBlockhashCaching
     );
