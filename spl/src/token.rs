@@ -144,7 +144,6 @@ pub fn close_account<'a, 'b, 'c, 'info>(
             ctx.accounts.account.clone(),
             ctx.accounts.destination.clone(),
             ctx.accounts.authority.clone(),
-            ctx.program.clone(),
         ],
         ctx.signer_seeds,
     )
