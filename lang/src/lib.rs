@@ -50,6 +50,7 @@ mod signer;
 pub mod state;
 mod system_program;
 mod sysvar;
+mod unsafe_account;
 mod vec;
 
 pub use crate::account::Account;
@@ -74,6 +75,7 @@ pub use crate::signer::Signer;
 pub use crate::state::ProgramState;
 pub use crate::system_program::System;
 pub use crate::sysvar::Sysvar;
+pub use crate::unsafe_account::UnsafeAccount;
 pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::{account, declare_id, zero_copy};
 pub use anchor_attribute_error::error;
@@ -247,6 +249,7 @@ pub mod prelude {
         state, zero_copy, Account, AccountDeserialize, AccountSerialize, Accounts, AccountsExit,
         AnchorDeserialize, AnchorSerialize, Context, CpiContext, Key, Loader, Owner, Program,
         ProgramAccount, Signer, System, Sysvar, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        UnsafeAccount,
     };
 
     #[allow(deprecated)]
