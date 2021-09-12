@@ -172,17 +172,15 @@ export default class Provider {
    *
    * @param tx      The transaction to send.
    * @param signers The set of signers in addition to the provdier wallet that
-   *                will sign the transaction.
+   *                will sign the transaction, does not sign when undefined,
+   *                to sign with the provider wallet pass an empty array.
    * @param opts    Transaction confirmation options.
    */
   async simulate(
     tx: Transaction,
-    signers?: Array<Signer | undefined>,
+    signers?: Array<Signer>,
     opts?: ConfirmOptions
   ): Promise<RpcResponseAndContext<SimulatedTransactionResponse>> {
-    if (signers === undefined) {
-      signers = [];
-    }
     if (opts === undefined) {
       opts = this.opts;
     }
@@ -194,12 +192,10 @@ export default class Provider {
       )
     ).blockhash;
 
-    await this.wallet.signTransaction(tx);
-    signers
-      .filter((s) => s !== undefined)
-      .forEach((kp) => {
-        tx.partialSign(kp);
-      });
+    if (signers !== undefined) {
+      await this.wallet.signTransaction(tx);
+      tx.partialSign(...signers);
+    }
 
     return await simulateTransaction(
       this.connection,
@@ -268,17 +264,23 @@ async function simulateTransaction(
   transaction: Transaction,
   commitment: Commitment
 ): Promise<RpcResponseAndContext<SimulatedTransactionResponse>> {
-  // @ts-ignore
-  transaction.recentBlockhash = await connection._recentBlockhash(
-    // @ts-ignore
-    connection._disableBlockhashCaching
-  );
-
   const signData = transaction.serializeMessage();
   // @ts-ignore
   const wireTransaction = transaction._serialize(signData);
   const encodedTransaction = wireTransaction.toString("base64");
-  const config: any = { encoding: "base64", commitment };
+  let config: any = { encoding: "base64", commitment };
+
+  // Sign only when there are signatures, ignoring the case where only the fee payer is present and signature is null
+  if (transaction.signatures.length > 0 && !(transaction.signatures.length === 1 && transaction.signatures[0].signature === null)) {
+      // @ts-ignore
+      transaction.recentBlockhash = await connection._recentBlockhash(
+      // @ts-ignore
+      connection._disableBlockhashCaching
+    );
+    config.signVerify = true;
+  } else {
+    config.replaceRecentBlockhash = true;
+  }
   const args = [encodedTransaction, config];
 
   // @ts-ignore
