@@ -33,6 +33,12 @@ async function initMarket({ provider }) {
     undefined,
     decimals
   );
+  const [MINT_B, GOD_B] = await serumCmn.createMintAndVault(
+    provider,
+    new BN("1000000000000000000"),
+    undefined,
+    decimals
+  );
   const [USDC, GOD_USDC] = await serumCmn.createMintAndVault(
     provider,
     new BN("1000000000000000000"),
@@ -46,6 +52,7 @@ async function initMarket({ provider }) {
     provider,
     mints: [
       { god: GOD_A, mint: MINT_A, amount, decimals },
+      { god: GOD_B, mint: MINT_B, amount, decimals },
       { god: GOD_USDC, mint: USDC, amount, decimals },
     ],
   });
@@ -89,6 +96,7 @@ async function initMarket({ provider }) {
     vaultSigner,
     marketMaker,
     mintA: MINT_A,
+    mintB: MINT_B,
     usdc: USDC,
     godA: GOD_A,
     godUsdc: GOD_USDC,

@@ -53,6 +53,13 @@ pub mod cfo {
         Ok(())
     }
 
+    /// Creates an open orders account for the given market.
+    /*
+    pub fn create_open_orders(_ctx: Context<CreateOpenOrders>, _bump: u8) -> Result<()> {
+        Ok(())
+    }
+         */
+
     /// Updates the cfo's fee distribution.
     #[access_control(is_distribution_valid(&d))]
     pub fn set_distribution(ctx: Context<SetDistribution>, d: Distribution) -> Result<()> {
@@ -107,7 +114,7 @@ pub mod cfo {
         swap::cpi::swap(
             cpi_ctx.with_signer(&[&seeds]),
             swap::Side::Bid,
-            ctx.accounts.from_vault.amount,
+            ctx.accounts.usdc_vault.amount,
             min_exchange_rate.into(),
         )?;
         Ok(())
@@ -303,19 +310,28 @@ pub struct CreateOfficer<'info> {
     officer: Box<Account<'info, Officer>>,
     #[account(
         init,
-        seeds = [b"vault", officer.key().as_ref()],
+        seeds = [b"token", officer.key().as_ref(), srm_mint.key().as_ref()],
         bump = bumps.srm,
         payer = authority,
-        token::mint = mint,
+        token::mint = srm_mint,
         token::authority = officer,
     )]
     srm_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         init,
+        seeds = [b"token", officer.key().as_ref(), usdc_mint.key().as_ref()],
+        bump = bumps.usdc,
+        payer = authority,
+        token::mint = usdc_mint,
+        token::authority = officer,
+    )]
+    usdc_vault: Box<Account<'info, TokenAccount>>,
+    #[account(
+        init,
         seeds = [b"stake", officer.key().as_ref()],
         bump = bumps.stake,
         payer = authority,
-        token::mint = mint,
+        token::mint = srm_mint,
         token::authority = officer,
     )]
     stake: Box<Account<'info, TokenAccount>>,
@@ -324,7 +340,7 @@ pub struct CreateOfficer<'info> {
         seeds = [b"treasury", officer.key().as_ref()],
         bump = bumps.treasury,
         payer = authority,
-        token::mint = mint,
+        token::mint = srm_mint,
         token::authority = officer,
     )]
     treasury: Box<Account<'info, TokenAccount>>,
@@ -333,7 +349,12 @@ pub struct CreateOfficer<'info> {
         not(feature = "test"),
         account(address = mint::SRM),
     )]
-    mint: Box<Account<'info, Mint>>,
+    srm_mint: Box<Account<'info, Mint>>,
+    #[cfg_attr(
+        not(feature = "test"),
+        account(address = mint::USDC),
+    )]
+    usdc_mint: Box<Account<'info, Mint>>,
     dex_program: Program<'info, Dex>,
     swap_program: Program<'info, Swap>,
     system_program: Program<'info, System>,
@@ -347,7 +368,7 @@ pub struct CreateOfficerToken<'info> {
     officer: Account<'info, Officer>,
     #[account(
         init,
-        seeds = [officer.key().as_ref(), mint.key().as_ref()],
+        seeds = [b"token", officer.key().as_ref(), mint.key().as_ref()],
         bump = bump,
         token::mint = mint,
         token::authority = officer,
@@ -378,7 +399,7 @@ pub struct SweepFees<'info> {
     officer: Account<'info, Officer>,
     #[account(
         mut,
-        seeds = [officer.key().as_ref(), mint.key().as_ref()],
+        seeds = [b"token", officer.key().as_ref(), mint.key().as_ref()],
         bump,
     )]
     sweep_vault: Account<'info, TokenAccount>,
@@ -391,11 +412,11 @@ pub struct SweepFees<'info> {
 #[derive(Accounts)]
 pub struct DexAccounts<'info> {
     #[account(mut)]
-    market: UnsafeAccount<'info>,
+    market: UncheckedAccount<'info>,
     #[account(mut)]
-    pc_vault: UnsafeAccount<'info>,
-    sweep_authority: UnsafeAccount<'info>,
-    vault_signer: UnsafeAccount<'info>,
+    pc_vault: UncheckedAccount<'info>,
+    sweep_authority: UncheckedAccount<'info>,
+    vault_signer: UncheckedAccount<'info>,
     dex_program: Program<'info, Dex>,
     token_program: Program<'info, Token>,
 }
@@ -413,14 +434,19 @@ pub struct SwapToUsdc<'info> {
         constraint = &officer.stake != &from_vault.key(),
     )]
     from_vault: Box<Account<'info, TokenAccount>>,
-    quote_vault: Box<Account<'info, TokenAccount>>,
-    #[account(seeds = [officer.key().as_ref(), mint::USDC.as_ref()], bump)]
+    #[cfg_attr(
+				not(feature = "test"),
+				account(
+						seeds = [b"token", officer.key().as_ref(), mint::USDC.as_ref()],
+						bump,
+				)
+		)]
     usdc_vault: Box<Account<'info, TokenAccount>>,
     swap_program: Program<'info, Swap>,
     dex_program: Program<'info, Dex>,
     token_program: Program<'info, Token>,
     #[account(address = tx_instructions::ID)]
-    instructions: UnsafeAccount<'info>,
+    instructions: UncheckedAccount<'info>,
     rent: Sysvar<'info, Rent>,
 }
 
@@ -433,23 +459,22 @@ pub struct SwapToSrm<'info> {
     officer: Box<Account<'info, Officer>>,
     market: DexMarketAccounts<'info>,
     #[account(
-        constraint = &officer.treasury != &from_vault.key(),
-        constraint = &officer.stake != &from_vault.key(),
+				mut,
+				seeds = [b"token", officer.key().as_ref(), mint::USDC.as_ref()],
+				bump,
     )]
-    from_vault: Box<Account<'info, TokenAccount>>,
-    quote_vault: Box<Account<'info, TokenAccount>>,
+    usdc_vault: Box<Account<'info, TokenAccount>>,
     #[account(
-        seeds = [officer.key().as_ref(), mint::SRM.as_ref()],
+				mut,
+        seeds = [b"token", officer.key().as_ref(), mint::SRM.as_ref()],
         bump,
-        constraint = &officer.treasury != &from_vault.key(),
-        constraint = &officer.stake != &from_vault.key(),
     )]
     srm_vault: Box<Account<'info, TokenAccount>>,
     swap_program: Program<'info, Swap>,
     dex_program: Program<'info, Dex>,
     token_program: Program<'info, Token>,
     #[account(address = tx_instructions::ID)]
-    instructions: UnsafeAccount<'info>,
+    instructions: UncheckedAccount<'info>,
     rent: Sysvar<'info, Rent>,
 }
 
@@ -458,48 +483,45 @@ pub struct SwapToSrm<'info> {
 #[derive(Accounts)]
 pub struct DexMarketAccounts<'info> {
     #[account(mut)]
-    market: UnsafeAccount<'info>,
+    market: UncheckedAccount<'info>,
     #[account(mut)]
-    open_orders: UnsafeAccount<'info>,
+    open_orders: UncheckedAccount<'info>,
     #[account(mut)]
-    request_queue: UnsafeAccount<'info>,
+    request_queue: UncheckedAccount<'info>,
     #[account(mut)]
-    event_queue: UnsafeAccount<'info>,
+    event_queue: UncheckedAccount<'info>,
     #[account(mut)]
-    bids: UnsafeAccount<'info>,
+    bids: UncheckedAccount<'info>,
     #[account(mut)]
-    asks: UnsafeAccount<'info>,
+    asks: UncheckedAccount<'info>,
     // The `spl_token::Account` that funds will be taken from, i.e., transferred
     // from the user into the market's vault.
     //
     // For bids, this is the base currency. For asks, the quote.
     #[account(mut)]
-    order_payer_token_account: UnsafeAccount<'info>,
+    order_payer_token_account: UncheckedAccount<'info>,
     // Also known as the "base" currency. For a given A/B market,
     // this is the vault for the A mint.
     #[account(mut)]
-    coin_vault: UnsafeAccount<'info>,
+    coin_vault: UncheckedAccount<'info>,
     // Also known as the "quote" currency. For a given A/B market,
     // this is the vault for the B mint.
     #[account(mut)]
-    pc_vault: UnsafeAccount<'info>,
+    pc_vault: UncheckedAccount<'info>,
     // PDA owner of the DEX's token accounts for base + quote currencies.
-    vault_signer: UnsafeAccount<'info>,
-    // User wallets.
-    #[account(mut)]
-    coin_wallet: UnsafeAccount<'info>,
+    vault_signer: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
 pub struct Distribute<'info> {
     #[account(has_one = treasury, has_one = stake)]
     officer: Account<'info, Officer>,
-    treasury: UnsafeAccount<'info>,
-    stake: UnsafeAccount<'info>,
+    treasury: UncheckedAccount<'info>,
+    stake: UncheckedAccount<'info>,
     #[account(constraint = srm_vault.mint == mint::SRM)]
     srm_vault: Account<'info, TokenAccount>,
     #[account(address = mint::SRM)]
-    mint: UnsafeAccount<'info>,
+    mint: UncheckedAccount<'info>,
     token_program: Program<'info, Token>,
     dex_program: Program<'info, Dex>,
 }
@@ -521,7 +543,7 @@ pub struct DropStakeReward<'info> {
         not(feature = "test"),
         account(address = mint::SRM),
     )]
-    mint: UnsafeAccount<'info>,
+    mint: UncheckedAccount<'info>,
     srm: DropStakeRewardPool<'info>,
     msrm: DropStakeRewardPool<'info>,
     msrm_registrar: Box<Account<'info, Registrar>>,
@@ -537,11 +559,11 @@ pub struct DropStakeReward<'info> {
 // program to handle it.
 #[derive(Accounts)]
 pub struct DropStakeRewardPool<'info> {
-    registrar: UnsafeAccount<'info>,
-    reward_event_q: UnsafeAccount<'info>,
+    registrar: UncheckedAccount<'info>,
+    reward_event_q: UncheckedAccount<'info>,
     pool_mint: Account<'info, Mint>,
-    vendor: UnsafeAccount<'info>,
-    vendor_vault: UnsafeAccount<'info>,
+    vendor: UncheckedAccount<'info>,
+    vendor_vault: UncheckedAccount<'info>,
 }
 
 // Accounts.
@@ -575,6 +597,7 @@ pub struct Officer {
 pub struct OfficerBumps {
     pub bump: u8,
     pub srm: u8,
+    pub usdc: u8,
     pub stake: u8,
     pub treasury: u8,
 }
@@ -621,7 +644,7 @@ impl<'info> From<&SwapToSrm<'info>> for CpiContext<'_, '_, '_, 'info, swap::Swap
                 coin_wallet: accs.srm_vault.to_account_info(),
             },
             authority: accs.officer.to_account_info(),
-            pc_wallet: accs.from_vault.to_account_info(),
+            pc_wallet: accs.usdc_vault.to_account_info(),
             dex_program: accs.dex_program.to_account_info(),
             token_program: accs.token_program.to_account_info(),
             rent: accs.rent.to_account_info(),
@@ -784,7 +807,7 @@ fn is_distribution_ready(accounts: &Distribute) -> Result<()> {
 }
 
 // `ixs` must be the Instructions sysvar.
-fn is_not_trading(ixs: &UnsafeAccount) -> Result<()> {
+fn is_not_trading(ixs: &UncheckedAccount) -> Result<()> {
     let data = ixs.try_borrow_data()?;
     match tx_instructions::load_instruction_at(1, &data) {
         Ok(_) => Err(ErrorCode::TooManyInstructions.into()),

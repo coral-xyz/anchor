@@ -9,9 +9,9 @@ use std::ops::Deref;
 
 /// Explicit wrapper for AccountInfo types.
 #[derive(Clone)]
-pub struct UnsafeAccount<'info>(AccountInfo<'info>);
+pub struct UncheckedAccount<'info>(AccountInfo<'info>);
 
-impl<'info> Accounts<'info> for UnsafeAccount<'info> {
+impl<'info> Accounts<'info> for UncheckedAccount<'info> {
     fn try_accounts(
         _program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
@@ -22,11 +22,11 @@ impl<'info> Accounts<'info> for UnsafeAccount<'info> {
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
-        Ok(UnsafeAccount(account.clone()))
+        Ok(UncheckedAccount(account.clone()))
     }
 }
 
-impl<'info> ToAccountMetas for UnsafeAccount<'info> {
+impl<'info> ToAccountMetas for UncheckedAccount<'info> {
     fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
         let is_signer = is_signer.unwrap_or(self.is_signer);
         let meta = match self.is_writable {
@@ -37,32 +37,32 @@ impl<'info> ToAccountMetas for UnsafeAccount<'info> {
     }
 }
 
-impl<'info> ToAccountInfos<'info> for UnsafeAccount<'info> {
+impl<'info> ToAccountInfos<'info> for UncheckedAccount<'info> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         vec![self.0.clone()]
     }
 }
 
-impl<'info> ToAccountInfo<'info> for UnsafeAccount<'info> {
+impl<'info> ToAccountInfo<'info> for UncheckedAccount<'info> {
     fn to_account_info(&self) -> AccountInfo<'info> {
         self.0.clone()
     }
 }
 
-impl<'info> AccountsExit<'info> for UnsafeAccount<'info> {
+impl<'info> AccountsExit<'info> for UncheckedAccount<'info> {
     fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
         // no-op
         Ok(())
     }
 }
 
-impl<'info> Key for UnsafeAccount<'info> {
+impl<'info> Key for UncheckedAccount<'info> {
     fn key(&self) -> Pubkey {
         *self.key
     }
 }
 
-impl<'info> Deref for UnsafeAccount<'info> {
+impl<'info> Deref for UncheckedAccount<'info> {
     type Target = AccountInfo<'info>;
 
     fn deref(&self) -> &Self::Target {

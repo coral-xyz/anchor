@@ -178,8 +178,8 @@ impl Field {
             Ty::AccountInfo => quote! {
                 AccountInfo
             },
-            Ty::UnsafeAccount => quote! {
-                UnsafeAccount
+            Ty::UncheckedAccount => quote! {
+                UncheckedAccount
             },
             Ty::Signer => quote! {
                 Signer
@@ -225,7 +225,7 @@ impl Field {
         let container_ty = self.container_ty();
         match &self.ty {
             Ty::AccountInfo => quote! { #field.to_account_info() },
-            Ty::UnsafeAccount => quote! { #field.to_account_info() },
+            Ty::UncheckedAccount => quote! { #field.to_account_info() },
             Ty::Account(AccountTy { boxed, .. }) => {
                 if *boxed {
                     quote! {
@@ -280,7 +280,7 @@ impl Field {
             Ty::ProgramState(_) => quote! { anchor_lang::ProgramState },
             Ty::Program(_) => quote! { anchor_lang::Program },
             Ty::AccountInfo => quote! {},
-            Ty::UnsafeAccount => quote! {},
+            Ty::UncheckedAccount => quote! {},
             Ty::Signer => quote! {},
         }
     }
@@ -291,8 +291,8 @@ impl Field {
             Ty::AccountInfo => quote! {
                 AccountInfo
             },
-            Ty::UnsafeAccount => quote! {
-                UnsafeAccount
+            Ty::UncheckedAccount => quote! {
+                UncheckedAccount
             },
             Ty::Signer => quote! {
                 Signer
@@ -368,7 +368,7 @@ pub struct CompositeField {
 #[derive(Debug, PartialEq)]
 pub enum Ty {
     AccountInfo,
-    UnsafeAccount,
+    UncheckedAccount,
     ProgramState(ProgramStateTy),
     CpiState(CpiStateTy),
     ProgramAccount(ProgramAccountTy),
