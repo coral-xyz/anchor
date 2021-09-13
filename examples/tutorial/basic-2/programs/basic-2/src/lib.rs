@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-// Define the program's instruction handlers.
+declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 #[program]
 mod basic_2 {
@@ -20,23 +20,21 @@ mod basic_2 {
     }
 }
 
-// Define the validated accounts for each handler.
-
 #[derive(Accounts)]
 pub struct Create<'info> {
-    #[account(init)]
-    pub counter: ProgramAccount<'info, Counter>,
+    #[account(init, payer = user, space = 8 + 40)]
+    pub counter: Account<'info, Counter>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct Increment<'info> {
     #[account(mut, has_one = authority)]
-    pub counter: ProgramAccount<'info, Counter>,
-    #[account(signer)]
-    pub authority: AccountInfo<'info>,
+    pub counter: Account<'info, Counter>,
+    pub authority: Signer<'info>,
 }
-
-// Define the program owned accounts.
 
 #[account]
 pub struct Counter {

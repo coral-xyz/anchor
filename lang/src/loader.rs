@@ -1,7 +1,7 @@
 use crate::error::ErrorCode;
 use crate::{
-    Accounts, AccountsClose, AccountsExit, AccountsInit, ToAccountInfo, ToAccountInfos,
-    ToAccountMetas, ZeroCopy,
+    Accounts, AccountsClose, AccountsExit, Key, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+    ZeroCopy,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
@@ -39,9 +39,14 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
 
     /// Constructs a new `Loader` from a previously initialized account.
     #[inline(never)]
-    pub fn try_from(acc_info: &AccountInfo<'info>) -> Result<Loader<'info, T>, ProgramError> {
+    pub fn try_from(
+        program_id: &Pubkey,
+        acc_info: &AccountInfo<'info>,
+    ) -> Result<Loader<'info, T>, ProgramError> {
+        if acc_info.owner != program_id {
+            return Err(ErrorCode::AccountNotProgramOwned.into());
+        }
         let data: &[u8] = &acc_info.try_borrow_data()?;
-
         // Discriminator must match.
         let mut disc_bytes = [0u8; 8];
         disc_bytes.copy_from_slice(&data[..8]);
@@ -54,17 +59,13 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
 
     /// Constructs a new `Loader` from an uninitialized account.
     #[inline(never)]
-    pub fn try_from_init(acc_info: &AccountInfo<'info>) -> Result<Loader<'info, T>, ProgramError> {
-        let data = acc_info.try_borrow_data()?;
-
-        // The discriminator should be zero, since we're initializing.
-        let mut disc_bytes = [0u8; 8];
-        disc_bytes.copy_from_slice(&data[..8]);
-        let discriminator = u64::from_le_bytes(disc_bytes);
-        if discriminator != 0 {
-            return Err(ErrorCode::AccountDiscriminatorAlreadySet.into());
+    pub fn try_from_unchecked(
+        program_id: &Pubkey,
+        acc_info: &AccountInfo<'info>,
+    ) -> Result<Loader<'info, T>, ProgramError> {
+        if acc_info.owner != program_id {
+            return Err(ErrorCode::AccountNotProgramOwned.into());
         }
-
         Ok(Loader::new(acc_info.clone()))
     }
 
@@ -139,29 +140,7 @@ impl<'info, T: ZeroCopy> Accounts<'info> for Loader<'info, T> {
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
-        let l = Loader::try_from(account)?;
-        if l.acc_info.owner != program_id {
-            return Err(ErrorCode::AccountNotProgramOwned.into());
-        }
-        Ok(l)
-    }
-}
-
-impl<'info, T: ZeroCopy> AccountsInit<'info> for Loader<'info, T> {
-    #[inline(never)]
-    fn try_accounts_init(
-        program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
-    ) -> Result<Self, ProgramError> {
-        if accounts.is_empty() {
-            return Err(ErrorCode::AccountNotEnoughKeys.into());
-        }
-        let account = &accounts[0];
-        *accounts = &accounts[1..];
-        let l = Loader::try_from_init(account)?;
-        if l.acc_info.owner != program_id {
-            return Err(ErrorCode::AccountNotProgramOwned.into());
-        }
+        let l = Loader::try_from(program_id, account)?;
         Ok(l)
     }
 }
@@ -194,6 +173,12 @@ impl<'info, T: ZeroCopy> ToAccountMetas for Loader<'info, T> {
     }
 }
 
+impl<'info, T: ZeroCopy> AsRef<AccountInfo<'info>> for Loader<'info, T> {
+    fn as_ref(&self) -> &AccountInfo<'info> {
+        &self.acc_info
+    }
+}
+
 impl<'info, T: ZeroCopy> ToAccountInfos<'info> for Loader<'info, T> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         vec![self.acc_info.clone()]
@@ -203,5 +188,11 @@ impl<'info, T: ZeroCopy> ToAccountInfos<'info> for Loader<'info, T> {
 impl<'info, T: ZeroCopy> ToAccountInfo<'info> for Loader<'info, T> {
     fn to_account_info(&self) -> AccountInfo<'info> {
         self.acc_info.clone()
+    }
+}
+
+impl<'info, T: ZeroCopy> Key for Loader<'info, T> {
+    fn key(&self) -> Pubkey {
+        *self.acc_info.key
     }
 }

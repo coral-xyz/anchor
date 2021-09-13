@@ -64,7 +64,6 @@ module.exports = {
           "/tutorials/tutorial-2",
           "/tutorials/tutorial-3",
           "/tutorials/tutorial-4",
-          "/tutorials/tutorial-5",
         ],
       },
       {
@@ -98,5 +97,6 @@ module.exports = {
     "dehydrate",
     "@vuepress/plugin-back-to-top",
     "@vuepress/plugin-medium-zoom",
+    "@xiaopanda/vuepress-plugin-code-copy",
   ],
 };

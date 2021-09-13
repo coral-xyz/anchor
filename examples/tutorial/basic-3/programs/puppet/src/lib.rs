@@ -1,9 +1,11 @@
 use anchor_lang::prelude::*;
 
+declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+
 #[program]
 pub mod puppet {
     use super::*;
-    pub fn initialize(ctx: Context<Initialize>) -> ProgramResult {
+    pub fn initialize(_ctx: Context<Initialize>) -> ProgramResult {
         Ok(())
     }
 
@@ -16,17 +18,20 @@ pub mod puppet {
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-    #[account(init)]
-    pub puppet: ProgramAccount<'info, Puppet>,
+    #[account(init, payer = user, space = 8 + 8)]
+    pub puppet: Account<'info, Data>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct SetData<'info> {
     #[account(mut)]
-    pub puppet: ProgramAccount<'info, Puppet>,
+    pub puppet: Account<'info, Data>,
 }
 
 #[account]
-pub struct Puppet {
+pub struct Data {
     pub data: u64,
 }

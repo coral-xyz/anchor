@@ -1,7 +1,9 @@
 use crate::error::ErrorCode;
+#[allow(deprecated)]
+use crate::CpiAccount;
 use crate::{
-    AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, AccountsInit,
-    CpiAccount, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+    AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, Key,
+    ToAccountInfo, ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
@@ -24,7 +26,7 @@ struct Inner<'info, T: AccountSerialize + AccountDeserialize + Clone> {
 }
 
 impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T> {
-    pub fn new(info: AccountInfo<'a>, account: T) -> ProgramAccount<'a, T> {
+    fn new(info: AccountInfo<'a>, account: T) -> ProgramAccount<'a, T> {
         Self {
             inner: Box::new(Inner { info, account }),
         }
@@ -32,7 +34,13 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
 
     /// Deserializes the given `info` into a `ProgramAccount`.
     #[inline(never)]
-    pub fn try_from(info: &AccountInfo<'a>) -> Result<ProgramAccount<'a, T>, ProgramError> {
+    pub fn try_from(
+        program_id: &Pubkey,
+        info: &AccountInfo<'a>,
+    ) -> Result<ProgramAccount<'a, T>, ProgramError> {
+        if info.owner != program_id {
+            return Err(ErrorCode::AccountNotProgramOwned.into());
+        }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramAccount::new(
             info.clone(),
@@ -40,22 +48,18 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
         ))
     }
 
-    /// Deserializes the zero-initialized `info` into a `ProgramAccount` without
-    /// checking the account type. This should only be used upon program account
-    /// initialization (since the entire account data array is zeroed and thus
-    /// no account type is set).
+    /// Deserializes the given `info` into a `ProgramAccount` without checking
+    /// the account discriminator. Be careful when using this and avoid it if
+    /// possible.
     #[inline(never)]
-    pub fn try_from_init(info: &AccountInfo<'a>) -> Result<ProgramAccount<'a, T>, ProgramError> {
-        let mut data: &[u8] = &info.try_borrow_data()?;
-
-        // The discriminator should be zero, since we're initializing.
-        let mut disc_bytes = [0u8; 8];
-        disc_bytes.copy_from_slice(&data[..8]);
-        let discriminator = u64::from_le_bytes(disc_bytes);
-        if discriminator != 0 {
-            return Err(ErrorCode::AccountDiscriminatorAlreadySet.into());
+    pub fn try_from_unchecked(
+        program_id: &Pubkey,
+        info: &AccountInfo<'a>,
+    ) -> Result<ProgramAccount<'a, T>, ProgramError> {
+        if info.owner != program_id {
+            return Err(ErrorCode::AccountNotProgramOwned.into());
         }
-
+        let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramAccount::new(
             info.clone(),
             T::try_deserialize_unchecked(&mut data)?,
@@ -82,33 +86,7 @@ where
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
-        let pa = ProgramAccount::try_from(account)?;
-        if pa.inner.info.owner != program_id {
-            return Err(ErrorCode::AccountNotProgramOwned.into());
-        }
-        Ok(pa)
-    }
-}
-
-impl<'info, T> AccountsInit<'info> for ProgramAccount<'info, T>
-where
-    T: AccountSerialize + AccountDeserialize + Clone,
-{
-    #[inline(never)]
-    fn try_accounts_init(
-        program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
-    ) -> Result<Self, ProgramError> {
-        if accounts.is_empty() {
-            return Err(ErrorCode::AccountNotEnoughKeys.into());
-        }
-        let account = &accounts[0];
-        *accounts = &accounts[1..];
-        let pa = ProgramAccount::try_from_init(account)?;
-        if pa.inner.info.owner != program_id {
-            return Err(ErrorCode::AccountNotProgramOwned.into());
-        }
-        Ok(pa)
+        ProgramAccount::try_from(program_id, account)
     }
 }
 
@@ -180,15 +158,28 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Deref for ProgramAcco
 
 impl<'a, T: AccountSerialize + AccountDeserialize + Clone> DerefMut for ProgramAccount<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
+        #[cfg(feature = "anchor-debug")]
+        if !self.inner.info.is_writable {
+            solana_program::msg!("The given ProgramAccount is not mutable");
+            panic!();
+        }
+
         &mut DerefMut::deref_mut(&mut self.inner).account
     }
 }
 
+#[allow(deprecated)]
 impl<'info, T> From<CpiAccount<'info, T>> for ProgramAccount<'info, T>
 where
     T: AccountSerialize + AccountDeserialize + Clone,
 {
     fn from(a: CpiAccount<'info, T>) -> Self {
         Self::new(a.to_account_info(), Deref::deref(&a).clone())
+    }
+}
+
+impl<'info, T: AccountSerialize + AccountDeserialize + Clone> Key for ProgramAccount<'info, T> {
+    fn key(&self) -> Pubkey {
+        *self.inner.info.key
     }
 }
