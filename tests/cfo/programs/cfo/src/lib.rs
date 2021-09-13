@@ -54,11 +54,14 @@ pub mod cfo {
     }
 
     /// Creates an open orders account for the given market.
-    /*
-    pub fn create_open_orders(_ctx: Context<CreateOpenOrders>, _bump: u8) -> Result<()> {
-        Ok(())
+    pub fn create_officer_open_orders(
+        ctx: Context<CreateOfficerOpenOrders>,
+        _bump: u8,
+    ) -> Result<()> {
+        let seeds = [ctx.accounts.dex_program.key.as_ref()];
+        let cpi_ctx = CpiContext::from(&*ctx.accounts);
+        dex::init_open_orders(cpi_ctx.with_signer(&[&seeds])).map_err(Into::into)
     }
-         */
 
     /// Updates the cfo's fee distribution.
     #[access_control(is_distribution_valid(&d))]
@@ -384,6 +387,28 @@ pub struct CreateOfficerToken<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(bump: u8)]
+pub struct CreateOfficerOpenOrders<'info> {
+    officer: Account<'info, Officer>,
+    #[account(
+        init,
+        seeds = [b"open-orders", officer.key().as_ref()],
+        bump = bump,
+				space = 12 + std::mem::size_of::<serum_dex::state::OpenOrders>(),
+        payer = payer,
+				owner = dex::ID,
+    )]
+    open_orders: AccountInfo<'info>, // TODO: make this unchecked.
+    #[account(mut)]
+    payer: Signer<'info>,
+    dex_program: Program<'info, Dex>,
+    system_program: Program<'info, System>,
+    rent: Sysvar<'info, Rent>,
+    // Used for CPI. Not read or written so not validated.
+    market: UncheckedAccount<'info>,
+}
+
+#[derive(Accounts)]
 pub struct SetDistribution<'info> {
     #[account(has_one = authority)]
     officer: Account<'info, Officer>,
@@ -610,6 +635,21 @@ pub struct Distribution {
 }
 
 // CpiContext transformations.
+
+impl<'info> From<&CreateOfficerOpenOrders<'info>>
+    for CpiContext<'_, '_, '_, 'info, dex::InitOpenOrders<'info>>
+{
+    fn from(accs: &CreateOfficerOpenOrders<'info>) -> Self {
+        let program = accs.dex_program.to_account_info();
+        let accounts = dex::InitOpenOrders {
+            open_orders: accs.open_orders.to_account_info(),
+            authority: accs.officer.to_account_info(),
+            market: accs.market.to_account_info(),
+            rent: accs.rent.to_account_info(),
+        };
+        CpiContext::new(program.to_account_info(), accounts)
+    }
+}
 
 impl<'info> From<&SweepFees<'info>> for CpiContext<'_, '_, '_, 'info, dex::SweepFees<'info>> {
     fn from(sweep: &SweepFees<'info>) -> Self {

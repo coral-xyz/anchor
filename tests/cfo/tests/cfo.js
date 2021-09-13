@@ -29,6 +29,7 @@ describe("cfo", () => {
   const sweepAuthority = program.provider.wallet.publicKey;
   let officer, srmVault, usdcVault, bVault, stake, treasury;
   let officerBump, srmBump, usdcBump, bBump, stakeBump, treasuryBump;
+  let openOrders, openOrdersBump;
   let USDC_TOKEN_CLIENT, A_TOKEN_CLIENT, B_TOKEN_CLIENT;
   let officerAccount;
   let marketAClient;
@@ -114,6 +115,10 @@ describe("cfo", () => {
       [DEX_PID.toBuffer()],
       program.programId
     );
+    const [_openOrders, _openOrdersBump] = await PublicKey.findProgramAddress(
+      [utf8.encode("open-orders"), _officer.toBuffer()],
+      program.programId
+    );
     const [_srmVault, _srmBump] = await PublicKey.findProgramAddress(
       [
         utf8.encode("token"),
@@ -149,6 +154,8 @@ describe("cfo", () => {
 
     officer = _officer;
     officerBump = _officerBump;
+    openOrders = _openOrders;
+    openOrdersBump = _openOrdersBump;
     srmVault = _srmVault;
     srmBump = _srmBump;
     usdcVault = _usdcVault;
@@ -225,6 +232,20 @@ describe("cfo", () => {
     const tokenAccount = await B_TOKEN_CLIENT.getAccountInfo(bVault);
     assert.ok(tokenAccount.state === 1);
     assert.ok(tokenAccount.isInitialized);
+  });
+
+  it("Creates an open orders account for the officer", async () => {
+    await program.rpc.createOfficerOpenOrders(openOrdersBump, {
+      accounts: {
+        officer,
+        openOrders,
+        payer: program.provider.wallet.publicKey,
+        dexProgram: DEX_PID,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+        market: ORDERBOOK_ENV.marketA._decoded.ownAddress,
+      },
+    });
   });
 
   it("Sweeps fees", async () => {
