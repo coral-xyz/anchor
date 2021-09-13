@@ -394,9 +394,9 @@ pub struct CreateOfficerOpenOrders<'info> {
         init,
         seeds = [b"open-orders", officer.key().as_ref()],
         bump = bump,
-				space = 12 + std::mem::size_of::<serum_dex::state::OpenOrders>(),
+        space = 12 + std::mem::size_of::<serum_dex::state::OpenOrders>(),
         payer = payer,
-				owner = dex::ID,
+        owner = dex::ID,
     )]
     open_orders: AccountInfo<'info>, // TODO: make this unchecked.
     #[account(mut)]
@@ -460,12 +460,12 @@ pub struct SwapToUsdc<'info> {
     )]
     from_vault: Box<Account<'info, TokenAccount>>,
     #[cfg_attr(
-				not(feature = "test"),
-				account(
-						seeds = [b"token", officer.key().as_ref(), mint::USDC.as_ref()],
-						bump,
-				)
-		)]
+        not(feature = "test"),
+        account(
+            seeds = [b"token", officer.key().as_ref(), mint::USDC.as_ref()],
+            bump,
+        )
+    )]
     usdc_vault: Box<Account<'info, TokenAccount>>,
     swap_program: Program<'info, Swap>,
     dex_program: Program<'info, Dex>,
@@ -484,13 +484,13 @@ pub struct SwapToSrm<'info> {
     officer: Box<Account<'info, Officer>>,
     market: DexMarketAccounts<'info>,
     #[account(
-				mut,
-				seeds = [b"token", officer.key().as_ref(), mint::USDC.as_ref()],
-				bump,
+        mut,
+        seeds = [b"token", officer.key().as_ref(), mint::USDC.as_ref()],
+        bump,
     )]
     usdc_vault: Box<Account<'info, TokenAccount>>,
     #[account(
-				mut,
+        mut,
         seeds = [b"token", officer.key().as_ref(), mint::SRM.as_ref()],
         bump,
     )]
