@@ -8,7 +8,9 @@ use anchor_spl::token::{self, Mint, Token, TokenAccount};
 use lockup::program::Lockup;
 use registry::program::Registry;
 use registry::{Registrar, RewardVendorKind};
+use serum_dex::state::OpenOrders;
 use std::convert::TryInto;
+use std::mem::size_of;
 use swap::program::Swap;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
@@ -394,11 +396,11 @@ pub struct CreateOfficerOpenOrders<'info> {
         init,
         seeds = [b"open-orders", officer.key().as_ref()],
         bump = bump,
-        space = 12 + std::mem::size_of::<serum_dex::state::OpenOrders>(),
+        space = 12 + size_of::<OpenOrders>(),
         payer = payer,
         owner = dex::ID,
     )]
-    open_orders: AccountInfo<'info>, // TODO: make this unchecked.
+    open_orders: UncheckedAccount<'info>, // TODO: make this unchecked.
     #[account(mut)]
     payer: Signer<'info>,
     dex_program: Program<'info, Dex>,
@@ -647,7 +649,7 @@ impl<'info> From<&CreateOfficerOpenOrders<'info>>
             market: accs.market.to_account_info(),
             rent: accs.rent.to_account_info(),
         };
-        CpiContext::new(program.to_account_info(), accounts)
+        CpiContext::new(program, accounts)
     }
 }
 

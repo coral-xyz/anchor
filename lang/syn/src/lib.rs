@@ -220,12 +220,14 @@ impl Field {
 
     // TODO: remove the option once `CpiAccount` is completely removed (not
     //       just deprecated).
-    pub fn from_account_info(&self, kind: Option<&InitKind>) -> proc_macro2::TokenStream {
+    pub fn from_account_info_unchecked(&self, kind: Option<&InitKind>) -> proc_macro2::TokenStream {
         let field = &self.ident;
         let container_ty = self.container_ty();
         match &self.ty {
             Ty::AccountInfo => quote! { #field.to_account_info() },
-            Ty::UncheckedAccount => quote! { #field.to_account_info() },
+            Ty::UncheckedAccount => {
+                quote! { UncheckedAccount::try_from(#field.to_account_info()) }
+            }
             Ty::Account(AccountTy { boxed, .. }) => {
                 if *boxed {
                     quote! {

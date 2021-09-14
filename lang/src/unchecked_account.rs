@@ -11,6 +11,12 @@ use std::ops::Deref;
 #[derive(Clone)]
 pub struct UncheckedAccount<'info>(AccountInfo<'info>);
 
+impl<'info> UncheckedAccount<'info> {
+    pub fn try_from(acc_info: AccountInfo<'info>) -> Self {
+        Self(acc_info)
+    }
+}
+
 impl<'info> Accounts<'info> for UncheckedAccount<'info> {
     fn try_accounts(
         _program_id: &Pubkey,
