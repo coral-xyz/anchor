@@ -1322,19 +1322,19 @@ fn test(
         // 2. The cluster is localnet, but we're not booting a local validator.
         //
         // In either case, skip the deploy if the user specifies.
-        let is_localnet = cfg.provider.cluster.url().contains("127.0.0.1")
-            || cfg.provider.cluster.url().contains("localhost");
+        let is_localnet = cfg.provider.cluster == Cluster::Localnet;
         if (!is_localnet || skip_local_validator) && !skip_deploy {
             deploy(cfg_override, None)?;
         }
         // Start local test validator, if needed.
         let mut validator_handle = None;
+        let mut provider_url = cfg.provider.cluster.url();
         if is_localnet && (!skip_local_validator) {
             let flags = match skip_deploy {
                 true => None,
                 false => Some(validator_flags(cfg)?),
             };
-            validator_handle = Some(start_test_validator(cfg, flags)?);
+            (validator_handle, provider_url) = Some(start_test_validator(cfg, flags)?);
         }
 
         // Setup log reader.
@@ -1354,8 +1354,7 @@ fn test(
             let program = args.remove(0);
 
             std::process::Command::new(program)
-                .args(args)
-                .env("ANCHOR_PROVIDER_URL", cfg.provider.cluster.url())
+                .env("ANCHOR_PROVIDER_URL", provider_url)
                 .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
@@ -1495,25 +1494,24 @@ pub struct IdlTestMetadata {
     address: String,
 }
 
-fn start_test_validator(cfg: &Config, flags: Option<Vec<String>>) -> Result<Child> {
-    fs::create_dir_all(".anchor")?;
-    let test_ledger_filename = ".anchor/test-ledger";
-    let test_ledger_log_filename = ".anchor/test-ledger-log.txt";
-
-    if Path::new(test_ledger_filename).exists() {
-        std::fs::remove_dir_all(test_ledger_filename)?;
+fn start_test_validator(cfg: &Config, flags: Option<Vec<String>>) -> Result<(Child, String)> {
+    let flags = flags.unwrap_or_default();
+    let test_ledger_directory: &str = match flags.iter().position(|f| *f == "--ledger") {
+        Some(position) => flags[position + 1].as_ref(),
+        None => ".anchor/test-ledger".as_ref(),
+    };
+    if Path::new(test_ledger_directory).exists() {
+        std::fs::remove_dir_all(test_ledger_directory)?;
     }
-    if Path::new(test_ledger_log_filename).exists() {
-        std::fs::remove_file(test_ledger_log_filename)?;
-    }
+    fs::create_dir_all(test_ledger_directory)?;
 
+    let test_ledger_log_filename = format!("{}/test-ledger-log.txt", test_ledger_directory);
     // Start a validator for testing.
     let test_validator_stdout = File::create(test_ledger_log_filename)?;
     let test_validator_stderr = test_validator_stdout.try_clone()?;
-    let flags = flags.unwrap_or_default();
     let validator_handle = std::process::Command::new("solana-test-validator")
         .arg("--ledger")
-        .arg(test_ledger_filename)
+        .arg(test_ledger_directory)
         .arg("--mint")
         .arg(cfg.wallet_kp()?.pubkey().to_string())
         .args(&flags)
@@ -1522,14 +1520,18 @@ fn start_test_validator(cfg: &Config, flags: Option<Vec<String>>) -> Result<Chil
         .spawn()
         .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
 
+    let bind_address = match flags.iter().position(|f| *f == "--bind-address") {
+        Some(position) => flags[position + 1].clone(),
+        None => "127.0.0.1".to_string(),
+    };
     // If a custom port is defined use that for validator ready check.
     let port = match flags.iter().position(|f| *f == "--rpc-port") {
         Some(position) => flags[position + 1].clone(),
         None => "8899".to_string(),
     };
 
-    // Wait for the validator to be ready.
-    let client = RpcClient::new(format!("http://localhost:{}", port));
+    let rpc_url = format!("http://{}:{}", bind_address, port);
+    let client = RpcClient::new(rpc_url);
     let mut count = 0;
     let ms_wait = 5000;
     while count < ms_wait {
@@ -1544,8 +1546,7 @@ fn start_test_validator(cfg: &Config, flags: Option<Vec<String>>) -> Result<Chil
         println!("Unable to start test validator.");
         std::process::exit(1);
     }
-
-    Ok(validator_handle)
+    Ok((validator_handle, rpc_url))
 }
 
 fn deploy(cfg_override: &ConfigOverride, program_str: Option<String>) -> Result<()> {
