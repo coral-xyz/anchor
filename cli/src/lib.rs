@@ -1322,7 +1322,8 @@ fn test(
         // 2. The cluster is localnet, but we're not booting a local validator.
         //
         // In either case, skip the deploy if the user specifies.
-        let is_localnet = cfg.provider.cluster == Cluster::Localnet;
+        let is_localnet = cfg.provider.cluster.url().contains("127.0.0.1")
+            || cfg.provider.cluster.url().contains("localhost");
         if (!is_localnet || skip_local_validator) && !skip_deploy {
             deploy(cfg_override, None)?;
         }
