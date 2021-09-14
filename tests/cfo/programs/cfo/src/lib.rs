@@ -3,7 +3,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::sysvar::instructions as tx_instructions;
 use anchor_spl::dex::{self, Dex};
-use anchor_spl::mint;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
 use lockup::program::Lockup;
 use registry::program::Registry;
@@ -48,6 +47,18 @@ pub mod cfo {
         Ok(())
     }
 
+    /// Creates a market authorization token.
+    pub fn authorize_market(ctx: Context<AuthorizeMarket>) -> Result<()> {
+        let auth = &mut ctx.accounts.auth;
+        auth.market = ctx.accounts.market.key();
+        Ok(())
+    }
+
+    /// Revokes a market authorization token.
+    pub fn revoke_market(ctx: Context<RevokeMarket>) -> Result<()> {
+        Ok(())
+    }
+
     /// Creates a deterministic token account owned by the CFO.
     /// This should be used when a new mint is used for collecting fees.
     /// Can only be called once per token CFO and token mint.
@@ -60,7 +71,10 @@ pub mod cfo {
         ctx: Context<CreateOfficerOpenOrders>,
         _bump: u8,
     ) -> Result<()> {
-        let seeds = [ctx.accounts.dex_program.key.as_ref()];
+        let seeds = [
+            ctx.accounts.dex_program.key.as_ref(),
+            &[ctx.accounts.officer.bumps.bump],
+        ];
         let cpi_ctx = CpiContext::from(&*ctx.accounts);
         dex::init_open_orders(cpi_ctx.with_signer(&[&seeds])).map_err(Into::into)
     }
@@ -97,7 +111,7 @@ pub mod cfo {
         let cpi_ctx = CpiContext::from(&*ctx.accounts);
         swap::cpi::swap(
             cpi_ctx.with_signer(&[&seeds]),
-            swap::Side::Bid,
+            swap::Side::Ask,
             ctx.accounts.from_vault.amount,
             min_exchange_rate.into(),
         )
@@ -121,8 +135,8 @@ pub mod cfo {
             swap::Side::Bid,
             ctx.accounts.usdc_vault.amount,
             min_exchange_rate.into(),
-        )?;
-        Ok(())
+        )
+        .map_err(Into::into)
     }
 
     /// Distributes srm tokens to the various categories. Before calling this,
@@ -368,6 +382,34 @@ pub struct CreateOfficer<'info> {
 }
 
 #[derive(Accounts)]
+pub struct AuthorizeMarket<'info> {
+    #[account(has_one = authority)]
+    officer: Account<'info, Officer>,
+    authority: Signer<'info>,
+    #[account(
+				init,
+				payer = payer,
+				seeds = [b"market-auth", officer.key().as_ref(), market.key.as_ref()],
+				bump,
+		)]
+    auth: Account<'info, MarketAuth>,
+    payer: Signer<'info>,
+    // Not read or written to so not validated.
+    market: UncheckedAccount<'info>,
+    system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct RevokeMarket<'info> {
+    #[account(has_one = authority)]
+    pub officer: Account<'info, Officer>,
+    pub authority: Signer<'info>,
+    #[account(mut, close = payer)]
+    pub auth: Account<'info, MarketAuth>,
+    pub payer: Signer<'info>,
+}
+
+#[derive(Accounts)]
 #[instruction(bump: u8)]
 pub struct CreateOfficerToken<'info> {
     officer: Account<'info, Officer>,
@@ -394,13 +436,13 @@ pub struct CreateOfficerOpenOrders<'info> {
     officer: Account<'info, Officer>,
     #[account(
         init,
-        seeds = [b"open-orders", officer.key().as_ref()],
+        seeds = [b"open-orders", officer.key().as_ref(), market.key.as_ref()],
         bump = bump,
         space = 12 + size_of::<OpenOrders>(),
         payer = payer,
         owner = dex::ID,
     )]
-    open_orders: UncheckedAccount<'info>, // TODO: make this unchecked.
+    open_orders: UncheckedAccount<'info>,
     #[account(mut)]
     payer: Signer<'info>,
     dex_program: Program<'info, Dex>,
@@ -461,9 +503,11 @@ pub struct SwapToUsdc<'info> {
         constraint = &officer.stake != &from_vault.key(),
     )]
     from_vault: Box<Account<'info, TokenAccount>>,
+    #[cfg_attr(feature = "test", account(mut))]
     #[cfg_attr(
         not(feature = "test"),
         account(
+						mut,
             seeds = [b"token", officer.key().as_ref(), mint::USDC.as_ref()],
             bump,
         )
@@ -486,17 +530,21 @@ pub struct SwapToSrm<'info> {
     officer: Box<Account<'info, Officer>>,
     market: DexMarketAccounts<'info>,
     #[account(
-        mut,
-        seeds = [b"token", officer.key().as_ref(), mint::USDC.as_ref()],
-        bump,
-    )]
+				mut,
+				seeds = [b"token", officer.key().as_ref(), usdc_mint.key().as_ref()],
+				bump,
+		)]
     usdc_vault: Box<Account<'info, TokenAccount>>,
     #[account(
-        mut,
-        seeds = [b"token", officer.key().as_ref(), mint::SRM.as_ref()],
-        bump,
-    )]
+				mut,
+				seeds = [b"token", officer.key().as_ref(), srm_mint.key().as_ref()],
+				bump,
+		)]
     srm_vault: Box<Account<'info, TokenAccount>>,
+    #[cfg_attr(not(feature = "test"), account(address = mint::SRM))]
+    srm_mint: Box<Account<'info, Mint>>,
+    #[cfg_attr(not(feature = "test"), account(address = mint::USDC))]
+    usdc_mint: Box<Account<'info, Mint>>,
     swap_program: Program<'info, Swap>,
     dex_program: Program<'info, Dex>,
     token_program: Program<'info, Token>,
@@ -541,14 +589,16 @@ pub struct DexMarketAccounts<'info> {
 
 #[derive(Accounts)]
 pub struct Distribute<'info> {
-    #[account(has_one = treasury, has_one = stake)]
+    #[account(
+				has_one = srm_vault,
+				has_one = treasury,
+				has_one = stake,
+		)]
     officer: Account<'info, Officer>,
-    treasury: UncheckedAccount<'info>,
-    stake: UncheckedAccount<'info>,
-    #[account(constraint = srm_vault.mint == mint::SRM)]
+    treasury: Account<'info, TokenAccount>,
+    stake: Account<'info, TokenAccount>,
     srm_vault: Account<'info, TokenAccount>,
-    #[account(address = mint::SRM)]
-    mint: UncheckedAccount<'info>,
+    mint: Account<'info, Mint>,
     token_program: Program<'info, Token>,
     dex_program: Program<'info, Dex>,
 }
@@ -595,6 +645,10 @@ pub struct DropStakeRewardPool<'info> {
 
 // Accounts.
 
+/// Officer represents a deployed instance of the CFO mechanism. It is tied
+/// to a single deployment of the dex program.
+///
+/// PDA - [dex_program_id].
 #[account]
 #[derive(Default)]
 pub struct Officer {
@@ -618,6 +672,20 @@ pub struct Officer {
     pub msrm_registrar: Pubkey,
     // Bump seeds for pdas.
     pub bumps: OfficerBumps,
+}
+
+/// MarketAuth represents an authorization token created by the Officer
+/// authority. This is used as an authorization token which allows one to
+/// permissionlessly invoke the swap instructions on the market. Without this
+/// one would be able to create their own market with prices unfavorable
+/// to the smart contract.
+///
+/// PDA - [b"market-auth", officer, market_id]
+#[account]
+#[derive(Default)]
+pub struct MarketAuth {
+    pub market: Pubkey,
+    pub revoked: bool,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]

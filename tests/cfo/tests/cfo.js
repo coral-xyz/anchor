@@ -116,7 +116,11 @@ describe("cfo", () => {
       program.programId
     );
     const [_openOrders, _openOrdersBump] = await PublicKey.findProgramAddress(
-      [utf8.encode("open-orders"), _officer.toBuffer()],
+      [
+        utf8.encode("open-orders"),
+        _officer.toBuffer(),
+        ORDERBOOK_ENV.marketA.address.toBuffer(),
+      ],
       program.programId
     );
     const [_srmVault, _srmBump] = await PublicKey.findProgramAddress(
@@ -280,9 +284,16 @@ describe("cfo", () => {
     );
   });
 
-  it("Swap to SRM", async () => {
+	it("Swaps to USDC", async () => {
+
+	});
+
+  it("Swaps to SRM", async () => {
+    const srmVaultBefore = await SRM_TOKEN_CLIENT.getAccountInfo(srmVault);
+    const usdcVaultBefore = await USDC_TOKEN_CLIENT.getAccountInfo(usdcVault);
+
     const minExchangeRate = {
-      rate: 0,
+      rate: new anchor.BN(0),
       fromDecimals: 6,
       quoteDecimals: 6,
       strict: false,
@@ -292,7 +303,7 @@ describe("cfo", () => {
         officer,
         market: {
           market: marketAClient.address,
-          openOrders: marketAClient.decoded.openOrders,
+          openOrders,
           requestQueue: marketAClient.decoded.requestQueue,
           eventQueue: marketAClient.decoded.eventQueue,
           bids: marketAClient.decoded.bids,
@@ -304,12 +315,26 @@ describe("cfo", () => {
         },
         usdcVault,
         srmVault,
+        usdcMint: ORDERBOOK_ENV.usdc,
+        srmMint: ORDERBOOK_ENV.mintA,
         swapProgram: SWAP_PID,
-        dexprogram: DEX_PID,
+        dexProgram: DEX_PID,
         tokenProgram: TOKEN_PID,
         instructions: SYSVAR_INSTRUCTIONS_PUBKEY,
         rent: SYSVAR_RENT_PUBKEY,
       },
     });
+
+    const srmVaultAfter = await SRM_TOKEN_CLIENT.getAccountInfo(srmVault);
+    const usdcVaultAfter = await USDC_TOKEN_CLIENT.getAccountInfo(usdcVault);
+
+    assert.ok(srmVaultBefore.amount.toNumber() === 0);
+    assert.ok(srmVaultAfter.amount.toNumber() === 1006400000);
+    assert.ok(usdcVaultBefore.amount.toNumber() === 6160355581);
+    assert.ok(usdcVaultAfter.amount.toNumber() === 142760);
   });
+
+		it("Distributes the tokens to categories", async () => {
+
+		});
 });
