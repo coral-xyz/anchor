@@ -473,22 +473,34 @@ pub struct GenesisEntry {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Validator {
-    // Range to use for dynamically assigned ports.
+    // IP address to bind the validator ports. [default: 0.0.0.0]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bind_address: Option<String>,
+    // Range to use for dynamically assigned ports. [default: 1024-65535]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dynamic_port_range: Option<String>,
-    // Enable the faucet on this port.
+    // Enable the faucet on this port [deafult: 9900].
     #[serde(skip_serializing_if = "Option::is_none")]
     pub faucet_port: Option<u16>,
-    // Give the faucet address this much SOL in genesis.
+    // Give the faucet address this much SOL in genesis. [default: 1000000]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub faucet_sol: Option<String>,
+    // Gossip DNS name or IP address for the validator to advertise in gossip. [default: 127.0.0.1]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gossip_host: Option<String>,
+    // Gossip port number for the validator
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gossip_port: Option<u16>,
     // URL for Solana's JSON RPC or moniker.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
-    // Keep this amount of shreds in root slots.
+    // Use DIR as ledger location
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ledger: Option<String>,
+    // Keep this amount of shreds in root slots. [default: 10000]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit_ledger_size: Option<String>,
-    // Enable JSON RPC on this port, and the next port for the RPC websocket.
+    // Enable JSON RPC on this port, and the next port for the RPC websocket. [default: 8899]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rpc_port: Option<u16>,
     // Override the number of slots in an epoch.
