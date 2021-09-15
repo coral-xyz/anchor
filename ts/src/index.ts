@@ -15,7 +15,7 @@ export {
   AccountsCoder,
 } from "./coder";
 
-export { ProgramError } from "./error";
+export * from "./error";
 export { Instruction } from "./coder/instruction";
 export { Idl } from "./idl";
 export { default as workspace } from "./workspace";
