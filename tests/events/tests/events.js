@@ -22,6 +22,15 @@ describe("events", () => {
     assert.ok(event.label === "hello");
   });
 
+  it("Events through simulation", async () => {
+    const simulateResponse = await program.simulate.initialize();
+
+    const events = simulateResponse.events;
+    assert.ok(events.length === 1);
+    assert.ok(events[0].data.data.toNumber() === 5);
+    assert.ok(events[0].data.label === "hello");
+  })
+
   it("Multiple events", async () => {
     // Sleep so we don't get this transaction has already been processed.
     await sleep(2000);
