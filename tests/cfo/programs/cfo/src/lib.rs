@@ -605,10 +605,14 @@ pub struct Distribute<'info> {
         has_one = stake,
     )]
     officer: Account<'info, Officer>,
+    #[account(mut)]
     treasury: Account<'info, TokenAccount>,
+    #[account(mut)]
     stake: Account<'info, TokenAccount>,
+    #[account(mut)]
     srm_vault: Account<'info, TokenAccount>,
-    mint: Account<'info, Mint>,
+    #[account(mut)]
+    srm_mint: Account<'info, Mint>,
     token_program: Program<'info, Token>,
     dex_program: Program<'info, Dex>,
 }
@@ -688,7 +692,7 @@ pub struct Officer {
 /// authority. This is used as an authorization token which allows one to
 /// permissionlessly invoke the swap instructions on the market. Without this
 /// one would be able to create their own market with prices unfavorable
-/// to the smart contract.
+/// to the smart contract (and subsequently swap on it).
 ///
 /// Because a PDA is used here, the account existing (without a tombstone) is
 /// proof of the validity of a given market, which means that anyone can use
@@ -804,15 +808,35 @@ impl<'info> From<&SwapToUsdc<'info>> for CpiContext<'_, '_, '_, 'info, swap::Swa
     }
 }
 
-impl<'info> From<&Distribute<'info>> for CpiContext<'_, '_, '_, 'info, token::Burn<'info>> {
-    fn from(accs: &Distribute<'info>) -> Self {
-        let program = accs.token_program.to_account_info();
+impl<'info> Distribute<'info> {
+    fn into_burn(&self) -> CpiContext<'_, '_, '_, 'info, token::Burn<'info>> {
+        let program = self.token_program.to_account_info();
         let accounts = token::Burn {
-            mint: accs.mint.to_account_info(),
-            to: accs.srm_vault.to_account_info(),
-            authority: accs.officer.to_account_info(),
+            mint: self.srm_mint.to_account_info(),
+            to: self.srm_vault.to_account_info(),
+            authority: self.officer.to_account_info(),
         };
-        CpiContext::new(program.to_account_info(), accounts)
+        CpiContext::new(program, accounts)
+    }
+
+    fn into_stake_transfer(&self) -> CpiContext<'_, '_, '_, 'info, token::Transfer<'info>> {
+        let program = self.token_program.to_account_info();
+        let accounts = token::Transfer {
+            from: self.srm_vault.to_account_info(),
+            to: self.stake.to_account_info(),
+            authority: self.officer.to_account_info(),
+        };
+        CpiContext::new(program, accounts)
+    }
+
+    fn into_treasury_transfer(&self) -> CpiContext<'_, '_, '_, 'info, token::Transfer<'info>> {
+        let program = self.token_program.to_account_info();
+        let accounts = token::Transfer {
+            from: self.srm_vault.to_account_info(),
+            to: self.treasury.to_account_info(),
+            authority: self.officer.to_account_info(),
+        };
+        CpiContext::new(program, accounts)
     }
 }
 
@@ -849,38 +873,6 @@ impl<'info> DropStakeReward<'info> {
             token_program: self.token_program.to_account_info(),
             clock: self.clock.clone(),
             rent: self.rent.clone(),
-        };
-        CpiContext::new(program.to_account_info(), accounts)
-    }
-}
-
-impl<'info> Distribute<'info> {
-    fn into_burn(&self) -> CpiContext<'_, '_, '_, 'info, token::Burn<'info>> {
-        let program = self.token_program.to_account_info();
-        let accounts = token::Burn {
-            mint: self.mint.to_account_info(),
-            to: self.srm_vault.to_account_info(),
-            authority: self.officer.to_account_info(),
-        };
-        CpiContext::new(program.to_account_info(), accounts)
-    }
-
-    fn into_stake_transfer(&self) -> CpiContext<'_, '_, '_, 'info, token::Transfer<'info>> {
-        let program = self.token_program.to_account_info();
-        let accounts = token::Transfer {
-            from: self.srm_vault.to_account_info(),
-            to: self.stake.to_account_info(),
-            authority: self.officer.to_account_info(),
-        };
-        CpiContext::new(program.to_account_info(), accounts)
-    }
-
-    fn into_treasury_transfer(&self) -> CpiContext<'_, '_, '_, 'info, token::Transfer<'info>> {
-        let program = self.token_program.to_account_info();
-        let accounts = token::Transfer {
-            from: self.srm_vault.to_account_info(),
-            to: self.treasury.to_account_info(),
-            authority: self.officer.to_account_info(),
         };
         CpiContext::new(program.to_account_info(), accounts)
     }

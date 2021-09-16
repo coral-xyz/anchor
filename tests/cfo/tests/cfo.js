@@ -36,6 +36,7 @@ describe("cfo", () => {
   let marketAClient, marketBClient;
   let marketAuth, marketAuthBump;
   let marketAuthB, marketAuthBumpB;
+  let distribution;
 
   // Accounts used to setup the orderbook.
   let ORDERBOOK_ENV,
@@ -212,7 +213,7 @@ describe("cfo", () => {
   });
 
   it("Creates a CFO!", async () => {
-    let distribution = {
+    distribution = {
       burn: 80,
       stake: 20,
       treasury: 0,
@@ -460,5 +461,45 @@ describe("cfo", () => {
     assert.ok(usdcVaultAfter.amount.toNumber() === 530863);
   });
 
-  it("Distributes the tokens to categories", async () => {});
+  it("Distributes the tokens to categories", async () => {
+    const srmVaultBefore = await SRM_TOKEN_CLIENT.getAccountInfo(srmVault);
+    const treasuryBefore = await SRM_TOKEN_CLIENT.getAccountInfo(treasury);
+    const stakeBefore = await SRM_TOKEN_CLIENT.getAccountInfo(stake);
+    const mintInfoBefore = await SRM_TOKEN_CLIENT.getMintInfo();
+
+    await program.rpc.distribute({
+      accounts: {
+        officer,
+        treasury,
+        stake,
+        srmVault,
+        srmMint: ORDERBOOK_ENV.mintA,
+        tokenProgram: TOKEN_PID,
+        dexProgram: DEX_PID,
+      },
+    });
+
+    const srmVaultAfter = await SRM_TOKEN_CLIENT.getAccountInfo(srmVault);
+    const treasuryAfter = await SRM_TOKEN_CLIENT.getAccountInfo(treasury);
+    const stakeAfter = await SRM_TOKEN_CLIENT.getAccountInfo(stake);
+    const mintInfoAfter = await SRM_TOKEN_CLIENT.getMintInfo();
+
+    const beforeAmount = 1152000000;
+    assert.ok(srmVaultBefore.amount.toNumber() === beforeAmount);
+    assert.ok(srmVaultAfter.amount.toNumber() === 0); // Fully distributed.
+    assert.ok(
+      stakeAfter.amount.toNumber() ===
+        beforeAmount * (distribution.stake / 100.0)
+    );
+    assert.ok(
+      treasuryAfter.amount.toNumber() ===
+        beforeAmount * (distribution.treasury / 100.0)
+    );
+    // Check burn amount.
+    assert.ok(mintInfoBefore.supply.toString() === "1000000000000000000");
+    assert.ok(
+      mintInfoBefore.supply.sub(mintInfoAfter.supply).toNumber() ===
+        beforeAmount * (distribution.burn / 100.0)
+    );
+  });
 });
