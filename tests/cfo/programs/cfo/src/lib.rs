@@ -387,11 +387,11 @@ pub struct AuthorizeMarket<'info> {
     officer: Account<'info, Officer>,
     authority: Signer<'info>,
     #[account(
-				init,
-				payer = payer,
-				seeds = [b"market-auth", officer.key().as_ref(), market.key.as_ref()],
-				bump = bump,
-		)]
+        init,
+        payer = payer,
+        seeds = [b"market-auth", officer.key().as_ref(), market.key.as_ref()],
+        bump = bump,
+    )]
     market_auth: Account<'info, MarketAuth>,
     payer: Signer<'info>,
     // Not read or written to so not validated.
@@ -499,18 +499,18 @@ pub struct SwapToUsdc<'info> {
     officer: Box<Account<'info, Officer>>,
     market: DexMarketAccounts<'info>,
     #[account(
-				seeds = [b"market-auth", officer.key().as_ref(), market.market.key.as_ref()],
-				bump = market_auth.bump,
-		)]
+        seeds = [b"market-auth", officer.key().as_ref(), market.market.key.as_ref()],
+        bump = market_auth.bump,
+    )]
     market_auth: Account<'info, MarketAuth>,
     #[account(
-				mut,
+        mut,
         constraint = &officer.treasury != &from_vault.key(),
         constraint = &officer.stake != &from_vault.key(),
     )]
     from_vault: Box<Account<'info, TokenAccount>>,
     #[account(
-				mut,
+        mut,
         seeds = [b"token", officer.key().as_ref(), usdc_mint.key().as_ref()],
         bump,
     )]
@@ -535,21 +535,21 @@ pub struct SwapToSrm<'info> {
     officer: Box<Account<'info, Officer>>,
     market: DexMarketAccounts<'info>,
     #[account(
-				seeds = [b"market-auth", officer.key().as_ref(), market.market.key.as_ref()],
-				bump = market_auth.bump,
-		)]
+        seeds = [b"market-auth", officer.key().as_ref(), market.market.key.as_ref()],
+        bump = market_auth.bump,
+    )]
     market_auth: Account<'info, MarketAuth>,
     #[account(
-				mut,
-				seeds = [b"token", officer.key().as_ref(), usdc_mint.key().as_ref()],
-				bump,
-		)]
+        mut,
+        seeds = [b"token", officer.key().as_ref(), usdc_mint.key().as_ref()],
+        bump,
+    )]
     usdc_vault: Box<Account<'info, TokenAccount>>,
     #[account(
-				mut,
-				seeds = [b"token", officer.key().as_ref(), srm_mint.key().as_ref()],
-				bump,
-		)]
+        mut,
+        seeds = [b"token", officer.key().as_ref(), srm_mint.key().as_ref()],
+        bump,
+    )]
     srm_vault: Box<Account<'info, TokenAccount>>,
     #[cfg_attr(not(feature = "test"), account(address = mint::SRM))]
     srm_mint: Box<Account<'info, Mint>>,
@@ -600,10 +600,10 @@ pub struct DexMarketAccounts<'info> {
 #[derive(Accounts)]
 pub struct Distribute<'info> {
     #[account(
-				has_one = srm_vault,
-				has_one = treasury,
-				has_one = stake,
-		)]
+        has_one = srm_vault,
+        has_one = treasury,
+        has_one = stake,
+    )]
     officer: Account<'info, Officer>,
     treasury: Account<'info, TokenAccount>,
     stake: Account<'info, TokenAccount>,
