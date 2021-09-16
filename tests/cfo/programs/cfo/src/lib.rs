@@ -48,14 +48,13 @@ pub mod cfo {
     }
 
     /// Creates a market authorization token.
-    pub fn authorize_market(ctx: Context<AuthorizeMarket>) -> Result<()> {
-        let auth = &mut ctx.accounts.auth;
-        auth.market = ctx.accounts.market.key();
+    pub fn authorize_market(ctx: Context<AuthorizeMarket>, bump: u8) -> Result<()> {
+        ctx.accounts.market_auth.bump = bump;
         Ok(())
     }
 
     /// Revokes a market authorization token.
-    pub fn revoke_market(ctx: Context<RevokeMarket>) -> Result<()> {
+    pub fn revoke_market(_ctx: Context<RevokeMarket>) -> Result<()> {
         Ok(())
     }
 
@@ -382,6 +381,7 @@ pub struct CreateOfficer<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(bump: u8)]
 pub struct AuthorizeMarket<'info> {
     #[account(has_one = authority)]
     officer: Account<'info, Officer>,
@@ -390,9 +390,9 @@ pub struct AuthorizeMarket<'info> {
 				init,
 				payer = payer,
 				seeds = [b"market-auth", officer.key().as_ref(), market.key.as_ref()],
-				bump,
+				bump = bump,
 		)]
-    auth: Account<'info, MarketAuth>,
+    market_auth: Account<'info, MarketAuth>,
     payer: Signer<'info>,
     // Not read or written to so not validated.
     market: UncheckedAccount<'info>,
@@ -499,20 +499,24 @@ pub struct SwapToUsdc<'info> {
     officer: Box<Account<'info, Officer>>,
     market: DexMarketAccounts<'info>,
     #[account(
+				seeds = [b"market-auth", officer.key().as_ref(), market.market.key.as_ref()],
+				bump = market_auth.bump,
+		)]
+    market_auth: Account<'info, MarketAuth>,
+    #[account(
+				mut,
         constraint = &officer.treasury != &from_vault.key(),
         constraint = &officer.stake != &from_vault.key(),
     )]
     from_vault: Box<Account<'info, TokenAccount>>,
-    #[cfg_attr(feature = "test", account(mut))]
-    #[cfg_attr(
-        not(feature = "test"),
-        account(
-						mut,
-            seeds = [b"token", officer.key().as_ref(), mint::USDC.as_ref()],
-            bump,
-        )
+    #[account(
+				mut,
+        seeds = [b"token", officer.key().as_ref(), usdc_mint.key().as_ref()],
+        bump,
     )]
     usdc_vault: Box<Account<'info, TokenAccount>>,
+    #[cfg_attr(not(feature = "test"), account(address = mint::USDC))]
+    usdc_mint: Box<Account<'info, Mint>>,
     swap_program: Program<'info, Swap>,
     dex_program: Program<'info, Dex>,
     token_program: Program<'info, Token>,
@@ -522,6 +526,7 @@ pub struct SwapToUsdc<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(bump: u8)]
 pub struct SwapToSrm<'info> {
     #[account(
         seeds = [dex_program.key.as_ref()],
@@ -529,6 +534,11 @@ pub struct SwapToSrm<'info> {
     )]
     officer: Box<Account<'info, Officer>>,
     market: DexMarketAccounts<'info>,
+    #[account(
+				seeds = [b"market-auth", officer.key().as_ref(), market.market.key.as_ref()],
+				bump = market_auth.bump,
+		)]
+    market_auth: Account<'info, MarketAuth>,
     #[account(
 				mut,
 				seeds = [b"token", officer.key().as_ref(), usdc_mint.key().as_ref()],
@@ -680,12 +690,16 @@ pub struct Officer {
 /// one would be able to create their own market with prices unfavorable
 /// to the smart contract.
 ///
-/// PDA - [b"market-auth", officer, market_id]
+/// Because a PDA is used here, the account existing (without a tombstone) is
+/// proof of the validity of a given market, which means that anyone can use
+/// the vault here to swap.
+///
+/// PDA - [b"market-auth", officer, market_address]
 #[account]
 #[derive(Default)]
 pub struct MarketAuth {
-    pub market: Pubkey,
-    pub revoked: bool,
+    // Bump seed for this account's PDA.
+    pub bump: u8,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
