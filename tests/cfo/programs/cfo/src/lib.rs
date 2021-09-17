@@ -637,7 +637,6 @@ pub struct DropStakeReward<'info> {
     mint: UncheckedAccount<'info>,
     srm: DropStakeRewardPool<'info>,
     msrm: DropStakeRewardPool<'info>,
-    msrm_registrar: Box<Account<'info, Registrar>>,
     token_program: Program<'info, Token>,
     registry_program: Program<'info, Registry>,
     lockup_program: Program<'info, Lockup>,

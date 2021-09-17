@@ -4,7 +4,13 @@ const anchor = require("@project-serum/anchor");
 const serumCmn = require("@project-serum/common");
 const { Market } = require("@project-serum/serum");
 const utf8 = anchor.utils.bytes.utf8;
-const { PublicKey, SystemProgram, Keypair, SYSVAR_RENT_PUBKEY } = anchor.web3;
+const {
+  PublicKey,
+  SystemProgram,
+  Keypair,
+  SYSVAR_RENT_PUBKEY,
+  SYSVAR_CLOCK_PUBKEY,
+} = anchor.web3;
 const utils = require("./utils");
 const { setupStakePool } = require("./utils/stake");
 
@@ -49,7 +55,12 @@ describe("cfo", () => {
     // Serum DEX vault PDA for market B/USDC.
     marketBVaultSigner;
 
-  let registrar, msrmRegistrar;
+  let registrar, rewardEventQ, poolMint, vendor, vendorVault;
+  let msrmRegistrar,
+    msrmRewardEventQ,
+    msrmPoolMint,
+    msrmVendor,
+    msrmVendorVault;
 
   it("BOILERPLATE: Sets up a market with funded fees", async () => {
     ORDERBOOK_ENV = await utils.initMarket({
@@ -501,5 +512,36 @@ describe("cfo", () => {
       mintInfoBefore.supply.sub(mintInfoAfter.supply).toNumber() ===
         beforeAmount * (distribution.burn / 100.0)
     );
+  });
+
+  it("Drops staking rewards", async () => {
+    //
+    await program.rpc.dropstakeReward({
+      accounts: {
+        officer,
+        stake,
+        mint: ORDERBOOK_ENV.mintA,
+        srm: {
+          registrar,
+          rewardEventQ,
+          poolMint,
+          vendor,
+          vendorVault,
+        },
+        msrm: {
+          registrar: msrmRegistrar,
+          rewardEventQ: msrmRewardEventQ,
+          poolMint: msrmPoolMint,
+          vendor: msrmVendor,
+          vendorVault: msrmVendorvault,
+        },
+        tokenProgram: TOKEN_PID,
+        registryProgram: REGISTRY_PID,
+        lockupProgram: LOCKUP_PID,
+        dexProgram: DEX_PID,
+        clock: SYSVAR_CLOCK_PUBKEY,
+        rent: SYSVAR_RENT_PUBKEY,
+      },
+    });
   });
 });
