@@ -16,7 +16,7 @@
 //! - Initializer will get back ownership of their token X account
 
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, SetAuthority, TokenAccount, Transfer};
+use anchor_spl::token::{self, SetAuthority, Token, TokenAccount, Transfer};
 use spl_token::instruction::AuthorityType;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
@@ -112,7 +112,7 @@ pub struct InitializeEscrow<'info> {
     pub initializer_receive_token_account: Account<'info, TokenAccount>,
     #[account(zero)]
     pub escrow_account: Account<'info, EscrowAccount>,
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 
 #[derive(Accounts)]
@@ -139,7 +139,7 @@ pub struct Exchange<'info> {
     )]
     pub escrow_account: Account<'info, EscrowAccount>,
     pub pda_account: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 
 #[derive(Accounts)]
@@ -155,7 +155,7 @@ pub struct CancelEscrow<'info> {
         close = initializer
     )]
     pub escrow_account: Account<'info, EscrowAccount>,
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 
 #[account]
@@ -178,7 +178,7 @@ impl<'info> From<&mut InitializeEscrow<'info>>
                 .clone(),
             current_authority: accounts.initializer.clone(),
         };
-        let cpi_program = accounts.token_program.clone();
+        let cpi_program = accounts.token_program.to_account_info();
         CpiContext::new(cpi_program, cpi_accounts)
     }
 }
@@ -189,7 +189,8 @@ impl<'info> CancelEscrow<'info> {
             account_or_mint: self.pda_deposit_token_account.to_account_info().clone(),
             current_authority: self.pda_account.clone(),
         };
-        CpiContext::new(self.token_program.clone(), cpi_accounts)
+        let cpi_program = self.token_program.to_account_info();
+        CpiContext::new(cpi_program, cpi_accounts)
     }
 }
 
@@ -199,7 +200,8 @@ impl<'info> Exchange<'info> {
             account_or_mint: self.pda_deposit_token_account.to_account_info().clone(),
             current_authority: self.pda_account.clone(),
         };
-        CpiContext::new(self.token_program.clone(), cpi_accounts)
+        let cpi_program = self.token_program.to_account_info();
+        CpiContext::new(cpi_program, cpi_accounts)
     }
 }
 
@@ -210,7 +212,8 @@ impl<'info> Exchange<'info> {
             to: self.taker_receive_token_account.to_account_info().clone(),
             authority: self.pda_account.clone(),
         };
-        CpiContext::new(self.token_program.clone(), cpi_accounts)
+        let cpi_program = self.token_program.to_account_info();
+        CpiContext::new(cpi_program, cpi_accounts)
     }
 }
 
@@ -226,6 +229,7 @@ impl<'info> Exchange<'info> {
                 .clone(),
             authority: self.taker.clone(),
         };
-        CpiContext::new(self.token_program.clone(), cpi_accounts)
+        let cpi_program = self.token_program.to_account_info();
+        CpiContext::new(cpi_program, cpi_accounts)
     }
 }
