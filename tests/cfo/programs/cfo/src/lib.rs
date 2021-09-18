@@ -6,7 +6,7 @@ use anchor_spl::dex::{self, Dex};
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
 use lockup::program::Lockup;
 use registry::program::Registry;
-use registry::{Registrar, RewardVendorKind};
+use registry::RewardVendorKind;
 use serum_dex::state::OpenOrders;
 use std::convert::TryInto;
 use std::mem::size_of;

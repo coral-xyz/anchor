@@ -7,41 +7,25 @@ const lockup = anchor.workspace.Lockup;
 const registry = anchor.workspace.Registry;
 const provider = anchor.Provider.env();
 
-let lockupAddress = null;
-let mint = null;
-let god = null;
-
-let registrarAccount = null;
-let registrarSigner = null;
-let nonce = null;
-let poolMint = null;
-
-const registrar = new anchor.web3.Account();
-const rewardQ = new anchor.web3.Account();
 const withdrawalTimelock = new anchor.BN(4);
 const stakeRate = new anchor.BN(2);
 const rewardQLen = 170;
-let member = null;
-
-let memberAccount = null;
-let memberSigner = null;
-let balances = null;
-let balancesLocked = null;
 
 const WHITELIST_SIZE = 10;
 
 async function setupStakePool(mint, god) {
+	const registrar = new anchor.web3.Account();
+	const rewardQ = new anchor.web3.Account();
+
   // Registry genesis.
   const [
-    _registrarSigner,
-    _nonce,
+    registrarSigner,
+    nonce,
   ] = await anchor.web3.PublicKey.findProgramAddress(
     [registrar.publicKey.toBuffer()],
     registry.programId
   );
-  registrarSigner = _registrarSigner;
-  nonce = _nonce;
-  poolMint = await serumCmn.createMint(provider, registrarSigner);
+  const poolMint = await serumCmn.createMint(provider, registrarSigner);
 
   try {
     // Init registry.
@@ -82,7 +66,7 @@ async function setupStakePool(mint, god) {
       ],
     }
   );
-  registrarAccount = await registry.account.registrar.fetch(
+  const registrarAccount = await registry.account.registrar.fetch(
     registrar.publicKey
   );
   console.log("Registrar", registrar.publicKey.toString());
@@ -91,31 +75,28 @@ async function setupStakePool(mint, god) {
   const seed = anchor.utils.sha256
     .hash(`${registrar.publicKey.toString()}:Member`)
     .slice(0, 32);
-  member = await anchor.web3.PublicKey.createWithSeed(
+  const member = await anchor.web3.PublicKey.createWithSeed(
     registry.provider.wallet.publicKey,
     seed,
     registry.programId
   );
   const [
-    _memberSigner,
+    memberSigner,
     nonce2,
   ] = await anchor.web3.PublicKey.findProgramAddress(
     [registrar.publicKey.toBuffer(), member.toBuffer()],
     registry.programId
   );
-  memberSigner = _memberSigner;
-  const [mainTx, _balances] = await utils.createBalanceSandbox(
+  const [mainTx, balances] = await utils.createBalanceSandbox(
     provider,
     registrarAccount,
     memberSigner
   );
-  const [lockedTx, _balancesLocked] = await utils.createBalanceSandbox(
+  const [lockedTx, balancesLocked] = await utils.createBalanceSandbox(
     provider,
     registrarAccount,
     memberSigner
   );
-  balances = _balances;
-  balancesLocked = _balancesLocked;
   const tx = registry.transaction.createMember(nonce2, {
     accounts: {
       registrar: registrar.publicKey,
@@ -144,7 +125,7 @@ async function setupStakePool(mint, god) {
   const signers = [provider.wallet.payer];
   const allTxs = [mainTx, lockedTx, { tx, signers }];
   await provider.sendAll(allTxs);
-  memberAccount = await registry.account.member.fetch(member);
+  const memberAccount = await registry.account.member.fetch(member);
 
   // Deposit into stake program.
   const depositAmount = new anchor.BN(120);

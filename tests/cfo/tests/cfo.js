@@ -515,8 +515,7 @@ describe("cfo", () => {
   });
 
   it("Drops staking rewards", async () => {
-    //
-    await program.rpc.dropstakeReward({
+    await program.rpc.dropStakeReward({
       accounts: {
         officer,
         stake,
@@ -533,7 +532,7 @@ describe("cfo", () => {
           rewardEventQ: msrmRewardEventQ,
           poolMint: msrmPoolMint,
           vendor: msrmVendor,
-          vendorVault: msrmVendorvault,
+          vendorVault: msrmVendorVault,
         },
         tokenProgram: TOKEN_PID,
         registryProgram: REGISTRY_PID,
