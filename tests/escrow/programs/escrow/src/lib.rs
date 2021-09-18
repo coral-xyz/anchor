@@ -110,8 +110,9 @@ pub struct InitializeEscrow<'info> {
     )]
     pub initializer_deposit_token_account: Account<'info, TokenAccount>,
     pub initializer_receive_token_account: Account<'info, TokenAccount>,
-    #[account(zero)]
+    #[account(init, payer = initializer, space = 8 + EscrowAccount::LEN)]
     pub escrow_account: Account<'info, EscrowAccount>,
+    pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
 }
 
@@ -165,6 +166,10 @@ pub struct EscrowAccount {
     pub initializer_receive_token_account: Pubkey,
     pub initializer_amount: u64,
     pub taker_amount: u64,
+}
+
+impl EscrowAccount {
+    pub const LEN: usize = 32 + 32 + 32 + 8 + 8;
 }
 
 impl<'info> From<&mut InitializeEscrow<'info>>
