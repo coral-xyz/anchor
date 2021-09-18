@@ -128,6 +128,27 @@ pub fn initialize_account<'a, 'b, 'c, 'info>(
     )
 }
 
+pub fn close_account<'a, 'b, 'c, 'info>(
+    ctx: CpiContext<'a, 'b, 'c, 'info, CloseAccount<'info>>,
+) -> ProgramResult {
+    let ix = spl_token::instruction::close_account(
+        &spl_token::ID,
+        ctx.accounts.account.key,
+        ctx.accounts.destination.key,
+        ctx.accounts.authority.key,
+        &[], // TODO: support multisig
+    )?;
+    solana_program::program::invoke_signed(
+        &ix,
+        &[
+            ctx.accounts.account.clone(),
+            ctx.accounts.destination.clone(),
+            ctx.accounts.authority.clone(),
+        ],
+        ctx.signer_seeds,
+    )
+}
+
 pub fn initialize_mint<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, InitializeMint<'info>>,
     decimals: u8,
@@ -218,6 +239,13 @@ pub struct InitializeAccount<'info> {
 }
 
 #[derive(Accounts)]
+pub struct CloseAccount<'info> {
+    pub account: AccountInfo<'info>,
+    pub destination: AccountInfo<'info>,
+    pub authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
 pub struct InitializeMint<'info> {
     pub mint: AccountInfo<'info>,
     pub rent: AccountInfo<'info>,
@@ -302,6 +330,25 @@ impl Deref for Mint {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+#[derive(Clone)]
+pub struct Token;
+
+impl anchor_lang::AccountDeserialize for Token {
+    fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
+        Token::try_deserialize_unchecked(buf)
+    }
+
+    fn try_deserialize_unchecked(_buf: &mut &[u8]) -> Result<Self, ProgramError> {
+        Ok(Token)
+    }
+}
+
+impl anchor_lang::Id for Token {
+    fn id() -> Pubkey {
+        ID
     }
 }
 

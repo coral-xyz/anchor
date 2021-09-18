@@ -1,4 +1,9 @@
-export class IdlError extends Error {}
+export class IdlError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "IdlError";
+  }
+}
 
 // An error from a user defined program.
 export class ProgramError extends Error {
@@ -80,6 +85,8 @@ const LangErrorCode = {
   AccountNotEnoughKeys: 165,
   AccountNotMutable: 166,
   AccountNotProgramOwned: 167,
+  InvalidProgramId: 168,
+  InvalidProgramIdExecutable: 169,
 
   // State.
   StateInvalidAddress: 180,
@@ -158,6 +165,11 @@ const LangErrorMessage = new Map([
   [
     LangErrorCode.AccountNotProgramOwned,
     "The given account is not owned by the executing program",
+  ],
+  [LangErrorCode.InvalidProgramId, "Program ID was not as expected"],
+  [
+    LangErrorCode.InvalidProgramIdExecutable,
+    "Program account is not executable",
   ],
 
   // State.

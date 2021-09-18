@@ -178,6 +178,12 @@ impl Field {
             Ty::AccountInfo => quote! {
                 AccountInfo
             },
+            Ty::UncheckedAccount => quote! {
+                UncheckedAccount
+            },
+            Ty::Signer => quote! {
+                Signer
+            },
             Ty::Account(AccountTy { boxed, .. }) => {
                 if *boxed {
                     quote! {
@@ -214,11 +220,14 @@ impl Field {
 
     // TODO: remove the option once `CpiAccount` is completely removed (not
     //       just deprecated).
-    pub fn from_account_info(&self, kind: Option<&InitKind>) -> proc_macro2::TokenStream {
+    pub fn from_account_info_unchecked(&self, kind: Option<&InitKind>) -> proc_macro2::TokenStream {
         let field = &self.ident;
         let container_ty = self.container_ty();
         match &self.ty {
             Ty::AccountInfo => quote! { #field.to_account_info() },
+            Ty::UncheckedAccount => {
+                quote! { UncheckedAccount::try_from(#field.to_account_info()) }
+            }
             Ty::Account(AccountTy { boxed, .. }) => {
                 if *boxed {
                     quote! {
@@ -271,7 +280,10 @@ impl Field {
             Ty::Sysvar(_) => quote! { anchor_lang::Sysvar },
             Ty::CpiState(_) => quote! { anchor_lang::CpiState },
             Ty::ProgramState(_) => quote! { anchor_lang::ProgramState },
+            Ty::Program(_) => quote! { anchor_lang::Program },
             Ty::AccountInfo => quote! {},
+            Ty::UncheckedAccount => quote! {},
+            Ty::Signer => quote! {},
         }
     }
 
@@ -280,6 +292,12 @@ impl Field {
         match &self.ty {
             Ty::AccountInfo => quote! {
                 AccountInfo
+            },
+            Ty::UncheckedAccount => quote! {
+                UncheckedAccount
+            },
+            Ty::Signer => quote! {
+                Signer
             },
             Ty::ProgramAccount(ty) => {
                 let ident = &ty.account_type_path;
@@ -329,6 +347,12 @@ impl Field {
                 SysvarTy::Instructions => quote! {Instructions},
                 SysvarTy::Rewards => quote! {Rewards},
             },
+            Ty::Program(ty) => {
+                let program = &ty.account_type_path;
+                quote! {
+                    #program
+                }
+            }
         }
     }
 }
@@ -346,6 +370,7 @@ pub struct CompositeField {
 #[derive(Debug, PartialEq)]
 pub enum Ty {
     AccountInfo,
+    UncheckedAccount,
     ProgramState(ProgramStateTy),
     CpiState(CpiStateTy),
     ProgramAccount(ProgramAccountTy),
@@ -353,6 +378,8 @@ pub enum Ty {
     CpiAccount(CpiAccountTy),
     Sysvar(SysvarTy),
     Account(AccountTy),
+    Program(ProgramTy),
+    Signer,
 }
 
 #[derive(Debug, PartialEq)]
@@ -403,6 +430,12 @@ pub struct AccountTy {
     pub account_type_path: TypePath,
     // True if the account has been boxed via `Box<T>`.
     pub boxed: bool,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ProgramTy {
+    // The struct type of the account.
+    pub account_type_path: TypePath,
 }
 
 #[derive(Debug)]
@@ -561,7 +594,7 @@ pub struct ConstraintRaw {
 
 #[derive(Debug, Clone)]
 pub struct ConstraintOwner {
-    pub owner_target: Expr,
+    pub owner_address: Expr,
 }
 
 #[derive(Debug, Clone)]

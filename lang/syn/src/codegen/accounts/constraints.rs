@@ -143,7 +143,7 @@ pub fn generate_constraint_init(f: &Field, c: &ConstraintInitGroup) -> proc_macr
 pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let ty_decl = f.ty_decl();
-    let from_account_info = f.from_account_info(None);
+    let from_account_info = f.from_account_info_unchecked(None);
     quote! {
         let #field: #ty_decl = {
             let mut __data: &[u8] = &#field.try_borrow_data()?;
@@ -244,9 +244,9 @@ pub fn generate_constraint_raw(c: &ConstraintRaw) -> proc_macro2::TokenStream {
 
 pub fn generate_constraint_owner(f: &Field, c: &ConstraintOwner) -> proc_macro2::TokenStream {
     let ident = &f.ident;
-    let owner_target = c.owner_target.clone();
+    let owner_address = &c.owner_address;
     quote! {
-        if #ident.to_account_info().owner != #owner_target.to_account_info().key {
+        if #ident.to_account_info().owner != &#owner_address {
             return Err(anchor_lang::__private::ErrorCode::ConstraintOwner.into());
         }
     }
@@ -374,7 +374,7 @@ pub fn generate_init(
 ) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let ty_decl = f.ty_decl();
-    let from_account_info = f.from_account_info(Some(kind));
+    let from_account_info = f.from_account_info_unchecked(Some(kind));
     match kind {
         InitKind::Token { owner, mint } => {
             let create_account = generate_create_account(
@@ -401,7 +401,7 @@ pub fn generate_init(
                     };
                     let cpi_ctx = CpiContext::new(cpi_program, accounts);
                     anchor_spl::token::initialize_account(cpi_ctx)?;
-                    let mut pa: #ty_decl = #from_account_info;
+                    let pa: #ty_decl = #from_account_info;
                     pa
                 };
             }
@@ -429,7 +429,7 @@ pub fn generate_init(
                     };
                     let cpi_ctx = CpiContext::new(cpi_program, accounts);
                     anchor_spl::token::initialize_mint(cpi_ctx, #decimals, &#owner.to_account_info().key, None)?;
-                    let mut pa: #ty_decl = #from_account_info;
+                    let pa: #ty_decl = #from_account_info;
                     pa
                 };
             }
@@ -476,7 +476,7 @@ pub fn generate_init(
                     #space
                     #payer
                     #create_account
-                    let mut pa: #ty_decl = #from_account_info;
+                    let pa: #ty_decl = #from_account_info;
                     pa
                 };
             }
@@ -515,7 +515,7 @@ pub fn generate_create_account(
                 &[
                     payer.to_account_info(),
                     #field.to_account_info(),
-                    system_program.to_account_info().clone(),
+                    system_program.to_account_info(),
                 ],
                 &[#seeds_with_nonce],
             )?;
@@ -535,7 +535,7 @@ pub fn generate_create_account(
                     &[
                         payer.to_account_info(),
                         #field.to_account_info(),
-                        system_program.to_account_info().clone(),
+                        system_program.to_account_info(),
                     ],
                 )?;
             }
@@ -547,7 +547,7 @@ pub fn generate_create_account(
                 ),
                 &[
                     #field.to_account_info(),
-                    system_program.clone(),
+                    system_program.to_account_info(),
                 ],
                 &[#seeds_with_nonce],
             )?;
