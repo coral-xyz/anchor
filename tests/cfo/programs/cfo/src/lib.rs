@@ -30,6 +30,7 @@ pub mod cfo {
         registrar: Pubkey,
         msrm_registrar: Pubkey,
         swap_interval: i64,
+        max_swap_usdc: u64,
     ) -> Result<()> {
         let officer = &mut ctx.accounts.officer;
         officer.authority = *ctx.accounts.authority.key;
@@ -43,6 +44,7 @@ pub mod cfo {
         officer.srm_vault = *ctx.accounts.srm_vault.to_account_info().key;
         officer.bumps = bumps;
         officer.swap_interval = swap_interval;
+        officer.max_swap_usdc = max_swap_usdc;
         emit!(OfficerDidCreate {
             pubkey: *officer.to_account_info().key,
         });
@@ -114,18 +116,34 @@ pub mod cfo {
         ctx.accounts.market_auth.last_trade = Clock::get()?.unix_timestamp;
 
         // Trade.
-        let seeds = [
-            ctx.accounts.dex_program.key.as_ref(),
-            &[ctx.accounts.officer.bumps.bump],
-        ];
-        let cpi_ctx = CpiContext::from(&*ctx.accounts);
-        swap::cpi::swap(
-            cpi_ctx.with_signer(&[&seeds]),
-            swap::Side::Ask,
-            ctx.accounts.from_vault.amount,
-            min_exchange_rate.into(),
-        )
-        .map_err(Into::into)
+        let amount_traded_usdc = {
+            // USDC before the swap.
+            let usdc_before = ctx.accounts.usdc_vault.amount;
+
+            // Swap..
+            let seeds = [
+                ctx.accounts.dex_program.key.as_ref(),
+                &[ctx.accounts.officer.bumps.bump],
+            ];
+            let cpi_ctx = CpiContext::from(&*ctx.accounts);
+            swap::cpi::swap(
+                cpi_ctx.with_signer(&[&seeds]),
+                swap::Side::Ask,
+                ctx.accounts.from_vault.amount,
+                min_exchange_rate.into(),
+            )?;
+
+            // USDC after the swap.
+            ctx.accounts.usdc_vault.reload()?;
+            ctx.accounts.usdc_vault.amount - usdc_before
+        };
+
+        // Reject any swap over the max size.
+        if amount_traded_usdc > ctx.accounts.officer.max_swap_usdc {
+            return Err(ErrorCode::SwapTooLarge.into());
+        }
+
+        Ok(())
     }
 
     /// Convert the CFO's entire token balance into SRM.
@@ -151,10 +169,14 @@ pub mod cfo {
         swap::cpi::swap(
             cpi_ctx.with_signer(&[&seeds]),
             swap::Side::Bid,
-            ctx.accounts.usdc_vault.amount,
+            std::cmp::min(
+                ctx.accounts.usdc_vault.amount,
+                ctx.accounts.officer.max_swap_usdc,
+            ),
             min_exchange_rate.into(),
-        )
-        .map_err(Into::into)
+        )?;
+
+        Ok(())
     }
 
     /// Distributes srm tokens to the various categories. Before calling this,
@@ -694,6 +716,8 @@ pub struct Officer {
     pub authority: Pubkey,
     // Required trade interval in seconds.
     pub swap_interval: i64,
+    // Maximum amount of native USDC that can be swapped in one tx.
+    pub max_swap_usdc: u64,
     // Vault holding the officer's SRM tokens prior to distribution.
     pub srm_vault: Pubkey,
     // Escrow SRM vault holding tokens which are dropped onto stakers.
@@ -935,6 +959,8 @@ pub enum ErrorCode {
     InsufficientStakeReward,
     #[msg("Swap interval must pass before another trade can occur")]
     SwapIntervalBlocked,
+    #[msg("Swap too large")]
+    SwapTooLarge,
 }
 
 // Access control.

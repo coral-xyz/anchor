@@ -28,6 +28,7 @@ const SYSVAR_INSTRUCTIONS_PUBKEY = new PublicKey(
 );
 const FEES = "6160355581";
 const SWAP_INTERVAL = new anchor.BN(1);
+const MAX_SWAP_USDC = new anchor.BN(50000000000);
 
 describe("cfo", () => {
   anchor.setProvider(anchor.Provider.env());
@@ -127,9 +128,23 @@ describe("cfo", () => {
   });
 
   it("BOILERPLATE: Sets up the staking pools", async () => {
-    await setupStakePool(ORDERBOOK_ENV.mintA, ORDERBOOK_ENV.godA);
-    registrar = ORDERBOOK_ENV.usdc;
-    msrmRegistrar = registrar;
+			const {
+					registrar: _registrar,
+					rewardEventQ: _rewardEventQ,
+					poolMint: _poolMint,
+			} = await setupStakePool(ORDERBOOK_ENV.mintA, ORDERBOOK_ENV.godA);
+			const {
+					registrar: _msrmRegistrar,
+					rewardEventQ: _msrmRewardEventQ,
+					poolMint: _msrmPoolMint,
+			} = await setupStakePool(ORDERBOOK_ENV.mintB, ORDERBOOK_ENV.godB);
+
+			registrar = _registrar;
+			rewardEventQ = _rewardEventQ;
+			poolMint = _poolMint;
+			msrmRegistrar = _msrmRegistrar;
+			msrmRewardEventQ = _msrmRewardEventQ;
+			msrmPoolMint = _msrmPoolMint;
   });
 
   it("BOILERPLATE: Finds PDA addresses", async () => {
@@ -243,6 +258,7 @@ describe("cfo", () => {
       registrar,
 			msrmRegistrar,
 			SWAP_INTERVAL,
+			MAX_SWAP_USDC,
       {
         accounts: {
           officer,

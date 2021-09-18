@@ -161,6 +161,13 @@ async function setupStakePool(mint, god) {
       tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
     },
   });
+
+		return {
+				registrar: registrar.publicKey,
+				poolMint,
+				rewardEventQ: rewardQ.publicKey,
+				member,
+		};
 }
 
 module.exports = {
