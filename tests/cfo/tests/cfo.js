@@ -27,6 +27,7 @@ const SYSVAR_INSTRUCTIONS_PUBKEY = new PublicKey(
   "Sysvar1nstructions1111111111111111111111111"
 );
 const FEES = "6160355581";
+const SWAP_INTERVAL = new anchor.BN(1);
 
 describe("cfo", () => {
   anchor.setProvider(anchor.Provider.env());
@@ -240,7 +241,8 @@ describe("cfo", () => {
       bumps,
       distribution,
       registrar,
-      msrmRegistrar,
+			msrmRegistrar,
+			SWAP_INTERVAL,
       {
         accounts: {
           officer,
@@ -367,6 +369,8 @@ describe("cfo", () => {
         systemProgram: SystemProgram.programId,
       },
     });
+		// Let the "last trade interval" elapse.
+		await serumCmn.sleep(1000);
   });
 
   it("Transfers into the mintB vault", async () => {

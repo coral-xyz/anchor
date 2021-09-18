@@ -29,6 +29,7 @@ pub mod cfo {
         d: Distribution,
         registrar: Pubkey,
         msrm_registrar: Pubkey,
+        swap_interval: i64,
     ) -> Result<()> {
         let officer = &mut ctx.accounts.officer;
         officer.authority = *ctx.accounts.authority.key;
@@ -41,6 +42,7 @@ pub mod cfo {
         officer.treasury = *ctx.accounts.treasury.to_account_info().key;
         officer.srm_vault = *ctx.accounts.srm_vault.to_account_info().key;
         officer.bumps = bumps;
+        officer.swap_interval = swap_interval;
         emit!(OfficerDidCreate {
             pubkey: *officer.to_account_info().key,
         });
@@ -50,6 +52,7 @@ pub mod cfo {
     /// Creates a market authorization token.
     pub fn authorize_market(ctx: Context<AuthorizeMarket>, bump: u8) -> Result<()> {
         ctx.accounts.market_auth.bump = bump;
+        ctx.accounts.market_auth.last_trade = Clock::get()?.unix_timestamp;
         Ok(())
     }
 
@@ -98,11 +101,19 @@ pub mod cfo {
 
     /// Convert the CFO's entire non-SRM token balance into USDC.
     /// Assumes USDC is the quote currency.
-    #[access_control(is_not_trading(&ctx.accounts.instructions))]
+    #[access_control(can_swap(
+				&ctx.accounts.officer,
+				&ctx.accounts.market_auth,
+				&ctx.accounts.instructions,
+		))]
     pub fn swap_to_usdc<'info>(
         ctx: Context<'_, '_, '_, 'info, SwapToUsdc<'info>>,
         min_exchange_rate: ExchangeRate,
     ) -> Result<()> {
+        // Update last trade ts.
+        ctx.accounts.market_auth.last_trade = Clock::get()?.unix_timestamp;
+
+        // Trade.
         let seeds = [
             ctx.accounts.dex_program.key.as_ref(),
             &[ctx.accounts.officer.bumps.bump],
@@ -119,11 +130,19 @@ pub mod cfo {
 
     /// Convert the CFO's entire token balance into SRM.
     /// Assumes SRM is the base currency.
-    #[access_control(is_not_trading(&ctx.accounts.instructions))]
+    #[access_control(can_swap(
+				&ctx.accounts.officer,
+				&ctx.accounts.market_auth,
+				&ctx.accounts.instructions,
+		))]
     pub fn swap_to_srm<'info>(
         ctx: Context<'_, '_, '_, 'info, SwapToSrm<'info>>,
         min_exchange_rate: ExchangeRate,
     ) -> Result<()> {
+        // Update last trade ts.
+        ctx.accounts.market_auth.last_trade = Clock::get()?.unix_timestamp;
+
+        // Trade.
         let seeds = [
             ctx.accounts.dex_program.key.as_ref(),
             &[ctx.accounts.officer.bumps.bump],
@@ -156,7 +175,9 @@ pub mod cfo {
             .unwrap()
             .try_into()
             .map_err(|_| ErrorCode::U128CannotConvert)?;
-        token::burn(ctx.accounts.into_burn().with_signer(&[&seeds]), burn_amount)?;
+        if burn_amount > 0 {
+            token::burn(ctx.accounts.into_burn().with_signer(&[&seeds]), burn_amount)?;
+        }
 
         // Stake.
         let stake_amount: u64 = u128::from(total_fees)
@@ -166,10 +187,12 @@ pub mod cfo {
             .unwrap()
             .try_into()
             .map_err(|_| ErrorCode::U128CannotConvert)?;
-        token::transfer(
-            ctx.accounts.into_stake_transfer().with_signer(&[&seeds]),
-            stake_amount,
-        )?;
+        if stake_amount > 0 {
+            token::transfer(
+                ctx.accounts.into_stake_transfer().with_signer(&[&seeds]),
+                stake_amount,
+            )?;
+        }
 
         // Treasury.
         let treasury_amount: u64 = u128::from(total_fees)
@@ -179,10 +202,12 @@ pub mod cfo {
             .unwrap()
             .try_into()
             .map_err(|_| ErrorCode::U128CannotConvert)?;
-        token::transfer(
-            ctx.accounts.into_treasury_transfer().with_signer(&[&seeds]),
-            treasury_amount,
-        )?;
+        if treasury_amount > 0 {
+            token::transfer(
+                ctx.accounts.into_treasury_transfer().with_signer(&[&seeds]),
+                treasury_amount,
+            )?;
+        }
 
         Ok(())
     }
@@ -667,6 +692,8 @@ pub struct DropStakeRewardPool<'info> {
 pub struct Officer {
     // Priviledged account.
     pub authority: Pubkey,
+    // Required trade interval in seconds.
+    pub swap_interval: i64,
     // Vault holding the officer's SRM tokens prior to distribution.
     pub srm_vault: Pubkey,
     // Escrow SRM vault holding tokens which are dropped onto stakers.
@@ -701,6 +728,9 @@ pub struct Officer {
 #[account]
 #[derive(Default)]
 pub struct MarketAuth {
+    // Unix timestamp of hte last time the program traded on this market.
+    // Used to help ensure the program doesn't have too much market impact.
+    pub last_trade: i64,
     // Bump seed for this account's PDA.
     pub bump: u8,
 }
@@ -903,6 +933,8 @@ pub enum ErrorCode {
     InsufficientDistributionAmount,
     #[msg("Must drop more SRM onto the stake pool")]
     InsufficientStakeReward,
+    #[msg("Swap interval must pass before another trade can occur")]
+    SwapIntervalBlocked,
 }
 
 // Access control.
@@ -917,6 +949,25 @@ fn is_distribution_valid(d: &Distribution) -> Result<()> {
 fn is_distribution_ready(accounts: &Distribute) -> Result<()> {
     if accounts.srm_vault.amount < 1_000_000 {
         return Err(ErrorCode::InsufficientDistributionAmount.into());
+    }
+    Ok(())
+}
+
+// Asserts the given accounts can swap in this transaction.
+fn can_swap(officer: &Officer, auth: &MarketAuth, ixs: &UncheckedAccount) -> Result<()> {
+    is_swap_interval_elapsed(officer, auth)?;
+    is_not_trading(ixs)?;
+    Ok(())
+}
+
+fn is_swap_interval_elapsed(officer: &Officer, auth: &MarketAuth) -> Result<()> {
+    if Clock::get()?
+        .unix_timestamp
+        .checked_sub(auth.last_trade)
+        .unwrap()
+        < officer.swap_interval
+    {
+        return Err(ErrorCode::SwapIntervalBlocked.into());
     }
     Ok(())
 }
