@@ -25,6 +25,8 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 pub mod escrow {
     use super::*;
 
+    const ESCROW_PDA_SEED: &[u8] = b"escrow";
+
     pub fn initialize_escrow(
         ctx: Context<InitializeEscrow>,
         initializer_amount: u64,
@@ -48,14 +50,14 @@ pub mod escrow {
         ctx.accounts.escrow_account.initializer_amount = initializer_amount;
         ctx.accounts.escrow_account.taker_amount = taker_amount;
 
-        let (pda, _bump_seed) = Pubkey::find_program_address(&[b"escrow"], ctx.program_id);
+        let (pda, _bump_seed) = Pubkey::find_program_address(&[ESCROW_PDA_SEED], ctx.program_id);
         token::set_authority(ctx.accounts.into(), AuthorityType::AccountOwner, Some(pda))?;
         Ok(())
     }
 
     pub fn cancel_escrow(ctx: Context<CancelEscrow>) -> ProgramResult {
-        let (_pda, bump_seed) = Pubkey::find_program_address(&[b"escrow"], ctx.program_id);
-        let seeds = &[&b"escrow"[..], &[bump_seed]];
+        let (_pda, bump_seed) = Pubkey::find_program_address(&[ESCROW_PDA_SEED], ctx.program_id);
+        let seeds = &[&ESCROW_PDA_SEED[..], &[bump_seed]];
 
         token::set_authority(
             ctx.accounts
@@ -70,8 +72,8 @@ pub mod escrow {
 
     pub fn exchange(ctx: Context<Exchange>) -> ProgramResult {
         // Transferring from initializer to taker
-        let (_pda, bump_seed) = Pubkey::find_program_address(&[b"escrow"], ctx.program_id);
-        let seeds = &[&b"escrow"[..], &[bump_seed]];
+        let (_pda, bump_seed) = Pubkey::find_program_address(&[ESCROW_PDA_SEED], ctx.program_id);
+        let seeds = &[&ESCROW_PDA_SEED[..], &[bump_seed]];
 
         token::transfer(
             ctx.accounts
