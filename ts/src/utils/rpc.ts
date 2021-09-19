@@ -52,8 +52,8 @@ export async function getMultipleAccounts(
   } else {
     const batches = chunks(publicKeys, GET_MULTIPLE_ACCOUNTS_LIMIT);
     const results = await Promise.all<
-        Array<null | { publicKey: PublicKey; account: AccountInfo<Buffer> }>
-      >(batches.map(batch => getMultipleAccountsCore(connection, batch)));
+      Array<null | { publicKey: PublicKey; account: AccountInfo<Buffer> }>
+    >(batches.map((batch) => getMultipleAccountsCore(connection, batch)));
     return results.flat();
   }
 }
