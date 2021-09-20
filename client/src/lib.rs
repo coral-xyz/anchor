@@ -406,7 +406,58 @@ impl<'a> RequestBuilder<'a> {
         self.signers.push(signer);
         self
     }
+    pub fn send_with_config(self, config: RpcSendTransactionConfig) -> Result<Signature, ClientError> {
+        let accounts = match self.namespace {
+            RequestNamespace::State { new } => {
+                let mut accounts = match new {
+                    false => vec![AccountMeta::new(
+                        anchor_lang::__private::state::address(&self.program_id),
+                        false,
+                    )],
+                    true => vec![
+                        AccountMeta::new_readonly(self.payer.pubkey(), true),
+                        AccountMeta::new(
+                            anchor_lang::__private::state::address(&self.program_id),
+                            false,
+                        ),
+                        AccountMeta::new_readonly(
+                            Pubkey::find_program_address(&[], &self.program_id).0,
+                            false,
+                        ),
+                        AccountMeta::new_readonly(system_program::ID, false),
+                        AccountMeta::new_readonly(self.program_id, false),
+                    ],
+                };
+                accounts.extend_from_slice(&self.accounts);
+                accounts
+            }
+            _ => self.accounts,
+        };
+        let mut instructions = self.instructions;
+        if let Some(ix_data) = self.instruction_data {
+            instructions.push(Instruction {
+                program_id: self.program_id,
+                data: ix_data,
+                accounts,
+            });
+        }
 
+        let mut signers = self.signers;
+        signers.push(&self.payer);
+
+        let rpc_client = RpcClient::new_with_commitment(self.cluster, self.options);
+
+        let tx = {
+            let (recent_hash, _fee_calc) = rpc_client.get_recent_blockhash()?;
+            Transaction::new_signed_with_payer(
+                &instructions,
+                Some(&self.payer.pubkey()),
+                &signers,
+                recent_hash,
+            )
+        };
+        rpc_client.send_transaction_with_config(&tx, config).map_err(Into::into)
+    }
     pub fn send(self) -> Result<Signature, ClientError> {
         let accounts = match self.namespace {
             RequestNamespace::State { new } => {
