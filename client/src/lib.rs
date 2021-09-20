@@ -10,7 +10,7 @@ use regex::Regex;
 use solana_client::client_error::ClientError as SolanaClientError;
 use solana_client::pubsub_client::{PubsubClient, PubsubClientError, PubsubClientSubscription};
 use solana_client::rpc_client::RpcClient;
-use solana_client::rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilter};
+use solana_client::rpc_config::{RpcSendTransactionConfig, RpcTransactionLogsConfig, RpcTransactionLogsFilter};
 use solana_client::rpc_response::{Response as RpcResponse, RpcLogsResponse};
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::signature::{Keypair, Signature, Signer};
