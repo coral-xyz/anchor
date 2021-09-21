@@ -1,5 +1,5 @@
 <div align="center">
-  <img style="border-radius:50%" height="170x" src="https://pbs.twimg.com/media/E_0PN1rVgAYbKzv?format=jpg&name=4096x4096" />
+  <img height="170x" src="https://media.discordapp.net/attachments/889596381235392522/889979895860568114/anchor-radius.png?width=746&height=746" />
 
   <h1>Anchor</h1>
 
