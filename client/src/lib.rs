@@ -10,7 +10,9 @@ use regex::Regex;
 use solana_client::client_error::ClientError as SolanaClientError;
 use solana_client::pubsub_client::{PubsubClient, PubsubClientError, PubsubClientSubscription};
 use solana_client::rpc_client::RpcClient;
-use solana_client::rpc_config::{RpcSendTransactionConfig, RpcTransactionLogsConfig, RpcTransactionLogsFilter};
+use solana_client::rpc_config::{
+    RpcSendTransactionConfig, RpcTransactionLogsConfig, RpcTransactionLogsFilter,
+};
 use solana_client::rpc_response::{Response as RpcResponse, RpcLogsResponse};
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::signature::{Keypair, Signature, Signer};
@@ -406,7 +408,10 @@ impl<'a> RequestBuilder<'a> {
         self.signers.push(signer);
         self
     }
-    pub fn send_with_config(self, config: RpcSendTransactionConfig) -> Result<Signature, ClientError> {
+    pub fn send_with_config(
+        self,
+        config: RpcSendTransactionConfig,
+    ) -> Result<Signature, ClientError> {
         let accounts = match self.namespace {
             RequestNamespace::State { new } => {
                 let mut accounts = match new {
@@ -456,7 +461,9 @@ impl<'a> RequestBuilder<'a> {
                 recent_hash,
             )
         };
-        rpc_client.send_transaction_with_config(&tx, config).map_err(Into::into)
+        rpc_client
+            .send_transaction_with_config(&tx, config)
+            .map_err(Into::into)
     }
     pub fn send(self) -> Result<Signature, ClientError> {
         let accounts = match self.namespace {
