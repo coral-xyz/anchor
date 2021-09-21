@@ -1,5 +1,5 @@
 <div align="center">
-  <img style="border-radius:75px; height: 170px;" src="https://pbs.twimg.com/media/E_0PN1rVgAYbKzv?format=jpg&name=4096x4096" />
+  <img style="border-radius: 90px; height: 170px;" src="https://pbs.twimg.com/media/E_0PN1rVgAYbKzv?format=jpg&name=4096x4096" />
 
   <h1>Anchor</h1>
 
