@@ -1,5 +1,5 @@
 <div align="center">
-  <img height="170" src="https://pbs.twimg.com/media/E_0PN1rVgAYbKzv?format=jpg&name=4096x4096" />
+  <img style="border-radius:75px" height="170" src="https://pbs.twimg.com/media/E_0PN1rVgAYbKzv?format=jpg&name=4096x4096" />
 
   <h1>Anchor</h1>
 
@@ -8,9 +8,9 @@
   </p>
 
   <p>
-    <a href="https://travis-ci.com/project-serum/anchor"><img style="border-radius:75px" alt="Build Status" src="https://travis-ci.com/project-serum/anchor.svg?branch=master" /></a>
+    <a href="https://travis-ci.com/project-serum/anchor"><img alt="Build Status" src="https://travis-ci.com/project-serum/anchor.svg?branch=master" /></a>
     <a href="https://project-serum.github.io/anchor/"><img alt="Tutorials" src="https://img.shields.io/badge/docs-tutorials-orange" /></a>
-	<a href="https://discord.com/channels/889577356681945098"><img alt="Discord Chat" src="https://img.shields.io/discord/889577356681945098?color=blueviolet" /></a>
+    <a href="https://discord.com/channels/889577356681945098"><img alt="Discord Chat" src="https://img.shields.io/discord/889577356681945098?color=blueviolet" /></a>
     <a href="https://opensource.org/licenses/Apache-2.0"><img alt="License" src="https://img.shields.io/github/license/project-serum/anchor?color=ff69b4" /></a>
   </p>
 </div>
