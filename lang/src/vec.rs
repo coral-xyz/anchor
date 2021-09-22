@@ -64,6 +64,13 @@ mod tests {
         #[account(mut)]
         tests: Vec<AccountInfo<'info>>,
     }
+    #[derive(Accounts)]
+    pub struct Test3<'info> {
+        #[account(signer)]
+        test: AccountInfo<'info>,
+        #[account(signer)]
+        tests: Vec<AccountInfo<'info>>,
+    }
 
     #[test]
     fn test_accounts_trait_for_vec() {

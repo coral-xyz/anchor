@@ -197,12 +197,13 @@ pub fn generate_constraint_has_one(f: &Field, c: &ConstraintHasOne) -> proc_macr
 
 pub fn generate_constraint_signer(f: &Field, _c: &ConstraintSigner) -> proc_macro2::TokenStream {
     let ident = &f.ident;
-    let info = match f.ty {
-        Ty::AccountInfo => quote! { #ident },
-        Ty::ProgramAccount(_) => quote! { #ident.to_account_info() },
-        Ty::Account(_) => quote! { #ident.to_account_info() },
-        Ty::Loader(_) => quote! { #ident.to_account_info() },
-        Ty::CpiAccount(_) => quote! { #ident.to_account_info() },
+    let is_signer = match f.ty {
+        Ty::AccountInfo => quote! { #ident.to_account_info().is_signer },
+        Ty::AccountsInfo => quote! { #ident.to_account_infos().iter().all(|x| x.is_signer) },
+        Ty::ProgramAccount(_) => quote! { #ident.to_account_info().to_account_info().is_signer },
+        Ty::Account(_) => quote! { #ident.to_account_info().to_account_info().is_signer },
+        Ty::Loader(_) => quote! { #ident.to_account_info().to_account_info().is_signer },
+        Ty::CpiAccount(_) => quote! { #ident.to_account_info().to_account_info().is_signer },
         _ => panic!("Invalid syntax: signer cannot be specified."),
     };
     quote! {
@@ -212,7 +213,7 @@ pub fn generate_constraint_signer(f: &Field, _c: &ConstraintSigner) -> proc_macr
         //
         // This check will be performed on the other end of the invocation.
         if cfg!(not(feature = "cpi")) {
-            if !#info.to_account_info().is_signer {
+            if !#is_signer {
                 return Err(anchor_lang::__private::ErrorCode::ConstraintSigner.into());
             }
         }
