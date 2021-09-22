@@ -120,13 +120,40 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn test_accounts_exit_trait_for_exit_fails() {
-        todo!()
-    }
+    fn test_accounts_exit_trait_for_vec() -> ProgramResult {
+        let program_id = Pubkey::default();
 
-    #[test]
-    fn test_accounts_exit_trait_for_vec() {
-        todo!()
+        let key = Pubkey::default();
+        let mut lamports1 = 0;
+        let mut data1 = vec![0; 10];
+        let owner = Pubkey::default();
+        let account1 = AccountInfo::new(
+            &key,
+            true,
+            true,
+            &mut lamports1,
+            &mut data1,
+            &owner,
+            false,
+            Epoch::default(),
+        );
+
+        let mut lamports2 = 0;
+        let mut data2 = vec![0; 10];
+        let account2 = AccountInfo::new(
+            &key,
+            true,
+            true,
+            &mut lamports2,
+            &mut data2,
+            &owner,
+            false,
+            Epoch::default(),
+        );
+
+        let mut accounts = &[account1, account2][..];
+        let parsed_accounts = Vec::<Test>::try_accounts(&program_id, &mut accounts, &[]).unwrap();
+        Vec::<Test>::exit(&parsed_accounts, &program_id)?;
+        Ok(())
     }
 }
