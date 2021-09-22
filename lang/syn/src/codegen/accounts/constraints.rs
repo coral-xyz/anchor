@@ -170,8 +170,12 @@ pub fn generate_constraint_close(f: &Field, c: &ConstraintClose) -> proc_macro2:
 
 pub fn generate_constraint_mut(f: &Field, _c: &ConstraintMut) -> proc_macro2::TokenStream {
     let ident = &f.ident;
+    let is_writable = match f.ty {
+        Ty::AccountsInfo => quote! { #ident.to_account_infos().iter().all(|x| x.is_writable) },
+        _ => quote! { #ident.to_account_info().is_writable },
+    };
     quote! {
-        if !#ident.to_account_info().is_writable {
+        if !#is_writable {
             return Err(anchor_lang::__private::ErrorCode::ConstraintMut.into());
         }
     }

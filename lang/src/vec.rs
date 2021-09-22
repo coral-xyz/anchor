@@ -61,6 +61,7 @@ mod tests {
     pub struct Test2<'info> {
         #[account(signer)]
         test: AccountInfo<'info>,
+        #[account(mut)]
         tests: Vec<AccountInfo<'info>>,
     }
 
