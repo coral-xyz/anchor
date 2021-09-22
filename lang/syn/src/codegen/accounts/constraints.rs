@@ -284,9 +284,8 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
             let s = &mut c.seeds.clone();
             // If the seeds came with a trailing comma, we need to chop it off
             // before we interpolate them below.
-            if s.trailing_punct() {
-                let last = s.pop().unwrap();
-                s.push_value(last.value().clone());
+            if let Some(pair) = s.pop() {
+                s.push_value(pair.into_value());
             }
             let inner = match c.bump.as_ref() {
                 // Bump target not given. Use the canonical bump.
