@@ -18,7 +18,7 @@ pub struct TestTokenSeedsInit<'info> {
     pub mint: Account<'info, Mint>,
     #[account(
         init,
-        seeds = [b"my-token-seed".as_ref()],
+        seeds = [b"my-token-seed".as_ref(),],
         bump = token_bump,
         payer = authority,
         token::mint = mint,
@@ -184,4 +184,12 @@ pub struct TestInitToken<'info> {
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestCompositePayer<'info> {
+    pub composite: TestInit<'info>,
+    #[account(init, payer = composite.payer, space = 8 + size_of::<Data>())]
+    pub data: Account<'info, Data>,
+    pub system_program: Program<'info, System>,
 }

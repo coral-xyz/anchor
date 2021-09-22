@@ -620,7 +620,7 @@ pub enum ConstraintRentExempt {
 #[derive(Debug, Clone)]
 pub struct ConstraintInitGroup {
     pub seeds: Option<ConstraintSeedsGroup>,
-    pub payer: Option<Ident>,
+    pub payer: Option<Expr>,
     pub space: Option<Expr>,
     pub kind: InitKind,
 }
@@ -647,7 +647,7 @@ pub struct ConstraintState {
 
 #[derive(Debug, Clone)]
 pub struct ConstraintPayer {
-    pub target: Ident,
+    pub target: Expr,
 }
 
 #[derive(Debug, Clone)]
