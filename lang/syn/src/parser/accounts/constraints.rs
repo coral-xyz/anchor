@@ -503,7 +503,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                             )),
                         },
                     }
-								} else if let Some(tm) = &associated_token_mint {
+                } else if let Some(tm) = &associated_token_mint {
                     InitKind::AssociatedToken {
                         mint: tm.clone().into_inner().mint,
                         owner: match &associated_token_authority {

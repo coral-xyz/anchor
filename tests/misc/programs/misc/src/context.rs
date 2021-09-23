@@ -35,11 +35,11 @@ pub struct TestTokenSeedsInit<'info> {
 #[derive(Accounts)]
 pub struct TestInitAssociatedToken<'info> {
     #[account(
-				init,
-				payer = payer,
-				associated_token::mint = mint,
-				associated_token::authority = payer,
-		)]
+        init,
+        payer = payer,
+        associated_token::mint = mint,
+        associated_token::authority = payer,
+    )]
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
     pub payer: Signer<'info>,
