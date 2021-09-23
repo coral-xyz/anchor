@@ -171,7 +171,7 @@ pub fn generate_constraint_close(f: &Field, c: &ConstraintClose) -> proc_macro2:
 pub fn generate_constraint_mut(f: &Field, _c: &ConstraintMut) -> proc_macro2::TokenStream {
     let ident = &f.ident;
     let is_writable = match f.ty {
-        Ty::AccountsInfo => quote! { #ident.to_account_infos().iter().all(|x| x.is_writable) },
+        Ty::VecAccount => quote! { #ident.to_account_infos().iter().all(|x| x.is_writable) },
         _ => quote! { #ident.to_account_info().is_writable },
     };
     quote! {
@@ -199,7 +199,7 @@ pub fn generate_constraint_signer(f: &Field, _c: &ConstraintSigner) -> proc_macr
     let ident = &f.ident;
     let is_signer = match f.ty {
         Ty::AccountInfo => quote! { #ident.to_account_info().is_signer },
-        Ty::AccountsInfo => quote! { #ident.to_account_infos().iter().all(|x| x.is_signer) },
+        Ty::VecAccount => quote! { #ident.to_account_infos().iter().all(|x| x.is_signer) },
         Ty::ProgramAccount(_) => quote! { #ident.to_account_info().to_account_info().is_signer },
         Ty::Account(_) => quote! { #ident.to_account_info().to_account_info().is_signer },
         Ty::Loader(_) => quote! { #ident.to_account_info().to_account_info().is_signer },

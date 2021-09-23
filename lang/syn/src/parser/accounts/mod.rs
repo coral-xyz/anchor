@@ -94,7 +94,7 @@ fn parse_ty(f: &syn::Field) -> ParseResult<Ty> {
         "CpiAccount" => Ty::CpiAccount(parse_cpi_account(&path)?),
         "Sysvar" => Ty::Sysvar(parse_sysvar(&path)?),
         "AccountInfo" => Ty::AccountInfo,
-        "Vec" => Ty::AccountsInfo,
+        "Vec" => Ty::VecAccount,
         "UncheckedAccount" => Ty::UncheckedAccount,
         "Loader" => Ty::Loader(parse_program_account_zero_copy(&path)?),
         "Account" => Ty::Account(parse_account_ty(&path)?),
