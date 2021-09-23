@@ -175,8 +175,8 @@ impl Field {
         let account_ty = self.account_ty();
         let container_ty = self.container_ty();
         match &self.ty {
-            Ty::VecAccount => quote! {
-                Vec<AccountInfo>
+            Ty::VecAccount(_) => quote! {
+                Vec<#container_ty<#account_ty>>
             },
             Ty::AccountInfo => quote! {
                 AccountInfo
@@ -228,7 +228,7 @@ impl Field {
         let container_ty = self.container_ty();
         match &self.ty {
             Ty::AccountInfo => quote! { #field.to_account_info() },
-            Ty::VecAccount => quote! { #field.to_account_infos() },
+            Ty::VecAccount(_) => quote! { #field.to_account_infos() },
             Ty::UncheckedAccount => {
                 quote! { UncheckedAccount::try_from(#field.to_account_info()) }
             }
@@ -286,7 +286,13 @@ impl Field {
             Ty::ProgramState(_) => quote! { anchor_lang::ProgramState },
             Ty::Program(_) => quote! { anchor_lang::Program },
             Ty::AccountInfo => quote! {},
-            Ty::VecAccount => quote! {},
+            Ty::VecAccount(path) => {
+                if path.account_type_path == None {
+                    quote! { AccountInfo }
+                } else {
+                    quote! { anchor_lang::Account }
+                }
+            }
             Ty::UncheckedAccount => quote! {},
             Ty::Signer => quote! {},
         }
@@ -295,9 +301,12 @@ impl Field {
     // Returns the inner account struct type.
     pub fn account_ty(&self) -> proc_macro2::TokenStream {
         match &self.ty {
-            Ty::VecAccount => quote! {
-                Vec<AccountInfo>
-            },
+            Ty::VecAccount(ty) => {
+                let ident = &ty.account_type_path;
+                quote! {
+                    #ident
+                }
+            }
             Ty::AccountInfo => quote! {
                 AccountInfo
             },
@@ -377,7 +386,7 @@ pub struct CompositeField {
 // A type of an account field.
 #[derive(Debug, PartialEq)]
 pub enum Ty {
-    VecAccount,
+    VecAccount(VecAccountTy),
     AccountInfo,
     UncheckedAccount,
     ProgramState(ProgramStateTy),
@@ -445,6 +454,12 @@ pub struct AccountTy {
 pub struct ProgramTy {
     // The struct type of the account.
     pub account_type_path: TypePath,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct VecAccountTy {
+    // The struct type of the account.
+    pub account_type_path: Option<TypePath>,
 }
 
 #[derive(Debug)]

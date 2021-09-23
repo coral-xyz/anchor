@@ -94,7 +94,7 @@ fn parse_ty(f: &syn::Field) -> ParseResult<Ty> {
         "CpiAccount" => Ty::CpiAccount(parse_cpi_account(&path)?),
         "Sysvar" => Ty::Sysvar(parse_sysvar(&path)?),
         "AccountInfo" => Ty::AccountInfo,
-        "Vec" => Ty::VecAccount,
+        "Vec" => Ty::VecAccount(parse_vec_account(&path)?),
         "UncheckedAccount" => Ty::UncheckedAccount,
         "Loader" => Ty::Loader(parse_program_account_zero_copy(&path)?),
         "Account" => Ty::Account(parse_account_ty(&path)?),
@@ -175,6 +175,21 @@ fn parse_account_ty(path: &syn::Path) -> ParseResult<AccountTy> {
     })
 }
 
+fn parse_vec_account(path: &syn::Path) -> ParseResult<VecAccountTy> {
+    if parser::tts_to_string(path)
+        .replace(" ", "")
+        .starts_with("Vec<AccountInfo<")
+    {
+        return Ok(VecAccountTy {
+            account_type_path: None,
+        });
+    }
+    let account_type_path = parse_account(path)?;
+    Ok(VecAccountTy {
+        account_type_path: Some(account_type_path),
+    })
+}
+
 fn parse_program_ty(path: &syn::Path) -> ParseResult<ProgramTy> {
     let account_type_path = parse_account(path)?;
     Ok(ProgramTy { account_type_path })
@@ -185,6 +200,9 @@ fn parse_account(mut path: &syn::Path) -> ParseResult<syn::TypePath> {
     if parser::tts_to_string(path)
         .replace(" ", "")
         .starts_with("Box<Account<")
+        || parser::tts_to_string(path)
+            .replace(" ", "")
+            .starts_with("Vec<Account<")
     {
         let segments = &path.segments[0];
         match &segments.arguments {
