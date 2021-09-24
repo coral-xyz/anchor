@@ -1371,11 +1371,9 @@ fn test(
         };
 
         // Keep validator running if needed.
-        if test_result.is_ok() {
-            if detach {
-                println!("Local validator still running. Press Ctrl + C quit.");
-                std::io::stdin().lock().lines().next().unwrap().unwrap();
-            }
+        if test_result.is_ok() && detach {
+            println!("Local validator still running. Press Ctrl + C quit.");
+            std::io::stdin().lock().lines().next().unwrap().unwrap();
         }
 
         // Check all errors and shut down.
