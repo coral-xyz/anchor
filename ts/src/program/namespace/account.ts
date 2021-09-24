@@ -199,15 +199,9 @@ export class AccountClient<T = any> {
    *
    *                When filters are of type `GetProgramAccountsFilter[]`,
    *                filters are appended after the discriminator filter.
-   *
-   * @param offset  Number of bytes to skip before the discriminator starts.
-   *
-   *                When offset is not provided it defaults to 0.
-   *
    */
   async all(
-    filters?: Buffer | GetProgramAccountsFilter[],
-    offset = 0
+    filters?: Buffer | GetProgramAccountsFilter[]
   ): Promise<ProgramAccount<T>[]> {
     const discriminator = AccountsCoder.accountDiscriminator(
       this._idlAccount.name
@@ -220,7 +214,7 @@ export class AccountClient<T = any> {
         filters: [
           {
             memcmp: {
-              offset,
+              offset: 0,
               bytes: bs58.encode(
                 filters instanceof Buffer
                   ? Buffer.concat([discriminator, filters])

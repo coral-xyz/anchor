@@ -708,11 +708,6 @@ describe("misc", () => {
       await program.account.dataWithFilter.all(
         program.provider.wallet.publicKey.toBuffer()
       );
-    const allAccountsFilteredByBufferAndOffset =
-      await program.account.dataWithFilter.all(
-        program.provider.wallet.publicKey.toBuffer(),
-        1
-      );
     const allAccountsFilteredByProgramFilters1 =
       await program.account.dataWithFilter.all([
         {
@@ -737,8 +732,6 @@ describe("misc", () => {
     assert.equal(allAccounts.length, 4);
     // Filtering by main wallet there should be 3 accounts
     assert.equal(allAccountsFilteredByBuffer.length, 3);
-    // By changing the offset of the discriminator everything is filtered out
-    assert.equal(allAccountsFilteredByBufferAndOffset.length, 0);
     // Filtering all the main wallet accounts and matching the filterable1 value
     // results in a 2 accounts
     assert.equal(allAccountsFilteredByProgramFilters1.length, 2);
