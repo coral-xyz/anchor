@@ -601,6 +601,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         if !matches!(self.f_ty, Some(Ty::ProgramAccount(_)))
             && !matches!(self.f_ty, Some(Ty::Account(_)))
             && !matches!(self.f_ty, Some(Ty::Loader(_)))
+            && !matches!(self.f_ty, Some(Ty::LoaderAccount(_)))
         {
             return Err(ParseError::new(
                 c.span(),

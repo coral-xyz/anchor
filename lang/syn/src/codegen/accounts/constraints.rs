@@ -182,6 +182,7 @@ pub fn generate_constraint_has_one(f: &Field, c: &ConstraintHasOne) -> proc_macr
     let ident = &f.ident;
     let field = match &f.ty {
         Ty::Loader(_) => quote! {#ident.load()?},
+        Ty::LoaderAccount(_) => quote! {#ident.load()?},
         _ => quote! {#ident},
     };
     quote! {
@@ -198,6 +199,7 @@ pub fn generate_constraint_signer(f: &Field, _c: &ConstraintSigner) -> proc_macr
         Ty::ProgramAccount(_) => quote! { #ident.to_account_info() },
         Ty::Account(_) => quote! { #ident.to_account_info() },
         Ty::Loader(_) => quote! { #ident.to_account_info() },
+        Ty::LoaderAccount(_) => quote! { #ident.to_account_info() },
         Ty::CpiAccount(_) => quote! { #ident.to_account_info() },
         _ => panic!("Invalid syntax: signer cannot be specified."),
     };
@@ -467,7 +469,7 @@ pub fn generate_init(
                 // and take the length (with +8 for the discriminator.)
                 None => {
                     let account_ty = f.account_ty();
-                    match matches!(f.ty, Ty::Loader(_)) {
+                    match matches!(f.ty, Ty::Loader(_) | Ty::LoaderAccount(_)) {
                         false => {
                             quote! {
                                 let space = 8 + #account_ty::default().try_to_vec().unwrap().len();
