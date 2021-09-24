@@ -100,6 +100,10 @@ pub enum Command {
         /// use this to save time when running test and the program code is not altered.
         #[clap(long)]
         skip_build: bool,
+        /// Flag to keep the local validator running after tests
+        /// to be able to check the transactions.
+        #[clap(long)]
+        detach: bool,
         #[clap(multiple_values = true)]
         args: Vec<String>,
     },
@@ -280,12 +284,14 @@ pub fn entry(opts: Opts) -> Result<()> {
             skip_deploy,
             skip_local_validator,
             skip_build,
+            detach,
             args,
         } => test(
             &opts.cfg_override,
             skip_deploy,
             skip_local_validator,
             skip_build,
+            detach,
             args,
         ),
         #[cfg(feature = "dev")]
@@ -1308,6 +1314,7 @@ fn test(
     skip_deploy: bool,
     skip_local_validator: bool,
     skip_build: bool,
+    detach: bool,
     extra_args: Vec<String>,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
@@ -1363,6 +1370,12 @@ fn test(
                 .context(cmd)
         };
 
+        // Keep validator running if needed.
+        if test_result.is_ok() && detach {
+            println!("Local validator still running. Press Ctrl + C quit.");
+            std::io::stdin().lock().lines().next().unwrap().unwrap();
+        }
+
         // Check all errors and shut down.
         if let Some(mut child) = validator_handle {
             if let Err(err) = child.kill() {
@@ -1374,6 +1387,8 @@ fn test(
                 println!("Failed to kill subprocess {}: {}", child.id(), err);
             }
         }
+
+        // Must exist *after* shutting down the validator and log streams.
         match test_result {
             Ok(exit) => {
                 if !exit.status.success() {
@@ -1792,6 +1807,7 @@ fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
             std::fs::write("deploy.js", deploy_script_host_str)?;
             std::process::Command::new("node")
                 .arg("deploy.js")
+                .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .output()?

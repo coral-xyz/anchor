@@ -12,12 +12,13 @@ import Provider from "../../provider";
 import { Idl, IdlTypeDef } from "../../idl";
 import Coder, {
   ACCOUNT_DISCRIMINATOR_SIZE,
-  accountDiscriminator,
   accountSize,
+  AccountsCoder,
 } from "../../coder";
 import { Subscription, Address, translateAddress } from "../common";
 import { getProvider } from "../../";
 import * as pubkeyUtil from "../../utils/pubkey";
+import * as rpcUtil from "../../utils/rpc";
 
 export default class AccountFactory {
   public static build(
@@ -67,7 +68,7 @@ export interface AccountNamespace {
   [key: string]: AccountClient;
 }
 
-export class AccountClient {
+export class AccountClient<T = any> {
   /**
    * Returns the number of bytes in this account.
    */
@@ -118,20 +119,22 @@ export class AccountClient {
   }
 
   /**
-   * Returns a deserialized account.
+   * Returns a deserialized account, returning null if it doesn't exist.
    *
    * @param address The address of the account to fetch.
    */
-  async fetch(address: Address): Promise<Object> {
+  async fetchNullable(address: Address): Promise<T | null> {
     const accountInfo = await this._provider.connection.getAccountInfo(
       translateAddress(address)
     );
     if (accountInfo === null) {
-      throw new Error(`Account does not exist ${address.toString()}`);
+      return null;
     }
 
     // Assert the account discriminator is correct.
-    const discriminator = await accountDiscriminator(this._idlAccount.name);
+    const discriminator = AccountsCoder.accountDiscriminator(
+      this._idlAccount.name
+    );
     if (discriminator.compare(accountInfo.data.slice(0, 8))) {
       throw new Error("Invalid account discriminator");
     }
@@ -140,10 +143,53 @@ export class AccountClient {
   }
 
   /**
+   * Returns a deserialized account.
+   *
+   * @param address The address of the account to fetch.
+   */
+  async fetch(address: Address): Promise<T> {
+    const data = await this.fetchNullable(address);
+    if (data === null) {
+      throw new Error(`Account does not exist ${address.toString()}`);
+    }
+    return data;
+  }
+
+  /**
+   * Returns multiple deserialized accounts.
+   * Accounts not found or with wrong discriminator are returned as null.
+   *
+   * @param addresses The addresses of the accounts to fetch.
+   */
+  async fetchMultiple(addresses: Address[]): Promise<(Object | null)[]> {
+    const accounts = await rpcUtil.getMultipleAccounts(
+      this._provider.connection,
+      addresses.map((address) => translateAddress(address))
+    );
+
+    const discriminator = AccountsCoder.accountDiscriminator(
+      this._idlAccount.name
+    );
+    // Decode accounts where discriminator is correct, null otherwise
+    return accounts.map((account) => {
+      if (account == null) {
+        return null;
+      }
+      if (discriminator.compare(account?.account.data.slice(0, 8))) {
+        return null;
+      }
+      return this._coder.accounts.decode(
+        this._idlAccount.name,
+        account?.account.data
+      );
+    });
+  }
+
+  /**
    * Returns all instances of this account type for the program.
    */
-  async all(filter?: Buffer): Promise<ProgramAccount<any>[]> {
-    let bytes = await accountDiscriminator(this._idlAccount.name);
+  async all(filter?: Buffer): Promise<ProgramAccount<T>[]> {
+    let bytes = AccountsCoder.accountDiscriminator(this._idlAccount.name);
     if (filter !== undefined) {
       bytes = Buffer.concat([bytes, filter]);
     }
@@ -250,7 +296,7 @@ export class AccountClient {
    * Function returning the associated account. Args are keys to associate.
    * Order matters.
    */
-  async associated(...args: Array<PublicKey | Buffer>): Promise<any> {
+  async associated(...args: Array<PublicKey | Buffer>): Promise<T> {
     const addr = await this.associatedAddress(...args);
     return await this.fetch(addr);
   }

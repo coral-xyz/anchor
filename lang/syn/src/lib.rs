@@ -243,6 +243,13 @@ impl Field {
                     }
                 }
             }
+            Ty::CpiAccount(_) => {
+                quote! {
+                    #container_ty::try_from_unchecked(
+                        &#field,
+                    )?
+                }
+            }
             _ => {
                 let owner_addr = match &kind {
                     None => quote! { program_id },
@@ -554,6 +561,8 @@ pub enum ConstraintToken {
     Address(Context<ConstraintAddress>),
     TokenMint(Context<ConstraintTokenMint>),
     TokenAuthority(Context<ConstraintTokenAuthority>),
+    AssociatedTokenMint(Context<ConstraintTokenMint>),
+    AssociatedTokenAuthority(Context<ConstraintTokenAuthority>),
     MintAuthority(Context<ConstraintMintAuthority>),
     MintDecimals(Context<ConstraintMintDecimals>),
     Bump(Context<ConstraintTokenBump>),
@@ -611,7 +620,7 @@ pub enum ConstraintRentExempt {
 #[derive(Debug, Clone)]
 pub struct ConstraintInitGroup {
     pub seeds: Option<ConstraintSeedsGroup>,
-    pub payer: Option<Ident>,
+    pub payer: Option<Expr>,
     pub space: Option<Expr>,
     pub kind: InitKind,
 }
@@ -638,7 +647,7 @@ pub struct ConstraintState {
 
 #[derive(Debug, Clone)]
 pub struct ConstraintPayer {
-    pub target: Ident,
+    pub target: Expr,
 }
 
 #[derive(Debug, Clone)]
@@ -653,6 +662,7 @@ pub enum InitKind {
     // Owner for token and mint represents the authority. Not to be confused
     // with the owner of the AccountInfo.
     Token { owner: Expr, mint: Expr },
+    AssociatedToken { owner: Expr, mint: Expr },
     Mint { owner: Expr, decimals: Expr },
 }
 

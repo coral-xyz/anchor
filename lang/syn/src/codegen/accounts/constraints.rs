@@ -281,7 +281,12 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
     let seeds_with_nonce = match &c.seeds {
         None => quote! {},
         Some(c) => {
-            let s = &c.seeds;
+            let s = &mut c.seeds.clone();
+            // If the seeds came with a trailing comma, we need to chop it off
+            // before we interpolate them below.
+            if let Some(pair) = s.pop() {
+                s.push_value(pair.into_value());
+            }
             let inner = match c.bump.as_ref() {
                 // Bump target not given. Use the canonical bump.
                 None => {
@@ -401,6 +406,28 @@ pub fn generate_init(
                     };
                     let cpi_ctx = CpiContext::new(cpi_program, accounts);
                     anchor_spl::token::initialize_account(cpi_ctx)?;
+                    let pa: #ty_decl = #from_account_info;
+                    pa
+                };
+            }
+        }
+        InitKind::AssociatedToken { owner, mint } => {
+            quote! {
+                let #field: #ty_decl = {
+                    #payer
+
+                    let cpi_program = associated_token_program.to_account_info();
+                    let cpi_accounts = anchor_spl::associated_token::Create {
+                        payer: payer.to_account_info(),
+                        associated_token: #field.to_account_info(),
+                        authority: #owner.to_account_info(),
+                        mint: #mint.to_account_info(),
+                        system_program: system_program.to_account_info(),
+                        token_program: token_program.to_account_info(),
+                        rent: rent.to_account_info(),
+                    };
+                    let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+                    anchor_spl::associated_token::create(cpi_ctx)?;
                     let pa: #ty_decl = #from_account_info;
                     pa
                 };
