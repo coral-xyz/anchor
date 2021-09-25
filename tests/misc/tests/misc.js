@@ -702,7 +702,7 @@ describe("misc", () => {
         signers: [data4],
       }),
     ]);
-    // Call for multiple kinds of .all
+    // Call for multiple kinds of .all.
     const allAccounts = await program.account.dataWithFilter.all();
     const allAccountsFilteredByBuffer =
       await program.account.dataWithFilter.all(
