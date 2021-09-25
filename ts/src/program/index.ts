@@ -205,7 +205,7 @@ export class Program<IDL extends Idl = Idl> {
    * one can use this to send transactions and read accounts for the state
    * abstraction.
    */
-  readonly state: StateClient<IDL> | undefined;
+  readonly state?: StateClient<IDL>;
 
   /**
    * Address of the program.
