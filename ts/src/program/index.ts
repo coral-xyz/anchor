@@ -279,7 +279,7 @@ export class Program<IDL extends Idl = Idl> {
   public static async at<IDL extends Idl = Idl>(
     address: Address,
     provider?: Provider
-  ) {
+  ): Promise<Program<IDL>> {
     const programId = translateAddress(address);
 
     const idl = await Program.fetchIdl<IDL>(programId, provider);
