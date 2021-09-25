@@ -1,5 +1,5 @@
 {
-  "name": "@wum.bo/anchor",
+  "name": "@project-serum/anchor",
   "version": "0.16.1",
   "description": "Anchor client",
   "main": "dist/cjs/index.js",
