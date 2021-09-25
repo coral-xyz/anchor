@@ -728,7 +728,7 @@ describe("misc", () => {
         },
         { memcmp: { offset: 40, bytes: filterable2.toBase58() } },
       ]);
-    // Without filters there should be 4 accounts
+    // Without filters there should be 4 accounts.
     assert.equal(allAccounts.length, 4);
     // Filtering by main wallet there should be 3 accounts
     assert.equal(allAccountsFilteredByBuffer.length, 3);
