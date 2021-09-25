@@ -152,4 +152,22 @@ pub mod misc {
         assert!(ctx.accounts.token.mint == ctx.accounts.mint.key());
         Ok(())
     }
+
+    pub fn test_composite_payer(ctx: Context<TestCompositePayer>) -> ProgramResult {
+        ctx.accounts.composite.data.data = 1;
+        ctx.accounts.data.udata = 2;
+        ctx.accounts.data.idata = 3;
+        Ok(())
+    }
+
+    pub fn test_init_associated_token(ctx: Context<TestInitAssociatedToken>) -> ProgramResult {
+        assert!(ctx.accounts.token.mint == ctx.accounts.mint.key());
+        Ok(())
+    }
+
+    pub fn test_fetch_all(ctx: Context<TestFetchAll>, filterable: Pubkey) -> ProgramResult {
+        ctx.accounts.data.authority = ctx.accounts.authority.key();
+        ctx.accounts.data.filterable = filterable;
+        Ok(())
+    }
 }

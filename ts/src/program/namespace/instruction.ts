@@ -3,7 +3,7 @@ import {
   PublicKey,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { Idl, IdlAccount, IdlAccountItem, IdlInstruction } from "../../idl";
+import { Idl, IdlAccount, IdlAccountItem, IdlAccounts, IdlInstruction } from "../../idl";
 import { IdlError } from "../../error";
 import {
   toInstruction,
@@ -54,7 +54,7 @@ export default class InstructionNamespaceFactory {
     };
 
     // Utility fn for ordering the accounts for this instruction.
-    ix["accounts"] = (accs: Accounts<I["accounts"][number]>) => {
+    ix["accounts"] = (accs: Accounts<I["accounts"][number]> | undefined) => {
       return InstructionNamespaceFactory.accountsArray(accs, idlIx.accounts);
     };
 
@@ -62,17 +62,23 @@ export default class InstructionNamespaceFactory {
   }
 
   public static accountsArray(
-    ctx: Accounts,
+    ctx: Accounts | undefined,
     accounts: readonly IdlAccountItem[]
   ): AccountMeta[] {
+    if (!ctx) {
+      return []
+    }
+
     return accounts
       .map((acc: IdlAccountItem) => {
         // Nested accounts.
-        if ("accounts" in acc) {
+        const nestedAccounts: IdlAccountItem[] | undefined =
+          "accounts" in acc ? acc.accounts : undefined;
+        if (nestedAccounts !== undefined) {
           const rpcAccs = ctx[acc.name] as Accounts;
           return InstructionNamespaceFactory.accountsArray(
             rpcAccs,
-            acc.accounts
+            (acc as IdlAccounts).accounts
           ).flat();
         } else {
           const account: IdlAccount = acc as IdlAccount;

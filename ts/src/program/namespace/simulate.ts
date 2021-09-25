@@ -1,4 +1,8 @@
-import { PublicKey } from "@solana/web3.js";
+import {
+  PublicKey,
+  RpcResponseAndContext,
+  SimulatedTransactionResponse,
+} from "@solana/web3.js";
 import Provider from "../../provider";
 import { splitArgsAndCtx } from "../context";
 import { TransactionFn } from "./transaction";
@@ -18,7 +22,7 @@ export default class SimulateFactory {
     idlIx: AllInstructions<IDL>,
     txFn: TransactionFn<IDL>,
     idlErrors: Map<number, string>,
-    provider: Provider,
+    provider: Provider | undefined,
     coder: Coder,
     programId: PublicKey,
     idl: IDL
@@ -26,9 +30,11 @@ export default class SimulateFactory {
     const simulate: SimulateFn<IDL> = async (...args) => {
       const tx = txFn(...args);
       const [, ctx] = splitArgsAndCtx(idlIx, [...args]);
-      let resp = undefined;
+      let resp:
+        | RpcResponseAndContext<SimulatedTransactionResponse>
+        | undefined = undefined;
       try {
-        resp = await provider.simulate(tx, ctx.signers, ctx.options);
+        resp = await provider!.simulate(tx, ctx.signers, ctx.options);
       } catch (err) {
         console.log("Translating error", err);
         let translatedErr = ProgramError.parse(err, idlErrors);
@@ -48,7 +54,7 @@ export default class SimulateFactory {
         throw new Error("Simulated logs not found");
       }
 
-      const events = [];
+      const events: Event<IdlEvent, IdlTypes<IDL>>[] = [];
       if (idl.events) {
         let parser = new EventParser(programId, coder);
         parser.parseLogs(logs, (event) => {
@@ -102,8 +108,10 @@ export type SimulateNamespace<
 > = MakeInstructionsNamespace<
   IDL,
   I,
-  Promise<SimulateResponse<IDL["events"][number], IdlTypes<IDL>>>
+  Promise<SimulateResponse<NullableEvents<IDL>, IdlTypes<IDL>>>
 >;
+
+type NullableEvents<IDL extends Idl> = (IDL["events"] extends undefined ? IdlEvent : NonNullable<IDL["events"]>[number])
 
 /**
  * SimulateFn is a single method generated from an IDL. It simulates a method
@@ -117,7 +125,7 @@ export type SimulateFn<
 > = InstructionContextFn<
   IDL,
   I,
-  Promise<SimulateResponse<IDL["events"][number], IdlTypes<IDL>>>
+  Promise<SimulateResponse<NullableEvents<IDL>, IdlTypes<IDL>>>
 >;
 
 type SimulateResponse<E extends IdlEvent, Defined> = {

@@ -61,7 +61,9 @@ export default class Provider {
    * (This api is for Node only.)
    */
   static env(): Provider {
-    if (isBrowser) return;
+    if (isBrowser) {
+      throw new Error(`Provider env is not available on browser.`);
+    }
 
     const process = require("process");
     const url = process.env.ANCHOR_PROVIDER_URL;
@@ -79,7 +81,7 @@ export default class Provider {
    * Sends the given transaction, paid for and signed by the provider's wallet.
    *
    * @param tx      The transaction to send.
-   * @param signers The set of signers in addition to the provdier wallet that
+   * @param signers The set of signers in addition to the provider wallet that
    *                will sign the transaction.
    * @param opts    Transaction confirmation options.
    */
@@ -102,7 +104,7 @@ export default class Provider {
 
     await this.wallet.signTransaction(tx);
     signers
-      .filter((s) => s !== undefined)
+      .filter((s): s is Signer => s !== undefined)
       .forEach((kp) => {
         tx.partialSign(kp);
       });
@@ -144,7 +146,7 @@ export default class Provider {
       tx.recentBlockhash = blockhash.blockhash;
 
       signers
-        .filter((s) => s !== undefined)
+        .filter((s): s is Signer => s !== undefined)
         .forEach((kp) => {
           tx.partialSign(kp);
         });
@@ -154,7 +156,7 @@ export default class Provider {
 
     const signedTxs = await this.wallet.signAllTransactions(txs);
 
-    const sigs = [];
+    const sigs: TransactionSignature[] = [];
 
     for (let k = 0; k < txs.length; k += 1) {
       const tx = signedTxs[k];
@@ -178,13 +180,10 @@ export default class Provider {
   async simulate(
     tx: Transaction,
     signers?: Array<Signer | undefined>,
-    opts?: ConfirmOptions
+    opts: ConfirmOptions = this.opts
   ): Promise<RpcResponseAndContext<SimulatedTransactionResponse>> {
     if (signers === undefined) {
       signers = [];
-    }
-    if (opts === undefined) {
-      opts = this.opts;
     }
 
     tx.feePayer = this.wallet.publicKey;
@@ -196,7 +195,7 @@ export default class Provider {
 
     await this.wallet.signTransaction(tx);
     signers
-      .filter((s) => s !== undefined)
+      .filter((s): s is Signer => s !== undefined)
       .forEach((kp) => {
         tx.partialSign(kp);
       });
@@ -204,7 +203,7 @@ export default class Provider {
     return await simulateTransaction(
       this.connection,
       tx,
-      opts.commitment ?? this.opts.commitment
+      opts.commitment ?? this.opts.commitment ?? "recent"
     );
   }
 }
@@ -230,15 +229,13 @@ export class NodeWallet implements Wallet {
   constructor(readonly payer: Keypair) {}
 
   static local(): NodeWallet {
+    const process = require("process");
     const payer = Keypair.fromSecretKey(
       Buffer.from(
         JSON.parse(
-          require("fs").readFileSync(
-            require("os").homedir() + "/.config/solana/id.json",
-            {
-              encoding: "utf-8",
-            }
-          )
+          require("fs").readFileSync(process.env.ANCHOR_WALLET, {
+            encoding: "utf-8",
+          })
         )
       )
     );

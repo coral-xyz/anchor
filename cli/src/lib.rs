@@ -10,6 +10,7 @@ use clap::Clap;
 use flate2::read::ZlibDecoder;
 use flate2::write::{GzEncoder, ZlibEncoder};
 use flate2::Compression;
+use heck::SnakeCase;
 use rand::rngs::OsRng;
 use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
@@ -99,6 +100,10 @@ pub enum Command {
         /// use this to save time when running test and the program code is not altered.
         #[clap(long)]
         skip_build: bool,
+        /// Flag to keep the local validator running after tests
+        /// to be able to check the transactions.
+        #[clap(long)]
+        detach: bool,
         #[clap(multiple_values = true)]
         args: Vec<String>,
     },
@@ -279,12 +284,14 @@ pub fn entry(opts: Opts) -> Result<()> {
             skip_deploy,
             skip_local_validator,
             skip_build,
+            detach,
             args,
         } => test(
             &opts.cfg_override,
             skip_deploy,
             skip_local_validator,
             skip_build,
+            detach,
             args,
         ),
         #[cfg(feature = "dev")]
@@ -319,7 +326,7 @@ fn init(cfg_override: &ConfigOverride, name: String, typescript: bool) -> Result
     );
     let mut localnet = BTreeMap::new();
     localnet.insert(
-        name.to_string(),
+        name.to_snake_case(),
         ProgramDeployment {
             address: template::default_program_id(),
             path: None,
@@ -1307,6 +1314,7 @@ fn test(
     skip_deploy: bool,
     skip_local_validator: bool,
     skip_build: bool,
+    detach: bool,
     extra_args: Vec<String>,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
@@ -1354,12 +1362,19 @@ fn test(
             std::process::Command::new(program)
                 .args(args)
                 .env("ANCHOR_PROVIDER_URL", cfg.provider.cluster.url())
+                .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .output()
                 .map_err(anyhow::Error::from)
                 .context(cmd)
         };
+
+        // Keep validator running if needed.
+        if test_result.is_ok() && detach {
+            println!("Local validator still running. Press Ctrl + C quit.");
+            std::io::stdin().lock().lines().next().unwrap().unwrap();
+        }
 
         // Check all errors and shut down.
         if let Some(mut child) = validator_handle {
@@ -1372,6 +1387,8 @@ fn test(
                 println!("Failed to kill subprocess {}: {}", child.id(), err);
             }
         }
+
+        // Must exist *after* shutting down the validator and log streams.
         match test_result {
             Ok(exit) => {
                 if !exit.status.success() {
@@ -1790,6 +1807,7 @@ fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
             std::fs::write("deploy.js", deploy_script_host_str)?;
             std::process::Command::new("node")
                 .arg("deploy.js")
+                .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .output()?
@@ -1943,6 +1961,8 @@ fn run(cfg_override: &ConfigOverride, script: String) -> Result<()> {
         let exit = std::process::Command::new("bash")
             .arg("-c")
             .arg(&script)
+            .env("ANCHOR_PROVIDER_URL", cfg.provider.cluster.url())
+            .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .output()

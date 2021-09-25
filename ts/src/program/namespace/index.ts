@@ -29,14 +29,14 @@ export default class NamespaceFactory {
     idl: IDL,
     coder: Coder,
     programId: PublicKey,
-    provider: Provider
+    provider?: Provider
   ): [
     RpcNamespace<IDL>,
     InstructionNamespace<IDL>,
     TransactionNamespace<IDL>,
     AccountNamespace<IDL>,
     SimulateNamespace<IDL>,
-    StateClient<IDL>
+    StateClient<IDL> | undefined
   ] {
     const rpc: RpcNamespace = {};
     const instruction: InstructionNamespace = {};

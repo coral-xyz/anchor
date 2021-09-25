@@ -1,7 +1,7 @@
 import { TransactionSignature } from "@solana/web3.js";
 import Provider from "../../provider";
-import { Idl, IdlInstruction } from "../../idl";
-import { splitArgsAndCtx } from "../context";
+import { IdlInstruction, Idl } from "../../idl";
+import { Context, splitArgsAndCtx } from "../context";
 import { TransactionFn } from "./transaction";
 import { ProgramError } from "../../error";
 import {
@@ -15,13 +15,13 @@ export default class RpcFactory {
     idlIx: I,
     txFn: TransactionFn<IDL, I>,
     idlErrors: Map<number, string>,
-    provider: Provider
+    provider?: Provider
   ): RpcFn {
     const rpc: RpcFn<IDL, I> = async (...args) => {
       const tx = txFn(...args);
       const [, ctx] = splitArgsAndCtx(idlIx, [...args]);
       try {
-        const txSig = await provider.send(tx, ctx.signers, ctx.options);
+        const txSig = await provider!.send(tx, ctx.signers, ctx.options);
         return txSig;
       } catch (err) {
         console.log("Translating error", err);

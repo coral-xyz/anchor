@@ -1,14 +1,14 @@
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { Idl } from "src";
-import { IdlField, IdlInstruction, IdlType, IdlTypeDef } from "../../idl";
+import { IdlField, IdlInstruction, IdlState, IdlStateMethod, IdlType, IdlTypeDef, IdlTypeDefTyEnum, IdlTypeDefTyStruct } from "../../idl";
 import { Accounts, Context } from "../context";
 
 /**
  * All instructions for an IDL.
  */
 export type AllInstructions<IDL extends Idl> = IDL["instructions"][number] &
-  IDL["state"]["methods"][number];
+  (IDL["state"] extends undefined ? IdlStateMethod : NonNullable<IDL["state"]>["methods"][number]);
 
 /**
  * Returns a type of instruction name to the IdlInstruction.
@@ -27,7 +27,7 @@ export type AllInstructionsMap<IDL extends Idl> = InstructionMap<
 /**
  * All accounts for an IDL.
  */
-export type AllAccounts<IDL extends Idl> = IDL["accounts"][number];
+export type AllAccounts<IDL extends Idl> = (IDL["accounts"] extends undefined ? IdlTypeDef : NonNullable<IDL["accounts"]>[number]);
 
 /**
  * Returns a type of instruction name to the IdlInstruction.
@@ -100,7 +100,12 @@ type ArgsTuple<A extends IdlField[], Defined> = {
   unknown[];
 
 type FieldsOfType<I extends IdlTypeDef> = NonNullable<
-  I["type"]["fields"]
+  (I["type"] extends IdlTypeDefTyStruct ? 
+      I["type"]["fields"] : 
+        (I["type"] extends IdlTypeDefTyEnum ? 
+        I["type"]["variants"][number]["fields"] :
+        any[])
+    )
 >[number];
 
 export type TypeDef<I extends IdlTypeDef, Defined> = {

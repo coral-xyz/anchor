@@ -31,10 +31,20 @@ npm install -g mocha
 
 ## Install Anchor
 
+### Install using pre-build binary on x86_64 Linux
+
+Anchor binaries are avalable via an NPM package [`@project-serum/anchor-cli`](https://www.npmjs.com/package/@project-serum/anchor-cli). Only x86_64 Linux is supported currently, you must build from source for other OS'.
+
+```bash
+npm i -g @project-serum/anchor-cli
+```
+
+### Build from source for other operating systems
+
 For now, we can use Cargo to install the CLI.
 
 ```bash
-cargo install --git https://github.com/project-serum/anchor --tag v0.15.0 anchor-cli --locked
+cargo install --git https://github.com/project-serum/anchor --tag v0.16.1 anchor-cli --locked
 ```
 
 On Linux systems you may need to install additional dependencies if `cargo install` fails. On Ubuntu,

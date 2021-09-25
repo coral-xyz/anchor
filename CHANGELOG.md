@@ -11,6 +11,25 @@ incremented for features.
 
 ## [Unreleased]
 
+### Features
+
+* lang: Add `--detach` flag to `anchor test` ([#770](https://github.com/project-serum/anchor/pull/770)).
+* lang: Add `associated_token` keyword for initializing associated token accounts within `#[derive(Accounts)]` ([#790](https://github.com/project-serum/anchor/pull/790)).
+
+## [0.16.1] - 2021-09-17
+
+### Fixes
+
+* lang: `Signer` type now sets isSigner to true in the IDL ([#750](https://github.com/project-serum/anchor/pull/750)).
+
+## [0.16.0] - 2021-09-16
+
+### Features
+
+* lang: `Program` type introduced for executable accounts ([#705](https://github.com/project-serum/anchor/pull/705)).
+* lang: `Signer` type introduced for signing accounts where data is not used ([#705](https://github.com/project-serum/anchor/pull/705)).
+* lang: `UncheckedAccount` type introduced as a preferred alias for `AccountInfo` ([#745](https://github.com/project-serum/anchor/pull/745)).
+
 ### Breaking Changes
 
 * lang: `#[account(owner = <pubkey>)]` now requires a `Pubkey` instead of an account ([#691](https://github.com/project-serum/anchor/pull/691)).
@@ -20,6 +39,7 @@ incremented for features.
 ### Features
 
 * lang: Add new `Account` type to replace `ProgramAccount` and `CpiAccount`, both of which are deprecated ([#686](https://github.com/project-serum/anchor/pull/686)).
+* lang: `Box` can be used with `Account` types to reduce stack usage ([#686](https://github.com/project-serum/anchor/pull/686)).
 * lang: Add `Owner` trait, which is automatically implemented by all `#[account]` structs ([#686](https://github.com/project-serum/anchor/pull/686)).
 * lang: Check that ProgramAccount writable before mut borrow (`anchor-debug` only) ([#681](https://github.com/project-serum/anchor/pull/681)).
 

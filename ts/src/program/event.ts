@@ -16,7 +16,7 @@ export type Event<
   data: EventData<E["fields"][number], Defined>;
 };
 
-type EventData<T extends IdlEventField, Defined> = {
+export type EventData<T extends IdlEventField, Defined> = {
   [N in T["name"]]: DecodeType<(T & { name: N })["type"], Defined>;
 };
 
@@ -31,7 +31,7 @@ export class EventManager {
   /**
    * Network and wallet provider.
    */
-  private _provider: Provider;
+  private _provider?: Provider;
 
   /**
    * Event parser to handle onLogs callbacks.
@@ -58,7 +58,7 @@ export class EventManager {
    */
   private _onLogsSubscriptionId: number | undefined;
 
-  constructor(programId: PublicKey, provider: Provider, coder: Coder) {
+  constructor(programId: PublicKey, provider: Provider | undefined, coder: Coder) {
     this._programId = programId;
     this._provider = provider;
     this._eventParser = new EventParser(programId, coder);
@@ -80,7 +80,7 @@ export class EventManager {
     }
     this._eventListeners.set(
       eventName,
-      this._eventListeners.get(eventName).concat(listener)
+      (this._eventListeners.get(eventName) ?? []).concat(listener)
     );
 
     // Store the callback into the listener map.
@@ -91,7 +91,7 @@ export class EventManager {
       return listener;
     }
 
-    this._onLogsSubscriptionId = this._provider.connection.onLogs(
+    this._onLogsSubscriptionId = this._provider!.connection.onLogs(
       this._programId,
       (logs, ctx) => {
         if (logs.err) {
@@ -102,8 +102,11 @@ export class EventManager {
           const allListeners = this._eventListeners.get(event.name);
           if (allListeners) {
             allListeners.forEach((listener) => {
-              const [, callback] = this._eventCallbacks.get(listener);
-              callback(event.data, ctx.slot);
+              const listenerCb = this._eventCallbacks.get(listener);
+              if (listenerCb) {
+                const [, callback] = listenerCb;
+                callback(event.data, ctx.slot);
+              }
             });
           }
         });
@@ -137,10 +140,12 @@ export class EventManager {
     // Kill the websocket connection if all listeners have been removed.
     if (this._eventCallbacks.size == 0) {
       assert.ok(this._eventListeners.size === 0);
-      await this._provider.connection.removeOnLogsListener(
-        this._onLogsSubscriptionId
-      );
-      this._onLogsSubscriptionId = undefined;
+      if (this._onLogsSubscriptionId !== undefined) {
+        await this._provider!.connection.removeOnLogsListener(
+          this._onLogsSubscriptionId
+        );
+        this._onLogsSubscriptionId = undefined;
+      }
     }
   }
 }
@@ -252,7 +257,10 @@ class ExecutionContext {
   constructor(log: string) {
     // Assumes the first log in every transaction is an `invoke` log from the
     // runtime.
-    const program = /^Program (.*) invoke.*$/g.exec(log)[1];
+    const program = /^Program (.*) invoke.*$/g.exec(log)?.[1];
+    if (!program) {
+      throw new Error(`Could not find program invocation log line`);
+    }
     this.stack = [program];
   }
 

@@ -16,6 +16,11 @@ import { utf8 } from "../utils/bytes";
 import { EventManager } from "./event";
 import { Address, translateAddress } from "./common";
 
+export * from "./common";
+export * from "./context";
+export * from "./event";
+export * from "./namespace";
+
 /**
  * ## Program
  *
@@ -200,7 +205,7 @@ export class Program<IDL extends Idl = Idl> {
    * one can use this to send transactions and read accounts for the state
    * abstraction.
    */
-  readonly state: StateClient<IDL>;
+  readonly state: StateClient<IDL> | undefined;
 
   /**
    * Address of the program.
@@ -227,14 +232,6 @@ export class Program<IDL extends Idl = Idl> {
   private _coder: Coder;
 
   /**
-   * Wallet and network provider.
-   */
-  public get provider(): Provider {
-    return this._provider;
-  }
-  private _provider: Provider;
-
-  /**
    * Handles event subscriptions.
    */
   private _events: EventManager;
@@ -249,15 +246,9 @@ export class Program<IDL extends Idl = Idl> {
     programId = translateAddress(programId);
 
     // Fields.
-    this._idl = idl;
     this._programId = programId;
-    this._provider = provider ?? getProvider();
     this._coder = new Coder(idl);
-    this._events = new EventManager(
-      this._programId,
-      this._provider,
-      this._coder
-    );
+    this._events = new EventManager(this._programId, provider, this._coder);
 
     // Dynamic namespaces.
     const [
@@ -267,7 +258,7 @@ export class Program<IDL extends Idl = Idl> {
       account,
       simulate,
       state,
-    ] = NamespaceFactory.build(idl, this._coder, programId, this._provider);
+    ] = NamespaceFactory.build(idl, this._coder, programId, provider);
     this.rpc = rpc;
     this.instruction = instruction;
     this.transaction = transaction;
@@ -292,6 +283,10 @@ export class Program<IDL extends Idl = Idl> {
     const programId = translateAddress(address);
 
     const idl = await Program.fetchIdl<IDL>(programId, provider);
+    if (!idl) {
+      throw new Error(`IDL not found for program: ${address.toString()}`);
+    }
+    
     return new Program(idl, programId, provider);
   }
 
@@ -307,12 +302,15 @@ export class Program<IDL extends Idl = Idl> {
   public static async fetchIdl<IDL extends Idl = Idl>(
     address: Address,
     provider?: Provider
-  ): Promise<IDL> {
+  ): Promise<IDL | null> {
     provider = provider ?? getProvider();
     const programId = translateAddress(address);
 
     const idlAddr = await idlAddress(programId);
     const accountInfo = await provider.connection.getAccountInfo(idlAddr);
+    if (!accountInfo) {
+      return null;
+    }
     // Chop off account discriminator.
     let idlAccount = decodeIdlAccount(accountInfo.data.slice(8));
     const inflatedIdl = inflate(idlAccount.data);
