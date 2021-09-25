@@ -246,6 +246,7 @@ export class Program<IDL extends Idl = Idl> {
     programId = translateAddress(programId);
 
     // Fields.
+    this._idl = idl;
     this._programId = programId;
     this._coder = new Coder(idl);
     this._events = new EventManager(this._programId, provider, this._coder);
