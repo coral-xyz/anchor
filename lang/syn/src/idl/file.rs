@@ -1,6 +1,7 @@
 use crate::idl::*;
 use crate::parser::context::CrateContext;
 use crate::parser::{self, accounts, error, program};
+use crate::Ty;
 use crate::{AccountField, AccountsStruct, StateIx};
 use anyhow::Result;
 use heck::MixedCase;
@@ -13,10 +14,14 @@ const DERIVE_NAME: &str = "Accounts";
 const ERROR_CODE_OFFSET: u32 = 300;
 
 // Parse an entire interface file.
-pub fn parse(filename: impl AsRef<Path>) -> Result<Idl> {
+pub fn parse(filename: impl AsRef<Path>) -> Result<Option<Idl>> {
     let ctx = CrateContext::parse(filename)?;
 
-    let p = program::parse(parse_program_mod(&ctx))?;
+    let program_mod = match parse_program_mod(&ctx) {
+        None => return Ok(None),
+        Some(m) => m,
+    };
+    let p = program::parse(program_mod)?;
 
     let accs = parse_account_derives(&ctx);
 
@@ -218,7 +223,7 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Idl> {
         }
     }
 
-    Ok(Idl {
+    Ok(Some(Idl {
         version: "0.0.0".to_string(),
         name: p.name.to_string(),
         state,
@@ -232,11 +237,11 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Idl> {
         },
         errors: error_codes,
         metadata: None,
-    })
+    }))
 }
 
 // Parse the main program mod.
-fn parse_program_mod(ctx: &CrateContext) -> syn::ItemMod {
+fn parse_program_mod(ctx: &CrateContext) -> Option<syn::ItemMod> {
     let root = ctx.root_module();
     let mods = root
         .items()
@@ -256,9 +261,9 @@ fn parse_program_mod(ctx: &CrateContext) -> syn::ItemMod {
         })
         .collect::<Vec<_>>();
     if mods.len() != 1 {
-        panic!("Did not find program attribute");
+        return None;
     }
-    mods[0].clone()
+    Some(mods[0].clone())
 }
 
 fn parse_error_enum(ctx: &CrateContext) -> Option<syn::ItemEnum> {
@@ -380,7 +385,8 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
                         })
                     })
                     .collect::<Result<Vec<IdlField>>>(),
-                _ => panic!("Only named structs are allowed."),
+                syn::Fields::Unnamed(_) => return None,
+                _ => panic!("Empty structs are allowed."),
             };
 
             Some(fields.map(|fields| IdlTypeDefinition {
@@ -453,7 +459,10 @@ fn idl_accounts(
             AccountField::Field(acc) => IdlAccountItem::IdlAccount(IdlAccount {
                 name: acc.ident.to_string().to_mixed_case(),
                 is_mut: acc.constraints.is_mutable(),
-                is_signer: acc.constraints.is_signer(),
+                is_signer: match acc.ty {
+                    Ty::Signer => true,
+                    _ => acc.constraints.is_signer(),
+                },
             }),
         })
         .collect::<Vec<_>>()

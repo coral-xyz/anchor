@@ -13,8 +13,13 @@ import NamespaceFactory, {
 } from "./namespace";
 import { getProvider } from "../";
 import { utf8 } from "../utils/bytes";
-import { EventParser } from "./event";
+import { EventManager } from "./event";
 import { Address, translateAddress } from "./common";
+
+export * from "./common";
+export * from "./context";
+export * from "./event";
+export * from "./namespace";
 
 /**
  * ## Program
@@ -200,7 +205,7 @@ export class Program<IDL extends Idl = Idl> {
    * one can use this to send transactions and read accounts for the state
    * abstraction.
    */
-  readonly state: StateClient<IDL>;
+  readonly state?: StateClient<IDL>;
 
   /**
    * Address of the program.
@@ -235,6 +240,11 @@ export class Program<IDL extends Idl = Idl> {
   private _provider: Provider;
 
   /**
+   * Handles event subscriptions.
+   */
+  private _events: EventManager;
+
+  /**
    * @param idl       The interface definition.
    * @param programId The on-chain address of the program.
    * @param provider  The network and wallet context to use. If not provided
@@ -243,11 +253,14 @@ export class Program<IDL extends Idl = Idl> {
   public constructor(idl: IDL, programId: Address, provider?: Provider) {
     programId = translateAddress(programId);
 
+		if (!provider) {
+			provider = getProvider();
+		}
+
     // Fields.
-    this._idl = idl;
     this._programId = programId;
-    this._provider = provider ?? getProvider();
     this._coder = new Coder(idl);
+    this._events = new EventManager(this._programId, provider, this._coder);
 
     // Dynamic namespaces.
     const [
@@ -257,7 +270,7 @@ export class Program<IDL extends Idl = Idl> {
       account,
       simulate,
       state,
-    ] = NamespaceFactory.build(idl, this._coder, programId, this._provider);
+    ] = NamespaceFactory.build(idl, this._coder, programId, provider);
     this.rpc = rpc;
     this.instruction = instruction;
     this.transaction = transaction;
@@ -278,10 +291,12 @@ export class Program<IDL extends Idl = Idl> {
   public static async at<IDL extends Idl = Idl>(
     address: Address,
     provider?: Provider
-  ) {
+  ): Promise<Program<IDL>> {
     const programId = translateAddress(address);
-
     const idl = await Program.fetchIdl<IDL>(programId, provider);
+    if (!idl) {
+      throw new Error(`IDL not found for program: ${address.toString()}`);
+    }
     return new Program(idl, programId, provider);
   }
 
@@ -297,12 +312,15 @@ export class Program<IDL extends Idl = Idl> {
   public static async fetchIdl<IDL extends Idl = Idl>(
     address: Address,
     provider?: Provider
-  ): Promise<IDL> {
+  ): Promise<IDL | null> {
     provider = provider ?? getProvider();
     const programId = translateAddress(address);
 
     const idlAddr = await idlAddress(programId);
     const accountInfo = await provider.connection.getAccountInfo(idlAddr);
+    if (!accountInfo) {
+      return null;
+    }
     // Chop off account discriminator.
     let idlAccount = decodeIdlAccount(accountInfo.data.slice(8));
     const inflatedIdl = inflate(idlAccount.data);
@@ -320,24 +338,13 @@ export class Program<IDL extends Idl = Idl> {
     eventName: string,
     callback: (event: any, slot: number) => void
   ): number {
-    const eventParser = new EventParser(this._coder, this._programId);
-    return this._provider.connection.onLogs(this._programId, (logs, ctx) => {
-      if (logs.err) {
-        console.error(logs);
-        return;
-      }
-      eventParser.parseLogs(logs.logs, (event) => {
-        if (event.name === eventName) {
-          callback(event.data, ctx.slot);
-        }
-      });
-    });
+    return this._events.addEventListener(eventName, callback);
   }
 
   /**
-   * Unsubscribes from the given event listener.
+   * Unsubscribes from the given eventName.
    */
   public async removeEventListener(listener: number): Promise<void> {
-    return this._provider.connection.removeOnLogsListener(listener);
+    return await this._events.removeEventListener(listener);
   }
 }

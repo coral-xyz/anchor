@@ -10,6 +10,7 @@ import {
   IdlTypeDef,
   IdlAccount,
   IdlAccountItem,
+  IdlTypeDefTyStruct,
 } from "../idl";
 import { IdlCoder } from "./idl";
 import { sighash } from "./common";
@@ -77,7 +78,11 @@ export class InstructionCoder {
   private _encode(nameSpace: string, ixName: string, ix: any): Buffer {
     const buffer = Buffer.alloc(1000); // TODO: use a tighter buffer.
     const methodName = camelCase(ixName);
-    const len = this.ixLayout.get(methodName).encode(ix, buffer);
+    const layout = this.ixLayout.get(methodName);
+    if (!layout) {
+      throw new Error(`Unknown method: ${methodName}`);
+    }
+    const len = layout.encode(ix, buffer);
     const data = buffer.slice(0, len);
     return Buffer.concat([sighash(nameSpace, ixName), data]);
   }
@@ -88,7 +93,10 @@ export class InstructionCoder {
     const ixLayouts = stateMethods
       .map((m: IdlStateMethod) => {
         let fieldLayouts = m.args.map((arg: IdlField) => {
-          return IdlCoder.fieldLayout(arg, idl.types);
+          return IdlCoder.fieldLayout(
+            arg,
+            Array.from([...(idl.accounts ?? []), ...(idl.types ?? [])])
+          );
         });
         const name = camelCase(m.name);
         return [name, borsh.struct(fieldLayouts, name)];
@@ -96,7 +104,10 @@ export class InstructionCoder {
       .concat(
         idl.instructions.map((ix) => {
           let fieldLayouts = ix.args.map((arg: IdlField) =>
-            IdlCoder.fieldLayout(arg, idl.types)
+            IdlCoder.fieldLayout(
+              arg,
+              Array.from([...(idl.accounts ?? []), ...(idl.types ?? [])])
+            )
           );
           const name = camelCase(ix.name);
           return [name, borsh.struct(fieldLayouts, name)];
@@ -109,9 +120,12 @@ export class InstructionCoder {
   /**
    * Dewcodes a program instruction.
    */
-  public decode(ix: Buffer | string): Instruction | null {
+  public decode(
+    ix: Buffer | string,
+    encoding: "hex" | "base58" = "hex"
+  ): Instruction | null {
     if (typeof ix === "string") {
-      ix = bs58.decode(ix);
+      ix = encoding === "hex" ? Buffer.from(ix, "hex") : bs58.decode(ix);
     }
     let sighash = bs58.encode(ix.slice(0, 8));
     let data = ix.slice(8);
@@ -206,21 +220,20 @@ class InstructionFormatter {
       return idlType as string;
     }
 
-    // @ts-ignore
-    if (idlType.vec) {
-      // @ts-ignore
+    if ("vec" in idlType) {
       return `Vec<${this.formatIdlType(idlType.vec)}>`;
     }
-    // @ts-ignore
-    if (idlType.option) {
-      // @ts-ignore
+    if ("option" in idlType) {
       return `Option<${this.formatIdlType(idlType.option)}>`;
     }
-    // @ts-ignore
-    if (idlType.defined) {
-      // @ts-ignore
+    if ("defined" in idlType) {
       return idlType.defined;
     }
+    if ("array" in idlType) {
+      return `Array<${idlType.array[0]}; ${idlType.array[1]}>`;
+    }
+
+    throw new Error(`Unknown IDL type: ${idlType}`);
   }
 
   private static formatIdlData(
@@ -287,9 +300,10 @@ class InstructionFormatter {
     types: IdlTypeDef[]
   ): string {
     if (typeDef.type.kind === "struct") {
+      const struct: IdlTypeDefTyStruct = typeDef.type;
       const fields = Object.keys(data)
         .map((k) => {
-          const f = typeDef.type.fields.filter((f) => f.name === k)[0];
+          const f = struct.fields.filter((f) => f.name === k)[0];
           if (f === undefined) {
             throw new Error("Unable to find type");
           }
@@ -305,12 +319,13 @@ class InstructionFormatter {
       }
       // Struct enum.
       if (typeDef.type.variants[0].name) {
+        const variants = typeDef.type.variants;
         const variant = Object.keys(data)[0];
         const enumType = data[variant];
         const namedFields = Object.keys(enumType)
           .map((f) => {
             const fieldData = enumType[f];
-            const idlField = typeDef.type.variants[variant]?.filter(
+            const idlField = variants[variant]?.filter(
               (v: IdlField) => v.name === f
             )[0];
             if (idlField === undefined) {

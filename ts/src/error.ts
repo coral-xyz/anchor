@@ -1,4 +1,9 @@
-export class IdlError extends Error {}
+export class IdlError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "IdlError";
+  }
+}
 
 // An error from a user defined program.
 export class ProgramError extends Error {
@@ -80,6 +85,8 @@ const LangErrorCode = {
   AccountNotEnoughKeys: 165,
   AccountNotMutable: 166,
   AccountNotProgramOwned: 167,
+  InvalidProgramId: 168,
+  InvalidProgramIdExecutable: 169,
 
   // State.
   StateInvalidAddress: 180,
@@ -121,7 +128,7 @@ const LangErrorMessage = new Map([
   [LangErrorCode.ConstraintMut, "A mut constraint was violated"],
   [LangErrorCode.ConstraintHasOne, "A has_one constraint was violated"],
   [LangErrorCode.ConstraintSigner, "A signer constraint was violated"],
-  [LangErrorCode.ConstraintRaw, "A raw constraint as violated"],
+  [LangErrorCode.ConstraintRaw, "A raw constraint was violated"],
   [LangErrorCode.ConstraintOwner, "An owner constraint was violated"],
   [LangErrorCode.ConstraintRentExempt, "A rent exempt constraint was violated"],
   [LangErrorCode.ConstraintSeeds, "A seeds constraint was violated"],
@@ -158,6 +165,11 @@ const LangErrorMessage = new Map([
   [
     LangErrorCode.AccountNotProgramOwned,
     "The given account is not owned by the executing program",
+  ],
+  [LangErrorCode.InvalidProgramId, "Program ID was not as expected"],
+  [
+    LangErrorCode.InvalidProgramIdExecutable,
+    "Program account is not executable",
   ],
 
   // State.

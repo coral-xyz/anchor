@@ -63,7 +63,7 @@ export default class InstructionNamespaceFactory {
 
   public static accountsArray(
     ctx: Accounts,
-    accounts: readonly IdlAccountItem[]
+    accounts: IdlAccountItem[]
   ): AccountMeta[] {
     return accounts
       .map((acc: IdlAccountItem) => {

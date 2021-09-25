@@ -86,23 +86,19 @@ export class StateClient<
   get coder(): Coder {
     return this._coder;
   }
+	private _coder: Coder;
 
   private _address: PublicKey;
-  private _coder: Coder;
-  private _idl: IDL;
+  private _idl: Idl;
   private _sub: Subscription | null;
 
   constructor(
     idl: IDL,
     programId: PublicKey,
-    provider?: Provider,
-    coder?: Coder
   ) {
     this._idl = idl;
     this._programId = programId;
     this._address = programStateAddress(programId);
-    this._provider = provider ?? getProvider();
-    this._coder = coder ?? new Coder(idl);
     this._sub = null;
 
     // Build namespaces.
@@ -174,9 +170,11 @@ export class StateClient<
       throw new Error(`Account does not exist ${addr.toString()}`);
     }
     // Assert the account discriminator is correct.
-    const expectedDiscriminator = await stateDiscriminator(
-      this._idl.state.struct.name
-    );
+    const state = this._idl.state;
+    if (!state) {
+      throw new Error("State is not specified in IDL.");
+    }
+    const expectedDiscriminator = await stateDiscriminator(state.struct.name);
     if (expectedDiscriminator.compare(accountInfo.data.slice(0, 8))) {
       throw new Error("Invalid account discriminator");
     }
@@ -268,11 +266,6 @@ function stateInstructionKeys<M extends IdlStateMethod>(
       },
 
       { pubkey: programId, isWritable: false, isSigner: false },
-      {
-        pubkey: SYSVAR_RENT_PUBKEY,
-        isWritable: false,
-        isSigner: false,
-      },
     ];
   } else {
     validateAccounts(m.accounts, accounts);

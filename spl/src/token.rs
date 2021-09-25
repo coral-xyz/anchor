@@ -5,6 +5,7 @@ use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::program_pack::Pack;
 use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::{Accounts, CpiContext};
+use std::io::Write;
 use std::ops::Deref;
 
 pub use spl_token::ID;
@@ -127,6 +128,27 @@ pub fn initialize_account<'a, 'b, 'c, 'info>(
     )
 }
 
+pub fn close_account<'a, 'b, 'c, 'info>(
+    ctx: CpiContext<'a, 'b, 'c, 'info, CloseAccount<'info>>,
+) -> ProgramResult {
+    let ix = spl_token::instruction::close_account(
+        &spl_token::ID,
+        ctx.accounts.account.key,
+        ctx.accounts.destination.key,
+        ctx.accounts.authority.key,
+        &[], // TODO: support multisig
+    )?;
+    solana_program::program::invoke_signed(
+        &ix,
+        &[
+            ctx.accounts.account.clone(),
+            ctx.accounts.destination.clone(),
+            ctx.accounts.authority.clone(),
+        ],
+        ctx.signer_seeds,
+    )
+}
+
 pub fn initialize_mint<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, InitializeMint<'info>>,
     decimals: u8,
@@ -136,7 +158,7 @@ pub fn initialize_mint<'a, 'b, 'c, 'info>(
     let ix = spl_token::instruction::initialize_mint(
         &spl_token::ID,
         ctx.accounts.mint.key,
-        &authority,
+        authority,
         freeze_authority,
         decimals,
     )?;
@@ -217,6 +239,13 @@ pub struct InitializeAccount<'info> {
 }
 
 #[derive(Accounts)]
+pub struct CloseAccount<'info> {
+    pub account: AccountInfo<'info>,
+    pub destination: AccountInfo<'info>,
+    pub authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
 pub struct InitializeMint<'info> {
     pub mint: AccountInfo<'info>,
     pub rent: AccountInfo<'info>,
@@ -245,6 +274,19 @@ impl anchor_lang::AccountDeserialize for TokenAccount {
     }
 }
 
+impl anchor_lang::AccountSerialize for TokenAccount {
+    fn try_serialize<W: Write>(&self, _writer: &mut W) -> Result<(), ProgramError> {
+        // no-op
+        Ok(())
+    }
+}
+
+impl anchor_lang::Owner for TokenAccount {
+    fn owner() -> Pubkey {
+        ID
+    }
+}
+
 impl Deref for TokenAccount {
     type Target = spl_token::state::Account;
 
@@ -256,6 +298,10 @@ impl Deref for TokenAccount {
 #[derive(Clone)]
 pub struct Mint(spl_token::state::Mint);
 
+impl Mint {
+    pub const LEN: usize = spl_token::state::Mint::LEN;
+}
+
 impl anchor_lang::AccountDeserialize for Mint {
     fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
         Mint::try_deserialize_unchecked(buf)
@@ -266,11 +312,43 @@ impl anchor_lang::AccountDeserialize for Mint {
     }
 }
 
+impl anchor_lang::AccountSerialize for Mint {
+    fn try_serialize<W: Write>(&self, _writer: &mut W) -> Result<(), ProgramError> {
+        // no-op
+        Ok(())
+    }
+}
+
+impl anchor_lang::Owner for Mint {
+    fn owner() -> Pubkey {
+        ID
+    }
+}
+
 impl Deref for Mint {
     type Target = spl_token::state::Mint;
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+#[derive(Clone)]
+pub struct Token;
+
+impl anchor_lang::AccountDeserialize for Token {
+    fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
+        Token::try_deserialize_unchecked(buf)
+    }
+
+    fn try_deserialize_unchecked(_buf: &mut &[u8]) -> Result<Self, ProgramError> {
+        Ok(Token)
+    }
+}
+
+impl anchor_lang::Id for Token {
+    fn id() -> Pubkey {
+        ID
     }
 }
 
@@ -291,5 +369,12 @@ pub mod accessor {
         let mut mint_bytes = [0u8; 32];
         mint_bytes.copy_from_slice(&bytes[..32]);
         Ok(Pubkey::new_from_array(mint_bytes))
+    }
+
+    pub fn authority(account: &AccountInfo) -> Result<Pubkey, ProgramError> {
+        let bytes = account.try_borrow_data()?;
+        let mut owner_bytes = [0u8; 32];
+        owner_bytes.copy_from_slice(&bytes[32..64]);
+        Ok(Pubkey::new_from_array(owner_bytes))
     }
 }

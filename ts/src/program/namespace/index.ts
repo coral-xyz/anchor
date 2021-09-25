@@ -35,7 +35,7 @@ export default class NamespaceFactory {
     TransactionNamespace<IDL>,
     AccountNamespace<IDL>,
     SimulateNamespace<IDL>,
-    StateClient<IDL>
+    StateClient<IDL> | undefined,
   ] {
     const rpc: RpcNamespace = {};
     const instruction: InstructionNamespace = {};

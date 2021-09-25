@@ -67,10 +67,10 @@ const workspace = new Proxy({} as any, {
         fs.readFileSync(path.join(projectRoot, "Anchor.toml"), "utf-8")
       );
       const clusterId = anchorToml.provider.cluster;
-      if (anchorToml.clusters && anchorToml.clusters[clusterId]) {
+      if (anchorToml.programs && anchorToml.programs[clusterId]) {
         attachWorkspaceOverride(
           workspaceCache,
-          anchorToml.clusters[clusterId],
+          anchorToml.programs[clusterId],
           idlMap
         );
       }
@@ -96,6 +96,9 @@ function attachWorkspaceOverride(
     let idl = idlMap.get(programName);
     if (typeof entry !== "string" && entry.idl) {
       idl = JSON.parse(require("fs").readFileSync(entry.idl, "utf-8"));
+    }
+    if (!idl) {
+      throw new Error(`Error loading workspace IDL for ${programName}`);
     }
     workspaceCache[wsProgramName] = new Program(idl, overrideAddress);
   });
