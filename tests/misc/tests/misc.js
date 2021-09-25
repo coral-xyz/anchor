@@ -648,7 +648,7 @@ describe("misc", () => {
     const data2 = anchor.web3.Keypair.generate();
     const data3 = anchor.web3.Keypair.generate();
     const data4 = anchor.web3.Keypair.generate();
-    // Initialize filterable data
+    // Initialize filterable data.
     const filterable1 = anchor.web3.Keypair.generate().publicKey;
     const filterable2 = anchor.web3.Keypair.generate().publicKey;
     // Set up a secondary wallet and program.
