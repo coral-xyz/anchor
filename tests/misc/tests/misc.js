@@ -661,7 +661,7 @@ describe("misc", () => {
         { commitment: program.provider.connection.commitment }
       )
     );
-    // Request airdrop for secondary wallet
+    // Request airdrop for secondary wallet.
     const signature = await program.provider.connection.requestAirdrop(
       anotherProgram.provider.wallet.publicKey,
       anchor.web3.LAMPORTS_PER_SOL
