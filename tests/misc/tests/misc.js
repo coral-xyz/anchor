@@ -643,7 +643,7 @@ describe("misc", () => {
   });
 
   it("Can fetch all accounts of a given type", async () => {
-    // Initialize the accounts
+    // Initialize the accounts.
     const data1 = anchor.web3.Keypair.generate();
     const data2 = anchor.web3.Keypair.generate();
     const data3 = anchor.web3.Keypair.generate();
