@@ -667,7 +667,7 @@ describe("misc", () => {
       anchor.web3.LAMPORTS_PER_SOL
     );
     await program.provider.connection.confirmTransaction(signature);
-    // Create all the accounts
+    // Create all the accounts.
     await Promise.all([
       program.rpc.testFetchAll(filterable1, {
         accounts: {
