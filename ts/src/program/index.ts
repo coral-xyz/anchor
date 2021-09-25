@@ -245,6 +245,10 @@ export class Program<IDL extends Idl = Idl> {
   public constructor(idl: IDL, programId: Address, provider?: Provider) {
     programId = translateAddress(programId);
 
+		if (!provider) {
+			provider = getProvider();
+		}
+
     // Fields.
     this._idl = idl;
     this._programId = programId;

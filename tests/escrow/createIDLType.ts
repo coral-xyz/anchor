@@ -15,4 +15,3 @@ for (let account of escrowIDLJSON.accounts) {
 
 const fileContents = `export type EscrowIDL = ${JSON.stringify(escrowIDLJSON)};`;
 fs.writeFileSync("tests/types/escrow.ts", fileContents);
-

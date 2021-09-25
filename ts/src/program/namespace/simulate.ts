@@ -22,7 +22,7 @@ export default class SimulateFactory {
     idlIx: AllInstructions<IDL>,
     txFn: TransactionFn<IDL>,
     idlErrors: Map<number, string>,
-    provider: Provider | undefined,
+    provider: Provider,
     coder: Coder,
     programId: PublicKey,
     idl: IDL

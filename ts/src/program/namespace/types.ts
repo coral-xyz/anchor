@@ -4,8 +4,6 @@ import { Idl } from "src";
 import {
   IdlField,
   IdlInstruction,
-  IdlState,
-  IdlStateMethod,
   IdlType,
   IdlTypeDef,
   IdlTypeDefTyEnum,
@@ -16,10 +14,7 @@ import { Accounts, Context } from "../context";
 /**
  * All instructions for an IDL.
  */
-export type AllInstructions<IDL extends Idl> = IDL["instructions"][number] &
-  (IDL["state"] extends undefined
-    ? IdlStateMethod
-    : NonNullable<IDL["state"]>["methods"][number]);
+export type AllInstructions<IDL extends Idl> = IDL["instructions"][number];
 
 /**
  * Returns a type of instruction name to the IdlInstruction.

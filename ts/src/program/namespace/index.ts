@@ -29,7 +29,7 @@ export default class NamespaceFactory {
     idl: IDL,
     coder: Coder,
     programId: PublicKey,
-    provider?: Provider
+    provider: Provider
   ): [
     RpcNamespace<IDL>,
     InstructionNamespace<IDL>,

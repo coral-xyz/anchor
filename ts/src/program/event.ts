@@ -31,7 +31,7 @@ export class EventManager {
   /**
    * Network and wallet provider.
    */
-  private _provider?: Provider;
+  private _provider: Provider;
 
   /**
    * Event parser to handle onLogs callbacks.
@@ -60,7 +60,7 @@ export class EventManager {
 
   constructor(
     programId: PublicKey,
-    provider: Provider | undefined,
+    provider: Provider,
     coder: Coder
   ) {
     this._programId = programId;
