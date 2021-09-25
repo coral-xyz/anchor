@@ -651,7 +651,7 @@ describe("misc", () => {
     // Initialize filterable data
     const filterable1 = anchor.web3.Keypair.generate().publicKey;
     const filterable2 = anchor.web3.Keypair.generate().publicKey;
-    // Set up a secondary wallet and program
+    // Set up a secondary wallet and program.
     const anotherProgram = new anchor.Program(
       miscIdl,
       program.programId,
