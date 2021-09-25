@@ -730,7 +730,7 @@ describe("misc", () => {
       ]);
     // Without filters there should be 4 accounts.
     assert.equal(allAccounts.length, 4);
-    // Filtering by main wallet there should be 3 accounts
+    // Filtering by main wallet there should be 3 accounts.
     assert.equal(allAccountsFilteredByBuffer.length, 3);
     // Filtering all the main wallet accounts and matching the filterable1 value
     // results in a 2 accounts
