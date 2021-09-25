@@ -46,7 +46,9 @@ export class EventCoder {
     );
   }
 
-  public decode<E extends IdlEvent = IdlEvent, T = Record<string, never>>(log: string): Event<E, T> | null {
+  public decode<E extends IdlEvent = IdlEvent, T = Record<string, never>>(
+    log: string
+  ): Event<E, T> | null {
     let logArr: Buffer;
     // This will throw if log length is not a multiple of 4.
     try {
@@ -66,7 +68,10 @@ export class EventCoder {
     if (!layout) {
       throw new Error(`Unknown event: ${eventName}`);
     }
-    const data = layout.decode(logArr.slice(8)) as EventData<E["fields"][number], T>;
+    const data = layout.decode(logArr.slice(8)) as EventData<
+      E["fields"][number],
+      T
+    >;
     return { data, name: eventName };
   }
 }

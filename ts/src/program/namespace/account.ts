@@ -46,7 +46,9 @@ export default class AccountFactory {
   }
 }
 
-type NullableIdlAccount<IDL extends Idl> = (IDL["accounts"] extends undefined ? IdlTypeDef : NonNullable<IDL["accounts"]>[number]);
+type NullableIdlAccount<IDL extends Idl> = IDL["accounts"] extends undefined
+  ? IdlTypeDef
+  : NonNullable<IDL["accounts"]>[number];
 
 /**
  * The namespace provides handles to an [[AccountClient]] object for each
@@ -74,7 +76,9 @@ export type AccountNamespace<IDL extends Idl = Idl> = {
 
 export class AccountClient<
   IDL extends Idl = Idl,
-  A extends NullableIdlAccount<IDL> =  (IDL["accounts"] extends undefined ? IdlTypeDef : NonNullable<IDL["accounts"]>[number]),
+  A extends NullableIdlAccount<IDL> = IDL["accounts"] extends undefined
+    ? IdlTypeDef
+    : NonNullable<IDL["accounts"]>[number],
   T = TypeDef<A, IdlTypes<IDL>>
 > {
   /**

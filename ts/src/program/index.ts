@@ -9,7 +9,7 @@ import NamespaceFactory, {
   TransactionNamespace,
   AccountNamespace,
   StateClient,
-  SimulateNamespace
+  SimulateNamespace,
 } from "./namespace";
 import { getProvider } from "../";
 import { utf8 } from "../utils/bytes";
@@ -287,7 +287,7 @@ export class Program<IDL extends Idl = Idl> {
     if (!idl) {
       throw new Error(`IDL not found for program: ${address.toString()}`);
     }
-    
+
     return new Program(idl, programId, provider);
   }
 

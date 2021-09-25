@@ -3,7 +3,13 @@ import {
   PublicKey,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { Idl, IdlAccount, IdlAccountItem, IdlAccounts, IdlInstruction } from "../../idl";
+import {
+  Idl,
+  IdlAccount,
+  IdlAccountItem,
+  IdlAccounts,
+  IdlInstruction,
+} from "../../idl";
 import { IdlError } from "../../error";
 import {
   toInstruction,
@@ -66,7 +72,7 @@ export default class InstructionNamespaceFactory {
     accounts: readonly IdlAccountItem[]
   ): AccountMeta[] {
     if (!ctx) {
-      return []
+      return [];
     }
 
     return accounts

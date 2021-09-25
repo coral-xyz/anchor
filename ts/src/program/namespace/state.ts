@@ -7,7 +7,13 @@ import {
   AccountMeta,
 } from "@solana/web3.js";
 import Provider from "../../provider";
-import { Idl, IdlAccountItem, IdlInstruction, IdlStateMethod, IdlTypeDef } from "../../idl";
+import {
+  Idl,
+  IdlAccountItem,
+  IdlInstruction,
+  IdlStateMethod,
+  IdlTypeDef,
+} from "../../idl";
 import Coder, { stateDiscriminator } from "../../coder";
 import { RpcNamespace, InstructionNamespace, TransactionNamespace } from "./";
 import { getProvider } from "../../";
@@ -33,16 +39,16 @@ export default class StateFactory {
   }
 }
 
-type NullableMethods<IDL extends Idl> = (IDL["state"] extends undefined ? IdlInstruction[] : NonNullable<IDL["state"]>["methods"]);
+type NullableMethods<IDL extends Idl> = IDL["state"] extends undefined
+  ? IdlInstruction[]
+  : NonNullable<IDL["state"]>["methods"];
 
 /**
  * A client for the program state. Similar to the base [[Program]] client,
  * one can use this to send transactions and read accounts for the state
  * abstraction.
  */
-export class StateClient<
-  IDL extends Idl
-> {
+export class StateClient<IDL extends Idl> {
   /**
    * [[RpcNamespace]] for all state methods.
    */
@@ -51,18 +57,12 @@ export class StateClient<
   /**
    * [[InstructionNamespace]] for all state methods.
    */
-  readonly instruction: InstructionNamespace<
-    IDL,
-    NullableMethods<IDL>[number]
-  >;
+  readonly instruction: InstructionNamespace<IDL, NullableMethods<IDL>[number]>;
 
   /**
    * [[TransactionNamespace]] for all state methods.
    */
-  readonly transaction: TransactionNamespace<
-    IDL,
-    NullableMethods<IDL>[number]
-  >;
+  readonly transaction: TransactionNamespace<IDL, NullableMethods<IDL>[number]>;
 
   /**
    * Returns the program ID owning the state.
@@ -137,14 +137,8 @@ export class StateClient<
       );
 
       return [
-        instruction as InstructionNamespace<
-          IDL,
-          NullableMethods<IDL>[number]
-        >,
-        transaction as TransactionNamespace<
-          IDL,
-          NullableMethods<IDL>[number]
-        >,
+        instruction as InstructionNamespace<IDL, NullableMethods<IDL>[number]>,
+        transaction as TransactionNamespace<IDL, NullableMethods<IDL>[number]>,
         rpc as RpcNamespace<IDL, NullableMethods<IDL>[number]>,
       ];
     })();
@@ -156,7 +150,14 @@ export class StateClient<
   /**
    * Returns the deserialized state account.
    */
-  async fetch(): Promise<TypeDef<(IDL["state"] extends undefined ? IdlTypeDef : NonNullable<IDL["state"]>["struct"]), IdlTypes<IDL>>> {
+  async fetch(): Promise<
+    TypeDef<
+      IDL["state"] extends undefined
+        ? IdlTypeDef
+        : NonNullable<IDL["state"]>["struct"],
+      IdlTypes<IDL>
+    >
+  > {
     const addr = this.address();
     const accountInfo = await this.provider.connection.getAccountInfo(addr);
     if (accountInfo === null) {

@@ -111,7 +111,9 @@ export type SimulateNamespace<
   Promise<SimulateResponse<NullableEvents<IDL>, IdlTypes<IDL>>>
 >;
 
-type NullableEvents<IDL extends Idl> = (IDL["events"] extends undefined ? IdlEvent : NonNullable<IDL["events"]>[number])
+type NullableEvents<IDL extends Idl> = IDL["events"] extends undefined
+  ? IdlEvent
+  : NonNullable<IDL["events"]>[number];
 
 /**
  * SimulateFn is a single method generated from an IDL. It simulates a method
