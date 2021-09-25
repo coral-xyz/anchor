@@ -736,7 +736,7 @@ describe("misc", () => {
     // results in a 2 accounts.
     assert.equal(allAccountsFilteredByProgramFilters1.length, 2);
     // Filtering all the main wallet accounts and matching the filterable2 value
-    // results in 1 account
+    // results in 1 account.
     assert.equal(allAccountsFilteredByProgramFilters2.length, 1);
   });
 });
