@@ -65,6 +65,12 @@ export type MakeInstructionsNamespace<
     Mk[M];
 };
 
+export type InstructionContextFn<
+  IDL extends Idl,
+  I extends AllInstructions<IDL>,
+  Ret
+> = (...args: InstructionContextFnArgs<IDL, I>) => Ret;
+
 export type InstructionContextFnArgs<
   IDL extends Idl,
   I extends IDL["instructions"][number]
@@ -72,12 +78,6 @@ export type InstructionContextFnArgs<
   ...ArgsTuple<I["args"], IdlTypes<IDL>>,
   Context<Accounts<I["accounts"][number]>>
 ];
-
-export type InstructionContextFn<
-  IDL extends Idl,
-  I extends AllInstructions<IDL>,
-  Ret
-> = (...args: InstructionContextFnArgs<IDL, I>) => Ret;
 
 type TypeMap = {
   publicKey: PublicKey;

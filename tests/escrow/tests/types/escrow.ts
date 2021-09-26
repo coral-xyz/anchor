@@ -1,4 +1,4 @@
-export type EscrowIDL = {
+export type Escrow = {
   version: "0.0.0";
   name: "escrow";
   instructions: [

@@ -78,7 +78,7 @@ export class Program<IDL extends Idl = Idl> {
    * });
    * ```
    */
-  readonly rpc: RpcNamespace<IDL, IDL["instructions"][number]>;
+  readonly rpc: RpcNamespace<IDL>;
 
   /**
    * The namespace provides handles to an [[AccountClient]] object for each
@@ -131,7 +131,7 @@ export class Program<IDL extends Idl = Idl> {
    * });
    * ```
    */
-  readonly instruction: InstructionNamespace<IDL, IDL["instructions"][number]>;
+  readonly instruction: InstructionNamespace<IDL>;
 
   /**
    * The namespace provides functions to build [[Transaction]] objects for each
@@ -162,7 +162,7 @@ export class Program<IDL extends Idl = Idl> {
    * });
    * ```
    */
-  readonly transaction: TransactionNamespace<IDL, IDL["instructions"][number]>;
+  readonly transaction: TransactionNamespace<IDL>;
 
   /**
    * The namespace provides functions to simulate transactions for each method
@@ -198,7 +198,7 @@ export class Program<IDL extends Idl = Idl> {
    * });
    * ```
    */
-  readonly simulate: SimulateNamespace<IDL, IDL["instructions"][number]>;
+  readonly simulate: SimulateNamespace<IDL>;
 
   /**
    * A client for the program state. Similar to the base [[Program]] client,

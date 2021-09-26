@@ -8,13 +8,13 @@ import {
 } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import { assert } from "chai";
-import { EscrowIDL } from "./types/escrow";
+import { Escrow } from "./types/escrow";
 
 describe("escrow", () => {
   const provider = anchor.Provider.env();
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.Escrow as Program<EscrowIDL>;
+  const program = anchor.workspace.Escrow as Program<Escrow>;
 
   let mintA: Token = null;
   let mintB: Token = null;

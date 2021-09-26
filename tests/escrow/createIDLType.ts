@@ -8,10 +8,10 @@ fs.mkdir("tests/types", { recursive: true }, (err) => {
     }
 });
 
-let escrowIDLJSON = JSON.parse(fs.readFileSync('./target/idl/escrow.json'));
-for (let account of escrowIDLJSON.accounts) {
+const escrowIdlJson = JSON.parse(fs.readFileSync('./target/idl/escrow.json'));
+for (let account of escrowIdlJson.accounts) {
     account.name = camelcase(account.name);
 }
 
-const fileContents = `export type EscrowIDL = ${JSON.stringify(escrowIDLJSON)};`;
+const fileContents = `export type EscrowIdl = ${JSON.stringify(escrowIdlJson)};`;
 fs.writeFileSync("tests/types/escrow.ts", fileContents);
