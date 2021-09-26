@@ -799,7 +799,6 @@ fn docker_build(
 fn _build_cwd(idl_out: Option<PathBuf>, slop: Option<Vec<String>>) -> Result<()> {
     let exit = std::process::Command::new("cargo")
         .arg("build-bpf")
-        //.arg("--")
         .args(slop.unwrap_or(vec![]))
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
@@ -2040,18 +2039,6 @@ fn publish(cfg_override: &ConfigOverride, program_name: String) -> Result<()> {
 
     let anchor_package = AnchorPackage::from(program_name.clone(), &cfg)?;
     let anchor_package_bytes = serde_json::to_vec(&anchor_package)?;
-
-    // Build the program before sending it to the server.
-    build(
-        cfg_override,
-        None,
-        true,
-        Some(program_name.clone()),
-        cfg.solana_version.clone(),
-        None,
-        None,
-        None,
-    )?;
 
     // Set directory to top of the workspace.
     let workspace_dir = cfg.path().parent().unwrap();
