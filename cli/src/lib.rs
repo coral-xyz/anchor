@@ -124,7 +124,7 @@ pub enum Command {
         detach: bool,
         #[clap(multiple_values = true)]
         args: Vec<String>,
-        /// Arguments to pass to the underlying `cargo build-bpf` command
+        /// Arguments to pass to the underlying `cargo build-bpf` command.
         #[clap(
             required = false,
             takes_value = true,
