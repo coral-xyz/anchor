@@ -185,7 +185,7 @@ pub enum Command {
     Publish {
         /// The name of the program to publish.
         program: String,
-        /// Arguments to pass to the underlying `cargo build-bpf` command
+        /// Arguments to pass to the underlying `cargo build-bpf` command.
         #[clap(
             required = false,
             takes_value = true,
