@@ -95,7 +95,7 @@ pub enum Command {
         /// only.
         #[clap(short, long)]
         solana_version: Option<String>,
-        /// Arguments to pass to the underlying `cargo build-bpf` command
+        /// Arguments to pass to the underlying `cargo build-bpf` command.
         #[clap(
             required = false,
             takes_value = true,
