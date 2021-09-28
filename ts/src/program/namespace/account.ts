@@ -7,13 +7,14 @@ import {
   SystemProgram,
   TransactionInstruction,
   Commitment,
+  GetProgramAccountsFilter,
 } from "@solana/web3.js";
 import Provider from "../../provider";
 import { Idl, IdlTypeDef } from "../../idl";
 import Coder, {
   ACCOUNT_DISCRIMINATOR_SIZE,
-  accountDiscriminator,
   accountSize,
+  AccountsCoder,
 } from "../../coder";
 import { Subscription, Address, translateAddress } from "../common";
 import { getProvider } from "../../";
@@ -132,7 +133,9 @@ export class AccountClient<T = any> {
     }
 
     // Assert the account discriminator is correct.
-    const discriminator = await accountDiscriminator(this._idlAccount.name);
+    const discriminator = AccountsCoder.accountDiscriminator(
+      this._idlAccount.name
+    );
     if (discriminator.compare(accountInfo.data.slice(0, 8))) {
       throw new Error("Invalid account discriminator");
     }
@@ -165,7 +168,9 @@ export class AccountClient<T = any> {
       addresses.map((address) => translateAddress(address))
     );
 
-    const discriminator = await accountDiscriminator(this._idlAccount.name);
+    const discriminator = AccountsCoder.accountDiscriminator(
+      this._idlAccount.name
+    );
     // Decode accounts where discriminator is correct, null otherwise
     return accounts.map((account) => {
       if (account == null) {
@@ -183,12 +188,24 @@ export class AccountClient<T = any> {
 
   /**
    * Returns all instances of this account type for the program.
+   *
+   * @param filters User-provided filters to narrow the results from `connection.getProgramAccounts`.
+   *
+   *                When filters are not defined this method returns all
+   *                the account instances.
+   *
+   *                When filters are of type `Buffer`, the filters are appended
+   *                after the discriminator.
+   *
+   *                When filters are of type `GetProgramAccountsFilter[]`,
+   *                filters are appended after the discriminator filter.
    */
-  async all(filter?: Buffer): Promise<ProgramAccount<T>[]> {
-    let bytes = await accountDiscriminator(this._idlAccount.name);
-    if (filter !== undefined) {
-      bytes = Buffer.concat([bytes, filter]);
-    }
+  async all(
+    filters?: Buffer | GetProgramAccountsFilter[]
+  ): Promise<ProgramAccount<T>[]> {
+    const discriminator = AccountsCoder.accountDiscriminator(
+      this._idlAccount.name
+    );
 
     let resp = await this._provider.connection.getProgramAccounts(
       this._programId,
@@ -198,9 +215,14 @@ export class AccountClient<T = any> {
           {
             memcmp: {
               offset: 0,
-              bytes: bs58.encode(bytes),
+              bytes: bs58.encode(
+                filters instanceof Buffer
+                  ? Buffer.concat([discriminator, filters])
+                  : discriminator
+              ),
             },
           },
+          ...(Array.isArray(filters) ? filters : []),
         ],
       }
     );
