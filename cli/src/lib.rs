@@ -1334,7 +1334,8 @@ fn test(
                 true => None,
                 false => Some(validator_flags(cfg)?),
             };
-            (validator_handle, provider_url) = Some(start_test_validator(cfg, flags)?);
+            validator_handle = Some(start_test_validator(cfg, flags)?);
+            provider_url = test_validator_rpc_url(flags).as_str();
         }
 
         // Setup log reader.
@@ -1494,7 +1495,7 @@ pub struct IdlTestMetadata {
     address: String,
 }
 
-fn start_test_validator(cfg: &Config, flags: Option<Vec<String>>) -> Result<(Child, String)> {
+fn start_test_validator(cfg: &Config, flags: Option<Vec<String>>) -> Result<Child> {
     let flags = flags.unwrap_or_default();
     let test_ledger_directory: &str = match flags.iter().position(|f| *f == "--ledger") {
         Some(position) => flags[position + 1].as_ref(),
@@ -1520,18 +1521,7 @@ fn start_test_validator(cfg: &Config, flags: Option<Vec<String>>) -> Result<(Chi
         .spawn()
         .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
 
-    let bind_address = match flags.iter().position(|f| *f == "--bind-address") {
-        Some(position) => flags[position + 1].clone(),
-        None => "127.0.0.1".to_string(),
-    };
-    // If a custom port is defined use that for validator ready check.
-    let port = match flags.iter().position(|f| *f == "--rpc-port") {
-        Some(position) => flags[position + 1].clone(),
-        None => "8899".to_string(),
-    };
-
-    let rpc_url = format!("http://{}:{}", bind_address, port);
-    let client = RpcClient::new(rpc_url);
+    let client = RpcClient::new(test_validator_rpc_url(flags));
     let mut count = 0;
     let ms_wait = 5000;
     while count < ms_wait {
@@ -1546,7 +1536,23 @@ fn start_test_validator(cfg: &Config, flags: Option<Vec<String>>) -> Result<(Chi
         println!("Unable to start test validator.");
         std::process::exit(1);
     }
-    Ok((validator_handle, rpc_url))
+    Ok(validator_handle)
+}
+
+// Return the URL that a validator should be running on given the config
+// and flags
+fn test_validator_rpc_url(flags: Option<Vec<String>>) -> String {
+    let bind_address = match flags.iter().position(|f| *f == "--bind-address") {
+        Some(position) => flags[position + 1].clone(),
+        None => "127.0.0.1".to_string(),
+    };
+    // If a custom port is defined use that for validator ready check.
+    let port = match flags.iter().position(|f| *f == "--rpc-port") {
+        Some(position) => flags[position + 1].clone(),
+        None => "8899".to_string(),
+    };
+
+    format!("http://{}:{}", bind_address, port)
 }
 
 fn deploy(cfg_override: &ConfigOverride, program_str: Option<String>) -> Result<()> {
