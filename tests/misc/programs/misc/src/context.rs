@@ -1,6 +1,7 @@
 use crate::account::*;
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, TokenAccount};
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token::{Mint, Token, TokenAccount};
 use misc2::misc2::MyState as Misc2State;
 use std::mem::size_of;
 
@@ -18,7 +19,7 @@ pub struct TestTokenSeedsInit<'info> {
     pub mint: Account<'info, Mint>,
     #[account(
         init,
-        seeds = [b"my-token-seed".as_ref()],
+        seeds = [b"my-token-seed".as_ref(),],
         bump = token_bump,
         payer = authority,
         token::mint = mint,
@@ -29,6 +30,23 @@ pub struct TestTokenSeedsInit<'info> {
     pub system_program: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub token_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestInitAssociatedToken<'info> {
+    #[account(
+        init,
+        payer = payer,
+        associated_token::mint = mint,
+        associated_token::authority = payer,
+    )]
+    pub token: Account<'info, TokenAccount>,
+    pub mint: Account<'info, Mint>,
+    pub payer: Signer<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
 #[derive(Accounts)]
@@ -184,4 +202,20 @@ pub struct TestInitToken<'info> {
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestCompositePayer<'info> {
+    pub composite: TestInit<'info>,
+    #[account(init, payer = composite.payer, space = 8 + size_of::<Data>())]
+    pub data: Account<'info, Data>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct TestFetchAll<'info> {
+    #[account(init, payer = authority)]
+    pub data: Account<'info, DataWithFilter>,
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
 }

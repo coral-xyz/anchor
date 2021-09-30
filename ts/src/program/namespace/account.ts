@@ -7,17 +7,19 @@ import {
   SystemProgram,
   TransactionInstruction,
   Commitment,
+  GetProgramAccountsFilter,
 } from "@solana/web3.js";
 import Provider from "../../provider";
 import { Idl, IdlTypeDef } from "../../idl";
 import Coder, {
   ACCOUNT_DISCRIMINATOR_SIZE,
-  accountDiscriminator,
   accountSize,
+  AccountsCoder,
 } from "../../coder";
 import { Subscription, Address, translateAddress } from "../common";
 import { getProvider } from "../../";
 import * as pubkeyUtil from "../../utils/pubkey";
+import * as rpcUtil from "../../utils/rpc";
 
 export default class AccountFactory {
   public static build(
@@ -28,7 +30,7 @@ export default class AccountFactory {
   ): AccountNamespace {
     const accountFns: AccountNamespace = {};
 
-    idl.accounts.forEach((idlAccount) => {
+    idl.accounts?.forEach((idlAccount) => {
       const name = camelCase(idlAccount.name);
       accountFns[name] = new AccountClient(
         idl,
@@ -67,7 +69,7 @@ export interface AccountNamespace {
   [key: string]: AccountClient;
 }
 
-export class AccountClient {
+export class AccountClient<T = any> {
   /**
    * Returns the number of bytes in this account.
    */
@@ -113,24 +115,27 @@ export class AccountClient {
     this._programId = programId;
     this._provider = provider ?? getProvider();
     this._coder = coder ?? new Coder(idl);
-    this._size = ACCOUNT_DISCRIMINATOR_SIZE + accountSize(idl, idlAccount);
+    this._size =
+      ACCOUNT_DISCRIMINATOR_SIZE + (accountSize(idl, idlAccount) ?? 0);
   }
 
   /**
-   * Returns a deserialized account.
+   * Returns a deserialized account, returning null if it doesn't exist.
    *
    * @param address The address of the account to fetch.
    */
-  async fetch(address: Address): Promise<Object> {
+  async fetchNullable(address: Address): Promise<T | null> {
     const accountInfo = await this._provider.connection.getAccountInfo(
       translateAddress(address)
     );
     if (accountInfo === null) {
-      throw new Error(`Account does not exist ${address.toString()}`);
+      return null;
     }
 
     // Assert the account discriminator is correct.
-    const discriminator = await accountDiscriminator(this._idlAccount.name);
+    const discriminator = AccountsCoder.accountDiscriminator(
+      this._idlAccount.name
+    );
     if (discriminator.compare(accountInfo.data.slice(0, 8))) {
       throw new Error("Invalid account discriminator");
     }
@@ -139,13 +144,68 @@ export class AccountClient {
   }
 
   /**
-   * Returns all instances of this account type for the program.
+   * Returns a deserialized account.
+   *
+   * @param address The address of the account to fetch.
    */
-  async all(filter?: Buffer): Promise<ProgramAccount<any>[]> {
-    let bytes = await accountDiscriminator(this._idlAccount.name);
-    if (filter !== undefined) {
-      bytes = Buffer.concat([bytes, filter]);
+  async fetch(address: Address): Promise<T> {
+    const data = await this.fetchNullable(address);
+    if (data === null) {
+      throw new Error(`Account does not exist ${address.toString()}`);
     }
+    return data;
+  }
+
+  /**
+   * Returns multiple deserialized accounts.
+   * Accounts not found or with wrong discriminator are returned as null.
+   *
+   * @param addresses The addresses of the accounts to fetch.
+   */
+  async fetchMultiple(addresses: Address[]): Promise<(Object | null)[]> {
+    const accounts = await rpcUtil.getMultipleAccounts(
+      this._provider.connection,
+      addresses.map((address) => translateAddress(address))
+    );
+
+    const discriminator = AccountsCoder.accountDiscriminator(
+      this._idlAccount.name
+    );
+    // Decode accounts where discriminator is correct, null otherwise
+    return accounts.map((account) => {
+      if (account == null) {
+        return null;
+      }
+      if (discriminator.compare(account?.account.data.slice(0, 8))) {
+        return null;
+      }
+      return this._coder.accounts.decode(
+        this._idlAccount.name,
+        account?.account.data
+      );
+    });
+  }
+
+  /**
+   * Returns all instances of this account type for the program.
+   *
+   * @param filters User-provided filters to narrow the results from `connection.getProgramAccounts`.
+   *
+   *                When filters are not defined this method returns all
+   *                the account instances.
+   *
+   *                When filters are of type `Buffer`, the filters are appended
+   *                after the discriminator.
+   *
+   *                When filters are of type `GetProgramAccountsFilter[]`,
+   *                filters are appended after the discriminator filter.
+   */
+  async all(
+    filters?: Buffer | GetProgramAccountsFilter[]
+  ): Promise<ProgramAccount<T>[]> {
+    const discriminator = AccountsCoder.accountDiscriminator(
+      this._idlAccount.name
+    );
 
     let resp = await this._provider.connection.getProgramAccounts(
       this._programId,
@@ -155,9 +215,14 @@ export class AccountClient {
           {
             memcmp: {
               offset: 0,
-              bytes: bs58.encode(bytes),
+              bytes: bs58.encode(
+                filters instanceof Buffer
+                  ? Buffer.concat([discriminator, filters])
+                  : discriminator
+              ),
             },
           },
+          ...(Array.isArray(filters) ? filters : []),
         ],
       }
     );
@@ -177,8 +242,9 @@ export class AccountClient {
    * changes.
    */
   subscribe(address: Address, commitment?: Commitment): EventEmitter {
-    if (subscriptions.get(address.toString())) {
-      return subscriptions.get(address.toString()).ee;
+    const sub = subscriptions.get(address.toString());
+    if (sub) {
+      return sub.ee;
     }
 
     const ee = new EventEmitter();
@@ -248,7 +314,7 @@ export class AccountClient {
    * Function returning the associated account. Args are keys to associate.
    * Order matters.
    */
-  async associated(...args: Array<PublicKey | Buffer>): Promise<any> {
+  async associated(...args: Array<PublicKey | Buffer>): Promise<T> {
     const addr = await this.associatedAddress(...args);
     return await this.fetch(addr);
   }

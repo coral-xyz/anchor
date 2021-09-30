@@ -178,6 +178,9 @@ impl Field {
             Ty::AccountInfo => quote! {
                 AccountInfo
             },
+            Ty::UncheckedAccount => quote! {
+                UncheckedAccount
+            },
             Ty::Signer => quote! {
                 Signer
             },
@@ -217,11 +220,14 @@ impl Field {
 
     // TODO: remove the option once `CpiAccount` is completely removed (not
     //       just deprecated).
-    pub fn from_account_info(&self, kind: Option<&InitKind>) -> proc_macro2::TokenStream {
+    pub fn from_account_info_unchecked(&self, kind: Option<&InitKind>) -> proc_macro2::TokenStream {
         let field = &self.ident;
         let container_ty = self.container_ty();
         match &self.ty {
             Ty::AccountInfo => quote! { #field.to_account_info() },
+            Ty::UncheckedAccount => {
+                quote! { UncheckedAccount::try_from(#field.to_account_info()) }
+            }
             Ty::Account(AccountTy { boxed, .. }) => {
                 if *boxed {
                     quote! {
@@ -235,6 +241,13 @@ impl Field {
                             &#field,
                         )?
                     }
+                }
+            }
+            Ty::CpiAccount(_) => {
+                quote! {
+                    #container_ty::try_from_unchecked(
+                        &#field,
+                    )?
                 }
             }
             _ => {
@@ -276,6 +289,7 @@ impl Field {
             Ty::ProgramState(_) => quote! { anchor_lang::ProgramState },
             Ty::Program(_) => quote! { anchor_lang::Program },
             Ty::AccountInfo => quote! {},
+            Ty::UncheckedAccount => quote! {},
             Ty::Signer => quote! {},
         }
     }
@@ -285,6 +299,9 @@ impl Field {
         match &self.ty {
             Ty::AccountInfo => quote! {
                 AccountInfo
+            },
+            Ty::UncheckedAccount => quote! {
+                UncheckedAccount
             },
             Ty::Signer => quote! {
                 Signer
@@ -360,6 +377,7 @@ pub struct CompositeField {
 #[derive(Debug, PartialEq)]
 pub enum Ty {
     AccountInfo,
+    UncheckedAccount,
     ProgramState(ProgramStateTy),
     CpiState(CpiStateTy),
     ProgramAccount(ProgramAccountTy),
@@ -543,6 +561,8 @@ pub enum ConstraintToken {
     Address(Context<ConstraintAddress>),
     TokenMint(Context<ConstraintTokenMint>),
     TokenAuthority(Context<ConstraintTokenAuthority>),
+    AssociatedTokenMint(Context<ConstraintTokenMint>),
+    AssociatedTokenAuthority(Context<ConstraintTokenAuthority>),
     MintAuthority(Context<ConstraintMintAuthority>),
     MintDecimals(Context<ConstraintMintDecimals>),
     Bump(Context<ConstraintTokenBump>),
@@ -600,7 +620,7 @@ pub enum ConstraintRentExempt {
 #[derive(Debug, Clone)]
 pub struct ConstraintInitGroup {
     pub seeds: Option<ConstraintSeedsGroup>,
-    pub payer: Option<Ident>,
+    pub payer: Option<Expr>,
     pub space: Option<Expr>,
     pub kind: InitKind,
 }
@@ -627,7 +647,7 @@ pub struct ConstraintState {
 
 #[derive(Debug, Clone)]
 pub struct ConstraintPayer {
-    pub target: Ident,
+    pub target: Expr,
 }
 
 #[derive(Debug, Clone)]
@@ -642,6 +662,7 @@ pub enum InitKind {
     // Owner for token and mint represents the authority. Not to be confused
     // with the owner of the AccountInfo.
     Token { owner: Expr, mint: Expr },
+    AssociatedToken { owner: Expr, mint: Expr },
     Mint { owner: Expr, decimals: Expr },
 }
 
