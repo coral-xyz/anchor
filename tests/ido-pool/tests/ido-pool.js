@@ -64,7 +64,7 @@ describe("ido-pool", () => {
   let redeemableMint = null;
   let poolWatermelon = null;
   let poolUsdc = null;
-  let poolAccount = null;
+  // let poolAccount = null;
 
   let startIdoTs = null;
   let endDepositsTs = null;
@@ -74,15 +74,15 @@ describe("ido-pool", () => {
   it("Initializes the IDO pool", async () => {
     let bumps = new PoolBumps();
 
-    // We use the watermelon mint address as the seed, could use something else though.
     const [poolAccount, poolAccountBump] = await anchor.web3.PublicKey.findProgramAddress(
+      // [Buffer.from("test_ido")],
       [Buffer.from(poolId)],
       program.programId
     );
     bumps.poolAccount = poolAccountBump;
 
     const [redeemableMint, redeemableMintBump] = await anchor.web3.PublicKey.findProgramAddress(
-      [Buffer.from(poolId), Buffer.from("reedemable_mint")],
+      [Buffer.from(poolId), Buffer.from("redeemable_mint")],
       program.programId
     );
     bumps.redeemableMint = redeemableMintBump;
@@ -109,6 +109,9 @@ describe("ido-pool", () => {
     //   poolSigner
     // );
     // poolUsdc = await createTokenAccount(provider, usdcMint, poolSigner);
+    console.log("bumps:", bumps);
+    console.log("program account", poolAccount.toString());
+    console.log("program id", program.programId.toString());
 
     // poolAccount = anchor.web3.Keypair.generate();
     const nowBn = new anchor.BN(Date.now() / 1000);
@@ -116,10 +119,21 @@ describe("ido-pool", () => {
     endDepositsTs = nowBn.add(new anchor.BN(10));
     endIdoTs = nowBn.add(new anchor.BN(15));
 
+    // await program.rpc.testPdas(
+    //   bumps, {
+    //   accounts: {
+    //     distributionAuthority: provider.wallet.publicKey,
+    //     creatorWatermelon,
+    //     poolAccount,
+    //     systemProgram: anchor.web3.SystemProgram.programId,
+    //   }
+    // }
+    // );
+
     // Atomically create the new account and initialize it with the program.
     await program.rpc.initializePool(
-      poolId,
       bumps,
+      poolId,
       watermelonIdoAmount,
       startIdoTs,
       endDepositsTs,

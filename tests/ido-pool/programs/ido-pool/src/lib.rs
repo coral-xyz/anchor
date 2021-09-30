@@ -19,8 +19,8 @@ pub mod ido_pool {
     #[access_control(future_start_time(&ctx, start_ido_ts))]
     pub fn initialize_pool(
         ctx: Context<InitializePool>,
-        pool_id: String,
         bumps: PoolBumps,
+        pool_id: String,
         num_ido_tokens: u64,
         start_ido_ts: i64,
         end_deposits_ts: i64,
@@ -206,7 +206,7 @@ pub mod ido_pool {
 }
 
 #[derive(Accounts)]
-#[instruction(pool_id: String, bumps: PoolBumps)]
+#[instruction(bumps: PoolBumps, pool_id: String)]
 pub struct InitializePool<'info> {
     // Authority accounts
     #[account(signer)]
@@ -220,16 +220,16 @@ pub struct InitializePool<'info> {
         payer = distribution_authority)]
     pub pool_account: Box<Account<'info, PoolAccount>>,
     pub watermelon_mint: Box<Account<'info, Mint>>,
-    // TODO USDC should be a known mint on mainnet so add a check to confirm that
-    #[account(constraint = usdc_mint.decimals == redeemable_mint.decimals)]
-    pub usdc_mint: Box<Account<'info, Mint>>,
     #[account(init,
         mint::decimals = DECIMALS, 
         mint::authority = pool_account,
-        seeds = [pool_id.as_bytes(), b"redeemable_mint"],
+        seeds = [pool_id.as_bytes(), b"redeemable_mint".as_ref()],
         bump = bumps.redeemable_mint,
         payer = distribution_authority)]
     pub redeemable_mint: Box<Account<'info, Mint>>,
+    // TODO USDC should be a known mint on mainnet so add a check to confirm that
+    #[account(constraint = usdc_mint.decimals == redeemable_mint.decimals)]
+    pub usdc_mint: Box<Account<'info, Mint>>,
     #[account(init,
         token::mint = watermelon_mint,
         token::authority = pool_account,
