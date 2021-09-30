@@ -63,6 +63,15 @@ pub mod ido_pool {
         Ok(())
     }
 
+    // TODO are there any security issues with allowing init user redeemable
+    // to be called at any time? Maybe for UX reasons limit it to before the
+    // end of the deposit period
+    pub fn init_user_redeemable(
+        _ctx: Context<InitUserRedeemable>
+    ) -> ProgramResult {
+        Ok(())
+    }
+
     #[access_control(unrestricted_phase(&ctx))]
     pub fn exchange_usdc_for_redeemable(
         ctx: Context<ExchangeUsdcAndRedeemable>,
@@ -224,8 +233,9 @@ pub struct InitializePool<'info> {
         bump = bumps.ido_account,
         payer = ido_authority)]
     pub ido_account: Box<Account<'info, IdoAccount>>,
-    #[account(constraint = watermelon_mint.key() == ido_authority_watermelon.mint)]
-    pub watermelon_mint: Box<Account<'info, Mint>>,
+    // TODO USDC should be a known mint on mainnet so could add a check to confirm that
+    #[account(constraint = usdc_mint.decimals == DECIMALS)]
+    pub usdc_mint: Box<Account<'info, Mint>>,
     #[account(init,
         mint::decimals = DECIMALS,
         mint::authority = ido_account,
@@ -233,9 +243,8 @@ pub struct InitializePool<'info> {
         bump = bumps.redeemable_mint,
         payer = ido_authority)]
     pub redeemable_mint: Box<Account<'info, Mint>>,
-    // TODO USDC should be a known mint on mainnet so could add a check to confirm that
-    #[account(constraint = usdc_mint.decimals == DECIMALS)]
-    pub usdc_mint: Box<Account<'info, Mint>>,
+    #[account(constraint = watermelon_mint.key() == ido_authority_watermelon.mint)]
+    pub watermelon_mint: Box<Account<'info, Mint>>,
     #[account(init,
         token::mint = watermelon_mint,
         token::authority = ido_account,
@@ -258,20 +267,54 @@ pub struct InitializePool<'info> {
 }
 
 #[derive(Accounts)]
-pub struct ExchangeUsdcAndRedeemable<'info> {
+pub struct InitUserRedeemable<'info> {
     // User Accounts
-    // #[account(mut)] TODO we shouldn't need to pay for any solana stuff?
+    #[account(mut)]
     pub user_authority: Signer<'info>,
-    // TODO this needs to be an ATA
-    #[account(mut, constraint = user_usdc.owner == *user_authority.key)]
-    pub user_usdc: Box<Account<'info, TokenAccount>>,
-    // TODO this needs to be a PDA token account, already init, with the user's pubkey in the seed
-    #[account(mut, constraint = user_redeemable.owner == *user_authority.key)]
+    #[account(init,
+        token::mint = redeemable_mint,
+        token::authority = user_authority,
+        seeds = [user_authority.key.as_ref(), 
+            ido_account.ido_name.as_ref().trim_ascii_whitespace(), 
+            b"user_redeemable"],
+        bump,
+        payer = user_authority)]
     pub user_redeemable: Box<Account<'info, TokenAccount>>,
     // Pool Accounts
     #[account(seeds = [ido_account.ido_name.as_ref().trim_ascii_whitespace()],
         bump = ido_account.bumps.ido_account)]
     pub ido_account: Box<Account<'info, IdoAccount>>,
+    #[account(seeds = [ido_account.ido_name.as_ref().trim_ascii_whitespace(), b"redeemable_mint"],
+        bump = ido_account.bumps.redeemable_mint)]
+    pub redeemable_mint: Box<Account<'info, Mint>>,
+    // Programs and Sysvars
+    pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
+    pub rent: Sysvar<'info, Rent>,
+    pub clock: Sysvar<'info, Clock>,
+}
+
+#[derive(Accounts)]
+pub struct ExchangeUsdcAndRedeemable<'info> {
+    // User Accounts
+    // #[account(mut)] TODO we shouldn't need to pay for any solana stuff?
+    pub user_authority: Signer<'info>,
+    // TODO  replace these with the ATA constraints
+    #[account(mut, 
+        constraint = user_usdc.owner == *user_authority.key,
+        constraint = user_usdc.mint == usdc_mint.key())]
+    pub user_usdc: Box<Account<'info, TokenAccount>>,
+    #[account(mut,
+        seeds = [user_authority.key.as_ref(),
+            ido_account.ido_name.as_ref().trim_ascii_whitespace(),
+            b"user_redeemable"],
+        bump)]
+    pub user_redeemable: Box<Account<'info, TokenAccount>>,
+    // Pool Accounts
+    #[account(seeds = [ido_account.ido_name.as_ref().trim_ascii_whitespace()],
+        bump = ido_account.bumps.ido_account)]
+    pub ido_account: Box<Account<'info, IdoAccount>>,
+    pub usdc_mint: Box<Account<'info, Mint>>,
     pub watermelon_mint: Box<Account<'info, Mint>>,
     #[account(mut,
         seeds = [ido_account.ido_name.as_ref().trim_ascii_whitespace(), b"redeemable_mint"],
