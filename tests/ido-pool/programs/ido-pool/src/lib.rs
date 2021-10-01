@@ -297,9 +297,9 @@ pub struct InitUserRedeemable<'info> {
 #[derive(Accounts)]
 pub struct ExchangeUsdcAndRedeemable<'info> {
     // User Accounts
-    // #[account(mut)] TODO we shouldn't need to pay for any solana stuff?
+    // #[account(mut)] TODO user shouldn't need to pay for any solana stuff?
     pub user_authority: Signer<'info>,
-    // TODO  replace these with the ATA constraints
+    // TODO replace these with the ATA constraints when possible
     #[account(mut, 
         constraint = user_usdc.owner == *user_authority.key,
         constraint = user_usdc.mint == usdc_mint.key())]

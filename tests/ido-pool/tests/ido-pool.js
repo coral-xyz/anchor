@@ -178,7 +178,7 @@ describe("ido-pool", () => {
   it("Exchanges user USDC for redeemable tokens", async () => {
     // Wait until the IDO has opened.
     if (Date.now() < startIdoTs.toNumber() * 1000) {
-      await sleep(startIdoTs.toNumber() * 1000 - Date.now() + 1000);
+      await sleep(startIdoTs.toNumber() * 1000 - Date.now() + 2000);
     }
 
     const [idoAccount] = await anchor.web3.PublicKey.findProgramAddress(
@@ -393,13 +393,14 @@ describe("ido-pool", () => {
   it("Exchanges user Redeemable tokens for USDC", async () => {
     await program.rpc.exchangeRedeemableForUsdc(firstWithdrawal, {
       accounts: {
-        idoAccount: idoAccount.publicKey,
-        poolSigner,
-        redeemableMint,
-        poolUsdc,
         userAuthority: provider.wallet.publicKey,
         userUsdc,
         userRedeemable,
+        idoAccount,
+        usdcMint,
+        redeemableMint,
+        watermelonMint,
+        poolUsdc,
         tokenProgram: TOKEN_PROGRAM_ID,
         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       },
