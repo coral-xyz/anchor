@@ -2,9 +2,9 @@ use crate::{AccountField, AccountsStruct, Ty};
 use heck::SnakeCase;
 use quote::quote;
 
-// Generates the private `__client_accounts` mod implementation, containing
+// Generates the private `__cpi_client_accounts` mod implementation, containing
 // a generated struct mapping 1-1 to the `Accounts` struct, except with
-// `Pubkey`s as the types. This is generated for Rust *clients*.
+// `AccountInfo`s as the types. This is generated for CPI clients.
 pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     let name = &accs.ident;
     let account_mod_name: proc_macro2::TokenStream = format!(
