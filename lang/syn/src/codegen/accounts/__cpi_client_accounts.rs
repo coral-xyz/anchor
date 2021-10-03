@@ -119,7 +119,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             })
             .collect()
     };
-    let generics = if account_struct_fields.len() == 0 {
+    let generics = if account_struct_fields.is_empty() {
         quote! {}
     } else {
         quote! {<'info>}

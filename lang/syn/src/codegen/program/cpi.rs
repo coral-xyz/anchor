@@ -102,7 +102,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         })
         .collect();
 
-    let accounts = generate_accounts(&program);
+    let accounts = generate_accounts(program);
 
     quote! {
         #[cfg(feature = "cpi")]
