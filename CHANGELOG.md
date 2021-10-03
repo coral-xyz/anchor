@@ -15,7 +15,7 @@ incremented for features.
 
 ### Features
 
-* cli: Add `localnet` command for starting a local `solana-test-validator` with the workspace deployed.
+* cli: Add `localnet` command for starting a local `solana-test-validator` with the workspace deployed ([#820](https://github.com/project-serum/anchor/pull/820)).
 
 ### Breaking
 
