@@ -64,7 +64,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             dispatch(program_id, accounts, data)
                 .map_err(|e| {
                     anchor_lang::solana_program::msg!(&e.to_string());
-                    e
+                    let program_error = e.to_program_error();
+                    anchor_lang::solana_program::msg!(&program_error.to_string());
+                    program_error
                 })
         }
 

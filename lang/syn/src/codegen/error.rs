@@ -49,7 +49,7 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
         /// `ProgramError` or a custom, user defined error code by utilizing
         /// its `From` implementation.
         #[doc(hidden)]
-        #[derive(thiserror::Error, Debug)]
+        #[derive(thiserror::Error, Clone, Debug)]
         pub enum Error {
             #[error(transparent)]
             ProgramError(#[from] anchor_lang::solana_program::program_error::ProgramError),

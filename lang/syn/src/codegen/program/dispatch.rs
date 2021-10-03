@@ -18,7 +18,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             program_id,
                             accounts,
                             ix_data,
-                        )
+                        ).map_err(Into::into)
                     }
                 }
             }
@@ -47,7 +47,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     program_id,
                                     accounts,
                                     ix_data,
-                                )
+                                ).map_err(Into::into)
                             }
                         }
                     })
@@ -82,7 +82,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             program_id,
                                             accounts,
                                             ix_data,
-                                        )
+                                        ).map_err(Into::into)
                                     }
                                 }
                             })
@@ -108,7 +108,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         program_id,
                         accounts,
                         ix_data,
-                    )
+                    ).map_err(Into::into)
                 }
             }
         })
@@ -139,7 +139,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             program_id: &Pubkey,
             accounts: &[AccountInfo],
             data: &[u8],
-        ) -> ProgramResult {
+        ) -> ::anchor_lang::DynAnchorResult {
             // Split the instruction data into the first 8 byte method
             // identifier (sighash) and the serialized instruction data.
             let mut ix_data: &[u8] = data;
@@ -158,7 +158,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         program_id,
                         accounts,
                         &ix_data,
-                    );
+                    ).map_err(Into::into);
                 }
             }
 
@@ -181,7 +181,7 @@ pub fn gen_fallback(program: &Program) -> Option<proc_macro2::TokenStream> {
         let method = &fallback_fn.raw_method;
         let fn_name = &method.sig.ident;
         quote! {
-            #program_name::#fn_name(program_id, accounts, data)
+            #program_name::#fn_name(program_id, accounts, data).map_err(Into::into)
         }
     })
 }

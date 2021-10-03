@@ -88,6 +88,30 @@ pub use anchor_derive_accounts::Accounts;
 pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorSerialize};
 pub use solana_program;
 
+pub trait AnchorError: std::fmt::Display {
+    fn to_program_error(&self) -> solana_program::program_error::ProgramError;
+}
+
+impl<E: Into<ProgramError> + Clone + std::fmt::Display> AnchorError for E {
+    fn to_program_error(&self) -> solana_program::program_error::ProgramError {
+        self.clone().into()
+    }
+}
+
+impl<E: AnchorError + 'static> From<E> for Box<dyn AnchorError> {
+    fn from(e: E) -> Self {
+        Box::new(e)
+    }
+}
+
+impl From<Box<dyn AnchorError>> for solana_program::program_error::ProgramError {
+    fn from(e: Box<dyn AnchorError>) -> solana_program::program_error::ProgramError {
+        e.into()
+    }
+}
+
+pub type DynAnchorResult = std::result::Result<(), Box<dyn AnchorError>>;
+
 /// A data structure of validated accounts that can be deserialized from the
 /// input to a Solana program. Implementations of this trait should perform any
 /// and all requisite constraint checks on accounts to ensure the accounts
