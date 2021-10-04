@@ -1507,8 +1507,9 @@ fn test(
     })
 }
 
-// Returns the solana-test-validator flags to embed the workspace programs
-// in the genesis block. This allows us to run tests without every deploying.
+// Returns the solana-test-validator flags. This will embed the workspace
+// programs in the genesis block so we don't have to deploy every time. It also
+// allows control of other solana-test-validator features.
 fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
     let programs = cfg.programs.get(&Cluster::Localnet);
 
