@@ -1429,7 +1429,7 @@ fn test(
             deploy(cfg_override, None)?;
         }
         // Start local test validator, if needed.
-        let (provider_url, validator_handle) = match is_localnet && !skip_local_validator {
+        let (rpc_url, validator_handle) = match is_localnet && !skip_local_validator {
             true => {
                 let flags = match skip_deploy {
                     true => None,
@@ -1444,7 +1444,7 @@ fn test(
         };
 
         // Setup log reader.
-        let log_streams = stream_logs(cfg);
+        let log_streams = stream_logs(cfg, &rpc_url);
 
         // Run the tests.
         let test_result: Result<_> = {
@@ -1459,11 +1459,9 @@ fn test(
                 .collect();
             let program = args.remove(0);
 
-            println!("Anchor provider URL: {}", provider_url);
-
             std::process::Command::new(program)
                 .args(args)
-                .env("ANCHOR_PROVIDER_URL", provider_url)
+                .env("ANCHOR_PROVIDER_URL", rpc_url)
                 .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
@@ -1555,7 +1553,7 @@ fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
     Ok(flags)
 }
 
-fn stream_logs(config: &WithPath<Config>) -> Result<Vec<std::process::Child>> {
+fn stream_logs(config: &WithPath<Config>, rpc_url: &String) -> Result<Vec<std::process::Child>> {
     let program_logs_dir = ".anchor/program-logs";
     if Path::new(program_logs_dir).exists() {
         std::fs::remove_dir_all(program_logs_dir)?;
@@ -1581,7 +1579,7 @@ fn stream_logs(config: &WithPath<Config>) -> Result<Vec<std::process::Child>> {
             .arg("logs")
             .arg(metadata.address)
             .arg("--url")
-            .arg(config.provider.cluster.url())
+            .arg(rpc_url)
             .stdout(stdio)
             .spawn()?;
         handles.push(child);
@@ -2359,13 +2357,15 @@ fn localnet(
             )?;
         }
 
-        // Setup log reader.
-        let log_streams = stream_logs(cfg);
-
         let flags = match skip_deploy {
             true => None,
             false => Some(validator_flags(cfg)?),
         };
+
+        // Setup log reader.
+        let rpc_url = test_validator_rpc_url(&flags);
+        let log_streams = stream_logs(cfg, &rpc_url);
+
         let validator_handle = &mut start_test_validator(cfg, flags, false)?;
 
         std::io::stdin().lock().lines().next().unwrap().unwrap();
