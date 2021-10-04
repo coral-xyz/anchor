@@ -1429,16 +1429,19 @@ fn test(
             deploy(cfg_override, None)?;
         }
         // Start local test validator, if needed.
-        let mut validator_handle = None;
-        let mut provider_url = cfg.provider.cluster.url();
-        if is_localnet && (!skip_local_validator) {
-            let flags = match skip_deploy {
-                true => None,
-                false => Some(validator_flags(cfg)?),
-            };
-            validator_handle = Some(start_test_validator(cfg, flags, true)?);
-            provider_url = test_validator_rpc_url(flags).as_str();
-        }
+        let (provider_url, validator_handle) = match is_localnet && !skip_local_validator {
+            true => {
+                let flags = match skip_deploy {
+                    true => None,
+                    false => Some(validator_flags(cfg)?),
+                };
+                (
+                    test_validator_rpc_url(&flags),
+                    Some(start_test_validator(cfg, flags, true)?),
+                )
+            }
+            false => (cfg.provider.cluster.url().to_string(), None),
+        };
 
         // Setup log reader.
         let log_streams = stream_logs(cfg);
@@ -1455,6 +1458,8 @@ fn test(
                 .chain(extra_args.iter().map(|arg| arg.as_str()))
                 .collect();
             let program = args.remove(0);
+
+            println!("Anchor provider URL: {}", provider_url);
 
             std::process::Command::new(program)
                 .env("ANCHOR_PROVIDER_URL", provider_url)
@@ -1610,19 +1615,18 @@ fn start_test_validator(
     flags: Option<Vec<String>>,
     test_log_stdout: bool,
 ) -> Result<Child> {
-    let flags = flags.unwrap_or_default();
-    let test_ledger_directory: &str = match flags.iter().position(|f| *f == "--ledger") {
-        Some(position) => flags[position + 1].as_ref(),
-        None => ".anchor/test-ledger".as_ref(),
-    };
-    let test_ledger_log_filename = format!("{}/test-ledger-log.txt", test_ledger_directory);
-    if Path::new(test_ledger_directory).exists() {
-        std::fs::remove_dir_all(test_ledger_directory)?;
+    // TODO respect the --ledger flag with respect to the ledger directory and
+    // log path?
+    fs::create_dir_all(".anchor")?;
+    let test_ledger_filename = ".anchor/test-ledger";
+    let test_ledger_log_filename = ".anchor/test-ledger-log.txt";
+
+    if Path::new(test_ledger_filename).exists() {
+        std::fs::remove_dir_all(test_ledger_filename)?;
     }
-    if Path::new(&test_ledger_log_filename).exists() {
+    if Path::new(test_ledger_log_filename).exists() {
         std::fs::remove_file(test_ledger_log_filename)?;
     }
-    fs::create_dir_all(test_ledger_directory)?;
 
     // Start a validator for testing.
     let (test_validator_stdout, test_validator_stderr) = match test_log_stdout {
@@ -1636,18 +1640,21 @@ fn start_test_validator(
         }
         false => (Stdio::inherit(), Stdio::inherit()),
     };
+
+    let rpc_url = test_validator_rpc_url(&flags);
+
     let mut validator_handle = std::process::Command::new("solana-test-validator")
         .arg("--ledger")
-        .arg(test_ledger_directory)
+        .arg(test_ledger_filename)
         .arg("--mint")
         .arg(cfg.wallet_kp()?.pubkey().to_string())
-        .args(&flags)
+        .args(flags.unwrap_or_default())
         .stdout(test_validator_stdout)
         .stderr(test_validator_stderr)
         .spawn()
         .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
 
-    let client = RpcClient::new(test_validator_rpc_url(Some(flags)));
+    let client = RpcClient::new(rpc_url);
     let mut count = 0;
     let ms_wait = 5000;
     while count < ms_wait {
@@ -1671,8 +1678,8 @@ fn start_test_validator(
 
 // Return the URL that a validator should be running on given the config
 // and flags
-fn test_validator_rpc_url(flags: Option<Vec<String>>) -> String {
-    let flags = flags.unwrap_or_default();
+fn test_validator_rpc_url(flags: &Option<Vec<String>>) -> String {
+    let flags = flags.as_ref().unwrap();
     let bind_address = match flags.iter().position(|f| *f == "--bind-address") {
         Some(position) => flags[position + 1].clone(),
         None => "127.0.0.1".to_string(),

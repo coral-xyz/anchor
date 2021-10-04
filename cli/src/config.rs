@@ -457,8 +457,9 @@ fn deser_programs(
         .collect::<Result<BTreeMap<Cluster, BTreeMap<String, ProgramDeployment>>>>()
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Test {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub genesis: Option<Vec<GenesisEntry>>,
     pub validator: Option<Validator>,
 }
@@ -495,8 +496,8 @@ pub struct Validator {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
     // Use DIR as ledger location
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ledger: Option<String>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub ledger: Option<String>,
     // Keep this amount of shreds in root slots. [default: 10000]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit_ledger_size: Option<String>,
