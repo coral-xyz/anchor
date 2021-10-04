@@ -219,3 +219,10 @@ pub struct TestFetchAll<'info> {
     pub authority: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
+
+#[derive(Accounts)]
+pub struct TestVecMut<'info> {
+    #[account(mut)]
+    pub data: Vec<Account<'info, DataWithFilter>>,
+    pub system_program: Program<'info, System>,
+}

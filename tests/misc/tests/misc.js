@@ -738,5 +738,25 @@ describe("misc", () => {
     // Filtering all the main wallet accounts and matching the filterable2 value
     // results in 1 account.
     assert.equal(allAccountsFilteredByProgramFilters2.length, 1);
+
+    // Test Accounts vector mutation
+    await program.rpc.testVecMut(filterable1, {
+      accounts: {
+        data: [data2.publicKey, data3.publicKey],
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+      signers: [data2, data3],
+    });
+    const allAccountsFilteredByProgramFilters1Again =
+      await program.account.dataWithFilter.all([
+        {
+          memcmp: {
+            offset: 8,
+            bytes: program.provider.wallet.publicKey.toBase58(),
+          },
+        },
+        { memcmp: { offset: 40, bytes: filterable1.toBase58() } },
+      ]);
+      assert.equal(allAccountsFilteredByProgramFilters1Again.length, 3);
   });
 });
