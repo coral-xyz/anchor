@@ -8,7 +8,7 @@ import {
 } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import { assert } from "chai";
-import { Escrow } from "./types/escrow";
+import { Escrow } from '../target/types/escrow';
 
 describe("escrow", () => {
   const provider = anchor.Provider.env();

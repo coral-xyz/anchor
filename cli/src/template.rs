@@ -1,7 +1,8 @@
 use crate::config::ProgramWorkspace;
 use crate::VERSION;
+use anchor_syn::idl::Idl;
 use anyhow::Result;
-use heck::{CamelCase, SnakeCase};
+use heck::{CamelCase, MixedCase, SnakeCase};
 use solana_sdk::pubkey::Pubkey;
 
 pub fn default_program_id() -> Pubkey {
@@ -25,6 +26,25 @@ token = "{}"
 "#,
         token
     )
+}
+
+pub fn idl_ts(idl: &Idl) -> Result<String> {
+    let mut idl = idl.clone();
+    idl.accounts = idl
+        .accounts
+        .into_iter()
+        .map(|acc| {
+            let mut acc = acc.clone();
+            acc.name = acc.name.to_mixed_case();
+            acc
+        })
+        .collect();
+    let idl_json = serde_json::to_string_pretty(&idl)?;
+    Ok(format!(
+        "export type {} = {}",
+        idl.name.to_camel_case(),
+        idl_json
+    ))
 }
 
 pub fn cargo_toml(name: &str) -> String {
