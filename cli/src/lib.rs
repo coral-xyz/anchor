@@ -1546,7 +1546,12 @@ fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
         }
         for (key, value) in serde_json::to_value(&test.validator)?.as_object().unwrap() {
             flags.push(format!("--{}", key.replace("_", "-")));
-            flags.push(value.to_string());
+            let flag_value = match value.clone() {
+                e @ serde_json::Value::Number(_) | e @ serde_json::Value::Bool(_) => e.to_string(),
+                serde_json::Value::String(s) => s,
+                _ => "".to_string(),
+            };
+            flags.push(flag_value);
         }
     }
 
@@ -1614,23 +1619,23 @@ fn start_test_validator(
     flags: Option<Vec<String>>,
     test_log_stdout: bool,
 ) -> Result<Child> {
-    // TODO respect the --ledger flag with respect to the ledger directory and
-    // log path?
-    fs::create_dir_all(".anchor")?;
-    let test_ledger_filename = ".anchor/test-ledger";
-    let test_ledger_log_filename = ".anchor/test-ledger-log.txt";
+    //
+    let (test_ledger_directory, test_ledger_log_filename) = test_validator_file_paths(&flags);
 
-    if Path::new(test_ledger_filename).exists() {
-        std::fs::remove_dir_all(test_ledger_filename)?;
+    if Path::new(&test_ledger_directory).exists() {
+        std::fs::remove_dir_all(&test_ledger_directory)?;
     }
-    if Path::new(test_ledger_log_filename).exists() {
-        std::fs::remove_file(test_ledger_log_filename)?;
+
+    fs::create_dir_all(&test_ledger_directory)?;
+
+    if Path::new(&test_ledger_log_filename).exists() {
+        std::fs::remove_file(&test_ledger_log_filename)?;
     }
 
     // Start a validator for testing.
     let (test_validator_stdout, test_validator_stderr) = match test_log_stdout {
         true => {
-            let test_validator_stdout_file = File::create(test_ledger_log_filename)?;
+            let test_validator_stdout_file = File::create(&test_ledger_log_filename)?;
             let test_validator_sterr_file = test_validator_stdout_file.try_clone()?;
             (
                 Stdio::from(test_validator_stdout_file),
@@ -1643,8 +1648,6 @@ fn start_test_validator(
     let rpc_url = test_validator_rpc_url(&flags);
 
     let mut validator_handle = std::process::Command::new("solana-test-validator")
-        .arg("--ledger")
-        .arg(test_ledger_filename)
         .arg("--mint")
         .arg(cfg.wallet_kp()?.pubkey().to_string())
         .args(flags.unwrap_or_default())
@@ -1690,6 +1693,17 @@ fn test_validator_rpc_url(flags: &Option<Vec<String>>) -> String {
     };
 
     format!("http://{}:{}", bind_address, port)
+}
+
+fn test_validator_file_paths(flags: &Option<Vec<String>>) -> (String, String) {
+    let flags = flags.as_ref().unwrap();
+    let test_ledger_directory = match flags.iter().position(|f| *f == "--ledger") {
+        Some(position) => flags[position + 1].to_string(),
+        None => ".anchor/test-ledger".to_string(),
+    };
+    let test_ledger_log_filename = format!("{}/test-ledger-log.txt", test_ledger_directory);
+
+    (test_ledger_directory, test_ledger_log_filename)
 }
 
 fn deploy(cfg_override: &ConfigOverride, program_str: Option<String>) -> Result<()> {

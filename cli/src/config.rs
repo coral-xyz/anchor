@@ -471,8 +471,11 @@ pub struct GenesisEntry {
     pub program: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Validator {
+    // Clone
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub clone: Option<Vec<String>>,
     // IP address to bind the validator ports. [default: 0.0.0.0]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bind_address: Option<String>,
@@ -495,8 +498,8 @@ pub struct Validator {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
     // Use DIR as ledger location
-    // #[serde(skip_serializing_if = "Option::is_none")]
-    // pub ledger: Option<String>,
+    #[serde(default = "default_ledger_path")]
+    pub ledger: String,
     // Keep this amount of shreds in root slots. [default: 10000]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit_ledger_size: Option<String>,
@@ -509,6 +512,10 @@ pub struct Validator {
     // Warp the ledger to WARP_SLOT after starting the validator.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub warp_slot: Option<String>,
+}
+
+fn default_ledger_path() -> String {
+    ".anchor/test-ledger".to_string()
 }
 
 #[derive(Debug, Clone)]
