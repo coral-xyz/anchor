@@ -1462,6 +1462,7 @@ fn test(
             println!("Anchor provider URL: {}", provider_url);
 
             std::process::Command::new(program)
+                .args(args)
                 .env("ANCHOR_PROVIDER_URL", provider_url)
                 .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
                 .stdout(Stdio::inherit())
