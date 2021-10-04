@@ -231,6 +231,14 @@ export class Program<IDL extends Idl = Idl> {
   }
   private _coder: Coder;
 
+	/**
+	 * Wallet and network provider.
+	 */
+	public get provider(): Provider {
+		return this._provider;
+	}
+	private _provider: Provider;
+
   /**
    * Handles event subscriptions.
    */
@@ -251,6 +259,7 @@ export class Program<IDL extends Idl = Idl> {
 
     // Fields.
     this._idl = idl;
+		this._provider = provider;
     this._programId = programId;
     this._coder = new Coder(idl);
     this._events = new EventManager(this._programId, provider, this._coder);

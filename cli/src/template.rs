@@ -34,7 +34,7 @@ pub fn idl_ts(idl: &Idl) -> Result<String> {
         .accounts
         .into_iter()
         .map(|acc| {
-            let mut acc = acc.clone();
+            let mut acc = acc;
             acc.name = acc.name.to_mixed_case();
             acc
         })
