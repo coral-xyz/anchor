@@ -1603,7 +1603,7 @@ fn stream_logs(config: &WithPath<Config>, rpc_url: &String) -> Result<Vec<std::p
                     .arg("logs")
                     .arg(entry.address.clone())
                     .arg("--url")
-                    .arg(config.provider.cluster.url())
+                    .arg(rpc_url)
                     .stdout(stdio)
                     .spawn()?;
                 handles.push(child);
