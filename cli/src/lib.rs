@@ -927,7 +927,8 @@ fn verify(
         .join("target/verifiable/")
         .join(format!("{}.so", binary_name));
 
-    let bin_ver = verify_bin(program_id, &bin_path, cfg.provider.cluster.url())?;
+    let url = cluster_url(&cfg);
+    let bin_ver = verify_bin(program_id, &bin_path, &url)?;
     if !bin_ver.is_verified {
         println!("Error: Binaries don't match");
         std::process::exit(1);
@@ -1052,7 +1053,8 @@ pub enum BinVerificationState {
 // Fetches an IDL for the given program_id.
 fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
     let cfg = Config::discover(cfg_override)?.expect("Inside a workspace");
-    let client = RpcClient::new(cfg.provider.cluster.url().to_string());
+    let url = cluster_url(&cfg);
+    let client = RpcClient::new(url);
 
     let mut account = client
         .get_account_with_commitment(&idl_addr, CommitmentConfig::processed())?
@@ -1149,7 +1151,8 @@ fn idl_set_buffer(cfg_override: &ConfigOverride, program_id: Pubkey, buffer: Pub
     with_workspace(cfg_override, |cfg| {
         let keypair = solana_sdk::signature::read_keypair_file(&cfg.provider.wallet.to_string())
             .map_err(|_| anyhow!("Unable to read keypair file"))?;
-        let client = RpcClient::new(cfg.provider.cluster.url().to_string());
+        let url = cluster_url(&cfg);
+        let client = RpcClient::new(url);
 
         // Instruction to set the buffer onto the IdlAccount.
         let set_buffer_ix = {
@@ -1201,7 +1204,8 @@ fn idl_upgrade(
 
 fn idl_authority(cfg_override: &ConfigOverride, program_id: Pubkey) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
-        let client = RpcClient::new(cfg.provider.cluster.url().to_string());
+        let url = cluster_url(&cfg);
+        let client = RpcClient::new(url);
         let idl_address = {
             let account = client
                 .get_account_with_commitment(&program_id, CommitmentConfig::processed())?
@@ -1238,7 +1242,8 @@ fn idl_set_authority(
         };
         let keypair = solana_sdk::signature::read_keypair_file(&cfg.provider.wallet.to_string())
             .map_err(|_| anyhow!("Unable to read keypair file"))?;
-        let client = RpcClient::new(cfg.provider.cluster.url().to_string());
+        let url = cluster_url(&cfg);
+        let client = RpcClient::new(url);
 
         // Instruction data.
         let data =
@@ -1308,7 +1313,8 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
     // Misc.
     let keypair = solana_sdk::signature::read_keypair_file(&cfg.provider.wallet.to_string())
         .map_err(|_| anyhow!("Unable to read keypair file"))?;
-    let client = RpcClient::new(cfg.provider.cluster.url().to_string());
+    let url = cluster_url(&cfg);
+    let client = RpcClient::new(url);
 
     // Serialize and compress the idl.
     let idl_data = {
@@ -1429,22 +1435,19 @@ fn test(
             deploy(cfg_override, None)?;
         }
         // Start local test validator, if needed.
-        let (rpc_url, validator_handle) = match is_localnet && !skip_local_validator {
-            true => {
-                let flags = match skip_deploy {
-                    true => None,
-                    false => Some(validator_flags(cfg)?),
-                };
-                (
-                    test_validator_rpc_url(&flags),
-                    Some(start_test_validator(cfg, flags, true)?),
-                )
-            }
-            false => (cfg.provider.cluster.url().to_string(), None),
-        };
+        let mut validator_handle = None;
+        if is_localnet && (!skip_local_validator) {
+            let flags = match skip_deploy {
+                true => None,
+                false => Some(validator_flags(cfg)?),
+            };
+            validator_handle = Some(start_test_validator(cfg, flags, true)?);
+        }
+
+        let url = cluster_url(&cfg);
 
         // Setup log reader.
-        let log_streams = stream_logs(cfg, &rpc_url);
+        let log_streams = stream_logs(cfg, &url);
 
         // Run the tests.
         let test_result: Result<_> = {
@@ -1461,7 +1464,7 @@ fn test(
 
             std::process::Command::new(program)
                 .args(args)
-                .env("ANCHOR_PROVIDER_URL", rpc_url)
+                .env("ANCHOR_PROVIDER_URL", url)
                 .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
@@ -1625,17 +1628,7 @@ fn start_test_validator(
     test_log_stdout: bool,
 ) -> Result<Child> {
     //
-    let (test_ledger_directory, test_ledger_log_filename) = test_validator_file_paths(&flags);
-
-    if Path::new(&test_ledger_directory).exists() {
-        std::fs::remove_dir_all(&test_ledger_directory)?;
-    }
-
-    fs::create_dir_all(&test_ledger_directory)?;
-
-    if Path::new(&test_ledger_log_filename).exists() {
-        std::fs::remove_file(&test_ledger_log_filename)?;
-    }
+    let test_ledger_log_filename = test_validator_log_path(&cfg);
 
     // Start a validator for testing.
     let (test_validator_stdout, test_validator_stderr) = match test_log_stdout {
@@ -1650,7 +1643,7 @@ fn start_test_validator(
         false => (Stdio::inherit(), Stdio::inherit()),
     };
 
-    let rpc_url = test_validator_rpc_url(&flags);
+    let rpc_url = test_validator_rpc_url(&cfg);
 
     let mut validator_handle = std::process::Command::new("solana-test-validator")
         .arg("--mint")
@@ -1683,48 +1676,55 @@ fn start_test_validator(
     Ok(validator_handle)
 }
 
-// Return the URL that a validator should be running on given the config
-// and flags
-fn test_validator_rpc_url(flags: &Option<Vec<String>>) -> String {
-    let flags = flags.as_ref().unwrap();
-    let bind_address = match flags.iter().position(|f| *f == "--bind-address") {
-        Some(position) => flags[position + 1].clone(),
-        None => "127.0.0.1".to_string(),
-    };
-    // If a custom port is defined use that for validator ready check.
-    let port = match flags.iter().position(|f| *f == "--rpc-port") {
-        Some(position) => flags[position + 1].clone(),
-        None => "8899".to_string(),
-    };
-
-    format!("http://{}:{}", bind_address, port)
+// Return the URL that solana-test-validator should be running on given the
+// configuration
+fn test_validator_rpc_url(cfg: &Config) -> String {
+    if let Some(test) = cfg.test.as_ref() {
+        format!(
+            "http://{}:{}",
+            test.validator.bind_address, test.validator.rpc_port
+        )
+    } else {
+        "http://localhost:8899".to_string()
+    }
 }
 
-fn test_validator_file_paths(flags: &Option<Vec<String>>) -> (String, String) {
-    let flags = flags.as_ref().unwrap();
-    let test_ledger_directory = match flags.iter().position(|f| *f == "--ledger") {
-        Some(position) => flags[position + 1].to_string(),
-        None => ".anchor/test-ledger".to_string(),
+// Setup and return paths to the solana-test-validator ledger directory and log
+// files given the configuration
+fn test_validator_log_path(cfg: &Config) -> String {
+    let ledger_directory = match cfg.test.as_ref() {
+        Some(test) => &test.validator.ledger,
+        None => ".anchor/test-ledger",
     };
 
-    if !Path::new(&test_ledger_directory).is_relative() {
+    if !Path::new(&ledger_directory).is_relative() {
         // Prevent absolute paths to avoid someone using / or similar, as the
         // directory gets removed
-        eprintln!(
-            "Ledger directory {} must be relative",
-            test_ledger_directory
-        );
+        eprintln!("Ledger directory {} must be relative", ledger_directory);
         std::process::exit(1);
     }
+    if Path::new(&ledger_directory).exists() {
+        std::fs::remove_dir_all(&ledger_directory).unwrap();
+    }
 
-    let test_ledger_log_filename = format!("{}/test-ledger-log.txt", test_ledger_directory);
+    fs::create_dir_all(&ledger_directory).unwrap();
 
-    (test_ledger_directory, test_ledger_log_filename)
+    format!("{}/test-ledger-log.txt", ledger_directory)
+}
+
+fn cluster_url(cfg: &Config) -> String {
+    let is_localnet = cfg.provider.cluster == Cluster::Localnet;
+    match is_localnet {
+        // Cluster is Localnet, assume the intent is to use the configuration
+        // for solana-test-validator
+        true => test_validator_rpc_url(&cfg),
+        false => cfg.provider.cluster.url().to_string(),
+    }
 }
 
 fn deploy(cfg_override: &ConfigOverride, program_str: Option<String>) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
-        let url = cfg.provider.cluster.url().to_string();
+        let url = cluster_url(&cfg);
         let keypair = cfg.provider.wallet.to_string();
 
         // Deploy the programs.
@@ -1798,11 +1798,12 @@ fn upgrade(
     let program_filepath = path.canonicalize()?.display().to_string();
 
     with_workspace(cfg_override, |cfg| {
+        let url = cluster_url(&cfg);
         let exit = std::process::Command::new("solana")
             .arg("program")
             .arg("deploy")
             .arg("--url")
-            .arg(cfg.provider.cluster.url())
+            .arg(url)
             .arg("--keypair")
             .arg(&cfg.provider.wallet.to_string())
             .arg("--program-id")
@@ -1830,7 +1831,8 @@ fn create_idl_account(
     let idl_address = IdlAccount::address(program_id);
     let keypair = solana_sdk::signature::read_keypair_file(keypair_path)
         .map_err(|_| anyhow!("Unable to read keypair file"))?;
-    let client = RpcClient::new(cfg.provider.cluster.url().to_string());
+    let url = cluster_url(&cfg);
+    let client = RpcClient::new(url);
     let idl_data = serialize_idl(idl)?;
 
     // Run `Create instruction.
@@ -1883,7 +1885,8 @@ fn create_idl_buffer(
 ) -> Result<Pubkey> {
     let keypair = solana_sdk::signature::read_keypair_file(keypair_path)
         .map_err(|_| anyhow!("Unable to read keypair file"))?;
-    let client = RpcClient::new(cfg.provider.cluster.url().to_string());
+    let url = cluster_url(&cfg);
+    let client = RpcClient::new(url);
 
     let buffer = Keypair::generate(&mut OsRng);
 
@@ -1956,7 +1959,7 @@ fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         println!("Running migration deploy script");
 
-        let url = cfg.provider.cluster.url().to_string();
+        let url = cluster_url(&cfg);
         let cur_dir = std::env::current_dir()?;
 
         let use_ts =
@@ -2110,11 +2113,8 @@ fn shell(cfg_override: &ConfigOverride) -> Result<()> {
                     .collect::<Vec<ProgramWorkspace>>(),
             }
         };
-        let js_code = template::node_shell(
-            cfg.provider.cluster.url(),
-            &cfg.provider.wallet.to_string(),
-            programs,
-        )?;
+        let url = cluster_url(&cfg);
+        let js_code = template::node_shell(&url, &cfg.provider.wallet.to_string(), programs)?;
         let mut child = std::process::Command::new("node")
             .args(&["-e", &js_code, "-i", "--experimental-repl-await"])
             .stdout(Stdio::inherit())
@@ -2132,6 +2132,7 @@ fn shell(cfg_override: &ConfigOverride) -> Result<()> {
 
 fn run(cfg_override: &ConfigOverride, script: String) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
+        let url = cluster_url(&cfg);
         let script = cfg
             .scripts
             .get(&script)
@@ -2139,7 +2140,7 @@ fn run(cfg_override: &ConfigOverride, script: String) -> Result<()> {
         let exit = std::process::Command::new("bash")
             .arg("-c")
             .arg(&script)
-            .env("ANCHOR_PROVIDER_URL", cfg.provider.cluster.url())
+            .env("ANCHOR_PROVIDER_URL", url)
             .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
@@ -2393,8 +2394,8 @@ fn localnet(
         };
 
         // Setup log reader.
-        let rpc_url = test_validator_rpc_url(&flags);
-        let log_streams = stream_logs(cfg, &rpc_url);
+        let url = test_validator_rpc_url(&cfg);
+        let log_streams = stream_logs(cfg, &url);
 
         let validator_handle = &mut start_test_validator(cfg, flags, false)?;
 

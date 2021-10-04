@@ -461,7 +461,7 @@ fn deser_programs(
 pub struct Test {
     pub genesis: Option<Vec<GenesisEntry>>,
     pub clone: Option<Vec<CloneEntry>>,
-    pub validator: Option<Validator>,
+    pub validator: Validator,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -481,8 +481,8 @@ pub struct CloneEntry {
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Validator {
     // IP address to bind the validator ports. [default: 0.0.0.0]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bind_address: Option<String>,
+    #[serde(default = "default_bind_address")]
+    pub bind_address: String,
     // Range to use for dynamically assigned ports. [default: 1024-65535]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dynamic_port_range: Option<String>,
@@ -508,8 +508,8 @@ pub struct Validator {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit_ledger_size: Option<String>,
     // Enable JSON RPC on this port, and the next port for the RPC websocket. [default: 8899]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rpc_port: Option<u16>,
+    #[serde(default = "default_rpc_port")]
+    pub rpc_port: u16,
     // Override the number of slots in an epoch.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub slots_per_epoch: Option<String>,
@@ -520,6 +520,14 @@ pub struct Validator {
 
 fn default_ledger_path() -> String {
     ".anchor/test-ledger".to_string()
+}
+
+fn default_bind_address() -> String {
+    "0.0.0.0".to_string()
+}
+
+fn default_rpc_port() -> u16 {
+    8899
 }
 
 #[derive(Debug, Clone)]
