@@ -307,7 +307,7 @@ pub mod __private {
     use solana_program::pubkey::Pubkey;
 
     pub use crate::ctor::Ctor;
-    pub use crate::error::{Error, ErrorCode};
+    pub use crate::error::{Error, ErrorCode, __pretty_print_error_code};
     pub use anchor_attribute_account::ZeroCopyAccessor;
     pub use anchor_attribute_event::EventIndex;
     pub use base64;

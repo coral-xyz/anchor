@@ -6,7 +6,10 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
     let enum_name = &error.ident;
     // Each arm of the `match` statement for implementing `std::fmt::Display`
     // on the user defined error code.
-    let variant_dispatch: Vec<proc_macro2::TokenStream> = error
+    let (variant_dispatch, code_dispatch): (
+        Vec<proc_macro2::TokenStream>,
+        Vec<proc_macro2::TokenStream>,
+    ) = error
         .raw_enum
         .variants
         .iter()
@@ -14,6 +17,7 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
         .map(|(idx, variant)| {
             let ident = &variant.ident;
             let error_code = &error.codes[idx];
+            let error_code_id = error_code.id;
             let msg = match &error_code.msg {
                 None => {
                     quote! {
@@ -26,11 +30,16 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
                     }
                 }
             };
-            quote! {
+            let variant_dispatch = quote! {
                 #enum_name::#ident => #msg
-            }
+            };
+            let code_dispatch = quote! {
+                #error_code_id => ::anchor_lang::solana_program::msg!("{}", #enum_name::#ident)
+            };
+            (variant_dispatch, code_dispatch)
         })
-        .collect();
+        .clone()
+        .unzip();
 
     let offset = match error.args {
         None => quote! { anchor_lang::__private::ERROR_CODE_OFFSET},
@@ -44,6 +53,13 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
         /// Anchor generated Result to be used as the return type for the
         /// program.
         pub type Result<T> = std::result::Result<T, Error>;
+
+        pub fn __pretty_print_error_code(code: u32) {
+            match code - #offset {
+                #(#code_dispatch),*
+                , _ => {}
+            }
+        }
 
         /// Anchor generated error allowing one to easily return a
         /// `ProgramError` or a custom, user defined error code by utilizing
