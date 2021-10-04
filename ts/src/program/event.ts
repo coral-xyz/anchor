@@ -58,11 +58,7 @@ export class EventManager {
    */
   private _onLogsSubscriptionId: number | undefined;
 
-  constructor(
-    programId: PublicKey,
-    provider: Provider,
-    coder: Coder
-  ) {
+  constructor(programId: PublicKey, provider: Provider, coder: Coder) {
     this._programId = programId;
     this._provider = provider;
     this._eventParser = new EventParser(programId, coder);
