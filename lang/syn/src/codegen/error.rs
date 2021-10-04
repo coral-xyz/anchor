@@ -34,7 +34,7 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
                 #enum_name::#ident => #msg
             };
             let code_dispatch = quote! {
-                #error_code_id => ::anchor_lang::solana_program::msg!("{}", #enum_name::#ident)
+                #error_code_id => Some(format!("{}", #enum_name::#ident))
             };
             (variant_dispatch, code_dispatch)
         })
@@ -54,10 +54,10 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
         /// program.
         pub type Result<T> = std::result::Result<T, Error>;
 
-        pub fn __pretty_print_error_code(code: u32) {
+        pub fn __pretty_print_error_code(code: u32) -> Option<String> {
             match code - #offset {
                 #(#code_dispatch),*
-                , _ => {}
+                , _ => None
             }
         }
 
