@@ -459,15 +459,34 @@ fn deser_programs(
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Test {
-    pub genesis: Vec<GenesisEntry>,
+    pub genesis: GenesisState,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GenesisEntry {
+pub struct GenesisState {
+    // Programs to embed into genesis
+    pub programs: Vec<GenesisProgram>,
+    // Accounts to embed into genesis
+    pub accounts: Option<Vec<GenesisAccount>>,
+    // Network url to clone genesis accounts from
+    pub url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenesisProgram {
     // Base58 pubkey string.
     pub address: String,
     // Filepath to the compiled program to embed into the genesis.
     pub program: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenesisAccount {
+    // Base58 pubkey string of the mainnet account to clone
+    // embedding into gensis
+    pub address: String,
+    // Name of the account, used only for documentation
+    pub name: String,
 }
 
 #[derive(Debug, Clone)]

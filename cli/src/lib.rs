@@ -1531,11 +1531,20 @@ fn genesis_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
         }
     }
     if let Some(test) = cfg.test.as_ref() {
-        for entry in &test.genesis {
+        for entry in &test.genesis.programs {
             flags.push("--bpf-program".to_string());
             flags.push(entry.address.clone());
             flags.push(entry.program.clone());
         }
+        if test.genesis.accounts.is_some() && test.genesis.url.is_some() {
+            flags.push("--url".to_string());
+            flags.push(test.genesis.url.clone().unwrap());
+            for entry in &test.genesis.clone().accounts.unwrap() {
+                flags.push("--clone".to_string());
+                flags.push(entry.address.clone());
+            }
+        }
+        
     }
     Ok(flags)
 }
@@ -1572,7 +1581,7 @@ fn stream_logs(config: &WithPath<Config>) -> Result<Vec<std::process::Child>> {
         handles.push(child);
     }
     if let Some(test) = config.test.as_ref() {
-        for entry in &test.genesis {
+        for entry in &test.genesis.programs {
             let log_file = File::create(format!("{}/{}.log", program_logs_dir, entry.address))?;
             let stdio = std::process::Stdio::from(log_file);
             let child = std::process::Command::new("solana")
