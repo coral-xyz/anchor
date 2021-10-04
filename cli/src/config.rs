@@ -457,9 +457,8 @@ fn deser_programs(
         .collect::<Result<BTreeMap<Cluster, BTreeMap<String, ProgramDeployment>>>>()
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Test {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub genesis: Option<Vec<GenesisEntry>>,
     pub validator: Option<Validator>,
 }
