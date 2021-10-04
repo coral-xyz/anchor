@@ -460,6 +460,7 @@ fn deser_programs(
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Test {
     pub genesis: Option<Vec<GenesisEntry>>,
+    pub clone: Option<Vec<CloneEntry>>,
     pub validator: Option<Validator>,
 }
 
@@ -471,11 +472,14 @@ pub struct GenesisEntry {
     pub program: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CloneEntry {
+    // Base58 pubkey string.
+    pub address: String,
+}
+
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Validator {
-    // Clone
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub clone: Option<Vec<String>>,
     // IP address to bind the validator ports. [default: 0.0.0.0]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bind_address: Option<String>,

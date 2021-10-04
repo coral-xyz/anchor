@@ -1544,14 +1544,19 @@ fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
                 flags.push(entry.program.clone());
             }
         }
+        if let Some(clone) = &test.clone {
+            for entry in clone {
+                flags.push("--clone".to_string());
+                flags.push(entry.address.clone());
+            }
+        }
         for (key, value) in serde_json::to_value(&test.validator)?.as_object().unwrap() {
             flags.push(format!("--{}", key.replace("_", "-")));
-            let flag_value = match value.clone() {
-                e @ serde_json::Value::Number(_) | e @ serde_json::Value::Bool(_) => e.to_string(),
-                serde_json::Value::String(s) => s,
-                _ => "".to_string(),
-            };
-            flags.push(flag_value);
+            if let serde_json::Value::String(v) = value {
+                flags.push(v.to_string());
+            } else {
+                flags.push(value.to_string());
+            }
         }
     }
 
@@ -1701,6 +1706,17 @@ fn test_validator_file_paths(flags: &Option<Vec<String>>) -> (String, String) {
         Some(position) => flags[position + 1].to_string(),
         None => ".anchor/test-ledger".to_string(),
     };
+
+    if !Path::new(&test_ledger_directory).is_relative() {
+        // Prevent absolute paths to avoid someone using / or similar, as the
+        // directory gets removed
+        eprintln!(
+            "Ledger directory {} must be relative",
+            test_ledger_directory
+        );
+        std::process::exit(1);
+    }
+
     let test_ledger_log_filename = format!("{}/test-ledger-log.txt", test_ledger_directory);
 
     (test_ledger_directory, test_ledger_log_filename)
@@ -1987,8 +2003,8 @@ fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
 
 fn set_workspace_dir_or_exit() {
     let d = match Config::discover(&ConfigOverride::default()) {
-        Err(_) => {
-            println!("Not in anchor workspace.");
+        Err(err) => {
+            println!("Workspace configuration error: {}", err);
             std::process::exit(1);
         }
         Ok(d) => d,
