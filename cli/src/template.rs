@@ -249,21 +249,27 @@ pub fn ts_package_json() -> String {
 pub fn ts_mocha(name: &str) -> String {
     format!(
         r#"import * as anchor from '@project-serum/anchor';
+import {{ Program }} from '@project-serum/anchor';
+import {{ {} }} from '../target/types/{}';
 
 describe('{}', () => {{
 
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.Provider.env());
 
+  const program = anchor.workspace.{} as Program<{}>;
+
   it('Is initialized!', async () => {{
     // Add your test here.
-    const program = anchor.workspace.{};
     const tx = await program.rpc.initialize();
     console.log("Your transaction signature", tx);
   }});
 }});
 "#,
+        name.to_camel_case(),
+        name.to_snake_case(),
         name,
+        name.to_camel_case(),
         name.to_camel_case(),
     )
 }
