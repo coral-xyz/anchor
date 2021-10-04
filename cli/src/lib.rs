@@ -1672,6 +1672,7 @@ fn start_test_validator(
 // Return the URL that a validator should be running on given the config
 // and flags
 fn test_validator_rpc_url(flags: Option<Vec<String>>) -> String {
+    let flags = flags.unwrap_or_default();
     let bind_address = match flags.iter().position(|f| *f == "--bind-address") {
         Some(position) => flags[position + 1].clone(),
         None => "127.0.0.1".to_string(),
