@@ -2393,11 +2393,11 @@ fn localnet(
             false => Some(validator_flags(cfg)?),
         };
 
+        let validator_handle = &mut start_test_validator(cfg, flags, false)?;
+
         // Setup log reader.
         let url = test_validator_rpc_url(&cfg);
         let log_streams = stream_logs(cfg, &url);
-
-        let validator_handle = &mut start_test_validator(cfg, flags, false)?;
 
         std::io::stdin().lock().lines().next().unwrap().unwrap();
 
