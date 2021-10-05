@@ -1658,6 +1658,7 @@ fn start_test_validator(
         .spawn()
         .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
 
+    // Wait for the validator to be ready.
     let client = RpcClient::new(rpc_url);
     let mut count = 0;
     let ms_wait = 5000;
