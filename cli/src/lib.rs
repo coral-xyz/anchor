@@ -521,19 +521,18 @@ pub fn build(
     }
 
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
+    let cfg_parent = cfg.path().parent().expect("Invalid Anchor.toml");
+
     let cargo = Manifest::discover()?;
+
+    fs::create_dir_all(cfg_parent.join("target/idl"))?;
+    fs::create_dir_all(cfg_parent.join("target/types"))?;
 
     let idl_out = match idl {
         Some(idl) => Some(PathBuf::from(idl)),
-        None => {
-            let cfg_parent = match cfg.path().parent() {
-                None => return Err(anyhow!("Invalid Anchor.toml")),
-                Some(parent) => parent,
-            };
-            fs::create_dir_all(cfg_parent.join("target/idl"))?;
-            Some(cfg_parent.join("target/idl"))
-        }
+        None => Some(cfg_parent.join("target/idl")),
     };
+    let idl_ts_out = Some(cfg_parent.join("target/types"));
 
     let solana_version = match solana_version.is_some() {
         true => solana_version,
@@ -546,6 +545,7 @@ pub fn build(
             &cfg,
             cfg.path(),
             idl_out,
+            idl_ts_out,
             verifiable,
             solana_version,
             stdout,
@@ -557,6 +557,7 @@ pub fn build(
             &cfg,
             cfg.path(),
             idl_out,
+            idl_ts_out,
             verifiable,
             solana_version,
             stdout,
@@ -568,6 +569,7 @@ pub fn build(
             &cfg,
             cargo.path().to_path_buf(),
             idl_out,
+            idl_ts_out,
             verifiable,
             solana_version,
             stdout,
@@ -586,6 +588,7 @@ fn build_all(
     cfg: &WithPath<Config>,
     cfg_path: &Path,
     idl_out: Option<PathBuf>,
+    idl_ts_out: Option<PathBuf>,
     verifiable: bool,
     solana_version: Option<String>,
     stdout: Option<File>, // Used for the package registry server.
@@ -601,6 +604,7 @@ fn build_all(
                     cfg,
                     p.join("Cargo.toml"),
                     idl_out.clone(),
+                    idl_ts_out.clone(),
                     verifiable,
                     solana_version.clone(),
                     stdout.as_ref().map(|f| f.try_clone()).transpose()?,
@@ -621,6 +625,7 @@ fn build_cwd(
     cfg: &WithPath<Config>,
     cargo_toml: PathBuf,
     idl_out: Option<PathBuf>,
+    idl_ts_out: Option<PathBuf>,
     verifiable: bool,
     solana_version: Option<String>,
     stdout: Option<File>,
@@ -632,7 +637,7 @@ fn build_cwd(
         Some(p) => std::env::set_current_dir(&p)?,
     };
     match verifiable {
-        false => _build_cwd(idl_out, cargo_args),
+        false => _build_cwd(idl_out, idl_ts_out, cargo_args),
         true => build_cwd_verifiable(cfg, cargo_toml, solana_version, stdout, stderr),
     }
 }
@@ -697,8 +702,14 @@ fn build_cwd_verifiable(
     // Build the idl.
     if let Ok(Some(idl)) = extract_idl("src/lib.rs") {
         println!("Extracting the IDL");
+
+        // Write out the JSON file.
         let out_file = workspace_dir.join(format!("target/idl/{}.json", idl.name));
         write_idl(&idl, OutFile::File(out_file))?;
+
+        // Write out the TypeScript type.
+        let ts_file = format!("target/types/{}.ts", idl.name);
+        fs::write(&ts_file, template::idl_ts(&idl)?)?;
     }
 
     result
@@ -861,7 +872,11 @@ fn docker_build(
     Ok(())
 }
 
-fn _build_cwd(idl_out: Option<PathBuf>, cargo_args: Vec<String>) -> Result<()> {
+fn _build_cwd(
+    idl_out: Option<PathBuf>,
+    idl_ts_out: Option<PathBuf>,
+    cargo_args: Vec<String>,
+) -> Result<()> {
     let exit = std::process::Command::new("cargo")
         .arg("build-bpf")
         .args(cargo_args)
@@ -875,12 +890,22 @@ fn _build_cwd(idl_out: Option<PathBuf>, cargo_args: Vec<String>) -> Result<()> {
 
     // Always assume idl is located ar src/lib.rs.
     if let Some(idl) = extract_idl("src/lib.rs")? {
+        // JSON out path.
         let out = match idl_out {
             None => PathBuf::from(".").join(&idl.name).with_extension("json"),
             Some(o) => PathBuf::from(&o.join(&idl.name).with_extension("json")),
         };
+        // TS out path.
+        let ts_out = match idl_ts_out {
+            None => PathBuf::from(".").join(&idl.name).with_extension("ts"),
+            Some(o) => PathBuf::from(&o.join(&idl.name).with_extension("ts")),
+        };
 
+        // Write out the JSON file.
         write_idl(&idl, OutFile::File(out))?;
+
+        // Write out the TypeScript type.
+        fs::write(ts_out, template::idl_ts(&idl)?)?;
     }
 
     Ok(())
@@ -1118,7 +1143,7 @@ fn idl_init(cfg_override: &ConfigOverride, program_id: Pubkey, idl_filepath: Str
     with_workspace(cfg_override, |cfg| {
         let keypair = cfg.provider.wallet.to_string();
 
-        let bytes = std::fs::read(idl_filepath)?;
+        let bytes = fs::read(idl_filepath)?;
         let idl: Idl = serde_json::from_reader(&*bytes)?;
 
         let idl_address = create_idl_account(cfg, &keypair, &program_id, &idl)?;
@@ -1136,7 +1161,7 @@ fn idl_write_buffer(
     with_workspace(cfg_override, |cfg| {
         let keypair = cfg.provider.wallet.to_string();
 
-        let bytes = std::fs::read(idl_filepath)?;
+        let bytes = fs::read(idl_filepath)?;
         let idl: Idl = serde_json::from_reader(&*bytes)?;
 
         let idl_buffer = create_idl_buffer(cfg, &keypair, &program_id, &idl)?;
@@ -1390,8 +1415,9 @@ fn write_idl(idl: &Idl, out: OutFile) -> Result<()> {
     let idl_json = serde_json::to_string_pretty(idl)?;
     match out {
         OutFile::Stdout => println!("{}", idl_json),
-        OutFile::File(out) => std::fs::write(out, idl_json)?,
+        OutFile::File(out) => fs::write(out, idl_json)?,
     };
+
     Ok(())
 }
 
@@ -1576,7 +1602,7 @@ fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
 fn stream_logs(config: &WithPath<Config>, rpc_url: &str) -> Result<Vec<std::process::Child>> {
     let program_logs_dir = ".anchor/program-logs";
     if Path::new(program_logs_dir).exists() {
-        std::fs::remove_dir_all(program_logs_dir)?;
+        fs::remove_dir_all(program_logs_dir)?;
     }
     fs::create_dir_all(program_logs_dir)?;
     let mut handles = vec![];
@@ -1716,7 +1742,7 @@ fn test_validator_file_paths(cfg: &Config) -> (String, String) {
         std::process::exit(1);
     }
     if Path::new(&ledger_directory).exists() {
-        std::fs::remove_dir_all(&ledger_directory).unwrap();
+        fs::remove_dir_all(&ledger_directory).unwrap();
     }
 
     fs::create_dir_all(&ledger_directory).unwrap();
@@ -1989,7 +2015,7 @@ fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
             let module_path = cur_dir.join("migrations/deploy.ts");
             let deploy_script_host_str =
                 template::deploy_ts_script_host(&url, &module_path.display().to_string());
-            std::fs::write("deploy.ts", deploy_script_host_str)?;
+            fs::write("deploy.ts", deploy_script_host_str)?;
             std::process::Command::new("ts-node")
                 .arg("deploy.ts")
                 .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
@@ -2000,7 +2026,7 @@ fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
             let module_path = cur_dir.join("migrations/deploy.js");
             let deploy_script_host_str =
                 template::deploy_js_script_host(&url, &module_path.display().to_string());
-            std::fs::write("deploy.js", deploy_script_host_str)?;
+            fs::write("deploy.js", deploy_script_host_str)?;
             std::process::Command::new("node")
                 .arg("deploy.js")
                 .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
@@ -2102,7 +2128,7 @@ fn shell(cfg_override: &ConfigOverride) -> Result<()> {
                     .map(|(name, pd)| {
                         if let Some(idl_fp) = &pd.idl {
                             let file_str =
-                                std::fs::read_to_string(idl_fp).expect("Unable to read IDL file");
+                                fs::read_to_string(idl_fp).expect("Unable to read IDL file");
                             let idl = serde_json::from_str(&file_str).expect("Idl not readable");
                             idls.insert(name.clone(), idl);
                         }
@@ -2269,7 +2295,7 @@ fn publish(
             // Skip target dir.
             if !path_str.contains("target/") && !path_str.contains("/target") {
                 // Only add the file if it's not empty.
-                let metadata = std::fs::File::open(&e)?.metadata()?;
+                let metadata = fs::File::open(&e)?.metadata()?;
                 if metadata.len() > 0 {
                     println!("PACKING: {}", e.display().to_string());
                     if e.is_dir() {
