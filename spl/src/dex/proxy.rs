@@ -95,6 +95,18 @@ impl<'a> MarketProxy<'a> {
                     mw.close_open_orders(&mut ctx)?;
                 }
             }
+            Some(MarketInstruction::ConsumeEvents(limit)) => {
+                require!(ctx.accounts.len() >= 4, ErrorCode::NotEnoughAccounts);
+                for mw in &self.middlewares {
+                    mw.consume_events(&mut ctx, limit)?;
+                }
+            }
+            Some(MarketInstruction::ConsumeEventsPermissioned(limit)) => {
+                require!(ctx.accounts.len() >= 3, ErrorCode::NotEnoughAccounts);
+                for mw in &self.middlewares {
+                    mw.consume_events_permissioned(&mut ctx, limit)?;
+                }
+            }
             Some(MarketInstruction::Prune(limit)) => {
                 require!(ctx.accounts.len() >= 7, ErrorCode::NotEnoughAccounts);
                 for mw in &self.middlewares {

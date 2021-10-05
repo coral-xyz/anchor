@@ -171,6 +171,7 @@ pub fn initialize_market<'info>(
 ) -> ProgramResult {
     let authority = ctx.remaining_accounts.get(0);
     let prune_authority = ctx.remaining_accounts.get(1);
+    let crank_authority = ctx.remaining_accounts.get(2);
     let ix = serum_dex::instruction::initialize_market(
         ctx.accounts.market.key,
         &ID,
@@ -180,6 +181,7 @@ pub fn initialize_market<'info>(
         ctx.accounts.pc_vault.key,
         authority.map(|r| r.key),
         prune_authority.map(|r| r.key),
+        crank_authority.map(|r| r.key),
         ctx.accounts.bids.key,
         ctx.accounts.asks.key,
         ctx.accounts.req_q.key,

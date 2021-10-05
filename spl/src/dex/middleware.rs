@@ -75,6 +75,14 @@ pub trait MarketMiddleware {
         Ok(())
     }
 
+    fn consume_events(&self, _ctx: &mut Context, _limit: u16) -> ProgramResult {
+        Ok(())
+    }
+
+    fn consume_events_permissioned(&self, _ctx: &mut Context, _limit: u16) -> ProgramResult {
+        Ok(())
+    }
+
     fn prune(&self, _ctx: &mut Context, _limit: u16) -> ProgramResult {
         Ok(())
     }

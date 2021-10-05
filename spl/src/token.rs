@@ -106,6 +106,26 @@ pub fn approve<'a, 'b, 'c, 'info>(
     )
 }
 
+pub fn revoke<'a, 'b, 'c, 'info>(
+    ctx: CpiContext<'a, 'b, 'c, 'info, Revoke<'info>>,
+) -> ProgramResult {
+    let ix = spl_token::instruction::revoke(
+        &spl_token::ID,
+        ctx.accounts.to.key,
+        ctx.accounts.authority.key,
+        &[],
+    )?;
+    solana_program::program::invoke_signed(
+        &ix,
+        &[
+            ctx.accounts.to.clone(),
+            ctx.accounts.authority.clone(),
+            ctx.program.clone(),
+        ],
+        ctx.signer_seeds,
+    )
+}
+
 pub fn initialize_account<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, InitializeAccount<'info>>,
 ) -> ProgramResult {
@@ -227,6 +247,12 @@ pub struct Burn<'info> {
 pub struct Approve<'info> {
     pub to: AccountInfo<'info>,
     pub delegate: AccountInfo<'info>,
+    pub authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct Revoke<'info> {
+    pub to: AccountInfo<'info>,
     pub authority: AccountInfo<'info>,
 }
 
