@@ -1152,7 +1152,7 @@ fn idl_set_buffer(cfg_override: &ConfigOverride, program_id: Pubkey, buffer: Pub
     with_workspace(cfg_override, |cfg| {
         let keypair = solana_sdk::signature::read_keypair_file(&cfg.provider.wallet.to_string())
             .map_err(|_| anyhow!("Unable to read keypair file"))?;
-        let url = cluster_url(&cfg);
+        let url = cluster_url(cfg);
         let client = RpcClient::new(url);
 
         // Instruction to set the buffer onto the IdlAccount.
@@ -1205,7 +1205,7 @@ fn idl_upgrade(
 
 fn idl_authority(cfg_override: &ConfigOverride, program_id: Pubkey) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
-        let url = cluster_url(&cfg);
+        let url = cluster_url(cfg);
         let client = RpcClient::new(url);
         let idl_address = {
             let account = client
@@ -1243,7 +1243,7 @@ fn idl_set_authority(
         };
         let keypair = solana_sdk::signature::read_keypair_file(&cfg.provider.wallet.to_string())
             .map_err(|_| anyhow!("Unable to read keypair file"))?;
-        let url = cluster_url(&cfg);
+        let url = cluster_url(cfg);
         let client = RpcClient::new(url);
 
         // Instruction data.
@@ -1314,7 +1314,7 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
     // Misc.
     let keypair = solana_sdk::signature::read_keypair_file(&cfg.provider.wallet.to_string())
         .map_err(|_| anyhow!("Unable to read keypair file"))?;
-    let url = cluster_url(&cfg);
+    let url = cluster_url(cfg);
     let client = RpcClient::new(url);
 
     // Serialize and compress the idl.
@@ -1445,7 +1445,7 @@ fn test(
             validator_handle = Some(start_test_validator(cfg, flags, true)?);
         }
 
-        let url = cluster_url(&cfg);
+        let url = cluster_url(cfg);
 
         // Setup log reader.
         let log_streams = stream_logs(cfg, &url);
@@ -1570,7 +1570,7 @@ fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
     Ok(flags)
 }
 
-fn stream_logs(config: &WithPath<Config>, rpc_url: &String) -> Result<Vec<std::process::Child>> {
+fn stream_logs(config: &WithPath<Config>, rpc_url: &str) -> Result<Vec<std::process::Child>> {
     let program_logs_dir = ".anchor/program-logs";
     if Path::new(program_logs_dir).exists() {
         std::fs::remove_dir_all(program_logs_dir)?;
@@ -1632,7 +1632,7 @@ fn start_test_validator(
     test_log_stdout: bool,
 ) -> Result<Child> {
     //
-    let test_ledger_log_filename = test_validator_log_path(&cfg);
+    let test_ledger_log_filename = test_validator_log_path(cfg);
 
     // Start a validator for testing.
     let (test_validator_stdout, test_validator_stderr) = match test_log_stdout {
@@ -1647,7 +1647,7 @@ fn start_test_validator(
         false => (Stdio::inherit(), Stdio::inherit()),
     };
 
-    let rpc_url = test_validator_rpc_url(&cfg);
+    let rpc_url = test_validator_rpc_url(cfg);
 
     let mut validator_handle = std::process::Command::new("solana-test-validator")
         .arg("--mint")
@@ -1724,14 +1724,14 @@ fn cluster_url(cfg: &Config) -> String {
     match is_localnet {
         // Cluster is Localnet, assume the intent is to use the configuration
         // for solana-test-validator
-        true => test_validator_rpc_url(&cfg),
+        true => test_validator_rpc_url(cfg),
         false => cfg.provider.cluster.url().to_string(),
     }
 }
 
 fn deploy(cfg_override: &ConfigOverride, program_str: Option<String>) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
-        let url = cluster_url(&cfg);
+        let url = cluster_url(cfg);
         let keypair = cfg.provider.wallet.to_string();
 
         // Deploy the programs.
@@ -1805,7 +1805,7 @@ fn upgrade(
     let program_filepath = path.canonicalize()?.display().to_string();
 
     with_workspace(cfg_override, |cfg| {
-        let url = cluster_url(&cfg);
+        let url = cluster_url(cfg);
         let exit = std::process::Command::new("solana")
             .arg("program")
             .arg("deploy")
@@ -1838,7 +1838,7 @@ fn create_idl_account(
     let idl_address = IdlAccount::address(program_id);
     let keypair = solana_sdk::signature::read_keypair_file(keypair_path)
         .map_err(|_| anyhow!("Unable to read keypair file"))?;
-    let url = cluster_url(&cfg);
+    let url = cluster_url(cfg);
     let client = RpcClient::new(url);
     let idl_data = serialize_idl(idl)?;
 
@@ -1892,7 +1892,7 @@ fn create_idl_buffer(
 ) -> Result<Pubkey> {
     let keypair = solana_sdk::signature::read_keypair_file(keypair_path)
         .map_err(|_| anyhow!("Unable to read keypair file"))?;
-    let url = cluster_url(&cfg);
+    let url = cluster_url(cfg);
     let client = RpcClient::new(url);
 
     let buffer = Keypair::generate(&mut OsRng);
@@ -1966,7 +1966,7 @@ fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         println!("Running migration deploy script");
 
-        let url = cluster_url(&cfg);
+        let url = cluster_url(cfg);
         let cur_dir = std::env::current_dir()?;
 
         let use_ts =
@@ -2120,7 +2120,7 @@ fn shell(cfg_override: &ConfigOverride) -> Result<()> {
                     .collect::<Vec<ProgramWorkspace>>(),
             }
         };
-        let url = cluster_url(&cfg);
+        let url = cluster_url(cfg);
         let js_code = template::node_shell(&url, &cfg.provider.wallet.to_string(), programs)?;
         let mut child = std::process::Command::new("node")
             .args(&["-e", &js_code, "-i", "--experimental-repl-await"])
@@ -2139,7 +2139,7 @@ fn shell(cfg_override: &ConfigOverride) -> Result<()> {
 
 fn run(cfg_override: &ConfigOverride, script: String) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
-        let url = cluster_url(&cfg);
+        let url = cluster_url(cfg);
         let script = cfg
             .scripts
             .get(&script)
@@ -2403,7 +2403,7 @@ fn localnet(
         let validator_handle = &mut start_test_validator(cfg, flags, false)?;
 
         // Setup log reader.
-        let url = test_validator_rpc_url(&cfg);
+        let url = test_validator_rpc_url(cfg);
         let log_streams = stream_logs(cfg, &url);
 
         std::io::stdin().lock().lines().next().unwrap().unwrap();
