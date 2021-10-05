@@ -659,7 +659,9 @@ pub struct ConstraintSpace {
 #[derive(Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum InitKind {
-    Program { owner: Option<Expr> },
+    Program {
+        owner: Option<Expr>,
+    },
     // Owner for token and mint represents the authority. Not to be confused
     // with the owner of the AccountInfo.
     Token {
