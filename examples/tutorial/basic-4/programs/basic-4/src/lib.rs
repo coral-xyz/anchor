@@ -1,6 +1,8 @@
 // #region code
 use anchor_lang::prelude::*;
 
+declare_id!("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr");
+
 #[program]
 pub mod basic_4 {
     use super::*;
@@ -31,8 +33,7 @@ pub mod basic_4 {
 
 #[derive(Accounts)]
 pub struct Auth<'info> {
-    #[account(signer)]
-    authority: AccountInfo<'info>,
+    authority: Signer<'info>,
 }
 // #endregion code
 

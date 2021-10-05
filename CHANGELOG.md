@@ -11,16 +11,81 @@ incremented for features.
 
 ## [Unreleased]
 
+## [0.17.0] - 2021-10-03
+
+### Features
+
+* cli: Add `localnet` command for starting a local `solana-test-validator` with the workspace deployed ([#820](https://github.com/project-serum/anchor/pull/820)).
+
+### Breaking
+
+* `CpiContext` accounts must now be used with the accounts struct generated in the `crate::cpi::accounts::*` module. These structs correspond to the accounts context for each instruction, except that each field is of type `AccountInfo` ([#824](https://github.com/project-serum/anchor/pull/824)).
+
+## [0.16.2] - 2021-09-27
+
+### Features
+
+* lang: Add `--detach` flag to `anchor test` ([#770](https://github.com/project-serum/anchor/pull/770)).
+* lang: Add `associated_token` keyword for initializing associated token accounts within `#[derive(Accounts)]` ([#790](https://github.com/project-serum/anchor/pull/790)).
+* cli: Allow passing through cargo flags for build command ([#719](https://github.com/project-serum/anchor/pull/719)).
+* cli: Allow passing through cargo flags for test, verify, and publish commands ([#804](https://github.com/project-serum/anchor/pull/804)).
+
+### Fixes
+
+* lang: Generated `AccountMeta`s for Rust clients now properly set the `isSigner` field ([#762](https://github.com/project-serum/anchor/pull/762)).
+
+## [0.16.1] - 2021-09-17
+
+### Fixes
+
+* lang: `Signer` type now sets isSigner to true in the IDL ([#750](https://github.com/project-serum/anchor/pull/750)).
+
+## [0.16.0] - 2021-09-16
+
+### Features
+
+* lang: `Program` type introduced for executable accounts ([#705](https://github.com/project-serum/anchor/pull/705)).
+* lang: `Signer` type introduced for signing accounts where data is not used ([#705](https://github.com/project-serum/anchor/pull/705)).
+* lang: `UncheckedAccount` type introduced as a preferred alias for `AccountInfo` ([#745](https://github.com/project-serum/anchor/pull/745)).
+
+### Breaking Changes
+
+* lang: `#[account(owner = <pubkey>)]` now requires a `Pubkey` instead of an account ([#691](https://github.com/project-serum/anchor/pull/691)).
+
+## [0.15.0] - 2021-09-07
+
+### Features
+
+* lang: Add new `Account` type to replace `ProgramAccount` and `CpiAccount`, both of which are deprecated ([#686](https://github.com/project-serum/anchor/pull/686)).
+* lang: `Box` can be used with `Account` types to reduce stack usage ([#686](https://github.com/project-serum/anchor/pull/686)).
+* lang: Add `Owner` trait, which is automatically implemented by all `#[account]` structs ([#686](https://github.com/project-serum/anchor/pull/686)).
+* lang: Check that ProgramAccount writable before mut borrow (`anchor-debug` only) ([#681](https://github.com/project-serum/anchor/pull/681)).
+
+### Breaking Changes
+
+* lang: All programs must now define their program id in source via `declare_id!` ([#686](https://github.com/project-serum/anchor/pull/686)).
+
+## [0.14.0] - 2021-09-02
+
 ### Features
 
 * lang: Ignore `Unnamed` structs instead of panic ([#605](https://github.com/project-serum/anchor/pull/605)).
 * lang: Add constraints for initializing mint accounts as pdas, `#[account(init, seeds = [...], mint::decimals = <expr>, mint::authority = <expr>)]` ([#](https://github.com/project-serum/anchor/pull/562)).
-* cli: Added more informative error if non-existent program passed in genesis configuration.
+* lang: Add constraints for initializing mint accounts as pdas, `#[account(init, seeds = [...], mint::decimals = <expr>, mint::authority = <expr>)]` ([#562](https://github.com/project-serum/anchor/pull/562)).
+* lang: Add `AsRef<AccountInfo>` for `AccountInfo` wrappers ([#652](https://github.com/project-serum/anchor/pull/652)).
+* lang: Optimize `trait Key` by removing `AccountInfo` cloning ([#652](https://github.com/project-serum/anchor/pull/652)).
+* cli, client, lang: Update solana toolchain to v1.7.11 ([#653](https://github.com/project-serum/anchor/pull/653)).
 
 ### Breaking Changes
 
-* lang: Change `#[account(init, seeds = [...], token = <expr>, authority = <expr>)]` to `#[account(init, token::mint = <expr> token::authority = <expr>)]` ([#](https://github.com/project-serum/anchor/pull/562)).
-* lang: `#[associated]` and `#[account(associated = <target>, with = <target>)]` are both removed.
+* lang: Change `#[account(init, seeds = [...], token = <expr>, authority = <expr>)]` to `#[account(init, token::mint = <expr> token::authority = <expr>)]` ([#562](https://github.com/project-serum/anchor/pull/562)).
+* lang: `#[associated]` and `#[account(associated = <target>, with = <target>)]` are both removed ([#612](https://github.com/project-serum/anchor/pull/612)).
+* cli: Removed `anchor launch` command ([#634](https://github.com/project-serum/anchor/pull/634)).
+* lang: `#[account(init)]` now creates the account inside the same instruction to be consistent with initializing PDAs. To maintain the old behavior of `init`, replace it with `#[account(zero)]` ([#641](https://github.com/project-serum/anchor/pull/641)).
+* lang: `bump` must be provided when using the `seeds` constraint. This has been added as an extra safety constraint to ensure that whenever a PDA is initialized via a constraint the bump used is the one created by `Pubkey::find_program_address` ([#641](https://github.com/project-serum/anchor/pull/641)).
+* lang: `try_from_init` has been removed from `Loader`, `ProgramAccount`, and `CpiAccount`  and replaced with `try_from_unchecked` ([#641](https://github.com/project-serum/anchor/pull/641)).
+* lang: Remove `AccountsInit` trait ([#641](https://github.com/project-serum/anchor/pull/641)).
+* lang: `try_from` methods for `ProgramAccount`, `Loader`, and `ProgramState` now take in an additional `program_id: &Pubkey` parameter ([#660](https://github.com/project-serum/anchor/pull/660)).
 
 ## [0.13.2] - 2021-08-11
 
@@ -32,7 +97,7 @@ incremented for features.
 
 ### Features
 
-* cli: Programs embedded into genesis during tests will produce program logs.
+* cli: Programs embedded into genesis during tests will produce program logs ([#594](https://github.com/project-serum/anchor/pull/594)).
 
 ### Fixes
 

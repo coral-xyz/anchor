@@ -1,5 +1,5 @@
 use crate::config::{
-    AnchorPackage, Config, ConfigOverride, Manifest, Program, ProgramWorkspace, WithPath,
+    AnchorPackage, Config, ConfigOverride, Manifest, ProgramDeployment, ProgramWorkspace, WithPath,
 };
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction};
@@ -7,9 +7,11 @@ use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
 use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Context, Result};
 use clap::Clap;
+use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
 use flate2::write::{GzEncoder, ZlibEncoder};
 use flate2::Compression;
+use heck::SnakeCase;
 use rand::rngs::OsRng;
 use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
@@ -25,12 +27,14 @@ use solana_sdk::signature::Keypair;
 use solana_sdk::signature::Signer;
 use solana_sdk::sysvar;
 use solana_sdk::transaction::Transaction;
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Stdio};
 use std::string::ToString;
+use tar::Archive;
 
 pub mod config;
 pub mod template;
@@ -70,6 +74,14 @@ pub enum Command {
         /// only.
         #[clap(short, long)]
         solana_version: Option<String>,
+        /// Arguments to pass to the underlying `cargo build-bpf` command
+        #[clap(
+            required = false,
+            takes_value = true,
+            multiple_values = true,
+            last = true
+        )]
+        cargo_args: Vec<String>,
     },
     /// Verifies the on-chain bytecode matches the locally compiled artifact.
     /// Run this command inside a program subdirectory, i.e., in the dir
@@ -83,6 +95,14 @@ pub enum Command {
         /// only.
         #[clap(short, long)]
         solana_version: Option<String>,
+        /// Arguments to pass to the underlying `cargo build-bpf` command.
+        #[clap(
+            required = false,
+            takes_value = true,
+            multiple_values = true,
+            last = true
+        )]
+        cargo_args: Vec<String>,
     },
     /// Runs integration tests against a localnetwork.
     Test {
@@ -98,8 +118,20 @@ pub enum Command {
         /// use this to save time when running test and the program code is not altered.
         #[clap(long)]
         skip_build: bool,
-        #[clap(multiple = true)]
+        /// Flag to keep the local validator running after tests
+        /// to be able to check the transactions.
+        #[clap(long)]
+        detach: bool,
+        #[clap(multiple_values = true)]
         args: Vec<String>,
+        /// Arguments to pass to the underlying `cargo build-bpf` command.
+        #[clap(
+            required = false,
+            takes_value = true,
+            multiple_values = true,
+            last = true
+        )]
+        cargo_args: Vec<String>,
     },
     /// Creates a new program.
     New { name: String },
@@ -116,14 +148,6 @@ pub enum Command {
     /// Runs the deploy migration script.
     Migrate,
     /// Deploys, initializes an IDL, and migrates all in one command.
-    Launch {
-        /// True if the build should be verifiable. If deploying to mainnet,
-        /// this should almost always be set.
-        #[clap(short, long)]
-        verifiable: bool,
-        #[clap(short, long)]
-        program_name: Option<String>,
-    },
     /// Upgrades a single program. The configured wallet must be the upgrade
     /// authority.
     Upgrade {
@@ -161,7 +185,44 @@ pub enum Command {
     Publish {
         /// The name of the program to publish.
         program: String,
+        /// Arguments to pass to the underlying `cargo build-bpf` command.
+        #[clap(
+            required = false,
+            takes_value = true,
+            multiple_values = true,
+            last = true
+        )]
+        cargo_args: Vec<String>,
     },
+    /// Keypair commands.
+    Keys {
+        #[clap(subcommand)]
+        subcmd: KeysCommand,
+    },
+    /// Localnet commands.
+    Localnet {
+        /// Flag to skip building the program in the workspace,
+        /// use this to save time when running test and the program code is not altered.
+        #[clap(long)]
+        skip_build: bool,
+        /// Use this flag if you want to run tests against previously deployed
+        /// programs.
+        #[clap(long)]
+        skip_deploy: bool,
+        /// Arguments to pass to the underlying `cargo build-bpf` command.
+        #[clap(
+            required = false,
+            takes_value = true,
+            multiple_values = true,
+            last = true
+        )]
+        cargo_args: Vec<String>,
+    },
+}
+
+#[derive(Debug, Clap)]
+pub enum KeysCommand {
+    List,
 }
 
 #[derive(Debug, Clap)]
@@ -251,6 +312,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             verifiable,
             program_name,
             solana_version,
+            cargo_args,
         } => build(
             &opts.cfg_override,
             idl,
@@ -259,12 +321,20 @@ pub fn entry(opts: Opts) -> Result<()> {
             solana_version,
             None,
             None,
+            cargo_args,
         ),
         Command::Verify {
             program_id,
             program_name,
             solana_version,
-        } => verify(&opts.cfg_override, program_id, program_name, solana_version),
+            cargo_args,
+        } => verify(
+            &opts.cfg_override,
+            program_id,
+            program_name,
+            solana_version,
+            cargo_args,
+        ),
         Command::Deploy { program_name } => deploy(&opts.cfg_override, program_name),
         Command::Upgrade {
             program_id,
@@ -272,21 +342,21 @@ pub fn entry(opts: Opts) -> Result<()> {
         } => upgrade(&opts.cfg_override, program_id, program_filepath),
         Command::Idl { subcmd } => idl(&opts.cfg_override, subcmd),
         Command::Migrate => migrate(&opts.cfg_override),
-        Command::Launch {
-            verifiable,
-            program_name,
-        } => launch(&opts.cfg_override, verifiable, program_name),
         Command::Test {
             skip_deploy,
             skip_local_validator,
             skip_build,
+            detach,
             args,
+            cargo_args,
         } => test(
             &opts.cfg_override,
             skip_deploy,
             skip_local_validator,
             skip_build,
+            detach,
             args,
+            cargo_args,
         ),
         #[cfg(feature = "dev")]
         Command::Airdrop => airdrop(cfg_override),
@@ -294,7 +364,16 @@ pub fn entry(opts: Opts) -> Result<()> {
         Command::Shell => shell(&opts.cfg_override),
         Command::Run { script } => run(&opts.cfg_override, script),
         Command::Login { token } => login(&opts.cfg_override, token),
-        Command::Publish { program } => publish(&opts.cfg_override, program),
+        Command::Publish {
+            program,
+            cargo_args,
+        } => publish(&opts.cfg_override, program, cargo_args),
+        Command::Keys { subcmd } => keys(&opts.cfg_override, subcmd),
+        Command::Localnet {
+            skip_build,
+            skip_deploy,
+            cargo_args,
+        } => localnet(&opts.cfg_override, skip_build, skip_deploy, cargo_args),
     }
 }
 
@@ -317,6 +396,16 @@ fn init(cfg_override: &ConfigOverride, name: String, typescript: bool) -> Result
         }
         .to_owned(),
     );
+    let mut localnet = BTreeMap::new();
+    localnet.insert(
+        name.to_snake_case(),
+        ProgramDeployment {
+            address: template::default_program_id(),
+            path: None,
+            idl: None,
+        },
+    );
+    cfg.programs.insert(Cluster::Localnet, localnet);
     let toml = cfg.to_string();
     let mut file = File::create("Anchor.toml")?;
     file.write_all(toml.as_bytes())?;
@@ -414,6 +503,7 @@ fn new_program(name: &str) -> Result<()> {
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn build(
     cfg_override: &ConfigOverride,
     idl: Option<String>,
@@ -422,6 +512,7 @@ pub fn build(
     solana_version: Option<String>,
     stdout: Option<File>, // Used for the package registry server.
     stderr: Option<File>, // Used for the package registry server.
+    cargo_args: Vec<String>,
 ) -> Result<()> {
     // Change to the workspace member directory, if needed.
     if let Some(program_name) = program_name.as_ref() {
@@ -458,6 +549,7 @@ pub fn build(
             solana_version,
             stdout,
             stderr,
+            cargo_args,
         )?,
         // If the Cargo.toml is at the root, build the entire workspace.
         Some(cargo) if cargo.path().parent() == cfg.path().parent() => build_all(
@@ -468,6 +560,7 @@ pub fn build(
             solana_version,
             stdout,
             stderr,
+            cargo_args,
         )?,
         // Cargo.toml represents a single package. Build it.
         Some(cargo) => build_cwd(
@@ -478,6 +571,7 @@ pub fn build(
             solana_version,
             stdout,
             stderr,
+            cargo_args,
         )?,
     }
 
@@ -486,6 +580,7 @@ pub fn build(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_all(
     cfg: &WithPath<Config>,
     cfg_path: &Path,
@@ -494,6 +589,7 @@ fn build_all(
     solana_version: Option<String>,
     stdout: Option<File>, // Used for the package registry server.
     stderr: Option<File>, // Used for the package registry server.
+    cargo_args: Vec<String>,
 ) -> Result<()> {
     let cur_dir = std::env::current_dir()?;
     let r = match cfg_path.parent() {
@@ -508,6 +604,7 @@ fn build_all(
                     solana_version.clone(),
                     stdout.as_ref().map(|f| f.try_clone()).transpose()?,
                     stderr.as_ref().map(|f| f.try_clone()).transpose()?,
+                    cargo_args.clone(),
                 )?;
             }
             Ok(())
@@ -518,6 +615,7 @@ fn build_all(
 }
 
 // Runs the build command outside of a workspace.
+#[allow(clippy::too_many_arguments)]
 fn build_cwd(
     cfg: &WithPath<Config>,
     cargo_toml: PathBuf,
@@ -526,13 +624,14 @@ fn build_cwd(
     solana_version: Option<String>,
     stdout: Option<File>,
     stderr: Option<File>,
+    cargo_args: Vec<String>,
 ) -> Result<()> {
     match cargo_toml.parent() {
         None => return Err(anyhow!("Unable to find parent")),
         Some(p) => std::env::set_current_dir(&p)?,
     };
     match verifiable {
-        false => _build_cwd(idl_out),
+        false => _build_cwd(idl_out, cargo_args),
         true => build_cwd_verifiable(cfg, cargo_toml, solana_version, stdout, stderr),
     }
 }
@@ -761,9 +860,10 @@ fn docker_build(
     Ok(())
 }
 
-fn _build_cwd(idl_out: Option<PathBuf>) -> Result<()> {
+fn _build_cwd(idl_out: Option<PathBuf>, cargo_args: Vec<String>) -> Result<()> {
     let exit = std::process::Command::new("cargo")
         .arg("build-bpf")
+        .args(cargo_args)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
@@ -790,6 +890,7 @@ fn verify(
     program_id: Pubkey,
     program_name: Option<String>,
     solana_version: Option<String>,
+    cargo_args: Vec<String>,
 ) -> Result<()> {
     // Change to the workspace member directory, if needed.
     if let Some(program_name) = program_name.as_ref() {
@@ -813,6 +914,7 @@ fn verify(
         },
         None,
         None,
+        cargo_args,
     )?;
     std::env::set_current_dir(&cur_dir)?;
 
@@ -1297,12 +1399,23 @@ fn test(
     skip_deploy: bool,
     skip_local_validator: bool,
     skip_build: bool,
+    detach: bool,
     extra_args: Vec<String>,
+    cargo_args: Vec<String>,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         // Build if needed.
         if !skip_build {
-            build(cfg_override, None, false, None, None, None, None)?;
+            build(
+                cfg_override,
+                None,
+                false,
+                None,
+                None,
+                None,
+                None,
+                cargo_args,
+            )?;
         }
 
         // Run the deploy against the cluster in two cases:
@@ -1322,7 +1435,7 @@ fn test(
                 true => None,
                 false => Some(genesis_flags(cfg)?),
             };
-            validator_handle = Some(start_test_validator(cfg, flags)?);
+            validator_handle = Some(start_test_validator(cfg, flags, true)?);
         }
 
         // Setup log reader.
@@ -1344,12 +1457,19 @@ fn test(
             std::process::Command::new(program)
                 .args(args)
                 .env("ANCHOR_PROVIDER_URL", cfg.provider.cluster.url())
+                .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .output()
                 .map_err(anyhow::Error::from)
                 .context(cmd)
         };
+
+        // Keep validator running if needed.
+        if test_result.is_ok() && detach {
+            println!("Local validator still running. Press Ctrl + C quit.");
+            std::io::stdin().lock().lines().next().unwrap().unwrap();
+        }
 
         // Check all errors and shut down.
         if let Some(mut child) = validator_handle {
@@ -1362,6 +1482,8 @@ fn test(
                 println!("Failed to kill subprocess {}: {}", child.id(), err);
             }
         }
+
+        // Must exist *after* shutting down the validator and log streams.
         match test_result {
             Ok(exit) => {
                 if !exit.status.success() {
@@ -1386,13 +1508,12 @@ fn genesis_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
     for mut program in cfg.read_all_programs()? {
         let binary_path = program.binary_path().display().to_string();
 
+        // Use the [programs.cluster] override and fallback to the keypair
+        // files if no override is given.
         let address = programs
             .and_then(|m| m.get(&program.lib_name))
-            .map(|deployment| deployment.address.to_string())
-            .unwrap_or_else(|| {
-                let kp = Keypair::generate(&mut OsRng);
-                kp.pubkey().to_string()
-            });
+            .map(|deployment| Ok(deployment.address.to_string()))
+            .unwrap_or_else(|| program.pubkey().map(|p| p.to_string()))?;
 
         flags.push("--bpf-program".to_string());
         flags.push(address.clone());
@@ -1480,7 +1601,11 @@ pub struct IdlTestMetadata {
     address: String,
 }
 
-fn start_test_validator(cfg: &Config, flags: Option<Vec<String>>) -> Result<Child> {
+fn start_test_validator(
+    cfg: &Config,
+    flags: Option<Vec<String>>,
+    test_log_stdout: bool,
+) -> Result<Child> {
     fs::create_dir_all(".anchor")?;
     let test_ledger_filename = ".anchor/test-ledger";
     let test_ledger_log_filename = ".anchor/test-ledger-log.txt";
@@ -1493,16 +1618,25 @@ fn start_test_validator(cfg: &Config, flags: Option<Vec<String>>) -> Result<Chil
     }
 
     // Start a validator for testing.
-    let test_validator_stdout = File::create(test_ledger_log_filename)?;
-    let test_validator_stderr = test_validator_stdout.try_clone()?;
-    let validator_handle = std::process::Command::new("solana-test-validator")
+    let (test_validator_stdout, test_validator_stderr) = match test_log_stdout {
+        true => {
+            let test_validator_stdout_file = File::create(test_ledger_log_filename)?;
+            let test_validator_sterr_file = test_validator_stdout_file.try_clone()?;
+            (
+                Stdio::from(test_validator_stdout_file),
+                Stdio::from(test_validator_sterr_file),
+            )
+        }
+        false => (Stdio::inherit(), Stdio::inherit()),
+    };
+    let mut validator_handle = std::process::Command::new("solana-test-validator")
         .arg("--ledger")
         .arg(test_ledger_filename)
         .arg("--mint")
         .arg(cfg.wallet_kp()?.pubkey().to_string())
         .args(flags.unwrap_or_default())
-        .stdout(Stdio::from(test_validator_stdout))
-        .stderr(Stdio::from(test_validator_stderr))
+        .stdout(test_validator_stdout)
+        .stderr(test_validator_stderr)
         .spawn()
         .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
 
@@ -1518,22 +1652,19 @@ fn start_test_validator(cfg: &Config, flags: Option<Vec<String>>) -> Result<Chil
         std::thread::sleep(std::time::Duration::from_millis(1));
         count += 1;
     }
-    if count == 5000 {
-        println!("Unable to start test validator.");
+    if count == ms_wait {
+        eprintln!(
+            "Unable to start test validator. Check {} for errors.",
+            test_ledger_log_filename
+        );
+        validator_handle.kill()?;
         std::process::exit(1);
     }
 
     Ok(validator_handle)
 }
 
-fn deploy(cfg_override: &ConfigOverride, program_name: Option<String>) -> Result<()> {
-    _deploy(cfg_override, program_name).map(|_| ())
-}
-
-fn _deploy(
-    cfg_override: &ConfigOverride,
-    program_str: Option<String>,
-) -> Result<Vec<(Pubkey, Program)>> {
+fn deploy(cfg_override: &ConfigOverride, program_str: Option<String>) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         let url = cfg.provider.cluster.url().to_string();
         let keypair = cfg.provider.wallet.to_string();
@@ -1541,8 +1672,6 @@ fn _deploy(
         // Deploy the programs.
         println!("Deploying workspace: {}", url);
         println!("Upgrade authority: {}", keypair);
-
-        let mut programs = Vec::new();
 
         for mut program in cfg.read_all_programs()? {
             if let Some(single_prog_str) = &program_str {
@@ -1559,11 +1688,7 @@ fn _deploy(
             );
             println!("Program path: {}...", binary_path);
 
-            // Write the program's keypair filepath. This forces a new deploy
-            // address.
-            let program_kp = Keypair::generate(&mut OsRng);
-            let mut file = File::create(program.anchor_keypair_path())?;
-            file.write_all(format!("{:?}", &program_kp.to_bytes()).as_bytes())?;
+            let file = program.keypair_file()?;
 
             // Send deploy transactions.
             let exit = std::process::Command::new("solana")
@@ -1574,7 +1699,7 @@ fn _deploy(
                 .arg("--keypair")
                 .arg(&keypair)
                 .arg("--program-id")
-                .arg(program.anchor_keypair_path().display().to_string())
+                .arg(file.path().display().to_string())
                 .arg(&binary_path)
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
@@ -1585,10 +1710,11 @@ fn _deploy(
                 std::process::exit(exit.status.code().unwrap_or(1));
             }
 
+            let program_pubkey = program.pubkey()?;
             if let Some(mut idl) = program.idl.as_mut() {
                 // Add program address to the IDL.
                 idl.metadata = Some(serde_json::to_value(IdlTestMetadata {
-                    address: program_kp.pubkey().to_string(),
+                    address: program_pubkey.to_string(),
                 })?);
 
                 // Persist it.
@@ -1597,13 +1723,11 @@ fn _deploy(
                     .with_extension("json");
                 write_idl(idl, OutFile::File(idl_out))?;
             }
-
-            programs.push((program_kp.pubkey(), program))
         }
 
         println!("Deploy success");
 
-        Ok(programs)
+        Ok(())
     })
 }
 
@@ -1636,59 +1760,6 @@ fn upgrade(
         }
         Ok(())
     })
-}
-
-fn launch(
-    cfg_override: &ConfigOverride,
-    verifiable: bool,
-    program_name: Option<String>,
-) -> Result<()> {
-    // Build and deploy.
-    build(
-        cfg_override,
-        None,
-        verifiable,
-        program_name.clone(),
-        None,
-        None,
-        None,
-    )?;
-    let programs = _deploy(cfg_override, program_name)?;
-
-    with_workspace(cfg_override, |cfg| {
-        let keypair = cfg.provider.wallet.to_string();
-
-        // Add metadata to all IDLs.
-        for (address, program) in programs {
-            if let Some(idl) = program.idl.as_ref() {
-                // Store the IDL on chain.
-                let idl_address = create_idl_account(cfg, &keypair, &address, idl)?;
-                println!("IDL account created: {}", idl_address.to_string());
-            }
-        }
-
-        // Run migration script.
-        if Path::new("migrations/deploy.js").exists() || Path::new("migrations/deploy.ts").exists()
-        {
-            migrate(cfg_override)?;
-        }
-
-        Ok(())
-    })
-}
-
-// The Solana CLI doesn't redeploy a program if this file exists.
-// So remove it to make all commands explicit.
-fn clear_program_keys(cfg_override: &ConfigOverride) -> Result<()> {
-    let config = Config::discover(cfg_override).unwrap_or_default().unwrap();
-
-    for program in config.read_all_programs()? {
-        let anchor_keypair_path = program.anchor_keypair_path();
-        if Path::exists(&anchor_keypair_path) {
-            std::fs::remove_file(anchor_keypair_path).expect("Always remove");
-        }
-    }
-    Ok(())
 }
 
 fn create_idl_account(
@@ -1845,6 +1916,7 @@ fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
             std::fs::write("deploy.ts", deploy_script_host_str)?;
             std::process::Command::new("ts-node")
                 .arg("deploy.ts")
+                .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .output()?
@@ -1855,6 +1927,7 @@ fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
             std::fs::write("deploy.js", deploy_script_host_str)?;
             std::process::Command::new("node")
                 .arg("deploy.js")
+                .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .output()?
@@ -1960,6 +2033,7 @@ fn shell(cfg_override: &ConfigOverride) -> Result<()> {
                     })
                     .collect::<Vec<_>>();
             }
+
             // Finalize program list with all programs with IDLs.
             match cfg.programs.get(&cfg.provider.cluster) {
                 None => Vec::new(),
@@ -2007,6 +2081,8 @@ fn run(cfg_override: &ConfigOverride, script: String) -> Result<()> {
         let exit = std::process::Command::new("bash")
             .arg("-c")
             .arg(&script)
+            .env("ANCHOR_PROVIDER_URL", cfg.provider.cluster.url())
+            .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .output()
@@ -2032,7 +2108,11 @@ fn login(_cfg_override: &ConfigOverride, token: String) -> Result<()> {
     Ok(())
 }
 
-fn publish(cfg_override: &ConfigOverride, program_name: String) -> Result<()> {
+fn publish(
+    cfg_override: &ConfigOverride,
+    program_name: String,
+    cargo_args: Vec<String>,
+) -> Result<()> {
     // Discover the various workspace configs.
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
 
@@ -2062,17 +2142,6 @@ fn publish(cfg_override: &ConfigOverride, program_name: String) -> Result<()> {
 
     let anchor_package = AnchorPackage::from(program_name.clone(), &cfg)?;
     let anchor_package_bytes = serde_json::to_vec(&anchor_package)?;
-
-    // Build the program before sending it to the server.
-    build(
-        cfg_override,
-        None,
-        true,
-        Some(program_name.clone()),
-        cfg.solana_version.clone(),
-        None,
-        None,
-    )?;
 
     // Set directory to top of the workspace.
     let workspace_dir = cfg.path().parent().unwrap();
@@ -2142,6 +2211,32 @@ fn publish(cfg_override: &ConfigOverride, program_name: String) -> Result<()> {
     // Tar pack complete.
     tar.into_inner()?;
 
+    // Create tmp directory for workspace.
+    let ws_dir = dot_anchor.join("workspace");
+    if Path::exists(&ws_dir) {
+        fs::remove_dir_all(&ws_dir)?;
+    }
+    fs::create_dir_all(&ws_dir)?;
+
+    // Unpack the archive into the new workspace directory.
+    std::env::set_current_dir(&ws_dir)?;
+    unpack_archive(&tarball_filename)?;
+
+    // Build the program before sending it to the server.
+    build(
+        cfg_override,
+        None,
+        true,
+        Some(program_name),
+        cfg.solana_version.clone(),
+        None,
+        None,
+        cargo_args,
+    )?;
+
+    // Success. Now we can finally upload to the server without worrying
+    // about a build failure.
+
     // Upload the tarball to the server.
     let token = registry_api_token(cfg_override)?;
     let form = Form::new()
@@ -2169,6 +2264,16 @@ fn publish(cfg_override: &ConfigOverride, program_name: String) -> Result<()> {
     Ok(())
 }
 
+// Unpacks the tarball into the current directory.
+fn unpack_archive(tar_path: impl AsRef<Path>) -> Result<()> {
+    let tar = GzDecoder::new(std::fs::File::open(tar_path)?);
+    let mut archive = Archive::new(tar);
+    archive.unpack(".")?;
+    archive.into_inner();
+
+    Ok(())
+}
+
 fn registry_api_token(_cfg_override: &ConfigOverride) -> Result<String> {
     #[derive(Debug, Deserialize)]
     struct Registry {
@@ -2188,6 +2293,72 @@ fn registry_api_token(_cfg_override: &ConfigOverride) -> Result<String> {
     Ok(credentials_toml.registry.token)
 }
 
+fn keys(cfg_override: &ConfigOverride, cmd: KeysCommand) -> Result<()> {
+    match cmd {
+        KeysCommand::List => keys_list(cfg_override),
+    }
+}
+
+fn keys_list(cfg_override: &ConfigOverride) -> Result<()> {
+    let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
+    for program in cfg.read_all_programs()? {
+        let pubkey = program.pubkey()?;
+        println!("{}: {}", program.lib_name, pubkey.to_string());
+    }
+    Ok(())
+}
+
+fn localnet(
+    cfg_override: &ConfigOverride,
+    skip_build: bool,
+    skip_deploy: bool,
+    cargo_args: Vec<String>,
+) -> Result<()> {
+    with_workspace(cfg_override, |cfg| {
+        // Build if needed.
+        if !skip_build {
+            build(
+                cfg_override,
+                None,
+                false,
+                None,
+                None,
+                None,
+                None,
+                cargo_args,
+            )?;
+        }
+
+        // Setup log reader.
+        let log_streams = stream_logs(cfg);
+
+        let flags = match skip_deploy {
+            true => None,
+            false => Some(genesis_flags(cfg)?),
+        };
+        let validator_handle = &mut start_test_validator(cfg, flags, false)?;
+
+        std::io::stdin().lock().lines().next().unwrap().unwrap();
+
+        // Check all errors and shut down.
+        if let Err(err) = validator_handle.kill() {
+            println!(
+                "Failed to kill subprocess {}: {}",
+                validator_handle.id(),
+                err
+            );
+        }
+
+        for mut child in log_streams? {
+            if let Err(err) = child.kill() {
+                println!("Failed to kill subprocess {}: {}", child.id(), err);
+            }
+        }
+
+        Ok(())
+    })
+}
+
 // with_workspace ensures the current working directory is always the top level
 // workspace directory, i.e., where the `Anchor.toml` file is located, before
 // and after the closure invocation.
@@ -2197,8 +2368,6 @@ fn registry_api_token(_cfg_override: &ConfigOverride) -> Result<String> {
 fn with_workspace<R>(cfg_override: &ConfigOverride, f: impl FnOnce(&WithPath<Config>) -> R) -> R {
     set_workspace_dir_or_exit();
 
-    clear_program_keys(cfg_override).unwrap();
-
     let cfg = Config::discover(cfg_override)
         .expect("Previously set the workspace dir")
         .expect("Anchor.toml must always exist");
@@ -2206,7 +2375,6 @@ fn with_workspace<R>(cfg_override: &ConfigOverride, f: impl FnOnce(&WithPath<Con
     let r = f(&cfg);
 
     set_workspace_dir_or_exit();
-    clear_program_keys(cfg_override).unwrap();
 
     r
 }

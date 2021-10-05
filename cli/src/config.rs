@@ -4,7 +4,7 @@ use anyhow::{anyhow, Error, Result};
 use clap::Clap;
 use serde::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
-use solana_sdk::signature::Keypair;
+use solana_sdk::signature::{Keypair, Signer};
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use std::fs::{self, File};
@@ -329,12 +329,12 @@ impl Config {
 struct _Config {
     anchor_version: Option<String>,
     solana_version: Option<String>,
+    programs: Option<BTreeMap<String, BTreeMap<String, serde_json::Value>>>,
     registry: Option<RegistryConfig>,
     provider: Provider,
-    test: Option<Test>,
-    scripts: Option<ScriptsConfig>,
-    programs: Option<BTreeMap<String, BTreeMap<String, serde_json::Value>>>,
     workspace: Option<WorkspaceConfig>,
+    scripts: Option<ScriptsConfig>,
+    test: Option<Test>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -409,7 +409,7 @@ fn ser_programs(
                 .map(|(name, deployment)| {
                     (
                         name.clone(),
-                        serde_json::to_value(&_ProgramDeployment::from(deployment)).unwrap(),
+                        to_value(&_ProgramDeployment::from(deployment)),
                     )
                 })
                 .collect::<BTreeMap<String, serde_json::Value>>();
@@ -417,6 +417,14 @@ fn ser_programs(
         })
         .collect::<BTreeMap<String, BTreeMap<String, serde_json::Value>>>()
 }
+
+fn to_value(dep: &_ProgramDeployment) -> serde_json::Value {
+    if dep.path.is_none() && dep.idl.is_none() {
+        return serde_json::Value::String(dep.address.to_string());
+    }
+    serde_json::to_value(dep).unwrap()
+}
+
 fn deser_programs(
     programs: BTreeMap<String, BTreeMap<String, serde_json::Value>>,
 ) -> Result<BTreeMap<Cluster, BTreeMap<String, ProgramDeployment>>> {
@@ -471,13 +479,29 @@ pub struct Program {
 }
 
 impl Program {
-    pub fn anchor_keypair_path(&self) -> PathBuf {
-        std::env::current_dir()
+    pub fn pubkey(&self) -> Result<Pubkey> {
+        self.keypair().map(|kp| kp.pubkey())
+    }
+
+    pub fn keypair(&self) -> Result<Keypair> {
+        let file = self.keypair_file()?;
+        solana_sdk::signature::read_keypair_file(file.path())
+            .map_err(|_| anyhow!("failed to read keypair for program: {}", self.lib_name))
+    }
+
+    // Lazily initializes the keypair file with a new key if it doesn't exist.
+    pub fn keypair_file(&self) -> Result<WithPath<File>> {
+        fs::create_dir_all("target/deploy/")?;
+        let path = std::env::current_dir()
             .expect("Must have current dir")
-            .join(format!(
-                "target/deploy/anchor-{}-keypair.json",
-                self.lib_name
-            ))
+            .join(format!("target/deploy/{}-keypair.json", self.lib_name));
+        if path.exists() {
+            return Ok(WithPath::new(File::open(&path)?, path));
+        }
+        let program_kp = Keypair::generate(&mut rand::rngs::OsRng);
+        let mut file = File::create(&path)?;
+        file.write_all(format!("{:?}", &program_kp.to_bytes()).as_bytes())?;
+        Ok(WithPath::new(file, path))
     }
 
     pub fn binary_path(&self) -> PathBuf {

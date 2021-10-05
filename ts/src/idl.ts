@@ -60,11 +60,17 @@ export type IdlTypeDef = {
   type: IdlTypeDefTy;
 };
 
-type IdlTypeDefTy = {
-  kind: "struct" | "enum";
-  fields?: IdlTypeDefStruct;
-  variants?: IdlEnumVariant[];
+export type IdlTypeDefTyStruct = {
+  kind: "struct";
+  fields: IdlTypeDefStruct;
 };
+
+export type IdlTypeDefTyEnum = {
+  kind: "enum";
+  variants: IdlEnumVariant[];
+};
+
+type IdlTypeDefTy = IdlTypeDefTyEnum | IdlTypeDefTyStruct;
 
 type IdlTypeDefStruct = Array<IdlField>;
 
@@ -83,21 +89,26 @@ export type IdlType =
   | "bytes"
   | "string"
   | "publicKey"
-  | IdlTypeVec
+  | IdlTypeDefined
   | IdlTypeOption
-  | IdlTypeDefined;
+  | IdlTypeVec
+  | IdlTypeArray;
 
-export type IdlTypeVec = {
-  vec: IdlType;
+// User defined type.
+export type IdlTypeDefined = {
+  defined: string;
 };
 
 export type IdlTypeOption = {
   option: IdlType;
 };
 
-// User defined type.
-export type IdlTypeDefined = {
-  defined: string;
+export type IdlTypeVec = {
+  vec: IdlType;
+};
+
+export type IdlTypeArray = {
+  array: [idlType: IdlType, size: number];
 };
 
 export type IdlEnumVariant = {

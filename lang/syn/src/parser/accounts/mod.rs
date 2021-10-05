@@ -1,7 +1,4 @@
-use crate::{
-    AccountField, AccountsStruct, CompositeField, CpiAccountTy, CpiStateTy, Field, LoaderTy,
-    ProgramAccountTy, ProgramStateTy, SysvarTy, Ty,
-};
+use crate::*;
 use syn::parse::{Error as ParseError, Result as ParseResult};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
@@ -74,8 +71,12 @@ fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
             | "CpiAccount"
             | "Sysvar"
             | "AccountInfo"
+            | "UncheckedAccount"
             | "CpiState"
             | "Loader"
+            | "Account"
+            | "Program"
+            | "Signer"
     );
     Ok(r)
 }
@@ -92,7 +93,11 @@ fn parse_ty(f: &syn::Field) -> ParseResult<Ty> {
         "CpiAccount" => Ty::CpiAccount(parse_cpi_account(&path)?),
         "Sysvar" => Ty::Sysvar(parse_sysvar(&path)?),
         "AccountInfo" => Ty::AccountInfo,
+        "UncheckedAccount" => Ty::UncheckedAccount,
         "Loader" => Ty::Loader(parse_program_account_zero_copy(&path)?),
+        "Account" => Ty::Account(parse_account_ty(&path)?),
+        "Program" => Ty::Program(parse_program_ty(&path)?),
+        "Signer" => Ty::Signer,
         _ => return Err(ParseError::new(f.ty.span(), "invalid account type given")),
     };
 
@@ -104,6 +109,12 @@ fn ident_string(f: &syn::Field) -> ParseResult<String> {
         syn::Type::Path(ty_path) => ty_path.path.clone(),
         _ => return Err(ParseError::new(f.ty.span(), "invalid type")),
     };
+    if parser::tts_to_string(&path)
+        .replace(" ", "")
+        .starts_with("Box<Account<")
+    {
+        return Ok("Account".to_string());
+    }
     // TODO: allow segmented paths.
     if path.segments.len() != 1 {
         return Err(ParseError::new(
@@ -151,7 +162,59 @@ fn parse_program_account_zero_copy(path: &syn::Path) -> ParseResult<LoaderTy> {
     })
 }
 
-fn parse_account(path: &syn::Path) -> ParseResult<syn::TypePath> {
+fn parse_account_ty(path: &syn::Path) -> ParseResult<AccountTy> {
+    let account_type_path = parse_account(path)?;
+    let boxed = parser::tts_to_string(&path)
+        .replace(" ", "")
+        .starts_with("Box<Account<");
+    Ok(AccountTy {
+        account_type_path,
+        boxed,
+    })
+}
+
+fn parse_program_ty(path: &syn::Path) -> ParseResult<ProgramTy> {
+    let account_type_path = parse_account(path)?;
+    Ok(ProgramTy { account_type_path })
+}
+
+// TODO: this whole method is a hack. Do something more idiomatic.
+fn parse_account(mut path: &syn::Path) -> ParseResult<syn::TypePath> {
+    if parser::tts_to_string(path)
+        .replace(" ", "")
+        .starts_with("Box<Account<")
+    {
+        let segments = &path.segments[0];
+        match &segments.arguments {
+            syn::PathArguments::AngleBracketed(args) => {
+                // Expected: <'info, MyType>.
+                if args.args.len() != 1 {
+                    return Err(ParseError::new(
+                        args.args.span(),
+                        "bracket arguments must be the lifetime and type",
+                    ));
+                }
+                match &args.args[0] {
+                    syn::GenericArgument::Type(syn::Type::Path(ty_path)) => {
+                        path = &ty_path.path;
+                    }
+                    _ => {
+                        return Err(ParseError::new(
+                            args.args[1].span(),
+                            "first bracket argument must be a lifetime",
+                        ))
+                    }
+                }
+            }
+            _ => {
+                return Err(ParseError::new(
+                    segments.arguments.span(),
+                    "expected angle brackets with a lifetime and type",
+                ))
+            }
+        }
+    }
+
     let segments = &path.segments[0];
     match &segments.arguments {
         syn::PathArguments::AngleBracketed(args) => {

@@ -1,6 +1,8 @@
 use crate::error::ErrorCode;
+#[allow(deprecated)]
+use crate::CpiAccount;
 use crate::{
-    AccountDeserialize, AccountSerialize, Accounts, AccountsExit, CpiAccount, ToAccountInfo,
+    AccountDeserialize, AccountSerialize, Accounts, AccountsExit, Key, ToAccountInfo,
     ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
@@ -14,6 +16,7 @@ pub const PROGRAM_STATE_SEED: &str = "unversioned";
 
 /// Boxed container for the program state singleton.
 #[derive(Clone)]
+#[deprecated]
 pub struct ProgramState<'info, T: AccountSerialize + AccountDeserialize + Clone> {
     inner: Box<Inner<'info, T>>,
 }
@@ -24,8 +27,10 @@ struct Inner<'info, T: AccountSerialize + AccountDeserialize + Clone> {
     account: T,
 }
 
+#[allow(deprecated)]
+
 impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramState<'a, T> {
-    pub fn new(info: AccountInfo<'a>, account: T) -> ProgramState<'a, T> {
+    fn new(info: AccountInfo<'a>, account: T) -> ProgramState<'a, T> {
         Self {
             inner: Box::new(Inner { info, account }),
         }
@@ -33,7 +38,17 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramState<'a, T> {
 
     /// Deserializes the given `info` into a `ProgramState`.
     #[inline(never)]
-    pub fn try_from(info: &AccountInfo<'a>) -> Result<ProgramState<'a, T>, ProgramError> {
+    pub fn try_from(
+        program_id: &Pubkey,
+        info: &AccountInfo<'a>,
+    ) -> Result<ProgramState<'a, T>, ProgramError> {
+        if info.owner != program_id {
+            return Err(ErrorCode::AccountNotProgramOwned.into());
+        }
+        if info.key != &Self::address(program_id) {
+            solana_program::msg!("Invalid state address");
+            return Err(ErrorCode::StateInvalidAddress.into());
+        }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramState::new(
             info.clone(),
@@ -50,6 +65,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramState<'a, T> {
     }
 }
 
+#[allow(deprecated)]
 impl<'info, T> Accounts<'info> for ProgramState<'info, T>
 where
     T: AccountSerialize + AccountDeserialize + Clone,
@@ -65,21 +81,11 @@ where
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
-
-        if account.key != &Self::address(program_id) {
-            solana_program::msg!("Invalid state address");
-            return Err(ErrorCode::StateInvalidAddress.into());
-        }
-
-        let pa = ProgramState::try_from(account)?;
-        if pa.inner.info.owner != program_id {
-            solana_program::msg!("Invalid state owner");
-            return Err(ErrorCode::AccountNotProgramOwned.into());
-        }
-        Ok(pa)
+        ProgramState::try_from(program_id, account)
     }
 }
 
+#[allow(deprecated)]
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountMetas
     for ProgramState<'info, T>
 {
@@ -93,6 +99,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountMetas
     }
 }
 
+#[allow(deprecated)]
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfos<'info>
     for ProgramState<'info, T>
 {
@@ -101,6 +108,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfos<'in
     }
 }
 
+#[allow(deprecated)]
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfo<'info>
     for ProgramState<'info, T>
 {
@@ -109,6 +117,16 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfo<'inf
     }
 }
 
+#[allow(deprecated)]
+impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AsRef<AccountInfo<'info>>
+    for ProgramState<'info, T>
+{
+    fn as_ref(&self) -> &AccountInfo<'info> {
+        &self.inner.info
+    }
+}
+
+#[allow(deprecated)]
 impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Deref for ProgramState<'a, T> {
     type Target = T;
 
@@ -117,12 +135,14 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Deref for ProgramStat
     }
 }
 
+#[allow(deprecated)]
 impl<'a, T: AccountSerialize + AccountDeserialize + Clone> DerefMut for ProgramState<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut DerefMut::deref_mut(&mut self.inner).account
     }
 }
 
+#[allow(deprecated)]
 impl<'info, T> From<CpiAccount<'info, T>> for ProgramState<'info, T>
 where
     T: AccountSerialize + AccountDeserialize + Clone,
@@ -132,6 +152,7 @@ where
     }
 }
 
+#[allow(deprecated)]
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info>
     for ProgramState<'info, T>
 {
@@ -150,4 +171,11 @@ pub fn address(program_id: &Pubkey) -> Pubkey {
     let seed = PROGRAM_STATE_SEED;
     let owner = program_id;
     Pubkey::create_with_seed(&base, seed, owner).unwrap()
+}
+
+#[allow(deprecated)]
+impl<'info, T: AccountSerialize + AccountDeserialize + Clone> Key for ProgramState<'info, T> {
+    fn key(&self) -> Pubkey {
+        *self.inner.info.key
+    }
 }

@@ -46,6 +46,8 @@ pub enum ErrorCode {
     ConstraintClose,
     #[msg("An address constraint was violated")]
     ConstraintAddress,
+    #[msg("Expected zero account discriminant")]
+    ConstraintZero,
 
     // Accounts.
     #[msg("The account discriminator was already set on this account")]
@@ -64,6 +66,12 @@ pub enum ErrorCode {
     AccountNotMutable,
     #[msg("The given account is not owned by the executing program")]
     AccountNotProgramOwned,
+    #[msg("Program ID was not as expected")]
+    InvalidProgramId,
+    #[msg("Program account is not executable")]
+    InvalidProgramExecutable,
+    #[msg("The given account did not sign")]
+    AccountNotSigner,
 
     // State.
     #[msg("The given state account does not have the correct address")]
