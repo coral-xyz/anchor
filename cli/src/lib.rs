@@ -1557,6 +1557,9 @@ fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
         }
         if let Some(validator) = &test.validator {
             for (key, value) in serde_json::to_value(validator)?.as_object().unwrap() {
+                if key == "ledger" {
+                    continue;
+                };
                 flags.push(format!("--{}", key.replace("_", "-")));
                 if let serde_json::Value::String(v) = value {
                     flags.push(v.to_string());
@@ -1632,7 +1635,7 @@ fn start_test_validator(
     test_log_stdout: bool,
 ) -> Result<Child> {
     //
-    let test_ledger_log_filename = test_validator_log_path(cfg);
+    let (test_ledger_directory, test_ledger_log_filename) = test_validator_file_paths(cfg);
 
     // Start a validator for testing.
     let (test_validator_stdout, test_validator_stderr) = match test_log_stdout {
@@ -1650,6 +1653,8 @@ fn start_test_validator(
     let rpc_url = test_validator_rpc_url(cfg);
 
     let mut validator_handle = std::process::Command::new("solana-test-validator")
+        .arg("--ledger")
+        .arg(test_ledger_directory)
         .arg("--mint")
         .arg(cfg.wallet_kp()?.pubkey().to_string())
         .args(flags.unwrap_or_default())
@@ -1695,7 +1700,7 @@ fn test_validator_rpc_url(cfg: &Config) -> String {
 
 // Setup and return paths to the solana-test-validator ledger directory and log
 // files given the configuration
-fn test_validator_log_path(cfg: &Config) -> String {
+fn test_validator_file_paths(cfg: &Config) -> (String, String) {
     let ledger_directory = match &cfg.test.as_ref() {
         Some(Test {
             validator: Some(validator),
@@ -1716,7 +1721,10 @@ fn test_validator_log_path(cfg: &Config) -> String {
 
     fs::create_dir_all(&ledger_directory).unwrap();
 
-    format!("{}/test-ledger-log.txt", ledger_directory)
+    (
+        ledger_directory.to_string(),
+        format!("{}/test-ledger-log.txt", ledger_directory),
+    )
 }
 
 fn cluster_url(cfg: &Config) -> String {
