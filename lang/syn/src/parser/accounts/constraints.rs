@@ -533,7 +533,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                                 "authority must be provided to initialize a mint program derived address"
                             ))
                         },
-                        freeze_authority: mint_freeze_authority.map(|fa| fa.clone().into_inner().mint_freeze_auth)
+                        freeze_authority: mint_freeze_authority.map(|fa| fa.into_inner().mint_freeze_auth)
                     }
                 } else {
                     InitKind::Program {
