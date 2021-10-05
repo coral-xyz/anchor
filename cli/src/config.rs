@@ -461,7 +461,7 @@ fn deser_programs(
 pub struct Test {
     pub genesis: Option<Vec<GenesisEntry>>,
     pub clone: Option<Vec<CloneEntry>>,
-    pub validator: Validator,
+    pub validator: Option<Validator>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

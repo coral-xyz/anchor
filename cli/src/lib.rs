@@ -1,5 +1,6 @@
 use crate::config::{
-    AnchorPackage, Config, ConfigOverride, Manifest, ProgramDeployment, ProgramWorkspace, WithPath,
+    AnchorPackage, Config, ConfigOverride, Manifest, ProgramDeployment, ProgramWorkspace, Test,
+    WithPath,
 };
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction};
@@ -1554,12 +1555,14 @@ fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
                 flags.push(entry.address.clone());
             }
         }
-        for (key, value) in serde_json::to_value(&test.validator)?.as_object().unwrap() {
-            flags.push(format!("--{}", key.replace("_", "-")));
-            if let serde_json::Value::String(v) = value {
-                flags.push(v.to_string());
-            } else {
-                flags.push(value.to_string());
+        if let Some(validator) = &test.validator {
+            for (key, value) in serde_json::to_value(validator)?.as_object().unwrap() {
+                flags.push(format!("--{}", key.replace("_", "-")));
+                if let serde_json::Value::String(v) = value {
+                    flags.push(v.to_string());
+                } else {
+                    flags.push(value.to_string());
+                }
             }
         }
     }
@@ -1680,22 +1683,24 @@ fn start_test_validator(
 // Return the URL that solana-test-validator should be running on given the
 // configuration
 fn test_validator_rpc_url(cfg: &Config) -> String {
-    if let Some(test) = cfg.test.as_ref() {
-        format!(
-            "http://{}:{}",
-            test.validator.bind_address, test.validator.rpc_port
-        )
-    } else {
-        "http://localhost:8899".to_string()
+    match &cfg.test.as_ref() {
+        Some(Test {
+            validator: Some(validator),
+            ..
+        }) => format!("http://{}:{}", validator.bind_address, validator.rpc_port),
+        _ => "http://localhost:8899".to_string(),
     }
 }
 
 // Setup and return paths to the solana-test-validator ledger directory and log
 // files given the configuration
 fn test_validator_log_path(cfg: &Config) -> String {
-    let ledger_directory = match cfg.test.as_ref() {
-        Some(test) => &test.validator.ledger,
-        None => ".anchor/test-ledger",
+    let ledger_directory = match &cfg.test.as_ref() {
+        Some(Test {
+            validator: Some(validator),
+            ..
+        }) => &validator.ledger,
+        _ => ".anchor/test-ledger",
     };
 
     if !Path::new(&ledger_directory).is_relative() {
