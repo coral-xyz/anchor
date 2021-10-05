@@ -98,7 +98,7 @@ export type DecodeType<T extends IdlType, Defined> = T extends keyof TypeMap
   : unknown;
 
 /**
- * Tuple of arguments
+ * Tuple of arguments.
  */
 type ArgsTuple<A extends IdlField[], Defined> = {
   [K in keyof A]: A[K] extends IdlField
