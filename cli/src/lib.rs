@@ -1544,7 +1544,6 @@ fn genesis_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
                 flags.push(entry.address.clone());
             }
         }
-        
     }
     Ok(flags)
 }
