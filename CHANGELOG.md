@@ -13,8 +13,10 @@ incremented for features.
 
 ### Features
 
+* cli: Add support for configuration options for `solana-test-validator` in Anchor.toml ([#834](https://github.com/project-serum/anchor/pull/834)).
 * cli: `target/types` directory now created on build to store a TypeScript types file for each program's IDL ([#795](https://github.com/project-serum/anchor/pull/795)).
 * ts: `Program<T>` can now be typed with an IDL type ([#795](https://github.com/project-serum/anchor/pull/795)).
+* lang: Add `mint::freeze_authority` keyword for mint initialization within `#[derive(Accounts)]` ([#835](https://github.com/project-serum/anchor/pull/835)).
 
 ## [0.17.0] - 2021-10-03
 
