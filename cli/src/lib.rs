@@ -1695,15 +1695,7 @@ fn start_test_validator(
     // Wait for the validator to be ready.
     let client = RpcClient::new(rpc_url);
     let mut count = 0;
-    let ms_wait = match &cfg.test {
-        Some(test) => {
-            match test.startup_wait {
-                Some(wait) => wait,
-                None => 5000,
-            }
-        },
-        None => 5000,
-    };
+    let ms_wait = cfg.test.and_then(|test| test.startup_wait).unwrap_or(5_000);
     while count < ms_wait {
         let r = client.get_recent_blockhash();
         if r.is_ok() {
