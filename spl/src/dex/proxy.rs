@@ -186,8 +186,14 @@ impl<'a> MarketProxy<'a> {
         }
 
         // Execute post callbacks.
-        for (function, args) in post_callbacks {
-            function(program_id, &accounts, ix_data.to_vec(), args)?;
+        for (function, additional_accounts, args) in post_callbacks {
+            function(
+                program_id,
+                &accounts,
+                ix_data.to_vec(),
+                additional_accounts,
+                args,
+            )?;
         }
 
         Ok(())
