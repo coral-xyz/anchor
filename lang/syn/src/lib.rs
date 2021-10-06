@@ -279,7 +279,7 @@ impl Field {
                 anchor_lang::Account
             },
             Ty::AccountLoader(_) => quote! {
-                anchor_lang::Account
+                anchor_lang::AccountLoader
             },
             Ty::Loader(_) => quote! {
                 anchor_lang::Loader
