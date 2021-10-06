@@ -24,12 +24,10 @@ pub struct Context<'a, 'info> {
 type PostCallback<'a, 'info> = fn(
     // program_id
     &'a Pubkey,
-    // accounts for the DEX relay CPI.
-    &Vec<AccountInfo<'info>>,
+    // AccountInfos needed for post callback
+    Vec<AccountInfo<'info>>,
     // market instruction
     Vec<u8>,
-    // additional accounts for post callback
-    Vec<AccountInfo<'info>>,
     // arguments to post callback
     Vec<u8>,
 ) -> ProgramResult;
