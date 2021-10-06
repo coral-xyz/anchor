@@ -230,4 +230,20 @@ mod tests {
             IdlType::Array(Box::new(IdlType::U8), 50000)
         );
     }
+
+    #[test]
+    fn option() {
+        assert_eq!(
+            IdlType::from_str("Option<bool>").unwrap(),
+            IdlType::Option(Box::new(IdlType::Bool))
+        )
+    }
+
+    #[test]
+    fn vector() {
+        assert_eq!(
+            IdlType::from_str("Vec<bool>").unwrap(),
+            IdlType::Vec(Box::new(IdlType::Bool))
+        )
+    }
 }
