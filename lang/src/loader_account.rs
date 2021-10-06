@@ -13,7 +13,7 @@ use std::io::Write;
 use std::marker::PhantomData;
 use std::ops::DerefMut;
 
-/// Account LoaderAccount facilitating on demand zero copy deserialization.
+/// Account AccountLoader facilitating on demand zero copy deserialization.
 /// Note that using accounts in this way is distinctly different from using,
 /// for example, the [`ProgramAccount`](./struct.ProgramAccount.html). Namely,
 /// one must call `load`, `load_mut`, or `load_init`, before reading or writing
@@ -24,13 +24,13 @@ use std::ops::DerefMut;
 /// induce a `RefCell` panic, especially when sharing accounts across CPI
 /// boundaries. When in doubt, one should make sure all refs resulting from a
 /// call to `load` are dropped before CPI.
-pub struct LoaderAccount<'info, T: ZeroCopy + Owner> {
+pub struct AccountLoader<'info, T: ZeroCopy + Owner> {
     acc_info: AccountInfo<'info>,
     phantom: PhantomData<&'info T>,
 }
 
-impl<'info, T: ZeroCopy + Owner> LoaderAccount<'info, T> {
-    fn new(acc_info: AccountInfo<'info>) -> LoaderAccount<'info, T> {
+impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
+    fn new(acc_info: AccountInfo<'info>) -> AccountLoader<'info, T> {
         Self {
             acc_info,
             phantom: PhantomData,
@@ -41,7 +41,7 @@ impl<'info, T: ZeroCopy + Owner> LoaderAccount<'info, T> {
     #[inline(never)]
     pub fn try_from(
         acc_info: &AccountInfo<'info>,
-    ) -> Result<LoaderAccount<'info, T>, ProgramError> {
+    ) -> Result<AccountLoader<'info, T>, ProgramError> {
         if acc_info.owner != &T::owner() {
             return Err(ErrorCode::AccountNotProgramOwned.into());
         }
@@ -53,18 +53,18 @@ impl<'info, T: ZeroCopy + Owner> LoaderAccount<'info, T> {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
-        Ok(LoaderAccount::new(acc_info.clone()))
+        Ok(AccountLoader::new(acc_info.clone()))
     }
 
     /// Constructs a new `Loader` from an uninitialized account.
     #[inline(never)]
     pub fn try_from_unchecked(
         acc_info: &AccountInfo<'info>,
-    ) -> Result<LoaderAccount<'info, T>, ProgramError> {
+    ) -> Result<AccountLoader<'info, T>, ProgramError> {
         if acc_info.owner != &T::owner() {
             return Err(ErrorCode::AccountNotProgramOwned.into());
         }
-        Ok(LoaderAccount::new(acc_info.clone()))
+        Ok(AccountLoader::new(acc_info.clone()))
     }
 
     /// Returns a Ref to the account data structure for reading.
@@ -126,7 +126,7 @@ impl<'info, T: ZeroCopy + Owner> LoaderAccount<'info, T> {
     }
 }
 
-impl<'info, T: ZeroCopy + Owner> Accounts<'info> for LoaderAccount<'info, T> {
+impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
     #[inline(never)]
     fn try_accounts(
         _program_id: &Pubkey,
@@ -138,12 +138,12 @@ impl<'info, T: ZeroCopy + Owner> Accounts<'info> for LoaderAccount<'info, T> {
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
-        let l = LoaderAccount::try_from(account)?;
+        let l = AccountLoader::try_from(account)?;
         Ok(l)
     }
 }
 
-impl<'info, T: ZeroCopy + Owner> AccountsExit<'info> for LoaderAccount<'info, T> {
+impl<'info, T: ZeroCopy + Owner> AccountsExit<'info> for AccountLoader<'info, T> {
     // The account *cannot* be loaded when this is called.
     fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
         let mut data = self.acc_info.try_borrow_mut_data()?;
@@ -154,13 +154,13 @@ impl<'info, T: ZeroCopy + Owner> AccountsExit<'info> for LoaderAccount<'info, T>
     }
 }
 
-impl<'info, T: ZeroCopy + Owner> AccountsClose<'info> for LoaderAccount<'info, T> {
+impl<'info, T: ZeroCopy + Owner> AccountsClose<'info> for AccountLoader<'info, T> {
     fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult {
         crate::common::close(self.to_account_info(), sol_destination)
     }
 }
 
-impl<'info, T: ZeroCopy + Owner> ToAccountMetas for LoaderAccount<'info, T> {
+impl<'info, T: ZeroCopy + Owner> ToAccountMetas for AccountLoader<'info, T> {
     fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
         let is_signer = is_signer.unwrap_or(self.acc_info.is_signer);
         let meta = match self.acc_info.is_writable {
@@ -171,25 +171,25 @@ impl<'info, T: ZeroCopy + Owner> ToAccountMetas for LoaderAccount<'info, T> {
     }
 }
 
-impl<'info, T: ZeroCopy + Owner> AsRef<AccountInfo<'info>> for LoaderAccount<'info, T> {
+impl<'info, T: ZeroCopy + Owner> AsRef<AccountInfo<'info>> for AccountLoader<'info, T> {
     fn as_ref(&self) -> &AccountInfo<'info> {
         &self.acc_info
     }
 }
 
-impl<'info, T: ZeroCopy + Owner> ToAccountInfos<'info> for LoaderAccount<'info, T> {
+impl<'info, T: ZeroCopy + Owner> ToAccountInfos<'info> for AccountLoader<'info, T> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         vec![self.acc_info.clone()]
     }
 }
 
-impl<'info, T: ZeroCopy + Owner> ToAccountInfo<'info> for LoaderAccount<'info, T> {
+impl<'info, T: ZeroCopy + Owner> ToAccountInfo<'info> for AccountLoader<'info, T> {
     fn to_account_info(&self) -> AccountInfo<'info> {
         self.acc_info.clone()
     }
 }
 
-impl<'info, T: ZeroCopy + Owner> Key for LoaderAccount<'info, T> {
+impl<'info, T: ZeroCopy + Owner> Key for AccountLoader<'info, T> {
     fn key(&self) -> Pubkey {
         *self.acc_info.key
     }

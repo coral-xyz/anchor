@@ -74,7 +74,7 @@ fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
             | "UncheckedAccount"
             | "CpiState"
             | "Loader"
-            | "LoaderAccount"
+            | "AccountLoader"
             | "Account"
             | "Program"
             | "Signer"
@@ -96,7 +96,7 @@ fn parse_ty(f: &syn::Field) -> ParseResult<Ty> {
         "AccountInfo" => Ty::AccountInfo,
         "UncheckedAccount" => Ty::UncheckedAccount,
         "Loader" => Ty::Loader(parse_program_account_zero_copy(&path)?),
-        "LoaderAccount" => Ty::LoaderAccount(parse_program_loader_account(&path)?),
+        "AccountLoader" => Ty::AccountLoader(parse_program_loader_account(&path)?),
         "Account" => Ty::Account(parse_account_ty(&path)?),
         "Program" => Ty::Program(parse_program_ty(&path)?),
         "Signer" => Ty::Signer,

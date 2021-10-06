@@ -17,7 +17,7 @@ where
     pub non_generic: AccountInfo<'info>,
     pub generic: Account<'info, T>,
     pub const_generic: Loader<'info, FooAccount<N>>,
-    pub const_generic_loader: LoaderAccount<'info, FooAccount<N>>,
+    pub const_generic_loader: AccountLoader<'info, FooAccount<N>>,
     pub associated: Account<'info, Associated<U>>,
 }
 

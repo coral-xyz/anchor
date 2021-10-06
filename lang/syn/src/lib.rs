@@ -278,7 +278,7 @@ impl Field {
             Ty::Account(_) => quote! {
                 anchor_lang::Account
             },
-            Ty::LoaderAccount(_) => quote! {
+            Ty::AccountLoader(_) => quote! {
                 anchor_lang::Account
             },
             Ty::Loader(_) => quote! {
@@ -321,7 +321,7 @@ impl Field {
                     #ident
                 }
             }
-            Ty::LoaderAccount(ty) => {
+            Ty::AccountLoader(ty) => {
                 let ident = &ty.account_type_path;
                 quote! {
                     #ident
@@ -391,7 +391,7 @@ pub enum Ty {
     CpiState(CpiStateTy),
     ProgramAccount(ProgramAccountTy),
     Loader(LoaderTy),
-    LoaderAccount(LoaderAccountTy),
+    AccountLoader(LoaderAccountTy),
     CpiAccount(CpiAccountTy),
     Sysvar(SysvarTy),
     Account(AccountTy),
