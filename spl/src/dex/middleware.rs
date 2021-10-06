@@ -18,8 +18,10 @@ pub struct Context<'a, 'info> {
     pub pre_instructions: Vec<(Instruction, Vec<AccountInfo<'info>>, Seeds)>,
     // Instructions to execution *after* the DEX relay CPI.
     pub post_instructions: Vec<(Instruction, Vec<AccountInfo<'info>>, Seeds)>,
+    pub post_callbacks: Vec<(PostCallback<'a, 'info>, Vec<u8>)>,
 }
 
+type PostCallback<'a, 'info> = fn(&'a Pubkey, &Vec<AccountInfo<'info>>, Vec<u8>, Vec<u8>) -> ProgramResult;
 type Seeds = Vec<Vec<Vec<u8>>>;
 
 impl<'a, 'info> Context<'a, 'info> {
@@ -35,6 +37,7 @@ impl<'a, 'info> Context<'a, 'info> {
             seeds: Vec::new(),
             pre_instructions: Vec::new(),
             post_instructions: Vec::new(),
+            post_callbacks: Vec::new(),
         }
     }
 }

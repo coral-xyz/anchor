@@ -127,6 +127,7 @@ impl<'a> MarketProxy<'a> {
             accounts,
             pre_instructions,
             post_instructions,
+            post_callbacks,
             ..
         } = ctx;
 
@@ -182,6 +183,11 @@ impl<'a> MarketProxy<'a> {
                 .collect();
             let signers: Vec<&[&[u8]]> = tmp_signers.iter().map(|seeds| &seeds[..]).collect();
             program::invoke_signed(&ix, &acc_infos, &signers)?;
+        }
+
+        // Execute post callbacks.
+        for (function, args) in post_callbacks {
+            function(program_id, &accounts, ix_data.to_vec(), args)?;
         }
 
         Ok(())
