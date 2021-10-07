@@ -171,6 +171,7 @@ pub fn initialize_market<'info>(
 ) -> ProgramResult {
     let authority = ctx.remaining_accounts.get(0);
     let prune_authority = ctx.remaining_accounts.get(1);
+    let crank_authority = ctx.remaining_accounts.get(2);
     let ix = serum_dex::instruction::initialize_market(
         ctx.accounts.market.key,
         &ID,
@@ -180,6 +181,7 @@ pub fn initialize_market<'info>(
         ctx.accounts.pc_vault.key,
         authority.map(|r| r.key),
         prune_authority.map(|r| r.key),
+        crank_authority.map(|r| r.key),
         ctx.accounts.bids.key,
         ctx.accounts.asks.key,
         ctx.accounts.req_q.key,
@@ -189,6 +191,81 @@ pub fn initialize_market<'info>(
         vault_signer_nonce,
         pc_dust_threshold,
     )?;
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )?;
+    Ok(())
+}
+
+pub fn prune<'info>(ctx: CpiContext<'_, '_, '_, 'info, Prune<'info>>, limit: u16) -> ProgramResult {
+    let ix = serum_dex::instruction::prune(
+        &ID,
+        ctx.accounts.market.key,
+        ctx.accounts.market_bids.key,
+        ctx.accounts.market_asks.key,
+        ctx.accounts.prune_authority.key,
+        ctx.accounts.open_orders.key,
+        ctx.accounts.open_orders_authority.key,
+        ctx.accounts.event_queue.key,
+        limit,
+    )?;
+
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )?;
+    Ok(())
+}
+
+pub fn consume_events<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, ConsumeEvents<'info>>,
+    limit: u16,
+) -> ProgramResult {
+    let mut open_orders_accounts = Vec::new();
+    for acc in &mut ctx.remaining_accounts.iter() {
+        open_orders_accounts.push(acc.key);
+    }
+
+    let ix = serum_dex::instruction::consume_events(
+        &ID,
+        open_orders_accounts,
+        ctx.accounts.market.key,
+        ctx.accounts.event_queue.key,
+        // These keys are deprecated for dex consume_events.
+        &Pubkey::default(),
+        &Pubkey::default(),
+        limit,
+    )?;
+
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )?;
+    Ok(())
+}
+
+pub fn consume_events_permissioned<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, ConsumeEventsPermissioned<'info>>,
+    limit: u16,
+) -> ProgramResult {
+    let mut open_orders_accounts = Vec::new();
+    for acc in &mut ctx.remaining_accounts.iter() {
+        open_orders_accounts.push(acc.key);
+    }
+
+    let ix = serum_dex::instruction::consume_events_permissioned(
+        &ID,
+        open_orders_accounts,
+        ctx.accounts.market.key,
+        ctx.accounts.event_queue.key,
+        ctx.accounts.crank_authority.key,
+        limit,
+    )?;
+
     solana_program::program::invoke_signed(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
@@ -282,6 +359,30 @@ pub struct InitializeMarket<'info> {
     pub req_q: AccountInfo<'info>,
     pub event_q: AccountInfo<'info>,
     pub rent: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct Prune<'info> {
+    pub market: AccountInfo<'info>,
+    pub market_bids: AccountInfo<'info>,
+    pub market_asks: AccountInfo<'info>,
+    pub prune_authority: AccountInfo<'info>,
+    pub open_orders: AccountInfo<'info>,
+    pub open_orders_authority: AccountInfo<'info>,
+    pub event_queue: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ConsumeEvents<'info> {
+    pub market: AccountInfo<'info>,
+    pub event_queue: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ConsumeEventsPermissioned<'info> {
+    pub market: AccountInfo<'info>,
+    pub event_queue: AccountInfo<'info>,
+    pub crank_authority: AccountInfo<'info>,
 }
 
 #[derive(Clone)]
