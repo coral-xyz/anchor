@@ -647,7 +647,7 @@ describe("misc", () => {
     assert.ok(account.mint.equals(mint.publicKey));
   });
 
-  it("Can validate associated_token constrainst", async () => {
+  it("Can validate associated_token constraints", async () => {
     await program.rpc.testValidateAssociatedToken({
       accounts: {
         token: associatedToken,
