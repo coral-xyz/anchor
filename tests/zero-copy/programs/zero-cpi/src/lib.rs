@@ -8,7 +8,6 @@ declare_id!("ErjUjtqKE5AGWUsjseSJCVLtddM6rhaMbDqmhzraF9h6");
 pub mod zero_cpi {
     use super::*;
     pub fn check_cpi(ctx: Context<CheckCpi>, data: u64) -> ProgramResult {
-        // AccountLoader::to_account_info(&self)
         let cpi_program = ctx.accounts.zero_copy_program.to_account_info();
         let cpi_accounts = UpdateBar {
             authority: ctx.accounts.authority.clone(),
@@ -16,7 +15,6 @@ pub mod zero_cpi {
             foo: ctx.accounts.foo.clone(),
         };
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-        // zero_copy::cpi::(cpi_ctx, data)
         zero_copy::cpi::update_bar(cpi_ctx, data);
         Ok(())
     }
