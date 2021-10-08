@@ -56,6 +56,7 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
         state,
         close,
         address,
+        associated_token,
     } = c_group.clone();
 
     let mut constraints = Vec::new();
@@ -68,6 +69,9 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
     }
     if let Some(c) = seeds {
         constraints.push(Constraint::Seeds(c));
+    }
+    if let Some(c) = associated_token {
+        constraints.push(Constraint::AssociatedToken(c));
     }
     if let Some(c) = mutable {
         constraints.push(Constraint::Mut(c));
@@ -115,6 +119,7 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::State(c) => generate_constraint_state(f, c),
         Constraint::Close(c) => generate_constraint_close(f, c),
         Constraint::Address(c) => generate_constraint_address(f, c),
+        Constraint::AssociatedToken(c) => generate_constraint_associated_token(f, c),
     }
 }
 
@@ -204,15 +209,8 @@ pub fn generate_constraint_signer(f: &Field, _c: &ConstraintSigner) -> proc_macr
         _ => panic!("Invalid syntax: signer cannot be specified."),
     };
     quote! {
-        // Don't enforce on CPI, since usually a program is signing and so
-        // the `try_accounts` deserializatoin will fail *if* the one
-        // tries to manually invoke it.
-        //
-        // This check will be performed on the other end of the invocation.
-        if cfg!(not(feature = "cpi")) {
-            if !#info.to_account_info().is_signer {
-                return Err(anchor_lang::__private::ErrorCode::ConstraintSigner.into());
-            }
+        if !#info.to_account_info().is_signer {
+            return Err(anchor_lang::__private::ErrorCode::ConstraintSigner.into());
         }
     }
 }
@@ -372,6 +370,21 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
     }
 }
 
+fn generate_constraint_associated_token(
+    f: &Field,
+    c: &ConstraintAssociatedToken,
+) -> proc_macro2::TokenStream {
+    let name = &f.ident;
+    let wallet_address = &c.wallet;
+    let spl_token_mint_address = &c.mint;
+    quote! {
+        let __associated_token_address = anchor_spl::associated_token::get_associated_token_address(&#wallet_address.key(), &#spl_token_mint_address.key());
+        if #name.to_account_info().key != &__associated_token_address {
+            return Err(anchor_lang::__private::ErrorCode::ConstraintAssociated.into());
+        }
+    }
+}
+
 pub fn generate_init(
     f: &Field,
     seeds_with_nonce: proc_macro2::TokenStream,
@@ -435,13 +448,21 @@ pub fn generate_init(
                 };
             }
         }
-        InitKind::Mint { owner, decimals } => {
+        InitKind::Mint {
+            owner,
+            decimals,
+            freeze_authority,
+        } => {
             let create_account = generate_create_account(
                 field,
                 quote! {anchor_spl::token::Mint::LEN},
                 quote! {token_program.to_account_info().key},
                 seeds_with_nonce,
             );
+            let freeze_authority = match freeze_authority {
+                Some(fa) => quote! { Some(&#fa.key()) },
+                None => quote! { None },
+            };
             quote! {
                 let #field: #ty_decl = {
                     // Define payer variable.
@@ -457,7 +478,7 @@ pub fn generate_init(
                         rent: rent.to_account_info(),
                     };
                     let cpi_ctx = CpiContext::new(cpi_program, accounts);
-                    anchor_spl::token::initialize_mint(cpi_ctx, #decimals, &#owner.to_account_info().key, None)?;
+                    anchor_spl::token::initialize_mint(cpi_ctx, #decimals, &#owner.to_account_info().key, #freeze_authority)?;
                     let pa: #ty_decl = #from_account_info;
                     pa
                 };

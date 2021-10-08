@@ -513,6 +513,7 @@ pub struct ConstraintGroup {
     raw: Vec<ConstraintRaw>,
     close: Option<ConstraintClose>,
     address: Option<ConstraintAddress>,
+    associated_token: Option<ConstraintAssociatedToken>,
 }
 
 impl ConstraintGroup {
@@ -549,6 +550,7 @@ pub enum Constraint {
     Owner(ConstraintOwner),
     RentExempt(ConstraintRentExempt),
     Seeds(ConstraintSeedsGroup),
+    AssociatedToken(ConstraintAssociatedToken),
     Executable(ConstraintExecutable),
     State(ConstraintState),
     Close(ConstraintClose),
@@ -580,6 +582,7 @@ pub enum ConstraintToken {
     AssociatedTokenMint(Context<ConstraintTokenMint>),
     AssociatedTokenAuthority(Context<ConstraintTokenAuthority>),
     MintAuthority(Context<ConstraintMintAuthority>),
+    MintFreezeAuthority(Context<ConstraintMintFreezeAuthority>),
     MintDecimals(Context<ConstraintMintDecimals>),
     Bump(Context<ConstraintTokenBump>),
 }
@@ -674,12 +677,24 @@ pub struct ConstraintSpace {
 #[derive(Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum InitKind {
-    Program { owner: Option<Expr> },
+    Program {
+        owner: Option<Expr>,
+    },
     // Owner for token and mint represents the authority. Not to be confused
     // with the owner of the AccountInfo.
-    Token { owner: Expr, mint: Expr },
-    AssociatedToken { owner: Expr, mint: Expr },
-    Mint { owner: Expr, decimals: Expr },
+    Token {
+        owner: Expr,
+        mint: Expr,
+    },
+    AssociatedToken {
+        owner: Expr,
+        mint: Expr,
+    },
+    Mint {
+        owner: Expr,
+        freeze_authority: Option<Expr>,
+        decimals: Expr,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -703,6 +718,11 @@ pub struct ConstraintMintAuthority {
 }
 
 #[derive(Debug, Clone)]
+pub struct ConstraintMintFreezeAuthority {
+    mint_freeze_auth: Expr,
+}
+
+#[derive(Debug, Clone)]
 pub struct ConstraintMintDecimals {
     decimals: Expr,
 }
@@ -710,6 +730,12 @@ pub struct ConstraintMintDecimals {
 #[derive(Debug, Clone)]
 pub struct ConstraintTokenBump {
     bump: Option<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintAssociatedToken {
+    pub wallet: Expr,
+    pub mint: Expr,
 }
 
 // Syntaxt context object for preserving metadata about the inner item.
