@@ -120,7 +120,7 @@ describe("ido-pool", () => {
     idoTimes.startIdo = nowBn.add(new anchor.BN(5));
     idoTimes.endDeposits = nowBn.add(new anchor.BN(10));
     idoTimes.endIdo = nowBn.add(new anchor.BN(15));
-    idoTimes.endEscrow = nowBn.add(new anchor.BN(20));
+    idoTimes.endEscrow = nowBn.add(new anchor.BN(16));
 
     // Atomically create the new account and initialize it with the program.
     await program.rpc.initializePool(
@@ -547,15 +547,25 @@ describe("ido-pool", () => {
   });
 
   it("Withdraws total USDC from pool account", async () => {
+    const [idoAccount] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from(idoName)],
+      program.programId
+    )
+
+    const [poolUsdc] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from(idoName), Buffer.from("pool_usdc")],
+      program.programId
+    );
+
     await program.rpc.withdrawPoolUsdc({
       accounts: {
-        idoAccount: idoAccount.publicKey,
-        poolSigner,
         idoAuthority: provider.wallet.publicKey,
         idoAuthorityUsdc,
+        idoAccount,
+        usdcMint,
+        watermelonMint,
         poolUsdc,
         tokenProgram: TOKEN_PROGRAM_ID,
-        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       },
     });
 
@@ -564,6 +574,41 @@ describe("ido-pool", () => {
     idoAuthorityUsdcAccount = await getTokenAccount(provider, idoAuthorityUsdc);
     assert.ok(idoAuthorityUsdcAccount.amount.eq(totalPoolUsdc));
   });
+
+  it("Withdraws USDC from the escrow account after waiting period is over", async () => {
+    // Wait until the escrow period is over.
+    if (Date.now() < idoTimes.endEscrow.toNumber() * 1000 + 1000) {
+      await sleep(idoTimes.endEscrow.toNumber() * 1000 - Date.now() + 4000);
+    }
+
+    const [idoAccount] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from(idoName)],
+      program.programId
+    );
+
+    const [escrowUsdc] = await anchor.web3.PublicKey.findProgramAddress(
+      [provider.wallet.publicKey.toBuffer(),
+      Buffer.from(idoName),
+      Buffer.from("escrow_usdc")],
+      program.programId
+    );
+
+    await program.rpc.withdrawFromEscrow(firstWithdrawal, {
+      accounts: {
+        payer: provider.wallet.publicKey,
+        userAuthority: provider.wallet.publicKey,
+        userUsdc,
+        escrowUsdc,
+        idoAccount,
+        usdcMint,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      }
+    });
+
+    userUsdcAccount = await getTokenAccount(provider, userUsdc);
+    assert.ok(userUsdcAccount.amount.eq(firstWithdrawal));
+  });
+
 
   function PoolBumps() {
     this.idoAccount;
