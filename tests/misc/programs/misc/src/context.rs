@@ -50,6 +50,17 @@ pub struct TestInitAssociatedToken<'info> {
 }
 
 #[derive(Accounts)]
+pub struct TestValidateAssociatedToken<'info> {
+    #[account(
+        associated_token::mint = mint,
+        associated_token::authority = wallet,
+    )]
+    pub token: Account<'info, TokenAccount>,
+    pub mint: Account<'info, Mint>,
+    pub wallet: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
 #[instruction(nonce: u8)]
 pub struct TestInstructionConstraint<'info> {
     #[account(
@@ -183,7 +194,7 @@ pub struct TestInitZeroCopy<'info> {
 
 #[derive(Accounts)]
 pub struct TestInitMint<'info> {
-    #[account(init, mint::decimals = 6, mint::authority = payer, payer = payer)]
+    #[account(init, mint::decimals = 6, mint::authority = payer, mint::freeze_authority = payer, payer = payer)]
     pub mint: Account<'info, Mint>,
     #[account(signer)]
     pub payer: AccountInfo<'info>,
