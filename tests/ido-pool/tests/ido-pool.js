@@ -417,7 +417,6 @@ describe("ido-pool", () => {
         watermelonMint,
         poolUsdc,
         tokenProgram: TOKEN_PROGRAM_ID,
-        // clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       },
       instructions: [
         program.instruction.initEscrowUsdc({
@@ -446,6 +445,29 @@ describe("ido-pool", () => {
     if (Date.now() < idoTimes.endIdo.toNumber() * 1000) {
       await sleep(idoTimes.endIdo.toNumber() * 1000 - Date.now() + 3000);
     }
+
+    const [idoAccount] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from(idoName)],
+      program.programId
+    );
+
+    const [poolWatermelon] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from(idoName), Buffer.from("pool_watermelon")],
+      program.programId
+    );
+
+    const [redeemableMint] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from(idoName), Buffer.from("redeemable_mint")],
+      program.programId
+    );
+
+    const [userRedeemable] = await anchor.web3.PublicKey.findProgramAddress(
+      [provider.wallet.publicKey.toBuffer(),
+      Buffer.from(idoName),
+      Buffer.from("user_redeemable")],
+      program.programId
+    );
+
     let firstUserRedeemable = firstDeposit.sub(firstWithdrawal);
     userWatermelon = await createTokenAccount(
       provider,
@@ -455,15 +477,15 @@ describe("ido-pool", () => {
 
     await program.rpc.exchangeRedeemableForWatermelon(firstUserRedeemable, {
       accounts: {
-        idoAccount: idoAccount.publicKey,
-        poolSigner,
-        redeemableMint,
-        poolWatermelon,
+        payer: provider.wallet.publicKey,
         userAuthority: provider.wallet.publicKey,
         userWatermelon,
         userRedeemable,
+        idoAccount,
+        watermelonMint,
+        redeemableMint,
+        poolWatermelon,
         tokenProgram: TOKEN_PROGRAM_ID,
-        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       },
     });
 
@@ -478,23 +500,45 @@ describe("ido-pool", () => {
   });
 
   it("Exchanges second users Redeemable tokens for watermelon", async () => {
+    const [idoAccount] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from(idoName)],
+      program.programId
+    );
+
+    const [redeemableMint] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from(idoName), Buffer.from("redeemable_mint")],
+      program.programId
+    );
+
+    const [secondUserRedeemable] = await anchor.web3.PublicKey.findProgramAddress(
+      [secondUserKeypair.publicKey.toBuffer(),
+      Buffer.from(idoName),
+      Buffer.from("user_redeemable")],
+      program.programId
+    );
+
+    const [poolWatermelon] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from(idoName), Buffer.from("pool_watermelon")],
+      program.programId
+    );
+
     secondUserWatermelon = await createTokenAccount(
       provider,
       watermelonMint,
-      provider.wallet.publicKey
+      secondUserKeypair.publicKey
     );
 
     await program.rpc.exchangeRedeemableForWatermelon(secondDeposit, {
       accounts: {
-        idoAccount: idoAccount.publicKey,
-        poolSigner,
-        redeemableMint,
-        poolWatermelon,
-        userAuthority: provider.wallet.publicKey,
+        payer: provider.wallet.publicKey,
+        userAuthority: secondUserKeypair.publicKey,
         userWatermelon: secondUserWatermelon,
         userRedeemable: secondUserRedeemable,
+        idoAccount,
+        watermelonMint,
+        redeemableMint,
+        poolWatermelon,
         tokenProgram: TOKEN_PROGRAM_ID,
-        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       },
     });
 
