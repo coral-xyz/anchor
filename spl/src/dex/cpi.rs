@@ -225,7 +225,7 @@ pub fn consume_events<'info>(
     limit: u16,
 ) -> ProgramResult {
     let mut open_orders_accounts = Vec::new();
-    for acc in &mut ctx.remaining_accounts.iter() {
+    for acc in ctx.remaining_accounts.iter() {
         open_orders_accounts.push(acc.key);
     }
 
@@ -253,7 +253,7 @@ pub fn consume_events_permissioned<'info>(
     limit: u16,
 ) -> ProgramResult {
     let mut open_orders_accounts = Vec::new();
-    for acc in &mut ctx.remaining_accounts.iter() {
+    for acc in ctx.remaining_accounts.iter() {
         open_orders_accounts.push(acc.key);
     }
 
