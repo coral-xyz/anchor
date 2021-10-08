@@ -71,13 +71,12 @@ describe("ido-pool", () => {
   let poolUsdc = null;
   // let idoAccount = null;
 
-  let startIdoTs = null;
-  let endDepositsTs = null;
-  let endIdoTs = null;
+  let idoTimes;
   let idoName = "test_ido";
 
   it("Initializes the IDO pool", async () => {
     let bumps = new PoolBumps();
+    idoTimes = new IdoTimes();
 
     const [idoAccount, idoAccountBump] = await anchor.web3.PublicKey.findProgramAddress(
       [Buffer.from(idoName)],
@@ -117,31 +116,18 @@ describe("ido-pool", () => {
     // console.log("program account", idoAccount.toString());
     // console.log("program id", program.programId.toString());
 
-    // idoAccount = anchor.web3.Keypair.generate();
     const nowBn = new anchor.BN(Date.now() / 1000);
-    startIdoTs = nowBn.add(new anchor.BN(5));
-    endDepositsTs = nowBn.add(new anchor.BN(10));
-    endIdoTs = nowBn.add(new anchor.BN(15));
-
-    // await program.rpc.testPdas(
-    //   bumps, {
-    //   accounts: {
-    //     idoAuthority: provider.wallet.publicKey,
-    //     idoAuthorityWatermelon,
-    //     idoAccount,
-    //     systemProgram: anchor.web3.SystemProgram.programId,
-    //   }
-    // }
-    // );
+    idoTimes.startIdo = nowBn.add(new anchor.BN(5));
+    idoTimes.endDeposits = nowBn.add(new anchor.BN(10));
+    idoTimes.endIdo = nowBn.add(new anchor.BN(15));
+    idoTimes.endEscrow = nowBn.add(new anchor.BN(20));
 
     // Atomically create the new account and initialize it with the program.
     await program.rpc.initializePool(
       idoName,
       bumps,
       watermelonIdoAmount,
-      startIdoTs,
-      endDepositsTs,
-      endIdoTs,
+      idoTimes,
       {
         accounts: {
           idoAuthority: provider.wallet.publicKey,
@@ -177,8 +163,8 @@ describe("ido-pool", () => {
 
   it("Exchanges user USDC for redeemable tokens", async () => {
     // Wait until the IDO has opened.
-    if (Date.now() < startIdoTs.toNumber() * 1000) {
-      await sleep(startIdoTs.toNumber() * 1000 - Date.now() + 2000);
+    if (Date.now() < idoTimes.startIdo.toNumber() * 1000) {
+      await sleep(idoTimes.startIdo.toNumber() * 1000 - Date.now() + 2000);
     }
 
     const [idoAccount] = await anchor.web3.PublicKey.findProgramAddress(
@@ -391,10 +377,39 @@ describe("ido-pool", () => {
   const firstWithdrawal = new anchor.BN(2_000_000);
 
   it("Exchanges user Redeemable tokens for USDC", async () => {
+    const [idoAccount] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from(idoName)],
+      program.programId
+    );
+
+    const [redeemableMint] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from(idoName), Buffer.from("redeemable_mint")],
+      program.programId
+    );
+
+    const [poolUsdc] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from(idoName), Buffer.from("pool_usdc")],
+      program.programId
+    );
+
+    const [userRedeemable] = await anchor.web3.PublicKey.findProgramAddress(
+      [provider.wallet.publicKey.toBuffer(),
+      Buffer.from(idoName),
+      Buffer.from("user_redeemable")],
+      program.programId
+    );
+
+    const [escrowUsdc] = await anchor.web3.PublicKey.findProgramAddress(
+      [provider.wallet.publicKey.toBuffer(),
+      Buffer.from(idoName),
+      Buffer.from("escrow_usdc")],
+      program.programId
+    );
+
     await program.rpc.exchangeRedeemableForUsdc(firstWithdrawal, {
       accounts: {
         userAuthority: provider.wallet.publicKey,
-        userUsdc,
+        escrowUsdc,
         userRedeemable,
         idoAccount,
         usdcMint,
@@ -402,21 +417,34 @@ describe("ido-pool", () => {
         watermelonMint,
         poolUsdc,
         tokenProgram: TOKEN_PROGRAM_ID,
-        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+        // clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       },
+      instructions: [
+        program.instruction.initEscrowUsdc({
+          accounts: {
+            userAuthority: provider.wallet.publicKey,
+            escrowUsdc,
+            idoAccount,
+            usdcMint,
+            systemProgram: anchor.web3.SystemProgram.programId,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            rent: anchor.web3.SYSVAR_RENT_PUBKEY
+          }
+        })
+      ]
     });
 
     totalPoolUsdc = totalPoolUsdc.sub(firstWithdrawal);
     poolUsdcAccount = await getTokenAccount(provider, poolUsdc);
     assert.ok(poolUsdcAccount.amount.eq(totalPoolUsdc));
-    userUsdcAccount = await getTokenAccount(provider, userUsdc);
-    assert.ok(userUsdcAccount.amount.eq(firstWithdrawal));
+    escrowUsdcAccount = await getTokenAccount(provider, escrowUsdc);
+    assert.ok(escrowUsdcAccount.amount.eq(firstWithdrawal));
   });
 
   it("Exchanges user Redeemable tokens for watermelon", async () => {
     // Wait until the IDO has opened.
-    if (Date.now() < endIdoTs.toNumber() * 1000) {
-      await sleep(endIdoTs.toNumber() * 1000 - Date.now() + 3000);
+    if (Date.now() < idoTimes.endIdo.toNumber() * 1000) {
+      await sleep(idoTimes.endIdo.toNumber() * 1000 - Date.now() + 3000);
     }
     let firstUserRedeemable = firstDeposit.sub(firstWithdrawal);
     userWatermelon = await createTokenAccount(
@@ -498,5 +526,12 @@ describe("ido-pool", () => {
     this.redeemableMint;
     this.poolWatermelon;
     this.poolUsdc;
-  }
+  };
+
+  function IdoTimes() {
+    this.startIdo;
+    this.endDeposts;
+    this.endIdo;
+    this.endEscrow;
+  };
 });
