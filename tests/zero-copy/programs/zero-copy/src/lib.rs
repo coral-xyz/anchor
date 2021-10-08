@@ -111,11 +111,6 @@ pub struct CreateBar<'info> {
     foo: AccountLoader<'info, Foo>,
     system_program: AccountInfo<'info>,
 }
-// impl anchor_lang::Owner for Bar {
-//     fn owner() -> Pubkey {
-//         crate::id
-//     }
-// }
 #[derive(Accounts)]
 pub struct UpdateBar<'info> {
     #[account(
