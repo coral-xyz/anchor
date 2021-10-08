@@ -4,7 +4,7 @@
 
 use anchor_lang::prelude::*;
 // use anchor_lang::solana_program::program_option::COption;
-use anchor_spl::token::{self, Burn, Mint, MintTo, Token, TokenAccount, Transfer};
+use anchor_spl::token::{self, Burn, CloseAccount, Mint, MintTo, Token, TokenAccount, Transfer};
 
 use std::ops::Deref;
 
@@ -195,6 +195,19 @@ pub mod ido_pool {
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
         token::transfer(cpi_ctx, watermelon_amount as u64)?;
 
+        // Send rent back to user if account is empty
+        ctx.accounts.user_redeemable.reload()?;
+        if ctx.accounts.user_redeemable.amount == 0 {
+            let cpi_accounts = CloseAccount {
+                account: ctx.accounts.user_redeemable.to_account_info(),
+                destination: ctx.accounts.user_authority.clone(),
+                authority: ctx.accounts.ido_account.to_account_info(),
+            };
+            let cpi_program = ctx.accounts.token_program.to_account_info();
+            let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+            token::close_account(cpi_ctx)?;
+        }
+
         Ok(())
     }
 
@@ -244,6 +257,19 @@ pub mod ido_pool {
         let cpi_program = ctx.accounts.token_program.to_account_info();
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
         token::transfer(cpi_ctx, amount)?;
+
+        // Send rent back to user if account is empty
+        ctx.accounts.escrow_usdc.reload()?;
+        if ctx.accounts.escrow_usdc.amount == 0 {
+            let cpi_accounts = CloseAccount {
+                account: ctx.accounts.escrow_usdc.to_account_info(),
+                destination: ctx.accounts.user_authority.clone(),
+                authority: ctx.accounts.ido_account.to_account_info(),
+            };
+            let cpi_program = ctx.accounts.token_program.to_account_info();
+            let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+            token::close_account(cpi_ctx)?;
+        }
 
         Ok(())
     }
@@ -425,6 +451,7 @@ pub struct ExchangeRedeemableForWatermelon<'info> {
     // and prevents forgotten / leftover redeemable tokens in the IDO pool.
     pub payer: Signer<'info>,
     // User Accounts
+    #[account(mut)]
     pub user_authority: AccountInfo<'info>,
     // TODO replace with ATA constraints
     #[account(mut,
@@ -484,6 +511,7 @@ pub struct WithdrawFromEscrow<'info> {
     // and prevents forgotten / leftover USDC in the IDO pool.
     pub payer: Signer<'info>,
     // User Accounts
+    #[account(mut)]
     pub user_authority: AccountInfo<'info>,
     #[account(mut,
         constraint = user_usdc.owner == *user_authority.key,
