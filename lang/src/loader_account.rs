@@ -24,6 +24,7 @@ use std::ops::DerefMut;
 /// induce a `RefCell` panic, especially when sharing accounts across CPI
 /// boundaries. When in doubt, one should make sure all refs resulting from a
 /// call to `load` are dropped before CPI.
+#[derive(Clone)]
 pub struct AccountLoader<'info, T: ZeroCopy + Owner> {
     acc_info: AccountInfo<'info>,
     phantom: PhantomData<&'info T>,
@@ -59,6 +60,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
     /// Constructs a new `Loader` from an uninitialized account.
     #[inline(never)]
     pub fn try_from_unchecked(
+        _program_id: &Pubkey,
         acc_info: &AccountInfo<'info>,
     ) -> Result<AccountLoader<'info, T>, ProgramError> {
         if acc_info.owner != &T::owner() {
