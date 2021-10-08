@@ -141,7 +141,6 @@ describe("ido-pool", () => {
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
         },
       }
     );
@@ -236,7 +235,6 @@ describe("ido-pool", () => {
           watermelonMint,
           poolUsdc,
           tokenProgram: TOKEN_PROGRAM_ID,
-          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
         },
         instructions: [
           program.instruction.initUserRedeemable({
@@ -248,7 +246,6 @@ describe("ido-pool", () => {
               systemProgram: anchor.web3.SystemProgram.programId,
               tokenProgram: TOKEN_PROGRAM_ID,
               rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-              clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
             }
           })
         ]
@@ -342,7 +339,6 @@ describe("ido-pool", () => {
         watermelonMint,
         poolUsdc,
         tokenProgram: TOKEN_PROGRAM_ID,
-        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       },
       instructions: [
         program.instruction.initUserRedeemable({
@@ -354,9 +350,7 @@ describe("ido-pool", () => {
             systemProgram: anchor.web3.SystemProgram.programId,
             tokenProgram: TOKEN_PROGRAM_ID,
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-            clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
           },
-          // signers: [secondUserKeypair]
         })
       ],
       signers: [secondUserKeypair]

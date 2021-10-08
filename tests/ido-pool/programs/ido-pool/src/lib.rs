@@ -321,7 +321,6 @@ pub struct InitializePool<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub rent: Sysvar<'info, Rent>,
-    pub clock: Sysvar<'info, Clock>,
 }
 
 #[derive(Accounts)]
@@ -349,7 +348,6 @@ pub struct InitUserRedeemable<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub rent: Sysvar<'info, Rent>,
-    pub clock: Sysvar<'info, Clock>,
 }
 
 #[derive(Accounts)]
@@ -383,7 +381,6 @@ pub struct ExchangeUsdcForRedeemable<'info> {
     pub pool_usdc: Box<Account<'info, TokenAccount>>,
     // Programs and Sysvars
     pub token_program: Program<'info, Token>,
-    pub clock: Sysvar<'info, Clock>,
 }
 
 #[derive(Accounts)]
@@ -408,7 +405,6 @@ pub struct InitEscrowUsdc<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub rent: Sysvar<'info, Rent>,
-    // pub clock: Sysvar<'info, Clock>,
 }
 
 #[derive(Accounts)]
