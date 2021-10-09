@@ -266,11 +266,11 @@ impl TokenAccount {
 
 impl anchor_lang::AccountDeserialize for TokenAccount {
     fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        TokenAccount::try_deserialize_unchecked(buf)
+        spl_token::state::Account::unpack(buf).map(TokenAccount)
     }
 
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        spl_token::state::Account::unpack(buf).map(TokenAccount)
+        spl_token::state::Account::unpack_unchecked(buf).map(TokenAccount)
     }
 }
 
@@ -304,11 +304,11 @@ impl Mint {
 
 impl anchor_lang::AccountDeserialize for Mint {
     fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        Mint::try_deserialize_unchecked(buf)
+        spl_token::state::Mint::unpack(buf).map(Mint)
     }
 
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        spl_token::state::Mint::unpack(buf).map(Mint)
+        spl_token::state::Mint::unpack_unchecked(buf).map(Mint)
     }
 }
 
