@@ -3,7 +3,6 @@
 // #![warn(clippy::all)]
 
 use anchor_lang::prelude::*;
-// use anchor_lang::solana_program::program_option::COption;
 use anchor_spl::token::{self, Burn, CloseAccount, Mint, MintTo, Token, TokenAccount, Transfer};
 
 use std::ops::Deref;
@@ -34,12 +33,13 @@ pub mod ido_pool {
 
         ido_account.ido_name = name_data;
         ido_account.bumps = bumps;
-        ido_account.ido_authority = *ctx.accounts.ido_authority.key;
+        ido_account.ido_authority = ctx.accounts.ido_authority.key();
 
-        ido_account.redeemable_mint = *ctx.accounts.redeemable_mint.to_account_info().key;
-        ido_account.pool_watermelon = *ctx.accounts.pool_watermelon.to_account_info().key;
-        ido_account.watermelon_mint = ctx.accounts.pool_watermelon.mint;
-        ido_account.pool_usdc = *ctx.accounts.pool_usdc.to_account_info().key;
+        ido_account.usdc_mint = ctx.accounts.usdc_mint.key();
+        ido_account.redeemable_mint = ctx.accounts.redeemable_mint.key();
+        ido_account.watermelon_mint = ctx.accounts.watermelon_mint.key();
+        ido_account.pool_usdc = ctx.accounts.pool_usdc.key();
+        ido_account.pool_watermelon = ctx.accounts.pool_watermelon.key();
 
         ido_account.num_ido_tokens = num_ido_tokens;
         ido_account.ido_times = ido_times;
@@ -281,8 +281,9 @@ pub struct InitializePool<'info> {
     // IDO Authority accounts
     #[account(mut)]
     pub ido_authority: Signer<'info>,
+    // Watermelon Doesn't have to be an ATA because it could be DAO controlled
     #[account(mut,
-        constraint = ido_authority_watermelon.owner == *ido_authority.key,
+        constraint = ido_authority_watermelon.owner == ido_authority.key(),
         constraint = ido_authority_watermelon.mint == watermelon_mint.key())]
     pub ido_authority_watermelon: Box<Account<'info, TokenAccount>>,
     // IDO Accounts
@@ -291,7 +292,7 @@ pub struct InitializePool<'info> {
         bump = bumps.ido_account,
         payer = ido_authority)]
     pub ido_account: Box<Account<'info, IdoAccount>>,
-    // TODO USDC should be a known mint on mainnet so could add a check to confirm that
+    // TODO Confirm USDC mint address on mainnet or leave open as an option for other stables
     #[account(constraint = usdc_mint.decimals == DECIMALS)]
     pub usdc_mint: Box<Account<'info, Mint>>,
     #[account(init,
@@ -331,7 +332,7 @@ pub struct InitUserRedeemable<'info> {
     #[account(init,
         token::mint = redeemable_mint,
         token::authority = ido_account,
-        seeds = [user_authority.key.as_ref(),
+        seeds = [user_authority.key().as_ref(),
             ido_account.ido_name.as_ref().trim_ascii_whitespace(),
             b"user_redeemable"],
         bump,
@@ -353,22 +354,22 @@ pub struct InitUserRedeemable<'info> {
 #[derive(Accounts)]
 pub struct ExchangeUsdcForRedeemable<'info> {
     // User Accounts
-    // #[account(mut)] TODO user shouldn't need to pay for any solana stuff?
     pub user_authority: Signer<'info>,
     // TODO replace these with the ATA constraints when possible
     #[account(mut,
-        constraint = user_usdc.owner == *user_authority.key,
+        constraint = user_usdc.owner == user_authority.key(),
         constraint = user_usdc.mint == usdc_mint.key())]
     pub user_usdc: Box<Account<'info, TokenAccount>>,
     #[account(mut,
-        seeds = [user_authority.key.as_ref(),
+        seeds = [user_authority.key().as_ref(),
             ido_account.ido_name.as_ref().trim_ascii_whitespace(),
             b"user_redeemable"],
         bump)]
     pub user_redeemable: Box<Account<'info, TokenAccount>>,
     // IDO Accounts
     #[account(seeds = [ido_account.ido_name.as_ref().trim_ascii_whitespace()],
-        bump = ido_account.bumps.ido_account)]
+        bump = ido_account.bumps.ido_account,
+        has_one = usdc_mint)]
     pub ido_account: Box<Account<'info, IdoAccount>>,
     pub usdc_mint: Box<Account<'info, Mint>>,
     #[account(mut,
@@ -391,14 +392,15 @@ pub struct InitEscrowUsdc<'info> {
     #[account(init,
         token::mint = usdc_mint,
         token::authority = ido_account,
-        seeds =  [user_authority.key.as_ref(),
+        seeds =  [user_authority.key().as_ref(),
             ido_account.ido_name.as_ref().trim_ascii_whitespace(),
             b"escrow_usdc"],
         bump,
         payer = user_authority)]
     pub escrow_usdc: Box<Account<'info, TokenAccount>>,
     #[account(seeds = [ido_account.ido_name.as_ref().trim_ascii_whitespace()],
-        bump = ido_account.bumps.ido_account)]
+        bump = ido_account.bumps.ido_account,
+        has_one = usdc_mint)]
     pub ido_account: Box<Account<'info, IdoAccount>>,
     pub usdc_mint: Box<Account<'info, Mint>>,
     // Programs and Sysvars
@@ -412,20 +414,21 @@ pub struct ExchangeRedeemableForUsdc<'info> {
     // User Accounts
     pub user_authority: Signer<'info>,
     #[account(mut,
-        seeds = [user_authority.key.as_ref(),
+        seeds = [user_authority.key().as_ref(),
             ido_account.ido_name.as_ref().trim_ascii_whitespace(),
             b"escrow_usdc"],
         bump)]
     pub escrow_usdc: Box<Account<'info, TokenAccount>>,
     #[account(mut,
-        seeds = [user_authority.key.as_ref(),
+        seeds = [user_authority.key().as_ref(),
             ido_account.ido_name.as_ref().trim_ascii_whitespace(),
             b"user_redeemable"],
         bump)]
     pub user_redeemable: Box<Account<'info, TokenAccount>>,
     // IDO Accounts
     #[account(seeds = [ido_account.ido_name.as_ref().trim_ascii_whitespace()],
-        bump = ido_account.bumps.ido_account)]
+        bump = ido_account.bumps.ido_account,
+        has_one = usdc_mint)]
     pub ido_account: Box<Account<'info, IdoAccount>>,
     pub usdc_mint: Box<Account<'info, Mint>>,
     pub watermelon_mint: Box<Account<'info, Mint>>,
@@ -447,25 +450,24 @@ pub struct ExchangeRedeemableForWatermelon<'info> {
     // and prevents forgotten / leftover redeemable tokens in the IDO pool.
     pub payer: Signer<'info>,
     // User Accounts
-    #[account(mut)]
+    #[account(mut)] // Sol rent from empty redeemable account is refunded to the user
     pub user_authority: AccountInfo<'info>,
     // TODO replace with ATA constraints
     #[account(mut,
-        constraint = user_watermelon.owner == *user_authority.key,
+        constraint = user_watermelon.owner == user_authority.key(),
         constraint = user_watermelon.mint == watermelon_mint.key())]
     pub user_watermelon: Box<Account<'info, TokenAccount>>,
-    // TODO we should close this account and return the rent to user authority
     #[account(mut,
-        seeds = [user_authority.key.as_ref(),
+        seeds = [user_authority.key().as_ref(),
             ido_account.ido_name.as_ref().trim_ascii_whitespace(),
             b"user_redeemable"],
         bump)]
     pub user_redeemable: Box<Account<'info, TokenAccount>>,
     // IDO Accounts
     #[account(seeds = [ido_account.ido_name.as_ref().trim_ascii_whitespace()],
-        bump = ido_account.bumps.ido_account)]
+        bump = ido_account.bumps.ido_account,
+        has_one = watermelon_mint)]
     pub ido_account: Box<Account<'info, IdoAccount>>,
-    #[account(constraint = watermelon_mint.key() == pool_watermelon.mint)]
     pub watermelon_mint: Box<Account<'info, Mint>>,
     #[account(mut,
         seeds = [ido_account.ido_name.as_ref().trim_ascii_whitespace(), b"redeemable_mint"],
@@ -483,13 +485,17 @@ pub struct ExchangeRedeemableForWatermelon<'info> {
 pub struct WithdrawPoolUsdc<'info> {
     // IDO Authority Accounts
     pub ido_authority: Signer<'info>,
+    // Doesn't need to be an ATA because it might be a DAO account
     #[account(mut,
-        constraint = ido_authority_usdc.owner == *ido_authority.key,
+        constraint = ido_authority_usdc.owner == ido_authority.key(),
         constraint = ido_authority_usdc.mint == usdc_mint.key())]
     pub ido_authority_usdc: Box<Account<'info, TokenAccount>>,
     // IDO Accounts
     #[account(seeds = [ido_account.ido_name.as_ref().trim_ascii_whitespace()],
-        bump = ido_account.bumps.ido_account)]
+        bump = ido_account.bumps.ido_account,
+        has_one = ido_authority,
+        has_one = usdc_mint,
+        has_one = watermelon_mint)]
     pub ido_account: Box<Account<'info, IdoAccount>>,
     pub usdc_mint: Box<Account<'info, Mint>>,
     pub watermelon_mint: Box<Account<'info, Mint>>,
@@ -510,57 +516,37 @@ pub struct WithdrawFromEscrow<'info> {
     #[account(mut)]
     pub user_authority: AccountInfo<'info>,
     #[account(mut,
-        constraint = user_usdc.owner == *user_authority.key,
+        constraint = user_usdc.owner == user_authority.key(),
         constraint = user_usdc.mint == usdc_mint.key())]
     pub user_usdc: Box<Account<'info, TokenAccount>>,
     #[account(mut,
-        seeds = [user_authority.key.as_ref(),
+        seeds = [user_authority.key().as_ref(),
             ido_account.ido_name.as_ref().trim_ascii_whitespace(),
             b"escrow_usdc"],
         bump)]
     pub escrow_usdc: Box<Account<'info, TokenAccount>>,
     // IDO Accounts
     #[account(seeds = [ido_account.ido_name.as_ref().trim_ascii_whitespace()],
-        bump = ido_account.bumps.ido_account)]
+        bump = ido_account.bumps.ido_account,
+        has_one = usdc_mint)]
     pub ido_account: Box<Account<'info, IdoAccount>>,
     pub usdc_mint: Box<Account<'info, Mint>>,
     // Programs and Sysvars
     pub token_program: Program<'info, Token>,
 }
 
-// TODO Coming soon in a new version of anchor
-// #[derive(Accounts)]
-// pub struct ReclaimRedeemableRent<'info> {
-//     // User does not have to sign, this allows anyone to reclaim on their behalf
-//     // and prevents forgotten / leftover rent
-//     pub payer: Signer<'info>,
-//     // User Accounts
-//     pub user_authority: AccountInfo<'info>,
-//     #[account(mut,
-//         seeds = [user_authority.key.as_ref(),
-//             ido_account.ido_name.as_ref().trim_ascii_whitespace(),
-//             b"user_redeemable"],
-//         bump,
-//         constraint = user_redeemable.amount == 0,
-//         close = user_authority)]
-//     pub user_redeemable: Box<Account<'info, TokenAccount>>,
-//     // IDO Accounts
-//     #[account(seeds = [ido_account.ido_name.as_ref().trim_ascii_whitespace()],
-//         bump = ido_account.bumps.ido_account)]
-//     pub ido_account: Box<Account<'info, IdoAccount>>
-// }
-
 #[account]
 #[derive(Default)]
 pub struct IdoAccount {
     pub ido_name: [u8; 10], // Setting an arbitrary max of ten characters in the ido name.
     pub bumps: PoolBumps,
-
     pub ido_authority: Pubkey,
+
+    pub usdc_mint: Pubkey,
     pub redeemable_mint: Pubkey,
-    pub pool_watermelon: Pubkey,
     pub watermelon_mint: Pubkey,
     pub pool_usdc: Pubkey,
+    pub pool_watermelon: Pubkey,
 
     pub num_ido_tokens: u64,
     pub ido_times: IdoTimes,
@@ -625,7 +611,7 @@ fn validate_ido_times(ido_times: IdoTimes) -> ProgramResult {
     Ok(())
 }
 
-// Asserts the IDO is in the first phase.
+// Asserts the IDO is still accepting deposits.
 fn unrestricted_phase(ido_account: &IdoAccount) -> ProgramResult {
     let clock = Clock::get()?;
     if clock.unix_timestamp <= ido_account.ido_times.start_ido {
