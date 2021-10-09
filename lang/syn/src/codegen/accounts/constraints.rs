@@ -287,13 +287,9 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
             if let Some(pair) = s.pop() {
                 s.push_value(pair.into_value());
             }
-            let maybe_seeds_plus_comma = if s.len() == 0 {
-                quote! {}
-            } else {
-                quote! {
-                    #s,
-                }
-            };
+            let maybe_seeds_plus_comma = (s.len() != 0).then(|| {
+                quote! { #s, }
+            });
             let inner = match c.bump.as_ref() {
                 // Bump target not given. Use the canonical bump.
                 None => {
@@ -348,13 +344,9 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
             }
         }
     } else {
-        let maybe_seeds_plus_comma = if s.len() == 0 {
-            quote! {}
-        } else {
-            quote! {
-                #s,
-            }
-        };
+        let maybe_seeds_plus_comma = (s.len() != 0).then(|| {
+            quote! { #s, }
+        });
         let seeds = match c.bump.as_ref() {
             // Bump target not given. Find it.
             None => {
