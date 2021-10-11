@@ -16,12 +16,15 @@ incremented for features.
 * cli: Add support for configuration options for `solana-test-validator` in Anchor.toml ([#834](https://github.com/project-serum/anchor/pull/834)).
 * cli: `target/types` directory now created on build to store a TypeScript types file for each program's IDL ([#795](https://github.com/project-serum/anchor/pull/795)).
 * ts: `Program<T>` can now be typed with an IDL type ([#795](https://github.com/project-serum/anchor/pull/795)).
+* ts: `ProgramError` now stores the enum variant name of the program error ([#869](https://github.com/project-serum/anchor/pull/869)).
 * lang: Add `mint::freeze_authority` keyword for mint initialization within `#[derive(Accounts)]` ([#835](https://github.com/project-serum/anchor/pull/835)).
 * lang: Add `AccountLoader` type for `zero_copy` accounts with support for CPI ([#792](https://github.com/project-serum/anchor/pull/792)).
+* lang: The `close` constraint now works with `Box<Account<'info, T>>` defined accounts in context ([#856](https://github.com/project-serum/anchor/pull/856)).
 
 ### Breaking
 
 * lang: Accounts marked with the `#[account(signer)]` constraint now enforce signer when the `"cpi"` feature is enabled ([#849](https://github.com/project-serum/anchor/pull/849)).
+* ts: `parseIdlErrors` now returns a `Map<number, IdlErrorMetadata>` instead of `Map<number, string>` ([#869](https://github.com/project-serum/anchor/pull/869)).
 
 ## [0.17.0] - 2021-10-03
 
