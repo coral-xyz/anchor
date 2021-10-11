@@ -8,10 +8,12 @@ mod dispatch;
 mod entry;
 mod handlers;
 mod instruction;
+mod program_id;
 
 pub fn generate(program: &Program) -> proc_macro2::TokenStream {
     let mod_name = &program.name;
 
+    let program_id = program_id::generate(program);
     let entry = entry::generate(program);
     let dispatch = dispatch::generate(program);
     let handlers = handlers::generate(program);
@@ -21,6 +23,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
     let accounts = accounts::generate(program);
 
     quote! {
+        #program_id
+
         // TODO: remove once we allow segmented paths in `Accounts` structs.
         use #mod_name::*;
 
