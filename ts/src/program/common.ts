@@ -8,12 +8,19 @@ export type Subscription = {
   ee: EventEmitter;
 };
 
-export function parseIdlErrors(idl: Idl): Map<number, string> {
+export type IdlErrorMetadata = {
+  name: string
+  msg?: string
+};
+
+export function parseIdlErrors(idl: Idl): Map<number, IdlErrorMetadata> {
   const errors = new Map();
   if (idl.errors) {
     idl.errors.forEach((e) => {
-      let msg = e.msg ?? e.name;
-      errors.set(e.code, msg);
+      errors.set(e.code, {
+        name: e.name,
+        msg: e.msg
+      });
     });
   }
   return errors;
