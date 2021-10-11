@@ -35,6 +35,16 @@ pub fn event(
                 d.append(&mut self.try_to_vec().unwrap());
                 d
             }
+
+            fn base58(&self) -> String {
+                use std::io::Write;
+                let mut enc = anchor_lang::__private::base64::write::EncoderStringWriter::new(
+                    anchor_lang::__private::base64::STANDARD
+                );
+                enc.write_all(&#discriminator).unwrap();
+                self.serialize(&mut enc).unwrap();
+                enc.into_inner()
+            }
         }
 
         impl anchor_lang::Discriminator for #event_name {
@@ -54,8 +64,7 @@ pub fn emit(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let data: proc_macro2::TokenStream = input.into();
     proc_macro::TokenStream::from(quote! {
         {
-            let data = anchor_lang::Event::data(&#data);
-            let msg_str = &anchor_lang::__private::base64::encode(data);
+            let msg_str = &anchor_lang::Event::base58(&#data);
             anchor_lang::solana_program::msg!(msg_str);
         }
     })
