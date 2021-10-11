@@ -1,0 +1,13 @@
+[package]
+name = "avm"
+version = "0.1.0"
+edition = "2018"
+
+[[bin]]
+name = "avm"
+path = "src/main.rs"
+
+
+[dependencies]
+clap = "3.0.0-beta.1"
+anyhow = "1.0.32"
