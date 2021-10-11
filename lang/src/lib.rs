@@ -202,7 +202,7 @@ pub trait InstructionData: AnchorSerialize {
 /// An event that can be emitted via a Solana log.
 pub trait Event: AnchorSerialize + AnchorDeserialize + Discriminator {
     fn data(&self) -> Vec<u8>;
-    fn base58(&self) -> Vec<u8>;
+    fn base58(&self) -> String;
 }
 
 // The serialized event data to be emitted via a Solana log.

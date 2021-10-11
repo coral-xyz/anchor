@@ -36,15 +36,14 @@ pub fn event(
                 d
             }
 
-            fn base58(&self) -> Vec<u8> {
+            fn base58(&self) -> String {
                 use std::io::Write;
-                let mut enc = anchor_lang::__private::base64::write::EncoderWriter::new(
-                    #discriminator.to_vec(),
+                let mut enc = anchor_lang::__private::base64::write::EncoderStringWriter::new(
                     anchor_lang::__private::base64::STANDARD
                 );
                 enc.write_all(&#discriminator).unwrap();
                 self.serialize(&mut enc).unwrap();
-                enc.finish().unwrap()
+                enc.into_inner()
             }
         }
 
@@ -65,8 +64,7 @@ pub fn emit(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let data: proc_macro2::TokenStream = input.into();
     proc_macro::TokenStream::from(quote! {
         {
-            let msg_vec = &anchor_lang::Event::base58(&#data);
-            let msg_str = unsafe { std::str::from_utf8_unchecked(&msg_vec) };
+            let msg_str = &anchor_lang::Event::base58(&#data);
             anchor_lang::solana_program::msg!(msg_str);
         }
     })
