@@ -16,7 +16,7 @@ const {
   OpenOrders,
   OpenOrdersPda,
   Logger,
-  ReferralFees,
+  ReferrerFees,
   MarketProxyBuilder,
 } = serum;
 const { initMarket, sleep } = require("./utils");
@@ -43,7 +43,7 @@ describe("permissioned-markets", () => {
     let marketProxy, tokenAccount, usdcAccount;
     let openOrders, openOrdersBump, openOrdersInitAuthority, openOrdersBumpinit;
     let usdcPosted;
-    let referralTokenAddress;
+    let referrerTokenAddress;
 
     it("BOILERPLATE: Initializes an orderbook", async () => {
       const getAuthority = async (market) => {
@@ -66,7 +66,7 @@ describe("permissioned-markets", () => {
               dexProgramId: DEX_PID,
             })
           )
-          .middleware(new ReferralFees())
+          .middleware(new ReferrerFees())
           .middleware(new Identity())
           .middleware(new Logger())
           .load({
@@ -94,7 +94,7 @@ describe("permissioned-markets", () => {
         provider.wallet.payer
       );
 
-      referral = await usdcClient.createAccount(REFERRAL_AUTHORITY);
+      referrer = await usdcClient.createAccount(REFERRAL_AUTHORITY);
     });
 
     it("BOILERPLATE: Calculates open orders addresses", async () => {
@@ -228,7 +228,7 @@ describe("permissioned-markets", () => {
           provider.wallet.publicKey,
           tokenAccount,
           usdcAccount,
-          referral
+          referrer
         )
       );
       await provider.send(tx);

@@ -41,8 +41,8 @@ pub mod swap {
         amount: u64,
         min_expected_swap_amount: u64,
     ) -> Result<()> {
-        // Optional referral account (earns a referral fee).
-        let referral = ctx.remaining_accounts.iter().next().map(Clone::clone);
+        // Optional referrer account (earns a referrer fee).
+        let referrer = ctx.remaining_accounts.iter().next().map(Clone::clone);
 
         // Side determines swap direction.
         let (from_token, to_token) = match side {
@@ -57,10 +57,10 @@ pub mod swap {
         // Execute trade.
         let orderbook: OrderbookClient<'info> = (&*ctx.accounts).into();
         match side {
-            Side::Bid => orderbook.buy(amount, referral.clone())?,
-            Side::Ask => orderbook.sell(amount, referral.clone())?,
+            Side::Bid => orderbook.buy(amount, None)?,
+            Side::Ask => orderbook.sell(amount, None)?,
         };
-        orderbook.settle(referral)?;
+        orderbook.settle(referrer)?;
 
         // Token balances after the trade.
         let from_amount_after = token::accessor::amount(from_token)?;
@@ -111,8 +111,8 @@ pub mod swap {
         amount: u64,
         min_expected_swap_amount: u64,
     ) -> Result<()> {
-        // Optional referral account (earns a referral fee).
-        let referral = ctx.remaining_accounts.iter().next().map(Clone::clone);
+        // Optional referrer account (earns a referrer fee).
+        let referrer = ctx.remaining_accounts.iter().next().map(Clone::clone);
 
         // Leg 1: Sell Token A for USD(x) (or whatever quote currency is used).
         let (from_amount, sell_proceeds) = {
@@ -122,8 +122,8 @@ pub mod swap {
 
             // Execute the trade.
             let orderbook = ctx.accounts.orderbook_from();
-            orderbook.sell(amount, referral.clone())?;
-            orderbook.settle(referral.clone())?;
+            orderbook.sell(amount, None)?;
+            orderbook.settle(referrer.clone())?;
 
             // Token balances after the trade.
             let base_after = token::accessor::amount(&ctx.accounts.from.coin_wallet)?;
@@ -144,8 +144,8 @@ pub mod swap {
 
             // Execute the trade.
             let orderbook = ctx.accounts.orderbook_to();
-            orderbook.buy(sell_proceeds, referral.clone())?;
-            orderbook.settle(referral)?;
+            orderbook.buy(sell_proceeds, None)?;
+            orderbook.settle(referrer)?;
 
             // Token balances after the trade.
             let base_after = token::accessor::amount(&ctx.accounts.to.coin_wallet)?;
@@ -274,7 +274,7 @@ impl<'info> OrderbookClient<'info> {
     //
     // `base_amount` is the "native" amount of the base currency, i.e., token
     // amount including decimals.
-    fn sell(&self, base_amount: u64, referral: Option<AccountInfo<'info>>) -> ProgramResult {
+    fn sell(&self, base_amount: u64, fee_discount_account: Option<AccountInfo<'info>>) -> ProgramResult {
         let limit_price = 1;
         let max_coin_qty = {
             // The loaded market must be dropped before CPI.
@@ -287,7 +287,7 @@ impl<'info> OrderbookClient<'info> {
             max_coin_qty,
             max_native_pc_qty,
             Side::Ask,
-            referral,
+            fee_discount_account,
         )
     }
 
@@ -296,7 +296,7 @@ impl<'info> OrderbookClient<'info> {
     //
     // `quote_amount` is the "native" amount of the quote currency, i.e., token
     // amount including decimals.
-    fn buy(&self, quote_amount: u64, referral: Option<AccountInfo<'info>>) -> ProgramResult {
+    fn buy(&self, quote_amount: u64, fee_discount_account: Option<AccountInfo<'info>>) -> ProgramResult {
         let limit_price = u64::MAX;
         let max_coin_qty = u64::MAX;
         let max_native_pc_qty = quote_amount;
@@ -305,7 +305,7 @@ impl<'info> OrderbookClient<'info> {
             max_coin_qty,
             max_native_pc_qty,
             Side::Bid,
-            referral,
+            fee_discount_account,
         )
     }
 
@@ -316,14 +316,14 @@ impl<'info> OrderbookClient<'info> {
     // * `max_native_pc_qty` - the max number of quote currency in native token
     //                         units (includes decimals).
     // * `side` - bid or ask, i.e. the type of order.
-    // * `referral` - referral account, earning a fee.
+    // * `fee_discount_account` - fee discount account, for fee tier calculation.
     fn order_cpi(
         &self,
         limit_price: u64,
         max_coin_qty: u64,
         max_native_pc_qty: u64,
         side: Side,
-        referral: Option<AccountInfo<'info>>,
+        fee_discount_account: Option<AccountInfo<'info>>,
     ) -> ProgramResult {
         // Client order id is only used for cancels. Not used here so hardcode.
         let client_order_id = 0;
@@ -347,8 +347,8 @@ impl<'info> OrderbookClient<'info> {
             rent: self.rent.clone(),
         };
         let mut ctx = CpiContext::new(self.dex_program.clone(), dex_accs);
-        if let Some(referral) = referral {
-            ctx = ctx.with_remaining_accounts(vec![referral]);
+        if let Some(fee_discount_account) = fee_discount_account {
+            ctx = ctx.with_remaining_accounts(vec![fee_discount_account]);
         }
         dex::new_order_v3(
             ctx,
@@ -363,7 +363,7 @@ impl<'info> OrderbookClient<'info> {
         )
     }
 
-    fn settle(&self, referral: Option<AccountInfo<'info>>) -> ProgramResult {
+    fn settle(&self, referrer: Option<AccountInfo<'info>>) -> ProgramResult {
         let settle_accs = dex::SettleFunds {
             market: self.market.market.clone(),
             open_orders: self.market.open_orders.clone(),
@@ -376,8 +376,8 @@ impl<'info> OrderbookClient<'info> {
             token_program: self.token_program.clone(),
         };
         let mut ctx = CpiContext::new(self.dex_program.clone(), settle_accs);
-        if let Some(referral) = referral {
-            ctx = ctx.with_remaining_accounts(vec![referral]);
+        if let Some(referrer) = referrer {
+            ctx = ctx.with_remaining_accounts(vec![referrer]);
         }
         dex::settle_funds(ctx)
     }

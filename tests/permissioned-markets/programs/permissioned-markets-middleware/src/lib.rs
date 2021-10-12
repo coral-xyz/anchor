@@ -3,7 +3,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::dex::serum_dex::instruction::{CancelOrderInstructionV2, NewOrderInstructionV3};
 use anchor_spl::dex::{
-    Context, Logger, MarketMiddleware, MarketProxy, OpenOrdersPda, ReferralFees,
+    Context, Logger, MarketMiddleware, MarketProxy, OpenOrdersPda, ReferrerFees,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
@@ -25,7 +25,7 @@ declare_id!("HmbTLCmaGvZhKnn1Zfa1JVnp7vkMV4DYVxPLWBVoN65L");
 /// who can trade on a given market.
 ///
 /// For example, this example forces all trades that execute on this market
-/// to set the referral to a hardcoded address--`referral::ID`--and requires
+/// to set the referrer to a hardcoded address--`referrer::ID`--and requires
 /// the client to pass in an identity token, authorizing the user.
 ///
 /// # Extending the proxy via middleware
@@ -60,7 +60,7 @@ pub mod permissioned_markets_middleware {
         MarketProxy::new()
             .middleware(&mut Logger)
             .middleware(&mut Identity)
-            .middleware(&mut ReferralFees::new(referral::ID))
+            .middleware(&mut ReferrerFees::new(referrer::ID))
             .middleware(&mut OpenOrdersPda::new())
             .run(program_id, accounts, data)
     }
@@ -151,7 +151,7 @@ pub enum ErrorCode {
 
 // Constants.
 
-pub mod referral {
+pub mod referrer {
     // This is a dummy address for testing. Do not use in production.
     solana_program::declare_id!("3oSfkjQZKCneYvsCTZc9HViGAPqR8pYr4h9YeGB5ZxHf");
 }

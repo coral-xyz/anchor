@@ -404,23 +404,23 @@ impl MarketMiddleware for Logger {
 }
 
 /// Enforces referal fees being sent to the configured address.
-pub struct ReferralFees {
-    referral: Pubkey,
+pub struct ReferrerFees {
+    referrer: Pubkey,
 }
 
-impl ReferralFees {
-    pub fn new(referral: Pubkey) -> Self {
-        Self { referral }
+impl ReferrerFees {
+    pub fn new(referrer: Pubkey) -> Self {
+        Self { referrer }
     }
 }
 
-impl MarketMiddleware for ReferralFees {
+impl MarketMiddleware for ReferrerFees {
     /// Accounts:
     ///
     /// .. serum_dex::MarketInstruction::SettleFunds.
     fn settle_funds(&self, ctx: &mut Context) -> ProgramResult {
-        let referral = token::accessor::authority(&ctx.accounts[9])?;
-        require!(referral == self.referral, ErrorCode::InvalidReferral);
+        let referrer = token::accessor::authority(&ctx.accounts[9])?;
+        require!(referrer == self.referrer, ErrorCode::InvalidReferrer);
         Ok(())
     }
 }
@@ -502,8 +502,8 @@ pub enum ErrorCode {
     InvalidInstruction,
     #[msg("Could not unpack the instruction")]
     CannotUnpack,
-    #[msg("Invalid referral address given")]
-    InvalidReferral,
+    #[msg("Invalid referrer address given")]
+    InvalidReferrer,
     #[msg("The user didn't sign")]
     UnauthorizedUser,
     #[msg("Not enough accounts were provided")]

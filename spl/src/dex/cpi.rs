@@ -26,7 +26,7 @@ pub fn new_order_v3<'info>(
     client_order_id: u64,
     limit: u16,
 ) -> ProgramResult {
-    let referral = ctx.remaining_accounts.get(0);
+    let fee_discount_account = ctx.remaining_accounts.get(0);
     let ix = serum_dex::instruction::new_order(
         ctx.accounts.market.key,
         ctx.accounts.open_orders.key,
@@ -40,7 +40,7 @@ pub fn new_order_v3<'info>(
         ctx.accounts.pc_vault.key,
         ctx.accounts.token_program.key,
         ctx.accounts.rent.key,
-        referral.map(|r| r.key),
+        fee_discount_account.map(|r| r.key),
         &ID,
         side,
         limit_price,
@@ -86,7 +86,7 @@ pub fn cancel_order_v2<'info>(
 pub fn settle_funds<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, SettleFunds<'info>>,
 ) -> ProgramResult {
-    let referral = ctx.remaining_accounts.get(0);
+    let referrer = ctx.remaining_accounts.get(0);
     let ix = serum_dex::instruction::settle_funds(
         &ID,
         ctx.accounts.market.key,
@@ -97,7 +97,7 @@ pub fn settle_funds<'info>(
         ctx.accounts.coin_wallet.key,
         ctx.accounts.pc_vault.key,
         ctx.accounts.pc_wallet.key,
-        referral.map(|r| r.key),
+        referrer.map(|r| r.key),
         ctx.accounts.vault_signer.key,
     )?;
     solana_program::program::invoke_signed(

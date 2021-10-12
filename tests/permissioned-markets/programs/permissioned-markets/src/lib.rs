@@ -216,10 +216,10 @@ pub mod permissioned_markets {
                 let (market, user) = {
                     let market = &acc_infos[0];
                     let user = &acc_infos[2];
-                    let referral = &acc_infos[9];
+                    let referrer = &acc_infos[9];
 
-                    if !DISABLE_REFERRAL && referral.key != &referral::ID {
-                        return Err(ErrorCode::InvalidReferral.into());
+                    if !DISABLE_REFERRAL && referrer.key != &referrer::ID {
+                        return Err(ErrorCode::InvalidReferrer.into());
                     }
                     if !user.is_signer {
                         return Err(ErrorCode::UnauthorizedUser.into());
@@ -359,8 +359,8 @@ pub enum ErrorCode {
     InvalidInstruction,
     #[msg("Could not unpack the instruction")]
     CannotUnpack,
-    #[msg("Invalid referral address given")]
-    InvalidReferral,
+    #[msg("Invalid referrer address given")]
+    InvalidReferrer,
     #[msg("The user didn't sign")]
     UnauthorizedUser,
     #[msg("Not enough accounts were provided")]
@@ -466,12 +466,12 @@ macro_rules! open_orders_init_authority {
 // b"serum".len() + b"padding".len().
 const SERUM_PADDING: usize = 12;
 
-// True if we don't care about referral access control (for testing).
+// True if we don't care about referrer access control (for testing).
 const DISABLE_REFERRAL: bool = true;
 
 /// The address that will receive all fees for all markets controlled by this
 /// program. Note: this is a dummy address. Do not use in production.
-pub mod referral {
+pub mod referrer {
     solana_program::declare_id!("2k1bb16Hu7ocviT2KC3wcCgETtnC8tEUuvFBH4C5xStG");
 }
 
