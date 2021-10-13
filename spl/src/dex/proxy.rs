@@ -84,7 +84,7 @@ impl<'a> MarketProxy<'a> {
                 }
             }
             Some(MarketInstruction::SettleFunds) => {
-                require!(ctx.accounts.len() >= 10, ErrorCode::NotEnoughAccounts);
+                require!(ctx.accounts.len() >= 9, ErrorCode::NotEnoughAccounts);
                 for mw in &self.middlewares {
                     mw.settle_funds(&mut ctx)?;
                 }
