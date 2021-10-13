@@ -38,7 +38,6 @@ fn program_id_from_anchor_toml(program_name: &str) -> Option<String> {
             )
         });
 
-    eprintln!("Got an anchor.toml program_id: {}", program_id);
     Some(program_id.to_string())
 }
 
@@ -47,6 +46,5 @@ fn program_id_from_target_slash_deploy_dir(program_name: &str) -> Option<String>
     let bytes: Vec<u8> = serde_json::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
     let pubkey_bytes = &bytes[bytes.len() - 32..];
     let pubkey = bs58::encode(pubkey_bytes).into_string();
-    eprintln!("Got a target/deploy pubkey: {}", pubkey);
     Some(pubkey)
 }
