@@ -1,4 +1,4 @@
-import { IdlErrorMetadata } from "./program/common";
+import { IdlErrorMetadata } from "./program/namespace/types";
 
 export class IdlError extends Error {
   constructor(message: string) {
