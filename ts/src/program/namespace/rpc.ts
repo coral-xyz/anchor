@@ -8,13 +8,14 @@ import {
   AllInstructions,
   InstructionContextFn,
   MakeInstructionsNamespace,
+  IdlErrorMetadata
 } from "./types";
 
 export default class RpcFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
     idlIx: I,
     txFn: TransactionFn<IDL, I>,
-    idlErrors: Map<number, string>,
+    idlErrors: Map<number, IdlErrorMetadata>,
     provider: Provider
   ): RpcFn {
     const rpc: RpcFn<IDL, I> = async (...args) => {

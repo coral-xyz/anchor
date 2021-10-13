@@ -2,15 +2,11 @@ import EventEmitter from "eventemitter3";
 import { PublicKey } from "@solana/web3.js";
 import { Idl, IdlInstruction, IdlAccountItem, IdlStateMethod } from "../idl";
 import { Accounts } from "./context";
+import { IdlErrorMetadata } from "./namespace/types";
 
 export type Subscription = {
   listener: number;
   ee: EventEmitter;
-};
-
-export type IdlErrorMetadata = {
-  name: string
-  msg?: string
 };
 
 export function parseIdlErrors(idl: Idl): Map<number, IdlErrorMetadata> {

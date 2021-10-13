@@ -139,3 +139,8 @@ export type IdlAccounts<T extends Idl> = TypeDefDictionary<
 >;
 
 export type IdlErrorInfo<IDL extends Idl> = NonNullable<IDL["errors"]>[number];
+
+export type IdlErrorMetadata = {
+  name: string
+  msg?: string
+};
