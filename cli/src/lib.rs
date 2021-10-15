@@ -637,7 +637,7 @@ fn build_cwd(
         Some(p) => std::env::set_current_dir(&p)?,
     };
     match verifiable {
-        false => _build_cwd(idl_out, idl_ts_out, cargo_args),
+        false => _build_cwd(idl_out, idl_ts_out, cargo_args, cfg),
         true => build_cwd_verifiable(cfg, cargo_toml, solana_version, stdout, stderr),
     }
 }
@@ -879,10 +879,12 @@ fn _build_cwd(
     idl_out: Option<PathBuf>,
     idl_ts_out: Option<PathBuf>,
     cargo_args: Vec<String>,
+    cfg: &Config,
 ) -> Result<()> {
     let exit = std::process::Command::new("cargo")
         .arg("build-bpf")
         .args(cargo_args)
+        .env("ANCHOR_CLUSTER", cfg.provider.cluster.to_string())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()

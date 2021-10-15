@@ -3,8 +3,6 @@ use quote::quote;
 use crate::Program;
 
 pub fn generate(program: &Program) -> proc_macro2::TokenStream {
-    eprintln!("Hello from the program_id macro!!!!");
-
     let program_name = &program.name.to_string();
 
     // Let's first look for the program's program_id in Anchor.toml.
@@ -60,7 +58,6 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             panic!("Expected to find {}'s program_id in your Anchor.toml file's [program.{}] section or in ./target/deploy/{}-keypair.json", program_name, cluster, program_name);
         });
 
-    eprintln!("program_id = {}", program_id);
     quote! {
         ::anchor_lang::declare_id!(#program_id);
     }
