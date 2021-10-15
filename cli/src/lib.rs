@@ -881,6 +881,15 @@ fn _build_cwd(
     cargo_args: Vec<String>,
     cfg: &Config,
 ) -> Result<()> {
+    // Hack: cargo checks source file mtimes to see whether it should bother
+    // rebuilding things. This interacts poorly with the way the #[program]
+    // macro figures out which program_id to use. Use touch -m to convince cargo
+    // to at least rerun our macros.
+    std::process::Command::new("touch")
+        .arg("-m")
+        .arg("src/lib.rs")
+        .output()?;
+
     let exit = std::process::Command::new("cargo")
         .arg("build-bpf")
         .args(cargo_args)
