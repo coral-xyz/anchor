@@ -1,62 +1,66 @@
-use anchor_lang::prelude::*;
-use spl_governance::addins::voter_weight::{
-    VoterWeightAccountType, VoterWeightRecord as SplVoterWeightRecord,
-};
-use std::ops::{Deref, DerefMut};
+/// A macro is exposed so that we can embed the program ID.
+#[macro_export]
+macro_rules! vote_weight_record {
+    ($id:expr) => {
+        /// Anchor wrapper for the SPL governance program's VoterWeightRecord type.
+        #[derive(Clone)]
+        pub struct VoterWeightRecord(spl_governance::addins::voter_weight::VoterWeightRecord);
 
-/// Anchor wrapper for the SPL governance program's VoterWeightRecord type.
-#[derive(Clone)]
-pub struct VoterWeightRecord(SplVoterWeightRecord);
+        impl anchor_lang::AccountDeserialize for VoterWeightRecord {
+            fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
+                let mut data = buf;
+                let vwr: spl_governance::addins::voter_weight::VoterWeightRecord =
+                    anchor_lang::AnchorDeserialize::deserialize(&mut data)
+                        .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotDeserialize)?;
+                if vwr.account_type != spl-governance::addins::voter_weight::VoterWeightAccountType::VoterWeightRecord {
+                    return Err(anchor_lang::__private::ErrorCode::AccountDidNotSerialize.into());
+                }
+                Ok(VoterWeightRecord(vwr))
+            }
 
-impl anchor_lang::AccountDeserialize for VoterWeightRecord {
-    fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
-        let mut data = buf;
-        let vwr: SplVoterWeightRecord = anchor_lang::AnchorDeserialize::deserialize(&mut data)
-            .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotDeserialize)?;
-        if vwr.account_type != VoterWeightAccountType::VoterWeightRecord {
-            return Err(anchor_lang::__private::ErrorCode::AccountDidNotSerialize.into());
+            fn try_deserialize_unchecked(
+                buf: &mut &[u8],
+            ) -> std::result::Result<Self, ProgramError> {
+                let mut data = buf;
+                let vwr: spl_governance::addins::voter_weight::VoterWeightRecord =
+                    anchor_lang::AnchorDeserialize::deserialize(&mut data)
+                        .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotDeserialize)?;
+                if vwr.account_type != spl-governance::addins::voter_weight::VoterWeightAccountType::Uninitialized {
+                    return Err(anchor_lang::__private::ErrorCode::AccountDidNotSerialize.into());
+                }
+                Ok(VoterWeightRecord(vwr))
+            }
         }
-        Ok(VoterWeightRecord(vwr))
-    }
 
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
-        let mut data = buf;
-        let vwr: SplVoterWeightRecord = anchor_lang::AnchorDeserialize::deserialize(&mut data)
-            .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotDeserialize)?;
-        if vwr.account_type != VoterWeightAccountType::Uninitialized {
-            return Err(anchor_lang::__private::ErrorCode::AccountDidNotSerialize.into());
+        impl anchor_lang::AccountSerialize for VoterWeightRecord {
+            fn try_serialize<W: std::io::Write>(
+                &self,
+                writer: &mut W,
+            ) -> std::result::Result<(), ProgramError> {
+                AnchorSerialize::serialize(&self.0, writer)
+                    .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotSerialize)?;
+                Ok(())
+            }
         }
-        Ok(VoterWeightRecord(vwr))
-    }
-}
 
-impl anchor_lang::AccountSerialize for VoterWeightRecord {
-    fn try_serialize<W: std::io::Write>(
-        &self,
-        writer: &mut W,
-    ) -> std::result::Result<(), ProgramError> {
-        AnchorSerialize::serialize(&self.0, writer)
-            .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotSerialize)?;
-        Ok(())
-    }
-}
+        impl anchor_lang::Owner for VoterWeightRecord {
+            fn owner() -> Pubkey {
+                $id
+            }
+        }
 
-impl anchor_lang::Owner for VoterWeightRecord {
-    fn owner() -> Pubkey {
-        crate::ID
-    }
-}
+        impl std::ops::Deref for VoterWeightRecord {
+            type Target = spl_governance::addins::voter_weight::VoterWeightRecord;
 
-impl Deref for VoterWeightRecord {
-    type Target = SplVoterWeightRecord;
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for VoterWeightRecord {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
+        impl std::ops::DerefMut for VoterWeightRecord {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.0
+            }
+        }
+    };
 }
