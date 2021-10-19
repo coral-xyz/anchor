@@ -154,6 +154,14 @@ pub struct TestClose<'info> {
 }
 
 #[derive(Accounts)]
+pub struct TestTokenClose<'info> {
+    #[account(mut, close = sol_dest, program = token_program)]
+    pub token: Account<'info, TokenAccount>,
+    pub sol_dest: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>
+}
+
+#[derive(Accounts)]
 pub struct TestU16<'info> {
     #[account(zero)]
     pub my_account: Account<'info, DataU16>,

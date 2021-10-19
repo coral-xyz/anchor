@@ -4,7 +4,7 @@ use anchor_lang::solana_program::entrypoint::ProgramResult;
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::program_pack::Pack;
 use anchor_lang::solana_program::pubkey::Pubkey;
-use anchor_lang::{Accounts, CpiContext};
+use anchor_lang::{Accounts, CpiContext, AccountClose};
 use std::io::Write;
 use std::ops::Deref;
 
@@ -318,6 +318,20 @@ pub struct TokenAccount(spl_token::state::Account);
 
 impl TokenAccount {
     pub const LEN: usize = spl_token::state::Account::LEN;
+}
+
+impl<'info> AccountClose<'info> for TokenAccount {
+    fn close(program: AccountInfo<'info>, account: AccountInfo<'info>, sol_destination: AccountInfo<'info>) -> ProgramResult {
+        let cpi_accounts = CloseAccount {
+            account: account,
+            destination: sol_destination.clone(),
+            authority: sol_destination.clone(),
+        };
+        let cpi_ctx = CpiContext::new(program, cpi_accounts);
+
+        close_account(cpi_ctx) // TODO Handle seeds
+    }
+
 }
 
 impl anchor_lang::AccountDeserialize for TokenAccount {

@@ -122,10 +122,15 @@ pub trait AccountsExit<'info>: ToAccountMetas + ToAccountInfos<'info> {
     fn exit(&self, program_id: &Pubkey) -> ProgramResult;
 }
 
-/// The close procedure to initiate garabage collection of an account, allowing
-/// one to retrieve the rent exemption.
+/// The close procedure dispatcher
 pub trait AccountsClose<'info>: ToAccountInfos<'info> {
-    fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult;
+    fn close(&self, owner_program: Option<AccountInfo<'info>>, sol_destination: AccountInfo<'info>) -> ProgramResult;
+}
+
+/// The implementation of the close procedure to initiate garabage collection of an account
+/// allowing one to retrieve the rent exemption.
+pub trait AccountClose<'info> {
+    fn close(program: AccountInfo<'info>, account: AccountInfo<'info>, sol_destination: AccountInfo<'info>) -> ProgramResult;
 }
 
 /// Transformation to
@@ -225,6 +230,15 @@ pub trait Bump {
 /// Defines an address expected to own an account.
 pub trait Owner {
     fn owner() -> Pubkey;
+}
+
+/// Defines an account as owned by the current program.
+pub trait Ours {}
+
+impl<'info, T: Ours> AccountClose<'info> for T {
+    fn close(_program: AccountInfo<'info>, account: AccountInfo<'info>, sol_destination: AccountInfo<'info>) -> ProgramResult {
+        crate::common::close(account, sol_destination)
+    }
 }
 
 /// Defines the id of a program.

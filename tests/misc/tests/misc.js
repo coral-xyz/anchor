@@ -252,6 +252,49 @@ describe("misc", () => {
     assert.ok(closedAccount === null);
   });
 
+  it("Can close a token account", async () => {
+    let mintA = await Token.createMint(
+      program.provider.connection,
+      program.provider.wallet.payer, // UintA
+      program.provider.wallet.publicKey,
+      null,
+      0,
+      TOKEN_PROGRAM_ID
+    );
+
+    let tokenAccount = await mintA.createAccount(program.provider.wallet.publicKey);
+
+    let beforeBalance = (
+      await program.provider.connection.getAccountInfo(
+        program.provider.wallet.publicKey
+      )
+    ).lamports;
+
+    // TODO Add mintA balance
+
+    await program.rpc.testTokenClose({
+      accounts: {
+        token: tokenAccount,
+        solDest: program.provider.wallet.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      },
+    });
+
+    let afterBalance = (
+      await program.provider.connection.getAccountInfo(
+        program.provider.wallet.publicKey
+      )
+    ).lamports;
+
+    // Retrieved rent exemption sol.
+    assert.ok(afterBalance > beforeBalance);
+
+    const closedAccount = await program.provider.connection.getAccountInfo(
+      tokenAccount
+    );
+    assert.ok(closedAccount === null);
+  });
+
   it("Can use instruction data in accounts constraints", async () => {
     // b"my-seed"
     const seed = Buffer.from([109, 121, 45, 115, 101, 101, 100]);

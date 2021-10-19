@@ -511,7 +511,7 @@ pub struct ConstraintGroup {
     has_one: Vec<ConstraintHasOne>,
     literal: Vec<ConstraintLiteral>,
     raw: Vec<ConstraintRaw>,
-    close: Option<ConstraintClose>,
+    close: Option<ConstraintCloseGroup>,
     address: Option<ConstraintAddress>,
     associated_token: Option<ConstraintAssociatedToken>,
 }
@@ -553,7 +553,7 @@ pub enum Constraint {
     AssociatedToken(ConstraintAssociatedToken),
     Executable(ConstraintExecutable),
     State(ConstraintState),
-    Close(ConstraintClose),
+    Close(ConstraintCloseGroup),
     Address(ConstraintAddress),
 }
 
@@ -574,6 +574,7 @@ pub enum ConstraintToken {
     Executable(Context<ConstraintExecutable>),
     State(Context<ConstraintState>),
     Close(Context<ConstraintClose>),
+    Program(Context<ConstraintProgram>),
     Payer(Context<ConstraintPayer>),
     Space(Context<ConstraintSpace>),
     Address(Context<ConstraintAddress>),
@@ -698,8 +699,19 @@ pub enum InitKind {
 }
 
 #[derive(Debug, Clone)]
+pub struct ConstraintCloseGroup {
+    pub owner_program: Option<Ident>,
+    pub sol_dest: Ident,
+}
+
+#[derive(Debug, Clone)]
 pub struct ConstraintClose {
     pub sol_dest: Ident,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintProgram {
+    pub program: Ident,
 }
 
 #[derive(Debug, Clone)]

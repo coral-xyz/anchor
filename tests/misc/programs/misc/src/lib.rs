@@ -85,6 +85,11 @@ pub mod misc {
         Ok(())
     }
 
+
+    pub fn test_token_close(_ctx: Context<TestTokenClose>) -> ProgramResult {
+        Ok(())
+    }
+
     pub fn test_instruction_constraint(
         _ctx: Context<TestInstructionConstraint>,
         _nonce: u8,

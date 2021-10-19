@@ -93,11 +93,22 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsEx
     }
 }
 
-impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsClose<'info>
+impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone + AccountClose<'info>> AccountsClose<'info>
     for Account<'info, T>
 {
-    fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult {
-        crate::common::close(self.to_account_info(), sol_destination)
+    fn close(&self, owner_program: Option<AccountInfo<'info>>, sol_destination: AccountInfo<'info>) -> ProgramResult {
+        match owner_program {
+            None =>  {
+                crate::common::close(self.to_account_info(), sol_destination)
+            }
+            Some(program) => {
+                if program.to_account_info().key != self.to_account_info().owner {
+                    return Err(ErrorCode::ConstraintClose.into())
+                }
+                T::close(program, self.to_account_info(), sol_destination)
+            }
+
+        }
     }
 }
 

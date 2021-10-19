@@ -109,6 +109,7 @@ pub fn account(
                         crate::ID
                     }
                 }
+                impl #impl_gen anchor_lang::Ours for #account_name #type_gen #where_clause { }
             }
         } else {
             quote! {}

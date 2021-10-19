@@ -163,13 +163,23 @@ pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macr
     }
 }
 
-pub fn generate_constraint_close(f: &Field, c: &ConstraintClose) -> proc_macro2::TokenStream {
+pub fn generate_constraint_close(f: &Field, c: &ConstraintCloseGroup) -> proc_macro2::TokenStream {
     let field = &f.ident;
+    let owner_program_constraint = match &c.owner_program {
+        None => quote!{},
+        Some(owner_program) => quote!{
+            if #owner_program.to_account_info().key != #field.to_account_info().owner {
+                return Err(anchor_lang::__private::ErrorCode::ConstraintClose.into());
+            }
+        }
+    };
     let target = &c.sol_dest;
     quote! {
         if #field.to_account_info().key == #target.to_account_info().key {
             return Err(anchor_lang::__private::ErrorCode::ConstraintClose.into());
         }
+
+        #owner_program_constraint
     }
 }
 

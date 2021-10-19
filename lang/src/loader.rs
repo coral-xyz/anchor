@@ -157,7 +157,7 @@ impl<'info, T: ZeroCopy> AccountsExit<'info> for Loader<'info, T> {
 }
 
 impl<'info, T: ZeroCopy> AccountsClose<'info> for Loader<'info, T> {
-    fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult {
+    fn close(&self, _owner_program: Option<AccountInfo<'info>>, sol_destination: AccountInfo<'info>) -> ProgramResult {
         crate::common::close(self.to_account_info(), sol_destination)
     }
 }
