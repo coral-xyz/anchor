@@ -20,7 +20,7 @@ export type EventData<T extends IdlEventField, Defined> = {
   [N in T["name"]]: DecodeType<(T & { name: N })["type"], Defined>;
 };
 
-type EventCallback = (event: any, slot: number) => void;
+type EventCallback = (event: any, slot: number, err: any) => void;
 
 export class EventManager {
   /**
@@ -69,7 +69,7 @@ export class EventManager {
 
   public addEventListener(
     eventName: string,
-    callback: (event: any, slot: number) => void
+    callback: (event: any, slot: number, err: any) => void
   ): number {
     let listener = this._listenerIdCount;
     this._listenerIdCount += 1;
@@ -94,10 +94,6 @@ export class EventManager {
     this._onLogsSubscriptionId = this._provider!.connection.onLogs(
       this._programId,
       (logs, ctx) => {
-        if (logs.err) {
-          console.error(logs);
-          return;
-        }
         this._eventParser.parseLogs(logs.logs, (event) => {
           const allListeners = this._eventListeners.get(event.name);
           if (allListeners) {
@@ -105,7 +101,7 @@ export class EventManager {
               const listenerCb = this._eventCallbacks.get(listener);
               if (listenerCb) {
                 const [, callback] = listenerCb;
-                callback(event.data, ctx.slot);
+                callback(event.data, ctx.slot, logs.err);
               }
             });
           }
