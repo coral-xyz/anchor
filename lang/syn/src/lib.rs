@@ -594,7 +594,12 @@ impl Parse for ConstraintToken {
 }
 
 #[derive(Debug, Clone)]
-pub struct ConstraintInit {}
+pub struct ConstraintInit {
+    pub if_needed: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintInitIfNeeded {}
 
 #[derive(Debug, Clone)]
 pub struct ConstraintZeroed {}
@@ -638,6 +643,7 @@ pub enum ConstraintRentExempt {
 
 #[derive(Debug, Clone)]
 pub struct ConstraintInitGroup {
+    pub if_needed: bool,
     pub seeds: Option<ConstraintSeedsGroup>,
     pub payer: Option<Expr>,
     pub space: Option<Expr>,
