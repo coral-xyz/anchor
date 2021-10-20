@@ -232,12 +232,16 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         },
                     ))
                 }
-                "constraint" => ConstraintToken::Raw(Context::new(
-                    span,
-                    ConstraintRaw {
-                        raw: stream.parse()?,
-                    },
-                )),
+                "constraint" => {
+                    let raw: Expr = stream.parse()?;
+                    let error = if stream.peek(Token![@]) {
+                        stream.parse::<Token![@]>()?;
+                        Some(stream.parse()?)
+                    } else {
+                        None
+                    };
+                    ConstraintToken::Raw(Context::new(span, ConstraintRaw { raw, error }))
+                }
                 "close" => ConstraintToken::Close(Context::new(
                     span,
                     ConstraintClose {

@@ -235,9 +235,13 @@ pub fn generate_constraint_literal(c: &ConstraintLiteral) -> proc_macro2::TokenS
 
 pub fn generate_constraint_raw(c: &ConstraintRaw) -> proc_macro2::TokenStream {
     let raw = &c.raw;
+    let error = match &c.error {
+        Some(error) => quote! { #error },
+        None => quote! { anchor_lang::__private::ErrorCode::ConstraintRaw },
+    };
     quote! {
         if !(#raw) {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintRaw.into());
+            return Err(#error.into());
         }
     }
 }
