@@ -6,7 +6,7 @@ use anchor_lang::solana_program::program_pack::Pack;
 use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::{Accounts, CpiContext};
 use std::io::Write;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 pub use spl_token::ID;
 
@@ -348,6 +348,12 @@ impl Deref for TokenAccount {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl DerefMut for TokenAccount {
+    fn deref_mut(&mut self) -> &mut spl_token::state::Account {
+        &mut self.0
     }
 }
 
