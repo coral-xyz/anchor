@@ -12,7 +12,7 @@ macro_rules! vote_weight_record {
                 let vwr: spl_governance::addins::voter_weight::VoterWeightRecord =
                     anchor_lang::AnchorDeserialize::deserialize(&mut data)
                         .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotDeserialize)?;
-                if vwr.account_type != spl-governance::addins::voter_weight::VoterWeightAccountType::VoterWeightRecord {
+                if vwr.account_type != spl_governance::addins::voter_weight::VoterWeightAccountType::VoterWeightRecord {
                     return Err(anchor_lang::__private::ErrorCode::AccountDidNotSerialize.into());
                 }
                 Ok(VoterWeightRecord(vwr))
@@ -25,7 +25,7 @@ macro_rules! vote_weight_record {
                 let vwr: spl_governance::addins::voter_weight::VoterWeightRecord =
                     anchor_lang::AnchorDeserialize::deserialize(&mut data)
                         .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotDeserialize)?;
-                if vwr.account_type != spl-governance::addins::voter_weight::VoterWeightAccountType::Uninitialized {
+                if vwr.account_type != spl_governance::addins::voter_weight::VoterWeightAccountType::Uninitialized {
                     return Err(anchor_lang::__private::ErrorCode::AccountDidNotSerialize.into());
                 }
                 Ok(VoterWeightRecord(vwr))
@@ -37,7 +37,7 @@ macro_rules! vote_weight_record {
                 &self,
                 writer: &mut W,
             ) -> std::result::Result<(), ProgramError> {
-                AnchorSerialize::serialize(&self.0, writer)
+                anchor_lang::AnchorSerialize::serialize(&self.0, writer)
                     .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotSerialize)?;
                 Ok(())
             }
