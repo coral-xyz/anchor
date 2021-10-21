@@ -179,13 +179,6 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                 .join(stream.span())
                 .unwrap_or_else(|| ident.span());
             match kw.as_str() {
-                // Deprecated since 0.11
-                "belongs_to" => {
-                    return Err(ParseError::new(
-                        ident.span(),
-                        "belongs_to is deprecated, please use has_one",
-                    ))
-                }
                 "has_one" => ConstraintToken::HasOne(Context::new(
                     span,
                     ConstraintHasOne {
@@ -243,6 +236,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                     span,
                     ConstraintRaw {
                         raw: stream.parse()?,
+                        error: parse_optional_custom_error(&stream)?,
                     },
                 )),
                 "close" => ConstraintToken::Close(Context::new(
@@ -263,6 +257,15 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
     };
 
     Ok(c)
+}
+
+fn parse_optional_custom_error(stream: &ParseStream) -> ParseResult<Option<Expr>> {
+    if stream.peek(Token![@]) {
+        stream.parse::<Token![@]>()?;
+        stream.parse().map(Some)
+    } else {
+        Ok(None)
+    }
 }
 
 #[derive(Default)]

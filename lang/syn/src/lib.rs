@@ -623,6 +623,7 @@ pub struct ConstraintLiteral {
 #[derive(Debug, Clone)]
 pub struct ConstraintRaw {
     pub raw: Expr,
+    pub error: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
