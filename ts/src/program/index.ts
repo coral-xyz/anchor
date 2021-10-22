@@ -1,7 +1,14 @@
 import { inflate } from "pako";
 import { PublicKey } from "@solana/web3.js";
 import Provider from "../provider";
-import { Idl, idlAddress, decodeIdlAccount, camelCaseIdl, RawIdl, isCamelized } from "../idl";
+import {
+  Idl,
+  idlAddress,
+  decodeIdlAccount,
+  camelCaseIdl,
+  RawIdl,
+  isCamelized,
+} from "../idl";
 import Coder from "../coder";
 import NamespaceFactory, {
   RpcNamespace,
@@ -250,13 +257,20 @@ export class Program<IDL extends Idl = Idl> {
    * @param provider  The network and wallet context to use. If not provided
    *                  then uses [[getProvider]].
    */
-  public constructor(idl: RawIdl | Idl, programId: Address, provider?: Provider, raw?: boolean) {
+  public constructor(
+    idl: RawIdl | Idl,
+    programId: Address,
+    provider?: Provider,
+    raw?: boolean
+  ) {
     programId = translateAddress(programId);
 
     if (!provider) {
       provider = getProvider();
     }
-    const camelizedIdl = isCamelized(idl) ? idl as IDL : camelCaseIdl<IDL>(idl as RawIdl);
+    const camelizedIdl = isCamelized(idl)
+      ? (idl as IDL)
+      : camelCaseIdl<IDL>(idl as RawIdl);
     // Fields.
     this._idl = camelizedIdl;
     this._provider = provider;

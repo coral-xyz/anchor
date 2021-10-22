@@ -153,8 +153,8 @@ export class StateClient<IDL extends Idl> {
   async fetch(): Promise<
     TypeDef<
       IDL["state"] extends undefined
-      ? IdlTypeDef
-      : NonNullable<IDL["state"]>["struct"],
+        ? IdlTypeDef
+        : NonNullable<IDL["state"]>["struct"],
       IdlTypes<IDL>
     >
   > {

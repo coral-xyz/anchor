@@ -27,12 +27,10 @@ export type Idl = {
   camelized?: boolean;
 };
 
-
 type RawIdlEvent = {
   name: string;
   fields: RawIdlEventField[];
 };
-
 
 export type IdlEvent = {
   name: string;
@@ -85,7 +83,7 @@ type RawIdlAccount = {
   name: string;
   is_mut: boolean;
   is_signer: boolean;
-}
+};
 
 export type IdlAccount = {
   name: string;
@@ -167,7 +165,7 @@ type RawLiteralIdlType =
   | "I128"
   | "Bytes"
   | "String"
-  | "PublicKey"
+  | "PublicKey";
 
 type RawNonLiteralIdlType =
   | RawIdlTypeDefined
@@ -191,7 +189,7 @@ export type LiteralIdlType =
   | "i128"
   | "bytes"
   | "string"
-  | "publicKey"
+  | "publicKey";
 
 export type NonLiteralIdlType =
   | IdlTypeDefined
@@ -219,7 +217,6 @@ export type IdlTypeOption = {
   option: IdlType;
 };
 
-
 type RawIdlTypeVec = {
   Vec: RawIdlType;
 };
@@ -227,7 +224,6 @@ type RawIdlTypeVec = {
 export type IdlTypeVec = {
   vec: IdlType;
 };
-
 
 type RawIdlTypeArray = {
   array: [idlType: RawIdlType, size: number];
@@ -269,7 +265,7 @@ function camelCaseAccount(acc: RawIdlAccount): IdlAccount {
   return {
     name: camelcase(acc.name),
     isMut: acc.is_mut,
-    isSigner: acc.is_signer
+    isSigner: acc.is_signer,
   };
 }
 
@@ -283,21 +279,25 @@ function camelCaseAccountItem(account: RawIdlAccountItem): IdlAccountItem {
   if (isAccounts(account)) {
     return {
       name: camelCase(account.name),
-      accounts: camelCaseAccountItems(account.accounts)
-    }
+      accounts: camelCaseAccountItems(account.accounts),
+    };
   }
-  return camelCaseAccount(account)
+  return camelCaseAccount(account);
 }
 
-function camelCaseAccountItems(accounts: RawIdlAccountItem[]): IdlAccountItem[] {
-  return accounts.map(camelCaseAccountItem)
+function camelCaseAccountItems(
+  accounts: RawIdlAccountItem[]
+): IdlAccountItem[] {
+  return accounts.map(camelCaseAccountItem);
 }
 
 function isLiteral(type: RawIdlType): type is RawLiteralIdlType {
   return typeof (type as RawLiteralIdlType) === "string";
 }
 
-function isIdlTypeDefined(type: RawNonLiteralIdlType): type is RawIdlTypeDefined {
+function isIdlTypeDefined(
+  type: RawNonLiteralIdlType
+): type is RawIdlTypeDefined {
   return (type as RawIdlTypeDefined).Defined !== undefined;
 }
 
@@ -344,7 +344,7 @@ function camelCaseIdlType(type: RawIdlType): IdlType {
 function camelCaseIdlField(field: RawIdlField): IdlField {
   return {
     name: camelCase(field.name),
-    type: camelCaseIdlType(field.type)
+    type: camelCaseIdlType(field.type),
   };
 }
 
@@ -352,78 +352,122 @@ function camelCaseIdlFields(args: RawIdlField[]): IdlField[] {
   return args.map(camelCaseIdlField);
 }
 
-function camelCaseIdlInstruction(rawInstruction: RawIdlInstruction): IdlInstruction {
+function camelCaseIdlInstruction(
+  rawInstruction: RawIdlInstruction
+): IdlInstruction {
   return {
     name: camelcase(rawInstruction.name),
     accounts: camelCaseAccountItems(rawInstruction.accounts),
-    args: camelCaseIdlFields(rawInstruction.args)
+    args: camelCaseIdlFields(rawInstruction.args),
   };
 }
 
-function camelCaseIdlInstructions(rawIdlInstructions: RawIdlInstruction[]): IdlInstruction[] {
+function camelCaseIdlInstructions(
+  rawIdlInstructions: RawIdlInstruction[]
+): IdlInstruction[] {
   return rawIdlInstructions.map(camelCaseIdlInstruction);
 }
 
-function isRawIdlTypeDefTyEnum(rawIdlTypeDefTy: RawIdlTypeDefTy): rawIdlTypeDefTy is RawIdlTypeDefTyEnum {
+function isRawIdlTypeDefTyEnum(
+  rawIdlTypeDefTy: RawIdlTypeDefTy
+): rawIdlTypeDefTy is RawIdlTypeDefTyEnum {
   return rawIdlTypeDefTy.kind === "enum";
 }
 
-function isRawIdlEnumFieldsNamed(fields: RawIdlEnumFields): fields is RawIdlEnumFieldsNamed {
+function isRawIdlEnumFieldsNamed(
+  fields: RawIdlEnumFields
+): fields is RawIdlEnumFieldsNamed {
   return (fields as RawIdlEnumFieldsNamed)[0].name !== undefined;
 }
 
-function camelCaseIdlEnumFieldsNamed(fields: RawIdlEnumFieldsNamed): IdlEnumFieldsNamed {
+function camelCaseIdlEnumFieldsNamed(
+  fields: RawIdlEnumFieldsNamed
+): IdlEnumFieldsNamed {
   return fields.map(camelCaseIdlField);
 }
 
-function camelCaseIdlEnumFieldsTuple(fields: RawIdlEnumFieldsTuple): IdlEnumFieldsTuple {
+function camelCaseIdlEnumFieldsTuple(
+  fields: RawIdlEnumFieldsTuple
+): IdlEnumFieldsTuple {
   return fields.map(camelCaseIdlType);
 }
 
-function camelCaseIdlEnumFields(fields?: RawIdlEnumFields): IdlEnumFields | undefined {
-  if (fields === undefined) { return undefined; }
-  if (isRawIdlEnumFieldsNamed(fields)) { return camelCaseIdlEnumFieldsNamed(fields) }
+function camelCaseIdlEnumFields(
+  fields?: RawIdlEnumFields
+): IdlEnumFields | undefined {
+  if (fields === undefined) {
+    return undefined;
+  }
+  if (isRawIdlEnumFieldsNamed(fields)) {
+    return camelCaseIdlEnumFieldsNamed(fields);
+  }
   return camelCaseIdlEnumFieldsTuple(fields);
 }
 
 function camelCaseIdlEnumVariant(variant: RawIdlEnumVariant): IdlEnumVariant {
-  return { name: camelCase(variant.name), fields: camelCaseIdlEnumFields(variant.fields) }
+  return {
+    name: camelCase(variant.name),
+    fields: camelCaseIdlEnumFields(variant.fields),
+  };
 }
 
-function camelCaseIdlEnumVariants(variants: RawIdlEnumVariant[]): IdlEnumVariant[] {
+function camelCaseIdlEnumVariants(
+  variants: RawIdlEnumVariant[]
+): IdlEnumVariant[] {
   return variants.map(camelCaseIdlEnumVariant);
 }
 
-function camelCaseIdlTypeDefStruct(fields: RawIdlTypeDefStruct): IdlTypeDefStruct {
+function camelCaseIdlTypeDefStruct(
+  fields: RawIdlTypeDefStruct
+): IdlTypeDefStruct {
   return fields.map(camelCaseIdlField);
 }
 
 function camelCaseIdlTypeDefTy(rawIdlTypeDefTy: RawIdlTypeDefTy): IdlTypeDefTy {
   if (isRawIdlTypeDefTyEnum(rawIdlTypeDefTy)) {
-    return { kind: "enum", variants: camelCaseIdlEnumVariants(rawIdlTypeDefTy.variants) }
+    return {
+      kind: "enum",
+      variants: camelCaseIdlEnumVariants(rawIdlTypeDefTy.variants),
+    };
   }
-  return { kind: "struct", fields: camelCaseIdlTypeDefStruct(rawIdlTypeDefTy.fields) };
-}
-
-function camelCaseIdlTypeDef(rawIdlTypeDef: RawIdlTypeDef): IdlTypeDef {
-  return { name: rawIdlTypeDef.name, type: camelCaseIdlTypeDefTy(rawIdlTypeDef.type) }
-}
-
-function camelCaseState(rawIdlState?: RawIdlState): IdlState | undefined {
-  if (rawIdlState === undefined) { return undefined; }
   return {
-    struct: camelCaseIdlTypeDef(rawIdlState.struct),
-    methods: camelCaseIdlInstructions(rawIdlState.methods)
+    kind: "struct",
+    fields: camelCaseIdlTypeDefStruct(rawIdlTypeDefTy.fields),
   };
 }
 
-function camelCaseMaybeIdlTypeDefs(typeDefs?: RawIdlTypeDef[]): IdlTypeDef[] | undefined {
-  if (typeDefs === undefined) { return undefined }
+function camelCaseIdlTypeDef(rawIdlTypeDef: RawIdlTypeDef): IdlTypeDef {
+  return {
+    name: rawIdlTypeDef.name,
+    type: camelCaseIdlTypeDefTy(rawIdlTypeDef.type),
+  };
+}
+
+function camelCaseState(rawIdlState?: RawIdlState): IdlState | undefined {
+  if (rawIdlState === undefined) {
+    return undefined;
+  }
+  return {
+    struct: camelCaseIdlTypeDef(rawIdlState.struct),
+    methods: camelCaseIdlInstructions(rawIdlState.methods),
+  };
+}
+
+function camelCaseMaybeIdlTypeDefs(
+  typeDefs?: RawIdlTypeDef[]
+): IdlTypeDef[] | undefined {
+  if (typeDefs === undefined) {
+    return undefined;
+  }
   return typeDefs.map(camelCaseIdlTypeDef);
 }
 
 function camelCaseIdlEventField(field: RawIdlEventField): IdlEventField {
-  return { name: camelCase(field.name), type: camelCaseIdlType(field.type), index: field.index }
+  return {
+    name: camelCase(field.name),
+    type: camelCaseIdlType(field.type),
+    index: field.index,
+  };
 }
 
 function camelCaseIdlEventFields(fields: RawIdlEventField[]): IdlEventField[] {
@@ -433,19 +477,20 @@ function camelCaseIdlEventFields(fields: RawIdlEventField[]): IdlEventField[] {
 function camelCaseEvent(event: RawIdlEvent): IdlEvent {
   return {
     name: event.name,
-    fields: camelCaseIdlEventFields(event.fields)
-  }
+    fields: camelCaseIdlEventFields(event.fields),
+  };
 }
 
 function camelCaseEvents(events?: RawIdlEvent[]): IdlEvent[] | undefined {
-  if (events === undefined) { return undefined }
+  if (events === undefined) {
+    return undefined;
+  }
   return events.map(camelCaseEvent);
 }
 
 export function isCamelized(idl: Idl | RawIdl): idl is Idl {
   return (idl as Idl).camelized === true;
 }
-
 
 export function camelCaseIdl<IDL extends Idl = Idl>(rawIdl: RawIdl): IDL {
   return {
@@ -457,7 +502,7 @@ export function camelCaseIdl<IDL extends Idl = Idl>(rawIdl: RawIdl): IDL {
     types: camelCaseMaybeIdlTypeDefs(rawIdl.types),
     events: camelCaseEvents(rawIdl.events),
     errors: rawIdl.errors,
-    camelized: true
+    camelized: true,
   } as IDL;
 }
 
