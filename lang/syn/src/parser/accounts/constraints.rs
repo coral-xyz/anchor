@@ -260,6 +260,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                     span,
                     ConstraintAddress {
                         address: stream.parse()?,
+                        error: parse_optional_custom_error(&stream)?,
                     },
                 )),
                 _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
