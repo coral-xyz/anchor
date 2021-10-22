@@ -173,11 +173,12 @@ pub fn generate_constraint_close(f: &Field, c: &ConstraintClose) -> proc_macro2:
     }
 }
 
-pub fn generate_constraint_mut(f: &Field, _c: &ConstraintMut) -> proc_macro2::TokenStream {
+pub fn generate_constraint_mut(f: &Field, c: &ConstraintMut) -> proc_macro2::TokenStream {
     let ident = &f.ident;
+    let error = generate_custom_error(&c.error, quote! { ConstraintMut });
     quote! {
         if !#ident.to_account_info().is_writable {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintMut.into());
+            return Err(#error);
         }
     }
 }

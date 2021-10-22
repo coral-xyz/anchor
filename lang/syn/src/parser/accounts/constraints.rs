@@ -69,7 +69,12 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
             ConstraintInit { if_needed: true },
         )),
         "zero" => ConstraintToken::Zeroed(Context::new(ident.span(), ConstraintZeroed {})),
-        "mut" => ConstraintToken::Mut(Context::new(ident.span(), ConstraintMut {})),
+        "mut" => ConstraintToken::Mut(Context::new(
+            ident.span(),
+            ConstraintMut {
+                error: parse_optional_custom_error(&stream)?,
+            },
+        )),
         "signer" => ConstraintToken::Signer(Context::new(ident.span(), ConstraintSigner {})),
         "executable" => {
             ConstraintToken::Executable(Context::new(ident.span(), ConstraintExecutable {}))
@@ -341,7 +346,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 }
                 None => self
                     .mutable
-                    .replace(Context::new(i.span(), ConstraintMut {})),
+                    .replace(Context::new(i.span(), ConstraintMut { error: None })),
             };
             // Rent exempt if not explicitly skipped.
             if self.rent_exempt.is_none() {
@@ -375,7 +380,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 }
                 None => self
                     .mutable
-                    .replace(Context::new(z.span(), ConstraintMut {})),
+                    .replace(Context::new(z.span(), ConstraintMut { error: None })),
             };
             // Rent exempt if not explicitly skipped.
             if self.rent_exempt.is_none() {

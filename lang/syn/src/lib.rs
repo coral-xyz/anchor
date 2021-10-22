@@ -605,7 +605,9 @@ pub struct ConstraintInitIfNeeded {}
 pub struct ConstraintZeroed {}
 
 #[derive(Debug, Clone)]
-pub struct ConstraintMut {}
+pub struct ConstraintMut {
+    pub error: Option<Expr>,
+}
 
 #[derive(Debug, Clone)]
 pub struct ConstraintSigner {}

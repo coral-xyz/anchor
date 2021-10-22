@@ -38,7 +38,7 @@ use syn::parse_macro_input;
 /// | Attribute | Location | Description |
 /// |:--|:--|:--|
 /// | `#[account(signer)]` | On raw `AccountInfo` structs. | Checks the given account signed the transaction. |
-/// | `#[account(mut)]` | On `AccountInfo`, `ProgramAccount` or `CpiAccount` structs. | Marks the account as mutable and persists the state transition. |
+/// | `#[account(mut)]`<br><br>`#[account(mut @ <custom_error>)]` | On `AccountInfo`, `ProgramAccount` or `CpiAccount` structs. | Marks the account as mutable and persists the state transition. Custom errors are supported via `@`. |
 /// | `#[account(init)]` | On `ProgramAccount` structs. | Marks the account as being initialized, creating the account via the system program. |
 /// | `#[account(zero)]` | On `ProgramAccount` structs. | Asserts the account discriminator is zero. |
 /// | `#[account(close = <target>)]` | On `ProgramAccount` and `Loader` structs. | Marks the account as being closed at the end of the instruction's execution, sending the rent exemption lamports to the specified <target>. |
