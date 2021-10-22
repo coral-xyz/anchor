@@ -411,12 +411,24 @@ function camelCaseIdlTypeDef(rawIdlTypeDef: RawIdlTypeDef): IdlTypeDef {
 
 function camelCaseState(rawIdlState?: RawIdlState): IdlState | undefined {
   if (rawIdlState === undefined) { return undefined; }
-  return { struct: camelCaseIdlTypeDef(rawIdlState.struct), methods: camelCaseIdlInstructions(rawIdlState.methods) };
+  return {
+    struct: camelCaseIdlTypeDef(rawIdlState.struct),
+    methods: camelCaseIdlInstructions(rawIdlState.methods)
+  };
 }
 
 function camelCaseMaybeIdlTypeDefs(typeDefs?: RawIdlTypeDef[]): IdlTypeDef[] | undefined {
   if (typeDefs === undefined) { return undefined }
-  return typeDefs.map(camelCaseIdlTypeDef)
+  return typeDefs.map(camelCaseIdlTypeDef);
+}
+
+function camelCaseType(rawIdlTypeDef: RawIdlTypeDef): IdlTypeDef {
+  return { name: rawIdlTypeDef.name, type: camelCaseIdlTypeDefTy(rawIdlTypeDef.type) }
+}
+
+function camelCaseTypes(typeDefs?: RawIdlTypeDef[]): IdlTypeDef[] | undefined {
+  if (typeDefs === undefined) { return undefined }
+  return typeDefs.map(camelCaseType);
 }
 
 function camelCaseIdlEventField(field: RawIdlEventField): IdlEventField {
@@ -443,6 +455,7 @@ export function isCamelized(idl: Idl | RawIdl): idl is Idl {
   return (idl as Idl).camelized === true;
 }
 
+
 export function camelCaseIdl<IDL extends Idl = Idl>(rawIdl: RawIdl): IDL {
   return {
     version: rawIdl.version,
@@ -450,7 +463,7 @@ export function camelCaseIdl<IDL extends Idl = Idl>(rawIdl: RawIdl): IDL {
     instructions: camelCaseIdlInstructions(rawIdl.instructions),
     state: camelCaseState(rawIdl.state),
     accounts: camelCaseMaybeIdlTypeDefs(rawIdl.accounts),
-    types: camelCaseMaybeIdlTypeDefs(rawIdl.types),
+    types: camelCaseTypes(rawIdl.types),
     events: camelCaseEvents(rawIdl.events),
     errors: rawIdl.errors,
     camelized: true

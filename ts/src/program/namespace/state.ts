@@ -153,8 +153,8 @@ export class StateClient<IDL extends Idl> {
   async fetch(): Promise<
     TypeDef<
       IDL["state"] extends undefined
-        ? IdlTypeDef
-        : NonNullable<IDL["state"]>["struct"],
+      ? IdlTypeDef
+      : NonNullable<IDL["state"]>["struct"],
       IdlTypes<IDL>
     >
   > {
@@ -168,7 +168,7 @@ export class StateClient<IDL extends Idl> {
     if (!state) {
       throw new Error("State is not specified in IDL.");
     }
-    const expectedDiscriminator = await stateDiscriminator(state.struct.name);
+    const expectedDiscriminator = await stateDiscriminator(camelCase(state.struct.name, { pascalCase: true }));
     if (expectedDiscriminator.compare(accountInfo.data.slice(0, 8))) {
       throw new Error("Invalid account discriminator");
     }
