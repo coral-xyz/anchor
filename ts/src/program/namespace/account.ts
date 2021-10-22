@@ -77,10 +77,10 @@ export type AccountNamespace<IDL extends Idl = Idl> = {
 export class AccountClient<
   IDL extends Idl = Idl,
   A extends NullableIdlAccount<IDL> = IDL["accounts"] extends undefined
-    ? IdlTypeDef
-    : NonNullable<IDL["accounts"]>[number],
+  ? IdlTypeDef
+  : NonNullable<IDL["accounts"]>[number],
   T = TypeDef<A, IdlTypes<IDL>>
-> {
+  > {
   /**
    * Returns the number of bytes in this account.
    */
@@ -145,7 +145,7 @@ export class AccountClient<
 
     // Assert the account discriminator is correct.
     const discriminator = AccountsCoder.accountDiscriminator(
-      this._idlAccount.name
+      camelCase(this._idlAccount.name, { pascalCase: true })
     );
     if (discriminator.compare(accountInfo.data.slice(0, 8))) {
       throw new Error("Invalid account discriminator");
