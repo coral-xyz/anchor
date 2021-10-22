@@ -42,7 +42,7 @@ use syn::parse_macro_input;
 /// | `#[account(init)]` | On `ProgramAccount` structs. | Marks the account as being initialized, creating the account via the system program. |
 /// | `#[account(zero)]` | On `ProgramAccount` structs. | Asserts the account discriminator is zero. |
 /// | `#[account(close = <target>)]` | On `ProgramAccount` and `Loader` structs. | Marks the account as being closed at the end of the instruction's execution, sending the rent exemption lamports to the specified <target>. |
-/// | `#[account(has_one = <target>)]` | On `ProgramAccount` or `CpiAccount` structs | Checks the `target` field on the account matches the `target` field in the struct deriving `Accounts`. |
+/// | `#[account(has_one = <target>)]`<br><br>`#[account(has_one = <target> @ <custom_error>)]` | On `ProgramAccount` or `CpiAccount` structs | Checks the `target` field on the account matches the `target` field in the struct deriving `Accounts`. Custom errors are supported via `@`. |
 /// | `#[account(seeds = [<seeds>], bump? = <target>, payer? = <target>, space? = <target>, owner? = <target>)]` | On `AccountInfo` structs | Seeds for the program derived address an `AccountInfo` struct represents. If bump is provided, then appends it to the seeds. On initialization, validates the given bump is the bump provided by `Pubkey::find_program_address`.|
 /// | `#[account(constraint = <expression>)]`<br><br>`#[account(constraint = <expression> @ <custom_error>)]` | On any type deriving `Accounts` | Executes the given code as a constraint. The expression should evaluate to a boolean. Custom errors are supported via `@`. |
 /// | `#[account("<literal>")]` | Deprecated | Executes the given code literal as a constraint. The literal should evaluate to a boolean. |

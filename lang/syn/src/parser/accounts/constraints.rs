@@ -183,6 +183,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                     span,
                     ConstraintHasOne {
                         join_target: stream.parse()?,
+                        error: parse_optional_custom_error(&stream)?,
                     },
                 )),
                 "owner" => ConstraintToken::Owner(Context::new(
