@@ -226,7 +226,7 @@ export type IdlTypeVec = {
 };
 
 type RawIdlTypeArray = {
-  array: [idlType: RawIdlType, size: number];
+  Array: [idlType: RawIdlType, size: number];
 };
 
 export type IdlTypeArray = {
@@ -322,7 +322,7 @@ function camelCaseIdlTypeVec(type: RawIdlTypeVec): IdlTypeVec {
 }
 
 function camelCaseIdlTypeArray(type: RawIdlTypeArray): IdlTypeArray {
-  return { array: [camelCaseIdlType(type.array[0]), type.array[1]] };
+  return { array: [camelCaseIdlType(type.Array[0]), type.Array[1]] };
 }
 
 function camelCaseIdlType(type: RawIdlType): IdlType {
