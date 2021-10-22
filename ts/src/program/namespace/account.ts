@@ -218,7 +218,7 @@ export class AccountClient<
     filters?: Buffer | GetProgramAccountsFilter[]
   ): Promise<ProgramAccount<T>[]> {
     const discriminator = AccountsCoder.accountDiscriminator(
-      camelCase(this._idlAccount.name, { pascalCase: true })
+      this._idlAccount.name
     );
 
     let resp = await this._provider.connection.getProgramAccounts(
