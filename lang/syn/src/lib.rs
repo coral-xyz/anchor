@@ -634,6 +634,7 @@ pub struct ConstraintRaw {
 #[derive(Debug, Clone)]
 pub struct ConstraintOwner {
     pub owner_address: Expr,
+    pub error: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]

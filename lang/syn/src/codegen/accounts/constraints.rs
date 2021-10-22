@@ -250,9 +250,10 @@ pub fn generate_constraint_raw(c: &ConstraintRaw) -> proc_macro2::TokenStream {
 pub fn generate_constraint_owner(f: &Field, c: &ConstraintOwner) -> proc_macro2::TokenStream {
     let ident = &f.ident;
     let owner_address = &c.owner_address;
+    let error = generate_custom_error(&c.error, quote! { ConstraintOwner });
     quote! {
         if #ident.to_account_info().owner != &#owner_address {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintOwner.into());
+            return Err(#error);
         }
     }
 }

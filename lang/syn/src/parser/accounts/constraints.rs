@@ -200,6 +200,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                     span,
                     ConstraintOwner {
                         owner_address: stream.parse()?,
+                        error: parse_optional_custom_error(&stream)?,
                     },
                 )),
                 "rent_exempt" => ConstraintToken::RentExempt(Context::new(
