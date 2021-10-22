@@ -145,7 +145,7 @@ export class AccountClient<
 
     // Assert the account discriminator is correct.
     const discriminator = AccountsCoder.accountDiscriminator(
-      camelCase(this._idlAccount.name, { pascalCase: true })
+      this._idlAccount.name
     );
     if (discriminator.compare(accountInfo.data.slice(0, 8))) {
       throw new Error("Invalid account discriminator");
