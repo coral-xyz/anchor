@@ -75,7 +75,12 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                 error: parse_optional_custom_error(&stream)?,
             },
         )),
-        "signer" => ConstraintToken::Signer(Context::new(ident.span(), ConstraintSigner {})),
+        "signer" => ConstraintToken::Signer(Context::new(
+            ident.span(),
+            ConstraintSigner {
+                error: parse_optional_custom_error(&stream)?,
+            },
+        )),
         "executable" => {
             ConstraintToken::Executable(Context::new(ident.span(), ConstraintExecutable {}))
         }
@@ -365,7 +370,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             if self.signer.is_none() && self.seeds.is_none() && self.associated_token_mint.is_none()
             {
                 self.signer
-                    .replace(Context::new(i.span(), ConstraintSigner {}));
+                    .replace(Context::new(i.span(), ConstraintSigner { error: None }));
             }
         }
 

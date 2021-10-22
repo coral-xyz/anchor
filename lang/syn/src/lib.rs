@@ -610,7 +610,9 @@ pub struct ConstraintMut {
 }
 
 #[derive(Debug, Clone)]
-pub struct ConstraintSigner {}
+pub struct ConstraintSigner {
+    pub error: Option<Expr>,
+}
 
 #[derive(Debug, Clone)]
 pub struct ConstraintHasOne {

@@ -199,7 +199,7 @@ pub fn generate_constraint_has_one(f: &Field, c: &ConstraintHasOne) -> proc_macr
     }
 }
 
-pub fn generate_constraint_signer(f: &Field, _c: &ConstraintSigner) -> proc_macro2::TokenStream {
+pub fn generate_constraint_signer(f: &Field, c: &ConstraintSigner) -> proc_macro2::TokenStream {
     let ident = &f.ident;
     let info = match f.ty {
         Ty::AccountInfo => quote! { #ident },
@@ -210,9 +210,10 @@ pub fn generate_constraint_signer(f: &Field, _c: &ConstraintSigner) -> proc_macr
         Ty::CpiAccount(_) => quote! { #ident.to_account_info() },
         _ => panic!("Invalid syntax: signer cannot be specified."),
     };
+    let error = generate_custom_error(&c.error, quote! { ConstraintSigner });
     quote! {
         if !#info.to_account_info().is_signer {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintSigner.into());
+            return Err(#error);
         }
     }
 }

@@ -37,7 +37,7 @@ use syn::parse_macro_input;
 ///
 /// | Attribute | Location | Description |
 /// |:--|:--|:--|
-/// | `#[account(signer)]` | On raw `AccountInfo` structs. | Checks the given account signed the transaction. |
+/// | `#[account(signer)]`<br><br>`#[account(signer @ <custom_error>)]` | On raw `AccountInfo` structs. | Checks the given account signed the transaction. Custom errors are supported via `@`. |
 /// | `#[account(mut)]`<br><br>`#[account(mut @ <custom_error>)]` | On `AccountInfo`, `ProgramAccount` or `CpiAccount` structs. | Marks the account as mutable and persists the state transition. Custom errors are supported via `@`. |
 /// | `#[account(init)]` | On `ProgramAccount` structs. | Marks the account as being initialized, creating the account via the system program. |
 /// | `#[account(zero)]` | On `ProgramAccount` structs. | Asserts the account discriminator is zero. |
