@@ -1,7 +1,7 @@
 import { inflate } from "pako";
 import { PublicKey } from "@solana/web3.js";
 import Provider from "../provider";
-import { Idl, idlAddress, decodeIdlAccount } from "../idl";
+import { Idl, idlAddress, decodeIdlAccount, camelCaseIdl, RawIdl, isCamelized } from "../idl";
 import Coder from "../coder";
 import NamespaceFactory, {
   RpcNamespace,
@@ -250,18 +250,18 @@ export class Program<IDL extends Idl = Idl> {
    * @param provider  The network and wallet context to use. If not provided
    *                  then uses [[getProvider]].
    */
-  public constructor(idl: IDL, programId: Address, provider?: Provider) {
+  public constructor(idl: RawIdl | Idl, programId: Address, provider?: Provider, raw?: boolean) {
     programId = translateAddress(programId);
 
     if (!provider) {
       provider = getProvider();
     }
-
+    const camelizedIdl = isCamelized(idl) ? idl as IDL : camelCaseIdl<IDL>(idl as RawIdl);
     // Fields.
-    this._idl = idl;
+    this._idl = camelizedIdl;
     this._provider = provider;
     this._programId = programId;
-    this._coder = new Coder(idl);
+    this._coder = new Coder(camelizedIdl);
     this._events = new EventManager(this._programId, provider, this._coder);
 
     // Dynamic namespaces.
@@ -272,7 +272,7 @@ export class Program<IDL extends Idl = Idl> {
       account,
       simulate,
       state,
-    ] = NamespaceFactory.build(idl, this._coder, programId, provider);
+    ] = NamespaceFactory.build(camelizedIdl, this._coder, programId, provider);
     this.rpc = rpc;
     this.instruction = instruction;
     this.transaction = transaction;
@@ -300,7 +300,6 @@ export class Program<IDL extends Idl = Idl> {
     if (!idl) {
       throw new Error(`IDL not found for program: ${address.toString()}`);
     }
-
     return new Program(idl, programId, provider);
   }
 
@@ -328,7 +327,8 @@ export class Program<IDL extends Idl = Idl> {
     // Chop off account discriminator.
     let idlAccount = decodeIdlAccount(accountInfo.data.slice(8));
     const inflatedIdl = inflate(idlAccount.data);
-    return JSON.parse(utf8.decode(inflatedIdl));
+    const rawIdl = JSON.parse(utf8.decode(inflatedIdl));
+    return camelCaseIdl<IDL>(rawIdl);
   }
 
   /**
