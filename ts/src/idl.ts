@@ -92,7 +92,8 @@ export type IdlType =
   | IdlTypeDefined
   | IdlTypeOption
   | IdlTypeVec
-  | IdlTypeArray;
+  | IdlTypeArray
+  | IdlTypeMap;
 
 // User defined type.
 export type IdlTypeDefined = {
@@ -109,6 +110,10 @@ export type IdlTypeVec = {
 
 export type IdlTypeArray = {
   array: [idlType: IdlType, size: number];
+};
+
+export type IdlTypeMap = {
+  map: [keyIdlType: IdlType, valueIdlType: IdlType];
 };
 
 export type IdlEnumVariant = {

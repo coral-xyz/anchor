@@ -83,6 +83,9 @@ function typeSize(idl: Idl, ty: IdlType): number {
         let arraySize = ty.array[1];
         return typeSize(idl, arrayTy) * arraySize;
       }
+      if ("map" in ty) {
+        return 1;
+      }
       throw new Error(`Invalid type ${JSON.stringify(ty)}`);
   }
 }
