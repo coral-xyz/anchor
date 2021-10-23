@@ -213,7 +213,7 @@ pub fn generate_constraint_signer(f: &Field, c: &ConstraintSigner) -> proc_macro
     };
     let error = generate_custom_error(&c.error, quote! { ConstraintSigner });
     quote! {
-        if !#info.to_account_info().is_signer {
+        if !#info.is_signer {
             return Err(#error);
         }
     }
