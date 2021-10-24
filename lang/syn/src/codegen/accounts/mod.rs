@@ -28,6 +28,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         #impl_try_accounts
         #impl_to_account_infos
         #impl_to_account_metas
+        #impl_has_singleton_account
         #impl_exit
 
         #__client_accounts_mod

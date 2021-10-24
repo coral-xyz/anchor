@@ -154,8 +154,8 @@ pub trait ToAccountInfo<'info> {
 
 /// Returns a singleton [AccountInfo] associated with the struct.
 pub trait HasSingletonAccount<'info, T> {
-    /// Returns a singleton [AccountInfo] associated with the struct.
-    fn get_account_info(&self) -> AccountInfo<'info>;
+    /// Returns the singleton [AccountInfo] instance associated with the struct.
+    fn instance(&self) -> AccountInfo<'info>;
 }
 
 /// A data structure that can be serialized and stored into account storage,
@@ -255,9 +255,9 @@ pub mod prelude {
     pub use super::{
         access_control, account, declare_id, emit, error, event, interface, program, require,
         state, zero_copy, Account, AccountDeserialize, AccountLoader, AccountSerialize, Accounts,
-        AccountsExit, AnchorDeserialize, AnchorSerialize, Context, CpiContext, Id, Key, Loader,
-        Owner, Program, ProgramAccount, Signer, System, Sysvar, ToAccountInfo, ToAccountInfos,
-        ToAccountMetas, UncheckedAccount,
+        AccountsExit, AnchorDeserialize, AnchorSerialize, Context, CpiContext, HasSingletonAccount,
+        Id, Key, Loader, Owner, Program, ProgramAccount, Signer, System, Sysvar, ToAccountInfo,
+        ToAccountInfos, ToAccountMetas, UncheckedAccount,
     };
 
     #[allow(deprecated)]
