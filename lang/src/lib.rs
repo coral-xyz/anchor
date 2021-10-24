@@ -152,6 +152,12 @@ pub trait ToAccountInfo<'info> {
     fn to_account_info(&self) -> AccountInfo<'info>;
 }
 
+/// Returns a singleton [AccountInfo] associated with the struct.
+pub trait HasSingletonAccount<'info, T> {
+    /// Returns a singleton [AccountInfo] associated with the struct.
+    fn get_account_info(&self) -> AccountInfo<'info>;
+}
+
 /// A data structure that can be serialized and stored into account storage,
 /// i.e. an
 /// [`AccountInfo`](../solana_program/account_info/struct.AccountInfo.html#structfield.data)'s
