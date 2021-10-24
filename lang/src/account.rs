@@ -5,25 +5,39 @@ use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
-use std::ops::{Deref, DerefMut};
+use std::{
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+};
 
 /// Account container that checks ownership on deserialization.
 #[derive(Clone)]
-pub struct Account<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> {
+pub struct Account<
+    'info,
+    T: AccountSerialize + AccountDeserialize + Owner + Clone,
+    E: CustomError = AccountNotProgramOwnedError,
+> {
     account: T,
     info: AccountInfo<'info>,
+    error: PhantomData<E>,
 }
 
-impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T> {
-    fn new(info: AccountInfo<'a>, account: T) -> Account<'a, T> {
-        Self { info, account }
+impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone, E: CustomError>
+    Account<'a, T, E>
+{
+    fn new(info: AccountInfo<'a>, account: T) -> Self {
+        Self {
+            info,
+            account,
+            error: PhantomData,
+        }
     }
 
     /// Deserializes the given `info` into a `Account`.
     #[inline(never)]
-    pub fn try_from(info: &AccountInfo<'a>) -> Result<Account<'a, T>, ProgramError> {
+    pub fn try_from(info: &AccountInfo<'a>) -> Result<Self, ProgramError> {
         if info.owner != &T::owner() {
-            return Err(ErrorCode::AccountNotProgramOwned.into());
+            return Err(E::error());
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(Account::new(info.clone(), T::try_deserialize(&mut data)?))
@@ -33,9 +47,9 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
     /// the account discriminator. Be careful when using this and avoid it if
     /// possible.
     #[inline(never)]
-    pub fn try_from_unchecked(info: &AccountInfo<'a>) -> Result<Account<'a, T>, ProgramError> {
+    pub fn try_from_unchecked(info: &AccountInfo<'a>) -> Result<Self, ProgramError> {
         if info.owner != &T::owner() {
-            return Err(ErrorCode::AccountNotProgramOwned.into());
+            return Err(E::error());
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(Account::new(

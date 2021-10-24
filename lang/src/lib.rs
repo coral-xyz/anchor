@@ -243,6 +243,20 @@ impl Key for Pubkey {
     }
 }
 
+/// Defines the custom error for account's validation.
+pub trait CustomError {
+    fn error() -> ProgramError;
+}
+
+/// `CustomError` for `ErrorCode::AccountNotProgramOwned`.
+pub struct AccountNotProgramOwnedError;
+
+impl CustomError for AccountNotProgramOwnedError {
+    fn error() -> ProgramError {
+        crate::error::ErrorCode::AccountNotProgramOwned.into()
+    }
+}
+
 /// The prelude contains all commonly used components of the crate.
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
