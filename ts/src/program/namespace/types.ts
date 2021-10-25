@@ -81,10 +81,11 @@ export type InstructionContextFnArgs<
 
 type TypeMap = {
   publicKey: PublicKey;
-  u64: BN;
-  i64: BN;
+  bool: boolean;
 } & {
   [K in "u8" | "i8" | "u16" | "i16" | "u32" | "i32"]: number;
+} & {
+  [K in "u64" | "i64" | "u128" | "i128"]: BN;
 };
 
 export type DecodeType<T extends IdlType, Defined> = T extends keyof TypeMap
@@ -106,8 +107,7 @@ type ArgsTuple<A extends IdlField[], Defined> = {
   [K in keyof A]: A[K] extends IdlField
     ? DecodeType<A[K]["type"], Defined>
     : unknown;
-} &
-  unknown[];
+} & unknown[];
 
 type FieldsOfType<I extends IdlTypeDef> = NonNullable<
   I["type"] extends IdlTypeDefTyStruct
