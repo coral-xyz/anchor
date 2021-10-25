@@ -57,6 +57,13 @@ export class AccountsCoder<A extends string = string> {
    * @param name The name of the account to calculate the discriminator.
    */
   public static accountDiscriminator(name: string): Buffer {
-    return Buffer.from(sha256.digest(`account:${name}`)).slice(0, 8);
+    return Buffer.from(sha256.digest(`account:${capitalize(name)}`)).slice(0, ACCOUNT_DISCRIMINATOR_SIZE);
   }
 }
+
+/**
+ * Capitalize the first letter of the argued string.
+ * @param {string} s
+ * @returns {string}
+ */
+const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1)
