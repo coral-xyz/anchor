@@ -215,24 +215,6 @@ pub fn generate_constraint_signer(f: &Field, _c: &ConstraintSigner) -> proc_macr
     }
 }
 
-pub fn generate_constraint_literal(c: &ConstraintLiteral) -> proc_macro2::TokenStream {
-    let lit: proc_macro2::TokenStream = {
-        let lit = &c.lit;
-        let constraint = lit.value().replace("\"", "");
-        let message = format!(
-            "Deprecated. Should be used with constraint: #[account(constraint = {})]",
-            constraint,
-        );
-        lit.span().warning(message).emit_as_item_tokens();
-        constraint.parse().unwrap()
-    };
-    quote! {
-        if !(#lit) {
-            return Err(anchor_lang::__private::ErrorCode::Deprecated.into());
-        }
-    }
-}
-
 pub fn generate_constraint_raw(c: &ConstraintRaw) -> proc_macro2::TokenStream {
     let raw = &c.raw;
     quote! {
