@@ -527,14 +527,14 @@ pub fn build(
 
     let cargo = Manifest::discover()?;
 
-    fs::create_dir_all(cfg_parent.join("target/idl"))?;
-    fs::create_dir_all(cfg_parent.join("target/types"))?;
-
     let idl_out = match idl {
         Some(idl) => Some(PathBuf::from(idl)),
         None => Some(cfg_parent.join("target/idl")),
     };
+    fs::create_dir_all(idl_out.as_ref().unwrap())?;
+
     let idl_ts_out = Some(cfg_parent.join("target/types"));
+    fs::create_dir_all(idl_ts_out.as_ref().unwrap())?;
 
     let solana_version = match solana_version.is_some() {
         true => solana_version,
