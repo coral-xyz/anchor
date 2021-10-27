@@ -67,6 +67,9 @@ pub enum Command {
         /// Output directory for the IDL.
         #[clap(short, long)]
         idl: Option<String>,
+        /// Output directory for the TypeScript IDL.
+        #[clap(short = 't', long)]
+        idl_ts: Option<String>,
         /// True if the build artifact needs to be deterministic and verifiable.
         #[clap(short, long)]
         verifiable: bool,
@@ -311,6 +314,7 @@ pub fn entry(opts: Opts) -> Result<()> {
         Command::New { name } => new(&opts.cfg_override, name),
         Command::Build {
             idl,
+            idl_ts,
             verifiable,
             program_name,
             solana_version,
@@ -318,6 +322,7 @@ pub fn entry(opts: Opts) -> Result<()> {
         } => build(
             &opts.cfg_override,
             idl,
+            idl_ts,
             verifiable,
             program_name,
             solana_version,
@@ -510,6 +515,7 @@ fn new_program(name: &str) -> Result<()> {
 pub fn build(
     cfg_override: &ConfigOverride,
     idl: Option<String>,
+    idl_ts: Option<String>,
     verifiable: bool,
     program_name: Option<String>,
     solana_version: Option<String>,
@@ -533,7 +539,10 @@ pub fn build(
     };
     fs::create_dir_all(idl_out.as_ref().unwrap())?;
 
-    let idl_ts_out = Some(cfg_parent.join("target/types"));
+    let idl_ts_out = match idl_ts {
+        Some(idl_ts) => Some(PathBuf::from(idl_ts)),
+        None => Some(cfg_parent.join("target/types")),
+    };
     fs::create_dir_all(idl_ts_out.as_ref().unwrap())?;
 
     let solana_version = match solana_version.is_some() {
@@ -936,6 +945,7 @@ fn verify(
     let cur_dir = std::env::current_dir()?;
     build(
         cfg_override,
+        None,
         None,
         true,
         None,
@@ -1446,6 +1456,7 @@ fn test(
         if !skip_build {
             build(
                 cfg_override,
+                None,
                 None,
                 false,
                 None,
@@ -2354,6 +2365,7 @@ fn publish(
     build(
         cfg_override,
         None,
+        None,
         true,
         Some(program_name),
         cfg.solana_version.clone(),
@@ -2447,6 +2459,7 @@ fn localnet(
         if !skip_build {
             build(
                 cfg_override,
+                None,
                 None,
                 false,
                 None,
