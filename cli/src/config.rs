@@ -150,7 +150,6 @@ impl WithPath<Config> {
         for path in self.get_program_list()? {
             let idl = anchor_syn::idl::file::parse(path.join("src/lib.rs"))?;
             let lib_name = Manifest::from_path(&path.join("Cargo.toml"))?.lib_name()?;
-            println!("{:?}", Manifest::from_path(&path.join("Cargo.toml"))?);
             r.push(Program {
                 lib_name,
                 path,
