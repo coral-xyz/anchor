@@ -2,6 +2,7 @@ use anchor_client::Cluster;
 use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Error, Result};
 use clap::Clap;
+use heck::SnakeCase;
 use serde::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{Keypair, Signer};
@@ -68,14 +69,16 @@ impl Manifest {
                 .name
                 .as_ref()
                 .unwrap()
-                .to_string())
+                .to_string()
+                .to_snake_case())
         } else {
             Ok(self
                 .package
                 .as_ref()
                 .ok_or_else(|| anyhow!("package section not provided"))?
                 .name
-                .to_string())
+                .to_string()
+                .to_snake_case())
         }
     }
 
@@ -147,6 +150,7 @@ impl WithPath<Config> {
         for path in self.get_program_list()? {
             let idl = anchor_syn::idl::file::parse(path.join("src/lib.rs"))?;
             let lib_name = Manifest::from_path(&path.join("Cargo.toml"))?.lib_name()?;
+            println!("{:?}", Manifest::from_path(&path.join("Cargo.toml"))?);
             r.push(Program {
                 lib_name,
                 path,
