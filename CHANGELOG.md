@@ -14,6 +14,7 @@ incremented for features.
 ### Fixes
 
 * cli: fix dns in NODE_OPTIONS ([#928](https://github.com/project-serum/anchor/pull/928)).
+* cli: Allow specify output directory for TypeScript IDL ([#940](https://github.com/project-serum/anchor/pull/940)).
 
 ## [0.18.0] - 2021-10-24
 
