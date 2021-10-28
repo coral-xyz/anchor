@@ -66,7 +66,7 @@ jobs:
       script:
         - pushd tests/misc && anchor test && popd
         - pushd tests/events && anchor test && popd
-        - pushd tests/cashiers-check && anchor test && popd
+        - pushd tests/cashiers-check && yarn && anchor test && popd
         - pushd tests/typescript && yarn && anchor test && popd
         - pushd tests/zero-copy && yarn && anchor test && popd
         - pushd tests/chat && yarn && anchor test && popd
