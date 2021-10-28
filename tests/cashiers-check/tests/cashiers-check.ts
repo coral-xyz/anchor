@@ -1,9 +1,7 @@
-const anchor = require("@project-serum/anchor");
-const serumCmn = require("@project-serum/common");
-const assert = require("assert");
-const { TOKEN_PROGRAM_ID } = require("@solana/spl-token");
-
-
+import * as anchor from "@project-serum/anchor";
+import * as serumCmn from "@project-serum/common";
+import assert from "assert";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 describe("cashiers-check", () => {
   // Configure the client to use the local cluster.
