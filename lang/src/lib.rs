@@ -49,6 +49,7 @@ mod program;
 mod program_account;
 mod signer;
 pub mod state;
+mod system_account;
 mod system_program;
 mod sysvar;
 mod unchecked_account;
@@ -75,6 +76,7 @@ pub use crate::signer::Signer;
 #[doc(hidden)]
 #[allow(deprecated)]
 pub use crate::state::ProgramState;
+pub use crate::system_account::SystemAccount;
 pub use crate::system_program::System;
 pub use crate::sysvar::Sysvar;
 pub use crate::unchecked_account::UncheckedAccount;
