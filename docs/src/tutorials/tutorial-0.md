@@ -114,7 +114,7 @@ If you've developed on Ethereum, the IDL is analogous to the `abi.json`.
 Once built, we can deploy the program by running
 
 ```bash
-anchor deploy
+anchor deploy --provider.cluster devnet
 ```
 
 Take note of the program's deployed address. We'll use it next.
