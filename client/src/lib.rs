@@ -407,10 +407,10 @@ impl<'a> RequestBuilder<'a> {
         self
     }
 
-    pub fn send(self) -> Result<Signature, ClientError> {
-        let accounts = match self.namespace {
+    pub fn instructions(&self) -> Result<Vec<Instruction>, ClientError> {
+        let mut accounts = match self.namespace {
             RequestNamespace::State { new } => {
-                let mut accounts = match new {
+                match new {
                     false => vec![AccountMeta::new(
                         anchor_lang::__private::state::address(&self.program_id),
                         false,
@@ -428,20 +428,26 @@ impl<'a> RequestBuilder<'a> {
                         AccountMeta::new_readonly(system_program::ID, false),
                         AccountMeta::new_readonly(self.program_id, false),
                     ],
-                };
-                accounts.extend_from_slice(&self.accounts);
-                accounts
+                }
             }
-            _ => self.accounts,
+            _ => Vec::new(),
         };
-        let mut instructions = self.instructions;
-        if let Some(ix_data) = self.instruction_data {
+        accounts.extend_from_slice(&self.accounts);
+
+        let mut instructions = self.instructions.clone();
+        if let Some(ix_data) = &self.instruction_data {
             instructions.push(Instruction {
                 program_id: self.program_id,
-                data: ix_data,
+                data: ix_data.clone(),
                 accounts,
             });
         }
+
+        Ok(instructions)
+    }
+
+    pub fn send(self) -> Result<Signature, ClientError> {
+        let instructions = self.instructions()?;
 
         let mut signers = self.signers;
         signers.push(&self.payer);
