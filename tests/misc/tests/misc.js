@@ -829,4 +829,32 @@ describe("misc", () => {
       undefined
     );
   });
+
+  const ifNeededAcc = anchor.web3.Keypair.generate();
+
+  it("Can init if needed a new account", async () => {
+    await program.rpc.testInitIfNeeded(1, {
+      accounts: {
+        data: ifNeededAcc.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        payer: program.provider.wallet.publicKey,
+      },
+      signers: [ifNeededAcc],
+    });
+    const account = await program.account.dataU16.fetch(ifNeededAcc.publicKey);
+    assert.ok(account.data, 1);
+  });
+
+  it("Can init if needed a previously created account", async () => {
+    await program.rpc.testInitIfNeeded(3, {
+      accounts: {
+        data: ifNeededAcc.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        payer: program.provider.wallet.publicKey,
+      },
+      signers: [ifNeededAcc],
+    });
+    const account = await program.account.dataU16.fetch(ifNeededAcc.publicKey);
+    assert.ok(account.data, 3);
+  });
 });

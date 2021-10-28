@@ -594,20 +594,30 @@ impl Parse for ConstraintToken {
 }
 
 #[derive(Debug, Clone)]
-pub struct ConstraintInit {}
+pub struct ConstraintInit {
+    pub if_needed: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintInitIfNeeded {}
 
 #[derive(Debug, Clone)]
 pub struct ConstraintZeroed {}
 
 #[derive(Debug, Clone)]
-pub struct ConstraintMut {}
+pub struct ConstraintMut {
+    pub error: Option<Expr>,
+}
 
 #[derive(Debug, Clone)]
-pub struct ConstraintSigner {}
+pub struct ConstraintSigner {
+    pub error: Option<Expr>,
+}
 
 #[derive(Debug, Clone)]
 pub struct ConstraintHasOne {
     pub join_target: Expr,
+    pub error: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
@@ -618,16 +628,19 @@ pub struct ConstraintLiteral {
 #[derive(Debug, Clone)]
 pub struct ConstraintRaw {
     pub raw: Expr,
+    pub error: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConstraintOwner {
     pub owner_address: Expr,
+    pub error: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConstraintAddress {
     pub address: Expr,
+    pub error: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
@@ -638,6 +651,7 @@ pub enum ConstraintRentExempt {
 
 #[derive(Debug, Clone)]
 pub struct ConstraintInitGroup {
+    pub if_needed: bool,
     pub seeds: Option<ConstraintSeedsGroup>,
     pub payer: Option<Expr>,
     pub space: Option<Expr>,

@@ -16,6 +16,7 @@ use heck::SnakeCase;
 use rand::rngs::OsRng;
 use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
+use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::RpcSendTransactionConfig;
@@ -59,7 +60,7 @@ pub enum Command {
     Init {
         name: String,
         #[clap(short, long)]
-        typescript: bool,
+        javascript: bool,
     },
     /// Builds the workspace.
     Build {
@@ -306,7 +307,7 @@ pub enum ClusterCommand {
 
 pub fn entry(opts: Opts) -> Result<()> {
     match opts.command {
-        Command::Init { name, typescript } => init(&opts.cfg_override, name, typescript),
+        Command::Init { name, javascript } => init(&opts.cfg_override, name, javascript),
         Command::New { name } => new(&opts.cfg_override, name),
         Command::Build {
             idl,
@@ -378,7 +379,7 @@ pub fn entry(opts: Opts) -> Result<()> {
     }
 }
 
-fn init(cfg_override: &ConfigOverride, name: String, typescript: bool) -> Result<()> {
+fn init(cfg_override: &ConfigOverride, name: String, javascript: bool) -> Result<()> {
     if Config::discover(cfg_override)?.is_some() {
         return Err(anyhow!("Workspace already initialized"));
     }
@@ -390,10 +391,10 @@ fn init(cfg_override: &ConfigOverride, name: String, typescript: bool) -> Result
     let mut cfg = Config::default();
     cfg.scripts.insert(
         "test".to_owned(),
-        if typescript {
-            "ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-        } else {
+        if javascript {
             "mocha -t 1000000 tests/"
+        } else {
+            "ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
         }
         .to_owned(),
     );
@@ -429,7 +430,17 @@ fn init(cfg_override: &ConfigOverride, name: String, typescript: bool) -> Result
     // Build the migrations directory.
     fs::create_dir("migrations")?;
 
-    if typescript {
+    if javascript {
+        // Build javascript config
+        let mut package_json = File::create("package.json")?;
+        package_json.write_all(template::package_json().as_bytes())?;
+
+        let mut mocha = File::create(&format!("tests/{}.js", name))?;
+        mocha.write_all(template::mocha(&name).as_bytes())?;
+
+        let mut deploy = File::create("migrations/deploy.js")?;
+        deploy.write_all(template::deploy_script().as_bytes())?;
+    } else {
         // Build typescript config
         let mut ts_config = File::create("tsconfig.json")?;
         ts_config.write_all(template::ts_config().as_bytes())?;
@@ -442,15 +453,6 @@ fn init(cfg_override: &ConfigOverride, name: String, typescript: bool) -> Result
 
         let mut mocha = File::create(&format!("tests/{}.ts", name))?;
         mocha.write_all(template::ts_mocha(&name).as_bytes())?;
-    } else {
-        let mut package_json = File::create("package.json")?;
-        package_json.write_all(template::package_json().as_bytes())?;
-
-        let mut mocha = File::create(&format!("tests/{}.js", name))?;
-        mocha.write_all(template::mocha(&name).as_bytes())?;
-
-        let mut deploy = File::create("migrations/deploy.js")?;
-        deploy.write_all(template::deploy_script().as_bytes())?;
     }
 
     // Install node modules.
@@ -891,7 +893,7 @@ fn _build_cwd(
         std::process::exit(exit.status.code().unwrap_or(1));
     }
 
-    // Always assume idl is located ar src/lib.rs.
+    // Always assume idl is located at src/lib.rs.
     if let Some(idl) = extract_idl("src/lib.rs")? {
         // JSON out path.
         let out = match idl_out {
@@ -1476,6 +1478,17 @@ fn test(
 
         let url = cluster_url(cfg);
 
+        let node_options = format!(
+            "{} {}",
+            match std::env::var_os("NODE_OPTIONS") {
+                Some(value) => value
+                    .into_string()
+                    .map_err(std::env::VarError::NotUnicode)?,
+                None => "".to_owned(),
+            },
+            get_node_dns_option()?,
+        );
+
         // Setup log reader.
         let log_streams = stream_logs(cfg, &url);
 
@@ -1496,6 +1509,7 @@ fn test(
                 .args(args)
                 .env("ANCHOR_PROVIDER_URL", url)
                 .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
+                .env("NODE_OPTIONS", node_options)
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .output()
@@ -2501,4 +2515,27 @@ fn is_hidden(entry: &walkdir::DirEntry) -> bool {
         .to_str()
         .map(|s| s == "." || s.starts_with('.') || s == "target")
         .unwrap_or(false)
+}
+
+fn get_node_version() -> Result<Version> {
+    let node_version = std::process::Command::new("node")
+        .arg("--version")
+        .stderr(Stdio::inherit())
+        .output()
+        .map_err(|e| anyhow::format_err!("node failed: {}", e.to_string()))?;
+    let output = std::str::from_utf8(&node_version.stdout)?
+        .strip_prefix('v')
+        .unwrap()
+        .trim();
+    Version::parse(output).map_err(Into::into)
+}
+
+fn get_node_dns_option() -> Result<&'static str> {
+    let version = get_node_version()?;
+    let req = VersionReq::parse(">=16.4.0").unwrap();
+    let option = match req.matches(&version) {
+        true => "--dns-result-order=ipv4first",
+        false => "",
+    };
+    Ok(option)
 }

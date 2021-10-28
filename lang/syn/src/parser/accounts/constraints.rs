@@ -60,10 +60,27 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
     let kw = ident.to_string();
 
     let c = match kw.as_str() {
-        "init" => ConstraintToken::Init(Context::new(ident.span(), ConstraintInit {})),
+        "init" => ConstraintToken::Init(Context::new(
+            ident.span(),
+            ConstraintInit { if_needed: false },
+        )),
+        "init_if_needed" => ConstraintToken::Init(Context::new(
+            ident.span(),
+            ConstraintInit { if_needed: true },
+        )),
         "zero" => ConstraintToken::Zeroed(Context::new(ident.span(), ConstraintZeroed {})),
-        "mut" => ConstraintToken::Mut(Context::new(ident.span(), ConstraintMut {})),
-        "signer" => ConstraintToken::Signer(Context::new(ident.span(), ConstraintSigner {})),
+        "mut" => ConstraintToken::Mut(Context::new(
+            ident.span(),
+            ConstraintMut {
+                error: parse_optional_custom_error(&stream)?,
+            },
+        )),
+        "signer" => ConstraintToken::Signer(Context::new(
+            ident.span(),
+            ConstraintSigner {
+                error: parse_optional_custom_error(&stream)?,
+            },
+        )),
         "executable" => {
             ConstraintToken::Executable(Context::new(ident.span(), ConstraintExecutable {}))
         }
@@ -172,23 +189,18 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                 .join(stream.span())
                 .unwrap_or_else(|| ident.span());
             match kw.as_str() {
-                // Deprecated since 0.11
-                "belongs_to" => {
-                    return Err(ParseError::new(
-                        ident.span(),
-                        "belongs_to is deprecated, please use has_one",
-                    ))
-                }
                 "has_one" => ConstraintToken::HasOne(Context::new(
                     span,
                     ConstraintHasOne {
                         join_target: stream.parse()?,
+                        error: parse_optional_custom_error(&stream)?,
                     },
                 )),
                 "owner" => ConstraintToken::Owner(Context::new(
                     span,
                     ConstraintOwner {
                         owner_address: stream.parse()?,
+                        error: parse_optional_custom_error(&stream)?,
                     },
                 )),
                 "rent_exempt" => ConstraintToken::RentExempt(Context::new(
@@ -236,6 +248,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                     span,
                     ConstraintRaw {
                         raw: stream.parse()?,
+                        error: parse_optional_custom_error(&stream)?,
                     },
                 )),
                 "close" => ConstraintToken::Close(Context::new(
@@ -248,6 +261,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                     span,
                     ConstraintAddress {
                         address: stream.parse()?,
+                        error: parse_optional_custom_error(&stream)?,
                     },
                 )),
                 _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
@@ -256,6 +270,15 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
     };
 
     Ok(c)
+}
+
+fn parse_optional_custom_error(stream: &ParseStream) -> ParseResult<Option<Expr>> {
+    if stream.peek(Token![@]) {
+        stream.parse::<Token![@]>()?;
+        stream.parse().map(Some)
+    } else {
+        Ok(None)
+    }
 }
 
 #[derive(Default)]
@@ -330,7 +353,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 }
                 None => self
                     .mutable
-                    .replace(Context::new(i.span(), ConstraintMut {})),
+                    .replace(Context::new(i.span(), ConstraintMut { error: None })),
             };
             // Rent exempt if not explicitly skipped.
             if self.rent_exempt.is_none() {
@@ -349,7 +372,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             if self.signer.is_none() && self.seeds.is_none() && self.associated_token_mint.is_none()
             {
                 self.signer
-                    .replace(Context::new(i.span(), ConstraintSigner {}));
+                    .replace(Context::new(i.span(), ConstraintSigner { error: None }));
             }
         }
 
@@ -364,7 +387,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 }
                 None => self
                     .mutable
-                    .replace(Context::new(z.span(), ConstraintMut {})),
+                    .replace(Context::new(z.span(), ConstraintMut { error: None })),
             };
             // Rent exempt if not explicitly skipped.
             if self.rent_exempt.is_none() {
@@ -515,7 +538,8 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             _ => None,
         };
         Ok(ConstraintGroup {
-            init: init.as_ref().map(|_| Ok(ConstraintInitGroup {
+            init: init.as_ref().map(|i| Ok(ConstraintInitGroup {
+            if_needed: i.if_needed,
                 seeds: seeds.clone(),
                 payer: into_inner!(payer.clone()).map(|a| a.target),
                 space: space.clone().map(|s| s.space.clone()),
