@@ -13,7 +13,7 @@ incremented for features.
 
 ### Features
 
-* lang: Add `SystemAccount<'info>` account type for generic wallet addresses or accounts owned by the system program ([#953](https://github.com/project-serum/anchor/pull/953))
+* lang: Add `SystemAccount<'info>` account type for generic wallet addresses or accounts owned by the system program ([#954](https://github.com/project-serum/anchor/pull/954))
 
 ### Fixes
 
