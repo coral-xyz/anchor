@@ -652,8 +652,8 @@ describe("misc", () => {
       accounts: {
         token: associatedToken,
         mint: mint.publicKey,
-        wallet: program.provider.wallet.publicKey
-      }
+        wallet: program.provider.wallet.publicKey,
+      },
     });
 
     await assert.rejects(
@@ -662,8 +662,8 @@ describe("misc", () => {
           accounts: {
             token: associatedToken,
             mint: mint.publicKey,
-            wallet: anchor.web3.Keypair.generate().publicKey
-          }
+            wallet: anchor.web3.Keypair.generate().publicKey,
+          },
         });
       },
       (err) => {
@@ -772,32 +772,61 @@ describe("misc", () => {
   });
 
   it("Can use pdas with empty seeds", async () => {
-    const [pda, bump] = await PublicKey.findProgramAddress([], program.programId);
+    const [pda, bump] = await PublicKey.findProgramAddress(
+      [],
+      program.programId
+    );
 
     await program.rpc.testInitWithEmptySeeds({
       accounts: {
         pda: pda,
         authority: program.provider.wallet.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId
-      }
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
     });
     await program.rpc.testEmptySeedsConstraint({
       accounts: {
-        pda: pda
-      }
+        pda: pda,
+      },
     });
 
-    const [pda2, bump2] = await PublicKey.findProgramAddress(["non-empty"], program.programId);
+    const [pda2, bump2] = await PublicKey.findProgramAddress(
+      ["non-empty"],
+      program.programId
+    );
     await assert.rejects(
       program.rpc.testEmptySeedsConstraint({
         accounts: {
-          pda: pda2
-        }
+          pda: pda2,
+        },
       }),
       (err) => {
         assert.equal(err.code, 146);
         return true;
       }
+    );
+  });
+
+  it("Should include BASE const in IDL", async () => {
+    assert(
+      miscIdl.constants.find(
+        (c) => c.name === "BASE" && c.ty === "u128" && c.value === "1_000_000"
+      ) !== undefined
+    );
+  });
+
+  it("Should include DECIMALS const in IDL", async () => {
+    assert(
+      miscIdl.constants.find(
+        (c) => c.name === "DECIMALS" && c.ty === "u8" && c.value === "6"
+      ) !== undefined
+    );
+  });
+
+  it("Should not include DECIMALS const in IDL", async () => {
+    assert.equal(
+      miscIdl.constants.find((c) => c.name === "NO_IDL"),
+      undefined
     );
   });
 });
