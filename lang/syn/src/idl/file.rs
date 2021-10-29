@@ -225,16 +225,10 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Option<Idl>> {
 
     let constants = parse_consts(&ctx)
         .iter()
-        .map(|c: &&syn::ItemConst| {
-            let mut tts = proc_macro2::TokenStream::new();
-            c.ty.to_tokens(&mut tts);
-            let mut vts = proc_macro2::TokenStream::new();
-            c.expr.to_tokens(&mut vts);
-            IdlConst {
-                name: c.ident.to_string(),
-                ty: tts.to_string().parse().unwrap(),
-                value: vts.to_string().parse().unwrap(),
-            }
+        .map(|c: &&syn::ItemConst| IdlConst {
+            name: c.ident.to_string(),
+            ty: c.ty.to_token_stream().to_string().parse().unwrap(),
+            value: c.expr.to_token_stream().to_string().parse().unwrap(),
         })
         .collect::<Vec<IdlConst>>();
 
