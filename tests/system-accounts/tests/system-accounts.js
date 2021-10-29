@@ -22,31 +22,32 @@ describe('system_accounts', () => {
 
   it('Emits an AccountNotSystemOwned error', async () => {
     const mint = await splToken.Token.createMint(
-      connection,
-      wallet,
-      wallet.publicKey,
+      program.provider.connection,
+      authority,
+      authority.publicKey,
       null,
       9,
       splToken.TOKEN_PROGRAM_ID,
     );
 
-    const tokenAccount = await mint.getOrCreateAssociatedAccountInfo(
+    const tokenAccount = await mint.createAssociatedTokenAccount(
       wallet.publicKey
     );
 
     await mint.mintTo(
-      tokenAccount.address,
-      wallet.publicKey,
+      tokenAccount,
+      authority.publicKey,
       [],
-      1000000000,
+      1 * anchor.web3.LAMPORTS_PER_SOL,
     );
 
     try {
       await program.rpc.initialize({
         accounts: {
           authority: authority.publicKey,
-          wallet: tokenAccount.address
-        }
+          wallet: tokenAccount
+        },
+        signers: [authority]
       })
       assert.ok(false);
     } catch (err) {

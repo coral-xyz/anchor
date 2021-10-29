@@ -1,5 +1,5 @@
 [package]
-name = "system_accounts"
+name = "system-accounts"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2018"

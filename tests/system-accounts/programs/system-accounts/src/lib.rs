@@ -14,7 +14,5 @@ mod system_accounts {
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     pub authority: Signer<'info>,
-
-    #[account(constraint = authority.key() != wallet.key())]
     pub wallet: SystemAccount<'info>,
 }
