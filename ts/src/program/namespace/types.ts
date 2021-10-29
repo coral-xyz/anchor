@@ -37,12 +37,22 @@ export type AllAccounts<IDL extends Idl> = IDL["accounts"] extends undefined
   ? IdlTypeDef
   : NonNullable<IDL["accounts"]>[number];
 
-/**
- * Returns a type of instruction name to the IdlInstruction.
- */
-export type AccountMap<I extends IdlTypeDef> = {
-  [K in I["name"]]: I & { name: K };
+type UncapitalizeKeys<T extends object> = Uncapitalize<keyof T & string>;
+
+type UncapitalizeObjectKeys<T extends object> = {
+  [key in UncapitalizeKeys<T>]: Capitalize<key> extends keyof T
+    ? T[Capitalize<key>]
+    : never;
 };
+
+/**
+ * Returns a type of account name to the IdlTypeDef of the account.
+ */
+export type AccountMap<I extends IdlTypeDef> = UncapitalizeObjectKeys<
+  {
+    [K in I["name"]]: I & { name: K };
+  }
+>;
 
 /**
  * Returns a type of instruction name to the IdlInstruction.
