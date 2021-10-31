@@ -261,7 +261,6 @@ export class Program<IDL extends Idl = Idl> {
     idl: RawIdl | Idl,
     programId: Address,
     provider?: Provider,
-    raw?: boolean
   ) {
     programId = translateAddress(programId);
 
