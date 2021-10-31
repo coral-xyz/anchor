@@ -260,7 +260,7 @@ export class Program<IDL extends Idl = Idl> {
   public constructor(
     idl: RawIdl | Idl,
     programId: Address,
-    provider?: Provider,
+    provider?: Provider
   ) {
     programId = translateAddress(programId);
 
