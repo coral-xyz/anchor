@@ -379,9 +379,21 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
                     .map(|f: &syn::Field| {
                         let mut tts = proc_macro2::TokenStream::new();
                         f.ty.to_tokens(&mut tts);
+                        // Handle array sizes that are constants
+                        let mut tts_string = tts.to_string();
+                        if tts_string.starts_with('[') {
+                            for constant in ctx.consts() {
+                                if constant.ty.to_token_stream().to_string() == "usize" {
+                                    tts_string = tts_string.replace(
+                                        &constant.ident.to_string(),
+                                        &constant.expr.to_token_stream().to_string(),
+                                    );
+                                }
+                            }
+                        }
                         Ok(IdlField {
                             name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
-                            ty: tts.to_string().parse()?,
+                            ty: tts_string.parse()?,
                         })
                     })
                     .collect::<Result<Vec<IdlField>>>(),
