@@ -24,13 +24,11 @@ pub fn ret<'a, 'b, 'c, 'info>(
     data: Vec<u8>,
 ) -> ProgramResult {
     let instruction = Instruction {
-        program_id: *ctx.program.key,
+        program_id: solana_program::pubkey::Pubkey::new_unique(), // TODO[paulx]: replace with correct pubkey, should this be the pubkey of the shmem program?
         accounts: vec![AccountMeta::new(*ctx.accounts.buffer.key, false)],
         data,
     };
-    let mut accounts = vec![ctx.accounts.buffer];
-    accounts.push(ctx.program.clone());
-    program::invoke(&instruction, &accounts)
+    program::invoke(&instruction, &[ctx.accounts.buffer])
 }
 
 #[derive(Accounts)]
