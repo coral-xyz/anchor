@@ -837,10 +837,7 @@ describe("misc", () => {
   });
 
   it("Can use multidimensional array", async () => {
-    const array2d = [
-      [99, ...new Array(9).fill(0)],
-      ...new Array(9).fill(new Array(10).fill(0)),
-    ];
+    const array2d = new Array(10).fill(new Array(10).fill(99));
     const data = anchor.web3.Keypair.generate();
     const tx = await program.rpc.testMultidimensionalArray(array2d, {
       accounts: {
