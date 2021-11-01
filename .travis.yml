@@ -60,7 +60,6 @@ jobs:
         - pushd tests/multisig && anchor test && popd
         - pushd tests/interface && anchor test && popd
         - pushd tests/lockup && anchor test && popd
-        - pushd tests/permissioned-markets/deps/serum-dex/dex && cargo build-bpf && cd ../../../ && anchor test && popd
     - <<: *tests
       name: Runs the e2e tests 2
       script:
