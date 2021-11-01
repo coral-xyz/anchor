@@ -128,7 +128,7 @@ pub mod misc {
         _accounts: &[AccountInfo<'info>],
         _data: &[u8],
     ) -> ProgramResult {
-        Err(ProgramError::Custom(1235))
+        Err(ProgramError::Custom(1234))
     }
 
     pub fn test_init(ctx: Context<TestInit>) -> ProgramResult {
