@@ -128,7 +128,7 @@ pub mod misc {
         _accounts: &[AccountInfo<'info>],
         _data: &[u8],
     ) -> ProgramResult {
-        Err(ProgramError::Custom(1234))
+        Err(ProgramError::Custom(1235))
     }
 
     pub fn test_init(ctx: Context<TestInit>) -> ProgramResult {
@@ -186,6 +186,14 @@ pub mod misc {
     }
 
     pub fn test_init_if_needed(ctx: Context<TestInitIfNeeded>, data: u16) -> ProgramResult {
+        ctx.accounts.data.data = data;
+        Ok(())
+    }
+
+    pub fn test_multidimensional_array(
+        ctx: Context<TestMultidimensionalArray>,
+        data: [[u8; 10]; 10],
+    ) -> ProgramResult {
         ctx.accounts.data.data = data;
         Ok(())
     }

@@ -735,11 +735,12 @@ describe("misc", () => {
     ]);
     // Call for multiple kinds of .all.
     const allAccounts = await program.account.dataWithFilter.all();
-    const allAccountsFilteredByBuffer = await program.account.dataWithFilter.all(
-      program.provider.wallet.publicKey.toBuffer()
-    );
-    const allAccountsFilteredByProgramFilters1 = await program.account.dataWithFilter.all(
-      [
+    const allAccountsFilteredByBuffer =
+      await program.account.dataWithFilter.all(
+        program.provider.wallet.publicKey.toBuffer()
+      );
+    const allAccountsFilteredByProgramFilters1 =
+      await program.account.dataWithFilter.all([
         {
           memcmp: {
             offset: 8,
@@ -747,10 +748,9 @@ describe("misc", () => {
           },
         },
         { memcmp: { offset: 40, bytes: filterable1.toBase58() } },
-      ]
-    );
-    const allAccountsFilteredByProgramFilters2 = await program.account.dataWithFilter.all(
-      [
+      ]);
+    const allAccountsFilteredByProgramFilters2 =
+      await program.account.dataWithFilter.all([
         {
           memcmp: {
             offset: 8,
@@ -758,8 +758,7 @@ describe("misc", () => {
           },
         },
         { memcmp: { offset: 40, bytes: filterable2.toBase58() } },
-      ]
-    );
+      ]);
     // Without filters there should be 4 accounts.
     assert.equal(allAccounts.length, 4);
     // Filtering by main wallet there should be 3 accounts.
@@ -834,5 +833,27 @@ describe("misc", () => {
     });
     const account = await program.account.dataU16.fetch(ifNeededAcc.publicKey);
     assert.ok(account.data, 3);
+  });
+
+  it.only("Can use multidimensional array", async () => {
+    const array2d = [
+      [99, ...new Array(9).fill(0)],
+      ...new Array(9).fill(new Array(10).fill(0)),
+    ];
+    const data = anchor.web3.Keypair.generate();
+    const tx = await program.rpc.testMultidimensionalArray(array2d, {
+      accounts: {
+        data: data.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [data],
+      instructions: [
+        await program.account.dataMultidimensionalArray.createInstruction(data),
+      ],
+    });
+    const dataAccount = await program.account.dataMultidimensionalArray.fetch(
+      data.publicKey
+    );
+    assert.deepStrictEqual(dataAccount.data, array2d);
   });
 });
