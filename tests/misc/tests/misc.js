@@ -735,12 +735,11 @@ describe("misc", () => {
     ]);
     // Call for multiple kinds of .all.
     const allAccounts = await program.account.dataWithFilter.all();
-    const allAccountsFilteredByBuffer =
-      await program.account.dataWithFilter.all(
-        program.provider.wallet.publicKey.toBuffer()
-      );
-    const allAccountsFilteredByProgramFilters1 =
-      await program.account.dataWithFilter.all([
+    const allAccountsFilteredByBuffer = await program.account.dataWithFilter.all(
+      program.provider.wallet.publicKey.toBuffer()
+    );
+    const allAccountsFilteredByProgramFilters1 = await program.account.dataWithFilter.all(
+      [
         {
           memcmp: {
             offset: 8,
@@ -748,9 +747,10 @@ describe("misc", () => {
           },
         },
         { memcmp: { offset: 40, bytes: filterable1.toBase58() } },
-      ]);
-    const allAccountsFilteredByProgramFilters2 =
-      await program.account.dataWithFilter.all([
+      ]
+    );
+    const allAccountsFilteredByProgramFilters2 = await program.account.dataWithFilter.all(
+      [
         {
           memcmp: {
             offset: 8,
@@ -758,7 +758,8 @@ describe("misc", () => {
           },
         },
         { memcmp: { offset: 40, bytes: filterable2.toBase58() } },
-      ]);
+      ]
+    );
     // Without filters there should be 4 accounts.
     assert.equal(allAccounts.length, 4);
     // Filtering by main wallet there should be 3 accounts.
