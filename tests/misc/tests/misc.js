@@ -836,7 +836,7 @@ describe("misc", () => {
     assert.ok(account.data, 3);
   });
 
-  it.only("Can use multidimensional array", async () => {
+  it("Can use multidimensional array", async () => {
     const array2d = [
       [99, ...new Array(9).fill(0)],
       ...new Array(9).fill(new Array(10).fill(0)),
