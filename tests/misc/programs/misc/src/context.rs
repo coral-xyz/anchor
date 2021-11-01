@@ -252,3 +252,8 @@ pub struct TestInitIfNeeded<'info> {
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
+
+#[derive(Accounts)]
+pub struct TestConstArraySize<'info> {
+    pub data: Account<'info, DataConstArraySize>,
+}

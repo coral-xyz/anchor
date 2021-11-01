@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 
+pub const MAX_SIZE: usize = 10;
+
 #[account]
 pub struct Data {
     pub udata: u128,
@@ -35,4 +37,9 @@ pub struct DataZeroCopy {
 pub struct DataWithFilter {
     pub authority: Pubkey,
     pub filterable: Pubkey,
+}
+
+#[account]
+pub struct DataConstArraySize {
+    pub data: [u8; MAX_SIZE],
 }
