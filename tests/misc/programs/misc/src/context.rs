@@ -255,5 +255,6 @@ pub struct TestInitIfNeeded<'info> {
 
 #[derive(Accounts)]
 pub struct TestConstArraySize<'info> {
+    #[account(zero)]
     pub data: Account<'info, DataConstArraySize>,
 }
