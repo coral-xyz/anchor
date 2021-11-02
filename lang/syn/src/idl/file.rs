@@ -388,6 +388,7 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
                                         &constant.ident.to_string(),
                                         &constant.expr.to_token_stream().to_string(),
                                     );
+                                    break;
                                 }
                             }
                         }
