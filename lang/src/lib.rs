@@ -351,12 +351,13 @@ pub mod __private {
 #[macro_export]
 macro_rules! require {
     ($invariant:expr, $error:tt $(,)?) => {
-        if !($invariant) {
-            return Err(crate::ErrorCode::$error.into());
-        }
+        require!(crate::ErrorCode::$error);
     };
     ($invariant:expr, $error:expr $(,)?) => {
         if !($invariant) {
+            msg!("Invariant violation");
+            msg!(&*format!("{:?}", $error));
+            msg!("{}", $error);
             return Err($error.into());
         }
     };
