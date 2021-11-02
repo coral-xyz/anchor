@@ -40,6 +40,11 @@ pub struct DataWithFilter {
 }
 
 #[account]
+pub struct DataMultidimensionalArray {
+    pub data: [[u8; 10]; 10],
+}
+
+#[account]
 pub struct DataConstArraySize {
     pub data: [u8; MAX_SIZE],
 }
