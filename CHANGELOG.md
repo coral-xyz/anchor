@@ -11,9 +11,14 @@ incremented for features.
 
 ## [Unreleased]
 
+### Features
+
+* lang: Add `SystemAccount<'info>` account type for generic wallet addresses or accounts owned by the system program ([#954](https://github.com/project-serum/anchor/pull/954))
+
 ### Fixes
 
 * cli: fix dns in NODE_OPTIONS ([#928](https://github.com/project-serum/anchor/pull/928)).
+* cli: output TypeScript IDL in `idl parse` subcommand ([#941](https://github.com/project-serum/anchor/pull/941)).
 
 ## [0.18.0] - 2021-10-24
 
