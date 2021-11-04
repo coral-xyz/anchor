@@ -409,27 +409,25 @@ impl<'a> RequestBuilder<'a> {
 
     pub fn instructions(&self) -> Result<Vec<Instruction>, ClientError> {
         let mut accounts = match self.namespace {
-            RequestNamespace::State { new } => {
-                match new {
-                    false => vec![AccountMeta::new(
+            RequestNamespace::State { new } => match new {
+                false => vec![AccountMeta::new(
+                    anchor_lang::__private::state::address(&self.program_id),
+                    false,
+                )],
+                true => vec![
+                    AccountMeta::new_readonly(self.payer.pubkey(), true),
+                    AccountMeta::new(
                         anchor_lang::__private::state::address(&self.program_id),
                         false,
-                    )],
-                    true => vec![
-                        AccountMeta::new_readonly(self.payer.pubkey(), true),
-                        AccountMeta::new(
-                            anchor_lang::__private::state::address(&self.program_id),
-                            false,
-                        ),
-                        AccountMeta::new_readonly(
-                            Pubkey::find_program_address(&[], &self.program_id).0,
-                            false,
-                        ),
-                        AccountMeta::new_readonly(system_program::ID, false),
-                        AccountMeta::new_readonly(self.program_id, false),
-                    ],
-                }
-            }
+                    ),
+                    AccountMeta::new_readonly(
+                        Pubkey::find_program_address(&[], &self.program_id).0,
+                        false,
+                    ),
+                    AccountMeta::new_readonly(system_program::ID, false),
+                    AccountMeta::new_readonly(self.program_id, false),
+                ],
+            },
             _ => Vec::new(),
         };
         accounts.extend_from_slice(&self.accounts);
