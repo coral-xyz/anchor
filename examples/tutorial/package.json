@@ -1,0 +1,10 @@
+{
+  "name": "anchor-examples",
+  "workspaces": [
+    "basic-0",
+    "basic-1",
+    "basic-2",
+    "basic-3",
+    "basic-4"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "anchor-tests",
+  "workspaces": [
+    "cashiers-check",
+    "cfo",
+    "chat",
+    "composite",
+    "errors",
+    "escrow",
+    "events",
+    "ido-pool",
+    "interface",
+    "lockup",
+    "misc",
+    "multisig",
+    "permissioned-markets",
+    "pyth",
+    "spl",
+    "swap",
+    "system-accounts",
+    "sysvars",
+    "tictactoe",
+    "typescript",
+    "zero-copy"
+  ]
+}
