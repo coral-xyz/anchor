@@ -1,5 +1,5 @@
 {
-  "name": "chat",
+  "name": "multisig",
   "version": "0.18.0",
   "license": "(MIT OR Apache-2.0)",
   "homepage": "https://github.com/project-serum/anchor#readme",
@@ -14,7 +14,9 @@
     "node": ">=11"
   },
   "dependencies": {
-    "@project-serum/anchor": "^0.18.0",
+    "@project-serum/anchor": "^0.18.0"
+  },
+  "devDependencies": {
     "mocha": "^9.1.3"
   }
 }

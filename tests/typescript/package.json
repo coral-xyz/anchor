@@ -1,5 +1,5 @@
 {
-  "name": "typescript",
+  "name": "anchor-typescript-example",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -13,7 +13,9 @@
   "license": "ISC",
   "dependencies": {
     "@project-serum/anchor": "^0.18.0",
-    "@types/node": "^14.14.37",
+    "@types/node": "^14.14.37"
+  },
+  "devDependencies": {
     "ts-mocha": "^8.0.0"
   }
 }

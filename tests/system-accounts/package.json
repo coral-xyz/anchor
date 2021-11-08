@@ -15,7 +15,9 @@
   },
   "dependencies": {
     "@project-serum/anchor": "^0.18.0",
-    "@solana/spl-token": "^0.1.8",
+    "@solana/spl-token": "^0.1.8"
+  },
+  "devDependencies": {
     "mocha": "^9.1.3"
   }
 }
