@@ -15,7 +15,7 @@
     "multisig",
     "permissioned-markets",
     "pyth",
-    "spl",
+    "spl/token-proxy",
     "swap",
     "system-accounts",
     "sysvars",

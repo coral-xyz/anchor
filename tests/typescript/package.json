@@ -7,6 +7,9 @@
     "test": "tests"
   },
   "license": "(MIT OR Apache-2.0)",
+  "scripts": {
+    "test": "anchor test"
+  },
   "dependencies": {
     "@project-serum/anchor": "^0.18.0",
     "@types/node": "^14.14.37"
