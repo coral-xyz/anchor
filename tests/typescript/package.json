@@ -12,6 +12,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@types/node": "^14.14.37"
+    "@project-serum/anchor": "^0.18.0",
+    "@types/node": "^14.14.37",
+    "ts-mocha": "^8.0.0"
   }
 }
