@@ -45,9 +45,6 @@ On Linux systems you may need to install additional dependencies if `cargo insta
 sudo apt-get update && sudo apt-get upgrade && sudo apt-get install -y pkg-config build-essential libudev-dev
 ```
 
-Make sure your `NODE_PATH` is set properly so that globally installed modules
-can be resolved.
-
 Now verify the CLI is installed properly.
 
 ```bash
