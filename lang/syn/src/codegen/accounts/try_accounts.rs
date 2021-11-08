@@ -3,6 +3,7 @@ use crate::{AccountField, AccountsStruct};
 use quote::quote;
 use syn::Expr;
 
+
 // Generates the `Accounts` trait implementation.
 pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     let name = &accs.ident;
@@ -134,9 +135,37 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         })
         .collect();
 
+    let no_dup_checks = {
+        let mut checks = vec![];
+        let mut checked_fields = Vec::<&AccountField>::with_capacity(accs.fields.len());
+        for field in accs.fields.iter() {
+            for previous_field in checked_fields.iter().filter(|f| {
+                if let Some(my_dup) = &field.constraints().dup {
+                    *f.ident() != my_dup.dup_field
+                        || (f.constraints().dup.is_some() && f.constraints().dup.as_ref().unwrap().dup_field
+                            != field.constraints().dup.as_ref().unwrap().dup_field)
+                } else {
+                    true
+                }
+            }) {
+                let previous_field_ident = previous_field.ident();
+                let my_ident = field.ident();
+                checks.push(quote! {
+                    if #my_ident.to_account_info().key == #previous_field_ident.to_account_info().key {
+                        return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
+                    }
+                });
+            }
+
+            checked_fields.push(field);
+        }
+        checks
+    };
+
     quote! {
         #(#init_fields)*
         #(#access_checks)*
+        {use anchor_lang::ToAccountInfo; #(#no_dup_checks)*}
     }
 }
 

@@ -45,6 +45,7 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
         init,
         zeroed,
         mutable,
+        dup,
         signer,
         has_one,
         literal,
@@ -76,6 +77,11 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
     if let Some(c) = mutable {
         constraints.push(Constraint::Mut(c));
     }
+
+    if let Some(c) = dup {
+        constraints.push(Constraint::Dup(c));
+    }
+
     if let Some(c) = signer {
         constraints.push(Constraint::Signer(c));
     }
@@ -108,6 +114,7 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::Init(c) => generate_constraint_init(f, c),
         Constraint::Zeroed(c) => generate_constraint_zeroed(f, c),
         Constraint::Mut(c) => generate_constraint_mut(f, c),
+        Constraint::Dup(c) => generate_constraint_dup(f, c),
         Constraint::HasOne(c) => generate_constraint_has_one(f, c),
         Constraint::Signer(c) => generate_constraint_signer(f, c),
         Constraint::Literal(c) => generate_constraint_literal(c),
@@ -180,6 +187,16 @@ pub fn generate_constraint_mut(f: &Field, c: &ConstraintMut) -> proc_macro2::Tok
     quote! {
         if !#ident.to_account_info().is_writable {
             return Err(#error);
+        }
+    }
+}
+
+pub fn generate_constraint_dup(f: &Field, c: &ConstraintDup) -> proc_macro2::TokenStream {
+    let me = &f.ident;
+    let dup_field = &c.dup_field;
+    quote! {
+        if !(#me.to_account_info().key == #dup_field.to_account_info().key) {
+            return Err(anchor_lang::__private::ErrorCode::ConstraintDup.into())
         }
     }
 }

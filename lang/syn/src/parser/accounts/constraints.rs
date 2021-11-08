@@ -189,6 +189,12 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                 .join(stream.span())
                 .unwrap_or_else(|| ident.span());
             match kw.as_str() {
+                "dup" => ConstraintToken::Dup(Context::new(
+                    span,
+                    ConstraintDup {
+                        dup_field: stream.parse()?,
+                    },
+                )),
                 "has_one" => ConstraintToken::HasOne(Context::new(
                     span,
                     ConstraintHasOne {
@@ -287,6 +293,7 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub init: Option<Context<ConstraintInit>>,
     pub zeroed: Option<Context<ConstraintZeroed>>,
     pub mutable: Option<Context<ConstraintMut>>,
+    pub dup: Option<Context<ConstraintDup>>,
     pub signer: Option<Context<ConstraintSigner>>,
     pub has_one: Vec<Context<ConstraintHasOne>>,
     pub literal: Vec<Context<ConstraintLiteral>>,
@@ -317,6 +324,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             init: None,
             zeroed: None,
             mutable: None,
+            dup: None,
             signer: None,
             has_one: Vec::new(),
             literal: Vec::new(),
@@ -473,6 +481,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             init,
             zeroed,
             mutable,
+            dup,
             signer,
             has_one,
             literal,
@@ -579,6 +588,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             })).transpose()?,
             zeroed: into_inner!(zeroed),
             mutable: into_inner!(mutable),
+            dup: into_inner!(dup),
             signer: into_inner!(signer),
             has_one: into_inner_vec!(has_one),
             literal: into_inner_vec!(literal),
@@ -599,6 +609,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::Init(c) => self.add_init(c),
             ConstraintToken::Zeroed(c) => self.add_zeroed(c),
             ConstraintToken::Mut(c) => self.add_mut(c),
+            ConstraintToken::Dup(c) => self.add_dup(c),
             ConstraintToken::Signer(c) => self.add_signer(c),
             ConstraintToken::HasOne(c) => self.add_has_one(c),
             ConstraintToken::Literal(c) => self.add_literal(c),
@@ -815,6 +826,14 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             return Err(ParseError::new(c.span(), "mut already provided"));
         }
         self.mutable.replace(c);
+        Ok(())
+    }
+
+    fn add_dup(&mut self, c: Context<ConstraintDup>) -> ParseResult<()> {
+        if self.dup.is_some() {
+            return Err(ParseError::new(c.span(), "dup already provided"));
+        }
+        self.dup.replace(c);
         Ok(())
     }
 

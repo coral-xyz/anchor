@@ -154,6 +154,22 @@ pub enum AccountField {
     CompositeField(CompositeField),
 }
 
+impl AccountField {
+    pub fn ident(&self) -> &Ident {
+        match self {
+            AccountField::Field(f) => &f.ident,
+            AccountField::CompositeField(cf) => &cf.ident,
+        }
+    }
+
+    pub fn constraints(&self) -> &ConstraintGroup {
+        match self {
+            AccountField::Field(f) => &f.constraints,
+            AccountField::CompositeField(cf) => &cf.constraints,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Field {
     pub ident: Ident,
@@ -510,6 +526,7 @@ pub struct ConstraintGroup {
     init: Option<ConstraintInitGroup>,
     zeroed: Option<ConstraintZeroed>,
     mutable: Option<ConstraintMut>,
+    dup: Option<ConstraintDup>,
     signer: Option<ConstraintSigner>,
     owner: Option<ConstraintOwner>,
     rent_exempt: Option<ConstraintRentExempt>,
@@ -540,6 +557,10 @@ impl ConstraintGroup {
     pub fn is_close(&self) -> bool {
         self.close.is_some()
     }
+
+    pub fn is_dup(&self) -> bool {
+        self.dup.is_some()
+    }
 }
 
 // A single account constraint *after* merging all tokens into a well formed
@@ -551,6 +572,7 @@ pub enum Constraint {
     Init(ConstraintInitGroup),
     Zeroed(ConstraintZeroed),
     Mut(ConstraintMut),
+    Dup(ConstraintDup),
     Signer(ConstraintSigner),
     HasOne(ConstraintHasOne),
     Literal(ConstraintLiteral),
@@ -572,6 +594,7 @@ pub enum ConstraintToken {
     Init(Context<ConstraintInit>),
     Zeroed(Context<ConstraintZeroed>),
     Mut(Context<ConstraintMut>),
+    Dup(Context<ConstraintDup>),
     Signer(Context<ConstraintSigner>),
     HasOne(Context<ConstraintHasOne>),
     Literal(Context<ConstraintLiteral>),
@@ -599,6 +622,11 @@ impl Parse for ConstraintToken {
     fn parse(stream: ParseStream) -> ParseResult<Self> {
         accounts_parser::constraints::parse_token(stream)
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintDup {
+    pub dup_field: Ident,
 }
 
 #[derive(Debug, Clone)]

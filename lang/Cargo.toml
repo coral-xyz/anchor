@@ -8,8 +8,9 @@ license = "Apache-2.0"
 description = "Solana Sealevel eDSL"
 
 [features]
+default = ["dup"]
 derive = []
-default = []
+dup = []
 anchor-debug = [
     "anchor-attribute-access-control/anchor-debug",
     "anchor-attribute-account/anchor-debug",
