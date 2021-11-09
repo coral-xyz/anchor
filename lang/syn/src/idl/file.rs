@@ -382,15 +382,7 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
                         // Handle array sizes that are constants
                         let mut tts_string = tts.to_string();
                         if tts_string.starts_with('[') {
-                            for constant in ctx.consts() {
-                                if constant.ty.to_token_stream().to_string() == "usize" {
-                                    tts_string = tts_string.replace(
-                                        &constant.ident.to_string(),
-                                        &constant.expr.to_token_stream().to_string(),
-                                    );
-                                    break;
-                                }
-                            }
+                            tts_string = resolve_variable_array_length(ctx, tts_string);
                         }
                         Ok(IdlField {
                             name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
@@ -443,6 +435,37 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
             })
         }))
         .collect()
+}
+
+// Replace variable array lengths with values
+fn resolve_variable_array_length(ctx: &CrateContext, tts_string: String) -> String {
+    for constant in ctx.consts() {
+        if constant.ty.to_token_stream().to_string() == "usize" {
+            if tts_string.contains(&constant.ident.to_string()) {
+                // Check for the existence of consts existing elsewhere in the
+                // crate which have the same name, are usize, and have a
+                // different value. We can't know which was intended for the
+                // array size from ctx.
+                if ctx
+                    .consts()
+                    .find(|c| {
+                        c != &constant
+                            && c.ident == constant.ident
+                            && c.ty == constant.ty
+                            && c.expr != constant.expr
+                    })
+                    .is_some()
+                {
+                    panic!("Crate wide unique name required for array size const.");
+                }
+                return tts_string.replace(
+                    &constant.ident.to_string(),
+                    &constant.expr.to_token_stream().to_string(),
+                );
+            }
+        }
+    }
+    tts_string
 }
 
 fn to_idl_type(f: &syn::Field) -> IdlType {
