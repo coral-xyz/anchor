@@ -1,6 +1,6 @@
 {
   "name": "typescript-example",
-  "version": "1.0.0",
+  "version": "0.18.0",
   "description": "",
   "main": "index.js",
   "directories": {
@@ -11,7 +11,7 @@
     "test": "anchor test"
   },
   "dependencies": {
-    "@project-serum/anchor": "^0.18.0",
+    "@project-serum/anchor": "^0.18.0"
   },
   "devDependencies": {
     "@types/node": "^14.14.37",
