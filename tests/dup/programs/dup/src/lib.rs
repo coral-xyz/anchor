@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 #[program]
-mod system_accounts {
+mod dup {
     use super::*;
 
     pub fn with_dup_constraint(_ctx: Context<WithDupConstraint>) -> ProgramResult {
