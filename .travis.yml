@@ -72,4 +72,4 @@ jobs:
         - pushd tests/escrow && anchor test && popd
         - pushd tests/pyth && anchor test && popd
         - pushd tests/system-accounts && anchor test && popd
-        - pushd examples/tutorial && npm test
+        - pushd examples/tutorial && npm test --workspaces
