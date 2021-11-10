@@ -17,4 +17,3 @@ default = []
 [dependencies]
 anchor-lang = { path = "../../../../lang" }
 anchor-spl = { path = "../../../../spl", features = ["dex"] }
-serum_dex = { path = "../../deps/serum-dex/dex", features = ["no-entrypoint"] }
