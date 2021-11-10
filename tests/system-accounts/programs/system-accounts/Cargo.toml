@@ -1,20 +1,16 @@
 [package]
-name = "permissioned-markets-middleware"
+name = "system-accounts"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2018"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "permissioned_markets_middleware"
+name = "system_accounts"
 
 [features]
 no-entrypoint = []
-no-idl = []
 cpi = ["no-entrypoint"]
-default = []
 
 [dependencies]
 anchor-lang = { path = "../../../../lang" }
-anchor-spl = { path = "../../../../spl" }
-solana-program = "1.8.0"
