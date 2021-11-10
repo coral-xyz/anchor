@@ -35,7 +35,7 @@ cd anchor/examples/tutorial/basic-2
 And install any additional JavaScript dependencies:
 
 ```bash
-npm install
+yarn install
 ```
 
 ## Defining a Program

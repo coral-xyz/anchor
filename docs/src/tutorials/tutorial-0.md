@@ -26,7 +26,7 @@ cd anchor/examples/tutorial/basic-0
 And install any additional JavaScript dependencies:
 
 ```bash
-npm install
+yarn install
 ```
 
 ## Starting a Localnet
