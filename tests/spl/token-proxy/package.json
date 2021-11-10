@@ -15,12 +15,5 @@
   },
   "scripts": {
     "test": "anchor test"
-  },
-  "dependencies": {
-    "@project-serum/anchor": "^0.18.0",
-    "@project-serum/common": "^0.0.1-beta.3"
-  },
-  "devDependencies": {
-    "mocha": "^9.1.3"
   }
 }

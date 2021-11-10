@@ -395,9 +395,9 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool) -> Result
     cfg.scripts.insert(
         "test".to_owned(),
         if javascript {
-            "npx mocha -t 1000000 tests/"
+            "yarn run mocha -t 1000000 tests/"
         } else {
-            "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+            "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
         }
         .to_owned(),
     );

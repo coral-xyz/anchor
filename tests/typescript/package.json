@@ -1,21 +1,19 @@
 {
   "name": "typescript-example",
   "version": "0.18.0",
-  "description": "",
-  "main": "index.js",
-  "directories": {
-    "test": "tests"
-  },
   "license": "(MIT OR Apache-2.0)",
+  "homepage": "https://github.com/project-serum/anchor#readme",
+  "bugs": {
+    "url": "https://github.com/project-serum/anchor/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/project-serum/anchor.git"
+  },
+  "engines": {
+    "node": ">=11"
+  },
   "scripts": {
     "test": "anchor test"
-  },
-  "dependencies": {
-    "@project-serum/anchor": "^0.18.0"
-  },
-  "devDependencies": {
-    "@types/node": "^14.14.37",
-    "ts-mocha": "^8.0.0",
-    "typescript": "^4.4.4"
   }
 }
