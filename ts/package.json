@@ -1,11 +1,19 @@
 {
   "name": "@project-serum/anchor",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "description": "Anchor client",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "license": "(MIT OR Apache-2.0)",
   "types": "dist/cjs/index.d.ts",
+  "homepage": "https://github.com/project-serum/anchor#readme",
+  "bugs": {
+    "url": "https://github.com/project-serum/anchor/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/project-serum/anchor.git"
+  },
   "publishConfig": {
     "access": "public"
   },

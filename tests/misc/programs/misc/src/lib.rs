@@ -184,4 +184,17 @@ pub mod misc {
     pub fn test_empty_seeds_constraint(ctx: Context<TestEmptySeedsConstraint>) -> ProgramResult {
         Ok(())
     }
+
+    pub fn test_init_if_needed(ctx: Context<TestInitIfNeeded>, data: u16) -> ProgramResult {
+        ctx.accounts.data.data = data;
+        Ok(())
+    }
+
+    pub fn test_multidimensional_array(
+        ctx: Context<TestMultidimensionalArray>,
+        data: [[u8; 10]; 10],
+    ) -> ProgramResult {
+        ctx.accounts.data.data = data;
+        Ok(())
+    }
 }

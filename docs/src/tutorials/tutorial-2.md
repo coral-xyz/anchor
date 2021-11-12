@@ -26,10 +26,16 @@ To get started, clone the repo.
 git clone https://github.com/project-serum/anchor
 ```
 
-And change directories to the [example](https://github.com/project-serum/anchor/tree/master/examples/tutorial/basic-2).
+Change directories to the [example](https://github.com/project-serum/anchor/tree/master/examples/tutorial/basic-2).
 
 ```bash
 cd anchor/examples/tutorial/basic-2
+```
+
+And install any additional JavaScript dependencies:
+
+```bash
+yarn install
 ```
 
 ## Defining a Program
@@ -52,11 +58,13 @@ pub struct Increment<'info> {
 }
 ```
 
-Here, several `#[account(..)]` attributes are used.
+Here, a couple `#[account(..)]` attributes are used.
 
 - `mut`: tells the program to persist all changes to the account.
 - `has_one`: enforces the constraint that `Increment.counter.authority == Increment.authority.key`.
-- `signer`: enforces the constraint that the `authority` account **signed** the transaction.
+
+Another new concept here is the `Signer` type. This enforces the constraint that the `authority`
+account **signed** the transaction. However, anchor doesn't fetch the data on that account.
 
 If any of these constraints do not hold, then the `increment` instruction will never be executed.
 This allows us to completely separate account validation from our program's business logic, allowing us
