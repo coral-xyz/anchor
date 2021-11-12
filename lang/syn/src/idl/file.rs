@@ -440,29 +440,25 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
 // Replace variable array lengths with values
 fn resolve_variable_array_length(ctx: &CrateContext, tts_string: String) -> String {
     for constant in ctx.consts() {
-        if constant.ty.to_token_stream().to_string() == "usize" {
-            if tts_string.contains(&constant.ident.to_string()) {
-                // Check for the existence of consts existing elsewhere in the
-                // crate which have the same name, are usize, and have a
-                // different value. We can't know which was intended for the
-                // array size from ctx.
-                if ctx
-                    .consts()
-                    .find(|c| {
-                        c != &constant
-                            && c.ident == constant.ident
-                            && c.ty == constant.ty
-                            && c.expr != constant.expr
-                    })
-                    .is_some()
-                {
-                    panic!("Crate wide unique name required for array size const.");
-                }
-                return tts_string.replace(
-                    &constant.ident.to_string(),
-                    &constant.expr.to_token_stream().to_string(),
-                );
+        if constant.ty.to_token_stream().to_string() == "usize"
+            && tts_string.contains(&constant.ident.to_string())
+        {
+            // Check for the existence of consts existing elsewhere in the
+            // crate which have the same name, are usize, and have a
+            // different value. We can't know which was intended for the
+            // array size from ctx.
+            if ctx.consts().any(|c| {
+                c != constant
+                    && c.ident == constant.ident
+                    && c.ty == constant.ty
+                    && c.expr != constant.expr
+            }) {
+                panic!("Crate wide unique name required for array size const.");
             }
+            return tts_string.replace(
+                &constant.ident.to_string(),
+                &constant.expr.to_token_stream().to_string(),
+            );
         }
     }
     tts_string
