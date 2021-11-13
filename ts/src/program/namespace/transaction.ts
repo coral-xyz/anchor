@@ -18,6 +18,7 @@ export default class TransactionFactory {
       const tx = new Transaction();
       ctx.instructions?.forEach((ix) => tx.add(ix));
       tx.add(ixFn(...args));
+      ctx.postInstructions?.forEach((ix) => tx.add(ix));
       return tx;
     };
 

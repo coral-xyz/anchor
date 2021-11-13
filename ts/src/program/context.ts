@@ -34,6 +34,12 @@ export type Context<A extends Accounts = Accounts> = {
   instructions?: TransactionInstruction[];
 
   /**
+   * Instructions to run *after* a given method. Often this is used, for
+   * example to close accounts after to executing a method.
+   */
+  postInstructions?: TransactionInstruction[];
+
+  /**
    * Commitment parameters to use for a transaction.
    */
   options?: ConfirmOptions;
