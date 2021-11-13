@@ -14,6 +14,24 @@ import {
 import { isBrowser } from "./utils/common";
 
 /**
+ * LocalOpts interface that can be used to custom the local provider.
+ */
+interface LocalOpts {
+  /**
+   * The network cluster url.
+   */
+  url?: string;
+  /**
+   * The default transaction confirmation options.
+   */
+  opts?: ConfirmOptions;
+  /**
+   * The path to the wallet.
+   */
+  walletPath?: string;
+}
+
+/**
  * The network and wallet context used to send transactions paid for and signed
  * by the provider.
  */
@@ -39,18 +57,17 @@ export default class Provider {
   /**
    * Returns a `Provider` with a wallet read from the local filesystem.
    *
-   * @param url  The network cluster url.
-   * @param opts The default transaction confirmation options.
+   * @param LocalOpts Options to custom the local provider.
    *
    * (This api is for Node only.)
    */
-  static local(url?: string, opts?: ConfirmOptions): Provider {
+  static local({ url, opts, walletPath }: LocalOpts = {}): Provider {
     opts = opts ?? Provider.defaultOptions();
     const connection = new Connection(
       url ?? "http://localhost:8899",
       opts.preflightCommitment
     );
-    const wallet = NodeWallet.local();
+    const wallet = NodeWallet.local(walletPath);
     return new Provider(connection, wallet, opts);
   }
 
@@ -228,17 +245,22 @@ export interface Wallet {
 export class NodeWallet implements Wallet {
   constructor(readonly payer: Keypair) {}
 
-  static local(): NodeWallet {
+  /**
+   * @param path The path to the wallet.
+   */
+  static local(path?: string): NodeWallet {
     const process = require("process");
+    path = path || process.env.ANCHOR_WALLET;
     const payer = Keypair.fromSecretKey(
       Buffer.from(
         JSON.parse(
-          require("fs").readFileSync(process.env.ANCHOR_WALLET, {
+          require("fs").readFileSync(path, {
             encoding: "utf-8",
           })
         )
       )
     );
+
     return new NodeWallet(payer);
   }
 
