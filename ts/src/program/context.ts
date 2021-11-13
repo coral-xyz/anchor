@@ -28,14 +28,21 @@ export type Context<A extends Accounts = Accounts> = {
   signers?: Array<Signer>;
 
   /**
+   * @deprecated use preInstructions instead
    * Instructions to run *before* a given method. Often this is used, for
    * example to create accounts prior to executing a method.
    */
   instructions?: TransactionInstruction[];
 
   /**
+   * Instructions to run *before* a given method. Often this is used, for
+   * example to create accounts prior to executing a method.
+   */
+  preInstructions?: TransactionInstruction[];
+
+  /**
    * Instructions to run *after* a given method. Often this is used, for
-   * example to close accounts after to executing a method.
+   * example to close accounts after executing a method.
    */
   postInstructions?: TransactionInstruction[];
 
