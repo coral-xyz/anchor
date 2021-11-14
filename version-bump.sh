@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 if [ $# -eq 0 ]; then
     echo "Usage $0 VERSION"
     exit 1
@@ -14,7 +16,16 @@ case "$(uname)" in
   Darwin*) sedi=(-i "")
 esac
 
-git grep -l $(cat VERSION) -- './*' ':!**/yarn.lock' ':!CHANGELOG.md' ':!Cargo.lock' | xargs sed "${sedi[@]}" -e "s/$(cat VERSION)/$1/g"
+git grep -l $(cat VERSION) -- ':!**/yarn.lock' ':!CHANGELOG.md' ':!Cargo.lock' ':!package.json' | \
+    xargs sed "${sedi[@]}" \
+    -e "s/$(cat VERSION)/$1/g"
+
+# Potential for collisions in package.json files, handle those separately
+# Replace only matching "version": "0.18.0" and "@project-serum/anchor": "0.18.0"
+git grep -l $(cat VERSION) -- '**/package.json' | \
+    xargs sed "${sedi[@]}" \
+    -e "s/@project-serum\/anchor\": \"$(cat VERSION)\"/@project-serum\/anchor\": \"$1\"/g" \
+    -e "s/\"version\": \"$(cat VERSION)\"/\"version\": \"$1\"/g"
 
 # Potential for collisions in Cargo.lock, use cargo update to update it
 cargo update --workspace
