@@ -1125,7 +1125,12 @@ fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
 
 fn extract_idl(file: &str) -> Result<Option<Idl>> {
     let file = shellexpand::tilde(file);
-    anchor_syn::idl::file::parse(&*file)
+    let cargo = Manifest::discover()?.ok_or_else(|| anyhow!("Cargo.toml not found"))?;
+    let version = match &cargo.package {
+        Some(package) => &package.version,
+        None => "0.0.0",
+    };
+    anchor_syn::idl::file::parse(&*file, version.to_string())
 }
 
 fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {

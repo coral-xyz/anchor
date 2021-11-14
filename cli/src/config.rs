@@ -145,8 +145,13 @@ impl WithPath<Config> {
     pub fn read_all_programs(&self) -> Result<Vec<Program>> {
         let mut r = vec![];
         for path in self.get_program_list()? {
-            let idl = anchor_syn::idl::file::parse(path.join("src/lib.rs"))?;
-            let lib_name = Manifest::from_path(&path.join("Cargo.toml"))?.lib_name()?;
+            let cargo = Manifest::from_path(&path.join("Cargo.toml"))?;
+            let lib_name = cargo.lib_name()?;
+            let version = match &cargo.package {
+                Some(package) => &package.version,
+                None => "0.0.0",
+            };
+            let idl = anchor_syn::idl::file::parse(path.join("src/lib.rs"), version.to_string())?;
             r.push(Program {
                 lib_name,
                 path,
