@@ -14,7 +14,9 @@ case "$(uname)" in
   Darwin*) sedi=(-i "")
 esac
 
-git grep -l $(cat VERSION) -- './*' ':!**/yarn.lock' ':!CHANGELOG.md' | xargs sed "${sedi[@]}" -e "s/$(cat VERSION)/$1/g"
+git grep -l $(cat VERSION) -- './*' ':!**/yarn.lock' ':!CHANGELOG.md' ':!Cargo.lock' | xargs sed "${sedi[@]}" -e "s/$(cat VERSION)/$1/g"
+
+# Potential for collisions in Cargo.lock
 
 # Insert version number into CHANGELOG.md
 sed "${sedi[@]}" -e "s/## [Unreleased]/## [Unreleased]\n\n[$1] - $(date '+%Y-%m-%d')/" CHANGELOG.md
