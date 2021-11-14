@@ -31,7 +31,7 @@ git grep -l $(cat VERSION) -- '**/package.json' | \
 cargo update --workspace
 
 # Insert version number into CHANGELOG.md
-sed "${sedi[@]}" -e "s/## [Unreleased]/## [Unreleased]\n\n[$1] - $(date '+%Y-%m-%d')/g" CHANGELOG.md
+sed "${sedi[@]}" -e "s/## \[Unreleased\]/## [Unreleased]\n\n## [$1] - $(date '+%Y-%m-%d')/g" CHANGELOG.md
 
 echo $1 > VERSION
 
