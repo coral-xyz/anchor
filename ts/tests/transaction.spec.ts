@@ -4,8 +4,16 @@ import { Coder } from "../src";
 import { PublicKey, TransactionInstruction } from "@solana/web3.js";
 
 describe("Transaction", () => {
-  const preIx = new TransactionInstruction({ keys: [], programId: PublicKey.default, data: Buffer.from("pre") });
-  const postIx = new TransactionInstruction({ keys: [], programId: PublicKey.default, data: Buffer.from("post") });
+  const preIx = new TransactionInstruction({
+    keys: [],
+    programId: PublicKey.default,
+    data: Buffer.from("pre"),
+  });
+  const postIx = new TransactionInstruction({
+    keys: [],
+    programId: PublicKey.default,
+    data: Buffer.from("post"),
+  });
   const idl = {
     version: "0.0.0",
     name: "basic_0",
@@ -56,8 +64,8 @@ describe("Transaction", () => {
     );
     const txItem = TransactionFactory.build(idl.instructions[0], ixItem);
 
-    expect(() => txItem({ accounts: {}, preInstructions: [preIx], instructions: [preIx] })).toThrow(
-      new Error("instructions is deprecated, use preInstructions")
-    );
+    expect(() =>
+      txItem({ accounts: {}, preInstructions: [preIx], instructions: [preIx] })
+    ).toThrow(new Error("instructions is deprecated, use preInstructions"));
   });
 });

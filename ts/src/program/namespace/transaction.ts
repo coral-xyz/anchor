@@ -17,7 +17,7 @@ export default class TransactionFactory {
       const [, ctx] = splitArgsAndCtx(idlIx, [...args]);
       const tx = new Transaction();
       if (ctx.preInstructions && ctx.instructions) {
-        throw new Error("instructions is deprecated, use preInstructions")
+        throw new Error("instructions is deprecated, use preInstructions");
       }
       ctx.preInstructions?.forEach((ix) => tx.add(ix));
       ctx.instructions?.forEach((ix) => tx.add(ix));
