@@ -21,7 +21,7 @@ git grep -l $(cat VERSION) -- ':!**/yarn.lock' ':!CHANGELOG.md' ':!Cargo.lock' '
     -e "s/$(cat VERSION)/$1/g"
 
 # Potential for collisions in package.json files, handle those separately
-# Replace only matching "version": "0.18.2" and "@project-serum/anchor": "0.18.2"
+# Replace only matching "version": "x.xx.x" and "@project-serum/anchor": "x.xx.x"
 git grep -l $(cat VERSION) -- '**/package.json' | \
     xargs sed "${sedi[@]}" \
     -e "s/@project-serum\/anchor\": \"$(cat VERSION)\"/@project-serum\/anchor\": \"$1\"/g" \
@@ -31,7 +31,7 @@ git grep -l $(cat VERSION) -- '**/package.json' | \
 cargo update --workspace
 
 # Insert version number into CHANGELOG.md
-sed "${sedi[@]}" -e "s/## [Unreleased]/## [Unreleased]\n\n[$1] - $(date '+%Y-%m-%d')/" CHANGELOG.md
+sed "${sedi[@]}" -e "s/## [Unreleased]/## [Unreleased]\n\n[$1] - $(date '+%Y-%m-%d')/g" CHANGELOG.md
 
 echo $1 > VERSION
 
