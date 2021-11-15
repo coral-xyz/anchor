@@ -11,6 +11,9 @@ incremented for features.
 
 ## [Unreleased]
 
+* spl: Remove the `shmem` program from the `spl` crate ([965](https://github.com/project-serum/anchor/pull/965))
+* lang: Remove program `AccountInfo` from accounts list for CPI because it is no longer needed ([965](https://github.com/project-serum/anchor/pull/965))
+
 ### Fixes
 
 lang: Add `deprecated` attribute to `ProgramAccount` ([#1014](https://github.com/project-serum/anchor/pull/1014)).
