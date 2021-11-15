@@ -548,6 +548,10 @@ pub fn build(
     };
     fs::create_dir_all(idl_ts_out.as_ref().unwrap())?;
 
+    if !&cfg.workspace.types.is_empty() {
+        fs::create_dir_all(cfg_parent.join(&cfg.workspace.types))?;
+    };
+
     let solana_version = match solana_version.is_some() {
         true => solana_version,
         false => cfg.solana_version.clone(),
@@ -651,7 +655,7 @@ fn build_cwd(
         Some(p) => std::env::set_current_dir(&p)?,
     };
     match verifiable {
-        false => _build_cwd(idl_out, idl_ts_out, cargo_args),
+        false => _build_cwd(cfg, idl_out, idl_ts_out, cargo_args),
         true => build_cwd_verifiable(cfg, cargo_toml, solana_version, stdout, stderr),
     }
 }
@@ -670,6 +674,9 @@ fn build_cwd_verifiable(
     fs::create_dir_all(workspace_dir.join("target/verifiable"))?;
     fs::create_dir_all(workspace_dir.join("target/idl"))?;
     fs::create_dir_all(workspace_dir.join("target/types"))?;
+    if !&cfg.workspace.types.is_empty() {
+        fs::create_dir_all(workspace_dir.join(&cfg.workspace.types))?;
+    }
 
     let container_name = "anchor-program";
 
@@ -726,6 +733,17 @@ fn build_cwd_verifiable(
         println!("Writing the .ts file");
         let ts_file = workspace_dir.join(format!("target/types/{}.ts", idl.name));
         fs::write(&ts_file, template::idl_ts(&idl)?)?;
+
+        // Copy out the TypeScript type.
+        if !&cfg.workspace.types.is_empty() {
+            fs::copy(
+                ts_file,
+                workspace_dir
+                    .join(&cfg.workspace.types)
+                    .join(idl.name)
+                    .with_extension("ts"),
+            )?;
+        }
     }
     println!("Build success");
 
@@ -890,6 +908,7 @@ fn docker_build(
 }
 
 fn _build_cwd(
+    cfg: &WithPath<Config>,
     idl_out: Option<PathBuf>,
     idl_ts_out: Option<PathBuf>,
     cargo_args: Vec<String>,
@@ -920,9 +939,19 @@ fn _build_cwd(
 
         // Write out the JSON file.
         write_idl(&idl, OutFile::File(out))?;
-
         // Write out the TypeScript type.
-        fs::write(ts_out, template::idl_ts(&idl)?)?;
+        fs::write(&ts_out, template::idl_ts(&idl)?)?;
+        // Copy out the TypeScript type.
+        let cfg_parent = cfg.path().parent().expect("Invalid Anchor.toml");
+        if !&cfg.workspace.types.is_empty() {
+            fs::copy(
+                &ts_out,
+                cfg_parent
+                    .join(&cfg.workspace.types)
+                    .join(&idl.name)
+                    .with_extension("ts"),
+            )?;
+        }
     }
 
     Ok(())

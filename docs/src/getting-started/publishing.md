@@ -33,6 +33,7 @@ An example `Anchor.toml` config looks as follows,
 anchor_version = "0.18.2"
 
 [workspace]
+types = "react-app/src/idl/"
 members = ["programs/multisig"]
 
 [provider]
