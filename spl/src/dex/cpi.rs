@@ -199,6 +199,26 @@ pub fn initialize_market<'info>(
     Ok(())
 }
 
+pub fn prune<'info>(ctx: CpiContext<'_, '_, '_, 'info, Prune<'info>>, limit: u16) -> ProgramResult {
+    let ix = serum_dex::instruction::prune(
+        &ID,
+        ctx.accounts.market.key,
+        ctx.accounts.bids.key,
+        ctx.accounts.asks.key,
+        ctx.accounts.prune_authority.key,
+        ctx.accounts.open_orders.key,
+        ctx.accounts.open_orders_owner.key,
+        ctx.accounts.event_q.key,
+        limit,
+    )?;
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )?;
+    Ok(())
+}
+
 #[derive(Accounts)]
 pub struct NewOrderV3<'info> {
     pub market: AccountInfo<'info>,
@@ -284,6 +304,17 @@ pub struct InitializeMarket<'info> {
     pub req_q: AccountInfo<'info>,
     pub event_q: AccountInfo<'info>,
     pub rent: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct Prune<'info> {
+    pub market: AccountInfo<'info>,
+    pub bids: AccountInfo<'info>,
+    pub asks: AccountInfo<'info>,
+    pub prune_authority: AccountInfo<'info>,
+    pub open_orders: AccountInfo<'info>,
+    pub open_orders_owner: AccountInfo<'info>,
+    pub event_q: AccountInfo<'info>,
 }
 
 #[derive(Clone)]
