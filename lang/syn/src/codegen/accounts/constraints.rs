@@ -727,7 +727,8 @@ pub fn generate_constraints_no_dup(accs: &AccountsStruct) -> Vec<proc_macro2::To
                 if let Some(previous_field_dup_constraint) = &previous_field.constraints().dup {
                     my_dup_constraint.dup_field != previous_field_dup_constraint.dup_field
                 } else {
-                    my_dup_constraint.dup_field != *previous_field.ident()
+                    my_dup_constraint.dup_field.to_token_stream().to_string()
+                        != previous_field.ident().to_token_stream().to_string()
                 }
             } else {
                 true
