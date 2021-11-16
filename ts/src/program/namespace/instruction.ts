@@ -49,9 +49,6 @@ export default class InstructionNamespaceFactory {
         keys.push(...ctx.remainingAccounts);
       }
 
-      if (ctx.__private && ctx.__private.logAccounts) {
-        console.log("Outgoing account metas:", keys);
-      }
       return new TransactionInstruction({
         keys,
         programId,

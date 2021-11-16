@@ -24,7 +24,6 @@ export default class RpcFactory {
         const txSig = await provider.send(tx, ctx.signers, ctx.options);
         return txSig;
       } catch (err) {
-        console.log("Translating error", err);
         let translatedErr = ProgramError.parse(err, idlErrors);
         if (translatedErr === null) {
           throw err;

@@ -36,7 +36,6 @@ export default class SimulateFactory {
       try {
         resp = await provider!.simulate(tx, ctx.signers, ctx.options);
       } catch (err) {
-        console.log("Translating error", err);
         let translatedErr = ProgramError.parse(err, idlErrors);
         if (translatedErr === null) {
           throw err;
