@@ -437,15 +437,12 @@ pub fn generate_init(
                         #create_account
 
                         // Initialize the token account.
-                        let cpi_program = token_program.to_account_info();
-                        let accounts = anchor_spl::token::InitializeAccount {
+                        anchor_spl::token::initialize_account(CpiContext::new(anchor_spl::token::InitializeAccount {
                             account: #field.to_account_info(),
                             mint: #mint.to_account_info(),
                             authority: #owner.to_account_info(),
                             rent: rent.to_account_info(),
-                        };
-                        let cpi_ctx = CpiContext::new(cpi_program, accounts);
-                        anchor_spl::token::initialize_account(cpi_ctx)?;
+                        }))?;
                     }
 
                     let pa: #ty_decl = #from_account_info;
@@ -459,8 +456,7 @@ pub fn generate_init(
                     if !#if_needed || #field.to_account_info().owner == &anchor_lang::solana_program::system_program::ID {
                         #payer
 
-                        let cpi_program = associated_token_program.to_account_info();
-                        let cpi_accounts = anchor_spl::associated_token::Create {
+                        anchor_spl::associated_token::create(CpiContext::new(anchor_spl::associated_token::Create {
                             payer: payer.to_account_info(),
                             associated_token: #field.to_account_info(),
                             authority: #owner.to_account_info(),
@@ -468,9 +464,7 @@ pub fn generate_init(
                             system_program: system_program.to_account_info(),
                             token_program: token_program.to_account_info(),
                             rent: rent.to_account_info(),
-                        };
-                        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-                        anchor_spl::associated_token::create(cpi_ctx)?;
+                        }))?;
                     }
                     let pa: #ty_decl = #from_account_info;
                     pa
@@ -502,13 +496,10 @@ pub fn generate_init(
                         #create_account
 
                         // Initialize the mint account.
-                        let cpi_program = token_program.to_account_info();
-                        let accounts = anchor_spl::token::InitializeMint {
+                        anchor_spl::token::initialize_mint(CpiContext::new(anchor_spl::token::InitializeMint {
                             mint: #field.to_account_info(),
                             rent: rent.to_account_info(),
-                        };
-                        let cpi_ctx = CpiContext::new(cpi_program, accounts);
-                        anchor_spl::token::initialize_mint(cpi_ctx, #decimals, &#owner.to_account_info().key, #freeze_authority)?;
+                        }), #decimals, &#owner.to_account_info().key, #freeze_authority)?;
                     }
                     let pa: #ty_decl = #from_account_info;
                     pa

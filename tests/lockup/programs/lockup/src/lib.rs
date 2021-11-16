@@ -412,25 +412,21 @@ impl<'a, 'b, 'c, 'info> From<&mut CreateVesting<'info>>
     for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>
 {
     fn from(accounts: &mut CreateVesting<'info>) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
+        CpiContext::new(Transfer {
             from: accounts.depositor.clone(),
             to: accounts.vault.to_account_info(),
             authority: accounts.depositor_authority.clone(),
-        };
-        let cpi_program = accounts.token_program.clone();
-        CpiContext::new(cpi_program, cpi_accounts)
+        })
     }
 }
 
 impl<'a, 'b, 'c, 'info> From<&Withdraw<'info>> for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
     fn from(accounts: &Withdraw<'info>) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
+        CpiContext::new(Transfer {
             from: accounts.vault.to_account_info(),
             to: accounts.token.to_account_info(),
             authority: accounts.vesting_signer.to_account_info(),
-        };
-        let cpi_program = accounts.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
+        })
     }
 }
 
@@ -515,6 +511,7 @@ pub fn is_valid_schedule(start_ts: i64, end_ts: i64, period_count: u64) -> bool 
 // unstake before being able to earn locked tokens.
 fn is_realized(ctx: &Context<Withdraw>) -> Result<()> {
     if let Some(realizor) = &ctx.accounts.vesting.realizor {
+        //TODO[paulx]: what to do with this?
         let cpi_program = {
             let p = ctx.remaining_accounts[0].clone();
             if p.key != &realizor.program {
@@ -522,10 +519,11 @@ fn is_realized(ctx: &Context<Withdraw>) -> Result<()> {
             }
             p
         };
-        let cpi_accounts = ctx.remaining_accounts.to_vec()[1..].to_vec();
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-        let vesting = (*ctx.accounts.vesting).clone();
-        realize_lock::is_realized(cpi_ctx, vesting).map_err(|_| ErrorCode::UnrealizedVesting)?;
+        realize_lock::is_realized(
+            CpiContext::new(ctx.remaining_accounts.to_vec()[1..].to_vec()),
+            (*ctx.accounts.vesting).clone(),
+        )
+        .map_err(|_| ErrorCode::UnrealizedVesting)?;
     }
     Ok(())
 }

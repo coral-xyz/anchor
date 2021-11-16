@@ -31,9 +31,8 @@ pub mod counter {
         #[access_control(SetCount::accounts(&self, &ctx))]
         pub fn set_count(&mut self, ctx: Context<SetCount>, new_count: u64) -> Result<()> {
             // Ask the auth program if we should approve the transaction.
-            let cpi_program = ctx.accounts.auth_program.clone();
-            let cpi_ctx = CpiContext::new(cpi_program, Empty {});
-            auth::is_authorized(cpi_ctx, self.count, new_count)?;
+            //TODO[paulx]: what to do with this?
+            auth::is_authorized(CpiContext::new(Empty {}), self.count, new_count)?;
 
             // Approved, so update.
             self.count = new_count;

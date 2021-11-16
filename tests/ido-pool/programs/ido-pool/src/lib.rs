@@ -45,14 +45,11 @@ pub mod ido_pool {
         ido_account.ido_times = ido_times;
 
         // Transfer Watermelon from ido_authority to pool account.
-        let cpi_accounts = Transfer {
+        token::transfer(CpiContext::new(Transfer {
             from: ctx.accounts.ido_authority_watermelon.to_account_info(),
             to: ctx.accounts.pool_watermelon.to_account_info(),
             authority: ctx.accounts.ido_authority.to_account_info(),
-        };
-        let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-        token::transfer(cpi_ctx, num_ido_tokens)?;
+        }), num_ido_tokens)?;
 
         Ok(())
     }
@@ -75,14 +72,11 @@ pub mod ido_pool {
         }
 
         // Transfer user's USDC to pool USDC account.
-        let cpi_accounts = Transfer {
+        token::transfer(CpiContext::new(Transfer {
             from: ctx.accounts.user_usdc.to_account_info(),
             to: ctx.accounts.pool_usdc.to_account_info(),
             authority: ctx.accounts.user_authority.to_account_info(),
-        };
-        let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-        token::transfer(cpi_ctx, amount)?;
+        }), amount)?;
 
         // Mint Redeemable to user Redeemable account.
         let ido_name = ctx.accounts.ido_account.ido_name.as_ref();
@@ -91,14 +85,11 @@ pub mod ido_pool {
             &[ctx.accounts.ido_account.bumps.ido_account],
         ];
         let signer = &[&seeds[..]];
-        let cpi_accounts = MintTo {
+        token::mint_to(CpiContext::new_with_signer(MintTo {
             mint: ctx.accounts.redeemable_mint.to_account_info(),
             to: ctx.accounts.user_redeemable.to_account_info(),
             authority: ctx.accounts.ido_account.to_account_info(),
-        };
-        let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
-        token::mint_to(cpi_ctx, amount)?;
+        }, signer), amount)?;
 
         Ok(())
     }
@@ -128,23 +119,19 @@ pub mod ido_pool {
         let signer = &[&seeds[..]];
 
         // Burn the user's redeemable tokens.
-        let cpi_accounts = Burn {
+        let cpi_ctx = CpiContext::new_with_signer(Burn {
             mint: ctx.accounts.redeemable_mint.to_account_info(),
             to: ctx.accounts.user_redeemable.to_account_info(),
             authority: ctx.accounts.ido_account.to_account_info(),
-        };
-        let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        }, signer);
         token::burn(cpi_ctx, amount)?;
 
         // Transfer USDC from pool account to the user's escrow account.
-        let cpi_accounts = Transfer {
+        let cpi_ctx = CpiContext::new_with_signer(Transfer {
             from: ctx.accounts.pool_usdc.to_account_info(),
             to: ctx.accounts.escrow_usdc.to_account_info(),
             authority: ctx.accounts.ido_account.to_account_info(),
-        };
-        let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        }, signer);
         token::transfer(cpi_ctx, amount)?;
 
         Ok(())
@@ -176,35 +163,29 @@ pub mod ido_pool {
         let signer = &[&seeds[..]];
 
         // Burn the user's redeemable tokens.
-        let cpi_accounts = Burn {
+        let cpi_ctx = CpiContext::new_with_signer(Burn {
             mint: ctx.accounts.redeemable_mint.to_account_info(),
             to: ctx.accounts.user_redeemable.to_account_info(),
             authority: ctx.accounts.ido_account.to_account_info(),
-        };
-        let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        }, signer);
         token::burn(cpi_ctx, amount)?;
 
         // Transfer Watermelon from pool account to user.
-        let cpi_accounts = Transfer {
+        let cpi_ctx = CpiContext::new_with_signer(Transfer {
             from: ctx.accounts.pool_watermelon.to_account_info(),
             to: ctx.accounts.user_watermelon.to_account_info(),
             authority: ctx.accounts.ido_account.to_account_info(),
-        };
-        let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        }, signer);
         token::transfer(cpi_ctx, watermelon_amount as u64)?;
 
         // Send rent back to user if account is empty
         ctx.accounts.user_redeemable.reload()?;
         if ctx.accounts.user_redeemable.amount == 0 {
-            let cpi_accounts = CloseAccount {
+            let cpi_ctx = CpiContext::new_with_signer(CloseAccount {
                 account: ctx.accounts.user_redeemable.to_account_info(),
                 destination: ctx.accounts.user_authority.clone(),
                 authority: ctx.accounts.ido_account.to_account_info(),
-            };
-            let cpi_program = ctx.accounts.token_program.to_account_info();
-            let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+            }, signer);
             token::close_account(cpi_ctx)?;
         }
 
@@ -221,13 +202,11 @@ pub mod ido_pool {
             &[ctx.accounts.ido_account.bumps.ido_account],
         ];
         let signer = &[&seeds[..]];
-        let cpi_accounts = Transfer {
+        let cpi_ctx = CpiContext::new_with_signer(Transfer {
             from: ctx.accounts.pool_usdc.to_account_info(),
             to: ctx.accounts.ido_authority_usdc.to_account_info(),
             authority: ctx.accounts.ido_account.to_account_info(),
-        };
-        let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        }, signer);
         token::transfer(cpi_ctx, ctx.accounts.pool_usdc.amount)?;
 
         Ok(())
@@ -249,25 +228,21 @@ pub mod ido_pool {
         let signer = &[&seeds[..]];
 
         // Transfer USDC from user's escrow account to user's USDC account.
-        let cpi_accounts = Transfer {
+        let cpi_ctx = CpiContext::new_with_signer(Transfer {
             from: ctx.accounts.escrow_usdc.to_account_info(),
             to: ctx.accounts.user_usdc.to_account_info(),
             authority: ctx.accounts.ido_account.to_account_info(),
-        };
-        let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        }, signer);
         token::transfer(cpi_ctx, amount)?;
 
         // Send rent back to user if account is empty
         ctx.accounts.escrow_usdc.reload()?;
         if ctx.accounts.escrow_usdc.amount == 0 {
-            let cpi_accounts = CloseAccount {
+            let cpi_ctx = CpiContext::new_with_signer(CloseAccount {
                 account: ctx.accounts.escrow_usdc.to_account_info(),
                 destination: ctx.accounts.user_authority.clone(),
                 authority: ctx.accounts.ido_account.to_account_info(),
-            };
-            let cpi_program = ctx.accounts.token_program.to_account_info();
-            let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+            }, signer);
             token::close_account(cpi_ctx)?;
         }
 
