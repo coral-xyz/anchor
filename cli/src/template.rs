@@ -48,11 +48,12 @@ export const IDL: {} = {};
 
 pub fn cargo_toml(name: &str) -> String {
     format!(
-        r#"[package]
+        r#"cargo-features = ["edition2021"]
+[package]
 name = "{0}"
 version = "0.1.0"
 description = "Created with Anchor"
-edition = "2018"
+edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]

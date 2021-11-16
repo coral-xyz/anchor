@@ -2,7 +2,7 @@
 name = "anchor-cli"
 version = "0.18.2"
 authors = ["armaniferrante <armaniferrante@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [[bin]]
 name = "anchor"
