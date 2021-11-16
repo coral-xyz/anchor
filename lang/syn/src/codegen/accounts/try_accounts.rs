@@ -136,10 +136,13 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
 
     /*
         When should there be a check for two acounts A and B?
-            - if my account B does not have a dup constraint && either A or B are mutable
-            - if my account B does have a dup constraint
-                - if B's dup target != A's indent && either A or B are mutable
-                - if B has a dup target && A has a dup target but theyre not the same dup target && either A or B are mutable
+            - if either A or B are mutable AND
+                - if my account B does not have a dup constraint OR
+                - if my account B does have a dup constraint AND
+                    - A does not have a dup constraint AND
+                        - B's dup target != A's indent
+                    - A does have a dup constraint AND
+                        - B's dup target != A's dup target
     */
 
     //TODO[paulx]: refactor and move this into constraints file
