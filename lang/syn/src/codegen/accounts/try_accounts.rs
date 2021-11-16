@@ -3,7 +3,6 @@ use crate::{AccountField, AccountsStruct};
 use quote::quote;
 use syn::Expr;
 
-
 // Generates the `Accounts` trait implementation.
 pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     let name = &accs.ident;
@@ -135,17 +134,30 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         })
         .collect();
 
+    /*
+        When should there be a check for two acounts A and B?
+            - if my account B does not have a dup constraint && either A or B are mutable
+            - if my account B does have a dup constraint
+                - if B's dup target != A's indent && either A or B are mutable
+                - if B has a dup target && A has a dup target but theyre not the same dup target && either A or B are mutable
+    */
+
+    //TODO[paulx]: refactor and move this into constraints file
+    //TODO[paulx]: handle composite fields
     let no_dup_checks = {
         let mut checks = vec![];
         let mut checked_fields = Vec::<&AccountField>::with_capacity(accs.fields.len());
         for field in accs.fields.iter() {
             for previous_field in checked_fields.iter().filter(|f| {
                 if let Some(my_dup) = &field.constraints().dup {
-                    *f.ident() != my_dup.dup_field
-                        || (f.constraints().dup.is_some() && f.constraints().dup.as_ref().unwrap().dup_field
-                            != field.constraints().dup.as_ref().unwrap().dup_field)
+                    (*f.ident() != my_dup.dup_field
+                        && (field.constraints().is_mutable() || f.constraints().is_mutable()))
+                        || ((f.constraints().dup.is_some()
+                            && f.constraints().dup.as_ref().unwrap().dup_field
+                                != field.constraints().dup.as_ref().unwrap().dup_field)
+                            && (field.constraints().is_mutable() || f.constraints().is_mutable()))
                 } else {
-                    true
+                    field.constraints().is_mutable() || f.constraints().is_mutable()
                 }
             }) {
                 let previous_field_ident = previous_field.ident();

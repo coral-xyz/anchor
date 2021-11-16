@@ -17,15 +17,15 @@ const checkNoDupError = (err) => {
 
 describe('dup_error', () => {
   anchor.setProvider(anchor.Provider.local());
-  const program = anchor.workspace.SystemAccounts;
+  const program = anchor.workspace.Dup;
   const authority = program.provider.wallet.payer;
 
-  it('Emits an ConstraintDup error because account is not a duplicate!', async () => {
+  it('Emits a ConstraintDup error because account is not a duplicate!', async () => {
     try {
       await program.rpc.withDupConstraint({
         accounts: {
           authority: authority.publicKey,
-          wallet: anchor.web3.Keypair.generate()
+          wallet: anchor.web3.Keypair.generate().publicKey
         },
         signers: [authority]
       });
@@ -46,7 +46,7 @@ describe('dup_error', () => {
 
   });
 
-  it('Emits an ConstraintNoDup error because account is a duplicate!', async () => {
+  it('Emits a ConstraintNoDup error because account is a duplicate!', async () => {
     try {
       await program.rpc.withoutDupConstraint({
         accounts: {
@@ -61,9 +61,9 @@ describe('dup_error', () => {
 
   });
 
-  it('Emits an ConstraintNoDup error because account is a duplicate!', async () => {
+  it('Emits a ConstraintNoDup error because account is a duplicate!', async () => {
     try {
-      await program.rpc.withMissingDupConstraint3Accounts({
+      await program.rpc.withMissingDupConstraints3Accounts({
         accounts: {
           myAccount: authority.publicKey,
           rent: authority.publicKey,
@@ -86,7 +86,7 @@ describe('dup_error', () => {
       signers: [authority]
     });
 
-    it('Emits an ConstraintNoDup error because account is a duplicate!', async () => {
+    it('Emits a ConstraintNoDup error because account is a duplicate!', async () => {
       let otherDuplicateKey = anchor.web3.Keypair.generate().publicKey;
       try {
         await program.rpc.withMissingDupConstraintDouble3Accounts({
@@ -94,9 +94,9 @@ describe('dup_error', () => {
             myAccount: authority.publicKey,
             rent: authority.publicKey,
             authority: authority.publicKey,
-            myAccount_1: otherDuplicateKey,
-            rent_1: otherDuplicateKey,
-            authority_1: otherDuplicateKey
+            myAccount1: otherDuplicateKey,
+            rent1: otherDuplicateKey,
+            authority1: otherDuplicateKey
           },
           signers: [authority]
         });

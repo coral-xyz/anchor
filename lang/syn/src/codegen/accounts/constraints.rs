@@ -37,7 +37,7 @@ pub fn generate_composite(f: &CompositeField) -> proc_macro2::TokenStream {
         #(#checks)*
     }
 }
-
+//TODO[paulx]: where to add Dup
 // Linearizes the constraint group so that constraints with dependencies
 // run after those without.
 pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
@@ -78,14 +78,15 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
         constraints.push(Constraint::Mut(c));
     }
 
-    if let Some(c) = dup {
-        constraints.push(Constraint::Dup(c));
-    }
-
     if let Some(c) = signer {
         constraints.push(Constraint::Signer(c));
     }
     constraints.append(&mut has_one.into_iter().map(Constraint::HasOne).collect());
+
+    if let Some(c) = dup {
+        constraints.push(Constraint::Dup(c));
+    }
+
     constraints.append(&mut literal.into_iter().map(Constraint::Literal).collect());
     constraints.append(&mut raw.into_iter().map(Constraint::Raw).collect());
     if let Some(c) = owner {
