@@ -8,9 +8,7 @@ license = "Apache-2.0"
 description = "Solana Sealevel eDSL"
 
 [features]
-default = ["nodup"]
 derive = []
-nodup = []
 anchor-debug = [
     "anchor-attribute-access-control/anchor-debug",
     "anchor-attribute-account/anchor-debug",
