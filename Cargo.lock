@@ -235,6 +235,7 @@ dependencies = [
  "sha2",
  "syn 1.0.75",
  "thiserror",
+ "toml",
 ]
 
 [[package]]
