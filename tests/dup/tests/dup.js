@@ -5,16 +5,16 @@ const assert = require('assert');
 
 const checkDupError = (err) => {
   const errMsg = "A dup constraint was violated";
-  assert.equal(err.toString(), errMsg);
-  assert.equal(err.msg, errMsg);
-  assert.equal(err.code, 153);
+  //assert.equal(err.toString(), errMsg);
+  //assert.equal(err.msg, errMsg);
+  assert.equal(err.code, 154);
 }
 
 const checkNoDupError = (err) => {
-  const errMsg = "a nodup constraint was violated";
+  const errMsg = "A nodup constraint was violated";
   assert.equal(err.toString(), errMsg);
   assert.equal(err.msg, errMsg);
-  assert.equal(err.code, 154);
+  assert.equal(err.code, 155);
 }
 
 describe('dup_error', () => {
@@ -37,7 +37,7 @@ describe('dup_error', () => {
     }
   });
 
-  it('Passes the ConstraintDup check because account is a duplicate!', async () => {
+  it('Passes the ConstraintDup check because account is a declared duplicate!', async () => {
     await program.rpc.withDupConstraint({
       accounts: {
         authority: authority.publicKey,
@@ -48,7 +48,7 @@ describe('dup_error', () => {
 
   });
 
-  it('Emits a ConstraintNoDup error because account is a duplicate!', async () => {
+  it('Emits a ConstraintNoDup error because account is a mutable duplicate!', async () => {
     try {
       await program.rpc.withoutDupConstraint({
         accounts: {
@@ -57,15 +57,15 @@ describe('dup_error', () => {
         },
         signers: [authority]
       });
+      assert.ok(false);
     } catch (err) {
       checkNoDupError(err);
     }
-
   });
 
-  it('Emits a ConstraintNoDup error because account is a duplicate!', async () => {
+    it('Emits a ConstraintNoDup error because account is a mutable duplicate!', async () => {
     try {
-      await program.rpc.withMissingDupConstraints3Accounts({
+      await program.rpc.withMissingDupConstraintsThreeAccounts({
         accounts: {
           myAccount: authority.publicKey,
           rent: authority.publicKey,
@@ -73,13 +73,14 @@ describe('dup_error', () => {
         },
         signers: [authority]
       });
+      assert.ok(false);
     } catch (err) {
       checkNoDupError(err);
     }
   });
 
-  it('Passes the ConstraintDup check because accounts are duplicate!', async () => {
-    await program.rpc.withDupConstraint({
+  it('Passes the ConstraintDup check because accounts are declared duplicate!', async () => {
+    await program.rpc.withDupConstraintsThreeAccounts({
       accounts: {
         myAccount: authority.publicKey,
         rent: authority.publicKey,
@@ -87,11 +88,12 @@ describe('dup_error', () => {
       },
       signers: [authority]
     });
+  });
 
     it('Emits a ConstraintNoDup error because account is a duplicate!', async () => {
       let otherDuplicateKey = anchor.web3.Keypair.generate().publicKey;
       try {
-        await program.rpc.withMissingDupConstraintDouble3Accounts({
+        await program.rpc.withMissingDupConstraintDoubleThreeAccounts({
           accounts: {
             myAccount: authority.publicKey,
             rent: authority.publicKey,
@@ -102,10 +104,9 @@ describe('dup_error', () => {
           },
           signers: [authority]
         });
+        assert.ok(false);
       } catch (err) {
         checkNoDupError(err);
       }
     });
-
-  });
 });

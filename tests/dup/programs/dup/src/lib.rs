@@ -14,15 +14,15 @@ mod dup {
         Ok(())
     }
 
-    pub fn with_missing_dup_constraints_3_accounts(_ctx: Context<WithMissingDupConstraint3Accounts>) -> ProgramResult {
+    pub fn with_missing_dup_constraints_three_accounts(_ctx: Context<WithMissingDupConstraintThreeAccounts>) -> ProgramResult {
         Ok(())
     }
 
-    pub fn with_dup_constraints_3_accounts(_ctx: Context<WithDupConstraint3Accounts>) -> ProgramResult {
+    pub fn with_dup_constraints_three_accounts(_ctx: Context<WithDupConstraintsThreeAccounts>) -> ProgramResult {
         Ok(())
     }
 
-    pub fn with_missing_dup_constraint_double_3_accounts(_ctx: Context<WithMissingDupConstraintDouble3Accounts>) -> ProgramResult {
+    pub fn with_missing_dup_constraint_double_three_accounts(_ctx: Context<WithMissingDupConstraintDoubleThreeAccounts>) -> ProgramResult {
         Ok(())
     }
 }
@@ -36,38 +36,40 @@ pub struct WithDupConstraint<'info> {
 
 #[derive(Accounts)]
 pub struct WithoutDupConstraint<'info> {
-    pub my_account: Account<'info, MyAccount>,
-    pub rent: Sysvar<'info, Rent>,
+    pub my_account: SystemAccount<'info>,
+    #[account(mut)]
+    pub rent: SystemAccount<'info>,
 }
 
 #[derive(Accounts)]
-pub struct WithMissingDupConstraint3Accounts<'info> {
-    pub my_account: Account<'info, MyAccount>,
-    #[account(dup = my_account)]
-    pub rent: Sysvar<'info, Rent>,
-    pub authority: Signer<'info>,
+pub struct WithMissingDupConstraintThreeAccounts<'info> {
+    pub my_account: SystemAccount<'info>,
+    #[account(dup = my_account, mut)]
+    pub rent: SystemAccount<'info>,
+    pub authority: SystemAccount<'info>,
 }
 
 #[derive(Accounts)]
-pub struct WithDupConstraint3Accounts<'info> {
-    pub my_account: Account<'info, MyAccount>,
+pub struct WithDupConstraintsThreeAccounts<'info> {
+    pub my_account: SystemAccount<'info>,
     #[account(dup = my_account)]
-    pub rent: Sysvar<'info, Rent>,
-    #[account(dup = my_account)]
-    pub authority: Signer<'info>,
+    pub rent: SystemAccount<'info>,
+    #[account(mut, dup = my_account)]
+    pub authority: SystemAccount<'info>,
 }
 
 #[derive(Accounts)]
-pub struct WithMissingDupConstraintDouble3Accounts<'info> {
-    pub my_account: Account<'info, MyAccount>,
+pub struct WithMissingDupConstraintDoubleThreeAccounts<'info> {
+    pub my_account: SystemAccount<'info>,
     #[account(dup = my_account)]
-    pub rent: Sysvar<'info, Rent>,
+    pub rent: SystemAccount<'info>,
     #[account(dup = my_account)]
-    pub authority: Signer<'info>,
-    pub my_account_1: Account<'info, MyAccount>,
+    pub authority: SystemAccount<'info>,
+    pub my_account_1: SystemAccount<'info>,
     #[account(dup = my_account_1)]
-    pub rent_1: Sysvar<'info, Rent>,
-    pub authority_1: Signer<'info>,
+    pub rent_1: SystemAccount<'info>,
+    #[account(mut)]
+    pub authority_1: SystemAccount<'info>,
 }
 
 #[account]

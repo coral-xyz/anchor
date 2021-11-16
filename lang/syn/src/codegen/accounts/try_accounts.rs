@@ -137,7 +137,8 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     // no_dup checks for mutable accounts
     let no_dup_checks = {
         #[cfg(not(feature = "nodup"))]
-        quote! {}
+        {quote! {}}
+        
         #[cfg(feature = "nodup")]
         {
             let no_dup_checks = constraints::generate_constraints_no_dup(accs);
