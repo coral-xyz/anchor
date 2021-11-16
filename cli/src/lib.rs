@@ -392,7 +392,7 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool) -> Result
         return Err(anyhow!("Workspace already initialized"));
     }
 
-    // The list is taken from https://doc.rust-lang.org/reference/keywords.html
+    // The list is taken from https://doc.rust-lang.org/reference/keywords.html.
     let key_words = [
         "as", "break", "const", "continue", "crate", "else", "enum", "extern", "false", "fn",
         "for", "if", "impl", "in", "let", "loop", "match", "mod", "move", "mut", "pub", "ref",
