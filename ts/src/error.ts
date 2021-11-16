@@ -147,6 +147,9 @@ const LangErrorMessage = new Map([
   ],
   [LangErrorCode.ConstraintClose, "A close constraint was violated"],
   [LangErrorCode.ConstraintAddress, "An address constraint was violated"],
+  [LangErrorCode.ConstraintZero, "Expected zero account discriminant"],
+  [LangErrorCode.ConstraintDup, "A dup constraint was violated"],
+  [LangErrorCode.ConstraintNoDup, "A nodup constraint was violated"],
 
   // Accounts.
   [
