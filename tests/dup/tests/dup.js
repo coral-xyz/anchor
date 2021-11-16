@@ -1,6 +1,8 @@
 const anchor = require('@project-serum/anchor');
 const assert = require('assert');
 
+//TODO[paulx]: add tests for composite fields and adjust tests to test only nodup checks for accounts where at least 1 acc in the pair is mutable
+
 const checkDupError = (err) => {
   const errMsg = "A dup constraint was violated";
   assert.equal(err.toString(), errMsg);
