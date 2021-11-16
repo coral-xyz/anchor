@@ -144,6 +144,7 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
 
     //TODO[paulx]: refactor and move this into constraints file
     //TODO[paulx]: handle composite fields
+    //TODO[paulx]: only add NoDup checks when "nodup" feature is enabled (dup checks should be compiled regardless of dup feature)
     let no_dup_checks = {
         let mut checks = vec![];
         let mut checked_fields = Vec::<&AccountField>::with_capacity(accs.fields.len());
