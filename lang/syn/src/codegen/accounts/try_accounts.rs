@@ -134,54 +134,27 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         })
         .collect();
 
-    /*
-        When should there be a check for two acounts A and B?
-            - if either A or B are mutable AND
-                - if my account B does not have a dup constraint OR
-                - if my account B does have a dup constraint AND
-                    - A does not have a dup constraint AND
-                        - B's dup target != A's indent
-                    - A does have a dup constraint AND
-                        - B's dup target != A's dup target
-    */
-
-    //TODO[paulx]: refactor and move this into constraints file
-    //TODO[paulx]: handle composite fields
-    //TODO[paulx]: only add NoDup checks when "nodup" feature is enabled (dup checks should be compiled regardless of dup feature)
+    // no_dup checks for mutable accounts
     let no_dup_checks = {
-        let mut checks = vec![];
-        let mut checked_fields = Vec::<&AccountField>::with_capacity(accs.fields.len());
-        for field in accs.fields.iter() {
-            for previous_field in checked_fields.iter().filter(|f| {
-                if let Some(my_dup) = &field.constraints().dup {
-                    (*f.ident() != my_dup.dup_field
-                        && (field.constraints().is_mutable() || f.constraints().is_mutable()))
-                        || ((f.constraints().dup.is_some()
-                            && f.constraints().dup.as_ref().unwrap().dup_field
-                                != field.constraints().dup.as_ref().unwrap().dup_field)
-                            && (field.constraints().is_mutable() || f.constraints().is_mutable()))
-                } else {
-                    field.constraints().is_mutable() || f.constraints().is_mutable()
+        #[cfg(not(feature = "nodup"))]
+        quote! {}
+        #[cfg(feature = "nodup")]
+        {
+            let no_dup_checks = constraints::generate_constraints_no_dup(accs);
+            if no_dup_checks.len() > 0 {
+                quote! {
+                    {use anchor_lang::ToAccountInfo; #(#no_dup_checks)*}
                 }
-            }) {
-                let previous_field_ident = previous_field.ident();
-                let my_ident = field.ident();
-                checks.push(quote! {
-                    if #my_ident.to_account_info().key == #previous_field_ident.to_account_info().key {
-                        return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
-                    }
-                });
+            } else {
+                quote! {}
             }
-
-            checked_fields.push(field);
         }
-        checks
     };
 
     quote! {
         #(#init_fields)*
         #(#access_checks)*
-        {use anchor_lang::ToAccountInfo; #(#no_dup_checks)*}
+        #no_dup_checks
     }
 }
 

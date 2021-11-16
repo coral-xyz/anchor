@@ -708,3 +708,48 @@ fn generate_custom_error(
         None => quote! { anchor_lang::__private::ErrorCode::#error.into() },
     }
 }
+
+#[cfg(feature = "nodup")]
+pub fn generate_constraints_no_dup(accs: &AccountsStruct) -> Vec<proc_macro2::TokenStream> {
+    let mut previous_fields = Vec::<&AccountField>::with_capacity(accs.fields.len());
+    accs.fields.iter().fold(vec![], |mut acc, field| {
+        if let AccountField::CompositeField(_) = field {
+            return acc;
+        }
+        for previous_field in previous_fields.iter().filter(|previous_field| {
+            if let AccountField::CompositeField(_) = previous_field {
+                return false;
+            }
+            if !field.constraints().is_mutable() && !previous_field.constraints().is_mutable() {
+                return false;
+            }
+            if let Some(my_dup_constraint) = &field.constraints().dup {
+                if let Some(previous_field_dup_constraint) = &previous_field.constraints().dup {
+                    my_dup_constraint.dup_field != previous_field_dup_constraint.dup_field
+                } else {
+                    my_dup_constraint.dup_field != *previous_field.ident()
+                }
+            } else {
+                true
+            }
+        }) {
+            acc.push(generate_constraint_no_dup(field, previous_field));
+        }
+        previous_fields.push(field);
+        acc
+    })
+}
+
+#[cfg(feature = "nodup")]
+fn generate_constraint_no_dup(
+    my_field: &AccountField,
+    other_field: &AccountField,
+) -> proc_macro2::TokenStream {
+    let other_field = other_field.ident();
+    let my_ident = my_field.ident();
+    quote! {
+        if #my_ident.to_account_info().key == #other_field.to_account_info().key {
+            return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
+        }
+    }
+}
