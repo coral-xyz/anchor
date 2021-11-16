@@ -10,7 +10,7 @@ description = "Solana Sealevel eDSL"
 [features]
 default = ["nodup"]
 derive = []
-dup = []
+nodup = []
 anchor-debug = [
     "anchor-attribute-access-control/anchor-debug",
     "anchor-attribute-account/anchor-debug",
