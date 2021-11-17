@@ -4,6 +4,7 @@ import { Idl } from "../../idl";
 import { splitArgsAndCtx } from "../context";
 import { TransactionFn } from "./transaction";
 import { ProgramError } from "../../error";
+import * as features from "../../utils/features";
 import {
   AllInstructions,
   InstructionContextFn,
@@ -24,6 +25,10 @@ export default class RpcFactory {
         const txSig = await provider.send(tx, ctx.signers, ctx.options);
         return txSig;
       } catch (err) {
+        if (features.isSet("debug-logs")) {
+          console.log("Translating error:", err);
+        }
+
         let translatedErr = ProgramError.parse(err, idlErrors);
         if (translatedErr === null) {
           throw err;
