@@ -511,14 +511,6 @@ pub fn is_valid_schedule(start_ts: i64, end_ts: i64, period_count: u64) -> bool 
 // unstake before being able to earn locked tokens.
 fn is_realized(ctx: &Context<Withdraw>) -> Result<()> {
     if let Some(realizor) = &ctx.accounts.vesting.realizor {
-        //TODO[paulx]: what to do with this?
-        let cpi_program = {
-            let p = ctx.remaining_accounts[0].clone();
-            if p.key != &realizor.program {
-                return Err(ErrorCode::InvalidLockRealizor.into());
-            }
-            p
-        };
         realize_lock::is_realized(
             CpiContext::new(ctx.remaining_accounts.to_vec()[1..].to_vec()),
             (*ctx.accounts.vesting).clone(),
