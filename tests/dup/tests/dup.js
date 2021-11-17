@@ -24,8 +24,8 @@ describe('dup_error', () => {
     try {
       await program.rpc.withDupConstraint({
         accounts: {
-          authority: authority.publicKey,
-          wallet: anchor.web3.Keypair.generate().publicKey
+          account1: authority.publicKey,
+          account2: anchor.web3.Keypair.generate().publicKey
         },
         signers: [authority]
       });
@@ -38,8 +38,8 @@ describe('dup_error', () => {
   it('Passes the ConstraintDup check because account is a declared duplicate!', async () => {
     await program.rpc.withDupConstraint({
       accounts: {
-        authority: authority.publicKey,
-        wallet: authority.publicKey
+        account1: authority.publicKey,
+        account2: authority.publicKey
       },
       signers: [authority]
     });
@@ -79,8 +79,8 @@ describe('dup_error', () => {
     try {
       await program.rpc.withoutDupConstraint({
         accounts: {
-          myAccount: authority.publicKey,
-          rent: authority.publicKey
+          account1: authority.publicKey,
+          account2: authority.publicKey
         },
         signers: [authority]
       });
@@ -88,6 +88,16 @@ describe('dup_error', () => {
     } catch (err) {
       checkNoDupError(err);
     }
+  });
+
+  it('Passes the ConstraintNoDup check because accounts are not the same!', async () => {
+    await program.rpc.withoutDupConstraint({
+      accounts: {
+        account1: authority.publicKey,
+        account2: anchor.web3.Keypair.generate().publicKey
+      },
+      signers: [authority]
+    });
   });
   
   it('Passed a ConstraintNoDup check because duplicate account is inside a CompositeField!', async () => {
@@ -106,9 +116,9 @@ describe('dup_error', () => {
     try {
       await program.rpc.withMissingDupConstraintsThreeAccounts({
         accounts: {
-          myAccount: authority.publicKey,
-          rent: authority.publicKey,
-          authority: authority.publicKey
+          account1: authority.publicKey,
+          account2: authority.publicKey,
+          account3: authority.publicKey
         },
         signers: [authority]
       });
@@ -118,49 +128,75 @@ describe('dup_error', () => {
     }
   });
 
-  it('Passes the ConstraintDup check because accounts are declared duplicate!', async () => {
-    await program.rpc.withDupConstraintsThreeAccounts({
+  it('Passes the ConstraintNoDup check because accounts are not the same!', async () => {
+    await program.rpc.withMissingDupConstraintsThreeAccounts({
       accounts: {
-        myAccount: authority.publicKey,
-        rent: authority.publicKey,
-        authority: authority.publicKey
+        account1: authority.publicKey,
+        account2: authority.publicKey,
+        account3: anchor.web3.Keypair.generate().publicKey
       },
       signers: [authority]
     });
   });
 
-    it('Emits a ConstraintNoDup error because account is a duplicate!', async () => {
-      let otherDuplicateKey = anchor.web3.Keypair.generate().publicKey;
-      try {
-        await program.rpc.withMissingDupConstraintDoubleThreeAccounts({
-          accounts: {
-            myAccount: authority.publicKey,
-            rent: authority.publicKey,
-            authority: authority.publicKey,
-            myAccount1: otherDuplicateKey,
-            rent1: otherDuplicateKey,
-            authority1: otherDuplicateKey
-          },
-          signers: [authority]
-        });
-        assert.ok(false);
-      } catch (err) {
-        checkNoDupError(err);
-      }
+  it('Passes the ConstraintDup check because accounts are declared duplicate!', async () => {
+    await program.rpc.withDupConstraintsThreeAccounts({
+      accounts: {
+        account1: authority.publicKey,
+        account2: authority.publicKey,
+        account3: authority.publicKey
+      },
+      signers: [authority]
     });
+  });
 
-    it('Passes the ConstraintNoDup check because accounts are all immutable!', async () => {
-      let otherDuplicateKey = anchor.web3.Keypair.generate().publicKey;
-      await program.rpc.withoutDupConstraintDoubleThreeAccountsAllImmutable({
+  it('Emits a ConstraintNoDup error because account is a duplicate!', async () => {
+    let otherDuplicateKey = anchor.web3.Keypair.generate().publicKey;
+    try {
+      await program.rpc.withMissingDupConstraintDoubleThreeAccounts({
         accounts: {
-          myAccount: authority.publicKey,
-          rent: authority.publicKey,
-          authority: authority.publicKey,
-          myAccount1: otherDuplicateKey,
-          rent1: otherDuplicateKey,
-          authority1: otherDuplicateKey
+          account1: authority.publicKey,
+          account2: authority.publicKey,
+          account3: authority.publicKey,
+          account4: otherDuplicateKey,
+          account5: otherDuplicateKey,
+          account6: otherDuplicateKey
         },
         signers: [authority]
       });
+      assert.ok(false);
+    } catch (err) {
+      checkNoDupError(err);
+    }
+  });
+
+  it('Passes the ConstraintNoDup check because account is not a duplicate!', async () => {
+    let otherDuplicateKey = anchor.web3.Keypair.generate().publicKey;
+    await program.rpc.withMissingDupConstraintDoubleThreeAccounts({
+      accounts: {
+        account1: authority.publicKey,
+        account2: authority.publicKey,
+        account3: authority.publicKey,
+        account4: otherDuplicateKey,
+        account5: otherDuplicateKey,
+        account6: anchor.web3.Keypair.generate().publicKey
+      },
+      signers: [authority]
     });
+  });
+
+  it('Passes the ConstraintNoDup check because accounts are all immutable!', async () => {
+    let otherDuplicateKey = anchor.web3.Keypair.generate().publicKey;
+    await program.rpc.withoutDupConstraintDoubleThreeAccountsAllImmutable({
+      accounts: {
+        account1: authority.publicKey,
+        account2: authority.publicKey,
+        account3: otherDuplicateKey,
+        account4: otherDuplicateKey,
+        account5: otherDuplicateKey,
+        account6: otherDuplicateKey
+      },
+      signers: [authority]
+    });
+  });
 });

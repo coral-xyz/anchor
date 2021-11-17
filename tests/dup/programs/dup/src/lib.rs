@@ -41,9 +41,9 @@ mod dup {
 
 #[derive(Accounts)]
 pub struct WithDupConstraint<'info> {
-    pub authority: Signer<'info>,
-    #[account(dup = authority)]
-    pub wallet: SystemAccount<'info>,
+    pub account1: Signer<'info>,
+    #[account(dup = account1)]
+    pub account2: SystemAccount<'info>,
 }
 
 #[derive(Accounts)]
@@ -60,9 +60,9 @@ pub struct Child<'info> {
 
 #[derive(Accounts)]
 pub struct WithoutDupConstraint<'info> {
-    pub my_account: SystemAccount<'info>,
+    pub account1: SystemAccount<'info>,
     #[account(mut)]
-    pub rent: SystemAccount<'info>,
+    pub account2: SystemAccount<'info>,
 }
 
 #[derive(Accounts)]
@@ -74,41 +74,41 @@ pub struct WithoutDupConstraintComposite<'info> {
 
 #[derive(Accounts)]
 pub struct WithMissingDupConstraintThreeAccounts<'info> {
-    pub my_account: SystemAccount<'info>,
-    #[account(dup = my_account, mut)]
-    pub rent: SystemAccount<'info>,
-    pub authority: SystemAccount<'info>,
+    pub account1: SystemAccount<'info>,
+    #[account(dup = account1, mut)]
+    pub account2: SystemAccount<'info>,
+    pub account3: SystemAccount<'info>,
 }
 
 #[derive(Accounts)]
 pub struct WithDupConstraintsThreeAccounts<'info> {
-    pub my_account: SystemAccount<'info>,
-    #[account(dup = my_account)]
-    pub rent: SystemAccount<'info>,
-    #[account(mut, dup = my_account)]
-    pub authority: SystemAccount<'info>,
+    pub account1: SystemAccount<'info>,
+    #[account(dup = account1)]
+    pub account2: SystemAccount<'info>,
+    #[account(mut, dup = account1)]
+    pub account3: SystemAccount<'info>,
 }
 
 #[derive(Accounts)]
 pub struct WithMissingDupConstraintDoubleThreeAccounts<'info> {
-    pub my_account: SystemAccount<'info>,
-    #[account(dup = my_account)]
-    pub rent: SystemAccount<'info>,
-    #[account(dup = my_account)]
-    pub authority: SystemAccount<'info>,
-    pub my_account_1: SystemAccount<'info>,
-    #[account(dup = my_account_1)]
-    pub rent_1: SystemAccount<'info>,
+    pub account1: SystemAccount<'info>,
+    #[account(dup = account1)]
+    pub account2: SystemAccount<'info>,
+    #[account(dup = account1)]
+    pub account3: SystemAccount<'info>,
+    pub account4: SystemAccount<'info>,
+    #[account(dup = account4)]
+    pub account5: SystemAccount<'info>,
     #[account(mut)]
-    pub authority_1: SystemAccount<'info>,
+    pub account6: SystemAccount<'info>,
 }
 
 #[derive(Accounts)]
 pub struct WithoutDupConstraintDoubleThreeAccountsAllImmutable<'info> {
-    pub my_account: SystemAccount<'info>,
-    pub rent: SystemAccount<'info>,
-    pub authority: SystemAccount<'info>,
-    pub my_account_1: SystemAccount<'info>,
-    pub rent_1: SystemAccount<'info>,
-    pub authority_1: SystemAccount<'info>,
+    pub account1: SystemAccount<'info>,
+    pub account2: SystemAccount<'info>,
+    pub account3: SystemAccount<'info>,
+    pub account4: SystemAccount<'info>,
+    pub account5: SystemAccount<'info>,
+    pub account6: SystemAccount<'info>,
 }
