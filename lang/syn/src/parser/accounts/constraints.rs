@@ -192,7 +192,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                 "dup" => ConstraintToken::Dup(Context::new(
                     span,
                     ConstraintDup {
-                        dup_field: stream.parse()?,
+                        target: stream.parse()?,
                     },
                 )),
                 "has_one" => ConstraintToken::HasOne(Context::new(

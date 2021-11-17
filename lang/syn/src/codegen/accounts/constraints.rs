@@ -194,9 +194,9 @@ pub fn generate_constraint_mut(f: &Field, c: &ConstraintMut) -> proc_macro2::Tok
 
 pub fn generate_constraint_dup(f: &Field, c: &ConstraintDup) -> proc_macro2::TokenStream {
     let me = &f.ident;
-    let dup_field = &c.dup_field;
+    let target = &c.target;
     quote! {
-        if !(#me.to_account_info().key == #dup_field.to_account_info().key) {
+        if !(#me.to_account_info().key == #target.to_account_info().key) {
             return Err(anchor_lang::__private::ErrorCode::ConstraintDup.into())
         }
     }
@@ -725,9 +725,9 @@ pub fn generate_constraints_no_dup(accs: &AccountsStruct) -> Vec<proc_macro2::To
             }
             if let Some(my_dup_constraint) = &field.constraints().dup {
                 if let Some(previous_field_dup_constraint) = &previous_field.constraints().dup {
-                    my_dup_constraint.dup_field != previous_field_dup_constraint.dup_field
+                    my_dup_constraint.target != previous_field_dup_constraint.target
                 } else {
-                    my_dup_constraint.dup_field.to_token_stream().to_string()
+                    my_dup_constraint.target.to_token_stream().to_string()
                         != previous_field.ident().to_token_stream().to_string()
                 }
             } else {

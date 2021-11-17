@@ -626,10 +626,8 @@ impl Parse for ConstraintToken {
 
 #[derive(Debug, Clone)]
 pub struct ConstraintDup {
-    pub dup_field: Expr,
+    pub target: Expr,
 }
-
-//TODO[paulx]: change dup_field to target
 
 #[derive(Debug, Clone)]
 pub struct ConstraintInit {
