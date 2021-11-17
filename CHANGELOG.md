@@ -11,10 +11,80 @@ incremented for features.
 
 ## [Unreleased]
 
+### Fixes
+
+lang: Add `deprecated` attribute to `ProgramAccount` ([#1014](https://github.com/project-serum/anchor/pull/1014)).
+
+## [0.18.2] - 2021-11-14
+
+* cli: Replace global JavaScript dependency installs with local.
+
+### Features
+
+* lang: Add `SystemAccount<'info>` account type for generic wallet addresses or accounts owned by the system program ([#954](https://github.com/project-serum/anchor/pull/954))
+* ts: Add inputs `postInstructions` and `preInstructions` as a replacement for (the now deprecated) `instructions`
+
+### Fixes
+
+* cli: fix dns in NODE_OPTIONS ([#928](https://github.com/project-serum/anchor/pull/928)).
+* cli: output TypeScript IDL in `idl parse` subcommand ([#941](https://github.com/project-serum/anchor/pull/941)).
+* cli: Add fields `os` and `cpu` to npm package `@project-serum/anchor-cli` ([#976](https://github.com/project-serum/anchor/pull/976)).
+* cli: Allow specify output directory for TypeScript IDL ([#940](https://github.com/project-serum/anchor/pull/940)).
+
+## [0.18.0] - 2021-10-24
+
+### Features
+
+* cli: Add support for configuration options for `solana-test-validator` in Anchor.toml ([#834](https://github.com/project-serum/anchor/pull/834)).
+* cli: `target/types` directory now created on build to store a TypeScript types file for each program's IDL ([#795](https://github.com/project-serum/anchor/pull/795)).
+* ts: `Program<T>` can now be typed with an IDL type ([#795](https://github.com/project-serum/anchor/pull/795)).
+* lang: Add `mint::freeze_authority` keyword for mint initialization within `#[derive(Accounts)]` ([#835](https://github.com/project-serum/anchor/pull/835)).
+* lang: Add `AccountLoader` type for `zero_copy` accounts with support for CPI ([#792](https://github.com/project-serum/anchor/pull/792)).
+* lang: Add `#[account(init_if_needed)]` keyword for allowing one to invoke the same instruction even if the account was created already ([#906](https://github.com/project-serum/anchor/pull/906)).
+* lang: Add custom errors support for raw constraints ([#905](https://github.com/project-serum/anchor/pull/905)).
+* lang, cli, spl: Update solana toolchain to v1.8.0 ([#886](https://github.com/project-serum/anchor/pull/886)).
+* lang: Add custom errors support for `signer`, `mut`, `has_one`, `owner`, raw constraints and `address` ([#905](https://github.com/project-serum/anchor/pull/905), [#913](https://github.com/project-serum/anchor/pull/913)).
+
+### Breaking
+
+* lang: Accounts marked with the `#[account(signer)]` constraint now enforce signer when the `"cpi"` feature is enabled ([#849](https://github.com/project-serum/anchor/pull/849)).
+
+## [0.17.0] - 2021-10-03
+
+### Features
+
+* cli: Add `localnet` command for starting a local `solana-test-validator` with the workspace deployed ([#820](https://github.com/project-serum/anchor/pull/820)).
+
+### Breaking
+
+* `CpiContext` accounts must now be used with the accounts struct generated in the `crate::cpi::accounts::*` module. These structs correspond to the accounts context for each instruction, except that each field is of type `AccountInfo` ([#824](https://github.com/project-serum/anchor/pull/824)).
+
+## [0.16.2] - 2021-09-27
+
+### Features
+
+* lang: Add `--detach` flag to `anchor test` ([#770](https://github.com/project-serum/anchor/pull/770)).
+* lang: Add `associated_token` keyword for initializing associated token accounts within `#[derive(Accounts)]` ([#790](https://github.com/project-serum/anchor/pull/790)).
+* cli: Allow passing through cargo flags for build command ([#719](https://github.com/project-serum/anchor/pull/719)).
+* cli: Allow passing through cargo flags for test, verify, and publish commands ([#804](https://github.com/project-serum/anchor/pull/804)).
+
+### Fixes
+
+* lang: Generated `AccountMeta`s for Rust clients now properly set the `isSigner` field ([#762](https://github.com/project-serum/anchor/pull/762)).
+
+## [0.16.1] - 2021-09-17
+
+### Fixes
+
+* lang: `Signer` type now sets isSigner to true in the IDL ([#750](https://github.com/project-serum/anchor/pull/750)).
+
+## [0.16.0] - 2021-09-16
+
 ### Features
 
 * lang: `Program` type introduced for executable accounts ([#705](https://github.com/project-serum/anchor/pull/705)).
 * lang: `Signer` type introduced for signing accounts where data is not used ([#705](https://github.com/project-serum/anchor/pull/705)).
+* lang: `UncheckedAccount` type introduced as a preferred alias for `AccountInfo` ([#745](https://github.com/project-serum/anchor/pull/745)).
 
 ### Breaking Changes
 
@@ -25,6 +95,7 @@ incremented for features.
 ### Features
 
 * lang: Add new `Account` type to replace `ProgramAccount` and `CpiAccount`, both of which are deprecated ([#686](https://github.com/project-serum/anchor/pull/686)).
+* lang: `Box` can be used with `Account` types to reduce stack usage ([#686](https://github.com/project-serum/anchor/pull/686)).
 * lang: Add `Owner` trait, which is automatically implemented by all `#[account]` structs ([#686](https://github.com/project-serum/anchor/pull/686)).
 * lang: Check that ProgramAccount writable before mut borrow (`anchor-debug` only) ([#681](https://github.com/project-serum/anchor/pull/681)).
 

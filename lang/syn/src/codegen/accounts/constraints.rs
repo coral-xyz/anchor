@@ -56,6 +56,7 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
         state,
         close,
         address,
+        associated_token,
     } = c_group.clone();
 
     let mut constraints = Vec::new();
@@ -68,6 +69,9 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
     }
     if let Some(c) = seeds {
         constraints.push(Constraint::Seeds(c));
+    }
+    if let Some(c) = associated_token {
+        constraints.push(Constraint::AssociatedToken(c));
     }
     if let Some(c) = mutable {
         constraints.push(Constraint::Mut(c));
@@ -115,6 +119,7 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::State(c) => generate_constraint_state(f, c),
         Constraint::Close(c) => generate_constraint_close(f, c),
         Constraint::Address(c) => generate_constraint_address(f, c),
+        Constraint::AssociatedToken(c) => generate_constraint_associated_token(f, c),
     }
 }
 
@@ -129,9 +134,10 @@ fn generate_constraint_composite(_f: &CompositeField, c: &Constraint) -> proc_ma
 fn generate_constraint_address(f: &Field, c: &ConstraintAddress) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let addr = &c.address;
+    let error = generate_custom_error(&c.error, quote! { ConstraintAddress });
     quote! {
         if #field.to_account_info().key != &#addr {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintAddress.into());
+            return Err(#error);
         }
     }
 }
@@ -143,7 +149,7 @@ pub fn generate_constraint_init(f: &Field, c: &ConstraintInitGroup) -> proc_macr
 pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let ty_decl = f.ty_decl();
-    let from_account_info = f.from_account_info(None);
+    let from_account_info = f.from_account_info_unchecked(None);
     quote! {
         let #field: #ty_decl = {
             let mut __data: &[u8] = &#field.try_borrow_data()?;
@@ -168,11 +174,12 @@ pub fn generate_constraint_close(f: &Field, c: &ConstraintClose) -> proc_macro2:
     }
 }
 
-pub fn generate_constraint_mut(f: &Field, _c: &ConstraintMut) -> proc_macro2::TokenStream {
+pub fn generate_constraint_mut(f: &Field, c: &ConstraintMut) -> proc_macro2::TokenStream {
     let ident = &f.ident;
+    let error = generate_custom_error(&c.error, quote! { ConstraintMut });
     quote! {
         if !#ident.to_account_info().is_writable {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintMut.into());
+            return Err(#error);
         }
     }
 }
@@ -182,35 +189,32 @@ pub fn generate_constraint_has_one(f: &Field, c: &ConstraintHasOne) -> proc_macr
     let ident = &f.ident;
     let field = match &f.ty {
         Ty::Loader(_) => quote! {#ident.load()?},
+        Ty::AccountLoader(_) => quote! {#ident.load()?},
         _ => quote! {#ident},
     };
+    let error = generate_custom_error(&c.error, quote! { ConstraintHasOne });
     quote! {
         if &#field.#target != #target.to_account_info().key {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintHasOne.into());
+            return Err(#error);
         }
     }
 }
 
-pub fn generate_constraint_signer(f: &Field, _c: &ConstraintSigner) -> proc_macro2::TokenStream {
+pub fn generate_constraint_signer(f: &Field, c: &ConstraintSigner) -> proc_macro2::TokenStream {
     let ident = &f.ident;
     let info = match f.ty {
         Ty::AccountInfo => quote! { #ident },
         Ty::ProgramAccount(_) => quote! { #ident.to_account_info() },
         Ty::Account(_) => quote! { #ident.to_account_info() },
         Ty::Loader(_) => quote! { #ident.to_account_info() },
+        Ty::AccountLoader(_) => quote! { #ident.to_account_info() },
         Ty::CpiAccount(_) => quote! { #ident.to_account_info() },
         _ => panic!("Invalid syntax: signer cannot be specified."),
     };
+    let error = generate_custom_error(&c.error, quote! { ConstraintSigner });
     quote! {
-        // Don't enforce on CPI, since usually a program is signing and so
-        // the `try_accounts` deserializatoin will fail *if* the one
-        // tries to manually invoke it.
-        //
-        // This check will be performed on the other end of the invocation.
-        if cfg!(not(feature = "cpi")) {
-            if !#info.to_account_info().is_signer {
-                return Err(anchor_lang::__private::ErrorCode::ConstraintSigner.into());
-            }
+        if !#info.is_signer {
+            return Err(#error);
         }
     }
 }
@@ -235,9 +239,10 @@ pub fn generate_constraint_literal(c: &ConstraintLiteral) -> proc_macro2::TokenS
 
 pub fn generate_constraint_raw(c: &ConstraintRaw) -> proc_macro2::TokenStream {
     let raw = &c.raw;
+    let error = generate_custom_error(&c.error, quote! { ConstraintRaw });
     quote! {
         if !(#raw) {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintRaw.into());
+            return Err(#error);
         }
     }
 }
@@ -245,9 +250,10 @@ pub fn generate_constraint_raw(c: &ConstraintRaw) -> proc_macro2::TokenStream {
 pub fn generate_constraint_owner(f: &Field, c: &ConstraintOwner) -> proc_macro2::TokenStream {
     let ident = &f.ident;
     let owner_address = &c.owner_address;
+    let error = generate_custom_error(&c.error, quote! { ConstraintOwner });
     quote! {
         if #ident.to_account_info().owner != &#owner_address {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintOwner.into());
+            return Err(#error);
         }
     }
 }
@@ -281,25 +287,33 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
     let seeds_with_nonce = match &c.seeds {
         None => quote! {},
         Some(c) => {
-            let s = &c.seeds;
+            let s = &mut c.seeds.clone();
+            // If the seeds came with a trailing comma, we need to chop it off
+            // before we interpolate them below.
+            if let Some(pair) = s.pop() {
+                s.push_value(pair.into_value());
+            }
+            let maybe_seeds_plus_comma = (!s.is_empty()).then(|| {
+                quote! { #s, }
+            });
             let inner = match c.bump.as_ref() {
                 // Bump target not given. Use the canonical bump.
                 None => {
                     quote! {
                         [
-                            #s,
+                            #maybe_seeds_plus_comma
                             &[
                                 Pubkey::find_program_address(
                                     &[#s],
                                     program_id,
                                 ).1
-                            ]
+                            ][..]
                         ]
                     }
                 }
                 // Bump target given. Use it.
                 Some(b) => quote! {
-                    [#s, &[#b]]
+                    [#maybe_seeds_plus_comma &[#b][..]]
                 },
             };
             quote! {
@@ -307,12 +321,17 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
             }
         }
     };
-    generate_init(f, seeds_with_nonce, payer, &c.space, &c.kind)
+    generate_init(f, c.if_needed, seeds_with_nonce, payer, &c.space, &c.kind)
 }
 
 fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2::TokenStream {
     let name = &f.ident;
-    let s = &c.seeds;
+    let s = &mut c.seeds.clone();
+    // If the seeds came with a trailing comma, we need to chop it off
+    // before we interpolate them below.
+    if let Some(pair) = s.pop() {
+        s.push_value(pair.into_value());
+    }
 
     // If the bump is provided with init *and target*, then force it to be the
     // canonical bump.
@@ -331,25 +350,28 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
             }
         }
     } else {
+        let maybe_seeds_plus_comma = (!s.is_empty()).then(|| {
+            quote! { #s, }
+        });
         let seeds = match c.bump.as_ref() {
             // Bump target not given. Find it.
             None => {
                 quote! {
                     [
-                        #s,
+                        #maybe_seeds_plus_comma
                         &[
                             Pubkey::find_program_address(
                                 &[#s],
                                 program_id,
                             ).1
-                        ]
+                        ][..]
                     ]
                 }
             }
             // Bump target given. Use it.
             Some(b) => {
                 quote! {
-                    [#s, &[#b]]
+                    [#maybe_seeds_plus_comma &[#b][..]]
                 }
             }
         };
@@ -365,8 +387,25 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
     }
 }
 
+fn generate_constraint_associated_token(
+    f: &Field,
+    c: &ConstraintAssociatedToken,
+) -> proc_macro2::TokenStream {
+    let name = &f.ident;
+    let wallet_address = &c.wallet;
+    let spl_token_mint_address = &c.mint;
+    quote! {
+        let __associated_token_address = anchor_spl::associated_token::get_associated_token_address(&#wallet_address.key(), &#spl_token_mint_address.key());
+        if #name.to_account_info().key != &__associated_token_address {
+            return Err(anchor_lang::__private::ErrorCode::ConstraintAssociated.into());
+        }
+    }
+}
+
+// `if_needed` is set if account allocation and initialization is optional.
 pub fn generate_init(
     f: &Field,
+    if_needed: bool,
     seeds_with_nonce: proc_macro2::TokenStream,
     payer: proc_macro2::TokenStream,
     space: &Option<Expr>,
@@ -374,7 +413,12 @@ pub fn generate_init(
 ) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let ty_decl = f.ty_decl();
-    let from_account_info = f.from_account_info(Some(kind));
+    let from_account_info = f.from_account_info_unchecked(Some(kind));
+    let if_needed = if if_needed {
+        quote! {true}
+    } else {
+        quote! {false}
+    };
     match kind {
         InitKind::Token { owner, mint } => {
             let create_account = generate_create_account(
@@ -385,51 +429,88 @@ pub fn generate_init(
             );
             quote! {
                 let #field: #ty_decl = {
-                    // Define payer variable.
-                    #payer
+                    if !#if_needed || #field.to_account_info().owner == &anchor_lang::solana_program::system_program::ID {
+                        // Define payer variable.
+                        #payer
 
-                    // Create the account with the system program.
-                    #create_account
+                        // Create the account with the system program.
+                        #create_account
 
-                    // Initialize the token account.
-                    let cpi_program = token_program.to_account_info();
-                    let accounts = anchor_spl::token::InitializeAccount {
-                        account: #field.to_account_info(),
-                        mint: #mint.to_account_info(),
-                        authority: #owner.to_account_info(),
-                        rent: rent.to_account_info(),
-                    };
-                    let cpi_ctx = CpiContext::new(cpi_program, accounts);
-                    anchor_spl::token::initialize_account(cpi_ctx)?;
-                    let mut pa: #ty_decl = #from_account_info;
+                        // Initialize the token account.
+                        let cpi_program = token_program.to_account_info();
+                        let accounts = anchor_spl::token::InitializeAccount {
+                            account: #field.to_account_info(),
+                            mint: #mint.to_account_info(),
+                            authority: #owner.to_account_info(),
+                            rent: rent.to_account_info(),
+                        };
+                        let cpi_ctx = CpiContext::new(cpi_program, accounts);
+                        anchor_spl::token::initialize_account(cpi_ctx)?;
+                    }
+
+                    let pa: #ty_decl = #from_account_info;
                     pa
                 };
             }
         }
-        InitKind::Mint { owner, decimals } => {
+        InitKind::AssociatedToken { owner, mint } => {
+            quote! {
+                let #field: #ty_decl = {
+                    if !#if_needed || #field.to_account_info().owner == &anchor_lang::solana_program::system_program::ID {
+                        #payer
+
+                        let cpi_program = associated_token_program.to_account_info();
+                        let cpi_accounts = anchor_spl::associated_token::Create {
+                            payer: payer.to_account_info(),
+                            associated_token: #field.to_account_info(),
+                            authority: #owner.to_account_info(),
+                            mint: #mint.to_account_info(),
+                            system_program: system_program.to_account_info(),
+                            token_program: token_program.to_account_info(),
+                            rent: rent.to_account_info(),
+                        };
+                        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+                        anchor_spl::associated_token::create(cpi_ctx)?;
+                    }
+                    let pa: #ty_decl = #from_account_info;
+                    pa
+                };
+            }
+        }
+        InitKind::Mint {
+            owner,
+            decimals,
+            freeze_authority,
+        } => {
             let create_account = generate_create_account(
                 field,
                 quote! {anchor_spl::token::Mint::LEN},
                 quote! {token_program.to_account_info().key},
                 seeds_with_nonce,
             );
+            let freeze_authority = match freeze_authority {
+                Some(fa) => quote! { Some(&#fa.key()) },
+                None => quote! { None },
+            };
             quote! {
                 let #field: #ty_decl = {
-                    // Define payer variable.
-                    #payer
+                    if !#if_needed || #field.to_account_info().owner == &anchor_lang::solana_program::system_program::ID {
+                        // Define payer variable.
+                        #payer
 
-                    // Create the account with the system program.
-                    #create_account
+                        // Create the account with the system program.
+                        #create_account
 
-                    // Initialize the mint account.
-                    let cpi_program = token_program.to_account_info();
-                    let accounts = anchor_spl::token::InitializeMint {
-                        mint: #field.to_account_info(),
-                        rent: rent.to_account_info(),
-                    };
-                    let cpi_ctx = CpiContext::new(cpi_program, accounts);
-                    anchor_spl::token::initialize_mint(cpi_ctx, #decimals, &#owner.to_account_info().key, None)?;
-                    let mut pa: #ty_decl = #from_account_info;
+                        // Initialize the mint account.
+                        let cpi_program = token_program.to_account_info();
+                        let accounts = anchor_spl::token::InitializeMint {
+                            mint: #field.to_account_info(),
+                            rent: rent.to_account_info(),
+                        };
+                        let cpi_ctx = CpiContext::new(cpi_program, accounts);
+                        anchor_spl::token::initialize_mint(cpi_ctx, #decimals, &#owner.to_account_info().key, #freeze_authority)?;
+                    }
+                    let pa: #ty_decl = #from_account_info;
                     pa
                 };
             }
@@ -440,7 +521,7 @@ pub fn generate_init(
                 // and take the length (with +8 for the discriminator.)
                 None => {
                     let account_ty = f.account_ty();
-                    match matches!(f.ty, Ty::Loader(_)) {
+                    match matches!(f.ty, Ty::Loader(_) | Ty::AccountLoader(_)) {
                         false => {
                             quote! {
                                 let space = 8 + #account_ty::default().try_to_vec().unwrap().len();
@@ -473,10 +554,12 @@ pub fn generate_init(
                 generate_create_account(field, quote! {space}, owner, seeds_with_nonce);
             quote! {
                 let #field = {
-                    #space
-                    #payer
-                    #create_account
-                    let mut pa: #ty_decl = #from_account_info;
+                    if !#if_needed || #field.to_account_info().owner == &anchor_lang::solana_program::system_program::ID {
+                        #space
+                        #payer
+                        #create_account
+                    }
+                    let pa: #ty_decl = #from_account_info;
                     pa
                 };
             }
@@ -595,5 +678,15 @@ pub fn generate_constraint_state(f: &Field, c: &ConstraintState) -> proc_macro2:
         if #ident.to_account_info().owner != #program_target.to_account_info().key {
             return Err(anchor_lang::__private::ErrorCode::ConstraintState.into());
         }
+    }
+}
+
+fn generate_custom_error(
+    custom_error: &Option<Expr>,
+    error: proc_macro2::TokenStream,
+) -> proc_macro2::TokenStream {
+    match custom_error {
+        Some(error) => quote! { #error.into() },
+        None => quote! { anchor_lang::__private::ErrorCode::#error.into() },
     }
 }

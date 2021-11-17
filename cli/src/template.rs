@@ -1,7 +1,8 @@
 use crate::config::ProgramWorkspace;
 use crate::VERSION;
+use anchor_syn::idl::Idl;
 use anyhow::Result;
-use heck::{CamelCase, SnakeCase};
+use heck::{CamelCase, MixedCase, SnakeCase};
 use solana_sdk::pubkey::Pubkey;
 
 pub fn default_program_id() -> Pubkey {
@@ -25,6 +26,24 @@ token = "{}"
 "#,
         token
     )
+}
+
+pub fn idl_ts(idl: &Idl) -> Result<String> {
+    let mut idl = idl.clone();
+    for acc in idl.accounts.iter_mut() {
+        acc.name = acc.name.to_mixed_case();
+    }
+    let idl_json = serde_json::to_string_pretty(&idl)?;
+    Ok(format!(
+        r#"export type {} = {};
+
+export const IDL: {} = {};
+"#,
+        idl.name.to_camel_case(),
+        idl_json,
+        idl.name.to_camel_case(),
+        idl_json
+    ))
 }
 
 pub fn cargo_toml(name: &str) -> String {
@@ -229,21 +248,27 @@ pub fn ts_package_json() -> String {
 pub fn ts_mocha(name: &str) -> String {
     format!(
         r#"import * as anchor from '@project-serum/anchor';
+import {{ Program }} from '@project-serum/anchor';
+import {{ {} }} from '../target/types/{}';
 
 describe('{}', () => {{
 
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.Provider.env());
 
+  const program = anchor.workspace.{} as Program<{}>;
+
   it('Is initialized!', async () => {{
     // Add your test here.
-    const program = anchor.workspace.{};
-    const tx = await program.rpc.initialize();
+    const tx = await program.rpc.initialize({{}});
     console.log("Your transaction signature", tx);
   }});
 }});
 "#,
+        name.to_camel_case(),
+        name.to_snake_case(),
         name,
+        name.to_camel_case(),
         name.to_camel_case(),
     )
 }
@@ -282,15 +307,18 @@ pub fn node_shell(
 const anchor = require('@project-serum/anchor');
 const web3 = anchor.web3;
 const PublicKey = anchor.web3.PublicKey;
+const Keypair = anchor.web3.Keypair;
 
 const __wallet = new anchor.Wallet(
-  Buffer.from(
-    JSON.parse(
-      require('fs').readFileSync(
-        "{}",
-        {{
-          encoding: "utf-8",
-        }},
+  Keypair.fromSecretKey(
+    Buffer.from(
+      JSON.parse(
+        require('fs').readFileSync(
+          "{}",
+          {{
+            encoding: "utf-8",
+          }},
+        ),
       ),
     ),
   ),
@@ -312,7 +340,7 @@ anchor.workspace.{} = new anchor.Program({}, new PublicKey("{}"), provider);
 "#,
             program.name.to_camel_case(),
             serde_json::to_string(&program.idl)?,
-            program.program_id.to_string()
+            program.program_id
         ));
     }
 

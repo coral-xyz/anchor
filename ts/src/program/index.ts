@@ -16,6 +16,11 @@ import { utf8 } from "../utils/bytes";
 import { EventManager } from "./event";
 import { Address, translateAddress } from "./common";
 
+export * from "./common";
+export * from "./context";
+export * from "./event";
+export * from "./namespace";
+
 /**
  * ## Program
  *
@@ -42,7 +47,7 @@ import { Address, translateAddress } from "./common";
  * below will refer to the two counter examples found
  * [here](https://github.com/project-serum/anchor#examples).
  */
-export class Program {
+export class Program<IDL extends Idl = Idl> {
   /**
    * Async methods to send signed transactions to *non*-state methods on the
    * program, returning a [[TransactionSignature]].
@@ -73,7 +78,7 @@ export class Program {
    * });
    * ```
    */
-  readonly rpc: RpcNamespace;
+  readonly rpc: RpcNamespace<IDL>;
 
   /**
    * The namespace provides handles to an [[AccountClient]] object for each
@@ -95,7 +100,7 @@ export class Program {
    *
    * For the full API, see the [[AccountClient]] reference.
    */
-  readonly account: AccountNamespace;
+  readonly account: AccountNamespace<IDL>;
 
   /**
    * The namespace provides functions to build [[TransactionInstruction]]
@@ -126,7 +131,7 @@ export class Program {
    * });
    * ```
    */
-  readonly instruction: InstructionNamespace;
+  readonly instruction: InstructionNamespace<IDL>;
 
   /**
    * The namespace provides functions to build [[Transaction]] objects for each
@@ -157,7 +162,7 @@ export class Program {
    * });
    * ```
    */
-  readonly transaction: TransactionNamespace;
+  readonly transaction: TransactionNamespace<IDL>;
 
   /**
    * The namespace provides functions to simulate transactions for each method
@@ -193,14 +198,14 @@ export class Program {
    * });
    * ```
    */
-  readonly simulate: SimulateNamespace;
+  readonly simulate: SimulateNamespace<IDL>;
 
   /**
    * A client for the program state. Similar to the base [[Program]] client,
    * one can use this to send transactions and read accounts for the state
    * abstraction.
    */
-  readonly state: StateClient;
+  readonly state?: StateClient<IDL>;
 
   /**
    * Address of the program.
@@ -213,10 +218,10 @@ export class Program {
   /**
    * IDL defining the program's interface.
    */
-  public get idl(): Idl {
+  public get idl(): IDL {
     return this._idl;
   }
-  private _idl: Idl;
+  private _idl: IDL;
 
   /**
    * Coder for serializing requests.
@@ -245,19 +250,19 @@ export class Program {
    * @param provider  The network and wallet context to use. If not provided
    *                  then uses [[getProvider]].
    */
-  public constructor(idl: Idl, programId: Address, provider?: Provider) {
+  public constructor(idl: IDL, programId: Address, provider?: Provider) {
     programId = translateAddress(programId);
+
+    if (!provider) {
+      provider = getProvider();
+    }
 
     // Fields.
     this._idl = idl;
+    this._provider = provider;
     this._programId = programId;
-    this._provider = provider ?? getProvider();
     this._coder = new Coder(idl);
-    this._events = new EventManager(
-      this._programId,
-      this._provider,
-      this._coder
-    );
+    this._events = new EventManager(this._programId, provider, this._coder);
 
     // Dynamic namespaces.
     const [
@@ -267,7 +272,7 @@ export class Program {
       account,
       simulate,
       state,
-    ] = NamespaceFactory.build(idl, this._coder, programId, this._provider);
+    ] = NamespaceFactory.build(idl, this._coder, programId, provider);
     this.rpc = rpc;
     this.instruction = instruction;
     this.transaction = transaction;
@@ -285,10 +290,17 @@ export class Program {
    * @param programId The on-chain address of the program.
    * @param provider  The network and wallet context.
    */
-  public static async at(address: Address, provider?: Provider) {
+  public static async at<IDL extends Idl = Idl>(
+    address: Address,
+    provider?: Provider
+  ): Promise<Program<IDL>> {
     const programId = translateAddress(address);
 
-    const idl = await Program.fetchIdl(programId, provider);
+    const idl = await Program.fetchIdl<IDL>(programId, provider);
+    if (!idl) {
+      throw new Error(`IDL not found for program: ${address.toString()}`);
+    }
+
     return new Program(idl, programId, provider);
   }
 
@@ -301,12 +313,18 @@ export class Program {
    * @param programId The on-chain address of the program.
    * @param provider  The network and wallet context.
    */
-  public static async fetchIdl(address: Address, provider?: Provider) {
+  public static async fetchIdl<IDL extends Idl = Idl>(
+    address: Address,
+    provider?: Provider
+  ): Promise<IDL | null> {
     provider = provider ?? getProvider();
     const programId = translateAddress(address);
 
     const idlAddr = await idlAddress(programId);
     const accountInfo = await provider.connection.getAccountInfo(idlAddr);
+    if (!accountInfo) {
+      return null;
+    }
     // Chop off account discriminator.
     let idlAccount = decodeIdlAccount(accountInfo.data.slice(8));
     const inflatedIdl = inflate(idlAccount.data);

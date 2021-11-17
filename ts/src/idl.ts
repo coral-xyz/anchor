@@ -60,11 +60,17 @@ export type IdlTypeDef = {
   type: IdlTypeDefTy;
 };
 
-type IdlTypeDefTy = {
-  kind: "struct" | "enum";
-  fields?: IdlTypeDefStruct;
-  variants?: IdlEnumVariant[];
+export type IdlTypeDefTyStruct = {
+  kind: "struct";
+  fields: IdlTypeDefStruct;
 };
+
+export type IdlTypeDefTyEnum = {
+  kind: "enum";
+  variants: IdlEnumVariant[];
+};
+
+type IdlTypeDefTy = IdlTypeDefTyEnum | IdlTypeDefTyStruct;
 
 type IdlTypeDefStruct = Array<IdlField>;
 
@@ -116,7 +122,7 @@ type IdlEnumFieldsNamed = IdlField[];
 
 type IdlEnumFieldsTuple = IdlType[];
 
-type IdlErrorCode = {
+export type IdlErrorCode = {
   code: number;
   name: string;
   msg?: string;
