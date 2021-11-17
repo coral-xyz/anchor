@@ -37,7 +37,6 @@ pub fn generate_composite(f: &CompositeField) -> proc_macro2::TokenStream {
         #(#checks)*
     }
 }
-//TODO[paulx]: where to add Dup
 // Linearizes the constraint group so that constraints with dependencies
 // run after those without.
 pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
