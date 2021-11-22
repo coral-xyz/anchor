@@ -98,6 +98,7 @@ pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorS
 pub use solana_program;
 
 // macro that implements traits based around AccountInfo that are the same in many types
+// currently only accepts "Type<'info>" or "Type<'info, T> where T: A + B + C" but not multiple generics or lifetimes
 macro_rules! impl_account_info_traits {
     ($t:ident<$l:lifetime$(,$gen:ident)?> $(where $gen_same:ident: $($gen_impl:ident$(+)?)*)?) => {
         #[allow(deprecated)]
@@ -135,7 +136,7 @@ macro_rules! impl_accounts_trait {
             #[inline(never)]
             fn try_accounts(
                 _program_id: &Pubkey,
-                accounts: &mut &[AccountInfo<'info>],
+                accounts: &mut &[AccountInfo<$l>],
                 _ix_data: &[u8],
             ) -> Result<Self, ProgramError> {
                 if accounts.is_empty() {
