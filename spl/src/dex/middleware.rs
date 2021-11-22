@@ -67,15 +67,15 @@ pub trait MarketMiddleware {
         Ok(())
     }
 
-    fn new_order_v3(&self, _ctx: &mut Context, _ix: &NewOrderInstructionV3) -> ProgramResult {
+    fn new_order_v3(&self, _ctx: &mut Context, _ix: &mut NewOrderInstructionV3) -> ProgramResult {
         Ok(())
     }
 
-    fn cancel_order_v2(&self, _ctx: &mut Context, _ix: &CancelOrderInstructionV2) -> ProgramResult {
+    fn cancel_order_v2(&self, _ctx: &mut Context, _ix: &mut CancelOrderInstructionV2) -> ProgramResult {
         Ok(())
     }
 
-    fn cancel_order_by_client_id_v2(&self, _ctx: &mut Context, _client_id: u64) -> ProgramResult {
+    fn cancel_order_by_client_id_v2(&self, _ctx: &mut Context, _client_id: &mut u64) -> ProgramResult {
         Ok(())
     }
 
@@ -87,15 +87,15 @@ pub trait MarketMiddleware {
         Ok(())
     }
 
-    fn consume_events(&self, _ctx: &mut Context, _limit: u16) -> ProgramResult {
+    fn consume_events(&self, _ctx: &mut Context, _limit: &mut u16) -> ProgramResult {
         Ok(())
     }
 
-    fn consume_events_permissioned(&self, _ctx: &mut Context, _limit: u16) -> ProgramResult {
+    fn consume_events_permissioned(&self, _ctx: &mut Context, _limit: &mut u16) -> ProgramResult {
         Ok(())
     }
 
-    fn prune(&self, _ctx: &mut Context, _limit: u16) -> ProgramResult {
+    fn prune(&self, _ctx: &mut Context, _limit: &mut u16) -> ProgramResult {
         Ok(())
     }
 
@@ -194,7 +194,7 @@ impl MarketMiddleware for OpenOrdersPda {
     ///
     /// 0.   Discriminant.
     /// ..
-    fn new_order_v3(&self, ctx: &mut Context, ix: &NewOrderInstructionV3) -> ProgramResult {
+    fn new_order_v3(&self, ctx: &mut Context, ix: &mut NewOrderInstructionV3) -> ProgramResult {
         // The user must authorize the tx.
         let user = &ctx.accounts[7];
         if !user.is_signer {
@@ -269,7 +269,7 @@ impl MarketMiddleware for OpenOrdersPda {
     ///
     /// 0.   Discriminant.
     /// ..
-    fn cancel_order_v2(&self, ctx: &mut Context, _ix: &CancelOrderInstructionV2) -> ProgramResult {
+    fn cancel_order_v2(&self, ctx: &mut Context, _ix: &mut CancelOrderInstructionV2) -> ProgramResult {
         let market = &ctx.accounts[0];
         let user = &ctx.accounts[4];
         if !user.is_signer {
@@ -296,7 +296,7 @@ impl MarketMiddleware for OpenOrdersPda {
     ///
     /// 0.   Discriminant.
     /// ..
-    fn cancel_order_by_client_id_v2(&self, ctx: &mut Context, _client_id: u64) -> ProgramResult {
+    fn cancel_order_by_client_id_v2(&self, ctx: &mut Context, _client_id: &mut u64) -> ProgramResult {
         let market = &ctx.accounts[0];
         let user = &ctx.accounts[4];
         if !user.is_signer {
@@ -377,7 +377,7 @@ impl MarketMiddleware for OpenOrdersPda {
     ///
     /// 0.   Discriminant.
     /// ..
-    fn prune(&self, ctx: &mut Context, _limit: u16) -> ProgramResult {
+    fn prune(&self, ctx: &mut Context, _limit: &mut u16) -> ProgramResult {
         // Set owner of open orders to be itself.
         ctx.accounts[5] = ctx.accounts[4].clone();
         Ok(())
@@ -392,17 +392,17 @@ impl MarketMiddleware for Logger {
         Ok(())
     }
 
-    fn new_order_v3(&self, _ctx: &mut Context, ix: &NewOrderInstructionV3) -> ProgramResult {
+    fn new_order_v3(&self, _ctx: &mut Context, ix: &mut NewOrderInstructionV3) -> ProgramResult {
         msg!("proxying new order v3 {:?}", ix);
         Ok(())
     }
 
-    fn cancel_order_v2(&self, _ctx: &mut Context, ix: &CancelOrderInstructionV2) -> ProgramResult {
+    fn cancel_order_v2(&self, _ctx: &mut Context, ix: &mut CancelOrderInstructionV2) -> ProgramResult {
         msg!("proxying cancel order v2 {:?}", ix);
         Ok(())
     }
 
-    fn cancel_order_by_client_id_v2(&self, _ctx: &mut Context, client_id: u64) -> ProgramResult {
+    fn cancel_order_by_client_id_v2(&self, _ctx: &mut Context, client_id: &mut u64) -> ProgramResult {
         msg!("proxying cancel order by client id v2 {:?}", client_id);
         Ok(())
     }
@@ -417,7 +417,7 @@ impl MarketMiddleware for Logger {
         Ok(())
     }
 
-    fn prune(&self, _ctx: &mut Context, limit: u16) -> ProgramResult {
+    fn prune(&self, _ctx: &mut Context, limit: &mut u16) -> ProgramResult {
         msg!("proxying prune {:?}", limit);
         Ok(())
     }

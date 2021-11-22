@@ -55,7 +55,7 @@ impl<'a> MarketProxy<'a> {
         let mut ctx = Context::new(program_id, dex.key, acc_infos);
 
         // Decode instruction.
-        let ix = MarketInstruction::unpack(ix_data);
+        let mut ix = MarketInstruction::unpack(ix_data);
 
         // Method dispatch.
         match ix {
@@ -65,22 +65,22 @@ impl<'a> MarketProxy<'a> {
                     mw.init_open_orders(&mut ctx)?;
                 }
             }
-            Some(MarketInstruction::NewOrderV3(ix)) => {
+            Some(MarketInstruction::NewOrderV3(ref mut ix)) => {
                 require!(ctx.accounts.len() >= 12, ErrorCode::NotEnoughAccounts);
                 for mw in &self.middlewares {
-                    mw.new_order_v3(&mut ctx, &ix)?;
+                    mw.new_order_v3(&mut ctx, ix)?;
                 }
             }
-            Some(MarketInstruction::CancelOrderV2(ix)) => {
+            Some(MarketInstruction::CancelOrderV2(ref mut ix)) => {
                 require!(ctx.accounts.len() >= 6, ErrorCode::NotEnoughAccounts);
                 for mw in &self.middlewares {
-                    mw.cancel_order_v2(&mut ctx, &ix)?;
+                    mw.cancel_order_v2(&mut ctx, ix)?;
                 }
             }
-            Some(MarketInstruction::CancelOrderByClientIdV2(ix)) => {
+            Some(MarketInstruction::CancelOrderByClientIdV2(ref mut client_id)) => {
                 require!(ctx.accounts.len() >= 6, ErrorCode::NotEnoughAccounts);
                 for mw in &self.middlewares {
-                    mw.cancel_order_by_client_id_v2(&mut ctx, ix)?;
+                    mw.cancel_order_by_client_id_v2(&mut ctx, client_id)?;
                 }
             }
             Some(MarketInstruction::SettleFunds) => {
@@ -95,19 +95,19 @@ impl<'a> MarketProxy<'a> {
                     mw.close_open_orders(&mut ctx)?;
                 }
             }
-            Some(MarketInstruction::ConsumeEvents(limit)) => {
+            Some(MarketInstruction::ConsumeEvents(ref mut limit)) => {
                 require!(ctx.accounts.len() >= 4, ErrorCode::NotEnoughAccounts);
                 for mw in &self.middlewares {
                     mw.consume_events(&mut ctx, limit)?;
                 }
             }
-            Some(MarketInstruction::ConsumeEventsPermissioned(limit)) => {
+            Some(MarketInstruction::ConsumeEventsPermissioned(ref mut limit)) => {
                 require!(ctx.accounts.len() >= 3, ErrorCode::NotEnoughAccounts);
                 for mw in &self.middlewares {
                     mw.consume_events_permissioned(&mut ctx, limit)?;
                 }
             }
-            Some(MarketInstruction::Prune(limit)) => {
+            Some(MarketInstruction::Prune(ref mut limit)) => {
                 require!(ctx.accounts.len() >= 7, ErrorCode::NotEnoughAccounts);
                 for mw in &self.middlewares {
                     mw.prune(&mut ctx, limit)?;
@@ -120,6 +120,9 @@ impl<'a> MarketProxy<'a> {
                 return Ok(());
             }
         };
+
+        let ix_data_vec = MarketInstruction::pack(&ix.unwrap());
+        ix_data = ix_data_vec.as_slice();
 
         // Extract the middleware adjusted context.
         let Context {
