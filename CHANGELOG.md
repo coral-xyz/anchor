@@ -11,6 +11,14 @@ incremented for features.
 
 ## [Unreleased]
 
+### Fixes
+
+* lang: Add `deprecated` attribute to `ProgramAccount` ([#1014](https://github.com/project-serum/anchor/pull/1014)).
+
+### Features
+
+* lang: Add `ErrorCode::AccountNotInitialized` error to separate the situation when the account has the wrong owner from when it does not exist (#[1024](https://github.com/project-serum/anchor/pull/1024))
+
 ## [0.18.2] - 2021-11-14
 
 * cli: Replace global JavaScript dependency installs with local.
@@ -18,6 +26,7 @@ incremented for features.
 ### Features
 
 * lang: Add `SystemAccount<'info>` account type for generic wallet addresses or accounts owned by the system program ([#954](https://github.com/project-serum/anchor/pull/954))
+* ts: Add inputs `postInstructions` and `preInstructions` as a replacement for (the now deprecated) `instructions`
 
 ### Fixes
 

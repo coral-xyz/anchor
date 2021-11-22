@@ -392,6 +392,27 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool) -> Result
         return Err(anyhow!("Workspace already initialized"));
     }
 
+    // The list is taken from https://doc.rust-lang.org/reference/keywords.html.
+    let key_words = [
+        "as", "break", "const", "continue", "crate", "else", "enum", "extern", "false", "fn",
+        "for", "if", "impl", "in", "let", "loop", "match", "mod", "move", "mut", "pub", "ref",
+        "return", "self", "Self", "static", "struct", "super", "trait", "true", "type", "unsafe",
+        "use", "where", "while", "async", "await", "dyn", "abstract", "become", "box", "do",
+        "final", "macro", "override", "priv", "typeof", "unsized", "virtual", "yield", "try",
+        "unique",
+    ];
+
+    if key_words.contains(&name[..].into()) {
+        return Err(anyhow!(
+            "{} is a reserved word in rust, name your project something else!",
+            name
+        ));
+    } else if name.chars().next().unwrap().is_numeric() {
+        return Err(anyhow!(
+            "Cannot start project name with numbers, name your project something else!"
+        ));
+    }
+
     fs::create_dir(name.clone())?;
     std::env::set_current_dir(&name)?;
     fs::create_dir("app")?;
@@ -548,6 +569,10 @@ pub fn build(
     };
     fs::create_dir_all(idl_ts_out.as_ref().unwrap())?;
 
+    if !&cfg.workspace.types.is_empty() {
+        fs::create_dir_all(cfg_parent.join(&cfg.workspace.types))?;
+    };
+
     let solana_version = match solana_version.is_some() {
         true => solana_version,
         false => cfg.solana_version.clone(),
@@ -651,8 +676,8 @@ fn build_cwd(
         Some(p) => std::env::set_current_dir(&p)?,
     };
     match verifiable {
-        false => _build_cwd(idl_out, idl_ts_out, cargo_args),
-        true => build_cwd_verifiable(cfg, cargo_toml, solana_version, stdout, stderr),
+        false => _build_cwd(cfg, idl_out, idl_ts_out, cargo_args),
+        true => build_cwd_verifiable(cfg, cargo_toml, solana_version, stdout, stderr, cargo_args),
     }
 }
 
@@ -664,12 +689,16 @@ fn build_cwd_verifiable(
     solana_version: Option<String>,
     stdout: Option<File>,
     stderr: Option<File>,
+    cargo_args: Vec<String>,
 ) -> Result<()> {
     // Create output dirs.
     let workspace_dir = cfg.path().parent().unwrap().canonicalize()?;
     fs::create_dir_all(workspace_dir.join("target/verifiable"))?;
     fs::create_dir_all(workspace_dir.join("target/idl"))?;
     fs::create_dir_all(workspace_dir.join("target/types"))?;
+    if !&cfg.workspace.types.is_empty() {
+        fs::create_dir_all(workspace_dir.join(&cfg.workspace.types))?;
+    }
 
     let container_name = "anchor-program";
 
@@ -681,6 +710,7 @@ fn build_cwd_verifiable(
         solana_version,
         stdout,
         stderr,
+        cargo_args,
     );
 
     // Wipe the generated docker-target dir.
@@ -726,6 +756,17 @@ fn build_cwd_verifiable(
         println!("Writing the .ts file");
         let ts_file = workspace_dir.join(format!("target/types/{}.ts", idl.name));
         fs::write(&ts_file, template::idl_ts(&idl)?)?;
+
+        // Copy out the TypeScript type.
+        if !&cfg.workspace.types.is_empty() {
+            fs::copy(
+                ts_file,
+                workspace_dir
+                    .join(&cfg.workspace.types)
+                    .join(idl.name)
+                    .with_extension("ts"),
+            )?;
+        }
     }
     println!("Build success");
 
@@ -739,6 +780,7 @@ fn docker_build(
     solana_version: Option<String>,
     stdout: Option<File>,
     stderr: Option<File>,
+    cargo_args: Vec<String>,
 ) -> Result<()> {
     let binary_name = Manifest::from_path(&cargo_toml)?.lib_name()?;
 
@@ -842,6 +884,7 @@ fn docker_build(
             "--manifest-path",
             &manifest_path.display().to_string(),
         ])
+        .args(cargo_args)
         .stdout(match stdout {
             None => Stdio::inherit(),
             Some(f) => f.into(),
@@ -890,6 +933,7 @@ fn docker_build(
 }
 
 fn _build_cwd(
+    cfg: &WithPath<Config>,
     idl_out: Option<PathBuf>,
     idl_ts_out: Option<PathBuf>,
     cargo_args: Vec<String>,
@@ -920,9 +964,19 @@ fn _build_cwd(
 
         // Write out the JSON file.
         write_idl(&idl, OutFile::File(out))?;
-
         // Write out the TypeScript type.
-        fs::write(ts_out, template::idl_ts(&idl)?)?;
+        fs::write(&ts_out, template::idl_ts(&idl)?)?;
+        // Copy out the TypeScript type.
+        let cfg_parent = cfg.path().parent().expect("Invalid Anchor.toml");
+        if !&cfg.workspace.types.is_empty() {
+            fs::copy(
+                &ts_out,
+                cfg_parent
+                    .join(&cfg.workspace.types)
+                    .join(&idl.name)
+                    .with_extension("ts"),
+            )?;
+        }
     }
 
     Ok(())
@@ -1849,10 +1903,10 @@ fn deploy(cfg_override: &ConfigOverride, program_str: Option<String>) -> Result<
                 .arg("--url")
                 .arg(&url)
                 .arg("--keypair")
-                .arg(&keypair)
+                .arg(&format!("\"{}\"", keypair))
                 .arg("--program-id")
-                .arg(file.path().display().to_string())
-                .arg(&binary_path)
+                .arg(&format!("\"{}\"", file.path().display()))
+                .arg(&format!("\"{}\"", binary_path))
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .output()
@@ -2350,7 +2404,7 @@ fn publish(
                 // Only add the file if it's not empty.
                 let metadata = fs::File::open(&e)?.metadata()?;
                 if metadata.len() > 0 {
-                    println!("PACKING: {}", e.display().to_string());
+                    println!("PACKING: {}", e.display());
                     if e.is_dir() {
                         tar.append_dir_all(&e, &e)?;
                     } else {
@@ -2457,7 +2511,7 @@ fn keys_list(cfg_override: &ConfigOverride) -> Result<()> {
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
     for program in cfg.read_all_programs()? {
         let pubkey = program.pubkey()?;
-        println!("{}: {}", program.lib_name, pubkey.to_string());
+        println!("{}: {}", program.lib_name, pubkey);
     }
     Ok(())
 }
