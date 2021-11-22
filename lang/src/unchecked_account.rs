@@ -48,13 +48,6 @@ impl<'info> ToAccountMetas for UncheckedAccount<'info> {
     }
 }
 
-impl<'info> AccountsExit<'info> for UncheckedAccount<'info> {
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
-        // no-op
-        Ok(())
-    }
-}
-
 impl<'info> Deref for UncheckedAccount<'info> {
     type Target = AccountInfo<'info>;
 
@@ -62,5 +55,7 @@ impl<'info> Deref for UncheckedAccount<'info> {
         &self.info
     }
 }
+
+impl<'info> AccountsExit<'info> for UncheckedAccount<'info> {}
 
 impl_account_info_traits!(UncheckedAccount<'info>);
