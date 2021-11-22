@@ -132,30 +132,6 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> ToAccountM
     }
 }
 
-impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> ToAccountInfos<'info>
-    for Account<'info, T>
-{
-    fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        vec![self.info.clone()]
-    }
-}
-
-impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> ToAccountInfo<'info>
-    for Account<'info, T>
-{
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.info.clone()
-    }
-}
-
-impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AsRef<AccountInfo<'info>>
-    for Account<'info, T>
-{
-    fn as_ref(&self) -> &AccountInfo<'info> {
-        &self.info
-    }
-}
-
 impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Deref for Account<'a, T> {
     type Target = T;
 
@@ -175,8 +151,4 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> DerefMut for 
     }
 }
 
-impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> Key for Account<'info, T> {
-    fn key(&self) -> Pubkey {
-        *self.info.key
-    }
-}
+impl_account_info_traits!(Account<'info, T> where T: AccountSerialize + AccountDeserialize + Owner + Clone);

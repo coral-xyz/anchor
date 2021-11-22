@@ -1,4 +1,5 @@
 use crate::error::ErrorCode;
+use crate::impl_account_info_traits;
 use crate::{Accounts, AccountsExit, Key, ToAccountInfo, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
@@ -9,11 +10,13 @@ use std::ops::Deref;
 
 /// Explicit wrapper for AccountInfo types.
 #[derive(Debug, Clone)]
-pub struct UncheckedAccount<'info>(AccountInfo<'info>);
+pub struct UncheckedAccount<'info> {
+    info: AccountInfo<'info>,
+}
 
 impl<'info> UncheckedAccount<'info> {
-    pub fn try_from(acc_info: AccountInfo<'info>) -> Self {
-        Self(acc_info)
+    pub fn try_from(info: AccountInfo<'info>) -> Self {
+        Self { info }
     }
 }
 
@@ -28,7 +31,9 @@ impl<'info> Accounts<'info> for UncheckedAccount<'info> {
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
-        Ok(UncheckedAccount(account.clone()))
+        Ok(UncheckedAccount {
+            info: account.clone(),
+        })
     }
 }
 
@@ -43,18 +48,6 @@ impl<'info> ToAccountMetas for UncheckedAccount<'info> {
     }
 }
 
-impl<'info> ToAccountInfos<'info> for UncheckedAccount<'info> {
-    fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        vec![self.0.clone()]
-    }
-}
-
-impl<'info> ToAccountInfo<'info> for UncheckedAccount<'info> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.0.clone()
-    }
-}
-
 impl<'info> AccountsExit<'info> for UncheckedAccount<'info> {
     fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
         // no-op
@@ -62,16 +55,12 @@ impl<'info> AccountsExit<'info> for UncheckedAccount<'info> {
     }
 }
 
-impl<'info> Key for UncheckedAccount<'info> {
-    fn key(&self) -> Pubkey {
-        *self.key
-    }
-}
-
 impl<'info> Deref for UncheckedAccount<'info> {
     type Target = AccountInfo<'info>;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.info
     }
 }
+
+impl_account_info_traits!(UncheckedAccount<'info>);

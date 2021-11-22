@@ -1,4 +1,5 @@
 use crate::error::ErrorCode;
+use crate::impl_account_info_traits;
 use crate::{Accounts, AccountsExit, Key, ToAccountInfo, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
@@ -64,18 +65,6 @@ impl<'info, T: solana_program::sysvar::Sysvar> ToAccountMetas for Sysvar<'info, 
     }
 }
 
-impl<'info, T: solana_program::sysvar::Sysvar> ToAccountInfos<'info> for Sysvar<'info, T> {
-    fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        vec![self.info.clone()]
-    }
-}
-
-impl<'info, T: solana_program::sysvar::Sysvar> AsRef<AccountInfo<'info>> for Sysvar<'info, T> {
-    fn as_ref(&self) -> &AccountInfo<'info> {
-        &self.info
-    }
-}
-
 impl<'a, T: solana_program::sysvar::Sysvar> Deref for Sysvar<'a, T> {
     type Target = T;
 
@@ -90,12 +79,6 @@ impl<'a, T: solana_program::sysvar::Sysvar> DerefMut for Sysvar<'a, T> {
     }
 }
 
-impl<'info, T: solana_program::sysvar::Sysvar> ToAccountInfo<'info> for Sysvar<'info, T> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.info.clone()
-    }
-}
-
 impl<'info, T: solana_program::sysvar::Sysvar> AccountsExit<'info> for Sysvar<'info, T> {
     fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
         // no-op
@@ -103,8 +86,6 @@ impl<'info, T: solana_program::sysvar::Sysvar> AccountsExit<'info> for Sysvar<'i
     }
 }
 
-impl<'info, T: solana_program::sysvar::Sysvar> Key for Sysvar<'info, T> {
-    fn key(&self) -> Pubkey {
-        *self.info.key
-    }
-}
+// macro expects an ident so we rename the path to one
+use solana_program::sysvar::Sysvar as SolanaSysvar;
+impl_account_info_traits!(Sysvar<'info, T> where T: SolanaSysvar);

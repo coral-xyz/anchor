@@ -34,6 +34,7 @@ use std::io::Write;
 mod account;
 mod account_info;
 mod account_meta;
+mod account_mut;
 mod boxed;
 mod bpf_upgradeable_state;
 mod common;
@@ -96,6 +97,40 @@ pub use anchor_derive_accounts::Accounts;
 pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorSerialize};
 pub use solana_program;
 
+// macro that implements traits based around AccountInfo that are the same in many types
+macro_rules! impl_account_info_traits {
+    ($t:ident<$l:lifetime$(,$gen:ident)?> $(where $gen_same:ident: $($gen_impl:ident$(+)?)*)?) => {
+        #[allow(deprecated)]
+        impl<$l$(,$gen)?> ToAccountInfos<$l> for $t<$l$(,$gen)?> $(where $gen_same: $($gen_impl +)*)? {
+            fn to_account_infos(&self) -> Vec<AccountInfo<$l>> {
+                vec![self.info.clone()]
+            }
+        }
+        #[allow(deprecated)]
+        impl<$l$(,$gen)?> ToAccountInfo<$l> for $t<$l$(,$gen)?> $(where $gen_same: $($gen_impl +)*)?{
+            fn to_account_info(&self) -> AccountInfo<$l> {
+                self.info.clone()
+            }
+        }
+        #[allow(deprecated)]
+        impl<$l$(,$gen)?> AsRef<AccountInfo<$l>> for $t<$l$(,$gen)?> $(where $gen_same: $($gen_impl +)*)?{
+            fn as_ref(&self) -> &AccountInfo<$l> {
+                &self.info
+            }
+        }
+        #[allow(deprecated)]
+        impl<$l$(,$gen)?> Key for $t<$l$(,$gen)?> $(where $gen_same: $($gen_impl +)*)?{
+            fn key(&self) -> Pubkey {
+                *self.info.key
+            }
+        }
+    };
+}
+
+// hack to let other files inside the crate import the macro without
+// allowing other crates to import it (which would be the case with #[macro_export])
+pub(crate) use impl_account_info_traits;
+
 /// A data structure of validated accounts that can be deserialized from the
 /// input to a Solana program. Implementations of this trait should perform any
 /// and all requisite constraint checks on accounts to ensure the accounts
@@ -125,7 +160,9 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
 /// should be done here.
 pub trait AccountsExit<'info>: ToAccountMetas + ToAccountInfos<'info> {
     /// `program_id` is the currently executing program.
-    fn exit(&self, program_id: &Pubkey) -> ProgramResult;
+    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
+        Ok(())
+    }
 }
 
 /// The close procedure to initiate garabage collection of an account, allowing

@@ -64,24 +64,6 @@ impl<'info> ToAccountMetas for Signer<'info> {
     }
 }
 
-impl<'info> ToAccountInfos<'info> for Signer<'info> {
-    fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        vec![self.info.clone()]
-    }
-}
-
-impl<'info> ToAccountInfo<'info> for Signer<'info> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.info.clone()
-    }
-}
-
-impl<'info> AsRef<AccountInfo<'info>> for Signer<'info> {
-    fn as_ref(&self) -> &AccountInfo<'info> {
-        &self.info
-    }
-}
-
 impl<'info> Deref for Signer<'info> {
     type Target = AccountInfo<'info>;
 
@@ -90,8 +72,4 @@ impl<'info> Deref for Signer<'info> {
     }
 }
 
-impl<'info> Key for Signer<'info> {
-    fn key(&self) -> Pubkey {
-        *self.info.key
-    }
-}
+impl_account_info_traits!(Signer<'info>);

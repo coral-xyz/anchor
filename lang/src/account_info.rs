@@ -44,12 +44,7 @@ impl<'info> ToAccountInfo<'info> for AccountInfo<'info> {
     }
 }
 
-impl<'info> AccountsExit<'info> for AccountInfo<'info> {
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
-        // no-op
-        Ok(())
-    }
-}
+impl<'info> AccountsExit<'info> for AccountInfo<'info> {}
 
 impl<'info> Key for AccountInfo<'info> {
     fn key(&self) -> Pubkey {

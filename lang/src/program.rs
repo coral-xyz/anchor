@@ -73,24 +73,6 @@ impl<'info, T: Id + AccountDeserialize + Clone> ToAccountMetas for Program<'info
     }
 }
 
-impl<'info, T: Id + AccountDeserialize + Clone> ToAccountInfos<'info> for Program<'info, T> {
-    fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        vec![self.info.clone()]
-    }
-}
-
-impl<'info, T: Id + AccountDeserialize + Clone> ToAccountInfo<'info> for Program<'info, T> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.info.clone()
-    }
-}
-
-impl<'info, T: Id + AccountDeserialize + Clone> AsRef<AccountInfo<'info>> for Program<'info, T> {
-    fn as_ref(&self) -> &AccountInfo<'info> {
-        &self.info
-    }
-}
-
 impl<'info, T: Id + AccountDeserialize + Clone> Deref for Program<'info, T> {
     type Target = AccountInfo<'info>;
 
@@ -105,3 +87,5 @@ impl<'info, T: AccountDeserialize + Id + Clone> AccountsExit<'info> for Program<
         Ok(())
     }
 }
+
+impl_account_info_traits!(Program<'info, T> where T: AccountDeserialize + Id + Clone);

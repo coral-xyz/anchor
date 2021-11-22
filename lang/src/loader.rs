@@ -1,4 +1,5 @@
 use crate::error::ErrorCode;
+use crate::impl_account_info_traits;
 use crate::{
     Accounts, AccountsClose, AccountsExit, Key, ToAccountInfo, ToAccountInfos, ToAccountMetas,
     ZeroCopy,
@@ -27,7 +28,7 @@ use std::ops::DerefMut;
 /// call to `load` are dropped before CPI.
 #[deprecated(since = "0.18.0", note = "Please use AccountLoader instead")]
 pub struct Loader<'info, T: ZeroCopy> {
-    acc_info: AccountInfo<'info>,
+    info: AccountInfo<'info>,
     phantom: PhantomData<&'info T>,
 }
 
@@ -35,7 +36,7 @@ pub struct Loader<'info, T: ZeroCopy> {
 impl<'info, T: ZeroCopy + fmt::Debug> fmt::Debug for Loader<'info, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Loader")
-            .field("acc_info", &self.acc_info)
+            .field("info", &self.info)
             .field("phantom", &self.phantom)
             .finish()
     }
@@ -43,9 +44,9 @@ impl<'info, T: ZeroCopy + fmt::Debug> fmt::Debug for Loader<'info, T> {
 
 #[allow(deprecated)]
 impl<'info, T: ZeroCopy> Loader<'info, T> {
-    fn new(acc_info: AccountInfo<'info>) -> Loader<'info, T> {
+    fn new(info: AccountInfo<'info>) -> Loader<'info, T> {
         Self {
-            acc_info,
+            info: info,
             phantom: PhantomData,
         }
     }
@@ -55,12 +56,12 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
     #[allow(deprecated)]
     pub fn try_from(
         program_id: &Pubkey,
-        acc_info: &AccountInfo<'info>,
+        info: &AccountInfo<'info>,
     ) -> Result<Loader<'info, T>, ProgramError> {
-        if acc_info.owner != program_id {
+        if info.owner != program_id {
             return Err(ErrorCode::AccountNotProgramOwned.into());
         }
-        let data: &[u8] = &acc_info.try_borrow_data()?;
+        let data: &[u8] = &info.try_borrow_data()?;
         // Discriminator must match.
         let mut disc_bytes = [0u8; 8];
         disc_bytes.copy_from_slice(&data[..8]);
@@ -68,7 +69,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
-        Ok(Loader::new(acc_info.clone()))
+        Ok(Loader::new(info.clone()))
     }
 
     /// Constructs a new `Loader` from an uninitialized account.
@@ -76,18 +77,18 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
     #[inline(never)]
     pub fn try_from_unchecked(
         program_id: &Pubkey,
-        acc_info: &AccountInfo<'info>,
+        info: &AccountInfo<'info>,
     ) -> Result<Loader<'info, T>, ProgramError> {
-        if acc_info.owner != program_id {
+        if info.owner != program_id {
             return Err(ErrorCode::AccountNotProgramOwned.into());
         }
-        Ok(Loader::new(acc_info.clone()))
+        Ok(Loader::new(info.clone()))
     }
 
     /// Returns a Ref to the account data structure for reading.
     #[allow(deprecated)]
     pub fn load(&self) -> Result<Ref<T>, ProgramError> {
-        let data = self.acc_info.try_borrow_data()?;
+        let data = self.info.try_borrow_data()?;
 
         let mut disc_bytes = [0u8; 8];
         disc_bytes.copy_from_slice(&data[..8]);
@@ -103,11 +104,11 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
     pub fn load_mut(&self) -> Result<RefMut<T>, ProgramError> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
-        if !self.acc_info.is_writable {
+        if !self.info.is_writable {
             return Err(ErrorCode::AccountNotMutable.into());
         }
 
-        let data = self.acc_info.try_borrow_mut_data()?;
+        let data = self.info.try_borrow_mut_data()?;
 
         let mut disc_bytes = [0u8; 8];
         disc_bytes.copy_from_slice(&data[..8]);
@@ -126,11 +127,11 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
     pub fn load_init(&self) -> Result<RefMut<T>, ProgramError> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
-        if !self.acc_info.is_writable {
+        if !self.info.is_writable {
             return Err(ErrorCode::AccountNotMutable.into());
         }
 
-        let data = self.acc_info.try_borrow_mut_data()?;
+        let data = self.info.try_borrow_mut_data()?;
 
         // The discriminator should be zero, since we're initializing.
         let mut disc_bytes = [0u8; 8];
@@ -168,7 +169,7 @@ impl<'info, T: ZeroCopy> Accounts<'info> for Loader<'info, T> {
 impl<'info, T: ZeroCopy> AccountsExit<'info> for Loader<'info, T> {
     // The account *cannot* be loaded when this is called.
     fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
-        let mut data = self.acc_info.try_borrow_mut_data()?;
+        let mut data = self.info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
         let mut cursor = std::io::Cursor::new(dst);
         cursor.write_all(&T::discriminator()).unwrap();
@@ -186,39 +187,13 @@ impl<'info, T: ZeroCopy> AccountsClose<'info> for Loader<'info, T> {
 #[allow(deprecated)]
 impl<'info, T: ZeroCopy> ToAccountMetas for Loader<'info, T> {
     fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
-        let is_signer = is_signer.unwrap_or(self.acc_info.is_signer);
-        let meta = match self.acc_info.is_writable {
-            false => AccountMeta::new_readonly(*self.acc_info.key, is_signer),
-            true => AccountMeta::new(*self.acc_info.key, is_signer),
+        let is_signer = is_signer.unwrap_or(self.info.is_signer);
+        let meta = match self.info.is_writable {
+            false => AccountMeta::new_readonly(*self.info.key, is_signer),
+            true => AccountMeta::new(*self.info.key, is_signer),
         };
         vec![meta]
     }
 }
 
-#[allow(deprecated)]
-impl<'info, T: ZeroCopy> AsRef<AccountInfo<'info>> for Loader<'info, T> {
-    fn as_ref(&self) -> &AccountInfo<'info> {
-        &self.acc_info
-    }
-}
-
-#[allow(deprecated)]
-impl<'info, T: ZeroCopy> ToAccountInfos<'info> for Loader<'info, T> {
-    fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        vec![self.acc_info.clone()]
-    }
-}
-
-#[allow(deprecated)]
-impl<'info, T: ZeroCopy> ToAccountInfo<'info> for Loader<'info, T> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.acc_info.clone()
-    }
-}
-
-#[allow(deprecated)]
-impl<'info, T: ZeroCopy> Key for Loader<'info, T> {
-    fn key(&self) -> Pubkey {
-        *self.acc_info.key
-    }
-}
+impl_account_info_traits!(Loader<'info, T> where T: ZeroCopy);
