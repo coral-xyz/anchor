@@ -43,17 +43,6 @@ impl<'a, T: Id + AccountDeserialize + Clone> Program<'a, T> {
     }
 }
 
-impl<'info, T: Id + AccountDeserialize + Clone> ToAccountMetas for Program<'info, T> {
-    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
-        let is_signer = is_signer.unwrap_or(self.info.is_signer);
-        let meta = match self.info.is_writable {
-            false => AccountMeta::new_readonly(*self.info.key, is_signer),
-            true => AccountMeta::new(*self.info.key, is_signer),
-        };
-        vec![meta]
-    }
-}
-
 impl<'info, T: Id + AccountDeserialize + Clone> Deref for Program<'info, T> {
     type Target = AccountInfo<'info>;
 
@@ -62,12 +51,8 @@ impl<'info, T: Id + AccountDeserialize + Clone> Deref for Program<'info, T> {
     }
 }
 
-impl<'info, T: AccountDeserialize + Id + Clone> AccountsExit<'info> for Program<'info, T> {
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
-        // No-op.
-        Ok(())
-    }
-}
+impl<'info, T: AccountDeserialize + Id + Clone> AccountsExit<'info> for Program<'info, T> {}
 
 impl_account_info_traits!(Program<'info, T> where T: AccountDeserialize + Id + Clone);
 impl_accounts_trait!(Program<'info, T> where T: AccountDeserialize + Id + Clone);
+impl_account_metas_trait!(Program<'info, T> where T: AccountDeserialize + Id + Clone);

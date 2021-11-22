@@ -1,7 +1,6 @@
 use crate::error::ErrorCode;
 use crate::*;
 use solana_program::account_info::AccountInfo;
-use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
@@ -32,17 +31,6 @@ impl<'info> Signer<'info> {
 
 impl<'info> AccountsExit<'info> for Signer<'info> {}
 
-impl<'info> ToAccountMetas for Signer<'info> {
-    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
-        let is_signer = is_signer.unwrap_or(self.info.is_signer);
-        let meta = match self.info.is_writable {
-            false => AccountMeta::new_readonly(*self.info.key, is_signer),
-            true => AccountMeta::new(*self.info.key, is_signer),
-        };
-        vec![meta]
-    }
-}
-
 impl<'info> Deref for Signer<'info> {
     type Target = AccountInfo<'info>;
 
@@ -53,3 +41,4 @@ impl<'info> Deref for Signer<'info> {
 
 impl_account_info_traits!(Signer<'info>);
 impl_accounts_trait!(Signer<'info>);
+impl_account_metas_trait!(Signer<'info>);

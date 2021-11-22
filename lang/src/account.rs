@@ -99,19 +99,6 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsCl
     }
 }
 
-impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> ToAccountMetas
-    for Account<'info, T>
-{
-    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
-        let is_signer = is_signer.unwrap_or(self.info.is_signer);
-        let meta = match self.info.is_writable {
-            false => AccountMeta::new_readonly(*self.info.key, is_signer),
-            true => AccountMeta::new(*self.info.key, is_signer),
-        };
-        vec![meta]
-    }
-}
-
 impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Deref for Account<'a, T> {
     type Target = T;
 
@@ -133,3 +120,4 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> DerefMut for 
 
 impl_account_info_traits!(Account<'info, T> where T: AccountSerialize + AccountDeserialize + Owner + Clone);
 impl_accounts_trait!(Account<'info, T> where T: AccountSerialize + AccountDeserialize + Owner + Clone);
+impl_account_metas_trait!(Account<'info, T> where T: AccountSerialize + AccountDeserialize + Owner + Clone);

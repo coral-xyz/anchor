@@ -1,5 +1,5 @@
 use crate::error::ErrorCode;
-use crate::impl_account_info_traits;
+use crate::{impl_account_info_traits, impl_account_metas_trait};
 use crate::{
     Accounts, AccountsClose, AccountsExit, Key, ToAccountInfo, ToAccountInfos, ToAccountMetas,
     ZeroCopy,
@@ -46,7 +46,7 @@ impl<'info, T: ZeroCopy + fmt::Debug> fmt::Debug for Loader<'info, T> {
 impl<'info, T: ZeroCopy> Loader<'info, T> {
     fn new(info: AccountInfo<'info>) -> Loader<'info, T> {
         Self {
-            info: info,
+            info,
             phantom: PhantomData,
         }
     }
@@ -184,16 +184,5 @@ impl<'info, T: ZeroCopy> AccountsClose<'info> for Loader<'info, T> {
     }
 }
 
-#[allow(deprecated)]
-impl<'info, T: ZeroCopy> ToAccountMetas for Loader<'info, T> {
-    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
-        let is_signer = is_signer.unwrap_or(self.info.is_signer);
-        let meta = match self.info.is_writable {
-            false => AccountMeta::new_readonly(*self.info.key, is_signer),
-            true => AccountMeta::new(*self.info.key, is_signer),
-        };
-        vec![meta]
-    }
-}
-
 impl_account_info_traits!(Loader<'info, T> where T: ZeroCopy);
+impl_account_metas_trait!(Loader<'info, T> where T: ZeroCopy);

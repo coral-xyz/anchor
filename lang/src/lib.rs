@@ -149,9 +149,26 @@ macro_rules! impl_accounts_trait {
     };
 }
 
+macro_rules! impl_account_metas_trait {
+    ($t:ident<$l:lifetime$(,$gen:ident)?> $(where $gen_same:ident: $($gen_impl:ident$(+)?)*)?) => {
+        #[allow(deprecated)]
+        impl<$l$(,$gen)?> ToAccountMetas for $t<$l$(,$gen)?> $(where $gen_same: $($gen_impl +)*)? {
+            fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
+                let is_signer = is_signer.unwrap_or(self.info.is_signer);
+                let meta = match self.info.is_writable {
+                    false => AccountMeta::new_readonly(*self.info.key, is_signer),
+                    true => AccountMeta::new(*self.info.key, is_signer),
+                };
+                vec![meta]
+            }
+        }
+    };
+}
+
 // hack to let other files inside the crate import the macro without
 // allowing other crates to import it (which would be the case with #[macro_export])
 pub(crate) use impl_account_info_traits;
+pub(crate) use impl_account_metas_trait;
 pub(crate) use impl_accounts_trait;
 
 /// A data structure of validated accounts that can be deserialized from the
