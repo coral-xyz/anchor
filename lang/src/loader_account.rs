@@ -1,5 +1,5 @@
 use crate::error::ErrorCode;
-use crate::impl_account_info_traits;
+use crate::{impl_account_info_traits, impl_accounts_trait};
 use crate::{
     Accounts, AccountsClose, AccountsExit, Key, Owner, ToAccountInfo, ToAccountInfos,
     ToAccountMetas, ZeroCopy,
@@ -137,23 +137,6 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
     }
 }
 
-impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
-    #[inline(never)]
-    fn try_accounts(
-        _program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
-        _ix_data: &[u8],
-    ) -> Result<Self, ProgramError> {
-        if accounts.is_empty() {
-            return Err(ErrorCode::AccountNotEnoughKeys.into());
-        }
-        let account = &accounts[0];
-        *accounts = &accounts[1..];
-        let l = AccountLoader::try_from(account)?;
-        Ok(l)
-    }
-}
-
 impl<'info, T: ZeroCopy + Owner> AccountsExit<'info> for AccountLoader<'info, T> {
     // The account *cannot* be loaded when this is called.
     fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
@@ -183,3 +166,4 @@ impl<'info, T: ZeroCopy + Owner> ToAccountMetas for AccountLoader<'info, T> {
 }
 
 impl_account_info_traits!(AccountLoader<'info, T> where T: ZeroCopy + Owner);
+impl_accounts_trait!(AccountLoader<'info, T> where T: ZeroCopy + Owner);

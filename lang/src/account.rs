@@ -75,26 +75,6 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
     }
 }
 
-impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> Accounts<'info>
-    for Account<'info, T>
-where
-    T: AccountSerialize + AccountDeserialize + Owner + Clone,
-{
-    #[inline(never)]
-    fn try_accounts(
-        _program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
-        _ix_data: &[u8],
-    ) -> Result<Self, ProgramError> {
-        if accounts.is_empty() {
-            return Err(ErrorCode::AccountNotEnoughKeys.into());
-        }
-        let account = &accounts[0];
-        *accounts = &accounts[1..];
-        Account::try_from(account)
-    }
-}
-
 impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsExit<'info>
     for Account<'info, T>
 {
@@ -152,3 +132,4 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> DerefMut for 
 }
 
 impl_account_info_traits!(Account<'info, T> where T: AccountSerialize + AccountDeserialize + Owner + Clone);
+impl_accounts_trait!(Account<'info, T> where T: AccountSerialize + AccountDeserialize + Owner + Clone);

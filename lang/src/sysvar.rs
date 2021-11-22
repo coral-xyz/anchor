@@ -1,11 +1,12 @@
 use crate::error::ErrorCode;
-use crate::impl_account_info_traits;
+use crate::{impl_account_info_traits, impl_accounts_trait};
 use crate::{Accounts, AccountsExit, Key, ToAccountInfo, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
+use std::convert::TryFrom;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 
@@ -24,6 +25,21 @@ impl<'info, T: solana_program::sysvar::Sysvar + fmt::Debug> fmt::Debug for Sysva
     }
 }
 
+impl<'info, T> TryFrom<&AccountInfo<'info>> for Sysvar<'info, T>
+where
+    T: solana_program::sysvar::Sysvar,
+{
+    type Error = ProgramError;
+
+    fn try_from(info: &AccountInfo<'info>) -> Result<Self, Self::Error> {
+        Ok(Sysvar {
+            info: info.clone(),
+            account: T::from_account_info(info)?,
+        })
+    }
+}
+
+#[deprecated(note = "please use try_from instead")]
 impl<'info, T: solana_program::sysvar::Sysvar> Sysvar<'info, T> {
     pub fn from_account_info(
         acc_info: &AccountInfo<'info>,
@@ -41,21 +57,6 @@ impl<'info, T: solana_program::sysvar::Sysvar> Clone for Sysvar<'info, T> {
             info: self.info.clone(),
             account: T::from_account_info(&self.info).unwrap(),
         }
-    }
-}
-
-impl<'info, T: solana_program::sysvar::Sysvar> Accounts<'info> for Sysvar<'info, T> {
-    fn try_accounts(
-        _program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
-        _ix_data: &[u8],
-    ) -> Result<Self, ProgramError> {
-        if accounts.is_empty() {
-            return Err(ErrorCode::AccountNotEnoughKeys.into());
-        }
-        let account = &accounts[0];
-        *accounts = &accounts[1..];
-        Sysvar::from_account_info(account)
     }
 }
 
@@ -79,13 +80,9 @@ impl<'a, T: solana_program::sysvar::Sysvar> DerefMut for Sysvar<'a, T> {
     }
 }
 
-impl<'info, T: solana_program::sysvar::Sysvar> AccountsExit<'info> for Sysvar<'info, T> {
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
-        // no-op
-        Ok(())
-    }
-}
+impl<'info, T: solana_program::sysvar::Sysvar> AccountsExit<'info> for Sysvar<'info, T> {}
 
 // macro expects an ident so we rename the path to one
 use solana_program::sysvar::Sysvar as SolanaSysvar;
 impl_account_info_traits!(Sysvar<'info, T> where T: SolanaSysvar);
+impl_accounts_trait!(Sysvar<'info, T> where T: SolanaSysvar);

@@ -30,28 +30,7 @@ impl<'info> Signer<'info> {
     }
 }
 
-impl<'info> Accounts<'info> for Signer<'info> {
-    #[inline(never)]
-    fn try_accounts(
-        _program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
-        _ix_data: &[u8],
-    ) -> Result<Self, ProgramError> {
-        if accounts.is_empty() {
-            return Err(ErrorCode::AccountNotEnoughKeys.into());
-        }
-        let account = &accounts[0];
-        *accounts = &accounts[1..];
-        Signer::try_from(account)
-    }
-}
-
-impl<'info> AccountsExit<'info> for Signer<'info> {
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
-        // No-op.
-        Ok(())
-    }
-}
+impl<'info> AccountsExit<'info> for Signer<'info> {}
 
 impl<'info> ToAccountMetas for Signer<'info> {
     fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
@@ -73,3 +52,4 @@ impl<'info> Deref for Signer<'info> {
 }
 
 impl_account_info_traits!(Signer<'info>);
+impl_accounts_trait!(Signer<'info>);

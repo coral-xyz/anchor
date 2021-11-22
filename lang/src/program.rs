@@ -43,25 +43,6 @@ impl<'a, T: Id + AccountDeserialize + Clone> Program<'a, T> {
     }
 }
 
-impl<'info, T: Id + Clone> Accounts<'info> for Program<'info, T>
-where
-    T: Id + AccountDeserialize,
-{
-    #[inline(never)]
-    fn try_accounts(
-        _program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
-        _ix_data: &[u8],
-    ) -> Result<Self, ProgramError> {
-        if accounts.is_empty() {
-            return Err(ErrorCode::AccountNotEnoughKeys.into());
-        }
-        let account = &accounts[0];
-        *accounts = &accounts[1..];
-        Program::try_from(account)
-    }
-}
-
 impl<'info, T: Id + AccountDeserialize + Clone> ToAccountMetas for Program<'info, T> {
     fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
         let is_signer = is_signer.unwrap_or(self.info.is_signer);
@@ -89,3 +70,4 @@ impl<'info, T: AccountDeserialize + Id + Clone> AccountsExit<'info> for Program<
 }
 
 impl_account_info_traits!(Program<'info, T> where T: AccountDeserialize + Id + Clone);
+impl_accounts_trait!(Program<'info, T> where T: AccountDeserialize + Id + Clone);

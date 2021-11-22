@@ -127,9 +127,32 @@ macro_rules! impl_account_info_traits {
     };
 }
 
+macro_rules! impl_accounts_trait {
+    ($t:ident<$l:lifetime$(,$gen:ident)?> $(where $gen_same:ident: $($gen_impl:ident$(+)?)*)?) => {
+        impl<$l$(,$gen)?> Accounts<$l>
+            for $t<$l$(,$gen)?> $(where $gen_same: $($gen_impl +)*)?
+        {
+            #[inline(never)]
+            fn try_accounts(
+                _program_id: &Pubkey,
+                accounts: &mut &[AccountInfo<'info>],
+                _ix_data: &[u8],
+            ) -> Result<Self, ProgramError> {
+                if accounts.is_empty() {
+                    return Err(ErrorCode::AccountNotEnoughKeys.into());
+                }
+                let account = &accounts[0];
+                *accounts = &accounts[1..];
+                $t::try_from(account)
+            }
+        }
+    };
+}
+
 // hack to let other files inside the crate import the macro without
 // allowing other crates to import it (which would be the case with #[macro_export])
 pub(crate) use impl_account_info_traits;
+pub(crate) use impl_accounts_trait;
 
 /// A data structure of validated accounts that can be deserialized from the
 /// input to a Solana program. Implementations of this trait should perform any

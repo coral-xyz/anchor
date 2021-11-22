@@ -26,22 +26,6 @@ impl<'info> SystemAccount<'info> {
     }
 }
 
-impl<'info> Accounts<'info> for SystemAccount<'info> {
-    #[inline(never)]
-    fn try_accounts(
-        _program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
-        _ix_data: &[u8],
-    ) -> Result<Self, ProgramError> {
-        if accounts.is_empty() {
-            return Err(ErrorCode::AccountNotEnoughKeys.into());
-        }
-        let account = &accounts[0];
-        *accounts = &accounts[1..];
-        SystemAccount::try_from(account)
-    }
-}
-
 impl<'info> AccountsExit<'info> for SystemAccount<'info> {}
 
 impl<'info> ToAccountMetas for SystemAccount<'info> {
@@ -64,3 +48,4 @@ impl<'info> Deref for SystemAccount<'info> {
 }
 
 impl_account_info_traits!(SystemAccount<'info>);
+impl_accounts_trait!(SystemAccount<'info>);
