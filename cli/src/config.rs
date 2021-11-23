@@ -268,6 +268,14 @@ pub struct WorkspaceConfig {
     pub types: String,
 }
 
+#[derive(Debug, Default, Clone)]
+pub struct BuildConfig {
+    pub verifiable: bool,
+    pub solana_version: Option<String>,
+    pub docker_image: String,
+    pub bootstrap: bool,
+}
+
 impl Config {
     pub fn docker(&self) -> String {
         let ver = self
