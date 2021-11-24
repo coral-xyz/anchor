@@ -72,7 +72,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 accounts: &mut anchor_lang::idl::IdlCreateAccounts,
                 data_len: u64,
             ) -> ProgramResult {
-                #[cfg(feature = "log-ix-name")]
+                #[cfg(not(feature = "no-log-ix-name"))]
                 anchor_lang::prelude::msg!("Instruction: IdlCreateAccount");
 
                 if program_id != accounts.program.key {
@@ -135,7 +135,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 program_id: &Pubkey,
                 accounts: &mut anchor_lang::idl::IdlCreateBuffer,
             ) -> ProgramResult {
-                #[cfg(feature = "log-ix-name")]
+                #[cfg(not(feature = "no-log-ix-name"))]
                 anchor_lang::prelude::msg!("Instruction: IdlCreateBuffer");
 
                 let mut buffer = &mut accounts.buffer;
@@ -149,7 +149,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 accounts: &mut anchor_lang::idl::IdlAccounts,
                 idl_data: Vec<u8>,
             ) -> ProgramResult {
-                #[cfg(feature = "log-ix-name")]
+                #[cfg(not(feature = "no-log-ix-name"))]
                 anchor_lang::prelude::msg!("Instruction: IdlWrite");
 
                 let mut idl = &mut accounts.idl;
@@ -163,7 +163,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 accounts: &mut anchor_lang::idl::IdlAccounts,
                 new_authority: Pubkey,
             ) -> ProgramResult {
-                #[cfg(feature = "log-ix-name")]
+                #[cfg(not(feature = "no-log-ix-name"))]
                 anchor_lang::prelude::msg!("Instruction: IdlSetAuthority");
 
                 accounts.idl.authority = new_authority;
@@ -175,7 +175,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 program_id: &Pubkey,
                 accounts: &mut anchor_lang::idl::IdlSetBuffer,
             ) -> ProgramResult {
-                #[cfg(feature = "log-ix-name")]
+                #[cfg(not(feature = "no-log-ix-name"))]
                 anchor_lang::prelude::msg!("Instruction: IdlSetBuffer");
 
                 accounts.idl.data = accounts.buffer.data.clone();
@@ -202,7 +202,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         // invocations.
                         #[inline(never)]
                         pub fn __ctor(program_id: &Pubkey, accounts: &[AccountInfo], ix_data: &[u8]) -> ProgramResult {
-                            #[cfg(feature = "log-ix-name")]
+                            #[cfg(not(feature = "no-log-ix-name"))]
                             anchor_lang::prelude::msg!(#ix_name_log);
 
                             // Deserialize instruction data.
@@ -276,7 +276,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         // invocations.
                         #[inline(never)]
                         pub fn __ctor(program_id: &Pubkey, accounts: &[AccountInfo], ix_data: &[u8]) -> ProgramResult {
-                            #[cfg(feature = "log-ix-name")]
+                            #[cfg(not(feature = "no-log-ix-name"))]
                             anchor_lang::prelude::msg!(#ix_name_log);
 
                             // Deserialize instruction data.
@@ -379,7 +379,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     accounts: &[AccountInfo],
                                     ix_data: &[u8],
                                 ) -> ProgramResult {
-                                    #[cfg(feature = "log-ix-name")]
+                                    #[cfg(not(feature = "no-log-ix-name"))]
                                     anchor_lang::prelude::msg!(format!("Instruction: {}", #ix_name_log));
                                     // Deserialize instruction.
                                     let ix = instruction::state::#ix_name::deserialize(&mut &ix_data[..])
@@ -424,9 +424,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     accounts: &[AccountInfo],
                                     ix_data: &[u8],
                                 ) -> ProgramResult {
-                                    #[cfg(feature = "log-ix-name")]
+                                    #[cfg(not(feature = "no-log-ix-name"))]
                                     anchor_lang::prelude::msg!(#ix_name_log);
-                                    
+
                                     // Deserialize instruction.
                                     let ix = instruction::state::#ix_name::deserialize(&mut &ix_data[..])
                                         .map_err(|_| anchor_lang::__private::ErrorCode::InstructionDidNotDeserialize)?;
@@ -541,7 +541,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             accounts: &[AccountInfo],
                                             ix_data: &[u8],
                                         ) -> ProgramResult {
-                                            #[cfg(feature = "log-ix-name")]
+                                            #[cfg(not(feature = "no-log-ix-name"))]
                                             anchor_lang::prelude::msg!(#ix_name_log);
 
                                             // Deserialize instruction.
@@ -588,7 +588,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             accounts: &[AccountInfo],
                                             ix_data: &[u8],
                                         ) -> ProgramResult {
-                                            #[cfg(feature = "log-ix-name")]
+                                            #[cfg(not(feature = "no-log-ix-name"))]
                                             anchor_lang::prelude::msg!(#ix_name_log);
 
                                             // Deserialize instruction.
@@ -637,7 +637,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     accounts: &[AccountInfo],
                     ix_data: &[u8],
                 ) -> ProgramResult {
-                    #[cfg(feature = "log-ix-name")]
+                    #[cfg(not(feature = "no-log-ix-name"))]
                     anchor_lang::prelude::msg!(#ix_name_log);
 
                     // Deserialize data.
