@@ -204,13 +204,6 @@ pub enum Command {
     Publish {
         /// The name of the program to publish.
         program: String,
-        /// Docker image to use.
-        #[clap(short, long)]
-        docker_image: Option<String>,
-        /// Bootstrap docker image from scratch, installing all requirements for
-        /// verifiable builds. Only works for debian-based images.
-        #[clap(arg_enum, short, long, default_value = "none")]
-        bootstrap: BootstrapMode,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
         #[clap(
             required = false,
@@ -405,16 +398,8 @@ pub fn entry(opts: Opts) -> Result<()> {
         Command::Login { token } => login(&opts.cfg_override, token),
         Command::Publish {
             program,
-            docker_image,
-            bootstrap,
             cargo_args,
-        } => publish(
-            &opts.cfg_override,
-            program,
-            docker_image,
-            bootstrap,
-            cargo_args,
-        ),
+        } => publish(&opts.cfg_override, program, cargo_args),
         Command::Keys { subcmd } => keys(&opts.cfg_override, subcmd),
         Command::Localnet {
             skip_build,
@@ -2395,8 +2380,6 @@ fn login(_cfg_override: &ConfigOverride, token: String) -> Result<()> {
 fn publish(
     cfg_override: &ConfigOverride,
     program_name: String,
-    docker_image: Option<String>,
-    bootstrap: BootstrapMode,
     cargo_args: Vec<String>,
 ) -> Result<()> {
     // Discover the various workspace configs.
@@ -2515,9 +2498,9 @@ fn publish(
         None,
         true,
         Some(program_name),
-        cfg.solana_version.clone(),
-        docker_image,
-        bootstrap,
+        None,
+        None,
+        BootstrapMode::None,
         None,
         None,
         cargo_args,
