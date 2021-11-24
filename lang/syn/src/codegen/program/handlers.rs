@@ -380,7 +380,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     ix_data: &[u8],
                                 ) -> ProgramResult {
                                     #[cfg(not(feature = "no-log-ix-name"))]
-                                    anchor_lang::prelude::msg!(format!("Instruction: {}", #ix_name_log));
+                                    anchor_lang::prelude::msg!(#ix_name_log);
+
                                     // Deserialize instruction.
                                     let ix = instruction::state::#ix_name::deserialize(&mut &ix_data[..])
                                         .map_err(|_| anchor_lang::__private::ErrorCode::InstructionDidNotDeserialize)?;
