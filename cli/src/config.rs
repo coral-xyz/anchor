@@ -1,7 +1,7 @@
 use anchor_client::Cluster;
 use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Error, Result};
-use clap::Clap;
+use clap::{ArgEnum, Clap};
 use serde::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{Keypair, Signer};
@@ -268,12 +268,18 @@ pub struct WorkspaceConfig {
     pub types: String,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(ArgEnum, Clap, Clone, PartialEq, Debug)]
+pub enum BootstrapMode {
+    None,
+    Debian,
+}
+
+#[derive(Debug, Clone)]
 pub struct BuildConfig {
     pub verifiable: bool,
     pub solana_version: Option<String>,
     pub docker_image: String,
-    pub bootstrap: bool,
+    pub bootstrap: BootstrapMode,
 }
 
 impl Config {

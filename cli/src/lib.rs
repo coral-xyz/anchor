@@ -1,5 +1,5 @@
 use crate::config::{
-    AnchorPackage, BuildConfig, Config, ConfigOverride, Manifest, ProgramDeployment,
+    AnchorPackage, BootstrapMode, BuildConfig, Config, ConfigOverride, Manifest, ProgramDeployment,
     ProgramWorkspace, Test, WithPath,
 };
 use anchor_client::Cluster;
@@ -83,9 +83,9 @@ pub enum Command {
         #[clap(short, long)]
         docker_image: Option<String>,
         /// Bootstrap docker image from scratch, installing all requirements for
-        /// verifiable builds.
-        #[clap(short, long)]
-        bootstrap: bool,
+        /// verifiable builds. Only works for debian-based images.
+        #[clap(arg_enum, short, long, default_value = "none")]
+        bootstrap: BootstrapMode,
         /// Arguments to pass to the underlying `cargo build-bpf` command
         #[clap(
             required = false,
@@ -111,9 +111,9 @@ pub enum Command {
         #[clap(short, long)]
         docker_image: Option<String>,
         /// Bootstrap docker image from scratch, installing all requirements for
-        /// verifiable builds.
-        #[clap(short, long)]
-        bootstrap: bool,
+        /// verifiable builds. Only works for debian-based images.
+        #[clap(arg_enum, short, long, default_value = "none")]
+        bootstrap: BootstrapMode,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
         #[clap(
             required = false,
@@ -208,9 +208,9 @@ pub enum Command {
         #[clap(short, long)]
         docker_image: Option<String>,
         /// Bootstrap docker image from scratch, installing all requirements for
-        /// verifiable builds.
-        #[clap(short, long)]
-        bootstrap: bool,
+        /// verifiable builds. Only works for debian-based images.
+        #[clap(arg_enum, short, long, default_value = "none")]
+        bootstrap: BootstrapMode,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
         #[clap(
             required = false,
@@ -581,7 +581,7 @@ pub fn build(
     program_name: Option<String>,
     solana_version: Option<String>,
     docker_image: Option<String>,
-    bootstrap: bool,
+    bootstrap: BootstrapMode,
     stdout: Option<File>, // Used for the package registry server.
     stderr: Option<File>, // Used for the package registry server.
     cargo_args: Vec<String>,
@@ -857,21 +857,24 @@ fn docker_build(
 fn docker_prep(container_name: &str, build_config: &BuildConfig) -> Result<()> {
     // Set the solana version in the container, if given. Otherwise use the
     // default.
-    if build_config.bootstrap {
-        // Install build requirements
-        docker_exec(container_name, &["apt", "update"])?;
-        docker_exec(
-            container_name,
-            &["apt", "install", "-y", "curl", "build-essential"],
-        )?;
+    match build_config.bootstrap {
+        BootstrapMode::Debian => {
+            // Install build requirements
+            docker_exec(container_name, &["apt", "update"])?;
+            docker_exec(
+                container_name,
+                &["apt", "install", "-y", "curl", "build-essential"],
+            )?;
 
-        // Install Rust
-        docker_exec(
-            container_name,
-            &["curl", "https://sh.rustup.rs", "-sfo", "rustup.sh"],
-        )?;
-        docker_exec(container_name, &["sh", "rustup.sh", "-y"])?;
-        docker_exec(container_name, &["rm", "-f", "rustup.sh"])?;
+            // Install Rust
+            docker_exec(
+                container_name,
+                &["curl", "https://sh.rustup.rs", "-sfo", "rustup.sh"],
+            )?;
+            docker_exec(container_name, &["sh", "rustup.sh", "-y"])?;
+            docker_exec(container_name, &["rm", "-f", "rustup.sh"])?;
+        }
+        BootstrapMode::None => {}
     }
 
     if let Some(solana_version) = &build_config.solana_version {
@@ -1063,7 +1066,7 @@ fn verify(
     program_name: Option<String>,
     solana_version: Option<String>,
     docker_image: Option<String>,
-    bootstrap: bool,
+    bootstrap: BootstrapMode,
     cargo_args: Vec<String>,
 ) -> Result<()> {
     // Change to the workspace member directory, if needed.
@@ -1602,7 +1605,7 @@ fn test(
                 None,
                 None,
                 None,
-                false,
+                BootstrapMode::None,
                 None,
                 None,
                 cargo_args,
@@ -2393,7 +2396,7 @@ fn publish(
     cfg_override: &ConfigOverride,
     program_name: String,
     docker_image: Option<String>,
-    bootstrap: bool,
+    bootstrap: BootstrapMode,
     cargo_args: Vec<String>,
 ) -> Result<()> {
     // Discover the various workspace configs.
@@ -2611,7 +2614,7 @@ fn localnet(
                 None,
                 None,
                 None,
-                false,
+                BootstrapMode::None,
                 None,
                 None,
                 cargo_args,
