@@ -36,9 +36,9 @@ jobs:
       - run: cargo fmt -- --check
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test
-      - run: pushd ts && yarn && popd
-      - run: pushd ts && yarn test && popd
-      - run: pushd ts && yarn lint && popd
+      - run: cd ts && yarn 
+      - run: cd ts && yarn test 
+      - run: cd ts && yarn lint 
 
   setup-anchor-cli:
     name: Setup Anchor cli
@@ -108,7 +108,7 @@ jobs:
         with:
           path: ./examples/tutorial/basic-4/target
           key: cargo-${{ runner.os }}-${{ hashFiles('./examples/tutorial/basic-4/**/Cargo.toml') }}
-      - run: pushd examples/tutorial && yarn workspaces run test
+      - run: cd examples/tutorial && yarn workspaces run test
 
   setup-client-example:
     needs: setup-anchor-cli
@@ -135,7 +135,7 @@ jobs:
           name: anchor-binary
           path: ~/.cargo/bin/
       - run: chmod +rwx ~/.cargo/bin/anchor
-      - run: pushd ${{ matrix.node.path }} && anchor build && popd
+      - run: cd ${{ matrix.node.path }} && anchor build 
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.node.name }}
@@ -177,7 +177,7 @@ jobs:
           path: client/example/target
           key: cargo-${{ runner.os }}-client/example-${{ env.ANCHOR_VERSION }}
       - uses: ./.github/actions/setup-solana/
-      - run: pushd client/example && ./run-test.sh && popd
+      - run: cd client/example && ./run-test.sh 
 
   test-programs:
     needs: setup-anchor-cli
@@ -186,45 +186,45 @@ jobs:
     strategy:
       matrix:
         node:
-          - cmd: pushd tests/sysvars && anchor test && popd
+          - cmd: cd tests/sysvars && anchor test 
             path: tests/sysvars
-          - cmd: pushd tests/composite && anchor test && popd
+          - cmd: cd tests/composite && anchor test 
             path: tests/composite
-          - cmd: pushd tests/errors && anchor test && popd
+          - cmd: cd tests/errors && anchor test 
             path: tests/errors
-          - cmd: pushd tests/spl/token-proxy && anchor test && popd
+          - cmd: cd tests/spl/token-proxy && anchor test 
             path: spl/token-proxy
-          - cmd: pushd tests/multisig && anchor test && popd
+          - cmd: cd tests/multisig && anchor test 
             path: tests/multisig
-          - cmd: pushd tests/interface && anchor test && popd
+          - cmd: cd tests/interface && anchor test 
             path: tests/interface
-          - cmd: pushd tests/lockup && anchor test && popd
+          - cmd: cd tests/lockup && anchor test 
             path: tests/lockup
-          - cmd: pushd tests/permissioned-markets/deps/serum-dex/dex && cargo build-bpf && cd ../../../ && anchor test && popd
+          - cmd: cd tests/permissioned-markets/deps/serum-dex/dex && cargo build-bpf && cd ../../../ && anchor test 
             path: tests/permissioned-markets
-          - cmd: pushd tests/swap/deps/serum-dex/dex && cargo build-bpf && cd ../../../ && anchor test && popd
+          - cmd: cd tests/swap/deps/serum-dex/dex && cargo build-bpf && cd ../../../ && anchor test 
             path: tests/swap
-          - cmd: pushd tests/escrow && anchor test && popd
+          - cmd: cd tests/escrow && anchor test 
             path: tests/escrow
-          - cmd: pushd tests/pyth && anchor test && popd
+          - cmd: cd tests/pyth && anchor test 
             path: tests/pyth
-          - cmd: pushd tests/system-accounts && anchor test && popd
+          - cmd: cd tests/system-accounts && anchor test 
             path: tests/system-accounts
-          - cmd: pushd tests/misc && anchor test && popd
+          - cmd: cd tests/misc && anchor test 
             path: tests/misc
-          - cmd: pushd tests/events && anchor test && popd
+          - cmd: cd tests/events && anchor test 
             path: tests/events
-          - cmd: pushd tests/cashiers-check && anchor test && popd
+          - cmd: cd tests/cashiers-check && anchor test 
             path: tests/cashiers-check
-          - cmd: pushd tests/typescript && anchor test && popd
+          - cmd: cd tests/typescript && anchor test 
             path: tests/typescript
-          - cmd: pushd tests/zero-copy && anchor test && popd
+          - cmd: cd tests/zero-copy && anchor test 
             path: tests/zero-copy
-          - cmd: pushd tests/chat && anchor test && popd
+          - cmd: cd tests/chat && anchor test 
             path: tests/chat
-          - cmd: pushd tests/ido-pool && anchor test && popd
+          - cmd: cd tests/ido-pool && anchor test 
             path: tests/ido-pool
-          - cmd: pushd tests/cfo && anchor run test-with-build && popd
+          - cmd: cd tests/cfo && anchor run test-with-build 
             path: tests/cfo
     steps:
       - uses: actions/checkout@v2
