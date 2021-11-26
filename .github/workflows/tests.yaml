@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
-      - run: rustup component add rustfmt clippy
       - uses: ./.github/actions/setup/
       - uses: actions/setup-node@v2
         with:
@@ -232,8 +231,6 @@ jobs:
       - uses: ./.github/actions/setup/
       - uses: ./.github/actions/setup-ts/
       - uses: ./.github/actions/setup-solana/
-
-      - run: rustup component add rustfmt clippy
 
       - uses: actions/cache@v2
         name: Cache Cargo registry + index
