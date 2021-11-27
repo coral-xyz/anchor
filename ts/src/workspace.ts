@@ -25,7 +25,7 @@ const workspace = new Proxy({} as any, {
     const process = await import("process");
 
     if (!_populatedWorkspace) {
-      const path = require("path");
+      const path = await import("path");
 
       let projectRoot: string | undefined = process.cwd();
       while (!fs.existsSync(path.join(projectRoot, "Anchor.toml"))) {
@@ -69,7 +69,7 @@ const workspace = new Proxy({} as any, {
       );
       const clusterId = anchorToml.provider.cluster;
       if (anchorToml.programs && anchorToml.programs[clusterId]) {
-        attachWorkspaceOverride(
+        await attachWorkspaceOverride(
           workspaceCache,
           anchorToml.programs[clusterId],
           idlMap,
@@ -84,13 +84,15 @@ const workspace = new Proxy({} as any, {
   },
 });
 
-function attachWorkspaceOverride(
+async function attachWorkspaceOverride(
   workspaceCache: { [key: string]: Program },
   overrideConfig: { [key: string]: string | { address: string; idl?: string } },
   idlMap: Map<string, Idl>,
   provider: Provider,
 ) {
-  Object.keys(overrideConfig).forEach((programName) => {
+  const configKeys = Object.keys(overrideConfig);
+
+  for (const programName of configKeys) {
     const wsProgramName = camelCase(programName, { pascalCase: true });
     const entry = overrideConfig[programName];
     const overrideAddress = new PublicKey(
@@ -98,13 +100,14 @@ function attachWorkspaceOverride(
     );
     let idl = idlMap.get(programName);
     if (typeof entry !== "string" && entry.idl) {
-      idl = JSON.parse(require("fs").readFileSync(entry.idl, "utf-8"));
+      const fs = await import('fs');
+      idl = JSON.parse(fs.readFileSync(entry.idl, "utf-8").toString());
     }
     if (!idl) {
       throw new Error(`Error loading workspace IDL for ${programName}`);
     }
     workspaceCache[wsProgramName] = new Program(idl, overrideAddress, provider);
-  });
+  }
 }
 
 export default workspace;

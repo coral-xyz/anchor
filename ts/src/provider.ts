@@ -229,14 +229,14 @@ export class NodeWallet implements Wallet {
   constructor(readonly payer: Keypair) {}
 
   static async local(): Promise<NodeWallet> {
-    const process = require("process");
+    const process = await import("process");
     const fs = await import('fs');
     const payer = Keypair.fromSecretKey(
       Buffer.from(
         JSON.parse(
-          fs.readFileSync(process.env.ANCHOR_WALLET, {
+          fs.readFileSync(process.env.ANCHOR_WALLET as string, {
             encoding: "utf-8",
-          })
+          }).toString()
         )
       )
     );
