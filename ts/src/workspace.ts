@@ -3,6 +3,7 @@ import * as toml from "toml";
 import { PublicKey } from "@solana/web3.js";
 import { Program } from "./program";
 import { Idl } from "./idl";
+import Provider from "./provider";
 import { isBrowser } from "./utils/common";
 
 let _populatedWorkspace = false;
@@ -15,18 +16,18 @@ let _populatedWorkspace = false;
  * This API is for Node only.
  */
 const workspace = new Proxy({} as any, {
-  get(workspaceCache: { [key: string]: Program }, programName: string) {
+  async get(workspaceCache: { [key: string]: Program }, programName: string, provider: Provider) {
     if (isBrowser) {
       throw new Error("Workspaces aren't available in the browser");
     }
 
-    const fs = require("fs");
-    const process = require("process");
+    const fs = await import("fs");
+    const process = await import("process");
 
     if (!_populatedWorkspace) {
       const path = require("path");
 
-      let projectRoot = process.cwd();
+      let projectRoot: string | undefined = process.cwd();
       while (!fs.existsSync(path.join(projectRoot, "Anchor.toml"))) {
         const parentDir = path.dirname(projectRoot);
         if (parentDir === projectRoot) {
@@ -50,13 +51,14 @@ const workspace = new Proxy({} as any, {
       fs.readdirSync(idlFolder).forEach((file) => {
         const filePath = `${idlFolder}/${file}`;
         const idlStr = fs.readFileSync(filePath);
-        const idl = JSON.parse(idlStr);
+        const idl = JSON.parse(idlStr.toString());
         idlMap.set(idl.name, idl);
         const name = camelCase(idl.name, { pascalCase: true });
         if (idl.metadata && idl.metadata.address) {
           workspaceCache[name] = new Program(
             idl,
-            new PublicKey(idl.metadata.address)
+            new PublicKey(idl.metadata.address),
+            provider
           );
         }
       });
@@ -70,7 +72,8 @@ const workspace = new Proxy({} as any, {
         attachWorkspaceOverride(
           workspaceCache,
           anchorToml.programs[clusterId],
-          idlMap
+          idlMap,
+          provider
         );
       }
 
@@ -84,7 +87,8 @@ const workspace = new Proxy({} as any, {
 function attachWorkspaceOverride(
   workspaceCache: { [key: string]: Program },
   overrideConfig: { [key: string]: string | { address: string; idl?: string } },
-  idlMap: Map<string, Idl>
+  idlMap: Map<string, Idl>,
+  provider: Provider,
 ) {
   Object.keys(overrideConfig).forEach((programName) => {
     const wsProgramName = camelCase(programName, { pascalCase: true });
@@ -99,7 +103,7 @@ function attachWorkspaceOverride(
     if (!idl) {
       throw new Error(`Error loading workspace IDL for ${programName}`);
     }
-    workspaceCache[wsProgramName] = new Program(idl, overrideAddress);
+    workspaceCache[wsProgramName] = new Program(idl, overrideAddress, provider);
   });
 }
 

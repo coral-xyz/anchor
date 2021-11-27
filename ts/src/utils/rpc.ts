@@ -24,7 +24,7 @@ export async function invoke(
 ): Promise<TransactionSignature> {
   programId = translateAddress(programId);
   if (!provider) {
-    provider = getProvider();
+    provider = await getProvider();
   }
 
   const tx = new Transaction();

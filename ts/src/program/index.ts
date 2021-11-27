@@ -250,12 +250,8 @@ export class Program<IDL extends Idl = Idl> {
    * @param provider  The network and wallet context to use. If not provided
    *                  then uses [[getProvider]].
    */
-  public constructor(idl: IDL, programId: Address, provider?: Provider) {
+  public constructor(idl: IDL, programId: Address, provider: Provider) {
     programId = translateAddress(programId);
-
-    if (!provider) {
-      provider = getProvider();
-    }
 
     // Fields.
     this._idl = idl;
@@ -292,7 +288,7 @@ export class Program<IDL extends Idl = Idl> {
    */
   public static async at<IDL extends Idl = Idl>(
     address: Address,
-    provider?: Provider
+    provider: Provider
   ): Promise<Program<IDL>> {
     const programId = translateAddress(address);
 
@@ -315,9 +311,8 @@ export class Program<IDL extends Idl = Idl> {
    */
   public static async fetchIdl<IDL extends Idl = Idl>(
     address: Address,
-    provider?: Provider
+    provider: Provider
   ): Promise<IDL | null> {
-    provider = provider ?? getProvider();
     const programId = translateAddress(address);
 
     const idlAddr = await idlAddress(programId);

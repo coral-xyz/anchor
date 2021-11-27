@@ -30,7 +30,7 @@ export default class StateFactory {
     idl: IDL,
     coder: Coder,
     programId: PublicKey,
-    provider?: Provider
+    provider: Provider
   ): StateClient<IDL> | undefined {
     if (idl.state === undefined) {
       return undefined;
@@ -83,7 +83,7 @@ export class StateClient<IDL extends Idl> {
     /**
      * Returns the client's wallet and network provider.
      */
-    public readonly provider: Provider = getProvider(),
+    public readonly provider: Provider,
     /**
      * Returns the coder.
      */

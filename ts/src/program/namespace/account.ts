@@ -27,7 +27,7 @@ export default class AccountFactory {
     idl: IDL,
     coder: Coder,
     programId: PublicKey,
-    provider?: Provider
+    provider: Provider
   ): AccountNamespace<IDL> {
     const accountFns: AccountNamespace = {};
 
@@ -119,12 +119,12 @@ export class AccountClient<
     idl: IDL,
     idlAccount: A,
     programId: PublicKey,
-    provider?: Provider,
+    provider: Provider,
     coder?: Coder
   ) {
     this._idlAccount = idlAccount;
     this._programId = programId;
-    this._provider = provider ?? getProvider();
+    this._provider = provider;
     this._coder = coder ?? new Coder(idl);
     this._size =
       ACCOUNT_DISCRIMINATOR_SIZE + (accountSize(idl, idlAccount) ?? 0);

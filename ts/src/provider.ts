@@ -44,13 +44,13 @@ export default class Provider {
    *
    * (This api is for Node only.)
    */
-  static local(url?: string, opts?: ConfirmOptions): Provider {
+  static async local(url?: string, opts?: ConfirmOptions): Promise<Provider> {
     opts = opts ?? Provider.defaultOptions();
     const connection = new Connection(
       url ?? "http://localhost:8899",
       opts.preflightCommitment
     );
-    const wallet = NodeWallet.local();
+    const wallet = await NodeWallet.local();
     return new Provider(connection, wallet, opts);
   }
 
@@ -60,19 +60,19 @@ export default class Provider {
    *
    * (This api is for Node only.)
    */
-  static env(): Provider {
+  static async env(): Promise<Provider> {
     if (isBrowser) {
       throw new Error(`Provider env is not available on browser.`);
     }
 
-    const process = require("process");
+    const process = await import('process');
     const url = process.env.ANCHOR_PROVIDER_URL;
     if (url === undefined) {
       throw new Error("ANCHOR_PROVIDER_URL is not defined");
     }
     const options = Provider.defaultOptions();
     const connection = new Connection(url, options.commitment);
-    const wallet = NodeWallet.local();
+    const wallet = await NodeWallet.local();
 
     return new Provider(connection, wallet, options);
   }
@@ -228,12 +228,13 @@ export interface Wallet {
 export class NodeWallet implements Wallet {
   constructor(readonly payer: Keypair) {}
 
-  static local(): NodeWallet {
+  static async local(): Promise<NodeWallet> {
     const process = require("process");
+    const fs = await import('fs');
     const payer = Keypair.fromSecretKey(
       Buffer.from(
         JSON.parse(
-          require("fs").readFileSync(process.env.ANCHOR_WALLET, {
+          fs.readFileSync(process.env.ANCHOR_WALLET, {
             encoding: "utf-8",
           })
         )
@@ -296,9 +297,9 @@ export function setProvider(provider: Provider) {
 /**
  * Returns the default provider being used by the client.
  */
-export function getProvider(): Provider {
+export async function getProvider(): Promise<Provider> {
   if (_provider === null) {
-    return Provider.local();
+    return await Provider.local();
   }
   return _provider;
 }
