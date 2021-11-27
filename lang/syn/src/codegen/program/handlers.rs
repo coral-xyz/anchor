@@ -404,7 +404,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
                                     // Execute user defined function.
                                     {
-                                        let mut state = loader.load_mut()?;
+                                        let mut state = &mut loader;
                                         state.#ix_method_name(
                                             ctx,
                                             #(#ix_arg_names),*

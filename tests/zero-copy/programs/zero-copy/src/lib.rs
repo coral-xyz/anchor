@@ -16,32 +16,31 @@ pub mod zero_copy {
     use super::*;
 
     pub fn create_foo(ctx: Context<CreateFoo>) -> ProgramResult {
-        let foo = &mut ctx.accounts.foo.load_init()?;
+        let foo = &mut ctx.accounts.foo;
         foo.authority = *ctx.accounts.authority.key;
         foo.set_second_authority(ctx.accounts.authority.key);
         Ok(())
     }
 
     pub fn update_foo(ctx: Context<UpdateFoo>, data: u64) -> ProgramResult {
-        let mut foo = ctx.accounts.foo.load_mut()?;
-        foo.data = data;
+        ctx.accounts.foo.data = data;
         Ok(())
     }
 
     pub fn update_foo_second(ctx: Context<UpdateFooSecond>, second_data: u64) -> ProgramResult {
-        let mut foo = ctx.accounts.foo.load_mut()?;
+        let foo = &mut ctx.accounts.foo;
         foo.second_data = second_data;
         Ok(())
     }
 
     pub fn create_bar(ctx: Context<CreateBar>) -> ProgramResult {
-        let bar = &mut ctx.accounts.bar.load_init()?;
+        let bar = &mut ctx.accounts.bar;
         bar.authority = *ctx.accounts.authority.key;
         Ok(())
     }
 
     pub fn update_bar(ctx: Context<UpdateBar>, data: u64) -> ProgramResult {
-        let bar = &mut ctx.accounts.bar.load_mut()?;
+        let bar = &mut ctx.accounts.bar;
         bar.data = data;
         Ok(())
     }
@@ -55,7 +54,7 @@ pub mod zero_copy {
         idx: u32,
         data: u64,
     ) -> ProgramResult {
-        let event_q = &mut ctx.accounts.event_q.load_mut()?;
+        let event_q = &mut ctx.accounts.event_q;
         event_q.events[idx as usize] = Event {
             data,
             from: *ctx.accounts.from.key,
@@ -90,7 +89,7 @@ pub struct UpdateFoo<'info> {
 pub struct UpdateFooSecond<'info> {
     #[account(
         mut,
-        constraint = &foo.load()?.get_second_authority() == second_authority.key,
+        constraint = &foo.get_second_authority() == second_authority.key,
     )]
     foo: AccountLoader<'info, Foo>,
     #[account(signer)]

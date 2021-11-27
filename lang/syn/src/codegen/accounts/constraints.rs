@@ -152,13 +152,14 @@ pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macr
     let from_account_info = f.from_account_info_unchecked(None);
     quote! {
         let #field: #ty_decl = {
+            {
             let mut __data: &[u8] = &#field.try_borrow_data()?;
             let mut __disc_bytes = [0u8; 8];
             __disc_bytes.copy_from_slice(&__data[..8]);
             let __discriminator = u64::from_le_bytes(__disc_bytes);
             if __discriminator != 0 {
                 return Err(anchor_lang::__private::ErrorCode::ConstraintZero.into());
-            }
+            }}
             #from_account_info
         };
     }
@@ -188,8 +189,8 @@ pub fn generate_constraint_has_one(f: &Field, c: &ConstraintHasOne) -> proc_macr
     let target = c.join_target.clone();
     let ident = &f.ident;
     let field = match &f.ty {
-        Ty::Loader(_) => quote! {#ident.load()?},
-        Ty::AccountLoader(_) => quote! {#ident.load()?},
+        Ty::Loader(_) => quote! {#ident},
+        Ty::AccountLoader(_) => quote! {#ident},
         _ => quote! {#ident},
     };
     let error = generate_custom_error(&c.error, quote! { ConstraintHasOne });
