@@ -43,8 +43,8 @@ impl<'info, T: ZeroCopy + Owner + fmt::Debug> fmt::Debug for AccountLoader<'info
 
 impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
     fn new(acc_info: AccountInfo<'info>) -> Result<AccountLoader<'info, T>, ProgramError> {
-        let data = bytemuck::from_bytes::<T>(&mut (acc_info.try_borrow_mut_data())?[8..])
-            as *const T as *mut T;
+        let data = bytemuck::from_bytes::<T>(&(acc_info.try_borrow_mut_data())?[8..]) as *const T
+            as *mut T;
 
         Ok(Self {
             acc_info,
@@ -72,7 +72,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         when the account's &[u8] is accessed mutably in the following code */
         drop(data);
 
-        Ok(AccountLoader::new(acc_info.clone())?)
+        AccountLoader::new(acc_info.clone())
     }
 
     /// Constructs a new `Loader` from an uninitialized account.
@@ -84,7 +84,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         if acc_info.owner != &T::owner() {
             return Err(ErrorCode::AccountNotProgramOwned.into());
         }
-        Ok(AccountLoader::new(acc_info.clone())?)
+        AccountLoader::new(acc_info.clone())
     }
 }
 
