@@ -7,18 +7,19 @@ import {
   AccountMeta,
 } from "@solana/web3.js";
 import Provider from "../../provider.js";
-import {
-  Idl,
-  IdlAccountItem,
-  IdlInstruction,
-  IdlStateMethod,
-  IdlTypeDef,
-} from "../../idl.js";
+import { Idl, IdlInstruction, IdlStateMethod, IdlTypeDef } from "../../idl.js";
 import Coder, { stateDiscriminator } from "../../coder/index.js";
-import { RpcNamespace, InstructionNamespace, TransactionNamespace } from "./index.js";
+import {
+  RpcNamespace,
+  InstructionNamespace,
+  TransactionNamespace,
+} from "./index.js";
 import { getProvider } from "../../index.js";
 import { Subscription, validateAccounts, parseIdlErrors } from "../common.js";
-import { findProgramAddressSync, createWithSeedSync } from "../../utils/pubkey.js";
+import {
+  findProgramAddressSync,
+  createWithSeedSync,
+} from "../../utils/pubkey.js";
 import { Accounts } from "../context.js";
 import InstructionNamespaceFactory from "./instruction.js";
 import RpcNamespaceFactory from "./rpc.js";
