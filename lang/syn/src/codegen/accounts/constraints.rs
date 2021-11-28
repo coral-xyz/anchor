@@ -159,8 +159,10 @@ pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macr
             if __discriminator != 0 {
                 return Err(anchor_lang::__private::ErrorCode::ConstraintZero.into());
             }
-            /* without this drop, data is dropped at the end of the block which causes issues
-            when the account's &[u8] is accessed mutably in the following code */
+            // without this drop, data is dropped at the end
+            // of the block which causes issues
+            // when the account's &[u8] is accessed mutably
+            // in the following code
             drop(__data);
             #from_account_info
         };
