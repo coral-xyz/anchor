@@ -156,6 +156,17 @@ impl<'info, T: ZeroCopy + Owner> Key for AccountLoader<'info, T> {
     }
 }
 
+
+///
+/// # Safety
+/// 
+/// Dereferencing the self.data raw pointer is safe because it will always point to valid data.
+/// This is because after the instantiation of an AccountLoader
+/// the location of the data the pointer is pointing to (the memory location of the &[u8] inside the inner AccountInfo)
+/// will not change and the data will not be freed before the pointer is freed;
+/// the pointer drops when AccountLoader is dropped but the &[u8] will always live until the end of the transaction
+/// 
+/// 
 impl<'info, T> Deref for AccountLoader<'info, T>
 where
     T: ZeroCopy + Owner,
@@ -167,6 +178,16 @@ where
     }
 }
 
+///
+/// # Safety
+/// 
+/// Dereferencing the self.data raw pointer is safe because it will always point to valid data.
+/// This is because after the instantiation of an AccountLoader
+/// the location of the data the pointer is pointing to (the memory location of the &[u8] inside the inner AccountInfo)
+/// will not change and the data will not be freed before the pointer is freed;
+/// the pointer drops when AccountLoader is dropped but the &[u8] will always live until the end of the transaction
+/// 
+/// 
 impl<'info, T> DerefMut for AccountLoader<'info, T>
 where
     T: ZeroCopy + Owner,
