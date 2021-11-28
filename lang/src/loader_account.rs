@@ -58,18 +58,19 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
     pub fn try_from(
         acc_info: &AccountInfo<'info>,
     ) -> Result<AccountLoader<'info, T>, ProgramError> {
-        {
-            if acc_info.owner != &T::owner() {
-                return Err(ErrorCode::AccountNotProgramOwned.into());
-            }
-            let data: &[u8] = &acc_info.try_borrow_data()?;
-            // Discriminator must match.
-            let mut disc_bytes = [0u8; 8];
-            disc_bytes.copy_from_slice(&data[..8]);
-            if disc_bytes != T::discriminator() {
-                return Err(ErrorCode::AccountDiscriminatorMismatch.into());
-            }
+        if acc_info.owner != &T::owner() {
+            return Err(ErrorCode::AccountNotProgramOwned.into());
         }
+        let data = acc_info.try_borrow_data()?;
+        // Discriminator must match.
+        let mut disc_bytes = [0u8; 8];
+        disc_bytes.copy_from_slice(&data[..8]);
+        if disc_bytes != T::discriminator() {
+            return Err(ErrorCode::AccountDiscriminatorMismatch.into());
+        }
+        /* without this drop, data is dropped at the end of the block which causes issues
+        when the account's &[u8] is accessed mutably in the following code */
+        drop(data);
 
         Ok(AccountLoader::new(acc_info.clone())?)
     }
