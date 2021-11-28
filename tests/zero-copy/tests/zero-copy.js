@@ -82,7 +82,11 @@ describe('zero-copy', () => {
     })
 
     it('Updates a zero copy account field via cpi', async () => {
-      // assert that account.data does not equal to 420 before update so tests don't accidentally pass
+      /**
+       * assert that account.data does not equal to 420 before update
+       * so tests don't accidentally pass
+       */
+      //
       {
         const fooAccountAfterCpi = await program.account.foo.fetch(foo.publicKey)
         assert.notEqual(fooAccountAfterCpi.data.toNumber(), 420)
@@ -107,9 +111,11 @@ describe('zero-copy', () => {
       assert.equal(fooAccountAfterCpi.data.toNumber(), 420)
       assert.ok(slot > 0);
       /**
-       * we use an event to assert that if we take a reference to foo before we update foo via the cpi,
-       * the reference will automatically point to the updated data after the cpi returned
-       **/ 
+       * we use an event to assert that if we take a reference
+       * to foo before we update foo via the cpi,
+       * the reference will automatically point
+       * to the updated data after the cpi returned
+       */ 
       assert.equal(event.data.toNumber(), 420);
     })
   })
