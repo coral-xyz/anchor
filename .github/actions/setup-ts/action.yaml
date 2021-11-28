@@ -12,11 +12,18 @@ runs:
         with:
           path: |
             ./ts/node_modules/
+          key: solana-${{ runner.os }}-v0000-${{ env.NODE_VERSION }}-${{ hashFiles('./ts/**/yarn.lock') }}
+      - uses: actions/cache@v2
+        name: Cache Typescript node_modules
+        id: cache-typescript
+        with:
+          path: |
             ./ts/dist/
-          key: solana-${{ runner.os }}-v0000-${{ env.NODE_VERSION }}-${{ hashFiles('./ts/**/yarn.lock') }}-${{ hashFiles('./ts/**/*.ts') }}
+          key: solana-${{ runner.os }}-v0000-${{ env.NODE_VERSION }}-${{ hashFiles('./ts/**/*.ts') }}  
       - run: cd ts && yarn && yarn build:node && yarn link && cd ../
         shell: bash
       - run: cd examples/tutorial && yarn link @project-serum/anchor && yarn && cd ../../
         shell: bash
       - run: cd tests && yarn link @project-serum/anchor && yarn && cd ..
         shell: bash
+        
