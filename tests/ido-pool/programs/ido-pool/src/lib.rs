@@ -130,7 +130,7 @@ pub mod ido_pool {
         // Burn the user's redeemable tokens.
         let cpi_accounts = Burn {
             mint: ctx.accounts.redeemable_mint.to_account_info(),
-            to: ctx.accounts.user_redeemable.to_account_info(),
+            from: ctx.accounts.user_redeemable.to_account_info(),
             authority: ctx.accounts.ido_account.to_account_info(),
         };
         let cpi_program = ctx.accounts.token_program.to_account_info();
@@ -178,7 +178,7 @@ pub mod ido_pool {
         // Burn the user's redeemable tokens.
         let cpi_accounts = Burn {
             mint: ctx.accounts.redeemable_mint.to_account_info(),
-            to: ctx.accounts.user_redeemable.to_account_info(),
+            from: ctx.accounts.user_redeemable.to_account_info(),
             authority: ctx.accounts.ido_account.to_account_info(),
         };
         let cpi_program = ctx.accounts.token_program.to_account_info();

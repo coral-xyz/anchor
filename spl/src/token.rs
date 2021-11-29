@@ -64,7 +64,7 @@ pub fn burn<'a, 'b, 'c, 'info>(
 ) -> ProgramResult {
     let ix = spl_token::instruction::burn(
         &spl_token::ID,
-        ctx.accounts.to.key,
+        ctx.accounts.from.key,
         ctx.accounts.mint.key,
         ctx.accounts.authority.key,
         &[],
@@ -73,7 +73,7 @@ pub fn burn<'a, 'b, 'c, 'info>(
     solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.to.clone(),
+            ctx.accounts.from.clone(),
             ctx.accounts.mint.clone(),
             ctx.accounts.authority.clone(),
             ctx.program.clone(),
@@ -261,7 +261,7 @@ pub struct MintTo<'info> {
 #[derive(Accounts)]
 pub struct Burn<'info> {
     pub mint: AccountInfo<'info>,
-    pub to: AccountInfo<'info>,
+    pub from: AccountInfo<'info>,
     pub authority: AccountInfo<'info>,
 }
 

@@ -11,6 +11,10 @@ incremented for features.
 
 ## [Unreleased]
 
+### Breaking
+
+* spl: Change "to" to "from" in `token::burn` ([#1080](https://github.com/project-serum/anchor/pull/1080)).
+
 ### Fixes
 
 * lang: Add `deprecated` attribute to `ProgramAccount` ([#1014](https://github.com/project-serum/anchor/pull/1014)).

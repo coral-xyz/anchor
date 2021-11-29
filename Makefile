@@ -3,47 +3,56 @@ build-cli:
 	cargo build -p anchor-cli --release
 	cp target/release/anchor cli/npm-package/anchor
 
+.PHONY: build-tests-bpf-%
+build-tests-bpf-%: export NAME=$(subst _,/,$($(strip @):build-tests-bpf-%=%))
+build-tests-bpf-%:
+	cd tests/${NAME} && cargo build-bpf
+
 .PHONY: build-example-bpf-%
 build-example-bpf-%: export NAME=$(subst _,/,$($(strip @):build-example-bpf-%=%))
 build-example-bpf-%:
-	cd examples/${NAME} && cargo build-bpf
+	cd examples/tutorial/${NAME} && cargo build-bpf
 
 .PHONY: build-example-bpf-permissioned-markets
-build-example-bpf-permissioned-markets:
-	cd examples/permissioned-markets/deps/serum-dex/dex && cargo build-bpf
-	cd examples/permissioned-markets && cargo build-bpf
+build-tests-bpf-permissioned-markets:
+	cd tests/permissioned-markets/deps/serum-dex/dex && cargo build-bpf
+	cd tests/permissioned-markets && cargo build-bpf
 
 .PHONY: build-example-bpf-swap
-build-example-bpf-swap:
-	cd examples/swap/deps/serum-dex/dex && cargo build-bpf
-	cd examples/swap && cargo build-bpf
+build-tests-bpf-swap:
+	cd tests/swap/deps/serum-dex/dex && cargo build-bpf
+	cd tests/swap && cargo build-bpf
+
+.PHONY: build-tests-bpf-all
+build-tests-bpf-all: build-tests-bpf-cashiers-check
+build-tests-bpf-all: build-tests-bpf-cfo
+build-tests-bpf-all: build-tests-bpf-chat
+build-tests-bpf-all: build-tests-bpf-composite
+build-tests-bpf-all: build-tests-bpf-errors
+build-tests-bpf-all: build-tests-bpf-escrow
+build-tests-bpf-all: build-tests-bpf-events
+build-tests-bpf-all: build-tests-bpf-ido-pool
+build-tests-bpf-all: build-tests-bpf-interface
+build-tests-bpf-all: build-tests-bpf-lockup
+build-tests-bpf-all: build-tests-bpf-misc
+build-tests-bpf-all: build-tests-bpf-multisig
+build-tests-bpf-all: build-tests-bpf-permissioned-markets
+build-tests-bpf-all: build-tests-bpf-pyth
+build-tests-bpf-all: build-tests-bpf-spl_token-proxy
+build-tests-bpf-all: build-tests-bpf-swap
+build-tests-bpf-all: build-tests-bpf-sysvars
+build-tests-bpf-all: build-tests-bpf-typescript
+build-tests-bpf-all: build-tests-bpf-zero-copy
 
 .PHONY: build-example-bpf-all
-build-example-bpf-all: build-example-bpf-cashiers-check
-build-example-bpf-all: build-example-bpf-cfo
-build-example-bpf-all: build-example-bpf-chat
-build-example-bpf-all: build-example-bpf-composite
-build-example-bpf-all: build-example-bpf-errors
-build-example-bpf-all: build-example-bpf-escrow
-build-example-bpf-all: build-example-bpf-events
-build-example-bpf-all: build-example-bpf-ido-pool
-build-example-bpf-all: build-example-bpf-interface
-build-example-bpf-all: build-example-bpf-lockup
-build-example-bpf-all: build-example-bpf-misc
-build-example-bpf-all: build-example-bpf-multisig
-build-example-bpf-all: build-example-bpf-permissioned-markets
-build-example-bpf-all: build-example-bpf-pyth
-build-example-bpf-all: build-example-bpf-spl_token-proxy
-build-example-bpf-all: build-example-bpf-swap
-build-example-bpf-all: build-example-bpf-sysvars
 build-example-bpf-all: build-example-bpf-tutorial_basic-0
 build-example-bpf-all: build-example-bpf-tutorial_basic-1
 build-example-bpf-all: build-example-bpf-tutorial_basic-2
 build-example-bpf-all: build-example-bpf-tutorial_basic-3
 build-example-bpf-all: build-example-bpf-tutorial_basic-4
-build-example-bpf-all: build-example-bpf-tutorial_basic-5
-build-example-bpf-all: build-example-bpf-typescript
-build-example-bpf-all: build-example-bpf-zero-copy
+
+.PHONY: build-all
+build-all: build-tests-bpf-all build-example-bpf-all
 
 .PHONY: clean
 clean:
