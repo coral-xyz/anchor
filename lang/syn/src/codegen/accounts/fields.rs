@@ -6,7 +6,7 @@ use quote::{quote, ToTokens};
 pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     let name = &accs.ident;
     let ParsedGenerics {
-        combined_generics: _,
+        combined_generics,
         trait_generics: _,
         struct_generics,
         where_clause,
@@ -48,7 +48,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
 
     quote! {
         #[automatically_derived]
-        impl<#struct_generics> anchor_lang::__private::fields::Fields for #name <#struct_generics> #where_clause{
+        impl<#combined_generics> anchor_lang::__private::fields::Fields for #name <#struct_generics> #where_clause{
             fn fields(&self) -> Vec<anchor_lang::__private::fields::Field> {
                 let mut fields = vec![];
 

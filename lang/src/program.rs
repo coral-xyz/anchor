@@ -105,3 +105,9 @@ impl<'info, T: AccountDeserialize + Id + Clone> AccountsExit<'info> for Program<
         Ok(())
     }
 }
+
+impl<'info, T: AccountDeserialize + Id + Clone> Key for Program<'info, T> {
+    fn key(&self) -> Pubkey {
+        *self.info.key
+    }
+}
