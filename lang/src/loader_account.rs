@@ -68,7 +68,6 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         if disc_bytes != T::discriminator() {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
-        
 
         // without this drop, data is dropped at the end
         // of the block which causes issues
