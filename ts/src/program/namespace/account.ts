@@ -137,9 +137,7 @@ export class AccountClient<
    * @param address The address of the account to fetch.
    */
   async fetchNullable(address: Address): Promise<T | null> {
-    const accountInfo = await this._provider.connection.getAccountInfo(
-      translateAddress(address)
-    );
+    const accountInfo = await this.getAccountInfo(translateAddress(address));
     if (accountInfo === null) {
       return null;
     }
@@ -344,6 +342,13 @@ export class AccountClient<
     ...args: Array<PublicKey | Buffer>
   ): Promise<PublicKey> {
     return await pubkeyUtil.associated(this._programId, ...args);
+  }
+
+  async getAccountInfo(address: Address, commitment?: Commitment) {
+    return this._provider.connection.getAccountInfo(
+      translateAddress(address),
+      commitment
+    );
   }
 }
 
