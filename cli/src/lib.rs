@@ -1147,7 +1147,7 @@ pub fn verify_bin(program_id: Pubkey, bin_path: &Path, cluster: &str) -> Result<
         if account.owner == bpf_loader::id() || account.owner == bpf_loader_deprecated::id() {
             let bin = account.data.to_vec();
             let state = BinVerificationState::ProgramData {
-                slot: 0, // need to look through the transaction history
+                slot: 0, // Need to look through the transaction history.
                 upgrade_authority_address: None,
             };
             (bin, state)
