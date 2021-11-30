@@ -114,7 +114,6 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::Init(c) => generate_constraint_init(f, c),
         Constraint::Zeroed(c) => generate_constraint_zeroed(f, c),
         Constraint::Mut(c) => generate_constraint_mut(f, c),
-        Constraint::Dup(c) => generate_constraint_dup(f, c),
         Constraint::HasOne(c) => generate_constraint_has_one(f, c),
         Constraint::Signer(c) => generate_constraint_signer(f, c),
         Constraint::Literal(c) => generate_constraint_literal(c),
@@ -127,6 +126,8 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::Close(c) => generate_constraint_close(f, c),
         Constraint::Address(c) => generate_constraint_address(f, c),
         Constraint::AssociatedToken(c) => generate_constraint_associated_token(f, c),
+        // the dup constraint is only used to signal the nodup checks that they should ignore the annotated account
+        Constraint::Dup(_) => quote! {},
     }
 }
 
@@ -187,16 +188,6 @@ pub fn generate_constraint_mut(f: &Field, c: &ConstraintMut) -> proc_macro2::Tok
     quote! {
         if !#ident.to_account_info().is_writable {
             return Err(#error);
-        }
-    }
-}
-
-pub fn generate_constraint_dup(f: &Field, c: &ConstraintDup) -> proc_macro2::TokenStream {
-    let me = &f.ident;
-    let target = &c.target;
-    quote! {
-        if !(#me.to_account_info().key == #target.to_account_info().key) {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintDup.into())
         }
     }
 }

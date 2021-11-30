@@ -76,8 +76,7 @@ const LangErrorCode = {
   ConstraintClose: 151,
   ConstraintAddress: 152,
   ConstraintZero: 153,
-  ConstraintDup: 154,
-  ConstraintNoDup: 155,
+  ConstraintNoDup: 154,
 
   // Accounts.
   AccountDiscriminatorAlreadySet: 160,
@@ -148,7 +147,6 @@ const LangErrorMessage = new Map([
   [LangErrorCode.ConstraintClose, "A close constraint was violated"],
   [LangErrorCode.ConstraintAddress, "An address constraint was violated"],
   [LangErrorCode.ConstraintZero, "Expected zero account discriminant"],
-  [LangErrorCode.ConstraintDup, "A dup constraint was violated"],
   [LangErrorCode.ConstraintNoDup, "A nodup constraint was violated"],
 
   // Accounts.
