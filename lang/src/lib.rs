@@ -41,6 +41,7 @@ mod cpi_account;
 mod cpi_state;
 mod ctor;
 mod error;
+pub mod fields;
 #[doc(hidden)]
 pub mod idl;
 mod loader;
@@ -289,6 +290,7 @@ pub mod __private {
 
     pub use crate::ctor::Ctor;
     pub use crate::error::{Error, ErrorCode};
+    pub use crate::fields;
     pub use anchor_attribute_account::ZeroCopyAccessor;
     pub use anchor_attribute_event::EventIndex;
     pub use base64;

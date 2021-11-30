@@ -10,7 +10,9 @@ mod dup {
         Ok(())
     }
 
-    pub fn with_dup_constraint_composite(_ctx: Context<WithDupConstraintComposite>) -> ProgramResult {
+    pub fn with_dup_constraint_composite(
+        _ctx: Context<WithDupConstraintComposite>,
+    ) -> ProgramResult {
         Ok(())
     }
 
@@ -18,23 +20,33 @@ mod dup {
         Ok(())
     }
 
-    pub fn without_dup_constraint_composite(_ctx: Context<WithoutDupConstraintComposite>) -> ProgramResult {
+    pub fn without_dup_constraint_composite(
+        _ctx: Context<WithoutDupConstraintComposite>,
+    ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn with_missing_dup_constraints_three_accounts(_ctx: Context<WithMissingDupConstraintThreeAccounts>) -> ProgramResult {
+    pub fn with_missing_dup_constraints_three_accounts(
+        _ctx: Context<WithMissingDupConstraintThreeAccounts>,
+    ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn with_dup_constraints_three_accounts(_ctx: Context<WithDupConstraintsThreeAccounts>) -> ProgramResult {
+    pub fn with_dup_constraints_three_accounts(
+        _ctx: Context<WithDupConstraintsThreeAccounts>,
+    ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn with_missing_dup_constraint_double_three_accounts(_ctx: Context<WithMissingDupConstraintDoubleThreeAccounts>) -> ProgramResult {
+    pub fn with_missing_dup_constraint_double_three_accounts(
+        _ctx: Context<WithMissingDupConstraintDoubleThreeAccounts>,
+    ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn without_dup_constraint_double_three_accounts_all_immutable(_ctx: Context<WithoutDupConstraintDoubleThreeAccountsAllImmutable>) -> ProgramResult {
+    pub fn without_dup_constraint_double_three_accounts_all_immutable(
+        _ctx: Context<WithoutDupConstraintDoubleThreeAccountsAllImmutable>,
+    ) -> ProgramResult {
         Ok(())
     }
 }
@@ -50,12 +62,12 @@ pub struct WithDupConstraint<'info> {
 pub struct WithDupConstraintComposite<'info> {
     #[account(dup = child.child_account)]
     pub account1: SystemAccount<'info>,
-    pub child: Child<'info>
+    pub child: Child<'info>,
 }
 
 #[derive(Accounts)]
 pub struct Child<'info> {
-    pub child_account: SystemAccount<'info>
+    pub child_account: SystemAccount<'info>,
 }
 
 #[derive(Accounts)]
