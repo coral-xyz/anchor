@@ -739,7 +739,7 @@ fn generate_constraint_no_dup(
     let other_field = other_field.ident();
     let my_ident = my_field.ident();
     quote! {
-        if #my_ident.to_account_info().key == #other_field.to_account_info().key {
+        if anchor_lang::Key::key(&#my_ident) == anchor_lang::Key::key(&#other_field) {
             return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
         }
     }
