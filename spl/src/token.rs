@@ -244,6 +244,24 @@ pub fn set_authority<'a, 'b, 'c, 'info>(
     )
 }
 
+pub fn revoke<'info>(ctx: CpiContext<'_, '_, '_, 'info, Revoke<'info>>) -> ProgramResult {
+    let ix = spl_token::instruction::revoke(
+        &spl_token::ID,
+        ctx.accounts.to.key,
+        ctx.accounts.authority.key,
+        &[],
+    )?;
+    solana_program::program::invoke_signed(
+        &ix,
+        &[
+            ctx.accounts.to.clone(),
+            ctx.accounts.authority.clone(),
+            ctx.program.clone(),
+        ],
+        ctx.signer_seeds,
+    )
+}
+
 #[derive(Accounts)]
 pub struct Transfer<'info> {
     pub from: AccountInfo<'info>,
@@ -311,6 +329,12 @@ pub struct InitializeMint<'info> {
 pub struct SetAuthority<'info> {
     pub current_authority: AccountInfo<'info>,
     pub account_or_mint: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct Revoke<'info> {
+    pub to: AccountInfo<'info>,
+    pub authority: AccountInfo<'info>,
 }
 
 #[derive(Clone)]
