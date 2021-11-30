@@ -1,6 +1,6 @@
 use crate::config::{
-    AnchorPackage, Config, ConfigOverride, Manifest, ProgramDeployment, ProgramWorkspace, Test,
-    WithPath,
+    AnchorPackage, BootstrapMode, BuildConfig, Config, ConfigOverride, Manifest, ProgramDeployment,
+    ProgramWorkspace, Test, WithPath,
 };
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction};
@@ -22,7 +22,9 @@ use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::RpcSendTransactionConfig;
 use solana_program::instruction::{AccountMeta, Instruction};
 use solana_sdk::account_utils::StateMut;
-use solana_sdk::bpf_loader_upgradeable::UpgradeableLoaderState;
+use solana_sdk::bpf_loader;
+use solana_sdk::bpf_loader_deprecated;
+use solana_sdk::bpf_loader_upgradeable::{self, UpgradeableLoaderState};
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
@@ -67,6 +69,9 @@ pub enum Command {
         /// Output directory for the IDL.
         #[clap(short, long)]
         idl: Option<String>,
+        /// Output directory for the TypeScript IDL.
+        #[clap(short = 't', long)]
+        idl_ts: Option<String>,
         /// True if the build artifact needs to be deterministic and verifiable.
         #[clap(short, long)]
         verifiable: bool,
@@ -76,6 +81,13 @@ pub enum Command {
         /// only.
         #[clap(short, long)]
         solana_version: Option<String>,
+        /// Docker image to use. For --verifiable builds only.
+        #[clap(short, long)]
+        docker_image: Option<String>,
+        /// Bootstrap docker image from scratch, installing all requirements for
+        /// verifiable builds. Only works for debian-based images.
+        #[clap(arg_enum, short, long, default_value = "none")]
+        bootstrap: BootstrapMode,
         /// Arguments to pass to the underlying `cargo build-bpf` command
         #[clap(
             required = false,
@@ -97,6 +109,13 @@ pub enum Command {
         /// only.
         #[clap(short, long)]
         solana_version: Option<String>,
+        /// Docker image to use. For --verifiable builds only.
+        #[clap(short, long)]
+        docker_image: Option<String>,
+        /// Bootstrap docker image from scratch, installing all requirements for
+        /// verifiable builds. Only works for debian-based images.
+        #[clap(arg_enum, short, long, default_value = "none")]
+        bootstrap: BootstrapMode,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
         #[clap(
             required = false,
@@ -285,9 +304,12 @@ pub enum IdlCommand {
         /// Path to the program's interface definition.
         #[clap(short, long)]
         file: String,
-        /// Output file for the idl (stdout if not specified).
+        /// Output file for the IDL (stdout if not specified).
         #[clap(short, long)]
         out: Option<String>,
+        /// Output file for the TypeScript IDL.
+        #[clap(short = 't', long)]
+        out_ts: Option<String>,
     },
     /// Fetches an IDL for the given address from a cluster.
     /// The address can be a program, IDL account, or IDL buffer.
@@ -311,16 +333,22 @@ pub fn entry(opts: Opts) -> Result<()> {
         Command::New { name } => new(&opts.cfg_override, name),
         Command::Build {
             idl,
+            idl_ts,
             verifiable,
             program_name,
             solana_version,
+            docker_image,
+            bootstrap,
             cargo_args,
         } => build(
             &opts.cfg_override,
             idl,
+            idl_ts,
             verifiable,
             program_name,
             solana_version,
+            docker_image,
+            bootstrap,
             None,
             None,
             cargo_args,
@@ -329,12 +357,16 @@ pub fn entry(opts: Opts) -> Result<()> {
             program_id,
             program_name,
             solana_version,
+            docker_image,
+            bootstrap,
             cargo_args,
         } => verify(
             &opts.cfg_override,
             program_id,
             program_name,
             solana_version,
+            docker_image,
+            bootstrap,
             cargo_args,
         ),
         Command::Deploy { program_name } => deploy(&opts.cfg_override, program_name),
@@ -384,6 +416,27 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool) -> Result
         return Err(anyhow!("Workspace already initialized"));
     }
 
+    // The list is taken from https://doc.rust-lang.org/reference/keywords.html.
+    let key_words = [
+        "as", "break", "const", "continue", "crate", "else", "enum", "extern", "false", "fn",
+        "for", "if", "impl", "in", "let", "loop", "match", "mod", "move", "mut", "pub", "ref",
+        "return", "self", "Self", "static", "struct", "super", "trait", "true", "type", "unsafe",
+        "use", "where", "while", "async", "await", "dyn", "abstract", "become", "box", "do",
+        "final", "macro", "override", "priv", "typeof", "unsized", "virtual", "yield", "try",
+        "unique",
+    ];
+
+    if key_words.contains(&name[..].into()) {
+        return Err(anyhow!(
+            "{} is a reserved word in rust, name your project something else!",
+            name
+        ));
+    } else if name.chars().next().unwrap().is_numeric() {
+        return Err(anyhow!(
+            "Cannot start project name with numbers, name your project something else!"
+        ));
+    }
+
     fs::create_dir(name.clone())?;
     std::env::set_current_dir(&name)?;
     fs::create_dir("app")?;
@@ -392,9 +445,9 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool) -> Result
     cfg.scripts.insert(
         "test".to_owned(),
         if javascript {
-            "mocha -t 1000000 tests/"
+            "yarn run mocha -t 1000000 tests/"
         } else {
-            "ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+            "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
         }
         .to_owned(),
     );
@@ -510,9 +563,12 @@ fn new_program(name: &str) -> Result<()> {
 pub fn build(
     cfg_override: &ConfigOverride,
     idl: Option<String>,
+    idl_ts: Option<String>,
     verifiable: bool,
     program_name: Option<String>,
     solana_version: Option<String>,
+    docker_image: Option<String>,
+    bootstrap: BootstrapMode,
     stdout: Option<File>, // Used for the package registry server.
     stderr: Option<File>, // Used for the package registry server.
     cargo_args: Vec<String>,
@@ -523,22 +579,30 @@ pub fn build(
     }
 
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
+    let build_config = BuildConfig {
+        verifiable,
+        solana_version: solana_version.or_else(|| cfg.solana_version.clone()),
+        docker_image: docker_image.unwrap_or_else(|| cfg.docker()),
+        bootstrap,
+    };
     let cfg_parent = cfg.path().parent().expect("Invalid Anchor.toml");
 
     let cargo = Manifest::discover()?;
-
-    fs::create_dir_all(cfg_parent.join("target/idl"))?;
-    fs::create_dir_all(cfg_parent.join("target/types"))?;
 
     let idl_out = match idl {
         Some(idl) => Some(PathBuf::from(idl)),
         None => Some(cfg_parent.join("target/idl")),
     };
-    let idl_ts_out = Some(cfg_parent.join("target/types"));
+    fs::create_dir_all(idl_out.as_ref().unwrap())?;
 
-    let solana_version = match solana_version.is_some() {
-        true => solana_version,
-        false => cfg.solana_version.clone(),
+    let idl_ts_out = match idl_ts {
+        Some(idl_ts) => Some(PathBuf::from(idl_ts)),
+        None => Some(cfg_parent.join("target/types")),
+    };
+    fs::create_dir_all(idl_ts_out.as_ref().unwrap())?;
+
+    if !&cfg.workspace.types.is_empty() {
+        fs::create_dir_all(cfg_parent.join(&cfg.workspace.types))?;
     };
 
     match cargo {
@@ -548,8 +612,7 @@ pub fn build(
             cfg.path(),
             idl_out,
             idl_ts_out,
-            verifiable,
-            solana_version,
+            &build_config,
             stdout,
             stderr,
             cargo_args,
@@ -560,8 +623,7 @@ pub fn build(
             cfg.path(),
             idl_out,
             idl_ts_out,
-            verifiable,
-            solana_version,
+            &build_config,
             stdout,
             stderr,
             cargo_args,
@@ -572,8 +634,7 @@ pub fn build(
             cargo.path().to_path_buf(),
             idl_out,
             idl_ts_out,
-            verifiable,
-            solana_version,
+            &build_config,
             stdout,
             stderr,
             cargo_args,
@@ -591,8 +652,7 @@ fn build_all(
     cfg_path: &Path,
     idl_out: Option<PathBuf>,
     idl_ts_out: Option<PathBuf>,
-    verifiable: bool,
-    solana_version: Option<String>,
+    build_config: &BuildConfig,
     stdout: Option<File>, // Used for the package registry server.
     stderr: Option<File>, // Used for the package registry server.
     cargo_args: Vec<String>,
@@ -607,8 +667,7 @@ fn build_all(
                     p.join("Cargo.toml"),
                     idl_out.clone(),
                     idl_ts_out.clone(),
-                    verifiable,
-                    solana_version.clone(),
+                    build_config,
                     stdout.as_ref().map(|f| f.try_clone()).transpose()?,
                     stderr.as_ref().map(|f| f.try_clone()).transpose()?,
                     cargo_args.clone(),
@@ -628,8 +687,7 @@ fn build_cwd(
     cargo_toml: PathBuf,
     idl_out: Option<PathBuf>,
     idl_ts_out: Option<PathBuf>,
-    verifiable: bool,
-    solana_version: Option<String>,
+    build_config: &BuildConfig,
     stdout: Option<File>,
     stderr: Option<File>,
     cargo_args: Vec<String>,
@@ -638,9 +696,9 @@ fn build_cwd(
         None => return Err(anyhow!("Unable to find parent")),
         Some(p) => std::env::set_current_dir(&p)?,
     };
-    match verifiable {
-        false => _build_cwd(idl_out, idl_ts_out, cargo_args),
-        true => build_cwd_verifiable(cfg, cargo_toml, solana_version, stdout, stderr),
+    match build_config.verifiable {
+        false => _build_cwd(cfg, idl_out, idl_ts_out, cargo_args),
+        true => build_cwd_verifiable(cfg, cargo_toml, build_config, stdout, stderr, cargo_args),
     }
 }
 
@@ -649,15 +707,19 @@ fn build_cwd(
 fn build_cwd_verifiable(
     cfg: &WithPath<Config>,
     cargo_toml: PathBuf,
-    solana_version: Option<String>,
+    build_config: &BuildConfig,
     stdout: Option<File>,
     stderr: Option<File>,
+    cargo_args: Vec<String>,
 ) -> Result<()> {
     // Create output dirs.
     let workspace_dir = cfg.path().parent().unwrap().canonicalize()?;
     fs::create_dir_all(workspace_dir.join("target/verifiable"))?;
     fs::create_dir_all(workspace_dir.join("target/idl"))?;
     fs::create_dir_all(workspace_dir.join("target/types"))?;
+    if !&cfg.workspace.types.is_empty() {
+        fs::create_dir_all(workspace_dir.join(&cfg.workspace.types))?;
+    }
 
     let container_name = "anchor-program";
 
@@ -666,56 +728,44 @@ fn build_cwd_verifiable(
         cfg,
         container_name,
         cargo_toml,
-        solana_version,
+        build_config,
         stdout,
         stderr,
+        cargo_args,
     );
 
-    // Wipe the generated docker-target dir.
-    println!("Cleaning up the docker target directory");
-    let exit = std::process::Command::new("docker")
-        .args(&[
-            "exec",
-            container_name,
-            "rm",
-            "-rf",
-            "/workdir/docker-target",
-        ])
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .output()
-        .map_err(|e| anyhow::format_err!("Docker rm docker-target failed: {}", e.to_string()))?;
-    if !exit.status.success() {
-        return Err(anyhow!("Failed to build program"));
-    }
+    match &result {
+        Err(e) => {
+            eprintln!("Error during Docker build: {:?}", e);
+        }
+        Ok(_) => {
+            // Build the idl.
+            println!("Extracting the IDL");
+            if let Ok(Some(idl)) = extract_idl("src/lib.rs") {
+                // Write out the JSON file.
+                println!("Writing the IDL file");
+                let out_file = workspace_dir.join(format!("target/idl/{}.json", idl.name));
+                write_idl(&idl, OutFile::File(out_file))?;
 
-    // Remove the docker image.
-    println!("Removing the docker image");
-    let exit = std::process::Command::new("docker")
-        .args(&["rm", "-f", container_name])
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .output()
-        .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
-    if !exit.status.success() {
-        println!("Unable to remove docker container");
-        std::process::exit(exit.status.code().unwrap_or(1));
-    }
+                // Write out the TypeScript type.
+                println!("Writing the .ts file");
+                let ts_file = workspace_dir.join(format!("target/types/{}.ts", idl.name));
+                fs::write(&ts_file, template::idl_ts(&idl)?)?;
 
-    // Build the idl.
-    println!("Extracting the IDL");
-    if let Ok(Some(idl)) = extract_idl("src/lib.rs") {
-        // Write out the JSON file.
-        println!("Writing the IDL file");
-        let out_file = workspace_dir.join(format!("target/idl/{}.json", idl.name));
-        write_idl(&idl, OutFile::File(out_file))?;
-
-        // Write out the TypeScript type.
-        println!("Writing the .ts file");
-        let ts_file = workspace_dir.join(format!("target/types/{}.ts", idl.name));
-        fs::write(&ts_file, template::idl_ts(&idl)?)?;
+                // Copy out the TypeScript type.
+                if !&cfg.workspace.types.is_empty() {
+                    fs::copy(
+                        ts_file,
+                        workspace_dir
+                            .join(&cfg.workspace.types)
+                            .join(idl.name)
+                            .with_extension("ts"),
+                    )?;
+                }
+            }
+            println!("Build success");
+        }
     }
-    println!("Build success");
 
     result
 }
@@ -724,21 +774,24 @@ fn docker_build(
     cfg: &WithPath<Config>,
     container_name: &str,
     cargo_toml: PathBuf,
-    solana_version: Option<String>,
+    build_config: &BuildConfig,
     stdout: Option<File>,
     stderr: Option<File>,
+    cargo_args: Vec<String>,
 ) -> Result<()> {
     let binary_name = Manifest::from_path(&cargo_toml)?.lib_name()?;
 
     // Docker vars.
-    let image_name = cfg.docker();
+    let workdir = Path::new("/workdir");
     let volume_mount = format!(
-        "{}:/workdir",
-        cfg.path().parent().unwrap().canonicalize()?.display()
+        "{}:{}",
+        cfg.path().parent().unwrap().canonicalize()?.display(),
+        workdir.to_str().unwrap(),
     );
-    println!("Using image {:?}", image_name);
+    println!("Using image {:?}", build_config.docker_image);
 
     // Start the docker image running detached in the background.
+    let target_dir = workdir.join("docker-target");
     println!("Run docker image");
     let exit = std::process::Command::new("docker")
         .args(&[
@@ -748,10 +801,15 @@ fn docker_build(
             "--name",
             container_name,
             "--env",
-            "CARGO_TARGET_DIR=/workdir/docker-target",
+            &format!(
+                "CARGO_TARGET_DIR={}",
+                target_dir.as_path().to_str().unwrap()
+            ),
             "-v",
             &volume_mount,
-            &image_name,
+            "-w",
+            workdir.to_str().unwrap(),
+            &build_config.docker_image,
             "bash",
         ])
         .stdout(Stdio::inherit())
@@ -762,58 +820,84 @@ fn docker_build(
         return Err(anyhow!("Failed to build program"));
     }
 
+    let result = docker_prep(container_name, build_config).and_then(|_| {
+        let cfg_parent = cfg.path().parent().unwrap();
+        docker_build_bpf(
+            container_name,
+            cargo_toml.as_path(),
+            cfg_parent,
+            target_dir.as_path(),
+            binary_name,
+            stdout,
+            stderr,
+            cargo_args,
+        )
+    });
+
+    // Cleanup regardless of errors
+    docker_cleanup(container_name, target_dir.as_path())?;
+
+    // Done.
+    result
+}
+
+fn docker_prep(container_name: &str, build_config: &BuildConfig) -> Result<()> {
     // Set the solana version in the container, if given. Otherwise use the
     // default.
-    if let Some(solana_version) = solana_version {
+    match build_config.bootstrap {
+        BootstrapMode::Debian => {
+            // Install build requirements
+            docker_exec(container_name, &["apt", "update"])?;
+            docker_exec(
+                container_name,
+                &["apt", "install", "-y", "curl", "build-essential"],
+            )?;
+
+            // Install Rust
+            docker_exec(
+                container_name,
+                &["curl", "https://sh.rustup.rs", "-sfo", "rustup.sh"],
+            )?;
+            docker_exec(container_name, &["sh", "rustup.sh", "-y"])?;
+            docker_exec(container_name, &["rm", "-f", "rustup.sh"])?;
+        }
+        BootstrapMode::None => {}
+    }
+
+    if let Some(solana_version) = &build_config.solana_version {
         println!("Using solana version: {}", solana_version);
 
-        // Fetch the installer.
-        let exit = std::process::Command::new("docker")
-            .args(&[
-                "exec",
-                container_name,
+        // Install Solana CLI
+        docker_exec(
+            container_name,
+            &[
                 "curl",
                 "-sSfL",
                 &format!("https://release.solana.com/v{0}/install", solana_version,),
                 "-o",
                 "solana_installer.sh",
-            ])
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .output()
-            .map_err(|e| anyhow!("Failed to set solana version: {:?}", e))?;
-        if !exit.status.success() {
-            return Err(anyhow!("Failed to set solana version"));
-        }
-
-        // Run the installer.
-        let exit = std::process::Command::new("docker")
-            .args(&["exec", container_name, "sh", "solana_installer.sh"])
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .output()
-            .map_err(|e| anyhow!("Failed to set solana version: {:?}", e))?;
-        if !exit.status.success() {
-            return Err(anyhow!("Failed to set solana version"));
-        }
-
-        // Remove the installer.
-        let exit = std::process::Command::new("docker")
-            .args(&["exec", container_name, "rm", "-f", "solana_installer.sh"])
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .output()
-            .map_err(|e| anyhow!("Failed to remove installer: {:?}", e))?;
-        if !exit.status.success() {
-            return Err(anyhow!("Failed to remove installer"));
-        }
+            ],
+        )?;
+        docker_exec(container_name, &["sh", "solana_installer.sh"])?;
+        docker_exec(container_name, &["rm", "-f", "solana_installer.sh"])?;
     }
+    Ok(())
+}
 
-    let manifest_path = pathdiff::diff_paths(
-        cargo_toml.canonicalize()?,
-        cfg.path().parent().unwrap().canonicalize()?,
-    )
-    .ok_or_else(|| anyhow!("Unable to diff paths"))?;
+#[allow(clippy::too_many_arguments)]
+fn docker_build_bpf(
+    container_name: &str,
+    cargo_toml: &Path,
+    cfg_parent: &Path,
+    target_dir: &Path,
+    binary_name: String,
+    stdout: Option<File>,
+    stderr: Option<File>,
+    cargo_args: Vec<String>,
+) -> Result<()> {
+    let manifest_path =
+        pathdiff::diff_paths(cargo_toml.canonicalize()?, cfg_parent.canonicalize()?)
+            .ok_or_else(|| anyhow!("Unable to diff paths"))?;
     println!(
         "Building {} manifest: {:?}",
         binary_name,
@@ -824,12 +908,15 @@ fn docker_build(
     let exit = std::process::Command::new("docker")
         .args(&[
             "exec",
+            "--env",
+            "PATH=/root/.local/share/solana/install/active_release/bin:/root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
             container_name,
             "cargo",
             "build-bpf",
             "--manifest-path",
             &manifest_path.display().to_string(),
         ])
+        .args(cargo_args)
         .stdout(match stdout {
             None => Stdio::inherit(),
             Some(f) => f.into(),
@@ -846,10 +933,7 @@ fn docker_build(
 
     // Copy the binary out of the docker image.
     println!("Copying out the build artifacts");
-    let out_file = cfg
-        .path()
-        .parent()
-        .unwrap()
+    let out_file = cfg_parent
         .canonicalize()?
         .join(format!("target/verifiable/{}.so", binary_name))
         .display()
@@ -857,9 +941,12 @@ fn docker_build(
 
     // This requires the target directory of any built program to be located at
     // the root of the workspace.
+    let mut bin_path = target_dir.join("deploy");
+    bin_path.push(format!("{}.so", binary_name));
     let bin_artifact = format!(
-        "{}:/workdir/docker-target/deploy/{}.so",
-        container_name, binary_name
+        "{}:{}",
+        container_name,
+        bin_path.as_path().to_str().unwrap()
     );
     let exit = std::process::Command::new("docker")
         .args(&["cp", &bin_artifact, &out_file])
@@ -868,16 +955,50 @@ fn docker_build(
         .output()
         .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
     if !exit.status.success() {
-        return Err(anyhow!(
+        Err(anyhow!(
             "Failed to copy binary out of docker. Is the target directory set correctly?"
-        ));
+        ))
+    } else {
+        Ok(())
     }
+}
 
-    // Done.
+fn docker_cleanup(container_name: &str, target_dir: &Path) -> Result<()> {
+    // Wipe the generated docker-target dir.
+    println!("Cleaning up the docker target directory");
+    docker_exec(container_name, &["rm", "-rf", target_dir.to_str().unwrap()])?;
+
+    // Remove the docker image.
+    println!("Removing the docker image");
+    let exit = std::process::Command::new("docker")
+        .args(&["rm", "-f", container_name])
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .output()
+        .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
+    if !exit.status.success() {
+        println!("Unable to remove docker container");
+        std::process::exit(exit.status.code().unwrap_or(1));
+    }
     Ok(())
 }
 
+fn docker_exec(container_name: &str, args: &[&str]) -> Result<()> {
+    let exit = std::process::Command::new("docker")
+        .args([&["exec", container_name], args].concat())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .output()
+        .map_err(|e| anyhow!("Failed to run command \"{:?}\": {:?}", args, e))?;
+    if !exit.status.success() {
+        Err(anyhow!("Failed to run command: {:?}", args))
+    } else {
+        Ok(())
+    }
+}
+
 fn _build_cwd(
+    cfg: &WithPath<Config>,
     idl_out: Option<PathBuf>,
     idl_ts_out: Option<PathBuf>,
     cargo_args: Vec<String>,
@@ -908,9 +1029,19 @@ fn _build_cwd(
 
         // Write out the JSON file.
         write_idl(&idl, OutFile::File(out))?;
-
         // Write out the TypeScript type.
-        fs::write(ts_out, template::idl_ts(&idl)?)?;
+        fs::write(&ts_out, template::idl_ts(&idl)?)?;
+        // Copy out the TypeScript type.
+        let cfg_parent = cfg.path().parent().expect("Invalid Anchor.toml");
+        if !&cfg.workspace.types.is_empty() {
+            fs::copy(
+                &ts_out,
+                cfg_parent
+                    .join(&cfg.workspace.types)
+                    .join(&idl.name)
+                    .with_extension("ts"),
+            )?;
+        }
     }
 
     Ok(())
@@ -921,6 +1052,8 @@ fn verify(
     program_id: Pubkey,
     program_name: Option<String>,
     solana_version: Option<String>,
+    docker_image: Option<String>,
+    bootstrap: BootstrapMode,
     cargo_args: Vec<String>,
 ) -> Result<()> {
     // Change to the workspace member directory, if needed.
@@ -936,15 +1069,15 @@ fn verify(
     let cur_dir = std::env::current_dir()?;
     build(
         cfg_override,
-        None,
-        true,
-        None,
-        match solana_version.is_some() {
-            true => solana_version,
-            false => cfg.solana_version.clone(),
-        },
-        None,
-        None,
+        None,                                                  // idl
+        None,                                                  // idl ts
+        true,                                                  // verifiable
+        None,                                                  // program name
+        solana_version.or_else(|| cfg.solana_version.clone()), // solana version
+        docker_image,                                          // docker image
+        bootstrap,                                             // bootstrap docker image
+        None,                                                  // stdout
+        None,                                                  // stderr
         cargo_args,
     )?;
     std::env::set_current_dir(&cur_dir)?;
@@ -1011,40 +1144,60 @@ pub fn verify_bin(program_id: Pubkey, bin_path: &Path, cluster: &str) -> Result<
             .get_account_with_commitment(&program_id, CommitmentConfig::default())?
             .value
             .map_or(Err(anyhow!("Account not found")), Ok)?;
-        match account.state()? {
-            UpgradeableLoaderState::Program {
-                programdata_address,
-            } => {
-                let account = client
-                    .get_account_with_commitment(&programdata_address, CommitmentConfig::default())?
-                    .value
-                    .map_or(Err(anyhow!("Account not found")), Ok)?;
-                let bin = account.data
-                    [UpgradeableLoaderState::programdata_data_offset().unwrap_or(0)..]
-                    .to_vec();
+        if account.owner == bpf_loader::id() || account.owner == bpf_loader_deprecated::id() {
+            let bin = account.data.to_vec();
+            let state = BinVerificationState::ProgramData {
+                slot: 0, // Need to look through the transaction history.
+                upgrade_authority_address: None,
+            };
+            (bin, state)
+        } else if account.owner == bpf_loader_upgradeable::id() {
+            match account.state()? {
+                UpgradeableLoaderState::Program {
+                    programdata_address,
+                } => {
+                    let account = client
+                        .get_account_with_commitment(
+                            &programdata_address,
+                            CommitmentConfig::default(),
+                        )?
+                        .value
+                        .map_or(Err(anyhow!("Account not found")), Ok)?;
+                    let bin = account.data
+                        [UpgradeableLoaderState::programdata_data_offset().unwrap_or(0)..]
+                        .to_vec();
 
-                if let UpgradeableLoaderState::ProgramData {
-                    slot,
-                    upgrade_authority_address,
-                } = account.state()?
-                {
-                    let state = BinVerificationState::ProgramData {
+                    if let UpgradeableLoaderState::ProgramData {
                         slot,
                         upgrade_authority_address,
-                    };
-                    (bin, state)
-                } else {
-                    return Err(anyhow!("Expected program data"));
+                    } = account.state()?
+                    {
+                        let state = BinVerificationState::ProgramData {
+                            slot,
+                            upgrade_authority_address,
+                        };
+                        (bin, state)
+                    } else {
+                        return Err(anyhow!("Expected program data"));
+                    }
+                }
+                UpgradeableLoaderState::Buffer { .. } => {
+                    let offset = UpgradeableLoaderState::buffer_data_offset().unwrap_or(0);
+                    (
+                        account.data[offset..].to_vec(),
+                        BinVerificationState::Buffer,
+                    )
+                }
+                _ => {
+                    return Err(anyhow!(
+                        "Invalid program id, not a buffer or program account"
+                    ))
                 }
             }
-            UpgradeableLoaderState::Buffer { .. } => {
-                let offset = UpgradeableLoaderState::buffer_data_offset().unwrap_or(0);
-                (
-                    account.data[offset..].to_vec(),
-                    BinVerificationState::Buffer,
-                )
-            }
-            _ => return Err(anyhow!("Invalid program id")),
+        } else {
+            return Err(anyhow!(
+                "Invalid program id, not owned by any loader program"
+            ));
         }
     };
     let mut local_bin = {
@@ -1112,7 +1265,11 @@ fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
 
 fn extract_idl(file: &str) -> Result<Option<Idl>> {
     let file = shellexpand::tilde(file);
-    anchor_syn::idl::file::parse(&*file)
+    let manifest_from_path =
+        std::env::current_dir()?.join(PathBuf::from(&*file).parent().unwrap().to_path_buf());
+    let cargo = Manifest::discover_from_path(manifest_from_path)?
+        .ok_or_else(|| anyhow!("Cargo.toml not found"))?;
+    anchor_syn::idl::file::parse(&*file, cargo.version())
 }
 
 fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
@@ -1139,7 +1296,7 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
         } => idl_set_authority(cfg_override, program_id, address, new_authority),
         IdlCommand::EraseAuthority { program_id } => idl_erase_authority(cfg_override, program_id),
         IdlCommand::Authority { program_id } => idl_authority(cfg_override, program_id),
-        IdlCommand::Parse { file, out } => idl_parse(file, out),
+        IdlCommand::Parse { file, out, out_ts } => idl_parse(file, out, out_ts),
         IdlCommand::Fetch { address, out } => idl_fetch(cfg_override, address, out),
     }
 }
@@ -1398,13 +1555,20 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
     Ok(())
 }
 
-fn idl_parse(file: String, out: Option<String>) -> Result<()> {
+fn idl_parse(file: String, out: Option<String>, out_ts: Option<String>) -> Result<()> {
     let idl = extract_idl(&file)?.ok_or_else(|| anyhow!("IDL not parsed"))?;
     let out = match out {
         None => OutFile::Stdout,
         Some(out) => OutFile::File(PathBuf::from(out)),
     };
-    write_idl(&idl, out)
+    write_idl(&idl, out)?;
+
+    // Write out the TypeScript IDL.
+    if let Some(out) = out_ts {
+        fs::write(out, template::idl_ts(&idl)?)?;
+    }
+
+    Ok(())
 }
 
 fn idl_fetch(cfg_override: &ConfigOverride, address: Pubkey, out: Option<String>) -> Result<()> {
@@ -1447,9 +1611,12 @@ fn test(
             build(
                 cfg_override,
                 None,
+                None,
                 false,
                 None,
                 None,
+                None,
+                BootstrapMode::None,
                 None,
                 None,
                 cargo_args,
@@ -2325,7 +2492,7 @@ fn publish(
                 // Only add the file if it's not empty.
                 let metadata = fs::File::open(&e)?.metadata()?;
                 if metadata.len() > 0 {
-                    println!("PACKING: {}", e.display().to_string());
+                    println!("PACKING: {}", e.display());
                     if e.is_dir() {
                         tar.append_dir_all(&e, &e)?;
                     } else {
@@ -2354,9 +2521,12 @@ fn publish(
     build(
         cfg_override,
         None,
+        None,
         true,
         Some(program_name),
-        cfg.solana_version.clone(),
+        None,
+        None,
+        BootstrapMode::None,
         None,
         None,
         cargo_args,
@@ -2431,7 +2601,7 @@ fn keys_list(cfg_override: &ConfigOverride) -> Result<()> {
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
     for program in cfg.read_all_programs()? {
         let pubkey = program.pubkey()?;
-        println!("{}: {}", program.lib_name, pubkey.to_string());
+        println!("{}: {}", program.lib_name, pubkey);
     }
     Ok(())
 }
@@ -2448,9 +2618,12 @@ fn localnet(
             build(
                 cfg_override,
                 None,
+                None,
                 false,
                 None,
                 None,
+                None,
+                BootstrapMode::None,
                 None,
                 None,
                 cargo_args,

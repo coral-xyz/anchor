@@ -72,6 +72,10 @@ pub enum ErrorCode {
     InvalidProgramExecutable,
     #[msg("The given account did not sign")]
     AccountNotSigner,
+    #[msg("The given account is not owned by the system program")]
+    AccountNotSystemOwned,
+    #[msg("The program expected this account to be already initialized")]
+    AccountNotInitialized,
 
     // State.
     #[msg("The given state account does not have the correct address")]
