@@ -1,12 +1,12 @@
 [package]
-name = "dup"
+name = "nodup"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2018"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "dup"
+name = "nodup"
 
 [features]
 no-entrypoint = []

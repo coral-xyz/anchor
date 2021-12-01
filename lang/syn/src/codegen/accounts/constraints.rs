@@ -729,7 +729,6 @@ fn handle_composite_field(
 
     match previous_field {
         AccountField::Field(previous_field) => {
-            let previous_field_name = format!("{}", previous_field_ident);
             let is_previous_field_mutable =
                 if &previous_field.account_ty().to_token_stream().to_string() == "AccountInfo" {
                     quote! {#previous_field_ident.is_writable}
@@ -745,24 +744,10 @@ fn handle_composite_field(
                     if !field.is_mutable && !#is_previous_field_mutable {
                         continue;
                     }
-                    if field.dup_target.is_some() {
-                        if let Some(field_dup) = field.dup_target {
-                            if &field.dup_target.unwrap() != &#previous_field_name  {
-                                if field.key() == anchor_lang::Key::key(&#previous_field_ident) {
-                                    return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
-                                }
-                            }
-                        } else {
-                            if &field.dup_target.unwrap() != &#previous_field_name {
-                                if field.key() == anchor_lang::Key::key(&#previous_field_ident) {
-                                    return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
-                                }
-                            }
-                        }
-                    } else {
-                        if field.key() == anchor_lang::Key::key(&#previous_field_ident){
-                            return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
-                        }
+                    if field.key() == anchor_lang::Key::key(&#previous_field_ident){
+                        //anchor_lang::prelude::msg!("77777");
+
+                        return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
                     }
                 }
             });
@@ -777,30 +762,10 @@ fn handle_composite_field(
                         if !my_field.is_mutable && !prev_field.is_mutable {
                             continue;
                         }
-                        if my_field.dup_target.is_some() {
-                            if let Some(field_dup) = prev_field.dup_target {
-                                let mut path = prev_field.build_path();
-                                path.push_str(".");
-                                path.push_str(field_dup);
-                                if &my_field.dup_target.unwrap() != &path {
-                                    if my_field.key() == prev_field.key() {
-                                        return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
-                                    }
-                                }
-                            } else {
-                                let mut path = prev_field.build_path();
-                                path.push_str(".");
-                                path.push_str(prev_field.name);
-                                if &my_field.dup_target.unwrap() != &path {
-                                    if my_field.key() == prev_field.key() {
-                                        return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
-                                    }
-                                }
-                            }
-                        } else {
-                            if my_field.key() == prev_field.key() {
-                                return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
-                            }
+                        if my_field.key() == prev_field.key() {
+                            //anchor_lang::prelude::msg!("88888");
+
+                            return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
                         }
                     }
                 }
@@ -839,6 +804,7 @@ fn handle_field(previous_field: &AccountField, my_field: &Field) -> Vec<proc_mac
         AccountField::CompositeField(cf) => {
             let cf_ident = &cf.ident;
             let f_ident = &my_field.ident;
+            let f_name = format!("{}", f_ident);
             let has_dup_target = my_field.constraints.dup.is_some();
             let dup_target = if has_dup_target {
                 my_field
@@ -852,7 +818,17 @@ fn handle_field(previous_field: &AccountField, my_field: &Field) -> Vec<proc_mac
             } else {
                 String::new()
             };
-
+            let dup_target = dup_target.replace(" ", "");
+            let dup_target_root = if has_dup_target {
+                dup_target
+                    .split(".")
+                    .collect::<Vec<_>>()
+                    .get(0)
+                    .unwrap()
+                    .to_string()
+            } else {
+                String::new()
+            };
             let is_my_field_mutable =
                 if &my_field.account_ty().to_token_stream().to_string() == "AccountInfo" {
                     quote! {#f_ident.is_writable}
@@ -872,8 +848,11 @@ fn handle_field(previous_field: &AccountField, my_field: &Field) -> Vec<proc_mac
                             let mut path = field.build_path();
                             path.push_str(".");
                             path.push_str(field_dup);
-                            if &#dup_target != &path {
+                            let mut entire_path = String::from(#dup_target_root);
+                            entire_path.push_str(&path);
+                            if &#dup_target != &entire_path {
                                 if anchor_lang::Key::key(&#f_ident) == field.key() {
+                                    ////anchor_lang::prelude::msg!("0 {}=={}.{}",#f_name,path,field.name);
                                     return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
                                 }
                             }
@@ -881,14 +860,23 @@ fn handle_field(previous_field: &AccountField, my_field: &Field) -> Vec<proc_mac
                             let mut path = field.build_path();
                             path.push_str(".");
                             path.push_str(field.name);
-                            if &#dup_target != &path {
+                            let mut entire_path = String::from(#dup_target_root);
+                            entire_path.push_str(&path);
+                            if &#dup_target != &entire_path {
                                 if anchor_lang::Key::key(&#f_ident) == field.key() {
+                                    //anchor_lang::prelude::msg!("dup_target: {}",&#dup_target);
+                                    //anchor_lang::prelude::msg!("path: {}",&path);
+                                    //anchor_lang::prelude::msg!("1 {}=={}",#f_name,field.name);
                                     return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
                                 }
                             }
                         }
                     } else {
+                        let mut path = field.build_path();
+                            path.push_str(".");
+                            path.push_str(field.name);
                         if anchor_lang::Key::key(&#f_ident) == field.key() {
+                            //anchor_lang::prelude::msg!("2 {}=={}.{}",#f_name,path,field.name);
                             return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
                         }
                     }
@@ -904,8 +892,12 @@ fn generate_constraint_no_dup(
     my_field: &proc_macro2::TokenStream,
     other_field: &proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
+    let me = my_field.to_string();
+    let them = other_field.to_string();
     quote! {
+        //anchor_lang::prelude::msg!("me:{}, them:{}", #me, #them);
         if anchor_lang::Key::key(&#my_field) == anchor_lang::Key::key(&#other_field) {
+            //anchor_lang::prelude::msg!("AUTOGENERATED");
             return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
         }
     }

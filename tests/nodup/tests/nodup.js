@@ -10,7 +10,7 @@ const checkNoDupError = (err) => {
 
 describe('dup_error', () => {
   anchor.setProvider(anchor.Provider.local());
-  const program = anchor.workspace.Dup;
+  const program = anchor.workspace.Nodup;
   const authority = program.provider.wallet.payer;
 
   it('Passes because account is a declared duplicate', async () => {
@@ -43,6 +43,19 @@ describe('dup_error', () => {
       accounts: {
         account1: authority.publicKey,
         account2: anchor.web3.Keypair.generate().publicKey
+      },
+      signers: [authority]
+    });
+  });
+
+  it('Passes the ConstraintNoDup check because accounts is a declared mutable duplicate!', async () => {
+    await program.rpc.withDupConstraintComposite({
+      accounts: {
+        account1: authority.publicKey,
+        child: {
+          childAccount: authority.publicKey,
+          anotherChildAccount: anchor.web3.Keypair.generate().publicKey
+        }
       },
       signers: [authority]
     });

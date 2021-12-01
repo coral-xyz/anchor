@@ -193,7 +193,7 @@ pub struct Swap<'info> {
     market: MarketAccounts<'info>,
     #[account(signer)]
     authority: AccountInfo<'info>,
-    #[account(mut)]
+    #[account(mut, dup = market.order_payer_token_account)]
     pc_wallet: AccountInfo<'info>,
     // Programs.
     dex_program: AccountInfo<'info>,
@@ -226,7 +226,7 @@ pub struct SwapTransitive<'info> {
     // Must be the authority over all open orders accounts used.
     #[account(signer)]
     authority: AccountInfo<'info>,
-    #[account(mut)]
+    #[account(mut, dup = to.order_payer_token_account)]
     pc_wallet: AccountInfo<'info>,
     // Programs.
     dex_program: AccountInfo<'info>,
@@ -421,7 +421,7 @@ pub struct MarketAccounts<'info> {
     // PDA owner of the DEX's token accounts for base + quote currencies.
     vault_signer: AccountInfo<'info>,
     // User wallets.
-    #[account(mut)]
+    #[account(mut, dup = order_payer_token_account)]
     coin_wallet: AccountInfo<'info>,
 }
 

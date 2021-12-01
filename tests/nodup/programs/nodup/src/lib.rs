@@ -3,68 +3,90 @@ use anchor_lang::prelude::*;
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 #[program]
-mod dup {
+mod nodup {
     use super::*;
 
     pub fn with_dup_constraint(_ctx: Context<WithDupConstraint>) -> ProgramResult {
+        anchor_lang::solana_program::log::sol_log_compute_units();
+
         Ok(())
     }
 
     pub fn with_dup_constraint_composite(
         _ctx: Context<WithDupConstraintComposite>,
     ) -> ProgramResult {
+        anchor_lang::solana_program::log::sol_log_compute_units();
+
         Ok(())
     }
 
     pub fn without_dup_constraint(_ctx: Context<WithoutDupConstraint>) -> ProgramResult {
+        anchor_lang::solana_program::log::sol_log_compute_units();
+
         Ok(())
+
     }
 
     pub fn without_dup_constraint_composite(
         _ctx: Context<WithoutDupConstraintComposite>,
     ) -> ProgramResult {
+        anchor_lang::solana_program::log::sol_log_compute_units();
+
         Ok(())
     }
 
     pub fn without_dup_constraint_composite_reverse(
         _ctx: Context<WithoutDupConstraintCompositeReverse>,
     ) -> ProgramResult {
+        anchor_lang::solana_program::log::sol_log_compute_units();
+
         Ok(())
     }
 
     pub fn without_dup_constraint_two_composites(
         _ctx: Context<WithoutDupConstraintTwoComposites>,
     ) -> ProgramResult {
+        anchor_lang::solana_program::log::sol_log_compute_units();
+
         Ok(())
     }
 
     pub fn with_missing_dup_constraints_three_accounts(
         _ctx: Context<WithMissingDupConstraintThreeAccounts>,
     ) -> ProgramResult {
+        anchor_lang::solana_program::log::sol_log_compute_units();
+
         Ok(())
     }
 
     pub fn with_dup_constraints_three_accounts(
         _ctx: Context<WithDupConstraintsThreeAccounts>,
     ) -> ProgramResult {
+        anchor_lang::solana_program::log::sol_log_compute_units();
         Ok(())
     }
 
     pub fn with_missing_dup_constraint_double_three_accounts(
         _ctx: Context<WithMissingDupConstraintDoubleThreeAccounts>,
     ) -> ProgramResult {
+        anchor_lang::solana_program::log::sol_log_compute_units();
+
         Ok(())
     }
 
     pub fn without_dup_constraint_double_three_accounts_all_immutable(
         _ctx: Context<WithoutDupConstraintDoubleThreeAccountsAllImmutable>,
     ) -> ProgramResult {
+        anchor_lang::solana_program::log::sol_log_compute_units();
+
         Ok(())
     }
 
     pub fn nested_children(
         _ctx: Context<NestedChildren>,
     ) -> ProgramResult {
+        anchor_lang::solana_program::log::sol_log_compute_units();
+
         Ok(())
     }
 }
@@ -91,9 +113,9 @@ pub struct WithDupConstraint<'info> {
 
 #[derive(Accounts)]
 pub struct WithDupConstraintComposite<'info> {
+    pub child: ChildMut<'info>,
     #[account(dup = child.child_account)]
     pub account1: SystemAccount<'info>,
-    pub child: Child<'info>,
 }
 
 #[derive(Accounts)]
