@@ -728,13 +728,21 @@ fn handle_composite_field(
     let previous_field_ident = previous_field.ident();
 
     match previous_field {
-        AccountField::Field(_) => {
+        AccountField::Field(previous_field) => {
             let previous_field_name = format!("{}", previous_field_ident);
+            let is_previous_field_mutable =
+                if &previous_field.account_ty().to_token_stream().to_string() == "AccountInfo" {
+                    quote! {#previous_field_ident.is_writable}
+                } else {
+                    quote! {
+                        anchor_lang::IsMutable::is_mutable(&#previous_field_ident)
+                    }
+                };
             checks.push(quote! {
                 let fields = anchor_lang::__private::fields::Fields::fields(&#my_ident);
 
                 for field in fields.iter() {
-                    if !field.is_mutable && !anchor_lang::IsMutable::is_mutable(&#previous_field_ident)  {
+                    if !field.is_mutable && !#is_previous_field_mutable {
                         continue;
                     }
                     if field.dup_target.is_some() {
@@ -844,10 +852,19 @@ fn handle_field(previous_field: &AccountField, my_field: &Field) -> Vec<proc_mac
             } else {
                 String::new()
             };
+
+            let is_my_field_mutable =
+                if &my_field.account_ty().to_token_stream().to_string() == "AccountInfo" {
+                    quote! {#f_ident.is_writable}
+                } else {
+                    quote! {
+                        anchor_lang::IsMutable::is_mutable(&#f_ident)
+                    }
+                };
             checks.push(quote! {
                 let fields = anchor_lang::__private::fields::Fields::fields(&#cf_ident);
                 for field in fields {
-                    if !anchor_lang::IsMutable::is_mutable(&#f_ident) && !field.is_mutable {
+                    if !#is_my_field_mutable && !field.is_mutable {
                         continue;
                     }
                     if #has_dup_target {
