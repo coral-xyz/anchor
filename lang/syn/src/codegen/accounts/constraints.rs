@@ -747,10 +747,11 @@ fn handle_composite_field(
     field: &CompositeField,
 ) -> Vec<proc_macro2::TokenStream> {
     let mut checks = vec![];
+    let my_ident = &field.ident;
+    let previous_field_ident = previous_field.ident();
+
     match previous_field {
-        AccountField::Field(previous_field) => {
-            let previous_field_ident = &previous_field.ident;
-            let my_ident = &field.ident;
+        AccountField::Field(_) => {
             let previous_field_name = format!("{}", previous_field_ident);
             checks.push(quote! {
                 let fields = anchor_lang::__private::fields::Fields::fields(&#my_ident);
@@ -781,7 +782,45 @@ fn handle_composite_field(
                 }
             });
         }
-        AccountField::CompositeField(_) => {}
+        AccountField::CompositeField(_) => {
+            checks.push(quote! {
+                let fields = anchor_lang::__private::fields::Fields::fields(&#my_ident);
+                let previous_fields = anchor_lang::__private::fields::Fields::fields(&#previous_field_ident);
+
+                for my_field in fields {
+                    for prev_field in previous_fields {
+                        if !my_field.is_mutable && !prev_field.is_mutable {
+                            continue;
+                        }
+                        if my_field.dup_target.is_some() {
+                            if let Some(field_dup) = prev_field.dup_target {
+                                let mut path = prev_field.build_path();
+                                path.push_str(".");
+                                path.push_str(field_dup);
+                                if &my_field.dup_target.unwrap() != &path {
+                                    if my_field.key() == prev_field.key() {
+                                        return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
+                                    }
+                                }
+                            } else {
+                                let mut path = prev_field.build_path();
+                                path.push_str(".");
+                                path.push_str(prev_field.name);
+                                if &my_field.dup_target.unwrap() != &path {
+                                    if my_field.key() == prev_field.key() {
+                                        return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
+                                    }
+                                }
+                            }
+                        } else {
+                            if my_field.key() == prev_field.key() {
+                                return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
+                            }
+                        }
+                    }
+                }
+            });
+        }
     };
     checks
 }
@@ -813,8 +852,8 @@ fn handle_field(previous_field: &AccountField, my_field: &Field) -> Vec<proc_mac
             }
         }
         AccountField::CompositeField(cf) => {
-            let cf_name = &cf.ident;
-            let f_name = &my_field.ident;
+            let cf_ident = &cf.ident;
+            let f_ident = &my_field.ident;
             let has_dup_target = my_field.constraints.dup.is_some();
             let dup_target = if has_dup_target {
                 my_field
@@ -829,9 +868,9 @@ fn handle_field(previous_field: &AccountField, my_field: &Field) -> Vec<proc_mac
                 String::new()
             };
             checks.push(quote! {
-                let fields = anchor_lang::__private::fields::Fields::fields(&#cf_name);
+                let fields = anchor_lang::__private::fields::Fields::fields(&#cf_ident);
                 for field in fields {
-                    if !anchor_lang::IsMutable::is_mutable(&#f_name) && !field.is_mutable {
+                    if !anchor_lang::IsMutable::is_mutable(&#f_ident) && !field.is_mutable {
                         continue;
                     }
                     if #has_dup_target {
@@ -840,7 +879,7 @@ fn handle_field(previous_field: &AccountField, my_field: &Field) -> Vec<proc_mac
                             path.push_str(".");
                             path.push_str(field_dup);
                             if &#dup_target != &path {
-                                if anchor_lang::Key::key(&#f_name) == field.key() {
+                                if anchor_lang::Key::key(&#f_ident) == field.key() {
                                     return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
                                 }
                             }
@@ -849,13 +888,13 @@ fn handle_field(previous_field: &AccountField, my_field: &Field) -> Vec<proc_mac
                             path.push_str(".");
                             path.push_str(field.name);
                             if &#dup_target != &path {
-                                if anchor_lang::Key::key(&#f_name) == field.key() {
+                                if anchor_lang::Key::key(&#f_ident) == field.key() {
                                     return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
                                 }
                             }
                         }
                     } else {
-                        if anchor_lang::Key::key(&#f_name) == field.key() {
+                        if anchor_lang::Key::key(&#f_ident) == field.key() {
                             return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
                         }
                     }
