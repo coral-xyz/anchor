@@ -714,29 +714,6 @@ pub fn generate_constraints_no_dup(accs: &AccountsStruct) -> Vec<proc_macro2::To
             }
             previous_fields.push(field);
             acc
-            /* for previous_field in previous_fields.iter().filter(|previous_field| {
-                if let AccountField::CompositeField(_) = field {}
-                if let AccountField::CompositeField(_) = previous_field {
-                    return false;
-                }
-                if !field.constraints().is_mutable() && !previous_field.constraints().is_mutable() {
-                    return false;
-                }
-                if let Some(my_dup_constraint) = &field.constraints().dup {
-                    if let Some(previous_field_dup_constraint) = &previous_field.constraints().dup {
-                        my_dup_constraint.target != previous_field_dup_constraint.target
-                    } else {
-                        my_dup_constraint.target.to_token_stream().to_string()
-                            != previous_field.ident().to_token_stream().to_string()
-                    }
-                } else {
-                    true
-                }
-            }) {
-                acc.push(generate_constraint_no_dup(field, previous_field));
-            }
-            previous_fields.push(field);
-            acc */
         })
         .flatten()
         .collect()
@@ -756,7 +733,7 @@ fn handle_composite_field(
             checks.push(quote! {
                 let fields = anchor_lang::__private::fields::Fields::fields(&#my_ident);
 
-                for field in fields {
+                for field in fields.iter() {
                     if !field.is_mutable && !anchor_lang::IsMutable::is_mutable(&#previous_field_ident)  {
                         continue;
                     }
@@ -787,8 +764,8 @@ fn handle_composite_field(
                 let fields = anchor_lang::__private::fields::Fields::fields(&#my_ident);
                 let previous_fields = anchor_lang::__private::fields::Fields::fields(&#previous_field_ident);
 
-                for my_field in fields {
-                    for prev_field in previous_fields {
+                for my_field in fields.iter() {
+                    for prev_field in previous_fields.iter() {
                         if !my_field.is_mutable && !prev_field.is_mutable {
                             continue;
                         }

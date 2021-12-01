@@ -26,6 +26,18 @@ mod dup {
         Ok(())
     }
 
+    pub fn without_dup_constraint_composite_reverse(
+        _ctx: Context<WithoutDupConstraintCompositeReverse>,
+    ) -> ProgramResult {
+        Ok(())
+    }
+
+    pub fn without_dup_constraint_two_composites(
+        _ctx: Context<WithoutDupConstraintTwoComposites>,
+    ) -> ProgramResult {
+        Ok(())
+    }
+
     pub fn with_missing_dup_constraints_three_accounts(
         _ctx: Context<WithMissingDupConstraintThreeAccounts>,
     ) -> ProgramResult {
@@ -49,12 +61,31 @@ mod dup {
     ) -> ProgramResult {
         Ok(())
     }
+
+    pub fn nested_children(
+        _ctx: Context<NestedChildren>,
+    ) -> ProgramResult {
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct Child<'info> {
+    pub child_account: SystemAccount<'info>,
+    pub another_child_account: SystemAccount<'info>
+}
+
+#[derive(Accounts)]
+pub struct ChildMut<'info> {
+    #[account(mut)]
+    pub child_account: SystemAccount<'info>,
+    pub another_child_account: SystemAccount<'info>
 }
 
 #[derive(Accounts)]
 pub struct WithDupConstraint<'info> {
     pub account1: Signer<'info>,
-    #[account(dup = account1)]
+    #[account(mut, dup = account1)]
     pub account2: SystemAccount<'info>,
 }
 
@@ -63,11 +94,6 @@ pub struct WithDupConstraintComposite<'info> {
     #[account(dup = child.child_account)]
     pub account1: SystemAccount<'info>,
     pub child: Child<'info>,
-}
-
-#[derive(Accounts)]
-pub struct Child<'info> {
-    pub child_account: SystemAccount<'info>,
 }
 
 #[derive(Accounts)]
@@ -82,6 +108,20 @@ pub struct WithoutDupConstraintComposite<'info> {
     pub child: Child<'info>,
     #[account(mut)]
     pub account1: SystemAccount<'info>,
+}
+
+#[derive(Accounts)]
+pub struct WithoutDupConstraintCompositeReverse<'info> {
+    #[account(mut)]
+    pub account1: SystemAccount<'info>,
+    pub child: Child<'info>,
+}
+
+#[derive(Accounts)]
+pub struct WithoutDupConstraintTwoComposites<'info> {
+    pub account: SystemAccount<'info>,
+    pub child: Child<'info>,
+    pub child_two: ChildMut<'info>,
 }
 
 #[derive(Accounts)]
@@ -123,4 +163,13 @@ pub struct WithoutDupConstraintDoubleThreeAccountsAllImmutable<'info> {
     pub account4: SystemAccount<'info>,
     pub account5: SystemAccount<'info>,
     pub account6: SystemAccount<'info>,
+}
+
+#[derive(Accounts)]
+pub struct NestedChildren<'info> {
+    pub account_one: WithDupConstraintsThreeAccounts<'info>,
+    pub account_two: WithoutDupConstraint<'info>,
+    pub account_three: WithoutDupConstraintCompositeReverse<'info>,
+    pub account_four: WithoutDupConstraintTwoComposites<'info>,
+    pub account_five: SystemAccount<'info>
 }
