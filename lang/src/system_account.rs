@@ -92,3 +92,9 @@ impl<'info> Key for SystemAccount<'info> {
         *self.info.key
     }
 }
+
+impl<'info> IsMutable for SystemAccount<'info> {
+    fn is_mutable(&self) -> bool {
+        self.as_ref().is_writable
+    }
+}

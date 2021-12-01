@@ -450,7 +450,7 @@ pub struct ExchangeRedeemableForWatermelon<'info> {
     // and prevents forgotten / leftover redeemable tokens in the IDO pool.
     pub payer: Signer<'info>,
     // User Accounts
-    #[account(mut)] // Sol rent from empty redeemable account is refunded to the user
+    #[account(mut, dup = payer)] // Sol rent from empty redeemable account is refunded to the user
     pub user_authority: AccountInfo<'info>,
     // TODO replace with ATA constraints
     #[account(mut,
@@ -513,7 +513,7 @@ pub struct WithdrawFromEscrow<'info> {
     // and prevents forgotten / leftover USDC in the IDO pool.
     pub payer: Signer<'info>,
     // User Accounts
-    #[account(mut)]
+    #[account(mut, dup = payer)]
     pub user_authority: AccountInfo<'info>,
     #[account(mut,
         constraint = user_usdc.owner == user_authority.key(),

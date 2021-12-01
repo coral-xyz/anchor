@@ -37,7 +37,6 @@ pub fn generate_composite(f: &CompositeField) -> proc_macro2::TokenStream {
         #(#checks)*
     }
 }
-
 // Linearizes the constraint group so that constraints with dependencies
 // run after those without.
 pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
@@ -45,6 +44,7 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
         init,
         zeroed,
         mutable,
+        dup,
         signer,
         has_one,
         literal,
@@ -76,10 +76,16 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
     if let Some(c) = mutable {
         constraints.push(Constraint::Mut(c));
     }
+
     if let Some(c) = signer {
         constraints.push(Constraint::Signer(c));
     }
     constraints.append(&mut has_one.into_iter().map(Constraint::HasOne).collect());
+
+    if let Some(c) = dup {
+        constraints.push(Constraint::Dup(c));
+    }
+
     constraints.append(&mut literal.into_iter().map(Constraint::Literal).collect());
     constraints.append(&mut raw.into_iter().map(Constraint::Raw).collect());
     if let Some(c) = owner {
@@ -120,6 +126,8 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::Close(c) => generate_constraint_close(f, c),
         Constraint::Address(c) => generate_constraint_address(f, c),
         Constraint::AssociatedToken(c) => generate_constraint_associated_token(f, c),
+        // the dup constraint is only used to signal the nodup checks that they should ignore the annotated account
+        Constraint::Dup(_) => quote! {},
     }
 }
 
@@ -688,5 +696,234 @@ fn generate_custom_error(
     match custom_error {
         Some(error) => quote! { #error.into() },
         None => quote! { anchor_lang::__private::ErrorCode::#error.into() },
+    }
+}
+
+#[cfg(feature = "nodup")]
+pub fn generate_constraints_no_dup(accs: &AccountsStruct) -> Vec<proc_macro2::TokenStream> {
+    let mut previous_fields = Vec::<&AccountField>::with_capacity(accs.fields.len());
+    let mut no_dup_checks = vec![];
+    no_dup_checks.push(
+        quote! {
+            let mut previous_field_fields_cache: Vec<Option<Vec<anchor_lang::__private::fields::Field>>> = vec![];
+        }
+    );
+    no_dup_checks.extend(
+        accs.fields
+            .iter()
+            .map(|field| {
+                let mut acc = vec![];
+                for (count, previous_field) in previous_fields.iter().enumerate() {
+                    acc.extend(match field {
+                        AccountField::CompositeField(cf) => {
+                            handle_composite_field(previous_field, cf, count)
+                        }
+                        AccountField::Field(f) => handle_field(previous_field, f, count),
+                    });
+                }
+                previous_fields.push(field);
+                acc
+            })
+            .flatten(),
+    );
+
+    no_dup_checks
+}
+
+fn handle_composite_field(
+    previous_field: &AccountField,
+    field: &CompositeField,
+    previous_field_index: usize,
+) -> Vec<proc_macro2::TokenStream> {
+    let mut checks = vec![];
+    let my_ident = &field.ident;
+    let previous_field_ident = previous_field.ident();
+
+    match previous_field {
+        AccountField::Field(previous_field) => {
+            let is_previous_field_mutable =
+                if &previous_field.account_ty().to_token_stream().to_string() == "AccountInfo" {
+                    quote! {#previous_field_ident.is_writable}
+                } else {
+                    quote! {
+                        anchor_lang::IsMutable::is_mutable(&#previous_field_ident)
+                    }
+                };
+            checks.push(quote! {{
+                if previous_field_fields_cache.get(#previous_field_index).is_none() {
+                    previous_field_fields_cache.push(None);
+                }
+                let mut fields = vec![];
+                anchor_lang::__private::fields::Fields::fields(&#my_ident, &mut fields);
+
+                for field in fields.iter() {
+                    if !field.is_mutable && !#is_previous_field_mutable {
+                        continue;
+                    }
+                    if field.key() == anchor_lang::Key::key(&#previous_field_ident){
+                        return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
+                    }
+                }
+            }});
+        }
+        AccountField::CompositeField(_) => {
+            checks.push(quote! {{
+                let mut fields = vec![];
+                anchor_lang::__private::fields::Fields::fields(&#my_ident, &mut fields);
+
+                if previous_field_fields_cache.get(#previous_field_index).is_none() {
+                    previous_field_fields_cache.push({
+                        let mut previous_fields = vec![];
+                        anchor_lang::__private::fields::Fields::fields(&#previous_field_ident, &mut previous_fields);
+                        Some(previous_fields)
+                    });
+                } else {
+                    anchor_lang::prelude::msg!("CACHE HIT");
+                }
+                let previous_fields = previous_field_fields_cache.get(#previous_field_index).unwrap().as_ref().unwrap();
+
+                for my_field in fields.iter() {
+                    for prev_field in previous_fields.iter() {
+                        if !my_field.is_mutable && !prev_field.is_mutable {
+                            continue;
+                        }
+                        if my_field.key() == prev_field.key() {
+                            return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
+                        }
+                    }
+                }
+            }});
+        }
+    };
+    checks
+}
+
+fn handle_field(
+    previous_field: &AccountField,
+    my_field: &Field,
+    previous_field_index: usize,
+) -> Vec<proc_macro2::TokenStream> {
+    let mut checks = vec![];
+    match previous_field {
+        AccountField::Field(pf) => {
+            checks.push(quote! {
+                if previous_field_fields_cache.get(#previous_field_index).is_none() {
+                    previous_field_fields_cache.push(None);
+                }
+            });
+            if !my_field.constraints.is_mutable() && !pf.constraints.is_mutable() {
+                return vec![];
+            }
+            if let Some(my_dup_constraint) = &my_field.constraints.dup {
+                if if let Some(previous_field_dup_constraint) = &pf.constraints.dup {
+                    my_dup_constraint.target != previous_field_dup_constraint.target
+                } else {
+                    my_dup_constraint.target.to_token_stream().to_string()
+                        != (&pf.ident).to_token_stream().to_string()
+                } {
+                    checks.push(generate_constraint_no_dup(
+                        &(&pf.ident).to_token_stream(),
+                        &(&my_field.ident).into_token_stream(),
+                    ));
+                }
+            } else {
+                checks.push(generate_constraint_no_dup(
+                    &(&pf.ident).to_token_stream(),
+                    &(&my_field.ident).into_token_stream(),
+                ));
+            }
+        }
+        AccountField::CompositeField(cf) => {
+            let cf_ident = &cf.ident;
+            let f_ident = &my_field.ident;
+            let has_dup_target = my_field.constraints.dup.is_some();
+            let dup_target = if has_dup_target {
+                my_field
+                    .constraints
+                    .dup
+                    .as_ref()
+                    .unwrap()
+                    .target
+                    .to_token_stream()
+                    .to_string()
+            } else {
+                String::new()
+            };
+            let dup_target = dup_target.replace(" ", "");
+            let dup_target_root = if has_dup_target {
+                dup_target
+                    .split('.')
+                    .collect::<Vec<_>>()
+                    .get(0)
+                    .unwrap()
+                    .to_string()
+            } else {
+                String::new()
+            };
+            let is_my_field_mutable =
+                if &my_field.account_ty().to_token_stream().to_string() == "AccountInfo" {
+                    quote! {#f_ident.is_writable}
+                } else {
+                    quote! {
+                        anchor_lang::IsMutable::is_mutable(&#f_ident)
+                    }
+                };
+            checks.push(quote! {{
+                if previous_field_fields_cache.get(#previous_field_index).is_none() {
+                    previous_field_fields_cache.push({
+                        let mut previous_fields = vec![];
+                        anchor_lang::__private::fields::Fields::fields(&#cf_ident, &mut previous_fields);
+                        Some(previous_fields)
+                    });
+                } else {
+                    anchor_lang::prelude::msg!("CACHE HIT");
+                }
+                for field in previous_field_fields_cache.get(#previous_field_index).unwrap().as_ref().unwrap() {
+                    if !#is_my_field_mutable && !field.is_mutable {
+                        continue;
+                    }
+                    if #has_dup_target {
+                        if let Some(field_dup) = field.dup_target {
+                            let mut path = String::from(#dup_target_root);
+                            field.build_path(&mut path);
+                            path.push_str(".");
+                            path.push_str(field_dup);
+                            if &#dup_target != &path {
+                                if anchor_lang::Key::key(&#f_ident) == field.key() {
+                                    return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
+                                }
+                            }
+                        } else {
+                            let mut path = String::from(#dup_target_root);
+                            field.build_path(&mut path);
+                            path.push_str(".");
+                            path.push_str(field.name);
+                            if &#dup_target != &path {
+                                if anchor_lang::Key::key(&#f_ident) == field.key() {
+                                    return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
+                                }
+                            }
+                        }
+                    } else {
+                        if anchor_lang::Key::key(&#f_ident) == field.key() {
+                            return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
+                        }
+                    }
+                }
+            }});
+        }
+    };
+    checks
+}
+
+#[cfg(feature = "nodup")]
+fn generate_constraint_no_dup(
+    my_field: &proc_macro2::TokenStream,
+    other_field: &proc_macro2::TokenStream,
+) -> proc_macro2::TokenStream {
+    quote! {
+        {if anchor_lang::Key::key(&#my_field) == anchor_lang::Key::key(&#other_field) {
+            return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
+        }}
     }
 }

@@ -1,5 +1,7 @@
 use crate::error::ErrorCode;
-use crate::{Accounts, AccountsExit, Key, ToAccountInfo, ToAccountInfos, ToAccountMetas};
+use crate::{
+    Accounts, AccountsExit, IsMutable, Key, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
@@ -73,5 +75,11 @@ impl<'info> Deref for UncheckedAccount<'info> {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl<'info> IsMutable for UncheckedAccount<'info> {
+    fn is_mutable(&self) -> bool {
+        self.as_ref().is_writable
     }
 }

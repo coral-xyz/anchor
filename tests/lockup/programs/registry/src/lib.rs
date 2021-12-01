@@ -753,14 +753,14 @@ pub struct DepositLocked<'info> {
 pub struct Stake<'info> {
     // Global accounts for the staking instance.
     #[account(has_one = pool_mint, has_one = reward_event_q)]
-    registrar: Account<'info, Registrar>,
-    reward_event_q: Account<'info, RewardQueue>,
+    registrar: Box<Account<'info, Registrar>>,
+    reward_event_q: Box<Account<'info, RewardQueue>>,
     #[account(mut)]
-    pool_mint: Account<'info, Mint>,
+    pool_mint: Box<Account<'info, Mint>>,
 
     // Member.
     #[account(mut, has_one = beneficiary, has_one = registrar)]
-    member: Account<'info, Member>,
+    member: Box<Account<'info, Member>>,
     #[account(signer)]
     beneficiary: AccountInfo<'info>,
     #[account(constraint = BalanceSandbox::from(&balances) == member.balances)]
@@ -790,16 +790,16 @@ pub struct Stake<'info> {
 pub struct StartUnstake<'info> {
     // Stake instance globals.
     #[account(has_one = reward_event_q)]
-    registrar: Account<'info, Registrar>,
-    reward_event_q: Account<'info, RewardQueue>,
+    registrar: Box<Account<'info, Registrar>>,
+    reward_event_q: Box<Account<'info, RewardQueue>>,
     #[account(mut)]
     pool_mint: AccountInfo<'info>,
 
     // Member.
     #[account(zero)]
-    pending_withdrawal: Account<'info, PendingWithdrawal>,
+    pending_withdrawal: Box<Account<'info, PendingWithdrawal>>,
     #[account(has_one = beneficiary, has_one = registrar)]
-    member: Account<'info, Member>,
+    member: Box<Account<'info, Member>>,
     #[account(signer)]
     beneficiary: AccountInfo<'info>,
     #[account(constraint = BalanceSandbox::from(&balances) == member.balances)]
@@ -972,10 +972,10 @@ pub struct ClaimRewardLocked<'info> {
 #[derive(Accounts)]
 pub struct ClaimRewardCommon<'info> {
     // Stake instance.
-    registrar: Account<'info, Registrar>,
+    registrar: Box<Account<'info, Registrar>>,
     // Member.
     #[account(mut, has_one = registrar, has_one = beneficiary)]
-    member: Account<'info, Member>,
+    member: Box<Account<'info, Member>>,
     #[account(signer)]
     beneficiary: AccountInfo<'info>,
     #[account(constraint = BalanceSandbox::from(&balances) == member.balances)]
@@ -984,7 +984,7 @@ pub struct ClaimRewardCommon<'info> {
     balances_locked: BalanceSandboxAccounts<'info>,
     // Vendor.
     #[account(has_one = registrar, has_one = vault)]
-    vendor: Account<'info, RewardVendor>,
+    vendor: Box<Account<'info, RewardVendor>>,
     #[account(mut)]
     vault: AccountInfo<'info>,
     #[account(

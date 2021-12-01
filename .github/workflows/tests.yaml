@@ -224,6 +224,8 @@ jobs:
             path: tests/ido-pool
           - cmd: cd tests/cfo && anchor run test-with-build
             path: tests/cfo
+          - cmd: cd tests/nodup && anchor test
+            path: tests/nodup
     steps:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup/

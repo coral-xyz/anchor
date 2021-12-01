@@ -48,6 +48,8 @@ pub enum ErrorCode {
     ConstraintAddress,
     #[msg("Expected zero account discriminant")]
     ConstraintZero,
+    #[msg("A nodup constrait was violated")]
+    ConstraintNoDup,
 
     // Accounts.
     #[msg("The account discriminator was already set on this account")]

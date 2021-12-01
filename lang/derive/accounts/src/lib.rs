@@ -52,6 +52,7 @@ use syn::parse_macro_input;
 /// | `#[account(state = <target>)]` | On `CpiState` structs | Checks the given state is the canonical state account for the target program. |
 /// | `#[account(owner = <target>)]`<br><br>`#[account(owner = <target> @ <custom_error>)]` | On `CpiState`, `CpiAccount`, and `AccountInfo` | Checks the account owner matches the target. Custom errors are supported via `@`. |
 /// | `#[account(address = <pubkey>)]`<br><br>`#[account(address = <pubkey> @ <custom_error>)]` | On `AccountInfo` and `Account` | Checks the account key matches the pubkey. Custom errors are supported via `@`. |
+/// | `#[account(dup = <target>)]` | On all accounts except `CompositeField`s | Allows multiple mutable accounts with the same key. Given one account X that has key A, all following accounts with the same key A have to be annotated with `dup` |
 // TODO: How do we make the markdown render correctly without putting everything
 //       on absurdly long lines?
 #[proc_macro_derive(Accounts, attributes(account, instruction))]

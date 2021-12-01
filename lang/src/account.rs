@@ -180,3 +180,11 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> Key for Ac
         *self.info.key
     }
 }
+
+impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> IsMutable
+    for Account<'info, T>
+{
+    fn is_mutable(&self) -> bool {
+        self.as_ref().is_writable
+    }
+}

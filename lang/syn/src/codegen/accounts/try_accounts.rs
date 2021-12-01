@@ -134,9 +134,30 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         })
         .collect();
 
+    // no_dup checks for mutable accounts
+    let no_dup_checks = {
+        #[cfg(not(feature = "nodup"))]
+        {
+            quote! {}
+        }
+
+        #[cfg(feature = "nodup")]
+        {
+            let no_dup_checks = constraints::generate_constraints_no_dup(accs);
+            quote! {{
+                anchor_lang::prelude::msg!("BEGIN DUP CHECKS");
+                anchor_lang::solana_program::log::sol_log_compute_units();
+                #(#no_dup_checks)*
+                anchor_lang::solana_program::log::sol_log_compute_units();
+                anchor_lang::prelude::msg!("END DUP CHECKS");
+            }}
+        }
+    };
+
     quote! {
         #(#init_fields)*
         #(#access_checks)*
+        #no_dup_checks
     }
 }
 
