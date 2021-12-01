@@ -1,4 +1,6 @@
-use crate::{Accounts, AccountsClose, AccountsExit, ToAccountInfos, ToAccountMetas};
+use crate::{
+    Accounts, AccountsClose, AccountsExit, IsMutable, Key, ToAccountInfos, ToAccountMetas,
+};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
@@ -37,5 +39,17 @@ impl<T: ToAccountMetas> ToAccountMetas for Box<T> {
 impl<'info, T: AccountsClose<'info>> AccountsClose<'info> for Box<T> {
     fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult {
         T::close(self, sol_destination)
+    }
+}
+
+impl<'info, T: Key> Key for Box<T> {
+    fn key(&self) -> Pubkey {
+        T::key(self)
+    }
+}
+
+impl<'info, T: IsMutable> IsMutable for Box<T> {
+    fn is_mutable(&self) -> bool {
+        T::is_mutable(self)
     }
 }

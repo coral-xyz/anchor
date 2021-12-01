@@ -23,11 +23,18 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             AccountField::Field(f) => {
                 let name = &f.ident;
                 let name_string = name.to_token_stream().to_string();
+                let is_mutable = if &f.account_ty().to_token_stream().to_string() == "AccountInfo" {
+                    quote!{self.#name.is_writable}
+                } else {
+                    quote! {
+                        anchor_lang::IsMutable::is_mutable(&(self.#name))
+                    }
+                };
                 quote! {
                     fields.push(anchor_lang::__private::fields::Field {
                         name: #name_string,
                         address: anchor_lang::Key::key(&(self.#name)),
-                        is_mutable: std::convert::AsRef::as_ref(&(self.#name)).is_writable
+                        is_mutable: #is_mutable
                     });
                 }
             }

@@ -1,6 +1,6 @@
-use crate::error::ErrorCode;
 #[allow(deprecated)]
 use crate::CpiAccount;
+use crate::{error::ErrorCode, IsMutable};
 use crate::{
     AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, Key,
     ToAccountInfo, ToAccountInfos, ToAccountMetas,
@@ -193,5 +193,15 @@ where
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> Key for ProgramAccount<'info, T> {
     fn key(&self) -> Pubkey {
         *self.inner.info.key
+    }
+}
+
+#[allow(deprecated)]
+impl<'info, T> IsMutable for ProgramAccount<'info, T>
+where
+    T: AccountSerialize + AccountDeserialize + Clone,
+{
+    fn is_mutable(&self) -> bool {
+        self.as_ref().is_writable
     }
 }

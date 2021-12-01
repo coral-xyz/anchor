@@ -144,13 +144,7 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         #[cfg(feature = "nodup")]
         {
             let no_dup_checks = constraints::generate_constraints_no_dup(accs);
-            if !no_dup_checks.is_empty() {
-                quote! {
-                    {use anchor_lang::ToAccountInfo; #(#no_dup_checks)*}
-                }
-            } else {
-                quote! {}
-            }
+            quote! { #(#no_dup_checks)* }
         }
     };
 

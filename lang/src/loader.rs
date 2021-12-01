@@ -1,7 +1,7 @@
 use crate::error::ErrorCode;
 use crate::{
-    Accounts, AccountsClose, AccountsExit, Key, ToAccountInfo, ToAccountInfos, ToAccountMetas,
-    ZeroCopy,
+    Accounts, AccountsClose, AccountsExit, IsMutable, Key, ToAccountInfo, ToAccountInfos,
+    ToAccountMetas, ZeroCopy,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
@@ -220,5 +220,12 @@ impl<'info, T: ZeroCopy> ToAccountInfo<'info> for Loader<'info, T> {
 impl<'info, T: ZeroCopy> Key for Loader<'info, T> {
     fn key(&self) -> Pubkey {
         *self.acc_info.key
+    }
+}
+
+#[allow(deprecated)]
+impl<'info, T: ZeroCopy> IsMutable for Loader<'info, T> {
+    fn is_mutable(&self) -> bool {
+        self.as_ref().is_writable
     }
 }

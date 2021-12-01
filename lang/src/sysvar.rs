@@ -1,5 +1,7 @@
 use crate::error::ErrorCode;
-use crate::{Accounts, AccountsExit, Key, ToAccountInfo, ToAccountInfos, ToAccountMetas};
+use crate::{
+    Accounts, AccountsExit, IsMutable, Key, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
@@ -106,5 +108,11 @@ impl<'info, T: solana_program::sysvar::Sysvar> AccountsExit<'info> for Sysvar<'i
 impl<'info, T: solana_program::sysvar::Sysvar> Key for Sysvar<'info, T> {
     fn key(&self) -> Pubkey {
         *self.info.key
+    }
+}
+
+impl<'info, T: solana_program::sysvar::Sysvar> IsMutable for Sysvar<'info, T> {
+    fn is_mutable(&self) -> bool {
+        self.as_ref().is_writable
     }
 }

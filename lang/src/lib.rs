@@ -247,14 +247,18 @@ impl Key for Pubkey {
     }
 }
 
+pub trait IsMutable {
+    fn is_mutable(&self) -> bool;
+}
+
 /// The prelude contains all commonly used components of the crate.
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
     pub use super::{
         access_control, account, declare_id, emit, error, event, interface, program, require,
         state, zero_copy, Account, AccountDeserialize, AccountLoader, AccountSerialize, Accounts,
-        AccountsExit, AnchorDeserialize, AnchorSerialize, Context, CpiContext, Id, Key, Owner,
-        Program, Signer, System, SystemAccount, Sysvar, ToAccountInfo, ToAccountInfos,
+        AccountsExit, AnchorDeserialize, AnchorSerialize, Context, CpiContext, Id, IsMutable, Key,
+        Owner, Program, Signer, System, SystemAccount, Sysvar, ToAccountInfo, ToAccountInfos,
         ToAccountMetas, UncheckedAccount,
     };
 

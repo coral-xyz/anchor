@@ -111,3 +111,9 @@ impl<'info, T: AccountDeserialize + Id + Clone> Key for Program<'info, T> {
         *self.info.key
     }
 }
+
+impl<'info, T: AccountDeserialize + Id + Clone> IsMutable for Program<'info, T> {
+    fn is_mutable(&self) -> bool {
+        self.as_ref().is_writable
+    }
+}

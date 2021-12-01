@@ -138,3 +138,13 @@ where
         Self::new(a.to_account_info(), Box::new(a.into_inner()))
     }
 }
+
+#[allow(deprecated)]
+impl<'info, T> IsMutable for CpiAccount<'info, T>
+where
+    T: AccountSerialize + AccountDeserialize + Owner + Clone,
+{
+    fn is_mutable(&self) -> bool {
+        self.as_ref().is_writable
+    }
+}

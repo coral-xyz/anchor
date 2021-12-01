@@ -95,3 +95,9 @@ impl<'info> Key for Signer<'info> {
         *self.info.key
     }
 }
+
+impl<'info> IsMutable for Signer<'info> {
+    fn is_mutable(&self) -> bool {
+        self.as_ref().is_writable
+    }
+}
