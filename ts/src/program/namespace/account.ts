@@ -9,6 +9,7 @@ import {
   TransactionInstruction,
   Commitment,
   GetProgramAccountsFilter,
+  AccountInfo,
 } from "@solana/web3.js";
 import Provider from "../../provider.js";
 import { Idl, IdlTypeDef } from "../../idl.js";
@@ -344,7 +345,10 @@ export class AccountClient<
     return await pubkeyUtil.associated(this._programId, ...args);
   }
 
-  async getAccountInfo(address: Address, commitment?: Commitment) {
+  getAccountInfo(
+    address: Address,
+    commitment?: Commitment
+  ): Promise<AccountInfo<Buffer> | null> {
     return this._provider.connection.getAccountInfo(
       translateAddress(address),
       commitment
