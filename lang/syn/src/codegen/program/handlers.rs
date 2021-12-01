@@ -489,8 +489,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                 if state.is_zero_copy {
                                     // Easy to implement. Just need to write a test.
                                     // Feel free to open a PR.
-                                    panic!("Trait implementations not yet implemented for zero copy state structs. Please file an issue.");
-                                }
+                                    assert!(!state.is_zero_copy, "Trait implementations not yet implemented for zero copy state structs. Please file an issue.");                                }
 
                                 let ix_arg_names: Vec<&syn::Ident> =
                                     ix.args.iter().map(|arg| &arg.name).collect();

@@ -3,7 +3,6 @@ use solana_program::pubkey::Pubkey;
 pub struct Field {
     pub name: &'static str,
     pub address: Pubkey,
-    pub dup_target: Option<(&'static str, Pubkey)>,
     pub is_mutable: bool,
 }
 

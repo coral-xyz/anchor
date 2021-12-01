@@ -23,23 +23,11 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             AccountField::Field(f) => {
                 let name = &f.ident;
                 let name_string = name.to_token_stream().to_string();
-                let dup = {
-                    match &f.constraints.dup {
-                        None => quote! { None },
-                        Some(constraint_dup) => {
-                            let target_name = &constraint_dup.target;
-                            let target_name_string = target_name.to_token_stream().to_string();
-                            quote! { Some((#target_name_string, anchor_lang::Key::key(&(self.#target_name)))) }
-                        }
-                    }
-                };
-                let is_mutable = f.constraints.is_mutable();
                 quote! {
                     fields.push(anchor_lang::__private::fields::Field {
                         name: #name_string,
                         address: anchor_lang::Key::key(&(self.#name)),
-                        dup_target: #dup,
-                        is_mutable: #is_mutable
+                        is_mutable: std::convert::AsRef::as_ref(&(self.#name)).is_writable
                     });
                 }
             }
