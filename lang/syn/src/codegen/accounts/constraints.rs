@@ -744,18 +744,46 @@ pub fn generate_constraints_no_dup(accs: &AccountsStruct) -> Vec<proc_macro2::To
 
 fn handle_composite_field(
     previous_field: &AccountField,
-    _field: &CompositeField,
+    field: &CompositeField,
 ) -> Vec<proc_macro2::TokenStream> {
+    let mut checks = vec![];
     match previous_field {
-        AccountField::Field(f) => {
-            let _previous_field_name = &f.ident;
-            quote! {}
+        AccountField::Field(previous_field) => {
+            let previous_field_ident = &previous_field.ident;
+            let my_ident = &field.ident;
+            let previous_field_name = format!("{}", previous_field_ident);
+            checks.push(quote! {
+                let fields = anchor_lang::__private::fields::Fields::fields(&#my_ident);
+
+                for field in fields {
+                    if !field.is_mutable && !anchor_lang::IsMutable::is_mutable(&#previous_field_ident)  {
+                        continue;
+                    }
+                    if field.dup_target.is_some() {
+                        if let Some(field_dup) = field.dup_target {
+                            if &field.dup_target.unwrap() != &#previous_field_name  {
+                                if field.key() == anchor_lang::Key::key(&#previous_field_ident) {
+                                    return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
+                                }
+                            }
+                        } else {
+                            if &field.dup_target.unwrap() != &#previous_field_name {
+                                if field.key() == anchor_lang::Key::key(&#previous_field_ident) {
+                                    return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
+                                }
+                            }
+                        }
+                    } else {
+                        if field.key() == anchor_lang::Key::key(&#previous_field_ident){
+                            return Err(anchor_lang::__private::ErrorCode::ConstraintNoDup.into());
+                        }
+                    }
+                }
+            });
         }
-        AccountField::CompositeField(_) => {
-            quote! {}
-        }
+        AccountField::CompositeField(_) => {}
     };
-    vec![]
+    checks
 }
 
 fn handle_field(previous_field: &AccountField, my_field: &Field) -> Vec<proc_macro2::TokenStream> {
