@@ -144,7 +144,7 @@ fn generate_constraint_address(f: &Field, c: &ConstraintAddress) -> proc_macro2:
     let addr = &c.address;
     let error = generate_custom_error(&c.error, quote! { ConstraintAddress });
     quote! {
-        if #field.key() != &#addr {
+        if #field.to_account_info().key != &#addr {
             return Err(#error);
         }
     }
