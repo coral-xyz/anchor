@@ -144,7 +144,13 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         #[cfg(feature = "nodup")]
         {
             let no_dup_checks = constraints::generate_constraints_no_dup(accs);
-            quote! { #(#no_dup_checks)* }
+            quote! {{
+                anchor_lang::prelude::msg!("BEGIN DUP CHECKS");
+                anchor_lang::solana_program::log::sol_log_compute_units();
+                #(#no_dup_checks)*
+                anchor_lang::solana_program::log::sol_log_compute_units();
+                anchor_lang::prelude::msg!("END DUP CHECKS");
+            }}
         }
     };
 

@@ -140,6 +140,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             accounts: &[AccountInfo],
             data: &[u8],
         ) -> ProgramResult {
+            anchor_lang::prelude::msg!("BEGIN DISPATCH");
+            anchor_lang::solana_program::log::sol_log_compute_units();
             // Split the instruction data into the first 8 byte method
             // identifier (sighash) and the serialized instruction data.
             let mut ix_data: &[u8] = data;

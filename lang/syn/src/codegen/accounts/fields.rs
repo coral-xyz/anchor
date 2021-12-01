@@ -21,10 +21,15 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 let name_string = format!("{}", name);
                 quote! {
                     fields
-                        .extend(anchor_lang::__private::fields::Fields::fields(&(self.#name))
-                        .into_iter()
-                        .map(|mut field| {field.path.push(#name_string); field})
-                        .collect::<Vec<_>>());
+                        .extend(
+                            {
+                                let mut temp = vec![];
+                                anchor_lang::__private::fields::Fields::fields(&(self.#name), &mut temp);
+                                temp
+                                    .into_iter()
+                                    .map(|mut field| {field.path.push(#name_string); field})
+                            }
+                        );
                 }
             }
             AccountField::Field(f) => {
@@ -63,12 +68,8 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     quote! {
         #[automatically_derived]
         impl<#combined_generics> anchor_lang::__private::fields::Fields for #name <#struct_generics> #where_clause{
-            fn fields(&self) -> Vec<anchor_lang::__private::fields::Field> {
-                let mut fields = vec![];
-
+            fn fields(&self, fields: &mut Vec<anchor_lang::__private::fields::Field>) {
                 #(#fields)*
-
-                fields
             }
         }
     }

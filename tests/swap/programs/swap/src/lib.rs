@@ -111,6 +111,9 @@ pub mod swap {
         amount: u64,
         min_expected_swap_amount: u64,
     ) -> Result<()> {
+        anchor_lang::prelude::msg!("BEGIN IX");
+        anchor_lang::solana_program::log::sol_log_compute_units();
+
         // Optional referral account (earns a referral fee).
         let referral = ctx.remaining_accounts.iter().next().map(Clone::clone);
 
