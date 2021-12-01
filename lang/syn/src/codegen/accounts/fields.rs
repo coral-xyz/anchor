@@ -12,19 +12,36 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         where_clause,
     } = generics(accs);
 
-    let fields:Vec<_> = accs
+    let fields: Vec<_> = accs
         .fields
         .iter()
         .map(|f: &AccountField| match f {
             AccountField::CompositeField(s) => {
                 let name = &s.ident;
-                quote! { fields.extend(anchor_lang::__private::fields::Fields::fields(&(self.#name))); }
+                let name_string = format!("{}", name);
+                quote! {
+                    fields
+                        .extend(anchor_lang::__private::fields::Fields::fields(&(self.#name))
+                        .into_iter()
+                        .map(|mut field| {field.path.push(#name_string); field})
+                        .collect::<Vec<_>>());
+                }
             }
             AccountField::Field(f) => {
                 let name = &f.ident;
                 let name_string = name.to_token_stream().to_string();
+                let dup_target = {
+                    match &f.constraints.dup {
+                        None => quote! { None },
+                        Some(constraint_dup) => {
+                            let target_name = &constraint_dup.target;
+                            let target_name_string = target_name.to_token_stream().to_string();
+                            quote! { Some(#target_name_string) }
+                        }
+                    }
+                };
                 let is_mutable = if &f.account_ty().to_token_stream().to_string() == "AccountInfo" {
-                    quote!{self.#name.is_writable}
+                    quote! {self.#name.is_writable}
                 } else {
                     quote! {
                         anchor_lang::IsMutable::is_mutable(&(self.#name))
@@ -33,8 +50,10 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 quote! {
                     fields.push(anchor_lang::__private::fields::Field {
                         name: #name_string,
-                        address: anchor_lang::Key::key(&(self.#name)),
-                        is_mutable: #is_mutable
+                        is_mutable: #is_mutable,
+                        dup_target: #dup_target,
+                        key: anchor_lang::Key::key(&(self.#name)),
+                        path: vec![]
                     });
                 }
             }
