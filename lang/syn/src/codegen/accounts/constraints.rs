@@ -804,7 +804,6 @@ fn handle_field(previous_field: &AccountField, my_field: &Field) -> Vec<proc_mac
         AccountField::CompositeField(cf) => {
             let cf_ident = &cf.ident;
             let f_ident = &my_field.ident;
-            let f_name = format!("{}", f_ident);
             let has_dup_target = my_field.constraints.dup.is_some();
             let dup_target = if has_dup_target {
                 my_field
@@ -821,7 +820,7 @@ fn handle_field(previous_field: &AccountField, my_field: &Field) -> Vec<proc_mac
             let dup_target = dup_target.replace(" ", "");
             let dup_target_root = if has_dup_target {
                 dup_target
-                    .split(".")
+                    .split('.')
                     .collect::<Vec<_>>()
                     .get(0)
                     .unwrap()
@@ -892,8 +891,6 @@ fn generate_constraint_no_dup(
     my_field: &proc_macro2::TokenStream,
     other_field: &proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
-    let me = my_field.to_string();
-    let them = other_field.to_string();
     quote! {
         //anchor_lang::prelude::msg!("me:{}, them:{}", #me, #them);
         if anchor_lang::Key::key(&#my_field) == anchor_lang::Key::key(&#other_field) {
