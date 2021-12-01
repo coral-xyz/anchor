@@ -337,13 +337,11 @@ mod registry {
             &[ctx.accounts.member.nonce],
         ];
         let signer = &[&seeds[..]];
-        let cpi_accounts = Transfer {
+        let cpi_ctx = CpiContext::new_with_signer(Transfer {
             from: ctx.accounts.vault.to_account_info(),
             to: ctx.accounts.depositor.to_account_info(),
             authority: ctx.accounts.member_signer.clone(),
-        };
-        let cpi_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        }, signer);
 
         token::transfer(cpi_ctx, amount).map_err(Into::into)
     }
@@ -355,13 +353,11 @@ mod registry {
             &[ctx.accounts.member.nonce],
         ];
         let signer = &[&seeds[..]];
-        let cpi_accounts = Transfer {
+        let cpi_ctx = CpiContext::new_with_signer(Transfer {
             from: ctx.accounts.member_vault.to_account_info(),
             to: ctx.accounts.vesting_vault.to_account_info(),
             authority: ctx.accounts.member_signer.clone(),
-        };
-        let cpi_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        }, signer);
 
         token::transfer(cpi_ctx, amount).map_err(Into::into)
     }
@@ -501,8 +497,7 @@ mod registry {
         ];
         let signer = &[&seeds[..]];
         let remaining_accounts: &[AccountInfo] = ctx.remaining_accounts;
-        let cpi_program = ctx.accounts.lockup_program.clone();
-        let cpi_accounts = {
+        let cpi_ctx = CpiContext::new_with_signer({
             let accs = &mut remaining_accounts.iter();
             lockup::cpi::accounts::CreateVesting {
                 vesting: next_account_info(accs)?.to_account_info(),
@@ -512,8 +507,7 @@ mod registry {
                 token_program: next_account_info(accs)?.to_account_info(),
                 clock: next_account_info(accs)?.to_account_info(),
             }
-        };
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        }, signer);
         lockup::cpi::create_vesting(
             cpi_ctx,
             ctx.accounts.cmn.member.beneficiary,
@@ -1245,13 +1239,11 @@ impl<'a, 'b, 'c, 'info> From<&mut Deposit<'info>>
     for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>
 {
     fn from(accounts: &mut Deposit<'info>) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
+        CpiContext::new(Transfer {
             from: accounts.depositor.clone(),
             to: accounts.vault.to_account_info(),
             authority: accounts.depositor_authority.clone(),
-        };
-        let cpi_program = accounts.token_program.clone();
-        CpiContext::new(cpi_program, cpi_accounts)
+        })
     }
 }
 
@@ -1259,13 +1251,11 @@ impl<'a, 'b, 'c, 'info> From<&mut DepositLocked<'info>>
     for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>
 {
     fn from(accounts: &mut DepositLocked<'info>) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
+        CpiContext::new(Transfer {
             from: accounts.vesting_vault.clone(),
             to: accounts.member_vault.to_account_info(),
             authority: accounts.depositor_authority.clone(),
-        };
-        let cpi_program = accounts.token_program.clone();
-        CpiContext::new(cpi_program, cpi_accounts)
+        })
     }
 }
 
@@ -1273,13 +1263,11 @@ impl<'a, 'b, 'c, 'info> From<&mut DropReward<'info>>
     for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>
 {
     fn from(accounts: &mut DropReward<'info>) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
+        CpiContext::new(Transfer {
             from: accounts.depositor.clone(),
             to: accounts.vendor_vault.to_account_info(),
             authority: accounts.depositor_authority.clone(),
-        };
-        let cpi_program = accounts.token_program.clone();
-        CpiContext::new(cpi_program, cpi_accounts)
+        })
     }
 }
 

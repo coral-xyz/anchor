@@ -51,11 +51,9 @@ pub mod misc {
     }
 
     pub fn test_state_cpi(ctx: Context<TestStateCpi>, data: u64) -> ProgramResult {
-        let cpi_program = ctx.accounts.misc2_program.clone();
-        let cpi_accounts = Auth {
+        let ctx = ctx.accounts.cpi_state.context(Auth {
             authority: ctx.accounts.authority.clone(),
-        };
-        let ctx = ctx.accounts.cpi_state.context(cpi_program, cpi_accounts);
+        });
         misc2::cpi::state::set_data(ctx, data)
     }
 

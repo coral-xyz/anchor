@@ -728,29 +728,25 @@ impl<'info> From<&CreateOfficerOpenOrders<'info>>
     for CpiContext<'_, '_, '_, 'info, dex::InitOpenOrders<'info>>
 {
     fn from(accs: &CreateOfficerOpenOrders<'info>) -> Self {
-        let program = accs.dex_program.to_account_info();
-        let accounts = dex::InitOpenOrders {
+        CpiContext::new(dex::InitOpenOrders {
             open_orders: accs.open_orders.to_account_info(),
             authority: accs.officer.to_account_info(),
             market: accs.market.to_account_info(),
             rent: accs.rent.to_account_info(),
-        };
-        CpiContext::new(program, accounts)
+        })
     }
 }
 
 impl<'info> From<&SweepFees<'info>> for CpiContext<'_, '_, '_, 'info, dex::SweepFees<'info>> {
     fn from(sweep: &SweepFees<'info>) -> Self {
-        let program = sweep.dex.dex_program.to_account_info();
-        let accounts = dex::SweepFees {
+        CpiContext::new(dex::SweepFees {
             market: sweep.dex.market.to_account_info(),
             pc_vault: sweep.dex.pc_vault.to_account_info(),
             sweep_authority: sweep.dex.sweep_authority.to_account_info(),
             sweep_receiver: sweep.sweep_vault.to_account_info(),
             vault_signer: sweep.dex.vault_signer.to_account_info(),
             token_program: sweep.dex.token_program.to_account_info(),
-        };
-        CpiContext::new(program.to_account_info(), accounts)
+        })
     }
 }
 
@@ -758,8 +754,7 @@ impl<'info> From<&SwapToSrm<'info>>
     for CpiContext<'_, '_, '_, 'info, swap::cpi::accounts::Swap<'info>>
 {
     fn from(accs: &SwapToSrm<'info>) -> Self {
-        let program = accs.swap_program.to_account_info();
-        let accounts = swap::cpi::accounts::Swap {
+        CpiContext::new(swap::cpi::accounts::Swap {
             market: swap::cpi::accounts::MarketAccounts {
                 market: accs.market.market.to_account_info(),
                 open_orders: accs.market.open_orders.to_account_info(),
@@ -778,8 +773,7 @@ impl<'info> From<&SwapToSrm<'info>>
             dex_program: accs.dex_program.to_account_info(),
             token_program: accs.token_program.to_account_info(),
             rent: accs.rent.to_account_info(),
-        };
-        CpiContext::new(program.to_account_info(), accounts)
+        })
     }
 }
 
@@ -787,8 +781,7 @@ impl<'info> From<&SwapToUsdc<'info>>
     for CpiContext<'_, '_, '_, 'info, swap::cpi::accounts::Swap<'info>>
 {
     fn from(accs: &SwapToUsdc<'info>) -> Self {
-        let program = accs.swap_program.to_account_info();
-        let accounts = swap::cpi::accounts::Swap {
+        CpiContext::new(swap::cpi::accounts::Swap {
             market: swap::cpi::accounts::MarketAccounts {
                 market: accs.market.market.to_account_info(),
                 open_orders: accs.market.open_orders.to_account_info(),
@@ -807,40 +800,33 @@ impl<'info> From<&SwapToUsdc<'info>>
             dex_program: accs.dex_program.to_account_info(),
             token_program: accs.token_program.to_account_info(),
             rent: accs.rent.to_account_info(),
-        };
-        CpiContext::new(program.to_account_info(), accounts)
+        }, accounts)
     }
 }
 
 impl<'info> Distribute<'info> {
     fn into_burn(&self) -> CpiContext<'_, '_, '_, 'info, token::Burn<'info>> {
-        let program = self.token_program.to_account_info();
-        let accounts = token::Burn {
+        CpiContext::new(token::Burn {
             mint: self.srm_mint.to_account_info(),
             to: self.srm_vault.to_account_info(),
             authority: self.officer.to_account_info(),
-        };
-        CpiContext::new(program, accounts)
+        })
     }
 
     fn into_stake_transfer(&self) -> CpiContext<'_, '_, '_, 'info, token::Transfer<'info>> {
-        let program = self.token_program.to_account_info();
-        let accounts = token::Transfer {
+        CpiContext::new(token::Transfer {
             from: self.srm_vault.to_account_info(),
             to: self.stake.to_account_info(),
             authority: self.officer.to_account_info(),
-        };
-        CpiContext::new(program, accounts)
+        })
     }
 
     fn into_treasury_transfer(&self) -> CpiContext<'_, '_, '_, 'info, token::Transfer<'info>> {
-        let program = self.token_program.to_account_info();
-        let accounts = token::Transfer {
+        CpiContext::new(token::Transfer {
             from: self.srm_vault.to_account_info(),
             to: self.treasury.to_account_info(),
             authority: self.officer.to_account_info(),
-        };
-        CpiContext::new(program, accounts)
+        })
     }
 }
 
@@ -848,8 +834,7 @@ impl<'info> DropStakeReward<'info> {
     fn into_srm_reward(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, registry::cpi::accounts::DropReward<'info>> {
-        let program = self.registry_program.clone();
-        let accounts = registry::cpi::accounts::DropReward {
+        CpiContext::new(registry::cpi::accounts::DropReward {
             registrar: self.srm.registrar.to_account_info(),
             reward_event_q: self.srm.reward_event_q.to_account_info(),
             pool_mint: self.srm.pool_mint.to_account_info(),
@@ -860,15 +845,13 @@ impl<'info> DropStakeReward<'info> {
             token_program: self.token_program.to_account_info(),
             clock: self.clock.to_account_info(),
             rent: self.rent.to_account_info(),
-        };
-        CpiContext::new(program.to_account_info(), accounts)
+        })
     }
 
     fn into_msrm_reward(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, registry::cpi::accounts::DropReward<'info>> {
-        let program = self.registry_program.clone();
-        let accounts = registry::cpi::accounts::DropReward {
+        CpiContext::new(registry::cpi::accounts::DropReward {
             registrar: self.msrm.registrar.to_account_info(),
             reward_event_q: self.msrm.reward_event_q.to_account_info(),
             pool_mint: self.msrm.pool_mint.to_account_info(),
@@ -879,8 +862,7 @@ impl<'info> DropStakeReward<'info> {
             token_program: self.token_program.to_account_info(),
             clock: self.clock.to_account_info(),
             rent: self.rent.to_account_info(),
-        };
-        CpiContext::new(program.to_account_info(), accounts)
+        })
     }
 }
 

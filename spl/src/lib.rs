@@ -12,6 +12,3 @@ pub mod dex;
 
 #[cfg(feature = "governance")]
 pub mod governance;
-
-#[cfg(feature = "shmem")]
-pub mod shmem;

@@ -332,7 +332,7 @@ impl<'info> OrderbookClient<'info> {
         // before giving up and posting the remaining unmatched order.
         let limit = 65535;
 
-        let dex_accs = dex::NewOrderV3 {
+        let mut ctx = CpiContext::new(dex::NewOrderV3 {
             market: self.market.market.clone(),
             open_orders: self.market.open_orders.clone(),
             request_queue: self.market.request_queue.clone(),
@@ -345,8 +345,7 @@ impl<'info> OrderbookClient<'info> {
             pc_vault: self.market.pc_vault.clone(),
             token_program: self.token_program.clone(),
             rent: self.rent.clone(),
-        };
-        let mut ctx = CpiContext::new(self.dex_program.clone(), dex_accs);
+        });
         if let Some(referral) = referral {
             ctx = ctx.with_remaining_accounts(vec![referral]);
         }
@@ -364,7 +363,7 @@ impl<'info> OrderbookClient<'info> {
     }
 
     fn settle(&self, referral: Option<AccountInfo<'info>>) -> ProgramResult {
-        let settle_accs = dex::SettleFunds {
+        let mut ctx = CpiContext::new(dex::SettleFunds {
             market: self.market.market.clone(),
             open_orders: self.market.open_orders.clone(),
             open_orders_authority: self.authority.clone(),
@@ -374,8 +373,7 @@ impl<'info> OrderbookClient<'info> {
             pc_wallet: self.pc_wallet.clone(),
             vault_signer: self.market.vault_signer.clone(),
             token_program: self.token_program.clone(),
-        };
-        let mut ctx = CpiContext::new(self.dex_program.clone(), settle_accs);
+        });
         if let Some(referral) = referral {
             ctx = ctx.with_remaining_accounts(vec![referral]);
         }

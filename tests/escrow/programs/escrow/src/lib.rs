@@ -176,49 +176,41 @@ impl<'info> From<&mut InitializeEscrow<'info>>
     for CpiContext<'_, '_, '_, 'info, SetAuthority<'info>>
 {
     fn from(accounts: &mut InitializeEscrow<'info>) -> Self {
-        let cpi_accounts = SetAuthority {
+        CpiContext::new(SetAuthority {
             account_or_mint: accounts
                 .initializer_deposit_token_account
                 .to_account_info()
                 .clone(),
             current_authority: accounts.initializer.clone(),
-        };
-        let cpi_program = accounts.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
+        })
     }
 }
 
 impl<'info> CancelEscrow<'info> {
     fn into_set_authority_context(&self) -> CpiContext<'_, '_, '_, 'info, SetAuthority<'info>> {
-        let cpi_accounts = SetAuthority {
+        CpiContext::new(SetAuthority {
             account_or_mint: self.pda_deposit_token_account.to_account_info().clone(),
             current_authority: self.pda_account.clone(),
-        };
-        let cpi_program = self.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
+        })
     }
 }
 
 impl<'info> Exchange<'info> {
     fn into_set_authority_context(&self) -> CpiContext<'_, '_, '_, 'info, SetAuthority<'info>> {
-        let cpi_accounts = SetAuthority {
+        CpiContext::new(SetAuthority {
             account_or_mint: self.pda_deposit_token_account.to_account_info().clone(),
             current_authority: self.pda_account.clone(),
-        };
-        let cpi_program = self.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
+        })
     }
 }
 
 impl<'info> Exchange<'info> {
     fn into_transfer_to_taker_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
+        CpiContext::new(Transfer {
             from: self.pda_deposit_token_account.to_account_info().clone(),
             to: self.taker_receive_token_account.to_account_info().clone(),
             authority: self.pda_account.clone(),
-        };
-        let cpi_program = self.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
+        })
     }
 }
 
@@ -226,15 +218,13 @@ impl<'info> Exchange<'info> {
     fn into_transfer_to_initializer_context(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
+        CpiContext::new(Transfer {
             from: self.taker_deposit_token_account.to_account_info().clone(),
             to: self
                 .initializer_receive_token_account
                 .to_account_info()
                 .clone(),
             authority: self.taker.clone(),
-        };
-        let cpi_program = self.token_program.to_account_info();
-        CpiContext::new(cpi_program, cpi_accounts)
+        })
     }
 }

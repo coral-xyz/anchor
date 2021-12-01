@@ -46,8 +46,7 @@ instruction via CPI.
 
 Things to notice
 
-* We create a `CpiContext` object with the target instruction's accounts and program,
-  here `SetData` and `puppet_program`.
+* We create a `CpiContext` object with the target instruction's accounts, here the accounts that the `SetData` instruction expects.
 * To invoke an instruction on another program, just use the `cpi` module on the crate, here, `puppet::cpi::set_data`.
 * Our `Accounts` struct contains the puppet account we are calling into via CPI. Accounts used for CPI are not specifically denoted
   as such with the `CpiAccount` label since v0.15. Accounts used for CPI are not fundamentally different from `Program` or `Signer`
@@ -64,8 +63,8 @@ If you look at the `Cargo.toml` for this example, you'll see
 Often it's useful for a program to sign instructions. For example, if a program controls a token
 account and wants to send tokens to another account, it must sign. In Solana, this is done by specifying
 "signer seeds" on CPI. To do this using the example above, simply change
-`CpiContext::new(cpi_accounts, cpi_program)` to
-`CpiContext::new_with_signer(cpi_accounts, cpi_program, signer_seeds)`.
+`CpiContext::new(cpi_accounts)` to
+`CpiContext::new_with_signer(cpi_accounts, signer_seeds)`.
 
 For more background on signing with program derived addresses, see the official Solana [documentation](https://docs.solana.com/developing/programming-model/calling-between-programs#program-signed-accounts).
 

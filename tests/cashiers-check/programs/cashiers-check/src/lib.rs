@@ -21,14 +21,11 @@ pub mod cashiers_check {
         nonce: u8,
     ) -> Result<()> {
         // Transfer funds to the check.
-        let cpi_accounts = Transfer {
+        token::transfer(CpiContext::new(Transfer {
             from: ctx.accounts.from.to_account_info().clone(),
             to: ctx.accounts.vault.to_account_info().clone(),
             authority: ctx.accounts.owner.clone(),
-        };
-        let cpi_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-        token::transfer(cpi_ctx, amount)?;
+        }), amount)?;
 
         // Print the check.
         let check = &mut ctx.accounts.check;
@@ -49,14 +46,11 @@ pub mod cashiers_check {
             &[ctx.accounts.check.nonce],
         ];
         let signer = &[&seeds[..]];
-        let cpi_accounts = Transfer {
+        token::transfer(CpiContext::new_with_signer(Transfer {
             from: ctx.accounts.vault.to_account_info().clone(),
             to: ctx.accounts.to.to_account_info().clone(),
             authority: ctx.accounts.check_signer.clone(),
-        };
-        let cpi_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
-        token::transfer(cpi_ctx, ctx.accounts.check.amount)?;
+        }, signer), ctx.accounts.check.amount)?;
         // Burn the check for one time use.
         ctx.accounts.check.burned = true;
         Ok(())
@@ -69,14 +63,11 @@ pub mod cashiers_check {
             &[ctx.accounts.check.nonce],
         ];
         let signer = &[&seeds[..]];
-        let cpi_accounts = Transfer {
+        token::transfer(CpiContext::new_with_signer(Transfer {
             from: ctx.accounts.vault.to_account_info().clone(),
             to: ctx.accounts.from.to_account_info().clone(),
             authority: ctx.accounts.check_signer.clone(),
-        };
-        let cpi_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
-        token::transfer(cpi_ctx, ctx.accounts.check.amount)?;
+        }, signer), ctx.accounts.check.amount)?;
         ctx.accounts.check.burned = true;
         Ok(())
     }

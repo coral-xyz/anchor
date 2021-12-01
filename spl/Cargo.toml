@@ -12,7 +12,6 @@ mint = []
 token = []
 associated_token = []
 governance = []
-shmem = []
 devnet = []
 dex = ["serum_dex"]
 
