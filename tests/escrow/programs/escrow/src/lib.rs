@@ -128,7 +128,7 @@ pub struct Exchange<'info> {
     pub pda_deposit_token_account: Account<'info, TokenAccount>,
     #[account(mut)]
     pub initializer_receive_token_account: Account<'info, TokenAccount>,
-    #[account(mut)]
+    #[account(mut, dup = taker)]
     pub initializer_main_account: AccountInfo<'info>,
     #[account(
         mut,
