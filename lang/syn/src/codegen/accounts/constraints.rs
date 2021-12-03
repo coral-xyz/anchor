@@ -285,7 +285,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
     };
 
     let seeds_with_nonce = match &c.seeds {
-        None => (quote! {}, quote! {}),
+        None => quote! {},
         Some(c) => {
             let s = &mut c.seeds.clone();
             // If the seeds came with a trailing comma, we need to chop it off
@@ -296,27 +296,35 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
             let maybe_seeds_plus_comma = (!s.is_empty()).then(|| {
                 quote! { #s, }
             });
-            match c.bump.as_ref() {
+            let inner = match c.bump.as_ref() {
                 // Bump target not given. Use the canonical bump.
-                None => (
-                    quote! {#maybe_seeds_plus_comma},
-                    quote! {&[
-                        Pubkey::find_program_address(
-                            &[#s],
-                            program_id,
-                        ).1
-                    ][..]},
-                ),
+                None => {
+                    quote! {
+                        [
+                            #maybe_seeds_plus_comma
+                            &[
+                                Pubkey::find_program_address(
+                                    &[#s],
+                                    program_id,
+                                ).1
+                            ][..]
+                        ]
+                    }
+                }
                 // Bump target given. Use it.
-                Some(b) => (quote! {#maybe_seeds_plus_comma}, quote! {&[#b][..]}),
+                Some(b) => quote! {
+                    [#maybe_seeds_plus_comma &[#b][..]]
+                },
+            };
+            quote! {
+                &#inner[..]
             }
         }
     };
     generate_init(
         f,
         c.if_needed,
-        seeds_with_nonce.0,
-        seeds_with_nonce.1,
+        seeds_with_nonce,
         payer,
         &c.space,
         &c.kind,
@@ -405,8 +413,7 @@ fn generate_constraint_associated_token(
 pub fn generate_init(
     f: &Field,
     if_needed: bool,
-    seeds: proc_macro2::TokenStream,
-    nonce: proc_macro2::TokenStream,
+    seeds_with_nonce: proc_macro2::TokenStream,
     payer: proc_macro2::TokenStream,
     space: &Option<Expr>,
     kind: &InitKind,
@@ -414,7 +421,6 @@ pub fn generate_init(
     let field = &f.ident;
     let ty_decl = f.ty_decl();
     let from_account_info = f.from_account_info_unchecked(Some(kind));
-    let seeds_with_nonce = quote! { &[#seeds #nonce][..] };
     let if_needed = if if_needed {
         quote! {true}
     } else {
@@ -578,20 +584,25 @@ pub fn generate_init(
                     &#o
                 },
             };
-            let is_pda = !seeds.is_empty();
+            let is_pda = if !seeds_with_nonce.is_empty() {
+                quote!{true}
+            } else {
+                quote!{false}
+            };
             let create_account =
-                generate_create_account(field, quote! {space}, owner.clone(), seeds_with_nonce);
+                generate_create_account(field, quote! {space}, owner.clone(), seeds_with_nonce.clone());
             quote! {
                 let #field = {
-                    let actual_owner = #field.to_account_info().owner;
+                    let actual_field = #field.to_account_info();
+                    let actual_owner = actual_field.owner;
+                    #space
                     if !#if_needed || actual_owner == &anchor_lang::solana_program::system_program::ID {
-                        #space
                         #payer
                         #create_account
                     }
                     let pa: #ty_decl = #from_account_info;
                     if !(!#if_needed || actual_owner == &anchor_lang::solana_program::system_program::ID) {
-                        if #space != #field.as_ref().data_len() {
+                        if space != actual_field.data_len() {
                             return Err(anchor_lang::__private::ErrorCode::ConstraintSpace.into());
                         }
                         if actual_owner != #owner {
@@ -599,9 +610,9 @@ pub fn generate_init(
                         }
 
                         if #is_pda {
-                            let (expected_key, expected_nonce) = anchor_lang::solana_program::pubkey::Pubkey::create_program_address(
-                                &#seeds[..],
-                                #owner,
+                            let expected_key = anchor_lang::prelude::Pubkey::create_program_address(
+                                &[#seeds_with_nonce],
+                                #owner
                             ).map_err(|_| anchor_lang::__private::ErrorCode::ConstraintSeeds)?;
                             if expected_key != #field.key() {
                                 return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
