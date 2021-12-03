@@ -5,6 +5,7 @@ use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
+use std::fmt;
 use std::ops::{Deref, DerefMut};
 
 /// Account container that checks ownership on deserialization.
@@ -12,6 +13,17 @@ use std::ops::{Deref, DerefMut};
 pub struct Account<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> {
     account: T,
     info: AccountInfo<'info>,
+}
+
+impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone + fmt::Debug> fmt::Debug
+    for Account<'info, T>
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Account")
+            .field("account", &self.account)
+            .field("info", &self.info)
+            .finish()
+    }
 }
 
 impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T> {
@@ -22,6 +34,9 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
     /// Deserializes the given `info` into a `Account`.
     #[inline(never)]
     pub fn try_from(info: &AccountInfo<'a>) -> Result<Account<'a, T>, ProgramError> {
+        if info.owner == &system_program::ID && info.lamports() == 0 {
+            return Err(ErrorCode::AccountNotInitialized.into());
+        }
         if info.owner != &T::owner() {
             return Err(ErrorCode::AccountNotProgramOwned.into());
         }
@@ -34,6 +49,9 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
     /// possible.
     #[inline(never)]
     pub fn try_from_unchecked(info: &AccountInfo<'a>) -> Result<Account<'a, T>, ProgramError> {
+        if info.owner == &system_program::ID && info.lamports() == 0 {
+            return Err(ErrorCode::AccountNotInitialized.into());
+        }
         if info.owner != &T::owner() {
             return Err(ErrorCode::AccountNotProgramOwned.into());
         }

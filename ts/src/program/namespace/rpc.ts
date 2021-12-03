@@ -1,14 +1,15 @@
 import { TransactionSignature } from "@solana/web3.js";
-import Provider from "../../provider";
-import { Idl } from "../../idl";
-import { splitArgsAndCtx } from "../context";
-import { TransactionFn } from "./transaction";
-import { ProgramError } from "../../error";
+import Provider from "../../provider.js";
+import { Idl } from "../../idl.js";
+import { splitArgsAndCtx } from "../context.js";
+import { TransactionFn } from "./transaction.js";
+import { ProgramError } from "../../error.js";
+import * as features from "../../utils/features.js";
 import {
   AllInstructions,
   InstructionContextFn,
   MakeInstructionsNamespace,
-} from "./types";
+} from "./types.js";
 
 export default class RpcFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
@@ -24,7 +25,10 @@ export default class RpcFactory {
         const txSig = await provider.send(tx, ctx.signers, ctx.options);
         return txSig;
       } catch (err) {
-        console.log("Translating error", err);
+        if (features.isSet("debug-logs")) {
+          console.log("Translating error:", err);
+        }
+
         let translatedErr = ProgramError.parse(err, idlErrors);
         if (translatedErr === null) {
           throw err;

@@ -61,6 +61,7 @@ name = "{1}"
 [features]
 no-entrypoint = []
 no-idl = []
+no-log-ix-name = []
 cpi = ["no-entrypoint"]
 default = []
 
@@ -340,7 +341,7 @@ anchor.workspace.{} = new anchor.Program({}, new PublicKey("{}"), provider);
 "#,
             program.name.to_camel_case(),
             serde_json::to_string(&program.idl)?,
-            program.program_id.to_string()
+            program.program_id
         ));
     }
 
