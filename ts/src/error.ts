@@ -183,7 +183,7 @@ const LangErrorMessage = new Map([
   ],
   [
     LangErrorCode.AccountNotProgramData,
-    "The given account is not a program data account"
+    "The given account is not a program data account",
   ],
 
   // State.
