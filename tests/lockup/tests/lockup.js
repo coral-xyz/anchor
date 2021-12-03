@@ -783,7 +783,7 @@ describe("Lockup and Registry", () => {
       (err) => {
         // Solana doesn't propagate errors across CPI. So we receive the registry's error code,
         // not the lockup's.
-        const errorCode = "custom program error: 0x140";
+        const errorCode = "custom program error: 0x1784";
         assert.ok(err.toString().split(errorCode).length === 2);
         return true;
       }
