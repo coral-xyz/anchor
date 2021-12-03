@@ -608,9 +608,6 @@ pub fn generate_init(
                             return Err(anchor_lang::__private::ErrorCode::ConstraintSpace.into());
                         }
 
-                        // this check is for safety only and should never
-                        // be true as long as init is only valid on Accounts
-                        // (because they check the owner themselves)
                         if actual_owner != #owner {
                             return Err(anchor_lang::__private::ErrorCode::ConstraintOwner.into());
                         }

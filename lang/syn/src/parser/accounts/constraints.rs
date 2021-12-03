@@ -344,16 +344,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
     pub fn build(mut self) -> ParseResult<ConstraintGroup> {
         // Init.
         if let Some(i) = &self.init {
-            match self.f_ty.unwrap() {
-                Ty::Account(_) | Ty::ProgramAccount(_) | Ty::Loader(_) | Ty::AccountLoader(_) => (),
-                _ => {
-                    return Err(ParseError::new(
-                        i.span(),
-                        "init is only allowed on (Program)Account and (Account)Loader",
-                    ));
-                }
-            };
-
             match self.mutable {
                 Some(m) => {
                     return Err(ParseError::new(
