@@ -533,8 +533,8 @@ pub fn generate_init(
                         }
                         if pa.freeze_authority
                             .as_ref()
-                            .map(|fa| #freeze_authority.as_ref().map(|expected_fa| fa == *expected_fa).unwrap_or(false))
-                            .unwrap_or(#freeze_authority.is_none()) {
+                            .map(|fa| #freeze_authority.as_ref().map(|expected_fa| fa != *expected_fa).unwrap_or(true))
+                            .unwrap_or(#freeze_authority.is_some()) {
                             return Err(anchor_lang::__private::ErrorCode::ConstraintMintFreezeAuthority.into());
                         }
                         if pa.decimals != #decimals {
@@ -607,6 +607,10 @@ pub fn generate_init(
                         if space != actual_field.data_len() {
                             return Err(anchor_lang::__private::ErrorCode::ConstraintSpace.into());
                         }
+
+                        // this check is for safety only and should never
+                        // be true as long as init is only valid on Accounts
+                        // (because they check the owner themselves)
                         if actual_owner != #owner {
                             return Err(anchor_lang::__private::ErrorCode::ConstraintOwner.into());
                         }

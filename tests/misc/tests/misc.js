@@ -859,6 +859,344 @@ describe("misc", () => {
     );
   });
 
+  it("init_if_needed throws if account exists but is not the expected space", async () => {
+    const newAcc = anchor.web3.Keypair.generate();
+    await program.rpc.initWithSpace(3, {
+      accounts: {
+        data: newAcc.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        payer: program.provider.wallet.publicKey,
+      },
+      signers: [newAcc],
+    });
+
+    try {
+      await program.rpc.testInitIfNeeded(3, {
+        accounts: {
+          data: newAcc.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+          payer: program.provider.wallet.publicKey,
+        },
+        signers: [newAcc],
+      });
+      assert.ok(false);
+    } catch (err) {
+      assert.equal(err.code, 2019);
+    }
+  });
+
+  it("init_if_needed throws if mint exists but has the wrong mint authority", async () => {
+    const mint = anchor.web3.Keypair.generate();
+    await program.rpc.testInitMint({
+      accounts: {
+        mint: mint.publicKey,
+        payer: program.provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [mint],
+    });
+
+    try {
+      await program.rpc.testInitMintIfNeeded(6,{
+        accounts: {
+          mint: mint.publicKey,
+          payer: program.provider.wallet.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          mintAuthority: anchor.web3.Keypair.generate().publicKey,
+          freezeAuthority: program.provider.wallet.publicKey
+        },
+        signers: [mint],
+      });
+      assert.ok(false);
+    } catch (err) {
+      assert.equal(err.code, 2016);
+    }
+  });
+
+  it("init_if_needed throws if mint exists but has the wrong freeze authority", async () => {
+    const mint = anchor.web3.Keypair.generate();
+    await program.rpc.testInitMint({
+      accounts: {
+        mint: mint.publicKey,
+        payer: program.provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [mint],
+    });
+
+    try {
+      await program.rpc.testInitMintIfNeeded(6,{
+        accounts: {
+          mint: mint.publicKey,
+          payer: program.provider.wallet.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          mintAuthority: program.provider.wallet.publicKey,
+          freezeAuthority: anchor.web3.Keypair.generate().publicKey
+        },
+        signers: [mint],
+      });
+      assert.ok(false);
+    } catch (err) {
+      assert.equal(err.code, 2017);
+    }
+  });
+
+  it("init_if_needed throws if mint exists but has the wrong decimals", async () => {
+    const mint = anchor.web3.Keypair.generate();
+    await program.rpc.testInitMint({
+      accounts: {
+        mint: mint.publicKey,
+        payer: program.provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [mint],
+    });
+
+    try {
+      await program.rpc.testInitMintIfNeeded(9,{
+        accounts: {
+          mint: mint.publicKey,
+          payer: program.provider.wallet.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          mintAuthority: program.provider.wallet.publicKey,
+          freezeAuthority: program.provider.wallet.publicKey
+        },
+        signers: [mint],
+      });
+      assert.ok(false);
+    } catch (err) {
+      assert.equal(err.code, 2018);
+    }
+  });
+
+  it("init_if_needed throws if token exists but has the wrong owner", async () => {
+    const mint = anchor.web3.Keypair.generate();
+    await program.rpc.testInitMint({
+      accounts: {
+        mint: mint.publicKey,
+        payer: program.provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [mint],
+    });
+
+    const token = anchor.web3.Keypair.generate();
+    await program.rpc.testInitToken({
+      accounts: {
+        token: token.publicKey,
+        mint: mint.publicKey,
+        payer: program.provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [token],
+    });
+
+    try {
+      await program.rpc.testInitTokenIfNeeded({
+        accounts: {
+          token: token.publicKey,
+          mint: mint.publicKey,
+          payer: program.provider.wallet.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          authority: anchor.web3.Keypair.generate().publicKey,
+        },
+        signers: [token],
+      });
+      assert.ok(false);
+    } catch (err) {
+      assert.equal(err.code, 2015);
+    }
+  });
+
+  it("init_if_needed throws if token exists but has the wrong mint", async () => {
+    const mint = anchor.web3.Keypair.generate();
+    await program.rpc.testInitMint({
+      accounts: {
+        mint: mint.publicKey,
+        payer: program.provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [mint],
+    });
+
+    const mint2 = anchor.web3.Keypair.generate();
+    await program.rpc.testInitMint({
+      accounts: {
+        mint: mint2.publicKey,
+        payer: program.provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [mint2],
+    });
+
+    const token = anchor.web3.Keypair.generate();
+    await program.rpc.testInitToken({
+      accounts: {
+        token: token.publicKey,
+        mint: mint.publicKey,
+        payer: program.provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [token],
+    });
+
+    try {
+      await program.rpc.testInitTokenIfNeeded({
+        accounts: {
+          token: token.publicKey,
+          mint: mint2.publicKey,
+          payer: program.provider.wallet.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          authority: program.provider.wallet.publicKey,
+        },
+        signers: [token],
+      });
+      assert.ok(false);
+    } catch (err) {
+      assert.equal(err.code, 2014);
+    }
+  });
+
+  it("init_if_needed throws if associated token exists but has the wrong owner", async () => {
+    const mint = anchor.web3.Keypair.generate();
+    await program.rpc.testInitMint({
+      accounts: {
+        mint: mint.publicKey,
+        payer: program.provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [mint],
+    });
+
+    const associatedToken = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
+      mint.publicKey,
+      program.provider.wallet.publicKey
+    );
+
+    await program.rpc.testInitAssociatedToken({
+      accounts: {
+        token: associatedToken,
+        mint: mint.publicKey,
+        payer: program.provider.wallet.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+      },
+    });
+
+    try {
+      await program.rpc.testInitAssociatedTokenIfNeeded({
+        accounts: {
+          token: associatedToken,
+          mint: mint.publicKey,
+          payer: program.provider.wallet.publicKey,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          systemProgram: anchor.web3.SystemProgram.programId,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          authority: anchor.web3.Keypair.generate().publicKey
+        },
+      });
+      assert.ok(false);
+    } catch (err) {
+      assert.equal(err.code, 2015);
+    }
+  })
+
+  it("init_if_needed throws if associated token exists but has the wrong mint", async () => {
+    const mint = anchor.web3.Keypair.generate();
+    await program.rpc.testInitMint({
+      accounts: {
+        mint: mint.publicKey,
+        payer: program.provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [mint],
+    });
+
+    const mint2 = anchor.web3.Keypair.generate();
+    await program.rpc.testInitMint({
+      accounts: {
+        mint: mint2.publicKey,
+        payer: program.provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [mint2],
+    });
+
+    const associatedToken = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
+      mint.publicKey,
+      program.provider.wallet.publicKey
+    );
+
+    await program.rpc.testInitAssociatedToken({
+      accounts: {
+        token: associatedToken,
+        mint: mint.publicKey,
+        payer: program.provider.wallet.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+      },
+    });
+
+    try {
+      await program.rpc.testInitAssociatedTokenIfNeeded({
+        accounts: {
+          token: associatedToken,
+          mint: mint2.publicKey,
+          payer: program.provider.wallet.publicKey,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          systemProgram: anchor.web3.SystemProgram.programId,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          authority: program.provider.wallet.publicKey
+        },
+      });
+      assert.ok(false);
+    } catch (err) {
+      assert.equal(err.code, 2014);
+    }
+  })
+
   it("Can use multidimensional array", async () => {
     const array2d = new Array(10).fill(new Array(10).fill(99));
     const data = anchor.web3.Keypair.generate();
