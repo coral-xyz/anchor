@@ -83,7 +83,6 @@ const LangErrorCode = {
   ConstraintMintDecimals: 2018,
   ConstraintSpace: 2019,
 
-
   // Accounts.
   AccountDiscriminatorAlreadySet: 3000,
   AccountDiscriminatorNotFound: 3001,
@@ -155,11 +154,19 @@ const LangErrorMessage = new Map([
   [LangErrorCode.ConstraintZero, "Expected zero account discriminant"],
   [LangErrorCode.ConstraintTokenMint, "A token mint constraint was violated"],
   [LangErrorCode.ConstraintTokenOwner, "A token owner constraint was violated"],
-  [LangErrorCode.ConstraintMintMintAuthority, "A mint mint authority constraint was violated"],
-  [LangErrorCode.ConstraintMintFreezeAuthority, "A mint freeze authority constraint was violated"],
-  [LangErrorCode.ConstraintMintDecimals, "A mint decimals constraint was violated"],
+  [
+    LangErrorCode.ConstraintMintMintAuthority,
+    "A mint mint authority constraint was violated",
+  ],
+  [
+    LangErrorCode.ConstraintMintFreezeAuthority,
+    "A mint freeze authority constraint was violated",
+  ],
+  [
+    LangErrorCode.ConstraintMintDecimals,
+    "A mint decimals constraint was violated",
+  ],
   [LangErrorCode.ConstraintSpace, "A space constraint was violated"],
-
 
   // Accounts.
   [
