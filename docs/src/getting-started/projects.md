@@ -13,7 +13,7 @@ Open a pull request to add your project to the [list](https://github.com/project
 * [Cryptocurrencies.Ai](https://dex.cryptocurrencies.ai/)
 * [Cyclos](https://cyclos.io/)
 * [Solend](https://solend.fi)
-* [Drift Trade (formerly Moët)](https://www.drift.trade/)
+* [Drift](https://www.drift.trade/)
 * [SpringBoard](https://springboard.finance/)
 * [Unk](https://unk.finance/)
 * [Fabric](https://stake.fsynth.io/)
@@ -21,4 +21,5 @@ Open a pull request to add your project to the [list](https://github.com/project
 * [Quarry](https://quarry.so/)
 * [PsyOptions](https://psyoptions.io/)
 * [sosol](https://sosol.app/)
+* [Arrow Protocol](https://arrowprotocol.com/)
 

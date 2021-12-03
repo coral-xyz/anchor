@@ -8,7 +8,7 @@
   </p>
 
   <p>
-    <a href="https://travis-ci.com/project-serum/anchor"><img alt="Build Status" src="https://travis-ci.com/project-serum/anchor.svg?branch=master&color=blueviolet" /></a>
+    <a href="https://github.com/project-serum/anchor/actions"><img alt="Build Status" src="https://github.com/project-serum/anchor/actions/workflows/tests.yaml/badge.svg" /></a>
     <a href="https://project-serum.github.io/anchor/"><img alt="Tutorials" src="https://img.shields.io/badge/docs-tutorials-blueviolet" /></a>
     <a href="https://discord.com/channels/889577356681945098"><img alt="Discord Chat" src="https://img.shields.io/discord/889577356681945098?color=blueviolet" /></a>
     <a href="https://opensource.org/licenses/Apache-2.0"><img alt="License" src="https://img.shields.io/github/license/project-serum/anchor?color=blueviolet" /></a>
@@ -37,6 +37,7 @@ To jump straight to examples, go [here](https://github.com/project-serum/anchor/
 | `anchor-spl` | CPI clients for SPL programs on Solana | ![crates](https://img.shields.io/crates/v/anchor-spl?color=blue) | [![Docs.rs](https://docs.rs/anchor-spl/badge.svg)](https://docs.rs/anchor-spl) |
 | `anchor-client` | Rust client for Anchor programs | ![crates](https://img.shields.io/crates/v/anchor-client?color=blue) | [![Docs.rs](https://docs.rs/anchor-client/badge.svg)](https://docs.rs/anchor-client) |
 | `@project-serum/anchor` | TypeScript client for Anchor programs | [![npm](https://img.shields.io/npm/v/@project-serum/anchor.svg?color=blue)](https://www.npmjs.com/package/@project-serum/anchor) | [![Docs](https://img.shields.io/badge/docs-typedoc-blue)](https://project-serum.github.io/anchor/ts/index.html) |
+| `@project-serum/anchor-cli` | CLI to support building and managing an Anchor workspace | [![npm](https://img.shields.io/npm/v/@project-serum/anchor-cli.svg?color=blue)](https://www.npmjs.com/package/@project-serum/anchor-cli) | [![Docs](https://img.shields.io/badge/docs-typedoc-blue)](https://project-serum.github.io/anchor/cli/commands.html) |
 
 ## Note
 

@@ -11,13 +11,36 @@ incremented for features.
 
 ## [Unreleased]
 
+### Fixes
+
+* lang: Add `deprecated` attribute to `ProgramAccount` ([#1014](https://github.com/project-serum/anchor/pull/1014)).
+* cli: Add version number from programs `Cargo.toml` into extracted IDL
+* lang: Add `deprecated` attribute to `Loader`([#1078](https://github.com/project-serum/anchor/pull/1078))
+
+### Features
+
+* lang: Add `ErrorCode::AccountNotInitialized` error to separate the situation when the account has the wrong owner from when it does not exist (#[1024](https://github.com/project-serum/anchor/pull/1024))
+* lang: Called instructions now log their name by default. This can be turned off with the `no-log-ix-name` flag ([#1057](https://github.com/project-serum/anchor/pull/1057))
+
+## [0.18.2] - 2021-11-14
+
+* cli: Replace global JavaScript dependency installs with local.
+
 ### Features
 
 * lang: Add `SystemAccount<'info>` account type for generic wallet addresses or accounts owned by the system program ([#954](https://github.com/project-serum/anchor/pull/954))
+* ts: Add inputs `postInstructions` and `preInstructions` as a replacement for (the now deprecated) `instructions`
 
 ### Fixes
 
 * cli: fix dns in NODE_OPTIONS ([#928](https://github.com/project-serum/anchor/pull/928)).
+* cli: output TypeScript IDL in `idl parse` subcommand ([#941](https://github.com/project-serum/anchor/pull/941)).
+* cli: Add fields `os` and `cpu` to npm package `@project-serum/anchor-cli` ([#976](https://github.com/project-serum/anchor/pull/976)).
+* cli: Allow specify output directory for TypeScript IDL ([#940](https://github.com/project-serum/anchor/pull/940)).
+
+### Breaking
+
+* spl: Move permissioned markets into dex repository ([#962](https://github.com/project-serum/anchor/pull/962)).
 
 ## [0.18.0] - 2021-10-24
 
