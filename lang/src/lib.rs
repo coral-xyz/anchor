@@ -251,10 +251,10 @@ impl Key for Pubkey {
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
     pub use super::{
-        access_control, account, constant, declare_id, emit, error, event, interface, program, require,
-        state, zero_copy, Account, AccountDeserialize, AccountLoader, AccountSerialize, Accounts,
-        AccountsExit, AnchorDeserialize, AnchorSerialize, Context, CpiContext, Id, Key, Owner,
-        Program, Signer, System, SystemAccount, Sysvar, ToAccountInfo, ToAccountInfos,
+        access_control, account, constant, declare_id, emit, error, event, interface, program,
+        require, state, zero_copy, Account, AccountDeserialize, AccountLoader, AccountSerialize,
+        Accounts, AccountsExit, AnchorDeserialize, AnchorSerialize, Context, CpiContext, Id, Key,
+        Owner, Program, Signer, System, SystemAccount, Sysvar, ToAccountInfo, ToAccountInfos,
         ToAccountMetas, UncheckedAccount,
     };
 
