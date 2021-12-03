@@ -214,7 +214,7 @@ describe("misc", () => {
       const errMsg = "A close constraint was violated";
       assert.equal(err.toString(), errMsg);
       assert.equal(err.msg, errMsg);
-      assert.equal(err.code, 151);
+      assert.equal(err.code, 2011);
     }
   });
 
@@ -667,7 +667,7 @@ describe("misc", () => {
         });
       },
       (err) => {
-        assert.equal(err.code, 149);
+        assert.equal(err.code, 2009);
         return true;
       }
     );
@@ -802,7 +802,7 @@ describe("misc", () => {
         },
       }),
       (err) => {
-        assert.equal(err.code, 146);
+        assert.equal(err.code, 2006);
         return true;
       }
     );
