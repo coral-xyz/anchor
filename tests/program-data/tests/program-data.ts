@@ -79,4 +79,28 @@ describe('program-data', () => {
       assert.equal(err.msg, "The given account is not a program data account");
     }
   });
+
+  it('Validates that account is owned by the upgradable bpf loader', async () => {
+    const settings = anchor.web3.Keypair.generate();
+    try {
+      const authority = anchor.web3.Keypair.generate();
+      await provider.connection.confirmTransaction(
+        await provider.connection.requestAirdrop(authority.publicKey, 10000000000),
+        "confirmed"
+      );
+      await program.rpc.setAdminSettings(new anchor.BN(500), {
+        accounts: {
+          authority: authority.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+          programData: authority.publicKey,
+          settings: settings.publicKey
+        },
+        signers: [settings, authority]
+      });
+      assert.ok(false);
+    } catch (err) {
+      assert.equal(err.code, 174);
+      assert.equal(err.msg, "The given account is not owned by the upgradable BPF loader");
+    }
+  });
 });

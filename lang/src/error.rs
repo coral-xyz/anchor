@@ -78,6 +78,8 @@ pub enum ErrorCode {
     AccountNotInitialized,
     #[msg("The given account is not a program data account")]
     AccountNotProgramData,
+    #[msg("The given account is not owned by the upgradable BPF loader")]
+    AccountNotUpgradableBPFOwned,
 
     // State.
     #[msg("The given state account does not have the correct address")]

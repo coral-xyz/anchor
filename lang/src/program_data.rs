@@ -24,12 +24,6 @@ impl ProgramDataInner {
     }
 }
 
-impl Owner for ProgramDataInner {
-    fn owner() -> Pubkey {
-        bpf_loader_upgradeable::ID
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct ProgramData<'info> {
     program_data_inner: ProgramDataInner,
@@ -46,8 +40,8 @@ impl<'info> ProgramData<'info> {
 
     #[inline(never)]
     pub fn try_from(info: &AccountInfo<'info>) -> Result<ProgramData<'info>, ProgramError> {
-        if *info.owner != ProgramDataInner::owner() {
-            return Err(ErrorCode::AccountNotProgramOwned.into());
+        if *info.owner != bpf_loader_upgradeable::ID {
+            return Err(ErrorCode::AccountNotUpgradableBPFOwned.into());
         }
         let program_state: bpf_loader_upgradeable::UpgradeableLoaderState =
             bincode::deserialize(&info.try_borrow_data()?)
