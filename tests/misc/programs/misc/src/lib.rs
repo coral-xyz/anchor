@@ -196,6 +196,14 @@ pub mod misc {
         Ok(())
     }
 
+    pub fn test_init_if_needed_checks_owner(ctx: Context<TestInitIfNeededChecksOwner>) -> ProgramResult {
+        Ok(())
+    }
+
+    pub fn test_init_if_needed_checks_seeds(ctx: Context<TestInitIfNeededChecksSeeds>, seed_data: String) -> ProgramResult {
+        Ok(())
+    }
+
     pub fn test_init_mint_if_needed(ctx: Context<TestInitMintIfNeeded>, decimals: u8) -> ProgramResult {
         Ok(())
     }

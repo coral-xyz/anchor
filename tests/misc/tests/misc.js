@@ -7,6 +7,7 @@ const {
   Token,
 } = require("@solana/spl-token");
 const miscIdl = require("../target/idl/misc.json");
+const utf8 = anchor.utils.bytes.utf8;
 
 describe("misc", () => {
   // Configure the client to use the local cluster.
@@ -858,6 +859,65 @@ describe("misc", () => {
       undefined
     );
   });
+
+  it("init_if_needed throws if account exists but is not owned by the expected program", async () => {
+    const newAcc = await anchor.web3.PublicKey.findProgramAddress([utf8.encode("hello")], program.programId);
+    await program.rpc.testInitIfNeededChecksOwner({
+      accounts: {
+        data: newAcc[0],
+        systemProgram: anchor.web3.SystemProgram.programId,
+        payer: program.provider.wallet.publicKey,
+        owner: program.programId
+      }
+    });
+
+    try {
+      await program.rpc.testInitIfNeededChecksOwner({
+        accounts: {
+          data: newAcc[0],
+          systemProgram: anchor.web3.SystemProgram.programId,
+          payer: program.provider.wallet.publicKey,
+          owner: anchor.web3.Keypair.generate().publicKey
+        },
+      });
+      assert.ok(false);
+    } catch (err) {
+      assert.equal(err.code, 2004);
+    }
+  });
+
+  it("init_if_needed throws if pda account exists but does not have the expected seeds", async () => {
+    const newAcc = await anchor.web3.PublicKey.findProgramAddress([utf8.encode("nothello")], program.programId);
+    await program.rpc.testInitIfNeededChecksSeeds("nothello", {
+      accounts: {
+        data: newAcc[0],
+        systemProgram: anchor.web3.SystemProgram.programId,
+        payer: program.provider.wallet.publicKey,
+      }
+    });
+
+    // this will throw if it is not a proper PDA
+    // we need this so we know that the following tx failed
+    // not because it couldn't create this pda
+    // but because the two pdas were different
+    anchor.web3.PublicKey.createProgramAddress([utf8.encode("hello")], program.programId);
+
+    try {
+      await program.rpc.testInitIfNeededChecksSeeds("hello", {
+        accounts: {
+          data: newAcc[0],
+          systemProgram: anchor.web3.SystemProgram.programId,
+          payer: program.provider.wallet.publicKey,
+          owner: anchor.web3.Keypair.generate().publicKey
+        },
+      });
+      assert.ok(false);
+    } catch (err) {
+      assert.equal(err.code, 2006);
+    }
+  });
+
+
 
   it("init_if_needed throws if account exists but is not the expected space", async () => {
     const newAcc = anchor.web3.Keypair.generate();
