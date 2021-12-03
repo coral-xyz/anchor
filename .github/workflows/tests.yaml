@@ -215,7 +215,7 @@ jobs:
 
           - run: solana-test-validator -r --quiet &
             name: start validator
-          - run: cd tests/program-data && anchor build && anchor deploy && anchor test --skip-deploy
+          - run: cd tests/program-data && anchor build && solana program deploy --program-id program_data-keypair.json target/deploy/program_data.so && anchor test --skip-deploy
 
   test-programs:
     needs: setup-anchor-cli
@@ -262,8 +262,6 @@ jobs:
             path: tests/ido-pool
           - cmd: cd tests/cfo && anchor run test-with-build
             path: tests/cfo
-          - cmd: cd tests/program-data && anchor test
-            path: tests/program-data
     steps:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup/
