@@ -215,7 +215,7 @@ jobs:
 
           - run: solana-test-validator -r --quiet &
             name: start validator
-          - run: solana airdrop 10
+          - run: sleep 5 && solana airdrop 10
           - run: cd tests/program-data && anchor build && solana program deploy --program-id program_data-keypair.json target/deploy/program_data.so && anchor test --skip-deploy
 
   test-programs:
