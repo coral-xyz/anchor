@@ -188,7 +188,7 @@ const LangErrorMessage = new Map([
   ],
   [
     LangErrorCode.AccountNotUpgradableBPFOwned,
-    "The given account is not owned by the upgradable BPF loader"
+    "The given account is not owned by the upgradable BPF loader",
   ],
 
   // State.
