@@ -24,7 +24,6 @@ anchor-debug = [
 ]
 
 [dependencies]
-
 anchor-attribute-access-control = { path = "./attribute/access-control", version = "0.18.2" }
 anchor-attribute-account = { path = "./attribute/account", version = "0.18.2" }
 anchor-attribute-constant = { path = "./attribute/constant", version = "0.18.2" }
