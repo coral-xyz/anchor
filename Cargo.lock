@@ -213,6 +213,7 @@ dependencies = [
  "anchor-attribute-state",
  "anchor-derive-accounts",
  "base64 0.13.0",
+ "bincode",
  "borsh",
  "bytemuck",
  "solana-program",

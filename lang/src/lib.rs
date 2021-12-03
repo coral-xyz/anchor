@@ -47,6 +47,7 @@ mod loader;
 mod loader_account;
 mod program;
 mod program_account;
+mod program_data;
 mod signer;
 pub mod state;
 mod system_account;
@@ -73,6 +74,7 @@ pub use crate::program::Program;
 #[doc(hidden)]
 #[allow(deprecated)]
 pub use crate::program_account::ProgramAccount;
+pub use crate::program_data::*;
 pub use crate::signer::Signer;
 #[doc(hidden)]
 #[allow(deprecated)]
@@ -255,7 +257,7 @@ pub mod prelude {
         require, state, zero_copy, Account, AccountDeserialize, AccountLoader, AccountSerialize,
         Accounts, AccountsExit, AnchorDeserialize, AnchorSerialize, Context, CpiContext, Id, Key,
         Owner, Program, Signer, System, SystemAccount, Sysvar, ToAccountInfo, ToAccountInfos,
-        ToAccountMetas, UncheckedAccount,
+        ToAccountMetas, UncheckedAccount, ProgramData, ProgramDataInner
     };
 
     #[allow(deprecated)]

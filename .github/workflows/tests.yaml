@@ -179,6 +179,44 @@ jobs:
       - uses: ./.github/actions/setup-solana/
       - run: cd client/example && ./run-test.sh
 
+  test-program-data:
+    needs: setup-anchor-cli
+    name: Test tests/program-data
+    runs-on: ubuntu-18.04
+    steps:
+          - uses: actions/checkout@v2
+          - uses: ./.github/actions/setup/
+          - uses: ./.github/actions/setup-ts/
+          - uses: ./.github/actions/setup-solana/
+
+          - uses: actions/cache@v2
+            name: Cache Cargo registry + index
+            id: cache-anchor
+            with:
+              path: |
+                ~/.cargo/bin/
+                ~/.cargo/registry/index/
+                ~/.cargo/registry/cache/
+                ~/.cargo/git/db/
+                ./target/
+              key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
+
+          - uses: actions/download-artifact@v2
+            with:
+              name: anchor-binary
+              path: ~/.cargo/bin/
+
+          - uses: actions/cache@v2
+            name: Cache tests/program-data target
+            id: cache-test-target
+            with:
+              path: tests/program-data/target
+              key: cargo-${{ runner.os }}-tests/program-data-${{ env.ANCHOR_VERSION }}
+
+          - run: solana-test-validator -r --quiet &
+            name: start validator
+          - run: cd tests/program-data && anchor build && anchor deploy && anchor test --skip-deploy
+
   test-programs:
     needs: setup-anchor-cli
     name: Test ${{ matrix.node.path }}
@@ -224,6 +262,8 @@ jobs:
             path: tests/ido-pool
           - cmd: cd tests/cfo && anchor run test-with-build
             path: tests/cfo
+          - cmd: cd tests/program-data && anchor test
+            path: tests/program-data
     steps:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup/
