@@ -1,6 +1,5 @@
 import { inflate } from "pako";
 import { PublicKey } from "@solana/web3.js";
-import Provider from "../provider";
 import {
   Idl,
   idlAddress,
@@ -8,8 +7,9 @@ import {
   camelCaseIdl,
   RawIdl,
   isCamelized,
-} from "../idl";
-import Coder from "../coder";
+} from "../idl.js";
+import Provider from "../provider.js";
+import Coder from "../coder/index.js";
 import NamespaceFactory, {
   RpcNamespace,
   InstructionNamespace,
@@ -17,16 +17,16 @@ import NamespaceFactory, {
   AccountNamespace,
   StateClient,
   SimulateNamespace,
-} from "./namespace";
-import { getProvider } from "../";
-import { utf8 } from "../utils/bytes";
-import { EventManager } from "./event";
-import { Address, translateAddress } from "./common";
+} from "./namespace/index.js";
+import { getProvider } from "../index.js";
+import { utf8 } from "../utils/bytes/index.js";
+import { EventManager } from "./event.js";
+import { Address, translateAddress } from "./common.js";
 
-export * from "./common";
-export * from "./context";
-export * from "./event";
-export * from "./namespace";
+export * from "./common.js";
+export * from "./context.js";
+export * from "./event.js";
+export * from "./namespace/index.js";
 
 /**
  * ## Program

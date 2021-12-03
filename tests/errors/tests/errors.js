@@ -112,4 +112,34 @@ describe("errors", () => {
       assert.equal(err.toString(), errMsg);
     }
   });
+
+  it("Emits a raw custom error", async () => {
+    try {
+      const tx = await program.rpc.rawCustomError({
+        accounts: {
+          myAccount: anchor.web3.SYSVAR_RENT_PUBKEY,
+        },
+      });
+      assert.ok(false);
+    } catch (err) {
+      const errMsg = "HelloCustom";
+      assert.equal(err.toString(), errMsg);
+      assert.equal(err.msg, errMsg);
+      assert.equal(err.code, 300 + 125);
+    }
+  });
+
+  it("Emits a account not initialized error", async () => {
+    try {
+      const tx = await program.rpc.accountNotInitializedError({
+        accounts: {
+          notInitializedAccount: (new anchor.web3.Keypair()).publicKey
+        },
+      });
+      assert.fail("Unexpected success in creating a transaction that should have fail with `AccountNotInitialized` error");
+    } catch (err) {
+      const errMsg = "The program expected this account to be already initialized";
+      assert.equal(err.toString(), errMsg);
+    }
+  });
 });
