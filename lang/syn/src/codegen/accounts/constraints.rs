@@ -321,14 +321,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
             }
         }
     };
-    generate_init(
-        f,
-        c.if_needed,
-        seeds_with_nonce,
-        payer,
-        &c.space,
-        &c.kind,
-    )
+    generate_init(f, c.if_needed, seeds_with_nonce, payer, &c.space, &c.kind)
 }
 
 fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2::TokenStream {
@@ -585,12 +578,16 @@ pub fn generate_init(
                 },
             };
             let is_pda = if !seeds_with_nonce.is_empty() {
-                quote!{true}
+                quote! {true}
             } else {
-                quote!{false}
+                quote! {false}
             };
-            let create_account =
-                generate_create_account(field, quote! {space}, owner.clone(), seeds_with_nonce.clone());
+            let create_account = generate_create_account(
+                field,
+                quote! {space},
+                owner.clone(),
+                seeds_with_nonce.clone(),
+            );
             quote! {
                 let #field = {
                     let actual_field = #field.to_account_info();
