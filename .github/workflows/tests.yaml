@@ -215,7 +215,9 @@ jobs:
 
           - run: solana-test-validator -r --quiet &
             name: start validator
-          - run: cd tests/program-data && anchor build && solana program deploy --program-id program_data-keypair.json target/deploy/program_data.so && anchor test --skip-deploy
+          - run: cd tests/program-data && yarn
+          - run: cd tests/program-data && yarn link @project-serum/anchor
+          - run: cd tests/program-data && anchor build && solana program deploy --program-id program_data-keypair.json target/deploy/program_data.so && anchor test --skip-deploy --skip-build
 
   test-programs:
     needs: setup-anchor-cli
