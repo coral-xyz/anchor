@@ -52,7 +52,7 @@ pub enum ErrorCode {
     ConstraintTokenMint,
     #[msg("A token owner constraint was violated")]
     ConstraintTokenOwner,
-    // the mint mint is intentional -> a mint authority for the mint
+    // The mint mint is intentional -> a mint authority for the mint.
     #[msg("A mint mint authority constraint was violated")]
     ConstraintMintMintAuthority,
     #[msg("A mint freeze authority constraint was violated")]
