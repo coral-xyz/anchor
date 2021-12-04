@@ -9,22 +9,23 @@ import {
   IdlAccountItem,
   IdlAccounts,
   IdlInstruction,
-} from "../../idl";
-import { IdlError } from "../../error";
+} from "../../idl.js";
+import { IdlError } from "../../error.js";
 import {
   toInstruction,
   validateAccounts,
   translateAddress,
   Address,
-} from "../common";
-import { Accounts, splitArgsAndCtx } from "../context";
+} from "../common.js";
+import { Accounts, splitArgsAndCtx } from "../context.js";
+import * as features from "../../utils/features.js";
 import {
   AllInstructions,
   AllInstructionsMap,
   InstructionContextFn,
   InstructionContextFnArgs,
   MakeInstructionsNamespace,
-} from "./types";
+} from "./types.js";
 
 export default class InstructionNamespaceFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
@@ -49,9 +50,10 @@ export default class InstructionNamespaceFactory {
         keys.push(...ctx.remainingAccounts);
       }
 
-      if (ctx.__private && ctx.__private.logAccounts) {
+      if (features.isSet("debug-logs")) {
         console.log("Outgoing account metas:", keys);
       }
+
       return new TransactionInstruction({
         keys,
         programId,

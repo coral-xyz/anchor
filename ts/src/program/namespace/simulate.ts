@@ -3,13 +3,14 @@ import {
   RpcResponseAndContext,
   SimulatedTransactionResponse,
 } from "@solana/web3.js";
-import Provider from "../../provider";
-import { splitArgsAndCtx } from "../context";
-import { TransactionFn } from "./transaction";
-import { EventParser, Event } from "../event";
-import Coder from "../../coder";
-import { Idl, IdlEvent } from "../../idl";
-import { ProgramError } from "../../error";
+import Provider from "../../provider.js";
+import { splitArgsAndCtx } from "../context.js";
+import { TransactionFn } from "./transaction.js";
+import { EventParser, Event } from "../event.js";
+import Coder from "../../coder/index.js";
+import { Idl, IdlEvent } from "../../idl.js";
+import { ProgramError } from "../../error.js";
+import * as features from "../../utils/features.js";
 import {
   AllInstructions,
   IdlTypes,
@@ -36,7 +37,10 @@ export default class SimulateFactory {
       try {
         resp = await provider!.simulate(tx, ctx.signers, ctx.options);
       } catch (err) {
-        console.log("Translating error", err);
+        if (features.isSet("debug-logs")) {
+          console.log("Translating error:", err);
+        }
+
         let translatedErr = ProgramError.parse(err, idlErrors);
         if (translatedErr === null) {
           throw err;

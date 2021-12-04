@@ -166,10 +166,7 @@ impl Program {
                                         if self_program_str == execution.program() {
                                             handle_program_log(&self_program_str, l).unwrap_or_else(
                                                 |e| {
-                                                    println!(
-                                                        "Unable to parse log: {}",
-                                                        e.to_string()
-                                                    );
+                                                    println!("Unable to parse log: {}", e);
                                                     std::process::exit(1);
                                                 },
                                             )
@@ -212,8 +209,14 @@ fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
     // Log emitted from the current program.
     if l.starts_with("Program log:") {
         let log = l.to_string().split_off("Program log: ".len());
-        let borsh_bytes = anchor_lang::__private::base64::decode(log)
-            .map_err(|_| ClientError::LogParseError(l.to_string()))?;
+        let borsh_bytes = match anchor_lang::__private::base64::decode(&log) {
+            Ok(borsh_bytes) => borsh_bytes,
+            _ => {
+                #[cfg(feature = "debug")]
+                println!("Could not base64 decode log: {}", log);
+                return Ok((None, None, false));
+            }
+        };
 
         let mut slice: &[u8] = &borsh_bytes[..];
         let disc: [u8; 8] = {
