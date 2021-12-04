@@ -1,6 +1,5 @@
 import EventEmitter from "eventemitter3";
 import { PublicKey } from "@solana/web3.js";
-import { web3 } from "../index";
 import { Idl, IdlInstruction, IdlAccountItem, IdlStateMethod } from "../idl.js";
 import { Accounts } from "./context.js";
 
