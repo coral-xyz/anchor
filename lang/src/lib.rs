@@ -35,6 +35,7 @@ mod account;
 mod account_info;
 mod account_meta;
 mod boxed;
+mod bpf_upgradable;
 mod common;
 mod context;
 mod cpi_account;
@@ -47,7 +48,6 @@ mod loader;
 mod loader_account;
 mod program;
 mod program_account;
-mod program_data;
 mod signer;
 pub mod state;
 mod system_account;
@@ -57,6 +57,7 @@ mod unchecked_account;
 mod vec;
 
 pub use crate::account::Account;
+pub use crate::bpf_upgradable::*;
 #[doc(hidden)]
 #[allow(deprecated)]
 pub use crate::context::CpiStateContext;
@@ -74,7 +75,6 @@ pub use crate::program::Program;
 #[doc(hidden)]
 #[allow(deprecated)]
 pub use crate::program_account::ProgramAccount;
-pub use crate::program_data::*;
 pub use crate::signer::Signer;
 #[doc(hidden)]
 #[allow(deprecated)]
@@ -256,8 +256,8 @@ pub mod prelude {
         access_control, account, constant, declare_id, emit, error, event, interface, program,
         require, state, zero_copy, Account, AccountDeserialize, AccountLoader, AccountSerialize,
         Accounts, AccountsExit, AnchorDeserialize, AnchorSerialize, Context, CpiContext, Id, Key,
-        Owner, Program, Signer, System, SystemAccount, Sysvar, ToAccountInfo, ToAccountInfos,
-        ToAccountMetas, UncheckedAccount, ProgramData, ProgramDataInner
+        Owner, Program, ProgramData, Signer, System, SystemAccount, Sysvar, ToAccountInfo,
+        ToAccountInfos, ToAccountMetas, UncheckedAccount,
     };
 
     #[allow(deprecated)]

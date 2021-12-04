@@ -26,7 +26,7 @@ pub struct SetAdminSettings<'info> {
     pub settings: Account<'info, Settings>,
     #[account(mut)]
     pub authority: Signer<'info>,
-    #[account(constraint = *program_data.upgrade_authority_address() == Some(authority.key()))]
-    pub program_data: ProgramData<'info>,
+    #[account(constraint = program_data.upgrade_authority_address == Some(authority.key()))]
+    pub program_data: Account<'info, ProgramData>,
     pub system_program: Program<'info, System>
 }

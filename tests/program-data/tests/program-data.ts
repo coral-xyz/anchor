@@ -99,8 +99,8 @@ describe('program-data', () => {
       });
       assert.ok(false);
     } catch (err) {
-      assert.equal(err.code, 174);
-      assert.equal(err.msg, "The given account is not owned by the upgradable BPF loader");
+      assert.equal(err.code, 167);
+      assert.equal(err.msg, "The given account is not owned by the executing program");
     }
   });
 });
