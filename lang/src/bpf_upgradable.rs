@@ -1,8 +1,6 @@
 use crate::{AccountDeserialize, AccountSerialize, Owner};
 use solana_program::{
-    bpf_loader_upgradeable::{self, UpgradeableLoaderState},
-    program_error::ProgramError,
-    pubkey::Pubkey,
+    bpf_loader_upgradeable::UpgradeableLoaderState, program_error::ProgramError, pubkey::Pubkey,
 };
 
 #[derive(Clone)]
@@ -21,8 +19,7 @@ impl AccountDeserialize for ProgramData {
     fn try_deserialize_unchecked(
         buf: &mut &[u8],
     ) -> Result<Self, solana_program::program_error::ProgramError> {
-        let program_state: bpf_loader_upgradeable::UpgradeableLoaderState =
-            bincode::deserialize(buf).map_err(|_| ProgramError::InvalidAccountData)?;
+        let program_state = AccountDeserialize::try_deserialize_unchecked(buf)?;
 
         match program_state {
             UpgradeableLoaderState::Uninitialized => {
