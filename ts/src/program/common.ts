@@ -1,5 +1,6 @@
 import EventEmitter from "eventemitter3";
 import { PublicKey } from "@solana/web3.js";
+import { web3 } from "../index";
 import { Idl, IdlInstruction, IdlAccountItem, IdlStateMethod } from "../idl.js";
 import { Accounts } from "./context.js";
 
@@ -55,8 +56,14 @@ export function validateAccounts(
 
 // Translates an address to a Pubkey.
 export function translateAddress(address: Address): PublicKey {
-  // this will error if address is not a string or public key
-  return new PublicKey(address.toString());
+  if (typeof address === "string") {
+    const pk = new PublicKey(address);
+    return pk;
+  } else if (address.constructor.prototype.constructor.name === "PublicKey") {
+    return address;
+  } else {
+    throw new Error("Given address is not a PublicKey nor a string.");
+  }
 }
 
 /**
