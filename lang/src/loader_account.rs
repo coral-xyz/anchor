@@ -8,11 +8,10 @@ use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
-use std::cell::{Ref, RefMut};
 use std::fmt;
 use std::io::Write;
 use std::marker::PhantomData;
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 
 /// Account AccountLoader facilitating on demand zero copy deserialization.
 /// Note that using accounts in this way is distinctly different from using,
@@ -29,6 +28,7 @@ use std::ops::DerefMut;
 pub struct AccountLoader<'info, T: ZeroCopy + Owner> {
     acc_info: AccountInfo<'info>,
     phantom: PhantomData<&'info T>,
+    data: *mut T,
 }
 
 impl<'info, T: ZeroCopy + Owner + fmt::Debug> fmt::Debug for AccountLoader<'info, T> {
@@ -36,16 +36,21 @@ impl<'info, T: ZeroCopy + Owner + fmt::Debug> fmt::Debug for AccountLoader<'info
         f.debug_struct("AccountLoader")
             .field("acc_info", &self.acc_info)
             .field("phantom", &self.phantom)
+            .field("data", unsafe { &*self.data })
             .finish()
     }
 }
 
 impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
-    fn new(acc_info: AccountInfo<'info>) -> AccountLoader<'info, T> {
-        Self {
+    fn new(acc_info: AccountInfo<'info>) -> Result<AccountLoader<'info, T>, ProgramError> {
+        let data = bytemuck::from_bytes::<T>(&(acc_info.try_borrow_mut_data())?[8..]) as *const T
+            as *mut T;
+
+        Ok(Self {
             acc_info,
             phantom: PhantomData,
-        }
+            data,
+        })
     }
 
     /// Constructs a new `Loader` from a previously initialized account.
@@ -56,7 +61,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         if acc_info.owner != &T::owner() {
             return Err(ErrorCode::AccountNotProgramOwned.into());
         }
-        let data: &[u8] = &acc_info.try_borrow_data()?;
+        let data = acc_info.try_borrow_data()?;
         // Discriminator must match.
         let mut disc_bytes = [0u8; 8];
         disc_bytes.copy_from_slice(&data[..8]);
@@ -64,7 +69,13 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
-        Ok(AccountLoader::new(acc_info.clone()))
+        // without this drop, data is dropped at the end
+        // of the block which causes issues
+        // when the account's &[u8] is accessed mutably
+        // in the following code
+        drop(data);
+
+        AccountLoader::new(acc_info.clone())
     }
 
     /// Constructs a new `Loader` from an uninitialized account.
@@ -76,65 +87,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         if acc_info.owner != &T::owner() {
             return Err(ErrorCode::AccountNotProgramOwned.into());
         }
-        Ok(AccountLoader::new(acc_info.clone()))
-    }
-
-    /// Returns a Ref to the account data structure for reading.
-    pub fn load(&self) -> Result<Ref<T>, ProgramError> {
-        let data = self.acc_info.try_borrow_data()?;
-
-        let mut disc_bytes = [0u8; 8];
-        disc_bytes.copy_from_slice(&data[..8]);
-        if disc_bytes != T::discriminator() {
-            return Err(ErrorCode::AccountDiscriminatorMismatch.into());
-        }
-
-        Ok(Ref::map(data, |data| bytemuck::from_bytes(&data[8..])))
-    }
-
-    /// Returns a `RefMut` to the account data structure for reading or writing.
-    pub fn load_mut(&self) -> Result<RefMut<T>, ProgramError> {
-        // AccountInfo api allows you to borrow mut even if the account isn't
-        // writable, so add this check for a better dev experience.
-        if !self.acc_info.is_writable {
-            return Err(ErrorCode::AccountNotMutable.into());
-        }
-
-        let data = self.acc_info.try_borrow_mut_data()?;
-
-        let mut disc_bytes = [0u8; 8];
-        disc_bytes.copy_from_slice(&data[..8]);
-        if disc_bytes != T::discriminator() {
-            return Err(ErrorCode::AccountDiscriminatorMismatch.into());
-        }
-
-        Ok(RefMut::map(data, |data| {
-            bytemuck::from_bytes_mut(&mut data.deref_mut()[8..])
-        }))
-    }
-
-    /// Returns a `RefMut` to the account data structure for reading or writing.
-    /// Should only be called once, when the account is being initialized.
-    pub fn load_init(&self) -> Result<RefMut<T>, ProgramError> {
-        // AccountInfo api allows you to borrow mut even if the account isn't
-        // writable, so add this check for a better dev experience.
-        if !self.acc_info.is_writable {
-            return Err(ErrorCode::AccountNotMutable.into());
-        }
-
-        let data = self.acc_info.try_borrow_mut_data()?;
-
-        // The discriminator should be zero, since we're initializing.
-        let mut disc_bytes = [0u8; 8];
-        disc_bytes.copy_from_slice(&data[..8]);
-        let discriminator = u64::from_le_bytes(disc_bytes);
-        if discriminator != 0 {
-            return Err(ErrorCode::AccountDiscriminatorAlreadySet.into());
-        }
-
-        Ok(RefMut::map(data, |data| {
-            bytemuck::from_bytes_mut(&mut data.deref_mut()[8..])
-        }))
+        AccountLoader::new(acc_info.clone())
     }
 }
 
@@ -204,5 +157,53 @@ impl<'info, T: ZeroCopy + Owner> ToAccountInfo<'info> for AccountLoader<'info, T
 impl<'info, T: ZeroCopy + Owner> Key for AccountLoader<'info, T> {
     fn key(&self) -> Pubkey {
         *self.acc_info.key
+    }
+}
+
+///
+/// # Safety
+///
+/// Dereferencing the self.data raw pointer is
+/// safe because it will always point to valid data.
+/// This is because after the instantiation
+/// of an AccountLoader the location of the data the pointer
+/// is pointing to
+/// (the memory location of the &[u8] inside the inner AccountInfo)
+/// will not change and the data will not be freed
+/// before the pointer is freed; the pointer drops when
+/// AccountLoader is dropped but the &[u8] will always
+/// live until the end of the transaction
+///
+impl<'info, T> Deref for AccountLoader<'info, T>
+where
+    T: ZeroCopy + Owner,
+{
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &(*self.data) }
+    }
+}
+
+///
+/// # Safety
+///
+/// Dereferencing the self.data raw pointer is
+/// safe because it will always point to valid data.
+/// This is because after the instantiation
+/// of an AccountLoader the location of the data the pointer
+/// is pointing to
+/// (the memory location of the &[u8] inside the inner AccountInfo)
+/// will not change and the data will not be freed
+/// before the pointer is freed; the pointer drops when
+/// AccountLoader is dropped but the &[u8] will always
+/// live until the end of the transaction
+///
+impl<'info, T> DerefMut for AccountLoader<'info, T>
+where
+    T: ZeroCopy + Owner,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut (*self.data) }
     }
 }
