@@ -55,12 +55,8 @@ export function validateAccounts(
 
 // Translates an address to a Pubkey.
 export function translateAddress(address: Address): PublicKey {
-  if (typeof address === "string") {
-    const pk = new PublicKey(address);
-    return pk;
-  } else {
-    return address;
-  }
+  // this will error if address is not a string or public key
+  return new PublicKey(address.toString());
 }
 
 /**
