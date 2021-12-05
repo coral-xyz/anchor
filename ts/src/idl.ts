@@ -35,7 +35,6 @@ type RawIdlEvent = {
   fields: RawIdlEventField[];
 };
 
-
 export type IdlEvent = {
   name: string;
   fields: IdlEventField[];
@@ -497,7 +496,6 @@ function camelCaseEvent(event: RawIdlEvent): IdlEvent {
   };
 }
 
-
 function camelCaseEvents(events?: RawIdlEvent[]): IdlEvent[] | undefined {
   if (events === undefined) {
     return undefined;
@@ -513,7 +511,9 @@ function camelCaseConstant(constant: RawIdlConstant): IdlConstant {
   };
 }
 
-function camelCaseConstants(constants?: RawIdlConstant[]): IdlConstant[] | undefined {
+function camelCaseConstants(
+  constants?: RawIdlConstant[]
+): IdlConstant[] | undefined {
   if (constants === undefined) {
     return undefined;
   }
