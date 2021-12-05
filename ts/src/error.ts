@@ -91,7 +91,6 @@ const LangErrorCode = {
   AccountNotSystemOwned: 171,
   AccountNotInitialized: 172,
   AccountNotProgramData: 173,
-  AccountNotUpgradableBPFOwned: 174,
 
   // State.
   StateInvalidAddress: 180,
@@ -185,10 +184,6 @@ const LangErrorMessage = new Map([
   [
     LangErrorCode.AccountNotProgramData,
     "The given account is not a program data account",
-  ],
-  [
-    LangErrorCode.AccountNotUpgradableBPFOwned,
-    "The given account is not owned by the upgradable BPF loader",
   ],
 
   // State.

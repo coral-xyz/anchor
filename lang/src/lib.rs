@@ -35,7 +35,7 @@ mod account;
 mod account_info;
 mod account_meta;
 mod boxed;
-mod bpf_upgradable_state;
+mod bpf_upgradeable_state;
 mod common;
 mod context;
 mod cpi_account;
@@ -57,7 +57,7 @@ mod unchecked_account;
 mod vec;
 
 pub use crate::account::Account;
-pub use crate::bpf_upgradable_state::*;
+pub use crate::bpf_upgradeable_state::*;
 #[doc(hidden)]
 #[allow(deprecated)]
 pub use crate::context::CpiStateContext;
