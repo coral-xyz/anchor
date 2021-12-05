@@ -6,12 +6,12 @@ const {
   TOKEN_PROGRAM_ID,
   Token,
 } = require("@solana/spl-token");
-const miscIdl = require("../target/idl/misc.json");
 
 describe("misc", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.Provider.env());
   const program = anchor.workspace.Misc;
+  const miscIdl = program.idl;
   const misc2Program = anchor.workspace.Misc2;
 
   it("Can allocate extra space for a state constructor", async () => {
