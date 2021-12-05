@@ -34,15 +34,22 @@ type RawIdlEvent = {
   fields: RawIdlEventField[];
 };
 
-export type IdlConstant = {
-  name: string;
-  type: IdlType;
-  value: string;
-};
 
 export type IdlEvent = {
   name: string;
   fields: IdlEventField[];
+};
+
+export type RawIdlConstant = {
+  name: string;
+  type: RawIdlType;
+  value: string;
+};
+
+export type IdlConstant = {
+  name: string;
+  type: IdlType;
+  value: string;
 };
 
 type RawIdlEventField = {
@@ -489,11 +496,27 @@ function camelCaseEvent(event: RawIdlEvent): IdlEvent {
   };
 }
 
+
 function camelCaseEvents(events?: RawIdlEvent[]): IdlEvent[] | undefined {
   if (events === undefined) {
     return undefined;
   }
   return events.map(camelCaseEvent);
+}
+
+function camelCaseConstant(constant: RawIdlConstant): IdlConstant {
+  return {
+    name: constant.name,
+    type: camelCaseIdlType(constant.type),
+    value: constant.value,
+  };
+}
+
+function camelCaseConstants(constants?: RawIdlConstant[]): IdlConstant[] | undefined {
+  if (constants === undefined) {
+    return undefined;
+  }
+  return constants.map(camelCaseConstant);
 }
 
 export function isCamelized(idl: Idl | RawIdl): idl is Idl {
@@ -510,6 +533,7 @@ export function camelCaseIdl<IDL extends Idl = Idl>(rawIdl: RawIdl): IDL {
     types: camelCaseMaybeIdlTypeDefs(rawIdl.types),
     events: camelCaseEvents(rawIdl.events),
     errors: rawIdl.errors,
+    constants: camelCaseConstants(rawIdl.constants),
     camelized: true,
   } as IDL;
 }
