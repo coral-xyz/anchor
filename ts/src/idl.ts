@@ -14,6 +14,7 @@ export type RawIdl = {
   types?: RawIdlTypeDef[];
   events?: RawIdlEvent[];
   errors?: IdlErrorCode[];
+  constants?: RawIdlConstant[];
 };
 
 export type Idl = {
