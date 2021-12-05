@@ -35,6 +35,7 @@ mod account;
 mod account_info;
 mod account_meta;
 mod boxed;
+mod bpf_upgradeable_state;
 mod common;
 mod context;
 mod cpi_account;
@@ -56,6 +57,7 @@ mod unchecked_account;
 mod vec;
 
 pub use crate::account::Account;
+pub use crate::bpf_upgradeable_state::*;
 #[doc(hidden)]
 #[allow(deprecated)]
 pub use crate::context::CpiStateContext;
@@ -83,6 +85,7 @@ pub use crate::sysvar::Sysvar;
 pub use crate::unchecked_account::UncheckedAccount;
 pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::{account, declare_id, zero_copy};
+pub use anchor_attribute_constant::constant;
 pub use anchor_attribute_error::error;
 pub use anchor_attribute_event::{emit, event};
 pub use anchor_attribute_interface::interface;
@@ -250,10 +253,11 @@ impl Key for Pubkey {
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
     pub use super::{
-        access_control, account, declare_id, emit, error, event, interface, program, require,
-        state, zero_copy, Account, AccountDeserialize, AccountLoader, AccountSerialize, Accounts,
-        AccountsExit, AnchorDeserialize, AnchorSerialize, Context, CpiContext, Id, Key, Owner,
-        Program, Signer, System, SystemAccount, Sysvar, ToAccountInfo, ToAccountInfos,
+        access_control, account, constant, declare_id, emit, error, event, interface, program,
+        require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, state, zero_copy,
+        Account, AccountDeserialize, AccountLoader, AccountSerialize, Accounts, AccountsExit,
+        AnchorDeserialize, AnchorSerialize, Context, CpiContext, Id, Key, Owner, Program,
+        ProgramData, Signer, System, SystemAccount, Sysvar, ToAccountInfo, ToAccountInfos,
         ToAccountMetas, UncheckedAccount,
     };
 

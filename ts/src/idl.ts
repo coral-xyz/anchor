@@ -25,12 +25,19 @@ export type Idl = {
   types?: IdlTypeDef[];
   events?: IdlEvent[];
   errors?: IdlErrorCode[];
+  constants?: IdlConstant[];
   camelized?: boolean;
 };
 
 type RawIdlEvent = {
   name: string;
   fields: RawIdlEventField[];
+};
+
+export type IdlConstant = {
+  name: string;
+  type: IdlType;
+  value: string;
 };
 
 export type IdlEvent = {
