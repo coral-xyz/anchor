@@ -837,8 +837,6 @@ describe("misc", () => {
   });
 
   it("Should include BASE const in IDL", async () => {
-    console.log("miscIdl.constants");
-    console.log(miscIdl.constants);
     assert(
       miscIdl.constants.find(
         (c) => c.name === "BASE" && c.ty === "u128" && c.value === "1_000_000"
