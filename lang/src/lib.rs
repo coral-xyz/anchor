@@ -35,7 +35,7 @@ mod account;
 mod account_info;
 mod account_meta;
 mod boxed;
-mod bpf_upgradable;
+mod bpf_upgradable_state;
 mod common;
 mod context;
 mod cpi_account;
@@ -57,7 +57,7 @@ mod unchecked_account;
 mod vec;
 
 pub use crate::account::Account;
-pub use crate::bpf_upgradable::*;
+pub use crate::bpf_upgradable_state::*;
 #[doc(hidden)]
 #[allow(deprecated)]
 pub use crate::context::CpiStateContext;
@@ -254,10 +254,11 @@ impl Key for Pubkey {
 pub mod prelude {
     pub use super::{
         access_control, account, constant, declare_id, emit, error, event, interface, program,
-        require, state, zero_copy, Account, AccountDeserialize, AccountLoader, AccountSerialize,
-        Accounts, AccountsExit, AnchorDeserialize, AnchorSerialize, Context, CpiContext, Id, Key,
-        Owner, Program, ProgramData, Signer, System, SystemAccount, Sysvar, ToAccountInfo,
-        ToAccountInfos, ToAccountMetas, UncheckedAccount,
+        require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, state, zero_copy,
+        Account, AccountDeserialize, AccountLoader, AccountSerialize, Accounts, AccountsExit,
+        AnchorDeserialize, AnchorSerialize, Context, CpiContext, Id, Key, Owner, Program,
+        ProgramData, Signer, System, SystemAccount, Sysvar, ToAccountInfo, ToAccountInfos,
+        ToAccountMetas, UncheckedAccount,
     };
 
     #[allow(deprecated)]

@@ -6,7 +6,7 @@ declare_id!("Cum9tTyj5HwcEiAmhgaS7Bbj4UczCwsucrCkxRECzM4e");
 // Add constraint that program.program_data_address == program_data.key()
 
 #[program]
-pub mod program_data {
+pub mod bpf_upgradable_state {
     use super::*;
     pub fn set_admin_settings(ctx: Context<SetAdminSettings>, admin_data: u64) -> ProgramResult {
         ctx.accounts.settings.admin_data = admin_data;

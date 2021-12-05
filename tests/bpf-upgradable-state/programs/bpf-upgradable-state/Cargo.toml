@@ -1,12 +1,12 @@
 [package]
-name = "program-data"
+name = "bpf-upgradable-state"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2018"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "program_data"
+name = "bpf_upgradable_state"
 
 [features]
 no-entrypoint = []

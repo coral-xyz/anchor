@@ -1,16 +1,15 @@
 import * as anchor from '@project-serum/anchor';
 import { Program } from '@project-serum/anchor';
 import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey';
-import { sleep } from '@project-serum/common';
 import assert from 'assert';
-import { ProgramData } from '../target/types/program_data';
+import { BpfUpgradableState } from '../target/types/bpf_upgradable_state';
 
-describe('program-data', () => {
+describe('bpf_upgradable_state', () => {
   const provider = anchor.Provider.env();
   // Configure the client to use the local cluster.
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.ProgramData as Program<ProgramData>;
+  const program = anchor.workspace.BpfUpgradableState as Program<BpfUpgradableState>;
   const programDataAddress = findProgramAddressSync(
     [program.programId.toBytes()],
     new anchor.web3.PublicKey("BPFLoaderUpgradeab1e11111111111111111111111")

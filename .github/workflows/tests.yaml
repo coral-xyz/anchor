@@ -179,9 +179,9 @@ jobs:
       - uses: ./.github/actions/setup-solana/
       - run: cd client/example && ./run-test.sh
 
-  test-program-data:
+  test-bpf-upgradable-state:
     needs: setup-anchor-cli
-    name: Test tests/program-data
+    name: Test tests/bpf-upgradable-state
     runs-on: ubuntu-18.04
     steps:
           - uses: actions/checkout@v2
@@ -207,17 +207,17 @@ jobs:
               path: ~/.cargo/bin/
 
           - uses: actions/cache@v2
-            name: Cache tests/program-data target
+            name: Cache tests/bpf-upgradable-state target
             id: cache-test-target
             with:
-              path: tests/program-data/target
-              key: cargo-${{ runner.os }}-tests/program-data-${{ env.ANCHOR_VERSION }}
+              path: tests/bpf-upgradable-state/target
+              key: cargo-${{ runner.os }}-tests/bpf-upgradable-state-${{ env.ANCHOR_VERSION }}
 
           - run: solana-test-validator -r --quiet &
             name: start validator
-          - run: cd tests/program-data && yarn
-          - run: cd tests/program-data && yarn link @project-serum/anchor
-          - run: cd tests/program-data && anchor build && cp program_data-keypair.json target/deploy/program_data-keypair.json && anchor deploy && anchor test --skip-deploy --skip-build
+          - run: cd tests/bpf-upgradable-state && yarn
+          - run: cd tests/bpf-upgradable-state && yarn link @project-serum/anchor
+          - run: cd tests/bpf-upgradable-state && anchor build && cp bpf_upgradable_state-keypair.json target/deploy/bpf_upgradable_state-keypair.json && anchor deploy && anchor test --skip-deploy --skip-build
 
   test-programs:
     needs: setup-anchor-cli
