@@ -44,6 +44,9 @@ export default class Provider {
    * (This api is for Node only.)
    */
   static local(url?: string, opts?: ConfirmOptions): Provider {
+    if (isBrowser) {
+      throw new Error(`Provider local is not available on browser.`);
+    }
     opts = opts ?? Provider.defaultOptions();
     const connection = new Connection(
       url ?? "http://localhost:8899",
