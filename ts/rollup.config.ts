@@ -48,7 +48,7 @@ export default {
   ],
   output: {
     file: "dist/browser/index.js",
-    format: "cjs",
+    format: "es",
     sourcemap: true,
   },
 };
