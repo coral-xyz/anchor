@@ -138,7 +138,7 @@ export class AccountClient<
    * @param address The address of the account to fetch.
    */
   async fetchNullable(address: Address): Promise<T | null> {
-    const accountInfo = await this.getAccountInfo(translateAddress(address));
+    const accountInfo = await this.getAccountInfo(address);
     if (accountInfo === null) {
       return null;
     }
