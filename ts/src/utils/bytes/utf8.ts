@@ -2,7 +2,7 @@ import { isBrowser } from "../common";
 
 export function decode(array: Uint8Array): string {
   const decoder = isBrowser
-    ? new TextDecoder("utf-8") // Browser https://caniuse.com/textencoder
+    ? new TextDecoder("utf-8") // Browser https://caniuse.com/textencoder.
     : new (require("util").TextDecoder)("utf-8"); // Node.
 
   return decoder.decode(array);
