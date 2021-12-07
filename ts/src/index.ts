@@ -19,6 +19,6 @@ export * as utils from "./utils/index.js";
 export * from "./program/index.js";
 
 if (!isBrowser) {
-  exports.workspace = require("./workspace");
-  exports.Wallet = require("./nodewallet");
+  exports.workspace = require("./workspace.js");
+  exports.Wallet = require("./nodewallet.js");
 }

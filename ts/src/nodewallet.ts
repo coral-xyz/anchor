@@ -4,7 +4,7 @@ import { Wallet } from "./provider";
 /**
  * Node only wallet.
  */
-export class NodeWallet implements Wallet {
+export default class NodeWallet implements Wallet {
   constructor(readonly payer: Keypair) {}
 
   static local(): NodeWallet {
