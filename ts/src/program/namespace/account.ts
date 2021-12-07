@@ -345,11 +345,11 @@ export class AccountClient<
     return await pubkeyUtil.associated(this._programId, ...args);
   }
 
-  getAccountInfo(
+  async getAccountInfo(
     address: Address,
     commitment?: Commitment
   ): Promise<AccountInfo<Buffer> | null> {
-    return this._provider.connection.getAccountInfo(
+    return await this._provider.connection.getAccountInfo(
       translateAddress(address),
       commitment
     );
