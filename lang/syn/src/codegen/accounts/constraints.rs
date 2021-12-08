@@ -581,13 +581,15 @@ pub fn generate_init(
                 },
             };
             let pda_check = if !seeds_with_nonce.is_empty() {
-                quote! {let expected_key = anchor_lang::prelude::Pubkey::create_program_address(
-                    #seeds_with_nonce,
-                    #owner
-                ).map_err(|_| anchor_lang::__private::ErrorCode::ConstraintSeeds)?;
-                if expected_key != #field.key() {
-                    return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
-                }}
+                quote! {
+                    let expected_key = anchor_lang::prelude::Pubkey::create_program_address(
+                        #seeds_with_nonce,
+                        #owner
+                    ).map_err(|_| anchor_lang::__private::ErrorCode::ConstraintSeeds)?;
+                    if expected_key != #field.key() {
+                        return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+                    }
+                }
             } else {
                 quote! {}
             };

@@ -9,12 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The minor version will be incremented upon a breaking change and the patch version will be
 incremented for features.
 
-## [Unreleased Breaking]
-
-### Fixes
-
-* lang/ts: error codes have been mapped to new numbers to allow for more errors per namespace ([#1096](https://github.com/project-serum/anchor/pull/1096))
-
 ### Features
 
 ## [Unreleased]
@@ -22,16 +16,21 @@ incremented for features.
 ### Fixes
 
 * lang: Add `deprecated` attribute to `ProgramAccount` ([#1014](https://github.com/project-serum/anchor/pull/1014)).
-* cli: Add version number from programs `Cargo.toml` into extracted IDL
-* lang: Add `deprecated` attribute to `Loader`([#1078](https://github.com/project-serum/anchor/pull/1078))
-* lang: the `init_if_needed` attribute now checks that given attributes (e.g. space, owner, token::authority etc.) are validated even when init is not needed([#1096](https://github.com/project-serum/anchor/pull/1096))
+* cli: Add version number from programs `Cargo.toml` into extracted IDL ([#1061](https://github.com/project-serum/anchor/pull/1061)).
+* lang: Add `deprecated` attribute to `Loader`([#1078](https://github.com/project-serum/anchor/pull/1078)).
+* lang: the `init_if_needed` attribute now checks that given attributes (e.g. space, owner, token::authority etc.) are validated even when init is not needed ([#1096](https://github.com/project-serum/anchor/pull/1096)).
 
 ### Features
 
-* lang: Add `ErrorCode::AccountNotInitialized` error to separate the situation when the account has the wrong owner from when it does not exist (#[1024](https://github.com/project-serum/anchor/pull/1024))
-* lang: Called instructions now log their name by default. This can be turned off with the `no-log-ix-name` flag ([#1057](https://github.com/project-serum/anchor/pull/1057))
-* lang: `ProgramData` and `UpgradableLoaderState` can now be passed into `Account` as generics. see [UpgradeableLoaderState](https://docs.rs/solana-program/latest/solana_program/bpf_loader_upgradeable/enum.UpgradeableLoaderState.html). `UpgradableLoaderState` can also be matched on to get `ProgramData`, but when `ProgramData` is used instead, anchor does the serialization and checking that it is actually program data for you  ([#1095](https://github.com/project-serum/anchor/pull/1095))
-* ts: Add better error msgs in the ts client if something wrong (i.e. not a pubkey or a string) is passed in as an account in an instruction accounts object ([#1098](https://github.com/project-serum/anchor/pull/1098))
+* lang: Add `ErrorCode::AccountNotInitialized` error to separate the situation when the account has the wrong owner from when it does not exist (#[1024](https://github.com/project-serum/anchor/pull/1024)).
+* lang: Called instructions now log their name by default. This can be turned off with the `no-log-ix-name` flag ([#1057](https://github.com/project-serum/anchor/pull/1057)).
+* lang: `ProgramData` and `UpgradableLoaderState` can now be passed into `Account` as generics. see [UpgradeableLoaderState](https://docs.rs/solana-program/latest/solana_program/bpf_loader_upgradeable/enum.UpgradeableLoaderState.html). `UpgradableLoaderState` can also be matched on to get `ProgramData`, but when `ProgramData` is used instead, anchor does the serialization and checking that it is actually program data for you  ([#1095](https://github.com/project-serum/anchor/pull/1095)).
+* ts: Add better error msgs in the ts client if something wrong (i.e. not a pubkey or a string) is passed in as an account in an instruction accounts object ([#1098](https://github.com/project-serum/anchor/pull/1098)).
+* ts: Add inputs `postInstructions` and `preInstructions` as a replacement for (the now deprecated) `instructions`
+
+### Breaking
+
+* lang/ts: Error codes have been mapped to new numbers to allow for more errors per namespace ([#1096](https://github.com/project-serum/anchor/pull/1096)).
 
 ## [0.18.2] - 2021-11-14
 
@@ -40,7 +39,6 @@ incremented for features.
 ### Features
 
 * lang: Add `SystemAccount<'info>` account type for generic wallet addresses or accounts owned by the system program ([#954](https://github.com/project-serum/anchor/pull/954))
-* ts: Add inputs `postInstructions` and `preInstructions` as a replacement for (the now deprecated) `instructions`
 
 ### Fixes
 
