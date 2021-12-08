@@ -8,7 +8,7 @@ import {
   RawIdl,
   isCamelized,
 } from "../idl.js";
-import Provider from "../provider.js";
+import Provider, { getProvider } from "../provider.js";
 import Coder from "../coder/index.js";
 import NamespaceFactory, {
   RpcNamespace,
@@ -18,7 +18,6 @@ import NamespaceFactory, {
   StateClient,
   SimulateNamespace,
 } from "./namespace/index.js";
-import { getProvider } from "../index.js";
 import { utf8 } from "../utils/bytes/index.js";
 import { EventManager } from "./event.js";
 import { Address, translateAddress } from "./common.js";
