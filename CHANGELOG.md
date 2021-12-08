@@ -31,7 +31,6 @@ incremented for features.
 
 * lang, ts: Error codes have been mapped to new numbers to allow for more errors per namespace ([#1096](https://github.com/project-serum/anchor/pull/1096)).
 
-
 ## [0.18.2] - 2021-11-14
 
 * cli: Replace global JavaScript dependency installs with local.
