@@ -9,8 +9,9 @@ import {
   TransactionInstruction,
   Commitment,
   GetProgramAccountsFilter,
+  AccountInfo,
 } from "@solana/web3.js";
-import Provider from "../../provider.js";
+import Provider, { getProvider } from "../../provider.js";
 import { Idl, IdlTypeDef } from "../../idl.js";
 import Coder, {
   ACCOUNT_DISCRIMINATOR_SIZE,
@@ -18,7 +19,6 @@ import Coder, {
   AccountsCoder,
 } from "../../coder/index.js";
 import { Subscription, Address, translateAddress } from "../common.js";
-import { getProvider } from "../../index.js";
 import { AllAccountsMap, IdlTypes, TypeDef } from "./types.js";
 import * as pubkeyUtil from "../../utils/pubkey.js";
 import * as rpcUtil from "../../utils/rpc.js";
@@ -137,9 +137,7 @@ export class AccountClient<
    * @param address The address of the account to fetch.
    */
   async fetchNullable(address: Address): Promise<T | null> {
-    const accountInfo = await this._provider.connection.getAccountInfo(
-      translateAddress(address)
-    );
+    const accountInfo = await this.getAccountInfo(address);
     if (accountInfo === null) {
       return null;
     }
@@ -344,6 +342,16 @@ export class AccountClient<
     ...args: Array<PublicKey | Buffer>
   ): Promise<PublicKey> {
     return await pubkeyUtil.associated(this._programId, ...args);
+  }
+
+  async getAccountInfo(
+    address: Address,
+    commitment?: Commitment
+  ): Promise<AccountInfo<Buffer> | null> {
+    return await this._provider.connection.getAccountInfo(
+      translateAddress(address),
+      commitment
+    );
   }
 }
 
