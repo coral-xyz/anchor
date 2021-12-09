@@ -49,13 +49,6 @@ pub fn is_instruction(attr: &&syn::Attribute) -> bool {
 
 // Parses a single constraint from a parse stream for `#[account(<STREAM>)]`.
 pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
-    let is_lit = stream.peek(LitStr);
-    if is_lit {
-        let lit: LitStr = stream.parse()?;
-        let c = ConstraintToken::Literal(Context::new(lit.span(), ConstraintLiteral { lit }));
-        return Ok(c);
-    }
-
     let ident = stream.call(Ident::parse_any)?;
     let kw = ident.to_string();
 
