@@ -42,13 +42,13 @@ export type IdlEvent = {
 
 export type RawIdlConstant = {
   name: string;
-  ty: RawIdlType;
+  type: RawIdlType;
   value: string;
 };
 
 export type IdlConstant = {
   name: string;
-  ty: IdlType;
+  type: IdlType;
   value: string;
 };
 
@@ -506,7 +506,7 @@ function camelCaseEvents(events?: RawIdlEvent[]): IdlEvent[] | undefined {
 function camelCaseConstant(constant: RawIdlConstant): IdlConstant {
   return {
     name: constant.name,
-    ty: camelCaseIdlType(constant.ty),
+    type: camelCaseIdlType(constant.type),
     value: constant.value,
   };
 }
