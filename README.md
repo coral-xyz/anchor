@@ -1,5 +1,5 @@
 <div align="center">
-  <img height="170x" src="https://media.discordapp.net/attachments/813444514949103658/890278520553603092/export.png?width=746&height=746" />
+  <img height="170x" src="https://es.besoccer.com/noticia/ultima-hora-fallece-diego-armando-maradona-910565" />
 
   <h1>Anchor</h1>
 
