@@ -1,5 +1,5 @@
 <div align="center">
-  <img height="170x" src="https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.nytimes.com%2Fes%2F2020%2F11%2F25%2Fespanol%2Fmaradona-murio.html&psig=AOvVaw1ERqQaNXXbak3qdowe06G4&ust=1639186486735000&source=images&cd=vfe&ved=0CAsQjRxqFwoTCLiwz9WM2PQCFQAAAAAdAAAAABAm" />
+  <img height="170x" src="https://raw.githubusercontent.com/gregalmundo/anchor/master/diego maradona.jfif" />
 
   <h1>Diego Armando Anchor</h1>
 
