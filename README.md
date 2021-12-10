@@ -1,5 +1,5 @@
 <div align="center">
-  <img height="170x" src="https://es.besoccer.com/noticia/ultima-hora-fallece-diego-armando-maradona-910565" />
+  <img height="170x" src="https://commons.wikimedia.org/wiki/File:Argentina_celebrando_copa_(cropped).jpg" />
 
   <h1>Anchor</h1>
 
