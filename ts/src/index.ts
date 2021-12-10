@@ -2,7 +2,7 @@ import { isBrowser } from "./utils/common.js";
 
 export { default as BN } from "bn.js";
 export * as web3 from "@solana/web3.js";
-export { default as Provider, getProvider, setProvider } from "./provider.js";
+export { default as Provider, getProvider, setProvider, Wallet } from "./provider.js";
 export {
   default as Coder,
   InstructionCoder,
