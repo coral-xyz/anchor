@@ -54,24 +54,24 @@ impl<'a, T: Id + AccountDeserialize + Clone> Program<'a, T> {
             let mut data: &[u8] = &info.try_borrow_data()?;
             let upgradable_loader_state =
                 UpgradeableLoaderState::try_deserialize_unchecked(&mut data)?;
+
             match upgradable_loader_state {
-                UpgradeableLoaderState::Uninitialized => {
-                    return Err(ErrorCode::InvalidProgramExecutable.into());
-                }
-                UpgradeableLoaderState::Buffer {
+                UpgradeableLoaderState::Uninitialized
+                | UpgradeableLoaderState::Buffer {
                     authority_address: _,
+                }
+                | UpgradeableLoaderState::ProgramData {
+                    slot: _,
+                    upgrade_authority_address: _,
                 } => {
-                    return Err(ErrorCode::InvalidProgramExecutable.into());
+                    // unreachable because check above already
+                    // ensures that program is executable
+                    // and therefore a program account
+                    unreachable!()
                 }
                 UpgradeableLoaderState::Program {
                     programdata_address,
                 } => Some(programdata_address),
-                UpgradeableLoaderState::ProgramData {
-                    slot: _,
-                    upgrade_authority_address: _,
-                } => {
-                    return Err(ErrorCode::InvalidProgramExecutable.into());
-                }
             }
         } else {
             None
