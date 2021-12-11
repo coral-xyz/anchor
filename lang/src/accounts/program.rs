@@ -135,9 +135,4 @@ impl<'info, T: Id + Clone> Deref for Program<'info, T> {
     }
 }
 
-impl<'info, T: Id + Clone> AccountsExit<'info> for Program<'info, T> {
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
-        // No-op.
-        Ok(())
-    }
-}
+impl<'info, T: AccountDeserialize + Id + Clone> AccountsExit<'info> for Program<'info, T> {}

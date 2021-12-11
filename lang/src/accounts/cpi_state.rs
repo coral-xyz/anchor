@@ -6,7 +6,6 @@ use crate::{
     ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
-use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
@@ -147,8 +146,4 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> DerefMut for CpiSt
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info>
     for CpiState<'info, T>
 {
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
-        // no-op
-        Ok(())
-    }
 }

@@ -1,7 +1,6 @@
 use crate::error::ErrorCode;
 use crate::*;
 use solana_program::account_info::AccountInfo;
-use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
@@ -46,12 +45,7 @@ impl<'info> Accounts<'info> for Signer<'info> {
     }
 }
 
-impl<'info> AccountsExit<'info> for Signer<'info> {
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
-        // No-op.
-        Ok(())
-    }
-}
+impl<'info> AccountsExit<'info> for Signer<'info> {}
 
 impl<'info> ToAccountMetas for Signer<'info> {
     fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {

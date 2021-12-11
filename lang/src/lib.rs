@@ -112,7 +112,10 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
 /// should be done here.
 pub trait AccountsExit<'info>: ToAccountMetas + ToAccountInfos<'info> {
     /// `program_id` is the currently executing program.
-    fn exit(&self, program_id: &Pubkey) -> ProgramResult;
+    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
+        // no-op
+        Ok(())
+    }
 }
 
 /// The close procedure to initiate garabage collection of an account, allowing

@@ -115,12 +115,7 @@ impl<'a, T: AccountDeserialize + Clone> DerefMut for CpiAccount<'a, T> {
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountDeserialize + Clone> AccountsExit<'info> for CpiAccount<'info, T> {
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
-        // no-op
-        Ok(())
-    }
-}
+impl<'info, T: AccountDeserialize + Clone> AccountsExit<'info> for CpiAccount<'info, T> {}
 
 #[allow(deprecated)]
 impl<'info, T> From<Account<'info, T>> for CpiAccount<'info, T>
