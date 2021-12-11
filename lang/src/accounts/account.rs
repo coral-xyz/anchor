@@ -144,14 +144,6 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> ToAccountI
     }
 }
 
-impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> ToAccountInfo<'info>
-    for Account<'info, T>
-{
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.info.clone()
-    }
-}
-
 impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AsRef<AccountInfo<'info>>
     for Account<'info, T>
 {

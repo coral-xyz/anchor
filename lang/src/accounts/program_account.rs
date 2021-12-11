@@ -140,15 +140,6 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfos<'in
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfo<'info>
-    for ProgramAccount<'info, T>
-{
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.inner.info.clone()
-    }
-}
-
-#[allow(deprecated)]
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AsRef<AccountInfo<'info>>
     for ProgramAccount<'info, T>
 {

@@ -1,5 +1,5 @@
 use crate::error::ErrorCode;
-use crate::{Accounts, AccountsExit, ToAccountInfo, ToAccountInfos, ToAccountMetas};
+use crate::{Accounts, AccountsExit, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
@@ -34,12 +34,6 @@ impl<'info> ToAccountMetas for AccountInfo<'info> {
 impl<'info> ToAccountInfos<'info> for AccountInfo<'info> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         vec![self.clone()]
-    }
-}
-
-impl<'info> ToAccountInfo<'info> for AccountInfo<'info> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.clone()
     }
 }
 

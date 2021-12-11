@@ -205,10 +205,3 @@ impl<'info, T: ZeroCopy> ToAccountInfos<'info> for Loader<'info, T> {
         vec![self.acc_info.clone()]
     }
 }
-
-#[allow(deprecated)]
-impl<'info, T: ZeroCopy> ToAccountInfo<'info> for Loader<'info, T> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.acc_info.clone()
-    }
-}

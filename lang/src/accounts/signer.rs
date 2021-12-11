@@ -64,12 +64,6 @@ impl<'info> ToAccountInfos<'info> for Signer<'info> {
     }
 }
 
-impl<'info> ToAccountInfo<'info> for Signer<'info> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.info.clone()
-    }
-}
-
 impl<'info> AsRef<AccountInfo<'info>> for Signer<'info> {
     fn as_ref(&self) -> &AccountInfo<'info> {
         &self.info

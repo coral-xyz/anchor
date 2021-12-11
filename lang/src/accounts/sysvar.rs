@@ -1,5 +1,5 @@
 use crate::error::ErrorCode;
-use crate::{Accounts, AccountsExit, ToAccountInfo, ToAccountInfos, ToAccountMetas};
+use crate::{Accounts, AccountsExit, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
@@ -86,12 +86,6 @@ impl<'a, T: solana_program::sysvar::Sysvar> Deref for Sysvar<'a, T> {
 impl<'a, T: solana_program::sysvar::Sysvar> DerefMut for Sysvar<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.account
-    }
-}
-
-impl<'info, T: solana_program::sysvar::Sysvar> ToAccountInfo<'info> for Sysvar<'info, T> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.info.clone()
     }
 }
 

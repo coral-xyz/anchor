@@ -61,12 +61,6 @@ impl<'info> ToAccountInfos<'info> for SystemAccount<'info> {
     }
 }
 
-impl<'info> ToAccountInfo<'info> for SystemAccount<'info> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.info.clone()
-    }
-}
-
 impl<'info> AsRef<AccountInfo<'info>> for SystemAccount<'info> {
     fn as_ref(&self) -> &AccountInfo<'info> {
         &self.info

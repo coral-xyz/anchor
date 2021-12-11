@@ -115,12 +115,6 @@ impl<'info, T: Id + Clone> ToAccountInfos<'info> for Program<'info, T> {
     }
 }
 
-impl<'info, T: Id + Clone> ToAccountInfo<'info> for Program<'info, T> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.info.clone()
-    }
-}
-
 impl<'info, T: Id + Clone> AsRef<AccountInfo<'info>> for Program<'info, T> {
     fn as_ref(&self) -> &AccountInfo<'info> {
         &self.info

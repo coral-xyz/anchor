@@ -85,13 +85,6 @@ impl<'info, T: AccountDeserialize + Clone> ToAccountInfos<'info> for CpiAccount<
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountDeserialize + Clone> ToAccountInfo<'info> for CpiAccount<'info, T> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.info.clone()
-    }
-}
-
-#[allow(deprecated)]
 impl<'info, T: AccountDeserialize + Clone> AsRef<AccountInfo<'info>> for CpiAccount<'info, T> {
     fn as_ref(&self) -> &AccountInfo<'info> {
         &self.info

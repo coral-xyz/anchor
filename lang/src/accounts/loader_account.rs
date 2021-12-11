@@ -192,9 +192,3 @@ impl<'info, T: ZeroCopy + Owner> ToAccountInfos<'info> for AccountLoader<'info, 
         vec![self.acc_info.clone()]
     }
 }
-
-impl<'info, T: ZeroCopy + Owner> ToAccountInfo<'info> for AccountLoader<'info, T> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.acc_info.clone()
-    }
-}
