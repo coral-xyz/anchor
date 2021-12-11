@@ -272,7 +272,7 @@ async function setupMarket({
   const MARKET_A_USDC = await Market.load(
     provider.connection,
     marketAPublicKey,
-    { commitment: "recent" },
+    { commitment: "processed" },
     DEX_PID
   );
   for (let k = 0; k < asks.length; k += 1) {
@@ -476,7 +476,7 @@ async function signTransactions({
 async function sendAndConfirmRawTransaction(
   connection,
   raw,
-  commitment = "recent"
+  commitment = "processed"
 ) {
   let tx = await connection.sendRawTransaction(raw, {
     skipPreflight: true,
