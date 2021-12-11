@@ -610,6 +610,7 @@ pub enum ConstraintToken {
     MintFreezeAuthority(Context<ConstraintMintFreezeAuthority>),
     MintDecimals(Context<ConstraintMintDecimals>),
     Bump(Context<ConstraintTokenBump>),
+    ProgramId(Context<ConstraintTokenProgramId>),
 }
 
 impl Parse for ConstraintToken {
@@ -687,7 +688,8 @@ pub struct ConstraintInitGroup {
 pub struct ConstraintSeedsGroup {
     pub is_init: bool,
     pub seeds: Punctuated<Expr, Token![,]>,
-    pub bump: Option<Expr>, // None => bump was given without a target.
+    pub bump: Option<Expr>,       // None => bump was given without a target.
+    pub program_id: Option<Expr>, // None => use the current program's program_id
 }
 
 #[derive(Debug, Clone)]
@@ -769,6 +771,11 @@ pub struct ConstraintMintDecimals {
 #[derive(Debug, Clone)]
 pub struct ConstraintTokenBump {
     bump: Option<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintTokenProgramId {
+    program_id: Expr,
 }
 
 #[derive(Debug, Clone)]

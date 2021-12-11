@@ -1528,4 +1528,37 @@ describe("misc", () => {
       assert.equal("A rent exempt constraint was violated", err.msg);
     }
   });
+  
+  it("Can validate PDAs derived from other program ids", async () => {
+    const wrongAddress = anchor.web3.Keypair.generate().publicKey;
+    try {
+      await program.rpc.testProgramIdConstraint(123, {
+        accounts: {
+          associatedTokenAccount: wrongAddress,
+        }
+      });
+      assert.ok(false);
+    } catch (err) {
+      assert.equal(err.code, 2006);
+    }
+
+    const [wrongProgramIdPDA, wrongBump] = await anchor.web3.PublicKey.findProgramAddress(["seed"], program.programId);
+    try {
+      await program.rpc.testProgramIdConstraint(wrongBump, {
+        accounts: {
+          associatedTokenAccount: wrongProgramIdPDA,
+        }
+      });
+      assert.ok(false);
+    } catch (err) {
+      assert.equal(err.code, 2006);
+    }
+
+    const [rightProgramIdPDA, rightBump] = await anchor.web3.PublicKey.findProgramAddress(["seed"], ASSOCIATED_TOKEN_PROGRAM_ID);
+    await program.rpc.testProgramIdConstraint(rightBump, {
+      accounts: {
+        associatedTokenAccount: rightProgramIdPDA,
+      }
+    });
+  });
 });

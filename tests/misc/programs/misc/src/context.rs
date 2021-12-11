@@ -379,3 +379,8 @@ pub struct InitIfNeededChecksRentExemption<'info> {
     pub system_program: Program<'info, System>
 }
 
+#[instruction(bump: u8)]
+pub struct TestProgramIdConstraint<'info> {
+    #[account(seeds = [b"seed"], bump, program_id = anchor_spl::associated_token::ID)]
+    associated_token_account: AccountInfo<'info>,
+}
