@@ -234,9 +234,12 @@ pub trait Key {
     fn key(&self) -> Pubkey;
 }
 
-impl Key for Pubkey {
+impl<'info, T> Key for T
+where
+    T: AsRef<AccountInfo<'info>>,
+{
     fn key(&self) -> Pubkey {
-        *self
+        *self.as_ref().key
     }
 }
 

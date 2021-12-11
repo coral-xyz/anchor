@@ -186,9 +186,3 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> DerefMut for 
         &mut self.account
     }
 }
-
-impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> Key for Account<'info, T> {
-    fn key(&self) -> Pubkey {
-        *self.info.key
-    }
-}

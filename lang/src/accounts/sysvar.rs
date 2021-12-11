@@ -1,5 +1,5 @@
 use crate::error::ErrorCode;
-use crate::{Accounts, AccountsExit, Key, ToAccountInfo, ToAccountInfos, ToAccountMetas};
+use crate::{Accounts, AccountsExit, ToAccountInfo, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
@@ -100,11 +100,5 @@ impl<'info, T: solana_program::sysvar::Sysvar> AccountsExit<'info> for Sysvar<'i
     fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
         // no-op
         Ok(())
-    }
-}
-
-impl<'info, T: solana_program::sysvar::Sysvar> Key for Sysvar<'info, T> {
-    fn key(&self) -> Pubkey {
-        *self.info.key
     }
 }

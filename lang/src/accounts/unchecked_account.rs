@@ -1,5 +1,5 @@
 use crate::error::ErrorCode;
-use crate::{Accounts, AccountsExit, Key, ToAccountInfo, ToAccountInfos, ToAccountMetas};
+use crate::{Accounts, AccountsExit, ToAccountInfo, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
@@ -62,9 +62,9 @@ impl<'info> AccountsExit<'info> for UncheckedAccount<'info> {
     }
 }
 
-impl<'info> Key for UncheckedAccount<'info> {
-    fn key(&self) -> Pubkey {
-        *self.key
+impl<'info> AsRef<AccountInfo<'info>> for UncheckedAccount<'info> {
+    fn as_ref(&self) -> &AccountInfo<'info> {
+        &self.0
     }
 }
 

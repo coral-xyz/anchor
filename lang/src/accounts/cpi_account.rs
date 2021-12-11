@@ -123,13 +123,6 @@ impl<'info, T: AccountDeserialize + Clone> AccountsExit<'info> for CpiAccount<'i
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountDeserialize + Clone> Key for CpiAccount<'info, T> {
-    fn key(&self) -> Pubkey {
-        *self.info.key
-    }
-}
-
-#[allow(deprecated)]
 impl<'info, T> From<Account<'info, T>> for CpiAccount<'info, T>
 where
     T: AccountSerialize + AccountDeserialize + Owner + Clone,

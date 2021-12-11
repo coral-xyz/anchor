@@ -86,9 +86,3 @@ impl<'info> Deref for SystemAccount<'info> {
         &self.info
     }
 }
-
-impl<'info> Key for SystemAccount<'info> {
-    fn key(&self) -> Pubkey {
-        *self.info.key
-    }
-}

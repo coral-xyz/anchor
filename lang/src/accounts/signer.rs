@@ -89,9 +89,3 @@ impl<'info> Deref for Signer<'info> {
         &self.info
     }
 }
-
-impl<'info> Key for Signer<'info> {
-    fn key(&self) -> Pubkey {
-        *self.info.key
-    }
-}
