@@ -2015,6 +2015,22 @@ fn deploy(cfg_override: &ConfigOverride, program_str: Option<String>) -> Result<
                     .join(&idl.name)
                     .with_extension("json");
                 write_idl(idl, OutFile::File(idl_out))?;
+
+                let idl_ts_out = PathBuf::from("target/types")
+                    .join(&idl.name)
+                    .with_extension("ts");
+                fs::write(&idl_ts_out, template::idl_ts(idl)?)?;
+
+                let cfg_parent = cfg.path().parent().expect("Invalid Anchor.toml");
+                if !&cfg.workspace.types.is_empty() {
+                    fs::copy(
+                        &idl_ts_out,
+                        cfg_parent
+                            .join(&cfg.workspace.types)
+                            .join(&idl.name)
+                            .with_extension("ts"),
+                    )?;
+                }
             }
         }
 
