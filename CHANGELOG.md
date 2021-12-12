@@ -28,6 +28,7 @@ incremented for features.
 * ts: Add better error msgs in the ts client if something wrong (i.e. not a pubkey or a string) is passed in as an account in an instruction accounts object ([#1098](https://github.com/project-serum/anchor/pull/1098)).
 * ts: Add inputs `postInstructions` and `preInstructions` as a replacement for (the now deprecated) `instructions` ([#1007](https://github.com/project-serum/anchor/pull/1007)).
 * ts: Add `getAccountInfo` helper method to account namespace/client ([#1084](https://github.com/project-serum/anchor/pull/1084)).
+* ts: Add type declarations for conditional `workspace` and `Wallet` exports ([#1137](https://github.com/project-serum/anchor/pull/1137)).
 
 ### Breaking
 
