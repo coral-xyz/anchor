@@ -240,15 +240,12 @@ impl Key for Pubkey {
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
     pub use super::{
-        access_control, account, accounts::account::Account,
-        accounts::loader_account::AccountLoader, accounts::program::Program,
-        accounts::signer::Signer, accounts::system_account::SystemAccount,
-        accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, constant,
-        declare_id, emit, error, event, interface, program, require,
-        solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, state, zero_copy,
-        AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AnchorDeserialize,
-        AnchorSerialize, Context, CpiContext, Id, Key, Owner, ProgramData, System, ToAccountInfo,
-        ToAccountInfos, ToAccountMetas,
+        access_control, account, constant, declare_id, emit, error, event, interface, program,
+        require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, state, zero_copy,
+        Account, AccountDeserialize, AccountLoader, AccountSerialize, Accounts, AccountsExit,
+        AnchorDeserialize, AnchorSerialize, Context, CpiContext, Id, Key, Owner, Program,
+        ProgramData, Signer, System, SystemAccount, Sysvar, ToAccountInfo, ToAccountInfos,
+        ToAccountMetas, UncheckedAccount,
     };
 
     #[allow(deprecated)]
