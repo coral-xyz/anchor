@@ -31,58 +31,45 @@ use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::io::Write;
 
-mod account;
-mod account_info;
 mod account_meta;
-mod boxed;
+mod accounts;
 mod bpf_upgradeable_state;
 mod common;
 mod context;
-mod cpi_account;
-mod cpi_state;
 mod ctor;
 mod error;
 #[doc(hidden)]
 pub mod idl;
-mod loader;
-mod loader_account;
-mod program;
-mod program_account;
-mod signer;
-pub mod state;
-mod system_account;
 mod system_program;
-mod sysvar;
-mod unchecked_account;
-mod vec;
 
-pub use crate::account::Account;
+pub use crate::accounts::account::Account;
+#[doc(hidden)]
+#[allow(deprecated)]
+pub use crate::accounts::cpi_account::CpiAccount;
+#[doc(hidden)]
+#[allow(deprecated)]
+pub use crate::accounts::cpi_state::CpiState;
+#[allow(deprecated)]
+pub use crate::accounts::loader::Loader;
+pub use crate::accounts::loader_account::AccountLoader;
+pub use crate::accounts::program::Program;
+#[doc(hidden)]
+#[allow(deprecated)]
+pub use crate::accounts::program_account::ProgramAccount;
+pub use crate::accounts::signer::Signer;
+#[doc(hidden)]
+#[allow(deprecated)]
+pub use crate::accounts::state::ProgramState;
+pub use crate::accounts::system_account::SystemAccount;
+pub use crate::accounts::sysvar::Sysvar;
+pub use crate::accounts::unchecked_account::UncheckedAccount;
+pub use crate::system_program::System;
+mod vec;
 pub use crate::bpf_upgradeable_state::*;
 #[doc(hidden)]
 #[allow(deprecated)]
 pub use crate::context::CpiStateContext;
 pub use crate::context::{Context, CpiContext};
-#[doc(hidden)]
-#[allow(deprecated)]
-pub use crate::cpi_account::CpiAccount;
-#[doc(hidden)]
-#[allow(deprecated)]
-pub use crate::cpi_state::CpiState;
-#[allow(deprecated)]
-pub use crate::loader::Loader;
-pub use crate::loader_account::AccountLoader;
-pub use crate::program::Program;
-#[doc(hidden)]
-#[allow(deprecated)]
-pub use crate::program_account::ProgramAccount;
-pub use crate::signer::Signer;
-#[doc(hidden)]
-#[allow(deprecated)]
-pub use crate::state::ProgramState;
-pub use crate::system_account::SystemAccount;
-pub use crate::system_program::System;
-pub use crate::sysvar::Sysvar;
-pub use crate::unchecked_account::UncheckedAccount;
 pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::{account, declare_id, zero_copy};
 pub use anchor_attribute_constant::constant;
@@ -253,16 +240,22 @@ impl Key for Pubkey {
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
     pub use super::{
-        access_control, account, constant, declare_id, emit, error, event, interface, program,
-        require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, state, zero_copy,
-        Account, AccountDeserialize, AccountLoader, AccountSerialize, Accounts, AccountsExit,
-        AnchorDeserialize, AnchorSerialize, Context, CpiContext, Id, Key, Owner, Program,
-        ProgramData, Signer, System, SystemAccount, Sysvar, ToAccountInfo, ToAccountInfos,
-        ToAccountMetas, UncheckedAccount,
+        access_control, account, accounts::account::Account,
+        accounts::loader_account::AccountLoader, accounts::program::Program,
+        accounts::signer::Signer, accounts::system_account::SystemAccount,
+        accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, constant,
+        declare_id, emit, error, event, interface, program, require,
+        solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, state, zero_copy,
+        AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AnchorDeserialize,
+        AnchorSerialize, Context, CpiContext, Id, Key, Owner, ProgramData, System, ToAccountInfo,
+        ToAccountInfos, ToAccountMetas,
     };
 
     #[allow(deprecated)]
-    pub use super::{CpiAccount, CpiState, CpiStateContext, Loader, ProgramAccount, ProgramState};
+    pub use super::{
+        accounts::cpi_account::CpiAccount, accounts::cpi_state::CpiState, accounts::loader::Loader,
+        accounts::program_account::ProgramAccount, accounts::state::ProgramState, CpiStateContext,
+    };
 
     pub use borsh;
     pub use solana_program::account_info::{next_account_info, AccountInfo};
@@ -299,7 +292,7 @@ pub mod __private {
     pub use bytemuck;
 
     pub mod state {
-        pub use crate::state::*;
+        pub use crate::accounts::state::*;
     }
 
     // The starting point for user defined error codes.
@@ -327,7 +320,7 @@ pub mod __private {
         }
     }
 
-    pub use crate::state::PROGRAM_STATE_SEED;
+    pub use crate::accounts::state::PROGRAM_STATE_SEED;
     pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
 }
 
