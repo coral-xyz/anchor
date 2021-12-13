@@ -64,7 +64,7 @@ impl<'a, T: Id + AccountDeserialize + Clone> Program<'a, T> {
                     slot: _,
                     upgrade_authority_address: _,
                 } => {
-                    // unreachable because check above already
+                    // Unreachable because check above already
                     // ensures that program is executable
                     // and therefore a program account.
                     unreachable!()
