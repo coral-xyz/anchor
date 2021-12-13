@@ -9,7 +9,6 @@ use std::fmt;
 use std::ops::Deref;
 
 // TODO: can we remove _account?
-
 /// Account container that checks ownership on deserialization.
 #[derive(Clone)]
 pub struct Program<'info, T: Id + AccountDeserialize + Clone> {
