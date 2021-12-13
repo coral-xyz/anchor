@@ -66,7 +66,7 @@ impl<'a, T: Id + AccountDeserialize + Clone> Program<'a, T> {
                 } => {
                     // unreachable because check above already
                     // ensures that program is executable
-                    // and therefore a program account
+                    // and therefore a program account.
                     unreachable!()
                 }
                 UpgradeableLoaderState::Program {
