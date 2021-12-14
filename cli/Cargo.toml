@@ -3,6 +3,10 @@ name = "anchor-cli"
 version = "0.19.0"
 authors = ["armaniferrante <armaniferrante@gmail.com>"]
 edition = "2018"
+repository = "https://github.com/project-serum/anchor"
+license = "Apache-2.0"
+description = "CLI for Anchor, a Solana Sealevel eDSL."
+keywords = ["solana", "anchor", "sealevel", "cli"]
 
 [[bin]]
 name = "anchor"
@@ -16,9 +20,9 @@ default = []
 clap = "3.0.0-beta.1"
 anyhow = "1.0.32"
 syn = { version = "1.0.60", features = ["full", "extra-traits"] }
-anchor-lang = { path = "../lang" }
-anchor-client = { path = "../client" }
-anchor-syn = { path = "../lang/syn", features = ["idl"] }
+anchor-lang = { path = "../lang", version = "0.19.0" }
+anchor-client = { path = "../client", version = "0.19.0" }
+anchor-syn = { path = "../lang/syn", version = "0.19.0", features = ["idl"] }
 serde_json = "1.0"
 shellexpand = "2.1.0"
 toml = "0.5.8"
@@ -27,7 +31,7 @@ serde = { version = "1.0.122", features = ["derive"] }
 solana-sdk = "1.8.0"
 solana-program = "1.8.0"
 solana-client = "1.8.0"
-serum-common = { git = "https://github.com/project-serum/serum-dex", features = ["client"] }
+serum-common = { version = "0.4.7", features = ["client"] }
 dirs = "3.0"
 heck = "0.3.1"
 flate2 = "1.0.19"

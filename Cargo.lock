@@ -2828,8 +2828,9 @@ dependencies = [
 
 [[package]]
 name = "serum-common"
-version = "0.1.0"
-source = "git+https://github.com/project-serum/serum-dex#8d6c746baaf085976c186e09042bfd78217427b9"
+version = "0.4.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a744b9dbfae5a90f78f519b6beb729fa57abf49685abc0da4d4d5001f6c6bea"
 dependencies = [
  "anyhow",
  "arrayref",
