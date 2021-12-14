@@ -28,7 +28,7 @@ use solana_program::pubkey::Pubkey;
 pub const IDL_IX_TAG: u64 = 0x0a69e9a778bcf440;
 
 // The Pubkey that is stored as the 'authority' on the IdlAccount when the authority
-// is "erased"
+// is "erased".
 pub const ERASED_AUTHORITY: Pubkey = Pubkey::new_from_array([0u8; 32]);
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
