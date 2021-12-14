@@ -13,9 +13,10 @@ use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilter};
 use solana_client::rpc_response::{Response as RpcResponse, RpcLogsResponse};
 use solana_sdk::commitment_config::CommitmentConfig;
-use solana_sdk::signature::{Keypair, Signature, Signer};
+use solana_sdk::signature::{Signature, Signer};
 use solana_sdk::transaction::Transaction;
 use std::convert::Into;
+use std::rc::Rc;
 use thiserror::Error;
 
 pub use anchor_lang;
@@ -36,7 +37,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(cluster: Cluster, payer: Keypair) -> Self {
+    pub fn new(cluster: Cluster, payer: Rc<dyn Signer>) -> Self {
         Self {
             cfg: Config {
                 cluster,
@@ -46,7 +47,11 @@ impl Client {
         }
     }
 
-    pub fn new_with_options(cluster: Cluster, payer: Keypair, options: CommitmentConfig) -> Self {
+    pub fn new_with_options(
+        cluster: Cluster,
+        payer: Rc<dyn Signer>,
+        options: CommitmentConfig,
+    ) -> Self {
         Self {
             cfg: Config {
                 cluster,
@@ -62,7 +67,7 @@ impl Client {
             cfg: Config {
                 cluster: self.cfg.cluster.clone(),
                 options: self.cfg.options,
-                payer: Keypair::from_bytes(&self.cfg.payer.to_bytes()).unwrap(),
+                payer: self.cfg.payer.clone(),
             },
         }
     }
@@ -71,7 +76,7 @@ impl Client {
 // Internal configuration for a client.
 struct Config {
     cluster: Cluster,
-    payer: Keypair,
+    payer: Rc<dyn Signer>,
     options: Option<CommitmentConfig>,
 }
 
@@ -91,7 +96,7 @@ impl Program {
         RequestBuilder::from(
             self.program_id,
             self.cfg.cluster.url(),
-            Keypair::from_bytes(&self.cfg.payer.to_bytes()).unwrap(),
+            self.cfg.payer.clone(),
             self.cfg.options,
             RequestNamespace::Global,
         )
@@ -102,7 +107,7 @@ impl Program {
         RequestBuilder::from(
             self.program_id,
             self.cfg.cluster.url(),
-            Keypair::from_bytes(&self.cfg.payer.to_bytes()).unwrap(),
+            self.cfg.payer.clone(),
             self.cfg.options,
             RequestNamespace::State { new: false },
         )
@@ -321,7 +326,7 @@ pub struct RequestBuilder<'a> {
     accounts: Vec<AccountMeta>,
     options: CommitmentConfig,
     instructions: Vec<Instruction>,
-    payer: Keypair,
+    payer: Rc<dyn Signer>,
     // Serialized instruction data for the target RPC.
     instruction_data: Option<Vec<u8>>,
     signers: Vec<&'a dyn Signer>,
@@ -343,7 +348,7 @@ impl<'a> RequestBuilder<'a> {
     pub fn from(
         program_id: Pubkey,
         cluster: &str,
-        payer: Keypair,
+        payer: Rc<dyn Signer>,
         options: Option<CommitmentConfig>,
         namespace: RequestNamespace,
     ) -> Self {
@@ -360,7 +365,7 @@ impl<'a> RequestBuilder<'a> {
         }
     }
 
-    pub fn payer(mut self, payer: Keypair) -> Self {
+    pub fn payer(mut self, payer: Rc<dyn Signer>) -> Self {
         self.payer = payer;
         self
     }
@@ -451,7 +456,7 @@ impl<'a> RequestBuilder<'a> {
         let instructions = self.instructions()?;
 
         let mut signers = self.signers;
-        signers.push(&self.payer);
+        signers.push(&*self.payer);
 
         let rpc_client = RpcClient::new_with_commitment(self.cluster, self.options);
 

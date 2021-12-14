@@ -32,6 +32,7 @@ incremented for features.
 ### Breaking
 
 * lang, ts: Error codes have been mapped to new numbers to allow for more errors per namespace ([#1096](https://github.com/project-serum/anchor/pull/1096)).
+* client: Client::new and Client::new_with_options now accept `Rc<dyn Signer>` instead of `Keypair` ([#975](https://github.com/project-serum/anchor/pull/975)).
 
 ## [0.18.2] - 2021-11-14
 
