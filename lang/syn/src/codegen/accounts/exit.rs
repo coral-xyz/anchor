@@ -26,9 +26,20 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 let ident = &f.ident;
                 if f.constraints.is_close() {
                     let close_target = &f.constraints.close.as_ref().unwrap().sol_dest;
+                    let close_owner_program = if let Some(program) = &f.constraints.close.as_ref().unwrap().owner_program {
+                        quote! {
+                            Some(self.#program.to_account_info())
+                        }
+                    } else {
+                        quote! {
+                            None
+                        }
+                    };
+
                     quote! {
                         anchor_lang::AccountsClose::close(
                             &self.#ident,
+                            #close_owner_program,
                             self.#close_target.to_account_info(),
                         )?;
                     }

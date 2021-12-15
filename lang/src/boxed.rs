@@ -35,7 +35,7 @@ impl<T: ToAccountMetas> ToAccountMetas for Box<T> {
 }
 
 impl<'info, T: AccountsClose<'info>> AccountsClose<'info> for Box<T> {
-    fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult {
-        T::close(self, sol_destination)
+    fn close(&self, owner_program: Option<AccountInfo<'info>>, sol_destination: AccountInfo<'info>) -> ProgramResult {
+        T::close(self, owner_program, sol_destination)
     }
 }
