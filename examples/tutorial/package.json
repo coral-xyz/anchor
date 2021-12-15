@@ -2,8 +2,8 @@
   "name": "anchor-examples",
   "private": true,
   "scripts": {
-    "lint:fix": "prettier */*.js */**/*{.js,.ts} -w",
-    "lint": "prettier */*.js */**/*{.js,.ts} --check"
+    "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
+    "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
   },
   "workspaces": [
     "basic-0",
