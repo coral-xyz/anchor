@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
+use syn::{Expr, GenericArgument, Lit, PathArguments, Type};
 
 pub mod file;
 
@@ -138,69 +139,92 @@ pub enum IdlType {
     Option(Box<IdlType>),
     Vec(Box<IdlType>),
     Array(Box<IdlType>, usize),
+    Map(Box<IdlType>, Box<IdlType>),
 }
 
 impl std::str::FromStr for IdlType {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut s = s.to_string();
-        fn array_from_str(inner: &str) -> IdlType {
-            match inner.strip_suffix(']') {
-                None => {
-                    let (raw_type, raw_length) = inner.rsplit_once(';').unwrap();
-                    let ty = IdlType::from_str(raw_type).unwrap();
-                    let len = raw_length.replace("_", "").parse::<usize>().unwrap();
-                    IdlType::Array(Box::new(ty), len)
+        fn syn_type_to_idl_type(syn_type: &Type) -> Result<IdlType, anyhow::Error> {
+            match syn_type {
+                Type::Path(type_path) => {
+                    let type_word = type_path.path.segments[0].ident.to_string();
+                    let type_args: Vec<Type> = {
+                        match &type_path.path.segments[0].arguments {
+                            PathArguments::AngleBracketed(x) => x
+                                .args
+                                .iter()
+                                .map(|arg| match arg {
+                                    GenericArgument::Type(ty) => Ok(ty.clone()),
+                                    _ => Err(()),
+                                })
+                                .collect::<Result<Vec<Type>, _>>(),
+                            _ => Ok(Vec::new()),
+                        }
+                        .expect("Invalid option")
+                    };
+                    let r = match type_word.as_str() {
+                        "bool" => IdlType::Bool,
+                        "u8" => IdlType::U8,
+                        "i8" => IdlType::I8,
+                        "u16" => IdlType::U16,
+                        "i16" => IdlType::I16,
+                        "u32" => IdlType::U32,
+                        "i32" => IdlType::I32,
+                        "u64" => IdlType::U64,
+                        "i64" => IdlType::I64,
+                        "u128" => IdlType::U128,
+                        "i128" => IdlType::I128,
+                        "Vec<u8>" => IdlType::Bytes,
+                        "String" => IdlType::String,
+                        "Pubkey" => IdlType::PublicKey,
+                        "Option" => {
+                            if type_args.len() != 1 {
+                                return Err(anyhow::anyhow!("Invalid option"));
+                            }
+                            let inner_ty = syn_type_to_idl_type(&type_args[0])?;
+                            IdlType::Option(Box::new(inner_ty))
+                        }
+                        "Vec" | "VecDeque" | "LinkedList" => {
+                            if type_args.len() != 1 {
+                                return Err(anyhow::anyhow!("Invalid option"));
+                            }
+                            let inner_ty = syn_type_to_idl_type(&type_args[0])?;
+                            IdlType::Vec(Box::new(inner_ty))
+                        }
+                        "BTreeMap" => {
+                            if type_args.len() != 2 {
+                                return Err(anyhow::anyhow!("Invalid option"));
+                            }
+                            let key_ty = syn_type_to_idl_type(&type_args[0])?;
+                            let value_ty = syn_type_to_idl_type(&type_args[1])?;
+                            IdlType::Map(Box::new(key_ty), Box::new(value_ty))
+                        }
+                        _ => IdlType::Defined(type_word),
+                    };
+                    Ok(r)
                 }
-                Some(nested_inner) => array_from_str(&nested_inner[1..]),
-            }
-        }
-        s.retain(|c| !c.is_whitespace());
-        let r = match s.as_str() {
-            "bool" => IdlType::Bool,
-            "u8" => IdlType::U8,
-            "i8" => IdlType::I8,
-            "u16" => IdlType::U16,
-            "i16" => IdlType::I16,
-            "u32" => IdlType::U32,
-            "i32" => IdlType::I32,
-            "u64" => IdlType::U64,
-            "i64" => IdlType::I64,
-            "u128" => IdlType::U128,
-            "i128" => IdlType::I128,
-            "Vec<u8>" => IdlType::Bytes,
-            "String" => IdlType::String,
-            "Pubkey" => IdlType::PublicKey,
-            _ => match s.to_string().strip_prefix("Option<") {
-                None => match s.to_string().strip_prefix("Vec<") {
-                    None => {
-                        if s.to_string().starts_with('[') {
-                            array_from_str(&s)
-                        } else {
-                            IdlType::Defined(s.to_string())
+                Type::Array(type_array) => {
+                    let inner_ty = syn_type_to_idl_type(&(*type_array.elem))?;
+                    let size: usize = {
+                        match &type_array.len {
+                            Expr::Lit(x) => match &x.lit {
+                                Lit::Int(x) => x.base10_parse::<usize>().map_err(|_| ()),
+                                _ => Err(()),
+                            },
+                            _ => Err(()),
                         }
                     }
-                    Some(inner) => {
-                        let inner_ty = Self::from_str(
-                            inner
-                                .strip_suffix('>')
-                                .ok_or_else(|| anyhow::anyhow!("Invalid option"))?,
-                        )?;
-                        IdlType::Vec(Box::new(inner_ty))
-                    }
-                },
-                Some(inner) => {
-                    let inner_ty = Self::from_str(
-                        inner
-                            .strip_suffix('>')
-                            .ok_or_else(|| anyhow::anyhow!("Invalid option"))?,
-                    )?;
-                    IdlType::Option(Box::new(inner_ty))
+                    .expect("Invalid option");
+                    Ok(IdlType::Array(Box::new(inner_ty), size))
                 }
-            },
-        };
-        Ok(r)
+                _ => Err(anyhow::anyhow!("Invalid option")),
+            }
+        }
+
+        let ty = syn::parse_str::<Type>(s)?;
+        syn_type_to_idl_type(&ty)
     }
 }
 
@@ -254,6 +278,25 @@ mod tests {
         assert_eq!(
             IdlType::from_str("Vec<bool>").unwrap(),
             IdlType::Vec(Box::new(IdlType::Bool))
+        )
+    }
+
+    #[test]
+    fn map() {
+        assert_eq!(
+            IdlType::from_str("BTreeMap<u32, Pubkey>").unwrap(),
+            IdlType::Map(Box::new(IdlType::U32), Box::new(IdlType::PublicKey))
+        )
+    }
+
+    #[test]
+    fn map_with_multiple_angle_brackets() {
+        assert_eq!(
+            IdlType::from_str("BTreeMap<Vec<u8>, Pubkey>").unwrap(),
+            IdlType::Map(
+                Box::new(IdlType::Vec(Box::new(IdlType::U8))),
+                Box::new(IdlType::PublicKey)
+            )
         )
     }
 }
