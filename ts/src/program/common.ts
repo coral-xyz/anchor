@@ -55,7 +55,7 @@ export function validateAccounts(
 
 // Translates an address to a Pubkey.
 export function translateAddress(address: Address): PublicKey {
-  return new PublicKey(address);
+  return address instanceof PublicKey ? address : new PublicKey(address);
 }
 
 /**
