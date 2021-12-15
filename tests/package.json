@@ -2,8 +2,8 @@
   "name": "anchor-tests",
   "private": true,
   "scripts": {
-    "lint:fix": "prettier */**/*{.js,.ts} -w",
-    "lint": "prettier */**/*{.js,.ts} --check"
+    "lint:fix": "prettier */*.js */**/*{.js,.ts} -w",
+    "lint": "prettier */*.js */**/*{.js,.ts} --check"
   },
   "workspaces": [
     "cashiers-check",
