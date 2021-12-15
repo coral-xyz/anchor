@@ -6,7 +6,7 @@ wallet = "~/.config/solana/id.json"
 members = ["programs/zero-copy", "programs/zero-cpi"]
 
 [scripts]
-test = "yarn run mocha -t 1000000 tests/"
+test = "yarn run mocha -t 1000000 tests/ && pushd programs/zero-copy && cargo test-bpf && popd"
 
 [programs.localnet]
 zero_cpi = "ErjUjtqKE5AGWUsjseSJCVLtddM6rhaMbDqmhzraF9h6"
