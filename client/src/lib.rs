@@ -69,6 +69,7 @@ impl Client {
 }
 
 // Internal configuration for a client.
+#[derive(Debug)]
 struct Config {
     cluster: Cluster,
     payer: Keypair,
@@ -76,6 +77,7 @@ struct Config {
 }
 
 /// Program is the primary client handle to be used to build and send requests.
+#[derive(Debug)]
 pub struct Program {
     program_id: Pubkey,
     cfg: Config,
@@ -166,10 +168,7 @@ impl Program {
                                         if self_program_str == execution.program() {
                                             handle_program_log(&self_program_str, l).unwrap_or_else(
                                                 |e| {
-                                                    println!(
-                                                        "Unable to parse log: {}",
-                                                        e.to_string()
-                                                    );
+                                                    println!("Unable to parse log: {}", e);
                                                     std::process::exit(1);
                                                 },
                                             )
@@ -212,8 +211,14 @@ fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
     // Log emitted from the current program.
     if l.starts_with("Program log:") {
         let log = l.to_string().split_off("Program log: ".len());
-        let borsh_bytes = anchor_lang::__private::base64::decode(log)
-            .map_err(|_| ClientError::LogParseError(l.to_string()))?;
+        let borsh_bytes = match anchor_lang::__private::base64::decode(&log) {
+            Ok(borsh_bytes) => borsh_bytes,
+            _ => {
+                #[cfg(feature = "debug")]
+                println!("Could not base64 decode log: {}", log);
+                return Ok((None, None, false));
+            }
+        };
 
         let mut slice: &[u8] = &borsh_bytes[..];
         let disc: [u8; 8] = {
@@ -407,41 +412,45 @@ impl<'a> RequestBuilder<'a> {
         self
     }
 
-    pub fn send(self) -> Result<Signature, ClientError> {
-        let accounts = match self.namespace {
-            RequestNamespace::State { new } => {
-                let mut accounts = match new {
-                    false => vec![AccountMeta::new(
+    pub fn instructions(&self) -> Result<Vec<Instruction>, ClientError> {
+        let mut accounts = match self.namespace {
+            RequestNamespace::State { new } => match new {
+                false => vec![AccountMeta::new(
+                    anchor_lang::__private::state::address(&self.program_id),
+                    false,
+                )],
+                true => vec![
+                    AccountMeta::new_readonly(self.payer.pubkey(), true),
+                    AccountMeta::new(
                         anchor_lang::__private::state::address(&self.program_id),
                         false,
-                    )],
-                    true => vec![
-                        AccountMeta::new_readonly(self.payer.pubkey(), true),
-                        AccountMeta::new(
-                            anchor_lang::__private::state::address(&self.program_id),
-                            false,
-                        ),
-                        AccountMeta::new_readonly(
-                            Pubkey::find_program_address(&[], &self.program_id).0,
-                            false,
-                        ),
-                        AccountMeta::new_readonly(system_program::ID, false),
-                        AccountMeta::new_readonly(self.program_id, false),
-                    ],
-                };
-                accounts.extend_from_slice(&self.accounts);
-                accounts
-            }
-            _ => self.accounts,
+                    ),
+                    AccountMeta::new_readonly(
+                        Pubkey::find_program_address(&[], &self.program_id).0,
+                        false,
+                    ),
+                    AccountMeta::new_readonly(system_program::ID, false),
+                    AccountMeta::new_readonly(self.program_id, false),
+                ],
+            },
+            _ => Vec::new(),
         };
-        let mut instructions = self.instructions;
-        if let Some(ix_data) = self.instruction_data {
+        accounts.extend_from_slice(&self.accounts);
+
+        let mut instructions = self.instructions.clone();
+        if let Some(ix_data) = &self.instruction_data {
             instructions.push(Instruction {
                 program_id: self.program_id,
-                data: ix_data,
+                data: ix_data.clone(),
                 accounts,
             });
         }
+
+        Ok(instructions)
+    }
+
+    pub fn send(self) -> Result<Signature, ClientError> {
+        let instructions = self.instructions()?;
 
         let mut signers = self.signers;
         signers.push(&self.payer);

@@ -8,48 +8,9 @@ describe("zero-copy", () => {
   anchor.setProvider(anchor.Provider.env());
 
   const program = anchor.workspace.ZeroCopy;
+  const programCpi = anchor.workspace.ZeroCpi;
 
   const foo = anchor.web3.Keypair.generate();
-
-  it("Creates zero copy state", async () => {
-    await program.state.rpc.new({
-      accounts: {
-        authority: program.provider.wallet.publicKey,
-      },
-    });
-    const state = await program.state.fetch();
-    assert.ok(state.authority.equals(program.provider.wallet.publicKey));
-    assert.ok(state.events.length === 250);
-    state.events.forEach((event, idx) => {
-      assert.ok(event.from.equals(PublicKey.default));
-      assert.ok(event.data.toNumber() === 0);
-    });
-  });
-
-  it("Updates zero copy state", async () => {
-    let event = {
-      from: PublicKey.default,
-      data: new BN(1234),
-    };
-    await program.state.rpc.setEvent(5, event, {
-      accounts: {
-        authority: program.provider.wallet.publicKey,
-      },
-    });
-    const state = await program.state.fetch();
-    assert.ok(state.authority.equals(program.provider.wallet.publicKey));
-    assert.ok(state.events.length === 250);
-    state.events.forEach((event, idx) => {
-      if (idx === 5) {
-        assert.ok(event.from.equals(event.from));
-        assert.ok(event.data.eq(event.data));
-      } else {
-        assert.ok(event.from.equals(PublicKey.default));
-        assert.ok(event.data.toNumber() === 0);
-      }
-    });
-  });
-
   it("Is creates a zero copy account", async () => {
     await program.rpc.createFoo({
       accounts: {
@@ -169,6 +130,20 @@ describe("zero-copy", () => {
     const barAccount = await program.account.bar.fetch(bar);
     assert.ok(barAccount.authority.equals(program.provider.wallet.publicKey));
     assert.ok(barAccount.data.toNumber() === 99);
+    // Check zero_copy CPI
+    await programCpi.rpc.checkCpi(new BN(1337), {
+      accounts: {
+        bar,
+        authority: program.provider.wallet.publicKey,
+        foo: foo.publicKey,
+        zeroCopyProgram: program.programId,
+      },
+    });
+    const barAccountAfterCpi = await program.account.bar.fetch(bar);
+    assert.ok(
+      barAccountAfterCpi.authority.equals(program.provider.wallet.publicKey)
+    );
+    assert.ok(barAccountAfterCpi.data.toNumber() === 1337);
   });
 
   const eventQ = anchor.web3.Keypair.generate();

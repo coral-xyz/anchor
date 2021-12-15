@@ -9,22 +9,23 @@ import {
   IdlAccountItem,
   IdlAccounts,
   IdlInstruction,
-} from "../../idl";
-import { IdlError } from "../../error";
+} from "../../idl.js";
+import { IdlError } from "../../error.js";
 import {
   toInstruction,
   validateAccounts,
   translateAddress,
   Address,
-} from "../common";
-import { Accounts, splitArgsAndCtx } from "../context";
+} from "../common.js";
+import { Accounts, splitArgsAndCtx } from "../context.js";
+import * as features from "../../utils/features.js";
 import {
   AllInstructions,
   AllInstructionsMap,
   InstructionContextFn,
   InstructionContextFnArgs,
   MakeInstructionsNamespace,
-} from "./types";
+} from "./types.js";
 
 export default class InstructionNamespaceFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
@@ -49,9 +50,10 @@ export default class InstructionNamespaceFactory {
         keys.push(...ctx.remainingAccounts);
       }
 
-      if (ctx.__private && ctx.__private.logAccounts) {
+      if (features.isSet("debug-logs")) {
         console.log("Outgoing account metas:", keys);
       }
+
       return new TransactionInstruction({
         keys,
         programId,
@@ -61,7 +63,11 @@ export default class InstructionNamespaceFactory {
 
     // Utility fn for ordering the accounts for this instruction.
     ix["accounts"] = (accs: Accounts<I["accounts"][number]> | undefined) => {
-      return InstructionNamespaceFactory.accountsArray(accs, idlIx.accounts);
+      return InstructionNamespaceFactory.accountsArray(
+        accs,
+        idlIx.accounts,
+        idlIx.name
+      );
     };
 
     return ix;
@@ -69,7 +75,8 @@ export default class InstructionNamespaceFactory {
 
   public static accountsArray(
     ctx: Accounts | undefined,
-    accounts: readonly IdlAccountItem[]
+    accounts: readonly IdlAccountItem[],
+    ixName?: string
   ): AccountMeta[] {
     if (!ctx) {
       return [];
@@ -84,12 +91,25 @@ export default class InstructionNamespaceFactory {
           const rpcAccs = ctx[acc.name] as Accounts;
           return InstructionNamespaceFactory.accountsArray(
             rpcAccs,
-            (acc as IdlAccounts).accounts
+            (acc as IdlAccounts).accounts,
+            ixName
           ).flat();
         } else {
           const account: IdlAccount = acc as IdlAccount;
+          let pubkey;
+          try {
+            pubkey = translateAddress(ctx[acc.name] as Address);
+          } catch (err) {
+            throw new Error(
+              `Wrong input type for account "${
+                acc.name
+              }" in the instruction accounts object${
+                ixName !== undefined ? ' for instruction "' + ixName + '"' : ""
+              }. Expected PublicKey or string.`
+            );
+          }
           return {
-            pubkey: translateAddress(ctx[acc.name] as Address),
+            pubkey,
             isWritable: account.isMut,
             isSigner: account.isSigner,
           };

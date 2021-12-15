@@ -17,10 +17,16 @@ Next, checkout the tagged branch of the same version of the anchor cli you have 
 git checkout tags/<version>
 ```
 
-And change directories to the [example](https://github.com/project-serum/anchor/tree/master/examples/tutorial/basic-0).
+Change directories to the [example](https://github.com/project-serum/anchor/tree/master/examples/tutorial/basic-0).
 
 ```bash
 cd anchor/examples/tutorial/basic-0
+```
+
+And install any additional JavaScript dependencies:
+
+```bash
+yarn install
 ```
 
 ## Starting a Localnet
@@ -90,8 +96,8 @@ a `target/idl/basic_0.json` file is created. Inspecting its contents you should 
 
 ```json
 {
-  "version": "0.0.0",
-  "name": "basic",
+  "version": "0.1.0",
+  "name": "basic_0",
   "instructions": [
     {
       "name": "initialize",
@@ -155,7 +161,7 @@ deploying a program, copy and pasting the address, and explicitly reading
 an IDL is all a bit tedious, and can easily get out of hand the more tests and the more
 programs you have. For this reason, we introduce the concept of a workspace.
 
-Inspecting [tests/basic_0.js](https://github.com/project-serum/anchor/tree/master/examples/tutorial/basic-0/tests/basic_0.js), we see the above example can be reduced to
+Inspecting [tests/basic-0.js](https://github.com/project-serum/anchor/tree/master/examples/tutorial/basic-0/tests/basic-0.js), we see the above example can be reduced to
 
 <<< @/../examples/tutorial/basic-0/tests/basic-0.js#code
 

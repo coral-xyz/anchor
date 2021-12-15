@@ -74,9 +74,12 @@ fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
             | "UncheckedAccount"
             | "CpiState"
             | "Loader"
+            | "AccountLoader"
             | "Account"
             | "Program"
             | "Signer"
+            | "SystemAccount"
+            | "ProgramData"
     );
     Ok(r)
 }
@@ -95,9 +98,12 @@ fn parse_ty(f: &syn::Field) -> ParseResult<Ty> {
         "AccountInfo" => Ty::AccountInfo,
         "UncheckedAccount" => Ty::UncheckedAccount,
         "Loader" => Ty::Loader(parse_program_account_zero_copy(&path)?),
+        "AccountLoader" => Ty::AccountLoader(parse_program_loader_account(&path)?),
         "Account" => Ty::Account(parse_account_ty(&path)?),
         "Program" => Ty::Program(parse_program_ty(&path)?),
         "Signer" => Ty::Signer,
+        "SystemAccount" => Ty::SystemAccount,
+        "ProgramData" => Ty::ProgramData,
         _ => return Err(ParseError::new(f.ty.span(), "invalid account type given")),
     };
 
@@ -110,7 +116,7 @@ fn ident_string(f: &syn::Field) -> ParseResult<String> {
         _ => return Err(ParseError::new(f.ty.span(), "invalid type")),
     };
     if parser::tts_to_string(&path)
-        .replace(" ", "")
+        .replace(' ', "")
         .starts_with("Box<Account<")
     {
         return Ok("Account".to_string());
@@ -161,11 +167,17 @@ fn parse_program_account_zero_copy(path: &syn::Path) -> ParseResult<LoaderTy> {
         account_type_path: account_ident,
     })
 }
+fn parse_program_loader_account(path: &syn::Path) -> ParseResult<LoaderAccountTy> {
+    let account_ident = parse_account(path)?;
+    Ok(LoaderAccountTy {
+        account_type_path: account_ident,
+    })
+}
 
 fn parse_account_ty(path: &syn::Path) -> ParseResult<AccountTy> {
     let account_type_path = parse_account(path)?;
     let boxed = parser::tts_to_string(&path)
-        .replace(" ", "")
+        .replace(' ', "")
         .starts_with("Box<Account<");
     Ok(AccountTy {
         account_type_path,
@@ -181,7 +193,7 @@ fn parse_program_ty(path: &syn::Path) -> ParseResult<ProgramTy> {
 // TODO: this whole method is a hack. Do something more idiomatic.
 fn parse_account(mut path: &syn::Path) -> ParseResult<syn::TypePath> {
     if parser::tts_to_string(path)
-        .replace(" ", "")
+        .replace(' ', "")
         .starts_with("Box<Account<")
     {
         let segments = &path.segments[0];

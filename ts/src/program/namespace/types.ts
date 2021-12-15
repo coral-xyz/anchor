@@ -1,6 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
-import { Idl } from "src";
+import { Idl } from "../../";
 import {
   IdlField,
   IdlInstruction,
@@ -81,11 +81,13 @@ export type InstructionContextFnArgs<
 
 type TypeMap = {
   publicKey: PublicKey;
-  u64: BN;
-  i64: BN;
+  bool: boolean;
 } & {
   [K in "u8" | "i8" | "u16" | "i16" | "u32" | "i32"]: number;
-};
+} &
+  {
+    [K in "u64" | "i64" | "u128" | "i128"]: BN;
+  };
 
 export type DecodeType<T extends IdlType, Defined> = T extends keyof TypeMap
   ? TypeMap[T]
@@ -93,8 +95,10 @@ export type DecodeType<T extends IdlType, Defined> = T extends keyof TypeMap
   ? Defined[T["defined"]]
   : T extends { option: { defined: keyof Defined } }
   ? Defined[T["option"]["defined"]] | null
-  : T extends { vec: { defined: keyof Defined } }
-  ? Defined[T["vec"]["defined"]][]
+  : T extends { vec: keyof TypeMap }
+  ? TypeMap[T["vec"]][]
+  : T extends { array: [defined: keyof TypeMap, size: number] }
+  ? TypeMap[T["array"][0]][]
   : unknown;
 
 /**

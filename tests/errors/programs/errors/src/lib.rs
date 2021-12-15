@@ -32,6 +32,14 @@ mod errors {
     pub fn signer_error(_ctx: Context<SignerError>) -> Result<()> {
         Ok(())
     }
+
+    pub fn raw_custom_error(_ctx: Context<RawCustomError>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn account_not_initialized_error(_ctx: Context<AccountNotInitializedError>) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -61,10 +69,25 @@ pub struct HasOneAccount {
     owner: Pubkey,
 }
 
+#[derive(Accounts)]
+pub struct RawCustomError<'info> {
+    #[account(constraint = *my_account.key == ID @ MyError::HelloCustom)]
+    my_account: AccountInfo<'info>,
+}
+
+#[account]
+pub struct AnyAccount {}
+
+#[derive(Accounts)]
+pub struct AccountNotInitializedError<'info> {
+    not_initialized_account: Account<'info, AnyAccount>,
+}
+
 #[error]
 pub enum MyError {
     #[msg("This is an error message clients will automatically display")]
     Hello,
     HelloNoMsg = 123,
     HelloNext,
+    HelloCustom,
 }

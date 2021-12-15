@@ -1,7 +1,7 @@
 import EventEmitter from "eventemitter3";
 import { PublicKey } from "@solana/web3.js";
-import { Idl, IdlInstruction, IdlAccountItem, IdlStateMethod } from "../idl";
-import { Accounts } from "./context";
+import { Idl, IdlInstruction, IdlAccountItem, IdlStateMethod } from "../idl.js";
+import { Accounts } from "./context.js";
 
 export type Subscription = {
   listener: number;
@@ -55,12 +55,7 @@ export function validateAccounts(
 
 // Translates an address to a Pubkey.
 export function translateAddress(address: Address): PublicKey {
-  if (typeof address === "string") {
-    const pk = new PublicKey(address);
-    return pk;
-  } else {
-    return address;
-  }
+  return address instanceof PublicKey ? address : new PublicKey(address);
 }
 
 /**
