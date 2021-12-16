@@ -6,20 +6,20 @@ use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::fmt;
+use std::marker::PhantomData;
 use std::ops::Deref;
 
 /// Account container that checks ownership on deserialization.
 #[derive(Clone)]
 pub struct Program<'info, T: Id + AccountDeserialize + Clone> {
-    _account: T,
     info: AccountInfo<'info>,
     programdata_address: Option<Pubkey>,
+    _phantom: PhantomData<T>,
 }
 
 impl<'info, T: Id + AccountDeserialize + Clone + fmt::Debug> fmt::Debug for Program<'info, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Program")
-            .field("account", &self._account)
             .field("info", &self.info)
             .field("programdata_address", &self.programdata_address)
             .finish()
@@ -27,15 +27,11 @@ impl<'info, T: Id + AccountDeserialize + Clone + fmt::Debug> fmt::Debug for Prog
 }
 
 impl<'a, T: Id + AccountDeserialize + Clone> Program<'a, T> {
-    fn new(
-        info: AccountInfo<'a>,
-        _account: T,
-        programdata_address: Option<Pubkey>,
-    ) -> Program<'a, T> {
+    fn new(info: AccountInfo<'a>, programdata_address: Option<Pubkey>) -> Program<'a, T> {
         Self {
             info,
-            _account,
             programdata_address,
+            _phantom: PhantomData,
         }
     }
 
@@ -75,13 +71,7 @@ impl<'a, T: Id + AccountDeserialize + Clone> Program<'a, T> {
             None
         };
 
-        // Programs have no data so use an empty slice.
-        let mut empty = &[][..];
-        Ok(Program::new(
-            info.clone(),
-            T::try_deserialize(&mut empty)?,
-            programdata_address,
-        ))
+        Ok(Program::new(info.clone(), programdata_address))
     }
 
     pub fn programdata_address(&self) -> Option<Pubkey> {
