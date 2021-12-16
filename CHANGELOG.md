@@ -19,6 +19,7 @@ incremented for features.
 
 * lang: Add `programdata_address: Option<Pubkey>` field to `Program` account. Will be populated if account is a program owned by the upgradable bpf loader ([#1125](https://github.com/project-serum/anchor/pull/1125))
 * lang,ts,ci,cli,docs: update solana toolchain to version 1.8.5([#1133](https://github.com/project-serum/anchor/pull/1133))
+* lang: Account wrappers for non-Anchor programs no longer have to implement the `serialize` function because it has a default impl now. Similarly, they no longer have to implement `try_deserialize` which now delegates to `try_deserialize_unchecked` by default([#1156](https://github.com/project-serum/anchor/pull/1156)).
 
 ## [0.19.0] - 2021-12-08
 
