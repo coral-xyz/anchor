@@ -28,7 +28,6 @@ pub fn transfer<'a, 'b, 'c, 'info>(
             ctx.accounts.from.clone(),
             ctx.accounts.to.clone(),
             ctx.accounts.authority.clone(),
-//             ctx.program.clone(),
         ],
         ctx.signer_seeds,
     )
