@@ -644,7 +644,6 @@ fn expand_program(
         target_dir.push(
             workspace_cfg_parent
                 .join(".anchor/expanded-macros")
-                .join(&(*cargo).package.as_ref().unwrap().name)
                 .join("expand-target"),
         );
         target_dir
@@ -671,7 +670,7 @@ fn expand_program(
     }
 
     let version = cargo.version();
-    let time = chrono::Utc::now().to_string().replace(" ", "_");
+    let time = chrono::Utc::now().to_string().replace(' ', "_");
     fs::write(
         program_expansions_path.join(format!(
             "{}-{}-{}.rs",
