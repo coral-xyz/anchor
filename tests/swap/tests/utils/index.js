@@ -457,7 +457,7 @@ async function signTransactions({
   wallet,
   connection,
 }) {
-  const blockhash = (await connection.getRecentBlockhash("max")).blockhash;
+  const blockhash = (await connection.getRecentBlockhash("processed")).blockhash;
   transactionsAndSigners.forEach(({ transaction, signers = [] }) => {
     transaction.recentBlockhash = blockhash;
     transaction.setSigners(
