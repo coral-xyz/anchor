@@ -33,6 +33,7 @@ use solana_sdk::sysvar;
 use solana_sdk::transaction::Transaction;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -89,6 +90,20 @@ pub enum Command {
         #[clap(arg_enum, short, long, default_value = "none")]
         bootstrap: BootstrapMode,
         /// Arguments to pass to the underlying `cargo build-bpf` command
+        #[clap(
+            required = false,
+            takes_value = true,
+            multiple_values = true,
+            last = true
+        )]
+        cargo_args: Vec<String>,
+    },
+    /// Expands macros (wrapper around cargo expand)
+    Expand {
+        /// Only expands this program
+        #[clap(short, long)]
+        program_name: Option<String>,
+        /// Arguments to pass to the underlying `cargo expand` command
         #[clap(
             required = false,
             takes_value = true,
@@ -370,6 +385,10 @@ pub fn entry(opts: Opts) -> Result<()> {
             cargo_args,
         ),
         Command::Deploy { program_name } => deploy(&opts.cfg_override, program_name),
+        Command::Expand {
+            program_name,
+            cargo_args,
+        } => expand(&opts.cfg_override, program_name, &cargo_args),
         Command::Upgrade {
             program_id,
             program_filepath,
@@ -557,6 +576,121 @@ fn new_program(name: &str) -> Result<()> {
     let mut lib_rs = File::create(&format!("programs/{}/src/lib.rs", name))?;
     lib_rs.write_all(template::lib_rs(name).as_bytes())?;
     Ok(())
+}
+
+pub fn expand(
+    cfg_override: &ConfigOverride,
+    program_name: Option<String>,
+    cargo_args: &[String],
+) -> Result<()> {
+    // Change to the workspace member directory, if needed.
+    if let Some(program_name) = program_name.as_ref() {
+        cd_member(cfg_override, program_name)?;
+    }
+
+    println!("current dir: {:?}", std::env::current_dir().unwrap());
+
+    let workspace_cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
+    let cfg_parent = workspace_cfg.path().parent().expect("Invalid Anchor.toml");
+    let cargo = Manifest::discover()?;
+
+    println!("cargo path: {:?}", cargo.as_ref().unwrap().path());
+
+    let expansions_path = cfg_parent.join(".anchor/expanded-macros");
+    fs::create_dir_all(&expansions_path)?;
+
+    match cargo {
+        // No Cargo.toml found, expand entire workspace
+        None => expand_all(&workspace_cfg, cargo_args),
+        // Cargo.toml is at root of workspace, expand entire workspace
+        Some(cargo) if cargo.path().parent() == workspace_cfg.path().parent() => {
+            expand_all(&workspace_cfg, cargo_args)
+        }
+        // Reaching this arm means Cargo.toml belongs to a single package. Expand it.
+        Some(cargo) => {
+            println!("hello");
+            expand_program(
+                &workspace_cfg,
+                cargo.path().parent().unwrap().to_path_buf(),
+                cargo_args,
+            )
+        }
+    }
+}
+
+fn expand_all(workspace_cfg: &WithPath<Config>, cargo_args: &[String]) -> Result<()> {
+    let cur_dir = std::env::current_dir()?;
+    let r = match workspace_cfg.path().parent() {
+        None => Err(anyhow!(
+            "Invalid Anchor.toml at {}",
+            workspace_cfg.path().display()
+        )),
+        Some(_parent) => {
+            for p in workspace_cfg.get_program_list()? {
+                expand_program(workspace_cfg, p, cargo_args)?;
+            }
+            Ok(())
+        }
+    };
+    std::env::set_current_dir(cur_dir)?;
+    r
+}
+
+fn expand_program(
+    workspace_cfg: &WithPath<Config>,
+    program_path: PathBuf,
+    cargo_args: &[String],
+) -> Result<()> {
+    //println!("{:?}", workspace_cfg);
+    println!("{:?}", program_path);
+    let workspace_cfg_parent = workspace_cfg.path().parent().unwrap();
+
+    let cargo = Manifest::from_path(program_path.join("Cargo.toml"))
+        .map_err(|_| anyhow!("Could not find Cargo.toml for program"))?;
+
+    let target_dir = {
+        let mut target_dir = OsString::from("--target-dir=");
+        target_dir.push(
+            workspace_cfg_parent
+                .join(".anchor/expanded-macros")
+                .join(&(*cargo).package.as_ref().unwrap().name)
+                .join("expand-target"),
+        );
+        target_dir
+    };
+
+    let package = format!("--package={}", cargo.package.as_ref().unwrap().name);
+
+    let program_expansions_path = workspace_cfg_parent
+        .join(".anchor/expanded-macros")
+        .join(&cargo.package.as_ref().unwrap().name)
+        .join("expansions");
+    fs::create_dir_all(&program_expansions_path)?;
+
+    let exit = std::process::Command::new("cargo")
+        .arg("expand")
+        .arg(target_dir)
+        .arg(&package)
+        .args(cargo_args)
+        .stderr(Stdio::inherit())
+        .output()
+        .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
+    if !exit.status.success() {
+        std::process::exit(exit.status.code().unwrap_or(1));
+    }
+
+    let version = cargo.version();
+    let time = chrono::Utc::now().to_string().replace(" ", "_");
+    fs::write(
+        program_expansions_path.join(format!(
+            "{}-{}-{}.rs",
+            (*cargo).package.as_ref().unwrap().name,
+            version,
+            time
+        )),
+        &exit.stdout,
+    )
+    .map_err(|e| anyhow::format_err!("{}", e.to_string()))
 }
 
 #[allow(clippy::too_many_arguments)]
