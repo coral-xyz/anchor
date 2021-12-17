@@ -34,6 +34,9 @@ pub enum ErrorCode {
     /// 1001 - Invalid program given to the IDL instruction
     #[msg("Invalid program given to the IDL instruction")]
     IdlInstructionInvalidProgram,
+    /// 1002 - Canonical IDL account cannot be written to, must write to an IDL buffer
+    #[msg("Canonical IDL account cannot be written to, must write to an IDL buffer")]
+    IdlInstructionWritingToCanonicalAccount,
 
     // Constraints
     /// 2000 - A mut constraint was violated

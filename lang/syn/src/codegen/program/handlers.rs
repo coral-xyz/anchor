@@ -64,7 +64,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 Err(anchor_lang::__private::ErrorCode::IdlInstructionStub.into())
             }
 
-            // One time IDL account initializer. Will faill on subsequent
+            // One time IDL account initializer. Will fail on subsequent
             // invocations.
             #[inline(never)]
             pub fn __idl_create_account(
@@ -152,8 +152,15 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 #[cfg(not(feature = "no-log-ix-name"))]
                 anchor_lang::prelude::msg!("Instruction: IdlWrite");
 
-                let mut idl = &mut accounts.idl;
-                idl.data.extend(idl_data);
+                let mut buffer = &mut accounts.idl;
+
+                // Ensure that the instruction is writing to a buffer account, not the canonical IDL
+                // account.
+                if buffer.key == IdlAccount::address(program_id) {
+                    return Err(anchor_lang::__private::ErrorCode::IdlInstructionWritingToCanonicalAccount.into());
+                }
+
+                buffer.data.extend(idl_data);
                 Ok(())
             }
 
