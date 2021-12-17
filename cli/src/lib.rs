@@ -101,8 +101,12 @@ pub enum Command {
         cargo_args: Vec<String>,
     },
     /// Expands macros (wrapper around cargo expand)
+    ///
+    /// Use it in a program folder to expand program
+    ///
+    /// Use it in a workspace root to expand entire workspace
     Expand {
-        /// Only expands this program
+        /// Expand only this program
         #[clap(short, long)]
         program_name: Option<String>,
         /// Arguments to pass to the underlying `cargo expand` command
