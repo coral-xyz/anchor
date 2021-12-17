@@ -11,6 +11,9 @@ incremented for features.
 
 ## [Unreleased]
 
+### Fixes 
+* lang: Change commitment message recent to processed ([#1128](https://github.com/project-serum/anchor/pull/1128))
+
 ## [0.19.0] - 2021-12-08
 
 ### Fixes
@@ -19,7 +22,6 @@ incremented for features.
 * cli: Add version number from programs `Cargo.toml` into extracted IDL ([#1061](https://github.com/project-serum/anchor/pull/1061)).
 * lang: Add `deprecated` attribute to `Loader`([#1078](https://github.com/project-serum/anchor/pull/1078)).
 * lang: the `init_if_needed` attribute now checks that given attributes (e.g. space, owner, token::authority etc.) are validated even when init is not needed ([#1096](https://github.com/project-serum/anchor/pull/1096)).
-* lang: Change commitment message recent to processed ([#1128](https://github.com/project-serum/anchor/pull/1128))
 
 ### Features
 
