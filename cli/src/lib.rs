@@ -48,8 +48,6 @@ pub mod template;
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const DOCKER_BUILDER_VERSION: &str = VERSION;
 
-const EXPANDED_MACROS_PATH: &str = ".anchor/expanded-macros";
-
 #[derive(Debug, Clap)]
 #[clap(version = VERSION)]
 pub struct Opts {
@@ -598,52 +596,50 @@ pub fn expand(
     let cfg_parent = workspace_cfg.path().parent().expect("Invalid Anchor.toml");
     let cargo = Manifest::discover()?;
 
-    let expansions_path = cfg_parent.join(EXPANDED_MACROS_PATH);
+    let expansions_path = cfg_parent.join(".anchor/expanded-macros");
     fs::create_dir_all(&expansions_path)?;
 
     match cargo {
         // No Cargo.toml found, expand entire workspace
-        None => expand_all(&workspace_cfg, cargo_args),
+        None => expand_all(&workspace_cfg, expansions_path, cargo_args),
         // Cargo.toml is at root of workspace, expand entire workspace
         Some(cargo) if cargo.path().parent() == workspace_cfg.path().parent() => {
-            expand_all(&workspace_cfg, cargo_args)
+            expand_all(&workspace_cfg, expansions_path, cargo_args)
         }
         // Reaching this arm means Cargo.toml belongs to a single package. Expand it.
         Some(cargo) => expand_program(
-            &workspace_cfg,
             // If we found Cargo.toml, it must be in a directory so unwrap is safe
             cargo.path().parent().unwrap().to_path_buf(),
+            expansions_path,
             cargo_args,
         ),
     }
 }
 
-fn expand_all(workspace_cfg: &WithPath<Config>, cargo_args: &[String]) -> Result<()> {
+fn expand_all(
+    workspace_cfg: &WithPath<Config>,
+    expansions_path: PathBuf,
+    cargo_args: &[String],
+) -> Result<()> {
     let cur_dir = std::env::current_dir()?;
     for p in workspace_cfg.get_program_list()? {
-        expand_program(workspace_cfg, p, cargo_args)?;
+        expand_program(p, expansions_path.clone(), cargo_args)?;
     }
     std::env::set_current_dir(cur_dir)?;
     Ok(())
 }
 
 fn expand_program(
-    workspace_cfg: &WithPath<Config>,
     program_path: PathBuf,
+    expansions_path: PathBuf,
     cargo_args: &[String],
 ) -> Result<()> {
-    let workspace_cfg_parent = workspace_cfg.path().parent().unwrap();
-
     let cargo = Manifest::from_path(program_path.join("Cargo.toml"))
         .map_err(|_| anyhow!("Could not find Cargo.toml for program"))?;
 
     let target_dir_arg = {
         let mut target_dir_arg = OsString::from("--target-dir=");
-        target_dir_arg.push(
-            workspace_cfg_parent
-                .join(EXPANDED_MACROS_PATH)
-                .join("expand-target"),
-        );
+        target_dir_arg.push(expansions_path.join("expand-target"));
         target_dir_arg
     };
 
@@ -652,9 +648,7 @@ fn expand_program(
         .as_ref()
         .ok_or_else(|| anyhow!("Cargo config is missing a package"))?
         .name;
-    let program_expansions_path = workspace_cfg_parent
-        .join(EXPANDED_MACROS_PATH)
-        .join(package_name);
+    let program_expansions_path = expansions_path.join(package_name);
     fs::create_dir_all(&program_expansions_path)?;
 
     let exit = std::process::Command::new("cargo")
