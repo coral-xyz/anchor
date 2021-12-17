@@ -48,6 +48,8 @@ pub mod template;
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const DOCKER_BUILDER_VERSION: &str = VERSION;
 
+const EXPANDED_MACROS_PATH: &str = ".anchor/expanded-macros";
+
 #[derive(Debug, Clap)]
 #[clap(version = VERSION)]
 pub struct Opts {
@@ -592,7 +594,7 @@ pub fn expand(
     let cfg_parent = workspace_cfg.path().parent().expect("Invalid Anchor.toml");
     let cargo = Manifest::discover()?;
 
-    let expansions_path = cfg_parent.join(".anchor/expanded-macros");
+    let expansions_path = cfg_parent.join(EXPANDED_MACROS_PATH);
     fs::create_dir_all(&expansions_path)?;
 
     match cargo {
@@ -613,20 +615,11 @@ pub fn expand(
 
 fn expand_all(workspace_cfg: &WithPath<Config>, cargo_args: &[String]) -> Result<()> {
     let cur_dir = std::env::current_dir()?;
-    let r = match workspace_cfg.path().parent() {
-        None => Err(anyhow!(
-            "Invalid Anchor.toml at {}",
-            workspace_cfg.path().display()
-        )),
-        Some(_parent) => {
-            for p in workspace_cfg.get_program_list()? {
-                expand_program(workspace_cfg, p, cargo_args)?;
-            }
-            Ok(())
-        }
-    };
+    for p in workspace_cfg.get_program_list()? {
+        expand_program(workspace_cfg, p, cargo_args)?;
+    }
     std::env::set_current_dir(cur_dir)?;
-    r
+    Ok(())
 }
 
 fn expand_program(
@@ -643,7 +636,7 @@ fn expand_program(
         let mut target_dir = OsString::from("--target-dir=");
         target_dir.push(
             workspace_cfg_parent
-                .join(".anchor/expanded-macros")
+                .join(EXPANDED_MACROS_PATH)
                 .join("expand-target"),
         );
         target_dir
@@ -652,9 +645,8 @@ fn expand_program(
     let package = format!("--package={}", cargo.package.as_ref().unwrap().name);
 
     let program_expansions_path = workspace_cfg_parent
-        .join(".anchor/expanded-macros")
-        .join(&cargo.package.as_ref().unwrap().name)
-        .join("expansions");
+        .join(EXPANDED_MACROS_PATH)
+        .join(&cargo.package.as_ref().unwrap().name);
     fs::create_dir_all(&program_expansions_path)?;
 
     let exit = std::process::Command::new("cargo")
