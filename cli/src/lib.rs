@@ -611,6 +611,7 @@ pub fn expand(
         // Reaching this arm means Cargo.toml belongs to a single package. Expand it.
         Some(cargo) => expand_program(
             &workspace_cfg,
+            // If we found Cargo.toml, it must be in a directory so unwrap is safe
             cargo.path().parent().unwrap().to_path_buf(),
             cargo_args,
         ),
@@ -636,27 +637,30 @@ fn expand_program(
     let cargo = Manifest::from_path(program_path.join("Cargo.toml"))
         .map_err(|_| anyhow!("Could not find Cargo.toml for program"))?;
 
-    let target_dir = {
-        let mut target_dir = OsString::from("--target-dir=");
-        target_dir.push(
+    let target_dir_arg = {
+        let mut target_dir_arg = OsString::from("--target-dir=");
+        target_dir_arg.push(
             workspace_cfg_parent
                 .join(EXPANDED_MACROS_PATH)
                 .join("expand-target"),
         );
-        target_dir
+        target_dir_arg
     };
 
-    let package = format!("--package={}", cargo.package.as_ref().unwrap().name);
-
+    let package_name = &cargo
+        .package
+        .as_ref()
+        .ok_or_else(|| anyhow!("Cargo config is missing a package"))?
+        .name;
     let program_expansions_path = workspace_cfg_parent
         .join(EXPANDED_MACROS_PATH)
-        .join(&cargo.package.as_ref().unwrap().name);
+        .join(package_name);
     fs::create_dir_all(&program_expansions_path)?;
 
     let exit = std::process::Command::new("cargo")
         .arg("expand")
-        .arg(target_dir)
-        .arg(&package)
+        .arg(target_dir_arg)
+        .arg(&format!("--package={}", package_name))
         .args(cargo_args)
         .stderr(Stdio::inherit())
         .output()
@@ -668,12 +672,7 @@ fn expand_program(
     let version = cargo.version();
     let time = chrono::Utc::now().to_string().replace(' ', "_");
     fs::write(
-        program_expansions_path.join(format!(
-            "{}-{}-{}.rs",
-            (*cargo).package.as_ref().unwrap().name,
-            version,
-            time
-        )),
+        program_expansions_path.join(format!("{}-{}-{}.rs", package_name, version, time)),
         &exit.stdout,
     )
     .map_err(|e| anyhow::format_err!("{}", e.to_string()))
