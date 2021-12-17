@@ -588,13 +588,9 @@ pub fn expand(
         cd_member(cfg_override, program_name)?;
     }
 
-    println!("current dir: {:?}", std::env::current_dir().unwrap());
-
     let workspace_cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
     let cfg_parent = workspace_cfg.path().parent().expect("Invalid Anchor.toml");
     let cargo = Manifest::discover()?;
-
-    println!("cargo path: {:?}", cargo.as_ref().unwrap().path());
 
     let expansions_path = cfg_parent.join(".anchor/expanded-macros");
     fs::create_dir_all(&expansions_path)?;
@@ -607,14 +603,11 @@ pub fn expand(
             expand_all(&workspace_cfg, cargo_args)
         }
         // Reaching this arm means Cargo.toml belongs to a single package. Expand it.
-        Some(cargo) => {
-            println!("hello");
-            expand_program(
-                &workspace_cfg,
-                cargo.path().parent().unwrap().to_path_buf(),
-                cargo_args,
-            )
-        }
+        Some(cargo) => expand_program(
+            &workspace_cfg,
+            cargo.path().parent().unwrap().to_path_buf(),
+            cargo_args,
+        ),
     }
 }
 
@@ -641,8 +634,6 @@ fn expand_program(
     program_path: PathBuf,
     cargo_args: &[String],
 ) -> Result<()> {
-    //println!("{:?}", workspace_cfg);
-    println!("{:?}", program_path);
     let workspace_cfg_parent = workspace_cfg.path().parent().unwrap();
 
     let cargo = Manifest::from_path(program_path.join("Cargo.toml"))
