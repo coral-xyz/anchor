@@ -35,10 +35,16 @@ jobs:
       - run: cargo build
       - run: cargo fmt -- --check
       - run: cargo clippy --all-targets -- -D warnings
+      - run: rustup toolchain install nightly --profile minimal --component clippy
+      - run: cargo +nightly clippy --all-targets -- -D warnings
       - run: cargo test
       - run: cd ts && yarn
       - run: cd ts && yarn test
       - run: cd ts && yarn lint
+      - run: cd examples/tutorial && yarn
+      - run: cd examples/tutorial && yarn lint
+      - run: cd tests && yarn
+      - run: cd tests && yarn lint
 
   setup-anchor-cli:
     name: Setup Anchor cli
@@ -258,7 +264,7 @@ jobs:
             path: tests/cashiers-check
           - cmd: cd tests/typescript && anchor test
             path: tests/typescript
-          - cmd: cd tests/zero-copy && anchor test
+          - cmd: cd tests/zero-copy && anchor test && cd programs/zero-copy && cargo test-bpf
             path: tests/zero-copy
           - cmd: cd tests/chat && anchor test
             path: tests/chat
