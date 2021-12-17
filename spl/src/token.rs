@@ -201,10 +201,7 @@ pub fn initialize_mint<'a, 'b, 'c, 'info>(
     )?;
     solana_program::program::invoke_signed(
         &ix,
-        &[
-            ctx.accounts.mint.clone(),
-            ctx.accounts.rent.clone(),
-        ],
+        &[ctx.accounts.mint.clone(), ctx.accounts.rent.clone()],
         ctx.signer_seeds,
     )
 }
