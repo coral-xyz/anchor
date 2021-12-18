@@ -1,7 +1,7 @@
 #![cfg(feature = "test-bpf")]
 
 use {
-    std::rc::Rc;
+    std::rc::Rc,
     anchor_client::{
         anchor_lang::Discriminator,
         solana_sdk::{
