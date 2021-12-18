@@ -76,11 +76,13 @@ where
         }
     }
 
+    #[must_use]
     pub fn with_signer(mut self, signer_seeds: &'a [&'b [&'c [u8]]]) -> Self {
         self.signer_seeds = signer_seeds;
         self
     }
 
+    #[must_use]
     pub fn with_remaining_accounts(mut self, ra: Vec<AccountInfo<'info>>) -> Self {
         self.remaining_accounts = ra;
         self
@@ -156,6 +158,7 @@ impl<'a, 'b, 'c, 'info, T: Accounts<'info>> CpiStateContext<'a, 'b, 'c, 'info, T
         }
     }
 
+    #[must_use]
     pub fn with_signer(mut self, signer_seeds: &'a [&'b [&'c [u8]]]) -> Self {
         self.cpi_ctx = self.cpi_ctx.with_signer(signer_seeds);
         self
