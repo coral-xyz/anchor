@@ -660,16 +660,22 @@ fn expand_program(
         .output()
         .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
     if !exit.status.success() {
+        eprintln!("'anchor expand' failed. Perhaps you have not installed 'cargo-expand'? https://github.com/dtolnay/cargo-expand#installation");
         std::process::exit(exit.status.code().unwrap_or(1));
     }
 
     let version = cargo.version();
     let time = chrono::Utc::now().to_string().replace(' ', "_");
-    fs::write(
-        program_expansions_path.join(format!("{}-{}-{}.rs", package_name, version, time)),
-        &exit.stdout,
-    )
-    .map_err(|e| anyhow::format_err!("{}", e.to_string()))
+    let file_path =
+        program_expansions_path.join(format!("{}-{}-{}.rs", package_name, version, time));
+    fs::write(&file_path, &exit.stdout).map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
+
+    println!(
+        "Expanded {} into file {}\n",
+        package_name,
+        file_path.to_string_lossy()
+    );
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
