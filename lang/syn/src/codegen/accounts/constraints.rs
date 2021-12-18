@@ -284,9 +284,17 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
         }
     };
 
-    let seeds_with_nonce = match &c.seeds {
-        None => quote! {},
+    let (find_pda, seeds_with_nonce) = match &c.seeds {
+        None => (quote! {}, quote! {}),
         Some(c) => {
+            let deriving_program_id = c
+                .program_seed
+                .clone()
+                // If they specified a seeds::program to use when deriving the PDA, use it.
+                .map(|program_id| quote! { #program_id })
+                // Otherwise fall back to the current program's program_id.
+                .unwrap_or(quote! { program_id });
+
             let s = &mut c.seeds.clone();
             // If the seeds came with a trailing comma, we need to chop it off
             // before we interpolate them below.
@@ -296,32 +304,23 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
             let maybe_seeds_plus_comma = (!s.is_empty()).then(|| {
                 quote! { #s, }
             });
-            let inner = match c.bump.as_ref() {
-                // Bump target not given. Use the canonical bump.
-                None => {
-                    quote! {
-                        [
-                            #maybe_seeds_plus_comma
-                            &[
-                                Pubkey::find_program_address(
-                                    &[#s],
-                                    program_id,
-                                ).1
-                            ][..]
-                        ]
-                    }
-                }
-                // Bump target given. Use it.
-                Some(b) => quote! {
-                    [#maybe_seeds_plus_comma &[#b][..]]
-                },
+            let find_pda = quote! {
+                let (__pda_address, __pda_bump) = Pubkey::find_program_address(
+                    &[#s],
+                    &#deriving_program_id,
+                );
             };
-            quote! {
-                &#inner[..]
-            }
+            let seeds_with_nonce = quote! {
+                &[#maybe_seeds_plus_comma &[__pda_bump][..]][..]
+            };
+            (find_pda, seeds_with_nonce)
         }
     };
-    generate_init(f, c.if_needed, seeds_with_nonce, payer, &c.space, &c.kind)
+    let init = generate_init(f, c.if_needed, seeds_with_nonce, payer, &c.space, &c.kind);
+    quote! {
+        #find_pda
+        #init
+    }
 }
 
 fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2::TokenStream {
@@ -342,54 +341,45 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
         s.push_value(pair.into_value());
     }
 
-    // If the bump is provided with init *and target*, then force it to be the
-    // canonical bump.
-    if c.is_init && c.bump.is_some() {
-        let b = c.bump.as_ref().unwrap();
+    // On init with seeds, __pda_address and __pda_bump are already computed
+    if c.is_init {
+        let bump_check = match c.bump.as_ref() {
+            None => quote! {},
+            Some(b) => quote! {
+                if __pda_bump != #b {
+                    return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+                }
+            },
+        };
         quote! {
-            let (__program_signer, __bump) = anchor_lang::solana_program::pubkey::Pubkey::find_program_address(
-                &[#s],
-                &#deriving_program_id,
-            );
-            if #name.key() != __program_signer {
+            if #name.key() != __pda_address {
                 return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
             }
-            if __bump != #b {
-                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
-            }
+            #bump_check
         }
     } else {
         let maybe_seeds_plus_comma = (!s.is_empty()).then(|| {
             quote! { #s, }
         });
-        let seeds = match c.bump.as_ref() {
-            // Bump target not given. Find it.
-            None => {
-                quote! {
-                    [
-                        #maybe_seeds_plus_comma
-                        &[
-                            Pubkey::find_program_address(
-                                &[#s],
-                                &#deriving_program_id,
-                            ).1
-                        ][..]
-                    ]
-                }
-            }
+        let find_pda = match c.bump.as_ref() {
+            // Bump target not given, no need to check it.
+            None => quote! {
+                let __pda_address = Pubkey::find_program_address(
+                    &[#s],
+                    &#deriving_program_id,
+                ).0;
+            },
             // Bump target given. Use it.
-            Some(b) => {
-                quote! {
-                    [#maybe_seeds_plus_comma &[#b][..]]
-                }
-            }
+            Some(b) => quote! {
+                let __pda_address = Pubkey::create_program_address(
+                    &[#maybe_seeds_plus_comma &[#b][..]][..],
+                    &#deriving_program_id,
+                ).map_err(|_| anchor_lang::__private::ErrorCode::ConstraintSeeds)?;
+            },
         };
         quote! {
-            let __program_signer = Pubkey::create_program_address(
-                &#seeds[..],
-                &#deriving_program_id,
-            ).map_err(|_| anchor_lang::__private::ErrorCode::ConstraintSeeds)?;
-            if #name.key() != __program_signer {
+            #find_pda
+            if #name.key() != __pda_address {
                 return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
             }
         }
@@ -598,11 +588,7 @@ pub fn generate_init(
             };
             let pda_check = if !seeds_with_nonce.is_empty() {
                 quote! {
-                    let expected_key = anchor_lang::prelude::Pubkey::create_program_address(
-                        #seeds_with_nonce,
-                        #owner
-                    ).map_err(|_| anchor_lang::__private::ErrorCode::ConstraintSeeds)?;
-                    if expected_key != #field.key() {
+                    if __pda_address != #field.key() {
                         return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
                     }
                 }
