@@ -63,6 +63,7 @@ where
         }
     }
 
+    #[must_use]
     pub fn new_with_signer(
         program: AccountInfo<'info>,
         accounts: T,
