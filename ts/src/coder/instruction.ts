@@ -247,7 +247,6 @@ class InstructionFormatter {
     }
     // @ts-ignore
     if (idlField.type.vec) {
-      // @ts-ignore
       return (
         "[" +
         data
@@ -265,7 +264,6 @@ class InstructionFormatter {
     }
     // @ts-ignore
     if (idlField.type.option) {
-      // @ts-ignore
       return data === null
         ? "null"
         : this.formatIdlData(
@@ -365,7 +363,6 @@ class InstructionFormatter {
         // @ts-ignore
         if (account.accounts) {
           const newPrefix = prefix ? `${prefix} > ${accName}` : accName;
-          // @ts-ignore
           return InstructionFormatter.flattenIdlAccounts(
             // @ts-ignore
             account.accounts,

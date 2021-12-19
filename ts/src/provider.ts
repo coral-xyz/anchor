@@ -245,7 +245,6 @@ async function simulateTransaction(
   const config: any = { encoding: "base64", commitment };
   const args = [encodedTransaction, config];
 
-  // @ts-ignore
   const res = await connection._rpcRequest("simulateTransaction", args);
   if (res.error) {
     throw new Error("failed to simulate transaction: " + res.error.message);

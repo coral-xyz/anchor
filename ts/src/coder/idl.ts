@@ -60,7 +60,6 @@ export class IdlCoder {
             IdlCoder.fieldLayout(
               {
                 name: undefined,
-                // @ts-ignore
                 type: field.type.vec,
               },
               types
@@ -124,7 +123,6 @@ export class IdlCoder {
         if (variant.fields === undefined) {
           return borsh.struct([], name);
         }
-        // @ts-ignore
         const fieldLayouts = variant.fields.map((f: IdlField | IdlType) => {
           // @ts-ignore
           if (f.name === undefined) {
