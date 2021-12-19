@@ -102,7 +102,8 @@ pub enum Command {
     ///
     /// Use it in a program folder to expand program
     ///
-    /// Use it in a workspace root to expand entire workspace
+    /// Use it in a workspace but outside a program
+    /// folder to expand the entire workspace
     Expand {
         /// Expand only this program
         #[clap(short, long)]
