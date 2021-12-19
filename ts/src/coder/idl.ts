@@ -124,12 +124,14 @@ export class IdlCoder {
           return borsh.struct([], name);
         }
         const fieldLayouts = variant.fields.map((f: IdlField | IdlType) => {
-          // @ts-ignore
-          if (f.name === undefined) {
+          if (!f.hasOwnProperty("name")) {
             throw new Error("Tuple enum variants not yet implemented.");
           }
-          // @ts-ignore
-          return IdlCoder.fieldLayout(f, types);
+          // this typescript conversion is ok
+          // because if f were of type IdlType
+          // (that does not have a name property)
+          // the check before would've errored
+          return IdlCoder.fieldLayout(f as IdlField, types);
         });
         return borsh.struct(fieldLayouts, name);
       });
