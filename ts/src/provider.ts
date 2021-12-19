@@ -162,6 +162,10 @@ export default class Provider {
 
     const sigs: TransactionSignature[] = [];
 
+    if (signedTxs === undefined) {
+      throw new Error("Failed to sign all transactions.");
+    }
+
     for (let k = 0; k < txs.length; k += 1) {
       const tx = signedTxs[k];
       const rawTx = tx.serialize();
@@ -221,8 +225,8 @@ export type SendTxRequest = {
  * Wallet interface for objects that can be used to sign provider transactions.
  */
 export interface Wallet {
-  signTransaction(tx: Transaction): Promise<Transaction>;
-  signAllTransactions(txs: Transaction[]): Promise<Transaction[]>;
+  signTransaction(tx: Transaction): Promise<Transaction> | undefined;
+  signAllTransactions(txs: Transaction[]): Promise<Transaction[]> | undefined;
   publicKey: PublicKey;
 }
 
