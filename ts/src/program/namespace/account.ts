@@ -10,6 +10,7 @@ import {
   Commitment,
   GetProgramAccountsFilter,
   AccountInfo,
+  Connection,
 } from "@solana/web3.js";
 import Provider, { getProvider } from "../../provider.js";
 import { Idl, IdlTypeDef } from "../../idl.js";
@@ -34,13 +35,14 @@ export default class AccountFactory {
 
     idl.accounts?.forEach((idlAccount) => {
       const name = camelCase(idlAccount.name);
-      accountFns[name] = new AccountClient<IDL>(
+      accountFns[name] = new AccountClient<IDL>({
         idl,
         idlAccount,
         programId,
-        provider,
-        coder
-      );
+        connection: provider?.connection || getProvider().connection,
+        signer: provider?.wallet.publicKey || getProvider().wallet.publicKey,
+        coder,
+      });
     });
 
     return accountFns as AccountNamespace<IDL>;
@@ -88,6 +90,7 @@ export class AccountClient<
   get size(): number {
     return this._size;
   }
+
   private _size: number;
 
   /**
@@ -96,15 +99,12 @@ export class AccountClient<
   get programId(): PublicKey {
     return this._programId;
   }
+
   private _programId: PublicKey;
 
-  /**
-   * Returns the client's wallet and network provider.
-   */
-  get provider(): Provider {
-    return this._provider;
-  }
-  private _provider: Provider;
+  private _connection: Connection;
+
+  private _signer: PublicKey;
 
   /**
    * Returns the coder.
@@ -112,20 +112,30 @@ export class AccountClient<
   get coder(): Coder {
     return this._coder;
   }
+
   private _coder: Coder;
 
   private _idlAccount: A;
 
-  constructor(
-    idl: IDL,
-    idlAccount: A,
-    programId: PublicKey,
-    provider?: Provider,
-    coder?: Coder
-  ) {
+  constructor({
+    idl,
+    idlAccount,
+    programId,
+    connection,
+    signer,
+    coder,
+  }: {
+    idl: IDL;
+    idlAccount: A;
+    programId: PublicKey;
+    connection: Connection;
+    signer: PublicKey;
+    coder?: Coder;
+  }) {
     this._idlAccount = idlAccount;
     this._programId = programId;
-    this._provider = provider ?? getProvider();
+    this._signer = signer;
+    this._connection = connection;
     this._coder = coder ?? new Coder(idl);
     this._size =
       ACCOUNT_DISCRIMINATOR_SIZE + (accountSize(idl, idlAccount) ?? 0);
@@ -183,7 +193,7 @@ export class AccountClient<
     commitment?: Commitment
   ): Promise<(Object | null)[]> {
     const accounts = await rpcUtil.getMultipleAccounts(
-      this._provider.connection,
+      this._connection,
       addresses.map((address) => translateAddress(address)),
       commitment
     );
@@ -227,25 +237,22 @@ export class AccountClient<
       this._idlAccount.name
     );
 
-    let resp = await this._provider.connection.getProgramAccounts(
-      this._programId,
-      {
-        commitment: this._provider.connection.commitment,
-        filters: [
-          {
-            memcmp: {
-              offset: 0,
-              bytes: bs58.encode(
-                filters instanceof Buffer
-                  ? Buffer.concat([discriminator, filters])
-                  : discriminator
-              ),
-            },
+    let resp = await this._connection.getProgramAccounts(this._programId, {
+      commitment: this._connection.commitment,
+      filters: [
+        {
+          memcmp: {
+            offset: 0,
+            bytes: bs58.encode(
+              filters instanceof Buffer
+                ? Buffer.concat([discriminator, filters])
+                : discriminator
+            ),
           },
-          ...(Array.isArray(filters) ? filters : []),
-        ],
-      }
-    );
+        },
+        ...(Array.isArray(filters) ? filters : []),
+      ],
+    });
     return resp.map(({ pubkey, account }) => {
       return {
         publicKey: pubkey,
@@ -269,7 +276,7 @@ export class AccountClient<
 
     const ee = new EventEmitter();
     address = translateAddress(address);
-    const listener = this._provider.connection.onAccountChange(
+    const listener = this._connection.onAccountChange(
       address,
       (acc) => {
         const account = this._coder.accounts.decode(
@@ -299,7 +306,7 @@ export class AccountClient<
       return;
     }
     if (subscriptions) {
-      await this._provider.connection
+      await this._connection
         .removeAccountChangeListener(sub.listener)
         .then(() => {
           subscriptions.delete(address.toString());
@@ -318,10 +325,10 @@ export class AccountClient<
     const size = this.size;
 
     return SystemProgram.createAccount({
-      fromPubkey: this._provider.wallet.publicKey,
+      fromPubkey: this._signer,
       newAccountPubkey: signer.publicKey,
       space: sizeOverride ?? size,
-      lamports: await this._provider.connection.getMinimumBalanceForRentExemption(
+      lamports: await this._connection.getMinimumBalanceForRentExemption(
         sizeOverride ?? size
       ),
       programId: this._programId,
@@ -355,7 +362,7 @@ export class AccountClient<
     address: Address,
     commitment?: Commitment
   ): Promise<AccountInfo<Buffer> | null> {
-    return await this._provider.connection.getAccountInfo(
+    return await this._connection.getAccountInfo(
       translateAddress(address),
       commitment
     );
