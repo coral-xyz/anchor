@@ -72,7 +72,6 @@ async function getMultipleAccountsCore(
 ): Promise<
   Array<null | { publicKey: PublicKey; account: AccountInfo<Buffer> }>
 > {
-
   const commitment = commitmentOverride ?? connection.commitment;
   const args: (
     | string[]
