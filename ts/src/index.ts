@@ -22,3 +22,9 @@ if (!isBrowser) {
   exports.workspace = require("./workspace.js").default;
   exports.Wallet = require("./nodewallet.js").default;
 }
+
+import type NodeWallet from "./nodewallet.js"
+export declare class Wallet extends NodeWallet {}
+
+import type Workspace from "./workspace.js"
+export declare const workspace: typeof Workspace
