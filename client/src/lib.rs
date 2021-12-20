@@ -367,6 +367,7 @@ impl<'a> RequestBuilder<'a> {
         }
     }
 
+    #[must_use]
     pub fn payer(mut self, payer: Rc<dyn Signer>) -> Self {
         self.payer = payer;
         self
