@@ -7,11 +7,14 @@ use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::solana_program::system_program;
 use anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas};
 use regex::Regex;
+use solana_account_decoder::UiAccountEncoding;
 use solana_client::client_error::ClientError as SolanaClientError;
 use solana_client::pubsub_client::{PubsubClient, PubsubClientError, PubsubClientSubscription};
 use solana_client::rpc_client::RpcClient;
-use solana_client::rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilter};
+use solana_client::rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilter, RpcProgramAccountsConfig, RpcAccountInfoConfig};
+use solana_client::rpc_filter::RpcFilterType;
 use solana_client::rpc_response::{Response as RpcResponse, RpcLogsResponse};
+use solana_sdk::account::Account;
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::signature::{Signature, Signer};
 use solana_sdk::transaction::Transaction;
@@ -28,6 +31,8 @@ mod cluster;
 
 /// EventHandle unsubscribes from a program event stream on drop.
 pub type EventHandle = PubsubClientSubscription<RpcResponse<RpcLogsResponse>>;
+
+const ANCHOR_HDR_LEN: usize = 8;
 
 /// Client defines the base configuration for building RPC clients to
 /// communitcate with Anchor programs running on a Solana cluster. It's
@@ -127,6 +132,27 @@ impl Program {
             .ok_or(ClientError::AccountNotFound)?;
         let mut data: &[u8] = &account.data;
         T::try_deserialize(&mut data).map_err(Into::into)
+    }
+
+    pub fn accounts<T: AccountDeserialize>(&self) -> Result<Vec<T>, ClientError> {
+        Ok(self.rpc().get_program_accounts_with_config(
+            &self.id(),
+            RpcProgramAccountsConfig {
+                filters: Some(vec![RpcFilterType::DataSize(
+                    (std::mem::size_of::<T>() + ANCHOR_HDR_LEN) as u64,
+                )]),
+                account_config: RpcAccountInfoConfig {
+                    encoding: Some(UiAccountEncoding::Base64Zstd),
+                    ..Default::default()
+                },
+                with_context: None,
+            },
+        )?.into_iter()
+            .map(|(_key, account)| {
+                let mut data: &[u8] = &account.data;
+                T::try_deserialize(&mut data)
+            })
+            .collect::<Result<Vec<T>, ProgramError>>()?)
     }
 
     pub fn state<T: AccountDeserialize>(&self) -> Result<T, ClientError> {
