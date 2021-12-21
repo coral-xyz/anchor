@@ -32,8 +32,6 @@ mod cluster;
 /// EventHandle unsubscribes from a program event stream on drop.
 pub type EventHandle = PubsubClientSubscription<RpcResponse<RpcLogsResponse>>;
 
-const ANCHOR_HDR_LEN: usize = 8;
-
 /// Client defines the base configuration for building RPC clients to
 /// communitcate with Anchor programs running on a Solana cluster. It's
 /// primary use is to build a `Program` client via the `program` method.
