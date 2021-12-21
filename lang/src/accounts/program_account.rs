@@ -1,6 +1,6 @@
-use crate::error::ErrorCode;
 #[allow(deprecated)]
-use crate::CpiAccount;
+use crate::accounts::cpi_account::CpiAccount;
+use crate::error::ErrorCode;
 use crate::{
     AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, Key,
     ToAccountInfo, ToAccountInfos, ToAccountMetas,
@@ -41,7 +41,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
         info: &AccountInfo<'a>,
     ) -> Result<ProgramAccount<'a, T>, ProgramError> {
         if info.owner != program_id {
-            return Err(ErrorCode::AccountNotProgramOwned.into());
+            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramAccount::new(
@@ -59,7 +59,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
         info: &AccountInfo<'a>,
     ) -> Result<ProgramAccount<'a, T>, ProgramError> {
         if info.owner != program_id {
-            return Err(ErrorCode::AccountNotProgramOwned.into());
+            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramAccount::new(
