@@ -96,8 +96,8 @@ a `target/idl/basic_0.json` file is created. Inspecting its contents you should 
 
 ```json
 {
-  "version": "0.0.0",
-  "name": "basic",
+  "version": "0.1.0",
+  "name": "basic_0",
   "instructions": [
     {
       "name": "initialize",

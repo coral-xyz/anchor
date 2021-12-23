@@ -1,10 +1,10 @@
 use crate::error::ErrorCode;
+#[allow(deprecated)]
+use crate::{accounts::state::ProgramState, CpiStateContext};
 use crate::{
     AccountDeserialize, AccountSerialize, Accounts, AccountsExit, Key, ToAccountInfo,
     ToAccountInfos, ToAccountMetas,
 };
-#[allow(deprecated)]
-use crate::{CpiStateContext, ProgramState};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;

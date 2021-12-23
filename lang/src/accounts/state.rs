@@ -1,6 +1,6 @@
-use crate::error::ErrorCode;
 #[allow(deprecated)]
-use crate::CpiAccount;
+use crate::accounts::cpi_account::CpiAccount;
+use crate::error::ErrorCode;
 use crate::{
     AccountDeserialize, AccountSerialize, Accounts, AccountsExit, Key, ToAccountInfo,
     ToAccountInfos, ToAccountMetas,
@@ -43,7 +43,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramState<'a, T> {
         info: &AccountInfo<'a>,
     ) -> Result<ProgramState<'a, T>, ProgramError> {
         if info.owner != program_id {
-            return Err(ErrorCode::AccountNotProgramOwned.into());
+            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
         }
         if info.key != &Self::address(program_id) {
             solana_program::msg!("Invalid state address");
