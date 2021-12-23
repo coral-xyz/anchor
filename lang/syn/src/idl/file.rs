@@ -413,28 +413,26 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
                         })
                     })
                     .collect::<Result<Vec<IdlField>>>(),
-                syn::Fields::Unnamed(fields) => {
-                    let mut i = -1;
-                    fields
-                        .unnamed
-                        .iter()
-                        .map(|f: &syn::Field| {
-                            let mut tts = proc_macro2::TokenStream::new();
-                            f.ty.to_tokens(&mut tts);
-                            // Handle array sizes that are constants
-                            let mut tts_string = tts.to_string();
-                            if tts_string.starts_with('[') {
-                                tts_string = resolve_variable_array_length(ctx, tts_string);
-                            }
-                            i += 1;
+                syn::Fields::Unnamed(fields) => fields
+                    .unnamed
+                    .iter()
+                    .enumerate()
+                    .map(|(i, f)| {
+                        let mut tts = proc_macro2::TokenStream::new();
+                        f.ty.to_tokens(&mut tts);
+                        // Handle array sizes that are constants
+                        let mut tts_string = tts.to_string();
+                        if tts_string.starts_with('[') {
+                            tts_string = resolve_variable_array_length(ctx, tts_string);
+                        }
 
-                            Ok(IdlField {
-                                name: format!("f{}", i), // name fields as f0, f1, f2, ...
-                                ty: tts_string.parse()?,
-                            })
+                        Ok(IdlField {
+                            name: format!("f{}", i), // name fields as f0, f1, f2, ...
+                            ty: tts_string.parse()?,
                         })
-                        .collect::<Result<Vec<IdlField>>>()
-                }
+                    })
+                    .collect::<Result<Vec<IdlField>>>(),
+
                 _ => panic!("Empty structs are allowed."),
             };
 
