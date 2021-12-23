@@ -1,5 +1,5 @@
 const assert = require("assert");
-const anchor = require('@project-serum/anchor');
+const anchor = require("@project-serum/anchor");
 const { Account, Transaction, TransactionInstruction } = anchor.web3;
 
 describe("errors", () => {
@@ -17,7 +17,7 @@ describe("errors", () => {
         "This is an error message clients will automatically display";
       assert.equal(err.toString(), errMsg);
       assert.equal(err.msg, errMsg);
-      assert.equal(err.code, 300);
+      assert.equal(err.code, 6000);
     }
   });
 
@@ -29,7 +29,7 @@ describe("errors", () => {
       const errMsg = "HelloNoMsg";
       assert.equal(err.toString(), errMsg);
       assert.equal(err.msg, errMsg);
-      assert.equal(err.code, 300 + 123);
+      assert.equal(err.code, 6000 + 123);
     }
   });
 
@@ -41,7 +41,7 @@ describe("errors", () => {
       const errMsg = "HelloNext";
       assert.equal(err.toString(), errMsg);
       assert.equal(err.msg, errMsg);
-      assert.equal(err.code, 300 + 124);
+      assert.equal(err.code, 6000 + 124);
     }
   });
 
@@ -57,7 +57,7 @@ describe("errors", () => {
       const errMsg = "A mut constraint was violated";
       assert.equal(err.toString(), errMsg);
       assert.equal(err.msg, errMsg);
-      assert.equal(err.code, 140);
+      assert.equal(err.code, 2000);
     }
   });
 
@@ -80,7 +80,7 @@ describe("errors", () => {
       const errMsg = "A has_one constraint was violated";
       assert.equal(err.toString(), errMsg);
       assert.equal(err.msg, errMsg);
-      assert.equal(err.code, 141);
+      assert.equal(err.code, 2001);
     }
   });
 
@@ -108,7 +108,7 @@ describe("errors", () => {
       assert.ok(false);
     } catch (err) {
       const errMsg =
-        "Error: failed to send transaction: Transaction simulation failed: Error processing Instruction 0: custom program error: 0x8e";
+        "Error: failed to send transaction: Transaction simulation failed: Error processing Instruction 0: custom program error: 0x7d2";
       assert.equal(err.toString(), errMsg);
     }
   });
@@ -125,7 +125,7 @@ describe("errors", () => {
       const errMsg = "HelloCustom";
       assert.equal(err.toString(), errMsg);
       assert.equal(err.msg, errMsg);
-      assert.equal(err.code, 300 + 125);
+      assert.equal(err.code, 6000 + 125);
     }
   });
 
@@ -133,12 +133,15 @@ describe("errors", () => {
     try {
       const tx = await program.rpc.accountNotInitializedError({
         accounts: {
-          notInitializedAccount: (new anchor.web3.Keypair()).publicKey
+          notInitializedAccount: new anchor.web3.Keypair().publicKey,
         },
       });
-      assert.fail("Unexpected success in creating a transaction that should have fail with `AccountNotInitialized` error");
+      assert.fail(
+        "Unexpected success in creating a transaction that should have fail with `AccountNotInitialized` error"
+      );
     } catch (err) {
-      const errMsg = "The program expected this account to be already initialized";
+      const errMsg =
+        "The program expected this account to be already initialized";
       assert.equal(err.toString(), errMsg);
     }
   });

@@ -69,7 +69,7 @@ pub fn account(
     for arg in args {
         let ns = arg
             .to_string()
-            .replace("\"", "")
+            .replace('\"', "")
             .chars()
             .filter(|c| !c.is_whitespace())
             .collect();
@@ -289,7 +289,7 @@ pub fn zero_copy(
 
     proc_macro::TokenStream::from(quote! {
         #[derive(anchor_lang::__private::ZeroCopyAccessor, Copy, Clone)]
-        #[repr(packed)]
+        #[repr(C)]
         #account_strct
     })
 }
