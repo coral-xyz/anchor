@@ -853,7 +853,7 @@ describe("misc", () => {
     );
     assert.deepStrictEqual(dataAccount.data, [99, ...new Array(9).fill(0)]);
   });
-  
+
   it("Should include BASE const in IDL", async () => {
     assert(
       miscIdl.constants.find(
