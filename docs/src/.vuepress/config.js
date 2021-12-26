@@ -17,6 +17,7 @@ module.exports = {
    * ref：https://v1.vuepress.vuejs.org/config/#head
    */
   head: [
+    ["link", { rel: "icon", href: "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚓ </text></svg>"}],
     ["meta", { name: "theme-color", content: "#3eaf7c" }],
     ["meta", { name: "apple-mobile-web-app-capable", content: "yes" }],
     [
@@ -64,7 +65,6 @@ module.exports = {
           "/tutorials/tutorial-2",
           "/tutorials/tutorial-3",
           "/tutorials/tutorial-4",
-          "/tutorials/tutorial-5",
         ],
       },
       {
@@ -98,5 +98,6 @@ module.exports = {
     "dehydrate",
     "@vuepress/plugin-back-to-top",
     "@vuepress/plugin-medium-zoom",
+    "@xiaopanda/vuepress-plugin-code-copy",
   ],
 };

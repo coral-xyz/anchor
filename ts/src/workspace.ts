@@ -1,9 +1,9 @@
 import camelCase from "camelcase";
 import * as toml from "toml";
 import { PublicKey } from "@solana/web3.js";
-import { Program } from "./program";
-import { Idl } from "./idl";
-import { isBrowser } from "./utils/common";
+import { Program } from "./program/index.js";
+import { Idl } from "./idl.js";
+import { isBrowser } from "./utils/common.js";
 
 let _populatedWorkspace = false;
 
@@ -17,8 +17,7 @@ let _populatedWorkspace = false;
 const workspace = new Proxy({} as any, {
   get(workspaceCache: { [key: string]: Program }, programName: string) {
     if (isBrowser) {
-      console.log("Workspaces aren't available in the browser");
-      return undefined;
+      throw new Error("Workspaces aren't available in the browser");
     }
 
     const fs = require("fs");
@@ -96,6 +95,9 @@ function attachWorkspaceOverride(
     let idl = idlMap.get(programName);
     if (typeof entry !== "string" && entry.idl) {
       idl = JSON.parse(require("fs").readFileSync(entry.idl, "utf-8"));
+    }
+    if (!idl) {
+      throw new Error(`Error loading workspace IDL for ${programName}`);
     }
     workspaceCache[wsProgramName] = new Program(idl, overrideAddress);
   });

@@ -18,23 +18,33 @@ rustup component add rustfmt
 See the solana [docs](https://docs.solana.com/cli/install-solana-cli-tools) for installation instructions. On macOS and Linux,
 
 ```bash
-sh -c "$(curl -sSfL https://release.solana.com/v1.7.8/install)"
+sh -c "$(curl -sSfL https://release.solana.com/v1.9.1/install)"
 ```
 
-## Install Mocha
+## Install Yarn
 
-Program integration tests are run using [Mocha](https://mochajs.org/).
+[Yarn](https://yarnpkg.com/) is recommended for JavaScript package management.
 
 ```bash
-npm install -g mocha
+npm install -g yarn
 ```
 
 ## Install Anchor
 
+### Install using pre-build binary on x86_64 Linux
+
+Anchor binaries are available via an NPM package [`@project-serum/anchor-cli`](https://www.npmjs.com/package/@project-serum/anchor-cli). Only x86_64 Linux is supported currently, you must build from source for other OS'.
+
+```bash
+npm i -g @project-serum/anchor-cli
+```
+
+### Build from source for other operating systems
+
 For now, we can use Cargo to install the CLI.
 
 ```bash
-cargo install --git https://github.com/project-serum/anchor --tag v0.13.2 anchor-cli --locked
+cargo install --git https://github.com/project-serum/anchor --tag v0.19.0 anchor-cli --locked
 ```
 
 On Linux systems you may need to install additional dependencies if `cargo install` fails. On Ubuntu,
@@ -42,15 +52,6 @@ On Linux systems you may need to install additional dependencies if `cargo insta
 ```bash
 sudo apt-get update && sudo apt-get upgrade && sudo apt-get install -y pkg-config build-essential libudev-dev
 ```
-
-To install the JavaScript package.
-
-```bash
-npm install -g @project-serum/anchor
-```
-
-Make sure your `NODE_PATH` is set properly so that globally installed modules
-can be resolved.
 
 Now verify the CLI is installed properly.
 

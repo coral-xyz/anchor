@@ -52,7 +52,6 @@ pub mod __client_accounts_vec {
 }
 #[cfg(test)]
 mod tests {
-    use crate::ToAccountInfo;
     use solana_program::clock::Epoch;
     use solana_program::pubkey::Pubkey;
 

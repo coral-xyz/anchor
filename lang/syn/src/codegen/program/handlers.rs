@@ -72,6 +72,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 accounts: &mut anchor_lang::idl::IdlCreateAccounts,
                 data_len: u64,
             ) -> ProgramResult {
+                #[cfg(not(feature = "no-log-ix-name"))]
+                anchor_lang::prelude::msg!("Instruction: IdlCreateAccount");
+
                 if program_id != accounts.program.key {
                     return Err(anchor_lang::__private::ErrorCode::IdlInstructionInvalidProgram.into());
                 }
@@ -132,6 +135,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 program_id: &Pubkey,
                 accounts: &mut anchor_lang::idl::IdlCreateBuffer,
             ) -> ProgramResult {
+                #[cfg(not(feature = "no-log-ix-name"))]
+                anchor_lang::prelude::msg!("Instruction: IdlCreateBuffer");
+
                 let mut buffer = &mut accounts.buffer;
                 buffer.authority = *accounts.authority.key;
                 Ok(())
@@ -143,6 +149,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 accounts: &mut anchor_lang::idl::IdlAccounts,
                 idl_data: Vec<u8>,
             ) -> ProgramResult {
+                #[cfg(not(feature = "no-log-ix-name"))]
+                anchor_lang::prelude::msg!("Instruction: IdlWrite");
+
                 let mut idl = &mut accounts.idl;
                 idl.data.extend(idl_data);
                 Ok(())
@@ -154,6 +163,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 accounts: &mut anchor_lang::idl::IdlAccounts,
                 new_authority: Pubkey,
             ) -> ProgramResult {
+                #[cfg(not(feature = "no-log-ix-name"))]
+                anchor_lang::prelude::msg!("Instruction: IdlSetAuthority");
+
                 accounts.idl.authority = new_authority;
                 Ok(())
             }
@@ -163,6 +175,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 program_id: &Pubkey,
                 accounts: &mut anchor_lang::idl::IdlSetBuffer,
             ) -> ProgramResult {
+                #[cfg(not(feature = "no-log-ix-name"))]
+                anchor_lang::prelude::msg!("Instruction: IdlSetBuffer");
+
                 accounts.idl.data = accounts.buffer.data.clone();
                 Ok(())
             }
@@ -180,12 +195,16 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let variant_arm = generate_ctor_variant(state);
                 let ix_name: proc_macro2::TokenStream =
                     generate_ctor_variant_name().parse().unwrap();
+                let ix_name_log = format!("Instruction: {}", ix_name);
                 if state.is_zero_copy {
                     quote! {
                         // One time state account initializer. Will faill on subsequent
                         // invocations.
                         #[inline(never)]
                         pub fn __ctor(program_id: &Pubkey, accounts: &[AccountInfo], ix_data: &[u8]) -> ProgramResult {
+                            #[cfg(not(feature = "no-log-ix-name"))]
+                            anchor_lang::prelude::msg!(#ix_name_log);
+
                             // Deserialize instruction data.
                             let ix = instruction::state::#ix_name::deserialize(&mut &ix_data[..])
                                 .map_err(|_| anchor_lang::__private::ErrorCode::InstructionDidNotDeserialize)?;
@@ -227,7 +246,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             )?;
 
                             // Zero copy deserialize.
-                            let loader: anchor_lang::Loader<#mod_name::#name> = anchor_lang::Loader::try_from_init(&ctor_accounts.to)?;
+                            let loader: anchor_lang::Loader<#mod_name::#name> = anchor_lang::Loader::try_from_unchecked(program_id, &ctor_accounts.to)?;
 
                             // Invoke the ctor in a new lexical scope so that
                             // the zero-copy RefMut gets dropped. Required
@@ -257,6 +276,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         // invocations.
                         #[inline(never)]
                         pub fn __ctor(program_id: &Pubkey, accounts: &[AccountInfo], ix_data: &[u8]) -> ProgramResult {
+                            #[cfg(not(feature = "no-log-ix-name"))]
+                            anchor_lang::prelude::msg!(#ix_name_log);
+
                             // Deserialize instruction data.
                             let ix = instruction::state::#ix_name::deserialize(&mut &ix_data[..])
                                 .map_err(|_| anchor_lang::__private::ErrorCode::InstructionDidNotDeserialize)?;
@@ -347,6 +369,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         let variant_arm =
                             generate_ix_variant(ix.raw_method.sig.ident.to_string(), &ix.args);
                         let ix_name = generate_ix_variant_name(ix.raw_method.sig.ident.to_string());
+                        let ix_name_log = format!("Instruction: {}", ix_name);
 
                         if state.is_zero_copy {
                             quote! {
@@ -356,6 +379,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     accounts: &[AccountInfo],
                                     ix_data: &[u8],
                                 ) -> ProgramResult {
+                                    #[cfg(not(feature = "no-log-ix-name"))]
+                                    anchor_lang::prelude::msg!(#ix_name_log);
+
                                     // Deserialize instruction.
                                     let ix = instruction::state::#ix_name::deserialize(&mut &ix_data[..])
                                         .map_err(|_| anchor_lang::__private::ErrorCode::InstructionDidNotDeserialize)?;
@@ -366,9 +392,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     if remaining_accounts.is_empty() {
                                         return Err(anchor_lang::__private::ErrorCode::AccountNotEnoughKeys.into());
                                     }
-                                    let state_account = &remaining_accounts[0];
-                                    let loader: anchor_lang::Loader<#mod_name::#name> = anchor_lang::Loader::try_from(&state_account)?;
-                                    remaining_accounts = &remaining_accounts[1..];
+                                    let loader: anchor_lang::Loader<#mod_name::#name> = anchor_lang::Loader::try_accounts(program_id, &mut remaining_accounts, &[])?;
 
                                     // Deserialize accounts.
                                     let mut accounts = #anchor_ident::try_accounts(
@@ -401,6 +425,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     accounts: &[AccountInfo],
                                     ix_data: &[u8],
                                 ) -> ProgramResult {
+                                    #[cfg(not(feature = "no-log-ix-name"))]
+                                    anchor_lang::prelude::msg!(#ix_name_log);
+
                                     // Deserialize instruction.
                                     let ix = instruction::state::#ix_name::deserialize(&mut &ix_data[..])
                                         .map_err(|_| anchor_lang::__private::ErrorCode::InstructionDidNotDeserialize)?;
@@ -411,13 +438,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     if remaining_accounts.is_empty() {
                                         return Err(anchor_lang::__private::ErrorCode::AccountNotEnoughKeys.into());
                                     }
-                                    let state_account = &remaining_accounts[0];
-                                    let mut state: #state_ty = {
-                                        let data = state_account.try_borrow_data()?;
-                                        let mut sliced: &[u8] = &data;
-                                        anchor_lang::AccountDeserialize::try_deserialize(&mut sliced)?
-                                    };
-                                    remaining_accounts = &remaining_accounts[1..];
+                                    let mut state: anchor_lang::ProgramState<#state_ty> = anchor_lang::ProgramState::try_accounts(program_id, &mut remaining_accounts, &[])?;
 
                                     // Deserialize accounts.
                                     let mut accounts = #anchor_ident::try_accounts(
@@ -435,7 +456,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
                                     // Serialize the state and save it to storage.
                                     accounts.exit(program_id)?;
-                                    let mut data = state_account.try_borrow_mut_data()?;
+                                    let acc_info = state.to_account_info();
+                                    let mut data = acc_info.try_borrow_mut_data()?;
                                     let dst: &mut [u8] = &mut data;
                                     let mut cursor = std::io::Cursor::new(dst);
                                     state.try_serialize(&mut cursor)?;
@@ -464,11 +486,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             .methods
                             .iter()
                             .map(|ix| {
-                                if state.is_zero_copy {
-                                    // Easy to implement. Just need to write a test.
-                                    // Feel free to open a PR.
-                                    panic!("Trait implementations not yet implemented for zero copy state structs. Please file an issue.");
-                                }
+                                // Easy to implement. Just need to write a test.
+                                // Feel free to open a PR.
+                                assert!(!state.is_zero_copy, "Trait implementations not yet implemented for zero copy state structs. Please file an issue.");                                
 
                                 let ix_arg_names: Vec<&syn::Ident> =
                                     ix.args.iter().map(|arg| &arg.name).collect();
@@ -479,6 +499,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                 let ix_method_name = &ix.raw_method.sig.ident;
                                 let state_ty: proc_macro2::TokenStream = state.name.parse().unwrap();
                                 let anchor_ident = &ix.anchor_ident;
+                                let ix_name = generate_ix_variant_name(ix.raw_method.sig.ident.to_string());
+                                let ix_name_log = format!("Instruction: {}", ix_name);
 
                                 let raw_args: Vec<&syn::PatType> = ix
                                     .args
@@ -518,6 +540,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             accounts: &[AccountInfo],
                                             ix_data: &[u8],
                                         ) -> ProgramResult {
+                                            #[cfg(not(feature = "no-log-ix-name"))]
+                                            anchor_lang::prelude::msg!(#ix_name_log);
+
                                             // Deserialize instruction.
                                             #deserialize_instruction
 
@@ -526,13 +551,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             if remaining_accounts.is_empty() {
                                                 return Err(anchor_lang::__private::ErrorCode::AccountNotEnoughKeys.into());
                                             }
-                                            let state_account = &remaining_accounts[0];
-                                            let mut state: #state_ty = {
-                                                let data = state_account.try_borrow_data()?;
-                                                let mut sliced: &[u8] = &data;
-                                                anchor_lang::AccountDeserialize::try_deserialize(&mut sliced)?
-                                            };
-                                            remaining_accounts = &remaining_accounts[1..];
+                                            let mut state: anchor_lang::ProgramState<#state_ty> = anchor_lang::ProgramState::try_accounts(program_id, &mut remaining_accounts, &[])?;
 
                                             // Deserialize accounts.
                                             let mut accounts = #anchor_ident::try_accounts(
@@ -550,7 +569,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
                                             // Exit procedures.
                                             accounts.exit(program_id)?;
-                                            let mut data = state_account.try_borrow_mut_data()?;
+                                            let acc_info = state.to_account_info();
+                                            let mut data = acc_info.try_borrow_mut_data()?;
                                             let dst: &mut [u8] = &mut data;
                                             let mut cursor = std::io::Cursor::new(dst);
                                             state.try_serialize(&mut cursor)?;
@@ -567,6 +587,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             accounts: &[AccountInfo],
                                             ix_data: &[u8],
                                         ) -> ProgramResult {
+                                            #[cfg(not(feature = "no-log-ix-name"))]
+                                            anchor_lang::prelude::msg!(#ix_name_log);
+
                                             // Deserialize instruction.
                                             #deserialize_instruction
 
@@ -605,7 +628,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             let ix_method_name = &ix.raw_method.sig.ident;
             let anchor = &ix.anchor_ident;
             let variant_arm = generate_ix_variant(ix.raw_method.sig.ident.to_string(), &ix.args);
-
+            let ix_name_log = format!("Instruction: {}", ix_name);
             quote! {
                 #[inline(never)]
                 pub fn #ix_method_name(
@@ -613,6 +636,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     accounts: &[AccountInfo],
                     ix_data: &[u8],
                 ) -> ProgramResult {
+                    #[cfg(not(feature = "no-log-ix-name"))]
+                    anchor_lang::prelude::msg!(#ix_name_log);
+
                     // Deserialize data.
                     let ix = instruction::#ix_name::deserialize(&mut &ix_data[..])
                         .map_err(|_| anchor_lang::__private::ErrorCode::InstructionDidNotDeserialize)?;

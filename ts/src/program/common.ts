@@ -1,7 +1,7 @@
 import EventEmitter from "eventemitter3";
 import { PublicKey } from "@solana/web3.js";
-import { Idl, IdlInstruction, IdlAccountItem, IdlStateMethod } from "../idl";
-import { Accounts } from "./context";
+import { Idl, IdlInstruction, IdlAccountItem, IdlStateMethod } from "../idl.js";
+import { Accounts } from "./context.js";
 
 export type Subscription = {
   listener: number;
@@ -40,13 +40,11 @@ export function toInstruction(
 // Throws error if any account required for the `ix` is not given.
 export function validateAccounts(
   ixAccounts: IdlAccountItem[],
-  accounts: Accounts
+  accounts: Accounts = {}
 ) {
   ixAccounts.forEach((acc) => {
-    // @ts-ignore
-    if (acc.accounts !== undefined) {
-      // @ts-ignore
-      validateAccounts(acc.accounts, accounts[acc.name]);
+    if ("accounts" in acc) {
+      validateAccounts(acc.accounts, accounts[acc.name] as Accounts);
     } else {
       if (accounts[acc.name] === undefined) {
         throw new Error(`Invalid arguments: ${acc.name} not provided.`);
@@ -57,12 +55,7 @@ export function validateAccounts(
 
 // Translates an address to a Pubkey.
 export function translateAddress(address: Address): PublicKey {
-  if (typeof address === "string") {
-    const pk = new PublicKey(address);
-    return pk;
-  } else {
-    return address;
-  }
+  return address instanceof PublicKey ? address : new PublicKey(address);
 }
 
 /**

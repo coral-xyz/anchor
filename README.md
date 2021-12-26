@@ -1,18 +1,28 @@
-# Anchor ⚓
+<div align="center">
+  <img height="170x" src="https://media.discordapp.net/attachments/813444514949103658/890278520553603092/export.png?width=746&height=746" />
 
-[![Build Status](https://travis-ci.com/project-serum/anchor.svg?branch=master)](https://travis-ci.com/project-serum/anchor)
-[![Docs](https://img.shields.io/badge/docs-tutorials-orange)](https://project-serum.github.io/anchor/)
-[![Chat](https://img.shields.io/discord/739225212658122886?color=blueviolet)](https://discord.com/channels/739225212658122886)
-[![License](https://img.shields.io/github/license/project-serum/anchor?color=ff69b4)](https://opensource.org/licenses/Apache-2.0)
+  <h1>Anchor</h1>
 
-Anchor is a framework for Solana's [Sealevel](https://medium.com/solana-labs/sealevel-parallel-processing-thousands-of-smart-contracts-d814b378192) runtime providing several convenient developer tools.
+  <p>
+    <strong>Solana Sealevel Framework</strong>
+  </p>
+
+  <p>
+    <a href="https://github.com/project-serum/anchor/actions"><img alt="Build Status" src="https://github.com/project-serum/anchor/actions/workflows/tests.yaml/badge.svg" /></a>
+    <a href="https://project-serum.github.io/anchor/"><img alt="Tutorials" src="https://img.shields.io/badge/docs-tutorials-blueviolet" /></a>
+    <a href="https://discord.com/channels/889577356681945098"><img alt="Discord Chat" src="https://img.shields.io/discord/889577356681945098?color=blueviolet" /></a>
+    <a href="https://opensource.org/licenses/Apache-2.0"><img alt="License" src="https://img.shields.io/github/license/project-serum/anchor?color=blueviolet" /></a>
+  </p>
+</div>
+
+Anchor is a framework for Solana's [Sealevel](https://medium.com/solana-labs/sealevel-parallel-processing-thousands-of-smart-contracts-d814b378192) runtime providing several convenient developer tools for writing smart contracts.
 
 - Rust eDSL for writing Solana programs
 - [IDL](https://en.wikipedia.org/wiki/Interface_description_language) specification
 - TypeScript package for generating clients from IDL
 - CLI and workspace management for developing complete applications
 
-If you're familiar with developing in Ethereum's [Solidity](https://docs.soliditylang.org/en/v0.7.4/), [Truffle](https://www.trufflesuite.com/), [web3.js](https://github.com/ethereum/web3.js) or Parity's [Ink!](https://github.com/paritytech/ink), then the experience will be familiar. Although the DSL syntax and semantics are targeted at Solana, the high level flow of writing RPC request handlers, emitting an IDL, and generating clients from IDL is the same.
+If you're familiar with developing in Ethereum's [Solidity](https://docs.soliditylang.org/en/v0.7.4/), [Truffle](https://www.trufflesuite.com/), [web3.js](https://github.com/ethereum/web3.js), then the experience will be familiar. Although the DSL syntax and semantics are targeted at Solana, the high level flow of writing RPC request handlers, emitting an IDL, and generating clients from IDL is the same.
 
 ## Getting Started
 
@@ -27,6 +37,7 @@ To jump straight to examples, go [here](https://github.com/project-serum/anchor/
 | `anchor-spl` | CPI clients for SPL programs on Solana | ![crates](https://img.shields.io/crates/v/anchor-spl?color=blue) | [![Docs.rs](https://docs.rs/anchor-spl/badge.svg)](https://docs.rs/anchor-spl) |
 | `anchor-client` | Rust client for Anchor programs | ![crates](https://img.shields.io/crates/v/anchor-client?color=blue) | [![Docs.rs](https://docs.rs/anchor-client/badge.svg)](https://docs.rs/anchor-client) |
 | `@project-serum/anchor` | TypeScript client for Anchor programs | [![npm](https://img.shields.io/npm/v/@project-serum/anchor.svg?color=blue)](https://www.npmjs.com/package/@project-serum/anchor) | [![Docs](https://img.shields.io/badge/docs-typedoc-blue)](https://project-serum.github.io/anchor/ts/index.html) |
+| `@project-serum/anchor-cli` | CLI to support building and managing an Anchor workspace | [![npm](https://img.shields.io/npm/v/@project-serum/anchor-cli.svg?color=blue)](https://www.npmjs.com/package/@project-serum/anchor-cli) | [![Docs](https://img.shields.io/badge/docs-typedoc-blue)](https://project-serum.github.io/anchor/cli/commands.html) |
 
 ## Note
 
@@ -41,41 +52,39 @@ can increment the count.
 ```rust
 use anchor_lang::prelude::*;
 
+declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+
 #[program]
 mod counter {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>, authority: Pubkey) -> Result<()> {
+    pub fn initialize(ctx: Context<Initialize>, start: u64) -> ProgramResult {
         let counter = &mut ctx.accounts.counter;
-
-        counter.authority = authority;
-        counter.count = 0;
-
+        counter.authority = *ctx.accounts.authority.key;
+        counter.count = start;
         Ok(())
     }
 
-    pub fn increment(ctx: Context<Increment>) -> Result<()> {
+    pub fn increment(ctx: Context<Increment>) -> ProgramResult {
         let counter = &mut ctx.accounts.counter;
-
         counter.count += 1;
-
         Ok(())
     }
 }
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-    #[account(init)]
-    pub counter: ProgramAccount<'info, Counter>,
-    pub rent: Sysvar<'info, Rent>,
+    #[account(init, payer = authority, space = 48)]
+    pub counter: Account<'info, Counter>,
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct Increment<'info> {
     #[account(mut, has_one = authority)]
-    pub counter: ProgramAccount<'info, Counter>,
-    #[account(signer)]
-    pub authority: AccountInfo<'info>,
+    pub counter: Account<'info, Counter>,
+    pub authority: Signer<'info>,
 }
 
 #[account]
@@ -83,16 +92,10 @@ pub struct Counter {
     pub authority: Pubkey,
     pub count: u64,
 }
-
-#[error]
-pub enum ErrorCode {
-    #[msg("You are not authorized to perform this action.")]
-    Unauthorized,
-}
 ```
 
 For more, see the [examples](https://github.com/project-serum/anchor/tree/master/examples)
-directory.
+and [tests](https://github.com/project-serum/anchor/tree/master/tests) directories.
 
 ## Contribution
 
@@ -108,15 +111,7 @@ or issues where [help is wanted](https://github.com/project-serum/anchor/issues?
 For simple documentation changes, feel free to just open a pull request.
 
 If you're considering larger changes or self motivated features, please file an issue
-and engage with the maintainers in [Discord](https://discord.com/channels/739225212658122886).
-
-When contributing, please make sure your code adheres to some basic coding guidlines:
-
-* Code must be formatted with the configured formatters (e.g. rustfmt and prettier).
-* Comment lines should be no longer than 80 characters and written with proper grammar and punctuation.
-* Commit messages should be prefixed with the package(s) they modify. Changes affecting multiple
-  packages should list all packages. In rare cases, changes may omit the package name prefix.
-* All notable changes should be documented in the [Change Log](https://github.com/project-serum/anchor/blob/master/CHANGELOG.md).
+and engage with the maintainers in [Discord](https://discord.gg/sxy4zxBckh).
 
 ## License
 

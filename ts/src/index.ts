@@ -1,74 +1,24 @@
-import BN from "bn.js";
-import * as web3 from "@solana/web3.js";
-import Provider, {
-  getProvider,
-  setProvider,
-  NodeWallet as Wallet,
-} from "./provider";
-import Coder, {
-  InstructionCoder,
-  EventCoder,
-  StateCoder,
-  TypesCoder,
-  AccountsCoder,
-} from "./coder";
-import { Instruction } from "./coder/instruction";
-import { Idl } from "./idl";
-import workspace from "./workspace";
-import * as utils from "./utils";
-import { Program } from "./program";
-import { Address } from "./program/common";
-import { Event } from "./program/event";
-import {
-  ProgramAccount,
-  AccountNamespace,
-  AccountClient,
-  StateClient,
-  RpcNamespace,
-  RpcFn,
-  SimulateNamespace,
-  SimulateFn,
-  TransactionNamespace,
-  TransactionFn,
-  InstructionNamespace,
-  InstructionFn,
-} from "./program/namespace";
-import { Context, Accounts } from "./program/context";
-import { EventParser } from "./program/event";
+import { isBrowser } from "./utils/common.js";
 
+export { default as BN } from "bn.js";
+export * as web3 from "@solana/web3.js";
+export { default as Provider, getProvider, setProvider } from "./provider.js";
 export {
-  workspace,
-  Program,
-  AccountNamespace,
-  AccountClient,
-  StateClient,
-  RpcNamespace,
-  RpcFn,
-  SimulateNamespace,
-  SimulateFn,
-  TransactionNamespace,
-  TransactionFn,
-  InstructionNamespace,
-  InstructionFn,
-  ProgramAccount,
-  Context,
-  Accounts,
-  Coder,
+  default as Coder,
   InstructionCoder,
   EventCoder,
   StateCoder,
-  TypesCoder,
   AccountsCoder,
-  Event,
-  Instruction,
-  setProvider,
-  getProvider,
-  Provider,
-  BN,
-  web3,
-  Idl,
-  utils,
-  Wallet,
-  Address,
-  EventParser,
-};
+} from "./coder/index.js";
+
+export * from "./error.js";
+export { Instruction } from "./coder/instruction.js";
+export { Idl } from "./idl.js";
+
+export * as utils from "./utils/index.js";
+export * from "./program/index.js";
+
+if (!isBrowser) {
+  exports.workspace = require("./workspace.js").default;
+  exports.Wallet = require("./nodewallet.js").default;
+}

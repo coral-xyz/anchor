@@ -1,0 +1,13 @@
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[workspace]
+members = ["programs/zero-copy", "programs/zero-cpi"]
+
+[scripts]
+test = "yarn run mocha -t 1000000 tests/"
+
+[programs.localnet]
+zero_cpi = "ErjUjtqKE5AGWUsjseSJCVLtddM6rhaMbDqmhzraF9h6"
+zero_copy = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"

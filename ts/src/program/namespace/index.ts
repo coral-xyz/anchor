@@ -1,40 +1,42 @@
 import camelCase from "camelcase";
 import { PublicKey } from "@solana/web3.js";
-import Coder from "../../coder";
-import Provider from "../../provider";
-import { Idl } from "../../idl";
-import StateFactory, { StateClient } from "./state";
-import InstructionFactory, { InstructionNamespace } from "./instruction";
-import TransactionFactory, { TransactionNamespace } from "./transaction";
-import RpcFactory, { RpcNamespace } from "./rpc";
-import AccountFactory, { AccountNamespace } from "./account";
-import SimulateFactory, { SimulateNamespace } from "./simulate";
-import { parseIdlErrors } from "../common";
+import Coder from "../../coder/index.js";
+import Provider from "../../provider.js";
+import { Idl, IdlInstruction } from "../../idl.js";
+import StateFactory, { StateClient } from "./state.js";
+import InstructionFactory, { InstructionNamespace } from "./instruction.js";
+import TransactionFactory, { TransactionNamespace } from "./transaction.js";
+import RpcFactory, { RpcNamespace } from "./rpc.js";
+import AccountFactory, { AccountNamespace } from "./account.js";
+import SimulateFactory, { SimulateNamespace } from "./simulate.js";
+import { parseIdlErrors } from "../common.js";
+import { AllInstructions } from "./types.js";
 
 // Re-exports.
-export { StateClient } from "./state";
-export { InstructionNamespace, InstructionFn } from "./instruction";
-export { TransactionNamespace, TransactionFn } from "./transaction";
-export { RpcNamespace, RpcFn } from "./rpc";
-export { AccountNamespace, AccountClient, ProgramAccount } from "./account";
-export { SimulateNamespace, SimulateFn } from "./simulate";
+export { StateClient } from "./state.js";
+export { InstructionNamespace, InstructionFn } from "./instruction.js";
+export { TransactionNamespace, TransactionFn } from "./transaction.js";
+export { RpcNamespace, RpcFn } from "./rpc.js";
+export { AccountNamespace, AccountClient, ProgramAccount } from "./account.js";
+export { SimulateNamespace, SimulateFn } from "./simulate.js";
+export { IdlAccounts, IdlTypes } from "./types.js";
 
 export default class NamespaceFactory {
   /**
    * Generates all namespaces for a given program.
    */
-  public static build(
-    idl: Idl,
+  public static build<IDL extends Idl>(
+    idl: IDL,
     coder: Coder,
     programId: PublicKey,
     provider: Provider
   ): [
-    RpcNamespace,
-    InstructionNamespace,
-    TransactionNamespace,
-    AccountNamespace,
-    SimulateNamespace,
-    StateClient
+    RpcNamespace<IDL>,
+    InstructionNamespace<IDL>,
+    TransactionNamespace<IDL>,
+    AccountNamespace<IDL>,
+    SimulateNamespace<IDL>,
+    StateClient<IDL> | undefined
   ] {
     const rpc: RpcNamespace = {};
     const instruction: InstructionNamespace = {};
@@ -45,10 +47,10 @@ export default class NamespaceFactory {
 
     const state = StateFactory.build(idl, coder, programId, provider);
 
-    idl.instructions.forEach((idlIx) => {
-      const ixItem = InstructionFactory.build(
+    idl.instructions.forEach(<I extends AllInstructions<IDL>>(idlIx: I) => {
+      const ixItem = InstructionFactory.build<IDL, I>(
         idlIx,
-        (ixName: string, ix: any) => coder.instruction.encode(ixName, ix),
+        (ixName, ix) => coder.instruction.encode(ixName, ix),
         programId
       );
       const txItem = TransactionFactory.build(idlIx, ixItem);
@@ -71,10 +73,17 @@ export default class NamespaceFactory {
       simulate[name] = simulateItem;
     });
 
-    const account = idl.accounts
+    const account: AccountNamespace<IDL> = idl.accounts
       ? AccountFactory.build(idl, coder, programId, provider)
-      : {};
+      : ({} as AccountNamespace<IDL>);
 
-    return [rpc, instruction, transaction, account, simulate, state];
+    return [
+      rpc as RpcNamespace<IDL>,
+      instruction as InstructionNamespace<IDL>,
+      transaction as TransactionNamespace<IDL>,
+      account,
+      simulate as SimulateNamespace<IDL>,
+      state,
+    ];
   }
 }

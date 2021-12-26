@@ -1,7 +1,8 @@
+import { Buffer } from "buffer";
 import BN from "bn.js";
 import { sha256 as sha256Sync } from "js-sha256";
 import { PublicKey } from "@solana/web3.js";
-import { Address, translateAddress } from "../program/common";
+import { Address, translateAddress } from "../program/common.js";
 
 // Sync version of web3.PublicKey.createWithSeed.
 export function createWithSeedSync(
@@ -80,14 +81,11 @@ const toBuffer = (arr: Buffer | Uint8Array | Array<number>): Buffer => {
 
 export async function associated(
   programId: Address,
-  ...args: Array<PublicKey | Buffer>
+  ...args: Array<Address | Buffer>
 ): Promise<PublicKey> {
   let seeds = [Buffer.from([97, 110, 99, 104, 111, 114])]; // b"anchor".
   args.forEach((arg) => {
-    seeds.push(
-      // @ts-ignore
-      arg.buffer !== undefined ? arg : translateAddress(arg).toBuffer()
-    );
+    seeds.push(arg instanceof Buffer ? arg : translateAddress(arg).toBuffer());
   });
   const [assoc] = await PublicKey.findProgramAddress(
     seeds,

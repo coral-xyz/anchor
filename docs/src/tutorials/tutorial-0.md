@@ -11,10 +11,22 @@ To get started, clone the repo.
 git clone https://github.com/project-serum/anchor
 ```
 
-And change directories to the [example](https://github.com/project-serum/anchor/tree/master/examples/tutorial/basic-0).
+Next, checkout the tagged branch of the same version of the anchor cli you have installed.
+
+```bash
+git checkout tags/<version>
+```
+
+Change directories to the [example](https://github.com/project-serum/anchor/tree/master/examples/tutorial/basic-0).
 
 ```bash
 cd anchor/examples/tutorial/basic-0
+```
+
+And install any additional JavaScript dependencies:
+
+```bash
+yarn install
 ```
 
 ## Starting a Localnet
@@ -84,8 +96,8 @@ a `target/idl/basic_0.json` file is created. Inspecting its contents you should 
 
 ```json
 {
-  "version": "0.0.0",
-  "name": "basic",
+  "version": "0.1.0",
+  "name": "basic_0",
   "instructions": [
     {
       "name": "initialize",
@@ -125,10 +137,19 @@ Notice how we dynamically created the `initialize` method under
 the `rpc` namespace.
 
 Now, make sure to plugin your program's address into `<YOUR-PROGRAM-ID>` (a mild
-annoyance that we'll address next), and run
+annoyance that we'll address next). In order to run the client, you'll also need the path
+to your wallet's keypair you generated when you ran `solana-keygen new`; you can find it
+by running
 
 ```bash
-node client.js
+solana config get keypair
+```
+
+Once you've got it, run the client with the environment variable `ANCHOR_WALLET` set to
+that path, e.g.
+
+```bash
+ANCHOR_WALLET=<YOUR-KEYPAIR-PATH> node client.js
 ```
 
 You just successfully created a client and executed a transaction on your localnet.
@@ -140,7 +161,7 @@ deploying a program, copy and pasting the address, and explicitly reading
 an IDL is all a bit tedious, and can easily get out of hand the more tests and the more
 programs you have. For this reason, we introduce the concept of a workspace.
 
-Inspecting [tests/basic_0.js](https://github.com/project-serum/anchor/tree/master/examples/tutorial/basic-0/tests/basic_0.js), we see the above example can be reduced to
+Inspecting [tests/basic-0.js](https://github.com/project-serum/anchor/tree/master/examples/tutorial/basic-0/tests/basic-0.js), we see the above example can be reduced to
 
 <<< @/../examples/tutorial/basic-0/tests/basic-0.js#code
 
@@ -149,7 +170,7 @@ automatically updated to reflect the latest deployment, making it easy to change
 your program, update your JavaScript, and run your tests in a fast feedback loop.
 
 ::: tip NOTE
-For now, the workspace feature is only available when running  the `anchor test` command,
+For now, the workspace feature is only available when running the `anchor test` command,
 which will automatically `build`, `deploy`, and `test` all programs against a localnet
 in one command.
 :::

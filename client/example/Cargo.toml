@@ -7,12 +7,13 @@ edition = "2018"
 [workspace]
 
 [dependencies]
-anchor-client = { path = "../" }
+anchor-client = { path = "../", features = ["debug"] }
 basic-2 = { path = "../../examples/tutorial/basic-2/programs/basic-2", features = ["no-entrypoint"] }
 basic-4 = { path = "../../examples/tutorial/basic-4/programs/basic-4", features = ["no-entrypoint"] }
-composite = { path = "../../examples/composite/programs/composite", features = ["no-entrypoint"] }
-events = { path = "../../examples/events/programs/events", features = ["no-entrypoint"] }
+composite = { path = "../../tests/composite/programs/composite", features = ["no-entrypoint"] }
+events = { path = "../../tests/events/programs/events", features = ["no-entrypoint"] }
 shellexpand = "2.1.0"
 anyhow = "1.0.32"
 rand = "0.7.3"
-clap = "3.0.0-beta.2"
+clap = { version = "3.0.0-rc.0", features = ["derive"] }
+solana-sdk = "1.7.11"

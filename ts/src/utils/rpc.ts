@@ -1,3 +1,4 @@
+import { Buffer } from "buffer";
 import assert from "assert";
 import {
   AccountInfo,
@@ -7,9 +8,11 @@ import {
   TransactionSignature,
   Transaction,
   TransactionInstruction,
+  Commitment,
 } from "@solana/web3.js";
-import { Address, translateAddress } from "../program/common";
-import Provider, { getProvider } from "../provider";
+import { chunks } from "../utils/common.js";
+import { Address, translateAddress } from "../program/common.js";
+import Provider, { getProvider } from "../provider.js";
 
 /**
  * Sends a transaction to a program with the given accounts and instruction
@@ -38,13 +41,47 @@ export async function invoke(
   return await provider.send(tx);
 }
 
+const GET_MULTIPLE_ACCOUNTS_LIMIT: number = 99;
+
 export async function getMultipleAccounts(
   connection: Connection,
-  publicKeys: PublicKey[]
+  publicKeys: PublicKey[],
+  commitment?: Commitment
 ): Promise<
   Array<null | { publicKey: PublicKey; account: AccountInfo<Buffer> }>
 > {
-  const args = [publicKeys.map((k) => k.toBase58()), { commitment: "recent" }];
+  if (publicKeys.length <= GET_MULTIPLE_ACCOUNTS_LIMIT) {
+    return await getMultipleAccountsCore(connection, publicKeys, commitment);
+  } else {
+    const batches = chunks(publicKeys, GET_MULTIPLE_ACCOUNTS_LIMIT);
+    const results = await Promise.all<
+      Array<null | { publicKey: PublicKey; account: AccountInfo<Buffer> }>
+    >(
+      batches.map((batch) =>
+        getMultipleAccountsCore(connection, batch, commitment)
+      )
+    );
+    return results.flat();
+  }
+}
+
+async function getMultipleAccountsCore(
+  connection: Connection,
+  publicKeys: PublicKey[],
+  commitmentOverride?: Commitment
+): Promise<
+  Array<null | { publicKey: PublicKey; account: AccountInfo<Buffer> }>
+> {
+  const commitment = commitmentOverride ?? connection.commitment;
+  const args: (
+    | string[]
+    | {
+        commitment: Commitment;
+      }
+  )[] = [publicKeys.map((k) => k.toBase58())];
+  if (commitment) {
+    args.push({ commitment });
+  }
   // @ts-ignore
   const res = await connection._rpcRequest("getMultipleAccounts", args);
   if (res.error) {

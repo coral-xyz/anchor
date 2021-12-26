@@ -6,7 +6,7 @@ on different machines may produce different executables. To get around this
 problem, one can build inside a docker image with pinned dependencies to produce
 a verifiable build.
 
-Anchor makes this easy by providing CLI commands to build take care of
+Anchor makes this easy by providing CLI commands to build and take care of
 docker for you. To get started, first make sure you
 [install](https://docs.docker.com/get-docker/) docker on your local machine.
 
@@ -32,10 +32,10 @@ If the program has an IDL, it will also check the IDL deployed on chain matches.
 
 ## Images
 
-A docker image for each version of Anchor is published on [Docker Hub](https://hub.docker.com/r/projectserum/build). They are tagged in the form `projectserum/build:<version>`. For example, to get the image for Anchor `v0.13.2` one can run
+A docker image for each version of Anchor is published on [Docker Hub](https://hub.docker.com/r/projectserum/build). They are tagged in the form `projectserum/build:<version>`. For example, to get the image for Anchor `v0.19.0` one can run
 
 ```
-docker pull projectserum/build:v0.13.2
+docker pull projectserum/build:v0.19.0
 ```
 
 ## Removing an Image

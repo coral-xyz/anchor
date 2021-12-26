@@ -1,21 +1,30 @@
-import { AccountMeta, Transaction } from "@solana/web3.js";
-import { IdlInstruction } from "../../idl";
+import { AccountMeta } from "@solana/web3.js";
+import { IdlInstruction, Idl } from "../../idl";
 import { translateAddress } from "../common";
 import { AccountsArray, splitArgsAndCtx } from "../context";
 import { InstructionFn } from "./instruction";
+import { Transaction } from "@solana/web3.js";
+import {
+  AllInstructions,
+  InstructionContextFn,
+  MakeInstructionsNamespace,
+} from "./types.js";
 
 export default class TransactionFactory {
-  public static build(
-    idlIx: IdlInstruction,
-    ixFn: InstructionFn
-  ): TransactionFn {
-    const txFn = (...args: any[]): Transaction => {
+  public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
+    idlIx: I,
+    ixFn: InstructionFn<IDL, I>
+  ): TransactionFn<IDL, I> {
+    const txFn: TransactionFn<IDL, I> = (...args): Transaction => {
       const [, ctx] = splitArgsAndCtx(idlIx, [...args]);
       const tx = new Transaction();
-      if (ctx.instructions !== undefined) {
-        tx.add(...ctx.instructions);
+      if (ctx.preInstructions && ctx.instructions) {
+        throw new Error("instructions is deprecated, use preInstructions");
       }
+      ctx.preInstructions?.forEach((ix) => tx.add(ix));
+      ctx.instructions?.forEach((ix) => tx.add(ix));
       tx.add(ixFn(...args));
+      ctx.postInstructions?.forEach((ix) => tx.add(ix));
       return tx;
     };
 
@@ -52,11 +61,15 @@ export default class TransactionFactory {
  * });
  * ```
  */
-export interface TransactionNamespace {
-  [key: string]: TransactionFn;
-}
+export type TransactionNamespace<
+  IDL extends Idl = Idl,
+  I extends AllInstructions<IDL> = AllInstructions<IDL>
+> = MakeInstructionsNamespace<IDL, I, Transaction>;
 
 /**
  * Tx is a function to create a `Transaction` for a given program instruction.
  */
-export type TransactionFn = (...args: any[]) => Transaction;
+export type TransactionFn<
+  IDL extends Idl = Idl,
+  I extends AllInstructions<IDL> = AllInstructions<IDL>
+> = InstructionContextFn<IDL, I, Transaction>;

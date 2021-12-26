@@ -1,10 +1,11 @@
 use anchor_client::Cluster;
 use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Error, Result};
-use clap::Clap;
+use clap::{ArgEnum, Clap};
+use heck::SnakeCase;
 use serde::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
-use solana_sdk::signature::Keypair;
+use solana_sdk::signature::{Keypair, Signer};
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use std::fs::{self, File};
@@ -68,21 +69,34 @@ impl Manifest {
                 .name
                 .as_ref()
                 .unwrap()
-                .to_string())
+                .to_string()
+                .to_snake_case())
         } else {
             Ok(self
                 .package
                 .as_ref()
                 .ok_or_else(|| anyhow!("package section not provided"))?
                 .name
-                .to_string())
+                .to_string()
+                .to_snake_case())
         }
     }
 
-    // Climbs each parent directory until we find a Cargo.toml.
+    pub fn version(&self) -> String {
+        match &self.package {
+            Some(package) => package.version.to_string(),
+            _ => "0.0.0".to_string(),
+        }
+    }
+
+    // Climbs each parent directory from the current dir until we find a Cargo.toml
     pub fn discover() -> Result<Option<WithPath<Manifest>>> {
-        let _cwd = std::env::current_dir()?;
-        let mut cwd_opt = Some(_cwd.as_path());
+        Manifest::discover_from_path(std::env::current_dir()?)
+    }
+
+    // Climbs each parent directory from a given starting directory until we find a Cargo.toml.
+    pub fn discover_from_path(start_from: PathBuf) -> Result<Option<WithPath<Manifest>>> {
+        let mut cwd_opt = Some(start_from.as_path());
 
         while let Some(cwd) = cwd_opt {
             for f in fs::read_dir(cwd)? {
@@ -124,6 +138,7 @@ impl WithPath<Config> {
             if members.is_empty() {
                 let path = self.path().parent().unwrap().join("programs");
                 fs::read_dir(path)?
+                    .filter(|entry| entry.as_ref().map(|e| e.path().is_dir()).unwrap_or(false))
                     .map(|dir| dir.map(|d| d.path().canonicalize().unwrap()))
                     .collect::<Vec<Result<PathBuf, std::io::Error>>>()
                     .into_iter()
@@ -144,8 +159,10 @@ impl WithPath<Config> {
     pub fn read_all_programs(&self) -> Result<Vec<Program>> {
         let mut r = vec![];
         for path in self.get_program_list()? {
-            let idl = anchor_syn::idl::file::parse(path.join("src/lib.rs"))?;
-            let lib_name = Manifest::from_path(&path.join("Cargo.toml"))?.lib_name()?;
+            let cargo = Manifest::from_path(&path.join("Cargo.toml"))?;
+            let lib_name = cargo.lib_name()?;
+            let version = cargo.version();
+            let idl = anchor_syn::idl::file::parse(path.join("src/lib.rs"), version)?;
             r.push(Program {
                 lib_name,
                 path,
@@ -263,6 +280,22 @@ pub struct WorkspaceConfig {
     pub members: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub exclude: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub types: String,
+}
+
+#[derive(ArgEnum, Clap, Clone, PartialEq, Debug)]
+pub enum BootstrapMode {
+    None,
+    Debian,
+}
+
+#[derive(Debug, Clone)]
+pub struct BuildConfig {
+    pub verifiable: bool,
+    pub solana_version: Option<String>,
+    pub docker_image: String,
+    pub bootstrap: BootstrapMode,
 }
 
 impl Config {
@@ -329,12 +362,12 @@ impl Config {
 struct _Config {
     anchor_version: Option<String>,
     solana_version: Option<String>,
+    programs: Option<BTreeMap<String, BTreeMap<String, serde_json::Value>>>,
     registry: Option<RegistryConfig>,
     provider: Provider,
-    test: Option<Test>,
-    scripts: Option<ScriptsConfig>,
-    programs: Option<BTreeMap<String, BTreeMap<String, serde_json::Value>>>,
     workspace: Option<WorkspaceConfig>,
+    scripts: Option<ScriptsConfig>,
+    test: Option<Test>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -409,7 +442,7 @@ fn ser_programs(
                 .map(|(name, deployment)| {
                     (
                         name.clone(),
-                        serde_json::to_value(&_ProgramDeployment::from(deployment)).unwrap(),
+                        to_value(&_ProgramDeployment::from(deployment)),
                     )
                 })
                 .collect::<BTreeMap<String, serde_json::Value>>();
@@ -417,6 +450,14 @@ fn ser_programs(
         })
         .collect::<BTreeMap<String, BTreeMap<String, serde_json::Value>>>()
 }
+
+fn to_value(dep: &_ProgramDeployment) -> serde_json::Value {
+    if dep.path.is_none() && dep.idl.is_none() {
+        return serde_json::Value::String(dep.address.to_string());
+    }
+    serde_json::to_value(dep).unwrap()
+}
+
 fn deser_programs(
     programs: BTreeMap<String, BTreeMap<String, serde_json::Value>>,
 ) -> Result<BTreeMap<Cluster, BTreeMap<String, ProgramDeployment>>> {
@@ -451,7 +492,10 @@ fn deser_programs(
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Test {
-    pub genesis: Vec<GenesisEntry>,
+    pub genesis: Option<Vec<GenesisEntry>>,
+    pub clone: Option<Vec<CloneEntry>>,
+    pub validator: Option<Validator>,
+    pub startup_wait: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -460,6 +504,64 @@ pub struct GenesisEntry {
     pub address: String,
     // Filepath to the compiled program to embed into the genesis.
     pub program: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CloneEntry {
+    // Base58 pubkey string.
+    pub address: String,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Validator {
+    // IP address to bind the validator ports. [default: 0.0.0.0]
+    #[serde(default = "default_bind_address")]
+    pub bind_address: String,
+    // Range to use for dynamically assigned ports. [default: 1024-65535]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dynamic_port_range: Option<String>,
+    // Enable the faucet on this port [deafult: 9900].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub faucet_port: Option<u16>,
+    // Give the faucet address this much SOL in genesis. [default: 1000000]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub faucet_sol: Option<String>,
+    // Gossip DNS name or IP address for the validator to advertise in gossip. [default: 127.0.0.1]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gossip_host: Option<String>,
+    // Gossip port number for the validator
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gossip_port: Option<u16>,
+    // URL for Solana's JSON RPC or moniker.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    // Use DIR as ledger location
+    #[serde(default = "default_ledger_path")]
+    pub ledger: String,
+    // Keep this amount of shreds in root slots. [default: 10000]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit_ledger_size: Option<String>,
+    // Enable JSON RPC on this port, and the next port for the RPC websocket. [default: 8899]
+    #[serde(default = "default_rpc_port")]
+    pub rpc_port: u16,
+    // Override the number of slots in an epoch.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub slots_per_epoch: Option<String>,
+    // Warp the ledger to WARP_SLOT after starting the validator.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub warp_slot: Option<String>,
+}
+
+fn default_ledger_path() -> String {
+    ".anchor/test-ledger".to_string()
+}
+
+fn default_bind_address() -> String {
+    "0.0.0.0".to_string()
+}
+
+fn default_rpc_port() -> u16 {
+    8899
 }
 
 #[derive(Debug, Clone)]
@@ -471,13 +573,29 @@ pub struct Program {
 }
 
 impl Program {
-    pub fn anchor_keypair_path(&self) -> PathBuf {
-        std::env::current_dir()
+    pub fn pubkey(&self) -> Result<Pubkey> {
+        self.keypair().map(|kp| kp.pubkey())
+    }
+
+    pub fn keypair(&self) -> Result<Keypair> {
+        let file = self.keypair_file()?;
+        solana_sdk::signature::read_keypair_file(file.path())
+            .map_err(|_| anyhow!("failed to read keypair for program: {}", self.lib_name))
+    }
+
+    // Lazily initializes the keypair file with a new key if it doesn't exist.
+    pub fn keypair_file(&self) -> Result<WithPath<File>> {
+        fs::create_dir_all("target/deploy/")?;
+        let path = std::env::current_dir()
             .expect("Must have current dir")
-            .join(format!(
-                "target/deploy/anchor-{}-keypair.json",
-                self.lib_name
-            ))
+            .join(format!("target/deploy/{}-keypair.json", self.lib_name));
+        if path.exists() {
+            return Ok(WithPath::new(File::open(&path)?, path));
+        }
+        let program_kp = Keypair::generate(&mut rand::rngs::OsRng);
+        let mut file = File::create(&path)?;
+        file.write_all(format!("{:?}", &program_kp.to_bytes()).as_bytes())?;
+        Ok(WithPath::new(file, path))
     }
 
     pub fn binary_path(&self) -> PathBuf {

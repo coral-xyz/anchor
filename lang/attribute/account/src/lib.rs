@@ -3,6 +3,8 @@ extern crate proc_macro;
 use quote::quote;
 use syn::parse_macro_input;
 
+mod id;
+
 /// A data structure representing a Solana account, implementing various traits:
 ///
 /// - [`AccountSerialize`](./trait.AccountSerialize.html)
@@ -59,13 +61,15 @@ pub fn account(
 ) -> proc_macro::TokenStream {
     let mut namespace = "".to_string();
     let mut is_zero_copy = false;
-    if args.to_string().split(',').count() > 2 {
+    let args_str = args.to_string();
+    let args: Vec<&str> = args_str.split(',').collect();
+    if args.len() > 2 {
         panic!("Only two args are allowed to the account attribute.")
     }
-    for arg in args.to_string().split(',') {
+    for arg in args {
         let ns = arg
             .to_string()
-            .replace("\"", "")
+            .replace('\"', "")
             .chars()
             .filter(|c| !c.is_whitespace())
             .collect();
@@ -85,9 +89,9 @@ pub fn account(
         let discriminator_preimage = {
             // For now, zero copy accounts can't be namespaced.
             if namespace.is_empty() {
-                format!("account:{}", account_name.to_string())
+                format!("account:{}", account_name)
             } else {
-                format!("{}:{}", namespace, account_name.to_string())
+                format!("{}:{}", namespace, account_name)
             }
         };
 
@@ -96,6 +100,21 @@ pub fn account(
             &anchor_syn::hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..8],
         );
         format!("{:?}", discriminator).parse().unwrap()
+    };
+
+    let owner_impl = {
+        if namespace.is_empty() {
+            quote! {
+                #[automatically_derived]
+                impl #impl_gen anchor_lang::Owner for #account_name #type_gen #where_clause {
+                    fn owner() -> Pubkey {
+                        crate::ID
+                    }
+                }
+            }
+        } else {
+            quote! {}
+        }
     };
 
     proc_macro::TokenStream::from({
@@ -142,6 +161,8 @@ pub fn account(
                         Ok(*account)
                     }
                 }
+
+                #owner_impl
             }
         } else {
             quote! {
@@ -187,6 +208,8 @@ pub fn account(
                         #discriminator
                     }
                 }
+
+                #owner_impl
             }
         }
     })
@@ -224,9 +247,9 @@ pub fn derive_zero_copy_accessor(item: proc_macro::TokenStream) -> proc_macro::T
                     let field_name = field.ident.as_ref().unwrap();
 
                     let get_field: proc_macro2::TokenStream =
-                        format!("get_{}", field_name.to_string()).parse().unwrap();
+                        format!("get_{}", field_name).parse().unwrap();
                     let set_field: proc_macro2::TokenStream =
-                        format!("set_{}", field_name.to_string()).parse().unwrap();
+                        format!("set_{}", field_name).parse().unwrap();
 
                     quote! {
                         pub fn #get_field(&self) -> #accessor_ty {
@@ -266,7 +289,15 @@ pub fn zero_copy(
 
     proc_macro::TokenStream::from(quote! {
         #[derive(anchor_lang::__private::ZeroCopyAccessor, Copy, Clone)]
-        #[repr(packed)]
+        #[repr(C)]
         #account_strct
     })
+}
+
+/// Defines the program's ID. This should be used at the root of all Anchor
+/// based programs.
+#[proc_macro]
+pub fn declare_id(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let id = parse_macro_input!(input as id::Id);
+    proc_macro::TokenStream::from(quote! {#id})
 }

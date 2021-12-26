@@ -36,10 +36,11 @@ SUBCOMMANDS:
 anchor init
 ```
 
-Initializes a project workspace wit the following structure.
+Initializes a project workspace with the following structure.
 
 * `Anchor.toml`: Anchor configuration file.
 * `Cargo.toml`: Rust workspace configuration file.
+* `package.json`: JavaScript dependencies file.
 * `programs/`: Directory for Solana program crates.
 * `app/`: Directory for your application frontend.
 * `tests/`: Directory for JavaScript integration tests.
@@ -86,7 +87,7 @@ Uses Solana's upgradeable BPF loader to upgrade the on chain program code.
 anchor test
 ```
 
-Run an integration test suit against the configured cluster, deploying new versions
+Run an integration test suite against the configured cluster, deploying new versions
 of all workspace programs before running them.
 
 If the configured network is a localnet, then automatically starts the localnetwork and runs
@@ -114,7 +115,7 @@ anchor migrate
 ```
 
 Runs the deploy script located at `migrations/deploy.js`, injecting a provider configured
-form the workspace's `Anchor.toml`. For example,
+from the workspace's `Anchor.toml`. For example,
 
 ```javascript
 // File: migrations/deploys.js
@@ -136,7 +137,7 @@ and only support this simple deploy script at the moment.
 The `idl` subcommand provides commands for interacting with interface definition files.
 It's recommended to use these commands to store an IDL on chain, at a deterministic
 address, as a function of nothing but the the program's ID. This
-allow us to generate clients for a program using nothing but the program ID.
+allows us to generate clients for a program using nothing but the program ID.
 
 ### Idl Init
 
@@ -228,4 +229,3 @@ anchor verify <program-id>
 ```
 
 Verifies the on-chain bytecode matches the locally compiled artifact.
-

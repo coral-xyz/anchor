@@ -1,4 +1,9 @@
-export class IdlError extends Error {}
+export class IdlError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "IdlError";
+  }
+}
 
 // An error from a user defined program.
 export class ProgramError extends Error {
@@ -27,13 +32,13 @@ export class ProgramError extends Error {
     // Parse user error.
     let errorMsg = idlErrors.get(errorCode);
     if (errorMsg !== undefined) {
-      return new ProgramError(errorCode, errorMsg);
+      return new ProgramError(errorCode, errorMsg, errorCode + ": " + errorMsg);
     }
 
     // Parse framework internal error.
     errorMsg = LangErrorMessage.get(errorCode);
     if (errorMsg !== undefined) {
-      return new ProgramError(errorCode, errorMsg);
+      return new ProgramError(errorCode, errorMsg, errorCode + ": " + errorMsg);
     }
 
     // Unable to parse the error. Just return the untranslated error.
@@ -53,39 +58,51 @@ const LangErrorCode = {
   InstructionDidNotSerialize: 103,
 
   // IDL instructions.
-  IdlInstructionStub: 120,
-  IdlInstructionInvalidProgram: 121,
+  IdlInstructionStub: 1000,
+  IdlInstructionInvalidProgram: 1001,
 
   // Constraints.
-  ConstraintMut: 140,
-  ConstraintHasOne: 141,
-  ConstraintSigner: 142,
-  ConstraintRaw: 143,
-  ConstraintOwner: 144,
-  ConstraintRentExempt: 145,
-  ConstraintSeeds: 146,
-  ConstraintExecutable: 147,
-  ConstraintState: 148,
-  ConstraintAssociated: 149,
-  ConstraintAssociatedInit: 150,
-  ConstraintClose: 151,
-  ConstraintAddress: 152,
+  ConstraintMut: 2000,
+  ConstraintHasOne: 2001,
+  ConstraintSigner: 2002,
+  ConstraintRaw: 2003,
+  ConstraintOwner: 2004,
+  ConstraintRentExempt: 2005,
+  ConstraintSeeds: 2006,
+  ConstraintExecutable: 2007,
+  ConstraintState: 2008,
+  ConstraintAssociated: 2009,
+  ConstraintAssociatedInit: 2010,
+  ConstraintClose: 2011,
+  ConstraintAddress: 2012,
+  ConstraintZero: 2013,
+  ConstraintTokenMint: 2014,
+  ConstraintTokenOwner: 2015,
+  ConstraintMintMintAuthority: 2016,
+  ConstraintMintFreezeAuthority: 2017,
+  ConstraintMintDecimals: 2018,
+  ConstraintSpace: 2019,
 
   // Accounts.
-  AccountDiscriminatorAlreadySet: 160,
-  AccountDiscriminatorNotFound: 161,
-  AccountDiscriminatorMismatch: 162,
-  AccountDidNotDeserialize: 163,
-  AccountDidNotSerialize: 164,
-  AccountNotEnoughKeys: 165,
-  AccountNotMutable: 166,
-  AccountNotProgramOwned: 167,
-
+  AccountDiscriminatorAlreadySet: 3000,
+  AccountDiscriminatorNotFound: 3001,
+  AccountDiscriminatorMismatch: 3002,
+  AccountDidNotDeserialize: 3003,
+  AccountDidNotSerialize: 3004,
+  AccountNotEnoughKeys: 3005,
+  AccountNotMutable: 3006,
+  AccountOwnedByWrongProgram: 3007,
+  InvalidProgramId: 3008,
+  InvalidProgramExecutable: 3009,
+  AccountNotSigner: 3010,
+  AccountNotSystemOwned: 3011,
+  AccountNotInitialized: 3012,
+  AccountNotProgramData: 3013,
   // State.
-  StateInvalidAddress: 180,
+  StateInvalidAddress: 4000,
 
   // Used for APIs that shouldn't be used anymore.
-  Deprecated: 299,
+  Deprecated: 5000,
 };
 
 const LangErrorMessage = new Map([
@@ -134,6 +151,22 @@ const LangErrorMessage = new Map([
   ],
   [LangErrorCode.ConstraintClose, "A close constraint was violated"],
   [LangErrorCode.ConstraintAddress, "An address constraint was violated"],
+  [LangErrorCode.ConstraintZero, "Expected zero account discriminant"],
+  [LangErrorCode.ConstraintTokenMint, "A token mint constraint was violated"],
+  [LangErrorCode.ConstraintTokenOwner, "A token owner constraint was violated"],
+  [
+    LangErrorCode.ConstraintMintMintAuthority,
+    "A mint mint authority constraint was violated",
+  ],
+  [
+    LangErrorCode.ConstraintMintFreezeAuthority,
+    "A mint freeze authority constraint was violated",
+  ],
+  [
+    LangErrorCode.ConstraintMintDecimals,
+    "A mint decimals constraint was violated",
+  ],
+  [LangErrorCode.ConstraintSpace, "A space constraint was violated"],
 
   // Accounts.
   [
@@ -156,8 +189,23 @@ const LangErrorMessage = new Map([
   ],
   [LangErrorCode.AccountNotMutable, "The given account is not mutable"],
   [
-    LangErrorCode.AccountNotProgramOwned,
-    "The given account is not owned by the executing program",
+    LangErrorCode.AccountOwnedByWrongProgram,
+    "The given account is owned by a different program than expected",
+  ],
+  [LangErrorCode.InvalidProgramId, "Program ID was not as expected"],
+  [LangErrorCode.InvalidProgramExecutable, "Program account is not executable"],
+  [LangErrorCode.AccountNotSigner, "The given account did not sign"],
+  [
+    LangErrorCode.AccountNotSystemOwned,
+    "The given account is not owned by the system program",
+  ],
+  [
+    LangErrorCode.AccountNotInitialized,
+    "The program expected this account to be already initialized",
+  ],
+  [
+    LangErrorCode.AccountNotProgramData,
+    "The given account is not a program data account",
   ],
 
   // State.

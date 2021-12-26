@@ -31,32 +31,48 @@ use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::io::Write;
 
-mod account_info;
 mod account_meta;
-mod boxed;
+mod accounts;
+mod bpf_upgradeable_state;
 mod common;
 mod context;
-mod cpi_account;
-mod cpi_state;
 mod ctor;
 mod error;
 #[doc(hidden)]
 pub mod idl;
-mod loader;
-mod program_account;
-pub mod state;
-mod sysvar;
-mod vec;
+mod system_program;
 
-pub use crate::context::{Context, CpiContext, CpiStateContext};
-pub use crate::cpi_account::CpiAccount;
-pub use crate::cpi_state::CpiState;
-pub use crate::loader::Loader;
-pub use crate::program_account::ProgramAccount;
-pub use crate::state::ProgramState;
-pub use crate::sysvar::Sysvar;
+pub use crate::accounts::account::Account;
+#[doc(hidden)]
+#[allow(deprecated)]
+pub use crate::accounts::cpi_account::CpiAccount;
+#[doc(hidden)]
+#[allow(deprecated)]
+pub use crate::accounts::cpi_state::CpiState;
+#[allow(deprecated)]
+pub use crate::accounts::loader::Loader;
+pub use crate::accounts::loader_account::AccountLoader;
+pub use crate::accounts::program::Program;
+#[doc(hidden)]
+#[allow(deprecated)]
+pub use crate::accounts::program_account::ProgramAccount;
+pub use crate::accounts::signer::Signer;
+#[doc(hidden)]
+#[allow(deprecated)]
+pub use crate::accounts::state::ProgramState;
+pub use crate::accounts::system_account::SystemAccount;
+pub use crate::accounts::sysvar::Sysvar;
+pub use crate::accounts::unchecked_account::UncheckedAccount;
+pub use crate::system_program::System;
+mod vec;
+pub use crate::bpf_upgradeable_state::*;
+#[doc(hidden)]
+#[allow(deprecated)]
+pub use crate::context::CpiStateContext;
+pub use crate::context::{Context, CpiContext};
 pub use anchor_attribute_access_control::access_control;
-pub use anchor_attribute_account::{account, zero_copy};
+pub use anchor_attribute_account::{account, declare_id, zero_copy};
+pub use anchor_attribute_constant::constant;
 pub use anchor_attribute_error::error;
 pub use anchor_attribute_event::{emit, event};
 pub use anchor_attribute_interface::interface;
@@ -103,17 +119,6 @@ pub trait AccountsExit<'info>: ToAccountMetas + ToAccountInfos<'info> {
 /// one to retrieve the rent exemption.
 pub trait AccountsClose<'info>: ToAccountInfos<'info> {
     fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult;
-}
-
-/// A data structure of accounts providing a one time deserialization upon
-/// account initialization, i.e., when the data array for a given account is
-/// zeroed. Any subsequent call to `try_accounts_init` should fail. For all
-/// subsequent deserializations, it's expected that [`Accounts`] is used.
-pub trait AccountsInit<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
-    fn try_accounts_init(
-        program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
-    ) -> Result<Self, ProgramError>;
 }
 
 /// Transformation to
@@ -165,8 +170,8 @@ pub trait AccountDeserialize: Sized {
     /// uninitialized accounts, where the bytes are zeroed. Implementations
     /// should be unique to a particular account type so that one can never
     /// successfully deserialize the data of one account type into another.
-    /// For example, if the SPL token program where to implement this trait,
-    /// it should impossible to deserialize a `Mint` account into a token
+    /// For example, if the SPL token program were to implement this trait,
+    /// it should be impossible to deserialize a `Mint` account into a token
     /// `Account`.
     fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError>;
 
@@ -210,17 +215,19 @@ pub trait Bump {
     fn seed(&self) -> u8;
 }
 
-pub trait Key {
-    fn key(&self) -> Pubkey;
+/// Defines an address expected to own an account.
+pub trait Owner {
+    fn owner() -> Pubkey;
 }
 
-impl<'info, T> Key for T
-where
-    T: ToAccountInfo<'info>,
-{
-    fn key(&self) -> Pubkey {
-        *self.to_account_info().key
-    }
+/// Defines the id of a program.
+pub trait Id {
+    fn id() -> Pubkey;
+}
+
+/// Defines the Pubkey of an account.
+pub trait Key {
+    fn key(&self) -> Pubkey;
 }
 
 impl Key for Pubkey {
@@ -244,11 +251,18 @@ impl ToAccountMetas for Pubkey {
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
     pub use super::{
-        access_control, account, emit, error, event, interface, program, require, state, zero_copy,
-        AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AccountsInit,
-        AnchorDeserialize, AnchorSerialize, Context, CpiAccount, CpiContext, CpiState,
-        CpiStateContext, Key, Loader, ProgramAccount, ProgramState, Sysvar, ToAccountInfo,
-        ToAccountInfos, ToAccountMetas,
+        access_control, account, constant, declare_id, emit, error, event, interface, program,
+        require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, state, zero_copy,
+        Account, AccountDeserialize, AccountLoader, AccountSerialize, Accounts, AccountsExit,
+        AnchorDeserialize, AnchorSerialize, Context, CpiContext, Id, Key, Owner, Program,
+        ProgramData, Signer, System, SystemAccount, Sysvar, ToAccountInfo, ToAccountInfos,
+        ToAccountMetas, UncheckedAccount,
+    };
+
+    #[allow(deprecated)]
+    pub use super::{
+        accounts::cpi_account::CpiAccount, accounts::cpi_state::CpiState, accounts::loader::Loader,
+        accounts::program_account::ProgramAccount, accounts::state::ProgramState, CpiStateContext,
     };
 
     pub use borsh;
@@ -286,11 +300,11 @@ pub mod __private {
     pub use bytemuck;
 
     pub mod state {
-        pub use crate::state::*;
+        pub use crate::accounts::state::*;
     }
 
     // The starting point for user defined error codes.
-    pub const ERROR_CODE_OFFSET: u32 = 300;
+    pub const ERROR_CODE_OFFSET: u32 = 6000;
 
     // Calculates the size of an account, which may be larger than the deserialized
     // data in it. This trait is currently only used for `#[state]` accounts.
@@ -314,7 +328,7 @@ pub mod __private {
         }
     }
 
-    pub use crate::state::PROGRAM_STATE_SEED;
+    pub use crate::accounts::state::PROGRAM_STATE_SEED;
     pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
 }
 

@@ -11,10 +11,16 @@ To get started, clone the repo.
 git clone https://github.com/project-serum/anchor
 ```
 
-And change directories to the [example](https://github.com/project-serum/anchor/tree/master/examples/tutorial/basic-3).
+Change directories to the [example](https://github.com/project-serum/anchor/tree/master/examples/tutorial/basic-3).
 
 ```bash
 cd anchor/examples/tutorial/basic-3
+```
+
+And install any additional JavaScript dependencies:
+
+```bash
+yarn install
 ```
 
 ## Defining a Puppet Program
@@ -43,9 +49,9 @@ Things to notice
 * We create a `CpiContext` object with the target instruction's accounts and program,
   here `SetData` and `puppet_program`.
 * To invoke an instruction on another program, just use the `cpi` module on the crate, here, `puppet::cpi::set_data`.
-* Our `Accounts` struct has a new type, `CpiAccount`, containing the target program's `Puppet`
-  account. Think of `CpiAccount` exactly like `ProgramAccount`, except used for accounts *not*
-  owned by the current program.
+* Our `Accounts` struct contains the puppet account we are calling into via CPI. Accounts used for CPI are not specifically denoted
+  as such with the `CpiAccount` label since v0.15. Accounts used for CPI are not fundamentally different from `Program` or `Signer`
+  accounts except for their role and ownership in the specific context in which they are used.
 
 ::: tip
 When using another Anchor program for CPI, make sure to specify the `cpi` feature in your `Cargo.toml`.
@@ -71,9 +77,8 @@ retrieve the return value. In future work, Anchor should do this transparently.
 
 ## Conclusion
 
-Now that you can have your programs call other programs, you should be able to access all the work being done by other developers in your own applications! 
+Now that you can have your programs call other programs, you should be able to access all the work being done by other developers in your own applications!
 
 ## Next Steps
 
-Up until now, we've treated programs on Solana as stateless. In the next tutorial we will learn how to add a global state to our program.
-
+We just covered Cross Program Invocation and showed how anchor can handle talking to multiple different programs in the solana ecosystem. In the next step, we will teach you how to handle errors and in Anchor.

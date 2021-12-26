@@ -3,6 +3,7 @@ use codegen::program as program_codegen;
 use parser::accounts as accounts_parser;
 use parser::program as program_parser;
 use proc_macro2::{Span, TokenStream};
+use quote::quote;
 use quote::ToTokens;
 use std::ops::Deref;
 use syn::ext::IdentExt;
@@ -161,6 +162,231 @@ pub struct Field {
     pub ty: Ty,
 }
 
+impl Field {
+    pub fn typed_ident(&self) -> proc_macro2::TokenStream {
+        let name = &self.ident;
+        let ty_decl = self.ty_decl();
+        quote! {
+            #name: #ty_decl
+        }
+    }
+
+    pub fn ty_decl(&self) -> proc_macro2::TokenStream {
+        let account_ty = self.account_ty();
+        let container_ty = self.container_ty();
+        match &self.ty {
+            Ty::AccountInfo => quote! {
+                AccountInfo
+            },
+            Ty::UncheckedAccount => quote! {
+                UncheckedAccount
+            },
+            Ty::Signer => quote! {
+                Signer
+            },
+            Ty::ProgramData => quote! {
+                ProgramData
+            },
+            Ty::SystemAccount => quote! {
+                SystemAccount
+            },
+            Ty::Account(AccountTy { boxed, .. }) => {
+                if *boxed {
+                    quote! {
+                        Box<#container_ty<#account_ty>>
+                    }
+                } else {
+                    quote! {
+                        #container_ty<#account_ty>
+                    }
+                }
+            }
+            Ty::Sysvar(ty) => {
+                let account = match ty {
+                    SysvarTy::Clock => quote! {Clock},
+                    SysvarTy::Rent => quote! {Rent},
+                    SysvarTy::EpochSchedule => quote! {EpochSchedule},
+                    SysvarTy::Fees => quote! {Fees},
+                    SysvarTy::RecentBlockhashes => quote! {RecentBlockhashes},
+                    SysvarTy::SlotHashes => quote! {SlotHashes},
+                    SysvarTy::SlotHistory => quote! {SlotHistory},
+                    SysvarTy::StakeHistory => quote! {StakeHistory},
+                    SysvarTy::Instructions => quote! {Instructions},
+                    SysvarTy::Rewards => quote! {Rewards},
+                };
+                quote! {
+                    Sysvar<#account>
+                }
+            }
+            _ => quote! {
+                #container_ty<#account_ty>
+            },
+        }
+    }
+
+    // TODO: remove the option once `CpiAccount` is completely removed (not
+    //       just deprecated).
+    pub fn from_account_info_unchecked(&self, kind: Option<&InitKind>) -> proc_macro2::TokenStream {
+        let field = &self.ident;
+        let container_ty = self.container_ty();
+        match &self.ty {
+            Ty::AccountInfo => quote! { #field.to_account_info() },
+            Ty::UncheckedAccount => {
+                quote! { UncheckedAccount::try_from(#field.to_account_info()) }
+            }
+            Ty::Account(AccountTy { boxed, .. }) => {
+                if *boxed {
+                    quote! {
+                        Box::new(#container_ty::try_from_unchecked(
+                            &#field,
+                        )?)
+                    }
+                } else {
+                    quote! {
+                        #container_ty::try_from_unchecked(
+                            &#field,
+                        )?
+                    }
+                }
+            }
+            Ty::CpiAccount(_) => {
+                quote! {
+                    #container_ty::try_from_unchecked(
+                        &#field,
+                    )?
+                }
+            }
+            _ => {
+                let owner_addr = match &kind {
+                    None => quote! { program_id },
+                    Some(InitKind::Program { .. }) => quote! {
+                        program_id
+                    },
+                    _ => quote! {
+                        &anchor_spl::token::ID
+                    },
+                };
+                quote! {
+                    #container_ty::try_from_unchecked(
+                        #owner_addr,
+                        &#field,
+                    )?
+                }
+            }
+        }
+    }
+
+    pub fn container_ty(&self) -> proc_macro2::TokenStream {
+        match &self.ty {
+            Ty::ProgramAccount(_) => quote! {
+                anchor_lang::ProgramAccount
+            },
+            Ty::Account(_) => quote! {
+                anchor_lang::Account
+            },
+            Ty::AccountLoader(_) => quote! {
+                anchor_lang::AccountLoader
+            },
+            Ty::Loader(_) => quote! {
+                anchor_lang::Loader
+            },
+            Ty::CpiAccount(_) => quote! {
+                anchor_lang::CpiAccount
+            },
+            Ty::Sysvar(_) => quote! { anchor_lang::Sysvar },
+            Ty::CpiState(_) => quote! { anchor_lang::CpiState },
+            Ty::ProgramState(_) => quote! { anchor_lang::ProgramState },
+            Ty::Program(_) => quote! { anchor_lang::Program },
+            Ty::AccountInfo => quote! {},
+            Ty::UncheckedAccount => quote! {},
+            Ty::Signer => quote! {},
+            Ty::SystemAccount => quote! {},
+            Ty::ProgramData => quote! {},
+        }
+    }
+
+    // Returns the inner account struct type.
+    pub fn account_ty(&self) -> proc_macro2::TokenStream {
+        match &self.ty {
+            Ty::AccountInfo => quote! {
+                AccountInfo
+            },
+            Ty::UncheckedAccount => quote! {
+                UncheckedAccount
+            },
+            Ty::Signer => quote! {
+                Signer
+            },
+            Ty::SystemAccount => quote! {
+                SystemAccount
+            },
+            Ty::ProgramData => quote! {
+                ProgramData
+            },
+            Ty::ProgramAccount(ty) => {
+                let ident = &ty.account_type_path;
+                quote! {
+                    #ident
+                }
+            }
+            Ty::Account(ty) => {
+                let ident = &ty.account_type_path;
+                quote! {
+                    #ident
+                }
+            }
+            Ty::AccountLoader(ty) => {
+                let ident = &ty.account_type_path;
+                quote! {
+                    #ident
+                }
+            }
+            Ty::Loader(ty) => {
+                let ident = &ty.account_type_path;
+                quote! {
+                    #ident
+                }
+            }
+            Ty::CpiAccount(ty) => {
+                let ident = &ty.account_type_path;
+                quote! {
+                    #ident
+                }
+            }
+            Ty::ProgramState(ty) => {
+                let account = &ty.account_type_path;
+                quote! {
+                    #account
+                }
+            }
+            Ty::CpiState(ty) => {
+                let account = &ty.account_type_path;
+                quote! {
+                    #account
+                }
+            }
+            Ty::Sysvar(ty) => match ty {
+                SysvarTy::Clock => quote! {Clock},
+                SysvarTy::Rent => quote! {Rent},
+                SysvarTy::EpochSchedule => quote! {EpochSchedule},
+                SysvarTy::Fees => quote! {Fees},
+                SysvarTy::RecentBlockhashes => quote! {RecentBlockhashes},
+                SysvarTy::SlotHashes => quote! {SlotHashes},
+                SysvarTy::SlotHistory => quote! {SlotHistory},
+                SysvarTy::StakeHistory => quote! {StakeHistory},
+                SysvarTy::Instructions => quote! {Instructions},
+                SysvarTy::Rewards => quote! {Rewards},
+            },
+            Ty::Program(ty) => {
+                let program = &ty.account_type_path;
+                quote! {
+                    #program
+                }
+            }
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct CompositeField {
     pub ident: Ident,
@@ -174,12 +400,19 @@ pub struct CompositeField {
 #[derive(Debug, PartialEq)]
 pub enum Ty {
     AccountInfo,
+    UncheckedAccount,
     ProgramState(ProgramStateTy),
     CpiState(CpiStateTy),
     ProgramAccount(ProgramAccountTy),
     Loader(LoaderTy),
+    AccountLoader(LoaderAccountTy),
     CpiAccount(CpiAccountTy),
     Sysvar(SysvarTy),
+    Account(AccountTy),
+    Program(ProgramTy),
+    Signer,
+    SystemAccount,
+    ProgramData,
 }
 
 #[derive(Debug, PartialEq)]
@@ -219,7 +452,27 @@ pub struct CpiAccountTy {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct LoaderAccountTy {
+    // The struct type of the account.
+    pub account_type_path: TypePath,
+}
+
+#[derive(Debug, PartialEq)]
 pub struct LoaderTy {
+    // The struct type of the account.
+    pub account_type_path: TypePath,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct AccountTy {
+    // The struct type of the account.
+    pub account_type_path: TypePath,
+    // True if the account has been boxed via `Box<T>`.
+    pub boxed: bool,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ProgramTy {
     // The struct type of the account.
     pub account_type_path: TypePath,
 }
@@ -262,7 +515,7 @@ pub struct ErrorCode {
 // All well formed constraints on a single `Accounts` field.
 #[derive(Debug, Default, Clone)]
 pub struct ConstraintGroup {
-    init: Option<ConstraintInit>,
+    init: Option<ConstraintInitGroup>,
     zeroed: Option<ConstraintZeroed>,
     mutable: Option<ConstraintMut>,
     signer: Option<ConstraintSigner>,
@@ -276,13 +529,10 @@ pub struct ConstraintGroup {
     raw: Vec<ConstraintRaw>,
     close: Option<ConstraintClose>,
     address: Option<ConstraintAddress>,
+    associated_token: Option<ConstraintAssociatedToken>,
 }
 
 impl ConstraintGroup {
-    pub fn is_init(&self) -> bool {
-        self.init.is_some()
-    }
-
     pub fn is_zeroed(&self) -> bool {
         self.zeroed.is_some()
     }
@@ -306,7 +556,7 @@ impl ConstraintGroup {
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 pub enum Constraint {
-    Init(ConstraintInit),
+    Init(ConstraintInitGroup),
     Zeroed(ConstraintZeroed),
     Mut(ConstraintMut),
     Signer(ConstraintSigner),
@@ -316,6 +566,7 @@ pub enum Constraint {
     Owner(ConstraintOwner),
     RentExempt(ConstraintRentExempt),
     Seeds(ConstraintSeedsGroup),
+    AssociatedToken(ConstraintAssociatedToken),
     Executable(ConstraintExecutable),
     State(ConstraintState),
     Close(ConstraintClose),
@@ -344,7 +595,10 @@ pub enum ConstraintToken {
     Address(Context<ConstraintAddress>),
     TokenMint(Context<ConstraintTokenMint>),
     TokenAuthority(Context<ConstraintTokenAuthority>),
+    AssociatedTokenMint(Context<ConstraintTokenMint>),
+    AssociatedTokenAuthority(Context<ConstraintTokenAuthority>),
     MintAuthority(Context<ConstraintMintAuthority>),
+    MintFreezeAuthority(Context<ConstraintMintFreezeAuthority>),
     MintDecimals(Context<ConstraintMintDecimals>),
     Bump(Context<ConstraintTokenBump>),
 }
@@ -356,20 +610,30 @@ impl Parse for ConstraintToken {
 }
 
 #[derive(Debug, Clone)]
-pub struct ConstraintInit {}
+pub struct ConstraintInit {
+    pub if_needed: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintInitIfNeeded {}
 
 #[derive(Debug, Clone)]
 pub struct ConstraintZeroed {}
 
 #[derive(Debug, Clone)]
-pub struct ConstraintMut {}
+pub struct ConstraintMut {
+    pub error: Option<Expr>,
+}
 
 #[derive(Debug, Clone)]
-pub struct ConstraintSigner {}
+pub struct ConstraintSigner {
+    pub error: Option<Expr>,
+}
 
 #[derive(Debug, Clone)]
 pub struct ConstraintHasOne {
     pub join_target: Expr,
+    pub error: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
@@ -380,16 +644,19 @@ pub struct ConstraintLiteral {
 #[derive(Debug, Clone)]
 pub struct ConstraintRaw {
     pub raw: Expr,
+    pub error: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConstraintOwner {
-    pub owner_target: Expr,
+    pub owner_address: Expr,
+    pub error: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConstraintAddress {
     pub address: Expr,
+    pub error: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
@@ -399,14 +666,19 @@ pub enum ConstraintRentExempt {
 }
 
 #[derive(Debug, Clone)]
+pub struct ConstraintInitGroup {
+    pub if_needed: bool,
+    pub seeds: Option<ConstraintSeedsGroup>,
+    pub payer: Option<Expr>,
+    pub space: Option<Expr>,
+    pub kind: InitKind,
+}
+
+#[derive(Debug, Clone)]
 pub struct ConstraintSeedsGroup {
     pub is_init: bool,
     pub seeds: Punctuated<Expr, Token![,]>,
-    pub payer: Option<Ident>,
-    pub space: Option<Expr>,
-    pub kind: PdaKind,
-    // Some(None) => bump was given without a target.
-    pub bump: Option<Option<Expr>>,
+    pub bump: Option<Expr>, // None => bump was given without a target.
 }
 
 #[derive(Debug, Clone)]
@@ -424,7 +696,7 @@ pub struct ConstraintState {
 
 #[derive(Debug, Clone)]
 pub struct ConstraintPayer {
-    pub target: Ident,
+    pub target: Expr,
 }
 
 #[derive(Debug, Clone)]
@@ -434,10 +706,25 @@ pub struct ConstraintSpace {
 
 #[derive(Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
-pub enum PdaKind {
-    Program { owner: Option<Expr> },
-    Token { owner: Expr, mint: Expr },
-    Mint { owner: Expr, decimals: Expr },
+pub enum InitKind {
+    Program {
+        owner: Option<Expr>,
+    },
+    // Owner for token and mint represents the authority. Not to be confused
+    // with the owner of the AccountInfo.
+    Token {
+        owner: Expr,
+        mint: Expr,
+    },
+    AssociatedToken {
+        owner: Expr,
+        mint: Expr,
+    },
+    Mint {
+        owner: Expr,
+        freeze_authority: Option<Expr>,
+        decimals: Expr,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -461,6 +748,11 @@ pub struct ConstraintMintAuthority {
 }
 
 #[derive(Debug, Clone)]
+pub struct ConstraintMintFreezeAuthority {
+    mint_freeze_auth: Expr,
+}
+
+#[derive(Debug, Clone)]
 pub struct ConstraintMintDecimals {
     decimals: Expr,
 }
@@ -468,6 +760,12 @@ pub struct ConstraintMintDecimals {
 #[derive(Debug, Clone)]
 pub struct ConstraintTokenBump {
     bump: Option<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintAssociatedToken {
+    pub wallet: Expr,
+    pub mint: Expr,
 }
 
 // Syntaxt context object for preserving metadata about the inner item.

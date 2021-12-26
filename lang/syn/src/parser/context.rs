@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use syn::parse::{Error as ParseError, Result as ParseResult};
@@ -7,10 +7,14 @@ use syn::parse::{Error as ParseError, Result as ParseResult};
 ///
 /// Keeps track of modules defined within a crate.
 pub struct CrateContext {
-    modules: HashMap<String, ParsedModule>,
+    modules: BTreeMap<String, ParsedModule>,
 }
 
 impl CrateContext {
+    pub fn consts(&self) -> impl Iterator<Item = &syn::ItemConst> {
+        self.modules.iter().flat_map(|(_, ctx)| ctx.consts())
+    }
+
     pub fn structs(&self) -> impl Iterator<Item = &syn::ItemStruct> {
         self.modules.iter().flat_map(|(_, ctx)| ctx.structs())
     }
@@ -59,8 +63,8 @@ struct ParsedModule {
 }
 
 impl ParsedModule {
-    fn parse_recursive(root: &Path) -> Result<HashMap<String, ParsedModule>, anyhow::Error> {
-        let mut modules = HashMap::new();
+    fn parse_recursive(root: &Path) -> Result<BTreeMap<String, ParsedModule>, anyhow::Error> {
+        let mut modules = BTreeMap::new();
 
         let root_content = std::fs::read_to_string(root)?;
         let root_file = syn::parse_file(&root_content)?;
@@ -180,6 +184,13 @@ impl ParsedModule {
     fn enums(&self) -> impl Iterator<Item = &syn::ItemEnum> {
         self.items.iter().filter_map(|i| match i {
             syn::Item::Enum(item) => Some(item),
+            _ => None,
+        })
+    }
+
+    fn consts(&self) -> impl Iterator<Item = &syn::ItemConst> {
+        self.items.iter().filter_map(|i| match i {
+            syn::Item::Const(item) => Some(item),
             _ => None,
         })
     }

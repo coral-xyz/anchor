@@ -1,30 +1,47 @@
-import { PublicKey, TransactionInstruction } from "@solana/web3.js";
+import {
+  PublicKey,
+  TransactionInstruction,
+  AccountMeta,
+} from "@solana/web3.js";
 import {
   IdlAccount,
   IdlInstruction,
   IdlAccountItem,
   IdlAccountsVec,
+  Idl,
+  IdlAccounts,
 } from "../../idl";
 import { IdlError } from "../../error";
+import {} from "@solana/web3.js";
 import {
   toInstruction,
   validateAccounts,
   translateAddress,
   Address,
 } from "../common";
-import { Accounts, AccountsArray, splitArgsAndCtx } from "../context";
+import { Accounts, splitArgsAndCtx, AccountsArray } from "../context";
+import * as features from "../../utils/features";
+import {
+  AllInstructions,
+  AllInstructionsMap,
+  InstructionContextFn,
+  InstructionContextFnArgs,
+  MakeInstructionsNamespace,
+} from "./types";
 
 export default class InstructionNamespaceFactory {
-  public static build(
-    idlIx: IdlInstruction,
-    encodeFn: InstructionEncodeFn,
+  public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
+    idlIx: I,
+    encodeFn: InstructionEncodeFn<I>,
     programId: PublicKey
-  ): InstructionFn {
+  ): InstructionFn<IDL, I> {
     if (idlIx.name === "_inner") {
       throw new IdlError("the _inner name is reserved");
     }
 
-    const ix = (...args: any[]): TransactionInstruction => {
+    const ix = (
+      ...args: InstructionContextFnArgs<IDL, I>
+    ): TransactionInstruction => {
       const [ixArgs, ctx] = splitArgsAndCtx(idlIx, [...args]);
       validateAccounts(idlIx.accounts, ctx.accounts);
       validateInstruction(idlIx, ...args);
@@ -35,9 +52,10 @@ export default class InstructionNamespaceFactory {
         keys.push(...ctx.remainingAccounts);
       }
 
-      if (ctx.__private && ctx.__private.logAccounts) {
+      if (features.isSet("debug-logs")) {
         console.log("Outgoing account metas:", keys);
       }
+
       return new TransactionInstruction({
         keys,
         programId,
@@ -46,24 +64,37 @@ export default class InstructionNamespaceFactory {
     };
 
     // Utility fn for ordering the accounts for this instruction.
-    ix["accounts"] = (accs: Accounts) => {
-      return InstructionNamespaceFactory.accountsArray(accs, idlIx.accounts);
+    ix["accounts"] = (accs: Accounts<I["accounts"][number]> | undefined) => {
+      return InstructionNamespaceFactory.accountsArray(
+        accs,
+        idlIx.accounts,
+        idlIx.name
+      );
     };
 
     return ix;
   }
 
-  public static accountsArray(ctx: Accounts, accounts: IdlAccountItem[]): any {
+  public static accountsArray(
+    ctx: Accounts | undefined,
+    accounts: readonly IdlAccountItem[],
+    ixName?: string
+  ): AccountMeta[] {
+    if (!ctx) {
+      return [];
+    }
+
     return accounts
       .map((acc: IdlAccountItem) => {
         // Nested accounts.
-        // @ts-ignore
-        const nestedAccounts: IdlAccountItem[] | undefined = acc.accounts;
+        const nestedAccounts: IdlAccountItem[] | undefined =
+          "accounts" in acc ? acc.accounts : undefined;
         if (nestedAccounts !== undefined) {
           const rpcAccs = ctx[acc.name] as Accounts;
           return InstructionNamespaceFactory.accountsArray(
             rpcAccs,
-            nestedAccounts
+            (acc as IdlAccounts).accounts,
+            ixName
           ).flat();
         } else if ((acc as IdlAccountsVec).dummyVecIndicator) {
           const account: IdlAccountsVec = acc as IdlAccountsVec;
@@ -77,8 +108,20 @@ export default class InstructionNamespaceFactory {
           });
         } else {
           const account: IdlAccount = acc as IdlAccount;
+          let pubkey;
+          try {
+            pubkey = translateAddress(ctx[acc.name] as Address);
+          } catch (err) {
+            throw new Error(
+              `Wrong input type for account "${
+                acc.name
+              }" in the instruction accounts object${
+                ixName !== undefined ? ' for instruction "' + ixName + '"' : ""
+              }. Expected PublicKey or string.`
+            );
+          }
           return {
-            pubkey: translateAddress(ctx[acc.name] as Address),
+            pubkey,
             isWritable: account.isMut,
             isSigner: account.isSigner,
           };
@@ -117,21 +160,44 @@ export default class InstructionNamespaceFactory {
  * });
  * ```
  */
-export interface InstructionNamespace {
-  [key: string]: InstructionFn;
-}
+export type InstructionNamespace<
+  IDL extends Idl = Idl,
+  I extends IdlInstruction = IDL["instructions"][number]
+> = MakeInstructionsNamespace<
+  IDL,
+  I,
+  TransactionInstruction,
+  {
+    [M in keyof AllInstructionsMap<IDL>]: {
+      accounts: (
+        ctx: Accounts<AllInstructionsMap<IDL>[M]["accounts"][number]>
+      ) => unknown;
+    };
+  }
+>;
 
 /**
  * Function to create a `TransactionInstruction` generated from an IDL.
  * Additionally it provides an `accounts` utility method, returning a list
  * of ordered accounts for the instruction.
  */
-export type InstructionFn = IxProps & ((...args: any[]) => any);
-type IxProps = {
-  accounts: (ctx: Accounts) => any;
+export type InstructionFn<
+  IDL extends Idl = Idl,
+  I extends AllInstructions<IDL> = AllInstructions<IDL>
+> = InstructionContextFn<IDL, I, TransactionInstruction> &
+  IxProps<Accounts<I["accounts"][number]>>;
+
+type IxProps<A extends Accounts> = {
+  /**
+   * Returns an ordered list of accounts associated with the instruction.
+   */
+  accounts: (ctx: A) => AccountMeta[];
 };
 
-export type InstructionEncodeFn = (ixName: string, ix: any) => Buffer;
+export type InstructionEncodeFn<I extends IdlInstruction = IdlInstruction> = (
+  ixName: I["name"],
+  ix: any
+) => Buffer;
 
 // Throws error if any argument required for the `ix` is not given.
 function validateInstruction(ix: IdlInstruction, ...args: any[]) {
