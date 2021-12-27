@@ -182,12 +182,12 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
             };
             ConstraintToken::Bump(Context::new(ident.span(), ConstraintTokenBump { bump }))
         }
-        "program_id" => {
+        "program_seed" => {
             stream.parse::<Token![=]>()?;
-            ConstraintToken::ProgramId(Context::new(
+            ConstraintToken::ProgramSeed(Context::new(
                 ident.span(),
-                ConstraintTokenProgramId {
-                    program_id: stream.parse()?,
+                ConstraintTokenProgramSeed {
+                    program_seed: stream.parse()?,
                 },
             ))
         }
@@ -317,7 +317,7 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub mint_freeze_authority: Option<Context<ConstraintMintFreezeAuthority>>,
     pub mint_decimals: Option<Context<ConstraintMintDecimals>>,
     pub bump: Option<Context<ConstraintTokenBump>>,
-    pub program_id: Option<Context<ConstraintTokenProgramId>>,
+    pub program_seed: Option<Context<ConstraintTokenProgramSeed>>,
 }
 
 impl<'ty> ConstraintGroupBuilder<'ty> {
@@ -348,7 +348,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             mint_freeze_authority: None,
             mint_decimals: None,
             bump: None,
-            program_id: None,
+            program_seed: None,
         }
     }
 
@@ -505,7 +505,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             mint_freeze_authority,
             mint_decimals,
             bump,
-            program_id,
+            program_seed,
         } = self;
 
         // Converts Option<Context<T>> -> Option<T>.
@@ -531,7 +531,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             bump: into_inner!(bump)
                 .map(|b| b.bump)
                 .expect("bump must be provided with seeds"),
-            program_id: into_inner!(program_id).map(|id| id.program_id),
+            program_seed: into_inner!(program_seed).map(|id| id.program_seed),
         });
         let associated_token = match (associated_token_mint, associated_token_authority) {
             (Some(mint), Some(auth)) => Some(ConstraintAssociatedToken {
@@ -633,7 +633,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::MintFreezeAuthority(c) => self.add_mint_freeze_authority(c),
             ConstraintToken::MintDecimals(c) => self.add_mint_decimals(c),
             ConstraintToken::Bump(c) => self.add_bump(c),
-            ConstraintToken::ProgramId(c) => self.add_program_id(c),
+            ConstraintToken::ProgramSeed(c) => self.add_program_seed(c),
         }
     }
 
@@ -739,30 +739,30 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         Ok(())
     }
 
-    fn add_program_id(&mut self, c: Context<ConstraintTokenProgramId>) -> ParseResult<()> {
-        if self.program_id.is_some() {
-            return Err(ParseError::new(c.span(), "program_id already provided"));
+    fn add_program_seed(&mut self, c: Context<ConstraintTokenProgramSeed>) -> ParseResult<()> {
+        if self.program_seed.is_some() {
+            return Err(ParseError::new(c.span(), "program_seed already provided"));
         }
         if self.seeds.is_none() {
             return Err(ParseError::new(
                 c.span(),
-                "seeds must be provided before program_id",
+                "seeds must be provided before program_seed",
             ));
         }
         if let Some(ref init) = self.init {
             if init.if_needed {
                 return Err(ParseError::new(
                     c.span(),
-                    "program_id cannot be used with init_if_needed",
+                    "program_seed cannot be used with init_if_needed",
                 ));
             } else {
                 return Err(ParseError::new(
                     c.span(),
-                    "program_id cannot be used with init",
+                    "program_seed cannot be used with init",
                 ));
             }
         }
-        self.program_id.replace(c);
+        self.program_seed.replace(c);
         Ok(())
     }
 
