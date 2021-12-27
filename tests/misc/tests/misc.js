@@ -1530,11 +1530,16 @@ describe("misc", () => {
   });
   
   it("Can validate PDAs derived from other program ids", async () => {
+    const [ourPda, ourPdaBump] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from("seed")],
+      program.programId
+    );
     const wrongAddress = anchor.web3.Keypair.generate().publicKey;
     try {
       await program.rpc.testProgramIdConstraint(123, {
         accounts: {
           associatedTokenAccount: wrongAddress,
+          otherAccount: ourPda,
         },
       });
       assert.ok(false);
@@ -1551,6 +1556,7 @@ describe("misc", () => {
       await program.rpc.testProgramIdConstraint(wrongBump, {
         accounts: {
           associatedTokenAccount: wrongProgramIdPDA,
+          otherAccount: ourPda,
         },
       });
       assert.ok(false);
@@ -1566,6 +1572,7 @@ describe("misc", () => {
     await program.rpc.testProgramIdConstraint(rightBump, {
       accounts: {
         associatedTokenAccount: rightProgramIdPDA,
+        otherAccount: ourPda,
       },
     });
   });

@@ -383,4 +383,7 @@ pub struct InitIfNeededChecksRentExemption<'info> {
 pub struct TestProgramIdConstraint<'info> {
     #[account(seeds = [b"seed"], bump, program_seed = anchor_spl::associated_token::ID)]
     associated_token_account: AccountInfo<'info>,
+
+    #[account(seeds = [b"seed"], bump, program_seed = crate::ID)]
+    other_account: AccountInfo<'info>,
 }
