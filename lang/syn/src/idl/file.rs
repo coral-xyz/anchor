@@ -408,8 +408,6 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
                         }
                         Ok(IdlField {
                             name: f.ident.as_ref().unwrap().to_string(),
-                            ty: tts.to_string().parse()?,
-                            name: f.ident.as_ref().unwrap().to_string(),
                             ty: tts_string.parse()?,
                         })
                     })
