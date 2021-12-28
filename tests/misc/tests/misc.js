@@ -736,11 +736,12 @@ describe("misc", () => {
     ]);
     // Call for multiple kinds of .all.
     const allAccounts = await program.account.dataWithFilter.all();
-    const allAccountsFilteredByBuffer = await program.account.dataWithFilter.all(
-      program.provider.wallet.publicKey.toBuffer()
-    );
-    const allAccountsFilteredByProgramFilters1 = await program.account.dataWithFilter.all(
-      [
+    const allAccountsFilteredByBuffer =
+      await program.account.dataWithFilter.all(
+        program.provider.wallet.publicKey.toBuffer()
+      );
+    const allAccountsFilteredByProgramFilters1 =
+      await program.account.dataWithFilter.all([
         {
           memcmp: {
             offset: 8,
@@ -748,10 +749,9 @@ describe("misc", () => {
           },
         },
         { memcmp: { offset: 40, bytes: filterable1.toBase58() } },
-      ]
-    );
-    const allAccountsFilteredByProgramFilters2 = await program.account.dataWithFilter.all(
-      [
+      ]);
+    const allAccountsFilteredByProgramFilters2 =
+      await program.account.dataWithFilter.all([
         {
           memcmp: {
             offset: 8,
@@ -759,8 +759,7 @@ describe("misc", () => {
           },
         },
         { memcmp: { offset: 40, bytes: filterable2.toBase58() } },
-      ]
-    );
+      ]);
     // Without filters there should be 4 accounts.
     assert.equal(allAccounts.length, 4);
     // Filtering by main wallet there should be 3 accounts.
@@ -837,6 +836,24 @@ describe("misc", () => {
     assert.ok(account.data, 3);
   });
 
+  it("Can use const for array size", async () => {
+    const data = anchor.web3.Keypair.generate();
+    const tx = await program.rpc.testConstArraySize(99, {
+      accounts: {
+        data: data.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [data],
+      instructions: [
+        await program.account.dataConstArraySize.createInstruction(data),
+      ],
+    });
+    const dataAccount = await program.account.dataConstArraySize.fetch(
+      data.publicKey
+    );
+    assert.deepStrictEqual(dataAccount.data, [99, ...new Array(9).fill(0)]);
+  });
+
   it("Should include BASE const in IDL", async () => {
     assert(
       miscIdl.constants.find(
@@ -861,14 +878,17 @@ describe("misc", () => {
   });
 
   it("init_if_needed throws if account exists but is not owned by the expected program", async () => {
-    const newAcc = await anchor.web3.PublicKey.findProgramAddress([utf8.encode("hello")], program.programId);
+    const newAcc = await anchor.web3.PublicKey.findProgramAddress(
+      [utf8.encode("hello")],
+      program.programId
+    );
     await program.rpc.testInitIfNeededChecksOwner({
       accounts: {
         data: newAcc[0],
         systemProgram: anchor.web3.SystemProgram.programId,
         payer: program.provider.wallet.publicKey,
-        owner: program.programId
-      }
+        owner: program.programId,
+      },
     });
 
     try {
@@ -877,7 +897,7 @@ describe("misc", () => {
           data: newAcc[0],
           systemProgram: anchor.web3.SystemProgram.programId,
           payer: program.provider.wallet.publicKey,
-          owner: anchor.web3.Keypair.generate().publicKey
+          owner: anchor.web3.Keypair.generate().publicKey,
         },
       });
       assert.ok(false);
@@ -887,20 +907,26 @@ describe("misc", () => {
   });
 
   it("init_if_needed throws if pda account exists but does not have the expected seeds", async () => {
-    const newAcc = await anchor.web3.PublicKey.findProgramAddress([utf8.encode("nothello")], program.programId);
+    const newAcc = await anchor.web3.PublicKey.findProgramAddress(
+      [utf8.encode("nothello")],
+      program.programId
+    );
     await program.rpc.testInitIfNeededChecksSeeds("nothello", {
       accounts: {
         data: newAcc[0],
         systemProgram: anchor.web3.SystemProgram.programId,
         payer: program.provider.wallet.publicKey,
-      }
+      },
     });
 
     // this will throw if it is not a proper PDA
     // we need this so we know that the following tx failed
     // not because it couldn't create this pda
     // but because the two pdas were different
-    anchor.web3.PublicKey.createProgramAddress([utf8.encode("hello")], program.programId);
+    anchor.web3.PublicKey.createProgramAddress(
+      [utf8.encode("hello")],
+      program.programId
+    );
 
     try {
       await program.rpc.testInitIfNeededChecksSeeds("hello", {
@@ -908,7 +934,7 @@ describe("misc", () => {
           data: newAcc[0],
           systemProgram: anchor.web3.SystemProgram.programId,
           payer: program.provider.wallet.publicKey,
-          owner: anchor.web3.Keypair.generate().publicKey
+          owner: anchor.web3.Keypair.generate().publicKey,
         },
       });
       assert.ok(false);
@@ -916,8 +942,6 @@ describe("misc", () => {
       assert.equal(err.code, 2006);
     }
   });
-
-
 
   it("init_if_needed throws if account exists but is not the expected space", async () => {
     const newAcc = anchor.web3.Keypair.generate();
@@ -959,7 +983,7 @@ describe("misc", () => {
     });
 
     try {
-      await program.rpc.testInitMintIfNeeded(6,{
+      await program.rpc.testInitMintIfNeeded(6, {
         accounts: {
           mint: mint.publicKey,
           payer: program.provider.wallet.publicKey,
@@ -967,7 +991,7 @@ describe("misc", () => {
           tokenProgram: TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           mintAuthority: anchor.web3.Keypair.generate().publicKey,
-          freezeAuthority: program.provider.wallet.publicKey
+          freezeAuthority: program.provider.wallet.publicKey,
         },
         signers: [mint],
       });
@@ -991,7 +1015,7 @@ describe("misc", () => {
     });
 
     try {
-      await program.rpc.testInitMintIfNeeded(6,{
+      await program.rpc.testInitMintIfNeeded(6, {
         accounts: {
           mint: mint.publicKey,
           payer: program.provider.wallet.publicKey,
@@ -999,7 +1023,7 @@ describe("misc", () => {
           tokenProgram: TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           mintAuthority: program.provider.wallet.publicKey,
-          freezeAuthority: anchor.web3.Keypair.generate().publicKey
+          freezeAuthority: anchor.web3.Keypair.generate().publicKey,
         },
         signers: [mint],
       });
@@ -1023,7 +1047,7 @@ describe("misc", () => {
     });
 
     try {
-      await program.rpc.testInitMintIfNeeded(9,{
+      await program.rpc.testInitMintIfNeeded(9, {
         accounts: {
           mint: mint.publicKey,
           payer: program.provider.wallet.publicKey,
@@ -1031,7 +1055,7 @@ describe("misc", () => {
           tokenProgram: TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           mintAuthority: program.provider.wallet.publicKey,
-          freezeAuthority: program.provider.wallet.publicKey
+          freezeAuthority: program.provider.wallet.publicKey,
         },
         signers: [mint],
       });
@@ -1185,14 +1209,14 @@ describe("misc", () => {
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-          authority: anchor.web3.Keypair.generate().publicKey
+          authority: anchor.web3.Keypair.generate().publicKey,
         },
       });
       assert.ok(false);
     } catch (err) {
       assert.equal(err.code, 2015);
     }
-  })
+  });
 
   it("init_if_needed throws if associated token exists but has the wrong mint", async () => {
     const mint = anchor.web3.Keypair.generate();
@@ -1248,14 +1272,14 @@ describe("misc", () => {
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-          authority: program.provider.wallet.publicKey
+          authority: program.provider.wallet.publicKey,
         },
       });
       assert.ok(false);
     } catch (err) {
       assert.equal(err.code, 2014);
     }
-  })
+  });
 
   it("Can use multidimensional array", async () => {
     const array2d = new Array(10).fill(new Array(10).fill(99));

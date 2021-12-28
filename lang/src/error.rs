@@ -24,7 +24,7 @@ pub enum ErrorCode {
     ConstraintMut = 2000,
     #[msg("A has one constraint was violated")]
     ConstraintHasOne,
-    #[msg("A signer constraint as violated")]
+    #[msg("A signer constraint was violated")]
     ConstraintSigner,
     #[msg("A raw constraint was violated")]
     ConstraintRaw,
@@ -77,8 +77,8 @@ pub enum ErrorCode {
     AccountNotEnoughKeys,
     #[msg("The given account is not mutable")]
     AccountNotMutable,
-    #[msg("The given account is not owned by the executing program")]
-    AccountNotProgramOwned,
+    #[msg("The given account is owned by a different program than expected")]
+    AccountOwnedByWrongProgram,
     #[msg("Program ID was not as expected")]
     InvalidProgramId,
     #[msg("Program account is not executable")]
