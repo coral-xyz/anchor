@@ -28,7 +28,7 @@ pub fn parse(error_enum: &mut syn::ItemEnum, args: Option<ErrorArgs>) -> Error {
             variant.attrs = variant
                 .attrs
                 .iter()
-                .filter(|attr| attr.path.segments[0].ident.to_string() == "doc")
+                .filter(|attr| attr.path.segments[0].ident == "doc")
                 .cloned()
                 .collect();
 
@@ -48,7 +48,7 @@ fn parse_error_attribute(variant: &syn::Variant) -> Option<String> {
     let attrs = variant
         .attrs
         .iter()
-        .filter(|attr| !(attr.path.segments[0].ident.to_string() == "doc"))
+        .filter(|attr| attr.path.segments[0].ident != "doc")
         .collect::<Vec<_>>();
     match attrs.len() {
         0 => None,
