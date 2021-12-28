@@ -11,10 +11,10 @@ use std::path::Path;
 
 const DERIVE_NAME: &str = "Accounts";
 // TODO: sharee this with `anchor_lang` crate.
-const ERROR_CODE_OFFSET: u32 = 300;
+const ERROR_CODE_OFFSET: u32 = 6000;
 
 // Parse an entire interface file.
-pub fn parse(filename: impl AsRef<Path>) -> Result<Option<Idl>> {
+pub fn parse(filename: impl AsRef<Path>, version: String) -> Result<Option<Idl>> {
     let ctx = CrateContext::parse(filename)?;
 
     let program_mod = match parse_program_mod(&ctx) {
@@ -223,8 +223,17 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Option<Idl>> {
         }
     }
 
+    let constants = parse_consts(&ctx)
+        .iter()
+        .map(|c: &&syn::ItemConst| IdlConst {
+            name: c.ident.to_string(),
+            ty: c.ty.to_token_stream().to_string().parse().unwrap(),
+            value: c.expr.to_token_stream().to_string().parse().unwrap(),
+        })
+        .collect::<Vec<IdlConst>>();
+
     Ok(Some(Idl {
-        version: "0.0.0".to_string(),
+        version,
         name: p.name.to_string(),
         state,
         instructions,
@@ -237,6 +246,7 @@ pub fn parse(filename: impl AsRef<Path>) -> Result<Option<Idl>> {
         },
         errors: error_codes,
         metadata: None,
+        constants,
     }))
 }
 
@@ -344,6 +354,19 @@ fn parse_account_derives(ctx: &CrateContext) -> HashMap<String, AccountsStruct> 
         .collect()
 }
 
+fn parse_consts(ctx: &CrateContext) -> Vec<&syn::ItemConst> {
+    ctx.consts()
+        .filter(|item_strct| {
+            for attr in &item_strct.attrs {
+                if attr.path.segments.last().unwrap().ident == "constant" {
+                    return true;
+                }
+            }
+            false
+        })
+        .collect()
+}
+
 // Parse all user defined types in the file.
 fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
     ctx.structs()
@@ -379,9 +402,14 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
                     .map(|f: &syn::Field| {
                         let mut tts = proc_macro2::TokenStream::new();
                         f.ty.to_tokens(&mut tts);
+                        // Handle array sizes that are constants
+                        let mut tts_string = tts.to_string();
+                        if tts_string.starts_with('[') {
+                            tts_string = resolve_variable_array_length(ctx, tts_string);
+                        }
                         Ok(IdlField {
                             name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
-                            ty: tts.to_string().parse()?,
+                            ty: tts_string.parse()?,
                         })
                     })
                     .collect::<Result<Vec<IdlField>>>(),
@@ -430,6 +458,33 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
             })
         }))
         .collect()
+}
+
+// Replace variable array lengths with values
+fn resolve_variable_array_length(ctx: &CrateContext, tts_string: String) -> String {
+    for constant in ctx.consts() {
+        if constant.ty.to_token_stream().to_string() == "usize"
+            && tts_string.contains(&constant.ident.to_string())
+        {
+            // Check for the existence of consts existing elsewhere in the
+            // crate which have the same name, are usize, and have a
+            // different value. We can't know which was intended for the
+            // array size from ctx.
+            if ctx.consts().any(|c| {
+                c != constant
+                    && c.ident == constant.ident
+                    && c.ty == constant.ty
+                    && c.expr != constant.expr
+            }) {
+                panic!("Crate wide unique name required for array size const.");
+            }
+            return tts_string.replace(
+                &constant.ident.to_string(),
+                &constant.expr.to_token_stream().to_string(),
+            );
+        }
+    }
+    tts_string
 }
 
 fn to_idl_type(f: &syn::Field) -> IdlType {

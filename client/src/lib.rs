@@ -13,9 +13,10 @@ use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilter};
 use solana_client::rpc_response::{Response as RpcResponse, RpcLogsResponse};
 use solana_sdk::commitment_config::CommitmentConfig;
-use solana_sdk::signature::{Keypair, Signature, Signer};
+use solana_sdk::signature::{Signature, Signer};
 use solana_sdk::transaction::Transaction;
 use std::convert::Into;
+use std::rc::Rc;
 use thiserror::Error;
 
 pub use anchor_lang;
@@ -36,7 +37,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(cluster: Cluster, payer: Keypair) -> Self {
+    pub fn new(cluster: Cluster, payer: Rc<dyn Signer>) -> Self {
         Self {
             cfg: Config {
                 cluster,
@@ -46,7 +47,11 @@ impl Client {
         }
     }
 
-    pub fn new_with_options(cluster: Cluster, payer: Keypair, options: CommitmentConfig) -> Self {
+    pub fn new_with_options(
+        cluster: Cluster,
+        payer: Rc<dyn Signer>,
+        options: CommitmentConfig,
+    ) -> Self {
         Self {
             cfg: Config {
                 cluster,
@@ -62,20 +67,22 @@ impl Client {
             cfg: Config {
                 cluster: self.cfg.cluster.clone(),
                 options: self.cfg.options,
-                payer: Keypair::from_bytes(&self.cfg.payer.to_bytes()).unwrap(),
+                payer: self.cfg.payer.clone(),
             },
         }
     }
 }
 
 // Internal configuration for a client.
+#[derive(Debug)]
 struct Config {
     cluster: Cluster,
-    payer: Keypair,
+    payer: Rc<dyn Signer>,
     options: Option<CommitmentConfig>,
 }
 
 /// Program is the primary client handle to be used to build and send requests.
+#[derive(Debug)]
 pub struct Program {
     program_id: Pubkey,
     cfg: Config,
@@ -91,7 +98,7 @@ impl Program {
         RequestBuilder::from(
             self.program_id,
             self.cfg.cluster.url(),
-            Keypair::from_bytes(&self.cfg.payer.to_bytes()).unwrap(),
+            self.cfg.payer.clone(),
             self.cfg.options,
             RequestNamespace::Global,
         )
@@ -102,7 +109,7 @@ impl Program {
         RequestBuilder::from(
             self.program_id,
             self.cfg.cluster.url(),
-            Keypair::from_bytes(&self.cfg.payer.to_bytes()).unwrap(),
+            self.cfg.payer.clone(),
             self.cfg.options,
             RequestNamespace::State { new: false },
         )
@@ -166,10 +173,7 @@ impl Program {
                                         if self_program_str == execution.program() {
                                             handle_program_log(&self_program_str, l).unwrap_or_else(
                                                 |e| {
-                                                    println!(
-                                                        "Unable to parse log: {}",
-                                                        e.to_string()
-                                                    );
+                                                    println!("Unable to parse log: {}", e);
                                                     std::process::exit(1);
                                                 },
                                             )
@@ -212,8 +216,14 @@ fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
     // Log emitted from the current program.
     if l.starts_with("Program log:") {
         let log = l.to_string().split_off("Program log: ".len());
-        let borsh_bytes = anchor_lang::__private::base64::decode(log)
-            .map_err(|_| ClientError::LogParseError(l.to_string()))?;
+        let borsh_bytes = match anchor_lang::__private::base64::decode(&log) {
+            Ok(borsh_bytes) => borsh_bytes,
+            _ => {
+                #[cfg(feature = "debug")]
+                println!("Could not base64 decode log: {}", log);
+                return Ok((None, None, false));
+            }
+        };
 
         let mut slice: &[u8] = &borsh_bytes[..];
         let disc: [u8; 8] = {
@@ -318,7 +328,7 @@ pub struct RequestBuilder<'a> {
     accounts: Vec<AccountMeta>,
     options: CommitmentConfig,
     instructions: Vec<Instruction>,
-    payer: Keypair,
+    payer: Rc<dyn Signer>,
     // Serialized instruction data for the target RPC.
     instruction_data: Option<Vec<u8>>,
     signers: Vec<&'a dyn Signer>,
@@ -340,7 +350,7 @@ impl<'a> RequestBuilder<'a> {
     pub fn from(
         program_id: Pubkey,
         cluster: &str,
-        payer: Keypair,
+        payer: Rc<dyn Signer>,
         options: Option<CommitmentConfig>,
         namespace: RequestNamespace,
     ) -> Self {
@@ -357,37 +367,44 @@ impl<'a> RequestBuilder<'a> {
         }
     }
 
-    pub fn payer(mut self, payer: Keypair) -> Self {
+    #[must_use]
+    pub fn payer(mut self, payer: Rc<dyn Signer>) -> Self {
         self.payer = payer;
         self
     }
 
+    #[must_use]
     pub fn cluster(mut self, url: &str) -> Self {
         self.cluster = url.to_string();
         self
     }
 
+    #[must_use]
     pub fn instruction(mut self, ix: Instruction) -> Self {
         self.instructions.push(ix);
         self
     }
 
+    #[must_use]
     pub fn program(mut self, program_id: Pubkey) -> Self {
         self.program_id = program_id;
         self
     }
 
+    #[must_use]
     pub fn accounts(mut self, accounts: impl ToAccountMetas) -> Self {
         let mut metas = accounts.to_account_metas(None);
         self.accounts.append(&mut metas);
         self
     }
 
+    #[must_use]
     pub fn options(mut self, options: CommitmentConfig) -> Self {
         self.options = options;
         self
     }
 
+    #[must_use]
     pub fn args(mut self, args: impl InstructionData) -> Self {
         self.instruction_data = Some(args.data());
         self
@@ -395,6 +412,7 @@ impl<'a> RequestBuilder<'a> {
 
     /// Invokes the `#[state]`'s `new` constructor.
     #[allow(clippy::wrong_self_convention)]
+    #[must_use]
     pub fn new(mut self, args: impl InstructionData) -> Self {
         assert!(self.namespace == RequestNamespace::State { new: false });
         self.namespace = RequestNamespace::State { new: true };
@@ -402,49 +420,54 @@ impl<'a> RequestBuilder<'a> {
         self
     }
 
+    #[must_use]
     pub fn signer(mut self, signer: &'a dyn Signer) -> Self {
         self.signers.push(signer);
         self
     }
 
-    pub fn send(self) -> Result<Signature, ClientError> {
-        let accounts = match self.namespace {
-            RequestNamespace::State { new } => {
-                let mut accounts = match new {
-                    false => vec![AccountMeta::new(
+    pub fn instructions(&self) -> Result<Vec<Instruction>, ClientError> {
+        let mut accounts = match self.namespace {
+            RequestNamespace::State { new } => match new {
+                false => vec![AccountMeta::new(
+                    anchor_lang::__private::state::address(&self.program_id),
+                    false,
+                )],
+                true => vec![
+                    AccountMeta::new_readonly(self.payer.pubkey(), true),
+                    AccountMeta::new(
                         anchor_lang::__private::state::address(&self.program_id),
                         false,
-                    )],
-                    true => vec![
-                        AccountMeta::new_readonly(self.payer.pubkey(), true),
-                        AccountMeta::new(
-                            anchor_lang::__private::state::address(&self.program_id),
-                            false,
-                        ),
-                        AccountMeta::new_readonly(
-                            Pubkey::find_program_address(&[], &self.program_id).0,
-                            false,
-                        ),
-                        AccountMeta::new_readonly(system_program::ID, false),
-                        AccountMeta::new_readonly(self.program_id, false),
-                    ],
-                };
-                accounts.extend_from_slice(&self.accounts);
-                accounts
-            }
-            _ => self.accounts,
+                    ),
+                    AccountMeta::new_readonly(
+                        Pubkey::find_program_address(&[], &self.program_id).0,
+                        false,
+                    ),
+                    AccountMeta::new_readonly(system_program::ID, false),
+                    AccountMeta::new_readonly(self.program_id, false),
+                ],
+            },
+            _ => Vec::new(),
         };
-        let mut instructions = self.instructions;
-        if let Some(ix_data) = self.instruction_data {
+        accounts.extend_from_slice(&self.accounts);
+
+        let mut instructions = self.instructions.clone();
+        if let Some(ix_data) = &self.instruction_data {
             instructions.push(Instruction {
                 program_id: self.program_id,
-                data: ix_data,
+                data: ix_data.clone(),
                 accounts,
             });
         }
 
+        Ok(instructions)
+    }
+
+    pub fn send(self) -> Result<Signature, ClientError> {
+        let instructions = self.instructions()?;
+
         let mut signers = self.signers;
-        signers.push(&self.payer);
+        signers.push(&*self.payer);
 
         let rpc_client = RpcClient::new_with_commitment(self.cluster, self.options);
 

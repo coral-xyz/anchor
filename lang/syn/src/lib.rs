@@ -184,6 +184,12 @@ impl Field {
             Ty::Signer => quote! {
                 Signer
             },
+            Ty::ProgramData => quote! {
+                ProgramData
+            },
+            Ty::SystemAccount => quote! {
+                SystemAccount
+            },
             Ty::Account(AccountTy { boxed, .. }) => {
                 if *boxed {
                     quote! {
@@ -278,6 +284,9 @@ impl Field {
             Ty::Account(_) => quote! {
                 anchor_lang::Account
             },
+            Ty::AccountLoader(_) => quote! {
+                anchor_lang::AccountLoader
+            },
             Ty::Loader(_) => quote! {
                 anchor_lang::Loader
             },
@@ -291,6 +300,8 @@ impl Field {
             Ty::AccountInfo => quote! {},
             Ty::UncheckedAccount => quote! {},
             Ty::Signer => quote! {},
+            Ty::SystemAccount => quote! {},
+            Ty::ProgramData => quote! {},
         }
     }
 
@@ -306,6 +317,12 @@ impl Field {
             Ty::Signer => quote! {
                 Signer
             },
+            Ty::SystemAccount => quote! {
+                SystemAccount
+            },
+            Ty::ProgramData => quote! {
+                ProgramData
+            },
             Ty::ProgramAccount(ty) => {
                 let ident = &ty.account_type_path;
                 quote! {
@@ -313,6 +330,12 @@ impl Field {
                 }
             }
             Ty::Account(ty) => {
+                let ident = &ty.account_type_path;
+                quote! {
+                    #ident
+                }
+            }
+            Ty::AccountLoader(ty) => {
                 let ident = &ty.account_type_path;
                 quote! {
                     #ident
@@ -382,11 +405,14 @@ pub enum Ty {
     CpiState(CpiStateTy),
     ProgramAccount(ProgramAccountTy),
     Loader(LoaderTy),
+    AccountLoader(LoaderAccountTy),
     CpiAccount(CpiAccountTy),
     Sysvar(SysvarTy),
     Account(AccountTy),
     Program(ProgramTy),
     Signer,
+    SystemAccount,
+    ProgramData,
 }
 
 #[derive(Debug, PartialEq)]
@@ -421,6 +447,12 @@ pub struct ProgramAccountTy {
 
 #[derive(Debug, PartialEq)]
 pub struct CpiAccountTy {
+    // The struct type of the account.
+    pub account_type_path: TypePath,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct LoaderAccountTy {
     // The struct type of the account.
     pub account_type_path: TypePath,
 }
@@ -497,6 +529,7 @@ pub struct ConstraintGroup {
     raw: Vec<ConstraintRaw>,
     close: Option<ConstraintClose>,
     address: Option<ConstraintAddress>,
+    associated_token: Option<ConstraintAssociatedToken>,
 }
 
 impl ConstraintGroup {
@@ -533,6 +566,7 @@ pub enum Constraint {
     Owner(ConstraintOwner),
     RentExempt(ConstraintRentExempt),
     Seeds(ConstraintSeedsGroup),
+    AssociatedToken(ConstraintAssociatedToken),
     Executable(ConstraintExecutable),
     State(ConstraintState),
     Close(ConstraintClose),
@@ -576,20 +610,30 @@ impl Parse for ConstraintToken {
 }
 
 #[derive(Debug, Clone)]
-pub struct ConstraintInit {}
+pub struct ConstraintInit {
+    pub if_needed: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintInitIfNeeded {}
 
 #[derive(Debug, Clone)]
 pub struct ConstraintZeroed {}
 
 #[derive(Debug, Clone)]
-pub struct ConstraintMut {}
+pub struct ConstraintMut {
+    pub error: Option<Expr>,
+}
 
 #[derive(Debug, Clone)]
-pub struct ConstraintSigner {}
+pub struct ConstraintSigner {
+    pub error: Option<Expr>,
+}
 
 #[derive(Debug, Clone)]
 pub struct ConstraintHasOne {
     pub join_target: Expr,
+    pub error: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
@@ -600,16 +644,19 @@ pub struct ConstraintLiteral {
 #[derive(Debug, Clone)]
 pub struct ConstraintRaw {
     pub raw: Expr,
+    pub error: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConstraintOwner {
     pub owner_address: Expr,
+    pub error: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConstraintAddress {
     pub address: Expr,
+    pub error: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
@@ -620,6 +667,7 @@ pub enum ConstraintRentExempt {
 
 #[derive(Debug, Clone)]
 pub struct ConstraintInitGroup {
+    pub if_needed: bool,
     pub seeds: Option<ConstraintSeedsGroup>,
     pub payer: Option<Expr>,
     pub space: Option<Expr>,
@@ -712,6 +760,12 @@ pub struct ConstraintMintDecimals {
 #[derive(Debug, Clone)]
 pub struct ConstraintTokenBump {
     bump: Option<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintAssociatedToken {
+    pub wallet: Expr,
+    pub mint: Expr,
 }
 
 // Syntaxt context object for preserving metadata about the inner item.

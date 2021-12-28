@@ -1,7 +1,8 @@
 use anchor_client::Cluster;
 use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Error, Result};
-use clap::Clap;
+use clap::{ArgEnum, Clap};
+use heck::SnakeCase;
 use serde::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{Keypair, Signer};
@@ -68,21 +69,34 @@ impl Manifest {
                 .name
                 .as_ref()
                 .unwrap()
-                .to_string())
+                .to_string()
+                .to_snake_case())
         } else {
             Ok(self
                 .package
                 .as_ref()
                 .ok_or_else(|| anyhow!("package section not provided"))?
                 .name
-                .to_string())
+                .to_string()
+                .to_snake_case())
         }
     }
 
-    // Climbs each parent directory until we find a Cargo.toml.
+    pub fn version(&self) -> String {
+        match &self.package {
+            Some(package) => package.version.to_string(),
+            _ => "0.0.0".to_string(),
+        }
+    }
+
+    // Climbs each parent directory from the current dir until we find a Cargo.toml
     pub fn discover() -> Result<Option<WithPath<Manifest>>> {
-        let _cwd = std::env::current_dir()?;
-        let mut cwd_opt = Some(_cwd.as_path());
+        Manifest::discover_from_path(std::env::current_dir()?)
+    }
+
+    // Climbs each parent directory from a given starting directory until we find a Cargo.toml.
+    pub fn discover_from_path(start_from: PathBuf) -> Result<Option<WithPath<Manifest>>> {
+        let mut cwd_opt = Some(start_from.as_path());
 
         while let Some(cwd) = cwd_opt {
             for f in fs::read_dir(cwd)? {
@@ -124,6 +138,7 @@ impl WithPath<Config> {
             if members.is_empty() {
                 let path = self.path().parent().unwrap().join("programs");
                 fs::read_dir(path)?
+                    .filter(|entry| entry.as_ref().map(|e| e.path().is_dir()).unwrap_or(false))
                     .map(|dir| dir.map(|d| d.path().canonicalize().unwrap()))
                     .collect::<Vec<Result<PathBuf, std::io::Error>>>()
                     .into_iter()
@@ -144,8 +159,10 @@ impl WithPath<Config> {
     pub fn read_all_programs(&self) -> Result<Vec<Program>> {
         let mut r = vec![];
         for path in self.get_program_list()? {
-            let idl = anchor_syn::idl::file::parse(path.join("src/lib.rs"))?;
-            let lib_name = Manifest::from_path(&path.join("Cargo.toml"))?.lib_name()?;
+            let cargo = Manifest::from_path(&path.join("Cargo.toml"))?;
+            let lib_name = cargo.lib_name()?;
+            let version = cargo.version();
+            let idl = anchor_syn::idl::file::parse(path.join("src/lib.rs"), version)?;
             r.push(Program {
                 lib_name,
                 path,
@@ -263,6 +280,22 @@ pub struct WorkspaceConfig {
     pub members: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub exclude: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub types: String,
+}
+
+#[derive(ArgEnum, Clap, Clone, PartialEq, Debug)]
+pub enum BootstrapMode {
+    None,
+    Debian,
+}
+
+#[derive(Debug, Clone)]
+pub struct BuildConfig {
+    pub verifiable: bool,
+    pub solana_version: Option<String>,
+    pub docker_image: String,
+    pub bootstrap: BootstrapMode,
 }
 
 impl Config {
@@ -462,6 +495,7 @@ pub struct Test {
     pub genesis: Option<Vec<GenesisEntry>>,
     pub clone: Option<Vec<CloneEntry>>,
     pub validator: Option<Validator>,
+    pub startup_wait: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -4,8 +4,8 @@ import {
   ConfirmOptions,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { Address } from "./common";
-import { IdlAccountItem, IdlAccounts, IdlInstruction } from "../idl";
+import { Address } from "./common.js";
+import { IdlAccountItem, IdlAccounts, IdlInstruction } from "../idl.js";
 
 /**
  * Context provides all non-argument inputs for generating Anchor transactions.
@@ -28,22 +28,28 @@ export type Context<A extends Accounts = Accounts> = {
   signers?: Array<Signer>;
 
   /**
+   * @deprecated use preInstructions instead.
    * Instructions to run *before* a given method. Often this is used, for
    * example to create accounts prior to executing a method.
    */
   instructions?: TransactionInstruction[];
 
   /**
+   * Instructions to run *before* a given method. Often this is used, for
+   * example to create accounts prior to executing a method.
+   */
+  preInstructions?: TransactionInstruction[];
+
+  /**
+   * Instructions to run *after* a given method. Often this is used, for
+   * example to close accounts after executing a method.
+   */
+  postInstructions?: TransactionInstruction[];
+
+  /**
    * Commitment parameters to use for a transaction.
    */
   options?: ConfirmOptions;
-
-  /**
-   * @hidden
-   *
-   * Private namespace for development.
-   */
-  __private?: { logAccounts: boolean };
 };
 
 /**
@@ -72,7 +78,11 @@ export function splitArgsAndCtx(
   const inputLen = idlIx.args ? idlIx.args.length : 0;
   if (args.length > inputLen) {
     if (args.length !== inputLen + 1) {
-      throw new Error("provided too many arguments ${args}");
+      throw new Error(
+        `provided too many arguments ${args} to instruction ${
+          idlIx?.name
+        } expecting: ${idlIx.args?.map((a) => a.name) ?? []}`
+      );
     }
     options = args.pop();
   }

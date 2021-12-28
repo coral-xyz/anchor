@@ -1,3 +1,4 @@
+import { Buffer } from "buffer";
 import { PublicKey } from "@solana/web3.js";
 import * as borsh from "@project-serum/borsh";
 
@@ -10,6 +11,13 @@ export type Idl = {
   types?: IdlTypeDef[];
   events?: IdlEvent[];
   errors?: IdlErrorCode[];
+  constants?: IdlConstant[];
+};
+
+export type IdlConstant = {
+  name: string;
+  type: IdlType;
+  value: string;
 };
 
 export type IdlEvent = {

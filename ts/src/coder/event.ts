@@ -1,9 +1,10 @@
+import { Buffer } from "buffer";
 import * as base64 from "base64-js";
 import { Layout } from "buffer-layout";
 import { sha256 } from "js-sha256";
-import { Idl, IdlEvent, IdlTypeDef } from "../idl";
-import { Event, EventData } from "../program/event";
-import { IdlCoder } from "./idl";
+import { Idl, IdlEvent, IdlTypeDef } from "../idl.js";
+import { Event, EventData } from "../program/event.js";
+import { IdlCoder } from "./idl.js";
 
 export class EventCoder {
   /**
@@ -21,7 +22,7 @@ export class EventCoder {
       this.layouts = new Map();
       return;
     }
-    const layouts = idl.events.map((event) => {
+    const layouts: [string, Layout<any>][] = idl.events.map((event) => {
       let eventTypeDef: IdlTypeDef = {
         name: event.name,
         type: {
@@ -33,7 +34,6 @@ export class EventCoder {
       };
       return [event.name, IdlCoder.typeDefLayout(eventTypeDef, idl.types)];
     });
-    // @ts-ignore
     this.layouts = new Map(layouts);
 
     this.discriminators = new Map<string, string>(

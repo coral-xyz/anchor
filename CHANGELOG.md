@@ -11,12 +11,86 @@ incremented for features.
 
 ## [Unreleased]
 
+### Fixes
+
+* ts: Change commitment message `recent` to `processed` and `max` to `finalized` ([#1128](https://github.com/project-serum/anchor/pull/1128))
+* ts: fix `translateAddress` which currently leads to failing browser code. Now uses `PublicKey` constructor instead of prototype chain constructor name checking which doesn't work in the presence of code minifying/mangling([1138](https://github.com/project-serum/anchor/pull/1138))
+
+### Features
+
+* lang: Add `programdata_address: Option<Pubkey>` field to `Program` account. Will be populated if account is a program owned by the upgradable bpf loader ([#1125](https://github.com/project-serum/anchor/pull/1125))
+* lang,ts,ci,cli,docs: update solana toolchain to version 1.8.5([#1133](https://github.com/project-serum/anchor/pull/1133)).
+* lang: Account wrappers for non-Anchor programs no longer have to implement the `serialize` function because it has a default impl now. Similarly, they no longer have to implement `try_deserialize` which now delegates to `try_deserialize_unchecked` by default([#1156](https://github.com/project-serum/anchor/pull/1156)).
+* lang: Add `set_inner` method to `Account<'a, T>` to enable easy updates ([#1177](https://github.com/project-serum/anchor/pull/1177)).
+* lang: Handle arrays with const as length ([#968](https://github.com/project-serum/anchor/pull/968)).
+* ts: Add optional commitment argument to `fetch` and `fetchMultiple` ([#1171](https://github.com/project-serum/anchor/pull/1171)).
+* lang: Implement `AsRef<T>` for `Account<'a, T>`([#1173](https://github.com/project-serum/anchor/pull/1173))
+* cli: Add `anchor expand` command which wraps around `cargo expand` ([#1160](https://github.com/project-serum/anchor/pull/1160))
+
+### Breaking
+
+* client: Client::new and Client::new_with_options now accept `Rc<dyn Signer>` instead of `Keypair` ([#975](https://github.com/project-serum/anchor/pull/975)).
+* lang, ts: Change error enum name and message for 'wrong program ownership' account validation ([#1154](https://github.com/project-serum/anchor/pull/1154)).
+* lang: Change from `#[repr(packed)]` to `#[repr(C)]` for zero copy accounts ([#1106](https://github.com/project-serum/anchor/pull/1106)).
+
+## [0.19.0] - 2021-12-08
+
+### Fixes
+
+* lang: Add `deprecated` attribute to `ProgramAccount` ([#1014](https://github.com/project-serum/anchor/pull/1014)).
+* cli: Add version number from programs `Cargo.toml` into extracted IDL ([#1061](https://github.com/project-serum/anchor/pull/1061)).
+* lang: Add `deprecated` attribute to `Loader`([#1078](https://github.com/project-serum/anchor/pull/1078)).
+* lang: the `init_if_needed` attribute now checks that given attributes (e.g. space, owner, token::authority etc.) are validated even when init is not needed ([#1096](https://github.com/project-serum/anchor/pull/1096)).
+
+### Features
+
+* lang: Add `ErrorCode::AccountNotInitialized` error to separate the situation when the account has the wrong owner from when it does not exist (#[1024](https://github.com/project-serum/anchor/pull/1024)).
+* lang: Called instructions now log their name by default. This can be turned off with the `no-log-ix-name` flag ([#1057](https://github.com/project-serum/anchor/pull/1057)).
+* lang: `ProgramData` and `UpgradableLoaderState` can now be passed into `Account` as generics. see [UpgradeableLoaderState](https://docs.rs/solana-program/latest/solana_program/bpf_loader_upgradeable/enum.UpgradeableLoaderState.html). `UpgradableLoaderState` can also be matched on to get `ProgramData`, but when `ProgramData` is used instead, anchor does the serialization and checking that it is actually program data for you  ([#1095](https://github.com/project-serum/anchor/pull/1095)).
+* ts: Add better error msgs in the ts client if something wrong (i.e. not a pubkey or a string) is passed in as an account in an instruction accounts object ([#1098](https://github.com/project-serum/anchor/pull/1098)).
+* ts: Add inputs `postInstructions` and `preInstructions` as a replacement for (the now deprecated) `instructions` ([#1007](https://github.com/project-serum/anchor/pull/1007)).
+* ts: Add `getAccountInfo` helper method to account namespace/client ([#1084](https://github.com/project-serum/anchor/pull/1084)).
+
+### Breaking
+
+* lang, ts: Error codes have been mapped to new numbers to allow for more errors per namespace ([#1096](https://github.com/project-serum/anchor/pull/1096)).
+
+## [0.18.2] - 2021-11-14
+
+* cli: Replace global JavaScript dependency installs with local.
+
+### Features
+
+* lang: Add `SystemAccount<'info>` account type for generic wallet addresses or accounts owned by the system program ([#954](https://github.com/project-serum/anchor/pull/954))
+
+### Fixes
+
+* cli: fix dns in NODE_OPTIONS ([#928](https://github.com/project-serum/anchor/pull/928)).
+* cli: output TypeScript IDL in `idl parse` subcommand ([#941](https://github.com/project-serum/anchor/pull/941)).
+* cli: Add fields `os` and `cpu` to npm package `@project-serum/anchor-cli` ([#976](https://github.com/project-serum/anchor/pull/976)).
+* cli: Allow specify output directory for TypeScript IDL ([#940](https://github.com/project-serum/anchor/pull/940)).
+
+### Breaking
+
+* spl: Move permissioned markets into dex repository ([#962](https://github.com/project-serum/anchor/pull/962)).
+
+## [0.18.0] - 2021-10-24
+
 ### Features
 
 * cli: Add support for configuration options for `solana-test-validator` in Anchor.toml ([#834](https://github.com/project-serum/anchor/pull/834)).
 * cli: `target/types` directory now created on build to store a TypeScript types file for each program's IDL ([#795](https://github.com/project-serum/anchor/pull/795)).
 * ts: `Program<T>` can now be typed with an IDL type ([#795](https://github.com/project-serum/anchor/pull/795)).
 * lang: Add `mint::freeze_authority` keyword for mint initialization within `#[derive(Accounts)]` ([#835](https://github.com/project-serum/anchor/pull/835)).
+* lang: Add `AccountLoader` type for `zero_copy` accounts with support for CPI ([#792](https://github.com/project-serum/anchor/pull/792)).
+* lang: Add `#[account(init_if_needed)]` keyword for allowing one to invoke the same instruction even if the account was created already ([#906](https://github.com/project-serum/anchor/pull/906)).
+* lang: Add custom errors support for raw constraints ([#905](https://github.com/project-serum/anchor/pull/905)).
+* lang, cli, spl: Update solana toolchain to v1.8.0 ([#886](https://github.com/project-serum/anchor/pull/886)).
+* lang: Add custom errors support for `signer`, `mut`, `has_one`, `owner`, raw constraints and `address` ([#905](https://github.com/project-serum/anchor/pull/905), [#913](https://github.com/project-serum/anchor/pull/913)).
+
+### Breaking
+
+* lang: Accounts marked with the `#[account(signer)]` constraint now enforce signer when the `"cpi"` feature is enabled ([#849](https://github.com/project-serum/anchor/pull/849)).
 
 ## [0.17.0] - 2021-10-03
 
