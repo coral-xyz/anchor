@@ -289,7 +289,8 @@ pub fn zero_copy(
 
     proc_macro::TokenStream::from(quote! {
         #[derive(anchor_lang::__private::ZeroCopyAccessor, Copy, Clone)]
-        #[repr(C)]
+        #[cfg_attr(not(feature = "anchor-zero-copy-repr-packed"), repr(C))]
+        #[cfg_attr(feature = "anchor-zero-copy-repr-packed", repr(packed))]
         #account_strct
     })
 }
