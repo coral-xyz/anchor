@@ -33,6 +33,7 @@ incremented for features.
 * lang, ts: Change error enum name and message for 'wrong program ownership' account validation ([#1154](https://github.com/project-serum/anchor/pull/1154)).
 * lang: Change from `#[repr(packed)]` to `#[repr(C)]` for zero copy accounts ([#1106](https://github.com/project-serum/anchor/pull/1106)).
 * lang: Account types can now be found either in the `prelude` module or the `accounts` module but not longer directly under the root.
+Deprecated account types are no longer imported by the prelude ([#1208](https://github.com/project-serum/anchor/pull/1208)).
 
 ## [0.19.0] - 2021-12-08
 
