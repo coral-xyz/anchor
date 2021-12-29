@@ -6,7 +6,7 @@ use syn::parse_macro_input;
 mod id;
 
 /// An attribute for a data structure representing a Solana account.
-/// 
+///
 /// `#[account]` generates trait implementations for the following traits:
 ///
 /// - [`AccountSerialize`](./trait.AccountSerialize.html)
