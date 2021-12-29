@@ -32,6 +32,7 @@ incremented for features.
 * client: Client::new and Client::new_with_options now accept `Rc<dyn Signer>` instead of `Keypair` ([#975](https://github.com/project-serum/anchor/pull/975)).
 * lang, ts: Change error enum name and message for 'wrong program ownership' account validation ([#1154](https://github.com/project-serum/anchor/pull/1154)).
 * lang: Change from `#[repr(packed)]` to `#[repr(C)]` for zero copy accounts ([#1106](https://github.com/project-serum/anchor/pull/1106)).
+* lang: Account types can now be found either in the `prelude` module or the `accounts` module but not longer directly under the root.
 
 ## [0.19.0] - 2021-12-08
 

@@ -246,7 +246,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             )?;
 
                             // Zero copy deserialize.
-                            let loader: anchor_lang::Loader<#mod_name::#name> = anchor_lang::Loader::try_from_unchecked(program_id, &ctor_accounts.to)?;
+                            let loader: anchor_lang::accounts::loader::Loader<#mod_name::#name> = anchor_lang::accounts::loader::Loader::try_from_unchecked(program_id, &ctor_accounts.to)?;
 
                             // Invoke the ctor in a new lexical scope so that
                             // the zero-copy RefMut gets dropped. Required
@@ -302,7 +302,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             // Create the solana account for the ctor data.
                             let from = ctor_accounts.from.key;
                             let (base, nonce) = Pubkey::find_program_address(&[], ctor_accounts.program.key);
-                            let seed = anchor_lang::ProgramState::<#name>::seed();
+                            let seed = anchor_lang::accounts::state::ProgramState::<#name>::seed();
                             let owner = ctor_accounts.program.key;
                             let to = Pubkey::create_with_seed(&base, seed, owner).unwrap();
                             let space = anchor_lang::__private::AccountSize::size(&instance)?;
@@ -392,7 +392,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     if remaining_accounts.is_empty() {
                                         return Err(anchor_lang::__private::ErrorCode::AccountNotEnoughKeys.into());
                                     }
-                                    let loader: anchor_lang::Loader<#mod_name::#name> = anchor_lang::Loader::try_accounts(program_id, &mut remaining_accounts, &[])?;
+                                    let loader: anchor_lang::accounts::loader::Loader<#mod_name::#name> = anchor_lang::accounts::loader::Loader::try_accounts(program_id, &mut remaining_accounts, &[])?;
 
                                     // Deserialize accounts.
                                     let mut accounts = #anchor_ident::try_accounts(
@@ -438,7 +438,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     if remaining_accounts.is_empty() {
                                         return Err(anchor_lang::__private::ErrorCode::AccountNotEnoughKeys.into());
                                     }
-                                    let mut state: anchor_lang::ProgramState<#state_ty> = anchor_lang::ProgramState::try_accounts(program_id, &mut remaining_accounts, &[])?;
+                                    let mut state: anchor_lang::accounts::state::ProgramState<#state_ty> = anchor_lang::accounts::state::ProgramState::try_accounts(program_id, &mut remaining_accounts, &[])?;
 
                                     // Deserialize accounts.
                                     let mut accounts = #anchor_ident::try_accounts(
@@ -551,7 +551,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             if remaining_accounts.is_empty() {
                                                 return Err(anchor_lang::__private::ErrorCode::AccountNotEnoughKeys.into());
                                             }
-                                            let mut state: anchor_lang::ProgramState<#state_ty> = anchor_lang::ProgramState::try_accounts(program_id, &mut remaining_accounts, &[])?;
+                                            let mut state: anchor_lang::accounts::state::ProgramState<#state_ty> = anchor_lang::accounts::state::ProgramState::try_accounts(program_id, &mut remaining_accounts, &[])?;
 
                                             // Deserialize accounts.
                                             let mut accounts = #anchor_ident::try_accounts(
