@@ -27,7 +27,7 @@ use std::ops::{Deref, DerefMut};
 /// - `!(Account.info.owner == SystemProgram && Account.info.lamports() == 0)`
 ///
 /// Example
-/// ```rust
+/// ```ignore
 /// use anchor_lang::prelude::*;
 /// use other_program::Auth;
 ///
@@ -78,7 +78,7 @@ use std::ops::{Deref, DerefMut};
 /// to write.
 ///
 /// The mint wrapper type Anchor provides out of the box for the token program ([source](https://github.com/project-serum/anchor/blob/master/spl/src/token.rs))
-/// ```rust
+/// ```ignore
 /// #[derive(Clone)]
 /// pub struct Mint(spl_token::state::Mint);
 ///
