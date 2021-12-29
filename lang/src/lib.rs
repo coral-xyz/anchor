@@ -32,7 +32,7 @@ use solana_program::pubkey::Pubkey;
 use std::io::Write;
 
 mod account_meta;
-mod accounts;
+pub mod accounts;
 mod bpf_upgradeable_state;
 mod common;
 mod context;
@@ -42,27 +42,6 @@ mod error;
 pub mod idl;
 mod system_program;
 
-pub use crate::accounts::account::Account;
-#[doc(hidden)]
-#[allow(deprecated)]
-pub use crate::accounts::cpi_account::CpiAccount;
-#[doc(hidden)]
-#[allow(deprecated)]
-pub use crate::accounts::cpi_state::CpiState;
-#[allow(deprecated)]
-pub use crate::accounts::loader::Loader;
-pub use crate::accounts::loader_account::AccountLoader;
-pub use crate::accounts::program::Program;
-#[doc(hidden)]
-#[allow(deprecated)]
-pub use crate::accounts::program_account::ProgramAccount;
-pub use crate::accounts::signer::Signer;
-#[doc(hidden)]
-#[allow(deprecated)]
-pub use crate::accounts::state::ProgramState;
-pub use crate::accounts::system_account::SystemAccount;
-pub use crate::accounts::sysvar::Sysvar;
-pub use crate::accounts::unchecked_account::UncheckedAccount;
 pub use crate::system_program::System;
 mod vec;
 pub use crate::bpf_upgradeable_state::*;
@@ -244,18 +223,15 @@ impl Key for Pubkey {
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
     pub use super::{
-        access_control, account, constant, declare_id, emit, error, event, interface, program,
-        require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, state, zero_copy,
-        Account, AccountDeserialize, AccountLoader, AccountSerialize, Accounts, AccountsExit,
-        AnchorDeserialize, AnchorSerialize, Context, CpiContext, Id, Key, Owner, Program,
-        ProgramData, Signer, System, SystemAccount, Sysvar, ToAccountInfo, ToAccountInfos,
-        ToAccountMetas, UncheckedAccount,
-    };
-
-    #[allow(deprecated)]
-    pub use super::{
-        accounts::cpi_account::CpiAccount, accounts::cpi_state::CpiState, accounts::loader::Loader,
-        accounts::program_account::ProgramAccount, accounts::state::ProgramState, CpiStateContext,
+        access_control, account, accounts::account::Account,
+        accounts::loader_account::AccountLoader, accounts::program::Program,
+        accounts::signer::Signer, accounts::system_account::SystemAccount,
+        accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, constant,
+        declare_id, emit, error, event, interface, program, require,
+        solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, state, zero_copy,
+        AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AnchorDeserialize,
+        AnchorSerialize, Context, CpiContext, Id, Key, Owner, ProgramData, System, ToAccountInfo,
+        ToAccountInfos, ToAccountMetas,
     };
 
     pub use borsh;
