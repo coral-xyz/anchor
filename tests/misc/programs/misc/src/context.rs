@@ -278,7 +278,7 @@ pub struct TestInitIfNeededChecksOwner<'info> {
     pub data: UncheckedAccount<'info>,
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
-    pub owner: AccountInfo<'info>
+    pub owner: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -302,7 +302,7 @@ pub struct TestInitMintIfNeeded<'info> {
     pub system_program: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
     pub mint_authority: AccountInfo<'info>,
-    pub freeze_authority: AccountInfo<'info>, 
+    pub freeze_authority: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -333,7 +333,7 @@ pub struct TestInitAssociatedTokenIfNeeded<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-    pub authority: AccountInfo<'info>
+    pub authority: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -350,17 +350,11 @@ pub struct TestConstArraySize<'info> {
 
 #[derive(Accounts)]
 pub struct NoRentExempt<'info> {
-    pub data: AccountInfo<'info>
+    pub data: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct EnforceRentExempt<'info> {
     #[account(rent_exempt = enforce)]
-    pub data: AccountInfo<'info>
-}
-
-#[derive(Accounts)]
-pub struct SkipRentExempt<'info> {
-    #[account(rent_exempt = skip)]
-    pub data: AccountInfo<'info>
+    pub data: AccountInfo<'info>,
 }
