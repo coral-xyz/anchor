@@ -307,8 +307,7 @@ pub mod __private {
         pub use crate::accounts::state::*;
     }
 
-    // The starting point for user defined error codes.
-    #[doc(hidden)]
+    /// The starting point for user defined error codes.
     pub const ERROR_CODE_OFFSET: u32 = 6000;
 
     // Calculates the size of an account, which may be larger than the deserialized
