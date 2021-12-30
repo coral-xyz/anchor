@@ -48,6 +48,14 @@ pub mod misc {
         Ok(())
     }
 
+    pub fn initialize_no_rent_exempt(ctx: Context<InitializeNoRentExempt>) -> ProgramResult {
+        Ok(())
+    }
+
+    pub fn initialize_skip_rent_exempt(ctx: Context<InitializeSkipRentExempt>) -> ProgramResult {
+        Ok(())
+    }
+
     pub fn test_owner(_ctx: Context<TestOwner>) -> ProgramResult {
         Ok(())
     }
@@ -225,12 +233,19 @@ pub mod misc {
         Ok(())
     }
 
-
     pub fn test_multidimensional_array(
         ctx: Context<TestMultidimensionalArray>,
         data: [[u8; 10]; 10],
     ) -> ProgramResult {
         ctx.accounts.data.data = data;
+        Ok(())
+    }
+
+    pub fn test_no_rent_exempt(ctx: Context<NoRentExempt>) -> ProgramResult {
+        Ok(())
+    }
+
+    pub fn test_enforce_rent_exempt(ctx: Context<EnforceRentExempt>) -> ProgramResult {
         Ok(())
     }
 }

@@ -124,6 +124,17 @@ pub struct Initialize<'info> {
 }
 
 #[derive(Accounts)]
+pub struct InitializeSkipRentExempt<'info> {
+    #[account(zero, rent_exempt = skip)]
+    pub data: Account<'info, Data>,
+}
+
+#[derive(Accounts)]
+pub struct InitializeNoRentExempt<'info> {
+    pub data: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
 pub struct TestOwner<'info> {
     #[account(owner = *misc.key)]
     pub data: AccountInfo<'info>,
@@ -335,4 +346,21 @@ pub struct TestMultidimensionalArray<'info> {
 pub struct TestConstArraySize<'info> {
     #[account(zero)]
     pub data: Account<'info, DataConstArraySize>,
+}
+
+#[derive(Accounts)]
+pub struct NoRentExempt<'info> {
+    pub data: AccountInfo<'info>
+}
+
+#[derive(Accounts)]
+pub struct EnforceRentExempt<'info> {
+    #[account(rent_exempt = enforce)]
+    pub data: AccountInfo<'info>
+}
+
+#[derive(Accounts)]
+pub struct SkipRentExempt<'info> {
+    #[account(rent_exempt = skip)]
+    pub data: AccountInfo<'info>
 }
