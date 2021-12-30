@@ -1,14 +1,14 @@
 use crate::error;
 
 /// Error codes that can be returned by internal framework code.
-/// 
+///
 /// - &gt;= 100 Instruction error codes
 /// - &gt;= 1000 IDL error codes
 /// - &gt;= 2000 constraint error codes
 /// - &gt;= 3000 account error codes
 /// - = 4000 state error code
 /// - = 5000 deprecated error code
-/// 
+///
 /// The starting point for user-defined errors is defined
 /// by the [ERROR_CODE_OFFSET](crate::__private::ERROR_CODE_OFFSET).
 #[error(offset = 0)]
@@ -100,7 +100,6 @@ pub enum ErrorCode {
     ConstraintSpace,
 
     // Accounts.
-
     /// 3000 - The account discriminator was already set on this account
     #[msg("The account discriminator was already set on this account")]
     AccountDiscriminatorAlreadySet = 3000,
@@ -145,11 +144,9 @@ pub enum ErrorCode {
     AccountNotProgramData,
 
     // State.
-
     /// 4000 - The given state account does not have the correct address
     #[msg("The given state account does not have the correct address")]
     StateInvalidAddress = 4000,
-
 
     // Deprecated
     /// 5000 - The API being used is deprecated and should no longer be used
