@@ -15,8 +15,7 @@ use syn::parse_macro_input;
 /// pub struct Auth<'info> {
 ///     #[account(mut, has_one = authority)]
 ///     pub data: Account<'info, MyData>,
-///     #[account(signer)]
-///     pub authority: AccountInfo<'info>,
+///     pub authority: Signer<'info>,
 /// }
 ///
 /// #[account]
@@ -32,6 +31,148 @@ use syn::parse_macro_input;
 ///
 /// * Signed by `authority`.
 /// * Checked that `&data.authority == authority.key`.
+///
+/// <table>
+///     <thead>
+///         <tr>
+///             <th>Attribute</th>
+///             <th>Description</th>
+///         </tr>
+///     </thead>
+///     <tbody>
+///         <tr>
+///             <td>
+///                 <code>#[account(signer)]</code> <br><br><code>#[account(signer @ &lt;custom_error&gt;)]</code>
+///             </td>
+///             <td>
+///                 Checks the given account signed the transaction.<br>
+///                 Custom errors are supported via <code>@</code>.<br>
+///                 Consider using the <code>Signer</code> type if you would only have this constraint on the account.<br><br>
+///                 Example:
+///                 <pre><code>
+/// #[account(signer)]
+/// pub authority: AccountInfo<'info>,
+/// #[account(signer @ MyError::PayerSignatureMissing)]
+/// pub payer: AccountInfo<'info>
+///                 </code></pre>
+///             </td>
+///         </tr>
+///         <tr>
+///             <td>
+///                 <code>#[account(mut)]</code> <br><br><code>#[account(mut @ &lt;custom_error&gt;)]</code>
+///             </td>
+///             <td>
+///                 Checks the given account is mutable.<br>
+///                 Makes anchor persist any state changes.<br>
+///                 Custom errors are supported via <code>@</code>.<br><br>
+///                 Example:
+///                 <pre><code>
+/// #[account(mut)]
+/// pub data_account: Account<'info, MyData>,
+/// #[account(mut @ MyError::DataAccountTwoNotMutable)]
+/// pub data_account_two: Account<'info, MyData>
+///                 </code></pre>
+///             </td>
+///         </tr>
+///         <tr>
+///             <td>
+///                 <code>#[account(has_one = &lt;target&gt;)]</code> <br><br><code>#[account(has_one = &lt;target&gt; @ &lt;custom_error&gt;)]</code>
+///             </td>
+///             <td>
+///                 Checks the <code>target</code> field on the account matches the
+///                 key of the <code>target</code> field in the Accounts struct.<br>
+///                 Custom errors are supported via <code>@</code>.<br><br>
+///                 Example:
+///                 <pre><code>
+/// #[account(mut, has_one = authority)]
+/// pub data: Account<'info, MyData>,
+/// pub authority: Signer<'info>
+///                 </code></pre>
+///                 In this example <code>has_one</code> checks that <code>data.authority = authority.key()</code>
+///             </td>
+///         </tr>
+///         <tr>
+///             <td>
+///                 <code>#[account(address = &lt;expr&gt;)]</code> <br><br><code>#[account(address = &lt;expr&gt; @ &lt;custom_error&gt;)]</code>
+///             </td>
+///             <td>
+///                 Checks the account key matches the pubkey.<br>
+///                 Custom errors are supported via <code>@</code>.<br><br>
+///                 Example:
+///                 <pre><code>
+/// #[account(address = crate::ID)]
+/// pub data: Account<'info, MyData>,
+/// #[account(address = crate::ID @ MyError::DataTwoInvalidAddress)]
+/// pub data_two: Account<'info, MyData>
+///                 </code></pre>
+///             </td>
+///         </tr>
+///         <tr>
+///             <td>
+///                 <code>#[account(owner = &lt;expr&gt;)]</code> <br><br><code>#[account(owner = &lt;expr&gt; @ &lt;custom_error&gt;)]</code>
+///             </td>
+///             <td>
+///                 Checks the account owner matches <code>expr</code>.<br>
+///                 Custom errors are supported via <code>@</code>.<br><br>
+///                 Example:
+///                 <pre><code>
+/// #[account(owner = Token::ID @ MyError::NotOwnedByTokenProgram)]
+/// pub data: Account<'info, MyData>,
+/// #[account(owner = token_program.key())]
+/// pub data_two: Account<'info, MyData>,
+/// pub token_program: Program<'info, Token>
+///                 </code></pre>
+///             </td>
+///         </tr>
+///         <tr>
+///             <td>
+///                 <code>#[account(executable)]</code>
+///             </td>
+///             <td>
+///                 Checks the account is executable (i.e. the account is a program).<br>
+///                 You may want to use the <code>Program</code> type instead.<br><br>
+///                 Example:
+///                 <pre><code>
+/// #[account(executable)]
+/// pub my_program: AccountInfo<'info>
+///                 </code></pre>
+///             </td>
+///         </tr>
+///         <tr>
+///             <td>
+///                 <code>#[account(rent_exempt = skip)]</code><br><br>
+///                 <code>#[account(rent_exempt = enforce)]</code>
+///             </td>
+///             <td>
+///                 Enforces rent exemption with <code>= enforce</code>.<br>
+///                 Skips rent exemption check that would normally be done
+///                 through other constraints with <code>= skip</code>,
+///                 e.g. when used with the <code>zero</code> constraint<br><br>
+///                 Example:
+///                 <pre><code>
+/// #[account(zero, rent_exempt = skip)]
+/// pub skipped_account: Account<'info, MyData>,
+/// #[account(rent_exempt = enforce)]
+/// pub enforced_account: AccountInfo<'info>
+///                 </code></pre>
+///             </td>
+///         </tr>
+///         <tr>
+///             <td>
+///                 <code>#[account(zero)]</code>
+///             </td>
+///             <td>
+///                 Checks the account discriminator is zero.<br>
+///                 Enforces rent exemption unless skipped with <code>rent_exempt = skip</code><br><br>
+///                 Example:
+///                 <pre><code>
+/// #[account(zero)]
+/// pub my_account: Account<'info, MyData>
+///                 </code></pre>
+///             </td>
+///         </tr>
+///     </tbody>
+/// </table>
 ///
 /// The full list of available attributes is as follows.
 ///
