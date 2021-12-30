@@ -35,7 +35,7 @@ mod account_meta;
 pub mod accounts;
 mod bpf_upgradeable_state;
 mod common;
-mod context;
+pub mod context;
 mod ctor;
 mod error;
 #[doc(hidden)]
@@ -45,10 +45,6 @@ mod system_program;
 pub use crate::system_program::System;
 mod vec;
 pub use crate::bpf_upgradeable_state::*;
-#[doc(hidden)]
-#[allow(deprecated)]
-pub use crate::context::CpiStateContext;
-pub use crate::context::{Context, CpiContext};
 pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::{account, declare_id, zero_copy};
 pub use anchor_attribute_constant::constant;
@@ -227,11 +223,11 @@ pub mod prelude {
         accounts::loader_account::AccountLoader, accounts::program::Program,
         accounts::signer::Signer, accounts::system_account::SystemAccount,
         accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, constant,
-        declare_id, emit, error, event, interface, program, require,
-        solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, state, zero_copy,
+        context::Context, context::CpiContext, declare_id, emit, error, event, interface, program,
+        require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, state, zero_copy,
         AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AnchorDeserialize,
-        AnchorSerialize, Context, CpiContext, Id, Key, Owner, ProgramData, System, ToAccountInfo,
-        ToAccountInfos, ToAccountMetas,
+        AnchorSerialize, Id, Key, Owner, ProgramData, System, ToAccountInfo, ToAccountInfos,
+        ToAccountMetas,
     };
 
     pub use borsh;

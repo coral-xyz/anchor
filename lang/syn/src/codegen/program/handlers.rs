@@ -254,7 +254,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             {
                                 let mut instance = loader.load_init()?;
                                 instance.new(
-                                    anchor_lang::Context::new(
+                                    anchor_lang::context::Context::new(
                                         program_id,
                                         &mut ctor_user_def_accounts,
                                         remaining_accounts,
@@ -291,7 +291,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
                             // Invoke the ctor.
                             let instance = #mod_name::#name::new(
-                                anchor_lang::Context::new(
+                                anchor_lang::context::Context::new(
                                     program_id,
                                     &mut ctor_user_def_accounts,
                                     remaining_accounts,
@@ -400,7 +400,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                         &mut remaining_accounts,
                                         ix_data,
                                     )?;
-                                    let ctx = Context::new(program_id, &mut accounts, remaining_accounts);
+                                    let ctx = anchor_lang::context::Context::new(program_id, &mut accounts, remaining_accounts);
 
                                     // Execute user defined function.
                                     {
@@ -446,7 +446,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                         &mut remaining_accounts,
                                         ix_data,
                                     )?;
-                                    let ctx = Context::new(program_id, &mut accounts, remaining_accounts);
+                                    let ctx = anchor_lang::context::Context::new(program_id, &mut accounts, remaining_accounts);
 
                                     // Execute user defined function.
                                     state.#ix_method_name(
@@ -559,7 +559,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                                 &mut remaining_accounts,
                                                 ix_data,
                                             )?;
-                                            let ctx = Context::new(program_id, &mut accounts, remaining_accounts);
+                                            let ctx = anchor_lang::context::Context::new(program_id, &mut accounts, remaining_accounts);
 
                                             // Execute user defined function.
                                             state.#ix_method_name(
@@ -603,7 +603,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
                                             // Execute user defined function.
                                             #state_name::#ix_method_name(
-                                                Context::new(program_id, &mut accounts, remaining_accounts),
+                                                anchor_lang::context::Context::new(program_id, &mut accounts, remaining_accounts),
                                                 #(#ix_arg_names),*
                                             )?;
 
@@ -654,7 +654,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
                     // Invoke user defined handler.
                     #program_name::#ix_method_name(
-                        Context::new(program_id, &mut accounts, remaining_accounts),
+                        anchor_lang::context::Context::new(program_id, &mut accounts, remaining_accounts),
                         #(#ix_arg_names),*
                     )?;
 

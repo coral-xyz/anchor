@@ -122,6 +122,7 @@ impl<'info, T: ToAccountInfos<'info> + ToAccountMetas> ToAccountMetas
 
 /// Context specifying non-argument inputs for cross-program-invocations
 /// targeted at program state instructions.
+#[doc(hidden)]
 #[deprecated]
 pub struct CpiStateContext<'a, 'b, 'c, 'info, T: Accounts<'info>> {
     state: AccountInfo<'info>,

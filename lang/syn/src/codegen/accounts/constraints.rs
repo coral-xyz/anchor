@@ -444,7 +444,7 @@ pub fn generate_init(
                             authority: #owner.to_account_info(),
                             rent: rent.to_account_info(),
                         };
-                        let cpi_ctx = CpiContext::new(cpi_program, accounts);
+                        let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
                         anchor_spl::token::initialize_account(cpi_ctx)?;
                     }
 
@@ -477,7 +477,7 @@ pub fn generate_init(
                             token_program: token_program.to_account_info(),
                             rent: rent.to_account_info(),
                         };
-                        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+                        let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, cpi_accounts);
                         anchor_spl::associated_token::create(cpi_ctx)?;
                     }
                     let pa: #ty_decl = #from_account_info;
@@ -523,7 +523,7 @@ pub fn generate_init(
                             mint: #field.to_account_info(),
                             rent: rent.to_account_info(),
                         };
-                        let cpi_ctx = CpiContext::new(cpi_program, accounts);
+                        let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
                         anchor_spl::token::initialize_mint(cpi_ctx, #decimals, &#owner.key(), #freeze_authority)?;
                     }
                     let pa: #ty_decl = #from_account_info;
