@@ -52,7 +52,7 @@ use syn::parse_macro_input;
 ///                 <pre><code>
 /// #[account(signer)]
 /// pub authority: AccountInfo<'info>,
-/// #[account(signer @ MyError::PayerSignatureMissing)]
+/// #[account(signer @ MyError::MyErrorCode)]
 /// pub payer: AccountInfo<'info>
 ///                 </code></pre>
 ///             </td>
@@ -69,7 +69,7 @@ use syn::parse_macro_input;
 ///                 <pre><code>
 /// #[account(mut)]
 /// pub data_account: Account<'info, MyData>,
-/// #[account(mut @ MyError::DataAccountTwoNotMutable)]
+/// #[account(mut @ MyError::MyErrorCode)]
 /// pub data_account_two: Account<'info, MyData>
 ///                 </code></pre>
 ///             </td>
@@ -102,7 +102,7 @@ use syn::parse_macro_input;
 ///                 <pre><code>
 /// #[account(address = crate::ID)]
 /// pub data: Account<'info, MyData>,
-/// #[account(address = crate::ID @ MyError::DataTwoInvalidAddress)]
+/// #[account(address = crate::ID @ MyError::MyErrorCode)]
 /// pub data_two: Account<'info, MyData>
 ///                 </code></pre>
 ///             </td>
@@ -116,7 +116,7 @@ use syn::parse_macro_input;
 ///                 Custom errors are supported via <code>@</code>.<br><br>
 ///                 Example:
 ///                 <pre><code>
-/// #[account(owner = Token::ID @ MyError::NotOwnedByTokenProgram)]
+/// #[account(owner = Token::ID @ MyError::MyErrorCode)]
 /// pub data: Account<'info, MyData>,
 /// #[account(owner = token_program.key())]
 /// pub data_two: Account<'info, MyData>,
@@ -168,6 +168,40 @@ use syn::parse_macro_input;
 ///                 <pre><code>
 /// #[account(zero)]
 /// pub my_account: Account<'info, MyData>
+///                 </code></pre>
+///             </td>
+///         </tr>
+///         <tr>
+///             <td>
+///                 <code>#[account(close = &lt;target&gt;)]</code>
+///             </td>
+///             <td>
+///                 Marks the account as closed at the end of the instruction’s execution
+///                 (sets its discriminator to the `CLOSED_ACCOUNT_DISCRIMINATOR`)
+///                 and sends its lamports to the specified account.<br>
+///                 <br><br>
+///                 Example:
+///                 <pre><code>
+/// #[account(close = receiver)]
+/// pub data_account: Account<'info, MyData>,
+/// #[account(mut)]
+/// pub receiver: SystemAccount<'info>
+///                 </code></pre>
+///             </td>
+///         </tr>
+///         <tr>
+///             <td>
+///                 <code>#[account(constraint = &lt;expr&gt;)]</code><br><br><code>#[account(constraint = &lt;expr&gt; @ &lt;custom_error&gt;)]</code>
+///             </td>
+///             <td>
+///                 Constraint that checks whether the given expression evaluates to true.<br>
+///                 Use this when no other constraint fits your use case.
+///                 <br><br>
+///                 Example:
+///                 <pre><code>
+/// #[account(constraint = data_account.keys[0].age == other_data_account.market.apple.age)]
+/// pub data_account: Account<'info, MyData>,
+/// pub other_data_account: Account<'info, OtherData>
 ///                 </code></pre>
 ///             </td>
 ///         </tr>
