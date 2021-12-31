@@ -251,7 +251,7 @@ pub mod prelude {
     pub use thiserror;
 }
 
-// Internal module used by macros and unstable apis.
+/// Internal module used by macros and unstable apis.
 pub mod __private {
     // Modules with useful information for users
     // don't use #[doc(hidden)] on these
