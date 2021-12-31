@@ -7,31 +7,10 @@ use syn::parse_macro_input;
 /// Implements an [`Accounts`](./trait.Accounts.html) deserializer on the given
 /// struct, applying any constraints specified via inert `#[account(..)]`
 /// attributes upon deserialization.
-///
-/// # Example
-///
-/// ```ignore
-/// #[derive(Accounts)]
-/// pub struct Auth<'info> {
-///     #[account(mut, has_one = authority)]
-///     pub data: Account<'info, MyData>,
-///     pub authority: Signer<'info>,
-/// }
-///
-/// #[account]
-/// pub struct MyData {
-///   authority: Pubkey,
-///   protected_data: u64,
-/// }
-/// ```
-///
-/// Here, any instance of the `Auth` struct created via
-/// [`try_accounts`](trait.Accounts.html#tymethod.try_accounts) is guaranteed
-/// to have been both
-///
-/// * Signed by `authority`.
-/// * Checked that `&data.authority == authority.key`.
-///
+/// 
+/// - [Normal Constraints](#normal-constraints)
+/// - [SPL Constraints](#spl-constraints)
+/// # Normal Constraints
 /// <table>
 ///     <thead>
 ///         <tr>
@@ -177,8 +156,8 @@ use syn::parse_macro_input;
 ///             </td>
 ///             <td>
 ///                 Marks the account as closed at the end of the instruction’s execution
-///                 (sets its discriminator to the `CLOSED_ACCOUNT_DISCRIMINATOR`)
-///                 and sends its lamports to the specified account.<br>
+///                 (sets its discriminator to the <code>CLOSED_ACCOUNT_DISCRIMINATOR</code>)
+///                 and sends its lamports to the specified account.
 ///                 <br><br>
 ///                 Example:
 ///                 <pre><code>
@@ -207,6 +186,8 @@ use syn::parse_macro_input;
 ///         </tr>
 ///     </tbody>
 /// </table>
+/// 
+/// # SPL Constraints
 ///
 /// The full list of available attributes is as follows.
 ///
