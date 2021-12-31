@@ -35,14 +35,12 @@ pub fn idl_ts(idl: &Idl) -> Result<String> {
     }
     let idl_json = serde_json::to_string_pretty(&idl)?;
     Ok(format!(
-        r#"export type {} = {};
+        r#"export const IDL = {} as const;
 
-export const IDL: {} = {};
+export type {} = typeof IDL;
 "#,
-        idl.name.to_camel_case(),
         idl_json,
-        idl.name.to_camel_case(),
-        idl_json
+        idl.name.to_camel_case()
     ))
 }
 
