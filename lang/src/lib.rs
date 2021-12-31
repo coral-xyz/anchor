@@ -257,6 +257,12 @@ pub mod __private {
     // don't use #[doc(hidden)] on these
     pub use crate::error::ErrorCode;
 
+    /// The discriminator anchor uses to mark an account as closed
+    pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
+
+    /// The starting point for user defined error codes.
+    pub const ERROR_CODE_OFFSET: u32 = 6000;
+
     #[doc(hidden)]
     pub use crate::ctor::Ctor;
     #[doc(hidden)]
@@ -278,9 +284,6 @@ pub mod __private {
     pub mod state {
         pub use crate::accounts::state::*;
     }
-
-    /// The starting point for user defined error codes.
-    pub const ERROR_CODE_OFFSET: u32 = 6000;
 
     // Calculates the size of an account, which may be larger than the deserialized
     // data in it. This trait is currently only used for `#[state]` accounts.
@@ -308,8 +311,6 @@ pub mod __private {
 
     #[doc(hidden)]
     pub use crate::accounts::state::PROGRAM_STATE_SEED;
-    #[doc(hidden)]
-    pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
 }
 
 /// Ensures a condition is true, otherwise returns the given error.
