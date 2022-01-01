@@ -6,20 +6,20 @@ use syn::parse_macro_input;
 
 /// Implements an [`Accounts`](./trait.Accounts.html) deserializer on the given
 /// struct. Can provide further functionality through the use of attributes.
-/// 
+///
 /// # Table of Contents
 /// - [Instruction Attribute](#instruction-attribute)
 /// - [Constraints](#constraints)
-/// 
+///
 /// # Instruction Attribute
-/// 
+///
 /// You can access the instruction's arguments with the
 /// `#[instruction(..)]` attribute. You have to list them
 /// in the same order as in the instruction but you can
 /// omit all arguments after the last one you need.
-/// 
+///
 /// # Example
-/// 
+///
 /// ```ignore
 /// ...
 /// pub fn initialize(ctx: Context<Create>, bump: u8, authority: Pubkey, data: u64) -> ProgramResult {
@@ -33,11 +33,11 @@ use syn::parse_macro_input;
 ///     ...
 /// }
 /// ```
-/// 
+///
 /// # Constraints
-/// 
+///
 /// There are different types of constraints that can be applied with the `#[account(..)]` attribute.
-/// 
+///
 /// - [Normal Constraints](#normal-constraints)
 /// - [SPL Constraints](#spl-constraints)
 /// # Normal Constraints
@@ -365,7 +365,7 @@ use syn::parse_macro_input;
 ///         </tr>
 ///     </tbody>
 /// </table>
-/// 
+///
 /// # SPL Constraints
 ///
 /// The full list of available attributes is as follows.
