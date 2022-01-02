@@ -37,7 +37,7 @@ use syn::parse_macro_input;
 /// # Constraints
 ///
 /// There are different types of constraints that can be applied with the `#[account(..)]` attribute.
-/// 
+///
 /// Attributes may reference other data structures. When `<expr>` is used in the tables below, an arbitrary expression
 /// may be passed in as long as it evaluates to a value of the expected type, e.g. `owner = token_program.key()`. If `target_account`
 /// used, the `target_account` must exist in the struct and the `.key()` is implicit, e.g. `payer = authority`.
@@ -168,7 +168,7 @@ use syn::parse_macro_input;
 /// #[instruction(bump: u8)]
 /// pub struct Initialize<'info> {
 /// &nbsp;&nbsp;&nbsp;&nbsp;#[account(
-/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;init, payer = payer, 
+/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;init, payer = payer,
 /// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;seeds = [b"example_seed".as_ref()], bump = bump
 /// &nbsp;&nbsp;&nbsp;&nbsp;)]
 /// &nbsp;&nbsp;&nbsp;&nbsp;pub pda_data_account: Account<'info, MyData>,
@@ -388,7 +388,7 @@ use syn::parse_macro_input;
 /// </table>
 ///
 /// # SPL Constraints
-/// 
+///
 /// Anchor provides constraints that make verifying SPL accounts easier.
 ///
 /// <table>
