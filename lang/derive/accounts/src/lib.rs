@@ -38,7 +38,7 @@ use syn::parse_macro_input;
 ///
 /// There are different types of constraints that can be applied with the `#[account(..)]` attribute.
 /// 
-/// Attributes may reference other data structures. When `<expr>` is used in the table below, an arbitrary expression
+/// Attributes may reference other data structures. When `<expr>` is used in the tables below, an arbitrary expression
 /// may be passed in as long as it evaluates to a value of the expected type, e.g. `owner = token_program.key()`. If `target_account`
 /// used, the `target_account` must exist in the struct and the `.key()` is implicit, e.g. `payer = authority`.
 ///
@@ -96,6 +96,7 @@ use syn::parse_macro_input;
 ///                 Creates the account via a CPI to the system program and
 ///                 initializes it (sets its account discriminator).<br>
 ///                 Marks the account as mutable and is mutually exclusive with <code>mut</code>.<br>
+///                 Makes the account rent exempt unless skipped with `rent_exempt = skip`.<br>
 ///                 <ul>
 ///                     <li>
 ///                         Requires the <code>payer</code> constraint to also be on the account.
@@ -232,7 +233,9 @@ use syn::parse_macro_input;
 ///             <td>
 ///                 Checks that given account is a PDA derived from the currently executing program,
 ///                 the seeds, and if provided, the bump. If not provided, anchor uses the canonical
-///                 bump.
+///                 bump. Will be adjusted in the future to allow PDA to be derived from other programs.<br>
+///                 This constraint behaves slightly differently when used with <code>init</code>.
+///                 See its description.
 ///                 <br><br>
 ///                 Example:
 ///                 <pre><code>
@@ -385,28 +388,111 @@ use syn::parse_macro_input;
 /// </table>
 ///
 /// # SPL Constraints
+/// 
+/// Anchor provides constraints that make verifying SPL accounts easier.
 ///
-/// The full list of available attributes is as follows.
-///
-/// | Attribute | Location | Description |
-/// |:--|:--|:--|
-/// | `#[account(signer)]`<br><br>`#[account(signer @ <custom_error>)]` | On raw `AccountInfo` structs. | Checks the given account signed the transaction. Custom errors are supported via `@`. |
-/// | `#[account(mut)]`<br><br>`#[account(mut @ <custom_error>)]` | On `AccountInfo`, `Account` or `CpiAccount` structs. | Marks the account as mutable and persists the state transition. Custom errors are supported via `@`. |
-/// | `#[account(init)]` | On `Account` structs. | Marks the account as being initialized, creating the account via the system program. |
-/// | `#[account(init_if_needed)]` | On `Account` structs. | Same as `init` but skip if already initialized. |
-/// | `#[account(zero)]` | On `Account` structs. | Asserts the account discriminator is zero. |
-/// | `#[account(close = <target>)]` | On `Account` and `AccountLoader` structs. | Marks the account as being closed at the end of the instruction's execution, sending the rent exemption lamports to the specified <target>. |
-/// | `#[account(has_one = <target>)]`<br><br>`#[account(has_one = <target> @ <custom_error>)]` | On `Account` or `CpiAccount` structs | Checks the `target` field on the account matches the `target` field in the struct deriving `Accounts`. Custom errors are supported via `@`. |
-/// | `#[account(seeds = [<seeds>], bump? = <target>, payer? = <target>, space? = <target>, owner? = <target>)]` | On `AccountInfo` structs | Seeds for the program derived address an `AccountInfo` struct represents. If bump is provided, then appends it to the seeds. On initialization, validates the given bump is the bump provided by `Pubkey::find_program_address`.|
-/// | `#[account(constraint = <expression>)]`<br><br>`#[account(constraint = <expression> @ <custom_error>)]` | On any type deriving `Accounts` | Executes the given code as a constraint. The expression should evaluate to a boolean. Custom errors are supported via `@`. |
-/// | `#[account("<literal>")]` | Deprecated | Executes the given code literal as a constraint. The literal should evaluate to a boolean. |
-/// | `#[account(rent_exempt = <skip>)]` | On `AccountInfo` or `Account` structs | Optional attribute to skip the rent exemption check. By default, all accounts marked with `#[account(init)]` will be rent exempt, and so this should rarely (if ever) be used. Similarly, omitting `= skip` will mark the account rent exempt. |
-/// | `#[account(executable)]` | On `AccountInfo` structs | Checks the given account is an executable program. |
-/// | `#[account(state = <target>)]` | On `CpiState` structs | Checks the given state is the canonical state account for the target program. |
-/// | `#[account(owner = <target>)]`<br><br>`#[account(owner = <target> @ <custom_error>)]` | On `CpiState`, `CpiAccount`, and `AccountInfo` | Checks the account owner matches the target. Custom errors are supported via `@`. |
-/// | `#[account(address = <pubkey>)]`<br><br>`#[account(address = <pubkey> @ <custom_error>)]` | On `AccountInfo` and `Account` | Checks the account key matches the pubkey. Custom errors are supported via `@`. |
-// TODO: How do we make the markdown render correctly without putting everything
-//       on absurdly long lines?
+/// <table>
+///     <thead>
+///         <tr>
+///             <th>Attribute</th>
+///             <th>Description</th>
+///         </tr>
+///     </thead>
+///     <tbody>
+///         <tr>
+///             <td>
+///                 <code>#[account(token::mint = &lt;target_account&gt;, token::authority = &lt;target_account&gt;)]</code>
+///             </td>
+///             <td>
+///                 Can currently only be used with <code>init</code> to create a token
+///                 account with the given mint address and authority.
+///                 <br><br>
+///                 Example:
+///                 <pre>
+/// use anchor_spl::{mint, token::{TokenAccount, Mint}};
+/// ...&#10;
+/// #[account(
+///     init,
+///     payer = payer,
+///     token::mint = mint,
+///     token::authority = payer,
+/// )]
+/// pub token: Account<'info, TokenAccount>,
+/// #[account(address = mint::USDC)]
+/// pub mint: Account<'info, Mint>,
+/// #[account(mut)]
+/// pub payer: Signer<'info>,
+///                 </pre>
+///             </td>
+///         </tr>
+///         <tr>
+///             <td>
+///                 <code>#[account(mint::authority = &lt;target_account&gt;, mint::decimals = &lt;expr&gt;)]</code>
+///                 <br><br>
+///                 <code>#[account(mint::authority = &lt;target_account&gt;, mint::decimals = &lt;expr&gt;, mint::freeze_authority = &lt;target_account&gt;)]</code>
+///             </td>
+///             <td>
+///                 Can currently only be used with <code>init</code> to create a mint
+///                 account with the given mint decimals and mint authority.<br>
+///                 The freeze authority is optional.
+///                 <br><br>
+///                 Example:
+///                 <pre>
+/// use anchor_spl::token::Mint;
+/// ...&#10;
+/// #[account(
+///     init,
+///     payer = payer,
+///     mint::decimals = 9,
+///     mint::authority = payer,
+/// )]
+/// pub mint_one: Account<'info, Mint>,
+/// #[account(
+///     init,
+///     payer = payer,
+///     mint::decimals = 9,
+///     mint::authority = payer,
+///     mint::freeze_authority = payer
+/// )]
+/// pub mint_two: Account<'info, Mint>,
+/// #[account(mut)]
+/// pub payer: Signer<'info>,
+///                 </pre>
+///             </td>
+///         </tr>
+///         <tr>
+///             <td>
+///                 <code>#[account(associated_token::mint = &lt;target_account&gt;, associated_token::authority = &lt;target_account&gt;)]</code>
+///             </td>
+///             <td>
+///                 Can be used as a standalone as a check or with <code>init</code> to create an associated token
+///                 account with the given mint address and authority.
+///                 <br><br>
+///                 Example:
+///                 <pre>
+/// use anchor_spl::{mint, token::{TokenAccount, Mint}};
+/// ...&#10;
+/// #[account(
+///     init,
+///     payer = payer,
+///     associated_token::mint = mint,
+///     associated_token::authority = payer,
+/// )]
+/// pub token: Account<'info, TokenAccount>,
+/// #[account(
+///     associated_token::mint = mint,
+///     associated_token::authority = payer,
+/// )]
+/// pub second_token: Account<'info, TokenAccount>,
+/// #[account(address = mint::USDC)]
+/// pub mint: Account<'info, Mint>,
+/// #[account(mut)]
+/// pub payer: Signer<'info>,
+///                 </pre>
+///             </td>
+///         </tr>
+///     <tbody>
+/// </table>
 #[proc_macro_derive(Accounts, attributes(account, instruction))]
 pub fn derive_anchor_deserialize(item: TokenStream) -> TokenStream {
     parse_macro_input!(item as anchor_syn::AccountsStruct)
