@@ -37,6 +37,10 @@ use syn::parse_macro_input;
 /// # Constraints
 ///
 /// There are different types of constraints that can be applied with the `#[account(..)]` attribute.
+/// 
+/// Attributes may reference other data structures. When `<expr>` is used in the table below, an arbitrary expression
+/// may be passed in as long as it evaluates to a value of the expected type, e.g. `owner = token_program.key()`. If `target_account`
+/// used, the `target_account` must exist in the struct and the `.key()` is implicit, e.g. `payer = authority`.
 ///
 /// - [Normal Constraints](#normal-constraints)
 /// - [SPL Constraints](#spl-constraints)
@@ -85,8 +89,8 @@ use syn::parse_macro_input;
 ///         </tr>
 ///         <tr>
 ///             <td>
-///                 <code>#[account(init, payer = &lt;target&gt;)]</code><br><br>
-///                 <code>#[account(init, payer = &lt;target&gt;, space = &lt;num_bytes&gt;)]</code>
+///                 <code>#[account(init, payer = &lt;target_account&gt;)]</code><br><br>
+///                 <code>#[account(init, payer = &lt;target_account&gt;, space = &lt;num_bytes&gt;)]</code>
 ///             </td>
 ///             <td>
 ///                 Creates the account via a CPI to the system program and
@@ -162,11 +166,21 @@ use syn::parse_macro_input;
 /// #[derive(Accounts)]
 /// #[instruction(bump: u8)]
 /// pub struct Initialize<'info> {
-/// &nbsp;&nbsp;&nbsp;&nbsp;#[account(init, payer = payer, seeds = [b"example_seed".as_ref()], bump = bump)]
+/// &nbsp;&nbsp;&nbsp;&nbsp;#[account(
+/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;init, payer = payer, 
+/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;seeds = [b"example_seed".as_ref()], bump = bump
+/// &nbsp;&nbsp;&nbsp;&nbsp;)]
 /// &nbsp;&nbsp;&nbsp;&nbsp;pub pda_data_account: Account<'info, MyData>,
-/// &nbsp;&nbsp;&nbsp;&nbsp;#[account(init, payer = payer, space = 8 + 8, owner = other_program.key())]
+/// &nbsp;&nbsp;&nbsp;&nbsp;#[account(
+/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;init, payer = payer,
+/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;space = 8 + 8, owner = other_program.key()
+/// &nbsp;&nbsp;&nbsp;&nbsp;)]
 /// &nbsp;&nbsp;&nbsp;&nbsp;pub account_for_other_program: AccountInfo<'info>,
-/// &nbsp;&nbsp;&nbsp;&nbsp;#[account(init, payer = payer, space = 8 + 8, owner = other_program.key(), seeds = [b"other_seed".as_ref()], bump)]
+/// &nbsp;&nbsp;&nbsp;&nbsp;#[account(
+/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;init,payer = payer, space = 8 + 8,
+/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;owner = other_program.key(),
+/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;seeds = [b"other_seed".as_ref()], bump
+/// &nbsp;&nbsp;&nbsp;&nbsp;)]
 /// &nbsp;&nbsp;&nbsp;&nbsp;pub pda_for_other_program: AccountInfo<'info>,
 /// &nbsp;&nbsp;&nbsp;&nbsp;#[account(mut)]
 /// &nbsp;&nbsp;&nbsp;&nbsp;pub payer: Signer<'info>,
@@ -178,8 +192,8 @@ use syn::parse_macro_input;
 ///         </tr>
 ///         <tr>
 ///             <td>
-///                 <code>#[account(init_if_needed, payer = &lt;target&gt;)]</code><br><br>
-///                 <code>#[account(init_if_needed, payer = &lt;target&gt;, space = &lt;num_bytes&gt;)]</code>
+///                 <code>#[account(init_if_needed, payer = &lt;target_account&gt;)]</code><br><br>
+///                 <code>#[account(init_if_needed, payer = &lt;target_account&gt;, space = &lt;num_bytes&gt;)]</code>
 ///             </td>
 ///             <td>
 ///                 Exact same functionality as the <code>init</code> constraint but only runs if the account does not exist yet.<br>
@@ -231,12 +245,12 @@ use syn::parse_macro_input;
 ///         </tr>
 ///         <tr>
 ///             <td>
-///                 <code>#[account(has_one = &lt;target&gt;)]</code><br><br>
-///                 <code>#[account(has_one = &lt;target&gt; @ &lt;custom_error&gt;)]</code>
+///                 <code>#[account(has_one = &lt;target_account&gt;)]</code><br><br>
+///                 <code>#[account(has_one = &lt;target_account&gt; @ &lt;custom_error&gt;)]</code>
 ///             </td>
 ///             <td>
-///                 Checks the <code>target</code> field on the account matches the
-///                 key of the <code>target</code> field in the Accounts struct.<br>
+///                 Checks the <code>target_account</code> field on the account matches the
+///                 key of the <code>target_account</code> field in the Accounts struct.<br>
 ///                 Custom errors are supported via <code>@</code>.<br><br>
 ///                 Example:
 ///                 <pre><code>
@@ -331,16 +345,20 @@ use syn::parse_macro_input;
 ///         </tr>
 ///         <tr>
 ///             <td>
-///                 <code>#[account(close = &lt;target&gt;)]</code>
+///                 <code>#[account(close = &lt;target_account&gt;)]</code>
 ///             </td>
 ///             <td>
 ///                 Marks the account as closed at the end of the instruction’s execution
 ///                 (sets its discriminator to the <code>CLOSED_ACCOUNT_DISCRIMINATOR</code>)
-///                 and sends its lamports to the specified account.
+///                 and sends its lamports to the specified account.<br>
+///                 Setting the discriminator to a special variant
+///                 makes account revival attacks (where a subsequent instruction
+///                 adds the rent exemption lamports again) impossible.<br>
+///                 Requires <code>mut</code> to exist on the account.
 ///                 <br><br>
 ///                 Example:
 ///                 <pre><code>
-/// #[account(close = receiver)]
+/// #[account(mut, close = receiver)]
 /// pub data_account: Account<'info, MyData>,
 /// #[account(mut)]
 /// pub receiver: SystemAccount<'info>
@@ -357,9 +375,9 @@ use syn::parse_macro_input;
 ///                 <br><br>
 ///                 Example:
 ///                 <pre><code>
-/// #[account(constraint = data_account.keys[0].age == other_data_account.market.apple.age)]
-/// pub data_account: Account<'info, MyData>,
-/// pub other_data_account: Account<'info, OtherData>
+/// #[account(constraint = one.keys[0].age == two.apple.age)]
+/// pub one: Account<'info, MyData>,
+/// pub two: Account<'info, OtherData>
 ///                 </code></pre>
 ///             </td>
 ///         </tr>
