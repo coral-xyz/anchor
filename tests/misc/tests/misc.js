@@ -1282,7 +1282,7 @@ describe("misc", () => {
     }
   });
 
-  it("init_if_needed throws if associated token exists with correct owner and mint but is not the ATA", async () => {
+  it("init_if_needed throws if token exists with correct owner and mint but is not the ATA", async () => {
     const mint = anchor.web3.Keypair.generate();
     await program.rpc.testInitMint({
       accounts: {
