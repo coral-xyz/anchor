@@ -14,12 +14,26 @@ incremented for features.
 ### Fixes
 
 * ts: Add type declarations for conditional `workspace` and `Wallet` exports ([#1137](https://github.com/project-serum/anchor/pull/1137)).
-* ts: fix `translateAddress` which currently leads to failing browser code. Now uses `PublicKey` constructor instead of prototype chain constructor name checking which doesn't work in the presence of code minifying/mangling([1138](https://github.com/project-serum/anchor/pull/1138))
+* ts: Change commitment message `recent` to `processed` and `max` to `finalized` ([#1128](https://github.com/project-serum/anchor/pull/1128))
+* ts: fix `translateAddress` which currently leads to failing browser code. Now uses `PublicKey` constructor instead of prototype chain constructor name checking which doesn't work in the presence of code minifying/mangling([#1138](https://github.com/project-serum/anchor/pull/1138))
+* lang: add missing check that verifies that account is ATA when using `init_if_needed` and init is not needed([#1221](https://github.com/project-serum/anchor/pull/1221))
 
 ### Features
 
 * lang: Add `programdata_address: Option<Pubkey>` field to `Program` account. Will be populated if account is a program owned by the upgradable bpf loader ([#1125](https://github.com/project-serum/anchor/pull/1125))
-* lang,ts,ci,cli,docs: update solana toolchain to version 1.8.5([#1133](https://github.com/project-serum/anchor/pull/1133))
+* lang,ts,ci,cli,docs: update solana toolchain to version 1.8.5([#1133](https://github.com/project-serum/anchor/pull/1133)).
+* lang: Account wrappers for non-Anchor programs no longer have to implement the `serialize` function because it has a default impl now. Similarly, they no longer have to implement `try_deserialize` which now delegates to `try_deserialize_unchecked` by default([#1156](https://github.com/project-serum/anchor/pull/1156)).
+* lang: Add `set_inner` method to `Account<'a, T>` to enable easy updates ([#1177](https://github.com/project-serum/anchor/pull/1177)).
+* lang: Handle arrays with const as length ([#968](https://github.com/project-serum/anchor/pull/968)).
+* ts: Add optional commitment argument to `fetch` and `fetchMultiple` ([#1171](https://github.com/project-serum/anchor/pull/1171)).
+* lang: Implement `AsRef<T>` for `Account<'a, T>`([#1173](https://github.com/project-serum/anchor/pull/1173))
+* cli: Add `anchor expand` command which wraps around `cargo expand` ([#1160](https://github.com/project-serum/anchor/pull/1160))
+
+### Breaking
+
+* client: Client::new and Client::new_with_options now accept `Rc<dyn Signer>` instead of `Keypair` ([#975](https://github.com/project-serum/anchor/pull/975)).
+* lang, ts: Change error enum name and message for 'wrong program ownership' account validation ([#1154](https://github.com/project-serum/anchor/pull/1154)).
+* lang: Change from `#[repr(packed)]` to `#[repr(C)]` for zero copy accounts ([#1106](https://github.com/project-serum/anchor/pull/1106)).
 
 ## [0.19.0] - 2021-12-08
 

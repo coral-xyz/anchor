@@ -158,7 +158,9 @@ pub trait ToAccountInfo<'info> {
 /// [`#[account]`](./attr.account.html) attribute.
 pub trait AccountSerialize {
     /// Serializes the account data into `writer`.
-    fn try_serialize<W: Write>(&self, writer: &mut W) -> Result<(), ProgramError>;
+    fn try_serialize<W: Write>(&self, _writer: &mut W) -> Result<(), ProgramError> {
+        Ok(())
+    }
 }
 
 /// A data structure that can be deserialized and stored into account storage,
@@ -173,7 +175,9 @@ pub trait AccountDeserialize: Sized {
     /// For example, if the SPL token program were to implement this trait,
     /// it should be impossible to deserialize a `Mint` account into a token
     /// `Account`.
-    fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError>;
+    fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
+        Self::try_deserialize_unchecked(buf)
+    }
 
     /// Deserializes account data without checking the account discriminator.
     /// This should only be used on account initialization, when the bytes of
@@ -276,23 +280,34 @@ pub mod prelude {
 }
 
 // Internal module used by macros and unstable apis.
-#[doc(hidden)]
 pub mod __private {
-    use solana_program::program_error::ProgramError;
-    use solana_program::pubkey::Pubkey;
+    // Modules with useful information for users
+    // don't use #[doc(hidden)] on these
+    pub use crate::error::ErrorCode;
 
+    #[doc(hidden)]
     pub use crate::ctor::Ctor;
-    pub use crate::error::{Error, ErrorCode};
+    #[doc(hidden)]
+    pub use crate::error::Error;
+    #[doc(hidden)]
     pub use anchor_attribute_account::ZeroCopyAccessor;
+    #[doc(hidden)]
     pub use anchor_attribute_event::EventIndex;
+    #[doc(hidden)]
     pub use base64;
+    #[doc(hidden)]
     pub use bytemuck;
-
+    #[doc(hidden)]
+    use solana_program::program_error::ProgramError;
+    #[doc(hidden)]
+    use solana_program::pubkey::Pubkey;
+    #[doc(hidden)]
+    #[doc(hidden)]
     pub mod state {
         pub use crate::accounts::state::*;
     }
 
-    // The starting point for user defined error codes.
+    /// The starting point for user defined error codes.
     pub const ERROR_CODE_OFFSET: u32 = 6000;
 
     // Calculates the size of an account, which may be larger than the deserialized
@@ -303,11 +318,13 @@ pub mod __private {
     }
 
     // Very experimental trait.
+    #[doc(hidden)]
     pub trait ZeroCopyAccessor<Ty> {
         fn get(&self) -> Ty;
         fn set(input: &Ty) -> Self;
     }
 
+    #[doc(hidden)]
     impl ZeroCopyAccessor<Pubkey> for [u8; 32] {
         fn get(&self) -> Pubkey {
             Pubkey::new(self)
@@ -317,7 +334,9 @@ pub mod __private {
         }
     }
 
+    #[doc(hidden)]
     pub use crate::accounts::state::PROGRAM_STATE_SEED;
+    #[doc(hidden)]
     pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
 }
 
