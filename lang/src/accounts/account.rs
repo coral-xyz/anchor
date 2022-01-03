@@ -12,6 +12,13 @@ use std::ops::{Deref, DerefMut};
 
 /// Wrapper around [`AccountInfo`](crate::solana_program::account_info::AccountInfo)
 /// that verifies program ownership and deserializes underlying data into a Rust type.
+/// 
+/// # Table of Contents
+/// - [Basic Functionality](#basic-functionality)
+/// - [Using Account with non-anchor types](#using-account-with-non-anchor-types)
+///     - [Out of the box wrapper types](#out-of-the-box-wrapper-types)
+/// 
+/// # Basic Functionality
 ///
 /// Account checks that `Account.info.owner == T::owner()`.
 /// This means that the data type that Accounts wraps around (`=T`) needs to
@@ -26,7 +33,7 @@ use std::ops::{Deref, DerefMut};
 /// - `Account.info.owner == T::owner()`
 /// - `!(Account.info.owner == SystemProgram && Account.info.lamports() == 0)`
 ///
-/// Example
+/// # Example
 /// ```ignore
 /// use anchor_lang::prelude::*;
 /// use other_program::Auth;
@@ -68,6 +75,8 @@ use std::ops::{Deref, DerefMut};
 /// }
 /// ...
 /// ```
+/// 
+/// # Using Account with non-anchor types
 ///
 /// Account can also be used with non-anchor programs. The data types from
 /// those programs are not annotated with `#[account]` so you have to
@@ -77,7 +86,7 @@ use std::ops::{Deref, DerefMut};
 /// functions `#[account]` generates. See the example below for the code you have
 /// to write.
 ///
-/// The mint wrapper type Anchor provides out of the box for the token program ([source](https://github.com/project-serum/anchor/blob/master/spl/src/token.rs))
+/// The mint wrapper type that Anchor provides out of the box for the token program ([source](https://github.com/project-serum/anchor/blob/master/spl/src/token.rs))
 /// ```ignore
 /// #[derive(Clone)]
 /// pub struct Mint(spl_token::state::Mint);
@@ -119,6 +128,96 @@ use std::ops::{Deref, DerefMut};
 ///     }
 /// }
 /// ```
+/// 
+/// ## Out of the box wrapper types
+/// 
+/// ### Accessing BPFUpgradeableLoader Data
+/// 
+/// Anchor provides wrapper types to access data stored in programs owned by the BPFUpgradeableLoader
+/// such as the upgrade authority. If you're interested in the data of a program account, you can use
+/// ```rust
+/// Account<'info, BpfUpgradeableLoaderState>
+/// ```
+/// and then match on its contents inside your instruction function.
+/// 
+/// Alternatively, you can use
+/// ```rust
+/// Account<'info, ProgramData>
+/// ```
+/// to let anchor do the matching for you and return the ProgramData variant of BpfUpgradeableLoaderState.
+/// 
+/// # Example
+/// ```ignore
+/// use anchor_lang::prelude::*;
+/// use crate::program::MyProgram;
+/// 
+/// declare_id!("Cum9tTyj5HwcEiAmhgaS7Bbj4UczCwsucrCkxRECzM4e");
+/// 
+/// #[program]
+/// pub mod my_program {
+///     use super::*;
+/// 
+///     pub fn set_initial_admin(
+///         ctx: Context<SetInitialAdmin>,
+///         admin_key: Pubkey
+///     ) -> ProgramResult {
+///         ctx.accounts.admin_settings.admin_key = admin_key;
+///         Ok(())
+///     }
+/// 
+///     pub fn set_admin(...){...}
+/// 
+///     pub fn set_settings(...){...}
+/// }
+/// 
+/// #[account]
+/// #[derive(Default, Debug)]
+/// pub struct AdminSettings {
+///     admin_key: Pubkey
+/// }
+/// 
+/// #[derive(Accounts)]
+/// pub struct SetInitialAdmin<'info> {
+///     #[account(init, payer = authority, seeds = [b"admin"], bump)]
+///     pub admin_settings: Account<'info, AdminSettings>,
+///     #[account(mut)]
+///     pub authority: Signer<'info>,
+///     #[account(constraint = program.programdata_address() == Some(program_data.key()))]
+///     pub program: Program<'info, MyProgram>,
+///     #[account(constraint = program_data.upgrade_authority_address == Some(authority.key()))]
+///     pub program_data: Account<'info, ProgramData>,
+///     pub system_program: Program<'info, System>,
+/// }
+/// ```
+/// 
+/// This example solves a problem you may face if your program has admin settings: How do you set the
+/// admin key for restricted functionality after deployment? Setting the admin key itself should
+/// be a restricted action but how do you restrict it without having set an admin key?
+/// You're stuck in a loop.
+/// One solution is to use the upgrade authority of the program as the initial
+/// (or permanent) admin key.
+/// 
+/// ### SPL Types
+/// 
+/// Anchor provides wrapper types to access accounts owned by the token program. Use
+/// ```ignore
+/// use anchor_spl::token::TokenAccount;
+/// 
+/// #[derive(Accounts)]
+/// pub struct Example {
+///     pub my_acc: Account<'info, TokenAccount>
+/// }
+/// ```
+/// to access token accounts and
+/// ```rust
+/// use anchor_spl::token::Mint;
+/// 
+/// #[derive(Accounts)]
+/// pub struct Example {
+///     pub my_acc: Account<'info, Mint>
+/// }
+/// ```
+/// to access mint accounts.
 #[derive(Clone)]
 pub struct Account<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> {
     account: T,
