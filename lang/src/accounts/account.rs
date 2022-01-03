@@ -283,6 +283,22 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
         self.account
     }
 
+    /// Sets the inner account.
+    ///
+    /// Instead of this:
+    /// ```ignore
+    /// pub fn new_user(ctx: Context<CreateUser>, new_user:User) -> ProgramResult {
+    ///     (*ctx.accounts.user_to_create).name = new_user.name;
+    ///     (*ctx.accounts.user_to_create).age = new_user.age;
+    ///     (*ctx.accounts.user_to_create).address = new_user.address;
+    /// }
+    /// ```
+    /// You can do this:
+    /// ```ignore
+    /// pub fn new_user(ctx: Context<CreateUser>, new_user:User) -> ProgramResult {
+    ///     ctx.accounts.user_to_create.set_inner(new_user);
+    /// }
+    /// ```
     pub fn set_inner(&mut self, inner: T) {
         self.account = inner;
     }
