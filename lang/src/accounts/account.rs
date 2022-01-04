@@ -135,13 +135,13 @@ use std::ops::{Deref, DerefMut};
 ///
 /// Anchor provides wrapper types to access data stored in programs owned by the BPFUpgradeableLoader
 /// such as the upgrade authority. If you're interested in the data of a program account, you can use
-/// ```rust
+/// ```ignore
 /// Account<'info, BpfUpgradeableLoaderState>
 /// ```
 /// and then match on its contents inside your instruction function.
 ///
 /// Alternatively, you can use
-/// ```rust
+/// ```ignore
 /// Account<'info, ProgramData>
 /// ```
 /// to let anchor do the matching for you and return the ProgramData variant of BpfUpgradeableLoaderState.
@@ -209,7 +209,7 @@ use std::ops::{Deref, DerefMut};
 /// }
 /// ```
 /// to access token accounts and
-/// ```rust
+/// ```ignore
 /// use anchor_spl::token::Mint;
 ///
 /// #[derive(Accounts)]
