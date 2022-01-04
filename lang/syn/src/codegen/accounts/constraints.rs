@@ -321,7 +321,15 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
             }
         }
     };
-    generate_init(f, c.if_needed, seeds_with_nonce, payer, &c.space, &c.kind)
+    generate_init(
+        f,
+        c.if_needed,
+        seeds_with_nonce,
+        payer,
+        &c.space,
+        &c.kind,
+        &c.rent_exempt,
+    )
 }
 
 fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2::TokenStream {
@@ -410,6 +418,7 @@ pub fn generate_init(
     payer: proc_macro2::TokenStream,
     space: &Option<Expr>,
     kind: &InitKind,
+    rent_exempt: &ConstraintRentExempt,
 ) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let ty_decl = f.ty_decl();
@@ -426,6 +435,7 @@ pub fn generate_init(
                 quote! {anchor_spl::token::TokenAccount::LEN},
                 quote! {token_program.to_account_info().key},
                 seeds_with_nonce,
+                rent_exempt,
             );
             quote! {
                 let #field: #ty_decl = {
@@ -507,6 +517,7 @@ pub fn generate_init(
                 quote! {anchor_spl::token::Mint::LEN},
                 quote! {token_program.to_account_info().key},
                 seeds_with_nonce,
+                rent_exempt,
             );
             let freeze_authority = match freeze_authority {
                 Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key()) },
@@ -597,8 +608,24 @@ pub fn generate_init(
             } else {
                 quote! {}
             };
-            let create_account =
-                generate_create_account(field, quote! {space}, owner.clone(), seeds_with_nonce);
+            let create_account = generate_create_account(
+                field,
+                quote! {space},
+                owner.clone(),
+                seeds_with_nonce,
+                rent_exempt,
+            );
+
+            let rent_exempt_check = if *rent_exempt == ConstraintRentExempt::Enforce {
+                quote! {{
+                    let required_lamports = __anchor_rent.minimum_balance(#space);
+                    if pa.as_ref().lamports() < required_lamports {
+                        return Err(anchor_lang::__private::ErrorCode::ConstraintRentExempt.into());
+                    }
+                }}
+            } else {
+                quote! {}
+            };
             quote! {
                 let #field = {
                     let actual_field = #field.to_account_info();
@@ -619,6 +646,7 @@ pub fn generate_init(
                         }
 
                         #pda_check
+                        #rent_exempt_check
                     }
                     pa
                 };
@@ -637,7 +665,18 @@ pub fn generate_create_account(
     space: proc_macro2::TokenStream,
     owner: proc_macro2::TokenStream,
     seeds_with_nonce: proc_macro2::TokenStream,
+    rent_exempt: &ConstraintRentExempt,
 ) -> proc_macro2::TokenStream {
+    let required_lamports = match rent_exempt {
+        ConstraintRentExempt::Skip => quote! {0},
+        ConstraintRentExempt::Enforce => quote! {
+            __anchor_rent
+                .minimum_balance(#space)
+                .max(1)
+                .saturating_sub(__current_lamports)
+        },
+    };
+
     quote! {
         // If the account being initialized already has lamports, then
         // return them all back to the payer so that the account has
@@ -663,11 +702,8 @@ pub fn generate_create_account(
                 &[#seeds_with_nonce],
             )?;
         } else {
-            // Fund the account for rent exemption.
-            let required_lamports = __anchor_rent
-                .minimum_balance(#space)
-                .max(1)
-                .saturating_sub(__current_lamports);
+            // Fund the account for rent exemption unless skipped.
+            let required_lamports = #required_lamports;
             if required_lamports > 0 {
                 anchor_lang::solana_program::program::invoke(
                     &anchor_lang::solana_program::system_instruction::transfer(

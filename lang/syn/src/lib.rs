@@ -659,7 +659,7 @@ pub struct ConstraintAddress {
     pub error: Option<Expr>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConstraintRentExempt {
     Enforce,
     Skip,
@@ -671,6 +671,7 @@ pub struct ConstraintInitGroup {
     pub seeds: Option<ConstraintSeedsGroup>,
     pub payer: Option<Expr>,
     pub space: Option<Expr>,
+    pub rent_exempt: ConstraintRentExempt,
     pub kind: InitKind,
 }
 

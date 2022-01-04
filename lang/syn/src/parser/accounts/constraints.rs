@@ -537,9 +537,23 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             }
             _ => None,
         };
+
+        // SPL Token Program Rent Exemption Skip Forbidden
+        if init.is_some()
+            && into_inner!(rent_exempt.clone()).unwrap() == ConstraintRentExempt::Skip
+            && (mint_decimals.is_some() || token_mint.is_some() || associated_token.is_some())
+        {
+            return Err(ParseError::new(
+                rent_exempt.unwrap().span(),
+                "Accounts owned by the token program must be rent-exempt",
+            ));
+        }
+
         Ok(ConstraintGroup {
             init: init.as_ref().map(|i| Ok(ConstraintInitGroup {
             if_needed: i.if_needed,
+                // this unwrap is OK because init forces rent_exempt to be "Some" above
+                rent_exempt: into_inner!(rent_exempt.clone()).unwrap(),
                 seeds: seeds.clone(),
                 payer: into_inner!(payer.clone()).map(|a| a.target),
                 space: space.clone().map(|s| s.space.clone()),
