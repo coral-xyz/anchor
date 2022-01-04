@@ -14,7 +14,7 @@ pub mod create_mint_and_vault {
             to: ctx.accounts.vault.to_account_info(),
             authority: ctx.accounts.authority.to_account_info()
         };
-        return token::mint_to(CpiContext::new(ctx.accounts.token_program.to_account_info(), mint_to_ctx), amount);
+        token::mint_to(CpiContext::new(ctx.accounts.token_program.to_account_info(), mint_to_ctx), amount)
 
     }
 }
