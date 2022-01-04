@@ -618,8 +618,8 @@ pub fn generate_init(
 
             let rent_exempt_check = if *rent_exempt == ConstraintRentExempt::Enforce {
                 quote! {{
-                    let required_lamports = __anchor_rent.minimum_balance(#space);
-                    if pa.as_ref().lamports() < required_lamports {
+                    let required_lamports = __anchor_rent.minimum_balance(space);
+                    if pa.to_account_info().lamports() < required_lamports {
                         return Err(anchor_lang::__private::ErrorCode::ConstraintRentExempt.into());
                     }
                 }}
