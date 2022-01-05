@@ -13,6 +13,8 @@ incremented for features.
 
 ### Fixes
 
+* lang: `init_if_needed` now checks rent exemption when init is not needed ([#1234](https://github.com/project-serum/anchor/pull/1234)).
+* lang: `rent_exempt = skip` now makes `init` initialize account with 0 lamports ([#1234](https://github.com/project-serum/anchor/pull/1234)).
 * ts: Add type declarations for conditional `workspace` and `Wallet` exports ([#1137](https://github.com/project-serum/anchor/pull/1137)).
 * ts: Change commitment message `recent` to `processed` and `max` to `finalized` ([#1128](https://github.com/project-serum/anchor/pull/1128))
 * ts: fix `translateAddress` which currently leads to failing browser code. Now uses `PublicKey` constructor instead of prototype chain constructor name checking which doesn't work in the presence of code minifying/mangling([#1138](https://github.com/project-serum/anchor/pull/1138))
