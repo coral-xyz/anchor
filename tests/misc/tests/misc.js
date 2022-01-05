@@ -1346,6 +1346,53 @@ describe("misc", () => {
     }
   });
 
+  it("init_if_needed checks rent_exemption if init is not needed", async () => {
+    const data = anchor.web3.Keypair.generate();
+    await program.rpc.initDecreaseLamports({
+      accounts: {
+        data: data.publicKey,
+        user: anchor.getProvider().wallet.publicKey,
+        systemProgram: SystemProgram.programId,
+      },
+      signers: [data],
+    });
+
+    try {
+      await program.rpc.initIfNeededChecksRentExemption({
+        accounts: {
+          data: data.publicKey,
+          user: anchor.getProvider().wallet.publicKey,
+          systemProgram: SystemProgram.programId,
+        },
+        signers: [data],
+      });
+      assert.ok(false);
+    } catch (err) {
+      assert.equal(err.code, 2005);
+    }
+  });
+
+  it("init_if_needed does not rent_exemption if init is not needed and rent exempt check is skipped", async () => {
+    const data = anchor.web3.Keypair.generate();
+    await program.rpc.initDecreaseLamports({
+      accounts: {
+        data: data.publicKey,
+        user: anchor.getProvider().wallet.publicKey,
+        systemProgram: SystemProgram.programId,
+      },
+      signers: [data],
+    });
+
+    await program.rpc.initIfNeededSkipsRentExemption({
+      accounts: {
+        data: data.publicKey,
+        user: anchor.getProvider().wallet.publicKey,
+        systemProgram: SystemProgram.programId,
+      },
+      signers: [data],
+    });
+  });
+
   it("Can use multidimensional array", async () => {
     const array2d = new Array(10).fill(new Array(10).fill(99));
     const data = anchor.web3.Keypair.generate();
@@ -1393,9 +1440,9 @@ describe("misc", () => {
     });
   });
 
-  it("allows rent exemption to be skipped", async () => {
+  it("zero allows rent exemption to be skipped", async () => {
     const data = anchor.web3.Keypair.generate();
-    await program.rpc.initializeSkipRentExempt({
+    await program.rpc.zeroSkipRentExempt({
       accounts: {
         data: data.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
@@ -1416,9 +1463,21 @@ describe("misc", () => {
     });
   });
 
+  it("init allows rent exemption to be skipped", async () => {
+    const data = anchor.web3.Keypair.generate();
+    await program.rpc.initSkipRentExempt({
+      accounts: {
+        data: data.publicKey,
+        user: anchor.getProvider().wallet.publicKey,
+        systemProgram: SystemProgram.programId,
+      },
+      signers: [data],
+    });
+  });
+
   it("can use rent_exempt to enforce rent exemption", async () => {
     const data = anchor.web3.Keypair.generate();
-    await program.rpc.initializeSkipRentExempt({
+    await program.rpc.zeroSkipRentExempt({
       accounts: {
         data: data.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,

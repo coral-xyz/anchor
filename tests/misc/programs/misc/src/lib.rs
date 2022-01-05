@@ -48,19 +48,19 @@ pub mod misc {
         Ok(())
     }
 
-    pub fn initialize_no_rent_exempt(ctx: Context<InitializeNoRentExempt>) -> ProgramResult {
+    pub fn initialize_no_rent_exempt(_ctx: Context<InitializeNoRentExempt>) -> ProgramResult {
         Ok(())
     }
 
-    pub fn initialize_skip_rent_exempt(ctx: Context<InitializeSkipRentExempt>) -> ProgramResult {
+    pub fn zero_skip_rent_exempt(_ctx: Context<ZeroSkipRentExempt>) -> ProgramResult {
         Ok(())
     }
 
-    pub fn test_owner(_ctx: Context<TestOwner>) -> ProgramResult {
+    pub fn test_owner(__ctx: Context<TestOwner>) -> ProgramResult {
         Ok(())
     }
 
-    pub fn test_executable(_ctx: Context<TestExecutable>) -> ProgramResult {
+    pub fn test_executable(__ctx: Context<TestExecutable>) -> ProgramResult {
         Ok(())
     }
 
@@ -196,11 +196,11 @@ pub mod misc {
         Ok(())
     }
 
-    pub fn test_init_with_empty_seeds(ctx: Context<TestInitWithEmptySeeds>) -> ProgramResult {
+    pub fn test_init_with_empty_seeds(_ctx: Context<TestInitWithEmptySeeds>) -> ProgramResult {
         Ok(())
     }
 
-    pub fn test_empty_seeds_constraint(ctx: Context<TestEmptySeedsConstraint>) -> ProgramResult {
+    pub fn test_empty_seeds_constraint(_ctx: Context<TestEmptySeedsConstraint>) -> ProgramResult {
         Ok(())
     }
 
@@ -210,36 +210,36 @@ pub mod misc {
     }
 
     pub fn test_init_if_needed_checks_owner(
-        ctx: Context<TestInitIfNeededChecksOwner>,
+        _ctx: Context<TestInitIfNeededChecksOwner>,
     ) -> ProgramResult {
         Ok(())
     }
 
     pub fn test_init_if_needed_checks_seeds(
-        ctx: Context<TestInitIfNeededChecksSeeds>,
-        seed_data: String,
+        _ctx: Context<TestInitIfNeededChecksSeeds>,
+        _seed_data: String,
     ) -> ProgramResult {
         Ok(())
     }
 
     pub fn test_init_mint_if_needed(
-        ctx: Context<TestInitMintIfNeeded>,
-        decimals: u8,
+        _ctx: Context<TestInitMintIfNeeded>,
+        _decimals: u8,
     ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn test_init_token_if_needed(ctx: Context<TestInitTokenIfNeeded>) -> ProgramResult {
+    pub fn test_init_token_if_needed(_ctx: Context<TestInitTokenIfNeeded>) -> ProgramResult {
         Ok(())
     }
 
     pub fn test_init_associated_token_if_needed(
-        ctx: Context<TestInitAssociatedTokenIfNeeded>,
+        _ctx: Context<TestInitAssociatedTokenIfNeeded>,
     ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn init_with_space(ctx: Context<InitWithSpace>, data: u16) -> ProgramResult {
+    pub fn init_with_space(_ctx: Context<InitWithSpace>, _data: u16) -> ProgramResult {
         Ok(())
     }
 
@@ -251,11 +251,31 @@ pub mod misc {
         Ok(())
     }
 
-    pub fn test_no_rent_exempt(ctx: Context<NoRentExempt>) -> ProgramResult {
+    pub fn test_no_rent_exempt(_ctx: Context<NoRentExempt>) -> ProgramResult {
         Ok(())
     }
 
-    pub fn test_enforce_rent_exempt(ctx: Context<EnforceRentExempt>) -> ProgramResult {
+    pub fn test_enforce_rent_exempt(_ctx: Context<EnforceRentExempt>) -> ProgramResult {
+        Ok(())
+    }
+
+    pub fn init_skip_rent_exempt(ctx: Context<InitSkipRentExempt>) -> ProgramResult {
+        let rent = Rent::get()?;
+        assert!(ctx.accounts.data.to_account_info().lamports() < rent.minimum_balance(ctx.accounts.data.data_len()));
+        Ok(())
+    }
+
+    pub fn init_decrease_lamports(ctx: Context<InitDecreaseLamports>) -> ProgramResult {
+        **ctx.accounts.data.try_borrow_mut_lamports()? -= 1;
+        **ctx.accounts.user.try_borrow_mut_lamports()? += 1;
+        Ok(())
+    }
+
+    pub fn init_if_needed_checks_rent_exemption(_ctx: Context<InitIfNeededChecksRentExemption>) -> ProgramResult {
+        Ok(())
+    }
+
+    pub fn init_if_needed_skips_rent_exemption(_ctx: Context<InitIfNeededSkipsRentExemption>) -> ProgramResult {
         Ok(())
     }
 }

@@ -124,7 +124,7 @@ pub struct Initialize<'info> {
 }
 
 #[derive(Accounts)]
-pub struct InitializeSkipRentExempt<'info> {
+pub struct ZeroSkipRentExempt<'info> {
     #[account(zero, rent_exempt = skip)]
     pub data: Account<'info, Data>,
 }
@@ -357,4 +357,40 @@ pub struct NoRentExempt<'info> {
 pub struct EnforceRentExempt<'info> {
     #[account(rent_exempt = enforce)]
     pub data: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct InitSkipRentExempt<'info> {
+    #[account(init, payer = user, space = 5000, rent_exempt = skip)]
+    pub data: AccountInfo<'info>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub system_program: Program<'info, System>
+}
+
+#[derive(Accounts)]
+pub struct InitDecreaseLamports<'info> {
+    #[account(init, payer = user, space = 1000)]
+    pub data: AccountInfo<'info>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub system_program: Program<'info, System>
+}
+
+#[derive(Accounts)]
+pub struct InitIfNeededChecksRentExemption<'info> {
+    #[account(init_if_needed, payer = user, space = 1000)]
+    pub data: AccountInfo<'info>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub system_program: Program<'info, System>
+}
+
+#[derive(Accounts)]
+pub struct InitIfNeededSkipsRentExemption<'info> {
+    #[account(init_if_needed, payer = user, space = 1000, rent_exempt = skip)]
+    pub data: AccountInfo<'info>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub system_program: Program<'info, System>
 }

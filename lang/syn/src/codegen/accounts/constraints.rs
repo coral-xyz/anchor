@@ -667,25 +667,24 @@ pub fn generate_create_account(
     seeds_with_nonce: proc_macro2::TokenStream,
     rent_exempt: &ConstraintRentExempt,
 ) -> proc_macro2::TokenStream {
-    let required_lamports = match rent_exempt {
+    let current_lamports = quote! {
+        let __current_lamports = #field.to_account_info().lamports();
+    };
+
+    let lamports = match rent_exempt {
         ConstraintRentExempt::Skip => quote! {0},
         ConstraintRentExempt::Enforce => quote! {
-            __anchor_rent
-                .minimum_balance(#space)
-                .max(1)
-                .saturating_sub(__current_lamports)
+            __anchor_rent.minimum_balance(#space)
         },
     };
 
-    quote! {
-        // If the account being initialized already has lamports, then
-        // return them all back to the payer so that the account has
-        // zero lamports when the system program's create instruction
-        // is eventually called.
-        let __current_lamports = #field.to_account_info().lamports();
+    let create_account = quote! {
+        // If the account has no lamports yet,
+        // initialize it with the appropriate
+        // amount of lamports
         if __current_lamports == 0 {
             // Create the token account with right amount of lamports and space, and the correct owner.
-            let lamports = __anchor_rent.minimum_balance(#space);
+            let lamports = #lamports;
             anchor_lang::solana_program::program::invoke_signed(
                 &anchor_lang::solana_program::system_instruction::create_account(
                     payer.to_account_info().key,
@@ -701,7 +700,25 @@ pub fn generate_create_account(
                 ],
                 &[#seeds_with_nonce],
             )?;
-        } else {
+        }
+    };
+
+    let required_lamports = match rent_exempt {
+        ConstraintRentExempt::Skip => quote! {0},
+        ConstraintRentExempt::Enforce => quote! {
+            __anchor_rent
+                .minimum_balance(#space)
+                .max(1)
+                .saturating_sub(__current_lamports)
+        },
+    };
+
+    let transfer_allocate_assign = quote! {
+        // If the account being initialized already has lamports, then
+        // return them all back to the payer so that the account has
+        // zero lamports when the system program's create instruction
+        // is eventually called.
+        if __current_lamports != 0 {
             // Fund the account for rent exemption unless skipped.
             let required_lamports = #required_lamports;
             if required_lamports > 0 {
@@ -743,6 +760,12 @@ pub fn generate_create_account(
                 &[#seeds_with_nonce],
             )?;
         }
+    };
+
+    quote! {
+        #current_lamports
+        #create_account
+        #transfer_allocate_assign
     }
 }
 
