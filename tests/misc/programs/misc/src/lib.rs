@@ -262,6 +262,7 @@ pub mod misc {
     pub fn init_skip_rent_exempt(ctx: Context<InitSkipRentExempt>) -> ProgramResult {
         let rent = Rent::get()?;
         assert!(ctx.accounts.data.to_account_info().lamports() < rent.minimum_balance(ctx.accounts.data.data_len()));
+        assert!(ctx.accounts.data.to_account_info().lamports() == 0);
         Ok(())
     }
 
