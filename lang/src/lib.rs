@@ -257,7 +257,7 @@ pub mod __private {
     // don't use #[doc(hidden)] on these
     pub use crate::error::ErrorCode;
 
-    /// The discriminator anchor uses to mark an account as closed
+    /// The discriminator anchor uses to mark an account as closed.
     pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
 
     /// The starting point for user defined error codes.
