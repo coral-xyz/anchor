@@ -552,7 +552,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         Ok(ConstraintGroup {
             init: init.as_ref().map(|i| Ok(ConstraintInitGroup {
             if_needed: i.if_needed,
-                // this unwrap is OK because init forces rent_exempt to be "Some" above
+                // This unwrap is OK because init forces rent_exempt to be "Some" above.
                 rent_exempt: into_inner!(rent_exempt.clone()).unwrap(),
                 seeds: seeds.clone(),
                 payer: into_inner!(payer.clone()).map(|a| a.target),
