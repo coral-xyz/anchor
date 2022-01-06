@@ -16,7 +16,7 @@ use std::ops::{Deref, DerefMut};
 /// # Table of Contents
 /// - [Basic Functionality](#basic-functionality)
 /// - [Using Account with non-anchor types](#using-account-with-non-anchor-types)
-///     - [Out of the box wrapper types](#out-of-the-box-wrapper-types)
+/// - [Out of the box wrapper types](#out-of-the-box-wrapper-types)
 ///
 /// # Basic Functionality
 ///
