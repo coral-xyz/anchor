@@ -114,7 +114,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         decimals: stream.parse()?,
                     },
                 )),
-                _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
+                _ => return Err(ParseError::new(ident.span(), "Invalid attribute 1")),
             }
         }
         "token" => {
@@ -141,7 +141,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         auth: stream.parse()?,
                     },
                 )),
-                _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
+                _ => return Err(ParseError::new(ident.span(), "Invalid attribute 2")),
             }
         }
         "associated_token" => {
@@ -168,7 +168,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         auth: stream.parse()?,
                     },
                 )),
-                _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
+                _ => return Err(ParseError::new(ident.span(), "Invalid attribute 3")),
             }
         }
         "bump" => {
@@ -234,6 +234,12 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         space: stream.parse()?,
                     },
                 )),
+                "lamports" => ConstraintToken::Lamports(Context::new(
+                    span,
+                    ConstraintLamports {
+                        lamports: stream.parse()?,
+                    },
+                )),
                 "seeds" => {
                     let seeds;
                     let bracket = bracketed!(seeds in stream);
@@ -264,7 +270,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         error: parse_optional_custom_error(&stream)?,
                     },
                 )),
-                _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
+                _ => return Err(ParseError::new(ident.span(), "Invalid attribute 4")),
             }
         }
     };
@@ -298,6 +304,7 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub state: Option<Context<ConstraintState>>,
     pub payer: Option<Context<ConstraintPayer>>,
     pub space: Option<Context<ConstraintSpace>>,
+    pub lamports: Option<Context<ConstraintLamports>>,
     pub close: Option<Context<ConstraintClose>>,
     pub address: Option<Context<ConstraintAddress>>,
     pub token_mint: Option<Context<ConstraintTokenMint>>,
@@ -328,6 +335,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             state: None,
             payer: None,
             space: None,
+            lamports: None,
             close: None,
             address: None,
             token_mint: None,
@@ -484,6 +492,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             state,
             payer,
             space,
+            lamports,
             close,
             address,
             token_mint,
@@ -543,6 +552,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 seeds: seeds.clone(),
                 payer: into_inner!(payer.clone()).map(|a| a.target),
                 space: space.clone().map(|s| s.space.clone()),
+                lamports: lamports.clone().map(|s| s.lamports.clone()),
                 kind: if let Some(tm) = &token_mint {
                     InitKind::Token {
                         mint: tm.clone().into_inner().mint,
@@ -610,6 +620,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::State(c) => self.add_state(c),
             ConstraintToken::Payer(c) => self.add_payer(c),
             ConstraintToken::Space(c) => self.add_space(c),
+            ConstraintToken::Lamports(c) => self.add_lamports(c),
             ConstraintToken::Close(c) => self.add_close(c),
             ConstraintToken::Address(c) => self.add_address(c),
             ConstraintToken::TokenAuthority(c) => self.add_token_authority(c),
@@ -915,6 +926,20 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             return Err(ParseError::new(c.span(), "space already provided"));
         }
         self.space.replace(c);
+        Ok(())
+    }
+
+    fn add_lamports(&mut self, c: Context<ConstraintLamports>) -> ParseResult<()> {
+        if self.init.is_none() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before space",
+            ));
+        }
+        if self.lamports.is_some() {
+            return Err(ParseError::new(c.span(), "space already provided"));
+        }
+        self.lamports.replace(c);
         Ok(())
     }
 }
