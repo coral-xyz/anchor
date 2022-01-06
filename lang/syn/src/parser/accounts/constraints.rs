@@ -538,7 +538,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             _ => None,
         };
 
-        // SPL Token Program Rent Exemption Skip Forbidden
+        // SPL Token Program Rent Exemption Skip Forbidden.
         if init.is_some()
             && into_inner!(rent_exempt.clone()).unwrap() == ConstraintRentExempt::Skip
             && (mint_decimals.is_some() || token_mint.is_some() || associated_token.is_some())
