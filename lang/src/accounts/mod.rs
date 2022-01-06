@@ -1,4 +1,4 @@
-//! Account types that can be used in the account validation struct
+//! Account types that can be used in the account validation struct.
 
 pub mod account;
 pub mod account_info;
