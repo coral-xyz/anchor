@@ -76,7 +76,7 @@ use std::ops::{Deref, DerefMut};
 /// ...
 /// ```
 ///
-/// # Using Account with non-anchor types
+/// # Using Account with non-anchor programs
 ///
 /// Account can also be used with non-anchor programs. The data types from
 /// those programs are not annotated with `#[account]` so you have to
