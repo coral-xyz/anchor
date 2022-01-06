@@ -95,7 +95,6 @@ pub struct TestPdaInitCustomLamports<'info> {
         bump = bump,
         payer = my_payer,
         lamports = lamports,
-        rent_exempt = skip
     )]
     pub my_pda: Account<'info, DataU16>,
     pub my_payer: AccountInfo<'info>,

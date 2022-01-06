@@ -365,8 +365,14 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             };
             // Rent exempt if not explicitly skipped.
             if self.rent_exempt.is_none() {
-                self.rent_exempt
-                    .replace(Context::new(i.span(), ConstraintRentExempt::Enforce));
+                self.rent_exempt.replace(Context::new(
+                    i.span(),
+                    if self.lamports.is_none() {
+                        ConstraintRentExempt::Enforce
+                    } else {
+                        ConstraintRentExempt::Skip
+                    },
+                ));
             }
             if self.payer.is_none() {
                 return Err(ParseError::new(
