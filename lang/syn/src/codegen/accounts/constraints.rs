@@ -735,7 +735,7 @@ pub fn generate_constraint_state(f: &Field, c: &ConstraintState) -> proc_macro2:
     quote! {
         // Checks the given state account is the canonical state account for
         // the target program.
-        if #ident.key() != &anchor_lang::accounts::cpi_state::CpiState::<#account_ty>::address(#program_target.key()) {
+        if #ident.key() != anchor_lang::accounts::cpi_state::CpiState::<#account_ty>::address(&#program_target.key()) {
             return Err(anchor_lang::__private::ErrorCode::ConstraintState.into());
         }
         if #ident.to_account_info().owner != &#program_target.key() {
