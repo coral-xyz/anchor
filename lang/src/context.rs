@@ -1,4 +1,4 @@
-//! Data structures that are used to provide inputs to program endpoints
+//! Data structures that are used to provide non-argument inputs to program endpoints
 
 use crate::{Accounts, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
