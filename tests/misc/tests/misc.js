@@ -298,6 +298,40 @@ describe("misc", () => {
     assert.ok(myPdaAccount.data === 6);
   });
 
+  it("Can create a PDA account with custom lamports", async () => {
+    const seed = Buffer.from([2, 3, 4, 5]);
+    const domain = "my-domain";
+    const foo = anchor.web3.SYSVAR_RENT_PUBKEY;
+    const [myPda, nonce] = await PublicKey.findProgramAddress(
+      [
+        Buffer.from(anchor.utils.bytes.utf8.encode("my-seed")),
+        Buffer.from(anchor.utils.bytes.utf8.encode(domain)),
+        foo.toBuffer(),
+        seed,
+      ],
+      program.programId
+    );
+
+    await program.rpc.testPdaInitCustomLamports(
+      domain,
+      seed,
+      nonce,
+      new anchor.BN(100000),
+      {
+        accounts: {
+          myPda,
+          myPayer: program.provider.wallet.publicKey,
+          foo,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        },
+      }
+    );
+
+    const myPdaAccount = await program.account.dataU16.fetch(myPda);
+    assert.ok(myPdaAccount.data === 6);
+  });
+
   it("Can create a zero copy PDA account", async () => {
     const [myPda, nonce] = await PublicKey.findProgramAddress(
       [Buffer.from(anchor.utils.bytes.utf8.encode("my-seed"))],

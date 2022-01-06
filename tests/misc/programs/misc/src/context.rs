@@ -87,6 +87,23 @@ pub struct TestPdaInit<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(domain: String, seed: Vec<u8>, bump: u8, lamports: u64)]
+pub struct TestPdaInitCustomLamports<'info> {
+    #[account(
+        init,
+        seeds = [b"my-seed", domain.as_bytes(), foo.key.as_ref(), &seed],
+        bump = bump,
+        payer = my_payer,
+        lamports = lamports,
+        rent_exempt = skip
+    )]
+    pub my_pda: Account<'info, DataU16>,
+    pub my_payer: AccountInfo<'info>,
+    pub foo: AccountInfo<'info>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
 #[instruction(bump: u8)]
 pub struct TestPdaInitZeroCopy<'info> {
     #[account(
