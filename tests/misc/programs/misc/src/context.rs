@@ -382,6 +382,8 @@ pub struct InitIfNeededChecksRentExemption<'info> {
 #[derive(Accounts)]
 #[instruction(bump: u8)]
 pub struct TestProgramIdConstraint<'info> {
+    // not a real associated token account
+    // just deriving like this for testing purposes
     #[account(seeds = [b"seed"], bump = bump, program_seed = anchor_spl::associated_token::ID)]
     associated_token_account: AccountInfo<'info>,
 
