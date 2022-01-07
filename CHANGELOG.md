@@ -16,7 +16,7 @@ incremented for features.
 ### Features
 
 *lang: Improved error msgs when required programs are missing when using the `init` constraint([#1257](https://github.com/project-serum/anchor/pull/1257))
-*lang: Add seeds::program constraint for specifying which program_id to use when deriving PDAs.([#1197](https://github.com/project-serum/anchor/pull/1197))
+*lang: Add `seeds::program` constraint for specifying which program_id to use when deriving PDAs.([#1197](https://github.com/project-serum/anchor/pull/1197))
 
 ## [0.20.0] - 2022-01-06
 
