@@ -353,8 +353,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                     with the init-if-needed cargo feature enabled. \
                     Carefully read the init_if_needed docs before using this feature \
                     to make sure you know how to protect yourself against \
-                    re-initialization attacks.
-                    ",
+                    re-initialization attacks.",
                     ));
                 }
             }
