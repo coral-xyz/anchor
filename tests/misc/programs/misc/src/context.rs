@@ -379,11 +379,12 @@ pub struct InitIfNeededChecksRentExemption<'info> {
     pub system_program: Program<'info, System>
 }
 
+#[derive(Accounts)]
 #[instruction(bump: u8)]
 pub struct TestProgramIdConstraint<'info> {
-    #[account(seeds = [b"seed"], bump, program_seed = anchor_spl::associated_token::ID)]
+    #[account(seeds = [b"seed"], bump = bump, program_seed = anchor_spl::associated_token::ID)]
     associated_token_account: AccountInfo<'info>,
 
-    #[account(seeds = [b"seed"], bump, program_seed = crate::ID)]
+    #[account(seeds = [b"seed"], bump = bump, program_seed = crate::ID)]
     other_account: AccountInfo<'info>,
 }

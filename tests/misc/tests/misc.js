@@ -1528,7 +1528,7 @@ describe("misc", () => {
       assert.equal("A rent exempt constraint was violated", err.msg);
     }
   });
-  
+
   it("Can validate PDAs derived from other program ids", async () => {
     const [ourPda, ourPdaBump] = await anchor.web3.PublicKey.findProgramAddress(
       [Buffer.from("seed")],
