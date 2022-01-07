@@ -1532,15 +1532,16 @@ describe("misc", () => {
   describe("Can validate PDAs derived from other program ids", () => {
     it("With bumps using create_program_address", async () => {
       const [firstPDA, firstBump] =
-      await anchor.web3.PublicKey.findProgramAddress(
-        [anchor.utils.bytes.utf8.encode("seed")],
-        ASSOCIATED_TOKEN_PROGRAM_ID
-      );
-      const [secondPDA, secondBump] = await anchor.web3.PublicKey.findProgramAddress(
-        [anchor.utils.bytes.utf8.encode("seed")],
-        program.programId
-      );
-  
+        await anchor.web3.PublicKey.findProgramAddress(
+          [anchor.utils.bytes.utf8.encode("seed")],
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        );
+      const [secondPDA, secondBump] =
+        await anchor.web3.PublicKey.findProgramAddress(
+          [anchor.utils.bytes.utf8.encode("seed")],
+          program.programId
+        );
+
       // correct bump but wrong address
       const wrongAddress = anchor.web3.Keypair.generate().publicKey;
       try {
@@ -1554,7 +1555,7 @@ describe("misc", () => {
       } catch (err) {
         assert.equal(err.code, 2006);
       }
-  
+
       // matching bump seed for wrong address but derived from wrong program
       try {
         await program.rpc.testProgramIdConstraint(secondBump, secondBump, {
@@ -1567,7 +1568,7 @@ describe("misc", () => {
       } catch (err) {
         assert.equal(err.code, 2006);
       }
-  
+
       // correct inputs should lead to successful tx
       await program.rpc.testProgramIdConstraint(firstBump, secondBump, {
         accounts: {
@@ -1578,16 +1579,19 @@ describe("misc", () => {
     });
 
     it("With bumps using find_program_address", async () => {
-      const firstPDA =
-      (await anchor.web3.PublicKey.findProgramAddress(
-        [anchor.utils.bytes.utf8.encode("seed")],
-        ASSOCIATED_TOKEN_PROGRAM_ID
-      ))[0];
-      const secondPDA = (await anchor.web3.PublicKey.findProgramAddress(
-        [anchor.utils.bytes.utf8.encode("seed")],
-        program.programId
-      ))[0];
-  
+      const firstPDA = (
+        await anchor.web3.PublicKey.findProgramAddress(
+          [anchor.utils.bytes.utf8.encode("seed")],
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        )
+      )[0];
+      const secondPDA = (
+        await anchor.web3.PublicKey.findProgramAddress(
+          [anchor.utils.bytes.utf8.encode("seed")],
+          program.programId
+        )
+      )[0];
+
       // random wrong address
       const wrongAddress = anchor.web3.Keypair.generate().publicKey;
       try {
@@ -1601,7 +1605,7 @@ describe("misc", () => {
       } catch (err) {
         assert.equal(err.code, 2006);
       }
-  
+
       // same seeds but derived from wrong program
       try {
         await program.rpc.testProgramIdConstraintFindPda({
@@ -1614,7 +1618,7 @@ describe("misc", () => {
       } catch (err) {
         assert.equal(err.code, 2006);
       }
-  
+
       // correct inputs should lead to successful tx
       await program.rpc.testProgramIdConstraintFindPda({
         accounts: {
@@ -1623,6 +1627,5 @@ describe("misc", () => {
         },
       });
     });
-  })
-
+  });
 });
