@@ -47,7 +47,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
         }
     });
     if let Some(init_field) = init_field {
-        // init needs system program
+        // init needs system program.
         if fields.iter().all(|f| f.ident() != "system_program") {
             return Err(ParseError::new(
                 init_field.ident().span(),
