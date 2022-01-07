@@ -1,20 +1,21 @@
-import { Idl } from "../idl.js";
-import { InstructionCoder } from "./instruction.js";
-import { AccountsCoder } from "./accounts.js";
-import { EventCoder } from "./event.js";
-import { StateCoder } from "./state.js";
+import { Idl, IdlEvent } from "../idl.js";
+import { BorshInstructionCoder } from "./instruction.js";
+import { BorshAccountsCoder } from "./accounts.js";
+import { BorshEventCoder } from "./event.js";
+import { BorshStateCoder } from "./state.js";
 import { sighash } from "./common.js";
+import { Event } from "../program/event.js";
 
 export { accountSize } from "./common.js";
-export { InstructionCoder } from "./instruction.js";
-export { AccountsCoder, ACCOUNT_DISCRIMINATOR_SIZE } from "./accounts.js";
-export { EventCoder, eventDiscriminator } from "./event.js";
-export { StateCoder, stateDiscriminator } from "./state.js";
+export { BorshInstructionCoder } from "./instruction.js";
+export { BorshAccountsCoder, ACCOUNT_DISCRIMINATOR_SIZE } from "./accounts.js";
+export { BorshEventCoder, eventDiscriminator } from "./event.js";
+export { BorshStateCoder, stateDiscriminator } from "./state.js";
 
 /**
  * Coder provides a facade for encoding and decoding all IDL related objects.
  */
-export default class Coder<A extends string = string> {
+export interface Coder {
   /**
    * Instruction coder.
    */
@@ -23,7 +24,7 @@ export default class Coder<A extends string = string> {
   /**
    * Account coder.
    */
-  readonly accounts: AccountsCoder<A>;
+  readonly accounts: AccountsCoder;
 
   /**
    * Coder for state structs.
@@ -34,13 +35,61 @@ export default class Coder<A extends string = string> {
    * Coder for events.
    */
   readonly events: EventCoder;
+}
+
+export interface StateCoder {
+  encode<T = any>(name: string, account: T): Promise<Buffer>;
+  decode<T = any>(ix: Buffer): T;
+}
+
+export interface AccountsCoder<A extends string = string> {
+  encode<T = any>(accountName: A, account: T): Promise<Buffer>;
+  decode<T = any>(accountName: A, ix: Buffer): T;
+  decodeUnchecked<T = any>(accountName: A, ix: Buffer): T;
+  memcmp(accountName: A, appendData?: Buffer): any;
+}
+
+export interface InstructionCoder {
+  encode(ixName: string, ix: any): Buffer;
+  encodeState(ixName: string, ix: any): Buffer;
+}
+
+export interface EventCoder {
+  decode<E extends IdlEvent = IdlEvent, T = Record<string, string>>(
+    log: string
+  ): Event<E, T> | null;
+}
+
+/**
+ * BorshCoder is the default Coder for Anchor programs.
+ */
+export class BorshCoder<A extends string = string> implements Coder {
+  /**
+   * Instruction coder.
+   */
+  readonly instruction: BorshInstructionCoder;
+
+  /**
+   * Account coder.
+   */
+  readonly accounts: BorshAccountsCoder<A>;
+
+  /**
+   * Coder for state structs.
+   */
+  readonly state: BorshStateCoder;
+
+  /**
+   * Coder for events.
+   */
+  readonly events: BorshEventCoder;
 
   constructor(idl: Idl) {
-    this.instruction = new InstructionCoder(idl);
-    this.accounts = new AccountsCoder(idl);
-    this.events = new EventCoder(idl);
+    this.instruction = new BorshInstructionCoder(idl);
+    this.accounts = new BorshAccountsCoder(idl);
+    this.events = new BorshEventCoder(idl);
     if (idl.state) {
-      this.state = new StateCoder(idl);
+      this.state = new BorshStateCoder(idl);
     }
   }
 

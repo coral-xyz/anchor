@@ -5,7 +5,7 @@ import { Idl } from "../idl.js";
 import { IdlCoder } from "./idl.js";
 import * as features from "../utils/features.js";
 
-export class StateCoder {
+export class BorshStateCoder {
   private layout: Layout;
 
   public constructor(idl: Idl) {

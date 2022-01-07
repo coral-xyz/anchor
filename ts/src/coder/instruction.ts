@@ -1,8 +1,9 @@
-import { Buffer } from "buffer";
-import camelCase from "camelcase";
-import { Layout } from "buffer-layout";
-import * as borsh from "@project-serum/borsh";
 import bs58 from "bs58";
+import { Buffer } from "buffer";
+import { Layout } from "buffer-layout";
+import camelCase from "camelcase";
+import * as borsh from "@project-serum/borsh";
+import { AccountMeta, PublicKey } from "@solana/web3.js";
 import {
   Idl,
   IdlField,
@@ -19,7 +20,7 @@ import {
 } from "../idl";
 import { IdlCoder } from "./idl.js";
 import { sighash } from "./common.js";
-import { AccountMeta, PublicKey } from "@solana/web3.js";
+import { InstructionCoder } from ".";
 
 /**
  * Namespace for state method function signatures.
@@ -34,7 +35,7 @@ export const SIGHASH_GLOBAL_NAMESPACE = "global";
 /**
  * Encodes and decodes program instructions.
  */
-export class InstructionCoder {
+export class BorshInstructionCoder implements InstructionCoder {
   // Instruction args layout. Maps namespaced method
   private ixLayout: Map<string, Layout>;
 
@@ -42,7 +43,7 @@ export class InstructionCoder {
   private sighashLayouts: Map<string, { layout: Layout; name: string }>;
 
   public constructor(private idl: Idl) {
-    this.ixLayout = InstructionCoder.parseIxLayout(idl);
+    this.ixLayout = BorshInstructionCoder.parseIxLayout(idl);
 
     const sighashLayouts = new Map();
     idl.instructions.forEach((ix) => {
@@ -69,14 +70,14 @@ export class InstructionCoder {
   /**
    * Encodes a program instruction.
    */
-  public encode(ixName: string, ix: any) {
+  public encode(ixName: string, ix: any): Buffer {
     return this._encode(SIGHASH_GLOBAL_NAMESPACE, ixName, ix);
   }
 
   /**
    * Encodes a program state instruction.
    */
-  public encodeState(ixName: string, ix: any) {
+  public encodeState(ixName: string, ix: any): Buffer {
     return this._encode(SIGHASH_STATE_NAMESPACE, ixName, ix);
   }
 
