@@ -76,7 +76,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                     }
                 }
             }
-            // a_token needs associated token program
+            // a_token needs associated token program.
             if let InitKind::AssociatedToken { .. } = kind {
                 if fields
                     .iter()
