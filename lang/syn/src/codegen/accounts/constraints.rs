@@ -8,7 +8,7 @@ pub fn generate(f: &Field) -> proc_macro2::TokenStream {
 
     let rent = constraints
         .iter()
-        .any(|c| matches!(c, Constraint::RentExempt(_)))
+        .any(|c| matches!(c, Constraint::RentExempt(ConstraintRentExempt::Enforce)))
         .then(|| quote! { let __anchor_rent = Rent::get()?; })
         .unwrap_or_else(|| quote! {});
 
@@ -587,13 +587,13 @@ pub fn generate_init(
             };
 
             let lamports = match lamports {
-                // If no explicit lamports param was given, set it to 0
+                // If no explicit lamports param was given, set it rent exempt amount
                 None => quote! {
-                    let lamports = 0u64;
+                    let lamports = __anchor_rent.minimum_balance(space);
                 },
                 // Explicit lamports given. Use it.
-                Some(s) => quote! {
-                    let lamports = #s;
+                Some(l) => quote! {
+                    let lamports = #l;
                 },
             };
 
@@ -662,7 +662,13 @@ pub fn generate_create_account(
     owner: proc_macro2::TokenStream,
     seeds_with_nonce: proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
-    return generate_create_account_lamports(field, space, quote! { 0 }, owner, seeds_with_nonce);
+    return generate_create_account_lamports(
+        field,
+        space,
+        proc_macro2::TokenStream::new(),
+        owner,
+        seeds_with_nonce,
+    );
 }
 
 // Generated code to create an account with with system program with the
@@ -677,16 +683,18 @@ pub fn generate_create_account_lamports(
     owner: proc_macro2::TokenStream,
     seeds_with_nonce: proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
+    let target_lamports = if lamports.is_empty() {
+        quote! { __anchor_rent.minimum_balance(#space) }
+    } else {
+        quote! { #lamports }
+    };
     quote! {
         // If the account being initialized already has lamports, then
         // return them all back to the payer so that the account has
         // zero lamports when the system program's create instruction
         // is eventually called.
-        let mut __target_lamports = #lamports;
-        if __target_lamports == 0 {
-            __target_lamports = __anchor_rent.minimum_balance(#space);
-        }
-        let __current_lamports = #field.to_account_info().lamports();
+        let __target_lamports = #target_lamports;
+        let __current_lamports = #field.lamports();
         if __current_lamports == 0 {
             // Create the token account with right amount of lamports and space, and the correct owner.
             anchor_lang::solana_program::program::invoke_signed(
