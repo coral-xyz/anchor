@@ -15,7 +15,7 @@ incremented for features.
 
 *lang: Improved error msgs when required programs are missing when using the `init` constraint([#1257](https://github.com/project-serum/anchor/pull/1257))
 
-### Features
+### Breaking
 
 *lang: Put `init_if_needed` behind a feature flag to decrease wrong usage ([#1258](https://github.com/project-serum/anchor/pull/1258))
 
