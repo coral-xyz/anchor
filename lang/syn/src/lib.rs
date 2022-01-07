@@ -610,7 +610,7 @@ pub enum ConstraintToken {
     MintFreezeAuthority(Context<ConstraintMintFreezeAuthority>),
     MintDecimals(Context<ConstraintMintDecimals>),
     Bump(Context<ConstraintTokenBump>),
-    ProgramSeed(Context<ConstraintTokenProgramSeed>),
+    ProgramSeed(Context<ConstraintProgramSeed>),
 }
 
 impl Parse for ConstraintToken {
@@ -774,7 +774,7 @@ pub struct ConstraintTokenBump {
 }
 
 #[derive(Debug, Clone)]
-pub struct ConstraintTokenProgramSeed {
+pub struct ConstraintProgramSeed {
     program_seed: Expr,
 }
 

@@ -182,14 +182,42 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
             };
             ConstraintToken::Bump(Context::new(ident.span(), ConstraintTokenBump { bump }))
         }
-        "program_seed" => {
-            stream.parse::<Token![=]>()?;
-            ConstraintToken::ProgramSeed(Context::new(
-                ident.span(),
-                ConstraintTokenProgramSeed {
-                    program_seed: stream.parse()?,
-                },
-            ))
+        "seeds" => {
+            if stream.peek(Token![:]) {
+                stream.parse::<Token![:]>()?;
+                stream.parse::<Token![:]>()?;
+                let kw = stream.call(Ident::parse_any)?.to_string();
+                stream.parse::<Token![=]>()?;
+
+                let span = ident
+                    .span()
+                    .join(stream.span())
+                    .unwrap_or_else(|| ident.span());
+
+                match kw.as_str() {
+                    "program" => ConstraintToken::ProgramSeed(Context::new(
+                        span,
+                        ConstraintProgramSeed {
+                            program_seed: stream.parse()?,
+                        },
+                    )),
+                    _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
+                }
+            } else {
+                stream.parse::<Token![=]>()?;
+                let span = ident
+                    .span()
+                    .join(stream.span())
+                    .unwrap_or_else(|| ident.span());
+                let seeds;
+                let bracket = bracketed!(seeds in stream);
+                ConstraintToken::Seeds(Context::new(
+                    span.join(bracket.span).unwrap_or(span),
+                    ConstraintSeeds {
+                        seeds: seeds.parse_terminated(Expr::parse)?,
+                    },
+                ))
+            }
         }
         _ => {
             stream.parse::<Token![=]>()?;
@@ -243,16 +271,6 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         space: stream.parse()?,
                     },
                 )),
-                "seeds" => {
-                    let seeds;
-                    let bracket = bracketed!(seeds in stream);
-                    ConstraintToken::Seeds(Context::new(
-                        span.join(bracket.span).unwrap_or(span),
-                        ConstraintSeeds {
-                            seeds: seeds.parse_terminated(Expr::parse)?,
-                        },
-                    ))
-                }
                 "constraint" => ConstraintToken::Raw(Context::new(
                     span,
                     ConstraintRaw {
@@ -317,7 +335,7 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub mint_freeze_authority: Option<Context<ConstraintMintFreezeAuthority>>,
     pub mint_decimals: Option<Context<ConstraintMintDecimals>>,
     pub bump: Option<Context<ConstraintTokenBump>>,
-    pub program_seed: Option<Context<ConstraintTokenProgramSeed>>,
+    pub program_seed: Option<Context<ConstraintProgramSeed>>,
 }
 
 impl<'ty> ConstraintGroupBuilder<'ty> {
@@ -739,26 +757,26 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         Ok(())
     }
 
-    fn add_program_seed(&mut self, c: Context<ConstraintTokenProgramSeed>) -> ParseResult<()> {
+    fn add_program_seed(&mut self, c: Context<ConstraintProgramSeed>) -> ParseResult<()> {
         if self.program_seed.is_some() {
-            return Err(ParseError::new(c.span(), "program_seed already provided"));
+            return Err(ParseError::new(c.span(), "seeds::program already provided"));
         }
         if self.seeds.is_none() {
             return Err(ParseError::new(
                 c.span(),
-                "seeds must be provided before program_seed",
+                "seeds must be provided before seeds::program",
             ));
         }
         if let Some(ref init) = self.init {
             if init.if_needed {
                 return Err(ParseError::new(
                     c.span(),
-                    "program_seed cannot be used with init_if_needed",
+                    "seeds::program cannot be used with init_if_needed",
                 ));
             } else {
                 return Err(ParseError::new(
                     c.span(),
-                    "program_seed cannot be used with init",
+                    "seeds::program cannot be used with init",
                 ));
             }
         }
