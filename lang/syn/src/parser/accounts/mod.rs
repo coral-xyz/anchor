@@ -59,7 +59,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
         }
         if let AccountField::Field(field) = init_field {
             let kind = &field.constraints.init.as_ref().unwrap().kind;
-            // init token/a_token/mint needs token program
+            // init token/a_token/mint needs token program.
             match kind {
                 InitKind::Program { .. } => (),
                 InitKind::Token { .. }
