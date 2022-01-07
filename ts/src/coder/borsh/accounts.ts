@@ -1,11 +1,11 @@
 import bs58 from "bs58";
 import { Buffer } from "buffer";
 import { Layout } from "buffer-layout";
-import { Idl } from "../idl.js";
+import { Idl } from "../../idl.js";
 import { IdlCoder } from "./idl.js";
 import { sha256 } from "js-sha256";
 import camelcase from "camelcase";
-import { AccountsCoder } from ".";
+import { AccountsCoder } from "../index.js";
 
 /**
  * Number of bytes of the account discriminator.

@@ -17,10 +17,10 @@ import {
   IdlTypeOption,
   IdlTypeDefined,
   IdlAccounts,
-} from "../idl";
+} from "../../idl.js";
 import { IdlCoder } from "./idl.js";
 import { sighash } from "./common.js";
-import { InstructionCoder } from ".";
+import { InstructionCoder } from "../index.js";
 
 /**
  * Namespace for state method function signatures.
