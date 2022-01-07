@@ -13,7 +13,8 @@ export { BorshEventCoder, eventDiscriminator } from "./event.js";
 export { BorshStateCoder, stateDiscriminator } from "./state.js";
 
 /**
- * BorshCoder is the default Coder for Anchor programs.
+ * BorshCoder is the default Coder for Anchor programs implementing the
+ * borsh based serialization interface.
  */
 export class BorshCoder<A extends string = string> implements Coder {
   /**
