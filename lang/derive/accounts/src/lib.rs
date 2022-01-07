@@ -159,7 +159,9 @@ use syn::parse_macro_input;
 ///                         you can pass it in as instruction data and set the bump value like shown in the example,
 ///                         using the <code>instruction_data</code> attribute.
 ///                         Anchor will then check that the bump returned by <code>find_program_address</code> equals
-///                         the bump in the instruction data.
+///                         the bump in the instruction data.<br>
+///                         <code>seeds::program</code> cannot be used together with init because the creation of an
+///                         account requires its signature which for PDAs only the currently executing program can provide.
 ///                     </li>
 ///                 </ul>
 ///                 Example:
