@@ -324,13 +324,13 @@ pub mod __private {
 ///     ctx.accounts.data.data = data;
 ///     Ok(())
 /// }
-/// 
+///
 /// // An enum for custom error codes
 /// #[error]
 /// pub enum MyError {
 ///     MutationForbidden
 /// }
-/// 
+///
 /// // An account definition
 /// #[account]
 /// #[derive(Default)]
@@ -338,12 +338,12 @@ pub mod __private {
 ///     mutation_allowed: bool,
 ///     data: u64
 /// }
-/// 
+///
 /// // An account validation struct
 /// #[derive(Accounts)]
 /// pub struct SetData<'info> {
 ///     pub data: Account<'info, MyData>
-/// } 
+/// }
 /// ```
 #[macro_export]
 macro_rules! require {
