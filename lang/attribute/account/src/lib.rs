@@ -5,12 +5,16 @@ use syn::parse_macro_input;
 
 mod id;
 
-/// A data structure representing a Solana account, implementing various traits:
+/// An attribute for a data structure representing a Solana account.
+///
+/// `#[account]` generates trait implementations for the following traits:
 ///
 /// - [`AccountSerialize`](./trait.AccountSerialize.html)
 /// - [`AccountDeserialize`](./trait.AccountDeserialize.html)
 /// - [`AnchorSerialize`](./trait.AnchorSerialize.html)
 /// - [`AnchorDeserialize`](./trait.AnchorDeserialize.html)
+/// - [`Owner`](./trait.Owner.html)
+/// - [`Discriminator`](./trait.Discriminator.html)
 ///
 /// When implementing account serialization traits the first 8 bytes are
 /// reserved for a unique account discriminator, self described by the first 8
@@ -52,7 +56,7 @@ mod id;
 /// To facilitate this, all fields in an account must be constrained to be
 /// "plain old  data", i.e., they must implement
 /// [`Pod`](../bytemuck/trait.Pod.html). Please review the
-/// [`safety`](file:///home/armaniferrante/Documents/code/src/github.com/project-serum/anchor/target/doc/bytemuck/trait.Pod.html#safety)
+/// [`safety`](../bytemuck/trait.Pod.html#safety)
 /// section before using.
 #[proc_macro_attribute]
 pub fn account(
