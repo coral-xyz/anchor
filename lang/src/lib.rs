@@ -241,7 +241,7 @@ pub mod prelude {
         context::Context, context::CpiContext, declare_id, emit, error, event, interface, program,
         require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, state, zero_copy,
         AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AnchorDeserialize,
-        AnchorSerialize, Id, Key, Owner, ProgramData, System, ToAccountInfo, ToAccountInfos,
+        AnchorSerialize, Id, Key, Owner, Info, ProgramData, System, ToAccountInfo, ToAccountInfos,
         ToAccountMetas,
     };
 
