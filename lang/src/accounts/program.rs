@@ -124,6 +124,14 @@ impl<'a, T: Id + Clone> Program<'a, T> {
     pub fn programdata_address(&self) -> Option<Pubkey> {
         self.programdata_address
     }
+
+    pub fn lamports(&self) -> u64 {
+        **self.info.lamports.borrow()
+    }
+
+    pub fn owner(&self) -> Pubkey {
+        *self.info.owner
+    }
 }
 
 impl<'info, T> Accounts<'info> for Program<'info, T>

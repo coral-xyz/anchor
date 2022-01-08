@@ -302,6 +302,14 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
     pub fn set_inner(&mut self, inner: T) {
         self.account = inner;
     }
+
+    pub fn lamports(&self) -> u64 {
+        **self.info.lamports.borrow()
+    }
+
+    pub fn owner(&self) -> Pubkey {
+        *self.info.owner
+    }
 }
 
 impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> Accounts<'info>

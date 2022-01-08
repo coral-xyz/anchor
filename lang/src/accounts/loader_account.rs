@@ -200,6 +200,14 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
             bytemuck::from_bytes_mut(&mut data.deref_mut()[8..])
         }))
     }
+
+    pub fn lamports(&self) -> u64 {
+        **self.acc_info.lamports.borrow()
+    }
+
+    pub fn owner(&self) -> Pubkey {
+        *self.acc_info.owner
+    }
 }
 
 impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {

@@ -142,6 +142,14 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
             bytemuck::from_bytes_mut(&mut data.deref_mut()[8..])
         }))
     }
+
+    pub fn lamports(&self) -> u64 {
+        **self.acc_info.lamports.borrow()
+    }
+
+    pub fn owner(&self) -> Pubkey {
+        *self.acc_info.owner
+    }
 }
 
 #[allow(deprecated)]
