@@ -147,7 +147,7 @@ pub struct Foo {
     pub second_authority: [u8; 32],
 }
 
-#[account(zero_copy)]
+#[account(zero_copy, packed)]
 #[derive(Default)]
 pub struct Bar {
     pub authority: Pubkey,

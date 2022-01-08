@@ -65,6 +65,7 @@ pub fn account(
 ) -> proc_macro::TokenStream {
     let mut namespace = "".to_string();
     let mut is_zero_copy = false;
+    let mut is_packed = false;
     let args_str = args.to_string();
     let args: Vec<&str> = args_str.split(',').collect();
     if args.len() > 2 {
@@ -79,6 +80,8 @@ pub fn account(
             .collect();
         if ns == "zero_copy" {
             is_zero_copy = true;
+        } else if ns == "packed" {
+            is_packed = true;
         } else {
             namespace = ns;
         }
@@ -123,8 +126,19 @@ pub fn account(
 
     proc_macro::TokenStream::from({
         if is_zero_copy {
+            let repr = if is_packed {
+                quote! {
+                    #[repr(packed)]
+                }
+            } else {
+                quote! {
+                    #[repr(C)]
+                }
+            };
+
             quote! {
                 #[zero_copy]
+                #repr
                 #account_strct
 
                 #[automatically_derived]
@@ -293,8 +307,6 @@ pub fn zero_copy(
 
     proc_macro::TokenStream::from(quote! {
         #[derive(anchor_lang::__private::ZeroCopyAccessor, Copy, Clone)]
-        #[cfg_attr(not(feature = "anchor-zero-copy-repr-packed"), repr(C))]
-        #[cfg_attr(feature = "anchor-zero-copy-repr-packed", repr(packed))]
         #account_strct
     })
 }
