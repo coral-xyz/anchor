@@ -215,6 +215,21 @@ impl Key for Pubkey {
     }
 }
 
+pub trait Info {
+    fn lamports(&self) -> u64;
+    fn owner(&self) -> Pubkey;
+}
+
+impl<'info, T: AsRef<AccountInfo<'info>> > Info for T {
+    fn lamports(&self) -> u64 {
+        **self.as_ref().lamports.borrow()
+    }
+
+    fn owner(&self) -> Pubkey {
+        *self.as_ref().owner
+    }
+}
+
 /// The prelude contains all commonly used components of the crate.
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
