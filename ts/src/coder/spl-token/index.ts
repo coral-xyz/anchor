@@ -17,5 +17,6 @@ export class SplTokenCoder {
     this.instruction = new SplTokenInstructionCoder(idl);
     this.accounts = new SplTokenAccountsCoder(idl);
     this.events = new SplTokenEventsCoder(idl);
+    this.state = new SplTokenStateCoder(idl);
   }
 }
