@@ -63,14 +63,6 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramState<'a, T> {
     pub fn address(program_id: &Pubkey) -> Pubkey {
         address(program_id)
     }
-
-    pub fn lamports(&self) -> u64 {
-        **self.inner.info.lamports.borrow()
-    }
-
-    pub fn owner(&self) -> Pubkey {
-        *self.inner.info.owner
-    }
 }
 
 #[allow(deprecated)]

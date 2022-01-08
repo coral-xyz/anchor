@@ -41,14 +41,6 @@ impl<'a, T: AccountDeserialize + Clone> CpiAccount<'a, T> {
         self.account = Box::new(T::try_deserialize(&mut data)?);
         Ok(())
     }
-
-    pub fn lamports(&self) -> u64 {
-        **self.info.lamports.borrow()
-    }
-
-    pub fn owner(&self) -> Pubkey {
-        *self.info.owner
-    }
 }
 
 #[allow(deprecated)]

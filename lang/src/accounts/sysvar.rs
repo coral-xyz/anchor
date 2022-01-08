@@ -54,14 +54,6 @@ impl<'info, T: solana_program::sysvar::Sysvar> Sysvar<'info, T> {
             account: T::from_account_info(acc_info)?,
         })
     }
-
-    pub fn lamports(&self) -> u64 {
-        **self.info.lamports.borrow()
-    }
-
-    pub fn owner(&self) -> Pubkey {
-        *self.info.owner
-    }
 }
 
 impl<'info, T: solana_program::sysvar::Sysvar> Clone for Sysvar<'info, T> {

@@ -19,14 +19,6 @@ impl<'info> UncheckedAccount<'info> {
     pub fn try_from(acc_info: AccountInfo<'info>) -> Self {
         Self(acc_info)
     }
-
-    pub fn lamports(&self) -> u64 {
-        **self.lamports.borrow()
-    }
-
-    pub fn owner(&self) -> Pubkey {
-        *self.owner
-    }
 }
 
 impl<'info> Accounts<'info> for UncheckedAccount<'info> {

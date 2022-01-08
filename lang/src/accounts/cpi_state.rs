@@ -60,14 +60,6 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> CpiState<'info, T>
     ) -> CpiStateContext<'a, 'b, 'c, 'info, A> {
         CpiStateContext::new(program, self.inner.info.clone(), accounts)
     }
-
-    pub fn lamports(&self) -> u64 {
-        **self.inner.info.lamports.borrow()
-    }
-
-    pub fn owner(&self) -> Pubkey {
-        *self.inner.info.owner
-    }
 }
 
 #[allow(deprecated)]

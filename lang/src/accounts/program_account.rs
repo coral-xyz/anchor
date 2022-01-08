@@ -71,14 +71,6 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
     pub fn into_inner(self) -> T {
         self.inner.account
     }
-
-    pub fn lamports(&self) -> u64 {
-        **self.inner.info.lamports.borrow()
-    }
-
-    pub fn owner(&self) -> Pubkey {
-        *self.inner.info.owner
-    }
 }
 
 #[allow(deprecated)]

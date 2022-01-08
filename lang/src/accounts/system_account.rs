@@ -32,14 +32,6 @@ impl<'info> SystemAccount<'info> {
         }
         Ok(SystemAccount::new(info.clone()))
     }
-
-    pub fn lamports(&self) -> u64 {
-        **self.info.lamports.borrow()
-    }
-
-    pub fn owner(&self) -> Pubkey {
-        *self.info.owner
-    }
 }
 
 impl<'info> Accounts<'info> for SystemAccount<'info> {
