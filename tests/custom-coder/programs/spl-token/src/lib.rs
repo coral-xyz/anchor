@@ -31,7 +31,7 @@ pub mod spl_token {
         Ok(())
     }
 
-    pub fn approve(ctx: Context<Approve>) -> ProgramResult {
+    pub fn approve(ctx: Context<Approve>, amount: u64) -> ProgramResult {
         Ok(())
     }
 
@@ -39,7 +39,11 @@ pub mod spl_token {
         Ok(())
     }
 
-    pub fn set_authority(ctx: Context<SetAuthority>) -> ProgramResult {
+    pub fn set_authority(
+        ctx: Context<SetAuthority>,
+        authority_type: u8,
+        //        new_authority: COption<Pubkey>,
+    ) -> ProgramResult {
         Ok(())
     }
 
@@ -47,7 +51,7 @@ pub mod spl_token {
         Ok(())
     }
 
-    pub fn burn(ctx: Context<Burn>) -> ProgramResult {
+    pub fn burn(ctx: Context<Burn>, amount: u64) -> ProgramResult {
         Ok(())
     }
 
@@ -63,23 +67,38 @@ pub mod spl_token {
         Ok(())
     }
 
-    pub fn transfer_checked(ctx: Context<TransferChecked>) -> ProgramResult {
+    pub fn transfer_checked(
+        ctx: Context<TransferChecked>,
+        amount: u64,
+        decimals: u8,
+    ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn approve_checked(ctx: Context<ApproveChecked>) -> ProgramResult {
+    pub fn approve_checked(
+        ctx: Context<ApproveChecked>,
+        amount: u64,
+        decimals: u8,
+    ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn mint_to_checked(ctx: Context<MintToChecked>) -> ProgramResult {
+    pub fn mint_to_checked(
+        ctx: Context<MintToChecked>,
+        amount: u64,
+        decimals: u8,
+    ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn burn_checked(ctx: Context<BurnChecked>) -> ProgramResult {
+    pub fn burn_checked(ctx: Context<BurnChecked>, amount: u64, decimals: u8) -> ProgramResult {
         Ok(())
     }
 
-    pub fn initialize_account_2(ctx: Context<InitializeAccount2>) -> ProgramResult {
+    pub fn initialize_account_2(
+        ctx: Context<InitializeAccount2>,
+        authority: Pubkey,
+    ) -> ProgramResult {
         Ok(())
     }
 
@@ -87,15 +106,23 @@ pub mod spl_token {
         Ok(())
     }
 
-    pub fn initialize_account3(ctx: Context<InitializeAccount3>) -> ProgramResult {
+    pub fn initialize_account3(
+        ctx: Context<InitializeAccount3>,
+        authority: Pubkey,
+    ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn initialize_multisig_2(ctx: Context<InitializeMultisig2>) -> ProgramResult {
+    pub fn initialize_multisig_2(ctx: Context<InitializeMultisig2>, m: u8) -> ProgramResult {
         Ok(())
     }
 
-    pub fn initialize_mint_2(ctx: Context<InitializeMint2>) -> ProgramResult {
+    pub fn initialize_mint_2(
+        ctx: Context<InitializeMint2>,
+        decimals: u8,
+        mint_authority: Pubkey,
+        //        freeze_authority: COption<Pubkey>,
+    ) -> ProgramResult {
         Ok(())
     }
 }

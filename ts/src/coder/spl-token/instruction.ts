@@ -224,8 +224,15 @@ function encodeInitializeMint2({
   });
 }
 
-export const TOKEN_PROGRAM_ID = new PublicKey(
-  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+function encodeData(instruction: any) {
+  let b = Buffer.alloc(instructionMaxSpan);
+  let span = LAYOUT.encode(instruction, b);
+  return b.slice(0, span);
+}
+
+const instructionMaxSpan = Math.max(
+  // @ts-ignore
+  ...Object.values(LAYOUT.registry).map((r) => r.span)
 );
 
 const LAYOUT = BufferLayout.union(BufferLayout.u8("instruction"));
@@ -235,7 +242,7 @@ LAYOUT.addVariant(
     BufferLayout.u8("decimals"),
     BufferLayout.blob(32, "mintAuthority"),
     BufferLayout.u8("freezeAuthorityOption"),
-    BufferLayout.blob(32, "freezeAuthority"),
+    publicKey("freezeAuthority"),
   ]),
   "initializeMint"
 );
@@ -251,16 +258,29 @@ LAYOUT.addVariant(
   "transfer"
 );
 LAYOUT.addVariant(
-  7,
+  4,
   BufferLayout.struct([BufferLayout.nu64("amount")]),
-  "mintTo"
+  "approve"
 );
+LAYOUT.addVariant(5, BufferLayout.struct([]), "revoke");
+LAYOUT.addVariant(
+  6,
+  BufferLayout.struct([
+    BufferLayout.u8("authorityType"),
+    BufferLayout.u8("newAuthorityOption"),
+    publicKey("newAuthority"),
+  ]),
+  "setAuthority"
+);
+LAYOUT.addVariant(7, BufferLayout.struct([]), "mintTo");
 LAYOUT.addVariant(
   8,
   BufferLayout.struct([BufferLayout.nu64("amount")]),
   "burn"
 );
 LAYOUT.addVariant(9, BufferLayout.struct([]), "closeAccount");
+LAYOUT.addVariant(10, BufferLayout.struct([]), "freezeAccount");
+LAYOUT.addVariant(11, BufferLayout.struct([]), "thawAccount");
 LAYOUT.addVariant(
   12,
   BufferLayout.struct([
@@ -269,14 +289,57 @@ LAYOUT.addVariant(
   ]),
   "transferChecked"
 );
-
-function encodeData(instruction: any) {
-  let b = Buffer.alloc(instructionMaxSpan);
-  let span = LAYOUT.encode(instruction, b);
-  return b.slice(0, span);
-}
-
-const instructionMaxSpan = Math.max(
-  // @ts-ignore
-  ...Object.values(LAYOUT.registry).map((r) => r.span)
+LAYOUT.addVariant(
+  13,
+  BufferLayout.struct([
+    BufferLayout.nu64("amount"),
+    BufferLayout.u8("decimals"),
+  ]),
+  "approvedChecked"
 );
+LAYOUT.addVariant(
+  14,
+  BufferLayout.struct([
+    BufferLayout.nu64("amount"),
+    BufferLayout.u8("decimals"),
+  ]),
+  "mintToChecked"
+);
+LAYOUT.addVariant(
+  15,
+  BufferLayout.struct([
+    BufferLayout.nu64("amount"),
+    BufferLayout.u8("decimals"),
+  ]),
+  "burnedChecked"
+);
+LAYOUT.addVariant(
+  16,
+  BufferLayout.struct([publicKey("authority")]),
+  "InitializeAccount2"
+);
+LAYOUT.addVariant(17, BufferLayout.struct([]), "syncNative");
+LAYOUT.addVariant(
+  18,
+  BufferLayout.struct([publicKey("authority")]),
+  "initializeAccount3"
+);
+LAYOUT.addVariant(
+  19,
+  BufferLayout.struct([BufferLayout.u8("m")]),
+  "initializeMultisig2"
+);
+LAYOUT.addVariant(
+  20,
+  BufferLayout.struct([
+    BufferLayout.u8("decimals"),
+    publicKey("mintAuthority"),
+    BufferLayout.u8("freezeAuthorityOption"),
+    publicKey("freezeAuthority"),
+  ]),
+  "initializeMint2"
+);
+
+function publicKey(property: string): any {
+  return BufferLayout.blob(32, property);
+}

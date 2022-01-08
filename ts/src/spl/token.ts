@@ -17,7 +17,7 @@ export function program(provider?: Provider): Program<SplToken> {
  */
 export type SplToken = {
   version: "0.1.0";
-  name: "custom_coder";
+  name: "spl_token";
   instructions: [
     {
       name: "initializeMint";
@@ -51,22 +51,6 @@ export type SplToken = {
       ];
     },
     {
-      name: "initializeMultisig";
-      accounts: [
-        {
-          name: "account";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "rent";
-          isMut: false;
-          isSigner: false;
-        }
-      ];
-      args: [];
-    },
-    {
       name: "initializeAccount";
       accounts: [
         {
@@ -91,6 +75,27 @@ export type SplToken = {
         }
       ];
       args: [];
+    },
+    {
+      name: "initializeMultisig";
+      accounts: [
+        {
+          name: "account";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "rent";
+          isMut: false;
+          isSigner: false;
+        }
+      ];
+      args: [
+        {
+          name: "m";
+          type: "u8";
+        }
+      ];
     },
     {
       name: "transfer";
@@ -137,7 +142,12 @@ export type SplToken = {
           isSigner: true;
         }
       ];
-      args: [];
+      args: [
+        {
+          name: "amount";
+          type: "u64";
+        }
+      ];
     },
     {
       name: "revoke";
@@ -169,7 +179,18 @@ export type SplToken = {
           isSigner: true;
         }
       ];
-      args: [];
+      args: [
+        {
+          name: "authorityType";
+          type: "u8";
+        },
+        {
+          name: "newAuthority";
+          type: {
+            coption: "publicKey";
+          };
+        }
+      ];
     },
     {
       name: "mintTo";
@@ -211,7 +232,12 @@ export type SplToken = {
           isSigner: true;
         }
       ];
-      args: [];
+      args: [
+        {
+          name: "amount";
+          type: "u64";
+        }
+      ];
     },
     {
       name: "closeAccount";
@@ -300,7 +326,16 @@ export type SplToken = {
           isSigner: true;
         }
       ];
-      args: [];
+      args: [
+        {
+          name: "amount";
+          type: "u64";
+        },
+        {
+          name: "decimals";
+          type: "u8";
+        }
+      ];
     },
     {
       name: "approveChecked";
@@ -326,7 +361,16 @@ export type SplToken = {
           isSigner: true;
         }
       ];
-      args: [];
+      args: [
+        {
+          name: "amount";
+          type: "u64";
+        },
+        {
+          name: "decimals";
+          type: "u8";
+        }
+      ];
     },
     {
       name: "mintToChecked";
@@ -347,7 +391,16 @@ export type SplToken = {
           isSigner: false;
         }
       ];
-      args: [];
+      args: [
+        {
+          name: "amount";
+          type: "u64";
+        },
+        {
+          name: "decimals";
+          type: "u8";
+        }
+      ];
     },
     {
       name: "burnChecked";
@@ -368,7 +421,16 @@ export type SplToken = {
           isSigner: true;
         }
       ];
-      args: [];
+      args: [
+        {
+          name: "amount";
+          type: "u64";
+        },
+        {
+          name: "decimals";
+          type: "u8";
+        }
+      ];
     },
     {
       name: "initializeAccount2";
@@ -389,7 +451,12 @@ export type SplToken = {
           isSigner: false;
         }
       ];
-      args: [];
+      args: [
+        {
+          name: "authority";
+          type: "publicKey";
+        }
+      ];
     },
     {
       name: "syncNative";
@@ -416,7 +483,12 @@ export type SplToken = {
           isSigner: false;
         }
       ];
-      args: [];
+      args: [
+        {
+          name: "authority";
+          type: "publicKey";
+        }
+      ];
     },
     {
       name: "initializeMultisig2";
@@ -427,7 +499,12 @@ export type SplToken = {
           isSigner: false;
         }
       ];
-      args: [];
+      args: [
+        {
+          name: "m";
+          type: "u8";
+        }
+      ];
     },
     {
       name: "initializeMint2";
@@ -438,14 +515,29 @@ export type SplToken = {
           isSigner: false;
         }
       ];
-      args: [];
+      args: [
+        {
+          name: "decimals";
+          type: "u8";
+        },
+        {
+          name: "mintAuthority";
+          type: "publicKey";
+        },
+        {
+          name: "freezeAuthority";
+          type: {
+            coption: "publicKey";
+          };
+        }
+      ];
     }
   ];
 };
 
 export const IDL: SplToken = {
   version: "0.1.0",
-  name: "custom_coder",
+  name: "spl_token",
   instructions: [
     {
       name: "initializeMint",
@@ -479,22 +571,6 @@ export const IDL: SplToken = {
       ],
     },
     {
-      name: "initializeMultisig",
-      accounts: [
-        {
-          name: "account",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "rent",
-          isMut: false,
-          isSigner: false,
-        },
-      ],
-      args: [],
-    },
-    {
       name: "initializeAccount",
       accounts: [
         {
@@ -519,6 +595,27 @@ export const IDL: SplToken = {
         },
       ],
       args: [],
+    },
+    {
+      name: "initializeMultisig",
+      accounts: [
+        {
+          name: "account",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "rent",
+          isMut: false,
+          isSigner: false,
+        },
+      ],
+      args: [
+        {
+          name: "m",
+          type: "u8",
+        },
+      ],
     },
     {
       name: "transfer",
@@ -565,7 +662,12 @@ export const IDL: SplToken = {
           isSigner: true,
         },
       ],
-      args: [],
+      args: [
+        {
+          name: "amount",
+          type: "u64",
+        },
+      ],
     },
     {
       name: "revoke",
@@ -597,7 +699,18 @@ export const IDL: SplToken = {
           isSigner: true,
         },
       ],
-      args: [],
+      args: [
+        {
+          name: "authorityType",
+          type: "u8",
+        },
+        {
+          name: "newAuthority",
+          type: {
+            coption: "publicKey",
+          },
+        },
+      ],
     },
     {
       name: "mintTo",
@@ -639,7 +752,12 @@ export const IDL: SplToken = {
           isSigner: true,
         },
       ],
-      args: [],
+      args: [
+        {
+          name: "amount",
+          type: "u64",
+        },
+      ],
     },
     {
       name: "closeAccount",
@@ -728,7 +846,16 @@ export const IDL: SplToken = {
           isSigner: true,
         },
       ],
-      args: [],
+      args: [
+        {
+          name: "amount",
+          type: "u64",
+        },
+        {
+          name: "decimals",
+          type: "u8",
+        },
+      ],
     },
     {
       name: "approveChecked",
@@ -754,7 +881,16 @@ export const IDL: SplToken = {
           isSigner: true,
         },
       ],
-      args: [],
+      args: [
+        {
+          name: "amount",
+          type: "u64",
+        },
+        {
+          name: "decimals",
+          type: "u8",
+        },
+      ],
     },
     {
       name: "mintToChecked",
@@ -775,7 +911,16 @@ export const IDL: SplToken = {
           isSigner: false,
         },
       ],
-      args: [],
+      args: [
+        {
+          name: "amount",
+          type: "u64",
+        },
+        {
+          name: "decimals",
+          type: "u8",
+        },
+      ],
     },
     {
       name: "burnChecked",
@@ -796,7 +941,16 @@ export const IDL: SplToken = {
           isSigner: true,
         },
       ],
-      args: [],
+      args: [
+        {
+          name: "amount",
+          type: "u64",
+        },
+        {
+          name: "decimals",
+          type: "u8",
+        },
+      ],
     },
     {
       name: "initializeAccount2",
@@ -817,7 +971,12 @@ export const IDL: SplToken = {
           isSigner: false,
         },
       ],
-      args: [],
+      args: [
+        {
+          name: "authority",
+          type: "publicKey",
+        },
+      ],
     },
     {
       name: "syncNative",
@@ -844,7 +1003,12 @@ export const IDL: SplToken = {
           isSigner: false,
         },
       ],
-      args: [],
+      args: [
+        {
+          name: "authority",
+          type: "publicKey",
+        },
+      ],
     },
     {
       name: "initializeMultisig2",
@@ -855,7 +1019,12 @@ export const IDL: SplToken = {
           isSigner: false,
         },
       ],
-      args: [],
+      args: [
+        {
+          name: "m",
+          type: "u8",
+        },
+      ],
     },
     {
       name: "initializeMint2",
@@ -866,7 +1035,22 @@ export const IDL: SplToken = {
           isSigner: false,
         },
       ],
-      args: [],
+      args: [
+        {
+          name: "decimals",
+          type: "u8",
+        },
+        {
+          name: "mintAuthority",
+          type: "publicKey",
+        },
+        {
+          name: "freezeAuthority",
+          type: {
+            coption: "publicKey",
+          },
+        },
+      ],
     },
   ],
 };
