@@ -5,7 +5,7 @@ import { InstructionCoder } from "../index.js";
 import { Idl } from "../../idl.js";
 
 export class SplTokenInstructionCoder implements InstructionCoder {
-  constructor(private idl: Idl) {}
+  constructor(_: Idl) {}
 
   encode(ixName: string, ix: any): Buffer {
     switch (camelCase(ixName)) {
@@ -224,17 +224,6 @@ function encodeInitializeMint2({
   });
 }
 
-function encodeData(instruction: any) {
-  let b = Buffer.alloc(instructionMaxSpan);
-  let span = LAYOUT.encode(instruction, b);
-  return b.slice(0, span);
-}
-
-const instructionMaxSpan = Math.max(
-  // @ts-ignore
-  ...Object.values(LAYOUT.registry).map((r) => r.span)
-);
-
 const LAYOUT = BufferLayout.union(BufferLayout.u8("instruction"));
 LAYOUT.addVariant(
   0,
@@ -343,3 +332,14 @@ LAYOUT.addVariant(
 function publicKey(property: string): any {
   return BufferLayout.blob(32, property);
 }
+
+function encodeData(instruction: any): Buffer {
+  let b = Buffer.alloc(instructionMaxSpan);
+  let span = LAYOUT.encode(instruction, b);
+  return b.slice(0, span);
+}
+
+const instructionMaxSpan = Math.max(
+  // @ts-ignore
+  ...Object.values(LAYOUT.registry).map((r) => r.span)
+);

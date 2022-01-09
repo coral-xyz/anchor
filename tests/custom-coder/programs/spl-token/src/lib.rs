@@ -6,6 +6,7 @@ declare_id!("FmpfPa1LHEYRbueNMnwNVd2JvyQ89GXGWdyZEXNNKV8w");
 //
 // Note that we manually add the COption<Pubkey> type to the IDL after
 // compiling.
+//
 #[program]
 pub mod spl_token {
     use super::*;
