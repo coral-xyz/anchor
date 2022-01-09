@@ -215,18 +215,25 @@ impl Key for Pubkey {
     }
 }
 
-pub trait Info {
+/// Defines the number of lamports in an account.
+pub trait Lamports {
     fn lamports(&self) -> u64;
-    fn owner(&self) -> Pubkey;
 }
 
-impl<'info, T: AsRef<AccountInfo<'info>> > Info for T {
+impl<'info, T: AsRef<AccountInfo<'info>> > Lamports for T {
     fn lamports(&self) -> u64 {
-        **self.as_ref().lamports.borrow()
+        self.as_ref().lamports()
     }
+}
 
-    fn owner(&self) -> Pubkey {
-        *self.as_ref().owner
+/// Defines the owner of the underlying AccountInfo.
+pub trait InfoOwner<'info> {
+    fn owner(&self) -> &'info Pubkey;
+}
+
+impl<'info, T: AsRef<AccountInfo<'info>> > InfoOwner<'info> for T {
+    fn owner(&self) -> &'info Pubkey {
+        self.as_ref().owner
     }
 }
 
@@ -241,7 +248,7 @@ pub mod prelude {
         context::Context, context::CpiContext, declare_id, emit, error, event, interface, program,
         require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, state, zero_copy,
         AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AnchorDeserialize,
-        AnchorSerialize, Id, Key, Owner, Info, ProgramData, System, ToAccountInfo, ToAccountInfos,
+        AnchorSerialize, Id, Key, Owner, Lamports, InfoOwner, ProgramData, System, ToAccountInfo, ToAccountInfos,
         ToAccountMetas,
     };
 
