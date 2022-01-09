@@ -215,28 +215,6 @@ impl Key for Pubkey {
     }
 }
 
-/// Defines the number of lamports in an account.
-pub trait Lamports {
-    fn lamports(&self) -> u64;
-}
-
-impl<'info, T: AsRef<AccountInfo<'info>> > Lamports for T {
-    fn lamports(&self) -> u64 {
-        self.as_ref().lamports()
-    }
-}
-
-/// Defines the owner of the underlying AccountInfo.
-pub trait InfoOwner<'info> {
-    fn owner(&self) -> &'info Pubkey;
-}
-
-impl<'info, T: AsRef<AccountInfo<'info>> > InfoOwner<'info> for T {
-    fn owner(&self) -> &'info Pubkey {
-        self.as_ref().owner
-    }
-}
-
 /// The prelude contains all commonly used components of the crate.
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
@@ -248,7 +226,7 @@ pub mod prelude {
         context::Context, context::CpiContext, declare_id, emit, error, event, interface, program,
         require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, state, zero_copy,
         AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AnchorDeserialize,
-        AnchorSerialize, Id, Key, Owner, Lamports, InfoOwner, ProgramData, System, ToAccountInfo, ToAccountInfos,
+        AnchorSerialize, Id, Key, Owner, ProgramData, System, ToAccountInfo, ToAccountInfos,
         ToAccountMetas,
     };
 

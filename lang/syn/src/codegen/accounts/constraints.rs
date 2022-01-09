@@ -252,7 +252,7 @@ pub fn generate_constraint_owner(f: &Field, c: &ConstraintOwner) -> proc_macro2:
     let owner_address = &c.owner_address;
     let error = generate_custom_error(&c.error, quote! { ConstraintOwner });
     quote! {
-        if #ident.owner() != &#owner_address {
+        if #ident.as_ref().owner != &#owner_address {
             return Err(#error);
         }
     }
@@ -432,7 +432,7 @@ pub fn generate_init(
             );
             quote! {
                 let #field: #ty_decl = {
-                    if !#if_needed || #field.owner() == &anchor_lang::solana_program::system_program::ID {
+                    if !#if_needed || #field.as_ref().owner == &anchor_lang::solana_program::system_program::ID {
                         // Define payer variable.
                         #payer
 
@@ -452,7 +452,7 @@ pub fn generate_init(
                     }
 
                     let pa: #ty_decl = #from_account_info;
-                    if !(!#if_needed || #field.owner() == &anchor_lang::solana_program::system_program::ID) {
+                    if !(!#if_needed || #field.as_ref().owner == &anchor_lang::solana_program::system_program::ID) {
                         if pa.mint != #mint.key() {
                             return Err(anchor_lang::__private::ErrorCode::ConstraintTokenMint.into());
                         }
@@ -467,7 +467,7 @@ pub fn generate_init(
         InitKind::AssociatedToken { owner, mint } => {
             quote! {
                 let #field: #ty_decl = {
-                    if !#if_needed || #field.owner() == &anchor_lang::solana_program::system_program::ID {
+                    if !#if_needed || #field.as_ref().owner == &anchor_lang::solana_program::system_program::ID {
                         #payer
 
                         let cpi_program = associated_token_program.to_account_info();
@@ -484,7 +484,7 @@ pub fn generate_init(
                         anchor_spl::associated_token::create(cpi_ctx)?;
                     }
                     let pa: #ty_decl = #from_account_info;
-                    if !(!#if_needed || #field.owner() == &anchor_lang::solana_program::system_program::ID) {
+                    if !(!#if_needed || #field.as_ref().owner == &anchor_lang::solana_program::system_program::ID) {
                         if pa.mint != #mint.key() {
                             return Err(anchor_lang::__private::ErrorCode::ConstraintTokenMint.into());
                         }
@@ -517,7 +517,7 @@ pub fn generate_init(
             };
             quote! {
                 let #field: #ty_decl = {
-                    if !#if_needed || #field.owner() == &anchor_lang::solana_program::system_program::ID {
+                    if !#if_needed || #field.as_ref().owner == &anchor_lang::solana_program::system_program::ID {
                         // Define payer variable.
                         #payer
 
@@ -534,7 +534,7 @@ pub fn generate_init(
                         anchor_spl::token::initialize_mint(cpi_ctx, #decimals, &#owner.key(), #freeze_authority)?;
                     }
                     let pa: #ty_decl = #from_account_info;
-                    if !(!#if_needed || #field.owner() == &anchor_lang::solana_program::system_program::ID) {
+                    if !(!#if_needed || #field.as_ref().owner == &anchor_lang::solana_program::system_program::ID) {
                         if pa.mint_authority != anchor_lang::solana_program::program_option::COption::Some(#owner.key()) {
                             return Err(anchor_lang::__private::ErrorCode::ConstraintMintMintAuthority.into());
                         }
@@ -623,7 +623,7 @@ pub fn generate_init(
 
                         {
                             let required_lamports = __anchor_rent.minimum_balance(space);
-                            if pa.lamports() < required_lamports {
+                            if pa.to_account_info().lamports() < required_lamports {
                                 return Err(anchor_lang::__private::ErrorCode::ConstraintRentExempt.into());
                             }
                         }
@@ -745,7 +745,7 @@ pub fn generate_constraint_state(f: &Field, c: &ConstraintState) -> proc_macro2:
         if #ident.key() != anchor_lang::accounts::cpi_state::CpiState::<#account_ty>::address(&#program_target.key()) {
             return Err(anchor_lang::__private::ErrorCode::ConstraintState.into());
         }
-        if #ident.owner() != &#program_target.key() {
+        if #ident.as_ref().owner != &#program_target.key() {
             return Err(anchor_lang::__private::ErrorCode::ConstraintState.into());
         }
     }
