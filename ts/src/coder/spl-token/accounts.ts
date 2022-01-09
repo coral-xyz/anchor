@@ -2,7 +2,7 @@ import * as BufferLayout from "buffer-layout";
 import { publicKey, uint64, coption, bool } from "./buffer-layout.js";
 import { AccountsCoder } from "../index.js";
 import { Idl, IdlTypeDef } from "../../idl.js";
-import { accountSize } from "../borsh/common";
+import { accountSize } from "../common";
 
 export class SplTokenAccountsCoder<A extends string = string>
   implements AccountsCoder {

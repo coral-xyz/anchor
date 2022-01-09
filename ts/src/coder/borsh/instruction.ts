@@ -2,6 +2,8 @@ import bs58 from "bs58";
 import { Buffer } from "buffer";
 import { Layout } from "buffer-layout";
 import camelCase from "camelcase";
+import { snakeCase } from "snake-case";
+import { sha256 } from "js-sha256";
 import * as borsh from "@project-serum/borsh";
 import { AccountMeta, PublicKey } from "@solana/web3.js";
 import {
@@ -19,7 +21,6 @@ import {
   IdlAccounts,
 } from "../../idl.js";
 import { IdlCoder } from "./idl.js";
-import { sighash } from "./common.js";
 import { InstructionCoder } from "../index.js";
 
 /**
@@ -379,4 +380,12 @@ class InstructionFormatter {
 function sentenceCase(field: string): string {
   const result = field.replace(/([A-Z])/g, " $1");
   return result.charAt(0).toUpperCase() + result.slice(1);
+}
+
+// Not technically sighash, since we don't include the arguments, as Rust
+// doesn't allow function overloading.
+function sighash(nameSpace: string, ixName: string): Buffer {
+  let name = snakeCase(ixName);
+  let preimage = `${nameSpace}:${name}`;
+  return Buffer.from(sha256.digest(preimage)).slice(0, 8);
 }

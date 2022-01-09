@@ -1,8 +1,8 @@
 //import * as anchor from '@project-serum/anchor';
 //import { Program } from '@project-serum/anchor';
 import * as assert from "assert";
-import { SystemProgram, Keypair, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import BN from "bn.js";
+import { Keypair, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import * as anchor from "../../../ts";
 import { Spl } from "../../../ts";
 
@@ -15,7 +15,8 @@ describe("custom-coder", () => {
 
   // Constants.
   const mintKeypair = Keypair.generate();
-  const tokenKeypair = Keypair.generate();
+  const aliceTokenKeypair = Keypair.generate();
+  const bobTokenKeypair = Keypair.generate();
   const rent = SYSVAR_RENT_PUBKEY;
 
   it("Creates a mint", async () => {
@@ -30,15 +31,7 @@ describe("custom-coder", () => {
         },
         signers: [mintKeypair],
         preInstructions: [
-          SystemProgram.createAccount({
-            fromPubkey: program.provider.wallet.publicKey,
-            newAccountPubkey: mintKeypair.publicKey,
-            lamports: await program.provider.connection.getMinimumBalanceForRentExemption(
-              program.account.mint.size,
-            ),
-            space: program.account.mint.size,
-            programId: TOKEN_PROGRAM_ID,
-          }),
+          await program.account.mint.createInstruction(mintKeypair),
         ],
       }
     );
@@ -46,45 +39,101 @@ describe("custom-coder", () => {
     assert.ok(
       mintAccount.mintAuthority.equals(program.provider.wallet.publicKey)
     );
-		assert.ok(
-			mintAccount.freezeAuthority === null
-		);
-		assert.ok(mintAccount.decimals === 6);
-		assert.ok(mintAccount.isInitialized);
-		assert.ok(mintAccount.supply.toNumber() === 0);
+    assert.ok(mintAccount.freezeAuthority === null);
+    assert.ok(mintAccount.decimals === 6);
+    assert.ok(mintAccount.isInitialized);
+    assert.ok(mintAccount.supply.toNumber() === 0);
   });
 
-  it("Creates a token account", async () => {
+  it("Creates a token account for alice", async () => {
     await program.rpc.initializeAccount({
       accounts: {
-        account: tokenKeypair.publicKey,
+        account: aliceTokenKeypair.publicKey,
         mint: mintKeypair.publicKey,
         authority: program.provider.wallet.publicKey,
         rent,
       },
-      signers: [tokenKeypair],
+      signers: [aliceTokenKeypair],
       preInstructions: [
-        SystemProgram.createAccount({
-          fromPubkey: program.provider.wallet.publicKey,
-          newAccountPubkey: tokenKeypair.publicKey,
-          lamports: await program.provider.connection.getMinimumBalanceForRentExemption(
-            program.account.token.size
-          ),
-          space: program.account.token.size,
-          programId: TOKEN_PROGRAM_ID,
-        }),
+        await program.account.token.createInstruction(aliceTokenKeypair),
       ],
     });
-    const token = await program.account.token.fetch(tokenKeypair.publicKey);
+    const token = await program.account.token.fetch(
+      aliceTokenKeypair.publicKey
+    );
     assert.ok(token.authority.equals(program.provider.wallet.publicKey));
     assert.ok(token.mint.equals(mintKeypair.publicKey));
-		assert.ok(token.amount.toNumber() === 0);
-		assert.ok(token.delegate === null);
-		assert.ok(token.state === 0);
-		assert.ok(token.isNative === null);
-		assert.ok(token.delegatedAmount.toNumber() === 0);
-		assert.ok(token.closeAuthority === null);
+    assert.ok(token.amount.toNumber() === 0);
+    assert.ok(token.delegate === null);
+    assert.ok(token.state === 0);
+    assert.ok(token.isNative === null);
+    assert.ok(token.delegatedAmount.toNumber() === 0);
+    assert.ok(token.closeAuthority === null);
   });
 
+  it("Mints a token to alice", async () => {
+    await program.rpc.mintTo(new BN(2), {
+      accounts: {
+        mint: mintKeypair.publicKey,
+        to: aliceTokenKeypair.publicKey,
+        authority: program.provider.wallet.publicKey,
+      },
+    });
 
+    const token = await program.account.token.fetch(
+      aliceTokenKeypair.publicKey
+    );
+    const mint = await program.account.mint.fetch(mintKeypair.publicKey);
+    assert.ok(token.amount.toNumber() === 2);
+    assert.ok(mint.supply.toNumber() === 2);
+  });
+
+  it("Creates a token for bob", async () => {
+    await program.rpc.initializeAccount({
+      accounts: {
+        account: bobTokenKeypair.publicKey,
+        mint: mintKeypair.publicKey,
+        authority: program.provider.wallet.publicKey,
+        rent,
+      },
+      signers: [bobTokenKeypair],
+      preInstructions: [
+        await program.account.token.createInstruction(bobTokenKeypair),
+      ],
+    });
+  });
+
+  it("Transfer a token from alice to bob", async () => {
+    await program.rpc.transfer(new BN(1), {
+      accounts: {
+        source: aliceTokenKeypair.publicKey,
+        destination: bobTokenKeypair.publicKey,
+        authority: program.provider.wallet.publicKey,
+      },
+    });
+    const aliceToken = await program.account.token.fetch(
+      aliceTokenKeypair.publicKey
+    );
+    const bobToken = await program.account.token.fetch(
+      bobTokenKeypair.publicKey
+    );
+    assert.ok(aliceToken.amount.toNumber() === 1);
+    assert.ok(bobToken.amount.toNumber() === 1);
+  });
+
+  it("Alice burns a token", async () => {
+    await program.rpc.burn(new BN(1), {
+      accounts: {
+        source: aliceTokenKeypair.publicKey,
+        mint: mintKeypair.publicKey,
+        authority: program.provider.wallet.publicKey,
+      },
+    });
+    const aliceToken = await program.account.token.fetch(
+      aliceTokenKeypair.publicKey
+    );
+    const mint = await program.account.mint.fetch(mintKeypair.publicKey);
+    assert.ok(aliceToken.amount.toNumber() === 0);
+    assert.ok(mint.supply.toNumber() === 1);
+  });
 });

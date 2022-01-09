@@ -3,7 +3,6 @@ import { BorshInstructionCoder } from "./instruction.js";
 import { BorshAccountsCoder } from "./accounts.js";
 import { BorshEventCoder } from "./event.js";
 import { BorshStateCoder } from "./state.js";
-import { sighash } from "./common.js";
 import { Coder } from "../index.js";
 
 export { BorshInstructionCoder } from "./instruction.js";
@@ -43,9 +42,5 @@ export class BorshCoder<A extends string = string> implements Coder {
     if (idl.state) {
       this.state = new BorshStateCoder(idl);
     }
-  }
-
-  public sighash(nameSpace: string, ixName: string): Buffer {
-    return sighash(nameSpace, ixName);
   }
 }

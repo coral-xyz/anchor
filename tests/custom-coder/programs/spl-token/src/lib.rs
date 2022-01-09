@@ -48,7 +48,7 @@ pub mod spl_token {
         Ok(())
     }
 
-    pub fn mint_to(ctx: Context<MintTo>) -> ProgramResult {
+    pub fn mint_to(ctx: Context<MintTo>, amount: u64) -> ProgramResult {
         Ok(())
     }
 
@@ -250,7 +250,7 @@ pub struct MintToChecked<'info> {
     mint: AccountInfo<'info>,
     #[account(mut)]
     to: AccountInfo<'info>,
-    authority: AccountInfo<'info>,
+    authority: Signer<'info>,
 }
 
 #[derive(Accounts)]

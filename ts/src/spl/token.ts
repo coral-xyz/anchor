@@ -215,7 +215,12 @@ export type SplToken = {
           isSigner: true;
         }
       ];
-      args: [];
+      args: [
+        {
+          name: "amount";
+          type: "u64";
+        }
+      ];
     },
     {
       name: "burn";
@@ -392,7 +397,7 @@ export type SplToken = {
         {
           name: "authority";
           isMut: false;
-          isSigner: false;
+          isSigner: true;
         }
       ];
       args: [
@@ -815,7 +820,12 @@ export const IDL: SplToken = {
           isSigner: true,
         },
       ],
-      args: [],
+      args: [
+        {
+          name: "amount",
+          type: "u64",
+        },
+      ],
     },
     {
       name: "burn",
@@ -992,7 +1002,7 @@ export const IDL: SplToken = {
         {
           name: "authority",
           isMut: false,
-          isSigner: false,
+          isSigner: true,
         },
       ],
       args: [

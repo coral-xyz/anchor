@@ -261,7 +261,11 @@ LAYOUT.addVariant(
   ]),
   "setAuthority"
 );
-LAYOUT.addVariant(7, BufferLayout.struct([]), "mintTo");
+LAYOUT.addVariant(
+  7,
+  BufferLayout.struct([BufferLayout.nu64("amount")]),
+  "mintTo"
+);
 LAYOUT.addVariant(
   8,
   BufferLayout.struct([BufferLayout.nu64("amount")]),

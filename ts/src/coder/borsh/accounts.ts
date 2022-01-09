@@ -6,7 +6,7 @@ import { sha256 } from "js-sha256";
 import { Idl, IdlTypeDef } from "../../idl.js";
 import { IdlCoder } from "./idl.js";
 import { AccountsCoder } from "../index.js";
-import { accountSize } from "./common.js";
+import { accountSize } from "../common.js";
 
 /**
  * Number of bytes of the account discriminator.
