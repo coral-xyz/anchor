@@ -6,7 +6,6 @@ import { BorshStateCoder } from "./state.js";
 import { sighash } from "./common.js";
 import { Coder } from "../index.js";
 
-export { accountSize } from "./common.js";
 export { BorshInstructionCoder } from "./instruction.js";
 export { BorshAccountsCoder, ACCOUNT_DISCRIMINATOR_SIZE } from "./accounts.js";
 export { BorshEventCoder, eventDiscriminator } from "./event.js";

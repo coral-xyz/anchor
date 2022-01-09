@@ -11,12 +11,7 @@ import {
 } from "@solana/web3.js";
 import Provider, { getProvider } from "../../provider.js";
 import { Idl, IdlTypeDef } from "../../idl.js";
-import {
-  ACCOUNT_DISCRIMINATOR_SIZE,
-  accountSize,
-  Coder,
-  BorshCoder,
-} from "../../coder/index.js";
+import { Coder, BorshCoder } from "../../coder/index.js";
 import { Subscription, Address, translateAddress } from "../common.js";
 import { AllAccountsMap, IdlTypes, TypeDef } from "./types.js";
 import * as pubkeyUtil from "../../utils/pubkey.js";
@@ -126,8 +121,7 @@ export class AccountClient<
     this._programId = programId;
     this._provider = provider ?? getProvider();
     this._coder = coder ?? new BorshCoder(idl);
-    this._size =
-      ACCOUNT_DISCRIMINATOR_SIZE + (accountSize(idl, idlAccount) ?? 0);
+    this._size = this._coder.accounts.size(idlAccount);
   }
 
   /**

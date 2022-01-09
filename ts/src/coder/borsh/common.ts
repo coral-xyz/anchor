@@ -77,7 +77,7 @@ function typeSize(idl: Idl, ty: IdlType): number {
         return 1 + typeSize(idl, ty.option);
       }
       if ("coption" in ty) {
-        return 1 + typeSize(idl, ty.coption);
+        return 4 + typeSize(idl, ty.coption);
       }
       if ("defined" in ty) {
         const filtered = idl.types?.filter((t) => t.name === ty.defined) ?? [];

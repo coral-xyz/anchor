@@ -1,4 +1,4 @@
-import { IdlEvent } from "../idl.js";
+import { IdlEvent, IdlTypeDef } from "../idl.js";
 import { Event } from "../program/event.js";
 
 export * from "./borsh/index.js";
@@ -39,6 +39,7 @@ export interface AccountsCoder<A extends string = string> {
   decode<T = any>(accountName: A, ix: Buffer): T;
   decodeUnchecked<T = any>(accountName: A, ix: Buffer): T;
   memcmp(accountName: A, appendData?: Buffer): any;
+  size(idlAccount: IdlTypeDef): number;
 }
 
 export interface InstructionCoder {

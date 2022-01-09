@@ -1,20 +1,22 @@
 import * as BufferLayout from "buffer-layout";
-import { PublicKey } from "@solana/web3.js";
+import { publicKey, uint64, coption, bool } from "./buffer-layout.js";
 import { AccountsCoder } from "../index.js";
-import { Idl } from "../../idl.js";
+import { Idl, IdlTypeDef } from "../../idl.js";
+import { accountSize } from "../borsh/common";
 
 export class SplTokenAccountsCoder<A extends string = string>
   implements AccountsCoder {
-  constructor(_: Idl) {}
+  constructor(private idl: Idl) {}
 
   public async encode<T = any>(accountName: A, account: T): Promise<Buffer> {
-    const buffer = Buffer.alloc(1000); // TODO: use a tighter buffer.
     switch (accountName) {
       case "Token": {
+        const buffer = Buffer.alloc(165);
         const len = TOKEN_ACCOUNT_LAYOUT.encode(account, buffer);
         return buffer.slice(0, len);
       }
       case "Mint": {
+        const buffer = Buffer.alloc(82);
         const len = MINT_ACCOUNT_LAYOUT.encode(account, buffer);
         return buffer.slice(0, len);
       }
@@ -60,77 +62,35 @@ export class SplTokenAccountsCoder<A extends string = string>
       }
     }
   }
-}
 
-// TODO: can probably clean this up by using a proper COption and PublicKey
-//       struct layout decoder/subclass.
-function decodeTokenAccount<T = any>(ix: Buffer): T {
-  const account = TOKEN_ACCOUNT_LAYOUT.decode(ix) as T;
-  // @ts-ignore
-  account.authority = new PublicKey(account.authority);
-  // @ts-ignore
-  account.mint = new PublicKey(account.mint);
-  // @ts-ignore
-  account.delegate =
-    // @ts-ignore
-    account.delegateOption === 1 ? new PublicKey(account.delegate) : null;
-  // @ts-ignore
-  account.closeAuthority =
-    // @ts-ignore
-    account.closeAuthorityOption === 1
-      ? // @ts-ignore
-        new PublicKey(account.closeAuthority)
-      : null;
-  return account;
+  public size(idlAccount: IdlTypeDef): number {
+    return accountSize(this.idl, idlAccount) ?? 0;
+  }
 }
 
 function decodeMintAccount<T = any>(ix: Buffer): T {
-  const account = MINT_ACCOUNT_LAYOUT.decode(ix) as T;
-  // @ts-ignore
-  account.mintAuthority =
-    // @ts-ignore
-    account.mintAuthorityOption === 1
-      ? // @ts-ignore
-        new PublicKey(account.mintAuthority)
-      : null;
-  // @ts-ignore
-  account.freezeAuthority =
-    // @ts-ignore
-    account.freezeAuthorityOption === 1
-      ? // @ts-ignore
-        new PublicKey(account.freezeAuthorityAuthority)
-      : null;
-  return account;
+  return MINT_ACCOUNT_LAYOUT.decode(ix) as T;
 }
+
+function decodeTokenAccount<T = any>(ix: Buffer): T {
+  return TOKEN_ACCOUNT_LAYOUT.decode(ix) as T;
+}
+
+const MINT_ACCOUNT_LAYOUT = BufferLayout.struct([
+  coption(publicKey(), "mintAuthority"),
+  uint64("supply"),
+  BufferLayout.u8("decimals"),
+  bool("isInitialized"),
+  coption(publicKey(), "freezeAuthority"),
+]);
 
 const TOKEN_ACCOUNT_LAYOUT = BufferLayout.struct([
   publicKey("mint"),
   publicKey("authority"),
   uint64("amount"),
-  BufferLayout.u32("delegateOption"),
-  publicKey("delegate"),
+  coption(publicKey(), "delegate"),
   BufferLayout.u8("state"),
-  BufferLayout.u32("isNativeOption"),
-  uint64("isNative"),
+  coption(uint64(), "isNative"),
   uint64("delegatedAmount"),
-  BufferLayout.u32("closeAuthorityOption"),
-  publicKey("closeAuthority"),
+  coption(publicKey(), "closeAuthority"),
 ]);
-
-const MINT_ACCOUNT_LAYOUT = BufferLayout.struct([
-  BufferLayout.u32("mintAuthorityOption"),
-  publicKey("mintAuthority"),
-  uint64("supply"),
-  BufferLayout.u8("decimals"),
-  BufferLayout.u8("isInitialized"),
-  BufferLayout.u32("freezeAuthorityOption"),
-  publicKey("freezeAuthority"),
-]);
-
-function publicKey(property: string): any {
-  return BufferLayout.blob(32, property);
-}
-
-function uint64(property: string): any {
-  return BufferLayout.blob(8, property);
-}

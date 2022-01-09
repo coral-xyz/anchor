@@ -34,9 +34,9 @@ describe("custom-coder", () => {
             fromPubkey: program.provider.wallet.publicKey,
             newAccountPubkey: mintKeypair.publicKey,
             lamports: await program.provider.connection.getMinimumBalanceForRentExemption(
-              82
+              program.account.mint.size,
             ),
-            space: 82,
+            space: program.account.mint.size,
             programId: TOKEN_PROGRAM_ID,
           }),
         ],
@@ -46,7 +46,12 @@ describe("custom-coder", () => {
     assert.ok(
       mintAccount.mintAuthority.equals(program.provider.wallet.publicKey)
     );
-    console.log(mintAccount);
+		assert.ok(
+			mintAccount.freezeAuthority === null
+		);
+		assert.ok(mintAccount.decimals === 6);
+		assert.ok(mintAccount.isInitialized);
+		assert.ok(mintAccount.supply.toNumber() === 0);
   });
 
   it("Creates a token account", async () => {
@@ -63,9 +68,9 @@ describe("custom-coder", () => {
           fromPubkey: program.provider.wallet.publicKey,
           newAccountPubkey: tokenKeypair.publicKey,
           lamports: await program.provider.connection.getMinimumBalanceForRentExemption(
-            165
+            program.account.token.size
           ),
-          space: 165,
+          space: program.account.token.size,
           programId: TOKEN_PROGRAM_ID,
         }),
       ],
@@ -73,6 +78,13 @@ describe("custom-coder", () => {
     const token = await program.account.token.fetch(tokenKeypair.publicKey);
     assert.ok(token.authority.equals(program.provider.wallet.publicKey));
     assert.ok(token.mint.equals(mintKeypair.publicKey));
-    console.log("token", token);
+		assert.ok(token.amount.toNumber() === 0);
+		assert.ok(token.delegate === null);
+		assert.ok(token.state === 0);
+		assert.ok(token.isNative === null);
+		assert.ok(token.delegatedAmount.toNumber() === 0);
+		assert.ok(token.closeAuthority === null);
   });
+
+
 });
