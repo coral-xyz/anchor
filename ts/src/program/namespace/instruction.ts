@@ -1,31 +1,33 @@
 import {
-  AccountMeta,
   PublicKey,
   TransactionInstruction,
+  AccountMeta,
 } from "@solana/web3.js";
 import {
-  Idl,
   IdlAccount,
-  IdlAccountItem,
-  IdlAccounts,
   IdlInstruction,
-} from "../../idl.js";
-import { IdlError } from "../../error.js";
+  IdlAccountItem,
+  IdlAccountsVec,
+  Idl,
+  IdlAccounts,
+} from "../../idl";
+import { IdlError } from "../../error";
+import {} from "@solana/web3.js";
 import {
   toInstruction,
   validateAccounts,
   translateAddress,
   Address,
-} from "../common.js";
-import { Accounts, splitArgsAndCtx } from "../context.js";
-import * as features from "../../utils/features.js";
+} from "../common";
+import { Accounts, splitArgsAndCtx, AccountsArray } from "../context";
+import * as features from "../../utils/features";
 import {
   AllInstructions,
   AllInstructionsMap,
   InstructionContextFn,
   InstructionContextFnArgs,
   MakeInstructionsNamespace,
-} from "./types.js";
+} from "./types";
 
 export default class InstructionNamespaceFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
@@ -94,6 +96,16 @@ export default class InstructionNamespaceFactory {
             (acc as IdlAccounts).accounts,
             ixName
           ).flat();
+        } else if ((acc as IdlAccountsVec).dummyVecIndicator) {
+          const account: IdlAccountsVec = acc as IdlAccountsVec;
+          const accountInfos = ctx[acc.name] as AccountsArray;
+          return accountInfos.map((info) => {
+            return {
+              pubkey: translateAddress(info.address),
+              isWritable: info.isWriteable ?? false,
+              isSigner: info.isSigner ?? false,
+            };
+          });
         } else {
           const account: IdlAccount = acc as IdlAccount;
           let pubkey;

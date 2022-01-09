@@ -5,7 +5,12 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import { Address } from "./common.js";
-import { IdlAccountItem, IdlAccounts, IdlInstruction } from "../idl.js";
+import {
+  IdlAccountItem,
+  IdlAccounts,
+  IdlAccountsVec,
+  IdlInstruction,
+} from "../idl";
 
 /**
  * Context provides all non-argument inputs for generating Anchor transactions.
@@ -53,6 +58,16 @@ export type Context<A extends Accounts = Accounts> = {
 };
 
 /**
+ * The type which is passed in for an array of accounts. Thus, whether the account is a signer of is mutable
+ * can be determined from the frontend
+ */
+export type AccountsArray = {
+  address: Address;
+  isSigner?: boolean;
+  isWriteable?: boolean;
+}[];
+
+/**
  * A set of accounts mapping one-to-one to the program's accounts struct, i.e.,
  * the type deriving `#[derive(Accounts)]`.
  *
@@ -65,8 +80,10 @@ export type Accounts<A extends IdlAccountItem = IdlAccountItem> = {
   [N in A["name"]]: Account<A & { name: N }>;
 };
 
-type Account<A extends IdlAccountItem> = A extends IdlAccounts
-  ? Accounts<A["accounts"][number]>
+type Account<A extends IdlAccountItem> = A extends IdlAccounts | IdlAccountsVec
+  ? A extends IdlAccounts
+    ? Accounts<A["accounts"][number]>
+    : AccountsArray
   : Address;
 
 export function splitArgsAndCtx(

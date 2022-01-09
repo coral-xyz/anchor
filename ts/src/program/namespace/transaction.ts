@@ -1,7 +1,9 @@
+import { AccountMeta } from "@solana/web3.js";
+import { IdlInstruction, Idl } from "../../idl";
+import { translateAddress } from "../common";
+import { AccountsArray, splitArgsAndCtx } from "../context";
+import { InstructionFn } from "./instruction";
 import { Transaction } from "@solana/web3.js";
-import { Idl, IdlInstruction } from "../../idl.js";
-import { splitArgsAndCtx } from "../context.js";
-import { InstructionFn } from "./instruction.js";
 import {
   AllInstructions,
   InstructionContextFn,

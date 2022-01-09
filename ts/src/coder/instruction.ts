@@ -364,7 +364,8 @@ class InstructionFormatter {
             (<IdlAccounts>account).accounts,
             newPrefix
           );
-        } else {
+        } 
+        else {
           return {
             ...(<IdlAccount>account),
             name: prefix ? `${prefix} > ${accName}` : accName,

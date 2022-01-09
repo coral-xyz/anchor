@@ -58,6 +58,14 @@ pub struct IdlAccounts {
 pub enum IdlAccountItem {
     IdlAccount(IdlAccount),
     IdlAccounts(IdlAccounts),
+    IdlAccountsVec(IdlAccountsVec),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct IdlAccountsVec {
+    pub name: String,
+    pub _dummy_vec_indicator: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

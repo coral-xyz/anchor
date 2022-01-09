@@ -1,5 +1,6 @@
-use crate::{Accounts, ToAccountInfos, ToAccountMetas};
+use crate::{Accounts, AccountsExit, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
+use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
@@ -21,17 +22,34 @@ impl<T: ToAccountMetas> ToAccountMetas for Vec<T> {
 }
 
 impl<'info, T: Accounts<'info>> Accounts<'info> for Vec<T> {
+    /// try_accounts for Vec consumes the rest of the accounts, thus a vector should always be at the end of the struct and only 1 vector can be used
+    /// per context
     fn try_accounts(
         program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         ix_data: &[u8],
     ) -> Result<Self, ProgramError> {
         let mut vec: Vec<T> = Vec::new();
-        T::try_accounts(program_id, accounts, ix_data).map(|item| vec.push(item))?;
+        while !accounts.is_empty() {
+            T::try_accounts(program_id, accounts, ix_data).map(|item| vec.push(item))?;
+        }
+
         Ok(vec)
     }
 }
 
+impl<'info, T: AccountsExit<'info>> AccountsExit<'info> for Vec<T> {
+    fn exit(&self, program_id: &Pubkey) -> ProgramResult {
+        self.iter().try_for_each(|account| account.exit(program_id))
+    }
+}
+
+pub mod __client_accounts_vec {
+    use super::*;
+    use anchor_lang::prelude::borsh;
+
+    pub type Vec<T> = std::vec::Vec<T>;
+}
 #[cfg(test)]
 mod tests {
     use solana_program::clock::Epoch;
@@ -90,5 +108,16 @@ mod tests {
 
         let mut accounts = &[][..];
         Vec::<Test>::try_accounts(&program_id, &mut accounts, &[]).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_accounts_exit_trait_for_exit_fails() {
+        todo!()
+    }
+
+    #[test]
+    fn test_accounts_exit_trait_for_vec() {
+        todo!()
     }
 }

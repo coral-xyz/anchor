@@ -1,9 +1,6 @@
 [submodule "examples/swap/deps/serum-dex"]
 	path = tests/swap/deps/serum-dex
 	url = https://github.com/project-serum/serum-dex
-[submodule "examples/cfo/deps/serum-dex"]
-	path = tests/cfo/deps/serum-dex
-	url = https://github.com/project-serum/serum-dex
 [submodule "examples/cfo/deps/swap"]
 	path = tests/cfo/deps/swap
 	url = https://github.com/project-serum/swap.git

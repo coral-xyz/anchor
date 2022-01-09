@@ -44,6 +44,7 @@ pub fn parse(filename: impl AsRef<Path>, version: String) -> Result<Option<Idl>>
                                         let mut tts = proc_macro2::TokenStream::new();
                                         arg.raw_arg.ty.to_tokens(&mut tts);
                                         let ty = tts.to_string().parse().unwrap();
+                                        println!("Idl field type of {:?}", &ty);
                                         IdlField {
                                             name: arg.name.to_string().to_mixed_case(),
                                             ty,
@@ -347,6 +348,9 @@ fn parse_account_derives(ctx: &CrateContext) -> HashMap<String, AccountsStruct> 
                 if attr.tokens.to_string().contains(DERIVE_NAME) {
                     let strct = accounts::parse(i_strct).expect("Code not parseable");
                     return Some((strct.ident.to_string(), strct));
+                } else if attr.tokens.to_string().contains("Vec") {
+                    let strct = accounts::parse(i_strct).expect("Code not parseable");
+                    return Some((strct.ident.to_string(), strct));
                 }
             }
             None
@@ -502,14 +506,22 @@ fn idl_accounts(
         .iter()
         .map(|acc: &AccountField| match acc {
             AccountField::CompositeField(comp_f) => {
-                let accs_strct = global_accs
-                    .get(&comp_f.symbol)
-                    .expect("Could not resolve Accounts symbol");
-                let accounts = idl_accounts(accs_strct, global_accs);
-                IdlAccountItem::IdlAccounts(IdlAccounts {
-                    name: comp_f.ident.to_string().to_mixed_case(),
-                    accounts,
-                })
+                if &comp_f.symbol == "Vec" {
+                    IdlAccountItem::IdlAccountsVec(IdlAccountsVec {
+                        name: comp_f.ident.to_string().to_mixed_case(),
+                        _dummy_vec_indicator: true,
+                    })
+                } else {
+                    let accs_strct = global_accs.get(&comp_f.symbol).expect(&format!(
+                        "Could not resolve Accounts symbol for {}",
+                        &comp_f.symbol
+                    ));
+                    let accounts = idl_accounts(accs_strct, global_accs);
+                    IdlAccountItem::IdlAccounts(IdlAccounts {
+                        name: comp_f.ident.to_string().to_mixed_case(),
+                        accounts,
+                    })
+                }
             }
             AccountField::Field(acc) => IdlAccountItem::IdlAccount(IdlAccount {
                 name: acc.ident.to_string().to_mixed_case(),
