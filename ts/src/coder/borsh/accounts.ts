@@ -38,6 +38,7 @@ export class BorshAccountsCoder<A extends string = string>
     });
 
     this.accountLayouts = new Map(layouts);
+    this.idl = idl;
   }
 
   public async encode<T = any>(accountName: A, account: T): Promise<Buffer> {
