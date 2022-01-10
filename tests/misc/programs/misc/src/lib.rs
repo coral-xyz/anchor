@@ -121,6 +121,17 @@ pub mod misc {
         Ok(())
     }
 
+    pub fn test_pda_init_custom_lamports(
+        ctx: Context<TestPdaInitCustomLamports>,
+        _domain: String,
+        _seed: Vec<u8>,
+        _bump: u8,
+        _lamports: u64,
+    ) -> ProgramResult {
+        ctx.accounts.my_pda.data = 6;
+        Ok(())
+    }
+
     pub fn test_pda_init_zero_copy(ctx: Context<TestPdaInitZeroCopy>, bump: u8) -> ProgramResult {
         let mut acc = ctx.accounts.my_pda.load_init()?;
         acc.data = 9;

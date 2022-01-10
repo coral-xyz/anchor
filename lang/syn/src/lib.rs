@@ -601,6 +601,7 @@ pub enum ConstraintToken {
     Close(Context<ConstraintClose>),
     Payer(Context<ConstraintPayer>),
     Space(Context<ConstraintSpace>),
+    Lamports(Context<ConstraintLamports>),
     Address(Context<ConstraintAddress>),
     TokenMint(Context<ConstraintTokenMint>),
     TokenAuthority(Context<ConstraintTokenAuthority>),
@@ -680,6 +681,7 @@ pub struct ConstraintInitGroup {
     pub seeds: Option<ConstraintSeedsGroup>,
     pub payer: Option<Expr>,
     pub space: Option<Expr>,
+    pub lamports: Option<Expr>,
     pub kind: InitKind,
 }
 
@@ -711,6 +713,11 @@ pub struct ConstraintPayer {
 #[derive(Debug, Clone)]
 pub struct ConstraintSpace {
     pub space: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintLamports {
+    pub lamports: Expr,
 }
 
 #[derive(Debug, Clone)]
