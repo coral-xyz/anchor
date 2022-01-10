@@ -11,6 +11,21 @@ incremented for features.
 
 ## [Unreleased]
 
+### Breaking
+
+* lang: rename `loader_account` module to `account_loader` module ([#1279](https://github.com/project-serum/anchor/pull/1279))
+* ts: `Coder` is now an interface and the existing class has been renamed to `BorshCoder`. This change allows the generation of Anchor clients for non anchor programs  ([#1259](https://github.com/project-serum/anchor/pull/1259/files)).
+
+## [0.20.1] - 2022-01-09
+
+### Fixes
+
+* lang: Improved error msgs when required programs are missing when using the `init` constraint([#1257](https://github.com/project-serum/anchor/pull/1257))
+
+### Features
+
+* lang: Allow repr overrides for zero copy accounts ([#1273](https://github.com/project-serum/anchor/pull/1273)).
+
 ## [0.20.0] - 2022-01-06
 
 ### Fixes

@@ -87,7 +87,10 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
 /// should be done here.
 pub trait AccountsExit<'info>: ToAccountMetas + ToAccountInfos<'info> {
     /// `program_id` is the currently executing program.
-    fn exit(&self, program_id: &Pubkey) -> ProgramResult;
+    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
+        // no-op
+        Ok(())
+    }
 }
 
 /// The close procedure to initiate garabage collection of an account, allowing
@@ -118,6 +121,15 @@ pub trait ToAccountInfos<'info> {
 /// Transformation to an `AccountInfo` struct.
 pub trait ToAccountInfo<'info> {
     fn to_account_info(&self) -> AccountInfo<'info>;
+}
+
+impl<'info, T> ToAccountInfo<'info> for T
+where
+    T: AsRef<AccountInfo<'info>>,
+{
+    fn to_account_info(&self) -> AccountInfo<'info> {
+        self.as_ref().clone()
+    }
 }
 
 /// A data structure that can be serialized and stored into account storage,
@@ -209,9 +221,12 @@ pub trait Key {
     fn key(&self) -> Pubkey;
 }
 
-impl Key for Pubkey {
+impl<'info, T> Key for T
+where
+    T: AsRef<AccountInfo<'info>>,
+{
     fn key(&self) -> Pubkey {
-        *self
+        *self.as_ref().key
     }
 }
 
@@ -220,7 +235,7 @@ impl Key for Pubkey {
 pub mod prelude {
     pub use super::{
         access_control, account, accounts::account::Account,
-        accounts::loader_account::AccountLoader, accounts::program::Program,
+        accounts::account_loader::AccountLoader, accounts::program::Program,
         accounts::signer::Signer, accounts::system_account::SystemAccount,
         accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, constant,
         context::Context, context::CpiContext, declare_id, emit, error, event, interface, program,
@@ -317,24 +332,35 @@ pub mod __private {
 /// Use this with a custom error type.
 ///
 /// # Example
-///
-/// After defining an `ErrorCode`
-///
 /// ```ignore
+/// // Instruction function
+/// pub fn set_data(ctx: Context<SetData>, data: u64) -> ProgramResult {
+///     require!(ctx.accounts.data.mutation_allowed, MyError::MutationForbidden);
+///     ctx.accounts.data.data = data;
+///     Ok(())
+/// }
+///
+/// // An enum for custom error codes
 /// #[error]
-/// pub struct ErrorCode {
-///     InvalidArgument,
+/// pub enum MyError {
+///     MutationForbidden
+/// }
+///
+/// // An account definition
+/// #[account]
+/// #[derive(Default)]
+/// pub struct MyData {
+///     mutation_allowed: bool,
+///     data: u64
+/// }
+///
+/// // An account validation struct
+/// #[derive(Accounts)]
+/// pub struct SetData<'info> {
+///     #[account(mut)]
+///     pub data: Account<'info, MyData>
 /// }
 /// ```
-///
-/// One can write a `require` assertion as
-///
-/// ```ignore
-/// require!(condition, InvalidArgument);
-/// ```
-///
-/// which would exit the program with the `InvalidArgument` error code if
-/// `condition` is false.
 #[macro_export]
 macro_rules! require {
     ($invariant:expr, $error:tt $(,)?) => {
