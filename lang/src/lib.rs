@@ -34,7 +34,7 @@ use std::io::Write;
 mod account_meta;
 pub mod accounts;
 mod bpf_upgradeable_state;
-mod common;
+pub mod common;
 pub mod context;
 mod ctor;
 mod error;
