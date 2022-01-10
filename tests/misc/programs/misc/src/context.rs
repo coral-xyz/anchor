@@ -1,5 +1,7 @@
 use crate::account::*;
 use anchor_lang::prelude::*;
+use anchor_lang::accounts::loader::Loader;
+use anchor_lang::accounts::cpi_state::CpiState;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 use misc2::misc2::MyState as Misc2State;
@@ -121,6 +123,17 @@ pub struct RemainingAccounts {}
 pub struct Initialize<'info> {
     #[account(zero)]
     pub data: Account<'info, Data>,
+}
+
+#[derive(Accounts)]
+pub struct InitializeSkipRentExempt<'info> {
+    #[account(zero, rent_exempt = skip)]
+    pub data: Account<'info, Data>,
+}
+
+#[derive(Accounts)]
+pub struct InitializeNoRentExempt<'info> {
+    pub data: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -267,7 +280,7 @@ pub struct TestInitIfNeededChecksOwner<'info> {
     pub data: UncheckedAccount<'info>,
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
-    pub owner: AccountInfo<'info>
+    pub owner: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -291,7 +304,7 @@ pub struct TestInitMintIfNeeded<'info> {
     pub system_program: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
     pub mint_authority: AccountInfo<'info>,
-    pub freeze_authority: AccountInfo<'info>, 
+    pub freeze_authority: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -322,7 +335,7 @@ pub struct TestInitAssociatedTokenIfNeeded<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-    pub authority: AccountInfo<'info>
+    pub authority: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -336,3 +349,33 @@ pub struct TestConstArraySize<'info> {
     #[account(zero)]
     pub data: Account<'info, DataConstArraySize>,
 }
+
+#[derive(Accounts)]
+pub struct NoRentExempt<'info> {
+    pub data: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct EnforceRentExempt<'info> {
+    #[account(rent_exempt = enforce)]
+    pub data: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct InitDecreaseLamports<'info> {
+    #[account(init, payer = user, space = 1000)]
+    pub data: AccountInfo<'info>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub system_program: Program<'info, System>
+}
+
+#[derive(Accounts)]
+pub struct InitIfNeededChecksRentExemption<'info> {
+    #[account(init_if_needed, payer = user, space = 1000)]
+    pub data: AccountInfo<'info>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub system_program: Program<'info, System>
+}
+

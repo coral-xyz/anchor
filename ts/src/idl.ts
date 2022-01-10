@@ -209,6 +209,7 @@ export type LiteralIdlType =
 export type NonLiteralIdlType =
   | IdlTypeDefined
   | IdlTypeOption
+  | IdlTypeCOption
   | IdlTypeVec
   | IdlTypeArray;
 
@@ -234,6 +235,10 @@ export type IdlTypeOption = {
 
 type RawIdlTypeVec = {
   Vec: RawIdlType;
+};
+
+export type IdlTypeCOption = {
+  coption: IdlType;
 };
 
 export type IdlTypeVec = {

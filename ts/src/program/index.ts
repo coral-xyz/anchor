@@ -9,7 +9,7 @@ import {
   isCamelized,
 } from "../idl.js";
 import Provider, { getProvider } from "../provider.js";
-import Coder from "../coder/index.js";
+import { Coder, BorshCoder } from "../coder/index.js";
 import NamespaceFactory, {
   RpcNamespace,
   InstructionNamespace,
@@ -257,9 +257,10 @@ export class Program<IDL extends Idl = Idl> {
    *                  then uses [[getProvider]].
    */
   public constructor(
-    idl: RawIdl | Idl,
+    idl: IDL,
     programId: Address,
-    provider?: Provider
+    provider?: Provider,
+    coder?: Coder
   ) {
     programId = translateAddress(programId);
 
@@ -273,7 +274,7 @@ export class Program<IDL extends Idl = Idl> {
     this._idl = camelizedIdl;
     this._provider = provider;
     this._programId = programId;
-    this._coder = new Coder(camelizedIdl);
+    this._coder = coder ?? new BorshCoder(camelizedIdl);
     this._events = new EventManager(this._programId, provider, this._coder);
 
     // Dynamic namespaces.
