@@ -220,7 +220,7 @@ impl Key for Pubkey {
 pub mod prelude {
     pub use super::{
         access_control, account, accounts::account::Account,
-        accounts::loader_account::AccountLoader, accounts::program::Program,
+        accounts::account_loader::AccountLoader, accounts::program::Program,
         accounts::signer::Signer, accounts::system_account::SystemAccount,
         accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, constant,
         context::Context, context::CpiContext, declare_id, emit, error, event, interface, program,
