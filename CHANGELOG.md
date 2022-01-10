@@ -11,11 +11,15 @@ incremented for features.
 
 ## [Unreleased]
 
+### Breaking
+
+* lang: rename `loader_account` module to `account_loader` module ([#1279](https://github.com/project-serum/anchor/pull/1279))
+
 ## [0.20.1] - 2022-01-09
 
 ### Fixes
 
-*lang: Improved error msgs when required programs are missing when using the `init` constraint([#1257](https://github.com/project-serum/anchor/pull/1257))
+* lang: Improved error msgs when required programs are missing when using the `init` constraint([#1257](https://github.com/project-serum/anchor/pull/1257))
 
 ### Features
 
