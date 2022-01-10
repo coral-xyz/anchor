@@ -114,7 +114,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         decimals: stream.parse()?,
                     },
                 )),
-                _ => return Err(ParseError::new(ident.span(), "Invalid attribute 1")),
+                _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
             }
         }
         "token" => {
@@ -141,7 +141,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         auth: stream.parse()?,
                     },
                 )),
-                _ => return Err(ParseError::new(ident.span(), "Invalid attribute 2")),
+                _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
             }
         }
         "associated_token" => {
@@ -168,7 +168,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         auth: stream.parse()?,
                     },
                 )),
-                _ => return Err(ParseError::new(ident.span(), "Invalid attribute 3")),
+                _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
             }
         }
         "bump" => {
@@ -270,7 +270,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         error: parse_optional_custom_error(&stream)?,
                     },
                 )),
-                _ => return Err(ParseError::new(ident.span(), "Invalid attribute 4")),
+                _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
             }
         }
     };

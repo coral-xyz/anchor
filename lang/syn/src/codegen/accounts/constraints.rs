@@ -623,7 +623,7 @@ pub fn generate_init(
             let create_account = generate_create_account_lamports(
                 field,
                 quote! {space},
-                quote! {lamports},
+                Some(quote! {lamports}),
                 owner.clone(),
                 seeds_with_nonce,
             );
@@ -662,13 +662,7 @@ pub fn generate_create_account(
     owner: proc_macro2::TokenStream,
     seeds_with_nonce: proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
-    return generate_create_account_lamports(
-        field,
-        space,
-        proc_macro2::TokenStream::new(),
-        owner,
-        seeds_with_nonce,
-    );
+    return generate_create_account_lamports(field, space, None, owner, seeds_with_nonce);
 }
 
 // Generated code to create an account with with system program with the
@@ -679,14 +673,13 @@ pub fn generate_create_account(
 pub fn generate_create_account_lamports(
     field: &Ident,
     space: proc_macro2::TokenStream,
-    lamports: proc_macro2::TokenStream,
+    lamports: Option<proc_macro2::TokenStream>,
     owner: proc_macro2::TokenStream,
     seeds_with_nonce: proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
-    let target_lamports = if lamports.is_empty() {
-        quote! { __anchor_rent.minimum_balance(#space) }
-    } else {
-        quote! { #lamports }
+    let target_lamports = match lamports {
+        None => quote! { __anchor_rent.minimum_balance(#space) },
+        Some(l) => quote! { #l },
     };
     quote! {
         // If the account being initialized already has lamports, then
