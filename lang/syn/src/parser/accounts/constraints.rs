@@ -344,7 +344,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
     pub fn build(mut self) -> ParseResult<ConstraintGroup> {
         // Init.
         if let Some(i) = &self.init {
-            #[cfg(not(feature = "init-if-needed"))]
+            if cfg!(not(feature = "init-if-needed"))
             {
                 if i.if_needed {
                     return Err(ParseError::new(
