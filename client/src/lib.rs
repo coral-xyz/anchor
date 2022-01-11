@@ -17,12 +17,15 @@ use solana_client::rpc_config::{
 };
 use solana_client::rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType};
 use solana_client::rpc_response::{Response as RpcResponse, RpcLogsResponse};
+use solana_sdk::account::Account;
 use solana_sdk::bs58;
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::signature::{Signature, Signer};
 use solana_sdk::transaction::Transaction;
 use std::convert::Into;
+use std::iter::Map;
 use std::rc::Rc;
+use std::vec::IntoIter;
 use thiserror::Error;
 
 pub use anchor_lang;
@@ -140,6 +143,15 @@ impl Program {
         &self,
         filters: Vec<RpcFilterType>,
     ) -> Result<Vec<(Pubkey, T)>, ClientError> {
+        self.accounts_lazy(filters)?.collect()
+    }
+
+    /// Returns all program accounts of the given type matching the given filters as an iterator
+    /// Deserialization is executed lazily
+    pub fn accounts_lazy<T: AccountDeserialize + Discriminator>(
+        &self,
+        filters: Vec<RpcFilterType>,
+    ) -> Result<ProgramAccountsIterator<T>, ClientError> {
         let account_type_filter = RpcFilterType::Memcmp(Memcmp {
             offset: 0,
             bytes: MemcmpEncodedBytes::Base58(bs58::encode(T::discriminator()).into_string()),
@@ -154,11 +166,15 @@ impl Program {
             },
             with_context: None,
         };
-        self.rpc()
-            .get_program_accounts_with_config(&self.id(), config)?
-            .into_iter()
-            .map(|(key, account)| Ok((key, T::try_deserialize(&mut (&account.data as &[u8]))?)))
-            .collect()
+        Ok(ProgramAccountsIterator {
+            inner: self
+                .rpc()
+                .get_program_accounts_with_config(&self.id(), config)?
+                .into_iter()
+                .map(|(key, account)| {
+                    Ok((key, T::try_deserialize(&mut (&account.data as &[u8]))?))
+                }),
+        })
     }
 
     pub fn state<T: AccountDeserialize>(&self) -> Result<T, ClientError> {
@@ -238,6 +254,20 @@ impl Program {
             }
         });
         Ok(client)
+    }
+}
+
+// Hides the inner type from usages so the implementation can be changed
+pub struct ProgramAccountsIterator<T> {
+    inner:
+        Map<IntoIter<(Pubkey, Account)>, fn((Pubkey, Account)) -> Result<(Pubkey, T), ClientError>>,
+}
+
+impl<T> Iterator for ProgramAccountsIterator<T> {
+    type Item = Result<(Pubkey, T), ClientError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
     }
 }
 
