@@ -333,7 +333,7 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
         .clone()
         // If they specified a seeds::program to use when deriving the PDA, use it.
         .map(|program_id| quote! { #program_id })
-        // otherwise fall back to the current program's program_id
+        // Otherwise fall back to the current program's program_id.
         .unwrap_or(quote! { program_id });
 
     // If the seeds came with a trailing comma, we need to chop it off
