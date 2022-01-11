@@ -11,8 +11,11 @@ use solana_account_decoder::UiAccountEncoding;
 use solana_client::client_error::ClientError as SolanaClientError;
 use solana_client::pubsub_client::{PubsubClient, PubsubClientError, PubsubClientSubscription};
 use solana_client::rpc_client::RpcClient;
-use solana_client::rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilter, RpcProgramAccountsConfig, RpcAccountInfoConfig};
-use solana_client::rpc_filter::{RpcFilterType, MemcmpEncodedBytes, Memcmp};
+use solana_client::rpc_config::{
+    RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcTransactionLogsConfig,
+    RpcTransactionLogsFilter,
+};
+use solana_client::rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType};
 use solana_client::rpc_response::{Response as RpcResponse, RpcLogsResponse};
 use solana_sdk::bs58;
 use solana_sdk::commitment_config::CommitmentConfig;
@@ -139,9 +142,7 @@ impl Program {
     ) -> Result<Vec<(Pubkey, T)>, ClientError> {
         let account_type_filter = RpcFilterType::Memcmp(Memcmp {
             offset: 0,
-            bytes: MemcmpEncodedBytes::Base58(
-                bs58::encode(T::discriminator()).into_string()
-            ),
+            bytes: MemcmpEncodedBytes::Base58(bs58::encode(T::discriminator()).into_string()),
             encoding: None,
         });
         let config = RpcProgramAccountsConfig {
@@ -156,8 +157,7 @@ impl Program {
         self.rpc()
             .get_program_accounts_with_config(&self.id(), config)?
             .into_iter()
-            .map(|(key, account)|
-                Ok((key, T::try_deserialize(&mut (&account.data as &[u8]))?)))
+            .map(|(key, account)| Ok((key, T::try_deserialize(&mut (&account.data as &[u8]))?)))
             .collect()
     }
 
