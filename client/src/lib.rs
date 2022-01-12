@@ -257,11 +257,14 @@ impl Program {
     }
 }
 
-// Hides the inner type from usages so the implementation can be changed
+/// Iterator with items of type (Pubkey, T). Used to lazily deserialize account structs.
+/// Wrapper type hides the inner type from usages so the implementation can be changed.
 pub struct ProgramAccountsIterator<T> {
-    inner:
-        Map<IntoIter<(Pubkey, Account)>, fn((Pubkey, Account)) -> Result<(Pubkey, T), ClientError>>,
+    inner: Map<IntoIter<(Pubkey, Account)>, AccountConverterFunction<T>>,
 }
+
+/// Function type that accepts solana accounts and returns deserialized anchor accounts
+type AccountConverterFunction<T> = fn((Pubkey, Account)) -> Result<(Pubkey, T), ClientError>;
 
 impl<T> Iterator for ProgramAccountsIterator<T> {
     type Item = Result<(Pubkey, T), ClientError>;
