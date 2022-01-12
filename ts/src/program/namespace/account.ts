@@ -8,14 +8,17 @@ import {
   Commitment,
   GetProgramAccountsFilter,
   AccountInfo,
+  KeyedAccountInfo,
 } from "@solana/web3.js";
 import Provider, { getProvider } from "../../provider.js";
 import { Idl, IdlTypeDef } from "../../idl.js";
 import { Coder, BorshCoder } from "../../coder/index.js";
+import { BorshAccountsCoder } from "../../coder/borsh/accounts.js";
 import { Subscription, Address, translateAddress } from "../common.js";
 import { AllAccountsMap, IdlTypes, TypeDef } from "./types.js";
 import * as pubkeyUtil from "../../utils/pubkey.js";
 import * as rpcUtil from "../../utils/rpc.js";
+import * as bs58 from "bs58";
 
 export default class AccountFactory {
   public static build<IDL extends Idl>(
@@ -228,6 +231,62 @@ export class AccountClient<
   }
 
   /**
+   * Returns an `EventEmitter` emitting a "change" event whenever any program account
+   * of <T> changes.
+   */
+  subscribeAll(commitment?: Commitment): EventEmitter {
+    if (programAccountSubscription !== null) {
+      return programAccountSubscription.ee;
+    }
+
+    const ee = new EventEmitter();
+    const listener = this._provider.connection.onProgramAccountChange(
+      this._programId,
+      async (info: KeyedAccountInfo) => {
+        const account = this._coder.accounts.decode(
+          this._idlAccount.name,
+          info.accountInfo.data
+        );
+        ee.emit("change", {
+          publicKey: info.accountId,
+          account,
+        });
+      },
+      commitment,
+      [
+        {
+          memcmp: {
+            offset: 0,
+            bytes: bs58.encode(
+              BorshAccountsCoder.accountDiscriminator(this._idlAccount.name)
+            ),
+          },
+        },
+      ]
+    );
+
+    programAccountSubscription = { listener, ee };
+
+    return ee;
+  }
+
+  /**
+   * Unsubscribes websocket for <T>.
+   */
+  async unsubscribeAll() {
+    if (!programAccountSubscription) {
+      console.warn("Program account type is not subscribed to.");
+      return;
+    }
+    await this._provider.connection
+      .removeProgramAccountChangeListener(programAccountSubscription.listener)
+      .then(() => {
+        programAccountSubscription = null;
+      })
+      .catch(console.error);
+  }
+
+  /**
    * Returns an `EventEmitter` emitting a "change" event whenever the account
    * changes.
    */
@@ -344,3 +403,4 @@ export type ProgramAccount<T = any> = {
 
 // Tracks all subscriptions.
 const subscriptions: Map<string, Subscription> = new Map();
+let programAccountSubscription: Subscription | null = null;
