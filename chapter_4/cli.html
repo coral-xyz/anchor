@@ -1,0 +1,328 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>CLI - The Anchor Book</title>
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../chapter_1/introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../chapter_1/what_is_anchor.html"><strong aria-hidden="true">1.1.</strong> What is Anchor</a></li><li class="chapter-item expanded "><a href="../chapter_1/anchor_documentation.html"><strong aria-hidden="true">1.2.</strong> Anchor Documentation</a></li><li class="chapter-item expanded "><a href="../chapter_1/prerequisites.html"><strong aria-hidden="true">1.3.</strong> Prerequisites</a></li></ol></li><li class="chapter-item expanded "><a href="../chapter_2/getting_started.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../chapter_2/installation.html"><strong aria-hidden="true">2.1.</strong> Installation</a></li><li class="chapter-item expanded "><a href="../chapter_2/hello_anchor.html"><strong aria-hidden="true">2.2.</strong> Hello, Anchor!</a></li></ol></li><li class="chapter-item expanded "><a href="../chapter_3/anchor_programs_in-depth.html"><strong aria-hidden="true">3.</strong> Anchor Programs In-Depth</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../chapter_3/essentials.html"><strong aria-hidden="true">3.1.</strong> Essentials</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../chapter_3/high-level_overview.html"><strong aria-hidden="true">3.1.1.</strong> High-level Overview</a></li><li class="chapter-item expanded "><a href="../chapter_3/the_accounts_struct.html"><strong aria-hidden="true">3.1.2.</strong> The Accounts Struct</a></li><li class="chapter-item expanded "><a href="../chapter_3/the_program_module.html"><strong aria-hidden="true">3.1.3.</strong> The Program Module</a></li><li class="chapter-item expanded "><a href="../chapter_3/errors.html"><strong aria-hidden="true">3.1.4.</strong> Errors</a></li><li class="chapter-item expanded "><a href="../chapter_3/milestone_project_tic-tac-toe.html"><strong aria-hidden="true">3.1.5.</strong> Milestone Project - Tic-Tac-Toe</a></li></ol></li><li class="chapter-item expanded "><div><strong aria-hidden="true">3.2.</strong> Intermediate</div></li></ol></li><li class="chapter-item expanded "><a href="../chapter_4/anchor_periphery.html"><strong aria-hidden="true">4.</strong> Anchor Periphery</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../chapter_4/cli.html" class="active"><strong aria-hidden="true">4.1.</strong> CLI</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">4.2.</strong> IDL</div></li></ol></li><li class="chapter-item expanded "><div><strong aria-hidden="true">5.</strong> Anchor BTS</div></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Anchor Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="cli"><a class="header" href="#cli">CLI</a></h1>
+<p>A CLI is provided to support building and managing an Anchor workspace.
+For a comprehensive list of commands and options, run <code>anchor -h</code> on any
+of the following subcommands.</p>
+<pre><code>anchor-cli
+
+USAGE:
+    anchor &lt;SUBCOMMAND&gt;
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+SUBCOMMANDS:
+    build      Builds the workspace
+    cluster    Cluster commands
+    deploy     Deploys each program in the workspace
+    expand     Expands the macros of a program or the workspace
+    help       Prints this message or the help of the given subcommand(s)
+    idl        Commands for interacting with interface definitions
+    init       Initializes a workspace
+    migrate    Runs the deploy migration script
+    new        Creates a new program
+    test       Runs integration tests against a localnetwork
+    upgrade    Upgrades a single program. The configured wallet must be the upgrade authority
+    verify     Verifies the on-chain bytecode matches the locally compiled artifact. Run this
+               command inside a program subdirectory, i.e., in the dir containing the program's
+               Cargo.toml
+</code></pre>
+<h2 id="build"><a class="header" href="#build">Build</a></h2>
+<pre><code>anchor build
+</code></pre>
+<p>Builds programs in the workspace targeting Solana's BPF runtime and emitting IDLs in the <code>target/idl</code> directory.</p>
+<pre><code>anchor build --verifiable
+</code></pre>
+<p>Runs the build inside a docker image so that the output binary is deterministic (assuming a Cargo.lock file is used). This command must be run from within a single crate subdirectory within the workspace. For example, <code>programs/&lt;my-program&gt;/</code>.</p>
+<h2 id="cluster"><a class="header" href="#cluster">Cluster</a></h2>
+<h3 id="cluster-list"><a class="header" href="#cluster-list">Cluster list</a></h3>
+<pre><code>anchor cluster list
+</code></pre>
+<p>This lists cluster endpoints:</p>
+<pre><code>Cluster Endpoints:
+
+* Mainnet - https://solana-api.projectserum.com
+* Mainnet - https://api.mainnet-beta.solana.com
+* Devnet  - https://api.devnet.solana.com
+* Testnet - https://api.testnet.solana.com
+</code></pre>
+<h2 id="deploy"><a class="header" href="#deploy">Deploy</a></h2>
+<pre><code>anchor deploy
+</code></pre>
+<p>Deploys all programs in the workspace to the configured cluster.</p>
+<p>::: tip Note
+This is different from the <code>solana program deploy</code> command, because everytime it's run
+it will generate a <em>new</em> program address.
+:::</p>
+<h2 id="expand"><a class="header" href="#expand">Expand</a></h2>
+<pre><code>anchor expand
+</code></pre>
+<p>If run inside a program folder, expands the macros of the program.</p>
+<p>If run in the workspace but outside a program folder, expands the macros of the workspace.</p>
+<p>If run with the <code>--program-name</code> option, expand only the given program.</p>
+<h2 id="idl"><a class="header" href="#idl">Idl</a></h2>
+<p>The <code>idl</code> subcommand provides commands for interacting with interface definition files.
+It's recommended to use these commands to store an IDL on chain, at a deterministic
+address, as a function of nothing but the the program's ID. This
+allows us to generate clients for a program using nothing but the program ID.</p>
+<h3 id="idl-init"><a class="header" href="#idl-init">Idl Init</a></h3>
+<pre><code>anchor idl init -f &lt;target/idl/program.json&gt; &lt;program-id&gt;
+</code></pre>
+<p>Creates an idl account, writing the given <code>&lt;target/idl/program.json&gt;</code> file into a program owned account. By default, the size of the account is double the size of the IDL,
+allowing room for growth in case the idl needs to be upgraded in the future.</p>
+<h3 id="idl-fetch"><a class="header" href="#idl-fetch">Idl Fetch</a></h3>
+<pre><code>anchor idl fetch -o &lt;out-file.json&gt; &lt;program-id&gt;
+</code></pre>
+<p>Fetches an IDL from the configured blockchain. For example, make sure
+your <code>Anchor.toml</code> is pointing to the <code>mainnet</code> cluster and run</p>
+<pre><code>anchor idl fetch GrAkKfEpTKQuVHG2Y97Y2FF4i7y7Q5AHLK94JBy7Y5yv
+</code></pre>
+<h3 id="idl-authority"><a class="header" href="#idl-authority">Idl Authority</a></h3>
+<pre><code>anchor idl authority &lt;program-id&gt;
+</code></pre>
+<p>Outputs the IDL account's authority. This is the wallet that has the ability to
+update the IDL.</p>
+<h3 id="idl-erase-authority"><a class="header" href="#idl-erase-authority">Idl Erase Authority</a></h3>
+<pre><code>anchor idl erase-authority -p &lt;program-id&gt;
+</code></pre>
+<p>Erases the IDL account's authority so that upgrades can no longer occur. The
+configured wallet must be the current authority.</p>
+<h3 id="idl-upgrade"><a class="header" href="#idl-upgrade">Idl Upgrade</a></h3>
+<pre><code>anchor idl upgrade &lt;program-id&gt; -f &lt;target/idl/program.json&gt;
+</code></pre>
+<p>Upgrades the IDL file on chain to the new <code>target/idl/program.json</code> idl.
+The configured wallet must be the current authority.</p>
+<pre><code>anchor idl set-authority -n &lt;new-authority&gt; -p &lt;program-id&gt;
+</code></pre>
+<p>Sets a new authority on the IDL account. Both the <code>new-authority</code> and <code>program-id</code>
+must be encoded in base 58.</p>
+<h2 id="init"><a class="header" href="#init">Init</a></h2>
+<pre><code>anchor init
+</code></pre>
+<p>Initializes a project workspace with the following structure.</p>
+<ul>
+<li><code>Anchor.toml</code>: Anchor configuration file.</li>
+<li><code>Cargo.toml</code>: Rust workspace configuration file.</li>
+<li><code>package.json</code>: JavaScript dependencies file.</li>
+<li><code>programs/</code>: Directory for Solana program crates.</li>
+<li><code>app/</code>: Directory for your application frontend.</li>
+<li><code>tests/</code>: Directory for JavaScript integration tests.</li>
+<li><code>migrations/deploy.js</code>: Deploy script.</li>
+</ul>
+<h2 id="migrate"><a class="header" href="#migrate">Migrate</a></h2>
+<pre><code>anchor migrate
+</code></pre>
+<p>Runs the deploy script located at <code>migrations/deploy.js</code>, injecting a provider configured
+from the workspace's <code>Anchor.toml</code>. For example,</p>
+<pre><code class="language-javascript">// File: migrations/deploys.js
+
+const anchor = require(&quot;@project-serum/anchor&quot;);
+
+module.exports = async function (provider) {
+  anchor.setProvider(provider);
+
+  // Add your deploy script here.
+}
+</code></pre>
+<p>Migrations are a new feature
+and only support this simple deploy script at the moment.</p>
+<h2 id="new"><a class="header" href="#new">New</a></h2>
+<pre><code>anchor new &lt;program-name&gt;
+</code></pre>
+<p>Creates a new program in the workspace's <code>programs/</code> directory initialized with boilerplate.</p>
+<h2 id="test"><a class="header" href="#test">Test</a></h2>
+<pre><code>anchor test
+</code></pre>
+<p>Run an integration test suit against the configured cluster, deploying new versions
+of all workspace programs before running them.</p>
+<p>If the configured network is a localnet, then automatically starts the localnetwork and runs
+the test.</p>
+<p>::: tip Note
+Be sure to shutdown any other local validators, otherwise <code>anchor test</code> will fail to run.</p>
+<p>If you'd prefer to run the program against your local validator use <code>anchor test --skip-local-validator</code>.
+:::</p>
+<p>When running tests we stream program logs to <code>.anchor/program-logs/&lt;address&gt;.&lt;program-name&gt;.log</code></p>
+<p>::: tip Note
+The Anchor workflow <a href="https://www.parity.io/paritys-checklist-for-secure-smart-contract-development/">recommends</a>
+to test your program using integration tests in a language other
+than Rust to make sure that bugs related to syntax misunderstandings
+are coverable with tests and not just replicated in tests.
+:::</p>
+<h2 id="upgrade"><a class="header" href="#upgrade">Upgrade</a></h2>
+<pre><code>anchor upgrade &lt;target/deploy/program.so&gt; --program-id &lt;program-id&gt;
+</code></pre>
+<p>Uses Solana's upgradeable BPF loader to upgrade the on chain program code.</p>
+<h2 id="verify"><a class="header" href="#verify">Verify</a></h2>
+<pre><code>anchor verify &lt;program-id&gt;
+</code></pre>
+<p>Verifies the on-chain bytecode matches the locally compiled artifact.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../chapter_4/anchor_periphery.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../chapter_4/anchor_periphery.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+    </body>
+</html>
