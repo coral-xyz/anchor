@@ -1,14 +1,35 @@
+//! Type validating that the account is a sysvar and deserializing it
+
 use crate::error::ErrorCode;
-use crate::{Accounts, AccountsExit, Key, ToAccountInfo, ToAccountInfos, ToAccountMetas};
+use crate::{Accounts, AccountsExit, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
-use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 
-/// Container for sysvars.
+/// Type validating that the account is a sysvar and deserializing it.
+///
+/// If possible, sysvars should not be used via accounts
+/// but by using the [`get`](https://docs.rs/solana-program/latest/solana_program/sysvar/trait.Sysvar.html#method.get)
+/// function on the desired sysvar. This is because using `get`
+/// does not run the risk of Anchor having a bug in its `Sysvar` type
+/// and using `get` also decreases tx size, making space for other
+/// accounts that cannot be requested via syscall.
+///
+/// # Example
+/// ```ignore
+/// // OK - via account in the account validation struct
+/// #[derive(Accounts)]
+/// pub struct Example<'info> {
+///     pub clock: Sysvar<'info, Clock>
+/// }
+/// // BETTER - via syscall in the instruction function
+/// fn better(ctx: Context<Better>) -> ProgramResult {
+///     let clock = Clock::get()?;
+/// }
+/// ```
 pub struct Sysvar<'info, T: solana_program::sysvar::Sysvar> {
     info: AccountInfo<'info>,
     account: T,
@@ -90,21 +111,4 @@ impl<'a, T: solana_program::sysvar::Sysvar> DerefMut for Sysvar<'a, T> {
     }
 }
 
-impl<'info, T: solana_program::sysvar::Sysvar> ToAccountInfo<'info> for Sysvar<'info, T> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.info.clone()
-    }
-}
-
-impl<'info, T: solana_program::sysvar::Sysvar> AccountsExit<'info> for Sysvar<'info, T> {
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
-        // no-op
-        Ok(())
-    }
-}
-
-impl<'info, T: solana_program::sysvar::Sysvar> Key for Sysvar<'info, T> {
-    fn key(&self) -> Pubkey {
-        *self.info.key
-    }
-}
+impl<'info, T: solana_program::sysvar::Sysvar> AccountsExit<'info> for Sysvar<'info, T> {}

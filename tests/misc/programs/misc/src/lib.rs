@@ -48,6 +48,14 @@ pub mod misc {
         Ok(())
     }
 
+    pub fn initialize_no_rent_exempt(ctx: Context<InitializeNoRentExempt>) -> ProgramResult {
+        Ok(())
+    }
+
+    pub fn initialize_skip_rent_exempt(ctx: Context<InitializeSkipRentExempt>) -> ProgramResult {
+        Ok(())
+    }
+
     pub fn test_owner(_ctx: Context<TestOwner>) -> ProgramResult {
         Ok(())
     }
@@ -84,6 +92,11 @@ pub mod misc {
 
     pub fn test_i16(ctx: Context<TestI16>, data: i16) -> ProgramResult {
         ctx.accounts.data.data = data;
+        Ok(())
+    }
+
+    pub fn test_const_array_size(ctx: Context<TestConstArraySize>, data: u8) -> ProgramResult {
+        ctx.accounts.data.data[0] = data;
         Ok(())
     }
 
@@ -196,15 +209,23 @@ pub mod misc {
         Ok(())
     }
 
-    pub fn test_init_if_needed_checks_owner(ctx: Context<TestInitIfNeededChecksOwner>) -> ProgramResult {
+    pub fn test_init_if_needed_checks_owner(
+        ctx: Context<TestInitIfNeededChecksOwner>,
+    ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn test_init_if_needed_checks_seeds(ctx: Context<TestInitIfNeededChecksSeeds>, seed_data: String) -> ProgramResult {
+    pub fn test_init_if_needed_checks_seeds(
+        ctx: Context<TestInitIfNeededChecksSeeds>,
+        seed_data: String,
+    ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn test_init_mint_if_needed(ctx: Context<TestInitMintIfNeeded>, decimals: u8) -> ProgramResult {
+    pub fn test_init_mint_if_needed(
+        ctx: Context<TestInitMintIfNeeded>,
+        decimals: u8,
+    ) -> ProgramResult {
         Ok(())
     }
 
@@ -212,7 +233,9 @@ pub mod misc {
         Ok(())
     }
 
-    pub fn test_init_associated_token_if_needed(ctx: Context<TestInitAssociatedTokenIfNeeded>) -> ProgramResult {
+    pub fn test_init_associated_token_if_needed(
+        ctx: Context<TestInitAssociatedTokenIfNeeded>,
+    ) -> ProgramResult {
         Ok(())
     }
 
@@ -220,12 +243,43 @@ pub mod misc {
         Ok(())
     }
 
-
     pub fn test_multidimensional_array(
         ctx: Context<TestMultidimensionalArray>,
         data: [[u8; 10]; 10],
     ) -> ProgramResult {
         ctx.accounts.data.data = data;
+        Ok(())
+    }
+
+    pub fn test_no_rent_exempt(ctx: Context<NoRentExempt>) -> ProgramResult {
+        Ok(())
+    }
+
+    pub fn test_enforce_rent_exempt(ctx: Context<EnforceRentExempt>) -> ProgramResult {
+        Ok(())
+    }
+
+    pub fn init_decrease_lamports(ctx: Context<InitDecreaseLamports>) -> ProgramResult {
+        **ctx.accounts.data.try_borrow_mut_lamports()? -= 1;
+        **ctx.accounts.user.try_borrow_mut_lamports()? += 1;
+        Ok(())
+    }
+    
+    pub fn init_if_needed_checks_rent_exemption(_ctx: Context<InitIfNeededChecksRentExemption>) -> ProgramResult {
+        Ok(())
+    }
+        
+    pub fn test_program_id_constraint(
+        _ctx: Context<TestProgramIdConstraint>,
+        _bump: u8,
+        _second_bump: u8
+    ) -> ProgramResult {
+        Ok(())
+    }
+
+    pub fn test_program_id_constraint_find_pda(
+        _ctx: Context<TestProgramIdConstraintUsingFindPda>,
+    ) -> ProgramResult {
         Ok(())
     }
 }

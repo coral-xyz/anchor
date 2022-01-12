@@ -1,8 +1,11 @@
-import { Buffer } from "buffer";
-import camelCase from "camelcase";
-import { Layout } from "buffer-layout";
-import * as borsh from "@project-serum/borsh";
 import bs58 from "bs58";
+import { Buffer } from "buffer";
+import { Layout } from "buffer-layout";
+import camelCase from "camelcase";
+import { snakeCase } from "snake-case";
+import { sha256 } from "js-sha256";
+import * as borsh from "@project-serum/borsh";
+import { AccountMeta, PublicKey } from "@solana/web3.js";
 import {
   Idl,
   IdlField,
@@ -12,10 +15,13 @@ import {
   IdlAccount,
   IdlAccountItem,
   IdlTypeDefTyStruct,
-} from "../idl";
+  IdlTypeVec,
+  IdlTypeOption,
+  IdlTypeDefined,
+  IdlAccounts,
+} from "../../idl.js";
 import { IdlCoder } from "./idl.js";
-import { sighash } from "./common.js";
-import { AccountMeta, PublicKey } from "@solana/web3.js";
+import { InstructionCoder } from "../index.js";
 
 /**
  * Namespace for state method function signatures.
@@ -30,7 +36,7 @@ export const SIGHASH_GLOBAL_NAMESPACE = "global";
 /**
  * Encodes and decodes program instructions.
  */
-export class InstructionCoder {
+export class BorshInstructionCoder implements InstructionCoder {
   // Instruction args layout. Maps namespaced method
   private ixLayout: Map<string, Layout>;
 
@@ -38,7 +44,7 @@ export class InstructionCoder {
   private sighashLayouts: Map<string, { layout: Layout; name: string }>;
 
   public constructor(private idl: Idl) {
-    this.ixLayout = InstructionCoder.parseIxLayout(idl);
+    this.ixLayout = BorshInstructionCoder.parseIxLayout(idl);
 
     const sighashLayouts = new Map();
     idl.instructions.forEach((ix) => {
@@ -65,14 +71,14 @@ export class InstructionCoder {
   /**
    * Encodes a program instruction.
    */
-  public encode(ixName: string, ix: any) {
+  public encode(ixName: string, ix: any): Buffer {
     return this._encode(SIGHASH_GLOBAL_NAMESPACE, ixName, ix);
   }
 
   /**
    * Encodes a program state instruction.
    */
-  public encodeState(ixName: string, ix: any) {
+  public encodeState(ixName: string, ix: any): Buffer {
     return this._encode(SIGHASH_STATE_NAMESPACE, ixName, ix);
   }
 
@@ -92,7 +98,7 @@ export class InstructionCoder {
     const stateMethods = idl.state ? idl.state.methods : [];
 
     const ixLayouts = stateMethods
-      .map((m: IdlStateMethod) => {
+      .map((m: IdlStateMethod): [string, Layout<unknown>] => {
         let fieldLayouts = m.args.map((arg: IdlField) => {
           return IdlCoder.fieldLayout(
             arg,
@@ -114,7 +120,6 @@ export class InstructionCoder {
           return [name, borsh.struct(fieldLayouts, name)];
         })
       );
-    // @ts-ignore
     return new Map(ixLayouts);
   }
 
@@ -245,17 +250,13 @@ class InstructionFormatter {
     if (typeof idlField.type === "string") {
       return data.toString();
     }
-    // @ts-ignore
-    if (idlField.type.vec) {
-      // @ts-ignore
+    if (idlField.type.hasOwnProperty("vec")) {
       return (
         "[" +
-        data
-          // @ts-ignore
+        (<Array<IdlField>>data)
           .map((d: IdlField) =>
             this.formatIdlData(
-              // @ts-ignore
-              { name: "", type: idlField.type.vec },
+              { name: "", type: (<IdlTypeVec>idlField.type).vec },
               d
             )
           )
@@ -263,27 +264,25 @@ class InstructionFormatter {
         "]"
       );
     }
-    // @ts-ignore
-    if (idlField.type.option) {
-      // @ts-ignore
+    if (idlField.type.hasOwnProperty("option")) {
       return data === null
         ? "null"
         : this.formatIdlData(
-            // @ts-ignore
-            { name: "", type: idlField.type.option },
+            { name: "", type: (<IdlTypeOption>idlField.type).option },
             data
           );
     }
-    // @ts-ignore
-    if (idlField.type.defined) {
+    if (idlField.type.hasOwnProperty("defined")) {
       if (types === undefined) {
         throw new Error("User defined types not provided");
       }
-      // @ts-ignore
-      const filtered = types.filter((t) => t.name === idlField.type.defined);
+      const filtered = types.filter(
+        (t) => t.name === (<IdlTypeDefined>idlField.type).defined
+      );
       if (filtered.length !== 1) {
-        // @ts-ignore
-        throw new Error(`Type not found: ${idlField.type.defined}`);
+        throw new Error(
+          `Type not found: ${(<IdlTypeDefined>idlField.type).defined}`
+        );
       }
       return InstructionFormatter.formatIdlDataDefined(
         filtered[0],
@@ -358,22 +357,18 @@ class InstructionFormatter {
     accounts: IdlAccountItem[],
     prefix?: string
   ): IdlAccount[] {
-    // @ts-ignore
     return accounts
       .map((account) => {
         const accName = sentenceCase(account.name);
-        // @ts-ignore
-        if (account.accounts) {
+        if (account.hasOwnProperty("accounts")) {
           const newPrefix = prefix ? `${prefix} > ${accName}` : accName;
-          // @ts-ignore
           return InstructionFormatter.flattenIdlAccounts(
-            // @ts-ignore
-            account.accounts,
+            (<IdlAccounts>account).accounts,
             newPrefix
           );
         } else {
           return {
-            ...account,
+            ...(<IdlAccount>account),
             name: prefix ? `${prefix} > ${accName}` : accName,
           };
         }
@@ -385,4 +380,12 @@ class InstructionFormatter {
 function sentenceCase(field: string): string {
   const result = field.replace(/([A-Z])/g, " $1");
   return result.charAt(0).toUpperCase() + result.slice(1);
+}
+
+// Not technically sighash, since we don't include the arguments, as Rust
+// doesn't allow function overloading.
+function sighash(nameSpace: string, ixName: string): Buffer {
+  let name = snakeCase(ixName);
+  let preimage = `${nameSpace}:${name}`;
+  return Buffer.from(sha256.digest(preimage)).slice(0, 8);
 }

@@ -154,6 +154,15 @@ pub enum AccountField {
     CompositeField(CompositeField),
 }
 
+impl AccountField {
+    fn ident(&self) -> &Ident {
+        match self {
+            AccountField::Field(field) => &field.ident,
+            AccountField::CompositeField(c_field) => &c_field.ident,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Field {
     pub ident: Ident,
@@ -279,24 +288,24 @@ impl Field {
     pub fn container_ty(&self) -> proc_macro2::TokenStream {
         match &self.ty {
             Ty::ProgramAccount(_) => quote! {
-                anchor_lang::ProgramAccount
+                anchor_lang::accounts::program_account::ProgramAccount
             },
             Ty::Account(_) => quote! {
-                anchor_lang::Account
+                anchor_lang::accounts::account::Account
             },
             Ty::AccountLoader(_) => quote! {
-                anchor_lang::AccountLoader
+                anchor_lang::accounts::account_loader::AccountLoader
             },
             Ty::Loader(_) => quote! {
-                anchor_lang::Loader
+                anchor_lang::accounts::loader::Loader
             },
             Ty::CpiAccount(_) => quote! {
-                anchor_lang::CpiAccount
+                anchor_lang::accounts::cpi_account::CpiAccount
             },
-            Ty::Sysvar(_) => quote! { anchor_lang::Sysvar },
-            Ty::CpiState(_) => quote! { anchor_lang::CpiState },
-            Ty::ProgramState(_) => quote! { anchor_lang::ProgramState },
-            Ty::Program(_) => quote! { anchor_lang::Program },
+            Ty::Sysvar(_) => quote! { anchor_lang::accounts::sysvar::Sysvar },
+            Ty::CpiState(_) => quote! { anchor_lang::accounts::cpi_state::CpiState },
+            Ty::ProgramState(_) => quote! { anchor_lang::accounts::state::ProgramState },
+            Ty::Program(_) => quote! { anchor_lang::accounts::program::Program },
             Ty::AccountInfo => quote! {},
             Ty::UncheckedAccount => quote! {},
             Ty::Signer => quote! {},
@@ -405,7 +414,7 @@ pub enum Ty {
     CpiState(CpiStateTy),
     ProgramAccount(ProgramAccountTy),
     Loader(LoaderTy),
-    AccountLoader(LoaderAccountTy),
+    AccountLoader(AccountLoaderTy),
     CpiAccount(CpiAccountTy),
     Sysvar(SysvarTy),
     Account(AccountTy),
@@ -452,7 +461,7 @@ pub struct CpiAccountTy {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct LoaderAccountTy {
+pub struct AccountLoaderTy {
     // The struct type of the account.
     pub account_type_path: TypePath,
 }
@@ -601,6 +610,7 @@ pub enum ConstraintToken {
     MintFreezeAuthority(Context<ConstraintMintFreezeAuthority>),
     MintDecimals(Context<ConstraintMintDecimals>),
     Bump(Context<ConstraintTokenBump>),
+    ProgramSeed(Context<ConstraintProgramSeed>),
 }
 
 impl Parse for ConstraintToken {
@@ -678,7 +688,8 @@ pub struct ConstraintInitGroup {
 pub struct ConstraintSeedsGroup {
     pub is_init: bool,
     pub seeds: Punctuated<Expr, Token![,]>,
-    pub bump: Option<Expr>, // None => bump was given without a target.
+    pub bump: Option<Expr>,         // None => bump was given without a target.
+    pub program_seed: Option<Expr>, // None => use the current program's program_id
 }
 
 #[derive(Debug, Clone)]
@@ -760,6 +771,11 @@ pub struct ConstraintMintDecimals {
 #[derive(Debug, Clone)]
 pub struct ConstraintTokenBump {
     bump: Option<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintProgramSeed {
+    program_seed: Expr,
 }
 
 #[derive(Debug, Clone)]

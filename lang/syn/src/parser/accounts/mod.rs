@@ -31,7 +31,69 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
             ))
         }
     };
+
+    let _ = constraints_cross_checks(&fields)?;
+
     Ok(AccountsStruct::new(strct.clone(), fields, instruction_api))
+}
+
+fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
+    // INIT
+    let init_field = fields.iter().find(|f| {
+        if let AccountField::Field(field) = f {
+            field.constraints.init.is_some()
+        } else {
+            false
+        }
+    });
+    if let Some(init_field) = init_field {
+        // init needs system program.
+        if fields.iter().all(|f| f.ident() != "system_program") {
+            return Err(ParseError::new(
+                init_field.ident().span(),
+                "the init constraint requires \
+                the system_program field to exist in the account \
+                validation struct. Use the program type to add \
+                the system_program field to your validation struct.",
+            ));
+        }
+        if let AccountField::Field(field) = init_field {
+            let kind = &field.constraints.init.as_ref().unwrap().kind;
+            // init token/a_token/mint needs token program.
+            match kind {
+                InitKind::Program { .. } => (),
+                InitKind::Token { .. }
+                | InitKind::AssociatedToken { .. }
+                | InitKind::Mint { .. } => {
+                    if fields.iter().all(|f| f.ident() != "token_program") {
+                        return Err(ParseError::new(
+                            init_field.ident().span(),
+                            "the init constraint requires \
+                            the token_program field to exist in the account \
+                            validation struct. Use the program type to add \
+                            the token_program field to your validation struct.",
+                        ));
+                    }
+                }
+            }
+            // a_token needs associated token program.
+            if let InitKind::AssociatedToken { .. } = kind {
+                if fields
+                    .iter()
+                    .all(|f| f.ident() != "associated_token_program")
+                {
+                    return Err(ParseError::new(
+                        init_field.ident().span(),
+                        "the init constraint requires \
+                    the associated_token_program field to exist in the account \
+                    validation struct. Use the program type to add \
+                    the associated_token_program field to your validation struct.",
+                    ));
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 pub fn parse_account_field(f: &syn::Field, has_instruction_api: bool) -> ParseResult<AccountField> {
@@ -98,7 +160,7 @@ fn parse_ty(f: &syn::Field) -> ParseResult<Ty> {
         "AccountInfo" => Ty::AccountInfo,
         "UncheckedAccount" => Ty::UncheckedAccount,
         "Loader" => Ty::Loader(parse_program_account_zero_copy(&path)?),
-        "AccountLoader" => Ty::AccountLoader(parse_program_loader_account(&path)?),
+        "AccountLoader" => Ty::AccountLoader(parse_program_account_loader(&path)?),
         "Account" => Ty::Account(parse_account_ty(&path)?),
         "Program" => Ty::Program(parse_program_ty(&path)?),
         "Signer" => Ty::Signer,
@@ -167,9 +229,9 @@ fn parse_program_account_zero_copy(path: &syn::Path) -> ParseResult<LoaderTy> {
         account_type_path: account_ident,
     })
 }
-fn parse_program_loader_account(path: &syn::Path) -> ParseResult<LoaderAccountTy> {
+fn parse_program_account_loader(path: &syn::Path) -> ParseResult<AccountLoaderTy> {
     let account_ident = parse_account(path)?;
-    Ok(LoaderAccountTy {
+    Ok(AccountLoaderTy {
         account_type_path: account_ident,
     })
 }

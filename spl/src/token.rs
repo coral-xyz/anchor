@@ -4,8 +4,7 @@ use anchor_lang::solana_program::entrypoint::ProgramResult;
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::program_pack::Pack;
 use anchor_lang::solana_program::pubkey::Pubkey;
-use anchor_lang::{Accounts, CpiContext};
-use std::io::Write;
+use anchor_lang::{context::CpiContext, Accounts};
 use std::ops::Deref;
 
 pub use spl_token::ID;
@@ -28,7 +27,6 @@ pub fn transfer<'a, 'b, 'c, 'info>(
             ctx.accounts.from.clone(),
             ctx.accounts.to.clone(),
             ctx.accounts.authority.clone(),
-            ctx.program.clone(),
         ],
         ctx.signer_seeds,
     )
@@ -52,7 +50,6 @@ pub fn mint_to<'a, 'b, 'c, 'info>(
             ctx.accounts.to.clone(),
             ctx.accounts.mint.clone(),
             ctx.accounts.authority.clone(),
-            ctx.program.clone(),
         ],
         ctx.signer_seeds,
     )
@@ -76,7 +73,6 @@ pub fn burn<'a, 'b, 'c, 'info>(
             ctx.accounts.to.clone(),
             ctx.accounts.mint.clone(),
             ctx.accounts.authority.clone(),
-            ctx.program.clone(),
         ],
         ctx.signer_seeds,
     )
@@ -100,7 +96,6 @@ pub fn approve<'a, 'b, 'c, 'info>(
             ctx.accounts.to.clone(),
             ctx.accounts.delegate.clone(),
             ctx.accounts.authority.clone(),
-            ctx.program.clone(),
         ],
         ctx.signer_seeds,
     )
@@ -122,7 +117,6 @@ pub fn initialize_account<'a, 'b, 'c, 'info>(
             ctx.accounts.mint.clone(),
             ctx.accounts.authority.clone(),
             ctx.accounts.rent.clone(),
-            ctx.program.clone(),
         ],
         ctx.signer_seeds,
     )
@@ -206,11 +200,7 @@ pub fn initialize_mint<'a, 'b, 'c, 'info>(
     )?;
     solana_program::program::invoke_signed(
         &ix,
-        &[
-            ctx.accounts.mint.clone(),
-            ctx.accounts.rent.clone(),
-            ctx.program.clone(),
-        ],
+        &[ctx.accounts.mint.clone(), ctx.accounts.rent.clone()],
         ctx.signer_seeds,
     )
 }
@@ -238,7 +228,6 @@ pub fn set_authority<'a, 'b, 'c, 'info>(
         &[
             ctx.accounts.account_or_mint.clone(),
             ctx.accounts.current_authority.clone(),
-            ctx.program.clone(),
         ],
         ctx.signer_seeds,
     )
@@ -321,21 +310,12 @@ impl TokenAccount {
 }
 
 impl anchor_lang::AccountDeserialize for TokenAccount {
-    fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        TokenAccount::try_deserialize_unchecked(buf)
-    }
-
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError> {
         spl_token::state::Account::unpack(buf).map(TokenAccount)
     }
 }
 
-impl anchor_lang::AccountSerialize for TokenAccount {
-    fn try_serialize<W: Write>(&self, _writer: &mut W) -> Result<(), ProgramError> {
-        // no-op
-        Ok(())
-    }
-}
+impl anchor_lang::AccountSerialize for TokenAccount {}
 
 impl anchor_lang::Owner for TokenAccount {
     fn owner() -> Pubkey {
@@ -359,21 +339,12 @@ impl Mint {
 }
 
 impl anchor_lang::AccountDeserialize for Mint {
-    fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        Mint::try_deserialize_unchecked(buf)
-    }
-
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError> {
         spl_token::state::Mint::unpack(buf).map(Mint)
     }
 }
 
-impl anchor_lang::AccountSerialize for Mint {
-    fn try_serialize<W: Write>(&self, _writer: &mut W) -> Result<(), ProgramError> {
-        // no-op
-        Ok(())
-    }
-}
+impl anchor_lang::AccountSerialize for Mint {}
 
 impl anchor_lang::Owner for Mint {
     fn owner() -> Pubkey {
@@ -391,16 +362,6 @@ impl Deref for Mint {
 
 #[derive(Clone)]
 pub struct Token;
-
-impl anchor_lang::AccountDeserialize for Token {
-    fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        Token::try_deserialize_unchecked(buf)
-    }
-
-    fn try_deserialize_unchecked(_buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        Ok(Token)
-    }
-}
 
 impl anchor_lang::Id for Token {
     fn id() -> Pubkey {

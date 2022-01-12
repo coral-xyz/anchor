@@ -5,17 +5,27 @@ use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::solana_program::system_program;
-use anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas};
+use anchor_lang::{AccountDeserialize, Discriminator, InstructionData, ToAccountMetas};
 use regex::Regex;
+use solana_account_decoder::UiAccountEncoding;
 use solana_client::client_error::ClientError as SolanaClientError;
 use solana_client::pubsub_client::{PubsubClient, PubsubClientError, PubsubClientSubscription};
 use solana_client::rpc_client::RpcClient;
-use solana_client::rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilter};
+use solana_client::rpc_config::{
+    RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcTransactionLogsConfig,
+    RpcTransactionLogsFilter,
+};
+use solana_client::rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType};
 use solana_client::rpc_response::{Response as RpcResponse, RpcLogsResponse};
+use solana_sdk::account::Account;
+use solana_sdk::bs58;
 use solana_sdk::commitment_config::CommitmentConfig;
-use solana_sdk::signature::{Keypair, Signature, Signer};
+use solana_sdk::signature::{Signature, Signer};
 use solana_sdk::transaction::Transaction;
 use std::convert::Into;
+use std::iter::Map;
+use std::rc::Rc;
+use std::vec::IntoIter;
 use thiserror::Error;
 
 pub use anchor_lang;
@@ -36,7 +46,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(cluster: Cluster, payer: Keypair) -> Self {
+    pub fn new(cluster: Cluster, payer: Rc<dyn Signer>) -> Self {
         Self {
             cfg: Config {
                 cluster,
@@ -46,7 +56,11 @@ impl Client {
         }
     }
 
-    pub fn new_with_options(cluster: Cluster, payer: Keypair, options: CommitmentConfig) -> Self {
+    pub fn new_with_options(
+        cluster: Cluster,
+        payer: Rc<dyn Signer>,
+        options: CommitmentConfig,
+    ) -> Self {
         Self {
             cfg: Config {
                 cluster,
@@ -62,7 +76,7 @@ impl Client {
             cfg: Config {
                 cluster: self.cfg.cluster.clone(),
                 options: self.cfg.options,
-                payer: Keypair::from_bytes(&self.cfg.payer.to_bytes()).unwrap(),
+                payer: self.cfg.payer.clone(),
             },
         }
     }
@@ -72,7 +86,7 @@ impl Client {
 #[derive(Debug)]
 struct Config {
     cluster: Cluster,
-    payer: Keypair,
+    payer: Rc<dyn Signer>,
     options: Option<CommitmentConfig>,
 }
 
@@ -93,7 +107,7 @@ impl Program {
         RequestBuilder::from(
             self.program_id,
             self.cfg.cluster.url(),
-            Keypair::from_bytes(&self.cfg.payer.to_bytes()).unwrap(),
+            self.cfg.payer.clone(),
             self.cfg.options,
             RequestNamespace::Global,
         )
@@ -104,7 +118,7 @@ impl Program {
         RequestBuilder::from(
             self.program_id,
             self.cfg.cluster.url(),
-            Keypair::from_bytes(&self.cfg.payer.to_bytes()).unwrap(),
+            self.cfg.payer.clone(),
             self.cfg.options,
             RequestNamespace::State { new: false },
         )
@@ -122,6 +136,45 @@ impl Program {
             .ok_or(ClientError::AccountNotFound)?;
         let mut data: &[u8] = &account.data;
         T::try_deserialize(&mut data).map_err(Into::into)
+    }
+
+    /// Returns all program accounts of the given type matching the given filters
+    pub fn accounts<T: AccountDeserialize + Discriminator>(
+        &self,
+        filters: Vec<RpcFilterType>,
+    ) -> Result<Vec<(Pubkey, T)>, ClientError> {
+        self.accounts_lazy(filters)?.collect()
+    }
+
+    /// Returns all program accounts of the given type matching the given filters as an iterator
+    /// Deserialization is executed lazily
+    pub fn accounts_lazy<T: AccountDeserialize + Discriminator>(
+        &self,
+        filters: Vec<RpcFilterType>,
+    ) -> Result<ProgramAccountsIterator<T>, ClientError> {
+        let account_type_filter = RpcFilterType::Memcmp(Memcmp {
+            offset: 0,
+            bytes: MemcmpEncodedBytes::Base58(bs58::encode(T::discriminator()).into_string()),
+            encoding: None,
+        });
+        let config = RpcProgramAccountsConfig {
+            filters: Some([vec![account_type_filter], filters].concat()),
+            account_config: RpcAccountInfoConfig {
+                encoding: Some(UiAccountEncoding::Base64),
+                data_slice: None,
+                commitment: None,
+            },
+            with_context: None,
+        };
+        Ok(ProgramAccountsIterator {
+            inner: self
+                .rpc()
+                .get_program_accounts_with_config(&self.id(), config)?
+                .into_iter()
+                .map(|(key, account)| {
+                    Ok((key, T::try_deserialize(&mut (&account.data as &[u8]))?))
+                }),
+        })
     }
 
     pub fn state<T: AccountDeserialize>(&self) -> Result<T, ClientError> {
@@ -201,6 +254,23 @@ impl Program {
             }
         });
         Ok(client)
+    }
+}
+
+/// Iterator with items of type (Pubkey, T). Used to lazily deserialize account structs.
+/// Wrapper type hides the inner type from usages so the implementation can be changed.
+pub struct ProgramAccountsIterator<T> {
+    inner: Map<IntoIter<(Pubkey, Account)>, AccountConverterFunction<T>>,
+}
+
+/// Function type that accepts solana accounts and returns deserialized anchor accounts
+type AccountConverterFunction<T> = fn((Pubkey, Account)) -> Result<(Pubkey, T), ClientError>;
+
+impl<T> Iterator for ProgramAccountsIterator<T> {
+    type Item = Result<(Pubkey, T), ClientError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
     }
 }
 
@@ -323,7 +393,7 @@ pub struct RequestBuilder<'a> {
     accounts: Vec<AccountMeta>,
     options: CommitmentConfig,
     instructions: Vec<Instruction>,
-    payer: Keypair,
+    payer: Rc<dyn Signer>,
     // Serialized instruction data for the target RPC.
     instruction_data: Option<Vec<u8>>,
     signers: Vec<&'a dyn Signer>,
@@ -345,7 +415,7 @@ impl<'a> RequestBuilder<'a> {
     pub fn from(
         program_id: Pubkey,
         cluster: &str,
-        payer: Keypair,
+        payer: Rc<dyn Signer>,
         options: Option<CommitmentConfig>,
         namespace: RequestNamespace,
     ) -> Self {
@@ -362,37 +432,44 @@ impl<'a> RequestBuilder<'a> {
         }
     }
 
-    pub fn payer(mut self, payer: Keypair) -> Self {
+    #[must_use]
+    pub fn payer(mut self, payer: Rc<dyn Signer>) -> Self {
         self.payer = payer;
         self
     }
 
+    #[must_use]
     pub fn cluster(mut self, url: &str) -> Self {
         self.cluster = url.to_string();
         self
     }
 
+    #[must_use]
     pub fn instruction(mut self, ix: Instruction) -> Self {
         self.instructions.push(ix);
         self
     }
 
+    #[must_use]
     pub fn program(mut self, program_id: Pubkey) -> Self {
         self.program_id = program_id;
         self
     }
 
+    #[must_use]
     pub fn accounts(mut self, accounts: impl ToAccountMetas) -> Self {
         let mut metas = accounts.to_account_metas(None);
         self.accounts.append(&mut metas);
         self
     }
 
+    #[must_use]
     pub fn options(mut self, options: CommitmentConfig) -> Self {
         self.options = options;
         self
     }
 
+    #[must_use]
     pub fn args(mut self, args: impl InstructionData) -> Self {
         self.instruction_data = Some(args.data());
         self
@@ -400,6 +477,7 @@ impl<'a> RequestBuilder<'a> {
 
     /// Invokes the `#[state]`'s `new` constructor.
     #[allow(clippy::wrong_self_convention)]
+    #[must_use]
     pub fn new(mut self, args: impl InstructionData) -> Self {
         assert!(self.namespace == RequestNamespace::State { new: false });
         self.namespace = RequestNamespace::State { new: true };
@@ -407,6 +485,7 @@ impl<'a> RequestBuilder<'a> {
         self
     }
 
+    #[must_use]
     pub fn signer(mut self, signer: &'a dyn Signer) -> Self {
         self.signers.push(signer);
         self
@@ -453,7 +532,7 @@ impl<'a> RequestBuilder<'a> {
         let instructions = self.instructions()?;
 
         let mut signers = self.signers;
-        signers.push(&self.payer);
+        signers.push(&*self.payer);
 
         let rpc_client = RpcClient::new_with_commitment(self.cluster, self.options);
 
