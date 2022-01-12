@@ -24,7 +24,7 @@ use solana_sdk::signature::{Signature, Signer};
 use solana_sdk::transaction::Transaction;
 use std::convert::Into;
 use std::iter::Map;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::vec::IntoIter;
 use thiserror::Error;
 
@@ -46,7 +46,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(cluster: Cluster, payer: Rc<dyn Signer>) -> Self {
+    pub fn new(cluster: Cluster, payer: Arc<dyn Signer>) -> Self {
         Self {
             cfg: Config {
                 cluster,
@@ -58,7 +58,7 @@ impl Client {
 
     pub fn new_with_options(
         cluster: Cluster,
-        payer: Rc<dyn Signer>,
+        payer: Arc<dyn Signer>,
         options: CommitmentConfig,
     ) -> Self {
         Self {
@@ -86,7 +86,7 @@ impl Client {
 #[derive(Debug)]
 struct Config {
     cluster: Cluster,
-    payer: Rc<dyn Signer>,
+    payer: Arc<dyn Signer>,
     options: Option<CommitmentConfig>,
 }
 
@@ -393,7 +393,7 @@ pub struct RequestBuilder<'a> {
     accounts: Vec<AccountMeta>,
     options: CommitmentConfig,
     instructions: Vec<Instruction>,
-    payer: Rc<dyn Signer>,
+    payer: Arc<dyn Signer>,
     // Serialized instruction data for the target RPC.
     instruction_data: Option<Vec<u8>>,
     signers: Vec<&'a dyn Signer>,
@@ -415,7 +415,7 @@ impl<'a> RequestBuilder<'a> {
     pub fn from(
         program_id: Pubkey,
         cluster: &str,
-        payer: Rc<dyn Signer>,
+        payer: Arc<dyn Signer>,
         options: Option<CommitmentConfig>,
         namespace: RequestNamespace,
     ) -> Self {
@@ -433,7 +433,7 @@ impl<'a> RequestBuilder<'a> {
     }
 
     #[must_use]
-    pub fn payer(mut self, payer: Rc<dyn Signer>) -> Self {
+    pub fn payer(mut self, payer: Arc<dyn Signer>) -> Self {
         self.payer = payer;
         self
     }
