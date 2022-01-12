@@ -479,7 +479,7 @@ We are going to deploy on `devnet`.
 Here is your deployment checklist 🚀
 
 1. run `anchor build`. Your program keypair is now in `target/deploy`. Keep this secret. You can reuse it on all clusters.
-2. run `solana address -k target/deploy/tic_tac_toe-keypair.json` and copy the address into your `declareId!` macro at the top of `lib.rs`.
+2. run `solana address -k target/deploy/tic_tac_toe-keypair.json` and copy the address into your `declare_id!` macro at the top of `lib.rs`.
 3. run `anchor build` again. This step is is necessary to include our new program id in the binary.
 4. change the `provider.cluster` variable in `Anchor.toml` to `devnet`.
 5. run `anchor deploy`
