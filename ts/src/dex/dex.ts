@@ -299,6 +299,12 @@ export type Dex = {
           "type": "u64"
         },
         {
+          "name": "selfTradeBehaviour",
+          "type": {
+            "defined": "SelfTradeBehavior"
+          }
+        },
+        {
           "name": "orderType",
           "type": {
             "defined": "OrderType"
@@ -892,8 +898,6 @@ export type Dex = {
     }
   ]
 }
-
-// TODO
 export const IDL: Dex = {
   "version": "0.1.0",
   "name": "dex",
@@ -1178,6 +1182,12 @@ export const IDL: Dex = {
         {
           "name": "maxCoinQty",
           "type": "u64"
+        },
+        {
+          "name": "selfTradeBehaviour",
+          "type": {
+            "defined": "SelfTradeBehavior"
+          }
         },
         {
           "name": "orderType",
