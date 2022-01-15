@@ -1,4 +1,4 @@
-## @project-serum/anchor
+# @project-serum/anchor
 
 TypeScript client for Anchor programs
 
