@@ -36,6 +36,7 @@ pub mod dex {
         limit_price: u64, 
         max_coin_qty: u64,  
         order_type: OrderType,
+        self_trade_behaviour: SelfTradeBehavior,
         client_order_id: u64, 
         limit: u16) -> ProgramResult {
         Ok(())
