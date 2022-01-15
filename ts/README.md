@@ -1,7 +1,5 @@
 # @project-serum/anchor
 
-TypeScript client for Anchor programs
-
 [![npm](https://img.shields.io/npm/v/@project-serum/anchor.svg?color=blue)](https://www.npmjs.com/package/@project-serum/anchor)
 [![Docs](https://img.shields.io/badge/docs-typedoc-blue)](https://project-serum.github.io/anchor/ts/index.html) |
 
