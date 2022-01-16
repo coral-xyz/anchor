@@ -5,6 +5,7 @@ use parser::program as program_parser;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use quote::ToTokens;
+use std::collections::HashMap;
 use std::ops::Deref;
 use syn::ext::IdentExt;
 use syn::parse::{Error as ParseError, Parse, ParseStream, Result as ParseResult};
@@ -144,6 +145,29 @@ impl AccountsStruct {
             fields,
             instruction_api,
         }
+    }
+
+    // Return value maps instruction name to type.
+    // E.g. if we have `#[instruction(data: u64)]` then returns
+    // { "data": "u64"}.
+    pub fn instruction_args(&self) -> HashMap<String, String> {
+        let mut args = HashMap::new();
+        if let Some(instruction_api) = &self.instruction_api {
+            for expr in instruction_api {
+                let arg = parser::tts_to_string(&expr);
+                let components: Vec<&str> = arg.split(" : ").collect();
+                assert!(components.len() == 2);
+                args.insert(components[0].to_string(), components[1].to_string());
+            }
+        }
+        args
+    }
+
+    pub fn field_names(&self) -> Vec<String> {
+        self.fields
+            .iter()
+            .map(|field| field.ident().to_string())
+            .collect()
     }
 }
 

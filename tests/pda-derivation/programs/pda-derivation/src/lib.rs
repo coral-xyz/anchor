@@ -6,6 +6,7 @@ use anchor_lang::prelude::*;
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 pub const MY_SEED: [u8; 2] = *b"hi";
+pub const MY_SEED_STR: &str = "hi";
 
 #[program]
 pub mod pda_derivation {
@@ -37,16 +38,20 @@ pub struct InitBase<'info> {
 #[instruction(seed_a: u8, bump: u8)]
 pub struct InitMyAccount<'info> {
     base: Account<'info, BaseAccount>,
+    base2: AccountInfo<'info>,
     #[account(
         init,
         payer = payer,
         space = 8+8,
         seeds = [
             seed_a.to_le_bytes().as_ref(),
-            b"another-feed".as_ref(),
+            b"another-seed".as_ref(),
             base.key().as_ref(),
+						base2.key.as_ref(),
             MY_SEED.as_ref(),
+						MY_SEED_STR.as_bytes(),
             base.base_data.to_le_bytes().as_ref(),
+						base.base_data_key.as_ref(),
         ],
         bump = bump,
     )]
@@ -64,4 +69,5 @@ pub struct MyAccount {
 #[account]
 pub struct BaseAccount {
     base_data: u64,
+    base_data_key: Pubkey,
 }

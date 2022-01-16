@@ -75,7 +75,7 @@ pub struct IdlAccount {
 pub struct IdlSeed {
     pub name: String,
     #[serde(rename = "type")]
-    pub ty: SeedTy,
+    pub kind: SeedTy,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -85,6 +85,10 @@ pub enum SeedTy {
     Arg,
     AccountPubkey,
     AccountData,
+}
+
+pub enum AccountDataPath {
+    //
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

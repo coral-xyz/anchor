@@ -555,59 +555,63 @@ fn parse_seeds(
     accounts: &AccountsStruct,
     seeds: &ConstraintSeedsGroup,
 ) -> Vec<IdlSeed> {
+    let ix_args = accounts.instruction_args();
+    let const_names: Vec<String> = ctx.consts().map(|c| c.ident.to_string()).collect();
+    let account_field_names = accounts.field_names();
+    println!("CONSTS: {:?}", const_names);
+    println!("ACCOUNT FIELDS: {:?}", account_field_names);
+    println!("IX ARGS: {:?}", ix_args);
+
     let mut idl_seeds = Vec::new();
     for seed in &seeds.seeds {
         match seed {
             Expr::MethodCall(seed_method) => {
-                match &*seed_method.receiver {
-                    // Instruction data.
-                    Expr::MethodCall(seed_method) => {
-                        println!("FIELD: {}", parser::tts_to_string(&seed_method));
-                        match &*seed_method.receiver {
-                            Expr::Path(seed_path) => {
-                                // todo
-                                println!("FIELD: {:?}", seed_path);
-                            }
-                            Expr::Field(seed_expr_field) => {
-                                // todo
-                                println!("FIELD: {:?}", seed_expr_field.base);
-                            }
-                            _ => {
-                                println!("WARNING: unexpected inner method call seed");
-                                return Vec::new();
-                            }
-                        }
-                    }
-                    // Byte string literal.
-                    Expr::Lit(seed_lit) => {
-                        match &seed_lit.lit {
-                            Lit::ByteStr(seed_byte_str) => {
-                                // todo
-                                println!("FIELD: {}", parser::tts_to_string(seed_byte_str));
-                            }
-                            _ => {
-                                println!("WARNING: unexpected seed lit");
-                                return Vec::new();
-                            }
-                        }
-                    }
-                    // Another account in the derive struct.
-                    Expr::Field(seed_field) => {
-                        // todo
-                        println!("FIELD: {}", parser::tts_to_string(seed_field));
-                    }
-                    // Constant variable.
-                    Expr::Path(seed_path) => {
-                        // todo
-                        println!("FIELD PATH: {:?}", seed_path.path);
-                    }
-                    _ => {
-                        println!("WARNING: unexpected method call seed");
+                let (var_name, path) = {
+                    // Convert the seed into the raw string representation.
+                    let seed_str = parser::tts_to_string(&seed);
+
+                    let mut components: Vec<&str> = seed_str.split(" . ").collect();
+                    if components.len() <= 1 {
+                        println!("WARNING: seeds are in an unexpected format: {:?}", seed);
                         return Vec::new();
                     }
+
+                    // The name of the variable (or field).
+                    let name = components.remove(0);
+
+                    // The path to the seed (only if the `name` type is a struct).
+                    let mut path = Vec::new();
+                    while components.len() > 0 {
+                        let c = components.remove(0);
+                        if c.contains("()") {
+                            break;
+                        }
+                        path.push(c);
+                    }
+
+                    (name, path)
+                };
+
+                if ix_args.contains_key(var_name) {
+                    //
+                } else if const_names.contains(&var_name.to_string()) {
+                    assert!(path.len() == 0);
+                } else if account_field_names.contains(&var_name.to_string()) {
+                    //
+                } else {
+                    println!("WARNING: unexpected seed");
+                    return Vec::new();
                 }
+
+                println!("SEED_NAME: {:?}, SEED_PATH: {:?}", name, path);
+            }
+            Expr::Reference(exp_reference) => {
+                // Literal byte slice not currently supported.
+                println!("WARNING: unexpected reference seed");
+                return Vec::new();
             }
             _ => {
+                // Unknown type. Please file an issue.
                 println!("WARNING: unexpected seed");
                 return Vec::new();
             }
