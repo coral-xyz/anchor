@@ -1,15 +1,15 @@
 # 安装
 ## Rust
 
-去 [here](https://www.rust-lang.org/tools/install) 安装 Rust.
+去 [这里](https://www.rust-lang.org/tools/install) 安装 Rust.
 
 ## Solana
 
-去 [here](https://docs.solana.com/cli/install-solana-cli-tools) 安装 Solana.
+去 [这里](https://docs.solana.com/cli/install-solana-cli-tools) 安装 Solana.
 
 ## Yarn
 
-去 [here](https://yarnpkg.com/getting-started/install) 安装 Yarn.
+去 [这里](https://yarnpkg.com/getting-started/install) 安装 Yarn.
 
 ## Anchor
 
