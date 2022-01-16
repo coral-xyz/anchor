@@ -1,0 +1,6 @@
+[book]
+title = "The Anchor Book 中文"
+authors = []
+language = "zh-CN"
+multilingual = false
+src = "src"
