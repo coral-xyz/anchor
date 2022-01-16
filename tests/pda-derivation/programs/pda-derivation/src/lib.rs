@@ -23,10 +23,10 @@ pub mod pda_derivation {
 #[derive(Accounts)]
 pub struct InitBase<'info> {
     #[account(
-				init,
-				payer = payer,
-				space = 8+8,
-		)]
+        init,
+        payer = payer,
+        space = 8+8,
+    )]
     base: Account<'info, BaseAccount>,
     #[account(mut)]
     payer: Signer<'info>,
@@ -38,18 +38,18 @@ pub struct InitBase<'info> {
 pub struct InitMyAccount<'info> {
     base: Account<'info, BaseAccount>,
     #[account(
-				init,
-				payer = payer,
-				space = 8+8,
-				seeds = [
-						seed_a.to_le_bytes().as_ref(),
-						b"another-feed".as_ref(),
-						base.key().as_ref(),
-						MY_SEED.as_ref(),
-						base.base_data.to_le_bytes().as_ref(),
-				],
-				bump = bump,
-		)]
+        init,
+        payer = payer,
+        space = 8+8,
+        seeds = [
+            seed_a.to_le_bytes().as_ref(),
+            b"another-feed".as_ref(),
+            base.key().as_ref(),
+            MY_SEED.as_ref(),
+            base.base_data.to_le_bytes().as_ref(),
+        ],
+        bump = bump,
+    )]
     account: Account<'info, MyAccount>,
     #[account(mut)]
     payer: Signer<'info>,
