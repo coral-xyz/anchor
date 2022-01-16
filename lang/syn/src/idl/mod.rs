@@ -66,6 +66,25 @@ pub struct IdlAccount {
     pub name: String,
     pub is_mut: bool,
     pub is_signer: bool,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub seeds: Option<Vec<IdlSeed>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct IdlSeed {
+    pub name: String,
+    #[serde(rename = "type")]
+    pub ty: SeedTy,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum SeedTy {
+    Const,
+    Arg,
+    AccountPubkey,
+    AccountData,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

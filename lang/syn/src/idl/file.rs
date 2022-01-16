@@ -1,6 +1,7 @@
 use crate::idl::*;
 use crate::parser::context::CrateContext;
 use crate::parser::{self, accounts, error, program};
+use crate::ConstraintSeedsGroup;
 use crate::Ty;
 use crate::{AccountField, AccountsStruct, StateIx};
 use anyhow::Result;
@@ -8,6 +9,7 @@ use heck::MixedCase;
 use quote::ToTokens;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use syn::{Expr, Lit};
 
 const DERIVE_NAME: &str = "Accounts";
 // TODO: sharee this with `anchor_lang` crate.
@@ -52,7 +54,7 @@ pub fn parse(filename: impl AsRef<Path>, version: String) -> Result<Option<Idl>>
                                     .collect::<Vec<_>>();
                                 let accounts_strct =
                                     accs.get(&method.anchor_ident.to_string()).unwrap();
-                                let accounts = idl_accounts(accounts_strct, &accs);
+                                let accounts = idl_accounts(&ctx, accounts_strct, &accs);
                                 IdlInstruction {
                                     name,
                                     accounts,
@@ -91,7 +93,7 @@ pub fn parse(filename: impl AsRef<Path>, version: String) -> Result<Option<Idl>>
                         })
                         .collect();
                     let accounts_strct = accs.get(&anchor_ident.to_string()).unwrap();
-                    let accounts = idl_accounts(accounts_strct, &accs);
+                    let accounts = idl_accounts(&ctx, accounts_strct, &accs);
                     IdlInstruction {
                         name,
                         accounts,
@@ -159,7 +161,7 @@ pub fn parse(filename: impl AsRef<Path>, version: String) -> Result<Option<Idl>>
                 .collect::<Vec<_>>();
             // todo: don't unwrap
             let accounts_strct = accs.get(&ix.anchor_ident.to_string()).unwrap();
-            let accounts = idl_accounts(accounts_strct, &accs);
+            let accounts = idl_accounts(&ctx, accounts_strct, &accs);
             IdlInstruction {
                 name: ix.ident.to_string().to_mixed_case(),
                 accounts,
@@ -494,6 +496,7 @@ fn to_idl_type(f: &syn::Field) -> IdlType {
 }
 
 fn idl_accounts(
+    ctx: &CrateContext,
     accounts: &AccountsStruct,
     global_accs: &HashMap<String, AccountsStruct>,
 ) -> Vec<IdlAccountItem> {
@@ -505,7 +508,7 @@ fn idl_accounts(
                 let accs_strct = global_accs
                     .get(&comp_f.symbol)
                     .expect("Could not resolve Accounts symbol");
-                let accounts = idl_accounts(accs_strct, global_accs);
+                let accounts = idl_accounts(&ctx, accs_strct, global_accs);
                 IdlAccountItem::IdlAccounts(IdlAccounts {
                     name: comp_f.ident.to_string().to_mixed_case(),
                     accounts,
@@ -518,7 +521,97 @@ fn idl_accounts(
                     Ty::Signer => true,
                     _ => acc.constraints.is_signer(),
                 },
+                seeds: acc
+                    .constraints
+                    .seeds
+                    .as_ref()
+                    .map(|s| parse_seeds(ctx, accounts, s)),
             }),
         })
         .collect::<Vec<_>>()
+}
+
+// Parses a seeds constraint, extracting the IdlSeed types.
+//
+// Note: This implementation is fragile as it makes assumptions about the types
+//       that can be used here (e.g., no program-defined function calls in
+//       seeds).
+//
+//       This probably doesn't cover all cases. If you see a warning log, you
+//       can add a new case here. In the worst case, we miss a seed and
+//       the parser will treat the given seeds as empty and so clients will
+//       simply fail to automatically populate the PDA accounts.
+//
+// Seed Assumptions: Seeds must be of the form
+//
+// - instruction argument
+// - account context field pubkey
+// - account data
+// - byte string literal (e.g. b"MY_SEED")
+// - byte string literal constant  (e.g. `pub const MY_SEED: [u8; 2] = *b"hi";`)
+//
+fn parse_seeds(
+    ctx: &CrateContext,
+    accounts: &AccountsStruct,
+    seeds: &ConstraintSeedsGroup,
+) -> Vec<IdlSeed> {
+    let mut idl_seeds = Vec::new();
+    for seed in &seeds.seeds {
+        match seed {
+            Expr::MethodCall(seed_method) => {
+                match &*seed_method.receiver {
+                    // Instruction data.
+                    Expr::MethodCall(seed_method) => {
+                        println!("FIELD: {}", parser::tts_to_string(&seed_method));
+                        match &*seed_method.receiver {
+                            Expr::Path(seed_path) => {
+                                // todo
+                                println!("FIELD: {:?}", seed_path);
+                            }
+                            Expr::Field(seed_expr_field) => {
+                                // todo
+                                println!("FIELD: {:?}", seed_expr_field.base);
+                            }
+                            _ => {
+                                println!("WARNING: unexpected inner method call seed");
+                                return Vec::new();
+                            }
+                        }
+                    }
+                    // Byte string literal.
+                    Expr::Lit(seed_lit) => {
+                        match &seed_lit.lit {
+                            Lit::ByteStr(seed_byte_str) => {
+                                // todo
+                                println!("FIELD: {}", parser::tts_to_string(seed_byte_str));
+                            }
+                            _ => {
+                                println!("WARNING: unexpected seed lit");
+                                return Vec::new();
+                            }
+                        }
+                    }
+                    // Another account in the derive struct.
+                    Expr::Field(seed_field) => {
+                        // todo
+                        println!("FIELD: {}", parser::tts_to_string(seed_field));
+                    }
+                    // Constant variable.
+                    Expr::Path(seed_path) => {
+                        // todo
+                        println!("FIELD PATH: {:?}", seed_path.path);
+                    }
+                    _ => {
+                        println!("WARNING: unexpected method call seed");
+                        return Vec::new();
+                    }
+                }
+            }
+            _ => {
+                println!("WARNING: unexpected seed");
+                return Vec::new();
+            }
+        }
+    }
+    idl_seeds
 }

@@ -689,7 +689,7 @@ pub struct ConstraintSeedsGroup {
     pub is_init: bool,
     pub seeds: Punctuated<Expr, Token![,]>,
     pub bump: Option<Expr>,         // None => bump was given without a target.
-    pub program_seed: Option<Expr>, // None => use the current program's program_id
+    pub program_seed: Option<Expr>, // None => use the current program's program_id.
 }
 
 #[derive(Debug, Clone)]

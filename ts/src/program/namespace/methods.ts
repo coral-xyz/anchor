@@ -54,6 +54,11 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     return this;
   }
 
+	public signers(signers: Array<Signer>): MethodsBuilder<IDL, I> {
+		Object.assign(this._signers, signers);
+		return this;
+	}
+
   public remainingAccounts(
     accounts: Array<AccountMeta>
   ): MethodsBuilder<IDL, I> {
