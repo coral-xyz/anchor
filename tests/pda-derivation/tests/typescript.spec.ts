@@ -14,7 +14,7 @@ describe("typescript", () => {
       .initBase()
       .accounts({
         base: base.publicKey,
-				base2: base.publicKey,
+        base2: base.publicKey,
       })
       .signers([base])
       .rpc();
