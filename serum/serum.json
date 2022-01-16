@@ -1,0 +1,2464 @@
+{
+    "version": "0.0.0",
+    "name": "serum_dex",
+    "instructions": [
+    {
+        "name": "InitializeMarket",
+        "accounts": [
+        {
+            "name": "marketToInitialize",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the market to initialize"
+            ]
+        },
+        {
+            "name": "requestQueue",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "zeroed out request queue"
+            ]
+        },
+        {
+            "name": "eventQueue",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "zeroed out event queue"
+            ]
+        },
+        {
+            "name": "bids",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "zeroed out bids"
+            ]
+        },
+        {
+            "name": "asks",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "zeroed out asks"
+            ]
+        },
+        {
+            "name": "splTokenAccountCoin",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "spl-token account for the coin currency"
+            ]
+        },
+        {
+            "name": "splTokenAccountPrice",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "spl-token account for the price currency"
+            ]
+        },
+        {
+            "name": "coinCurrencyMint",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "coin currency Mint"
+            ]
+        },
+        {
+            "name": "priceCurrencyMint",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "price currency Mint"
+            ]
+        },
+        {
+            "name": "rentSysvar",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "the rent sysvar"
+            ]
+        },
+        {
+            "name": "openOrdersMarketAuthority",
+            "isMut": false,
+            "isSigner": false,
+            "isOptional": true,
+            "docs": [
+                "open orders market authority (optional)"
+            ]
+        },
+        {
+            "name": "pruneAuthority",
+            "isMut": false,
+            "isSigner": false,
+            "isOptional": true,
+            "docs": [
+                "prune authority (optional, requires open orders market authority)"
+            ]
+        },
+        {
+            "name": "crankAuthority",
+            "isMut": false,
+            "isSigner": false,
+            "isOptional": true,
+            "docs": [
+                "crank authority (optional, requires prune authority)"
+            ]
+        }],
+        "args": [
+        {
+            "name": "args",
+            "type":
+            {
+                "defined": "InitializeMarketInstruction"
+            }
+        }]
+    },
+    {
+        "name": "NewOrder",
+        "accounts": [
+        {
+            "name": "market",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the market"
+            ]
+        },
+        {
+            "name": "openOrders",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the OpenOrders account to use"
+            ]
+        },
+        {
+            "name": "requestQueue",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the request queue"
+            ]
+        },
+        {
+            "name": "orderPayer",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the (coin or price currency) account paying for the order"
+            ]
+        },
+        {
+            "name": "openOrdersAccountOwner",
+            "isMut": false,
+            "isSigner": true,
+            "docs": [
+                "owner of the OpenOrders account"
+            ]
+        },
+        {
+            "name": "coinVault",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "coin vault"
+            ]
+        },
+        {
+            "name": "pcVault",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "pc vault"
+            ]
+        },
+        {
+            "name": "splTokenProgram",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "spl token program"
+            ]
+        },
+        {
+            "name": "rentSysvar",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "the rent sysvar"
+            ]
+        },
+        {
+            "name": "feeDiscounts",
+            "isMut": false,
+            "isSigner": false,
+            "isOptional": true,
+            "docs": [
+                "(optional) the (M)SRM account used for fee discounts"
+            ]
+        }],
+        "args": [
+        {
+            "name": "args",
+            "type":
+            {
+                "defined": "NewOrderInstructionV1"
+            },
+            "docs": []
+        }]
+    },
+    {
+        "name": "MatchOrders",
+        "accounts": [
+        {
+            "name": "market",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "market"
+            ]
+        },
+        {
+            "name": "requestQueue",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "req_q"
+            ]
+        },
+        {
+            "name": "eventQueue",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "event_q"
+            ]
+        },
+        {
+            "name": "bids",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "bids"
+            ]
+        },
+        {
+            "name": "asks",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "asks"
+            ]
+        }],
+        "args": [
+        {
+            "name": "limit",
+            "type": "u16"
+        }]
+    },
+    {
+        "name": "ConsumeEvents",
+        "accounts": [
+        {
+            "name": "openOrders",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "OpenOrders; TODO: this is an array of accounts"
+            ]
+        },
+        {
+            "name": "market",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "market"
+            ]
+        },
+        {
+            "name": "eventQueue",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "event queue"
+            ]
+        },
+        {
+            "name": "coinFeeReceivable",
+            "isMut": true,
+            "isSigner": false,
+            "docs": []
+        },
+        {
+            "name": "pcFeeReceivable",
+            "isMut": true,
+            "isSigner": false,
+            "docs": []
+        }],
+        "args": [
+        {
+            "name": "limit",
+            "type": "u16",
+            "docs": []
+        }]
+    },
+    {
+        "name": "CancelOrder",
+        "accounts": [
+        {
+            "name": "market",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "market"
+            ]
+        },
+        {
+            "name": "openOrders",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "OpenOrders"
+            ]
+        },
+        {
+            "name": "requestQueue",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the request queue"
+            ]
+        },
+        {
+            "name": "openOrdersOwner",
+            "isMut": false,
+            "isSigner": true,
+            "docs": [
+                "the OpenOrders owner"
+            ]
+        }],
+        "args": [
+        {
+            "name": "args",
+            "type":
+            {
+                "defined": "CancelOrderInstructionV2"
+            }
+        }]
+    },
+    {
+        "name": "SettleFunds",
+        "accounts": [
+        {
+            "name": "market",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "market"
+            ]
+        },
+        {
+            "name": "openOrders",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "OpenOrders"
+            ]
+        },
+        {
+            "name": "openOrdersOwner",
+            "isMut": false,
+            "isSigner": true,
+            "docs": [
+                "the OpenOrders owner"
+            ]
+        },
+        {
+            "name": "coinVault",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "coin vault"
+            ]
+        },
+        {
+            "name": "pcVault",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "pc vault"
+            ]
+        },
+        {
+            "name": "coinWallet",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "coin wallet"
+            ]
+        },
+        {
+            "name": "pcWallet",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "pc wallet"
+            ]
+        },
+        {
+            "name": "vaultSigner",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "vault signer"
+            ]
+        },
+        {
+            "name": "splTokenProgram",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "spl token program"
+            ]
+        },
+        {
+            "name": "referrerPcWallet",
+            "isMut": true,
+            "isSigner": false,
+            "isOptional": true,
+            "docs": [
+                "(optional) referrer pc wallet"
+            ]
+        }],
+        "args": []
+    },
+    {
+        "name": "CancelOrderByClientId",
+        "accounts": [
+        {
+            "name": "market",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "market"
+            ]
+        },
+        {
+            "name": "openOrders",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "OpenOrders"
+            ]
+        },
+        {
+            "name": "requestQueue",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the request queue"
+            ]
+        },
+        {
+            "name": "openOrdersOwner",
+            "isMut": false,
+            "isSigner": true,
+            "docs": [
+                "the OpenOrders owner"
+            ]
+        }],
+        "args": [
+        {
+            "name": "clientOrderID",
+            "type": "u64",
+            "docs": []
+        }]
+    },
+    {
+        "name": "DisableMarket",
+        "accounts": [
+        {
+            "name": "market",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "market"
+            ]
+        },
+        {
+            "name": "disableAuthority",
+            "isMut": false,
+            "isSigner": true,
+            "docs": [
+                "disable authority"
+            ]
+        }],
+        "args": []
+    },
+    {
+        "name": "SweepFees",
+        "accounts": [
+        {
+            "name": "market",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "market"
+            ]
+        },
+        {
+            "name": "pcVault",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "pc vault"
+            ]
+        },
+        {
+            "name": "feeSweepingAuthority",
+            "isMut": false,
+            "isSigner": true,
+            "docs": [
+                "fee sweeping authority"
+            ]
+        },
+        {
+            "name": "feeReceivable",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "fee receivable account"
+            ]
+        },
+        {
+            "name": "vaultSigner",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "vault signer"
+            ]
+        },
+        {
+            "name": "splTokenProgram",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "spl token program"
+            ]
+        }],
+        "args": []
+    },
+    {
+        "name": "NewOrderV2",
+        "accounts": [
+        {
+            "name": "market",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the market"
+            ]
+        },
+        {
+            "name": "openOrders",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the OpenOrders account to use"
+            ]
+        },
+        {
+            "name": "requestQueue",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the request queue"
+            ]
+        },
+        {
+            "name": "orderPayer",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the (coin or price currency) account paying for the order"
+            ]
+        },
+        {
+            "name": "openOrdersOwner",
+            "isMut": false,
+            "isSigner": true,
+            "docs": [
+                "owner of the OpenOrders account"
+            ]
+        },
+        {
+            "name": "coinVault",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "coin vault"
+            ]
+        },
+        {
+            "name": "pcVault",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "pc vault"
+            ]
+        },
+        {
+            "name": "splTokenProgram",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "spl token program"
+            ]
+        },
+        {
+            "name": "rentSysvar",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "the rent sysvar"
+            ]
+        },
+        {
+            "name": "feeDiscounts",
+            "isMut": false,
+            "isSigner": false,
+            "isOptional": true,
+            "docs": [
+                "(optional) the (M)SRM account used for fee discounts"
+            ]
+        }],
+        "args": [
+        {
+            "name": "args",
+            "type":
+            {
+                "defined": "NewOrderInstructionV2"
+            }
+        }]
+    },
+    {
+        "name": "NewOrderV3",
+        "accounts": [
+        {
+            "name": "market",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the market"
+            ]
+        },
+        {
+            "name": "openOrders",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the OpenOrders account to use"
+            ]
+        },
+        {
+            "name": "requestQueue",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the request queue"
+            ]
+        },
+        {
+            "name": "eventQueue",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the event queue"
+            ]
+        },
+        {
+            "name": "bids",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "bids"
+            ]
+        },
+        {
+            "name": "asks",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "asks"
+            ]
+        },
+        {
+            "name": "orderPayer",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the (coin or price currency) account paying for the order"
+            ]
+        },
+        {
+            "name": "openOrdersOwner",
+            "isMut": false,
+            "isSigner": true,
+            "docs": [
+                "owner of the OpenOrders account"
+            ]
+        },
+        {
+            "name": "coinVault",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "coin vault"
+            ]
+        },
+        {
+            "name": "pcVault",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "pc vault"
+            ]
+        },
+        {
+            "name": "splTokenProgram",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "spl token program"
+            ]
+        },
+        {
+            "name": "rentSysvar",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "the rent sysvar"
+            ]
+        },
+        {
+            "name": "feeDiscounts",
+            "isMut": false,
+            "isSigner": false,
+            "isOptional": true,
+            "docs": [
+                "(optional) the (M)SRM account used for fee discounts"
+            ]
+        }],
+        "args": [
+        {
+            "name": "args",
+            "type":
+            {
+                "defined": "NewOrderInstructionV3"
+            },
+            "docs": []
+        }]
+    },
+    {
+        "name": "CancelOrderV2",
+        "accounts": [
+        {
+            "name": "market",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "market"
+            ]
+        },
+        {
+            "name": "bids",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "bids"
+            ]
+        },
+        {
+            "name": "asks",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "asks"
+            ]
+        },
+        {
+            "name": "openOrders",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "OpenOrders"
+            ]
+        },
+        {
+            "name": "openOrdersOwner",
+            "isMut": false,
+            "isSigner": true,
+            "docs": [
+                "the OpenOrders owner"
+            ]
+        },
+        {
+            "name": "eventQueue",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "event_q"
+            ]
+        }],
+        "args": [
+        {
+            "name": "args",
+            "type":
+            {
+                "defined": "CancelOrderInstructionV2"
+            },
+            "docs": []
+        }]
+    },
+    {
+        "name": "CancelOrderByClientIdV2",
+        "accounts": [
+        {
+            "name": "market",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "market"
+            ]
+        },
+        {
+            "name": "bids",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "bids"
+            ]
+        },
+        {
+            "name": "asks",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "asks"
+            ]
+        },
+        {
+            "name": "openOrders",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "OpenOrders"
+            ]
+        },
+        {
+            "name": "openOrdersOwner",
+            "isMut": false,
+            "isSigner": true,
+            "docs": [
+                "the OpenOrders owner"
+            ]
+        },
+        {
+            "name": "eventQueue",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "event_q"
+            ]
+        }],
+        "args": [
+        {
+            "name": "client_order_id",
+            "type": "u64",
+            "docs": []
+        }]
+    },
+    {
+        "name": "SendTake",
+        "accounts": [
+        {
+            "name": "market",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "market"
+            ]
+        },
+        {
+            "name": "requestQueue",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the request queue"
+            ]
+        },
+        {
+            "name": "eventQueue",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the event queue"
+            ]
+        },
+        {
+            "name": "bids",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "bids"
+            ]
+        },
+        {
+            "name": "asks",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "asks"
+            ]
+        },
+        {
+            "name": "coinCurrencyWallet",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the coin currency wallet account"
+            ]
+        },
+        {
+            "name": "priceCurrencyWallet",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the price currency wallet account"
+            ]
+        },
+        {
+            "name": "signer",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "signer"
+            ]
+        },
+        {
+            "name": "coinVault",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "coin vault"
+            ]
+        },
+        {
+            "name": "pcVault",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "pc vault"
+            ]
+        },
+        {
+            "name": "splTokenProgram",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "spl token program"
+            ]
+        },
+        {
+            "name": "feeDiscounts",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "(optional) the (M)SRM account used for fee discounts"
+            ]
+        }],
+        "args": [
+        {
+            "name": "args",
+            "type":
+            {
+                "defined": "SendTakeInstruction"
+            }
+        }]
+    },
+    {
+        "name": "CloseOpenOrders",
+        "accounts": [
+        {
+            "name": "openOrders",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "OpenOrders"
+            ]
+        },
+        {
+            "name": "openOrdersOwner",
+            "isMut": false,
+            "isSigner": true,
+            "docs": [
+                "the OpenOrders owner"
+            ]
+        },
+        {
+            "name": "destination",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "the destination account to send rent exemption SOL to"
+            ]
+        },
+        {
+            "name": "market",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "market"
+            ]
+        }],
+        "args": []
+    },
+    {
+        "name": "InitOpenOrders",
+        "accounts": [
+        {
+            "name": "openOrders",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "OpenOrders"
+            ]
+        },
+        {
+            "name": "openOrdersOwner",
+            "isMut": false,
+            "isSigner": true,
+            "docs": [
+                "the OpenOrders owner"
+            ]
+        },
+        {
+            "name": "market",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "market"
+            ]
+        },
+        {
+            "name": "rent",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "TODO: rent?"
+            ]
+        },
+        {
+            "name": "marketAuthority",
+            "isMut": false,
+            "isSigner": false,
+            "isOptional": true,
+            "docs": [
+                "open orders market authority (optional)."
+            ]
+        }],
+        "args": []
+    },
+    {
+        "name": "Prune",
+        "docs": [
+            "Removes all orders for a given open orders account from the orderbook."
+        ],
+        "accounts": [
+        {
+            "name": "market",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "market"
+            ]
+        },
+        {
+            "name": "bids",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "bids"
+            ]
+        },
+        {
+            "name": "asks",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "asks"
+            ]
+        },
+        {
+            "name": "pruneAuthority",
+            "isMut": false,
+            "isSigner": true,
+            "docs": [
+                "prune authority"
+            ]
+        },
+        {
+            "name": "openOrders",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "open orders."
+            ]
+        },
+        {
+            "name": "openOrdersOwner",
+            "isMut": false,
+            "isSigner": false,
+            "docs": [
+                "open orders owner."
+            ]
+        },
+        {
+            "name": "eventQueue",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "event queue."
+            ]
+        }],
+        "args": [
+        {
+            "name": "limit",
+            "type": "u16",
+            "docs": []
+        }]
+    },
+    {
+        "name": "ConsumeEventsPermissioned",
+        "accounts": [
+        {
+            "name": "openOrders",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "OpenOrders; TODO: this is an array"
+            ]
+        },
+        {
+            "name": "market",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "market"
+            ]
+        },
+        {
+            "name": "eventQueue",
+            "isMut": true,
+            "isSigner": false,
+            "docs": [
+                "event queue"
+            ]
+        },
+        {
+            "name": "crankAuthority",
+            "isMut": false,
+            "isSigner": true,
+            "docs": [
+                "crank authority"
+            ]
+        }],
+        "args": [
+        {
+            "name": "limit",
+            "type": "u16",
+            "docs": []
+        }]
+    }],
+    "accounts": [
+    {
+        "name": "AccountFlag",
+        "type":
+        {
+            "kind": "enum",
+            "variants": [
+            {
+                "name": "Initialized"
+            },
+            {
+                "name": "Market"
+            },
+            {
+                "name": "OpenOrders"
+            },
+            {
+                "name": "RequestQueue"
+            },
+            {
+                "name": "EventQueue"
+            },
+            {
+                "name": "Bids"
+            },
+            {
+                "name": "Asks"
+            },
+            {
+                "name": "Disabled"
+            },
+            {
+                "name": "Closed"
+            },
+            {
+                "name": "Permissioned"
+            },
+            {
+                "name": "CrankAuthorityRequired"
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "MarketStateV2",
+        "type":
+        {
+            "kind": "struct",
+            "fields": [
+            {
+                "name": "inner",
+                "type":
+                {
+                    "defined": "MarketState"
+                },
+                "docs": []
+            },
+            {
+                "name": "open_orders_authority",
+                "type": "publicKey",
+                "docs": []
+            },
+            {
+                "name": "prune_authority",
+                "type": "publicKey",
+                "docs": []
+            },
+            {
+                "name": "consume_events_authority",
+                "type": "publicKey",
+                "docs": []
+            },
+            {
+                "name": "padding",
+                "type":
+                {
+                    "array": [
+                        "u8",
+                        992
+                    ]
+                },
+                "docs": [
+                    "Unused bytes for future upgrades."
+                ]
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "MarketState",
+        "type":
+        {
+            "kind": "struct",
+            "fields": [
+            {
+                "name": "account_flags",
+                "type": "u64",
+                "docs": [
+                    "0",
+                    "Initialized, Market"
+                ]
+            },
+            {
+                "name": "own_address",
+                "type":
+                {
+                    "array": [
+                        "u64",
+                        4
+                    ]
+                },
+                "docs": [
+                    "1"
+                ]
+            },
+            {
+                "name": "vault_signer_nonce",
+                "type": "u64",
+                "docs": [
+                    "5"
+                ]
+            },
+            {
+                "name": "coin_mint",
+                "type":
+                {
+                    "array": [
+                        "u64",
+                        4
+                    ]
+                },
+                "docs": [
+                    "6"
+                ]
+            },
+            {
+                "name": "pc_mint",
+                "type":
+                {
+                    "array": [
+                        "u64",
+                        4
+                    ]
+                },
+                "docs": [
+                    "10"
+                ]
+            },
+            {
+                "name": "coin_vault",
+                "type":
+                {
+                    "array": [
+                        "u64",
+                        4
+                    ]
+                },
+                "docs": [
+                    "14"
+                ]
+            },
+            {
+                "name": "coin_deposits_total",
+                "type": "u64",
+                "docs": [
+                    "18"
+                ]
+            },
+            {
+                "name": "coin_fees_accrued",
+                "type": "u64",
+                "docs": [
+                    "19"
+                ]
+            },
+            {
+                "name": "pc_vault",
+                "type":
+                {
+                    "array": [
+                        "u64",
+                        4
+                    ]
+                },
+                "docs": [
+                    "20"
+                ]
+            },
+            {
+                "name": "pc_deposits_total",
+                "type": "u64",
+                "docs": [
+                    "24"
+                ]
+            },
+            {
+                "name": "pc_fees_accrued",
+                "type": "u64",
+                "docs": [
+                    "25"
+                ]
+            },
+            {
+                "name": "pc_dust_threshold",
+                "type": "u64",
+                "docs": [
+                    "26"
+                ]
+            },
+            {
+                "name": "req_q",
+                "type":
+                {
+                    "array": [
+                        "u64",
+                        4
+                    ]
+                },
+                "docs": [
+                    "27"
+                ]
+            },
+            {
+                "name": "event_q",
+                "type":
+                {
+                    "array": [
+                        "u64",
+                        4
+                    ]
+                },
+                "docs": [
+                    "31"
+                ]
+            },
+            {
+                "name": "bids",
+                "type":
+                {
+                    "array": [
+                        "u64",
+                        4
+                    ]
+                },
+                "docs": [
+                    "35"
+                ]
+            },
+            {
+                "name": "asks",
+                "type":
+                {
+                    "array": [
+                        "u64",
+                        4
+                    ]
+                },
+                "docs": [
+                    "39"
+                ]
+            },
+            {
+                "name": "coin_lot_size",
+                "type": "u64",
+                "docs": [
+                    "43"
+                ]
+            },
+            {
+                "name": "pc_lot_size",
+                "type": "u64",
+                "docs": [
+                    "44"
+                ]
+            },
+            {
+                "name": "fee_rate_bps",
+                "type": "u64",
+                "docs": [
+                    "45"
+                ]
+            },
+            {
+                "name": "referrer_rebates_accrued",
+                "type": "u64",
+                "docs": [
+                    "46"
+                ]
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "OpenOrders",
+        "type":
+        {
+            "kind": "struct",
+            "fields": [
+            {
+                "name": "account_flags",
+                "type": "u64",
+                "docs": [
+                    "Initialized, OpenOrders"
+                ]
+            },
+            {
+                "name": "market",
+                "type":
+                {
+                    "array": [
+                        "u64",
+                        4
+                    ]
+                },
+                "docs": []
+            },
+            {
+                "name": "owner",
+                "type":
+                {
+                    "array": [
+                        "u64",
+                        4
+                    ]
+                },
+                "docs": []
+            },
+            {
+                "name": "native_coin_free",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "native_coin_total",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "native_pc_free",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "native_pc_total",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "free_slot_bits",
+                "type": "u128",
+                "docs": []
+            },
+            {
+                "name": "is_bid_bits",
+                "type": "u128",
+                "docs": []
+            },
+            {
+                "name": "orders",
+                "type":
+                {
+                    "array": [
+                        "u128",
+                        128
+                    ]
+                },
+                "docs": []
+            },
+            {
+                "name": "client_order_ids",
+                "type":
+                {
+                    "array": [
+                        "u64",
+                        128
+                    ]
+                },
+                "docs": [
+                    "Using Option\u003cNonZeroU64\u003e in a pod type requires nightly"
+                ]
+            },
+            {
+                "name": "referrer_rebates_accrued",
+                "type": "u64",
+                "docs": []
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "RequestQueueHeader",
+        "type":
+        {
+            "kind": "struct",
+            "fields": [
+            {
+                "name": "account_flags",
+                "type": "u64",
+                "docs": [
+                    "Initialized, RequestQueue"
+                ]
+            },
+            {
+                "name": "head",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "count",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "next_seq_num",
+                "type": "u64",
+                "docs": []
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "Request",
+        "type":
+        {
+            "kind": "struct",
+            "fields": [
+            {
+                "name": "request_flags",
+                "type": "u8",
+                "docs": []
+            },
+            {
+                "name": "owner_slot",
+                "type": "u8",
+                "docs": []
+            },
+            {
+                "name": "fee_tier",
+                "type": "u8",
+                "docs": []
+            },
+            {
+                "name": "self_trade_behavior",
+                "type": "u8",
+                "docs": []
+            },
+            {
+                "name": "padding",
+                "type":
+                {
+                    "array": [
+                        "u8",
+                        4
+                    ]
+                },
+                "docs": []
+            },
+            {
+                "name": "max_coin_qty_or_cancel_id",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "native_pc_qty_locked",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "order_id",
+                "type": "u128",
+                "docs": []
+            },
+            {
+                "name": "owner",
+                "type":
+                {
+                    "array": [
+                        "u64",
+                        4
+                    ]
+                },
+                "docs": []
+            },
+            {
+                "name": "client_order_id",
+                "type": "u64",
+                "docs": []
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "RequestView",
+        "type":
+        {
+            "kind": "enum",
+            "variants": [
+            {
+                "name": "NewOrder",
+                "fields": [
+                {
+                    "name": "side",
+                    "type":
+                    {
+                        "defined": "Side"
+                    },
+                    "docs": []
+                },
+                {
+                    "name": "order_type",
+                    "type":
+                    {
+                        "defined": "OrderType"
+                    },
+                    "docs": []
+                },
+                {
+                    "name": "owner_slot",
+                    "type": "u8",
+                    "docs": []
+                },
+                {
+                    "name": "fee_tier",
+                    "type":
+                    {
+                        "defined": "FeeTier"
+                    },
+                    "docs": []
+                },
+                {
+                    "name": "order_id",
+                    "type": "u128",
+                    "docs": []
+                },
+                {
+                    "name": "max_coin_qty",
+                    "type":
+                    {
+                        "defined": "NonZeroU64"
+                    },
+                    "docs": []
+                },
+                {
+                    "name": "native_pc_qty_locked",
+                    "type":
+                    {
+                        "option":
+                        {
+                            "defined": "NonZeroU64"
+                        }
+                    },
+                    "docs": []
+                },
+                {
+                    "name": "owner",
+                    "type":
+                    {
+                        "array": [
+                            "u64",
+                            4
+                        ]
+                    },
+                    "docs": []
+                },
+                {
+                    "name": "client_order_id",
+                    "type":
+                    {
+                        "option":
+                        {
+                            "defined": "NonZeroU64"
+                        }
+                    },
+                    "docs": []
+                },
+                {
+                    "name": "self_trade_behavior",
+                    "type":
+                    {
+                        "defined": "SelfTradeBehavior"
+                    },
+                    "docs": []
+                }]
+            },
+            {
+                "name": "CancelOrder",
+                "fields": [
+                {
+                    "name": "side",
+                    "type":
+                    {
+                        "defined": "Side"
+                    },
+                    "docs": []
+                },
+                {
+                    "name": "order_id",
+                    "type": "u128",
+                    "docs": []
+                },
+                {
+                    "name": "cancel_id",
+                    "type": "u64",
+                    "docs": []
+                },
+                {
+                    "name": "expected_owner_slot",
+                    "type": "u8",
+                    "docs": []
+                },
+                {
+                    "name": "expected_owner",
+                    "type":
+                    {
+                        "array": [
+                            "u64",
+                            4
+                        ]
+                    },
+                    "docs": []
+                },
+                {
+                    "name": "client_order_id",
+                    "type":
+                    {
+                        "option":
+                        {
+                            "defined": "NonZeroU64"
+                        }
+                    },
+                    "docs": []
+                }]
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "EventQueueHeader",
+        "type":
+        {
+            "kind": "struct",
+            "fields": [
+            {
+                "name": "account_flags",
+                "type": "u64",
+                "docs": [
+                    "Initialized, EventQueue"
+                ]
+            },
+            {
+                "name": "head",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "count",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "seq_num",
+                "type": "u64",
+                "docs": []
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "Event",
+        "type":
+        {
+            "kind": "struct",
+            "fields": [
+            {
+                "name": "event_flags",
+                "type": "u8",
+                "docs": []
+            },
+            {
+                "name": "owner_slot",
+                "type": "u8",
+                "docs": []
+            },
+            {
+                "name": "fee_tier",
+                "type": "u8",
+                "docs": []
+            },
+            {
+                "name": "_padding",
+                "type":
+                {
+                    "array": [
+                        "u8",
+                        5
+                    ]
+                },
+                "docs": []
+            },
+            {
+                "name": "native_qty_released",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "native_qty_paid",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "native_fee_or_rebate",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "order_id",
+                "type": "u128",
+                "docs": []
+            },
+            {
+                "name": "owner",
+                "type":
+                {
+                    "array": [
+                        "u64",
+                        4
+                    ]
+                },
+                "docs": []
+            },
+            {
+                "name": "client_order_id",
+                "type": "u64",
+                "docs": []
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "EventView",
+        "type":
+        {
+            "kind": "enum",
+            "variants": [
+            {
+                "name": "Fill",
+                "fields": [
+                {
+                    "name": "side",
+                    "type":
+                    {
+                        "defined": "Side"
+                    },
+                    "docs": []
+                },
+                {
+                    "name": "maker",
+                    "type": "bool",
+                    "docs": []
+                },
+                {
+                    "name": "native_qty_paid",
+                    "type": "u64",
+                    "docs": []
+                },
+                {
+                    "name": "native_qty_received",
+                    "type": "u64",
+                    "docs": []
+                },
+                {
+                    "name": "native_fee_or_rebate",
+                    "type": "u64",
+                    "docs": []
+                },
+                {
+                    "name": "order_id",
+                    "type": "u128",
+                    "docs": []
+                },
+                {
+                    "name": "owner",
+                    "type":
+                    {
+                        "array": [
+                            "u64",
+                            4
+                        ]
+                    },
+                    "docs": []
+                },
+                {
+                    "name": "owner_slot",
+                    "type": "u8",
+                    "docs": []
+                },
+                {
+                    "name": "fee_tier",
+                    "type":
+                    {
+                        "defined": "FeeTier"
+                    },
+                    "docs": []
+                },
+                {
+                    "name": "client_order_id",
+                    "type":
+                    {
+                        "option":
+                        {
+                            "defined": "NonZeroU64"
+                        }
+                    },
+                    "docs": []
+                }]
+            },
+            {
+                "name": "Out",
+                "fields": [
+                {
+                    "name": "side",
+                    "type":
+                    {
+                        "defined": "Side"
+                    },
+                    "docs": []
+                },
+                {
+                    "name": "release_funds",
+                    "type": "bool",
+                    "docs": []
+                },
+                {
+                    "name": "native_qty_unlocked",
+                    "type": "u64",
+                    "docs": []
+                },
+                {
+                    "name": "native_qty_still_locked",
+                    "type": "u64",
+                    "docs": []
+                },
+                {
+                    "name": "order_id",
+                    "type": "u128",
+                    "docs": []
+                },
+                {
+                    "name": "owner",
+                    "type":
+                    {
+                        "array": [
+                            "u64",
+                            4
+                        ]
+                    },
+                    "docs": []
+                },
+                {
+                    "name": "owner_slot",
+                    "type": "u8",
+                    "docs": []
+                },
+                {
+                    "name": "client_order_id",
+                    "type":
+                    {
+                        "option":
+                        {
+                            "defined": "NonZeroU64"
+                        }
+                    },
+                    "docs": []
+                }]
+            }]
+        },
+        "docs": []
+    }],
+    "types": [
+    {
+        "name": "InitializeMarketInstruction",
+        "type":
+        {
+            "kind": "struct",
+            "fields": [
+            {
+                "name": "coin_lot_size",
+                "type": "u64",
+                "docs": [
+                    "In the matching engine, all prices and balances are integers.",
+                    "This only works if the smallest representable quantity of the coin",
+                    "is at least a few orders of magnitude larger than the smallest representable",
+                    "quantity of the price currency. The internal representation also relies on",
+                    "on the assumption that every order will have a (quantity x price) value that",
+                    "fits into a u64.",
+                    "",
+                    "If these assumptions are problematic, rejigger the lot sizes."
+                ]
+            },
+            {
+                "name": "pc_lot_size",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "fee_rate_bps",
+                "type": "u16",
+                "docs": []
+            },
+            {
+                "name": "vault_signer_nonce",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "pc_dust_threshold",
+                "type": "u64",
+                "docs": []
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "NewOrderInstructionV1",
+        "type":
+        {
+            "kind": "struct",
+            "fields": [
+            {
+                "name": "side",
+                "type":
+                {
+                    "defined": "Side"
+                },
+                "docs": []
+            },
+            {
+                "name": "limit_price",
+                "type":
+                {
+                    "defined": "NonZeroU64"
+                },
+                "docs": []
+            },
+            {
+                "name": "max_qty",
+                "type":
+                {
+                    "defined": "NonZeroU64"
+                },
+                "docs": []
+            },
+            {
+                "name": "order_type",
+                "type":
+                {
+                    "defined": "OrderType"
+                },
+                "docs": []
+            },
+            {
+                "name": "client_id",
+                "type": "u64",
+                "docs": []
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "CancelOrderInstructionV2",
+        "type":
+        {
+            "kind": "struct",
+            "fields": [
+            {
+                "name": "side",
+                "type":
+                {
+                    "defined": "Side"
+                },
+                "docs": []
+            },
+            {
+                "name": "order_id",
+                "type": "u128",
+                "docs": []
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "NewOrderInstructionV2",
+        "type":
+        {
+            "kind": "struct",
+            "fields": [
+            {
+                "name": "side",
+                "type":
+                {
+                    "defined": "Side"
+                },
+                "docs": []
+            },
+            {
+                "name": "limit_price",
+                "type":
+                {
+                    "defined": "NonZeroU64"
+                },
+                "docs": []
+            },
+            {
+                "name": "max_qty",
+                "type":
+                {
+                    "defined": "NonZeroU64"
+                },
+                "docs": []
+            },
+            {
+                "name": "order_type",
+                "type":
+                {
+                    "defined": "OrderType"
+                },
+                "docs": []
+            },
+            {
+                "name": "client_id",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "self_trade_behavior",
+                "type":
+                {
+                    "defined": "SelfTradeBehavior"
+                },
+                "docs": []
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "NewOrderInstructionV3",
+        "type":
+        {
+            "kind": "struct",
+            "fields": [
+            {
+                "name": "side",
+                "type":
+                {
+                    "defined": "Side"
+                },
+                "docs": []
+            },
+            {
+                "name": "limit_price",
+                "type":
+                {
+                    "defined": "NonZeroU64"
+                },
+                "docs": []
+            },
+            {
+                "name": "max_coin_qty",
+                "type":
+                {
+                    "defined": "NonZeroU64"
+                },
+                "docs": []
+            },
+            {
+                "name": "max_native_pc_qty_including_fees",
+                "type":
+                {
+                    "defined": "NonZeroU64"
+                },
+                "docs": []
+            },
+            {
+                "name": "self_trade_behavior",
+                "type":
+                {
+                    "defined": "SelfTradeBehavior"
+                },
+                "docs": []
+            },
+            {
+                "name": "order_type",
+                "type":
+                {
+                    "defined": "OrderType"
+                },
+                "docs": []
+            },
+            {
+                "name": "client_order_id",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "limit",
+                "type": "u16",
+                "docs": []
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "SendTakeInstruction",
+        "type":
+        {
+            "kind": "struct",
+            "fields": [
+            {
+                "name": "side",
+                "type":
+                {
+                    "defined": "Side"
+                },
+                "docs": []
+            },
+            {
+                "name": "limit_price",
+                "type":
+                {
+                    "defined": "NonZeroU64"
+                },
+                "docs": []
+            },
+            {
+                "name": "max_coin_qty",
+                "type":
+                {
+                    "defined": "NonZeroU64"
+                },
+                "docs": []
+            },
+            {
+                "name": "max_native_pc_qty_including_fees",
+                "type":
+                {
+                    "defined": "NonZeroU64"
+                },
+                "docs": []
+            },
+            {
+                "name": "min_coin_qty",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "min_native_pc_qty",
+                "type": "u64",
+                "docs": []
+            },
+            {
+                "name": "limit",
+                "type": "u16",
+                "docs": []
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "Side",
+        "type":
+        {
+            "kind": "enum",
+            "variants": [
+            {
+                "name": "Bid"
+            },
+            {
+                "name": "Ask"
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "OrderType",
+        "type":
+        {
+            "kind": "enum",
+            "variants": [
+            {
+                "name": "Limit"
+            },
+            {
+                "name": "ImmediateOrCancel"
+            },
+            {
+                "name": "PostOnly"
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "SelfTradeBehavior",
+        "type":
+        {
+            "kind": "enum",
+            "variants": [
+            {
+                "name": "DecrementTake"
+            },
+            {
+                "name": "CancelProvide"
+            },
+            {
+                "name": "AbortTransaction"
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "NonZeroU64",
+        "type":
+        {
+            "kind": "struct",
+            "fields": [
+            {
+                "name": "warning",
+                "type": "u64",
+                "docs": [
+                    "TODO: remove this; THIS IS NOT A STRUCT, but a non-zero u64, which I'm not sure how to represent."
+                ]
+            }]
+        },
+        "docs": []
+    },
+    {
+        "name": "FeeTier",
+        "type":
+        {
+            "kind": "enum",
+            "variants": [
+            {
+                "name": "Base"
+            },
+            {
+                "name": "SRM2"
+            },
+            {
+                "name": "SRM3"
+            },
+            {
+                "name": "SRM4"
+            },
+            {
+                "name": "SRM5"
+            },
+            {
+                "name": "SRM6"
+            },
+            {
+                "name": "MSRM"
+            },
+            {
+                "name": "Stable"
+            }]
+        },
+        "docs": []
+    }],
+    "events": [],
+    "errors": [],
+    "metadata":
+    {
+        "address": ""
+    }
+}
