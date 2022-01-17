@@ -73,14 +73,15 @@ pub struct IdlAccount {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct IdlSeed {
-    pub name: String,
     #[serde(rename = "type")]
-    pub kind: SeedTy,
+    pub ty: IdlType,
+    pub value: String,
+    pub kind: IdlSeedKind,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub enum SeedTy {
+pub enum IdlSeedKind {
     Const,
     Arg,
     AccountPubkey,

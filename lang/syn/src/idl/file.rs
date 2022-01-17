@@ -18,7 +18,11 @@ const DERIVE_NAME: &str = "Accounts";
 const ERROR_CODE_OFFSET: u32 = 6000;
 
 // Parse an entire interface file.
-pub fn parse(filename: impl AsRef<Path>, version: String) -> Result<Option<Idl>> {
+pub fn parse(
+    filename: impl AsRef<Path>,
+    version: String,
+    seeds_feature: bool,
+) -> Result<Option<Idl>> {
     let ctx = CrateContext::parse(filename)?;
 
     let program_mod = match parse_program_mod(&ctx) {
@@ -56,7 +60,8 @@ pub fn parse(filename: impl AsRef<Path>, version: String) -> Result<Option<Idl>>
                                     .collect::<Vec<_>>();
                                 let accounts_strct =
                                     accs.get(&method.anchor_ident.to_string()).unwrap();
-                                let accounts = idl_accounts(&ctx, accounts_strct, &accs);
+                                let accounts =
+                                    idl_accounts(seeds_feature, &ctx, accounts_strct, &accs);
                                 IdlInstruction {
                                     name,
                                     accounts,
@@ -95,7 +100,7 @@ pub fn parse(filename: impl AsRef<Path>, version: String) -> Result<Option<Idl>>
                         })
                         .collect();
                     let accounts_strct = accs.get(&anchor_ident.to_string()).unwrap();
-                    let accounts = idl_accounts(&ctx, accounts_strct, &accs);
+                    let accounts = idl_accounts(seeds_feature, &ctx, accounts_strct, &accs);
                     IdlInstruction {
                         name,
                         accounts,
@@ -163,7 +168,7 @@ pub fn parse(filename: impl AsRef<Path>, version: String) -> Result<Option<Idl>>
                 .collect::<Vec<_>>();
             // todo: don't unwrap
             let accounts_strct = accs.get(&ix.anchor_ident.to_string()).unwrap();
-            let accounts = idl_accounts(&ctx, accounts_strct, &accs);
+            let accounts = idl_accounts(seeds_feature, &ctx, accounts_strct, &accs);
             IdlInstruction {
                 name: ix.ident.to_string().to_mixed_case(),
                 accounts,
@@ -498,6 +503,7 @@ fn to_idl_type(f: &syn::Field) -> IdlType {
 }
 
 fn idl_accounts(
+    seeds_feature: bool,
     ctx: &CrateContext,
     accounts: &AccountsStruct,
     global_accs: &HashMap<String, AccountsStruct>,
@@ -510,7 +516,7 @@ fn idl_accounts(
                 let accs_strct = global_accs
                     .get(&comp_f.symbol)
                     .expect("Could not resolve Accounts symbol");
-                let accounts = idl_accounts(&ctx, accs_strct, global_accs);
+                let accounts = idl_accounts(seeds_feature, &ctx, accs_strct, global_accs);
                 IdlAccountItem::IdlAccounts(IdlAccounts {
                     name: comp_f.ident.to_string().to_mixed_case(),
                     accounts,
@@ -523,11 +529,14 @@ fn idl_accounts(
                     Ty::Signer => true,
                     _ => acc.constraints.is_signer(),
                 },
-                seeds: acc
-                    .constraints
-                    .seeds
-                    .as_ref()
-                    .map(|s| parse_seeds(ctx, accounts, s)),
+                seeds: if seeds_feature {
+                    acc.constraints
+                        .seeds
+                        .as_ref()
+                        .map(|s| parse_seeds(ctx, accounts, s))
+                } else {
+                    None
+                },
             }),
         })
         .collect::<Vec<_>>()
@@ -548,7 +557,7 @@ fn idl_accounts(
 //
 // - instruction argument
 // - account context field pubkey
-// - account data
+// - account data, where the account is defined in the current program
 // - byte string literal (e.g. b"MY_SEED")
 // - byte string literal constant  (e.g. `pub const MY_SEED: [u8; 2] = *b"hi";`)
 //
@@ -557,26 +566,37 @@ fn parse_seeds(
     accounts: &AccountsStruct,
     seeds: &ConstraintSeedsGroup,
 ) -> Vec<IdlSeed> {
+    // All the available seed variables (except for constants).
     let ix_args = accounts.instruction_args();
     let const_names: Vec<String> = ctx.consts().map(|c| c.ident.to_string()).collect();
     let account_field_names = accounts.field_names();
 
-    println!("CONSTS: {:?}", const_names);
-    println!("ACCOUNT FIELDS: {:?}", account_field_names);
-    println!("IX ARGS: {:?}", ix_args);
-
+    // Final seeds accumulator.
     let mut idl_seeds = Vec::new();
+
+    // Parse each seed.
     for seed in &seeds.seeds {
-        match parse_seed(ctx, &ix_args, &const_names, &account_field_names, seed) {
+        match parse_seed(
+            ctx,
+            accounts,
+            &ix_args,
+            &const_names,
+            &account_field_names,
+            seed,
+        ) {
             Some(seed) => idl_seeds.push(seed),
             None => { /*return Vec::new(),*/ }
         }
     }
+
+    // Done.
+    println!("IDL SEEDS: {:#?}", idl_seeds);
     idl_seeds
 }
 
 fn parse_seed(
     ctx: &CrateContext,
+    accounts: &AccountsStruct,
     ix_args: &HashMap<String, String>,
     const_names: &[String],
     account_field_names: &[String],
@@ -611,8 +631,15 @@ fn parse_seed(
             };
 
             if ix_args.contains_key(&var_name) {
-                //
+                let idl_ty = IdlType::from_str(&ix_args.get(&var_name).unwrap()).ok()?;
+                Some(IdlSeed {
+                    value: var_name,
+                    ty: idl_ty,
+                    kind: IdlSeedKind::Arg,
+                })
             } else if const_names.contains(&var_name) {
+                // Pull in the constant value directly into the IDL.
+
                 assert!(path.len() == 0);
                 let const_item = ctx
                     .consts()
@@ -629,29 +656,74 @@ fn parse_seed(
                         str_lit.retain(|c| c != '"');
                         idl_ty_value = format!("{:?}", str_lit.as_bytes());
                     }
+                } else {
+                    idl_ty_value.retain(|c| c != '"');
                 }
 
-                println!("TY: {:?}", idl_ty);
-                println!("VALUE: {:?}", idl_ty_value);
-
-            //
+                Some(IdlSeed {
+                    value: idl_ty_value,
+                    ty: idl_ty,
+                    kind: IdlSeedKind::Const,
+                })
             } else if account_field_names.contains(&var_name) {
+                let kind = {
+                    if path.len() == 0 {
+                        IdlSeedKind::AccountPubkey
+                    } else if path.len() == 1 && (path[0] == "key" || path[0] == "key()") {
+                        IdlSeedKind::AccountPubkey
+                    } else {
+                        IdlSeedKind::AccountData
+                    }
+                };
                 //
+                Some(IdlSeed {
+                    value: match kind {
+                        IdlSeedKind::AccountPubkey => var_name.clone(),
+                        _ => format!("{}.{}", var_name, path.join(".")),
+                    },
+                    ty: match kind {
+                        IdlSeedKind::AccountPubkey => IdlType::PublicKey,
+                        IdlSeedKind::AccountData => {
+                            let account_field = accounts
+                                .fields
+                                .iter()
+                                .find(|field| field.ident().to_string() == var_name)
+                                .unwrap();
+
+                            println!("FOUND ACCOUNT FIELD: {:?}", account_field);
+                            let strct = ctx
+                                .structs()
+                                .find(|s| {
+                                    println!("S: {:?}", s.ident.to_string());
+                                    s.ident.to_string() == var_name
+                                })
+                                .unwrap();
+                            println!("FOUND IT: {:?}", strct.ident.to_string());
+                            IdlType::String
+                        }
+                        _ => panic!("invariant violation"),
+                    },
+                    kind,
+                })
             } else if path.len() == 0 && var_name.contains('"') {
                 // String literal.
+                let mut var_name = var_name;
+                if var_name.starts_with("b\"") {
+                    var_name.remove(0);
+                }
+                Some(IdlSeed {
+                    value: var_name.chars().filter(|c| *c != '"').collect(),
+                    ty: IdlType::String,
+                    kind: IdlSeedKind::Const,
+                })
             } else {
-                println!("VAR NAME: {:?}", var_name);
                 println!("WARNING: unexpected seed category");
-                return None;
+                None
             }
-
-            println!("SEED_NAME: {:?}, SEED_PATH: {:?}", var_name, path);
-            // todo
-
-            None
         }
         Expr::Reference(expr_reference) => parse_seed(
             ctx,
+            accounts,
             ix_args,
             const_names,
             account_field_names,
