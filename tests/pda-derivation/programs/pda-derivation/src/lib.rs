@@ -44,8 +44,9 @@ pub struct InitMyAccount<'info> {
         payer = payer,
         space = 8+8,
         seeds = [
-            seed_a.to_le_bytes().as_ref(),
-            b"another-seed".as_ref(),
+            &seed_a.to_le_bytes(),
+            "another-seed".as_bytes(),
+						b"test".as_ref(),
             base.key().as_ref(),
             base2.key.as_ref(),
             MY_SEED.as_ref(),

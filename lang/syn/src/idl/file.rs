@@ -7,9 +7,11 @@ use crate::{AccountField, AccountsStruct, StateIx};
 use anyhow::Result;
 use heck::MixedCase;
 use quote::ToTokens;
+use std::str::FromStr;
+
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
-use syn::{Expr, Lit};
+use syn::Expr;
 
 const DERIVE_NAME: &str = "Accounts";
 // TODO: sharee this with `anchor_lang` crate.
@@ -558,64 +560,112 @@ fn parse_seeds(
     let ix_args = accounts.instruction_args();
     let const_names: Vec<String> = ctx.consts().map(|c| c.ident.to_string()).collect();
     let account_field_names = accounts.field_names();
+
     println!("CONSTS: {:?}", const_names);
     println!("ACCOUNT FIELDS: {:?}", account_field_names);
     println!("IX ARGS: {:?}", ix_args);
 
     let mut idl_seeds = Vec::new();
     for seed in &seeds.seeds {
-        match seed {
-            Expr::MethodCall(seed_method) => {
-                let (var_name, path) = {
-                    // Convert the seed into the raw string representation.
-                    let seed_str = parser::tts_to_string(&seed);
-
-                    let mut components: Vec<&str> = seed_str.split(" . ").collect();
-                    if components.len() <= 1 {
-                        println!("WARNING: seeds are in an unexpected format: {:?}", seed);
-                        return Vec::new();
-                    }
-
-                    // The name of the variable (or field).
-                    let name = components.remove(0);
-
-                    // The path to the seed (only if the `name` type is a struct).
-                    let mut path = Vec::new();
-                    while components.len() > 0 {
-                        let c = components.remove(0);
-                        if c.contains("()") {
-                            break;
-                        }
-                        path.push(c);
-                    }
-
-                    (name, path)
-                };
-
-                if ix_args.contains_key(var_name) {
-                    //
-                } else if const_names.contains(&var_name.to_string()) {
-                    assert!(path.len() == 0);
-                } else if account_field_names.contains(&var_name.to_string()) {
-                    //
-                } else {
-                    println!("WARNING: unexpected seed");
-                    return Vec::new();
-                }
-
-                println!("SEED_NAME: {:?}, SEED_PATH: {:?}", name, path);
-            }
-            Expr::Reference(exp_reference) => {
-                // Literal byte slice not currently supported.
-                println!("WARNING: unexpected reference seed");
-                return Vec::new();
-            }
-            _ => {
-                // Unknown type. Please file an issue.
-                println!("WARNING: unexpected seed");
-                return Vec::new();
-            }
+        match parse_seed(ctx, &ix_args, &const_names, &account_field_names, seed) {
+            Some(seed) => idl_seeds.push(seed),
+            None => { /*return Vec::new(),*/ }
         }
     }
     idl_seeds
+}
+
+fn parse_seed(
+    ctx: &CrateContext,
+    ix_args: &HashMap<String, String>,
+    const_names: &[String],
+    account_field_names: &[String],
+    seed: &Expr,
+) -> Option<IdlSeed> {
+    match seed {
+        Expr::MethodCall(seed_method) => {
+            let (var_name, path) = {
+                // Convert the seed into the raw string representation.
+                let seed_str = parser::tts_to_string(&seed);
+
+                let mut components: Vec<&str> = seed_str.split(" . ").collect();
+                if components.len() <= 1 {
+                    println!("WARNING: seeds are in an unexpected format: {:?}", seed);
+                    return None;
+                }
+
+                // The name of the variable (or field).
+                let name = components.remove(0).to_string();
+
+                // The path to the seed (only if the `name` type is a struct).
+                let mut path = Vec::new();
+                while components.len() > 0 {
+                    let c = components.remove(0);
+                    if c.contains("()") {
+                        break;
+                    }
+                    path.push(c.to_string());
+                }
+
+                (name, path)
+            };
+
+            if ix_args.contains_key(&var_name) {
+                //
+            } else if const_names.contains(&var_name) {
+                assert!(path.len() == 0);
+                let const_item = ctx
+                    .consts()
+                    .find(|c| c.ident.to_string() == var_name)
+                    .unwrap();
+                let mut idl_ty = IdlType::from_str(&parser::tts_to_string(&const_item.ty)).ok()?;
+                let mut idl_ty_value = parser::tts_to_string(&const_item.expr);
+
+                if let IdlType::Array(ty, size) = &idl_ty {
+                    if idl_ty_value.contains("b\"") {
+                        let components: Vec<&str> = idl_ty_value.split('b').collect();
+                        assert!(components.len() == 2);
+                        let mut str_lit = components[1].to_string();
+                        str_lit.retain(|c| c != '"');
+                        idl_ty_value = format!("{:?}", str_lit.as_bytes());
+                    }
+                }
+
+                println!("TY: {:?}", idl_ty);
+                println!("VALUE: {:?}", idl_ty_value);
+
+            //
+            } else if account_field_names.contains(&var_name) {
+                //
+            } else if path.len() == 0 && var_name.contains('"') {
+                // String literal.
+            } else {
+                println!("VAR NAME: {:?}", var_name);
+                println!("WARNING: unexpected seed category");
+                return None;
+            }
+
+            println!("SEED_NAME: {:?}, SEED_PATH: {:?}", var_name, path);
+            // todo
+
+            None
+        }
+        Expr::Reference(expr_reference) => parse_seed(
+            ctx,
+            ix_args,
+            const_names,
+            account_field_names,
+            &expr_reference.expr,
+        ),
+        Expr::Index(expr_index) => {
+            // Slice literal.
+            println!("WARNING: auto pda derivation not currently supported for slice literals");
+            None
+        }
+        _ => {
+            // Unknown type. Please file an issue.
+            println!("WARNING: unexpected seed");
+            None
+        }
+    }
 }
