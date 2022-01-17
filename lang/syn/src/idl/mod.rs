@@ -71,7 +71,7 @@ pub struct IdlAccount {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", tag = "kind")]
 pub enum IdlSeed {
     Const(IdlSeedConst),
     Arg(IdlSeedArg),

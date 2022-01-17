@@ -592,7 +592,6 @@ fn parse_seeds(
     }
 
     // Done.
-    println!("IDL SEEDS: {:#?}", idl_seeds);
     idl_seeds
 }
 
