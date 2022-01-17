@@ -69,6 +69,9 @@ export default class NamespaceFactory {
         idl
       );
       const methodItem = MethodsBuilderFactory.build(
+        programId,
+        idl,
+        idlIx,
         ixItem,
         txItem,
         rpcItem,

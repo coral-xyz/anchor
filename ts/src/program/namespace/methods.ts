@@ -6,10 +6,12 @@ import {
   TransactionInstruction,
   TransactionSignature,
   PublicKey,
+  SystemProgram,
+  SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
 import { SimulateResponse } from "./simulate";
 import { TransactionFn } from "./transaction.js";
-import { Idl } from "../../idl.js";
+import { Idl, IdlAccount } from "../../idl.js";
 import {
   AllInstructions,
   InstructionContextFn,
@@ -21,13 +23,25 @@ import { SimulateFn } from "./simulate";
 
 export class MethodsBuilderFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
+    programId: PublicKey,
+    idl: IDL,
+    idlIx: AllInstructions<IDL>,
     ixFn: InstructionFn<IDL>,
     txFn: TransactionFn<IDL>,
     rpcFn: RpcFn<IDL>,
     simulateFn: SimulateFn<IDL>
   ): MethodFn {
     const request: MethodFn<IDL, I> = (...args) => {
-      return new MethodsBuilder(args, ixFn, txFn, rpcFn, simulateFn);
+      return new MethodsBuilder(
+        programId,
+        idl,
+        idlIx,
+        args,
+        ixFn,
+        txFn,
+        rpcFn,
+        simulateFn
+      );
     };
     return request;
   }
@@ -41,6 +55,9 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   private _postInstructions: Array<TransactionInstruction> = [];
 
   constructor(
+    private _programId: PublicKey,
+    private _idl: IDL,
+    private _idlIx: AllInstructions<IDL>,
     private _args: Array<any>,
     private _ixFn: InstructionFn<IDL>,
     private _txFn: TransactionFn<IDL>,
@@ -133,7 +150,28 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   }
 
   private async resolvePdas() {
-    // TODO: resolve all PDAs and accounts not provided.
+    for (let k = 0; k < this._idlIx.accounts.length; k += 1) {
+      // Cast is ok because only a non-nested IdlAccount can have a seeds
+      // cosntraint.
+      const accountDesc = this._idlIx.accounts[k] as IdlAccount;
+
+      // Auto populate *if needed*.
+      if (accountDesc.seeds && accountDesc.seeds.length > 0) {
+        if (this._accounts[accountDesc.name] === undefined) {
+          await this.autoPopulatePda(accountDesc);
+        }
+      }
+    }
+  }
+
+  private async autoPopulatePda(accountDesc: IdlAccount) {
+    const seeds = [];
+
+    // todo
+
+    const [pubkey] = await PublicKey.findProgramAddress(seeds, this._programId);
+
+    this._accounts[accountDesc.name] = pubkey;
   }
 }
 
