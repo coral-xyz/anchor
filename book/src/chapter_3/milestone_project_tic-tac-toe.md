@@ -113,7 +113,7 @@ pub fn setup_game(ctx: Context<SetupGame>, player_two: Pubkey) -> ProgramResult 
     Ok(())
 }
 ```
-Why didn't we just add `player_two` as an account in the accounts struct? There are two reasons for this. First, adding it there requires a little more space in the transaction that saves whether the account is writable and whether it's a signer. But we care about neither of that, we just want the address. This brings us to the second and more important reason: Simultaneous network transactions can affect each other if the account is shared. For example, if we add `player_two` to the accounts struct, during our transaction, no other transaction can edit `player_two`'s account. Therefore, we block all other transactions that want to edit `player_two`'s account, even though we neither want to read from nor write to the account. We just care about its address!
+Why didn't we just add `player_two` as an account in the accounts struct? There are two reasons for this. First, adding it there requires a little more space in the transaction that saves whether the account is writable and whether it's a signer. But we care about neither of that. We just want the address. This brings us to the second and more important reason: Simultaneous network transactions can affect each other if they share the same accounts. For example, if we add `player_two` to the accounts struct, during our transaction, no other transaction can edit `player_two`'s account. Therefore, we block all other transactions that want to edit `player_two`'s account, even though we neither want to read from nor write to the account. We just care about its address!
 
 Finish the instruction function by setting the game to its initial values:
 ```rust,ignore
