@@ -555,11 +555,13 @@ fn idl_accounts(
 //
 // Seed Assumptions: Seeds must be of the form
 //
-// - instruction argument
-// - account context field pubkey
-// - account data, where the account is defined in the current program
-// - byte string literal (e.g. b"MY_SEED")
-// - byte string literal constant  (e.g. `pub const MY_SEED: [u8; 2] = *b"hi";`)
+// - instruction argument.
+// - account context field pubkey.
+// - account data, where the account is defined in the current program.
+//   In the case of nested structs/account data, all nested structs must
+//   be defined in the current program as well.
+// - byte string literal (e.g. b"MY_SEED").
+// - byte string literal constant  (e.g. `pub const MY_SEED: [u8; 2] = *b"hi";`).
 //
 fn parse_seeds(
     ctx: &CrateContext,
@@ -585,7 +587,7 @@ fn parse_seeds(
             seed,
         ) {
             Some(seed) => idl_seeds.push(seed),
-            None => { /*return Vec::new(),*/ }
+            None => return Vec::new(),
         }
     }
 
@@ -627,19 +629,27 @@ fn parse_seed(
                     path.push(c.to_string());
                 }
 
+                if path.len() == 1 && (path[0] == "key" || path[0] == "key()") {
+                    path = Vec::new();
+                }
+
                 (name, path)
             };
 
+            // Instruction argument.
             if ix_args.contains_key(&var_name) {
                 let idl_ty = IdlType::from_str(&ix_args.get(&var_name).unwrap()).ok()?;
-                Some(IdlSeed {
-                    value: var_name,
+                Some(IdlSeed::Arg(IdlSeedArg {
                     ty: idl_ty,
-                    kind: IdlSeedKind::Arg,
-                })
-            } else if const_names.contains(&var_name) {
+                    path: match path.len() {
+                        0 => var_name,
+                        _ => format!("{}.{}", var_name, path.join(".")),
+                    },
+                }))
+            }
+            // Constant.
+            else if const_names.contains(&var_name) {
                 // Pull in the constant value directly into the IDL.
-
                 assert!(path.len() == 0);
                 let const_item = ctx
                     .consts()
@@ -656,67 +666,38 @@ fn parse_seed(
                         str_lit.retain(|c| c != '"');
                         idl_ty_value = format!("{:?}", str_lit.as_bytes());
                     }
-                } else {
-                    idl_ty_value.retain(|c| c != '"');
                 }
 
-                Some(IdlSeed {
-                    value: idl_ty_value,
+                Some(IdlSeed::Const(IdlSeedConst {
                     ty: idl_ty,
-                    kind: IdlSeedKind::Const,
-                })
-            } else if account_field_names.contains(&var_name) {
-                let kind = {
-                    if path.len() == 0 {
-                        IdlSeedKind::AccountPubkey
-                    } else if path.len() == 1 && (path[0] == "key" || path[0] == "key()") {
-                        IdlSeedKind::AccountPubkey
-                    } else {
-                        IdlSeedKind::AccountData
-                    }
-                };
-                //
-                Some(IdlSeed {
-                    value: match kind {
-                        IdlSeedKind::AccountPubkey => var_name.clone(),
+                    value: serde_json::from_str(&idl_ty_value).unwrap(),
+                }))
+            }
+            // Account pubkey or account data.
+            else if account_field_names.contains(&var_name) {
+                Some(IdlSeed::Account(IdlSeedAccount {
+                    path: match path.len() {
+                        0 => var_name.clone(),
                         _ => format!("{}.{}", var_name, path.join(".")),
                     },
-                    ty: match kind {
-                        IdlSeedKind::AccountPubkey => IdlType::PublicKey,
-                        IdlSeedKind::AccountData => {
-                            let account_field = accounts
-                                .fields
-                                .iter()
-                                .find(|field| field.ident().to_string() == var_name)
-                                .unwrap();
-
-                            println!("FOUND ACCOUNT FIELD: {:?}", account_field);
-                            let strct = ctx
-                                .structs()
-                                .find(|s| {
-                                    println!("S: {:?}", s.ident.to_string());
-                                    s.ident.to_string() == var_name
-                                })
-                                .unwrap();
-                            println!("FOUND IT: {:?}", strct.ident.to_string());
-                            IdlType::String
-                        }
-                        _ => panic!("invariant violation"),
-                    },
-                    kind,
-                })
-            } else if path.len() == 0 && var_name.contains('"') {
-                // String literal.
+                    ty: parse_seed_account_ty(ctx, accounts, var_name, &path)?,
+                }))
+            }
+            // String literal.
+            else if path.len() == 0 && var_name.contains('"') {
                 let mut var_name = var_name;
+                // Remove the byte `b` prefix if the string is of the form `b"seed".
                 if var_name.starts_with("b\"") {
                     var_name.remove(0);
                 }
-                Some(IdlSeed {
-                    value: var_name.chars().filter(|c| *c != '"').collect(),
+                let value_string: String = var_name.chars().filter(|c| *c != '"').collect();
+                Some(IdlSeed::Const(IdlSeedConst {
+                    value: serde_json::Value::String(value_string),
                     ty: IdlType::String,
-                    kind: IdlSeedKind::Const,
-                })
-            } else {
+                }))
+            }
+            // Unknown.
+            else {
                 println!("WARNING: unexpected seed category");
                 None
             }
@@ -740,4 +721,61 @@ fn parse_seed(
             None
         }
     }
+}
+
+fn parse_seed_account_ty(
+    ctx: &CrateContext,
+    accounts: &AccountsStruct,
+    var_name: String,
+    mut path: &[String],
+) -> Option<IdlType> {
+    match path.len() {
+        0 => Some(IdlType::PublicKey),
+        1 => {
+            // Get the anchor account field from the derive accounts struct.
+            let account_field = accounts
+                .fields
+                .iter()
+                .find(|field| field.ident().to_string() == var_name)
+                .unwrap();
+
+            // Get the struct name from the account field.
+            let ty_name = account_field.ty_name()?;
+
+            // Get the rust representation of the field's struct.
+            let strct = ctx
+                .structs()
+                .find(|s| s.ident.to_string() == ty_name)
+                .unwrap();
+
+            Some(parse_field_path(ctx, &strct, &mut path))
+        }
+        _ => panic!("invariant violation"),
+    }
+}
+
+fn parse_field_path(ctx: &CrateContext, strct: &syn::ItemStruct, path: &mut &[String]) -> IdlType {
+    let field_name = &path[0];
+    *path = &path[1..];
+
+    // Get the type name for the field.
+    let next_field = strct
+        .fields
+        .iter()
+        .find(|f| &f.ident.clone().unwrap().to_string() == field_name)
+        .unwrap();
+    let next_field_ty_str = parser::tts_to_string(&next_field.ty);
+
+    // The path is empty so this must be a primitive type.
+    if path.len() == 0 {
+        return next_field_ty_str.parse().unwrap();
+    }
+
+    // Get the rust representation of hte field's struct.
+    let strct = ctx
+        .structs()
+        .find(|s| s.ident.to_string() == next_field_ty_str)
+        .unwrap();
+
+    parse_field_path(ctx, strct, path)
 }

@@ -185,6 +185,19 @@ impl AccountField {
             AccountField::CompositeField(c_field) => &c_field.ident,
         }
     }
+
+    pub fn ty_name(&self) -> Option<String> {
+        match self {
+            AccountField::Field(field) => match &field.ty {
+                Ty::Account(account) => Some(parser::tts_to_string(&account.account_type_path)),
+                Ty::ProgramAccount(account) => {
+                    Some(parser::tts_to_string(&account.account_type_path))
+                }
+                _ => None,
+            },
+            AccountField::CompositeField(_field) => Some("todo".to_string()),
+        }
+    }
 }
 
 #[derive(Debug)]
