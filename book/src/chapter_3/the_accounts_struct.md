@@ -88,7 +88,7 @@ pub struct SetData<'info> {
 In this example, we set the `data` field of an account if the caller has admin rights. We decide whether the caller is an admin by checking whether they own admin tokens for the account they want to change. We do most of this via constraints which we will look at in the next section.
 The important thing to take away is that we use the `TokenAccount` type (that wraps around the token program's `Account` struct and adds the required functions) to make anchor ensure that the incoming account is owned by the token program and to make anchor deserialize it. This means we can use the `TokenAccount` properties inside our constraints (e.g. `token_account.mint`) as well as in the instruction function.
 
-Check out the [reference for the Account type](https://docs.rs/anchor-lang/latest/anchor_lang/struct.Account.html) to learn how to implement your own wrapper types for non-anchor programs.
+Check out the [reference for the Account type](https://docs.rs/anchor-lang/latest/anchor_lang/accounts/account/struct.Account.html#using-account-with-non-anchor-programs) to learn how to implement your own wrapper types for non-anchor programs.
 
 ## Constraints
 
