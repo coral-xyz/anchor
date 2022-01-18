@@ -50,8 +50,10 @@ export type IdlAccount = {
   name: string;
   isMut: boolean;
   isSigner: boolean;
-  seeds?: Array<any>; // TODO: type this.
+  seeds?: Array<IdlSeed>;
 };
+
+export type IdlSeed = any; // TODO.
 
 // A nested/recursive version of IdlAccount.
 export type IdlAccounts = {

@@ -81,6 +81,7 @@ pub enum IdlSeed {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct IdlSeedAccount {
+    #[serde(rename = "type")]
     pub ty: IdlType,
     pub path: String,
 }
@@ -88,6 +89,7 @@ pub struct IdlSeedAccount {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct IdlSeedArg {
+    #[serde(rename = "type")]
     pub ty: IdlType,
     pub path: String,
 }
@@ -95,6 +97,7 @@ pub struct IdlSeedArg {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct IdlSeedConst {
+    #[serde(rename = "type")]
     pub ty: IdlType,
     pub value: serde_json::Value,
 }

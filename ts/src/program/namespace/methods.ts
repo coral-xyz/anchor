@@ -11,7 +11,8 @@ import {
 } from "@solana/web3.js";
 import { SimulateResponse } from "./simulate";
 import { TransactionFn } from "./transaction.js";
-import { Idl, IdlAccount } from "../../idl.js";
+import { Idl, IdlSeed, IdlAccount } from "../../idl.js";
+import * as utf8 from "../../utils/bytes/utf8";
 import {
   AllInstructions,
   InstructionContextFn,
@@ -150,6 +151,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   }
 
   private async resolvePdas() {
+    const promises: Array<Promise<any>> = [];
     for (let k = 0; k < this._idlIx.accounts.length; k += 1) {
       // Cast is ok because only a non-nested IdlAccount can have a seeds
       // cosntraint.
@@ -158,20 +160,90 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
       // Auto populate *if needed*.
       if (accountDesc.seeds && accountDesc.seeds.length > 0) {
         if (this._accounts[accountDesc.name] === undefined) {
-          await this.autoPopulatePda(accountDesc);
+          promises.push(this.autoPopulatePda(accountDesc));
         }
       }
     }
+    await Promise.all(promises);
   }
 
   private async autoPopulatePda(accountDesc: IdlAccount) {
-    const seeds = [];
+    if (!accountDesc.seeds) throw new Error("Must have seeds");
+    const seeds: Buffer[] = [];
 
-    // todo
+    for (let k = 0; k < accountDesc.seeds.length; k += 1) {
+      let seedDesc = accountDesc.seeds[k];
+      seeds.push(this.toBuffer(seedDesc));
+    }
 
     const [pubkey] = await PublicKey.findProgramAddress(seeds, this._programId);
 
     this._accounts[accountDesc.name] = pubkey;
+  }
+
+  private toBuffer(seedDesc: IdlSeed): Buffer {
+    switch (seedDesc.kind) {
+      case "const":
+        return this.toBufferConst(seedDesc);
+      case "arg":
+        return this.toBufferArg(seedDesc);
+      case "account":
+        return this.toBufferAccount(seedDesc);
+      default:
+        throw new Error(`Unexpected seed kind: ${seedDesc.kind}`);
+    }
+  }
+
+  private toBufferConst(seedDesc: IdlSeed): Buffer {
+    return this.toBufferValue(seedDesc.type, seedDesc.value);
+  }
+
+  private toBufferArg(seedDesc: IdlSeed): Buffer {
+    let idlArgPosition = -1;
+    for (let k = 0; k < this._idlIx.args.length; k += 1) {
+      const argDesc = this._idlIx.args[k];
+      if (argDesc.name === seedDesc.name) {
+        idlArgPosition = k;
+        break;
+      }
+    }
+    if (idlArgPosition === -1) {
+      throw new Error(`Unable to find argument for seed: ${seedDesc.name}`);
+    }
+
+    const argValue = this._args[idlArgPosition];
+    return this.toBufferValue(seedDesc.type, argValue);
+  }
+
+  private toBufferAccount(seedDesc: IdlSeed): Buffer {
+    // 1. get the value
+    // 2. convert the value into a buffer based on type
+    return Buffer.from([]);
+  }
+
+  // Converts the given idl valaue into a Buffer. The values here must be
+  // primitives. E.g. no structs.
+  private toBufferValue(type: string | any, value: any): Buffer {
+    switch (type) {
+      case "u8":
+        return Buffer.from([value]);
+      case "u16":
+        // todo
+        return Buffer.from([]);
+      case "u32":
+        // todo
+        return Buffer.from([]);
+      case "u64":
+        // todo
+        return Buffer.from([]);
+      case "string":
+        return Buffer.from(utf8.encode(value));
+      default:
+        if (type.array) {
+          return Buffer.from(value);
+        }
+        throw new Error(`Unexpected seed type: ${type}`);
+    }
   }
 }
 

@@ -7,6 +7,9 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 pub const MY_SEED: [u8; 2] = *b"hi";
 pub const MY_SEED_STR: &str = "hi";
+pub const MY_SEED_U8: u8 = 1;
+pub const MY_SEED_U32: u32 = 2;
+pub const MY_SEED_U64: u64 = 3;
 
 #[program]
 pub mod pda_derivation {
@@ -46,11 +49,14 @@ pub struct InitMyAccount<'info> {
         seeds = [
             &seed_a.to_le_bytes(),
             "another-seed".as_bytes(),
-						b"test".as_ref(),
+            b"test".as_ref(),
             base.key().as_ref(),
             base2.key.as_ref(),
             MY_SEED.as_ref(),
             MY_SEED_STR.as_bytes(),
+            MY_SEED_U8.to_le_bytes().as_ref(),
+            &MY_SEED_U32.to_le_bytes(),
+            &MY_SEED_U64.to_le_bytes(),
             base.base_data.to_le_bytes().as_ref(),
             base.base_data_key.as_ref(),
         ],
