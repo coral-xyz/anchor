@@ -1,3 +1,4 @@
+import camelCase from "camelcase";
 import {
   ConfirmOptions,
   AccountMeta,
@@ -9,39 +10,43 @@ import {
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
-import { SimulateResponse } from "./simulate";
+import { SimulateResponse } from "./simulate.js";
 import { TransactionFn } from "./transaction.js";
 import { Idl, IdlSeed, IdlAccount } from "../../idl.js";
-import * as utf8 from "../../utils/bytes/utf8";
+import * as utf8 from "../../utils/bytes/utf8.js";
 import {
   AllInstructions,
   InstructionContextFn,
   MakeInstructionsNamespace,
-} from "./types";
-import { InstructionFn } from "./instruction";
-import { RpcFn } from "./rpc";
-import { SimulateFn } from "./simulate";
+} from "./types.js";
+import { InstructionFn } from "./instruction.js";
+import { RpcFn } from "./rpc.js";
+import { SimulateFn } from "./simulate.js";
+import Provider from "../../provider.js";
+import { AccountNamespace } from "./account.js";
 
 export class MethodsBuilderFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
+    provider: Provider,
     programId: PublicKey,
-    idl: IDL,
     idlIx: AllInstructions<IDL>,
     ixFn: InstructionFn<IDL>,
     txFn: TransactionFn<IDL>,
     rpcFn: RpcFn<IDL>,
-    simulateFn: SimulateFn<IDL>
+    simulateFn: SimulateFn<IDL>,
+    accountNamespace: AccountNamespace<IDL>
   ): MethodFn {
     const request: MethodFn<IDL, I> = (...args) => {
       return new MethodsBuilder(
+        provider,
         programId,
-        idl,
         idlIx,
         args,
         ixFn,
         txFn,
         rpcFn,
-        simulateFn
+        simulateFn,
+        accountNamespace
       );
     };
     return request;
@@ -54,17 +59,21 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   private _signers: Array<Signer> = [];
   private _preInstructions: Array<TransactionInstruction> = [];
   private _postInstructions: Array<TransactionInstruction> = [];
+  private _accountStore: AccountStore<IDL>;
 
   constructor(
+    private _provider: Provider,
     private _programId: PublicKey,
-    private _idl: IDL,
     private _idlIx: AllInstructions<IDL>,
     private _args: Array<any>,
     private _ixFn: InstructionFn<IDL>,
     private _txFn: TransactionFn<IDL>,
     private _rpcFn: RpcFn<IDL>,
-    private _simulateFn: SimulateFn<IDL>
-  ) {}
+    private _simulateFn: SimulateFn<IDL>,
+    _accountNamespace: AccountNamespace<IDL>
+  ) {
+    this._accountStore = new AccountStore(_accountNamespace);
+  }
 
   // TODO: don't use any.
   public accounts(accounts: any): MethodsBuilder<IDL, I> {
@@ -73,7 +82,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   }
 
   public signers(signers: Array<Signer>): MethodsBuilder<IDL, I> {
-    Object.assign(this._signers, signers);
+    this._signers = this._signers.concat(signers);
     return this;
   }
 
@@ -152,43 +161,55 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
 
   private async resolvePdas() {
     const promises: Array<Promise<any>> = [];
+
     for (let k = 0; k < this._idlIx.accounts.length; k += 1) {
       // Cast is ok because only a non-nested IdlAccount can have a seeds
       // cosntraint.
       const accountDesc = this._idlIx.accounts[k] as IdlAccount;
 
-      // Auto populate *if needed*.
+      // Auto populate if needed.
       if (accountDesc.seeds && accountDesc.seeds.length > 0) {
         if (this._accounts[accountDesc.name] === undefined) {
           promises.push(this.autoPopulatePda(accountDesc));
         }
+      } else if (accountDesc.name === "systemProgram") {
+        if (this._accounts[accountDesc.name] === undefined) {
+          this._accounts[accountDesc.name] = SystemProgram.programId;
+        }
+      } else if (accountDesc.name === "rent") {
+        if (this._accounts[accountDesc.name] === undefined) {
+          this._accounts[accountDesc.name] = SYSVAR_RENT_PUBKEY;
+        }
+      } else if (accountDesc.isSigner) {
+        if (this._accounts[accountDesc.name] === undefined) {
+          this._accounts[accountDesc.name] = this._provider.wallet.publicKey;
+        }
       }
     }
+
     await Promise.all(promises);
   }
 
   private async autoPopulatePda(accountDesc: IdlAccount) {
     if (!accountDesc.seeds) throw new Error("Must have seeds");
-    const seeds: Buffer[] = [];
 
-    for (let k = 0; k < accountDesc.seeds.length; k += 1) {
-      let seedDesc = accountDesc.seeds[k];
-      seeds.push(this.toBuffer(seedDesc));
-    }
+    const seeds: Buffer[] = await Promise.all(
+      accountDesc.seeds.map((seedDesc) => this.toBuffer(seedDesc))
+    );
 
     const [pubkey] = await PublicKey.findProgramAddress(seeds, this._programId);
 
     this._accounts[accountDesc.name] = pubkey;
   }
 
-  private toBuffer(seedDesc: IdlSeed): Buffer {
+  private async toBuffer(seedDesc: IdlSeed): Promise<Buffer> {
     switch (seedDesc.kind) {
       case "const":
         return this.toBufferConst(seedDesc);
       case "arg":
-        return this.toBufferArg(seedDesc);
+        return await this.toBufferArg(seedDesc);
       case "account":
-        return this.toBufferAccount(seedDesc);
+        return await this.toBufferAccount(seedDesc);
       default:
         throw new Error(`Unexpected seed kind: ${seedDesc.kind}`);
     }
@@ -198,27 +219,58 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     return this.toBufferValue(seedDesc.type, seedDesc.value);
   }
 
-  private toBufferArg(seedDesc: IdlSeed): Buffer {
+  private async toBufferArg(seedDesc: IdlSeed): Promise<Buffer> {
     let idlArgPosition = -1;
+    const seedArgName = camelCase(seedDesc.path.split(".")[0]);
     for (let k = 0; k < this._idlIx.args.length; k += 1) {
       const argDesc = this._idlIx.args[k];
-      if (argDesc.name === seedDesc.name) {
+      if (argDesc.name === seedArgName) {
         idlArgPosition = k;
         break;
       }
     }
     if (idlArgPosition === -1) {
-      throw new Error(`Unable to find argument for seed: ${seedDesc.name}`);
+      throw new Error(`Unable to find argument for seed: ${seedArgName}`);
     }
 
     const argValue = this._args[idlArgPosition];
     return this.toBufferValue(seedDesc.type, argValue);
   }
 
-  private toBufferAccount(seedDesc: IdlSeed): Buffer {
-    // 1. get the value
-    // 2. convert the value into a buffer based on type
-    return Buffer.from([]);
+  private async toBufferAccount(seedDesc: IdlSeed): Promise<Buffer> {
+    const pathComponents = seedDesc.path.split(".");
+
+    const fieldName = pathComponents[0];
+    const fieldPubkey = this._accounts[fieldName];
+
+    // The seed is a pubkey of the account.
+    if (pathComponents.length === 1) {
+      return this.toBufferValue("publicKey", fieldPubkey);
+    }
+
+    // The key is account data.
+    //
+    // Fetch and deserialize it.
+    const account = await this._accountStore.fetchAccount(
+      seedDesc.account,
+      fieldPubkey
+    );
+
+    // Dereference all fields in the path to get the field value
+    // used in the seed.
+    const fieldValue = this.parseAccountValue(account, pathComponents.slice(1));
+
+    // Now that we have the seed value, convert it into a buffer.
+    return this.toBufferValue(seedDesc.type, fieldValue);
+  }
+
+  private parseAccountValue<T = any>(account: T, path: Array<string>): any {
+    let accountField: any;
+    while (path.length > 0) {
+      accountField = account[camelCase(path[0])];
+      path = path.slice(1);
+    }
+    return accountField;
   }
 
   // Converts the given idl valaue into a Buffer. The values here must be
@@ -228,16 +280,21 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
       case "u8":
         return Buffer.from([value]);
       case "u16":
-        // todo
-        return Buffer.from([]);
+        let b = Buffer.alloc(2);
+        b.writeUInt16LE(value);
+        return b;
       case "u32":
-        // todo
-        return Buffer.from([]);
+        let buf = Buffer.alloc(4);
+        buf.writeUInt32LE(value);
+        return buf;
       case "u64":
-        // todo
-        return Buffer.from([]);
+        let bU64 = Buffer.alloc(8);
+        bU64.writeBigUInt64LE(BigInt(value));
+        return bU64;
       case "string":
         return Buffer.from(utf8.encode(value));
+      case "publicKey":
+        return value.toBuffer();
       default:
         if (type.array) {
           return Buffer.from(value);
@@ -256,3 +313,23 @@ export type MethodFn<
   IDL extends Idl = Idl,
   I extends AllInstructions<IDL> = AllInstructions<IDL>
 > = InstructionContextFn<IDL, I, MethodsBuilder<IDL, I>>;
+
+// TODO: this should be configureable to avoid unnecessary requests.
+export class AccountStore<IDL extends Idl> {
+  private _cache = new Map<string, any>();
+
+  // todo: don't use the progrma use the account namespace.
+  constructor(private _accounts: AccountNamespace<IDL>) {}
+
+  public async fetchAccount<T = any>(
+    name: string,
+    publicKey: PublicKey
+  ): Promise<T> {
+    const address = publicKey.toString();
+    if (this._cache.get(address) === undefined) {
+      const account = this._accounts[camelCase(name)].fetch(publicKey);
+      this._cache.set(address, account);
+    }
+    return this._cache.get(address);
+  }
+}

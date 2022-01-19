@@ -162,7 +162,11 @@ impl WithPath<Config> {
             let cargo = Manifest::from_path(&path.join("Cargo.toml"))?;
             let lib_name = cargo.lib_name()?;
             let version = cargo.version();
-            let idl = anchor_syn::idl::file::parse(path.join("src/lib.rs"), version, false)?;
+            let idl = anchor_syn::idl::file::parse(
+                path.join("src/lib.rs"),
+                version,
+                self.features.seeds,
+            )?;
             r.push(Program {
                 lib_name,
                 path,

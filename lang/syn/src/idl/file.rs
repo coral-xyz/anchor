@@ -679,7 +679,8 @@ fn parse_seed(
                         0 => var_name.clone(),
                         _ => format!("{}.{}", var_name, path.join(".")),
                     },
-                    ty: parse_seed_account_ty(ctx, accounts, var_name, &path)?,
+                    ty: parse_seed_account_field_ty(ctx, accounts, var_name.clone(), &path)?,
+                    account: parse_seed_account_ty(ctx, accounts, var_name),
                 }))
             }
             // String literal.
@@ -723,6 +724,22 @@ fn parse_seed(
 }
 
 fn parse_seed_account_ty(
+    ctx: &CrateContext,
+    accounts: &AccountsStruct,
+    var_name: String,
+) -> Option<String> {
+    // Get the anchor account field from the derive accounts struct.
+    let account_field = accounts
+        .fields
+        .iter()
+        .find(|field| field.ident().to_string() == var_name)
+        .unwrap();
+
+    // Get the struct name from the account field.
+    account_field.ty_name()
+}
+
+fn parse_seed_account_field_ty(
     ctx: &CrateContext,
     accounts: &AccountsStruct,
     var_name: String,

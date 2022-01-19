@@ -1,5 +1,6 @@
 //import * as anchor from "@project-serum/anchor";
 import * as anchor from "../../../ts";
+import BN from "bn.js";
 import { Keypair } from "@solana/web3.js";
 
 describe("typescript", () => {
@@ -8,19 +9,27 @@ describe("typescript", () => {
 
   const program = anchor.workspace.PdaDerivation;
   const base = Keypair.generate();
+  const dataKey = Keypair.generate();
+  const data = new BN(1);
+  const seedA = 4;
 
   it("Inits the base account", async () => {
     await program.methods
-      .initBase()
+      .initBase(data, dataKey.publicKey)
       .accounts({
         base: base.publicKey,
-        base2: base.publicKey,
       })
       .signers([base])
       .rpc();
   });
 
   it("Inits the derived accounts", async () => {
-    // todo
+    await program.methods
+      .initMyAccount(seedA)
+      .accounts({
+        base: base.publicKey,
+        base2: base.publicKey,
+      })
+      .rpc();
   });
 });

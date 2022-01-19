@@ -15,11 +15,14 @@ pub const MY_SEED_U64: u64 = 3;
 pub mod pda_derivation {
     use super::*;
 
-    pub fn init_base(ctx: Context<InitBase>) -> ProgramResult {
+    pub fn init_base(ctx: Context<InitBase>, data: u64, data_key: Pubkey) -> ProgramResult {
+        let base = &mut ctx.accounts.base;
+        base.base_data = data;
+        base.base_data_key = data_key;
         Ok(())
     }
 
-    pub fn init_my_account(ctx: Context<InitMyAccount>, seed_a: u8, bump: u8) -> ProgramResult {
+    pub fn init_my_account(ctx: Context<InitMyAccount>, seed_a: u8) -> ProgramResult {
         Ok(())
     }
 }
@@ -29,7 +32,7 @@ pub struct InitBase<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8+8,
+        space = 8+8+32,
     )]
     base: Account<'info, BaseAccount>,
     #[account(mut)]
@@ -38,7 +41,7 @@ pub struct InitBase<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(seed_a: u8, bump: u8)]
+#[instruction(seed_a: u8)]
 pub struct InitMyAccount<'info> {
     base: Account<'info, BaseAccount>,
     base2: AccountInfo<'info>,
@@ -60,7 +63,7 @@ pub struct InitMyAccount<'info> {
             base.base_data.to_le_bytes().as_ref(),
             base.base_data_key.as_ref(),
         ],
-        bump = bump,
+				bump,
     )]
     account: Account<'info, MyAccount>,
     #[account(mut)]

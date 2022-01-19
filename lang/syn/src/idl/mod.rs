@@ -83,6 +83,10 @@ pub enum IdlSeed {
 pub struct IdlSeedAccount {
     #[serde(rename = "type")]
     pub ty: IdlType,
+    // account_ty points to the entry in the "accounts" section.
+    // Some only if the `Account<T>` type is used.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account: Option<String>,
     pub path: String,
 }
 
