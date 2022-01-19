@@ -63,7 +63,7 @@ pub struct InitMyAccount<'info> {
             base.base_data.to_le_bytes().as_ref(),
             base.base_data_key.as_ref(),
         ],
-				bump,
+        bump,
     )]
     account: Account<'info, MyAccount>,
     #[account(mut)]
