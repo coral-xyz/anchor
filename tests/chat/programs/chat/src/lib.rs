@@ -51,8 +51,8 @@ pub struct CreateUser<'info> {
     space = 320,
     )]
     user: Account<'info, User>,
-    #[account(signer)]
-    authority: AccountInfo<'info>,
+    #[account(mut)]
+    authority: Signer<'info>,
     system_program: Program<'info, System>,
 }
 
@@ -70,8 +70,8 @@ pub struct SendMessage<'info> {
     has_one = authority,
     )]
     user: Account<'info, User>,
-    #[account(signer)]
-    authority: AccountInfo<'info>,
+    #[account(mut)]
+    authority: Signer<'info>,
     #[account(mut)]
     chat_room: AccountLoader<'info, ChatRoom>,
 }
@@ -87,9 +87,10 @@ pub struct User {
 pub struct ChatRoom {
     head: u64,
     tail: u64,
-    name: [u8; 280],
     // Human readable name (char bytes).
-    messages: [Message; 33607], // Leaves the account at 10,485,680 bytes.
+    name: [u8; 280],
+    // Leaves the account at 10,485,680 bytes.
+    messages: [Message; 33607],
 }
 
 impl ChatRoom {
