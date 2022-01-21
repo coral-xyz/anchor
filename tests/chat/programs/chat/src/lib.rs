@@ -1,7 +1,7 @@
 //! A simple chat program using a ring buffer to store messages.
 
 use anchor_lang::prelude::*;
-use anchor_lang::accounts::loader::Loader;
+use anchor_lang::accounts::account_loader::AccountLoader;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
@@ -9,13 +9,14 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 pub mod chat {
     use super::*;
 
-    pub fn create_user(ctx: Context<CreateUser>, name: String, bump: u8) -> Result<()> {
+    pub fn create_user(ctx: Context<CreateUser>, name: String, bump: u8) -> ProgramResult {
         ctx.accounts.user.name = name;
         ctx.accounts.user.authority = *ctx.accounts.authority.key;
         ctx.accounts.user.bump = bump;
         Ok(())
     }
-    pub fn create_chat_room(ctx: Context<CreateChatRoom>, name: String) -> Result<()> {
+
+    pub fn create_chat_room(ctx: Context<CreateChatRoom>, name: String) -> ProgramResult {
         let given_name = name.as_bytes();
         let mut name = [0u8; 280];
         name[..given_name.len()].copy_from_slice(given_name);
@@ -23,7 +24,8 @@ pub mod chat {
         chat.name = name;
         Ok(())
     }
-    pub fn send_message(ctx: Context<SendMessage>, msg: String) -> Result<()> {
+
+    pub fn send_message(ctx: Context<SendMessage>, msg: String) -> ProgramResult {
         let mut chat = ctx.accounts.chat_room.load_mut()?;
         chat.append({
             let src = msg.as_bytes();
@@ -42,36 +44,36 @@ pub mod chat {
 #[instruction(name: String, bump: u8)]
 pub struct CreateUser<'info> {
     #[account(
-        init,
-        seeds = [authority.key().as_ref()],
-        bump = bump,
-        payer = authority,
-        space = 320,
+    init,
+    seeds = [authority.key().as_ref()],
+    bump = bump,
+    payer = authority,
+    space = 320,
     )]
     user: Account<'info, User>,
     #[account(signer)]
     authority: AccountInfo<'info>,
-    system_program: AccountInfo<'info>,
+    system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct CreateChatRoom<'info> {
     #[account(zero)]
-    chat_room: Loader<'info, ChatRoom>,
+    chat_room: AccountLoader<'info, ChatRoom>,
 }
 
 #[derive(Accounts)]
 pub struct SendMessage<'info> {
     #[account(
-        seeds = [authority.key().as_ref()],
-        bump = user.bump,
-        has_one = authority,
+    seeds = [authority.key().as_ref()],
+    bump = user.bump,
+    has_one = authority,
     )]
     user: Account<'info, User>,
     #[account(signer)]
     authority: AccountInfo<'info>,
     #[account(mut)]
-    chat_room: Loader<'info, ChatRoom>,
+    chat_room: AccountLoader<'info, ChatRoom>,
 }
 
 #[account]
@@ -85,7 +87,8 @@ pub struct User {
 pub struct ChatRoom {
     head: u64,
     tail: u64,
-    name: [u8; 280],            // Human readable name (char bytes).
+    name: [u8; 280],
+    // Human readable name (char bytes).
     messages: [Message; 33607], // Leaves the account at 10,485,680 bytes.
 }
 
