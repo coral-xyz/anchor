@@ -14,6 +14,7 @@ import { SimulateResponse } from "./simulate.js";
 import { TransactionFn } from "./transaction.js";
 import { Idl, IdlSeed, IdlAccount } from "../../idl.js";
 import * as utf8 from "../../utils/bytes/utf8.js";
+import { TOKEN_PROGRAM_ID, ASSOCIATED_PROGRAM_ID } from "../../utils/token.js";
 import {
   AllInstructions,
   InstructionContextFn,
@@ -24,6 +25,8 @@ import { RpcFn } from "./rpc.js";
 import { SimulateFn } from "./simulate.js";
 import Provider from "../../provider.js";
 import { AccountNamespace } from "./account.js";
+import { coder } from "../../spl/token";
+import * as utils from "../../utils";
 
 export class MethodsBuilderFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
@@ -72,7 +75,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     private _simulateFn: SimulateFn<IDL>,
     _accountNamespace: AccountNamespace<IDL>
   ) {
-    this._accountStore = new AccountStore(_accountNamespace);
+    this._accountStore = new AccountStore(_provider, _accountNamespace);
   }
 
   // TODO: don't use any.
@@ -159,35 +162,52 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     });
   }
 
+  // Note: We serially resolve PDAs one by one rather than doing them
+  //       in parallel because there can be dependencies between
+  //       addresses. That is, one PDA can be used as a seed in another.
+  //
+  // TODO: PDAs need to be resolved in topological order. For now, we
+  //       require the developer to simply list the accounts in the
+  //       correct order. But in future work, we should create the
+  //       dependency graph and resolve automatically.
+  //
   private async resolvePdas() {
-    const promises: Array<Promise<any>> = [];
-
     for (let k = 0; k < this._idlIx.accounts.length; k += 1) {
       // Cast is ok because only a non-nested IdlAccount can have a seeds
       // cosntraint.
       const accountDesc = this._idlIx.accounts[k] as IdlAccount;
+      const accountDescName = camelCase(accountDesc.name);
 
       // Auto populate if needed.
       if (accountDesc.seeds && accountDesc.seeds.length > 0) {
-        if (this._accounts[accountDesc.name] === undefined) {
-          promises.push(this.autoPopulatePda(accountDesc));
+        if (this._accounts[accountDescName] === undefined) {
+          await this.autoPopulatePda(accountDesc);
         }
-      } else if (accountDesc.name === "systemProgram") {
-        if (this._accounts[accountDesc.name] === undefined) {
-          this._accounts[accountDesc.name] = SystemProgram.programId;
+      } else if (accountDescName === "systemProgram") {
+        if (this._accounts[accountDescName] === undefined) {
+          this._accounts[accountDescName] = SystemProgram.programId;
         }
-      } else if (accountDesc.name === "rent") {
-        if (this._accounts[accountDesc.name] === undefined) {
-          this._accounts[accountDesc.name] = SYSVAR_RENT_PUBKEY;
+      } else if (accountDescName === "rent") {
+        if (this._accounts[accountDescName] === undefined) {
+          this._accounts[accountDescName] = SYSVAR_RENT_PUBKEY;
+        }
+      } else if (accountDescName === "tokenProgram") {
+        if (this._accounts[accountDescName] === undefined) {
+          this._accounts[accountDescName] = TOKEN_PROGRAM_ID;
+        }
+      } else if (
+        accountDescName === "associatedTokenProgram" ||
+        accountDescName === "ataProgram"
+      ) {
+        if (this._accounts[accountDescName] === undefined) {
+          this._accounts[accountDescName] = ASSOCIATED_PROGRAM_ID;
         }
       } else if (accountDesc.isSigner) {
-        if (this._accounts[accountDesc.name] === undefined) {
-          this._accounts[accountDesc.name] = this._provider.wallet.publicKey;
+        if (this._accounts[accountDescName] === undefined) {
+          this._accounts[accountDescName] = this._provider.wallet.publicKey;
         }
       }
     }
-
-    await Promise.all(promises);
   }
 
   private async autoPopulatePda(accountDesc: IdlAccount) {
@@ -199,7 +219,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
 
     const [pubkey] = await PublicKey.findProgramAddress(seeds, this._programId);
 
-    this._accounts[accountDesc.name] = pubkey;
+    this._accounts[camelCase(accountDesc.name)] = pubkey;
   }
 
   private async toBuffer(seedDesc: IdlSeed): Promise<Buffer> {
@@ -241,7 +261,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     const pathComponents = seedDesc.path.split(".");
 
     const fieldName = pathComponents[0];
-    const fieldPubkey = this._accounts[fieldName];
+    const fieldPubkey = this._accounts[camelCase(fieldName)];
 
     // The seed is a pubkey of the account.
     if (pathComponents.length === 1) {
@@ -319,7 +339,10 @@ export class AccountStore<IDL extends Idl> {
   private _cache = new Map<string, any>();
 
   // todo: don't use the progrma use the account namespace.
-  constructor(private _accounts: AccountNamespace<IDL>) {}
+  constructor(
+    private _provider: Provider,
+    private _accounts: AccountNamespace<IDL>
+  ) {}
 
   public async fetchAccount<T = any>(
     name: string,
@@ -327,8 +350,19 @@ export class AccountStore<IDL extends Idl> {
   ): Promise<T> {
     const address = publicKey.toString();
     if (this._cache.get(address) === undefined) {
-      const account = this._accounts[camelCase(name)].fetch(publicKey);
-      this._cache.set(address, account);
+      if (name === "TokenAccount") {
+        const accountInfo = await this._provider.connection.getAccountInfo(
+          publicKey
+        );
+        if (accountInfo === null) {
+          throw new Error(`invalid account info for ${address}`);
+        }
+        const data = coder().accounts.decode("Token", accountInfo.data);
+        this._cache.set(address, data);
+      } else {
+        const account = this._accounts[camelCase(name)].fetch(publicKey);
+        this._cache.set(address, account);
+      }
     }
     return this._cache.get(address);
   }

@@ -698,7 +698,7 @@ fn parse_seed(
             }
             // Unknown.
             else {
-                println!("WARNING: unexpected seed category");
+                println!("WARNING: unexpected seed category for var: {:?}", var_name);
                 None
             }
         }
@@ -717,7 +717,7 @@ fn parse_seed(
         }
         _ => {
             // Unknown type. Please file an issue.
-            println!("WARNING: unexpected seed");
+            println!("WARNING: unexpected seed: {:?}", seed);
             None
         }
     }
@@ -758,6 +758,13 @@ fn parse_seed_account_field_ty(
             // Get the struct name from the account field.
             let ty_name = account_field.ty_name()?;
 
+            if ty_name == "TokenAccount" {
+                assert!(path.len() == 1);
+                let token_field = &path[0];
+                if token_field == "mint" {
+                    return Some(IdlType::PublicKey);
+                }
+            }
             // Get the rust representation of the field's struct.
             let strct = ctx
                 .structs()
