@@ -71,16 +71,6 @@ export type Dex = {
           "isSigner": false
         },
         {
-          "name": "pruneAuthority",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "consumeEventsAuthority",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "rent",
           "isMut": false,
           "isSigner": false
@@ -106,6 +96,18 @@ export type Dex = {
         {
           "name": "feeRateBps",
           "type": "u16"
+        },
+        {
+          "name": "pruneAuthority",
+          "type": "publicKey"
+        },
+        {
+          "name": "consumeEventsAuthority",
+          "type": "publicKey"
+        },
+        {
+          "name": "authority",
+          "type": "publicKey"
         }
       ]
     },
@@ -146,11 +148,6 @@ export type Dex = {
           "name": "orderPayerTokenAccount",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "openOrdersAuthority",
-          "isMut": false,
-          "isSigner": true
         },
         {
           "name": "coinVault",
@@ -210,6 +207,10 @@ export type Dex = {
           }
         },
         {
+          "name": "openOrdersAuthority",
+          "type": "publicKey"
+        },
+        {
           "name": "limit",
           "type": "u16"
         },
@@ -256,11 +257,6 @@ export type Dex = {
           "name": "orderPayerTokenAccount",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "openOrdersAuthority",
-          "isMut": false,
-          "isSigner": true
         },
         {
           "name": "coinVault",
@@ -313,6 +309,10 @@ export type Dex = {
         {
           "name": "clientOrderId",
           "type": "u64"
+        },
+        {
+          "name": "openOrdersAuthority",
+          "type": "publicKey"
         },
         {
           "name": "limit",
@@ -426,11 +426,6 @@ export type Dex = {
           "isSigner": false
         },
         {
-          "name": "openOrdersAuthority",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
           "name": "reqQueue",
           "isMut": true,
           "isSigner": false
@@ -451,6 +446,10 @@ export type Dex = {
         {
           "name": "orderId",
           "type": "u128"
+        },
+        {
+          "name": "openOrdersAuthority",
+          "type": "publicKey"
         }
       ]
     },
@@ -466,11 +465,6 @@ export type Dex = {
           "name": "openOrders",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "openOrdersAuthority",
-          "isMut": false,
-          "isSigner": true
         },
         {
           "name": "coinWallet",
@@ -503,7 +497,12 @@ export type Dex = {
           "isSigner": false
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "openOrdersAuthority",
+          "type": "publicKey"
+        }
+      ]
     },
     {
       "name": "disableMarket",
@@ -512,14 +511,14 @@ export type Dex = {
           "name": "market",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "disableAuthorityKey",
-          "isMut": false,
-          "isSigner": true
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "disableAuthorityKey",
+          "type": "publicKey"
+        }
+      ]
     },
     {
       "name": "sweepFees",
@@ -533,11 +532,6 @@ export type Dex = {
           "name": "pcVault",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "sweepAuthority",
-          "isMut": false,
-          "isSigner": true
         },
         {
           "name": "sweepReceiverAmount",
@@ -555,7 +549,12 @@ export type Dex = {
           "isSigner": false
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "sweepAuthority",
+          "type": "publicKey"
+        }
+      ]
     },
     {
       "name": "cancelOrderV2",
@@ -581,11 +580,6 @@ export type Dex = {
           "isSigner": false
         },
         {
-          "name": "openOrdersAuthority",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
           "name": "eventQueue",
           "isMut": true,
           "isSigner": false
@@ -601,6 +595,10 @@ export type Dex = {
         {
           "name": "orderId",
           "type": "u128"
+        },
+        {
+          "name": "openOrdersAuthority",
+          "type": "publicKey"
         }
       ]
     },
@@ -628,11 +626,6 @@ export type Dex = {
           "isSigner": false
         },
         {
-          "name": "openOrdersAuthority",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
           "name": "eventQueue",
           "isMut": true,
           "isSigner": false
@@ -642,6 +635,10 @@ export type Dex = {
         {
           "name": "clientId",
           "type": "u64"
+        },
+        {
+          "name": "openOrdersAuthority",
+          "type": "publicKey"
         }
       ]
     },
@@ -708,7 +705,7 @@ export type Dex = {
           "type": "u64"
         },
         {
-          "name": "minNatuvePcQty",
+          "name": "minNativePcQty",
           "type": "u64"
         },
         {
@@ -726,11 +723,6 @@ export type Dex = {
           "isSigner": false
         },
         {
-          "name": "authority",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
           "name": "destination",
           "isMut": true,
           "isSigner": false
@@ -741,7 +733,12 @@ export type Dex = {
           "isSigner": false
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "openOrdersAuthority",
+          "type": "publicKey"
+        }
+      ]
     },
     {
       "name": "initOpenOrders",
@@ -755,19 +752,18 @@ export type Dex = {
           "name": "market",
           "isMut": false,
           "isSigner": false
-        },
+        }
+      ],
+      "args": [
         {
-          "name": "authority",
-          "isMut": false,
-          "isSigner": true
+          "name": "openOrdersAuthority",
+          "type": "publicKey"
         },
         {
           "name": "marketAuthority",
-          "isMut": false,
-          "isSigner": true
+          "type": "publicKey"
         }
-      ],
-      "args": []
+      ]
     },
     {
       "name": "prune",
@@ -793,11 +789,6 @@ export type Dex = {
           "isSigner": false
         },
         {
-          "name": "pruneAuthority",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
           "name": "openOrdersAuthority",
           "isMut": false,
           "isSigner": false
@@ -812,6 +803,10 @@ export type Dex = {
         {
           "name": "limit",
           "type": "u16"
+        },
+        {
+          "name": "pruneAuthority",
+          "type": "publicKey"
         }
       ]
     },
@@ -832,17 +827,16 @@ export type Dex = {
           "name": "eventQueue",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "consumeEventsAuthority",
-          "isMut": false,
-          "isSigner": true
         }
       ],
       "args": [
         {
           "name": "limit",
           "type": "u16"
+        },
+        {
+          "name": "consumeEventsAuthority",
+          "type": "publicKey"
         }
       ]
     }
@@ -898,6 +892,15 @@ export type Dex = {
     }
   ]
 }
+
+
+
+
+
+
+
+
+
 export const IDL: Dex = {
   "version": "0.1.0",
   "name": "dex",
@@ -956,16 +959,6 @@ export const IDL: Dex = {
           "isSigner": false
         },
         {
-          "name": "pruneAuthority",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "consumeEventsAuthority",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "rent",
           "isMut": false,
           "isSigner": false
@@ -991,6 +984,18 @@ export const IDL: Dex = {
         {
           "name": "feeRateBps",
           "type": "u16"
+        },
+        {
+          "name": "pruneAuthority",
+          "type": "publicKey"
+        },
+        {
+          "name": "consumeEventsAuthority",
+          "type": "publicKey"
+        },
+        {
+          "name": "authority",
+          "type": "publicKey"
         }
       ]
     },
@@ -1031,11 +1036,6 @@ export const IDL: Dex = {
           "name": "orderPayerTokenAccount",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "openOrdersAuthority",
-          "isMut": false,
-          "isSigner": true
         },
         {
           "name": "coinVault",
@@ -1095,6 +1095,10 @@ export const IDL: Dex = {
           }
         },
         {
+          "name": "openOrdersAuthority",
+          "type": "publicKey"
+        },
+        {
           "name": "limit",
           "type": "u16"
         },
@@ -1141,11 +1145,6 @@ export const IDL: Dex = {
           "name": "orderPayerTokenAccount",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "openOrdersAuthority",
-          "isMut": false,
-          "isSigner": true
         },
         {
           "name": "coinVault",
@@ -1198,6 +1197,10 @@ export const IDL: Dex = {
         {
           "name": "clientOrderId",
           "type": "u64"
+        },
+        {
+          "name": "openOrdersAuthority",
+          "type": "publicKey"
         },
         {
           "name": "limit",
@@ -1311,11 +1314,6 @@ export const IDL: Dex = {
           "isSigner": false
         },
         {
-          "name": "openOrdersAuthority",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
           "name": "reqQueue",
           "isMut": true,
           "isSigner": false
@@ -1336,6 +1334,10 @@ export const IDL: Dex = {
         {
           "name": "orderId",
           "type": "u128"
+        },
+        {
+          "name": "openOrdersAuthority",
+          "type": "publicKey"
         }
       ]
     },
@@ -1351,11 +1353,6 @@ export const IDL: Dex = {
           "name": "openOrders",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "openOrdersAuthority",
-          "isMut": false,
-          "isSigner": true
         },
         {
           "name": "coinWallet",
@@ -1388,7 +1385,12 @@ export const IDL: Dex = {
           "isSigner": false
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "openOrdersAuthority",
+          "type": "publicKey"
+        }
+      ]
     },
     {
       "name": "disableMarket",
@@ -1397,14 +1399,14 @@ export const IDL: Dex = {
           "name": "market",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "disableAuthorityKey",
-          "isMut": false,
-          "isSigner": true
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "disableAuthorityKey",
+          "type": "publicKey"
+        }
+      ]
     },
     {
       "name": "sweepFees",
@@ -1418,11 +1420,6 @@ export const IDL: Dex = {
           "name": "pcVault",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "sweepAuthority",
-          "isMut": false,
-          "isSigner": true
         },
         {
           "name": "sweepReceiverAmount",
@@ -1440,7 +1437,12 @@ export const IDL: Dex = {
           "isSigner": false
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "sweepAuthority",
+          "type": "publicKey"
+        }
+      ]
     },
     {
       "name": "cancelOrderV2",
@@ -1466,11 +1468,6 @@ export const IDL: Dex = {
           "isSigner": false
         },
         {
-          "name": "openOrdersAuthority",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
           "name": "eventQueue",
           "isMut": true,
           "isSigner": false
@@ -1486,6 +1483,10 @@ export const IDL: Dex = {
         {
           "name": "orderId",
           "type": "u128"
+        },
+        {
+          "name": "openOrdersAuthority",
+          "type": "publicKey"
         }
       ]
     },
@@ -1513,11 +1514,6 @@ export const IDL: Dex = {
           "isSigner": false
         },
         {
-          "name": "openOrdersAuthority",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
           "name": "eventQueue",
           "isMut": true,
           "isSigner": false
@@ -1527,6 +1523,10 @@ export const IDL: Dex = {
         {
           "name": "clientId",
           "type": "u64"
+        },
+        {
+          "name": "openOrdersAuthority",
+          "type": "publicKey"
         }
       ]
     },
@@ -1593,7 +1593,7 @@ export const IDL: Dex = {
           "type": "u64"
         },
         {
-          "name": "minNatuvePcQty",
+          "name": "minNativePcQty",
           "type": "u64"
         },
         {
@@ -1611,11 +1611,6 @@ export const IDL: Dex = {
           "isSigner": false
         },
         {
-          "name": "authority",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
           "name": "destination",
           "isMut": true,
           "isSigner": false
@@ -1626,7 +1621,12 @@ export const IDL: Dex = {
           "isSigner": false
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "openOrdersAuthority",
+          "type": "publicKey"
+        }
+      ]
     },
     {
       "name": "initOpenOrders",
@@ -1640,19 +1640,18 @@ export const IDL: Dex = {
           "name": "market",
           "isMut": false,
           "isSigner": false
-        },
+        }
+      ],
+      "args": [
         {
-          "name": "authority",
-          "isMut": false,
-          "isSigner": true
+          "name": "openOrdersAuthority",
+          "type": "publicKey"
         },
         {
           "name": "marketAuthority",
-          "isMut": false,
-          "isSigner": true
+          "type": "publicKey"
         }
-      ],
-      "args": []
+      ]
     },
     {
       "name": "prune",
@@ -1678,11 +1677,6 @@ export const IDL: Dex = {
           "isSigner": false
         },
         {
-          "name": "pruneAuthority",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
           "name": "openOrdersAuthority",
           "isMut": false,
           "isSigner": false
@@ -1697,6 +1691,10 @@ export const IDL: Dex = {
         {
           "name": "limit",
           "type": "u16"
+        },
+        {
+          "name": "pruneAuthority",
+          "type": "publicKey"
         }
       ]
     },
@@ -1717,17 +1715,16 @@ export const IDL: Dex = {
           "name": "eventQueue",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "consumeEventsAuthority",
-          "isMut": false,
-          "isSigner": true
         }
       ],
       "args": [
         {
           "name": "limit",
           "type": "u16"
+        },
+        {
+          "name": "consumeEventsAuthority",
+          "type": "publicKey"
         }
       ]
     }
