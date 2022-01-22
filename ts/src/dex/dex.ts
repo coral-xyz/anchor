@@ -46,11 +46,6 @@ export type Dex = {
           "isSigner": false
         },
         {
-          "name": "authority",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
           "name": "requestQueue",
           "isMut": true,
           "isSigner": false
@@ -896,11 +891,6 @@ export type Dex = {
 
 
 
-
-
-
-
-
 export const IDL: Dex = {
   "version": "0.1.0",
   "name": "dex",
@@ -932,11 +922,6 @@ export const IDL: Dex = {
           "name": "pcVault",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "authority",
-          "isMut": false,
-          "isSigner": true
         },
         {
           "name": "requestQueue",
