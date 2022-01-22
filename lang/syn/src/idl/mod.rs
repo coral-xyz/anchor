@@ -67,7 +67,15 @@ pub struct IdlAccount {
     pub is_mut: bool,
     pub is_signer: bool,
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub seeds: Option<Vec<IdlSeed>>,
+    pub pda: Option<IdlPda>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct IdlPda {
+    pub seeds: Vec<IdlSeed>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub program_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

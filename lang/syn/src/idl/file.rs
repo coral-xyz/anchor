@@ -529,11 +529,14 @@ fn idl_accounts(
                     Ty::Signer => true,
                     _ => acc.constraints.is_signer(),
                 },
-                seeds: if seeds_feature {
-                    acc.constraints
-                        .seeds
-                        .as_ref()
-                        .map(|s| parse_seeds(ctx, accounts, s))
+                pda: if seeds_feature {
+                    acc.constraints.seeds.as_ref().map(|s| IdlPda {
+                        seeds: parse_seeds(ctx, accounts, s),
+                        // TODO:
+                        // - parse program id
+                        // - parse associated_token if given
+                        program_id: None,
+                    })
                 } else {
                     None
                 },

@@ -26,7 +26,6 @@ import { SimulateFn } from "./simulate.js";
 import Provider from "../../provider.js";
 import { AccountNamespace } from "./account.js";
 import { coder } from "../../spl/token";
-import * as utils from "../../utils";
 
 export class MethodsBuilderFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
@@ -179,7 +178,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
       const accountDescName = camelCase(accountDesc.name);
 
       // Auto populate if needed.
-      if (accountDesc.seeds && accountDesc.seeds.length > 0) {
+      if (accountDesc.pda && accountDesc.pda.seeds.length > 0) {
         if (this._accounts[accountDescName] === undefined) {
           await this.autoPopulatePda(accountDesc);
         }
@@ -195,10 +194,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
         if (this._accounts[accountDescName] === undefined) {
           this._accounts[accountDescName] = TOKEN_PROGRAM_ID;
         }
-      } else if (
-        accountDescName === "associatedTokenProgram" ||
-        accountDescName === "ataProgram"
-      ) {
+      } else if (accountDescName === "associatedTokenProgram") {
         if (this._accounts[accountDescName] === undefined) {
           this._accounts[accountDescName] = ASSOCIATED_PROGRAM_ID;
         }
@@ -211,15 +207,22 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   }
 
   private async autoPopulatePda(accountDesc: IdlAccount) {
-    if (!accountDesc.seeds) throw new Error("Must have seeds");
+    if (!accountDesc.pda || !accountDesc.pda.seeds)
+      throw new Error("Must have seeds");
 
     const seeds: Buffer[] = await Promise.all(
-      accountDesc.seeds.map((seedDesc) => this.toBuffer(seedDesc))
+      accountDesc.pda.seeds.map((seedDesc: IdlSeed) => this.toBuffer(seedDesc))
     );
 
-    const [pubkey] = await PublicKey.findProgramAddress(seeds, this._programId);
+    const programId = this.parseProgramId(accountDesc);
+    const [pubkey] = await PublicKey.findProgramAddress(seeds, programId);
 
     this._accounts[camelCase(accountDesc.name)] = pubkey;
+  }
+
+  private parseProgramId(accountDesc: IdlAccount): PublicKey {
+    // TODO
+    return this._programId;
   }
 
   private async toBuffer(seedDesc: IdlSeed): Promise<Buffer> {
