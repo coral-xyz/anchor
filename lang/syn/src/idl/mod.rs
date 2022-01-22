@@ -75,7 +75,7 @@ pub struct IdlAccount {
 pub struct IdlPda {
     pub seeds: Vec<IdlSeed>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub program_id: Option<String>,
+    pub program_id: Option<IdlSeed>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

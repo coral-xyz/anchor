@@ -243,15 +243,11 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   }
 
   private async toBufferArg(seedDesc: IdlSeed): Promise<Buffer> {
-    let idlArgPosition = -1;
     const seedArgName = camelCase(seedDesc.path.split(".")[0]);
-    for (let k = 0; k < this._idlIx.args.length; k += 1) {
-      const argDesc = this._idlIx.args[k];
-      if (argDesc.name === seedArgName) {
-        idlArgPosition = k;
-        break;
-      }
-    }
+
+    const idlArgPosition = this._idlIx.args.findIndex(
+      (argDesc: any) => argDesc.name === seedArgName
+    );
     if (idlArgPosition === -1) {
       throw new Error(`Unable to find argument for seed: ${seedArgName}`);
     }
