@@ -3,7 +3,6 @@ use serum_dex::matching::{OrderType as DexOrderType, Side as DexSide};
 use anchor_lang::solana_program::account_info::AccountInfo;
 use anchor_lang::solana_program::entrypoint::ProgramResult;
 use crate::serum_dex::instruction::{SelfTradeBehavior as DexSelfTradeBehavior};
-//use anchor_lang::{context::CpiContext, Accounts, ToAccountInfos};
 pub use serum_dex;
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
@@ -13,10 +12,13 @@ pub mod dex {
     #[allow(clippy::too_many_arguments)]
     pub fn initialize_market<'info>(ctx: Context<InitializeMarket>, 
         coin_lot_size: u64, 
-        pc_lot_size : u64, 
+        pc_lot_size: u64, 
         vault_signer_nonce: u64, 
         pc_dust_threshold: u64, 
-        fee_rate_bps: u16, ) -> ProgramResult {
+        fee_rate_bps: u16,
+        prune_authority: Pubkey,
+        consume_events_authority: Pubkey,
+        authority: Pubkey, ) -> ProgramResult {
         Ok(())
     }
     #[allow(clippy::too_many_arguments)]
@@ -27,6 +29,7 @@ pub mod dex {
         order_type: OrderType,
         client_order_id: u64,
         self_trade_behaviour: SelfTradeBehavior,
+        open_orders_authority: Pubkey,
         limit: u16,
         max_native_pc_qty_including_fees: u64) -> ProgramResult{
             Ok(())
@@ -34,10 +37,11 @@ pub mod dex {
     pub fn new_order_v3<'info>(ctx: Context<NewOrderv3>, 
         side: Side, 
         limit_price: u64, 
-        max_coin_qty: u64,  
+        max_coin_qty: u64,
+        self_trade_behaviour: SelfTradeBehavior,  
         order_type: OrderType,
-        self_trade_behaviour: SelfTradeBehavior,
-        client_order_id: u64, 
+        client_order_id: u64,
+        open_orders_authority: Pubkey, 
         limit: u16) -> ProgramResult {
         Ok(())
     }
@@ -47,24 +51,24 @@ pub mod dex {
     pub fn consume_events<'info>(ctx: Context<ConsumeEvents>, limit: u16) -> ProgramResult {
         Ok(())
     }
-    pub fn cancel_order<'info>(ctx: Context<CancelOrder>, side: Side, order_id: u128) -> ProgramResult {
+    pub fn cancel_order<'info>(ctx: Context<CancelOrder>, side: Side, order_id: u128, open_orders_authority: Pubkey) -> ProgramResult {
         Ok(())
     }
-    pub fn settle_funds<'info>(ctx: Context<SettleFunds>) -> ProgramResult {
+    pub fn settle_funds<'info>(ctx: Context<SettleFunds>, open_orders_authority: Pubkey) -> ProgramResult {
         Ok(())
     }
-    pub fn disable_market(ctx: Context<DisableMarket>) -> ProgramResult {
+    pub fn disable_market(ctx: Context<DisableMarket>, disable_authority_key: Pubkey) -> ProgramResult {
         Ok(())
     }
-    pub fn sweep_fees<'info>(ctx: Context<SweepFees>) -> ProgramResult {
+    pub fn sweep_fees<'info>(ctx: Context<SweepFees>, sweep_authority: Pubkey) -> ProgramResult {
         Ok(())
     }
    
   
-    pub fn cancel_order_v2(ctx: Context<CancelOrderv2>, side: Side, order_id: u128) -> ProgramResult {
+    pub fn cancel_order_v2(ctx: Context<CancelOrderv2>, side: Side, order_id: u128, open_orders_authority: Pubkey) -> ProgramResult {
         Ok(())
     }
-    pub fn cancel_order_by_client_v2(ctx: Context<CancelOrderByClientv2>, client_id: u64) -> ProgramResult {
+    pub fn cancel_order_by_client_v2(ctx: Context<CancelOrderByClientv2>, client_id: u64, open_orders_authority: Pubkey) -> ProgramResult {
         Ok(())
     }
     pub fn send_take(ctx: Context<SendTake>, 
@@ -73,20 +77,20 @@ pub mod dex {
         max_coin_qty: u64, 
         max_native_pc_qty_including_fees: u64,
         min_coin_qty: u64,
-        min_natuve_pc_qty: u64,
+        min_native_pc_qty: u64,
         limit: u16) -> ProgramResult {
         Ok(())
     }
-    pub fn close_open_orders(ctx: Context<CloseOpenOrders>) -> ProgramResult {
+    pub fn close_open_orders(ctx: Context<CloseOpenOrders>, open_orders_authority: Pubkey) -> ProgramResult {
         Ok(())
     }
-    pub fn init_open_orders(ctx: Context<InitOpenOrders>) -> ProgramResult {
+    pub fn init_open_orders(ctx: Context<InitOpenOrders>, open_orders_authority: Pubkey, market_authority: Pubkey) -> ProgramResult {
         Ok(())
     }
-    pub fn prune(ctx: Context<Prune>, limit: u16) -> ProgramResult {
+    pub fn prune(ctx: Context<Prune>, limit: u16, prune_authority: Pubkey) -> ProgramResult {
         Ok(())
     }
-    pub fn consume_events_permissioned(ctx: Context<ConsumeEventsPermissioned>, limit: u16) -> ProgramResult {
+    pub fn consume_events_permissioned(ctx: Context<ConsumeEventsPermissioned>, limit: u16, consume_events_authority: Pubkey) -> ProgramResult {
         Ok(())
     }
 }
@@ -101,7 +105,6 @@ pub struct InitializeMarket<'info>{
     pub coin_vault: AccountInfo<'info>,
     #[account(mut)]
     pub pc_vault: AccountInfo<'info>,
-    pub authority: Signer<'info>,
     #[account(mut)]
     pub request_queue: AccountInfo<'info>,
     #[account(mut)]
@@ -110,8 +113,6 @@ pub struct InitializeMarket<'info>{
     pub market_bids: AccountInfo<'info>,
     #[account(mut)]
     pub market_asks: AccountInfo<'info>,
-    pub prune_authority: AccountInfo<'info>,
-    pub consume_events_authority: AccountInfo<'info>,
     pub rent: AccountInfo<'info>,
 }
 #[derive(Accounts)]
@@ -127,7 +128,6 @@ pub struct NewOrder<'info>{
     pub market_asks: AccountInfo<'info>,
     #[account(mut)]
     pub order_payer_token_account: AccountInfo<'info>,
-    pub open_orders_authority: Signer<'info>,
     pub coin_vault: AccountInfo<'info>,
     pub pc_vault: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
@@ -151,7 +151,6 @@ pub struct NewOrderv3<'info>{
     pub market_asks: AccountInfo<'info>,
     #[account(mut)]
     pub order_payer_token_account: AccountInfo<'info>,
-    pub open_orders_authority: Signer<'info>,
     #[account(mut)]
     pub coin_vault: AccountInfo<'info>,
     #[account(mut)]
@@ -196,7 +195,6 @@ pub struct CancelOrder<'info>{
     pub market_asks: AccountInfo<'info>,
     #[account(mut)]
     pub open_orders: AccountInfo<'info>,
-    pub open_orders_authority: Signer<'info>,
     #[account(mut)]
     pub req_queue: AccountInfo<'info>,
     pub event_queue: AccountInfo<'info>,
@@ -208,7 +206,6 @@ pub struct SettleFunds<'info>{
     pub market: AccountInfo<'info>,
     #[account(mut)]
     pub open_orders: AccountInfo<'info>,
-    pub open_orders_authority: Signer<'info>,
     #[account(mut)]
     pub coin_wallet: AccountInfo<'info>,
     #[account(mut)]
@@ -225,7 +222,6 @@ pub struct SettleFunds<'info>{
 pub struct DisableMarket<'info>{
     #[account(mut)]
     pub market: AccountInfo<'info>,
-    pub disable_authority_key: Signer<'info>,
     
 }
 #[derive(Accounts)]
@@ -234,7 +230,6 @@ pub struct SweepFees<'info>{
     pub market: AccountInfo<'info>,
     #[account(mut)]
     pub pc_vault: AccountInfo<'info>,
-    pub sweep_authority: Signer<'info>,
     #[account(mut)]
     pub sweep_receiver_amount: AccountInfo<'info>,
     pub vault_signer: AccountInfo<'info>,
@@ -251,7 +246,6 @@ pub struct CancelOrderv2<'info>{
     pub market_asks: AccountInfo<'info>,
     #[account(mut)]
     pub open_orders: AccountInfo<'info>,
-    pub open_orders_authority: Signer<'info>,
     #[account(mut)]
     pub event_queue: AccountInfo<'info>,
 
@@ -266,7 +260,6 @@ pub struct CancelOrderByClientv2<'info>{
     pub market_asks: AccountInfo<'info>,
     #[account(mut)]
     pub open_orders: AccountInfo<'info>,
-    pub open_orders_authority: Signer<'info>,
     #[account(mut)]
     pub event_queue: AccountInfo<'info>,
 
@@ -293,7 +286,6 @@ pub struct SendTake<'info>{
 pub struct CloseOpenOrders<'info>{
     #[account(mut)]
     pub open_orders: AccountInfo<'info>,
-    pub authority: Signer<'info>,
     #[account(mut)]
     pub destination: AccountInfo<'info>,
     pub market: AccountInfo<'info>,
@@ -304,8 +296,6 @@ pub struct InitOpenOrders<'info>{
     #[account(mut)]
     pub open_orders: AccountInfo<'info>,
     pub market: AccountInfo<'info>,
-    pub authority: Signer<'info>,
-    pub market_authority: Signer<'info>,
 
 }
 #[derive(Accounts)]
@@ -317,7 +307,6 @@ pub struct Prune<'info>{
     #[account(mut)]
     pub market_asks: AccountInfo<'info>,
     pub open_orders: AccountInfo<'info>,
-    pub prune_authority: Signer<'info>,
     pub open_orders_authority: AccountInfo<'info>,
     #[account(mut)]
     pub event_queue: AccountInfo<'info>,
@@ -329,7 +318,6 @@ pub struct ConsumeEventsPermissioned<'info>{
     pub market: AccountInfo<'info>,
     #[account(mut)]
     pub event_queue: AccountInfo<'info>,
-    pub consume_events_authority: Signer<'info>,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
