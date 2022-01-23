@@ -1,5 +1,4 @@
-//import * as anchor from "@project-serum/anchor";
-import * as anchor from "../../../ts";
+import * as anchor from "@project-serum/anchor";
 import BN from "bn.js";
 import { Keypair } from "@solana/web3.js";
 

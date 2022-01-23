@@ -572,7 +572,7 @@ fn parse_pda(
     seeds_grp: &ConstraintSeedsGroup,
 ) -> IdlPda {
     // All the available seed variables (except for constants).
-    let ix_args = accounts.instruction_args();
+    let ix_args = accounts.instruction_args().unwrap_or_default();
     let const_names: Vec<String> = ctx.consts().map(|c| c.ident.to_string()).collect();
     let account_field_names = accounts.field_names();
 

@@ -150,17 +150,18 @@ impl AccountsStruct {
     // Return value maps instruction name to type.
     // E.g. if we have `#[instruction(data: u64)]` then returns
     // { "data": "u64"}.
-    pub fn instruction_args(&self) -> HashMap<String, String> {
-        let mut args = HashMap::new();
-        if let Some(instruction_api) = &self.instruction_api {
-            for expr in instruction_api {
-                let arg = parser::tts_to_string(&expr);
-                let components: Vec<&str> = arg.split(" : ").collect();
-                assert!(components.len() == 2);
-                args.insert(components[0].to_string(), components[1].to_string());
-            }
-        }
-        args
+    pub fn instruction_args(&self) -> Option<HashMap<String, String>> {
+        self.instruction_api.as_ref().map(|instruction_api| {
+            instruction_api
+                .iter()
+                .map(|expr| {
+                    let arg = parser::tts_to_string(&expr);
+                    let components: Vec<&str> = arg.split(" : ").collect();
+                    assert!(components.len() == 2);
+                    (components[0].to_string(), components[1].to_string())
+                })
+                .collect()
+        })
     }
 
     pub fn field_names(&self) -> Vec<String> {
@@ -195,7 +196,7 @@ impl AccountField {
                 }
                 _ => None,
             },
-            AccountField::CompositeField(_field) => Some("todo".to_string()),
+            AccountField::CompositeField(field) => Some(field.symbol.clone()),
         }
     }
 }
