@@ -516,7 +516,7 @@ fn idl_accounts(
                 let accs_strct = global_accs
                     .get(&comp_f.symbol)
                     .expect("Could not resolve Accounts symbol");
-                let accounts = idl_accounts(seeds_feature, &ctx, accs_strct, global_accs);
+                let accounts = idl_accounts(seeds_feature, ctx, accs_strct, global_accs);
                 IdlAccountItem::IdlAccounts(IdlAccounts {
                     name: comp_f.ident.to_string().to_mixed_case(),
                     accounts,
@@ -628,7 +628,7 @@ fn parse_seed(
     seed: &Expr,
 ) -> Option<IdlSeed> {
     match seed {
-        Expr::MethodCall(seed_method) => {
+        Expr::MethodCall(_) => {
             let (var_name, path) = {
                 // Convert the seed into the raw string representation.
                 let seed_str = parser::tts_to_string(&seed);
@@ -644,7 +644,7 @@ fn parse_seed(
 
                 // The path to the seed (only if the `name` type is a struct).
                 let mut path = Vec::new();
-                while components.len() > 0 {
+                while components.is_empty() {
                     let c = components.remove(0);
                     if c.contains("()") {
                         break;
@@ -661,7 +661,7 @@ fn parse_seed(
 
             // Instruction argument.
             if ix_args.contains_key(&var_name) {
-                let idl_ty = IdlType::from_str(&ix_args.get(&var_name).unwrap()).ok()?;
+                let idl_ty = IdlType::from_str(ix_args.get(&var_name).unwrap()).ok()?;
                 Some(IdlSeed::Arg(IdlSeedArg {
                     ty: idl_ty,
                     path: match path.len() {
@@ -673,15 +673,12 @@ fn parse_seed(
             // Constant.
             else if const_names.contains(&var_name) {
                 // Pull in the constant value directly into the IDL.
-                assert!(path.len() == 0);
-                let const_item = ctx
-                    .consts()
-                    .find(|c| c.ident.to_string() == var_name)
-                    .unwrap();
-                let mut idl_ty = IdlType::from_str(&parser::tts_to_string(&const_item.ty)).ok()?;
+                assert!(path.is_empty());
+                let const_item = ctx.consts().find(|c| c.ident == var_name).unwrap();
+                let idl_ty = IdlType::from_str(&parser::tts_to_string(&const_item.ty)).ok()?;
                 let mut idl_ty_value = parser::tts_to_string(&const_item.expr);
 
-                if let IdlType::Array(ty, size) = &idl_ty {
+                if let IdlType::Array(_ty, _size) = &idl_ty {
                     if idl_ty_value.contains("b\"") {
                         let components: Vec<&str> = idl_ty_value.split('b').collect();
                         assert!(components.len() == 2);
@@ -708,7 +705,7 @@ fn parse_seed(
                 }))
             }
             // String literal.
-            else if path.len() == 0 && var_name.contains('"') {
+            else if path.is_empty() && var_name.contains('"') {
                 let mut var_name = var_name;
                 // Remove the byte `b` prefix if the string is of the form `b"seed".
                 if var_name.starts_with("b\"") {
@@ -734,7 +731,7 @@ fn parse_seed(
             account_field_names,
             &expr_reference.expr,
         ),
-        Expr::Index(expr_index) => {
+        Expr::Index(_) => {
             // Slice literal.
             println!("WARNING: auto pda derivation not currently supported for slice literals");
             None
@@ -748,7 +745,7 @@ fn parse_seed(
 }
 
 fn parse_seed_account_ty(
-    ctx: &CrateContext,
+    _ctx: &CrateContext,
     accounts: &AccountsStruct,
     var_name: String,
 ) -> Option<String> {
@@ -756,7 +753,7 @@ fn parse_seed_account_ty(
     let account_field = accounts
         .fields
         .iter()
-        .find(|field| field.ident().to_string() == var_name)
+        .find(|field| *field.ident() == var_name)
         .unwrap();
 
     // Get the struct name from the account field.
@@ -776,7 +773,7 @@ fn parse_seed_account_field_ty(
             let account_field = accounts
                 .fields
                 .iter()
-                .find(|field| field.ident().to_string() == var_name)
+                .find(|field| *field.ident() == var_name)
                 .unwrap();
 
             // Get the struct name from the account field.
@@ -790,12 +787,9 @@ fn parse_seed_account_field_ty(
                 }
             }
             // Get the rust representation of the field's struct.
-            let strct = ctx
-                .structs()
-                .find(|s| s.ident.to_string() == ty_name)
-                .unwrap();
+            let strct = ctx.structs().find(|s| s.ident == ty_name).unwrap();
 
-            Some(parse_field_path(ctx, &strct, &mut path))
+            Some(parse_field_path(ctx, strct, &mut path))
         }
         _ => panic!("invariant violation"),
     }
@@ -814,14 +808,14 @@ fn parse_field_path(ctx: &CrateContext, strct: &syn::ItemStruct, path: &mut &[St
     let next_field_ty_str = parser::tts_to_string(&next_field.ty);
 
     // The path is empty so this must be a primitive type.
-    if path.len() == 0 {
+    if path.is_empty() {
         return next_field_ty_str.parse().unwrap();
     }
 
     // Get the rust representation of hte field's struct.
     let strct = ctx
         .structs()
-        .find(|s| s.ident.to_string() == next_field_ty_str)
+        .find(|s| s.ident == next_field_ty_str)
         .unwrap();
 
     parse_field_path(ctx, strct, path)
