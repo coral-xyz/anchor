@@ -646,14 +646,13 @@ fn parse_seed(
 
                 // The path to the seed (only if the `name` type is a struct).
                 let mut path = Vec::new();
-                while components.is_empty() {
+                while !components.is_empty() {
                     let c = components.remove(0);
                     if c.contains("()") {
                         break;
                     }
                     path.push(c.to_string());
                 }
-
                 if path.len() == 1 && (path[0] == "key" || path[0] == "key()") {
                     path = Vec::new();
                 }
