@@ -534,6 +534,7 @@ fn idl_accounts(
                         .seeds
                         .as_ref()
                         .map(|s| parse_pda(ctx, accounts, s))
+                        .unwrap_or(None)
                 } else {
                     None
                 },
@@ -553,53 +554,45 @@ fn idl_accounts(
 //       the parser will treat the given seeds as empty and so clients will
 //       simply fail to automatically populate the PDA accounts.
 //
-// Seed Assumptions: Seeds must be of the form
+// Seed Assumptions: Seeds must be of one of the following forms:
 //
 // - instruction argument.
 // - account context field pubkey.
 // - account data, where the account is defined in the current program.
 //   We make an exception for the SPL token program, since it is so common
 //   and sometimes convenient to use fields as a seed (e.g. Auction house
-//   program).
-//   In the case of nested structs/account data, all nested structs must
-//   be defined in the current program as well.
+//   program). In the case of nested structs/account data, all nested structs
+//   must be defined in the current program as well.
 // - byte string literal (e.g. b"MY_SEED").
 // - byte string literal constant  (e.g. `pub const MY_SEED: [u8; 2] = *b"hi";`).
-//
+// - array constants.
 fn parse_pda(
     ctx: &CrateContext,
     accounts: &AccountsStruct,
     seeds_grp: &ConstraintSeedsGroup,
-) -> IdlPda {
-    // All the available seed variables (except for constants).
+) -> Option<IdlPda> {
+    // All the available sources of seeds.
     let ix_args = accounts.instruction_args().unwrap_or_default();
     let const_names: Vec<String> = ctx.consts().map(|c| c.ident.to_string()).collect();
     let account_field_names = accounts.field_names();
 
-    // Final seeds accumulator.
-    let mut seeds = Vec::new();
+    // Extract the idl seed types from the constraints.
+    let seeds = seeds_grp
+        .seeds
+        .iter()
+        .map(|seed| {
+            parse_seed(
+                ctx,
+                accounts,
+                &ix_args,
+                &const_names,
+                &account_field_names,
+                seed,
+            )
+        })
+        .collect::<Option<Vec<_>>>()?;
 
-    // Parse each seed.
-    for seed in &seeds_grp.seeds {
-        match parse_seed(
-            ctx,
-            accounts,
-            &ix_args,
-            &const_names,
-            &account_field_names,
-            seed,
-        ) {
-            Some(seed) => seeds.push(seed),
-            None => {
-                return IdlPda {
-                    seeds: Vec::new(),
-                    program_id: None,
-                }
-            }
-        }
-    }
-
-    // Parse the program id.
+    // Parse the program id, if it exists.
     let program_id = seeds_grp
         .program_seed
         .as_ref()
@@ -613,10 +606,10 @@ fn parse_pda(
                 pid,
             )
         })
-        .unwrap_or(None);
+        .unwrap_or_default();
 
     // Done.
-    IdlPda { seeds, program_id }
+    Some(IdlPda { seeds, program_id })
 }
 
 fn parse_seed(
