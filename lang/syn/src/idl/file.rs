@@ -3,7 +3,7 @@ use crate::parser::context::CrateContext;
 use crate::parser::{self, accounts, error, program};
 use crate::ConstraintSeedsGroup;
 use crate::Ty;
-use crate::{AccountField, AccountsStruct, StateIx};
+use crate::{AccountField, AccountsStruct, Field, StateIx};
 use anyhow::Result;
 use heck::MixedCase;
 use quote::ToTokens;
@@ -61,7 +61,7 @@ pub fn parse(
                                 let accounts_strct =
                                     accs.get(&method.anchor_ident.to_string()).unwrap();
                                 let accounts =
-                                    idl_accounts(seeds_feature, &ctx, accounts_strct, &accs);
+                                    idl_accounts(&ctx, accounts_strct, &accs, seeds_feature);
                                 IdlInstruction {
                                     name,
                                     accounts,
@@ -100,7 +100,7 @@ pub fn parse(
                         })
                         .collect();
                     let accounts_strct = accs.get(&anchor_ident.to_string()).unwrap();
-                    let accounts = idl_accounts(seeds_feature, &ctx, accounts_strct, &accs);
+                    let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature);
                     IdlInstruction {
                         name,
                         accounts,
@@ -168,7 +168,7 @@ pub fn parse(
                 .collect::<Vec<_>>();
             // todo: don't unwrap
             let accounts_strct = accs.get(&ix.anchor_ident.to_string()).unwrap();
-            let accounts = idl_accounts(seeds_feature, &ctx, accounts_strct, &accs);
+            let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature);
             IdlInstruction {
                 name: ix.ident.to_string().to_mixed_case(),
                 accounts,
@@ -503,10 +503,10 @@ fn to_idl_type(f: &syn::Field) -> IdlType {
 }
 
 fn idl_accounts(
-    seeds_feature: bool,
     ctx: &CrateContext,
     accounts: &AccountsStruct,
     global_accs: &HashMap<String, AccountsStruct>,
+    seeds_feature: bool,
 ) -> Vec<IdlAccountItem> {
     accounts
         .fields
@@ -516,7 +516,7 @@ fn idl_accounts(
                 let accs_strct = global_accs
                     .get(&comp_f.symbol)
                     .expect("Could not resolve Accounts symbol");
-                let accounts = idl_accounts(seeds_feature, ctx, accs_strct, global_accs);
+                let accounts = idl_accounts(ctx, accs_strct, global_accs, seeds_feature);
                 IdlAccountItem::IdlAccounts(IdlAccounts {
                     name: comp_f.ident.to_string().to_mixed_case(),
                     accounts,
@@ -529,15 +529,7 @@ fn idl_accounts(
                     Ty::Signer => true,
                     _ => acc.constraints.is_signer(),
                 },
-                pda: if seeds_feature {
-                    acc.constraints
-                        .seeds
-                        .as_ref()
-                        .map(|s| parse_pda(ctx, accounts, s))
-                        .unwrap_or(None)
-                } else {
-                    None
-                },
+                pda: parse_pda(ctx, accounts, acc, seeds_feature),
             }),
         })
         .collect::<Vec<_>>()
@@ -567,6 +559,23 @@ fn idl_accounts(
 // - byte string literal constant  (e.g. `pub const MY_SEED: [u8; 2] = *b"hi";`).
 // - array constants.
 fn parse_pda(
+    ctx: &CrateContext,
+    accounts: &AccountsStruct,
+    acc: &Field,
+    seeds_feature: bool,
+) -> Option<IdlPda> {
+    if seeds_feature {
+        acc.constraints
+            .seeds
+            .as_ref()
+            .map(|s| _parse_pda(ctx, accounts, s))
+            .unwrap_or(None)
+    } else {
+        None
+    }
+}
+
+fn _parse_pda(
     ctx: &CrateContext,
     accounts: &AccountsStruct,
     seeds_grp: &ConstraintSeedsGroup,
