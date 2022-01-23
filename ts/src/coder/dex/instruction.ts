@@ -3,7 +3,6 @@ import camelCase from "camelcase";
 import { PublicKey } from "@solana/web3.js";
 import { InstructionCoder } from "../index.js";
 import { Idl } from "../../idl.js";
-import { publicKey } from "@project-serum/anchor/dist/cjs/utils";
 
 export class SplTokenInstructionCoder implements InstructionCoder {
   constructor(_: Idl) {}
@@ -232,10 +231,10 @@ const LAYOUT = BufferLayout.union(BufferLayout.u8("instruction"));
 LAYOUT.addVariant(
   0,
   BufferLayout.struct([
-    BufferLayout.u64("coin_lot_size"),
-    BufferLayout.u64("pc_lot_size"),
-    BufferLayout.u64("vault_signer_nonce"),
-    BufferLayout.u64("pc_dust_threshold"),
+    BufferLayout.nu64("coin_lot_size"),
+    BufferLayout.nu64("pc_lot_size"),
+    BufferLayout.nu64("vault_signer_nonce"),
+    BufferLayout.nu64("pc_dust_threshold"),
     BufferLayout.u16("fee_rate_bps"),
     publicKey("prune_authority"),
     publicKey("consume_events_authority"),
@@ -246,25 +245,25 @@ LAYOUT.addVariant(
 );
 LAYOUT.addVariant(1, BufferLayout.struct([
   BufferLayout.u32("side"),
-  BufferLayout.u64("limit_price"),
-  BufferLayout.u64("max_coin_qty"),
+  BufferLayout.nu64("limit_price"),
+  BufferLayout.nu64("max_coin_qty"),
   BufferLayout.u32("order_type"),
-  BufferLayout.u64("client_order_id"),
+  BufferLayout.nu64("client_order_id"),
   BufferLayout.u32("self_trade_behavior"),
   publicKey("open_orders_authority"),
   BufferLayout.u16("limit"),
-  BufferLayout.u64("max__native_pc_qty_including_fees"),
+  BufferLayout.nu64("max__native_pc_qty_including_fees"),
 ]), "new_order");
 
 LAYOUT.addVariant(
   2,
   BufferLayout.struct([
     BufferLayout.u32("side"),
-    BufferLayout.u64("limit_price"),
-    BufferLayout.u64("max_coin_qty"),
+    BufferLayout.nu64("limit_price"),
+    BufferLayout.nu64("max_coin_qty"),
     BufferLayout.u32("self_trade_behavior"),
     BufferLayout.u32("order_type"),
-    BufferLayout.u64("client_order_id"),
+    BufferLayout.nu64("client_order_id"),
     publicKey("open_orders_authority"),
     BufferLayout.u16("limit"),
   ]),
@@ -319,15 +318,15 @@ LAYOUT.addVariant(9, BufferLayout.struct([
 ]), "cancel_order_v2");
 
 LAYOUT.addVariant(10, BufferLayout.struct([
-  BufferLayout.u64("client_id"),
+  BufferLayout.nu64("client_id"),
   publicKey("open_orders_authority"),
 ]), "cancel_order_by_client_v2");
 
 LAYOUT.addVariant(11, BufferLayout.struct([
   BufferLayout.u32("side"),
-  BufferLayout.u64("limit_price"),
-  BufferLayout.u64("max_coin_qty"),
-  BufferLayout.u64("min_native_pc_qty"),
+  BufferLayout.nu64("limit_price"),
+  BufferLayout.nu64("max_coin_qty"),
+  BufferLayout.nu64("min_native_pc_qty"),
   BufferLayout.u16("limit"),
 ]), "send_take");
 
