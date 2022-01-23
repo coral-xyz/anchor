@@ -196,7 +196,7 @@ export type Dex = {
           "type": "u64"
         },
         {
-          "name": "selfTradeBehaviour",
+          "name": "selfTradeBehavior",
           "type": {
             "defined": "SelfTradeBehavior"
           }
@@ -290,7 +290,7 @@ export type Dex = {
           "type": "u64"
         },
         {
-          "name": "selfTradeBehaviour",
+          "name": "selfTradeBehavior",
           "type": {
             "defined": "SelfTradeBehavior"
           }
@@ -1074,7 +1074,7 @@ export const IDL: Dex = {
           "type": "u64"
         },
         {
-          "name": "selfTradeBehaviour",
+          "name": "selfTradeBehavior",
           "type": {
             "defined": "SelfTradeBehavior"
           }
@@ -1168,7 +1168,7 @@ export const IDL: Dex = {
           "type": "u64"
         },
         {
-          "name": "selfTradeBehaviour",
+          "name": "selfTradeBehavior",
           "type": {
             "defined": "SelfTradeBehavior"
           }
