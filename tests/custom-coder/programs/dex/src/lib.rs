@@ -28,7 +28,7 @@ pub mod dex {
         max_coin_qty: u64,
         order_type: OrderType,
         client_order_id: u64,
-        self_trade_behaviour: SelfTradeBehavior,
+        self_trade_behavior: SelfTradeBehavior,
         open_orders_authority: Pubkey,
         limit: u16,
         max_native_pc_qty_including_fees: u64) -> ProgramResult{
