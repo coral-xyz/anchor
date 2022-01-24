@@ -15,17 +15,18 @@ import { TransactionFn } from "./transaction.js";
 import { Idl, IdlSeed, IdlAccount } from "../../idl.js";
 import * as utf8 from "../../utils/bytes/utf8.js";
 import { TOKEN_PROGRAM_ID, ASSOCIATED_PROGRAM_ID } from "../../utils/token.js";
-import {
-  AllInstructions,
-  InstructionContextFn,
-  MakeInstructionsNamespace,
-} from "./types.js";
+import { AllInstructions, MethodsFn, MakeMethodsNamespace } from "./types.js";
 import { InstructionFn } from "./instruction.js";
 import { RpcFn } from "./rpc.js";
 import { SimulateFn } from "./simulate.js";
 import Provider from "../../provider.js";
 import { AccountNamespace } from "./account.js";
 import { coder } from "../../spl/token";
+
+export type MethodsNamespace<
+  IDL extends Idl = Idl,
+  I extends AllInstructions<IDL> = AllInstructions<IDL>
+> = MakeMethodsNamespace<IDL, I, any>; // TODO: don't use any.
 
 export class MethodsBuilderFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
@@ -37,17 +38,17 @@ export class MethodsBuilderFactory {
     rpcFn: RpcFn<IDL>,
     simulateFn: SimulateFn<IDL>,
     accountNamespace: AccountNamespace<IDL>
-  ): MethodFn {
-    const request: MethodFn<IDL, I> = (...args) => {
+  ): MethodsFn<IDL, I, any> {
+    const request: MethodsFn<IDL, I, any> = (...args) => {
       return new MethodsBuilder(
-        provider,
-        programId,
-        idlIx,
         args,
         ixFn,
         txFn,
         rpcFn,
         simulateFn,
+        provider,
+        programId,
+        idlIx,
         accountNamespace
       );
     };
@@ -56,25 +57,32 @@ export class MethodsBuilderFactory {
 }
 
 export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
-  private _accounts: { [name: string]: PublicKey } = {};
+  readonly _accounts: { [name: string]: PublicKey } = {};
   private _remainingAccounts: Array<AccountMeta> = [];
   private _signers: Array<Signer> = [];
   private _preInstructions: Array<TransactionInstruction> = [];
   private _postInstructions: Array<TransactionInstruction> = [];
-  private _accountStore: AccountStore<IDL>;
+  private _accountsResolver: AccountsResolver<IDL, I>;
 
   constructor(
-    private _provider: Provider,
-    private _programId: PublicKey,
-    private _idlIx: AllInstructions<IDL>,
     private _args: Array<any>,
     private _ixFn: InstructionFn<IDL>,
     private _txFn: TransactionFn<IDL>,
     private _rpcFn: RpcFn<IDL>,
     private _simulateFn: SimulateFn<IDL>,
+    _provider: Provider,
+    _programId: PublicKey,
+    _idlIx: AllInstructions<IDL>,
     _accountNamespace: AccountNamespace<IDL>
   ) {
-    this._accountStore = new AccountStore(_provider, _accountNamespace);
+    this._accountsResolver = new AccountsResolver(
+      _args,
+      this._accounts,
+      _provider,
+      _programId,
+      _idlIx,
+      _accountNamespace
+    );
   }
 
   // TODO: don't use any.
@@ -110,7 +118,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   }
 
   public async rpc(options: ConfirmOptions): Promise<TransactionSignature> {
-    await this.resolvePdas();
+    await this._accountsResolver.resolve();
     // @ts-ignore
     return this._rpcFn(...this._args, {
       accounts: this._accounts,
@@ -125,7 +133,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   public async simulate(
     options: ConfirmOptions
   ): Promise<SimulateResponse<any, any>> {
-    await this.resolvePdas();
+    await this._accountsResolver.resolve();
     // @ts-ignore
     return this._simulateFn(...this._args, {
       accounts: this._accounts,
@@ -138,7 +146,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   }
 
   public async instruction(): Promise<TransactionInstruction> {
-    await this.resolvePdas();
+    await this._accountsResolver.resolve();
     // @ts-ignore
     return this._ixFn(...this._args, {
       accounts: this._accounts,
@@ -150,7 +158,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   }
 
   public async transaction(): Promise<Transaction> {
-    await this.resolvePdas();
+    await this._accountsResolver.resolve();
     // @ts-ignore
     return this._txFn(...this._args, {
       accounts: this._accounts,
@@ -159,6 +167,21 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
       preInstructions: this._preInstructions,
       postInstructions: this._postInstructions,
     });
+  }
+}
+
+class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
+  private _accountStore: AccountStore<IDL>;
+
+  constructor(
+    private _args: Array<any>,
+    private _accounts: { [name: string]: PublicKey },
+    private _provider: Provider,
+    private _programId: PublicKey,
+    private _idlIx: AllInstructions<IDL>,
+    _accountNamespace: AccountNamespace<IDL>
+  ) {
+    this._accountStore = new AccountStore(_provider, _accountNamespace);
   }
 
   // Note: We serially resolve PDAs one by one rather than doing them
@@ -170,38 +193,48 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   //       correct order. But in future work, we should create the
   //       dependency graph and resolve automatically.
   //
-  private async resolvePdas() {
+  public async resolve() {
     for (let k = 0; k < this._idlIx.accounts.length; k += 1) {
       // Cast is ok because only a non-nested IdlAccount can have a seeds
       // cosntraint.
       const accountDesc = this._idlIx.accounts[k] as IdlAccount;
       const accountDescName = camelCase(accountDesc.name);
 
-      // Auto populate if needed.
+      // PDA derived from IDL seeds.
       if (accountDesc.pda && accountDesc.pda.seeds.length > 0) {
         if (this._accounts[accountDescName] === undefined) {
           await this.autoPopulatePda(accountDesc);
+          continue;
         }
-      } else if (accountDescName === "systemProgram") {
-        if (this._accounts[accountDescName] === undefined) {
-          this._accounts[accountDescName] = SystemProgram.programId;
-        }
-      } else if (accountDescName === "rent") {
-        if (this._accounts[accountDescName] === undefined) {
-          this._accounts[accountDescName] = SYSVAR_RENT_PUBKEY;
-        }
-      } else if (accountDescName === "tokenProgram") {
-        if (this._accounts[accountDescName] === undefined) {
-          this._accounts[accountDescName] = TOKEN_PROGRAM_ID;
-        }
-      } else if (accountDescName === "associatedTokenProgram") {
-        if (this._accounts[accountDescName] === undefined) {
-          this._accounts[accountDescName] = ASSOCIATED_PROGRAM_ID;
-        }
-      } else if (accountDesc.isSigner) {
-        if (this._accounts[accountDescName] === undefined) {
-          this._accounts[accountDescName] = this._provider.wallet.publicKey;
-        }
+      }
+
+      // Signers default to the provider.
+      if (
+        accountDesc.isSigner &&
+        this._accounts[accountDescName] === undefined
+      ) {
+        this._accounts[accountDescName] = this._provider.wallet.publicKey;
+        continue;
+      }
+
+      // Common accounts are auto populated with magic names by convention.
+      switch (accountDescName) {
+        case "systemProgram":
+          if (this._accounts[accountDescName] === undefined) {
+            this._accounts[accountDescName] = SystemProgram.programId;
+          }
+        case "rent":
+          if (this._accounts[accountDescName] === undefined) {
+            this._accounts[accountDescName] = SYSVAR_RENT_PUBKEY;
+          }
+        case "tokenProgram":
+          if (this._accounts[accountDescName] === undefined) {
+            this._accounts[accountDescName] = TOKEN_PROGRAM_ID;
+          }
+        case "associatedTokenProgram":
+          if (this._accounts[accountDescName] === undefined) {
+            this._accounts[accountDescName] = ASSOCIATED_PROGRAM_ID;
+          }
       }
     }
   }
@@ -294,6 +327,8 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
 
   // Converts the given idl valaue into a Buffer. The values here must be
   // primitives. E.g. no structs.
+  //
+  // TODO: add more types here as needed.
   private toBufferValue(type: string | any, value: any): Buffer {
     switch (type) {
       case "u8":
@@ -322,16 +357,6 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     }
   }
 }
-
-export type MethodsNamespace<
-  IDL extends Idl = Idl,
-  I extends AllInstructions<IDL> = AllInstructions<IDL>
-> = MakeInstructionsNamespace<IDL, I, any>; // TODO: don't use any.
-
-export type MethodFn<
-  IDL extends Idl = Idl,
-  I extends AllInstructions<IDL> = AllInstructions<IDL>
-> = InstructionContextFn<IDL, I, MethodsBuilder<IDL, I>>;
 
 // TODO: this should be configureable to avoid unnecessary requests.
 export class AccountStore<IDL extends Idl> {
