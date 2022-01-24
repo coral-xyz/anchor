@@ -20,7 +20,8 @@ incremented for features.
 ### Breaking
 
 * lang: rename `loader_account` module to `account_loader` module ([#1279](https://github.com/project-serum/anchor/pull/1279))
-* ts: `Coder` is now an interface and the existing class has been renamed to `BorshCoder`. This change allows the generation of Anchor clients for non anchor programs  ([#1259](https://github.com/project-serum/anchor/pull/1259/files)).
+* ts: `Coder` is now an interface and the existing class has been renamed to `BorshCoder`. This change allows the generation of Anchor clients for non anchor programs ([#1259](https://github.com/project-serum/anchor/pull/1259/files)).
+* lang: revert account layout back to `repr(packed)` by default ([#1356](https://github.com/project-serum/anchor/pull/1356)). Different account layouts can still be chosen by annotating the data structure with `repr(<layout>)`.
 
 ## [0.20.1] - 2022-01-09
 
