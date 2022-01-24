@@ -21,7 +21,7 @@ import { AccountsResolver } from "../accounts-resolver.js";
 export type MethodsNamespace<
   IDL extends Idl = Idl,
   I extends AllInstructions<IDL> = AllInstructions<IDL>
-> = MakeMethodsNamespace<IDL, I, any>; // TODO: don't use any.
+> = MakeMethodsNamespace<IDL, I>;
 
 export class MethodsBuilderFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(

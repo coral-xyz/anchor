@@ -65,16 +65,8 @@ export type MakeInstructionsNamespace<
     Mk[M];
 };
 
-export type MakeMethodsNamespace<
-  IDL extends Idl,
-  I extends IdlInstruction,
-  Ret,
-  Mk extends { [M in keyof InstructionMap<I>]: unknown } = {
-    [M in keyof InstructionMap<I>]: unknown;
-  }
-> = {
-  [M in keyof InstructionMap<I>]: MethodsFn<IDL, InstructionMap<I>[M], Ret> &
-    Mk[M];
+export type MakeMethodsNamespace<IDL extends Idl, I extends IdlInstruction> = {
+  [M in keyof InstructionMap<I>]: MethodsFn<IDL, InstructionMap<I>[M], any>;
 };
 
 export type InstructionContextFn<
