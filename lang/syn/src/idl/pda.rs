@@ -96,7 +96,6 @@ impl<'a> PdaParser<'a> {
     }
 
     fn parse_seed(&self, seed: &Expr) -> Option<IdlSeed> {
-        println!("EXPR: {:?}", parser::tts_to_string(seed));
         match seed {
             Expr::MethodCall(_) => {
                 let seed_path = parse_seed_path(seed)?;
@@ -171,15 +170,14 @@ impl<'a> PdaParser<'a> {
             .find(|field| *field.ident() == seed_path.name())
             .unwrap();
 
-        // Name of the account struct.
-        let account = account_field.ty_name()?;
-
         // Follow the path to find the seed type.
         let ty = {
             let mut path = seed_path.components();
             match path.len() {
                 0 => IdlType::PublicKey,
                 1 => {
+                    // Name of the account struct.
+                    let account = account_field.ty_name()?;
                     if account == "TokenAccount" {
                         assert!(path.len() == 1);
                         match path[0].as_str() {
@@ -204,7 +202,7 @@ impl<'a> PdaParser<'a> {
 
         Some(IdlSeed::Account(IdlSeedAccount {
             ty,
-            account: Some(account),
+            account: account_field.ty_name(),
             path: seed_path.path(),
         }))
     }
