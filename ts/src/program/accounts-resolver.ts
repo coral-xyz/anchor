@@ -86,15 +86,30 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
       accountDesc.pda.seeds.map((seedDesc: IdlSeed) => this.toBuffer(seedDesc))
     );
 
-    const programId = this.parseProgramId(accountDesc);
+    const programId = await this.parseProgramId(accountDesc);
     const [pubkey] = await PublicKey.findProgramAddress(seeds, programId);
 
     this._accounts[camelCase(accountDesc.name)] = pubkey;
   }
 
-  private parseProgramId(accountDesc: IdlAccount): PublicKey {
-    // TODO
-    return this._programId;
+  private async parseProgramId(accountDesc: IdlAccount): Promise<PublicKey> {
+    if (!accountDesc.pda?.programId) {
+      return this._programId;
+    }
+    switch (accountDesc.pda.programId.kind) {
+      case "const":
+        return new PublicKey(
+          this.toBufferConst(accountDesc.pda.programId.value)
+        );
+      case "arg":
+        return this.argValue(accountDesc.pda.programId);
+      case "account":
+        return await this.accountValue(accountDesc.pda.programId);
+      default:
+        throw new Error(
+          `Unexpected program seed kind: ${accountDesc.pda.programId.kind}`
+        );
+    }
   }
 
   private async toBuffer(seedDesc: IdlSeed): Promise<Buffer> {
@@ -115,6 +130,11 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
   }
 
   private async toBufferArg(seedDesc: IdlSeed): Promise<Buffer> {
+    const argValue = this.argValue(seedDesc);
+    return this.toBufferValue(seedDesc.type, argValue);
+  }
+
+  private argValue(seedDesc: IdlSeed): any {
     const seedArgName = camelCase(seedDesc.path.split(".")[0]);
 
     const idlArgPosition = this._idlIx.args.findIndex(
@@ -124,11 +144,15 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
       throw new Error(`Unable to find argument for seed: ${seedArgName}`);
     }
 
-    const argValue = this._args[idlArgPosition];
-    return this.toBufferValue(seedDesc.type, argValue);
+    return this._args[idlArgPosition];
   }
 
   private async toBufferAccount(seedDesc: IdlSeed): Promise<Buffer> {
+    const accountValue = await this.accountValue(seedDesc);
+    return this.toBufferValue(seedDesc.type, accountValue);
+  }
+
+  private async accountValue(seedDesc: IdlSeed): Promise<any> {
     const pathComponents = seedDesc.path.split(".");
 
     const fieldName = pathComponents[0];
@@ -136,7 +160,7 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
 
     // The seed is a pubkey of the account.
     if (pathComponents.length === 1) {
-      return this.toBufferValue("publicKey", fieldPubkey);
+      return fieldPubkey;
     }
 
     // The key is account data.
@@ -150,9 +174,7 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     // Dereference all fields in the path to get the field value
     // used in the seed.
     const fieldValue = this.parseAccountValue(account, pathComponents.slice(1));
-
-    // Now that we have the seed value, convert it into a buffer.
-    return this.toBufferValue(seedDesc.type, fieldValue);
+    return fieldValue;
   }
 
   private parseAccountValue<T = any>(account: T, path: Array<string>): any {

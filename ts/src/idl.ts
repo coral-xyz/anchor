@@ -54,8 +54,8 @@ export type IdlAccount = {
 };
 
 export type IdlPda = {
-  seeds: IdlSeed;
-  programId?: string;
+  seeds: IdlSeed[];
+  programId?: IdlSeed;
 };
 
 export type IdlSeed = any; // TODO
