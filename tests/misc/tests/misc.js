@@ -1,5 +1,5 @@
 const anchor = require("@project-serum/anchor");
-const PublicKey = anchor.web3.PublicKey;
+const { SystemProgram, Keypair, PublicKey, SYSVAR_RENT_PUBKEY } = anchor.web3;
 const assert = require("assert");
 const {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -1221,14 +1221,14 @@ describe("misc", () => {
   });
 
   it("init_if_needed throws if associated token exists but has the wrong owner", async () => {
-    const mint = anchor.web3.Keypair.generate();
+    const mint = Keypair.generate();
     await program.rpc.testInitMint({
       accounts: {
         mint: mint.publicKey,
         payer: program.provider.wallet.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
+        systemProgram: SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        rent: SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -1239,6 +1239,16 @@ describe("misc", () => {
       mint.publicKey,
       program.provider.wallet.publicKey
     );
+
+			console.log('associated token init', {
+        token: associatedToken,
+        mint: mint.publicKey,
+        payer: program.provider.wallet.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+      });
 
     await program.rpc.testInitAssociatedToken({
       accounts: {
