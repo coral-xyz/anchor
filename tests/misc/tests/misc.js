@@ -1,5 +1,4 @@
 const anchor = require("@project-serum/anchor");
-const { SystemProgram, Keypair, PublicKey, SYSVAR_RENT_PUBKEY } = anchor.web3;
 const assert = require("assert");
 const {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -7,7 +6,7 @@ const {
   Token,
 } = require("@solana/spl-token");
 const miscIdl = require("../target/idl/misc.json");
-const { SystemProgram } = require("@solana/web3.js");
+const { SystemProgram, Keypair, PublicKey, SYSVAR_RENT_PUBKEY } = require("@solana/web3.js");
 const utf8 = anchor.utils.bytes.utf8;
 
 describe("misc", () => {
