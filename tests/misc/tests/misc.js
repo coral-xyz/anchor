@@ -6,7 +6,12 @@ const {
   Token,
 } = require("@solana/spl-token");
 const miscIdl = require("../target/idl/misc.json");
-const { SystemProgram, Keypair, PublicKey, SYSVAR_RENT_PUBKEY } = require("@solana/web3.js");
+const {
+  SystemProgram,
+  Keypair,
+  PublicKey,
+  SYSVAR_RENT_PUBKEY,
+} = require("@solana/web3.js");
 const utf8 = anchor.utils.bytes.utf8;
 
 describe("misc", () => {
@@ -1238,16 +1243,6 @@ describe("misc", () => {
       mint.publicKey,
       program.provider.wallet.publicKey
     );
-
-			console.log('associated token init', {
-        token: associatedToken,
-        mint: mint.publicKey,
-        payer: program.provider.wallet.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-      });
 
     await program.rpc.testInitAssociatedToken({
       accounts: {
