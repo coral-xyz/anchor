@@ -300,7 +300,7 @@ pub fn zero_copy(
 
     let repr = match attr {
         Some(_attr) => quote! {},
-        None => quote! {#[repr(C)]},
+        None => quote! {#[repr(packed)]},
     };
 
     proc_macro::TokenStream::from(quote! {
