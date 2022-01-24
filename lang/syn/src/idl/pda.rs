@@ -118,7 +118,7 @@ impl<'a> PdaParser<'a> {
                 println!("WARNING: auto pda derivation not currently supported for slice literals");
                 None
             }
-            // Unknown type. Please file an issue	.
+            // Unknown type. Please file an issue.
             _ => {
                 println!("WARNING: unexpected seed: {:?}", seed);
                 None
@@ -146,6 +146,7 @@ impl<'a> PdaParser<'a> {
         let mut idl_ty_value = parser::tts_to_string(&const_item.expr);
 
         if let IdlType::Array(_ty, _size) = &idl_ty {
+            // Convert str literal to array.
             if idl_ty_value.contains("b\"") {
                 let components: Vec<&str> = idl_ty_value.split('b').collect();
                 assert!(components.len() == 2);
