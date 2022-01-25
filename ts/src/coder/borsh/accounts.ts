@@ -62,7 +62,7 @@ export class BorshAccountsCoder<A extends string = string>
 
   public decode<T = any>(accountName: A, data: Buffer): T {
     const expectedDiscriminator = BorshAccountHeader.discriminator(accountName);
-		const givenDisc = BorshAccountHeader.parseDiscriminator(data);
+    const givenDisc = BorshAccountHeader.parseDiscriminator(data);
     if (expectedDiscriminator.compare(givenDisc)) {
       throw new Error("Invalid account discriminator");
     }
@@ -70,7 +70,7 @@ export class BorshAccountsCoder<A extends string = string>
   }
 
   public decodeUnchecked<T = any>(accountName: A, ix: Buffer): T {
-    const data = ix.slice(BorshAccountHeader.size());   // Chop off the header.
+    const data = ix.slice(BorshAccountHeader.size()); // Chop off the header.
     const layout = this.accountLayouts.get(accountName);
     if (!layout) {
       throw new Error(`Unknown account: ${accountName}`);
@@ -89,28 +89,26 @@ export class BorshAccountsCoder<A extends string = string>
   }
 
   public size(idlAccount: IdlTypeDef): number {
-    return (
-      BorshAccountHeader.size() + (accountSize(this.idl, idlAccount) ?? 0)
-    );
+    return BorshAccountHeader.size() + (accountSize(this.idl, idlAccount) ?? 0);
   }
 }
 
 export class BorshAccountHeader {
-	/**
-	 * Returns the default account header for an account with the given name.
-	 */
-	public static encode(accountName: string): Buffer {
-		if (features.isSet('deprecated-layout')) {
-			return BorshAccountHeader.discriminator(accountName);
-		} else {
-			return Buffer.concat([
-				Buffer.from([0]), // Version.
-				Buffer.from([0]), // Bump.
-				BorshAccountHeader.discriminator(accountName), // Disc.
-				Buffer.from([0, 0]), // Unused.
-			]);
-		}
-	}
+  /**
+   * Returns the default account header for an account with the given name.
+   */
+  public static encode(accountName: string): Buffer {
+    if (features.isSet("deprecated-layout")) {
+      return BorshAccountHeader.discriminator(accountName);
+    } else {
+      return Buffer.concat([
+        Buffer.from([0]), // Version.
+        Buffer.from([0]), // Bump.
+        BorshAccountHeader.discriminator(accountName), // Disc.
+        Buffer.from([0, 0]), // Unused.
+      ]);
+    }
+  }
 
   /**
    * Calculates and returns a unique 8 byte discriminator prepended to all anchor accounts.
@@ -118,43 +116,43 @@ export class BorshAccountHeader {
    * @param name The name of the account to calculate the discriminator.
    */
   public static discriminator(name: string): Buffer {
-		let size: number;
-		if (features.isSet("deprecated-layout")) {
-			size = DEPRECATED_ACCOUNT_DISCRIMINATOR_SIZE;
-		} else {
-			size = ACCOUNT_DISCRIMINATOR_SIZE;
-		}
+    let size: number;
+    if (features.isSet("deprecated-layout")) {
+      size = DEPRECATED_ACCOUNT_DISCRIMINATOR_SIZE;
+    } else {
+      size = ACCOUNT_DISCRIMINATOR_SIZE;
+    }
     return Buffer.from(
       sha256.digest(`account:${camelcase(name, { pascalCase: true })}`)
     ).slice(0, size);
   }
 
-	/**
-	 * Returns the account data index at which the discriminator starts.
-	 */
-	public static discriminatorOffset(): number {
-		if (features.isSet("deprecated-layout")) {
-			return 0;
-		} else {
-			return 2;
-		}
-	}
+  /**
+   * Returns the account data index at which the discriminator starts.
+   */
+  public static discriminatorOffset(): number {
+    if (features.isSet("deprecated-layout")) {
+      return 0;
+    } else {
+      return 2;
+    }
+  }
 
-	/**
-	 * Returns the byte size of the account header.
-	 */
-	public static size(): number {
-		return ACCOUNT_HEADER_SIZE;
-	}
+  /**
+   * Returns the byte size of the account header.
+   */
+  public static size(): number {
+    return ACCOUNT_HEADER_SIZE;
+  }
 
-	/**
-	 * Returns the discriminator from the given account data.
-	 */
-	public static parseDiscriminator(data: Buffer): Buffer {
-		if (features.isSet("deprecated-layout")) {
-			return data.slice(0, 8);
-		} else {
-			return data.slice(2, 6);
-		}
-	}
+  /**
+   * Returns the discriminator from the given account data.
+   */
+  public static parseDiscriminator(data: Buffer): Buffer {
+    if (features.isSet("deprecated-layout")) {
+      return data.slice(0, 8);
+    } else {
+      return data.slice(2, 6);
+    }
+  }
 }

@@ -19,7 +19,7 @@ export function coder(): SplTokenCoder {
  * SplToken IDL.
  */
 export type SplToken = {
-	layoutVersion: "custom",
+  layoutVersion: "custom";
   version: "0.1.0";
   name: "spl_token";
   instructions: [
@@ -625,7 +625,7 @@ export type SplToken = {
 };
 
 export const IDL: SplToken = {
-	layoutVersion: "custom",
+  layoutVersion: "custom",
   version: "0.1.0",
   name: "spl_token",
   instructions: [

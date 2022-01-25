@@ -3,7 +3,7 @@ import { PublicKey } from "@solana/web3.js";
 import * as borsh from "@project-serum/borsh";
 
 export type Idl = {
-	layoutVersion: string;
+  layoutVersion: string;
   version: string;
   name: string;
   instructions: IdlInstruction[];
