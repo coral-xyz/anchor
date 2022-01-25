@@ -7,11 +7,18 @@ import { Idl, IdlTypeDef } from "../../idl.js";
 import { IdlCoder } from "./idl.js";
 import { AccountsCoder } from "../index.js";
 import { accountSize } from "../common.js";
+import * as features from "../../utils/features";
+
+/**
+ * Number of bytes of the account header.
+ */
+const ACCOUNT_HEADER_SIZE = 8;
 
 /**
  * Number of bytes of the account discriminator.
  */
-export const ACCOUNT_DISCRIMINATOR_SIZE = 8;
+const ACCOUNT_DISCRIMINATOR_SIZE = 4;
+const DEPRECATED_ACCOUNT_DISCRIMINATOR_SIZE = 4;
 
 /**
  * Encodes and decodes account objects.
@@ -49,22 +56,21 @@ export class BorshAccountsCoder<A extends string = string>
     }
     const len = layout.encode(account, buffer);
     let accountData = buffer.slice(0, len);
-    let discriminator = BorshAccountsCoder.accountDiscriminator(accountName);
-    return Buffer.concat([discriminator, accountData]);
+    let header = BorshAccountHeader.encode(accountName);
+    return Buffer.concat([header, accountData]);
   }
 
   public decode<T = any>(accountName: A, data: Buffer): T {
-    // Assert the account discriminator is correct.
-    const discriminator = BorshAccountsCoder.accountDiscriminator(accountName);
-    if (discriminator.compare(data.slice(0, 8))) {
+    const expectedDiscriminator = BorshAccountHeader.discriminator(accountName);
+		const givenDisc = BorshAccountHeader.parseDiscriminator(data);
+    if (expectedDiscriminator.compare(givenDisc)) {
       throw new Error("Invalid account discriminator");
     }
     return this.decodeUnchecked(accountName, data);
   }
 
   public decodeUnchecked<T = any>(accountName: A, ix: Buffer): T {
-    // Chop off the discriminator before decoding.
-    const data = ix.slice(ACCOUNT_DISCRIMINATOR_SIZE);
+    const data = ix.slice(BorshAccountHeader.size());   // Chop off the header.
     const layout = this.accountLayouts.get(accountName);
     if (!layout) {
       throw new Error(`Unknown account: ${accountName}`);
@@ -73,9 +79,9 @@ export class BorshAccountsCoder<A extends string = string>
   }
 
   public memcmp(accountName: A, appendData?: Buffer): any {
-    const discriminator = BorshAccountsCoder.accountDiscriminator(accountName);
+    const discriminator = BorshAccountHeader.discriminator(accountName);
     return {
-      offset: 0,
+      offset: BorshAccountHeader.discriminatorOffset(),
       bytes: bs58.encode(
         appendData ? Buffer.concat([discriminator, appendData]) : discriminator
       ),
@@ -84,18 +90,71 @@ export class BorshAccountsCoder<A extends string = string>
 
   public size(idlAccount: IdlTypeDef): number {
     return (
-      ACCOUNT_DISCRIMINATOR_SIZE + (accountSize(this.idl, idlAccount) ?? 0)
+      BorshAccountHeader.size() + (accountSize(this.idl, idlAccount) ?? 0)
     );
   }
+}
+
+export class BorshAccountHeader {
+	/**
+	 * Returns the default account header for an account with the given name.
+	 */
+	public static encode(accountName: string): Buffer {
+		if (features.isSet('deprecated-layout')) {
+			return BorshAccountHeader.discriminator(accountName);
+		} else {
+			return Buffer.concat([
+				Buffer.from([0]), // Version.
+				Buffer.from([0]), // Bump.
+				BorshAccountHeader.discriminator(accountName), // Disc.
+				Buffer.from([0, 0]), // Unused.
+			]);
+		}
+	}
 
   /**
    * Calculates and returns a unique 8 byte discriminator prepended to all anchor accounts.
    *
    * @param name The name of the account to calculate the discriminator.
    */
-  public static accountDiscriminator(name: string): Buffer {
+  public static discriminator(name: string): Buffer {
+		let size: number;
+		if (features.isSet("deprecated-layout")) {
+			size = DEPRECATED_ACCOUNT_DISCRIMINATOR_SIZE;
+		} else {
+			size = ACCOUNT_DISCRIMINATOR_SIZE;
+		}
     return Buffer.from(
       sha256.digest(`account:${camelcase(name, { pascalCase: true })}`)
-    ).slice(0, ACCOUNT_DISCRIMINATOR_SIZE);
+    ).slice(0, size);
   }
+
+	/**
+	 * Returns the account data index at which the discriminator starts.
+	 */
+	public static discriminatorOffset(): number {
+		if (features.isSet("deprecated-layout")) {
+			return 0;
+		} else {
+			return 2;
+		}
+	}
+
+	/**
+	 * Returns the byte size of the account header.
+	 */
+	public static size(): number {
+		return ACCOUNT_HEADER_SIZE;
+	}
+
+	/**
+	 * Returns the discriminator from the given account data.
+	 */
+	public static parseDiscriminator(data: Buffer): Buffer {
+		if (features.isSet("deprecated-layout")) {
+			return data.slice(0, 8);
+		} else {
+			return data.slice(2, 6);
+		}
+	}
 }

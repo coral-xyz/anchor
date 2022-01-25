@@ -291,12 +291,22 @@ fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
         };
 
         let mut slice: &[u8] = &borsh_bytes[..];
+
+        #[cfg(feature = "deprecated-layout")]
         let disc: [u8; 8] = {
             let mut disc = [0; 8];
             disc.copy_from_slice(&borsh_bytes[..8]);
             slice = &slice[8..];
             disc
         };
+        #[cfg(not(feature = "deprecated-layout"))]
+        let disc: [u8; 4] = {
+            let mut disc = [0; 4];
+            disc.copy_from_slice(&borsh_bytes[2..6]);
+            slice = &slice[8..];
+            disc
+        };
+
         let mut event = None;
         if disc == T::discriminator() {
             let e: T = anchor_lang::AnchorDeserialize::deserialize(&mut slice)

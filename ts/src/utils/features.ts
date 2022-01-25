@@ -1,4 +1,7 @@
-const _AVAILABLE_FEATURES = new Set(["anchor-deprecated-state"]);
+const _AVAILABLE_FEATURES = new Set([
+	"anchor-deprecated-state",
+	"deprecated-layout",
+]);
 
 const _FEATURES = new Map();
 

@@ -21,6 +21,8 @@ incremented for features.
 
 * lang: rename `loader_account` module to `account_loader` module ([#1279](https://github.com/project-serum/anchor/pull/1279))
 * ts: `Coder` is now an interface and the existing class has been renamed to `BorshCoder`. This change allows the generation of Anchor clients for non anchor programs  ([#1259](https://github.com/project-serum/anchor/pull/1259/files)).
+* ts: `BorshAccountsCoder.accountDiscriminator` method has been replaced with `BorshAccountHeader.discriminator` ([#]()).
+* lang, ts: 8 byte account discriminator has been replaced with a versioned account header ([#]()).
 
 ## [0.20.1] - 2022-01-09
 

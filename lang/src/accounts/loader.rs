@@ -61,8 +61,13 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
             return Err(ErrorCode::AccountOwnedByWrongProgram.into());
         }
         let data: &[u8] = &acc_info.try_borrow_data()?;
+
         // Discriminator must match.
+        #[cfg(feature = "deprecated-layout")]
         let disc_bytes = array_ref![data, 0, 8];
+        #[cfg(not(feature = "deprecated-layout"))]
+        let disc_bytes = array_ref![data, 2, 4];
+
         if disc_bytes != &T::discriminator() {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
@@ -88,7 +93,11 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
     pub fn load(&self) -> Result<Ref<T>, ProgramError> {
         let data = self.acc_info.try_borrow_data()?;
 
+        #[cfg(feature = "deprecated-layout")]
         let disc_bytes = array_ref![data, 0, 8];
+        #[cfg(not(feature = "deprecated-layout"))]
+        let disc_bytes = array_ref![data, 2, 4];
+
         if disc_bytes != &T::discriminator() {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
@@ -107,7 +116,11 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
 
         let data = self.acc_info.try_borrow_mut_data()?;
 
+        #[cfg(feature = "deprecated-layout")]
         let disc_bytes = array_ref![data, 0, 8];
+        #[cfg(not(feature = "deprecated-layout"))]
+        let disc_bytes = array_ref![data, 2, 4];
+
         if disc_bytes != &T::discriminator() {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
@@ -130,9 +143,20 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         let data = self.acc_info.try_borrow_mut_data()?;
 
         // The discriminator should be zero, since we're initializing.
+        #[cfg(feature = "deprecated-layout")]
         let mut disc_bytes = [0u8; 8];
+        #[cfg(feature = "deprecated-layout")]
         disc_bytes.copy_from_slice(&data[..8]);
+        #[cfg(feature = "deprecated-layout")]
         let discriminator = u64::from_le_bytes(disc_bytes);
+
+        #[cfg(not(feature = "deprecated-layout"))]
+        let mut disc_bytes = [0u8; 4];
+        #[cfg(not(feature = "deprecated-layout"))]
+        disc_bytes.copy_from_slice(&data[2..6]);
+        #[cfg(not(feature = "deprecated-layout"))]
+        let discriminator = u32::from_le_bytes(disc_bytes);
+
         if discriminator != 0 {
             return Err(ErrorCode::AccountDiscriminatorAlreadySet.into());
         }
@@ -166,7 +190,12 @@ impl<'info, T: ZeroCopy> AccountsExit<'info> for Loader<'info, T> {
     // The account *cannot* be loaded when this is called.
     fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
         let mut data = self.acc_info.try_borrow_mut_data()?;
+
+        #[cfg(feature = "deprecated-layout")]
         let dst: &mut [u8] = &mut data;
+        #[cfg(not(feature = "deprecated-layout"))]
+        let dst: &mut [u8] = &mut data[2..];
+
         let mut cursor = std::io::Cursor::new(dst);
         cursor.write_all(&T::discriminator()).unwrap();
         Ok(())

@@ -238,6 +238,7 @@ pub fn parse(
         .collect::<Vec<IdlConst>>();
 
     Ok(Some(Idl {
+        layout_version: "0.1.0".to_string(),
         version,
         name: p.name.to_string(),
         state,
