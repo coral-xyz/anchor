@@ -142,10 +142,6 @@ fn generate_constraint_address(f: &Field, c: &ConstraintAddress) -> proc_macro2:
     }
 }
 
-pub fn generate_constraint_init(f: &Field, c: &ConstraintInitGroup) -> proc_macro2::TokenStream {
-    generate_constraint_init_group(f, c)
-}
-
 pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let ty_decl = f.ty_decl();
@@ -304,54 +300,6 @@ pub fn generate_constraint_rent_exempt(
     }
 }
 
-fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_macro2::TokenStream {
-    let payer = {
-        let p = &c.payer;
-        quote! {
-            let payer = #p.to_account_info();
-        }
-    };
-
-    let seeds_with_nonce = match &c.seeds {
-        None => quote! {},
-        Some(c) => {
-            let s = &mut c.seeds.clone();
-            // If the seeds came with a trailing comma, we need to chop it off
-            // before we interpolate them below.
-            if let Some(pair) = s.pop() {
-                s.push_value(pair.into_value());
-            }
-            let maybe_seeds_plus_comma = (!s.is_empty()).then(|| {
-                quote! { #s, }
-            });
-            let inner = match c.bump.as_ref() {
-                // Bump target not given. Use the canonical bump.
-                None => {
-                    quote! {
-                        [
-                            #maybe_seeds_plus_comma
-                            &[
-                                Pubkey::find_program_address(
-                                    &[#s],
-                                    program_id,
-                                ).1
-                            ][..]
-                        ]
-                    }
-                }
-                // Bump target given. Use it.
-                Some(b) => quote! {
-                    [#maybe_seeds_plus_comma &[#b][..]]
-                },
-            };
-            quote! {
-                &#inner[..]
-            }
-        }
-    };
-    generate_init(f, c.if_needed, seeds_with_nonce, payer, &c.space, &c.kind)
-}
-
 fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2::TokenStream {
     let name = &f.ident;
     let s = &mut c.seeds.clone();
@@ -440,6 +388,54 @@ fn generate_constraint_associated_token(
             return Err(anchor_lang::__private::ErrorCode::ConstraintAssociated.into());
         }
     }
+}
+
+fn generate_constraint_init(f: &Field, c: &ConstraintInitGroup) -> proc_macro2::TokenStream {
+    let payer = {
+        let p = &c.payer;
+        quote! {
+            let payer = #p.to_account_info();
+        }
+    };
+
+    let seeds_with_nonce = match &c.seeds {
+        None => quote! {},
+        Some(c) => {
+            let s = &mut c.seeds.clone();
+            // If the seeds came with a trailing comma, we need to chop it off
+            // before we interpolate them below.
+            if let Some(pair) = s.pop() {
+                s.push_value(pair.into_value());
+            }
+            let maybe_seeds_plus_comma = (!s.is_empty()).then(|| {
+                quote! { #s, }
+            });
+            let inner = match c.bump.as_ref() {
+                // Bump target not given. Use the canonical bump.
+                None => {
+                    quote! {
+                        [
+                            #maybe_seeds_plus_comma
+                            &[
+                                Pubkey::find_program_address(
+                                    &[#s],
+                                    program_id,
+                                ).1
+                            ][..]
+                        ]
+                    }
+                }
+                // Bump target given. Use it.
+                Some(b) => quote! {
+                    [#maybe_seeds_plus_comma &[#b][..]]
+                },
+            };
+            quote! {
+                &#inner[..]
+            }
+        }
+    };
+    generate_init(f, c.if_needed, seeds_with_nonce, payer, &c.space, &c.kind)
 }
 
 // `if_needed` is set if account allocation and initialization is optional.

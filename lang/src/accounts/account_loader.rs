@@ -1,10 +1,7 @@
 //! Type facilitating on demand zero copy deserialization.
 
 use crate::error::ErrorCode;
-use crate::{
-    Accounts, AccountsClose, AccountsExit, Bump, Owner, ToAccountInfo, ToAccountInfos,
-    ToAccountMetas, ZeroCopy,
-};
+use crate::*;
 use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
@@ -245,11 +242,8 @@ impl<'info, T: ZeroCopy + Owner> ToAccountInfos<'info> for AccountLoader<'info, 
 }
 
 #[cfg(not(feature = "deprecated-layout"))]
-impl<'info, T> Bump for T
-where
-    T: AsRef<AccountInfo<'info>>,
-{
+impl<'a, T: ZeroCopy + Owner> Bump for AccountLoader<'a, T> {
     fn seed(&self) -> u8 {
-        self.as_ref().data.borrow()[1]
+        self.acc_info.data.borrow()[1]
     }
 }

@@ -1,10 +1,7 @@
 #[allow(deprecated)]
 use crate::accounts::cpi_account::CpiAccount;
 use crate::error::ErrorCode;
-use crate::{
-    AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, ToAccountInfo,
-    ToAccountInfos, ToAccountMetas,
-};
+use crate::*;
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
@@ -180,5 +177,12 @@ where
 {
     fn from(a: CpiAccount<'info, T>) -> Self {
         Self::new(a.to_account_info(), Deref::deref(&a).clone())
+    }
+}
+
+#[cfg(not(feature = "deprecated-layout"))]
+impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Bump for ProgramAccount<'a, T> {
+    fn seed(&self) -> u8 {
+        self.inner.info.data.borrow()[1]
     }
 }

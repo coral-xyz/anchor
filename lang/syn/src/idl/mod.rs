@@ -5,6 +5,7 @@ pub mod file;
 pub mod pda;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct Idl {
     // Version of the idl protocol.
     pub layout_version: String,

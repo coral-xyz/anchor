@@ -1,7 +1,5 @@
 use crate::error::ErrorCode;
-use crate::{
-    Accounts, AccountsClose, AccountsExit, ToAccountInfo, ToAccountInfos, ToAccountMetas, ZeroCopy,
-};
+use crate::*;
 use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
@@ -187,5 +185,12 @@ impl<'info, T: ZeroCopy> AsRef<AccountInfo<'info>> for Loader<'info, T> {
 impl<'info, T: ZeroCopy> ToAccountInfos<'info> for Loader<'info, T> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         vec![self.acc_info.clone()]
+    }
+}
+
+#[cfg(not(feature = "deprecated-layout"))]
+impl<'a, T: ZeroCopy> Bump for Loader<'a, T> {
+    fn seed(&self) -> u8 {
+        self.acc_info.data.borrow()[1]
     }
 }

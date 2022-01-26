@@ -406,3 +406,10 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> DerefMut for 
         &mut self.account
     }
 }
+
+#[cfg(not(feature = "deprecated-layout"))]
+impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Bump for Account<'a, T> {
+    fn seed(&self) -> u8 {
+        self.info.data.borrow()[1]
+    }
+}
