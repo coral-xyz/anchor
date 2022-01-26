@@ -283,9 +283,10 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
             let payer = #p.to_account_info();
         }
     };
+    let name_str = f.ident.to_string();
 
-    let seeds_with_nonce = match &c.seeds {
-        None => quote! {},
+    let (seeds_with_nonce, bump) = match &c.seeds {
+        None => (quote! {}, quote! {}),
         Some(c) => {
             let s = &mut c.seeds.clone();
             // If the seeds came with a trailing comma, we need to chop it off
@@ -302,12 +303,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                     quote! {
                         [
                             #maybe_seeds_plus_comma
-                            &[
-                                Pubkey::find_program_address(
-                                    &[#s],
-                                    program_id,
-                                ).1
-                            ][..]
+                            &[__bump][..]
                         ]
                     }
                 }
@@ -316,16 +312,35 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                     [#maybe_seeds_plus_comma &[#b][..]]
                 },
             };
-            quote! {
-                &#inner[..]
-            }
+            (
+                quote! {
+                    &#inner[..]
+                },
+                quote! {
+                    let __bump = Pubkey::find_program_address(
+                        &[#s],
+                        program_id,
+                    ).1;
+                    __bumps.insert(#name_str.to_string(), __bump);
+                },
+            )
         }
     };
-    generate_init(f, c.if_needed, seeds_with_nonce, payer, &c.space, &c.kind)
+    generate_init(
+        f,
+        c.if_needed,
+        bump,
+        seeds_with_nonce,
+        payer,
+        &c.space,
+        &c.kind,
+    )
 }
 
 fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2::TokenStream {
     let name = &f.ident;
+    let name_str = name.to_string();
+
     let s = &mut c.seeds.clone();
 
     let deriving_program_id = c
@@ -347,17 +362,21 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
     if c.is_init && c.bump.is_some() {
         let b = c.bump.as_ref().unwrap();
         quote! {
-            let (__program_signer, __bump) = anchor_lang::solana_program::pubkey::Pubkey::find_program_address(
-                &[#s],
-                &#deriving_program_id,
-            );
-            if #name.key() != __program_signer {
-                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
-            }
-            if __bump != #b {
-                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
-            }
+        let (__program_signer, __bump) = anchor_lang::solana_program::pubkey::Pubkey::find_program_address(
+            &[#s],
+            &#deriving_program_id,
+        );
+
+            // Save the bump for access by the handler.
+            __bumps.insert(#name_str.to_string(), __bump);
+
+        if #name.key() != __program_signer {
+            return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
         }
+        if __bump != #b {
+            return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+                }
+            }
     } else {
         let maybe_seeds_plus_comma = (!s.is_empty()).then(|| {
             quote! { #s, }
@@ -368,12 +387,7 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
                 quote! {
                     [
                         #maybe_seeds_plus_comma
-                        &[
-                            Pubkey::find_program_address(
-                                &[#s],
-                                &#deriving_program_id,
-                            ).1
-                        ][..]
+                        &[__bump][..]
                     ]
                 }
             }
@@ -385,6 +399,14 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
             }
         };
         quote! {
+            let __bump = Pubkey::find_program_address(
+                &[#s],
+                &#deriving_program_id,
+            ).1;
+
+            // Save the bump for access by the handler.
+            __bumps.insert(#name_str.to_string(), __bump);
+
             let __program_signer = Pubkey::create_program_address(
                 &#seeds[..],
                 &#deriving_program_id,
@@ -418,6 +440,7 @@ fn generate_constraint_associated_token(
 pub fn generate_init(
     f: &Field,
     if_needed: bool,
+    bump: proc_macro2::TokenStream,
     seeds_with_nonce: proc_macro2::TokenStream,
     payer: proc_macro2::TokenStream,
     space: &Option<Expr>,
@@ -444,6 +467,9 @@ pub fn generate_init(
                     if !#if_needed || #field.as_ref().owner == &anchor_lang::solana_program::system_program::ID {
                         // Define payer variable.
                         #payer
+
+                        // Define the bump variable.
+                        #bump
 
                         // Create the account with the system program.
                         #create_account
@@ -529,6 +555,9 @@ pub fn generate_init(
                     if !#if_needed || #field.as_ref().owner == &anchor_lang::solana_program::system_program::ID {
                         // Define payer variable.
                         #payer
+
+                        // Define the bump variable.
+                        #bump
 
                         // Create the account with the system program.
                         #create_account
@@ -616,6 +645,10 @@ pub fn generate_init(
                     let actual_field = #field.to_account_info();
                     let actual_owner = actual_field.owner;
                     #space
+
+                    // Define the bump variable.
+                    #bump
+
                     if !#if_needed || actual_owner == &anchor_lang::solana_program::system_program::ID {
                         #payer
                         #create_account
