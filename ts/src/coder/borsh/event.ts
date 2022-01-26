@@ -42,7 +42,7 @@ export class BorshEventCoder implements EventCoder {
       idl.events === undefined
         ? []
         : idl.events.map((e) => [
-          base64.fromByteArray(EventHeader.discriminator(e.name)),
+            base64.fromByteArray(EventHeader.discriminator(e.name)),
             e.name,
           ])
     );
@@ -79,31 +79,31 @@ export class BorshEventCoder implements EventCoder {
 }
 
 export function eventDiscriminator(name: string): Buffer {
-	return EventHeader.discriminator(name);
+  return EventHeader.discriminator(name);
 }
 
 class EventHeader {
-	public static parseDiscriminator(data: Buffer): Buffer {
-		if (features.isSet("deprecated-layout")) {
-			return data.slice(0, 8);
-		} else {
-			return data.slice(0, 4);
-		}
-	}
+  public static parseDiscriminator(data: Buffer): Buffer {
+    if (features.isSet("deprecated-layout")) {
+      return data.slice(0, 8);
+    } else {
+      return data.slice(0, 4);
+    }
+  }
 
-	public static size(): number {
-		if (features.isSet("deprecated-layout")) {
-			return 8;
-		} else {
-			return 4;
-		}
-	}
+  public static size(): number {
+    if (features.isSet("deprecated-layout")) {
+      return 8;
+    } else {
+      return 4;
+    }
+  }
 
-	public static discriminator(name: string): Buffer {
-		if (features.isSet("deprecated-layout")) {
-		  return Buffer.from(sha256.digest(`event:${name}`)).slice(0, 8);
-		} else {
-			return Buffer.from(sha256.digest(`event:${name}`)).slice(0, 4);
-		}
-	}
+  public static discriminator(name: string): Buffer {
+    if (features.isSet("deprecated-layout")) {
+      return Buffer.from(sha256.digest(`event:${name}`)).slice(0, 8);
+    } else {
+      return Buffer.from(sha256.digest(`event:${name}`)).slice(0, 4);
+    }
+  }
 }

@@ -644,7 +644,10 @@ pub fn generate_init(
 
             let header_write = {
                 match &f.ty {
-                    Ty::Account(_) | Ty::ProgramAccount(_) => {
+                    Ty::Account(_)
+                    | Ty::ProgramAccount(_)
+                    | Ty::Loader(_)
+                    | Ty::AccountLoader(_) => {
                         let account_ty = f.account_ty();
                         if cfg!(feature = "deprecated-layout") {
                             quote! {

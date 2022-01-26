@@ -68,8 +68,6 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         let disc_bytes = array_ref![data, 2, 4];
 
         if disc_bytes != &T::discriminator() {
-            crate::solana_program::msg!("DISC BYTES: {:?}", disc_bytes);
-            crate::solana_program::msg!("DISC BYTES 2: {:?}", data);
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 

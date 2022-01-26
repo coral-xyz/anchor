@@ -20,7 +20,7 @@ export class BorshStateCoder {
     const buffer = Buffer.alloc(1000); // TODO: use a tighter buffer.
     const len = this.layout.encode(account, buffer);
 
-		let ns = features.isSet("anchor-deprecated-state") ? "account" : "state";
+    let ns = features.isSet("anchor-deprecated-state") ? "account" : "state";
     const header = BorshAccountHeader.encode(name, ns);
     const accData = buffer.slice(0, len);
 
@@ -37,5 +37,8 @@ export class BorshStateCoder {
 // Calculates unique 8 byte discriminator prepended to all anchor state accounts.
 export async function stateDiscriminator(name: string): Promise<Buffer> {
   let ns = features.isSet("anchor-deprecated-state") ? "account" : "state";
-  return Buffer.from(sha256.digest(`${ns}:${name}`)).slice(0, BorshAccountHeader.discriminatorSize());
+  return Buffer.from(sha256.digest(`${ns}:${name}`)).slice(
+    0,
+    BorshAccountHeader.discriminatorSize()
+  );
 }

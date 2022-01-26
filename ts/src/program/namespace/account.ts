@@ -1,3 +1,4 @@
+import * as bs58 from "bs58";
 import camelCase from "camelcase";
 import EventEmitter from "eventemitter3";
 import {
@@ -201,19 +202,25 @@ export class AccountClient<
   async all(
     filters?: Buffer | GetProgramAccountsFilter[]
   ): Promise<ProgramAccount<T>[]> {
+    const typeFilter = [this.coder.accounts.memcmp(this._idlAccount.name)];
+    const dataFilter =
+      filters instanceof Buffer
+        ? [
+            {
+              memcmp: {
+                offset: this.coder.accounts.memcmpDataOffset(),
+                bytes: bs58.encode(filters),
+              },
+            },
+          ]
+        : [];
+    const miscFilters = Array.isArray(filters) ? filters : [];
+
     let resp = await this._provider.connection.getProgramAccounts(
       this._programId,
       {
         commitment: this._provider.connection.commitment,
-        filters: [
-          {
-            memcmp: this.coder.accounts.memcmp(
-              this._idlAccount.name,
-              filters instanceof Buffer ? filters : undefined
-            ),
-          },
-          ...(Array.isArray(filters) ? filters : []),
-        ],
+        filters: typeFilter.concat(dataFilter).concat(miscFilters),
       }
     );
     return resp.map(({ pubkey, account }) => {

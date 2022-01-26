@@ -176,15 +176,15 @@ export class StateClient<IDL extends Idl> {
 
     const expectedDiscriminator = await stateDiscriminator(state.struct.name);
 
-		if (features.isSet('deprecated-layout')) {
-			if (expectedDiscriminator.compare(accountInfo.data.slice(0, 8))) {
-				throw new Error("Invalid state discriminator");
-			}
-		} else {
-			if (expectedDiscriminator.compare(accountInfo.data.slice(2, 6))) {
-				throw new Error("Invalid state discriminator");
-			}
-		}
+    if (features.isSet("deprecated-layout")) {
+      if (expectedDiscriminator.compare(accountInfo.data.slice(0, 8))) {
+        throw new Error("Invalid state discriminator");
+      }
+    } else {
+      if (expectedDiscriminator.compare(accountInfo.data.slice(2, 6))) {
+        throw new Error("Invalid state discriminator");
+      }
+    }
 
     return this.coder.state.decode(accountInfo.data);
   }

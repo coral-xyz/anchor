@@ -1,3 +1,4 @@
+import { GetProgramAccountsFilter } from "@solana/web3.js";
 import bs58 from "bs58";
 import { Buffer } from "buffer";
 import { Layout } from "buffer-layout";
@@ -78,14 +79,18 @@ export class BorshAccountsCoder<A extends string = string>
     return layout.decode(data);
   }
 
-  public memcmp(accountName: A, appendData?: Buffer): any {
+  public memcmp(accountName: A): GetProgramAccountsFilter {
     const discriminator = BorshAccountHeader.discriminator(accountName);
     return {
-      offset: BorshAccountHeader.discriminatorOffset(),
-      bytes: bs58.encode(
-        appendData ? Buffer.concat([discriminator, appendData]) : discriminator
-      ),
+      memcmp: {
+        offset: BorshAccountHeader.discriminatorOffset(),
+        bytes: bs58.encode(discriminator),
+      },
     };
+  }
+
+  public memcmpDataOffset(): number {
+    return BorshAccountHeader.size();
   }
 
   public size(idlAccount: IdlTypeDef): number {
@@ -117,15 +122,17 @@ export class BorshAccountHeader {
    */
   public static discriminator(name: string, nameSpace?: string): Buffer {
     return Buffer.from(
-      sha256.digest(`${nameSpace ?? "account"}:${camelcase(name, { pascalCase: true })}`)
+      sha256.digest(
+        `${nameSpace ?? "account"}:${camelcase(name, { pascalCase: true })}`
+      )
     ).slice(0, BorshAccountHeader.discriminatorSize());
   }
 
-	public static discriminatorSize(): number {
-		return features.isSet("deprecated-layout")
-			? DEPRECATED_ACCOUNT_DISCRIMINATOR_SIZE
-			: ACCOUNT_DISCRIMINATOR_SIZE;
-	}
+  public static discriminatorSize(): number {
+    return features.isSet("deprecated-layout")
+      ? DEPRECATED_ACCOUNT_DISCRIMINATOR_SIZE
+      : ACCOUNT_DISCRIMINATOR_SIZE;
+  }
 
   /**
    * Returns the account data index at which the discriminator starts.
