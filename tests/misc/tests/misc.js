@@ -1,4 +1,5 @@
-const anchor = require("@project-serum/anchor");
+//const anchor = require("@project-serum/anchor");
+const anchor = require("../../../ts");
 const assert = require("assert");
 const {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -156,7 +157,6 @@ describe("misc", () => {
       "Program Z2Ddx1Lcd8CHTV9tkWtNnFQrSz6kxz2H38wrr18zZRZ consumed 4819 of 200000 compute units",
       "Program Z2Ddx1Lcd8CHTV9tkWtNnFQrSz6kxz2H38wrr18zZRZ success",
     ];
-
     assert.ok(JSON.stringify(expectedRaw), resp.raw);
     assert.ok(resp.events[0].name === "E1");
     assert.ok(resp.events[0].data.data === 44);

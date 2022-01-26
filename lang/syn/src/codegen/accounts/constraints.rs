@@ -149,16 +149,44 @@ pub fn generate_constraint_init(f: &Field, c: &ConstraintInitGroup) -> proc_macr
 pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let ty_decl = f.ty_decl();
-    let from_account_info = f.from_account_info_unchecked(None);
+    let account_ty = f.account_ty();
+    let from_account_info = f.from_account_info(None);
+
+    let header_write = {
+        if cfg!(feature = "deprecated-layout") {
+            quote! {
+                use std::io::{Write, Cursor};
+                use anchor_lang::Discriminator;
+                let __dst: &mut [u8] = &mut __data;
+                let mut __cursor = Cursor::new(__dst);
+                Write::write_all(&mut __cursor, &#account_ty::discriminator()).unwrap();
+            }
+        } else {
+            quote! {
+                use std::io::{Write, Cursor};
+                use anchor_lang::Discriminator;
+                let __dst: &mut [u8] = &mut __data[2..];
+                let mut __cursor = Cursor::new(__dst);
+                Write::write_all(&mut __cursor, &#account_ty::discriminator()).unwrap();
+            }
+        }
+    };
+
+    // Check the *entire* account header is zero.
     quote! {
         let #field: #ty_decl = {
-            let mut __data: &[u8] = &#field.try_borrow_data()?;
-            let mut __disc_bytes = [0u8; 8];
-            __disc_bytes.copy_from_slice(&__data[..8]);
-            let __discriminator = u64::from_le_bytes(__disc_bytes);
-            if __discriminator != 0 {
-                return Err(anchor_lang::__private::ErrorCode::ConstraintZero.into());
+            {
+                let mut __data: &mut [u8] = &mut #field.try_borrow_mut_data()?;
+                let mut __header_bytes = [0u8; 8];
+                __header_bytes.copy_from_slice(&__data[..8]);
+                let __header = u64::from_le_bytes(__header_bytes);
+                if __header != 0 {
+                    return Err(anchor_lang::__private::ErrorCode::ConstraintZero.into());
+                }
+
+                #header_write
             }
+
             #from_account_info
         };
     }
@@ -425,7 +453,7 @@ pub fn generate_init(
 ) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let ty_decl = f.ty_decl();
-    let from_account_info = f.from_account_info_unchecked(Some(kind));
+    let from_account_info = f.from_account_info(Some(kind));
     let if_needed = if if_needed {
         quote! {true}
     } else {
@@ -542,7 +570,9 @@ pub fn generate_init(
                         let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
                         anchor_spl::token::initialize_mint(cpi_ctx, #decimals, &#owner.key(), #freeze_authority)?;
                     }
+
                     let pa: #ty_decl = #from_account_info;
+
                     if !(!#if_needed || #field.as_ref().owner == &anchor_lang::solana_program::system_program::ID) {
                         if pa.mint_authority != anchor_lang::solana_program::program_option::COption::Some(#owner.key()) {
                             return Err(anchor_lang::__private::ErrorCode::ConstraintMintMintAuthority.into());
@@ -611,6 +641,42 @@ pub fn generate_init(
             };
             let create_account =
                 generate_create_account(field, quote! {space}, owner.clone(), seeds_with_nonce);
+
+            let header_write = {
+                match &f.ty {
+                    Ty::Account(_) | Ty::ProgramAccount(_) => {
+                        let account_ty = f.account_ty();
+                        if cfg!(feature = "deprecated-layout") {
+                            quote! {
+                                {
+                                    use std::io::{Write, Cursor};
+                                    use anchor_lang::Discriminator;
+
+                                    let mut __data = actual_field.try_borrow_mut_data()?;
+                                    let __dst: &mut [u8] = &mut __data;
+                                    let mut __cursor = Cursor::new(__dst);
+                                    Write::write_all(&mut __cursor, &#account_ty::discriminator()).unwrap();
+                                }
+                            }
+                        } else {
+                            quote! {
+                                {
+                                    use std::io::{Write, Seek, SeekFrom, Cursor};
+                                    use anchor_lang::Discriminator;
+
+                                    let mut __data = actual_field.try_borrow_mut_data()?;
+                                    let __dst: &mut [u8] = &mut __data;
+                                    let mut __cursor = Cursor::new(__dst);
+                                    Seek::seek(&mut __cursor, SeekFrom::Start(2)).unwrap();
+                                    Write::write_all(&mut __cursor, &#account_ty::discriminator()).unwrap();
+                                }
+                            }
+                        }
+                    }
+                    _ => quote! {},
+                }
+            };
+
             quote! {
                 let #field = {
                     let actual_field = #field.to_account_info();
@@ -620,6 +686,11 @@ pub fn generate_init(
                         #payer
                         #create_account
                     }
+
+                    // Write the account header into the account data before
+                    // deserializing.
+                    #header_write
+
                     let pa: #ty_decl = #from_account_info;
                     if !(!#if_needed || actual_owner == &anchor_lang::solana_program::system_program::ID) {
                         if space != actual_field.data_len() {

@@ -13,7 +13,6 @@ use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::cell::{Ref, RefMut};
 use std::fmt;
-use std::io::Write;
 use std::marker::PhantomData;
 use std::mem;
 use std::ops::DerefMut;
@@ -23,8 +22,6 @@ use std::ops::DerefMut;
 /// Note that using accounts in this way is distinctly different from using,
 /// for example, the [`Account`](./struct.Account.html). Namely,
 /// one must call
-/// - `load_init` after initializing an account (this will ignore the missing
-/// account discriminator that gets added only after the user's instruction code)
 /// - `load` when the account is not mutable
 /// - `load_mut` when the account is mutable
 ///
@@ -191,41 +188,6 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
             bytemuck::from_bytes_mut(&mut data.deref_mut()[8..mem::size_of::<T>() + 8])
         }))
     }
-
-    /// Returns a `RefMut` to the account data structure for reading or writing.
-    /// Should only be called once, when the account is being initialized.
-    pub fn load_init(&self) -> Result<RefMut<T>, ProgramError> {
-        // AccountInfo api allows you to borrow mut even if the account isn't
-        // writable, so add this check for a better dev experience.
-        if !self.acc_info.is_writable {
-            return Err(ErrorCode::AccountNotMutable.into());
-        }
-
-        let data = self.acc_info.try_borrow_mut_data()?;
-
-        // The discriminator should be zero, since we're initializing.
-        #[cfg(feature = "deprecated-layout")]
-        let mut disc_bytes = [0u8; 8];
-        #[cfg(feature = "deprecated-layout")]
-        disc_bytes.copy_from_slice(&data[..8]);
-        #[cfg(feature = "deprecated-layout")]
-        let discriminator = u64::from_le_bytes(disc_bytes);
-
-        #[cfg(not(feature = "deprecated-layout"))]
-        let mut disc_bytes = [0u8; 4];
-        #[cfg(not(feature = "deprecated-layout"))]
-        disc_bytes.copy_from_slice(&data[2..6]);
-        #[cfg(not(feature = "deprecated-layout"))]
-        let discriminator = u32::from_le_bytes(disc_bytes);
-
-        if discriminator != 0 {
-            return Err(ErrorCode::AccountDiscriminatorAlreadySet.into());
-        }
-
-        Ok(RefMut::map(data, |data| {
-            bytemuck::from_bytes_mut(&mut data.deref_mut()[8..mem::size_of::<T>() + 8])
-        }))
-    }
 }
 
 impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
@@ -248,15 +210,7 @@ impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
 impl<'info, T: ZeroCopy + Owner> AccountsExit<'info> for AccountLoader<'info, T> {
     // The account *cannot* be loaded when this is called.
     fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
-        let mut data = self.acc_info.try_borrow_mut_data()?;
-
-        #[cfg(feature = "deprecated-layout")]
-        let dst: &mut [u8] = &mut data;
-        #[cfg(not(feature = "deprecated-layout"))]
-        let dst: &mut [u8] = &mut data[2..];
-
-        let mut cursor = std::io::Cursor::new(dst);
-        cursor.write_all(&T::discriminator()).unwrap();
+        // No-op.
         Ok(())
     }
 }

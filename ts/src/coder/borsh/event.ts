@@ -6,6 +6,7 @@ import { Idl, IdlEvent, IdlTypeDef } from "../../idl.js";
 import { Event, EventData } from "../../program/event.js";
 import { IdlCoder } from "./idl.js";
 import { EventCoder } from "../index.js";
+import * as features from "../../utils/features";
 
 export class BorshEventCoder implements EventCoder {
   /**
@@ -41,7 +42,7 @@ export class BorshEventCoder implements EventCoder {
       idl.events === undefined
         ? []
         : idl.events.map((e) => [
-            base64.fromByteArray(eventDiscriminator(e.name)),
+          base64.fromByteArray(EventHeader.discriminator(e.name)),
             e.name,
           ])
     );
@@ -57,7 +58,7 @@ export class BorshEventCoder implements EventCoder {
     } catch (e) {
       return null;
     }
-    const disc = base64.fromByteArray(logArr.slice(0, 8));
+    const disc = base64.fromByteArray(EventHeader.parseDiscriminator(logArr));
 
     // Only deserialize if the discriminator implies a proper event.
     const eventName = this.discriminators.get(disc);
@@ -69,7 +70,7 @@ export class BorshEventCoder implements EventCoder {
     if (!layout) {
       throw new Error(`Unknown event: ${eventName}`);
     }
-    const data = layout.decode(logArr.slice(8)) as EventData<
+    const data = layout.decode(logArr.slice(EventHeader.size())) as EventData<
       E["fields"][number],
       T
     >;
@@ -78,5 +79,31 @@ export class BorshEventCoder implements EventCoder {
 }
 
 export function eventDiscriminator(name: string): Buffer {
-  return Buffer.from(sha256.digest(`event:${name}`)).slice(0, 8);
+	return EventHeader.discriminator(name);
+}
+
+class EventHeader {
+	public static parseDiscriminator(data: Buffer): Buffer {
+		if (features.isSet("deprecated-layout")) {
+			return data.slice(0, 8);
+		} else {
+			return data.slice(0, 4);
+		}
+	}
+
+	public static size(): number {
+		if (features.isSet("deprecated-layout")) {
+			return 8;
+		} else {
+			return 4;
+		}
+	}
+
+	public static discriminator(name: string): Buffer {
+		if (features.isSet("deprecated-layout")) {
+		  return Buffer.from(sha256.digest(`event:${name}`)).slice(0, 8);
+		} else {
+			return Buffer.from(sha256.digest(`event:${name}`)).slice(0, 4);
+		}
+	}
 }

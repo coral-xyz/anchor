@@ -122,7 +122,7 @@ pub mod misc {
     }
 
     pub fn test_pda_init_zero_copy(ctx: Context<TestPdaInitZeroCopy>, bump: u8) -> ProgramResult {
-        let mut acc = ctx.accounts.my_pda.load_init()?;
+        let mut acc = ctx.accounts.my_pda.load_mut()?;
         acc.data = 9;
         acc.bump = bump;
         Ok(())
@@ -156,7 +156,7 @@ pub mod misc {
     }
 
     pub fn test_init_zero_copy(ctx: Context<TestInitZeroCopy>) -> ProgramResult {
-        let mut data = ctx.accounts.data.load_init()?;
+        let mut data = ctx.accounts.data.load_mut()?;
         data.data = 10;
         data.bump = 2;
         Ok(())
@@ -264,15 +264,17 @@ pub mod misc {
         **ctx.accounts.user.try_borrow_mut_lamports()? += 1;
         Ok(())
     }
-    
-    pub fn init_if_needed_checks_rent_exemption(_ctx: Context<InitIfNeededChecksRentExemption>) -> ProgramResult {
+
+    pub fn init_if_needed_checks_rent_exemption(
+        _ctx: Context<InitIfNeededChecksRentExemption>,
+    ) -> ProgramResult {
         Ok(())
     }
-        
+
     pub fn test_program_id_constraint(
         _ctx: Context<TestProgramIdConstraint>,
         _bump: u8,
-        _second_bump: u8
+        _second_bump: u8,
     ) -> ProgramResult {
         Ok(())
     }

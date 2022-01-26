@@ -84,7 +84,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let seed = anchor_lang::idl::IdlAccount::seed();
                 let owner = accounts.program.key;
                 let to = Pubkey::create_with_seed(&base, seed, owner).unwrap();
-                // Space: account discriminator || authority pubkey || vec len || vec data
+                // Space: account header || authority pubkey || vec len || vec data
                 let space = 8 + 32 + 4 + data_len as usize;
                 let rent = Rent::get()?;
                 let lamports = rent.minimum_balance(space);
@@ -125,6 +125,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let mut data = accounts.to.try_borrow_mut_data()?;
                 let dst: &mut [u8] = &mut data;
                 let mut cursor = std::io::Cursor::new(dst);
+                std::io::Seek::seek(&mut cursor, std::io::SeekFrom::Start(8)).unwrap();
                 idl_account.try_serialize(&mut cursor)?;
 
                 Ok(())
@@ -196,6 +197,34 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let ix_name: proc_macro2::TokenStream =
                     generate_ctor_variant_name().parse().unwrap();
                 let ix_name_log = format!("Instruction: {}", ix_name);
+                let header_write = {
+                    if cfg!(feature = "deprecated-layout") {
+                        quote! {
+                            {
+                                use std::io::{Write, Cursor};
+                                use anchor_lang::Discriminator;
+
+                                let mut __data = ctor_accounts.to.try_borrow_mut_data()?;
+                                let __dst: &mut [u8] = &mut __data;
+                                let mut __cursor = Cursor::new(__dst);
+                                Write::write_all(&mut __cursor, &#name::discriminator()).unwrap();
+                            }
+                        }
+                    } else {
+                        quote! {
+                            {
+                                use std::io::{Write, Cursor, SeekFrom, Seek};
+                                use anchor_lang::Discriminator;
+
+                                let mut __data = ctor_accounts.to.try_borrow_mut_data()?;
+                                let __dst: &mut [u8] = &mut __data;
+                                let mut __cursor = Cursor::new(__dst);
+                                Seek::seek(&mut __cursor, SeekFrom::Start(2)).unwrap();
+                                Write::write_all(&mut __cursor, &#name::discriminator()).unwrap();
+                            }
+                        }
+                    }
+                };
                 if state.is_zero_copy {
                     quote! {
                         // One time state account initializer. Will faill on subsequent
@@ -245,14 +274,17 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                 &[seeds],
                             )?;
 
+                            // Initialize the header.
+                            #header_write
+
                             // Zero copy deserialize.
-                            let loader: anchor_lang::accounts::loader::Loader<#mod_name::#name> = anchor_lang::accounts::loader::Loader::try_from_unchecked(program_id, &ctor_accounts.to)?;
+                            let loader: anchor_lang::accounts::loader::Loader<#mod_name::#name> = anchor_lang::accounts::loader::Loader::try_from(program_id, &ctor_accounts.to)?;
 
                             // Invoke the ctor in a new lexical scope so that
                             // the zero-copy RefMut gets dropped. Required
                             // so that we can subsequently run the exit routine.
                             {
-                                let mut instance = loader.load_init()?;
+                                let mut instance = loader.load()?;
                                 instance.new(
                                     anchor_lang::context::Context::new(
                                         program_id,
@@ -329,11 +361,15 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                 &[seeds],
                             )?;
 
+                            // Initialize the account header.
+                            #header_write
+
                             // Serialize the state and save it to storage.
                             ctor_user_def_accounts.exit(program_id)?;
                             let mut data = ctor_accounts.to.try_borrow_mut_data()?;
                             let dst: &mut [u8] = &mut data;
                             let mut cursor = std::io::Cursor::new(dst);
+                            std::io::Seek::seek(&mut cursor, std::io::SeekFrom::Start(8)).unwrap();
                             instance.try_serialize(&mut cursor)?;
 
                             Ok(())
@@ -460,6 +496,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     let mut data = acc_info.try_borrow_mut_data()?;
                                     let dst: &mut [u8] = &mut data;
                                     let mut cursor = std::io::Cursor::new(dst);
+																		std::io::Seek::seek(&mut cursor, std::io::SeekFrom::Start(8)).unwrap();
                                     state.try_serialize(&mut cursor)?;
 
                                     Ok(())
@@ -488,7 +525,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             .map(|ix| {
                                 // Easy to implement. Just need to write a test.
                                 // Feel free to open a PR.
-                                assert!(!state.is_zero_copy, "Trait implementations not yet implemented for zero copy state structs. Please file an issue.");                                
+                                assert!(!state.is_zero_copy, "Trait implementations not yet implemented for zero copy state structs. Please file an issue.");
 
                                 let ix_arg_names: Vec<&syn::Ident> =
                                     ix.args.iter().map(|arg| &arg.name).collect();
@@ -573,6 +610,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             let mut data = acc_info.try_borrow_mut_data()?;
                                             let dst: &mut [u8] = &mut data;
                                             let mut cursor = std::io::Cursor::new(dst);
+																						std::io::Seek::seek(&mut cursor, std::io::SeekFrom::Start(8)).unwrap();
                                             state.try_serialize(&mut cursor)?;
 
                                             Ok(())

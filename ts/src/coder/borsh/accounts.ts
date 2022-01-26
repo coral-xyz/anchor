@@ -97,9 +97,9 @@ export class BorshAccountHeader {
   /**
    * Returns the default account header for an account with the given name.
    */
-  public static encode(accountName: string): Buffer {
+  public static encode(accountName: string, nameSpace?: string): Buffer {
     if (features.isSet("deprecated-layout")) {
-      return BorshAccountHeader.discriminator(accountName);
+      return BorshAccountHeader.discriminator(accountName, nameSpace);
     } else {
       return Buffer.concat([
         Buffer.from([0]), // Version.
@@ -115,17 +115,17 @@ export class BorshAccountHeader {
    *
    * @param name The name of the account to calculate the discriminator.
    */
-  public static discriminator(name: string): Buffer {
-    let size: number;
-    if (features.isSet("deprecated-layout")) {
-      size = DEPRECATED_ACCOUNT_DISCRIMINATOR_SIZE;
-    } else {
-      size = ACCOUNT_DISCRIMINATOR_SIZE;
-    }
+  public static discriminator(name: string, nameSpace?: string): Buffer {
     return Buffer.from(
-      sha256.digest(`account:${camelcase(name, { pascalCase: true })}`)
-    ).slice(0, size);
+      sha256.digest(`${nameSpace ?? "account"}:${camelcase(name, { pascalCase: true })}`)
+    ).slice(0, BorshAccountHeader.discriminatorSize());
   }
+
+	public static discriminatorSize(): number {
+		return features.isSet("deprecated-layout")
+			? DEPRECATED_ACCOUNT_DISCRIMINATOR_SIZE
+			: ACCOUNT_DISCRIMINATOR_SIZE;
+	}
 
   /**
    * Returns the account data index at which the discriminator starts.

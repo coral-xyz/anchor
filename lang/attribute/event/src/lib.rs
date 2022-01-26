@@ -18,11 +18,40 @@ pub fn event(
 
     let discriminator: proc_macro2::TokenStream = {
         let discriminator_preimage = format!("event:{}", event_name);
-        let mut discriminator = [0u8; 8];
-        discriminator.copy_from_slice(
-            &anchor_syn::hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..8],
-        );
+
+        #[cfg(feature = "deprecated-layout")]
+        let discriminator = {
+            let mut discriminator = [0u8; 8];
+            discriminator.copy_from_slice(
+                &anchor_syn::hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..8],
+            );
+            discriminator
+        };
+        #[cfg(not(feature = "deprecated-layout"))]
+        let discriminator = {
+            let mut discriminator = [0u8; 4];
+            discriminator.copy_from_slice(
+                &anchor_syn::hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..4],
+            );
+            discriminator
+        };
         format!("{:?}", discriminator).parse().unwrap()
+    };
+
+    let discriminator_trait_impl = {
+        if cfg!(feature = "deprecated_layout") {
+            quote! {
+                fn discriminator() -> [u8; 8] {
+                    #discriminator
+                }
+            }
+        } else {
+            quote! {
+                fn discriminator() -> [u8; 4] {
+                    #discriminator
+                }
+            }
+        }
     };
 
     proc_macro::TokenStream::from(quote! {
@@ -38,9 +67,7 @@ pub fn event(
         }
 
         impl anchor_lang::Discriminator for #event_name {
-            fn discriminator() -> [u8; 8] {
-                #discriminator
-            }
+            #discriminator_trait_impl
         }
     })
 }

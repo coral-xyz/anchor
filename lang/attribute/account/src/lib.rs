@@ -211,7 +211,6 @@ pub fn account(
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountSerialize for #account_name #type_gen #where_clause {
                     fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> std::result::Result<(), ProgramError> {
-                        writer.write_all(&#discriminator).map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotSerialize)?;
                         AnchorSerialize::serialize(
                             self,
                             writer
