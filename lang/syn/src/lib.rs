@@ -310,6 +310,13 @@ impl Field {
                     )?
                 }
             }
+            Ty::AccountLoader(_) => {
+                quote! {
+                    #container_ty::try_from(
+                        &#field,
+                    )?
+                }
+            }
             _ => {
                 let owner_addr = match &kind {
                     None => quote! { program_id },

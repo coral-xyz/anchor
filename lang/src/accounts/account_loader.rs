@@ -113,7 +113,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         }
     }
 
-    /// Constructs a new `Loader` from a previously initialized account.
+    /// Constructs a new `AccountLoader` from a previously initialized account.
     #[inline(never)]
     pub fn try_from(
         acc_info: &AccountInfo<'info>,
@@ -135,7 +135,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         Ok(AccountLoader::new(acc_info.clone()))
     }
 
-    /// Constructs a new `Loader` from an uninitialized account.
+    /// Constructs a new `AccountLoader` from an uninitialized account.
     #[inline(never)]
     pub fn try_from_unchecked(
         _program_id: &Pubkey,
