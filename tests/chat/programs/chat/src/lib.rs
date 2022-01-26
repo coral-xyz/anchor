@@ -1,7 +1,7 @@
 //! A simple chat program using a ring buffer to store messages.
 
-use anchor_lang::prelude::*;
 use anchor_lang::accounts::loader::Loader;
+use anchor_lang::prelude::*;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
@@ -19,7 +19,7 @@ pub mod chat {
         let given_name = name.as_bytes();
         let mut name = [0u8; 280];
         name[..given_name.len()].copy_from_slice(given_name);
-        let mut chat = ctx.accounts.chat_room.load_init()?;
+        let mut chat = ctx.accounts.chat_room.load_mut()?;
         chat.name = name;
         Ok(())
     }

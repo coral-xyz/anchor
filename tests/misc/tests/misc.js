@@ -1,5 +1,4 @@
-//const anchor = require("@project-serum/anchor");
-const anchor = require("../../../ts");
+const anchor = require("@project-serum/anchor");
 const assert = require("assert");
 const {
   ASSOCIATED_TOKEN_PROGRAM_ID,
