@@ -310,10 +310,6 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                 seeds.push_value(pair.into_value());
             }
 
-            let maybe_seeds_plus_comma = (!seeds.is_empty()).then(|| {
-                quote! { #seeds, }
-            });
-
             (
                 quote! {
                     let (__pda_address, __bump) = Pubkey::find_program_address(
@@ -324,7 +320,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                 },
                 quote! {
                     &[
-                        #maybe_seeds_plus_comma
+                        #seeds,
                         &[__bump][..]
                     ][..]
                 },
