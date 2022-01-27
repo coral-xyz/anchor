@@ -518,23 +518,6 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                 },
             };
 
-            // Check the given account matches the seeds given.
-            let pda_check = {
-                if !seeds_with_bump.is_empty() {
-                    quote! {
-                        let expected_key = anchor_lang::prelude::Pubkey::create_program_address(
-                            #seeds_with_bump,
-                            #owner
-                        ).map_err(|_| anchor_lang::__private::ErrorCode::ConstraintSeeds)?;
-                        if expected_key != #field.key() {
-                            return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
-                        }
-                    }
-                } else {
-                    quote! {}
-                }
-            };
-
             // CPI to the system program to create the account.
             let create_account =
                 generate_create_account(field, quote! {space}, owner.clone(), seeds_with_bump);
@@ -580,8 +563,6 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                                 return Err(anchor_lang::__private::ErrorCode::ConstraintRentExempt.into());
                             }
                         }
-
-                        #pda_check
                     }
 
                     // Done.
