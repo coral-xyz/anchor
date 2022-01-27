@@ -402,8 +402,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                         .map_err(|_| anchor_lang::__private::ErrorCode::InstructionDidNotDeserialize)?;
                                     let instruction::state::#variant_arm = ix;
 
-																		// Bump collector.
-																		let mut __bumps = std::collections::BTreeMap::new();
+                                    // Bump collector.
+                                    let mut __bumps = std::collections::BTreeMap::new();
 
                                     // Load state.
                                     let mut remaining_accounts: &[AccountInfo] = accounts;
@@ -417,15 +417,15 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                         program_id,
                                         &mut remaining_accounts,
                                         ix_data,
-																				&mut __bumps,
+                                        &mut __bumps,
                                     )?;
                                     let ctx =
-																				anchor_lang::context::Context::new(
-																						program_id,
-																						&mut accounts,
-																						remaining_accounts,
-																						__bumps,
-																				);
+                                        anchor_lang::context::Context::new(
+                                            program_id,
+                                            &mut accounts,
+                                            remaining_accounts,
+                                            __bumps,
+                                        );
 
                                     // Execute user defined function.
                                     {
@@ -458,8 +458,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                         .map_err(|_| anchor_lang::__private::ErrorCode::InstructionDidNotDeserialize)?;
                                     let instruction::state::#variant_arm = ix;
 
-																		// Bump collector.
-																		let mut __bumps = std::collections::BTreeMap::new();
+                                    // Bump collector.
+                                    let mut __bumps = std::collections::BTreeMap::new();
 
                                     // Load state.
                                     let mut remaining_accounts: &[AccountInfo] = accounts;
@@ -467,26 +467,26 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                         return Err(anchor_lang::__private::ErrorCode::AccountNotEnoughKeys.into());
                                     }
                                     let mut state: anchor_lang::accounts::state::ProgramState<#state_ty> = anchor_lang::accounts::state::ProgramState::try_accounts(
-																				program_id,
-																				&mut remaining_accounts,
-																				&[],
-																				&mut __bumps,
-																		)?;
+                                        program_id,
+                                        &mut remaining_accounts,
+                                        &[],
+                                        &mut __bumps,
+                                    )?;
 
                                     // Deserialize accounts.
                                     let mut accounts = #anchor_ident::try_accounts(
                                         program_id,
                                         &mut remaining_accounts,
                                         ix_data,
-																				&mut __bumps,
+                                        &mut __bumps,
                                     )?;
                                     let ctx =
-																				anchor_lang::context::Context::new(
-																						program_id,
-																						&mut accounts,
-																						remaining_accounts,
-																						__bumps
-																				);
+                                        anchor_lang::context::Context::new(
+                                            program_id,
+                                            &mut accounts,
+                                            remaining_accounts,
+                                            __bumps
+                                        );
 
                                     // Execute user defined function.
                                     state.#ix_method_name(
@@ -586,8 +586,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             // Deserialize instruction.
                                             #deserialize_instruction
 
-																						// Bump collector.
-																						let mut __bumps = std::collections::BTreeMap::new();
+                                            // Bump collector.
+                                            let mut __bumps = std::collections::BTreeMap::new();
 
                                             // Deserialize the program state account.
                                             let mut remaining_accounts: &[AccountInfo] = accounts;
@@ -595,26 +595,26 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                                 return Err(anchor_lang::__private::ErrorCode::AccountNotEnoughKeys.into());
                                             }
                                             let mut state: anchor_lang::accounts::state::ProgramState<#state_ty> = anchor_lang::accounts::state::ProgramState::try_accounts(
-																								program_id,
-																								&mut remaining_accounts,
-																								&[],
-																								&mut __bumps,
-																						)?;
+                                                program_id,
+                                                &mut remaining_accounts,
+                                                &[],
+                                                &mut __bumps,
+                                            )?;
 
                                             // Deserialize accounts.
                                             let mut accounts = #anchor_ident::try_accounts(
                                                 program_id,
                                                 &mut remaining_accounts,
                                                 ix_data,
-																								&mut __bumps,
+                                                &mut __bumps,
                                             )?;
                                             let ctx =
-																								anchor_lang::context::Context::new(
-																										program_id,
-																										&mut accounts,
-																										remaining_accounts,
-																										__bumps,
-																								);
+                                                anchor_lang::context::Context::new(
+                                                    program_id,
+                                                    &mut accounts,
+                                                    remaining_accounts,
+                                                    __bumps,
+                                                );
 
                                             // Execute user defined function.
                                             state.#ix_method_name(
@@ -648,8 +648,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             // Deserialize instruction.
                                             #deserialize_instruction
 
-																						// Bump collector.
-																						let mut __bumps = std::collections::BTreeMap::new();
+                                            // Bump collector.
+                                            let mut __bumps = std::collections::BTreeMap::new();
 
                                             // Deserialize accounts.
                                             let mut remaining_accounts: &[AccountInfo] = accounts;
@@ -657,17 +657,17 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                                 program_id,
                                                 &mut remaining_accounts,
                                                 ix_data,
-																								&mut __bumps,
+                                                &mut __bumps,
                                             )?;
 
                                             // Execute user defined function.
                                             #state_name::#ix_method_name(
                                                 anchor_lang::context::Context::new(
-																										program_id,
-																										&mut accounts,
-																										remaining_accounts,
-																										__bumps
-																								),
+                                                    program_id,
+                                                    &mut accounts,
+                                                    remaining_accounts,
+                                                    __bumps
+                                                ),
                                                 #(#ix_arg_names),*
                                             )?;
 
@@ -708,8 +708,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         .map_err(|_| anchor_lang::__private::ErrorCode::InstructionDidNotDeserialize)?;
                     let instruction::#variant_arm = ix;
 
-										// Bump collector.
-										let mut __bumps = std::collections::BTreeMap::new();
+                    // Bump collector.
+                    let mut __bumps = std::collections::BTreeMap::new();
 
                     // Deserialize accounts.
                     let mut remaining_accounts: &[AccountInfo] = accounts;
@@ -717,17 +717,17 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         program_id,
                         &mut remaining_accounts,
                         ix_data,
-												&mut __bumps,
+                        &mut __bumps,
                     )?;
 
                     // Invoke user defined handler.
                     #program_name::#ix_method_name(
                         anchor_lang::context::Context::new(
-														program_id,
-														&mut accounts,
-														remaining_accounts,
-														__bumps,
-												),
+                            program_id,
+                            &mut accounts,
+                            remaining_accounts,
+                            __bumps,
+                        ),
                         #(#ix_arg_names),*
                     )?;
 
