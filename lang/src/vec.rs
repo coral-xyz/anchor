@@ -78,9 +78,10 @@ mod tests {
             false,
             Epoch::default(),
         );
-
+        let mut bumps = std::collections::BTreeMap::new();
         let mut accounts = &[account1, account2][..];
-        let parsed_accounts = Vec::<Test>::try_accounts(&program_id, &mut accounts, &[]).unwrap();
+        let parsed_accounts =
+            Vec::<Test>::try_accounts(&program_id, &mut accounts, &[], &mut bumps).unwrap();
 
         assert_eq!(accounts.len(), parsed_accounts.len());
     }
@@ -89,8 +90,8 @@ mod tests {
     #[should_panic]
     fn test_accounts_trait_for_vec_empty() {
         let program_id = Pubkey::default();
-
+        let mut bumps = std::collections::BTreeMap::new();
         let mut accounts = &[][..];
-        Vec::<Test>::try_accounts(&program_id, &mut accounts, &[]).unwrap();
+        Vec::<Test>::try_accounts(&program_id, &mut accounts, &[], &mut bumps).unwrap();
     }
 }
