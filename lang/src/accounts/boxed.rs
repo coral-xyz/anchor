@@ -27,9 +27,9 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Box<T> {
         program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         ix_data: &[u8],
-        _bumps: &mut BTreeMap<String, u8>,
+        bumps: &mut BTreeMap<String, u8>,
     ) -> Result<Self, ProgramError> {
-        T::try_accounts(program_id, accounts, ix_data, _bumps).map(Box::new)
+        T::try_accounts(program_id, accounts, ix_data, bumps).map(Box::new)
     }
 }
 
