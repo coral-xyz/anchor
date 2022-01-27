@@ -493,7 +493,6 @@ fn deser_programs(
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Test {
     pub genesis: Option<Vec<GenesisEntry>>,
-    pub clone: Option<Vec<CloneEntry>>,
     pub validator: Option<Validator>,
     pub startup_wait: Option<i32>,
 }
