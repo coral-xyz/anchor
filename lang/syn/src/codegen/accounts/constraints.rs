@@ -314,31 +314,21 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                 quote! { #seeds, }
             });
 
-            match c.bump.as_ref() {
-                // Bump target not given. Use the canonical bump.
-                None => (
-                    quote! {
-                        let (__pda_address, __bump) = Pubkey::find_program_address(
-                            &[#seeds],
-                            program_id,
-                        );
-                        __bumps.insert(#name_str.to_string(), __bump);
-                    },
-                    quote! {
-                        &[
-                            #maybe_seeds_plus_comma
-                            &[__bump][..]
-                        ][..]
-                    },
-                ),
-                // Bump target given. Use it.
-                Some(bump) => (
-                    quote! {},
-                    quote! {
-                        &[#maybe_seeds_plus_comma &[#bump][..]][..]
-                    },
-                ),
-            }
+            (
+                quote! {
+                    let (__pda_address, __bump) = Pubkey::find_program_address(
+                        &[#seeds],
+                        program_id,
+                    );
+                    __bumps.insert(#name_str.to_string(), __bump);
+                },
+                quote! {
+                    &[
+                        #maybe_seeds_plus_comma
+                        &[__bump][..]
+                    ][..]
+                },
+            )
         }
     };
 
