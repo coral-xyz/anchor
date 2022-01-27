@@ -310,17 +310,21 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                 seeds.push_value(pair.into_value());
             }
 
+            let maybe_seeds_plus_comma = (!seeds.is_empty()).then(|| {
+                quote! { #seeds, }
+            });
+
             (
                 quote! {
                     let (__pda_address, __bump) = Pubkey::find_program_address(
-                        &[#seeds],
+                        &[#maybe_seeds_plus_comma],
                         program_id,
                     );
                     __bumps.insert(#name_str.to_string(), __bump);
                 },
                 quote! {
                     &[
-                        #seeds,
+                        #maybe_seeds_plus_comma
                         &[__bump][..]
                     ][..]
                 },
@@ -609,11 +613,14 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
     }
     // No init. So we just check the address.
     else {
+        let maybe_seeds_plus_comma = (!s.is_empty()).then(|| {
+            quote! { #s, }
+        });
         let define_pda = match c.bump.as_ref() {
             // Bump target not given. Find it.
             None => quote! {
                 let (__pda_address, __bump) = Pubkey::find_program_address(
-                    &[#s],
+                    &[#maybe_seeds_plus_comma],
                     &#deriving_program_id,
                 );
                 __bumps.insert(#name_str.to_string(), __bump);
@@ -621,7 +628,7 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
             // Bump target given. Use it.
             Some(b) => quote! {
                 let __pda_address = Pubkey::create_program_address(
-                    &[#s, &[#b][..]],
+                    &[#maybe_seeds_plus_comma &[#b][..]],
                     &#deriving_program_id,
                 ).map_err(|_| anchor_lang::__private::ErrorCode::ConstraintSeeds)?;
             },
