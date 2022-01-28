@@ -13,13 +13,15 @@ export async function verifiedBuild(
   programId: PublicKey,
   limit: number = 5
 ): Promise<Build | null> {
-  const programData = await fetchData(connection, programId);
   const url = `https://anchor.projectserum.com/api/v0/program/${programId.toString()}/latest?limit=${limit}`;
-  let latestBuilds = await (await fetch(url)).json();
+  const [programData, latestBuildsResp] = await Promise.all([
+    fetchData(connection, programId),
+    fetch(url),
+  ]);
 
   // Filter out all non successful builds.
-  latestBuilds = latestBuilds.filter(
-    (b) => !b.aborted && b.state === "Built" && b.verified === "Verified"
+  const latestBuilds = (await latestBuildsResp.json()).filter(
+    (b: Build) => !b.aborted && b.state === "Built" && b.verified === "Verified"
   );
   if (latestBuilds.length === 0) {
     return null;
@@ -104,4 +106,5 @@ export type Build = {
   upgrade_authority: string;
   verified: string;
   verified_slot: number;
+  state: string;
 };
