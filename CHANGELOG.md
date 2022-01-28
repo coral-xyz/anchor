@@ -14,7 +14,8 @@ incremented for features.
 ### Features
 
 * lang: Add `seeds::program` constraint for specifying which program_id to use when deriving PDAs.([#1197](https://github.com/project-serum/anchor/pull/1197))
-* ts: Remove error logging in the event parser when log websocket encounters a program error. ([#1313](https://github.com/project-serum/anchor/pull/1313))
+* lang: `Context` now has a new `bumps: BTree<String, u8>` argument, mapping account name to bump seed "found" by the accounts context. This allows one to access bump seeds without having to pass them in from the client or recalculate them in the handler ([#1367](calculated )).
+* ts: Remove error logging in the event parser when log websocket encounters a program error ([#1313](https://github.com/project-serum/anchor/pull/1313)).
 * ts: Add new `methods` namespace to the program client, introducing a more ergonomic builder API ([#1324](https://github.com/project-serum/anchor/pull/1324)).
 
 ### Breaking
@@ -22,6 +23,7 @@ incremented for features.
 * lang: rename `loader_account` module to `account_loader` module ([#1279](https://github.com/project-serum/anchor/pull/1279))
 * ts: `Coder` is now an interface and the existing class has been renamed to `BorshCoder`. This change allows the generation of Anchor clients for non anchor programs ([#1259](https://github.com/project-serum/anchor/pull/1259/files)).
 * lang: revert zero-copy account layout back to `repr(packed)` by default ([#1356](https://github.com/project-serum/anchor/pull/1356)). Different account layouts can still be chosen by annotating the data structure with `repr(<layout>)`.
+* lang: The `Accounts` trait's `try_accounts` method now has an additional `bumps: &mut BTreeMap<String, u8>` argument, which accumulates bump seeds ([#1367](https://github.com/project-serum/anchor/pull/1367)).
 
 ## [0.20.1] - 2022-01-09
 
