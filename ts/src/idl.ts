@@ -98,12 +98,14 @@ type RawIdlAccount = {
   name: string;
   is_mut: boolean;
   is_signer: boolean;
+  pda?: RawIdlPda;
 };
 
 export type IdlAccount = {
   name: string;
   isMut: boolean;
   isSigner: boolean;
+  pda?: IdlPda;
 };
 
 // A nested/recursive version of RawIdlAccount.
@@ -111,6 +113,18 @@ type RawIdlAccounts = {
   name: string;
   accounts: RawIdlAccountItem[];
 };
+
+type RawIdlPda = {
+  seeds: IdlSeed[];
+  program_id?: IdlSeed;
+};
+
+export type IdlPda = {
+  seeds: IdlSeed[];
+  programId?: IdlSeed;
+};
+
+export type IdlSeed = any; // TODO
 
 // A nested/recursive version of IdlAccount.
 export type IdlAccounts = {

@@ -1,12 +1,16 @@
 const anchor = require("@project-serum/anchor");
-const PublicKey = anchor.web3.PublicKey;
 const assert = require("assert");
 const {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
   Token,
 } = require("@solana/spl-token");
-const { SystemProgram } = require("@solana/web3.js");
+const {
+  SystemProgram,
+  Keypair,
+  PublicKey,
+  SYSVAR_RENT_PUBKEY,
+} = require("@solana/web3.js");
 const utf8 = anchor.utils.bytes.utf8;
 
 describe("misc", () => {
@@ -1221,14 +1225,14 @@ describe("misc", () => {
   });
 
   it("init_if_needed throws if associated token exists but has the wrong owner", async () => {
-    const mint = anchor.web3.Keypair.generate();
+    const mint = Keypair.generate();
     await program.rpc.testInitMint({
       accounts: {
         mint: mint.publicKey,
         payer: program.provider.wallet.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
+        systemProgram: SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        rent: SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -1527,5 +1531,105 @@ describe("misc", () => {
       assert.equal(2005, err.code);
       assert.equal("A rent exempt constraint was violated", err.msg);
     }
+  });
+
+  describe("Can validate PDAs derived from other program ids", () => {
+    it("With bumps using create_program_address", async () => {
+      const [firstPDA, firstBump] =
+        await anchor.web3.PublicKey.findProgramAddress(
+          [anchor.utils.bytes.utf8.encode("seed")],
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        );
+      const [secondPDA, secondBump] =
+        await anchor.web3.PublicKey.findProgramAddress(
+          [anchor.utils.bytes.utf8.encode("seed")],
+          program.programId
+        );
+
+      // correct bump but wrong address
+      const wrongAddress = anchor.web3.Keypair.generate().publicKey;
+      try {
+        await program.rpc.testProgramIdConstraint(firstBump, secondBump, {
+          accounts: {
+            first: wrongAddress,
+            second: secondPDA,
+          },
+        });
+        assert.ok(false);
+      } catch (err) {
+        assert.equal(err.code, 2006);
+      }
+
+      // matching bump seed for wrong address but derived from wrong program
+      try {
+        await program.rpc.testProgramIdConstraint(secondBump, secondBump, {
+          accounts: {
+            first: secondPDA,
+            second: secondPDA,
+          },
+        });
+        assert.ok(false);
+      } catch (err) {
+        assert.equal(err.code, 2006);
+      }
+
+      // correct inputs should lead to successful tx
+      await program.rpc.testProgramIdConstraint(firstBump, secondBump, {
+        accounts: {
+          first: firstPDA,
+          second: secondPDA,
+        },
+      });
+    });
+
+    it("With bumps using find_program_address", async () => {
+      const firstPDA = (
+        await anchor.web3.PublicKey.findProgramAddress(
+          [anchor.utils.bytes.utf8.encode("seed")],
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        )
+      )[0];
+      const secondPDA = (
+        await anchor.web3.PublicKey.findProgramAddress(
+          [anchor.utils.bytes.utf8.encode("seed")],
+          program.programId
+        )
+      )[0];
+
+      // random wrong address
+      const wrongAddress = anchor.web3.Keypair.generate().publicKey;
+      try {
+        await program.rpc.testProgramIdConstraintFindPda({
+          accounts: {
+            first: wrongAddress,
+            second: secondPDA,
+          },
+        });
+        assert.ok(false);
+      } catch (err) {
+        assert.equal(err.code, 2006);
+      }
+
+      // same seeds but derived from wrong program
+      try {
+        await program.rpc.testProgramIdConstraintFindPda({
+          accounts: {
+            first: secondPDA,
+            second: secondPDA,
+          },
+        });
+        assert.ok(false);
+      } catch (err) {
+        assert.equal(err.code, 2006);
+      }
+
+      // correct inputs should lead to successful tx
+      await program.rpc.testProgramIdConstraintFindPda({
+        accounts: {
+          first: firstPDA,
+          second: secondPDA,
+        },
+      });
+    });
   });
 });

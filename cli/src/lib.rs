@@ -7,7 +7,7 @@ use anchor_lang::idl::{IdlAccount, IdlInstruction};
 use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
 use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Context, Result};
-use clap::Clap;
+use clap::Parser;
 use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
 use flate2::write::{GzEncoder, ZlibEncoder};
@@ -48,7 +48,7 @@ pub mod template;
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const DOCKER_BUILDER_VERSION: &str = VERSION;
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 #[clap(version = VERSION)]
 pub struct Opts {
     #[clap(flatten)]
@@ -57,7 +57,7 @@ pub struct Opts {
     pub command: Command,
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 pub enum Command {
     /// Initializes a workspace.
     Init {
@@ -261,12 +261,12 @@ pub enum Command {
     },
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 pub enum KeysCommand {
     List,
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 pub enum IdlCommand {
     /// Initializes a program's IDL account. Can only be run once.
     Init {
@@ -341,7 +341,7 @@ pub enum IdlCommand {
     },
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 pub enum ClusterCommand {
     /// Prints common cluster urls.
     List,
@@ -861,7 +861,7 @@ fn build_cwd_verifiable(
         Ok(_) => {
             // Build the idl.
             println!("Extracting the IDL");
-            if let Ok(Some(idl)) = extract_idl("src/lib.rs") {
+            if let Ok(Some(idl)) = extract_idl(cfg, "src/lib.rs") {
                 // Write out the JSON file.
                 println!("Writing the IDL file");
                 let out_file = workspace_dir.join(format!("target/idl/{}.json", idl.name));
@@ -1021,7 +1021,7 @@ fn docker_build_bpf(
     println!(
         "Building {} manifest: {:?}",
         binary_name,
-        manifest_path.display().to_string()
+        manifest_path.display()
     );
 
     // Execute the build.
@@ -1135,7 +1135,7 @@ fn _build_cwd(
     }
 
     // Always assume idl is located at src/lib.rs.
-    if let Some(idl) = extract_idl("src/lib.rs")? {
+    if let Some(idl) = extract_idl(cfg, "src/lib.rs")? {
         // JSON out path.
         let out = match idl_out {
             None => PathBuf::from(".").join(&idl.name).with_extension("json"),
@@ -1219,7 +1219,7 @@ fn verify(
     }
 
     // Verify IDL (only if it's not a buffer account).
-    if let Some(local_idl) = extract_idl("src/lib.rs")? {
+    if let Some(local_idl) = extract_idl(&cfg, "src/lib.rs")? {
         if bin_ver.state != BinVerificationState::Buffer {
             let deployed_idl = fetch_idl(cfg_override, program_id)?;
             if local_idl != deployed_idl {
@@ -1383,12 +1383,12 @@ fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
     serde_json::from_slice(&s[..]).map_err(Into::into)
 }
 
-fn extract_idl(file: &str) -> Result<Option<Idl>> {
+fn extract_idl(cfg: &WithPath<Config>, file: &str) -> Result<Option<Idl>> {
     let file = shellexpand::tilde(file);
     let manifest_from_path = std::env::current_dir()?.join(PathBuf::from(&*file).parent().unwrap());
     let cargo = Manifest::discover_from_path(manifest_from_path)?
         .ok_or_else(|| anyhow!("Cargo.toml not found"))?;
-    anchor_syn::idl::file::parse(&*file, cargo.version())
+    anchor_syn::idl::file::parse(&*file, cargo.version(), cfg.features.seeds)
 }
 
 fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
@@ -1415,7 +1415,7 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
         } => idl_set_authority(cfg_override, program_id, address, new_authority),
         IdlCommand::EraseAuthority { program_id } => idl_erase_authority(cfg_override, program_id),
         IdlCommand::Authority { program_id } => idl_authority(cfg_override, program_id),
-        IdlCommand::Parse { file, out, out_ts } => idl_parse(file, out, out_ts),
+        IdlCommand::Parse { file, out, out_ts } => idl_parse(cfg_override, file, out, out_ts),
         IdlCommand::Fetch { address, out } => idl_fetch(cfg_override, address, out),
     }
 }
@@ -1674,8 +1674,14 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
     Ok(())
 }
 
-fn idl_parse(file: String, out: Option<String>, out_ts: Option<String>) -> Result<()> {
-    let idl = extract_idl(&file)?.ok_or_else(|| anyhow!("IDL not parsed"))?;
+fn idl_parse(
+    cfg_override: &ConfigOverride,
+    file: String,
+    out: Option<String>,
+    out_ts: Option<String>,
+) -> Result<()> {
+    let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
+    let idl = extract_idl(&cfg, &file)?.ok_or_else(|| anyhow!("IDL not parsed"))?;
     let out = match out {
         None => OutFile::Stdout,
         Some(out) => OutFile::File(PathBuf::from(out)),
@@ -2017,7 +2023,7 @@ fn start_test_validator(
     }
     if count == ms_wait {
         eprintln!(
-            "Unable to start test validator. Check {} for errors.",
+            "Unable to get recent blockhash. Test validator does not look started. Check {} for errors. Consider increasing [test.startup_wait] in Anchor.toml.",
             test_ledger_log_filename
         );
         validator_handle.kill()?;
