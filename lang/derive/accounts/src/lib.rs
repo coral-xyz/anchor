@@ -203,7 +203,7 @@ use syn::parse_macro_input;
 ///                 If the account does exist, it still checks whether the given init constraints are correct,
 ///                 e.g. that the account has the expected amount of space and, if it's a PDA, the correct seeds etc.<br><br>
 ///                 This feature should be used with care and is therefore behind a feature flag.
-///                 You can enable it importing by <code>anchor-lang</code> with the <code>init-if-needed</code> feature.<br>
+///                 You can enable it by importing <code>anchor-lang</code> with the <code>init-if-needed</code> cargo feature.<br>
 ///                 When using <code>init_if_needed</code>, you need to make sure you properly protect yourself
 ///                 against re-initialization attacks. You need to include checks in your code that check
 ///                 that the initialized account cannot be reset to its initial settings after the first time it was
