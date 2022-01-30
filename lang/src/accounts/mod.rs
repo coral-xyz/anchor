@@ -1,5 +1,8 @@
+//! Account types that can be used in the account validation struct.
+
 pub mod account;
 pub mod account_info;
+pub mod account_loader;
 pub mod boxed;
 #[doc(hidden)]
 #[allow(deprecated)]
@@ -10,7 +13,6 @@ pub mod cpi_state;
 #[doc(hidden)]
 #[allow(deprecated)]
 pub mod loader;
-pub mod loader_account;
 pub mod program;
 #[doc(hidden)]
 #[allow(deprecated)]

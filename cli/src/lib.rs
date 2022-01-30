@@ -7,7 +7,7 @@ use anchor_lang::idl::{IdlAccount, IdlInstruction};
 use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
 use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Context, Result};
-use clap::Clap;
+use clap::Parser;
 use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
 use flate2::write::{GzEncoder, ZlibEncoder};
@@ -33,6 +33,7 @@ use solana_sdk::sysvar;
 use solana_sdk::transaction::Transaction;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -47,7 +48,7 @@ pub mod template;
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const DOCKER_BUILDER_VERSION: &str = VERSION;
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 #[clap(version = VERSION)]
 pub struct Opts {
     #[clap(flatten)]
@@ -56,7 +57,7 @@ pub struct Opts {
     pub command: Command,
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 pub enum Command {
     /// Initializes a workspace.
     Init {
@@ -89,6 +90,25 @@ pub enum Command {
         #[clap(arg_enum, short, long, default_value = "none")]
         bootstrap: BootstrapMode,
         /// Arguments to pass to the underlying `cargo build-bpf` command
+        #[clap(
+            required = false,
+            takes_value = true,
+            multiple_values = true,
+            last = true
+        )]
+        cargo_args: Vec<String>,
+    },
+    /// Expands macros (wrapper around cargo expand)
+    ///
+    /// Use it in a program folder to expand program
+    ///
+    /// Use it in a workspace but outside a program
+    /// folder to expand the entire workspace
+    Expand {
+        /// Expand only this program
+        #[clap(short, long)]
+        program_name: Option<String>,
+        /// Arguments to pass to the underlying `cargo expand` command
         #[clap(
             required = false,
             takes_value = true,
@@ -241,12 +261,12 @@ pub enum Command {
     },
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 pub enum KeysCommand {
     List,
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 pub enum IdlCommand {
     /// Initializes a program's IDL account. Can only be run once.
     Init {
@@ -321,7 +341,7 @@ pub enum IdlCommand {
     },
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 pub enum ClusterCommand {
     /// Prints common cluster urls.
     List,
@@ -370,6 +390,10 @@ pub fn entry(opts: Opts) -> Result<()> {
             cargo_args,
         ),
         Command::Deploy { program_name } => deploy(&opts.cfg_override, program_name),
+        Command::Expand {
+            program_name,
+            cargo_args,
+        } => expand(&opts.cfg_override, program_name, &cargo_args),
         Command::Upgrade {
             program_id,
             program_filepath,
@@ -559,6 +583,102 @@ fn new_program(name: &str) -> Result<()> {
     Ok(())
 }
 
+pub fn expand(
+    cfg_override: &ConfigOverride,
+    program_name: Option<String>,
+    cargo_args: &[String],
+) -> Result<()> {
+    // Change to the workspace member directory, if needed.
+    if let Some(program_name) = program_name.as_ref() {
+        cd_member(cfg_override, program_name)?;
+    }
+
+    let workspace_cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
+    let cfg_parent = workspace_cfg.path().parent().expect("Invalid Anchor.toml");
+    let cargo = Manifest::discover()?;
+
+    let expansions_path = cfg_parent.join(".anchor/expanded-macros");
+    fs::create_dir_all(&expansions_path)?;
+
+    match cargo {
+        // No Cargo.toml found, expand entire workspace
+        None => expand_all(&workspace_cfg, expansions_path, cargo_args),
+        // Cargo.toml is at root of workspace, expand entire workspace
+        Some(cargo) if cargo.path().parent() == workspace_cfg.path().parent() => {
+            expand_all(&workspace_cfg, expansions_path, cargo_args)
+        }
+        // Reaching this arm means Cargo.toml belongs to a single package. Expand it.
+        Some(cargo) => expand_program(
+            // If we found Cargo.toml, it must be in a directory so unwrap is safe
+            cargo.path().parent().unwrap().to_path_buf(),
+            expansions_path,
+            cargo_args,
+        ),
+    }
+}
+
+fn expand_all(
+    workspace_cfg: &WithPath<Config>,
+    expansions_path: PathBuf,
+    cargo_args: &[String],
+) -> Result<()> {
+    let cur_dir = std::env::current_dir()?;
+    for p in workspace_cfg.get_program_list()? {
+        expand_program(p, expansions_path.clone(), cargo_args)?;
+    }
+    std::env::set_current_dir(cur_dir)?;
+    Ok(())
+}
+
+fn expand_program(
+    program_path: PathBuf,
+    expansions_path: PathBuf,
+    cargo_args: &[String],
+) -> Result<()> {
+    let cargo = Manifest::from_path(program_path.join("Cargo.toml"))
+        .map_err(|_| anyhow!("Could not find Cargo.toml for program"))?;
+
+    let target_dir_arg = {
+        let mut target_dir_arg = OsString::from("--target-dir=");
+        target_dir_arg.push(expansions_path.join("expand-target"));
+        target_dir_arg
+    };
+
+    let package_name = &cargo
+        .package
+        .as_ref()
+        .ok_or_else(|| anyhow!("Cargo config is missing a package"))?
+        .name;
+    let program_expansions_path = expansions_path.join(package_name);
+    fs::create_dir_all(&program_expansions_path)?;
+
+    let exit = std::process::Command::new("cargo")
+        .arg("expand")
+        .arg(target_dir_arg)
+        .arg(&format!("--package={}", package_name))
+        .args(cargo_args)
+        .stderr(Stdio::inherit())
+        .output()
+        .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
+    if !exit.status.success() {
+        eprintln!("'anchor expand' failed. Perhaps you have not installed 'cargo-expand'? https://github.com/dtolnay/cargo-expand#installation");
+        std::process::exit(exit.status.code().unwrap_or(1));
+    }
+
+    let version = cargo.version();
+    let time = chrono::Utc::now().to_string().replace(' ', "_");
+    let file_path =
+        program_expansions_path.join(format!("{}-{}-{}.rs", package_name, version, time));
+    fs::write(&file_path, &exit.stdout).map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
+
+    println!(
+        "Expanded {} into file {}\n",
+        package_name,
+        file_path.to_string_lossy()
+    );
+    Ok(())
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn build(
     cfg_override: &ConfigOverride,
@@ -741,7 +861,7 @@ fn build_cwd_verifiable(
         Ok(_) => {
             // Build the idl.
             println!("Extracting the IDL");
-            if let Ok(Some(idl)) = extract_idl("src/lib.rs") {
+            if let Ok(Some(idl)) = extract_idl(cfg, "src/lib.rs") {
                 // Write out the JSON file.
                 println!("Writing the IDL file");
                 let out_file = workspace_dir.join(format!("target/idl/{}.json", idl.name));
@@ -901,7 +1021,7 @@ fn docker_build_bpf(
     println!(
         "Building {} manifest: {:?}",
         binary_name,
-        manifest_path.display().to_string()
+        manifest_path.display()
     );
 
     // Execute the build.
@@ -969,7 +1089,7 @@ fn docker_cleanup(container_name: &str, target_dir: &Path) -> Result<()> {
     docker_exec(container_name, &["rm", "-rf", target_dir.to_str().unwrap()])?;
 
     // Remove the docker image.
-    println!("Removing the docker image");
+    println!("Removing the docker container");
     let exit = std::process::Command::new("docker")
         .args(&["rm", "-f", container_name])
         .stdout(Stdio::inherit())
@@ -977,7 +1097,7 @@ fn docker_cleanup(container_name: &str, target_dir: &Path) -> Result<()> {
         .output()
         .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
     if !exit.status.success() {
-        println!("Unable to remove docker container");
+        println!("Unable to remove the docker container");
         std::process::exit(exit.status.code().unwrap_or(1));
     }
     Ok(())
@@ -1015,7 +1135,7 @@ fn _build_cwd(
     }
 
     // Always assume idl is located at src/lib.rs.
-    if let Some(idl) = extract_idl("src/lib.rs")? {
+    if let Some(idl) = extract_idl(cfg, "src/lib.rs")? {
         // JSON out path.
         let out = match idl_out {
             None => PathBuf::from(".").join(&idl.name).with_extension("json"),
@@ -1099,7 +1219,7 @@ fn verify(
     }
 
     // Verify IDL (only if it's not a buffer account).
-    if let Some(local_idl) = extract_idl("src/lib.rs")? {
+    if let Some(local_idl) = extract_idl(&cfg, "src/lib.rs")? {
         if bin_ver.state != BinVerificationState::Buffer {
             let deployed_idl = fetch_idl(cfg_override, program_id)?;
             if local_idl != deployed_idl {
@@ -1263,13 +1383,12 @@ fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
     serde_json::from_slice(&s[..]).map_err(Into::into)
 }
 
-fn extract_idl(file: &str) -> Result<Option<Idl>> {
+fn extract_idl(cfg: &WithPath<Config>, file: &str) -> Result<Option<Idl>> {
     let file = shellexpand::tilde(file);
-    let manifest_from_path =
-        std::env::current_dir()?.join(PathBuf::from(&*file).parent().unwrap().to_path_buf());
+    let manifest_from_path = std::env::current_dir()?.join(PathBuf::from(&*file).parent().unwrap());
     let cargo = Manifest::discover_from_path(manifest_from_path)?
         .ok_or_else(|| anyhow!("Cargo.toml not found"))?;
-    anchor_syn::idl::file::parse(&*file, cargo.version())
+    anchor_syn::idl::file::parse(&*file, cargo.version(), cfg.features.seeds)
 }
 
 fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
@@ -1296,7 +1415,7 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
         } => idl_set_authority(cfg_override, program_id, address, new_authority),
         IdlCommand::EraseAuthority { program_id } => idl_erase_authority(cfg_override, program_id),
         IdlCommand::Authority { program_id } => idl_authority(cfg_override, program_id),
-        IdlCommand::Parse { file, out, out_ts } => idl_parse(file, out, out_ts),
+        IdlCommand::Parse { file, out, out_ts } => idl_parse(cfg_override, file, out, out_ts),
         IdlCommand::Fetch { address, out } => idl_fetch(cfg_override, address, out),
     }
 }
@@ -1555,8 +1674,14 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
     Ok(())
 }
 
-fn idl_parse(file: String, out: Option<String>, out_ts: Option<String>) -> Result<()> {
-    let idl = extract_idl(&file)?.ok_or_else(|| anyhow!("IDL not parsed"))?;
+fn idl_parse(
+    cfg_override: &ConfigOverride,
+    file: String,
+    out: Option<String>,
+    out_ts: Option<String>,
+) -> Result<()> {
+    let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
+    let idl = extract_idl(&cfg, &file)?.ok_or_else(|| anyhow!("IDL not parsed"))?;
     let out = match out {
         None => OutFile::Stdout,
         Some(out) => OutFile::File(PathBuf::from(out)),
@@ -1898,7 +2023,7 @@ fn start_test_validator(
     }
     if count == ms_wait {
         eprintln!(
-            "Unable to start test validator. Check {} for errors.",
+            "Unable to get recent blockhash. Test validator does not look started. Check {} for errors. Consider increasing [test.startup_wait] in Anchor.toml.",
             test_ledger_log_filename
         );
         validator_handle.kill()?;

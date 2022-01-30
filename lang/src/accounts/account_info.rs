@@ -1,16 +1,21 @@
+//! AccountInfo can be used as a type but
+//! [Unchecked Account](crate::accounts::unchecked_account::UncheckedAccount)
+//! should be used instead.
+
 use crate::error::ErrorCode;
-use crate::{Accounts, AccountsExit, Key, ToAccountInfo, ToAccountInfos, ToAccountMetas};
+use crate::{Accounts, AccountsExit, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
-use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
+use std::collections::BTreeMap;
 
 impl<'info> Accounts<'info> for AccountInfo<'info> {
     fn try_accounts(
         _program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
+        _bumps: &mut BTreeMap<String, u8>,
     ) -> Result<Self, ProgramError> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
@@ -38,21 +43,4 @@ impl<'info> ToAccountInfos<'info> for AccountInfo<'info> {
     }
 }
 
-impl<'info> ToAccountInfo<'info> for AccountInfo<'info> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.clone()
-    }
-}
-
-impl<'info> AccountsExit<'info> for AccountInfo<'info> {
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
-        // no-op
-        Ok(())
-    }
-}
-
-impl<'info> Key for AccountInfo<'info> {
-    fn key(&self) -> Pubkey {
-        *self.key
-    }
-}
+impl<'info> AccountsExit<'info> for AccountInfo<'info> {}

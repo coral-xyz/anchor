@@ -1,9 +1,25 @@
+//! Box<T> type to save stack space.
+//!
+//! Sometimes accounts are too large for the stack,
+//! leading to stack violations.
+//!
+//! Boxing the account can help.
+//!
+//! # Example
+//! ```ignore
+//! #[derive(Accounts)]
+//! pub struct Example {
+//!     pub my_acc: Box<Account<'info, MyData>>
+//! }
+//! ```
+
 use crate::{Accounts, AccountsClose, AccountsExit, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
+use std::collections::BTreeMap;
 use std::ops::Deref;
 
 impl<'info, T: Accounts<'info>> Accounts<'info> for Box<T> {
@@ -11,8 +27,9 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Box<T> {
         program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         ix_data: &[u8],
+        bumps: &mut BTreeMap<String, u8>,
     ) -> Result<Self, ProgramError> {
-        T::try_accounts(program_id, accounts, ix_data).map(Box::new)
+        T::try_accounts(program_id, accounts, ix_data, bumps).map(Box::new)
     }
 }
 

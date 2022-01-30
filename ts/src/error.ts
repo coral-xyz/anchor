@@ -91,13 +91,14 @@ const LangErrorCode = {
   AccountDidNotSerialize: 3004,
   AccountNotEnoughKeys: 3005,
   AccountNotMutable: 3006,
-  AccountNotProgramOwned: 3007,
+  AccountOwnedByWrongProgram: 3007,
   InvalidProgramId: 3008,
   InvalidProgramExecutable: 3009,
   AccountNotSigner: 3010,
   AccountNotSystemOwned: 3011,
   AccountNotInitialized: 3012,
   AccountNotProgramData: 3013,
+  AccountNotAssociatedTokenAccount: 3014,
   // State.
   StateInvalidAddress: 4000,
 
@@ -189,8 +190,8 @@ const LangErrorMessage = new Map([
   ],
   [LangErrorCode.AccountNotMutable, "The given account is not mutable"],
   [
-    LangErrorCode.AccountNotProgramOwned,
-    "The given account is not owned by the executing program",
+    LangErrorCode.AccountOwnedByWrongProgram,
+    "The given account is owned by a different program than expected",
   ],
   [LangErrorCode.InvalidProgramId, "Program ID was not as expected"],
   [LangErrorCode.InvalidProgramExecutable, "Program account is not executable"],
@@ -206,6 +207,10 @@ const LangErrorMessage = new Map([
   [
     LangErrorCode.AccountNotProgramData,
     "The given account is not a program data account",
+  ],
+  [
+    LangErrorCode.AccountNotAssociatedTokenAccount,
+    "The given account is not the associated token account",
   ],
 
   // State.

@@ -136,7 +136,7 @@ fn generate_constraint_address(f: &Field, c: &ConstraintAddress) -> proc_macro2:
     let addr = &c.address;
     let error = generate_custom_error(&c.error, quote! { ConstraintAddress });
     quote! {
-        if #field.to_account_info().key != &#addr {
+        if #field.key() != #addr {
             return Err(#error);
         }
     }
@@ -168,7 +168,7 @@ pub fn generate_constraint_close(f: &Field, c: &ConstraintClose) -> proc_macro2:
     let field = &f.ident;
     let target = &c.sol_dest;
     quote! {
-        if #field.to_account_info().key == #target.to_account_info().key {
+        if #field.key() == #target.key() {
             return Err(anchor_lang::__private::ErrorCode::ConstraintClose.into());
         }
     }
@@ -194,7 +194,7 @@ pub fn generate_constraint_has_one(f: &Field, c: &ConstraintHasOne) -> proc_macr
     };
     let error = generate_custom_error(&c.error, quote! { ConstraintHasOne });
     quote! {
-        if &#field.#target != #target.to_account_info().key {
+        if #field.#target != #target.key() {
             return Err(#error);
         }
     }
@@ -252,7 +252,7 @@ pub fn generate_constraint_owner(f: &Field, c: &ConstraintOwner) -> proc_macro2:
     let owner_address = &c.owner_address;
     let error = generate_custom_error(&c.error, quote! { ConstraintOwner });
     quote! {
-        if #ident.to_account_info().owner != &#owner_address {
+        if #ident.as_ref().owner != &#owner_address {
             return Err(#error);
         }
     }
@@ -277,6 +277,16 @@ pub fn generate_constraint_rent_exempt(
 }
 
 fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_macro2::TokenStream {
+    let field = &f.ident;
+    let ty_decl = f.ty_decl();
+    let if_needed = if c.if_needed {
+        quote! {true}
+    } else {
+        quote! {false}
+    };
+    let space = &c.space;
+
+    // Payer for rent exemption.
     let payer = {
         let p = &c.payer;
         quote! {
@@ -284,152 +294,58 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
         }
     };
 
-    let seeds_with_nonce = match &c.seeds {
-        None => quote! {},
+    // Convert from account info to account context wrapper type.
+    let from_account_info = f.from_account_info_unchecked(Some(&c.kind));
+
+    // PDA bump seeds.
+    let (find_pda, seeds_with_bump) = match &c.seeds {
+        None => (quote! {}, quote! {}),
         Some(c) => {
-            let s = &mut c.seeds.clone();
+            let name_str = f.ident.to_string();
+            let seeds = &mut c.seeds.clone();
+
             // If the seeds came with a trailing comma, we need to chop it off
             // before we interpolate them below.
-            if let Some(pair) = s.pop() {
-                s.push_value(pair.into_value());
+            if let Some(pair) = seeds.pop() {
+                seeds.push_value(pair.into_value());
             }
-            let maybe_seeds_plus_comma = (!s.is_empty()).then(|| {
-                quote! { #s, }
+
+            let maybe_seeds_plus_comma = (!seeds.is_empty()).then(|| {
+                quote! { #seeds, }
             });
-            let inner = match c.bump.as_ref() {
-                // Bump target not given. Use the canonical bump.
-                None => {
-                    quote! {
-                        [
-                            #maybe_seeds_plus_comma
-                            &[
-                                Pubkey::find_program_address(
-                                    &[#s],
-                                    program_id,
-                                ).1
-                            ][..]
-                        ]
-                    }
-                }
-                // Bump target given. Use it.
-                Some(b) => quote! {
-                    [#maybe_seeds_plus_comma &[#b][..]]
+
+            (
+                quote! {
+                    let (__pda_address, __bump) = Pubkey::find_program_address(
+                        &[#maybe_seeds_plus_comma],
+                        program_id,
+                    );
+                    __bumps.insert(#name_str.to_string(), __bump);
                 },
-            };
-            quote! {
-                &#inner[..]
-            }
-        }
-    };
-    generate_init(f, c.if_needed, seeds_with_nonce, payer, &c.space, &c.kind)
-}
-
-fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2::TokenStream {
-    let name = &f.ident;
-    let s = &mut c.seeds.clone();
-    // If the seeds came with a trailing comma, we need to chop it off
-    // before we interpolate them below.
-    if let Some(pair) = s.pop() {
-        s.push_value(pair.into_value());
-    }
-
-    // If the bump is provided with init *and target*, then force it to be the
-    // canonical bump.
-    if c.is_init && c.bump.is_some() {
-        let b = c.bump.as_ref().unwrap();
-        quote! {
-            let (__program_signer, __bump) = anchor_lang::solana_program::pubkey::Pubkey::find_program_address(
-                &[#s],
-                program_id,
-            );
-            if #name.to_account_info().key != &__program_signer {
-                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
-            }
-            if __bump != #b {
-                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
-            }
-        }
-    } else {
-        let maybe_seeds_plus_comma = (!s.is_empty()).then(|| {
-            quote! { #s, }
-        });
-        let seeds = match c.bump.as_ref() {
-            // Bump target not given. Find it.
-            None => {
                 quote! {
-                    [
+                    &[
                         #maybe_seeds_plus_comma
-                        &[
-                            Pubkey::find_program_address(
-                                &[#s],
-                                program_id,
-                            ).1
-                        ][..]
-                    ]
-                }
-            }
-            // Bump target given. Use it.
-            Some(b) => {
-                quote! {
-                    [#maybe_seeds_plus_comma &[#b][..]]
-                }
-            }
-        };
-        quote! {
-            let __program_signer = Pubkey::create_program_address(
-                &#seeds[..],
-                program_id,
-            ).map_err(|_| anchor_lang::__private::ErrorCode::ConstraintSeeds)?;
-            if #name.to_account_info().key != &__program_signer {
-                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
-            }
+                        &[__bump][..]
+                    ][..]
+                },
+            )
         }
-    }
-}
-
-fn generate_constraint_associated_token(
-    f: &Field,
-    c: &ConstraintAssociatedToken,
-) -> proc_macro2::TokenStream {
-    let name = &f.ident;
-    let wallet_address = &c.wallet;
-    let spl_token_mint_address = &c.mint;
-    quote! {
-        let __associated_token_address = anchor_spl::associated_token::get_associated_token_address(&#wallet_address.key(), &#spl_token_mint_address.key());
-        if #name.to_account_info().key != &__associated_token_address {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintAssociated.into());
-        }
-    }
-}
-
-// `if_needed` is set if account allocation and initialization is optional.
-pub fn generate_init(
-    f: &Field,
-    if_needed: bool,
-    seeds_with_nonce: proc_macro2::TokenStream,
-    payer: proc_macro2::TokenStream,
-    space: &Option<Expr>,
-    kind: &InitKind,
-) -> proc_macro2::TokenStream {
-    let field = &f.ident;
-    let ty_decl = f.ty_decl();
-    let from_account_info = f.from_account_info_unchecked(Some(kind));
-    let if_needed = if if_needed {
-        quote! {true}
-    } else {
-        quote! {false}
     };
-    match kind {
+
+    match &c.kind {
         InitKind::Token { owner, mint } => {
             let create_account = generate_create_account(
                 field,
                 quote! {anchor_spl::token::TokenAccount::LEN},
-                quote! {token_program.to_account_info().key},
-                seeds_with_nonce,
+                quote! {&token_program.key()},
+                seeds_with_bump,
             );
             quote! {
+                // Define the bump and pda variable.
+                #find_pda
+
                 let #field: #ty_decl = {
-                    if !#if_needed || #field.to_account_info().owner == &anchor_lang::solana_program::system_program::ID {
+                    if !#if_needed || #field.as_ref().owner == &anchor_lang::solana_program::system_program::ID {
                         // Define payer variable.
                         #payer
 
@@ -444,12 +360,12 @@ pub fn generate_init(
                             authority: #owner.to_account_info(),
                             rent: rent.to_account_info(),
                         };
-                        let cpi_ctx = CpiContext::new(cpi_program, accounts);
+                        let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
                         anchor_spl::token::initialize_account(cpi_ctx)?;
                     }
 
                     let pa: #ty_decl = #from_account_info;
-                    if !(!#if_needed || #field.to_account_info().owner == &anchor_lang::solana_program::system_program::ID) {
+                    if !(!#if_needed || #field.as_ref().owner == &anchor_lang::solana_program::system_program::ID) {
                         if pa.mint != #mint.key() {
                             return Err(anchor_lang::__private::ErrorCode::ConstraintTokenMint.into());
                         }
@@ -463,8 +379,11 @@ pub fn generate_init(
         }
         InitKind::AssociatedToken { owner, mint } => {
             quote! {
+                // Define the bump and pda variable.
+                #find_pda
+
                 let #field: #ty_decl = {
-                    if !#if_needed || #field.to_account_info().owner == &anchor_lang::solana_program::system_program::ID {
+                    if !#if_needed || #field.as_ref().owner == &anchor_lang::solana_program::system_program::ID {
                         #payer
 
                         let cpi_program = associated_token_program.to_account_info();
@@ -477,16 +396,20 @@ pub fn generate_init(
                             token_program: token_program.to_account_info(),
                             rent: rent.to_account_info(),
                         };
-                        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+                        let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, cpi_accounts);
                         anchor_spl::associated_token::create(cpi_ctx)?;
                     }
                     let pa: #ty_decl = #from_account_info;
-                    if !(!#if_needed || #field.to_account_info().owner == &anchor_lang::solana_program::system_program::ID) {
+                    if !(!#if_needed || #field.as_ref().owner == &anchor_lang::solana_program::system_program::ID) {
                         if pa.mint != #mint.key() {
                             return Err(anchor_lang::__private::ErrorCode::ConstraintTokenMint.into());
                         }
                         if pa.owner != #owner.key() {
                             return Err(anchor_lang::__private::ErrorCode::ConstraintTokenOwner.into());
+                        }
+
+                        if pa.key() != anchor_spl::associated_token::get_associated_token_address(&#owner.key(), &#mint.key()) {
+                            return Err(anchor_lang::__private::ErrorCode::AccountNotAssociatedTokenAccount.into());
                         }
                     }
                     pa
@@ -501,16 +424,19 @@ pub fn generate_init(
             let create_account = generate_create_account(
                 field,
                 quote! {anchor_spl::token::Mint::LEN},
-                quote! {token_program.to_account_info().key},
-                seeds_with_nonce,
+                quote! {&token_program.key()},
+                seeds_with_bump,
             );
             let freeze_authority = match freeze_authority {
                 Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key()) },
                 None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
             };
             quote! {
+                // Define the bump and pda variable.
+                #find_pda
+
                 let #field: #ty_decl = {
-                    if !#if_needed || #field.to_account_info().owner == &anchor_lang::solana_program::system_program::ID {
+                    if !#if_needed || #field.as_ref().owner == &anchor_lang::solana_program::system_program::ID {
                         // Define payer variable.
                         #payer
 
@@ -523,11 +449,11 @@ pub fn generate_init(
                             mint: #field.to_account_info(),
                             rent: rent.to_account_info(),
                         };
-                        let cpi_ctx = CpiContext::new(cpi_program, accounts);
+                        let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
                         anchor_spl::token::initialize_mint(cpi_ctx, #decimals, &#owner.key(), #freeze_authority)?;
                     }
                     let pa: #ty_decl = #from_account_info;
-                    if !(!#if_needed || #field.to_account_info().owner == &anchor_lang::solana_program::system_program::ID) {
+                    if !(!#if_needed || #field.as_ref().owner == &anchor_lang::solana_program::system_program::ID) {
                         if pa.mint_authority != anchor_lang::solana_program::program_option::COption::Some(#owner.key()) {
                             return Err(anchor_lang::__private::ErrorCode::ConstraintMintMintAuthority.into());
                         }
@@ -546,6 +472,7 @@ pub fn generate_init(
             }
         }
         InitKind::Program { owner } => {
+            // Define the space variable.
             let space = match space {
                 // If no explicit space param was given, serialize the type to bytes
                 // and take the length (with +8 for the discriminator.)
@@ -570,7 +497,7 @@ pub fn generate_init(
                 },
             };
 
-            // Owner of the account being created. If not specified,
+            // Define the owner of the account being created. If not specified,
             // default to the currently executing program.
             let owner = match owner {
                 None => quote! {
@@ -580,31 +507,37 @@ pub fn generate_init(
                     &#o
                 },
             };
-            let pda_check = if !seeds_with_nonce.is_empty() {
-                quote! {
-                    let expected_key = anchor_lang::prelude::Pubkey::create_program_address(
-                        #seeds_with_nonce,
-                        #owner
-                    ).map_err(|_| anchor_lang::__private::ErrorCode::ConstraintSeeds)?;
-                    if expected_key != #field.key() {
-                        return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
-                    }
-                }
-            } else {
-                quote! {}
-            };
+
+            // CPI to the system program to create the account.
             let create_account =
-                generate_create_account(field, quote! {space}, owner.clone(), seeds_with_nonce);
+                generate_create_account(field, quote! {space}, owner.clone(), seeds_with_bump);
+
+            // Put it all together.
             quote! {
+                // Define the bump variable.
+                #find_pda
+
                 let #field = {
                     let actual_field = #field.to_account_info();
                     let actual_owner = actual_field.owner;
+
+                    // Define the account space variable.
                     #space
+
+                    // Create the account. Always do this in the event
+                    // if needed is not specified or the system program is the owner.
                     if !#if_needed || actual_owner == &anchor_lang::solana_program::system_program::ID {
+                        // Define the payer variable.
                         #payer
+
+                        // CPI to the system program to create.
                         #create_account
                     }
+
+                    // Convert from account info to account context wrapper type.
                     let pa: #ty_decl = #from_account_info;
+
+                    // Assert the account was created correctly.
                     if !(!#if_needed || actual_owner == &anchor_lang::solana_program::system_program::ID) {
                         if space != actual_field.data_len() {
                             return Err(anchor_lang::__private::ErrorCode::ConstraintSpace.into());
@@ -614,11 +547,118 @@ pub fn generate_init(
                             return Err(anchor_lang::__private::ErrorCode::ConstraintOwner.into());
                         }
 
-                        #pda_check
+                        {
+                            let required_lamports = __anchor_rent.minimum_balance(space);
+                            if pa.to_account_info().lamports() < required_lamports {
+                                return Err(anchor_lang::__private::ErrorCode::ConstraintRentExempt.into());
+                            }
+                        }
                     }
+
+                    // Done.
                     pa
                 };
             }
+        }
+    }
+}
+
+fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2::TokenStream {
+    let name = &f.ident;
+    let name_str = name.to_string();
+
+    let s = &mut c.seeds.clone();
+
+    let deriving_program_id = c
+        .program_seed
+        .clone()
+        // If they specified a seeds::program to use when deriving the PDA, use it.
+        .map(|program_id| quote! { #program_id })
+        // Otherwise fall back to the current program's program_id.
+        .unwrap_or(quote! { program_id });
+
+    // If the seeds came with a trailing comma, we need to chop it off
+    // before we interpolate them below.
+    if let Some(pair) = s.pop() {
+        s.push_value(pair.into_value());
+    }
+
+    // If the bump is provided with init *and target*, then force it to be the
+    // canonical bump.
+    //
+    // Note that for `#[account(init, seeds)]`, find_program_address has already
+    // been run in the init constraint.
+    if c.is_init && c.bump.is_some() {
+        let b = c.bump.as_ref().unwrap();
+        quote! {
+            if #name.key() != __pda_address {
+                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+            }
+            if __bump != #b {
+                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+            }
+        }
+    }
+    // Init seeds but no bump. We already used the canonical to create bump so
+    // just check the address.
+    //
+    // Note that for `#[account(init, seeds)]`, find_program_address has already
+    // been run in the init constraint.
+    else if c.is_init {
+        quote! {
+            if #name.key() != __pda_address {
+                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+            }
+        }
+    }
+    // No init. So we just check the address.
+    else {
+        let maybe_seeds_plus_comma = (!s.is_empty()).then(|| {
+            quote! { #s, }
+        });
+        let define_pda = match c.bump.as_ref() {
+            // Bump target not given. Find it.
+            None => quote! {
+                let (__pda_address, __bump) = Pubkey::find_program_address(
+                    &[#maybe_seeds_plus_comma],
+                    &#deriving_program_id,
+                );
+                __bumps.insert(#name_str.to_string(), __bump);
+            },
+            // Bump target given. Use it.
+            Some(b) => quote! {
+                let __pda_address = Pubkey::create_program_address(
+                    &[#maybe_seeds_plus_comma &[#b][..]],
+                    &#deriving_program_id,
+                ).map_err(|_| anchor_lang::__private::ErrorCode::ConstraintSeeds)?;
+            },
+        };
+        quote! {
+            // Define the PDA.
+            #define_pda
+
+            // Check it.
+            if #name.key() != __pda_address {
+                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+            }
+        }
+    }
+}
+
+fn generate_constraint_associated_token(
+    f: &Field,
+    c: &ConstraintAssociatedToken,
+) -> proc_macro2::TokenStream {
+    let name = &f.ident;
+    let wallet_address = &c.wallet;
+    let spl_token_mint_address = &c.mint;
+    quote! {
+        if #name.owner != #wallet_address.key() {
+            return Err(anchor_lang::__private::ErrorCode::ConstraintTokenOwner.into());
+        }
+        let __associated_token_address = anchor_spl::associated_token::get_associated_token_address(&#wallet_address.key(), &#spl_token_mint_address.key());
+        if #name.key() != __associated_token_address {
+            return Err(anchor_lang::__private::ErrorCode::ConstraintAssociated.into());
         }
     }
 }
@@ -639,14 +679,14 @@ pub fn generate_create_account(
         // return them all back to the payer so that the account has
         // zero lamports when the system program's create instruction
         // is eventually called.
-        let __current_lamports = #field.to_account_info().lamports();
+        let __current_lamports = #field.lamports();
         if __current_lamports == 0 {
             // Create the token account with right amount of lamports and space, and the correct owner.
             let lamports = __anchor_rent.minimum_balance(#space);
             anchor_lang::solana_program::program::invoke_signed(
                 &anchor_lang::solana_program::system_instruction::create_account(
-                    payer.to_account_info().key,
-                    #field.to_account_info().key,
+                    &payer.key(),
+                    &#field.key(),
                     lamports,
                     #space as u64,
                     #owner,
@@ -667,8 +707,8 @@ pub fn generate_create_account(
             if required_lamports > 0 {
                 anchor_lang::solana_program::program::invoke(
                     &anchor_lang::solana_program::system_instruction::transfer(
-                        payer.to_account_info().key,
-                        #field.to_account_info().key,
+                        &payer.key(),
+                        &#field.key(),
                         required_lamports,
                     ),
                     &[
@@ -681,7 +721,7 @@ pub fn generate_create_account(
             // Allocate space.
             anchor_lang::solana_program::program::invoke_signed(
                 &anchor_lang::solana_program::system_instruction::allocate(
-                    #field.to_account_info().key,
+                    &#field.key(),
                     #space as u64,
                 ),
                 &[
@@ -693,7 +733,7 @@ pub fn generate_create_account(
             // Assign to the spl token program.
             anchor_lang::solana_program::program::invoke_signed(
                 &anchor_lang::solana_program::system_instruction::assign(
-                    #field.to_account_info().key,
+                    &#field.key(),
                     #owner,
                 ),
                 &[
@@ -728,10 +768,10 @@ pub fn generate_constraint_state(f: &Field, c: &ConstraintState) -> proc_macro2:
     quote! {
         // Checks the given state account is the canonical state account for
         // the target program.
-        if #ident.to_account_info().key != &anchor_lang::CpiState::<#account_ty>::address(#program_target.to_account_info().key) {
+        if #ident.key() != anchor_lang::accounts::cpi_state::CpiState::<#account_ty>::address(&#program_target.key()) {
             return Err(anchor_lang::__private::ErrorCode::ConstraintState.into());
         }
-        if #ident.to_account_info().owner != #program_target.to_account_info().key {
+        if #ident.as_ref().owner != &#program_target.key() {
             return Err(anchor_lang::__private::ErrorCode::ConstraintState.into());
         }
     }

@@ -50,7 +50,15 @@ export type IdlAccount = {
   name: string;
   isMut: boolean;
   isSigner: boolean;
+  pda?: IdlPda;
 };
+
+export type IdlPda = {
+  seeds: IdlSeed[];
+  programId?: IdlSeed;
+};
+
+export type IdlSeed = any; // TODO
 
 // A nested/recursive version of IdlAccount.
 export type IdlAccounts = {
@@ -99,6 +107,7 @@ export type IdlType =
   | "publicKey"
   | IdlTypeDefined
   | IdlTypeOption
+  | IdlTypeCOption
   | IdlTypeVec
   | IdlTypeArray;
 
@@ -109,6 +118,10 @@ export type IdlTypeDefined = {
 
 export type IdlTypeOption = {
   option: IdlType;
+};
+
+export type IdlTypeCOption = {
+  coption: IdlType;
 };
 
 export type IdlTypeVec = {

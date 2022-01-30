@@ -5,6 +5,7 @@ use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
+use std::collections::BTreeMap;
 use std::ops::{Deref, DerefMut};
 
 /// Container for any account *not* owned by the current program.
@@ -53,6 +54,7 @@ where
         _program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
+        _bumps: &mut BTreeMap<String, u8>,
     ) -> Result<Self, ProgramError> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
@@ -85,13 +87,6 @@ impl<'info, T: AccountDeserialize + Clone> ToAccountInfos<'info> for CpiAccount<
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountDeserialize + Clone> ToAccountInfo<'info> for CpiAccount<'info, T> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.info.clone()
-    }
-}
-
-#[allow(deprecated)]
 impl<'info, T: AccountDeserialize + Clone> AsRef<AccountInfo<'info>> for CpiAccount<'info, T> {
     fn as_ref(&self) -> &AccountInfo<'info> {
         &self.info
@@ -115,19 +110,7 @@ impl<'a, T: AccountDeserialize + Clone> DerefMut for CpiAccount<'a, T> {
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountDeserialize + Clone> AccountsExit<'info> for CpiAccount<'info, T> {
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
-        // no-op
-        Ok(())
-    }
-}
-
-#[allow(deprecated)]
-impl<'info, T: AccountDeserialize + Clone> Key for CpiAccount<'info, T> {
-    fn key(&self) -> Pubkey {
-        *self.info.key
-    }
-}
+impl<'info, T: AccountDeserialize + Clone> AccountsExit<'info> for CpiAccount<'info, T> {}
 
 #[allow(deprecated)]
 impl<'info, T> From<Account<'info, T>> for CpiAccount<'info, T>

@@ -18,3 +18,4 @@ default = []
 anchor-lang = { path = "../../../../lang" }
 anchor-spl = { path = "../../../../spl" }
 misc2 = { path = "../misc2", features = ["cpi"] }
+spl-associated-token-account = "=1.0.3"

@@ -7,7 +7,7 @@ import Provider from "../../provider.js";
 import { splitArgsAndCtx } from "../context.js";
 import { TransactionFn } from "./transaction.js";
 import { EventParser, Event } from "../event.js";
-import Coder from "../../coder/index.js";
+import { Coder } from "../../coder/index.js";
 import { Idl, IdlEvent } from "../../idl.js";
 import { ProgramError } from "../../error.js";
 import * as features from "../../utils/features.js";
@@ -134,7 +134,7 @@ export type SimulateFn<
   Promise<SimulateResponse<NullableEvents<IDL>, IdlTypes<IDL>>>
 >;
 
-type SimulateResponse<E extends IdlEvent, Defined> = {
+export type SimulateResponse<E extends IdlEvent, Defined> = {
   events: readonly Event<E, Defined>[];
   raw: readonly string[];
 };

@@ -1,7 +1,6 @@
 use crate::error::ErrorCode;
 use crate::{
-    Accounts, AccountsClose, AccountsExit, Key, ToAccountInfo, ToAccountInfos, ToAccountMetas,
-    ZeroCopy,
+    Accounts, AccountsClose, AccountsExit, ToAccountInfo, ToAccountInfos, ToAccountMetas, ZeroCopy,
 };
 use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;
@@ -10,6 +9,7 @@ use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::cell::{Ref, RefMut};
+use std::collections::BTreeMap;
 use std::fmt;
 use std::io::Write;
 use std::marker::PhantomData;
@@ -17,7 +17,7 @@ use std::ops::DerefMut;
 
 /// Account loader facilitating on demand zero copy deserialization.
 /// Note that using accounts in this way is distinctly different from using,
-/// for example, the [`ProgramAccount`](./struct.ProgramAccount.html). Namely,
+/// for example, the [`Account`](./struct.Account.html). Namely,
 /// one must call `load`, `load_mut`, or `load_init`, before reading or writing
 /// to the account. For more details on zero-copy-deserialization, see the
 /// [`account`](./attr.account.html) attribute.
@@ -59,7 +59,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         acc_info: &AccountInfo<'info>,
     ) -> Result<Loader<'info, T>, ProgramError> {
         if acc_info.owner != program_id {
-            return Err(ErrorCode::AccountNotProgramOwned.into());
+            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
         }
         let data: &[u8] = &acc_info.try_borrow_data()?;
         // Discriminator must match.
@@ -79,7 +79,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         acc_info: &AccountInfo<'info>,
     ) -> Result<Loader<'info, T>, ProgramError> {
         if acc_info.owner != program_id {
-            return Err(ErrorCode::AccountNotProgramOwned.into());
+            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
         }
         Ok(Loader::new(acc_info.clone()))
     }
@@ -151,6 +151,7 @@ impl<'info, T: ZeroCopy> Accounts<'info> for Loader<'info, T> {
         program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
+        _bumps: &mut BTreeMap<String, u8>,
     ) -> Result<Self, ProgramError> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
@@ -204,19 +205,5 @@ impl<'info, T: ZeroCopy> AsRef<AccountInfo<'info>> for Loader<'info, T> {
 impl<'info, T: ZeroCopy> ToAccountInfos<'info> for Loader<'info, T> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         vec![self.acc_info.clone()]
-    }
-}
-
-#[allow(deprecated)]
-impl<'info, T: ZeroCopy> ToAccountInfo<'info> for Loader<'info, T> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.acc_info.clone()
-    }
-}
-
-#[allow(deprecated)]
-impl<'info, T: ZeroCopy> Key for Loader<'info, T> {
-    fn key(&self) -> Pubkey {
-        *self.acc_info.key
     }
 }

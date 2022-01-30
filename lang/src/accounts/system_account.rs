@@ -1,13 +1,20 @@
+//! Type validating that the account is owned by the system program
+
 use crate::error::ErrorCode;
 use crate::*;
 use solana_program::account_info::AccountInfo;
-use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;
+use std::collections::BTreeMap;
 use std::ops::Deref;
 
+/// Type validating that the account is owned by the system program
+///
+/// Checks:
+///
+/// - `SystemAccount.info.owner == SystemProgram`
 #[derive(Debug, Clone)]
 pub struct SystemAccount<'info> {
     info: AccountInfo<'info>,
@@ -33,6 +40,7 @@ impl<'info> Accounts<'info> for SystemAccount<'info> {
         _program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
+        _bumps: &mut BTreeMap<String, u8>,
     ) -> Result<Self, ProgramError> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
@@ -43,12 +51,7 @@ impl<'info> Accounts<'info> for SystemAccount<'info> {
     }
 }
 
-impl<'info> AccountsExit<'info> for SystemAccount<'info> {
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
-        // No-op.
-        Ok(())
-    }
-}
+impl<'info> AccountsExit<'info> for SystemAccount<'info> {}
 
 impl<'info> ToAccountMetas for SystemAccount<'info> {
     fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
@@ -67,12 +70,6 @@ impl<'info> ToAccountInfos<'info> for SystemAccount<'info> {
     }
 }
 
-impl<'info> ToAccountInfo<'info> for SystemAccount<'info> {
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.info.clone()
-    }
-}
-
 impl<'info> AsRef<AccountInfo<'info>> for SystemAccount<'info> {
     fn as_ref(&self) -> &AccountInfo<'info> {
         &self.info
@@ -84,11 +81,5 @@ impl<'info> Deref for SystemAccount<'info> {
 
     fn deref(&self) -> &Self::Target {
         &self.info
-    }
-}
-
-impl<'info> Key for SystemAccount<'info> {
-    fn key(&self) -> Pubkey {
-        *self.info.key
     }
 }

@@ -1,15 +1,14 @@
 use crate::error::ErrorCode;
 #[allow(deprecated)]
-use crate::{accounts::state::ProgramState, CpiStateContext};
+use crate::{accounts::state::ProgramState, context::CpiStateContext};
 use crate::{
-    AccountDeserialize, AccountSerialize, Accounts, AccountsExit, Key, ToAccountInfo,
-    ToAccountInfos, ToAccountMetas,
+    AccountDeserialize, AccountSerialize, Accounts, AccountsExit, ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
-use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
+use std::collections::BTreeMap;
 use std::ops::{Deref, DerefMut};
 
 /// Boxed container for the program state singleton, used when the state
@@ -72,6 +71,7 @@ where
         _program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
+        _bumps: &mut BTreeMap<String, u8>,
     ) -> Result<Self, ProgramError> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
@@ -110,15 +110,6 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfos<'in
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfo<'info>
-    for CpiState<'info, T>
-{
-    fn to_account_info(&self) -> AccountInfo<'info> {
-        self.inner.info.clone()
-    }
-}
-
-#[allow(deprecated)]
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AsRef<AccountInfo<'info>>
     for CpiState<'info, T>
 {
@@ -147,15 +138,4 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> DerefMut for CpiSt
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info>
     for CpiState<'info, T>
 {
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
-        // no-op
-        Ok(())
-    }
-}
-
-#[allow(deprecated)]
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> Key for CpiState<'info, T> {
-    fn key(&self) -> Pubkey {
-        *self.inner.info.key
-    }
 }
