@@ -30,7 +30,8 @@ incremented for features.
 * lang: rename `loader_account` module to `account_loader` module ([#1279](https://github.com/project-serum/anchor/pull/1279))
 * lang: The `Accounts` trait's `try_accounts` method now has an additional `bumps: &mut BTreeMap<String, u8>` argument, which accumulates bump seeds ([#1367](https://github.com/project-serum/anchor/pull/1367)).
 * ts: `Coder` is now an interface and the existing class has been renamed to `BorshCoder`. This change allows the generation of Anchor clients for non anchor programs  ([#1259](https://github.com/project-serum/anchor/pull/1259/files)).
-* cli: [[test.clone]] key in Anchor.toml is renamed to [[test.validator.clone]]
+* cli: [[test.clone]] key in Anchor.toml is renamed to [[test.validator.clone]] ([#1366](https://github.com/project-serum/anchor/pull/1366)).
+
 
 ## [0.20.1] - 2022-01-09
 
