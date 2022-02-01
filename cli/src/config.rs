@@ -1,7 +1,7 @@
 use anchor_client::Cluster;
 use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Error, Result};
-use clap::{ArgEnum, Clap};
+use clap::{ArgEnum, Parser};
 use heck::SnakeCase;
 use serde::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
@@ -15,7 +15,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-#[derive(Default, Debug, Clap)]
+#[derive(Default, Debug, Parser)]
 pub struct ConfigOverride {
     /// Cluster override.
     #[clap(global = true, long = "provider.cluster")]
@@ -162,7 +162,11 @@ impl WithPath<Config> {
             let cargo = Manifest::from_path(&path.join("Cargo.toml"))?;
             let lib_name = cargo.lib_name()?;
             let version = cargo.version();
-            let idl = anchor_syn::idl::file::parse(path.join("src/lib.rs"), version)?;
+            let idl = anchor_syn::idl::file::parse(
+                path.join("src/lib.rs"),
+                version,
+                self.features.seeds,
+            )?;
             r.push(Program {
                 lib_name,
                 path,
@@ -243,12 +247,18 @@ impl<T> std::ops::DerefMut for WithPath<T> {
 pub struct Config {
     pub anchor_version: Option<String>,
     pub solana_version: Option<String>,
+    pub features: FeaturesConfig,
     pub registry: RegistryConfig,
     pub provider: ProviderConfig,
     pub programs: ProgramsConfig,
     pub scripts: ScriptsConfig,
     pub workspace: WorkspaceConfig,
     pub test: Option<Test>,
+}
+
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct FeaturesConfig {
+    pub seeds: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -284,7 +294,7 @@ pub struct WorkspaceConfig {
     pub types: String,
 }
 
-#[derive(ArgEnum, Clap, Clone, PartialEq, Debug)]
+#[derive(ArgEnum, Parser, Clone, PartialEq, Debug)]
 pub enum BootstrapMode {
     None,
     Debian,
@@ -362,6 +372,7 @@ impl Config {
 struct _Config {
     anchor_version: Option<String>,
     solana_version: Option<String>,
+    features: Option<FeaturesConfig>,
     programs: Option<BTreeMap<String, BTreeMap<String, serde_json::Value>>>,
     registry: Option<RegistryConfig>,
     provider: Provider,
@@ -389,6 +400,7 @@ impl ToString for Config {
         let cfg = _Config {
             anchor_version: self.anchor_version.clone(),
             solana_version: self.solana_version.clone(),
+            features: Some(self.features.clone()),
             registry: Some(self.registry.clone()),
             provider: Provider {
                 cluster: format!("{}", self.provider.cluster),
@@ -417,6 +429,7 @@ impl FromStr for Config {
         Ok(Config {
             anchor_version: cfg.anchor_version,
             solana_version: cfg.solana_version,
+            features: cfg.features.unwrap_or_default(),
             registry: cfg.registry.unwrap_or_default(),
             provider: ProviderConfig {
                 cluster: cfg.provider.cluster.parse()?,

@@ -8,10 +8,12 @@ description = "Anchor syntax parsing and code generation tools"
 edition = "2018"
 
 [features]
+init-if-needed = []
 idl = []
 hash = []
 default = []
 anchor-debug = []
+seeds = []
 
 [dependencies]
 proc-macro2 = "1.0"
