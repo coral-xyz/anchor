@@ -119,6 +119,10 @@ pub fn ensure_paths() {
     if !home_dir.as_path().exists() {
         fs::create_dir_all(home_dir.clone()).expect("Could not create .avm directory");
     }
+    let bin_dir = home_dir.join("bin");
+    if !bin_dir.as_path().exists() {
+        fs::create_dir_all(bin_dir.clone()).expect("Could not create .avm/bin directory");
+    }
     if !current_version_path().exists() {
         fs::File::create(current_version_path()).expect("Could not create .version file");
     }
