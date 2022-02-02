@@ -12,6 +12,7 @@ use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
 use flate2::write::{GzEncoder, ZlibEncoder};
 use flate2::Compression;
+use git2::Repository;
 use heck::SnakeCase;
 use rand::rngs::OsRng;
 use reqwest::blocking::multipart::{Form, Part};
@@ -371,6 +372,8 @@ pub fn entry(opts: Opts) -> Result<()> {
             bootstrap,
             None,
             None,
+            None,
+            None,
             cargo_args,
         ),
         Command::Verify {
@@ -482,6 +485,7 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool) -> Result
             address: template::default_program_id(),
             path: None,
             idl: None,
+            git_url: None,
         },
     );
     cfg.programs.insert(Cluster::Localnet, localnet);
@@ -689,8 +693,10 @@ pub fn build(
     solana_version: Option<String>,
     docker_image: Option<String>,
     bootstrap: BootstrapMode,
-    stdout: Option<File>, // Used for the package registry server.
-    stderr: Option<File>, // Used for the package registry server.
+    stdout: Option<File>,            // Used for the package registry server.
+    stderr: Option<File>,            // Used for the package registry server.
+    git_url: Option<String>,         // Used for the package registry server.
+    git_commit_hash: Option<String>, // Used for the package registry server.
     cargo_args: Vec<String>,
 ) -> Result<()> {
     // Change to the workspace member directory, if needed.
@@ -701,6 +707,8 @@ pub fn build(
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
     let build_config = BuildConfig {
         verifiable,
+        git_url,
+        git_commit_hash,
         solana_version: solana_version.or_else(|| cfg.solana_version.clone()),
         docker_image: docker_image.unwrap_or_else(|| cfg.docker()),
         bootstrap,
@@ -1198,6 +1206,8 @@ fn verify(
         bootstrap,                                             // bootstrap docker image
         None,                                                  // stdout
         None,                                                  // stderr
+        None,                                                  // git url
+        None,                                                  // git commit hash
         cargo_args,
     )?;
     std::env::set_current_dir(&cur_dir)?;
@@ -1742,6 +1752,8 @@ fn test(
                 None,
                 None,
                 BootstrapMode::None,
+                None,
+                None,
                 None,
                 None,
                 cargo_args,
@@ -2575,6 +2587,18 @@ fn publish(
     let anchor_package = AnchorPackage::from(program_name.clone(), &cfg)?;
     let anchor_package_bytes = serde_json::to_vec(&anchor_package)?;
 
+    if anchor_package.git_url.is_none() {
+        println!(
+            "Git URL not provided for this program in Anchor.toml. Are you sure? Enter (yes)/no:"
+        );
+
+        let answer = std::io::stdin().lock().lines().next().unwrap().unwrap();
+        if answer != "yes" {
+            println!("Aborting");
+            return Ok(());
+        }
+    }
+
     // Set directory to top of the workspace.
     let workspace_dir = cfg.path().parent().unwrap();
     std::env::set_current_dir(workspace_dir)?;
@@ -2654,6 +2678,18 @@ fn publish(
     std::env::set_current_dir(&ws_dir)?;
     unpack_archive(&tarball_filename)?;
 
+    // Fetch git commit when git URL provided
+    let git_commit_hash = anchor_package.git_url.clone().map(|_| {
+        Repository::discover(ws_dir)
+            .unwrap()
+            .head()
+            .unwrap()
+            .peel_to_commit()
+            .unwrap()
+            .id()
+            .to_string()
+    });
+
     // Build the program before sending it to the server.
     build(
         cfg_override,
@@ -2666,6 +2702,8 @@ fn publish(
         BootstrapMode::None,
         None,
         None,
+        anchor_package.git_url,
+        git_commit_hash,
         cargo_args,
     )?;
 
@@ -2761,6 +2799,8 @@ fn localnet(
                 None,
                 None,
                 BootstrapMode::None,
+                None,
+                None,
                 None,
                 None,
                 cargo_args,

@@ -303,6 +303,8 @@ pub enum BootstrapMode {
 #[derive(Debug, Clone)]
 pub struct BuildConfig {
     pub verifiable: bool,
+    pub git_url: Option<String>,
+    pub git_commit_hash: Option<String>,
     pub solana_version: Option<String>,
     pub docker_image: String,
     pub bootstrap: BootstrapMode,
@@ -480,18 +482,31 @@ fn deser_programs(
             let cluster: Cluster = cluster.parse()?;
             let programs = programs
                 .iter()
-                .map(|(name, program_id)| {
+                .map(|(name, program_details)| {
                     Ok((
                         name.clone(),
-                        ProgramDeployment::try_from(match &program_id {
+                        ProgramDeployment::try_from(match &program_details {
                             serde_json::Value::String(address) => _ProgramDeployment {
                                 address: address.parse()?,
                                 path: None,
                                 idl: None,
+                                git_url: None,
                             },
-                            serde_json::Value::Object(_) => {
-                                serde_json::from_value(program_id.clone())
-                                    .map_err(|_| anyhow!("Unable to read toml"))?
+                            serde_json::Value::Object(details) => {
+                                let address = details
+                                    .get("address")
+                                    .unwrap()
+                                    .to_string()
+                                    .replace('\"', "");
+                                let git_url = details
+                                    .get("git_url")
+                                    .map(|v| v.to_string().replace('\"', ""));
+                                _ProgramDeployment {
+                                    address,
+                                    path: None,
+                                    idl: None,
+                                    git_url,
+                                }
                             }
                             _ => return Err(anyhow!("Invalid toml type")),
                         })?,
@@ -636,6 +651,7 @@ pub struct ProgramDeployment {
     pub address: Pubkey,
     pub path: Option<String>,
     pub idl: Option<String>,
+    pub git_url: Option<String>,
 }
 
 impl TryFrom<_ProgramDeployment> for ProgramDeployment {
@@ -645,6 +661,7 @@ impl TryFrom<_ProgramDeployment> for ProgramDeployment {
             address: pd.address.parse()?,
             path: pd.path,
             idl: pd.idl,
+            git_url: pd.git_url.clone(),
         })
     }
 }
@@ -654,6 +671,7 @@ pub struct _ProgramDeployment {
     pub address: String,
     pub path: Option<String>,
     pub idl: Option<String>,
+    pub git_url: Option<String>,
 }
 
 impl From<&ProgramDeployment> for _ProgramDeployment {
@@ -662,6 +680,7 @@ impl From<&ProgramDeployment> for _ProgramDeployment {
             address: pd.address.to_string(),
             path: pd.path.clone(),
             idl: pd.idl.clone(),
+            git_url: pd.git_url.clone(),
         }
     }
 }
@@ -677,6 +696,7 @@ pub struct AnchorPackage {
     pub name: String,
     pub address: String,
     pub idl: Option<String>,
+    pub git_url: Option<String>,
 }
 
 impl AnchorPackage {
@@ -692,8 +712,14 @@ impl AnchorPackage {
             .get(&name)
             .ok_or_else(|| anyhow!("Program not provided in Anchor.toml"))?;
         let idl = program_details.idl.clone();
+        let git_url = program_details.git_url.clone();
         let address = program_details.address.to_string();
-        Ok(Self { name, address, idl })
+        Ok(Self {
+            name,
+            address,
+            idl,
+            git_url,
+        })
     }
 }
 
