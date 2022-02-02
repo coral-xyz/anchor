@@ -108,7 +108,10 @@ pub fn uninstall_version(version: &Version) -> Result<()> {
         .join("bin")
         .join(format!("anchor-{}", version.to_string()));
     if !version_path.exists() {
-        return Err(anyhow!("Anchor CLI {} is not installed", version));
+        return Err(anyhow!("anchor-cli {} is not installed", version));
+    }
+    if version == &current_version().unwrap() {
+        return Err(anyhow!("anchor-cli {} is currently in use", version));
     }
     fs::remove_file(version_path.as_path())?;
     Ok(())
