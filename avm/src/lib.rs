@@ -51,7 +51,7 @@ pub fn use_version(version: &Version) -> Result<()> {
     if !installed_versions.contains(version) {
         let input: String = Input::new()
             .with_prompt(format!(
-                "Anchor {} is not installed, would you like to install it? (y/n)",
+                "anchor-cli {} is not installed, would you like to install it? (y/n)",
                 version.to_string()
             ))
             .with_initial_text("y")
@@ -67,7 +67,7 @@ pub fn use_version(version: &Version) -> Result<()> {
     Ok(())
 }
 
-/// Install a version of Anchor CLI
+/// Install a version of anchor-cli
 pub fn install_version(version: &Version) -> Result<()> {
     let exit = std::process::Command::new("cargo")
         .args(&[
@@ -102,7 +102,7 @@ pub fn install_version(version: &Version) -> Result<()> {
     Ok(())
 }
 
-/// Remove an installed version of Anchor CLI
+/// Remove an installed version of anchor-cli
 pub fn uninstall_version(version: &Version) -> Result<()> {
     let version_path = AVM_HOME
         .join("bin")
@@ -129,7 +129,7 @@ pub fn ensure_paths() {
     }
 }
 
-/// Retrieve a list of installable versions of Anchor using the GitHub API and tags on the Anchor
+/// Retrieve a list of installable versions of anchor-cli using the GitHub API and tags on the Anchor
 /// repository.
 pub fn fetch_versions() -> Vec<semver::Version> {
     #[derive(Deserialize)]
@@ -192,7 +192,7 @@ pub fn get_latest_version() -> semver::Version {
     available_versions.first().unwrap().clone()
 }
 
-/// Read the installed Anchor CLI versions by reading the binaries in the AVM_HOME/bin directory.
+/// Read the installed anchor-cli versions by reading the binaries in the AVM_HOME/bin directory.
 pub fn read_installed_versions() -> Vec<semver::Version> {
     let home_dir = AVM_HOME.to_path_buf();
     let mut versions = vec![];

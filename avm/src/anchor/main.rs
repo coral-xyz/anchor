@@ -8,7 +8,7 @@ fn main() -> anyhow::Result<()> {
     let binary_path = avm::current_version_binary_path(&version);
     if !fs::metadata(&binary_path).is_ok() {
         anyhow::bail!(
-            "Anchor version {} not installed. Please run `avm use {}`.",
+            "anchor-cli {} not installed. Please run `avm use {}`.",
             version,
             version
         );
