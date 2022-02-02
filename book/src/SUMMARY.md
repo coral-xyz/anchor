@@ -17,9 +17,11 @@
   - [Intermediate]()
 - [Anchor Periphery](./chapter_4/anchor_periphery.md)
   - [CLI](./chapter_4/cli.md)
+  - [AVM](./chapter_4/avm.md)
   - [IDL]()
 - [Anchor BTS]()
 
 ---
 
 - [Reference Links](./reference_links.md)
+

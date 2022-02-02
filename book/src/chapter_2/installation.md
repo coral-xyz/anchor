@@ -1,4 +1,5 @@
 # Installation
+
 ## Rust
 
 Go [here](https://www.rust-lang.org/tools/install) to install Rust.
@@ -36,3 +37,26 @@ Now verify the CLI is installed properly.
 ```
 anchor --version
 ```
+
+### Installing using Anchor version manager (avm)
+
+It is recommended you uninstall the NPM package if you have it installed.
+
+Install `avm` using Cargo. Note this will replace your `anchor` binary if you had one installed.
+
+```
+cargo install --git https://github.com/project-serum/anchor --locked --force
+```
+
+Install the latest version of the CLI using `avm`.
+
+```
+avm use latest
+```
+
+Verify the installation.
+
+```
+anchor --version
+```
+
