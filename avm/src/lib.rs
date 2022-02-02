@@ -31,9 +31,10 @@ pub fn current_version_path() -> PathBuf {
 }
 
 /// Read the current version from the version file
-pub fn current_version() -> Result<Option<Version>> {
-    let v = fs::read_to_string(current_version_path().as_path())?;
-    Ok(Version::parse(v.trim_end_matches('\n').to_string().as_str()).ok())
+pub fn current_version() -> Result<Version> {
+    let v = fs::read_to_string(current_version_path().as_path())
+        .map_err(|e| anyhow!("Could not read version file: {}", e))?;
+    Ok(Version::parse(v.trim_end_matches('\n').to_string().as_str()).unwrap())
 }
 
 /// Path to the binary for the current version
@@ -173,7 +174,7 @@ pub fn list_versions() -> Result<()> {
         if installed_versions.contains(&v) {
             flags.push("installed");
         }
-        if current_version().unwrap_or(None) == Some(v.clone()) {
+        if current_version().unwrap() == v.clone() {
             flags.push("current");
         }
         if flags.is_empty() {
