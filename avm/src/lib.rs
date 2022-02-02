@@ -126,7 +126,7 @@ pub fn ensure_paths() {
 
 /// Retrieve a list of installable versions of Anchor using the GitHub API and tags on the Anchor
 /// repository.
-pub fn list_versions() -> Result<()> {
+pub fn fetch_versions() -> Vec<semver::Version> {
     #[derive(Deserialize)]
     struct Release {
         #[serde(rename = "name", deserialize_with = "version_deserializer")]
@@ -142,26 +142,34 @@ pub fn list_versions() -> Result<()> {
     }
 
     let client = reqwest::blocking::Client::new();
-    let mut versions: Vec<Release> = client
+    let versions: Vec<Release> = client
         .get("https://api.github.com/repos/project-serum/anchor/tags")
         .header(USER_AGENT, "avm https://github.com/project-serum/anchor")
-        .send()?
-        .json()?;
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    versions.into_iter().map(|r| r.version).collect()
+}
 
+/// Print available versions and flags indicating installed, current and latest
+pub fn list_versions() -> Result<()> {
     let installed_versions = read_installed_versions();
-    // Reverse version list so latest versions are printed last
-    versions.reverse();
 
-    versions.iter().enumerate().for_each(|(i, v)| {
-        print!("{}", v.version);
+    let mut available_versions = fetch_versions();
+    // Reverse version list so latest versions are printed last
+    available_versions.reverse();
+
+    available_versions.iter().enumerate().for_each(|(i, v)| {
+        print!("{}", v);
         let mut flags = vec![];
-        if i == versions.len() - 1 {
+        if i == available_versions.len() - 1 {
             flags.push("latest");
         }
-        if installed_versions.contains(&v.version) {
+        if installed_versions.contains(&v) {
             flags.push("installed");
         }
-        if current_version().unwrap_or(None) == Some(v.version.clone()) {
+        if current_version().unwrap_or(None) == Some(v.clone()) {
             flags.push("current");
         }
         if flags.is_empty() {
@@ -172,6 +180,11 @@ pub fn list_versions() -> Result<()> {
     });
 
     Ok(())
+}
+
+pub fn get_latest_version() -> semver::Version {
+    let available_versions = fetch_versions();
+    available_versions.first().unwrap().clone()
 }
 
 /// Read the installed Anchor CLI versions by reading the binaries in the AVM_HOME/bin directory.
