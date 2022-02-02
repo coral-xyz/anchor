@@ -1,66 +1,41 @@
-use anyhow::{anyhow, Result};
-use clap::Clap;
-use std::fs::{self};
-use std::path::PathBuf;
-use std::process::Stdio;
+use anyhow::Result;
+use clap::{Parser, Subcommand};
+use semver::Version;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[derive(Debug, Clap)]
-#[clap(version = VERSION)]
-pub struct Opts {
+#[derive(Parser)]
+#[clap(name = "avm", about = "Anchor version manager")]
+pub struct Cli {
     #[clap(subcommand)]
-    pub command: Command,
+    command: Commands,
 }
 
-#[derive(Debug, Clap)]
-pub enum Command {
-    Init {},
-    Use { version: String },
-    Install { version: String },
-    Uninstall { version: String },
+#[derive(Subcommand)]
+pub enum Commands {
+    #[clap(about = "Use a specific version of Anchor")]
+    Use { version: Version },
+    #[clap(about = "Install a version of Anchor")]
+    Install { version: Version },
+    #[clap(about = "Uninstall a version of Anchor")]
+    Uninstall { version: Version },
+    #[clap(about = "List available versions of Anchor")]
+    List {},
 }
 
-pub fn entry(opts: Opts) -> Result<()> {
+pub fn entry(opts: Cli) -> Result<()> {
     match opts.command {
-        Command::Use { version } => use_version(version),
-        Command::Install { version } => install(version),
-        Command::Uninstall { version } => uninstall(version),
+        Commands::Use { version } => avm::use_version(&version),
+        Commands::Install { version } => avm::install_version(&version),
+        Commands::Uninstall { version } => avm::uninstall_version(&version),
+        Commands::List {} => avm::list_versions(),
     }
-}
-
-fn install(version: String) -> Result<()> {
-    let exit = std::process::Command::new("cargo")
-        .args(&[
-            "install",
-            "--git",
-            "https://github.com/project-serum/anchor",
-            "--tag",
-            &version,
-            "anchor-cli",
-            "--locked",
-        ])
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .output()
-        .map_err(|e| {
-            anyhow::format_err!("Cargo install for {} failed: {}", version, e.to_string())
-        })?;
-    if !exit.status.success() {
-        return Err(anyhow!("Failed to install {}", version));
-    }
-
-    Ok(())
-}
-
-fn uninstall(version: String) -> Result<()> {
-    Ok(())
-}
-
-fn use_version(version: String) -> Result<()> {
-    Ok(())
 }
 
 fn main() -> Result<()> {
-    entry(Opts::parse())
+    // Make sure the user's home directory is setup with the paths required by AVM.
+    avm::ensure_paths();
+
+    let opt = Cli::parse();
+    entry(opt)
 }
