@@ -56,7 +56,7 @@ pub fn use_version(version: &Version) -> Result<()> {
             .with_initial_text("y")
             .default("n".into())
             .interact_text()?;
-        if matches!(input.as_str(), "y" | "Y" | "yes" | "Yes") {
+        if matches!(input.as_str(), "y" | "yy" | "Y" | "yes" | "Yes") {
             install_version(version)?;
         }
     }
