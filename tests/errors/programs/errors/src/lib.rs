@@ -9,35 +9,35 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 mod errors {
     use super::*;
 
-    pub fn hello(_ctx: Context<Hello>) -> Result<()> {
+    pub fn hello(_ctx: Context<Hello>) -> ProgramResult {
         Err(MyError::Hello.into())
     }
 
-    pub fn hello_no_msg(_ctx: Context<Hello>) -> Result<()> {
+    pub fn hello_no_msg(_ctx: Context<Hello>) -> ProgramResult {
         Err(MyError::HelloNoMsg.into())
     }
 
-    pub fn hello_next(_ctx: Context<Hello>) -> Result<()> {
+    pub fn hello_next(_ctx: Context<Hello>) -> ProgramResult {
         Err(MyError::HelloNext.into())
     }
 
-    pub fn mut_error(_ctx: Context<MutError>) -> Result<()> {
+    pub fn mut_error(_ctx: Context<MutError>) -> ProgramResult {
         Ok(())
     }
 
-    pub fn has_one_error(_ctx: Context<HasOneError>) -> Result<()> {
+    pub fn has_one_error(_ctx: Context<HasOneError>) -> ProgramResult {
         Ok(())
     }
 
-    pub fn signer_error(_ctx: Context<SignerError>) -> Result<()> {
+    pub fn signer_error(_ctx: Context<SignerError>) -> ProgramResult {
         Ok(())
     }
 
-    pub fn raw_custom_error(_ctx: Context<RawCustomError>) -> Result<()> {
+    pub fn raw_custom_error(_ctx: Context<RawCustomError>) -> ProgramResult {
         Ok(())
     }
 
-    pub fn account_not_initialized_error(_ctx: Context<AccountNotInitializedError>) -> Result<()> {
+    pub fn account_not_initialized_error(_ctx: Context<AccountNotInitializedError>) -> ProgramResult {
         Ok(())
     }
 }
@@ -71,7 +71,7 @@ pub struct HasOneAccount {
 
 #[derive(Accounts)]
 pub struct RawCustomError<'info> {
-    #[account(constraint = *my_account.key == ID @ MyError::HelloCustom)]
+    #[account(constraint = * my_account.key == ID @ MyError::HelloCustom)]
     my_account: AccountInfo<'info>,
 }
 
