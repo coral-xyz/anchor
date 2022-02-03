@@ -24,15 +24,15 @@ pub static AVM_HOME: Lazy<PathBuf> = Lazy::new(|| {
 });
 
 /// Path to the current version file ~/.avm/.version
-pub fn current_version_path() -> PathBuf {
-    let mut current_version_path = AVM_HOME.to_path_buf();
-    current_version_path.push(".version");
-    current_version_path
+pub fn current_version_file_path() -> PathBuf {
+    let mut current_version_file_path = AVM_HOME.to_path_buf();
+    current_version_file_path.push(".version");
+    current_version_file_path
 }
 
 /// Read the current version from the version file
 pub fn current_version() -> Result<Version> {
-    let v = fs::read_to_string(current_version_path().as_path())
+    let v = fs::read_to_string(current_version_file_path().as_path())
         .map_err(|e| anyhow!("Could not read version file: {}", e))?;
     Ok(Version::parse(v.trim_end_matches('\n').to_string().as_str()).unwrap())
 }
@@ -62,7 +62,7 @@ pub fn use_version(version: &Version) -> Result<()> {
         }
     }
 
-    let mut current_version_file = fs::File::create(current_version_path().as_path())?;
+    let mut current_version_file = fs::File::create(current_version_file_path().as_path())?;
     current_version_file.write_all(version.to_string().as_bytes())?;
     Ok(())
 }
@@ -127,8 +127,8 @@ pub fn ensure_paths() {
     if !bin_dir.as_path().exists() {
         fs::create_dir_all(bin_dir.clone()).expect("Could not create .avm/bin directory");
     }
-    if !current_version_path().exists() {
-        fs::File::create(current_version_path()).expect("Could not create .version file");
+    if !current_version_file_path().exists() {
+        fs::File::create(current_version_file_path()).expect("Could not create .version file");
     }
 }
 
