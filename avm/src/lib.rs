@@ -34,15 +34,13 @@ pub fn current_version_file_path() -> PathBuf {
 pub fn current_version() -> Result<Version> {
     let v = fs::read_to_string(current_version_file_path().as_path())
         .map_err(|e| anyhow!("Could not read version file: {}", e))?;
-    Ok(
-        Version::parse(v.trim_end_matches('\n').to_string().as_str())
-            .map_err(|e| anyhow!("Could not parse version file: {}", e))?,
-    )
+    Version::parse(v.trim_end_matches('\n').to_string().as_str())
+        .map_err(|e| anyhow!("Could not parse version file: {}", e))
 }
 
 /// Path to the binary for the given version
 pub fn version_binary_path(version: &Version) -> PathBuf {
-    let mut version_path = AVM_HOME.join("bin").to_path_buf();
+    let mut version_path = AVM_HOME.join("bin");
     version_path.push(format!("anchor-{}", version));
     version_path
 }
@@ -55,7 +53,7 @@ pub fn use_version(version: &Version) -> Result<()> {
         let input: String = Input::new()
             .with_prompt(format!(
                 "anchor-cli {} is not installed, would you like to install it? (y/n)",
-                version.to_string()
+                version
             ))
             .with_initial_text("y")
             .default("n".into())
@@ -82,7 +80,7 @@ pub fn install_version(version: &Version) -> Result<()> {
             "anchor-cli",
             "--locked",
             "--root",
-            &AVM_HOME.to_str().unwrap(),
+            AVM_HOME.to_str().unwrap(),
         ])
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
@@ -98,18 +96,14 @@ pub fn install_version(version: &Version) -> Result<()> {
     }
     fs::rename(
         &AVM_HOME.join("bin").join("anchor"),
-        &AVM_HOME
-            .join("bin")
-            .join(format!("anchor-{}", version.to_string())),
+        &AVM_HOME.join("bin").join(format!("anchor-{}", version)),
     )?;
     Ok(())
 }
 
 /// Remove an installed version of anchor-cli
 pub fn uninstall_version(version: &Version) -> Result<()> {
-    let version_path = AVM_HOME
-        .join("bin")
-        .join(format!("anchor-{}", version.to_string()));
+    let version_path = AVM_HOME.join("bin").join(format!("anchor-{}", version));
     if !version_path.exists() {
         return Err(anyhow!("anchor-cli {} is not installed", version));
     }
@@ -128,7 +122,7 @@ pub fn ensure_paths() {
     }
     let bin_dir = home_dir.join("bin");
     if !bin_dir.as_path().exists() {
-        fs::create_dir_all(bin_dir.clone()).expect("Could not create .avm/bin directory");
+        fs::create_dir_all(bin_dir).expect("Could not create .avm/bin directory");
     }
     if !current_version_file_path().exists() {
         fs::File::create(current_version_file_path()).expect("Could not create .version file");
@@ -149,7 +143,7 @@ pub fn fetch_versions() -> Vec<semver::Version> {
         D: de::Deserializer<'de>,
     {
         let s: &str = de::Deserialize::deserialize(deserializer)?;
-        Version::parse(s.trim_start_matches("v")).map_err(de::Error::custom)
+        Version::parse(s.trim_start_matches('v')).map_err(de::Error::custom)
     }
 
     let client = reqwest::blocking::Client::new();
@@ -177,7 +171,7 @@ pub fn list_versions() -> Result<()> {
         if i == available_versions.len() - 1 {
             flags.push("latest");
         }
-        if installed_versions.contains(&v) {
+        if installed_versions.contains(v) {
             flags.push("installed");
         }
         if current_version().unwrap() == v.clone() {
