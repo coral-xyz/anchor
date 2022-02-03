@@ -34,7 +34,10 @@ pub fn current_version_file_path() -> PathBuf {
 pub fn current_version() -> Result<Version> {
     let v = fs::read_to_string(current_version_file_path().as_path())
         .map_err(|e| anyhow!("Could not read version file: {}", e))?;
-    Ok(Version::parse(v.trim_end_matches('\n').to_string().as_str()).unwrap())
+    Ok(
+        Version::parse(v.trim_end_matches('\n').to_string().as_str())
+            .map_err(|e| anyhow!("Could not parse version file: {}", e))?,
+    )
 }
 
 /// Path to the binary for the given version
