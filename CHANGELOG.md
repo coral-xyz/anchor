@@ -18,6 +18,7 @@ incremented for features.
 * ts: Remove error logging in the event parser when log websocket encounters a program error ([#1313](https://github.com/project-serum/anchor/pull/1313)).
 * ts: Add new `methods` namespace to the program client, introducing a more ergonomic builder API ([#1324](https://github.com/project-serum/anchor/pull/1324)).
 * ts: Add registry utility for fetching the latest verified build ([#1371](https://github.com/project-serum/anchor/pull/1371)).
+* cli: Add avm, a tool for managing anchor-cli versions ([#1385](https://github.com/project-serum/anchor/pull/1385))
 
 ### Breaking
 
