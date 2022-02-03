@@ -200,18 +200,17 @@ pub fn read_installed_versions() -> Vec<semver::Version> {
     let home_dir = AVM_HOME.to_path_buf();
     let mut versions = vec![];
     for file in fs::read_dir(&home_dir.join("bin")).unwrap() {
-        versions.push(
-            Version::parse(
-                file.unwrap()
-                    .path()
-                    .file_name()
-                    .unwrap()
-                    .to_str()
-                    .unwrap()
-                    .trim_start_matches("anchor-"),
-            )
-            .expect("Failed to parse version"),
-        );
+        let file_name = file.unwrap().file_name();
+        // Match only things that look like anchor-*
+        if file_name.to_str().unwrap().starts_with("anchor-") {
+            let version = file_name
+                .to_str()
+                .unwrap()
+                .trim_start_matches("anchor-")
+                .parse::<semver::Version>()
+                .unwrap();
+            versions.push(version);
+        }
     }
 
     versions
@@ -241,7 +240,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ersion_binary_path() {
+    fn test_version_binary_path() {
         assert!(
             version_binary_path(&Version::parse("0.18.2").unwrap())
                 == AVM_HOME.join("bin/anchor-0.18.2")
@@ -258,11 +257,34 @@ mod tests {
     }
 
     #[test]
-    fn test_uninstall_non_installed_version() {}
+    #[should_panic(expected = "anchor-cli 0.18.2 is not installed")]
+    fn test_uninstall_non_installed_version() {
+        uninstall_version(&Version::parse("0.18.2").unwrap()).unwrap();
+    }
 
     #[test]
-    fn test_uninstalled_in_use_version() {}
+    #[should_panic(expected = "anchor-cli 0.18.2 is currently in use")]
+    fn test_uninstalled_in_use_version() {
+        ensure_paths();
+        let version = Version::parse("0.18.2").unwrap();
+        let mut current_version_file =
+            fs::File::create(current_version_file_path().as_path()).unwrap();
+        current_version_file.write_all("0.18.2".as_bytes()).unwrap();
+        // Create a fake binary for anchor-0.18.2 in the bin directory
+        fs::File::create(version_binary_path(&version)).unwrap();
+        uninstall_version(&version).unwrap();
+    }
 
     #[test]
-    fn test_read_installed_versions() {}
+    fn test_read_installed_versions() {
+        ensure_paths();
+        let version = Version::parse("0.18.2").unwrap();
+        // Create a fake binary for anchor-0.18.2 in the bin directory
+        fs::File::create(version_binary_path(&version)).unwrap();
+        let expected = vec![version];
+        assert!(read_installed_versions() == expected);
+        // Should ignore this file because its not anchor- prefixed
+        fs::File::create(AVM_HOME.join("bin").join("garbage").as_path()).unwrap();
+        assert!(read_installed_versions() == expected);
+    }
 }
