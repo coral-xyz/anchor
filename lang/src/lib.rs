@@ -38,7 +38,7 @@ mod bpf_upgradeable_state;
 mod common;
 pub mod context;
 mod ctor;
-mod error;
+pub mod error;
 #[doc(hidden)]
 pub mod idl;
 mod system_program;
