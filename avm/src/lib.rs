@@ -254,9 +254,9 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "anchor-cli 0.18.2 is not installed")]
+    #[should_panic(expected = "anchor-cli 0.18.1 is not installed")]
     fn test_uninstall_non_installed_version() {
-        uninstall_version(&Version::parse("0.18.2").unwrap()).unwrap();
+        uninstall_version(&Version::parse("0.18.1").unwrap()).unwrap();
     }
 
     #[test]
