@@ -216,3 +216,48 @@ pub fn read_installed_versions() -> Vec<semver::Version> {
 
     versions
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{current_version, current_version_file_path, ensure_paths, AVM_HOME};
+    use semver::Version;
+    use std::fs;
+    use std::io::Write;
+
+    #[test]
+    fn test_ensure_paths() {
+        ensure_paths();
+        assert!(AVM_HOME.exists());
+        let bin_dir = AVM_HOME.join("bin");
+        assert!(bin_dir.exists());
+        let current_version_file = AVM_HOME.join(".version");
+        assert!(current_version_file.exists());
+    }
+
+    #[test]
+    fn test_current_version_file_path() {
+        ensure_paths();
+        assert!(current_version_file_path().exists());
+    }
+
+    #[test]
+    fn test_current_version() {
+        ensure_paths();
+        let mut current_version_file =
+            fs::File::create(current_version_file_path().as_path()).unwrap();
+        current_version_file.write_all("0.18.2".as_bytes()).unwrap();
+        assert!(current_version().unwrap() == Version::parse("0.18.2").unwrap());
+    }
+
+    #[test]
+    fn test_current_version_binary_path() {}
+
+    #[test]
+    fn test_uninstall_non_installed_version() {}
+
+    #[test]
+    fn test_uninstalled_in_use_version() {}
+
+    #[test]
+    fn test_read_installed_versions() {}
+}
