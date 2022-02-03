@@ -12,7 +12,7 @@ use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
 use flate2::write::{GzEncoder, ZlibEncoder};
 use flate2::Compression;
-use git2::Repository;
+use git2::{Repository, Status};
 use heck::SnakeCase;
 use rand::rngs::OsRng;
 use reqwest::blocking::multipart::{Form, Part};
@@ -2678,9 +2678,11 @@ fn publish(
     std::env::set_current_dir(&ws_dir)?;
     unpack_archive(&tarball_filename)?;
 
-    // Fetch git commit when git URL provided
+    // Fetch git info when git URL provided
+    let repo = Repository::discover(ws_dir);
+
     let git_commit_hash = anchor_package.git_url.clone().map(|_| {
-        Repository::discover(ws_dir)
+        repo.as_ref()
             .unwrap()
             .head()
             .unwrap()
@@ -2689,6 +2691,19 @@ fn publish(
             .id()
             .to_string()
     });
+    let git_state = anchor_package
+        .git_url
+        .clone()
+        .map(|_| repo.as_ref().unwrap().statuses(None).unwrap());
+
+    if git_state
+        .unwrap()
+        .iter()
+        .any(|s| s.status() != Status::IGNORED)
+    {
+        println!("Repository is not in a clean state. Aborting");
+        return Ok(());
+    }
 
     // Build the program before sending it to the server.
     build(
