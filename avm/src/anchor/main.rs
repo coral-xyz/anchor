@@ -5,7 +5,7 @@ fn main() -> anyhow::Result<()> {
 
     let version = avm::current_version()
         .map_err(|_e| anyhow::anyhow!("Anchor version not set. Please run `avm use latest`."))?;
-    let binary_path = avm::current_version_binary_path(&version);
+    let binary_path = avm::version_binary_path(&version);
     if !fs::metadata(&binary_path).is_ok() {
         anyhow::bail!(
             "anchor-cli {} not installed. Please run `avm use {}`.",

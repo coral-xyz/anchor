@@ -37,8 +37,8 @@ pub fn current_version() -> Result<Version> {
     Ok(Version::parse(v.trim_end_matches('\n').to_string().as_str()).unwrap())
 }
 
-/// Path to the binary for the current version
-pub fn current_version_binary_path(version: &Version) -> PathBuf {
+/// Path to the binary for the given version
+pub fn version_binary_path(version: &Version) -> PathBuf {
     let mut version_path = AVM_HOME.join("bin").to_path_buf();
     version_path.push(format!("anchor-{}", version));
     version_path
@@ -219,7 +219,7 @@ pub fn read_installed_versions() -> Vec<semver::Version> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{current_version, current_version_file_path, ensure_paths, AVM_HOME};
+    use crate::*;
     use semver::Version;
     use std::fs;
     use std::io::Write;
@@ -241,6 +241,14 @@ mod tests {
     }
 
     #[test]
+    fn test_ersion_binary_path() {
+        assert!(
+            version_binary_path(&Version::parse("0.18.2").unwrap())
+                == AVM_HOME.join("bin/anchor-0.18.2")
+        );
+    }
+
+    #[test]
     fn test_current_version() {
         ensure_paths();
         let mut current_version_file =
@@ -248,9 +256,6 @@ mod tests {
         current_version_file.write_all("0.18.2".as_bytes()).unwrap();
         assert!(current_version().unwrap() == Version::parse("0.18.2").unwrap());
     }
-
-    #[test]
-    fn test_current_version_binary_path() {}
 
     #[test]
     fn test_uninstall_non_installed_version() {}
