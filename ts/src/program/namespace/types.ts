@@ -92,6 +92,7 @@ export type MethodsFn<
 type TypeMap = {
   publicKey: PublicKey;
   bool: boolean;
+  string: string;
 } & {
   [K in "u8" | "i8" | "u16" | "i16" | "u32" | "i32"]: number;
 } &
