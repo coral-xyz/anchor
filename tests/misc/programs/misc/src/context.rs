@@ -88,7 +88,6 @@ pub struct TestPdaInit<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(bump: u8)]
 pub struct TestPdaInitZeroCopy<'info> {
     #[account(
         init,
