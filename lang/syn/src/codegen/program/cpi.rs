@@ -70,9 +70,52 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let sighash_arr = sighash(SIGHASH_GLOBAL_NAMESPACE, name);
                 let sighash_tts: proc_macro2::TokenStream =
                     format!("{:?}", sighash_arr).parse().unwrap();
+
+                let (generics, generics_def) = {
+                    let ty = &*ix.ctx.raw_arg.ty;
+                    let generics = match ty {
+                        syn::Type::Path(ty_path) => {
+                            let segment = &ty_path.path.segments[0];
+                            match &segment.arguments {
+                                syn::PathArguments::AngleBracketed(bracket_args) => {
+                                    &bracket_args.args
+                                }
+                                _ => panic!("Invalid context"),
+                            }
+                        },
+                        _ => panic!("Invalid context"),
+                    };
+                    // If the user doesn't provide lifetimes, make this
+                    // assumption about the type.
+                    if generics.len() == 1 {
+                        (
+                            quote! {
+                                '_, '_, '_, 'info, #accounts_ident<'info>
+                            },
+                            quote! {
+                                <'info>
+                            }
+                        )
+                    }
+                    // User provided lifetimes, so use them.
+                    else {
+                        let generics_def = &ix.raw_method.sig.generics;
+                        (
+                            quote! {
+                                #generics
+                            },
+                            quote! {
+                                #generics_def
+                            }
+                        )
+                    }
+                };
+
+                println!("GENERICS: {:?}", crate::parser::tts_to_string(&generics));
+
                 quote! {
-                    pub fn #method_name<'a, 'b, 'c, 'info>(
-                        ctx: anchor_lang::context::CpiContext<'a, 'b, 'c, 'info, #accounts_ident<'info>>,
+                    pub fn #method_name #generics_def(
+                        ctx: anchor_lang::context::CpiContext<#generics>,
                         #(#args),*
                     ) -> ProgramResult {
                         let ix = {

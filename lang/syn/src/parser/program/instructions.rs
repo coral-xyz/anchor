@@ -29,6 +29,7 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<(Vec<Ix>, Option<Fallbac
                 ident: method.sig.ident.clone(),
                 args,
                 anchor_ident,
+                ctx,
             })
         })
         .collect::<ParseResult<Vec<Ix>>>()?;

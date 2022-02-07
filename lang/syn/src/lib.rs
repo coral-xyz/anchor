@@ -87,6 +87,7 @@ pub struct Ix {
     pub args: Vec<IxArg>,
     // The ident for the struct deriving Accounts.
     pub anchor_ident: Ident,
+    pub ctx: IxArg,
 }
 
 #[derive(Debug)]
