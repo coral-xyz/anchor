@@ -99,7 +99,7 @@ pub fn install_version(version: &Version) -> Result<()> {
         &AVM_HOME.join("bin").join(format!("anchor-{}", version)),
     )?;
     // If .version file is empty or not parseable, write the newly installed version to it
-    if !current_version().is_ok() {
+    if current_version().is_err() {
         let mut current_version_file = fs::File::create(current_version_file_path().as_path())?;
         current_version_file.write_all(version.to_string().as_bytes())?;
     }
