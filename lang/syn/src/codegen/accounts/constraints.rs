@@ -345,7 +345,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                 #find_pda
 
                 let #field: #ty_decl = {
-                    if !#if_needed || #field.as_ref().owner == anchor_lang::solana_program::system_program::ID {
+                    if !#if_needed || #field.as_ref().owner == &anchor_lang::solana_program::system_program::ID {
                         // Define payer variable.
                         #payer
 
@@ -436,7 +436,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                 #find_pda
 
                 let #field: #ty_decl = {
-                    if !#if_needed || #field.as_ref().owner == anchor_lang::solana_program::system_program::ID {
+                    if !#if_needed || #field.as_ref().owner == &anchor_lang::solana_program::system_program::ID {
                         // Define payer variable.
                         #payer
 
