@@ -200,7 +200,10 @@ pub trait EventData: AnchorSerialize + Discriminator {
 
 /// 8 byte unique identifier for a type.
 pub trait Discriminator {
+    #[cfg(feature = "deprecated-layout")]
     fn discriminator() -> [u8; 8];
+    #[cfg(not(feature = "deprecated-layout"))]
+    fn discriminator() -> [u8; 4];
 }
 
 /// Bump seed for program derived addresses.

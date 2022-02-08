@@ -1,3 +1,4 @@
+import { GetProgramAccountsFilter } from "@solana/web3.js";
 import * as BufferLayout from "buffer-layout";
 import { publicKey, uint64, coption, bool } from "./buffer-layout.js";
 import { AccountsCoder } from "../index.js";
@@ -44,8 +45,7 @@ export class SplTokenAccountsCoder<A extends string = string>
     }
   }
 
-  // TODO: this won't use the appendData.
-  public memcmp(accountName: A, _appendData?: Buffer): any {
+		public memcmp(accountName: A): GetProgramAccountsFilter {
     switch (accountName) {
       case "Token": {
         return {
@@ -61,6 +61,10 @@ export class SplTokenAccountsCoder<A extends string = string>
         throw new Error(`Invalid account name: ${accountName}`);
       }
     }
+  }
+
+  public memcmpDataOffset(): number {
+    return 0;
   }
 
   public size(idlAccount: IdlTypeDef): number {

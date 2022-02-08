@@ -11,6 +11,11 @@ incremented for features.
 
 ## [Unreleased]
 
+### Breaking
+
+* ts: `BorshAccountsCoder.accountDiscriminator` method has been replaced with `BorshAccountHeader.discriminator` ([#]()).
+* lang, ts: 8 byte account discriminator has been replaced with a versioned account header ([#]()).
+
 ## [0.21.0] - 2022-02-07
 
 ### Fixes

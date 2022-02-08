@@ -142,22 +142,43 @@ fn generate_constraint_address(f: &Field, c: &ConstraintAddress) -> proc_macro2:
     }
 }
 
-pub fn generate_constraint_init(f: &Field, c: &ConstraintInitGroup) -> proc_macro2::TokenStream {
-    generate_constraint_init_group(f, c)
-}
-
 pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let ty_decl = f.ty_decl();
-    let from_account_info = f.from_account_info_unchecked(None);
+    let account_ty = f.account_ty();
+    let from_account_info = f.from_account_info(None);
+    let header_write = {
+        if cfg!(feature = "deprecated-layout") {
+            quote! {
+                use std::io::{Write, Cursor};
+                use anchor_lang::Discriminator;
+                let __dst: &mut [u8] = &mut __data;
+                let mut __cursor = Cursor::new(__dst);
+                Write::write_all(&mut __cursor, &#account_ty::discriminator()).unwrap();
+            }
+        } else {
+            quote! {
+                use std::io::{Write, Cursor};
+                use anchor_lang::Discriminator;
+                let __dst: &mut [u8] = &mut __data[2..];
+                let mut __cursor = Cursor::new(__dst);
+                Write::write_all(&mut __cursor, &#account_ty::discriminator()).unwrap();
+            }
+        }
+    };
+    // Check the *entire* account header is zero.
     quote! {
         let #field: #ty_decl = {
-            let mut __data: &[u8] = &#field.try_borrow_data()?;
-            let mut __disc_bytes = [0u8; 8];
-            __disc_bytes.copy_from_slice(&__data[..8]);
-            let __discriminator = u64::from_le_bytes(__disc_bytes);
-            if __discriminator != 0 {
-                return Err(anchor_lang::__private::ErrorCode::ConstraintZero.into());
+            {
+                let mut __data: &mut [u8] = &mut #field.try_borrow_mut_data()?;
+                let mut __header_bytes = [0u8; 8];
+                __header_bytes.copy_from_slice(&__data[..8]);
+                let __header = u64::from_le_bytes(__header_bytes);
+                if __header != 0 {
+                    return Err(anchor_lang::__private::ErrorCode::ConstraintZero.into());
+                }
+
+                #header_write
             }
             #from_account_info
         };
@@ -276,7 +297,7 @@ pub fn generate_constraint_rent_exempt(
     }
 }
 
-fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_macro2::TokenStream {
+fn generate_constraint_init(f: &Field, c: &ConstraintInitGroup) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let ty_decl = f.ty_decl();
     let if_needed = if c.if_needed {
@@ -295,7 +316,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
     };
 
     // Convert from account info to account context wrapper type.
-    let from_account_info = f.from_account_info_unchecked(Some(&c.kind));
+    let from_account_info = f.from_account_info(Some(&c.kind));
 
     // PDA bump seeds.
     let (find_pda, seeds_with_bump) = match &c.seeds {
@@ -512,6 +533,45 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
             let create_account =
                 generate_create_account(field, quote! {space}, owner.clone(), seeds_with_bump);
 
+            // Write the 8 byte header.
+            let header_write = {
+                match &f.ty {
+                    Ty::Account(_)
+                    | Ty::ProgramAccount(_)
+                    | Ty::Loader(_)
+                    | Ty::AccountLoader(_) => {
+                        let account_ty = f.account_ty();
+                        if cfg!(feature = "deprecated-layout") {
+                            quote! {
+                                {
+                                    use std::io::{Write, Cursor};
+                                    use anchor_lang::Discriminator;
+
+                                    let mut __data = actual_field.try_borrow_mut_data()?;
+                                    let __dst: &mut [u8] = &mut __data;
+                                    let mut __cursor = Cursor::new(__dst);
+                                    Write::write_all(&mut __cursor, &#account_ty::discriminator()).unwrap();
+                                }
+                            }
+                        } else {
+                            quote! {
+                                {
+                                    use std::io::{Write, Seek, SeekFrom, Cursor};
+                                    use anchor_lang::Discriminator;
+
+                                    let mut __data = actual_field.try_borrow_mut_data()?;
+                                    let __dst: &mut [u8] = &mut __data;
+                                    let mut __cursor = Cursor::new(__dst);
+                                    Seek::seek(&mut __cursor, SeekFrom::Start(2)).unwrap();
+                                    Write::write_all(&mut __cursor, &#account_ty::discriminator()).unwrap();
+                                }
+                            }
+                        }
+                    }
+                    _ => quote! {},
+                }
+            };
+
             // Put it all together.
             quote! {
                 // Define the bump variable.
@@ -533,6 +593,10 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                         // CPI to the system program to create.
                         #create_account
                     }
+
+                    // Write the account header into the account data before
+                    // deserializing.
+                    #header_write
 
                     // Convert from account info to account context wrapper type.
                     let pa: #ty_decl = #from_account_info;

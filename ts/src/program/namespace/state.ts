@@ -24,6 +24,7 @@ import InstructionNamespaceFactory from "./instruction.js";
 import RpcNamespaceFactory from "./rpc.js";
 import TransactionNamespaceFactory from "./transaction.js";
 import { IdlTypes, TypeDef } from "./types.js";
+import * as features from "../../utils/features.js";
 
 export default class StateFactory {
   public static build<IDL extends Idl>(
@@ -172,10 +173,19 @@ export class StateClient<IDL extends Idl> {
     if (!state) {
       throw new Error("State is not specified in IDL.");
     }
+
     const expectedDiscriminator = await stateDiscriminator(state.struct.name);
-    if (expectedDiscriminator.compare(accountInfo.data.slice(0, 8))) {
-      throw new Error("Invalid account discriminator");
+
+    if (features.isSet("deprecated-layout")) {
+      if (expectedDiscriminator.compare(accountInfo.data.slice(0, 8))) {
+        throw new Error("Invalid state discriminator");
+      }
+    } else {
+      if (expectedDiscriminator.compare(accountInfo.data.slice(2, 6))) {
+        throw new Error("Invalid state discriminator");
+      }
     }
+
     return this.coder.state.decode(accountInfo.data);
   }
 

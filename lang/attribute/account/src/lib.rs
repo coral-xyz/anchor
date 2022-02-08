@@ -88,24 +88,6 @@ pub fn account(
     let account_name = &account_strct.ident;
     let (impl_gen, type_gen, where_clause) = account_strct.generics.split_for_impl();
 
-    let discriminator: proc_macro2::TokenStream = {
-        // Namespace the discriminator to prevent collisions.
-        let discriminator_preimage = {
-            // For now, zero copy accounts can't be namespaced.
-            if namespace.is_empty() {
-                format!("account:{}", account_name)
-            } else {
-                format!("{}:{}", namespace, account_name)
-            }
-        };
-
-        let mut discriminator = [0u8; 8];
-        discriminator.copy_from_slice(
-            &anchor_syn::hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..8],
-        );
-        format!("{:?}", discriminator).parse().unwrap()
-    };
-
     let owner_impl = {
         if namespace.is_empty() {
             quote! {
@@ -118,6 +100,60 @@ pub fn account(
             }
         } else {
             quote! {}
+        }
+    };
+
+    let discriminator: proc_macro2::TokenStream = {
+        // Namespace the discriminator to prevent collisions.
+        let discriminator_preimage = {
+            // For now, zero copy accounts can't be namespaced.
+            if namespace.is_empty() {
+                format!("account:{}", account_name)
+            } else {
+                format!("{}:{}", namespace, account_name)
+            }
+        };
+
+        if cfg!(feature = "deprecated-layout") {
+            let mut discriminator = [0u8; 8];
+            discriminator.copy_from_slice(
+                &anchor_syn::hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..8],
+            );
+            format!("{:?}", discriminator).parse().unwrap()
+        } else {
+            let mut discriminator = [0u8; 4];
+            discriminator.copy_from_slice(
+                &anchor_syn::hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..4],
+            );
+            format!("{:?}", discriminator).parse().unwrap()
+        }
+    };
+
+    let disc_bytes = {
+        if cfg!(feature = "deprecated-layout") {
+            quote! {
+                let given_disc = &buf[..8];
+            }
+        } else {
+            quote! {
+                let given_disc = &buf[2..6];
+            }
+        }
+    };
+
+    let disc_fn = {
+        if cfg!(feature = "deprecated-layout") {
+            quote! {
+                fn discriminator() -> [u8; 8] {
+                    #discriminator
+                }
+            }
+        } else {
+            quote! {
+                fn discriminator() -> [u8; 4] {
+                    #discriminator
+                }
+            }
         }
     };
 
@@ -137,9 +173,7 @@ pub fn account(
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::Discriminator for #account_name #type_gen #where_clause {
-                    fn discriminator() -> [u8; 8] {
-                        #discriminator
-                    }
+                    #disc_fn
                 }
 
                 // This trait is useful for clients deserializing accounts.
@@ -147,10 +181,11 @@ pub fn account(
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
                     fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
-                        if buf.len() < #discriminator.len() {
+                        // Header is always 8 bytes.
+                        if buf.len() < 8 {
                             return Err(anchor_lang::__private::ErrorCode::AccountDiscriminatorNotFound.into());
                         }
-                        let given_disc = &buf[..8];
+                        #disc_bytes
                         if &#discriminator != given_disc {
                             return Err(anchor_lang::__private::ErrorCode::AccountDiscriminatorMismatch.into());
                         }
@@ -176,7 +211,6 @@ pub fn account(
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountSerialize for #account_name #type_gen #where_clause {
                     fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> std::result::Result<(), ProgramError> {
-                        writer.write_all(&#discriminator).map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotSerialize)?;
                         AnchorSerialize::serialize(
                             self,
                             writer
@@ -192,7 +226,7 @@ pub fn account(
                         if buf.len() < #discriminator.len() {
                             return Err(anchor_lang::__private::ErrorCode::AccountDiscriminatorNotFound.into());
                         }
-                        let given_disc = &buf[..8];
+                        #disc_bytes
                         if &#discriminator != given_disc {
                             return Err(anchor_lang::__private::ErrorCode::AccountDiscriminatorMismatch.into());
                         }
@@ -208,9 +242,7 @@ pub fn account(
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::Discriminator for #account_name #type_gen #where_clause {
-                    fn discriminator() -> [u8; 8] {
-                        #discriminator
-                    }
+                    #disc_fn
                 }
 
                 #owner_impl

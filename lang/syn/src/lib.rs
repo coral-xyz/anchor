@@ -26,6 +26,13 @@ pub(crate) mod hash;
 pub mod idl;
 pub mod parser;
 
+// Layout indices.
+pub const LAYOUT_VERSION: u8 = 0;
+pub const LAYOUT_VERSION_INDEX: u8 = 0;
+pub const LAYOUT_BUMP_INDEX: u8 = 1;
+pub const LAYOUT_DISCRIMINATOR_INDEX: u8 = 2;
+pub const LAYOUT_UNUSED_INDEX: u8 = 6;
+
 #[derive(Debug)]
 pub struct Program {
     pub state: Option<State>,
@@ -273,7 +280,7 @@ impl Field {
 
     // TODO: remove the option once `CpiAccount` is completely removed (not
     //       just deprecated).
-    pub fn from_account_info_unchecked(&self, kind: Option<&InitKind>) -> proc_macro2::TokenStream {
+    pub fn from_account_info(&self, kind: Option<&InitKind>) -> proc_macro2::TokenStream {
         let field = &self.ident;
         let container_ty = self.container_ty();
         match &self.ty {
@@ -284,13 +291,13 @@ impl Field {
             Ty::Account(AccountTy { boxed, .. }) => {
                 if *boxed {
                     quote! {
-                        Box::new(#container_ty::try_from_unchecked(
+                        Box::new(#container_ty::try_from(
                             &#field,
                         )?)
                     }
                 } else {
                     quote! {
-                        #container_ty::try_from_unchecked(
+                        #container_ty::try_from(
                             &#field,
                         )?
                     }
@@ -298,7 +305,14 @@ impl Field {
             }
             Ty::CpiAccount(_) => {
                 quote! {
-                    #container_ty::try_from_unchecked(
+                    #container_ty::try_from(
+                        &#field,
+                    )?
+                }
+            }
+            Ty::AccountLoader(_) => {
+                quote! {
+                    #container_ty::try_from(
                         &#field,
                     )?
                 }
@@ -314,7 +328,7 @@ impl Field {
                     },
                 };
                 quote! {
-                    #container_ty::try_from_unchecked(
+                    #container_ty::try_from(
                         #owner_addr,
                         &#field,
                     )?
