@@ -42,7 +42,7 @@ export class BorshEventCoder implements EventCoder {
       idl.events === undefined
         ? []
         : idl.events.map((e) => [
-					base64.fromByteArray(EventHeader.discriminator(e.name)),
+            base64.fromByteArray(EventHeader.discriminator(e.name)),
             e.name,
           ])
     );
@@ -58,7 +58,7 @@ export class BorshEventCoder implements EventCoder {
     } catch (e) {
       return null;
     }
-		const disc = base64.fromByteArray(EventHeader.parseDiscriminator(logArr));
+    const disc = base64.fromByteArray(EventHeader.parseDiscriminator(logArr));
 
     // Only deserialize if the discriminator implies a proper event.
     const eventName = this.discriminators.get(disc);

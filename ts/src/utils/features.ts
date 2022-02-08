@@ -1,7 +1,7 @@
 const _AVAILABLE_FEATURES = new Set([
-	"anchor-deprecated-state",
-	"debug-logs",
-	"deprecated-layout",
+  "anchor-deprecated-state",
+  "debug-logs",
+  "deprecated-layout",
 ]);
 
 const _FEATURES = new Map();

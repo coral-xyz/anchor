@@ -1,4 +1,4 @@
-import * as bs58 from 'bs58';
+import * as bs58 from "bs58";
 import camelCase from "camelcase";
 import EventEmitter from "eventemitter3";
 import {

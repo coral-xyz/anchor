@@ -45,7 +45,7 @@ export class SplTokenAccountsCoder<A extends string = string>
     }
   }
 
-		public memcmp(accountName: A): GetProgramAccountsFilter {
+  public memcmp(accountName: A): GetProgramAccountsFilter {
     switch (accountName) {
       case "Token": {
         return {

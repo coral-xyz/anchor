@@ -15,7 +15,7 @@ describe("Transaction", () => {
     data: Buffer.from("post"),
   });
   const idl = {
-		layoutVersion: "0.1.0",
+    layoutVersion: "0.1.0",
     version: "0.0.0",
     name: "basic_0",
     instructions: [
