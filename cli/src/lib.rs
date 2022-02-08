@@ -176,6 +176,10 @@ pub enum Command {
     },
     /// Creates a new program.
     New { name: String },
+    /// Renames the workspace if ran at a level above the workspace directory.
+    /// Or
+    /// Renames an existing program.
+    Rename { original_name: String, new_name: String },
     /// Commands for interacting with interface definitions.
     Idl {
         #[clap(subcommand)]
@@ -351,6 +355,7 @@ pub fn entry(opts: Opts) -> Result<()> {
     match opts.command {
         Command::Init { name, javascript } => init(&opts.cfg_override, name, javascript),
         Command::New { name } => new(&opts.cfg_override, name),
+        Command::Rename { original_name, new_name } => rename(&opts.cfg_override, original_name, new_name),
         Command::Build {
             idl,
             idl_ts,
@@ -570,6 +575,22 @@ fn new(cfg_override: &ConfigOverride, name: String) -> Result<()> {
     })
 }
 
+fn rename(cfg_override: &ConfigOverride, original_name: String, new_name: String) -> Result<()> {
+    with_workspace(cfg_override, |cfg| {
+        match cfg.path().parent() {
+            None => {
+                println!("Unable to make new program");
+            }
+            Some(parent) => {
+                std::env::set_current_dir(&parent)?;
+                rename_program(&original_name, &new_name)?;
+                println!("Created new program.");
+            }
+        };
+        Ok(())
+    })
+}
+
 // Creates a new program crate in the current directory with `name`.
 fn new_program(name: &str) -> Result<()> {
     fs::create_dir(&format!("programs/{}", name))?;
@@ -580,6 +601,22 @@ fn new_program(name: &str) -> Result<()> {
     xargo_toml.write_all(template::xargo_toml().as_bytes())?;
     let mut lib_rs = File::create(&format!("programs/{}/src/lib.rs", name))?;
     lib_rs.write_all(template::lib_rs(name).as_bytes())?;
+    Ok(())
+}
+
+// Reads an existing program's contents in the current directory with `original_name`,
+// replaces `original_name` with `new_name`,
+// and writes the new contents to a new program crate of `new_name`.
+fn rename_program(original_name: &str, new_name: &str) -> Result<()> {
+    let cargo_toml = fs::read_to_string(&format!("programs/{}/Cargo.toml", original_name))?;
+    let new_cargo_toml = cargo_toml.replace(original_name, new_name);
+    fs::write(&format!("programs/{}/Cargo.toml", original_name), new_cargo_toml)?;
+
+    let lib_rs = fs::read_to_string(&format!("programs/{}/src/lib.rs", original_name))?;
+    let new_lib_rs = lib_rs.replace(original_name, new_name);
+    fs::write(&format!("programs/{}/src/lib.rs", original_name), new_lib_rs)?;
+
+    fs::rename(&format!("programs/{}", original_name), &format!("programs/{}", new_name))?;
     Ok(())
 }
 
