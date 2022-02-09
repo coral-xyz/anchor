@@ -15,7 +15,7 @@ export type Idl = {
   metadata?: IdlMetadata;
 };
 
-export type IdlMetadata = any
+export type IdlMetadata = any;
 
 export type IdlConstant = {
   name: string;
