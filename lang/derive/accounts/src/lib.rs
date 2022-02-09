@@ -106,11 +106,6 @@ use syn::parse_macro_input;
 ///                         account creation.
 ///                     </li>
 ///                     <li>
-///                         Requires the <code>payer</code> constraint to also be on the account.
-///                         The <code>payer</code> account pays for the
-///                         account creation.
-///                     </li>
-///                     <li>
 ///                         Requires the system program to exist on the struct
 ///                         and be called <code>system_program</code>.
 ///                     </li>
