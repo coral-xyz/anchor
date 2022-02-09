@@ -6,7 +6,7 @@ pub fn read_discriminator(data: &[u8]) -> &[u8; 8] {
 }
 
 #[cfg(not(feature = "deprecated-layout"))]
-pub fn read_discriminator<'a>(data: &[u8]) -> &[u8; 4] {
+pub fn read_discriminator(data: &[u8]) -> &[u8; 4] {
     array_ref![data, 2, 4]
 }
 
