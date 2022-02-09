@@ -1,8 +1,8 @@
 //! Type facilitating on demand zero copy deserialization.
 
+use crate::accounts::header;
 use crate::error::ErrorCode;
 use crate::*;
-use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
@@ -120,12 +120,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
             return Err(ErrorCode::AccountOwnedByWrongProgram.into());
         }
         let data: &[u8] = &acc_info.try_borrow_data()?;
-        // Discriminator must match.
-        #[cfg(feature = "deprecated-layout")]
-        let disc_bytes = array_ref![data, 0, 8];
-        #[cfg(not(feature = "deprecated-layout"))]
-        let disc_bytes = array_ref![data, 2, 4];
-
+        let disc_bytes = header::read_discriminator(data);
         if disc_bytes != &T::discriminator() {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
@@ -147,12 +142,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
     /// Returns a Ref to the account data structure for reading.
     pub fn load(&self) -> Result<Ref<T>, ProgramError> {
         let data = self.acc_info.try_borrow_data()?;
-
-        #[cfg(feature = "deprecated-layout")]
-        let disc_bytes = array_ref![data, 0, 8];
-        #[cfg(not(feature = "deprecated-layout"))]
-        let disc_bytes = array_ref![data, 2, 4];
-
+        let disc_bytes = header::read_discriminator(&data);
         if disc_bytes != &T::discriminator() {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
@@ -170,12 +160,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         }
 
         let data = self.acc_info.try_borrow_mut_data()?;
-
-        #[cfg(feature = "deprecated-layout")]
-        let disc_bytes = array_ref![data, 0, 8];
-        #[cfg(not(feature = "deprecated-layout"))]
-        let disc_bytes = array_ref![data, 2, 4];
-
+        let disc_bytes = header::read_discriminator(&data);
         if disc_bytes != &T::discriminator() {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }

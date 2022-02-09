@@ -1,5 +1,6 @@
 //! Account container that checks ownership on deserialization.
 
+use crate::accounts::header;
 use crate::error::ErrorCode;
 use crate::*;
 use solana_program::account_info::AccountInfo;
@@ -334,10 +335,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsEx
         if &T::owner() == program_id {
             let info = self.to_account_info();
             let mut data = info.try_borrow_mut_data()?;
-
-            // Chop off the header.
-            let dst: &mut [u8] = &mut data[8..];
-
+            let dst = header::read_data_mut(&mut data);
             let mut cursor = std::io::Cursor::new(dst);
             self.account.try_serialize(&mut cursor)?;
         }

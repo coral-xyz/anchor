@@ -1,6 +1,7 @@
 //! `anchor_client` provides an RPC client to send transactions and fetch
 //! deserialized accounts from Solana programs written in `anchor_lang`.
 
+use anchor_lang::accounts::header;
 use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::pubkey::Pubkey;
@@ -292,23 +293,11 @@ fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
 
         let mut slice: &[u8] = &borsh_bytes[..];
 
-        #[cfg(feature = "deprecated-layout")]
-        let disc: [u8; 8] = {
-            let mut disc = [0; 8];
-            disc.copy_from_slice(&borsh_bytes[..8]);
-            slice = &slice[8..];
-            disc
-        };
-        #[cfg(not(feature = "deprecated-layout"))]
-        let disc: [u8; 4] = {
-            let mut disc = [0; 4];
-            disc.copy_from_slice(&borsh_bytes[2..6]);
-            slice = &slice[8..];
-            disc
-        };
+        let disc = header::read_discriminator(slice);
+        slice = &slice[8..];
 
         let mut event = None;
-        if disc == T::discriminator() {
+        if disc == &T::discriminator() {
             let e: T = anchor_lang::AnchorDeserialize::deserialize(&mut slice)
                 .map_err(|e| ClientError::LogParseError(e.to_string()))?;
             event = Some(e);

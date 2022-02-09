@@ -10,6 +10,7 @@ pub mod cpi_account;
 #[doc(hidden)]
 #[allow(deprecated)]
 pub mod cpi_state;
+pub mod header;
 #[doc(hidden)]
 #[allow(deprecated)]
 pub mod loader;

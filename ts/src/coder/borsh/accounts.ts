@@ -19,7 +19,7 @@ const ACCOUNT_HEADER_SIZE = 8;
  * Number of bytes of the account discriminator.
  */
 const ACCOUNT_DISCRIMINATOR_SIZE = 4;
-const DEPRECATED_ACCOUNT_DISCRIMINATOR_SIZE = 4;
+const DEPRECATED_ACCOUNT_DISCRIMINATOR_SIZE = 8;
 
 /**
  * Encodes and decodes account objects.
