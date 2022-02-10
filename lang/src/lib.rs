@@ -40,8 +40,6 @@ pub mod context;
 mod ctor;
 
 pub mod error;
-/// The starting point for user defined error codes.
-pub const ERROR_CODE_OFFSET: u32 = 6000;
 
 #[doc(hidden)]
 pub mod idl;
