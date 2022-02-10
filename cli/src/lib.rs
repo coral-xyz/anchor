@@ -12,7 +12,7 @@ use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
 use flate2::write::{GzEncoder, ZlibEncoder};
 use flate2::Compression;
-use heck::SnakeCase;
+use heck::{SnakeCase, CamelCase};
 use rand::rngs::OsRng;
 use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
@@ -176,10 +176,11 @@ pub enum Command {
     },
     /// Creates a new program.
     New { name: String },
-    /// Renames the workspace if ran at a level above the workspace directory.
-    /// Or
-    /// Renames an existing program.
-    Rename { original_name: String, new_name: String },
+    /// Renames the workspace or a specific program.
+    Rename { 
+        from: String,
+        to: String,
+    },
     /// Commands for interacting with interface definitions.
     Idl {
         #[clap(subcommand)]
@@ -355,7 +356,7 @@ pub fn entry(opts: Opts) -> Result<()> {
     match opts.command {
         Command::Init { name, javascript } => init(&opts.cfg_override, name, javascript),
         Command::New { name } => new(&opts.cfg_override, name),
-        Command::Rename { original_name, new_name } => rename(&opts.cfg_override, original_name, new_name),
+        Command::Rename { from, to } => rename(&opts.cfg_override, from, to),
         Command::Build {
             idl,
             idl_ts,
@@ -440,11 +441,7 @@ pub fn entry(opts: Opts) -> Result<()> {
     }
 }
 
-fn init(cfg_override: &ConfigOverride, name: String, javascript: bool) -> Result<()> {
-    if Config::discover(cfg_override)?.is_some() {
-        return Err(anyhow!("Workspace already initialized"));
-    }
-
+fn is_valid_name(name: String) -> Result<()> {
     // The list is taken from https://doc.rust-lang.org/reference/keywords.html.
     let key_words = [
         "as", "break", "const", "continue", "crate", "else", "enum", "extern", "false", "fn",
@@ -464,6 +461,19 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool) -> Result
         return Err(anyhow!(
             "Cannot start project name with numbers, name your project something else!"
         ));
+    }
+
+    Ok(())
+}
+
+fn init(cfg_override: &ConfigOverride, name: String, javascript: bool) -> Result<()> {
+    if Config::discover(cfg_override)?.is_some() {
+        return Err(anyhow!("Workspace already initialized"));
+    }
+
+    let name_check = is_valid_name(name.clone());
+    if name_check.is_err() {
+        return name_check;
     }
 
     fs::create_dir(name.clone())?;
@@ -575,16 +585,23 @@ fn new(cfg_override: &ConfigOverride, name: String) -> Result<()> {
     })
 }
 
-fn rename(cfg_override: &ConfigOverride, original_name: String, new_name: String) -> Result<()> {
+fn rename(cfg_override: &ConfigOverride, from: String, to: String) -> Result<()> {
+    let name_check = is_valid_name(to.clone());
+    if name_check.is_err() {
+        return name_check;
+    }
+
     with_workspace(cfg_override, |cfg| {
         match cfg.path().parent() {
             None => {
-                println!("Unable to make new program");
+                println!("Unable to rename workspace");
             }
             Some(parent) => {
                 std::env::set_current_dir(&parent)?;
-                rename_program(&original_name, &new_name)?;
-                println!("Created new program.");
+                rename_in_file(&Path::new("Anchor.toml"), &from, &to)?;
+                rename_in_file(&Path::new("Cargo.toml"), &from, &to)?;
+                rename_program(from.clone(), to.clone())?;
+                println!("{} renamed to {}.", from, to);
             }
         };
         Ok(())
@@ -604,19 +621,43 @@ fn new_program(name: &str) -> Result<()> {
     Ok(())
 }
 
-// Reads an existing program's contents in the current directory with `original_name`,
-// replaces `original_name` with `new_name`,
-// and writes the new contents to a new program crate of `new_name`.
-fn rename_program(original_name: &str, new_name: &str) -> Result<()> {
-    let cargo_toml = fs::read_to_string(&format!("programs/{}/Cargo.toml", original_name))?;
-    let new_cargo_toml = cargo_toml.replace(original_name, new_name);
-    fs::write(&format!("programs/{}/Cargo.toml", original_name), new_cargo_toml)?;
+fn rename_program(from: String, to: String) -> Result<()> {
+    rename_in_file(&Path::new(&format!("programs/{}/Cargo.toml", from)), &from, &to)?;
+    rename_in_file(&Path::new(&format!("programs/{}/src/lib.rs", from)), &from, &to)?;
+    let status = rename_in_file(&Path::new(&format!("tests/{}.js", from)), &from, &to);
+    match status {
+        Err(_) => println!("Could not rename a file."),
+        Ok(_) => println!("Successfully renamed the file."),
+    }
+    let status = rename_in_file(&Path::new(&format!("tests/{}.ts", from)), &from, &to);
+    match status {
+        Err(_) => println!("Could not rename a file."),
+        Ok(_) => println!("Successfully renamed the file."),
+    }
 
-    let lib_rs = fs::read_to_string(&format!("programs/{}/src/lib.rs", original_name))?;
-    let new_lib_rs = lib_rs.replace(original_name, new_name);
-    fs::write(&format!("programs/{}/src/lib.rs", original_name), new_lib_rs)?;
+    fs::rename(&format!("programs/{}", from), &format!("programs/{}", to))?;
+    fs::rename(&format!("tests/{}.js", from), &format!("tests/{}.js", to)).ok();
+    fs::rename(&format!("tests/{}.ts", from), &format!("tests/{}.ts", to)).ok();
 
-    fs::rename(&format!("programs/{}", original_name), &format!("programs/{}", new_name))?;
+    Ok(())
+}
+
+fn rename_in_file(path: &Path, from: &str, to: &str) -> Result<()> {
+    let contents = fs::read_to_string(&path);
+    match contents {
+        Err(e) => return Err(anyhow!("Error opening file: {}", e)),
+        Ok(contents) => {
+            let from_snake = from.to_snake_case();
+            let from_camel = from.to_camel_case();
+            let to_snake = to.to_snake_case();
+            let to_camel = to.to_camel_case();
+            let new_contents = contents.
+                replace(&from, &to).
+                replace(&from_snake, &to_snake).
+                replace(&from_camel, &to_camel);
+            fs::write(&path, &new_contents)?;
+        }
+    };
     Ok(())
 }
 
