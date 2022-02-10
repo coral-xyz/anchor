@@ -38,7 +38,11 @@ mod bpf_upgradeable_state;
 mod common;
 pub mod context;
 mod ctor;
+
 pub mod error;
+/// The starting point for user defined error codes.
+pub const ERROR_CODE_OFFSET: u32 = 6000;
+
 #[doc(hidden)]
 pub mod idl;
 mod system_program;
@@ -271,19 +275,10 @@ pub mod prelude {
 /// Internal module used by macros and unstable apis.
 #[doc(hidden)]
 pub mod __private {
-    // Modules with useful information for users
-    // don't use #[doc(hidden)] on these
-    pub use crate::error::ErrorCode;
-
     /// The discriminator anchor uses to mark an account as closed.
     pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
 
-    /// The starting point for user defined error codes.
-    pub const ERROR_CODE_OFFSET: u32 = 6000;
-
     pub use crate::ctor::Ctor;
-
-    pub use crate::error::Error;
 
     pub use anchor_attribute_account::ZeroCopyAccessor;
 
