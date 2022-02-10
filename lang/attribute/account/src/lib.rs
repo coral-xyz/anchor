@@ -115,10 +115,6 @@ pub fn account(
         format!("{:?}", discriminator).parse().unwrap()
     };
 
-    let disc_bytes = quote! {
-        let given_disc = anchor_lang::accounts::header::read_discriminator(&buf);
-    };
-
     let disc_fn = {
         if cfg!(feature = "deprecated-layout") {
             quote! {
@@ -163,7 +159,7 @@ pub fn account(
                         if buf.len() < 8 {
                             return Err(anchor_lang::__private::ErrorCode::AccountDiscriminatorNotFound.into());
                         }
-                        #disc_bytes
+                        let given_disc = anchor_lang::accounts::header::read_discriminator(&buf);
                         if &#discriminator != given_disc {
                             return Err(anchor_lang::__private::ErrorCode::AccountDiscriminatorMismatch.into());
                         }
@@ -204,7 +200,7 @@ pub fn account(
                         if buf.len() < #discriminator.len() {
                             return Err(anchor_lang::__private::ErrorCode::AccountDiscriminatorNotFound.into());
                         }
-                        #disc_bytes
+                        let given_disc = anchor_lang::accounts::header::read_discriminator(&buf);
                         if &#discriminator != given_disc {
                             return Err(anchor_lang::__private::ErrorCode::AccountDiscriminatorMismatch.into());
                         }

@@ -530,7 +530,7 @@ fn generate_constraint_init(f: &Field, c: &ConstraintInitGroup) -> proc_macro2::
                         let account_ty = f.account_ty();
                         quote! {
                             {
-
+                                use anchor_lang::Discriminator;
                                 let mut __data = actual_field.try_borrow_mut_data()?;
                                 anchor_lang::accounts::header::write_discriminator(
                                     &mut __data,

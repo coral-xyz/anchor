@@ -204,6 +204,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let ix_name_log = format!("Instruction: {}", ix_name);
                 let header_write = quote! {
                     {
+                        use anchor_lang::Discriminator;
                         let mut __data = ctor_accounts.to.try_borrow_mut_data()?;
                         anchor_lang::accounts::header::write_discriminator(
                             &mut __data,
