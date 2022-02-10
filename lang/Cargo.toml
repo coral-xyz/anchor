@@ -11,6 +11,11 @@ description = "Solana Sealevel eDSL"
 init-if-needed = ["anchor-derive-accounts/init-if-needed"]
 derive = []
 default = []
+deprecated-layout = [
+    "anchor-common/deprecated-layout",
+    "anchor-attribute-account/deprecated-layout",
+    "anchor-attribute-event/deprecated-layout",
+]
 anchor-debug = [
     "anchor-attribute-access-control/anchor-debug",
     "anchor-attribute-account/anchor-debug",

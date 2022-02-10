@@ -8,6 +8,7 @@ description = "Rust client for Anchor programs"
 
 [features]
 debug = []
+deprecated-layout = ["anchor-lang/deprecated-layout"]
 
 [dependencies]
 anchor-lang = { path = "../lang", version = "0.21.0" }

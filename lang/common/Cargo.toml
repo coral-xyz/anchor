@@ -9,6 +9,7 @@ edition = "2018"
 
 [features]
 default = []
+deprecated-layout = []
 
 [dependencies]
 arrayref = "0.3.6"
