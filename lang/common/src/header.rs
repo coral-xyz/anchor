@@ -38,15 +38,26 @@ pub fn read_data_mut(account_data: &mut [u8]) -> &mut [u8] {
 }
 
 pub fn write_discriminator(account_data: &mut [u8], discriminator: &[u8]) {
-    #[cfg(feature = "deprecated_layout")]
+    #[cfg(feature = "deprecated-layout")]
     {
         let mut cursor = Cursor::new(account_dst);
         cursor.write_all(discriminator).unwrap();
     }
-    #[cfg(not(feature = "deprecated_layout"))]
+    #[cfg(not(feature = "deprecated-layout"))]
     {
         let dst: &mut [u8] = &mut account_data[2..];
         let mut cursor = Cursor::new(dst);
         cursor.write_all(discriminator).unwrap();
+    }
+}
+
+// Bit of a hack. We return the length as a string and then parse it into
+// a token stream in the macro code generation, so that we can isolate all
+// the feature flagging to this one module, here.
+pub fn discriminator_len_str() -> &'static str {
+    if cfg!(feature = "deprecated-layout") {
+        "8"
+    } else {
+        "4"
     }
 }

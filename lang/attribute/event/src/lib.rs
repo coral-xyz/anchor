@@ -23,17 +23,12 @@ pub fn event(
     };
 
     let discriminator_trait_impl = {
-        if cfg!(feature = "deprecated_layout") {
-            quote! {
-                fn discriminator() -> [u8; 8] {
-                    #discriminator
-                }
-            }
-        } else {
-            quote! {
-                fn discriminator() -> [u8; 4] {
-                    #discriminator
-                }
+        let len: proc_macro2::TokenStream = anchor_common::header::discriminator_len_str()
+            .parse()
+            .unwrap();
+        quote! {
+            fn discriminator() -> [u8; #len] {
+                #discriminator
             }
         }
     };

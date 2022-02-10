@@ -116,17 +116,12 @@ pub fn account(
     };
 
     let disc_fn = {
-        if cfg!(feature = "deprecated-layout") {
-            quote! {
-                fn discriminator() -> [u8; 8] {
-                    #discriminator
-                }
-            }
-        } else {
-            quote! {
-                fn discriminator() -> [u8; 4] {
-                    #discriminator
-                }
+        let len: proc_macro2::TokenStream = anchor_common::header::discriminator_len_str()
+            .parse()
+            .unwrap();
+        quote! {
+            fn discriminator() -> [u8; #len] {
+                #discriminator
             }
         }
     };
