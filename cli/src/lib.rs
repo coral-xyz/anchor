@@ -567,7 +567,7 @@ fn rename(cfg_override: &ConfigOverride, from: String, to: String) -> Result<()>
                 std::env::set_current_dir(&parent)?;
                 rename_in_file(&Path::new("Anchor.toml"), &from, &to)?;
                 rename_in_file(&Path::new("Cargo.toml"), &from, &to)?;
-                rename_program(from.clone(), to.clone())?;
+                rename_program(&from, &to)?;
                 println!("{} renamed to {}.", from, to);
             }
         };
@@ -588,21 +588,14 @@ fn new_program(name: &str) -> Result<()> {
     Ok(())
 }
 
-fn rename_program(from: String, to: String) -> Result<()> {
+fn rename_program(from: &str, to: &str) -> Result<()> {
     rename_in_file(&Path::new(&format!("programs/{}/Cargo.toml", from)), &from, &to)?;
     rename_in_file(&Path::new(&format!("programs/{}/src/lib.rs", from)), &from, &to)?;
-    let status = rename_in_file(&Path::new(&format!("tests/{}.js", from)), &from, &to);
-    match status {
-        Err(_) => println!("Could not rename a file."),
-        Ok(_) => println!("Successfully renamed the file."),
-    }
-    let status = rename_in_file(&Path::new(&format!("tests/{}.ts", from)), &from, &to);
-    match status {
-        Err(_) => println!("Could not rename a file."),
-        Ok(_) => println!("Successfully renamed the file."),
-    }
-
     fs::rename(&format!("programs/{}", from), &format!("programs/{}", to))?;
+    
+    // Users probably have either .js or .ts tests, not both. Don't panic.
+    rename_in_file(&Path::new(&format!("tests/{}.js", from)), &from, &to).ok();
+    rename_in_file(&Path::new(&format!("tests/{}.ts", from)), &from, &to).ok();
     fs::rename(&format!("tests/{}.js", from), &format!("tests/{}.js", to)).ok();
     fs::rename(&format!("tests/{}.ts", from), &format!("tests/{}.ts", to)).ok();
 
