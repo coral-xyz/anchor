@@ -441,41 +441,12 @@ pub fn entry(opts: Opts) -> Result<()> {
     }
 }
 
-fn is_valid_name(name: String) -> Result<()> {
-    // The list is taken from https://doc.rust-lang.org/reference/keywords.html.
-    let key_words = [
-        "as", "break", "const", "continue", "crate", "else", "enum", "extern", "false", "fn",
-        "for", "if", "impl", "in", "let", "loop", "match", "mod", "move", "mut", "pub", "ref",
-        "return", "self", "Self", "static", "struct", "super", "trait", "true", "type", "unsafe",
-        "use", "where", "while", "async", "await", "dyn", "abstract", "become", "box", "do",
-        "final", "macro", "override", "priv", "typeof", "unsized", "virtual", "yield", "try",
-        "unique",
-    ];
-
-    if key_words.contains(&name[..].into()) {
-        return Err(anyhow!(
-            "{} is a reserved word in rust, name your project something else!",
-            name
-        ));
-    } else if name.chars().next().unwrap().is_numeric() {
-        return Err(anyhow!(
-            "Cannot start project name with numbers, name your project something else!"
-        ));
-    }
-
-    Ok(())
-}
-
 fn init(cfg_override: &ConfigOverride, name: String, javascript: bool) -> Result<()> {
     if Config::discover(cfg_override)?.is_some() {
         return Err(anyhow!("Workspace already initialized"));
     }
 
-    let name_check = is_valid_name(name.clone());
-    if name_check.is_err() {
-        return name_check;
-    }
-
+    is_name_valid(&name)?;
     fs::create_dir(name.clone())?;
     std::env::set_current_dir(&name)?;
     fs::create_dir("app")?;
@@ -586,11 +557,7 @@ fn new(cfg_override: &ConfigOverride, name: String) -> Result<()> {
 }
 
 fn rename(cfg_override: &ConfigOverride, from: String, to: String) -> Result<()> {
-    let name_check = is_valid_name(to.clone());
-    if name_check.is_err() {
-        return name_check;
-    }
-
+    is_name_valid(&to)?;
     with_workspace(cfg_override, |cfg| {
         match cfg.path().parent() {
             None => {
@@ -643,21 +610,16 @@ fn rename_program(from: String, to: String) -> Result<()> {
 }
 
 fn rename_in_file(path: &Path, from: &str, to: &str) -> Result<()> {
-    let contents = fs::read_to_string(&path);
-    match contents {
-        Err(e) => return Err(anyhow!("Error opening file: {}", e)),
-        Ok(contents) => {
-            let from_snake = from.to_snake_case();
-            let from_camel = from.to_camel_case();
-            let to_snake = to.to_snake_case();
-            let to_camel = to.to_camel_case();
-            let new_contents = contents.
-                replace(&from, &to).
-                replace(&from_snake, &to_snake).
-                replace(&from_camel, &to_camel);
-            fs::write(&path, &new_contents)?;
-        }
-    };
+    let contents = fs::read_to_string(&path)?;
+    let from_snake = from.to_snake_case();
+    let from_camel = from.to_camel_case();
+    let to_snake = to.to_snake_case();
+    let to_camel = to.to_camel_case();
+    let new_contents = contents.
+        replace(&from, &to).
+        replace(&from_snake, &to_snake).
+        replace(&from_camel, &to_camel);
+    fs::write(&path, &new_contents)?;
     Ok(())
 }
 
@@ -2905,6 +2867,31 @@ fn is_hidden(entry: &walkdir::DirEntry) -> bool {
         .to_str()
         .map(|s| s == "." || s.starts_with('.') || s == "target")
         .unwrap_or(false)
+}
+
+fn is_name_valid(name: &str) -> Result<()> {
+    // The list is taken from https://doc.rust-lang.org/reference/keywords.html.
+    let key_words = [
+        "as", "break", "const", "continue", "crate", "else", "enum", "extern", "false", "fn",
+        "for", "if", "impl", "in", "let", "loop", "match", "mod", "move", "mut", "pub", "ref",
+        "return", "self", "Self", "static", "struct", "super", "trait", "true", "type", "unsafe",
+        "use", "where", "while", "async", "await", "dyn", "abstract", "become", "box", "do",
+        "final", "macro", "override", "priv", "typeof", "unsized", "virtual", "yield", "try",
+        "unique",
+    ];
+
+    if key_words.contains(&name[..].into()) {
+        return Err(anyhow!(
+            "{} is a reserved word in rust, name your project something else!",
+            name
+        ));
+    } else if name.chars().next().unwrap().is_numeric() {
+        return Err(anyhow!(
+            "Cannot start project name with numbers, name your project something else!"
+        ));
+    }
+
+    Ok(())
 }
 
 fn get_node_version() -> Result<Version> {
