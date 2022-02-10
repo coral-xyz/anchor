@@ -13,7 +13,7 @@ incremented for features.
 
 ### Fixes
 
-* ts: Allow nullable types for `Option<T>` mapped types. ([#1428](https://github.com/project-serum/anchor/pull/1428))
+* ts: Allow nullable types for `Option<T>` mapped types ([#1428](https://github.com/project-serum/anchor/pull/1428)).
 
 ### Breaking
 
