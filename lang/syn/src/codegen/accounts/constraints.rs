@@ -147,23 +147,10 @@ pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macr
     let ty_decl = f.ty_decl();
     let account_ty = f.account_ty();
     let from_account_info = f.from_account_info(None);
-    let header_write = {
-        if cfg!(feature = "deprecated-layout") {
-            quote! {
-                use std::io::{Write, Cursor};
-                use anchor_lang::Discriminator;
-                let __dst: &mut [u8] = &mut __data;
-                let mut __cursor = Cursor::new(__dst);
-                Write::write_all(&mut __cursor, &#account_ty::discriminator()).unwrap();
-            }
-        } else {
-            quote! {
-                use std::io::{Write, Cursor};
-                use anchor_lang::Discriminator;
-                let __dst: &mut [u8] = &mut __data[2..];
-                let mut __cursor = Cursor::new(__dst);
-                Write::write_all(&mut __cursor, &#account_ty::discriminator()).unwrap();
-            }
+    let header_write = quote! {
+        {
+            use anchor_lang::Discriminator;
+            anchor_lang::accounts::header::write_discriminator(&mut __data, &#account_ty::discriminator());
         }
     };
     // Check the *entire* account header is zero.
@@ -541,30 +528,14 @@ fn generate_constraint_init(f: &Field, c: &ConstraintInitGroup) -> proc_macro2::
                     | Ty::Loader(_)
                     | Ty::AccountLoader(_) => {
                         let account_ty = f.account_ty();
-                        if cfg!(feature = "deprecated-layout") {
-                            quote! {
-                                {
-                                    use std::io::{Write, Cursor};
-                                    use anchor_lang::Discriminator;
+                        quote! {
+                            {
 
-                                    let mut __data = actual_field.try_borrow_mut_data()?;
-                                    let __dst: &mut [u8] = &mut __data;
-                                    let mut __cursor = Cursor::new(__dst);
-                                    Write::write_all(&mut __cursor, &#account_ty::discriminator()).unwrap();
-                                }
-                            }
-                        } else {
-                            quote! {
-                                {
-                                    use std::io::{Write, Seek, SeekFrom, Cursor};
-                                    use anchor_lang::Discriminator;
-
-                                    let mut __data = actual_field.try_borrow_mut_data()?;
-                                    let __dst: &mut [u8] = &mut __data;
-                                    let mut __cursor = Cursor::new(__dst);
-                                    Seek::seek(&mut __cursor, SeekFrom::Start(2)).unwrap();
-                                    Write::write_all(&mut __cursor, &#account_ty::discriminator()).unwrap();
-                                }
+                                let mut __data = actual_field.try_borrow_mut_data()?;
+                                anchor_lang::accounts::header::write_discriminator(
+                                    &mut __data,
+                                    &#account_ty::discriminator(),
+                                );
                             }
                         }
                     }

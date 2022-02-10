@@ -1,4 +1,6 @@
 use arrayref::array_ref;
+use solana_program::hash;
+use std::io::{Cursor, Write};
 
 #[cfg(feature = "deprecated-layout")]
 pub fn read_discriminator(data: &[u8]) -> &[u8; 8] {
@@ -14,9 +16,7 @@ pub fn read_discriminator(data: &[u8]) -> &[u8; 4] {
 pub fn create_discriminator(account_name: &str, namespace: Option<&str>) -> [u8; 8] {
     let discriminator_preimage = format!("{}:{}", namespace.unwrap_or("account"), account_name);
     let mut discriminator = [0u8; 8];
-    discriminator.copy_from_slice(
-        &crate::solana_program::hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..8],
-    );
+    discriminator.copy_from_slice(&hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..8]);
     discriminator
 }
 
@@ -24,9 +24,7 @@ pub fn create_discriminator(account_name: &str, namespace: Option<&str>) -> [u8;
 pub fn create_discriminator(account_name: &str, namespace: Option<&str>) -> [u8; 4] {
     let discriminator_preimage = format!("{}:{}", namespace.unwrap_or("account"), account_name);
     let mut discriminator = [0u8; 4];
-    discriminator.copy_from_slice(
-        &crate::solana_program::hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..4],
-    );
+    discriminator.copy_from_slice(&hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..4]);
     discriminator
 }
 
@@ -37,4 +35,18 @@ pub fn read_data(account_data: &[u8]) -> &[u8] {
 
 pub fn read_data_mut(account_data: &mut [u8]) -> &mut [u8] {
     &mut account_data[8..]
+}
+
+pub fn write_discriminator(account_data: &mut [u8], discriminator: &[u8]) {
+    #[cfg(feature = "deprecated_layout")]
+    {
+        let mut cursor = Cursor::new(account_dst);
+        cursor.write_all(discriminator).unwrap();
+    }
+    #[cfg(not(feature = "deprecated_layout"))]
+    {
+        let dst: &mut [u8] = &mut account_data[2..];
+        let mut cursor = Cursor::new(dst);
+        cursor.write_all(discriminator).unwrap();
+    }
 }

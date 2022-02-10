@@ -34,6 +34,7 @@ anchor-attribute-state = { path = "./attribute/state", version = "0.21.0" }
 anchor-attribute-interface = { path = "./attribute/interface", version = "0.21.0" }
 anchor-attribute-event = { path = "./attribute/event", version = "0.21.0" }
 anchor-derive-accounts = { path = "./derive/accounts", version = "0.21.0" }
+anchor-common = { path = "./common", version = "0.21.0" }
 arrayref = "0.3.6"
 base64 = "0.13.0"
 borsh = "0.9"

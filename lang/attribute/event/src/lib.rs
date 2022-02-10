@@ -17,24 +17,8 @@ pub fn event(
     let event_name = &event_strct.ident;
 
     let discriminator: proc_macro2::TokenStream = {
-        let discriminator_preimage = format!("event:{}", event_name);
-
-        #[cfg(feature = "deprecated-layout")]
-        let discriminator = {
-            let mut discriminator = [0u8; 8];
-            discriminator.copy_from_slice(
-                &anchor_syn::hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..8],
-            );
-            discriminator
-        };
-        #[cfg(not(feature = "deprecated-layout"))]
-        let discriminator = {
-            let mut discriminator = [0u8; 4];
-            discriminator.copy_from_slice(
-                &anchor_syn::hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..4],
-            );
-            discriminator
-        };
+        let discriminator =
+            anchor_common::header::create_discriminator(&event_name.to_string(), Some("event"));
         format!("{:?}", discriminator).parse().unwrap()
     };
 

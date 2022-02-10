@@ -70,6 +70,7 @@ dependencies = [
 name = "anchor-attribute-account"
 version = "0.21.0"
 dependencies = [
+ "anchor-common",
  "anchor-syn",
  "anyhow",
  "bs58 0.4.0",
@@ -102,6 +103,7 @@ dependencies = [
 name = "anchor-attribute-event"
 version = "0.21.0"
 dependencies = [
+ "anchor-common",
  "anchor-syn",
  "anyhow",
  "proc-macro2 1.0.32",
@@ -191,6 +193,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "anchor-common"
+version = "0.21.0"
+dependencies = [
+ "arrayref",
+ "solana-program",
+]
+
+[[package]]
 name = "anchor-derive-accounts"
 version = "0.21.0"
 dependencies = [
@@ -213,6 +223,7 @@ dependencies = [
  "anchor-attribute-interface",
  "anchor-attribute-program",
  "anchor-attribute-state",
+ "anchor-common",
  "anchor-derive-accounts",
  "arrayref",
  "base64 0.13.0",
@@ -239,6 +250,7 @@ name = "anchor-syn"
 version = "0.21.0"
 dependencies = [
  "anyhow",
+ "arrayref",
  "bs58 0.3.1",
  "heck 0.3.3",
  "proc-macro2 1.0.32",
@@ -247,6 +259,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "solana-program",
  "syn 1.0.81",
  "thiserror",
 ]

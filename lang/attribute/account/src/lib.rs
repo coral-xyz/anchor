@@ -104,41 +104,19 @@ pub fn account(
     };
 
     let discriminator: proc_macro2::TokenStream = {
-        // Namespace the discriminator to prevent collisions.
-        let discriminator_preimage = {
-            // For now, zero copy accounts can't be namespaced.
+        let discriminator = anchor_common::header::create_discriminator(
+            &account_name.to_string(),
             if namespace.is_empty() {
-                format!("account:{}", account_name)
+                None
             } else {
-                format!("{}:{}", namespace, account_name)
-            }
-        };
-
-        if cfg!(feature = "deprecated-layout") {
-            let mut discriminator = [0u8; 8];
-            discriminator.copy_from_slice(
-                &anchor_syn::hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..8],
-            );
-            format!("{:?}", discriminator).parse().unwrap()
-        } else {
-            let mut discriminator = [0u8; 4];
-            discriminator.copy_from_slice(
-                &anchor_syn::hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..4],
-            );
-            format!("{:?}", discriminator).parse().unwrap()
-        }
+                Some(&namespace)
+            },
+        );
+        format!("{:?}", discriminator).parse().unwrap()
     };
 
-    let disc_bytes = {
-        if cfg!(feature = "deprecated-layout") {
-            quote! {
-                let given_disc = &buf[..8];
-            }
-        } else {
-            quote! {
-                let given_disc = &buf[2..6];
-            }
-        }
+    let disc_bytes = quote! {
+        let given_disc = anchor_lang::accounts::header::read_discriminator(&buf);
     };
 
     let disc_fn = {

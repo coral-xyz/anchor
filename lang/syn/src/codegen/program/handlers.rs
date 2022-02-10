@@ -202,32 +202,13 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let ix_name: proc_macro2::TokenStream =
                     generate_ctor_variant_name().parse().unwrap();
                 let ix_name_log = format!("Instruction: {}", ix_name);
-                let header_write = {
-                    if cfg!(feature = "deprecated-layout") {
-                        quote! {
-                            {
-                                use std::io::{Write, Cursor};
-                                use anchor_lang::Discriminator;
-
-                                let mut __data = ctor_accounts.to.try_borrow_mut_data()?;
-                                let __dst: &mut [u8] = &mut __data;
-                                let mut __cursor = Cursor::new(__dst);
-                                Write::write_all(&mut __cursor, &#name::discriminator()).unwrap();
-                            }
-                        }
-                    } else {
-                        quote! {
-                            {
-                                use std::io::{Write, Cursor, SeekFrom, Seek};
-                                use anchor_lang::Discriminator;
-
-                                let mut __data = ctor_accounts.to.try_borrow_mut_data()?;
-                                let __dst: &mut [u8] = &mut __data;
-                                let mut __cursor = Cursor::new(__dst);
-                                Seek::seek(&mut __cursor, SeekFrom::Start(2)).unwrap();
-                                Write::write_all(&mut __cursor, &#name::discriminator()).unwrap();
-                            }
-                        }
+                let header_write = quote! {
+                    {
+                        let mut __data = ctor_accounts.to.try_borrow_mut_data()?;
+                        anchor_lang::accounts::header::write_discriminator(
+                            &mut __data,
+                            &#name::discriminator(),
+                        );
                     }
                 };
                 if state.is_zero_copy {

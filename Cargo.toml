@@ -11,6 +11,7 @@ members = [
     "client",
     "lang",
     "lang/attribute/*",
+    "lang/common",
     "lang/derive/*",
     "lang/syn",
     "spl",

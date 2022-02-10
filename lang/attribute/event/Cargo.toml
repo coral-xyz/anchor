@@ -19,3 +19,4 @@ quote = "1.0"
 syn = { version = "1.0.60", features = ["full"] }
 anyhow = "1.0.32"
 anchor-syn = { path = "../../syn", version = "0.21.0", features = ["hash"] }
+anchor-common = { path = "../../common", version = "0.21.0" }

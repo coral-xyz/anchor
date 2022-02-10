@@ -10,7 +10,6 @@ pub mod cpi_account;
 #[doc(hidden)]
 #[allow(deprecated)]
 pub mod cpi_state;
-pub mod header;
 #[doc(hidden)]
 #[allow(deprecated)]
 pub mod loader;
@@ -25,3 +24,5 @@ pub mod state;
 pub mod system_account;
 pub mod sysvar;
 pub mod unchecked_account;
+
+pub use anchor_common::header;
