@@ -2,6 +2,8 @@ use arrayref::array_ref;
 use solana_program::hash;
 use std::io::{Cursor, Write};
 
+pub const HEADER_LEN: usize = 8;
+
 #[cfg(feature = "deprecated-layout")]
 pub fn read_discriminator(data: &[u8]) -> &[u8; 8] {
     array_ref![data, 0, 8]
@@ -30,11 +32,11 @@ pub fn create_discriminator(account_name: &str, namespace: Option<&str>) -> [u8;
 
 // Header is 8 bytes regardless of layout.
 pub fn read_data(account_data: &[u8]) -> &[u8] {
-    &account_data[8..]
+    &account_data[HEADER_LEN..]
 }
 
 pub fn read_data_mut(account_data: &mut [u8]) -> &mut [u8] {
-    &mut account_data[8..]
+    &mut account_data[HEADER_LEN..]
 }
 
 pub fn write_discriminator(account_data: &mut [u8], discriminator: &[u8]) {
