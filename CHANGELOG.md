@@ -11,7 +11,11 @@ incremented for features.
 
 ## [Unreleased]
 
-## [0.21.1] - 2022-02-07
+### Breaking
+
+* lang: Enforce that the payer for an init-ed account be marked `mut` ([#1271](https://github.com/project-serum/anchor/pull/1271)).
+
+## [0.21.0] - 2022-02-07
 
 ### Fixes
 
