@@ -152,7 +152,7 @@ pub fn account(
                     fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
                         // Header is always 8 bytes.
                         if buf.len() < anchor_lang::accounts::header::HEADER_LEN {
-                            return Err(anchor_lang::__private::ErrorCode::AccountDiscriminatorNotFound.into());
+                            return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound.into());
                         }
                         let given_disc = anchor_lang::accounts::header::read_discriminator(&buf);
                         if &#discriminator != given_disc {

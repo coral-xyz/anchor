@@ -162,7 +162,7 @@ pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macr
                 __header_bytes.copy_from_slice(&__data[..8]);
                 let __header = u64::from_le_bytes(__header_bytes);
                 if __header != 0 {
-                    return Err(anchor_lang::__private::ErrorCode::ConstraintZero.into());
+                    return Err(anchor_lang::error::ErrorCode::ConstraintZero.into());
                 }
 
                 #header_write
