@@ -269,7 +269,7 @@ class InstructionFormatter {
         ? "null"
         : this.formatIdlData(
             { name: "", type: (<IdlTypeOption>idlField.type).option },
-            data
+            data, types
           );
     }
     if (idlField.type.hasOwnProperty("defined")) {
