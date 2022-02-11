@@ -18,8 +18,9 @@ incremented for features.
 ### Breaking
 
 * lang: Enforce that the payer for an init-ed account be marked `mut` ([#1271](https://github.com/project-serum/anchor/pull/1271)).
-* ts: `BorshAccountsCoder.accountDiscriminator` method has been replaced with `BorshAccountHeader.discriminator` ([#1415](https://github.com/project-serum/anchor/pull/1415)).
 * lang, client, ts: 8 byte account discriminator has been replaced with a versioned account header. This is a state breaking change. If you have existing Anchor programs, previously deployed, one can continue to use the old 8 byte account discriminator by using the `deprecated-layout` feature flag ([#1415](https://github.com/project-serum/anchor/pull/1415)).
+* lang: All error-related code is now in the error module ([#1426](https://github.com/project-serum/anchor/pull/1426)).
+* ts: `BorshAccountsCoder.accountDiscriminator` method has been replaced with `BorshAccountHeader.discriminator` ([#1415](https://github.com/project-serum/anchor/pull/1415)).
 
 ## [0.21.0] - 2022-02-07
 
