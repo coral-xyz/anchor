@@ -52,7 +52,10 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
     let is_lit = stream.peek(LitStr);
     // Using a literal constraint is deprecated.
     if is_lit {
-        return Err(anchor_lang::__private::ErrorCode::Deprecated.into());
+        return Err(ParseError::new(
+            is_lit.span(),
+            "Literal consraint deprecated",
+        ));
     }
 
     let ident = stream.call(Ident::parse_any)?;

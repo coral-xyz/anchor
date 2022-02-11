@@ -1,5 +1,4 @@
 use crate::*;
-use proc_macro2_diagnostics::SpanDiagnosticExt;
 use quote::quote;
 use syn::Expr;
 
@@ -28,7 +27,7 @@ pub fn generate_composite(f: &CompositeField) -> proc_macro2::TokenStream {
         .iter()
         .filter_map(|c| match c {
             Constraint::Raw(_) => Some(c),
-            _ => panic!("Invariant violation: composite constraints can only be raw or literals"),
+            _ => panic!("Invariant violation: composite constraints can only be raw"),
         })
         .map(|c| generate_constraint_composite(f, c))
         .collect();
@@ -152,7 +151,7 @@ pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macr
             __disc_bytes.copy_from_slice(&__data[..8]);
             let __discriminator = u64::from_le_bytes(__disc_bytes);
             if __discriminator != 0 {
-                return Err(anchor_lang::__private::ErrorCode::ConstraintZero.into());
+                return Err(anchor_lang::error::ErrorCode::ConstraintZero.into());
             }
             #from_account_info
         };
@@ -164,7 +163,7 @@ pub fn generate_constraint_close(f: &Field, c: &ConstraintClose) -> proc_macro2:
     let target = &c.sol_dest;
     quote! {
         if #field.key() == #target.key() {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintClose.into());
+            return Err(anchor_lang::error::ErrorCode::ConstraintClose.into());
         }
     }
 }
@@ -247,7 +246,7 @@ pub fn generate_constraint_rent_exempt(
         ConstraintRentExempt::Skip => quote! {},
         ConstraintRentExempt::Enforce => quote! {
             if !__anchor_rent.is_exempt(#info.lamports(), #info.try_data_len()?) {
-                return Err(anchor_lang::__private::ErrorCode::ConstraintRentExempt.into());
+                return Err(anchor_lang::error::ErrorCode::ConstraintRentExempt.into());
             }
         },
     }
@@ -344,10 +343,10 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                     let pa: #ty_decl = #from_account_info;
                     if #if_needed {
                         if pa.mint != #mint.key() {
-                            return Err(anchor_lang::__private::ErrorCode::ConstraintTokenMint.into());
+                            return Err(anchor_lang::error::ErrorCode::ConstraintTokenMint.into());
                         }
                         if pa.owner != #owner.key() {
-                            return Err(anchor_lang::__private::ErrorCode::ConstraintTokenOwner.into());
+                            return Err(anchor_lang::error::ErrorCode::ConstraintTokenOwner.into());
                         }
                     }
                     pa
@@ -379,14 +378,14 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                     let pa: #ty_decl = #from_account_info;
                     if #if_needed {
                         if pa.mint != #mint.key() {
-                            return Err(anchor_lang::__private::ErrorCode::ConstraintTokenMint.into());
+                            return Err(anchor_lang::error::ErrorCode::ConstraintTokenMint.into());
                         }
                         if pa.owner != #owner.key() {
-                            return Err(anchor_lang::__private::ErrorCode::ConstraintTokenOwner.into());
+                            return Err(anchor_lang::error::ErrorCode::ConstraintTokenOwner.into());
                         }
 
                         if pa.key() != anchor_spl::associated_token::get_associated_token_address(&#owner.key(), &#mint.key()) {
-                            return Err(anchor_lang::__private::ErrorCode::AccountNotAssociatedTokenAccount.into());
+                            return Err(anchor_lang::error::ErrorCode::AccountNotAssociatedTokenAccount.into());
                         }
                     }
                     pa
@@ -432,16 +431,16 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                     let pa: #ty_decl = #from_account_info;
                     if #if_needed {
                         if pa.mint_authority != anchor_lang::solana_program::program_option::COption::Some(#owner.key()) {
-                            return Err(anchor_lang::__private::ErrorCode::ConstraintMintMintAuthority.into());
+                            return Err(anchor_lang::error::ErrorCode::ConstraintMintMintAuthority.into());
                         }
                         if pa.freeze_authority
                             .as_ref()
                             .map(|fa| #freeze_authority.as_ref().map(|expected_fa| fa != *expected_fa).unwrap_or(true))
                             .unwrap_or(#freeze_authority.is_some()) {
-                            return Err(anchor_lang::__private::ErrorCode::ConstraintMintFreezeAuthority.into());
+                            return Err(anchor_lang::error::ErrorCode::ConstraintMintFreezeAuthority.into());
                         }
                         if pa.decimals != #decimals {
-                            return Err(anchor_lang::__private::ErrorCode::ConstraintMintDecimals.into());
+                            return Err(anchor_lang::error::ErrorCode::ConstraintMintDecimals.into());
                         }
                     }
                     pa
@@ -517,17 +516,17 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                     // Assert the account was created correctly.
                     if #if_needed {
                         if space != actual_field.data_len() {
-                            return Err(anchor_lang::__private::ErrorCode::ConstraintSpace.into());
+                            return Err(anchor_lang::error::ErrorCode::ConstraintSpace.into());
                         }
 
                         if actual_owner != #owner {
-                            return Err(anchor_lang::__private::ErrorCode::ConstraintOwner.into());
+                            return Err(anchor_lang::error::ErrorCode::ConstraintOwner.into());
                         }
 
                         {
                             let required_lamports = __anchor_rent.minimum_balance(space);
                             if pa.to_account_info().lamports() < required_lamports {
-                                return Err(anchor_lang::__private::ErrorCode::ConstraintRentExempt.into());
+                                return Err(anchor_lang::error::ErrorCode::ConstraintRentExempt.into());
                             }
                         }
                     }
@@ -569,10 +568,10 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
         let b = c.bump.as_ref().unwrap();
         quote! {
             if #name.key() != __pda_address {
-                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+                return Err(anchor_lang::error::ErrorCode::ConstraintSeeds.into());
             }
             if __bump != #b {
-                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+                return Err(anchor_lang::error::ErrorCode::ConstraintSeeds.into());
             }
         }
     }
@@ -584,7 +583,7 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
     else if c.is_init {
         quote! {
             if #name.key() != __pda_address {
-                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+                return Err(anchor_lang::error::ErrorCode::ConstraintSeeds.into());
             }
         }
     }
@@ -607,7 +606,7 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
                 let __pda_address = Pubkey::create_program_address(
                     &[#maybe_seeds_plus_comma &[#b][..]],
                     &#deriving_program_id,
-                ).map_err(|_| anchor_lang::__private::ErrorCode::ConstraintSeeds)?;
+                ).map_err(|_| anchor_lang::error::ErrorCode::ConstraintSeeds)?;
             },
         };
         quote! {
@@ -616,7 +615,7 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
 
             // Check it.
             if #name.key() != __pda_address {
-                return Err(anchor_lang::__private::ErrorCode::ConstraintSeeds.into());
+                return Err(anchor_lang::error::ErrorCode::ConstraintSeeds.into());
             }
         }
     }
@@ -631,11 +630,11 @@ fn generate_constraint_associated_token(
     let spl_token_mint_address = &c.mint;
     quote! {
         if #name.owner != #wallet_address.key() {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintTokenOwner.into());
+            return Err(anchor_lang::error::ErrorCode::ConstraintTokenOwner.into());
         }
         let __associated_token_address = anchor_spl::associated_token::get_associated_token_address(&#wallet_address.key(), &#spl_token_mint_address.key());
         if #name.key() != __associated_token_address {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintAssociated.into());
+            return Err(anchor_lang::error::ErrorCode::ConstraintAssociated.into());
         }
     }
 }
@@ -730,7 +729,7 @@ pub fn generate_constraint_executable(
     let name = &f.ident;
     quote! {
         if !#name.to_account_info().executable {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintExecutable.into());
+            return Err(anchor_lang::error::ErrorCode::ConstraintExecutable.into());
         }
     }
 }
@@ -746,10 +745,10 @@ pub fn generate_constraint_state(f: &Field, c: &ConstraintState) -> proc_macro2:
         // Checks the given state account is the canonical state account for
         // the target program.
         if #ident.key() != anchor_lang::accounts::cpi_state::CpiState::<#account_ty>::address(&#program_target.key()) {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintState.into());
+            return Err(anchor_lang::error::ErrorCode::ConstraintState.into());
         }
         if #ident.as_ref().owner != &#program_target.key() {
-            return Err(anchor_lang::__private::ErrorCode::ConstraintState.into());
+            return Err(anchor_lang::error::ErrorCode::ConstraintState.into());
         }
     }
 }
@@ -760,6 +759,6 @@ fn generate_custom_error(
 ) -> proc_macro2::TokenStream {
     match custom_error {
         Some(error) => quote! { #error.into() },
-        None => quote! { anchor_lang::__private::ErrorCode::#error.into() },
+        None => quote! { anchor_lang::error::ErrorCode::#error.into() },
     }
 }
