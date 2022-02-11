@@ -88,6 +88,18 @@ pub fn account(
     let account_name = &account_strct.ident;
     let (impl_gen, type_gen, where_clause) = account_strct.generics.split_for_impl();
 
+    let discriminator: proc_macro2::TokenStream = {
+        let discriminator = anchor_common::header::create_discriminator(
+            &account_name.to_string(),
+            if namespace.is_empty() {
+                None
+            } else {
+                Some(&namespace)
+            },
+        );
+        format!("{:?}", discriminator).parse().unwrap()
+    };
+
     let owner_impl = {
         if namespace.is_empty() {
             quote! {
@@ -101,18 +113,6 @@ pub fn account(
         } else {
             quote! {}
         }
-    };
-
-    let discriminator: proc_macro2::TokenStream = {
-        let discriminator = anchor_common::header::create_discriminator(
-            &account_name.to_string(),
-            if namespace.is_empty() {
-                None
-            } else {
-                Some(&namespace)
-            },
-        );
-        format!("{:?}", discriminator).parse().unwrap()
     };
 
     let disc_fn = {

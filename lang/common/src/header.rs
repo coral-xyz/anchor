@@ -30,7 +30,6 @@ pub fn create_discriminator(account_name: &str, namespace: Option<&str>) -> [u8;
     discriminator
 }
 
-// Header is 8 bytes regardless of layout.
 pub fn read_data(account_data: &[u8]) -> &[u8] {
     &account_data[HEADER_LEN..]
 }
