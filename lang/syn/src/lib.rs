@@ -572,7 +572,6 @@ pub struct ConstraintGroup {
     executable: Option<ConstraintExecutable>,
     state: Option<ConstraintState>,
     has_one: Vec<ConstraintHasOne>,
-    literal: Vec<ConstraintLiteral>,
     raw: Vec<ConstraintRaw>,
     close: Option<ConstraintClose>,
     address: Option<ConstraintAddress>,
@@ -608,7 +607,6 @@ pub enum Constraint {
     Mut(ConstraintMut),
     Signer(ConstraintSigner),
     HasOne(ConstraintHasOne),
-    Literal(ConstraintLiteral),
     Raw(ConstraintRaw),
     Owner(ConstraintOwner),
     RentExempt(ConstraintRentExempt),
@@ -629,7 +627,6 @@ pub enum ConstraintToken {
     Mut(Context<ConstraintMut>),
     Signer(Context<ConstraintSigner>),
     HasOne(Context<ConstraintHasOne>),
-    Literal(Context<ConstraintLiteral>),
     Raw(Context<ConstraintRaw>),
     Owner(Context<ConstraintOwner>),
     RentExempt(Context<ConstraintRentExempt>),
@@ -682,11 +679,6 @@ pub struct ConstraintSigner {
 pub struct ConstraintHasOne {
     pub join_target: Expr,
     pub error: Option<Expr>,
-}
-
-#[derive(Debug, Clone)]
-pub struct ConstraintLiteral {
-    pub lit: LitStr,
 }
 
 #[derive(Debug, Clone)]
