@@ -30,7 +30,6 @@ use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::collections::BTreeMap;
-use std::io::Write;
 
 mod account_meta;
 pub mod accounts;
@@ -146,7 +145,8 @@ where
 /// In most cases, one can use the default implementation provided by the
 /// [`#[account]`](./attr.account.html) attribute.
 pub trait AccountSerialize {
-    /// Serializes the account data into `writer`.
+    /// Serializes the account into the data buffer. Does not modify the
+    /// account header.
     fn try_serialize(&self, _data: &mut [u8]) -> Result<(), ProgramError> {
         Ok(())
     }

@@ -1,6 +1,5 @@
 #[allow(deprecated)]
 use crate::accounts::cpi_account::CpiAccount;
-use crate::accounts::header;
 use crate::error::ErrorCode;
 use crate::*;
 use solana_program::account_info::AccountInfo;

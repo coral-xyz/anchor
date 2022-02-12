@@ -1,6 +1,5 @@
 //! Account container that checks ownership on deserialization.
 
-use crate::accounts::header;
 use crate::error::ErrorCode;
 use crate::*;
 use solana_program::account_info::AccountInfo;
