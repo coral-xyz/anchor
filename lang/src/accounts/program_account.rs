@@ -100,9 +100,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info
     fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
         let info = self.to_account_info();
         let mut data = info.try_borrow_mut_data()?;
-        let dst = header::read_data_mut(&mut data);
-        let mut cursor = std::io::Cursor::new(dst);
-        self.inner.account.try_serialize(&mut cursor)?;
+        self.inner.account.try_serialize(&mut data)?;
         Ok(())
     }
 }

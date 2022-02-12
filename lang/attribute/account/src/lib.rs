@@ -179,10 +179,12 @@ pub fn account(
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountSerialize for #account_name #type_gen #where_clause {
-                    fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> std::result::Result<(), ProgramError> {
+                    fn try_serialize(&self, buf: &mut [u8]) -> std::result::Result<(), ProgramError> {
+                        let dst = anchor_lang::accounts::header::read_data_mut(buf);
+                        let mut writer = std::io::Cursor::new(dst);
                         AnchorSerialize::serialize(
                             self,
-                            writer
+                            &mut writer
                         )
                             .map_err(|_| anchor_lang::error::ErrorCode::AccountDidNotSerialize)?;
                         Ok(())

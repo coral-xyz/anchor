@@ -42,15 +42,7 @@ impl AccountDeserialize for ProgramData {
     }
 }
 
-impl AccountSerialize for ProgramData {
-    fn try_serialize<W: std::io::Write>(
-        &self,
-        _writer: &mut W,
-    ) -> Result<(), solana_program::program_error::ProgramError> {
-        // no-op
-        Ok(())
-    }
-}
+impl AccountSerialize for ProgramData {}
 
 impl Owner for ProgramData {
     fn owner() -> solana_program::pubkey::Pubkey {
@@ -64,12 +56,7 @@ impl Owner for UpgradeableLoaderState {
     }
 }
 
-impl AccountSerialize for UpgradeableLoaderState {
-    fn try_serialize<W: std::io::Write>(&self, _writer: &mut W) -> Result<(), ProgramError> {
-        // no-op
-        Ok(())
-    }
-}
+impl AccountSerialize for UpgradeableLoaderState {}
 
 impl AccountDeserialize for UpgradeableLoaderState {
     fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {

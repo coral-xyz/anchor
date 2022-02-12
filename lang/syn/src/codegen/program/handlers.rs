@@ -128,10 +128,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
                 // Store the new account data.
                 let mut data = accounts.to.try_borrow_mut_data()?;
-                let dst: &mut [u8] = &mut data;
-                let mut cursor = std::io::Cursor::new(dst);
-                std::io::Seek::seek(&mut cursor, std::io::SeekFrom::Start(8)).unwrap();
-                idl_account.try_serialize(&mut cursor)?;
+                idl_account.try_serialize(&mut data)?;
 
                 Ok(())
             }
@@ -364,10 +361,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             // Serialize the state and save it to storage.
                             ctor_user_def_accounts.exit(program_id)?;
                             let mut data = ctor_accounts.to.try_borrow_mut_data()?;
-                            let dst: &mut [u8] = &mut data;
-                            let mut cursor = std::io::Cursor::new(dst);
-                            std::io::Seek::seek(&mut cursor, std::io::SeekFrom::Start(8)).unwrap();
-                            instance.try_serialize(&mut cursor)?;
+                            instance.try_serialize(&mut data)?;
 
                             Ok(())
                         }
@@ -516,10 +510,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     accounts.exit(program_id)?;
                                     let acc_info = state.to_account_info();
                                     let mut data = acc_info.try_borrow_mut_data()?;
-                                    let dst: &mut [u8] = &mut data;
-                                    let mut cursor = std::io::Cursor::new(dst);
-																		std::io::Seek::seek(&mut cursor, std::io::SeekFrom::Start(8)).unwrap();
-                                    state.try_serialize(&mut cursor)?;
+                                    state.try_serialize(&mut data)?;
 
                                     Ok(())
                                 }
@@ -645,10 +636,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             accounts.exit(program_id)?;
                                             let acc_info = state.to_account_info();
                                             let mut data = acc_info.try_borrow_mut_data()?;
-                                            let dst: &mut [u8] = &mut data;
-                                            let mut cursor = std::io::Cursor::new(dst);
-																						std::io::Seek::seek(&mut cursor, std::io::SeekFrom::Start(8)).unwrap();
-                                            state.try_serialize(&mut cursor)?;
+                                            state.try_serialize(&mut data)?;
 
                                             Ok(())
                                         }
