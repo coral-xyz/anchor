@@ -31,11 +31,12 @@ describe("floats", () => {
 
   it("Updates an account with float data", async () => {
     const accountKeypair = anchor.web3.Keypair.generate();
+    const authorityPublicKey = anchor.getProvider().wallet.publicKey;
 
     await program.rpc.create(1.0, 2.0, {
       accounts: {
         account: accountKeypair.publicKey,
-        authority: anchor.getProvider().wallet.publicKey,
+        authority: authorityPublicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
       signers: [accountKeypair],
@@ -48,6 +49,7 @@ describe("floats", () => {
     await program.rpc.update(3.0, 4.0, {
       accounts: {
         account: accountKeypair.publicKey,
+        authority: authorityPublicKey,
       },
     });
 

@@ -8,7 +8,7 @@ pub mod floats {
 
     pub fn create(ctx: Context<Create>, data_f32: f32, data_f64: f64) -> ProgramResult {
         let account = &mut ctx.accounts.account;
-        let authority = &ctx.accounts.authority;
+        let authority = &mut ctx.accounts.authority;
 
         account.data_f32 = data_f32;
         account.data_f64 = data_f64;
@@ -31,14 +31,16 @@ pub mod floats {
 pub struct Create<'info> {
     #[account(init, payer = authority, space = 8 + 8 + 4 + 32)]
     pub account: Account<'info, FloatDataAccount>,
+    #[account(mut)]
     pub authority: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct Update<'info> {
-    #[account(mut)]
+    #[account(mut, has_one = authority)]
     pub account: Account<'info, FloatDataAccount>,
+    pub authority: Signer<'info>,
 }
 
 #[account]
