@@ -73,10 +73,10 @@ export type AccountNamespace<IDL extends Idl = Idl> = {
 export class AccountClient<
   IDL extends Idl = Idl,
   A extends NullableIdlAccount<IDL> = IDL["accounts"] extends undefined
-  ? IdlTypeDef
-  : NonNullable<IDL["accounts"]>[number],
+    ? IdlTypeDef
+    : NonNullable<IDL["accounts"]>[number],
   T = TypeDef<A, IdlTypes<IDL>>
-  > {
+> {
   /**
    * Returns the number of bytes in this account.
    */
@@ -158,17 +158,23 @@ export class AccountClient<
   }
 
   /**
-   * Returns a deserialized program derived account.
+   * Returns a deserialized program derived account and its PublicKey.
    *
    * @param seeds The seeds of the program derived account to fetch.
    */
-  async fetchPda(seeds: Array<Buffer | Uint8Array>, commitment?: Commitment): Promise<T> {
-    const [address] = await PublicKey.findProgramAddress(seeds, this._programId);
+  async fetchPda(
+    seeds: (Buffer | Uint8Array)[],
+    commitment?: Commitment
+  ): Promise<[T, PublicKey]> {
+    const [address] = await PublicKey.findProgramAddress(
+      seeds,
+      this._programId
+    );
     const data = await this.fetchNullable(address, commitment);
     if (data === null) {
       throw new Error(`Account does not exist ${address.toString()}`);
     }
-    return data;
+    return [data, address];
   }
 
   /**
@@ -200,7 +206,7 @@ export class AccountClient<
   }
 
   /**
-   * Returns multiple deserialized program derived accounts.
+   * Returns multiple deserialized program derived accounts and their PublicKeys.
    * Accounts not found or with wrong discriminator are returned as null.
    *
    * @param seedsArray The array of seeds of the accounts to fetch.
@@ -208,27 +214,34 @@ export class AccountClient<
   async fetchMultiplePda(
     seedsArray: Array<Buffer | Uint8Array>[],
     commitment?: Commitment
-  ): Promise<(Object | null)[]> {
-    const addresses = await Promise.all(seedsArray.map((seeds) =>
-      PublicKey.findProgramAddress(seeds, this._programId)
-    ))
+  ): Promise<[(Object | null)[], PublicKey[]]> {
+    const addresses = (
+      await Promise.all(
+        seedsArray.map((seeds) =>
+          PublicKey.findProgramAddress(seeds, this._programId)
+        )
+      )
+    ).map(([address]) => address);
 
     const accounts = await rpcUtil.getMultipleAccounts(
       this._provider.connection,
-      addresses.map(([address]) => translateAddress(address)),
+      addresses.map(translateAddress),
       commitment
     );
 
     // Decode accounts where discriminator is correct, null otherwise
-    return accounts.map((account) => {
-      if (account == null) {
-        return null;
-      }
-      return this._coder.accounts.decode(
-        this._idlAccount.name,
-        account?.account.data
-      );
-    });
+    return [
+      accounts.map((account) => {
+        if (account == null) {
+          return null;
+        }
+        return this._coder.accounts.decode(
+          this._idlAccount.name,
+          account?.account.data
+        );
+      }),
+      addresses,
+    ];
   }
 
   /**
