@@ -26,13 +26,6 @@ pub(crate) mod hash;
 pub mod idl;
 pub mod parser;
 
-// Layout indices.
-pub const LAYOUT_VERSION: u8 = 0;
-pub const LAYOUT_VERSION_INDEX: u8 = 0;
-pub const LAYOUT_BUMP_INDEX: u8 = 1;
-pub const LAYOUT_DISCRIMINATOR_INDEX: u8 = 2;
-pub const LAYOUT_UNUSED_INDEX: u8 = 6;
-
 #[derive(Debug)]
 pub struct Program {
     pub state: Option<State>,
