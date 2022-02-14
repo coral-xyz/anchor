@@ -53,23 +53,28 @@ impl CrateContext {
 
         for unsafe_field in unsafe_struct_fields {
             // Check if unsafe field type has been documented with a /// SAFETY: doc string.
-            let is_documented =
-                unsafe_field
-                    .attrs
-                    .iter()
-                    .any(|attr| match attr.parse_meta().unwrap() {
-                        syn::Meta::NameValue(syn::MetaNameValue {
-                            lit: syn::Lit::Str(lit),
-                            ..
-                        }) => lit.value().contains("SAFETY:"),
-                        _ => false,
-                    });
+            let is_documented = unsafe_field.attrs.iter().any(|attr| {
+                attr.tokens.clone().into_iter().any(|token| match token {
+                    // Check for comments containing SAFETY: or CHECK:
+                    proc_macro2::TokenTree::Literal(s) => {
+                        s.to_string().contains("SAFETY:") || s.to_string().contains("CHECK:")
+                    }
+                    // Allow valid PDAs without documentation
+                    proc_macro2::TokenTree::Group(g) => {
+                        g.stream().into_iter().any(|token| match token {
+                            proc_macro2::TokenTree::Ident(s) => s.to_string() == "seeds",
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                })
+            });
             if !is_documented {
                 // Error if undocumented.
                 return Err(anyhow!(
                     r#"
     Struct field "{}" is unsafe, but is not documented.
-    Please add a `#[doc(SAFETY: "...")]` attribute to the field enumerating potential security risks.
+    Please add a `/// SAFETY:` doc comment to the field enumerating potential security risks.
     See https://book.anchor-lang.com/chapter_4/cli.html#safety_checks for more information.
                 "#,
                     unsafe_field.ident.as_ref().unwrap().to_string()
