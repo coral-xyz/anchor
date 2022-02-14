@@ -45,5 +45,5 @@ pub struct Update<'info> {
 pub struct FloatDataAccount {
     pub data_f64: f64,
     pub data_f32: f32,
-    pub authority: Pubkey
+    pub authority: Pubkey,
 }

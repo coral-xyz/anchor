@@ -1,5 +1,5 @@
 import camelCase from "camelcase";
-import { Layout, f32, f64 } from "buffer-layout";
+import { Layout } from "buffer-layout";
 import * as borsh from "@project-serum/borsh";
 import { IdlField, IdlTypeDef, IdlEnumVariant, IdlType } from "../../idl.js";
 import { IdlError } from "../../error.js";
@@ -34,7 +34,7 @@ export class IdlCoder {
         return borsh.i32(fieldName);
       }
       case "f32": {
-        return f32(fieldName);
+        return borsh.f32(fieldName);
       }
       case "u64": {
         return borsh.u64(fieldName);
@@ -43,7 +43,7 @@ export class IdlCoder {
         return borsh.i64(fieldName);
       }
       case "f64": {
-        return f64(fieldName);
+        return borsh.f64(fieldName);
       }
       case "u128": {
         return borsh.u128(fieldName);
