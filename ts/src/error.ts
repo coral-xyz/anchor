@@ -110,7 +110,7 @@ const LangErrorCode = {
 };
 
 const LangErrorMessage = new Map([
-  // Miscellaneous 
+  // Miscellaneous
   [
     LangErrorCode.DeclaredProgramIdMismatch,
     "The declared program id does not match the actual program id",
