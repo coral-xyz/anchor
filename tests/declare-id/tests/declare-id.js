@@ -11,7 +11,7 @@ describe("declare_id", () => {
       await program.rpc.initialize();
       assert.ok(false);
     } catch (err) {
-      assert.equal(err.code, 50);
+      assert.equal(err.code, 4100);
     }
   });
 });
