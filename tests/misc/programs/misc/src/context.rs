@@ -409,3 +409,23 @@ pub struct TestProgramIdConstraintUsingFindPda<'info> {
     #[account(seeds = [b"seed"], bump, seeds::program = crate::ID)]
     second: AccountInfo<'info>,
 }
+
+#[derive(Accounts)]
+pub struct TestUnsafeFieldSafetyErrors<'info> {
+    #[doc = "test"]
+    /// SAFETY:
+    pub data: UncheckedAccount<'info>,
+    #[account(mut)]
+    /// SAFETY:
+    pub data_two: UncheckedAccount<'info>,
+    #[account(
+        seeds = [b"my-seed", signer.key.as_ref()],
+        bump
+    )]
+    // Doesn't need a SAFETY doc comment because it is a PDA
+    pub data_three: UncheckedAccount<'info>,
+    /// SAFETY:
+    pub data_four: UncheckedAccount<'info>,
+    pub signer: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
