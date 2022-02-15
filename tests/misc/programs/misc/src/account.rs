@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 
 pub const MAX_SIZE: usize = 10;
+pub const MAX_SIZE_U8: usize = 11;
 
 #[account]
 pub struct Data {
@@ -47,4 +48,9 @@ pub struct DataMultidimensionalArray {
 #[account]
 pub struct DataConstArraySize {
     pub data: [u8; MAX_SIZE],
+}
+
+#[account]
+pub struct DataConstCastArraySize {
+    pub data: [u8; MAX_SIZE_U8 as usize],
 }
