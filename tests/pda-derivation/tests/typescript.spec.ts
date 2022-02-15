@@ -33,7 +33,6 @@ describe("typescript", () => {
       .rpc();
   });
   it("Fetches derived accounts from their seeds", async () => {
-
     const seeds = [
       new BN(seedA).toBuffer("le", 1),
       Buffer.from("another-seed"),
@@ -47,10 +46,9 @@ describe("typescript", () => {
       new BN(3).toBuffer("le", 8),
       data.toBuffer("le", 8),
       dataKey.publicKey.toBuffer(),
-    ]
+    ];
 
     await program.account.myAccount.fetchPda(seeds);
     await program.account.myAccount.fetchMultiplePda([seeds, seeds]);
-
   });
 });
