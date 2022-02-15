@@ -396,7 +396,7 @@ pub struct AuthorizeMarket<'info> {
     market_auth: Account<'info, MarketAuth>,
     #[account(mut)]
     payer: Signer<'info>,
-    // Not read or written to so not validated.
+    /// SAFETY: Not read or written to so not validated.
     market: UncheckedAccount<'info>,
     system_program: Program<'info, System>,
 }
@@ -450,7 +450,7 @@ pub struct CreateOfficerOpenOrders<'info> {
     dex_program: Program<'info, Dex>,
     system_program: Program<'info, System>,
     rent: Sysvar<'info, Rent>,
-    // Used for CPI. Not read or written so not validated.
+    /// SAFETY: Used for CPI. Not read or written so not validated.
     market: UncheckedAccount<'info>,
 }
 
@@ -483,10 +483,14 @@ pub struct SweepFees<'info> {
 #[derive(Accounts)]
 pub struct DexAccounts<'info> {
     #[account(mut)]
+    /// SAFETY:
     market: UncheckedAccount<'info>,
     #[account(mut)]
+    /// SAFETY:
     pc_vault: UncheckedAccount<'info>,
+    /// SAFETY:
     sweep_authority: UncheckedAccount<'info>,
+    /// SAFETY:
     vault_signer: UncheckedAccount<'info>,
     dex_program: Program<'info, Dex>,
     token_program: Program<'info, Token>,
@@ -523,6 +527,7 @@ pub struct SwapToUsdc<'info> {
     dex_program: Program<'info, Dex>,
     token_program: Program<'info, Token>,
     #[account(address = tx_instructions::ID)]
+    /// SAFETY:
     instructions: UncheckedAccount<'info>,
     rent: Sysvar<'info, Rent>,
 }
@@ -561,6 +566,7 @@ pub struct SwapToSrm<'info> {
     dex_program: Program<'info, Dex>,
     token_program: Program<'info, Token>,
     #[account(address = tx_instructions::ID)]
+    /// SAFETY:
     instructions: UncheckedAccount<'info>,
     rent: Sysvar<'info, Rent>,
 }
@@ -569,32 +575,42 @@ pub struct SwapToSrm<'info> {
 // They are not read or written and so are not validated.
 #[derive(Accounts)]
 pub struct DexMarketAccounts<'info> {
+    /// SAFETY:
     #[account(mut)]
     market: UncheckedAccount<'info>,
+    /// SAFETY:
     #[account(mut)]
     open_orders: UncheckedAccount<'info>,
+    /// SAFETY:
     #[account(mut)]
     request_queue: UncheckedAccount<'info>,
+    /// SAFETY:
     #[account(mut)]
     event_queue: UncheckedAccount<'info>,
+    /// SAFETY:
     #[account(mut)]
     bids: UncheckedAccount<'info>,
+    /// SAFETY:
     #[account(mut)]
     asks: UncheckedAccount<'info>,
+    /// SAFETY:
     // The `spl_token::Account` that funds will be taken from, i.e., transferred
     // from the user into the market's vault.
     //
     // For bids, this is the base currency. For asks, the quote.
     #[account(mut)]
     order_payer_token_account: UncheckedAccount<'info>,
+    /// SAFETY:
     // Also known as the "base" currency. For a given A/B market,
     // this is the vault for the A mint.
     #[account(mut)]
     coin_vault: UncheckedAccount<'info>,
+    /// SAFETY:
     // Also known as the "quote" currency. For a given A/B market,
     // this is the vault for the B mint.
     #[account(mut)]
     pc_vault: UncheckedAccount<'info>,
+    /// SAFETY:
     // PDA owner of the DEX's token accounts for base + quote currencies.
     vault_signer: UncheckedAccount<'info>,
 }
@@ -636,6 +652,7 @@ pub struct DropStakeReward<'info> {
         not(feature = "test"),
         account(address = mint::SRM),
     )]
+    /// SAFETY:
     mint: UncheckedAccount<'info>,
     srm: DropStakeRewardPool<'info>,
     msrm: DropStakeRewardPool<'info>,
@@ -652,10 +669,14 @@ pub struct DropStakeReward<'info> {
 // program to handle it.
 #[derive(Accounts)]
 pub struct DropStakeRewardPool<'info> {
+    /// SAFETY:
     registrar: UncheckedAccount<'info>,
+    /// SAFETY:
     reward_event_q: UncheckedAccount<'info>,
     pool_mint: Account<'info, Mint>,
+    /// SAFETY:
     vendor: UncheckedAccount<'info>,
+    /// SAFETY:
     vendor_vault: UncheckedAccount<'info>,
 }
 
