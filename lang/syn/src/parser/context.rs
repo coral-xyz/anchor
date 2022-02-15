@@ -70,14 +70,18 @@ impl CrateContext {
                 })
             });
             if !is_documented {
+                let ident = unsafe_field.ident.as_ref().unwrap();
+                let span = ident.span();
                 // Error if undocumented.
                 return Err(anyhow!(
                     r#"
-    Struct field "{}" is unsafe, but is not documented.
+    {}:{} struct field "{}" is unsafe, but is not documented.
     Please add a `/// SAFETY:` doc comment to the field enumerating potential security risks.
     See https://book.anchor-lang.com/chapter_4/cli.html#safety_checks for more information.
                 "#,
-                    unsafe_field.ident.as_ref().unwrap().to_string()
+                    span.start().line,
+                    span.start().column,
+                    ident.to_string()
                 ));
             };
         }
