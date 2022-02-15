@@ -46,44 +46,43 @@ impl CrateContext {
     // Perform Anchor safety checks on the parsed create
     pub fn safety_checks(&self) -> Result<(), anyhow::Error> {
         // Check all structs for unsafe field types, i.e. AccountInfo and UncheckedAccount.
-        let unsafe_struct_fields = self
-            .modules
-            .iter()
-            .flat_map(|(_, ctx)| ctx.unsafe_struct_fields());
-
-        for unsafe_field in unsafe_struct_fields {
-            // Check if unsafe field type has been documented with a /// SAFETY: doc string.
-            let is_documented = unsafe_field.attrs.iter().any(|attr| {
-                attr.tokens.clone().into_iter().any(|token| match token {
-                    // Check for comments containing SAFETY: or CHECK:
-                    proc_macro2::TokenTree::Literal(s) => {
-                        s.to_string().contains("SAFETY:") || s.to_string().contains("CHECK:")
-                    }
-                    // Allow valid PDAs without documentation
-                    proc_macro2::TokenTree::Group(g) => {
-                        g.stream().into_iter().any(|token| match token {
-                            proc_macro2::TokenTree::Ident(s) => s.to_string() == "seeds",
-                            _ => false,
-                        })
-                    }
-                    _ => false,
-                })
-            });
-            if !is_documented {
-                let ident = unsafe_field.ident.as_ref().unwrap();
-                let span = ident.span();
-                // Error if undocumented.
-                return Err(anyhow!(
-                    r#"
-    {}:{} struct field "{}" is unsafe, but is not documented.
-    Please add a `/// SAFETY:` doc comment to the field enumerating potential security risks.
-    See https://book.anchor-lang.com/chapter_4/cli.html#safety_checks for more information.
-                "#,
-                    span.start().line,
-                    span.start().column,
-                    ident.to_string()
-                ));
-            };
+        for (_, ctx) in self.modules.iter() {
+            for unsafe_field in ctx.unsafe_struct_fields() {
+                // Check if unsafe field type has been documented with a /// SAFETY: doc string.
+                let is_documented = unsafe_field.attrs.iter().any(|attr| {
+                    attr.tokens.clone().into_iter().any(|token| match token {
+                        // Check for comments containing SAFETY: or CHECK:
+                        proc_macro2::TokenTree::Literal(s) => {
+                            s.to_string().contains("SAFETY:") || s.to_string().contains("CHECK:")
+                        }
+                        // Allow valid PDAs without documentation
+                        proc_macro2::TokenTree::Group(g) => {
+                            g.stream().into_iter().any(|token| match token {
+                                proc_macro2::TokenTree::Ident(s) => s.to_string() == "seeds",
+                                _ => false,
+                            })
+                        }
+                        _ => false,
+                    })
+                });
+                if !is_documented {
+                    let ident = unsafe_field.ident.as_ref().unwrap();
+                    let span = ident.span();
+                    // Error if undocumented.
+                    return Err(anyhow!(
+                        r#"
+        {}:{}:{}
+        Struct field "{}" is unsafe, but is not documented.
+        Please add a `/// SAFETY:` doc comment to the field enumerating potential security risks.
+        See https://book.anchor-lang.com/chapter_4/cli.html#safety_checks for more information.
+                    "#,
+                        ctx.file.canonicalize().unwrap().display(),
+                        span.start().line,
+                        span.start().column,
+                        ident.to_string()
+                    ));
+                };
+            }
         }
         Ok(())
     }
