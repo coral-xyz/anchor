@@ -49,23 +49,24 @@ impl CrateContext {
         for (_, ctx) in self.modules.iter() {
             for unsafe_field in ctx.unsafe_struct_fields() {
                 // Check if unsafe field type has been documented with a /// SAFETY: doc string.
-                let is_documented = unsafe_field.attrs.iter().any(|attr| {
+                let is_documented_or_safe = unsafe_field.attrs.iter().any(|attr| {
                     attr.tokens.clone().into_iter().any(|token| match token {
                         // Check for comments containing SAFETY: or CHECK:
                         proc_macro2::TokenTree::Literal(s) => {
                             s.to_string().contains("SAFETY:") || s.to_string().contains("CHECK:")
                         }
-                        // Allow valid PDAs without documentation
+                        // Allow without doc comment if certain account constraints are present
                         proc_macro2::TokenTree::Group(g) => {
                             g.stream().into_iter().any(|token| match token {
-                                proc_macro2::TokenTree::Ident(s) => s.to_string() == "seeds",
+                                // TODO is it safe to skip in the case of init?
+                                proc_macro2::TokenTree::Ident(s) => s.to_string() == "init",
                                 _ => false,
                             })
                         }
                         _ => false,
                     })
                 });
-                if !is_documented {
+                if !is_documented_or_safe {
                     let ident = unsafe_field.ident.as_ref().unwrap();
                     let span = ident.span();
                     // Error if undocumented.
