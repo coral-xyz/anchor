@@ -51,6 +51,9 @@ export class ProgramError extends Error {
 }
 
 const LangErrorCode = {
+  // Miscellaneous
+  DeclaredProgramIdMismatch: 50,
+
   // Instructions.
   InstructionMissing: 100,
   InstructionFallbackNotFound: 101,
@@ -107,6 +110,12 @@ const LangErrorCode = {
 };
 
 const LangErrorMessage = new Map([
+  // Miscellaneous 
+  [
+    LangErrorCode.DeclaredProgramIdMismatch,
+    "The declared program id does not match the actual program id",
+  ],
+
   // Instructions.
   [
     LangErrorCode.InstructionMissing,

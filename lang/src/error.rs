@@ -16,6 +16,11 @@ pub const ERROR_CODE_OFFSET: u32 = 6000;
 /// by the [ERROR_CODE_OFFSET](crate::error::ERROR_CODE_OFFSET).
 #[error(offset = 0)]
 pub enum ErrorCode {
+    // Miscellaneous
+    /// 50 - The declared program id does not match actual program id
+    #[msg("The declared program id does not match the actual program id")]
+    DeclaredProgramIdMismatch = 50,
+
     // Instructions
     /// 100 - 8 byte instruction identifier not provided
     #[msg("8 byte instruction identifier not provided")]
