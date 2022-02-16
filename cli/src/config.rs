@@ -166,6 +166,7 @@ impl WithPath<Config> {
                 path.join("src/lib.rs"),
                 version,
                 self.features.seeds,
+                self.features.safety_checks,
             )?;
             r.push(Program {
                 lib_name,
@@ -259,6 +260,13 @@ pub struct Config {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct FeaturesConfig {
     pub seeds: bool,
+    #[serde(default = "default_safety_checks")]
+    pub safety_checks: bool,
+}
+
+// Anchor safety checks on by default
+fn default_safety_checks() -> bool {
+    true
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

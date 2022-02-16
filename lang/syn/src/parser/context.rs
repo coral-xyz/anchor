@@ -36,11 +36,9 @@ impl CrateContext {
     }
 
     pub fn parse(root: impl AsRef<Path>) -> Result<Self, anyhow::Error> {
-        let crate_context = CrateContext {
+        Ok(CrateContext {
             modules: ParsedModule::parse_recursive(root.as_ref())?,
-        };
-        crate_context.safety_checks()?;
-        Ok(crate_context)
+        })
     }
 
     // Perform Anchor safety checks on the parsed create
