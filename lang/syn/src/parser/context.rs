@@ -221,20 +221,15 @@ impl ParsedModule {
     fn unsafe_struct_fields(&self) -> impl Iterator<Item = &syn::Field> {
         self.structs()
             .flat_map(|s| &s.fields)
-            .filter_map(|f| match &f.ty {
+            .filter(|f| match &f.ty {
                 syn::Type::Path(syn::TypePath {
                     path: syn::Path { segments, .. },
                     ..
                 }) => {
-                    if segments.len() == 1 && segments[0].ident == "UncheckedAccount"
+                    segments.len() == 1 && segments[0].ident == "UncheckedAccount"
                         || segments[0].ident == "AccountInfo"
-                    {
-                        Some(f)
-                    } else {
-                        None
-                    }
                 }
-                _ => None,
+                _ => false,
             })
     }
 
