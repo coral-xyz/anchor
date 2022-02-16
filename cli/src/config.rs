@@ -257,16 +257,20 @@ pub struct Config {
     pub test: Option<Test>,
 }
 
-#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FeaturesConfig {
     pub seeds: bool,
-    #[serde(default = "default_safety_checks")]
     pub safety_checks: bool,
 }
 
-// Anchor safety checks on by default
-fn default_safety_checks() -> bool {
-    true
+impl Default for FeaturesConfig {
+    fn default() -> Self {
+        Self {
+            seeds: false,
+            // Anchor safety checks on by default
+            safety_checks: true,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
