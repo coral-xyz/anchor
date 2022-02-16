@@ -195,7 +195,7 @@ pub mod cfo {
         let expiry_ts = 1853942400; // 9/30/2028.
         let expiry_receiver = *ctx.accounts.officer.to_account_info().key;
         let locked_kind = {
-            let start_ts = 1633017600; // 9/30/2021.
+            let start_ts = 1633017600; // 9/30.21.0.
             let end_ts = 1822320000; // 9/30/2027.
             let period_count = 2191;
             RewardVendorKind::Locked {
@@ -322,14 +322,14 @@ pub struct CreateOfficer<'info> {
     #[account(
         init,
         seeds = [dex_program.key.as_ref()],
-        bump = bumps.bump,
+        bump,
         payer = authority,
     )]
     officer: Box<Account<'info, Officer>>,
     #[account(
         init,
         seeds = [b"token", officer.key().as_ref(), srm_mint.key().as_ref()],
-        bump = bumps.srm,
+        bump,
         payer = authority,
         token::mint = srm_mint,
         token::authority = officer,
@@ -338,7 +338,7 @@ pub struct CreateOfficer<'info> {
     #[account(
         init,
         seeds = [b"token", officer.key().as_ref(), usdc_mint.key().as_ref()],
-        bump = bumps.usdc,
+        bump,
         payer = authority,
         token::mint = usdc_mint,
         token::authority = officer,
@@ -347,7 +347,7 @@ pub struct CreateOfficer<'info> {
     #[account(
         init,
         seeds = [b"stake", officer.key().as_ref()],
-        bump = bumps.stake,
+        bump,
         payer = authority,
         token::mint = srm_mint,
         token::authority = officer,
@@ -356,12 +356,13 @@ pub struct CreateOfficer<'info> {
     #[account(
         init,
         seeds = [b"treasury", officer.key().as_ref()],
-        bump = bumps.treasury,
+        bump,
         payer = authority,
         token::mint = srm_mint,
         token::authority = officer,
     )]
     treasury: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
     authority: Signer<'info>,
     #[cfg_attr(
         not(feature = "test"),
@@ -390,9 +391,10 @@ pub struct AuthorizeMarket<'info> {
         init,
         payer = payer,
         seeds = [b"market-auth", officer.key().as_ref(), market.key.as_ref()],
-        bump = bump,
+        bump,
     )]
     market_auth: Account<'info, MarketAuth>,
+    #[account(mut)]
     payer: Signer<'info>,
     // Not read or written to so not validated.
     market: UncheckedAccount<'info>,
@@ -416,7 +418,7 @@ pub struct CreateOfficerToken<'info> {
     #[account(
         init,
         seeds = [b"token", officer.key().as_ref(), mint.key().as_ref()],
-        bump = bump,
+        bump,
         token::mint = mint,
         token::authority = officer,
         payer = payer,
@@ -437,7 +439,7 @@ pub struct CreateOfficerOpenOrders<'info> {
     #[account(
         init,
         seeds = [b"open-orders", officer.key().as_ref(), market.key.as_ref()],
-        bump = bump,
+        bump,
         space = 12 + size_of::<OpenOrders>(),
         payer = payer,
         owner = dex::ID,

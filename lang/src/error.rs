@@ -1,5 +1,8 @@
 use crate::error;
 
+/// The starting point for user defined error codes.
+pub const ERROR_CODE_OFFSET: u32 = 6000;
+
 /// Error codes that can be returned by internal framework code.
 ///
 /// - &gt;= 100 Instruction error codes
@@ -7,10 +10,11 @@ use crate::error;
 /// - &gt;= 2000 constraint error codes
 /// - &gt;= 3000 account error codes
 /// - = 4000 state error code
+/// - &gt;= 4100 misc error codes 
 /// - = 5000 deprecated error code
 ///
 /// The starting point for user-defined errors is defined
-/// by the [ERROR_CODE_OFFSET](crate::__private::ERROR_CODE_OFFSET).
+/// by the [ERROR_CODE_OFFSET](crate::error::ERROR_CODE_OFFSET).
 #[error(offset = 0)]
 pub enum ErrorCode {
     // Instructions
@@ -150,6 +154,11 @@ pub enum ErrorCode {
     /// 4000 - The given state account does not have the correct address
     #[msg("The given state account does not have the correct address")]
     StateInvalidAddress = 4000,
+
+    // Miscellaneous
+    /// 4100 - The declared program id does not match actual program id
+    #[msg("The declared program id does not match the actual program id")]
+    DeclaredProgramIdMismatch = 4100,
 
     // Deprecated
     /// 5000 - The API being used is deprecated and should no longer be used
