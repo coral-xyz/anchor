@@ -401,3 +401,155 @@ pub struct TestProgramIdConstraintUsingFindPda<'info> {
     #[account(seeds = [b"seed"], bump, seeds::program = crate::ID)]
     second: AccountInfo<'info>,
 }
+
+
+#[derive(Accounts)]
+pub struct TestConstraintToken<'info> {
+    #[account(
+        token::mint = mint, 
+        token::authority = payer
+    )] 
+    pub token: Account<'info, TokenAccount>,
+    pub mint: Account<'info, Mint>,
+    #[account(signer)]
+    pub payer: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+}
+#[derive(Accounts)]
+pub struct TestAuthorityConstraint<'info> {
+    #[account(
+        token::mint = mint, 
+        token::authority = fake_authority
+    )] 
+    pub token: Account<'info, TokenAccount>,
+    pub mint: Account<'info, Mint>,
+    #[account(signer)]
+    pub payer: AccountInfo<'info>,
+    pub fake_authority: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+}
+#[derive(Accounts)]
+pub struct TestOnlyAuthorityConstraint<'info> {
+    #[account(
+        token::authority = payer
+    )] 
+    pub token: Account<'info, TokenAccount>,
+    pub mint: Account<'info, Mint>,
+    #[account(signer)]
+    pub payer: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+}
+#[derive(Accounts)]
+pub struct TestOnlyMintConstraint<'info> {
+    #[account(
+        token::mint = mint, 
+    )] 
+    pub token: Account<'info, TokenAccount>,
+    pub mint: Account<'info, Mint>,
+    #[account(signer)]
+    pub payer: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(_decimals: u8)]
+pub struct TestMintConstraint<'info> {
+    #[account(
+        mint::decimals = _decimals, 
+        mint::authority = mint_authority, 
+        mint::freeze_authority = freeze_authority
+    )]
+    pub mint: Account<'info, Mint>,
+    #[account(signer)]
+    pub payer: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+    pub mint_authority: AccountInfo<'info>,
+    pub freeze_authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(_decimals: u8)]
+pub struct TestMintOnlyDecimalsConstraint<'info> {
+    #[account(
+        mint::decimals = _decimals,
+    )]
+    pub mint: Account<'info, Mint>,
+    #[account(signer)]
+    pub payer: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestMintAuthorityConstraint<'info> {
+    #[account(
+        mint::authority = mint_authority, 
+        mint::freeze_authority = freeze_authority
+    )]
+    pub mint: Account<'info, Mint>,
+    #[account(signer)]
+    pub payer: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+    pub mint_authority: AccountInfo<'info>,
+    pub freeze_authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestMintOneAuthorityConstraint<'info> {
+    #[account(
+        mint::authority = mint_authority,
+    )]
+    pub mint: Account<'info, Mint>,
+    #[account(signer)]
+    pub payer: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+    pub mint_authority: AccountInfo<'info>
+}
+
+
+#[derive(Accounts)]
+#[instruction(_decimals: u8)]
+pub struct TestMintMissMintAuthConstraint<'info> {
+    #[account(
+        mint::decimals = _decimals,
+        mint::freeze_authority = freeze_authority,
+    )]
+    pub mint: Account<'info, Mint>,
+    #[account(signer)]
+    pub payer: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+    pub freeze_authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestAssociatedToken<'info> {
+    #[account(
+        associated_token::mint = mint,
+        associated_token::authority = authority,
+    )]
+    pub token: Account<'info, TokenAccount>,
+    pub mint: Account<'info, Mint>,
+    pub payer: Signer<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub authority: AccountInfo<'info>,
+}
