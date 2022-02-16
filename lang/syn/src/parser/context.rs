@@ -53,14 +53,6 @@ impl CrateContext {
                         proc_macro2::TokenTree::Literal(s) => {
                             s.to_string().contains("SAFETY:") || s.to_string().contains("CHECK:")
                         }
-                        // Allow without doc comment if certain account constraints are present
-                        proc_macro2::TokenTree::Group(g) => {
-                            g.stream().into_iter().any(|token| match token {
-                                // TODO is it safe to skip in the case of init?
-                                proc_macro2::TokenTree::Ident(s) => s.to_string() == "init",
-                                _ => false,
-                            })
-                        }
                         _ => false,
                     })
                 });
