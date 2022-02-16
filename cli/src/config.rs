@@ -166,7 +166,7 @@ impl WithPath<Config> {
                 path.join("src/lib.rs"),
                 version,
                 self.features.seeds,
-                self.features.safety_checks,
+                false,
             )?;
             r.push(Program {
                 lib_name,
