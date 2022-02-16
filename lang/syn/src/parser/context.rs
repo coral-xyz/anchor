@@ -53,6 +53,16 @@ impl CrateContext {
                         proc_macro2::TokenTree::Literal(s) => {
                             s.to_string().contains("SAFETY:") || s.to_string().contains("CHECK:")
                         }
+                        proc_macro2::TokenTree::Group(g) => {
+                            g.stream().into_iter().any(|token| match token {
+                                proc_macro2::TokenTree::Ident(s) => {
+                                    // Allow PDAs and accounts which are being initialized without
+                                    // doc comments
+                                    s.to_string() == "seeds" || s.to_string() == "init"
+                                }
+                                _ => false,
+                            })
+                        }
                         _ => false,
                     })
                 });

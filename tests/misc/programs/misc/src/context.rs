@@ -72,7 +72,6 @@ pub struct TestInstructionConstraint<'info> {
         seeds = [b"my-seed", my_account.key.as_ref()],
         bump = nonce,
     )]
-    /// SAFETY:
     pub my_pda: AccountInfo<'info>,
     /// SAFETY:
     pub my_account: AccountInfo<'info>,
@@ -297,7 +296,6 @@ pub struct TestInitIfNeeded<'info> {
 #[derive(Accounts)]
 pub struct TestInitIfNeededChecksOwner<'info> {
     #[account(init_if_needed, payer = payer, space = 100, owner = *owner.key, seeds = [b"hello"], bump)]
-    /// SAFETY:
     pub data: UncheckedAccount<'info>,
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -310,7 +308,6 @@ pub struct TestInitIfNeededChecksOwner<'info> {
 #[instruction(seed_data: String)]
 pub struct TestInitIfNeededChecksSeeds<'info> {
     #[account(init_if_needed, payer = payer, space = 100, seeds = [seed_data.as_bytes()], bump)]
-    /// SAFETY:
     pub data: UncheckedAccount<'info>,
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -395,7 +392,6 @@ pub struct EnforceRentExempt<'info> {
 #[derive(Accounts)]
 pub struct InitDecreaseLamports<'info> {
     #[account(init, payer = user, space = 1000)]
-    /// SAFETY:
     pub data: AccountInfo<'info>,
     #[account(mut)]
     pub user: Signer<'info>,
@@ -418,11 +414,9 @@ pub struct TestProgramIdConstraint<'info> {
     // not a real associated token account
     // just deriving like this for testing purposes
     #[account(seeds = [b"seed"], bump = bump, seeds::program = anchor_spl::associated_token::ID)]
-    /// SAFETY:
     first: AccountInfo<'info>,
 
     #[account(seeds = [b"seed"], bump = second_bump, seeds::program = crate::ID)]
-    /// SAFETY:
     second: AccountInfo<'info>,
 }
 
@@ -431,11 +425,9 @@ pub struct TestProgramIdConstraintUsingFindPda<'info> {
     // not a real associated token account
     // just deriving like this for testing purposes
     #[account(seeds = [b"seed"], bump, seeds::program = anchor_spl::associated_token::ID)]
-    /// SAFETY:
     first: AccountInfo<'info>,
 
     #[account(seeds = [b"seed"], bump, seeds::program = crate::ID)]
-    /// SAFETY:
     second: AccountInfo<'info>,
 }
 
@@ -451,7 +443,6 @@ pub struct TestUnsafeFieldSafetyErrors<'info> {
         seeds = [b"my-seed", signer.key.as_ref()],
         bump
     )]
-    /// SAFETY:
     pub data_three: UncheckedAccount<'info>,
     /// SAFETY:
     pub data_four: UncheckedAccount<'info>,
