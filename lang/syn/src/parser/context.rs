@@ -64,7 +64,7 @@ impl CrateContext {
                         r#"
         {}:{}:{}
         Struct field "{}" is unsafe, but is not documented.
-        Please add a `/// SAFETY:` doc comment to the field enumerating potential security risks.
+        Please add a `/// SAFETY:` doc comment explaining why no checks through types are necessary.
         See https://book.anchor-lang.com/chapter_3/errors.html#safety-checks for more information.
                     "#,
                         ctx.file.canonicalize().unwrap().display(),
