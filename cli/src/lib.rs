@@ -260,8 +260,8 @@ pub enum Command {
         )]
         cargo_args: Vec<String>,
     },
-     /// Produces instruction visualization
-     Viz {
+    /// Produces instruction visualization
+    Viz {
         #[clap(short, long)]
         program_name: Option<String>,
         #[clap(
@@ -269,7 +269,7 @@ pub enum Command {
             takes_value = true,
             multiple_values = true,
             last = true
-            )]
+        )]
         viz_args: Vec<String>,
     },
 }
@@ -448,11 +448,7 @@ pub fn entry(opts: Opts) -> Result<()> {
         Command::Viz {
             program_name,
             viz_args,
-        } => visual(
-            &opts.cfg_override,
-            program_name,
-            viz_args
-        ),
+        } => visual(&opts.cfg_override, program_name, viz_args),
     }
 }
 
@@ -2873,14 +2869,12 @@ fn get_node_dns_option() -> Result<&'static str> {
     Ok(option)
 }
 
-
-#[allow(clippy::too_many_arguments,unused_variables)]
+#[allow(clippy::too_many_arguments, unused_variables)]
 fn visual(
     cfg_override: &ConfigOverride,
     program_name: Option<String>,
     viz_args: Vec<String>,
 ) -> Result<()> {
-
     let cargo = Manifest::discover()?.unwrap();
     let version = cargo.version();
 
@@ -2889,30 +2883,35 @@ fn visual(
     let workspace_dir = cfg.path().parent().unwrap();
     let extracted_idl = extract_idl(&cfg, "src/lib.rs");
 
-
-
     let idl;
     if extracted_idl.is_ok() {
         // this works if you are in your programs/YOUR_program directory, not from project root dir
-        idl = extracted_idl
-            .unwrap()
-            .unwrap();
-    }else {
-        if program_name.is_none(){
-            let stem = workspace_dir.file_stem().unwrap().to_os_string().to_str().expect("invalid workspace").to_string();
+        idl = extracted_idl.unwrap().unwrap();
+    } else {
+        if program_name.is_none() {
+            let stem = workspace_dir
+                .file_stem()
+                .unwrap()
+                .to_os_string()
+                .to_str()
+                .expect("invalid workspace")
+                .to_string();
             idl = extract_idl(&cfg, &format!("programs/{}/src/lib.rs", stem))
                 .expect(&format!("\n\n\nno program named {}.\nyour ./programs/PROGRAM name must not match your root anchor program name.\ncd into your program's directory or try anchor viz -p PROGRAM\n\n\n",stem))
                 .unwrap();
-        }else {
+        } else {
             idl = extract_idl(&cfg, &format!("programs/{}/src/lib.rs", program_name.as_ref().unwrap()))
                 .expect(&format!("\n\n\nno program named {}.\ncd into your program's directory or try anchor viz -p PROGRAM again\n\n\n", program_name.as_ref().unwrap()))
                 .unwrap();
         }
     }
 
-    let viz_out : String = workspace_dir.join(format!("{}.png", idl.name)).to_str().unwrap().to_string();
+    let viz_out: String = workspace_dir
+        .join(format!("{}.png", idl.name))
+        .to_str()
+        .unwrap()
+        .to_string();
 
-    
     // Generate visualization
     viz::visualize(idl, viz_args, &viz_out);
 
