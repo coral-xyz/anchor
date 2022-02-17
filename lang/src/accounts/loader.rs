@@ -166,7 +166,7 @@ impl<'info, T: ZeroCopy> Accounts<'info> for Loader<'info, T> {
 #[allow(deprecated)]
 impl<'info, T: ZeroCopy> AccountsExit<'info> for Loader<'info, T> {
     // The account *cannot* be loaded when this is called.
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
+    fn exit(&self, _program_id: &Pubkey) -> AnchorResult<()> {
         let mut data = self.acc_info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
         let mut cursor = std::io::Cursor::new(dst);

@@ -51,14 +51,14 @@ use std::ops::DerefMut;
 /// pub mod bar {
 ///     use super::*;
 ///
-///     pub fn create_bar(ctx: Context<CreateBar>, data: u64) -> ProgramResult {
+///     pub fn create_bar(ctx: Context<CreateBar>, data: u64) -> AnchorResult<()> {
 ///         let bar = &mut ctx.accounts.bar.load_init()?;
 ///         bar.authority = ctx.accounts.authority.key();
 ///         bar.data = data;
 ///         Ok(())
 ///     }
 ///
-///     pub fn update_bar(ctx: Context<UpdateBar>, data: u64) -> ProgramResult {
+///     pub fn update_bar(ctx: Context<UpdateBar>, data: u64) -> AnchorResult<()> {
 ///         (*ctx.accounts.bar.load_mut()?).data = data;
 ///         Ok(())
 ///     }
@@ -223,7 +223,7 @@ impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
 
 impl<'info, T: ZeroCopy + Owner> AccountsExit<'info> for AccountLoader<'info, T> {
     // The account *cannot* be loaded when this is called.
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
+    fn exit(&self, _program_id: &Pubkey) -> AnchorResult<()> {
         let mut data = self.acc_info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
         let mut cursor = std::io::Cursor::new(dst);

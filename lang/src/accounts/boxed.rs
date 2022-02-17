@@ -15,7 +15,7 @@
 
 use crate::{Accounts, AccountsClose, AccountsExit, AnchorResult, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
-use solana_program::entrypoint::ProgramResult;
+use solana_program::entrypoint::;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use std::collections::BTreeMap;
@@ -33,7 +33,7 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Box<T> {
 }
 
 impl<'info, T: AccountsExit<'info>> AccountsExit<'info> for Box<T> {
-    fn exit(&self, program_id: &Pubkey) -> ProgramResult {
+    fn exit(&self, program_id: &Pubkey) -> AnchorResult<()> {
         T::exit(Deref::deref(self), program_id)
     }
 }

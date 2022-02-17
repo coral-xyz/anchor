@@ -27,7 +27,7 @@ use std::ops::{Deref, DerefMut};
 ///     pub clock: Sysvar<'info, Clock>
 /// }
 /// // BETTER - via syscall in the instruction function
-/// fn better(ctx: Context<Better>) -> ProgramResult {
+/// fn better(ctx: Context<Better>) -> AnchorResult<()> {
 ///     let clock = Clock::get()?;
 /// }
 /// ```

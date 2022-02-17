@@ -148,7 +148,7 @@ where
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info>
     for ProgramState<'info, T>
 {
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
+    fn exit(&self, _program_id: &Pubkey) -> AnchorResult<()> {
         let info = self.to_account_info();
         let mut data = info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;

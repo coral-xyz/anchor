@@ -43,7 +43,7 @@ use std::ops::{Deref, DerefMut};
 /// #[program]
 /// mod hello_anchor {
 ///     use super::*;
-///     pub fn set_data(ctx: Context<SetData>, data: u64) -> ProgramResult {
+///     pub fn set_data(ctx: Context<SetData>, data: u64) -> AnchorResult<()> {
 ///         if (*ctx.accounts.auth_account).authorized {
 ///             (*ctx.accounts.my_account).data = data;
 ///         }
@@ -160,7 +160,7 @@ use std::ops::{Deref, DerefMut};
 ///     pub fn set_initial_admin(
 ///         ctx: Context<SetInitialAdmin>,
 ///         admin_key: Pubkey
-///     ) -> ProgramResult {
+///     ) -> AnchorResult<()> {
 ///         ctx.accounts.admin_settings.admin_key = admin_key;
 ///         Ok(())
 ///     }
@@ -273,7 +273,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
 
     /// Reloads the account from storage. This is useful, for example, when
     /// observing side effects after CPI.
-    pub fn reload(&mut self) -> ProgramResult {
+    pub fn reload(&mut self) -> AnchorResult<()> {
         let mut data: &[u8] = &self.info.try_borrow_data()?;
         self.account = T::try_deserialize(&mut data)?;
         Ok(())
@@ -287,7 +287,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
     ///
     /// Instead of this:
     /// ```ignore
-    /// pub fn new_user(ctx: Context<CreateUser>, new_user:User) -> ProgramResult {
+    /// pub fn new_user(ctx: Context<CreateUser>, new_user:User) -> AnchorResult<()> {
     ///     (*ctx.accounts.user_to_create).name = new_user.name;
     ///     (*ctx.accounts.user_to_create).age = new_user.age;
     ///     (*ctx.accounts.user_to_create).address = new_user.address;
@@ -295,7 +295,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
     /// ```
     /// You can do this:
     /// ```ignore
-    /// pub fn new_user(ctx: Context<CreateUser>, new_user:User) -> ProgramResult {
+    /// pub fn new_user(ctx: Context<CreateUser>, new_user:User) -> AnchorResult<()> {
     ///     ctx.accounts.user_to_create.set_inner(new_user);
     /// }
     /// ```
@@ -328,7 +328,7 @@ where
 impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsExit<'info>
     for Account<'info, T>
 {
-    fn exit(&self, program_id: &Pubkey) -> ProgramResult {
+    fn exit(&self, program_id: &Pubkey) -> AnchorResult<()> {
         // Only persist if the owner is the current program.
         if &T::owner() == program_id {
             let info = self.to_account_info();
