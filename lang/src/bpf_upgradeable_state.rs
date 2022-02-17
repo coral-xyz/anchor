@@ -40,10 +40,7 @@ impl AccountDeserialize for ProgramData {
 }
 
 impl AccountSerialize for ProgramData {
-    fn try_serialize<W: std::io::Write>(
-        &self,
-        _writer: &mut W,
-    ) -> Result<(), solana_program::program_error::ProgramError> {
+    fn try_serialize<W: std::io::Write>(&self, _writer: &mut W) -> AnchorResult<()> {
         // no-op
         Ok(())
     }
@@ -62,7 +59,7 @@ impl Owner for UpgradeableLoaderState {
 }
 
 impl AccountSerialize for UpgradeableLoaderState {
-    fn try_serialize<W: std::io::Write>(&self, _writer: &mut W) -> Result<(), ProgramError> {
+    fn try_serialize<W: std::io::Write>(&self, _writer: &mut W) -> AnchorResult<()> {
         // no-op
         Ok(())
     }

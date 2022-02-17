@@ -148,7 +148,7 @@ where
 /// [`#[account]`](./attr.account.html) attribute.
 pub trait AccountSerialize {
     /// Serializes the account data into `writer`.
-    fn try_serialize<W: Write>(&self, _writer: &mut W) -> Result<(), ProgramError> {
+    fn try_serialize<W: Write>(&self, _writer: &mut W) -> AnchorResult<()> {
         Ok(())
     }
 }

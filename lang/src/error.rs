@@ -190,11 +190,11 @@ impl From<ProgramError> for Error {
 #[derive(Debug)]
 pub struct AnchorError {
     // the program the error came from
-    program_id: Option<Pubkey>,
-    error_code_string: &'static str,
-    error_code_number: u32,
-    error_msg: &'static str,
-    source: Source,
+    pub program_id: Option<Pubkey>,
+    pub error_code_string: String,
+    pub error_code_number: u32,
+    pub error_msg: String,
+    pub source: Source,
 }
 
 impl std::convert::From<Error> for anchor_lang::solana_program::program_error::ProgramError {
@@ -216,6 +216,6 @@ impl std::convert::From<Error> for anchor_lang::solana_program::program_error::P
 
 #[derive(Debug)]
 pub struct Source {
-    filename: &'static str,
-    line: u32,
+    pub filename: &'static str,
+    pub line: u32,
 }

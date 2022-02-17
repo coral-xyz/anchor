@@ -175,7 +175,7 @@ pub fn account(
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountSerialize for #account_name #type_gen #where_clause {
-                    fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> std::result::Result<(), ProgramError> {
+                    fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> AnchorResult<()> {
                         if writer.write_all(&#discriminator).is_err() {
                             return anchor_lang::anchor_attribute_error::error!(anchor_lang::error::ErrorCode::AccountDidNotSerialize);
                         }
@@ -202,10 +202,8 @@ pub fn account(
 
                     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::AnchorResult<Self> {
                         let mut data: &[u8] = &buf[8..];
-                        if AnchorDeserialize::deserialize(&mut data).is_err() {
-                            return anchor_lang::anchor_attribute_error::error!(anchor_lang::error::ErrorCode::AccountDidNotDeserialize);
-                        }
-                        Ok(())
+                        let temp = AnchorDeserialize::deserialize(&mut data);
+                        temp.or_else(|_| anchor_lang::anchor_attribute_error::error!(anchor_lang::error::ErrorCode::AccountDidNotDeserialize))
                     }
                 }
 
