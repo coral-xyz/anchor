@@ -58,7 +58,7 @@ impl CrateContext {
                                 proc_macro2::TokenTree::Ident(s) => {
                                     // Allow PDAs and accounts which are being initialized without
                                     // doc comments
-                                    s.to_string() == "seeds" || s.to_string() == "init"
+                                    s == "seeds" || s == "init"
                                 }
                                 _ => false,
                             })
