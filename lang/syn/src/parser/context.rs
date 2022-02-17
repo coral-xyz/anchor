@@ -50,9 +50,7 @@ impl CrateContext {
                 let is_documented_or_safe = unsafe_field.attrs.iter().any(|attr| {
                     attr.tokens.clone().into_iter().any(|token| match token {
                         // Check for comments containing SAFETY: or CHECK:
-                        proc_macro2::TokenTree::Literal(s) => {
-                            s.to_string().contains("SAFETY:") || s.to_string().contains("CHECK:")
-                        }
+                        proc_macro2::TokenTree::Literal(s) => s.to_string().contains("CHECK"),
                         proc_macro2::TokenTree::Group(g) => {
                             g.stream().into_iter().any(|token| match token {
                                 proc_macro2::TokenTree::Ident(s) => {
@@ -74,7 +72,7 @@ impl CrateContext {
                         r#"
         {}:{}:{}
         Struct field "{}" is unsafe, but is not documented.
-        Please add a `/// SAFETY:` doc comment explaining why no checks through types are necessary.
+        Please add a `/// CHECK:` doc comment explaining why no checks through types are necessary.
         See https://book.anchor-lang.com/chapter_3/the_accounts_struct.html#safety-checks for more information.
                     "#,
                         ctx.file.canonicalize().unwrap().display(),

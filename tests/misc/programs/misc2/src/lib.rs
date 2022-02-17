@@ -33,6 +33,6 @@ pub mod misc2 {
 #[derive(Accounts)]
 pub struct Auth<'info> {
     #[account(signer)]
-    /// SAFETY:
+    /// CHECK:
     pub authority: AccountInfo<'info>,
 }

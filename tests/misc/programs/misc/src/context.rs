@@ -28,7 +28,7 @@ pub struct TestTokenSeedsInit<'info> {
     )]
     pub my_pda: Account<'info, TokenAccount>,
     #[account(mut)]
-    /// SAFETY:
+    /// CHECK:
     pub authority: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
@@ -61,7 +61,7 @@ pub struct TestValidateAssociatedToken<'info> {
     )]
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
-    /// SAFETY:
+    /// CHECK:
     pub wallet: AccountInfo<'info>,
 }
 
@@ -73,7 +73,7 @@ pub struct TestInstructionConstraint<'info> {
         bump = nonce,
     )]
     pub my_pda: AccountInfo<'info>,
-    /// SAFETY:
+    /// CHECK:
     pub my_account: AccountInfo<'info>,
 }
 
@@ -89,7 +89,7 @@ pub struct TestPdaInit<'info> {
     pub my_pda: Account<'info, DataU16>,
     #[account(mut)]
     pub my_payer: Signer<'info>,
-    /// SAFETY:
+    /// CHECK:
     pub foo: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
 }
@@ -116,7 +116,7 @@ pub struct TestPdaMutZeroCopy<'info> {
         bump = my_pda.load()?.bump,
     )]
     pub my_pda: Loader<'info, DataZeroCopy>,
-    /// SAFETY:
+    /// CHECK:
     pub my_payer: AccountInfo<'info>,
 }
 
@@ -140,35 +140,35 @@ pub struct InitializeSkipRentExempt<'info> {
 
 #[derive(Accounts)]
 pub struct InitializeNoRentExempt<'info> {
-    /// SAFETY:
+    /// CHECK:
     pub data: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct TestOwner<'info> {
     #[account(owner = *misc.key)]
-    /// SAFETY:
+    /// CHECK:
     pub data: AccountInfo<'info>,
-    /// SAFETY:
+    /// CHECK:
     pub misc: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct TestExecutable<'info> {
     #[account(executable)]
-    /// SAFETY:
+    /// CHECK:
     pub program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct TestStateCpi<'info> {
     #[account(signer)]
-    /// SAFETY:
+    /// CHECK:
     pub authority: AccountInfo<'info>,
     #[account(mut, state = misc2_program)]
     pub cpi_state: CpiState<'info, Misc2State>,
     #[account(executable)]
-    /// SAFETY:
+    /// CHECK:
     pub misc2_program: AccountInfo<'info>,
 }
 
@@ -176,7 +176,7 @@ pub struct TestStateCpi<'info> {
 pub struct TestClose<'info> {
     #[account(mut, close = sol_dest)]
     pub data: Account<'info, Data>,
-    /// SAFETY:
+    /// CHECK:
     sol_dest: AccountInfo<'info>,
 }
 
@@ -271,7 +271,7 @@ pub struct TestInitWithEmptySeeds<'info> {
 #[derive(Accounts)]
 pub struct TestEmptySeedsConstraint<'info> {
     #[account(seeds = [], bump)]
-    /// SAFETY:
+    /// CHECK:
     pub pda: AccountInfo<'info>,
 }
 
@@ -300,7 +300,7 @@ pub struct TestInitIfNeededChecksOwner<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
-    /// SAFETY:
+    /// CHECK:
     pub owner: AccountInfo<'info>,
 }
 
@@ -324,9 +324,9 @@ pub struct TestInitMintIfNeeded<'info> {
     pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
-    /// SAFETY:
+    /// CHECK:
     pub mint_authority: AccountInfo<'info>,
-    /// SAFETY:
+    /// CHECK:
     pub freeze_authority: AccountInfo<'info>,
 }
 
@@ -340,7 +340,7 @@ pub struct TestInitTokenIfNeeded<'info> {
     pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
-    /// SAFETY:
+    /// CHECK:
     pub authority: AccountInfo<'info>,
 }
 
@@ -360,7 +360,7 @@ pub struct TestInitAssociatedTokenIfNeeded<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-    /// SAFETY:
+    /// CHECK:
     pub authority: AccountInfo<'info>,
 }
 
@@ -378,14 +378,14 @@ pub struct TestConstArraySize<'info> {
 
 #[derive(Accounts)]
 pub struct NoRentExempt<'info> {
-    /// SAFETY:
+    /// CHECK:
     pub data: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct EnforceRentExempt<'info> {
     #[account(rent_exempt = enforce)]
-    /// SAFETY:
+    /// CHECK:
     pub data: AccountInfo<'info>,
 }
 
@@ -401,7 +401,7 @@ pub struct InitDecreaseLamports<'info> {
 #[derive(Accounts)]
 pub struct InitIfNeededChecksRentExemption<'info> {
     #[account(init_if_needed, payer = user, space = 1000)]
-    /// SAFETY:
+    /// CHECK:
     pub data: AccountInfo<'info>,
     #[account(mut)]
     pub user: Signer<'info>,
@@ -434,17 +434,17 @@ pub struct TestProgramIdConstraintUsingFindPda<'info> {
 #[derive(Accounts)]
 pub struct TestUnsafeFieldSafetyErrors<'info> {
     #[doc = "test"]
-    /// SAFETY:
+    /// CHECK:
     pub data: UncheckedAccount<'info>,
     #[account(mut)]
-    /// SAFETY:
+    /// CHECK:
     pub data_two: UncheckedAccount<'info>,
     #[account(
         seeds = [b"my-seed", signer.key.as_ref()],
         bump
     )]
     pub data_three: UncheckedAccount<'info>,
-    /// SAFETY:
+    /// CHECK:
     pub data_four: UncheckedAccount<'info>,
     pub signer: Signer<'info>,
     pub system_program: Program<'info, System>,
