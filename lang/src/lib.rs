@@ -25,7 +25,6 @@ extern crate self as anchor_lang;
 
 use bytemuck::{Pod, Zeroable};
 use solana_program::account_info::AccountInfo;
-use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
@@ -91,7 +90,7 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
 /// should be done here.
 pub trait AccountsExit<'info>: ToAccountMetas + ToAccountInfos<'info> {
     /// `program_id` is the currently executing program.
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
+    fn exit(&self, _program_id: &Pubkey) -> AnchorResult<()> {
         // no-op
         Ok(())
     }
@@ -246,7 +245,7 @@ pub mod prelude {
         require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, state, zero_copy,
         AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AnchorDeserialize,
         AnchorSerialize, Id, Key, Owner, ProgramData, System, ToAccountInfo, ToAccountInfos,
-        ToAccountMetas,
+        ToAccountMetas, AnchorResult
     };
 
     pub use borsh;
@@ -328,7 +327,7 @@ pub mod __private {
 /// # Example
 /// ```ignore
 /// // Instruction function
-/// pub fn set_data(ctx: Context<SetData>, data: u64) -> ProgramResult {
+/// pub fn set_data(ctx: Context<SetData>, data: u64) -> AnchorResult {
 ///     require!(ctx.accounts.data.mutation_allowed, MyError::MutationForbidden);
 ///     ctx.accounts.data.data = data;
 ///     Ok(())

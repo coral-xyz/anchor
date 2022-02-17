@@ -93,7 +93,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 accounts: &mut &[anchor_lang::solana_program::account_info::AccountInfo<'info>],
                 ix_data: &[u8],
                 __bumps: &mut std::collections::BTreeMap<String, u8>,
-            ) -> std::result::Result<Self, anchor_lang::solana_program::program_error::ProgramError> {
+            ) -> anchor_lang::AnchorResult<Self> {
                 // Deserialize instruction, if declared.
                 #ix_de
                 // Deserialize each account.
