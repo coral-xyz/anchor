@@ -212,7 +212,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
                             // Deserialize instruction data.
                             let ix = instruction::state::#ix_name::deserialize(&mut &ix_data[..])
-                                .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
+                                .or_else(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                             let instruction::state::#variant_arm = ix;
 
                             let mut __bumps = std::collections::BTreeMap::new();
@@ -291,7 +291,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
                             // Deserialize instruction data.
                             let ix = instruction::state::#ix_name::deserialize(&mut &ix_data[..])
-                                .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
+                                .or_else(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                             let instruction::state::#variant_arm = ix;
 
                             let mut __bumps = std::collections::BTreeMap::new();
@@ -399,7 +399,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
                                     // Deserialize instruction.
                                     let ix = instruction::state::#ix_name::deserialize(&mut &ix_data[..])
-                                        .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
+                                        .or_else(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                                     let instruction::state::#variant_arm = ix;
 
                                     // Bump collector.
@@ -568,7 +568,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                 let deserialize_instruction = quote! {
                                     #args_struct
                                     let ix = Args::deserialize(&mut &ix_data[..])
-                                        .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
+                                        .or_else(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                                     let Args {
                                         #(#ix_arg_names),*
                                     } = ix;

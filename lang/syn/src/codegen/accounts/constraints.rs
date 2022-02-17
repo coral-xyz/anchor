@@ -630,7 +630,7 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
                 let __pda_address = Pubkey::create_program_address(
                     &[#maybe_seeds_plus_comma &[#b][..]],
                     &#deriving_program_id,
-                ).map_err(|_| anchor_lang::error::anchor_lang::error::ErrorCode::ConstraintSeeds)?;
+                ).or_else(|_| anchor_lang::error::anchor_lang::error::ErrorCode::ConstraintSeeds)?;
             },
         };
         quote! {
