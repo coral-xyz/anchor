@@ -25,10 +25,10 @@ pub struct E4 {
 
 #[event]
 pub struct E5 {
-    pub data: [10; MAX_EVENT_SIZE];
+    pub data: [u8; MAX_EVENT_SIZE],
 }
 
 #[event]
 pub struct E6 {
-    pub data: [10; MAX_EVENT_SIZE_U8 as usize];
+    pub data: [u8; MAX_EVENT_SIZE_U8 as usize],
 }
