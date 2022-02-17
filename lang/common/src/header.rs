@@ -41,7 +41,7 @@ pub fn read_data_mut(account_data: &mut [u8]) -> &mut [u8] {
 pub fn write_discriminator(account_data: &mut [u8], discriminator: &[u8]) {
     #[cfg(feature = "deprecated-layout")]
     {
-        let mut cursor = Cursor::new(account_dst);
+        let mut cursor = Cursor::new(account_data);
         cursor.write_all(discriminator).unwrap();
     }
     #[cfg(not(feature = "deprecated-layout"))]

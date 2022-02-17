@@ -7,6 +7,7 @@ import { Event, EventData } from "../../program/event.js";
 import { IdlCoder } from "./idl.js";
 import { EventCoder } from "../index.js";
 import * as features from "../../utils/features";
+import { Features } from "../../utils/features";
 
 export class BorshEventCoder implements EventCoder {
   /**
@@ -84,7 +85,7 @@ export function eventDiscriminator(name: string): Buffer {
 
 class EventHeader {
   public static parseDiscriminator(data: Buffer): Buffer {
-    if (features.isSet("deprecated-layout")) {
+    if (features.isSet(Features.DeprecatedLayout)) {
       return data.slice(0, 8);
     } else {
       return data.slice(0, 4);
@@ -92,7 +93,7 @@ class EventHeader {
   }
 
   public static size(): number {
-    if (features.isSet("deprecated-layout")) {
+    if (features.isSet(Features.DeprecatedLayout)) {
       return 8;
     } else {
       return 4;
@@ -100,7 +101,7 @@ class EventHeader {
   }
 
   public static discriminator(name: string): Buffer {
-    if (features.isSet("deprecated-layout")) {
+    if (features.isSet(Features.DeprecatedLayout)) {
       return Buffer.from(sha256.digest(`event:${name}`)).slice(0, 8);
     } else {
       return Buffer.from(sha256.digest(`event:${name}`)).slice(0, 4);

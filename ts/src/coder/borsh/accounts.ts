@@ -9,6 +9,7 @@ import { IdlCoder } from "./idl.js";
 import { AccountsCoder } from "../index.js";
 import { accountSize } from "../common.js";
 import * as features from "../../utils/features";
+import { Features } from "../../utils/features";
 
 /**
  * Number of bytes of the account header.
@@ -103,7 +104,7 @@ export class BorshAccountHeader {
    * Returns the default account header for an account with the given name.
    */
   public static encode(accountName: string, nameSpace?: string): Buffer {
-    if (features.isSet("deprecated-layout")) {
+    if (features.isSet(Features.DeprecatedLayout)) {
       return BorshAccountHeader.discriminator(accountName, nameSpace);
     } else {
       return Buffer.concat([
@@ -129,7 +130,7 @@ export class BorshAccountHeader {
   }
 
   public static discriminatorSize(): number {
-    return features.isSet("deprecated-layout")
+    return features.isSet(Features.DeprecatedLayout)
       ? DEPRECATED_ACCOUNT_DISCRIMINATOR_SIZE
       : ACCOUNT_DISCRIMINATOR_SIZE;
   }
@@ -138,7 +139,7 @@ export class BorshAccountHeader {
    * Returns the account data index at which the discriminator starts.
    */
   public static discriminatorOffset(): number {
-    if (features.isSet("deprecated-layout")) {
+    if (features.isSet(Features.DeprecatedLayout)) {
       return 0;
     } else {
       return 2;
@@ -156,7 +157,7 @@ export class BorshAccountHeader {
    * Returns the discriminator from the given account data.
    */
   public static parseDiscriminator(data: Buffer): Buffer {
-    if (features.isSet("deprecated-layout")) {
+    if (features.isSet(Features.DeprecatedLayout)) {
       return data.slice(0, 8);
     } else {
       return data.slice(2, 6);
