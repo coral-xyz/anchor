@@ -262,6 +262,8 @@ jobs:
             path: tests/events
           - cmd: cd tests/cashiers-check && anchor test
             path: tests/cashiers-check
+          - cmd: cd tests/declare-id && anchor test
+            path: tests/declare-id
           - cmd: cd tests/typescript && anchor test
             path: tests/typescript
           - cmd: cd tests/zero-copy && anchor test && cd programs/zero-copy && cargo test-bpf
@@ -274,6 +276,8 @@ jobs:
             path: tests/cfo
           - cmd: cd tests/auction-house && yarn && anchor test
             path: tests/auction-house
+          - cmd: cd tests/floats && yarn && anchor test
+            path: tests/floats
     steps:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup/

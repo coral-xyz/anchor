@@ -11,6 +11,11 @@ incremented for features.
 
 ## [Unreleased]
 
+### Features
+
+* lang: add check that declared id == program id ([#1451](https://github.com/project-serum/anchor/pull/1451))
+* ts: Added float types support ([#1425](https://github.com/project-serum/anchor/pull/1425)).
+
 ### Fixes
 
 * ts: Allow nullable types for `Option<T>` mapped types ([#1428](https://github.com/project-serum/anchor/pull/1428)).
@@ -18,6 +23,7 @@ incremented for features.
 ### Breaking
 
 * lang: Enforce that the payer for an init-ed account be marked `mut` ([#1271](https://github.com/project-serum/anchor/pull/1271)).
+* lang: All error-related code is now in the error module ([#1426](https://github.com/project-serum/anchor/pull/1426)).
 * lang: Require doc comments when using AccountInfo or UncheckedAccount types ([#1452](https://github.com/project-serum/anchor/pull/1452)).
 
 ## [0.21.0] - 2022-02-07
