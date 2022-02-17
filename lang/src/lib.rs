@@ -328,7 +328,7 @@ pub mod __private {
 /// # Example
 /// ```ignore
 /// // Instruction function
-/// pub fn set_data(ctx: Context<SetData>, data: u64) -> AnchorResult {
+/// pub fn set_data(ctx: Context<SetData>, data: u64) -> AnchorResult<()> {
 ///     require!(ctx.accounts.data.mutation_allowed, MyError::MutationForbidden);
 ///     ctx.accounts.data.data = data;
 ///     Ok(())

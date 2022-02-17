@@ -200,7 +200,7 @@ pub fn interface(
                 pub fn #method_name<'a,'b, 'c, 'info, T: anchor_lang::Accounts<'info> + anchor_lang::ToAccountMetas + anchor_lang::ToAccountInfos<'info>>(
                     ctx: anchor_lang::context::CpiContext<'a, 'b, 'c, 'info, T>,
                     #(#args),*
-                ) -> anchor_lang::AnchorResult {
+                ) -> anchor_lang::AnchorResult<()> {
                     #args_struct
 
                     let ix = {
