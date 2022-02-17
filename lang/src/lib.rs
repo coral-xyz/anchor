@@ -276,6 +276,7 @@ pub mod __private {
     /// The discriminator anchor uses to mark an account as closed.
     pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
 
+    use crate::AnchorResult;
     pub use crate::ctor::Ctor;
 
     pub use anchor_attribute_account::ZeroCopyAccessor;
@@ -298,7 +299,7 @@ pub mod __private {
     // data in it. This trait is currently only used for `#[state]` accounts.
     #[doc(hidden)]
     pub trait AccountSize {
-        fn size(&self) -> Result<u64, ProgramError>;
+        fn size(&self) -> AnchorResult<u64>;
     }
 
     // Very experimental trait.
