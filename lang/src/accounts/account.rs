@@ -3,7 +3,6 @@
 use crate::error::ErrorCode;
 use crate::*;
 use solana_program::account_info::AccountInfo;
-use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use std::collections::BTreeMap;

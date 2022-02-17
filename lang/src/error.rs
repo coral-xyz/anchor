@@ -1,7 +1,5 @@
 use solana_program::{program_error::ProgramError, pubkey::Pubkey};
 
-use crate::error;
-
 use anchor_attribute_error::error_codes;
 
 /// The starting point for user defined error codes.
@@ -201,11 +199,11 @@ impl std::convert::From<Error> for anchor_lang::solana_program::program_error::P
     fn from(e: Error) -> anchor_lang::solana_program::program_error::ProgramError {
         match e {
             Error::AnchorError(AnchorError {
-                program_id,
-                error_code_string,
+                program_id: _,
+                error_code_string: _,
                 error_code_number,
-                error_msg,
-                source,
+                error_msg: _,
+                source: _,
             }) => {
                 anchor_lang::solana_program::program_error::ProgramError::Custom(error_code_number)
             }

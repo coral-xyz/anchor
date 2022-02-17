@@ -5,7 +5,6 @@ use crate::{
 };
 use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;
-use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use std::cell::{Ref, RefMut};

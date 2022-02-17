@@ -26,7 +26,6 @@ extern crate self as anchor_lang;
 use bytemuck::{Pod, Zeroable};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
-use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::collections::BTreeMap;
 use std::io::Write;
@@ -247,9 +246,10 @@ pub mod prelude {
         AnchorResult, AnchorSerialize, Id, Key, Owner, ProgramData, System, ToAccountInfo,
         ToAccountInfos, ToAccountMetas,
     };
-
+    pub use anchor_attribute_error;
     pub use anchor_attribute_error::error;
     pub use borsh;
+    pub use error::*;
     pub use solana_program::account_info::{next_account_info, AccountInfo};
     pub use solana_program::entrypoint::ProgramResult;
     pub use solana_program::instruction::AccountMeta;
