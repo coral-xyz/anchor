@@ -6,7 +6,10 @@ use quote::quote;
 use anchor_syn::codegen::error as error_codegen;
 use anchor_syn::parser::error as error_parser;
 use anchor_syn::ErrorArgs;
-use syn::{parse_macro_input, Expr, parse::{Result as ParseResult, Parse}, Token};
+use syn::{
+    parse::{Parse, Result as ParseResult},
+    parse_macro_input, Expr, Token,
+};
 
 /// Generates `Error` and `type Result<T> = Result<T, Error>` types to be
 /// used as return types from Anchor instruction handlers. Importantly, the
@@ -71,16 +74,17 @@ pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
     let error_code = input.error_code;
     let error_msg_inputs = input.error_msg_inputs;
     let error_msg_inputs = if error_msg_inputs.is_empty() {
-            quote! {
-                #error_code.to_string()
-            }
+        quote! {
+            #error_code.to_string()
+        }
     } else {
         quote! {
             format!(#error_code.to_string(), #(#error_msg_inputs),*)
         }
     };
     quote! {
-            Err(anchor_lang::error::AnchorError {
+            Err(anchor_lang::error::Error::from(
+                anchor_lang::error::AnchorError {
                 program_id: None,
                 error_code_string: &format!("{:?}", #error_code), // TODO: dont use format here
                 error_code_number: #error_code.into(),
@@ -89,13 +93,14 @@ pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
                     filename: #file,
                     line: #line
                 }
-            }.into())
-    }.into()
+            }))
+    }
+    .into()
 }
 
 struct ErrorInput {
     error_code: Expr,
-    error_msg_inputs: Vec<Expr>
+    error_msg_inputs: Vec<Expr>,
 }
 
 impl Parse for ErrorInput {
@@ -107,7 +112,7 @@ impl Parse for ErrorInput {
         }
         Ok(Self {
             error_code,
-            error_msg_inputs
+            error_msg_inputs,
         })
     }
 }
