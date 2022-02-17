@@ -59,6 +59,8 @@ pub use anchor_derive_accounts::Accounts;
 pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorSerialize};
 pub use solana_program;
 
+pub type AnchorResult<T> = Result<T, error::Error>;
+
 /// A data structure of validated accounts that can be deserialized from the
 /// input to a Solana program. Implementations of this trait should perform any
 /// and all requisite constraint checks on accounts to ensure the accounts

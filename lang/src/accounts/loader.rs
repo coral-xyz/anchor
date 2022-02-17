@@ -1,6 +1,6 @@
-use crate::error::ErrorCode;
+use crate::error::{ErrorCode, self};
 use crate::{
-    Accounts, AccountsClose, AccountsExit, ToAccountInfo, ToAccountInfos, ToAccountMetas, ZeroCopy,
+    Accounts, AccountsClose, AccountsExit, ToAccountInfo, ToAccountInfos, ToAccountMetas, ZeroCopy, AnchorResult,
 };
 use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;
@@ -57,9 +57,9 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
     pub fn try_from(
         program_id: &Pubkey,
         acc_info: &AccountInfo<'info>,
-    ) -> Result<Loader<'info, T>, ProgramError> {
+    ) -> AnchorResult<Loader<'info, T>> {
         if acc_info.owner != program_id {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return anchor_attribute_error::error_with_program_id!(program_id, ErrorCode::AccountOwnedByWrongProgram);
         }
         let data: &[u8] = &acc_info.try_borrow_data()?;
         // Discriminator must match.

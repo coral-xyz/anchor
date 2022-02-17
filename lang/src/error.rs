@@ -1,4 +1,8 @@
+use solana_program::{pubkey::Pubkey, program_error::ProgramError};
+
 use crate::error;
+
+use anchor_attribute_error::error_codes;
 
 /// The starting point for user defined error codes.
 pub const ERROR_CODE_OFFSET: u32 = 6000;
@@ -14,7 +18,7 @@ pub const ERROR_CODE_OFFSET: u32 = 6000;
 ///
 /// The starting point for user-defined errors is defined
 /// by the [ERROR_CODE_OFFSET](crate::error::ERROR_CODE_OFFSET).
-#[error(offset = 0)]
+#[error_codes(offset = 0)]
 pub enum ErrorCode {
     // Instructions
     /// 100 - 8 byte instruction identifier not provided
@@ -163,4 +167,46 @@ pub enum ErrorCode {
     /// 5000 - The API being used is deprecated and should no longer be used
     #[msg("The API being used is deprecated and should no longer be used")]
     Deprecated = 5000,
+}
+
+pub enum Error {
+    AnchorError(AnchorError),
+    ProgramError(anchor_lang::solana_program::program_error::ProgramError)
+}
+
+impl From<AnchorError> for Error {
+    fn from(ae: AnchorError) -> Self {
+        Self::AnchorError(ae)
+    }
+}
+
+impl From<ProgramError> for Error {
+    fn from(ae: ProgramError) -> Self {
+        Self::ProgramError(ae)
+    }
+}
+
+pub struct AnchorError {
+    // the program the error came from
+    program_id: Pubkey,
+    error_code_string: &'static str,
+    error_code_number: u32,
+    error_msg: &'static str,
+    source: Source
+}
+
+impl std::convert::From<Error> for anchor_lang::solana_program::program_error::ProgramError {
+    fn from(e: Error) -> anchor_lang::solana_program::program_error::ProgramError {
+        match e {
+            Error::AnchorError(AnchorError { program_id, error_code_string, error_code_number, error_msg, source }) => {
+                anchor_lang::solana_program::program_error::ProgramError::Custom(error_code_number)
+            },
+            Error::ProgramError(program_error) => program_error
+        }
+    }
+}
+
+pub struct Source {
+    filename: &'static str,
+    line: u32
 }

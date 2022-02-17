@@ -1,9 +1,12 @@
 extern crate proc_macro;
 
+use proc_macro::TokenStream;
+use quote::quote;
+
 use anchor_syn::codegen::error as error_codegen;
 use anchor_syn::parser::error as error_parser;
 use anchor_syn::ErrorArgs;
-use syn::parse_macro_input;
+use syn::{parse_macro_input, Expr, parse::{Result as ParseResult, Parse}, Token};
 
 /// Generates `Error` and `type Result<T> = Result<T, Error>` types to be
 /// used as return types from Anchor instruction handlers. Importantly, the
@@ -47,7 +50,7 @@ use syn::parse_macro_input;
 /// The `#[msg(..)]` attribute is inert, and is used only as a marker so that
 /// parsers  and IDLs can map error codes to error messages.
 #[proc_macro_attribute]
-pub fn error(
+pub fn error_codes(
     args: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
@@ -58,4 +61,101 @@ pub fn error(
     let mut error_enum = parse_macro_input!(input as syn::ItemEnum);
     let error = error_codegen::generate(error_parser::parse(&mut error_enum, args));
     proc_macro::TokenStream::from(error)
+}
+
+#[proc_macro]
+pub fn error_with_program_id(ts: proc_macro::TokenStream) -> TokenStream {
+    let file = file!();
+    let line = line!();
+    let input = parse_macro_input!(ts as ErrorInputWithProgramId);
+    dbg!(&input);
+    let error_code = input.error_code;
+    let error_msg_inputs = input.error_msg_inputs;
+    let program_id = input.program_id;
+    let error_msg_inputs = if error_msg_inputs.is_empty() {
+            quote! {
+                #error_code.to_string()
+            }
+    } else {
+        quote! {
+            format!(#error_code.to_string(), #(#error_msg_inputs),*)
+        }
+    };
+    quote! {
+            Err(anchor_lang::error::AnchorError {
+                program_id: *#program_id,
+                error_code_string: &format!("{:?}", #error_code), // TODO: dont use format here
+                error_code_number: #error_code.into(),
+                error_msg: &#error_msg_inputs,
+                source: anchor_lang::error::Source {
+                    filename: #file,
+                    line: #line
+                }
+            }.into())
+    }.into()
+}
+
+/// error!(path_to_err, input1, input2, input3)
+#[proc_macro]
+pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
+    let file = file!();
+    let line = line!();
+    let input = parse_macro_input!(ts as ErrorInput);
+    let error_code = input.error_code;
+    let error_msg_inputs = input.error_msg_inputs;
+    quote! {
+            Err(anchor_lang::error::AnchorError {
+                program_id: crate::ID,
+                error_code_string: &format!("{:?}", &#error_code), // TODO: dont use format here
+                error_code_number: #error_code.into(),
+                error_msg: format!(#error_code.to_string(), #(#error_msg_inputs),*),
+                source: anchor_lang::error::Source {
+                    filename: #file,
+                    line: #line
+                }
+            }.into())
+    }.into()
+}
+
+struct ErrorInput {
+    error_code: Expr,
+    error_msg_inputs: Vec<Expr>
+}
+
+impl Parse for ErrorInput {
+    fn parse(stream: syn::parse::ParseStream) -> ParseResult<Self> {
+        let error_code = stream.call(Expr::parse)?;
+        let mut error_msg_inputs = vec![];
+        while stream.parse::<Token![,]>().is_ok() {
+            error_msg_inputs.push(stream.call(Expr::parse)?);
+        }
+        Ok(Self {
+            error_code,
+            error_msg_inputs
+        })
+    }
+}
+
+#[derive(Debug)]
+struct ErrorInputWithProgramId {
+    error_code: Expr,
+    error_msg_inputs: Vec<Expr>,
+    program_id: Expr
+}
+
+impl Parse for ErrorInputWithProgramId {
+    fn parse(stream: syn::parse::ParseStream) -> ParseResult<Self> {
+        let program_id = stream.call(Expr::parse)?;
+        let _ = stream.parse::<Token![,]>()?;
+        let error_code = stream.call(Expr::parse)?;
+        let mut error_msg_inputs = vec![];
+        while stream.parse::<Token![,]>().is_ok() {
+            error_msg_inputs.push(stream.call(Expr::parse)?);
+        }
+        Ok(Self {
+            error_code,
+            error_msg_inputs,
+            program_id
+        })
+    }
 }
