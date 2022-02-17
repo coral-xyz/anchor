@@ -2,14 +2,13 @@
 
 use crate::error::ErrorCode;
 use crate::{
-    Accounts, AccountsClose, AccountsExit, Owner, ToAccountInfo, ToAccountInfos, ToAccountMetas,
-    ZeroCopy,
+    Accounts, AccountsClose, AccountsExit, AnchorResult, Owner, ToAccountInfo, ToAccountInfos,
+    ToAccountMetas, ZeroCopy,
 };
 use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
-use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::cell::{Ref, RefMut};
 use std::collections::BTreeMap;
@@ -119,17 +118,15 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
 
     /// Constructs a new `Loader` from a previously initialized account.
     #[inline(never)]
-    pub fn try_from(
-        acc_info: &AccountInfo<'info>,
-    ) -> Result<AccountLoader<'info, T>, ProgramError> {
+    pub fn try_from(acc_info: &AccountInfo<'info>) -> AnchorResult<AccountLoader<'info, T>> {
         if acc_info.owner != &T::owner() {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram);
         }
         let data: &[u8] = &acc_info.try_borrow_data()?;
         // Discriminator must match.
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::discriminator() {
-            return Err(ErrorCode::AccountDiscriminatorMismatch.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountDiscriminatorMismatch);
         }
 
         Ok(AccountLoader::new(acc_info.clone()))
@@ -140,20 +137,20 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
     pub fn try_from_unchecked(
         _program_id: &Pubkey,
         acc_info: &AccountInfo<'info>,
-    ) -> Result<AccountLoader<'info, T>, ProgramError> {
+    ) -> AnchorResult<AccountLoader<'info, T>> {
         if acc_info.owner != &T::owner() {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram);
         }
         Ok(AccountLoader::new(acc_info.clone()))
     }
 
     /// Returns a Ref to the account data structure for reading.
-    pub fn load(&self) -> Result<Ref<T>, ProgramError> {
+    pub fn load(&self) -> AnchorResult<Ref<T>> {
         let data = self.acc_info.try_borrow_data()?;
 
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::discriminator() {
-            return Err(ErrorCode::AccountDiscriminatorMismatch.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountDiscriminatorMismatch);
         }
 
         Ok(Ref::map(data, |data| {
@@ -162,18 +159,18 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
     }
 
     /// Returns a `RefMut` to the account data structure for reading or writing.
-    pub fn load_mut(&self) -> Result<RefMut<T>, ProgramError> {
+    pub fn load_mut(&self) -> AnchorResult<RefMut<T>> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
         if !self.acc_info.is_writable {
-            return Err(ErrorCode::AccountNotMutable.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountNotMutable);
         }
 
         let data = self.acc_info.try_borrow_mut_data()?;
 
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::discriminator() {
-            return Err(ErrorCode::AccountDiscriminatorMismatch.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountDiscriminatorMismatch);
         }
 
         Ok(RefMut::map(data, |data| {
@@ -183,11 +180,11 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
 
     /// Returns a `RefMut` to the account data structure for reading or writing.
     /// Should only be called once, when the account is being initialized.
-    pub fn load_init(&self) -> Result<RefMut<T>, ProgramError> {
+    pub fn load_init(&self) -> AnchorResult<RefMut<T>> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
         if !self.acc_info.is_writable {
-            return Err(ErrorCode::AccountNotMutable.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountNotMutable);
         }
 
         let data = self.acc_info.try_borrow_mut_data()?;
@@ -197,7 +194,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         disc_bytes.copy_from_slice(&data[..8]);
         let discriminator = u64::from_le_bytes(disc_bytes);
         if discriminator != 0 {
-            return Err(ErrorCode::AccountDiscriminatorAlreadySet.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountDiscriminatorAlreadySet);
         }
 
         Ok(RefMut::map(data, |data| {
@@ -213,9 +210,9 @@ impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
-    ) -> Result<Self, ProgramError> {
+    ) -> AnchorResult<Self> {
         if accounts.is_empty() {
-            return Err(ErrorCode::AccountNotEnoughKeys.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountNotEnoughKeys);
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
@@ -236,7 +233,7 @@ impl<'info, T: ZeroCopy + Owner> AccountsExit<'info> for AccountLoader<'info, T>
 }
 
 impl<'info, T: ZeroCopy + Owner> AccountsClose<'info> for AccountLoader<'info, T> {
-    fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult {
+    fn close(&self, sol_destination: AccountInfo<'info>) -> AnchorResult<()> {
         crate::common::close(self.to_account_info(), sol_destination)
     }
 }

@@ -2,8 +2,8 @@
 use crate::accounts::cpi_account::CpiAccount;
 use crate::error::ErrorCode;
 use crate::{
-    AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, ToAccountInfo,
-    ToAccountInfos, ToAccountMetas,
+    AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, AnchorResult,
+    ToAccountInfo, ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
@@ -40,9 +40,9 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
     pub fn try_from(
         program_id: &Pubkey,
         info: &AccountInfo<'a>,
-    ) -> Result<ProgramAccount<'a, T>, ProgramError> {
+    ) -> AnchorResult<ProgramAccount<'a, T>> {
         if info.owner != program_id {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram);
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramAccount::new(
@@ -58,9 +58,9 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
     pub fn try_from_unchecked(
         program_id: &Pubkey,
         info: &AccountInfo<'a>,
-    ) -> Result<ProgramAccount<'a, T>, ProgramError> {
+    ) -> AnchorResult<ProgramAccount<'a, T>> {
         if info.owner != program_id {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram);
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramAccount::new(
@@ -85,9 +85,9 @@ where
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
-    ) -> Result<Self, ProgramError> {
+    ) -> AnchorResult<Self> {
         if accounts.is_empty() {
-            return Err(ErrorCode::AccountNotEnoughKeys.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountNotEnoughKeys);
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
@@ -113,7 +113,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsClose<'info>
     for ProgramAccount<'info, T>
 {
-    fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult {
+    fn close(&self, sol_destination: AccountInfo<'info>) -> AnchorResult<()> {
         crate::common::close(self.to_account_info(), sol_destination)
     }
 }

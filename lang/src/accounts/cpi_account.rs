@@ -23,7 +23,7 @@ impl<'a, T: AccountDeserialize + Clone> CpiAccount<'a, T> {
     }
 
     /// Deserializes the given `info` into a `CpiAccount`.
-    pub fn try_from(info: &AccountInfo<'a>) -> Result<CpiAccount<'a, T>, ProgramError> {
+    pub fn try_from(info: &AccountInfo<'a>) -> AnchorResult<CpiAccount<'a, T>> {
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(CpiAccount::new(
             info.clone(),
@@ -31,7 +31,7 @@ impl<'a, T: AccountDeserialize + Clone> CpiAccount<'a, T> {
         ))
     }
 
-    pub fn try_from_unchecked(info: &AccountInfo<'a>) -> Result<CpiAccount<'a, T>, ProgramError> {
+    pub fn try_from_unchecked(info: &AccountInfo<'a>) -> AnchorResult<CpiAccount<'a, T>> {
         Self::try_from(info)
     }
 
@@ -55,9 +55,9 @@ where
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
-    ) -> Result<Self, ProgramError> {
+    ) -> AnchorResult<Self> {
         if accounts.is_empty() {
-            return Err(ErrorCode::AccountNotEnoughKeys.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountNotEnoughKeys);
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];

@@ -64,14 +64,12 @@ pub fn error_codes(
 }
 
 #[proc_macro]
-pub fn error_with_program_id(ts: proc_macro::TokenStream) -> TokenStream {
+pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
     let file = file!();
     let line = line!();
-    let input = parse_macro_input!(ts as ErrorInputWithProgramId);
-    dbg!(&input);
+    let input = parse_macro_input!(ts as ErrorInput);
     let error_code = input.error_code;
     let error_msg_inputs = input.error_msg_inputs;
-    let program_id = input.program_id;
     let error_msg_inputs = if error_msg_inputs.is_empty() {
             quote! {
                 #error_code.to_string()
@@ -83,32 +81,10 @@ pub fn error_with_program_id(ts: proc_macro::TokenStream) -> TokenStream {
     };
     quote! {
             Err(anchor_lang::error::AnchorError {
-                program_id: *#program_id,
+                program_id: None,
                 error_code_string: &format!("{:?}", #error_code), // TODO: dont use format here
                 error_code_number: #error_code.into(),
                 error_msg: &#error_msg_inputs,
-                source: anchor_lang::error::Source {
-                    filename: #file,
-                    line: #line
-                }
-            }.into())
-    }.into()
-}
-
-/// error!(path_to_err, input1, input2, input3)
-#[proc_macro]
-pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
-    let file = file!();
-    let line = line!();
-    let input = parse_macro_input!(ts as ErrorInput);
-    let error_code = input.error_code;
-    let error_msg_inputs = input.error_msg_inputs;
-    quote! {
-            Err(anchor_lang::error::AnchorError {
-                program_id: crate::ID,
-                error_code_string: &format!("{:?}", &#error_code), // TODO: dont use format here
-                error_code_number: #error_code.into(),
-                error_msg: format!(#error_code.to_string(), #(#error_msg_inputs),*),
                 source: anchor_lang::error::Source {
                     filename: #file,
                     line: #line
@@ -132,30 +108,6 @@ impl Parse for ErrorInput {
         Ok(Self {
             error_code,
             error_msg_inputs
-        })
-    }
-}
-
-#[derive(Debug)]
-struct ErrorInputWithProgramId {
-    error_code: Expr,
-    error_msg_inputs: Vec<Expr>,
-    program_id: Expr
-}
-
-impl Parse for ErrorInputWithProgramId {
-    fn parse(stream: syn::parse::ParseStream) -> ParseResult<Self> {
-        let program_id = stream.call(Expr::parse)?;
-        let _ = stream.parse::<Token![,]>()?;
-        let error_code = stream.call(Expr::parse)?;
-        let mut error_msg_inputs = vec![];
-        while stream.parse::<Token![,]>().is_ok() {
-            error_msg_inputs.push(stream.call(Expr::parse)?);
-        }
-        Ok(Self {
-            error_code,
-            error_msg_inputs,
-            program_id
         })
     }
 }

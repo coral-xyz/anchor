@@ -2,13 +2,12 @@
 use crate::accounts::cpi_account::CpiAccount;
 use crate::error::ErrorCode;
 use crate::{
-    AccountDeserialize, AccountSerialize, Accounts, AccountsExit, ToAccountInfo, ToAccountInfos,
-    ToAccountMetas,
+    AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AnchorResult, ToAccountInfo,
+    ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
-use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::collections::BTreeMap;
 use std::ops::{Deref, DerefMut};
@@ -42,13 +41,13 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramState<'a, T> {
     pub fn try_from(
         program_id: &Pubkey,
         info: &AccountInfo<'a>,
-    ) -> Result<ProgramState<'a, T>, ProgramError> {
+    ) -> AnchorResult<ProgramState<'a, T>> {
         if info.owner != program_id {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram);
         }
         if info.key != &Self::address(program_id) {
             solana_program::msg!("Invalid state address");
-            return Err(ErrorCode::StateInvalidAddress.into());
+            return anchor_attribute_error::error!(ErrorCode::StateInvalidAddress);
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramState::new(
@@ -77,9 +76,9 @@ where
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
-    ) -> Result<Self, ProgramError> {
+    ) -> AnchorResult<Self> {
         if accounts.is_empty() {
-            return Err(ErrorCode::AccountNotEnoughKeys.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountNotEnoughKeys);
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];

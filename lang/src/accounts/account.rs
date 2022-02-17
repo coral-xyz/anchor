@@ -5,7 +5,6 @@ use crate::*;
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
-use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -243,12 +242,12 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
 
     /// Deserializes the given `info` into a `Account`.
     #[inline(never)]
-    pub fn try_from(info: &AccountInfo<'a>) -> Result<Account<'a, T>, ProgramError> {
+    pub fn try_from(info: &AccountInfo<'a>) -> AnchorResult<Account<'a, T>> {
         if info.owner == &system_program::ID && info.lamports() == 0 {
-            return Err(ErrorCode::AccountNotInitialized.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountNotInitialized);
         }
         if info.owner != &T::owner() {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram);
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(Account::new(info.clone(), T::try_deserialize(&mut data)?))
@@ -258,12 +257,12 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
     /// the account discriminator. Be careful when using this and avoid it if
     /// possible.
     #[inline(never)]
-    pub fn try_from_unchecked(info: &AccountInfo<'a>) -> Result<Account<'a, T>, ProgramError> {
+    pub fn try_from_unchecked(info: &AccountInfo<'a>) -> AnchorResult<Account<'a, T>> {
         if info.owner == &system_program::ID && info.lamports() == 0 {
-            return Err(ErrorCode::AccountNotInitialized.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountNotInitialized);
         }
         if info.owner != &T::owner() {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram);
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(Account::new(
@@ -316,9 +315,9 @@ where
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
-    ) -> Result<Self, ProgramError> {
+    ) -> AnchorResult<Self> {
         if accounts.is_empty() {
-            return Err(ErrorCode::AccountNotEnoughKeys.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountNotEnoughKeys);
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
@@ -345,7 +344,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsEx
 impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsClose<'info>
     for Account<'info, T>
 {
-    fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult {
+    fn close(&self, sol_destination: AccountInfo<'info>) -> AnchorResult<()> {
         crate::common::close(self.to_account_info(), sol_destination)
     }
 }

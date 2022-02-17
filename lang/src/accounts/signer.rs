@@ -47,9 +47,9 @@ impl<'info> Signer<'info> {
 
     /// Deserializes the given `info` into a `Signer`.
     #[inline(never)]
-    pub fn try_from(info: &AccountInfo<'info>) -> Result<Signer<'info>, ProgramError> {
+    pub fn try_from(info: &AccountInfo<'info>) -> AnchorResult<Signer<'info>> {
         if !info.is_signer {
-            return Err(ErrorCode::AccountNotSigner.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountNotSigner);
         }
         Ok(Signer::new(info.clone()))
     }
@@ -62,9 +62,9 @@ impl<'info> Accounts<'info> for Signer<'info> {
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
-    ) -> Result<Self, ProgramError> {
+    ) -> AnchorResult<Self> {
         if accounts.is_empty() {
-            return Err(ErrorCode::AccountNotEnoughKeys.into());
+            return anchor_attribute_error::error!(ErrorCode::AccountNotEnoughKeys);
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];

@@ -1,4 +1,4 @@
-use solana_program::{pubkey::Pubkey, program_error::ProgramError};
+use solana_program::{program_error::ProgramError, pubkey::Pubkey};
 
 use crate::error;
 
@@ -169,9 +169,10 @@ pub enum ErrorCode {
     Deprecated = 5000,
 }
 
+#[derive(Debug)]
 pub enum Error {
     AnchorError(AnchorError),
-    ProgramError(anchor_lang::solana_program::program_error::ProgramError)
+    ProgramError(anchor_lang::solana_program::program_error::ProgramError),
 }
 
 impl From<AnchorError> for Error {
@@ -186,27 +187,35 @@ impl From<ProgramError> for Error {
     }
 }
 
+#[derive(Debug)]
 pub struct AnchorError {
     // the program the error came from
-    program_id: Pubkey,
+    program_id: Option<Pubkey>,
     error_code_string: &'static str,
     error_code_number: u32,
     error_msg: &'static str,
-    source: Source
+    source: Source,
 }
 
 impl std::convert::From<Error> for anchor_lang::solana_program::program_error::ProgramError {
     fn from(e: Error) -> anchor_lang::solana_program::program_error::ProgramError {
         match e {
-            Error::AnchorError(AnchorError { program_id, error_code_string, error_code_number, error_msg, source }) => {
+            Error::AnchorError(AnchorError {
+                program_id,
+                error_code_string,
+                error_code_number,
+                error_msg,
+                source,
+            }) => {
                 anchor_lang::solana_program::program_error::ProgramError::Custom(error_code_number)
-            },
-            Error::ProgramError(program_error) => program_error
+            }
+            Error::ProgramError(program_error) => program_error,
         }
     }
 }
 
+#[derive(Debug)]
 pub struct Source {
     filename: &'static str,
-    line: u32
+    line: u32,
 }

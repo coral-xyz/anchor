@@ -1,12 +1,12 @@
 use crate::error::ErrorCode;
+use crate::AnchorResult;
 use solana_program::account_info::AccountInfo;
-use solana_program::entrypoint::ProgramResult;
 use std::io::Write;
 
 pub fn close<'info>(
     info: AccountInfo<'info>,
     sol_destination: AccountInfo<'info>,
-) -> ProgramResult {
+) -> AnchorResult<()> {
     // Transfer tokens from the account to the sol_destination.
     let dest_starting_lamports = sol_destination.lamports();
     **sol_destination.lamports.borrow_mut() =
@@ -17,8 +17,11 @@ pub fn close<'info>(
     let mut data = info.try_borrow_mut_data()?;
     let dst: &mut [u8] = &mut data;
     let mut cursor = std::io::Cursor::new(dst);
-    cursor
+    if cursor
         .write_all(&crate::__private::CLOSED_ACCOUNT_DISCRIMINATOR)
-        .map_err(|_| ErrorCode::AccountDidNotSerialize)?;
+        .is_err()
+    {
+        return anchor_attribute_error::error!(ErrorCode::AccountDidNotSerialize);
+    }
     Ok(())
 }

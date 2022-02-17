@@ -84,7 +84,7 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
         accounts: &mut &[AccountInfo<'info>],
         ix_data: &[u8],
         bumps: &mut BTreeMap<String, u8>,
-    ) -> Result<Self, ProgramError>;
+    ) -> AnchorResult<Self>;
 }
 
 /// The exit procedure for an account. Any cleanup or persistence to storage
@@ -100,7 +100,7 @@ pub trait AccountsExit<'info>: ToAccountMetas + ToAccountInfos<'info> {
 /// The close procedure to initiate garabage collection of an account, allowing
 /// one to retrieve the rent exemption.
 pub trait AccountsClose<'info>: ToAccountInfos<'info> {
-    fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult;
+    fn close(&self, sol_destination: AccountInfo<'info>) -> AnchorResult<()>;
 }
 
 /// Transformation to
@@ -166,14 +166,14 @@ pub trait AccountDeserialize: Sized {
     /// For example, if the SPL token program were to implement this trait,
     /// it should be impossible to deserialize a `Mint` account into a token
     /// `Account`.
-    fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
+    fn try_deserialize(buf: &mut &[u8]) -> AnchorResult<Self> {
         Self::try_deserialize_unchecked(buf)
     }
 
     /// Deserializes account data without checking the account discriminator.
     /// This should only be used on account initialization, when the bytes of
     /// the account are zeroed.
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError>;
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> AnchorResult<Self>;
 }
 
 /// An account data structure capable of zero copy deserialization.

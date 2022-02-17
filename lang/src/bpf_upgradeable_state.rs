@@ -1,4 +1,5 @@
-use crate::{AccountDeserialize, AccountSerialize, Owner};
+use crate::error::ErrorCode;
+use crate::{AccountDeserialize, AccountSerialize, AnchorResult, Owner};
 use solana_program::{
     bpf_loader_upgradeable::UpgradeableLoaderState, program_error::ProgramError, pubkey::Pubkey,
 };
@@ -10,27 +11,23 @@ pub struct ProgramData {
 }
 
 impl AccountDeserialize for ProgramData {
-    fn try_deserialize(
-        buf: &mut &[u8],
-    ) -> Result<Self, solana_program::program_error::ProgramError> {
+    fn try_deserialize(buf: &mut &[u8]) -> AnchorResult<Self> {
         ProgramData::try_deserialize_unchecked(buf)
     }
 
-    fn try_deserialize_unchecked(
-        buf: &mut &[u8],
-    ) -> Result<Self, solana_program::program_error::ProgramError> {
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> AnchorResult<Self> {
         let program_state = AccountDeserialize::try_deserialize_unchecked(buf)?;
 
         match program_state {
             UpgradeableLoaderState::Uninitialized => {
-                Err(anchor_lang::error::ErrorCode::AccountNotProgramData.into())
+                anchor_attribute_error::error!(ErrorCode::AccountNotProgramData)
             }
             UpgradeableLoaderState::Buffer {
                 authority_address: _,
-            } => Err(anchor_lang::error::ErrorCode::AccountNotProgramData.into()),
+            } => anchor_attribute_error::error!(ErrorCode::AccountNotProgramData),
             UpgradeableLoaderState::Program {
                 programdata_address: _,
-            } => Err(anchor_lang::error::ErrorCode::AccountNotProgramData.into()),
+            } => anchor_attribute_error::error!(ErrorCode::AccountNotProgramData),
             UpgradeableLoaderState::ProgramData {
                 slot,
                 upgrade_authority_address,
@@ -72,11 +69,11 @@ impl AccountSerialize for UpgradeableLoaderState {
 }
 
 impl AccountDeserialize for UpgradeableLoaderState {
-    fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
+    fn try_deserialize(buf: &mut &[u8]) -> AnchorResult<Self> {
         UpgradeableLoaderState::try_deserialize_unchecked(buf)
     }
 
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        bincode::deserialize(buf).map_err(|_| ProgramError::InvalidAccountData)
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> AnchorResult<Self> {
+        bincode::deserialize(buf).map_err(|_| ProgramError::InvalidAccountData.into())
     }
 }
