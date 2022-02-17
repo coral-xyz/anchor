@@ -80,7 +80,7 @@ pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
             format!(#error_code.to_string(), #(#error_msg_inputs),*)
         }
     };
-    quote! {
+    TokenStream::from(quote! {
             Err(anchor_lang::error::Error::from(
                     anchor_lang::error::AnchorError {
                         program_id: None,
@@ -94,8 +94,7 @@ pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
                     }
                 )
             )
-    }
-    .into()
+    })
 }
 
 struct ErrorInput {
