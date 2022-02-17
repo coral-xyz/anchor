@@ -137,7 +137,7 @@ fn generate_constraint_address(f: &Field, c: &ConstraintAddress) -> proc_macro2:
     let error = generate_custom_error(&c.error, quote! { ConstraintAddress });
     quote! {
         if #field.key() != #addr {
-            return Err(#error);
+            return #error;
         }
     }
 }
@@ -179,7 +179,7 @@ pub fn generate_constraint_mut(f: &Field, c: &ConstraintMut) -> proc_macro2::Tok
     let error = generate_custom_error(&c.error, quote! { ConstraintMut });
     quote! {
         if !#ident.to_account_info().is_writable {
-            return Err(#error);
+            return #error;
         }
     }
 }
@@ -195,7 +195,7 @@ pub fn generate_constraint_has_one(f: &Field, c: &ConstraintHasOne) -> proc_macr
     let error = generate_custom_error(&c.error, quote! { ConstraintHasOne });
     quote! {
         if #field.#target != #target.key() {
-            return Err(#error);
+            return #error;
         }
     }
 }
@@ -214,7 +214,7 @@ pub fn generate_constraint_signer(f: &Field, c: &ConstraintSigner) -> proc_macro
     let error = generate_custom_error(&c.error, quote! { ConstraintSigner });
     quote! {
         if !#info.is_signer {
-            return Err(#error);
+            return #error;
         }
     }
 }
@@ -242,7 +242,7 @@ pub fn generate_constraint_raw(c: &ConstraintRaw) -> proc_macro2::TokenStream {
     let error = generate_custom_error(&c.error, quote! { ConstraintRaw });
     quote! {
         if !(#raw) {
-            return Err(#error);
+            return #error;
         }
     }
 }
@@ -253,7 +253,7 @@ pub fn generate_constraint_owner(f: &Field, c: &ConstraintOwner) -> proc_macro2:
     let error = generate_custom_error(&c.error, quote! { ConstraintOwner });
     quote! {
         if #ident.as_ref().owner != &#owner_address {
-            return Err(#error);
+            return #error;
         }
     }
 }
@@ -783,6 +783,6 @@ fn generate_custom_error(
 ) -> proc_macro2::TokenStream {
     match custom_error {
         Some(error) => quote! { #error.into() },
-        None => quote! { anchor_lang::error::ErrorCode::#error.into() },
+        None => quote! { anchor_lang::anchor_attribute_error::ErrorCode::#error }
     }
 }
