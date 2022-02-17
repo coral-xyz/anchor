@@ -273,10 +273,11 @@ pub mod prelude {
 /// Internal module used by macros and unstable apis.
 #[doc(hidden)]
 pub mod __private {
+    use crate::AnchorResult;
+
     /// The discriminator anchor uses to mark an account as closed.
     pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
 
-    use crate::AnchorResult;
     pub use crate::ctor::Ctor;
 
     pub use anchor_attribute_account::ZeroCopyAccessor;
@@ -286,8 +287,6 @@ pub mod __private {
     pub use base64;
 
     pub use bytemuck;
-
-    use solana_program::program_error::ProgramError;
 
     use solana_program::pubkey::Pubkey;
 
