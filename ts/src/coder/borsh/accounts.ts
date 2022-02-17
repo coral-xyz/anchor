@@ -94,8 +94,9 @@ export class BorshAccountsCoder<A extends string = string>
    * @param name The name of the account to calculate the discriminator.
    */
   public static accountDiscriminator(name: string): Buffer {
-    return Buffer.from(
-      sha256.digest(`account:${name}`)
-    ).slice(0, ACCOUNT_DISCRIMINATOR_SIZE);
+    return Buffer.from(sha256.digest(`account:${name}`)).slice(
+      0,
+      ACCOUNT_DISCRIMINATOR_SIZE
+    );
   }
 }
