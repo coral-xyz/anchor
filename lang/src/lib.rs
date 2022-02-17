@@ -48,7 +48,6 @@ pub use crate::bpf_upgradeable_state::*;
 pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::{account, declare_id, zero_copy};
 pub use anchor_attribute_constant::constant;
-pub use anchor_attribute_error::error;
 pub use anchor_attribute_event::{emit, event};
 pub use anchor_attribute_interface::interface;
 pub use anchor_attribute_program::program;
@@ -267,6 +266,7 @@ pub mod prelude {
     pub use solana_program::sysvar::stake_history::StakeHistory;
     pub use solana_program::sysvar::Sysvar as SolanaSysvar;
     pub use thiserror;
+    pub use anchor_attribute_error::error;
 }
 
 /// Internal module used by macros and unstable apis.
