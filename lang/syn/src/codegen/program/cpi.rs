@@ -78,7 +78,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         let ix = {
                             let ix = instruction::#ix_variant;
                             let mut ix_data = AnchorSerialize::try_to_vec(&ix)
-                                .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotSerialize)?;
+                                .map_err(|_| 
+                                    anchor_lang::anchor_attribute_error::error!(anchor_lang::error::ErrorCode::InstructionDidNotSerialize)
+                                    )?;
                             let mut data = #sighash_tts.to_vec();
                             data.append(&mut ix_data);
                             let accounts = ctx.to_account_metas(None);

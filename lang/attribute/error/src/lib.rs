@@ -68,8 +68,6 @@ pub fn error_codes(
 
 #[proc_macro]
 pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
-    let file = file!();
-    let line = line!();
     let input = parse_macro_input!(ts as ErrorInput);
     let error_code = input.error_code;
     let error_msg_inputs = input.error_msg_inputs;
@@ -90,8 +88,8 @@ pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
                 error_code_number: #error_code.into(),
                 error_msg: #error_msg_inputs,
                 source: anchor_lang::error::Source {
-                    filename: #file,
-                    line: #line
+                    filename: file!(),
+                    line: line!()
                 }
             }))
     }

@@ -48,7 +48,7 @@ impl<'info, T: solana_program::sysvar::Sysvar + fmt::Debug> fmt::Debug for Sysva
 impl<'info, T: solana_program::sysvar::Sysvar> Sysvar<'info, T> {
     pub fn from_account_info(
         acc_info: &AccountInfo<'info>,
-    ) -> Result<Sysvar<'info, T>, ProgramError> {
+    ) -> AnchorResult<Sysvar<'info, T>> {
         Ok(Sysvar {
             info: acc_info.clone(),
             account: T::from_account_info(acc_info)?,

@@ -21,7 +21,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let mut data: &[u8] = idl_ix_data;
 
                 let ix = anchor_lang::idl::IdlInstruction::deserialize(&mut data)
-                    .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
+                    .or_else(|_| anchor_lang::anchor_attribute_error::error!(anchor_lang::error::ErrorCode::InstructionDidNotDeserialize))?;
 
                 match ix {
                     anchor_lang::idl::IdlInstruction::Create { data_len } => {
@@ -455,7 +455,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
                                     // Deserialize instruction.
                                     let ix = instruction::state::#ix_name::deserialize(&mut &ix_data[..])
-                                        .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
+                                        .or_else(|_| anchor_lang::anchor_attribute_error::error!(
+                                            anchor_lang::error::ErrorCode::InstructionDidNotDeserialize
+                                        ))?;
                                     let instruction::state::#variant_arm = ix;
 
                                     // Bump collector.
@@ -683,6 +685,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             })
             .unwrap_or_default(),
     };
+    
     let non_inlined_handlers: Vec<proc_macro2::TokenStream> = program
         .ixs
         .iter()
@@ -705,7 +708,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
                     // Deserialize data.
                     let ix = instruction::#ix_name::deserialize(&mut &ix_data[..])
-                        .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
+                        .or_else(|_| anchor_lang::anchor_attribute_error::error!(
+                            anchor_lang::error::ErrorCode::InstructionDidNotDeserialize
+                        ))?;
                     let instruction::#variant_arm = ix;
 
                     // Bump collector.
