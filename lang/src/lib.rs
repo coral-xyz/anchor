@@ -48,6 +48,7 @@ pub use crate::bpf_upgradeable_state::*;
 pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::{account, declare_id, zero_copy};
 pub use anchor_attribute_constant::constant;
+pub use anchor_attribute_error;
 pub use anchor_attribute_event::{emit, event};
 pub use anchor_attribute_interface::interface;
 pub use anchor_attribute_program::program;
@@ -243,10 +244,11 @@ pub mod prelude {
         context::Context, context::CpiContext, declare_id, emit, error, event, interface, program,
         require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, state, zero_copy,
         AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AnchorDeserialize,
-        AnchorSerialize, Id, Key, Owner, ProgramData, System, ToAccountInfo, ToAccountInfos,
-        ToAccountMetas, AnchorResult
+        AnchorResult, AnchorSerialize, Id, Key, Owner, ProgramData, System, ToAccountInfo,
+        ToAccountInfos, ToAccountMetas,
     };
 
+    pub use anchor_attribute_error::error;
     pub use borsh;
     pub use solana_program::account_info::{next_account_info, AccountInfo};
     pub use solana_program::entrypoint::ProgramResult;
@@ -266,7 +268,6 @@ pub mod prelude {
     pub use solana_program::sysvar::stake_history::StakeHistory;
     pub use solana_program::sysvar::Sysvar as SolanaSysvar;
     pub use thiserror;
-    pub use anchor_attribute_error::error;
 }
 
 /// Internal module used by macros and unstable apis.
