@@ -783,8 +783,8 @@ fn generate_custom_error(
 ) -> proc_macro2::TokenStream {
     match custom_error {
         Some(error) => quote! { anchor_lang::anchor_attribute_error::error!(#error) },
-        None => 
+        None => {
             quote! { anchor_lang::anchor_attribute_error::error!(anchor_lang::error::ErrorCode::#error) }
-        
+        }
     }
 }

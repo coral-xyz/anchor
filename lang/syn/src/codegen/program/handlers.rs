@@ -81,7 +81,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 anchor_lang::prelude::msg!("Instruction: IdlCreateAccount");
 
                 if program_id != accounts.program.key {
-                    return anchor_lang::anchor_attribute_error:error!(anchor_lang::error::ErrorCode::IdlInstructionInvalidProgram);
+                    return anchor_lang::anchor_attribute_error::error!(anchor_lang::error::ErrorCode::IdlInstructionInvalidProgram);
                 }
                 // Create the IDL's account.
                 let from = accounts.from.key;
