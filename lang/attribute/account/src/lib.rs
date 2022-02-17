@@ -202,6 +202,7 @@ pub fn account(
 
                     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::AnchorResult<Self> {
                         let mut data: &[u8] = &buf[8..];
+                        // TODO: is this really necessary?
                         let temp = AnchorDeserialize::deserialize(&mut data);
                         temp.or_else(|_| anchor_lang::anchor_attribute_error::error!(anchor_lang::error::ErrorCode::AccountDidNotDeserialize))
                     }

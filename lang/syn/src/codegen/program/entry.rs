@@ -52,18 +52,28 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         /// The `entry` function here, defines the standard entry to a Solana
         /// program, where execution begins.
         pub fn entry(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+            try_entry(program_id, accounts, data).map_err(|mut e| {
+                if let Error::AnchorError(anchor_error) = &mut e {
+                    anchor_error.program_id = Some(crate::ID);
+                }
+                e.log();
+                e.into()
+            })
+        }
+
+        fn try_entry(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> AnchorResult<()> {
             #[cfg(feature = "anchor-debug")]
             {
                 msg!("anchor-debug is active");
             }
             if *program_id != ID {
-                return anchor_lang::anchor_attribute_error::error!(ErrorCode::DeclaredProgramIdMismatch).map_err(|e| e.into());
+                return anchor_lang::anchor_attribute_error::error!(ErrorCode::DeclaredProgramIdMismatch);
             }
             if data.len() < 8 {
-                return #fallback_maybe.map_err(|e| e.into());
+                return #fallback_maybe;
             }
 
-            dispatch(program_id, accounts, data).map_err(|e| e.into())
+            dispatch(program_id, accounts, data)
         }
 
         pub mod program {

@@ -170,7 +170,23 @@ pub enum ErrorCode {
 #[derive(Debug)]
 pub enum Error {
     AnchorError(AnchorError),
+    // TODO: should embed ProgramError in another error that can give more or less context (definitely always crate id)
     ProgramError(anchor_lang::solana_program::program_error::ProgramError),
+}
+
+impl Error {
+    pub fn log(&self) {
+        match self {
+            Error::ProgramError(program_error) => {
+                anchor_lang::solana_program::msg!(
+                    "ProgramError: {:?}. Message: {}.",
+                    program_error,
+                    program_error
+                )
+            }
+            Error::AnchorError(anchor_error) => anchor_error.log(),
+        }
+    }
 }
 
 impl From<AnchorError> for Error {
@@ -185,14 +201,26 @@ impl From<ProgramError> for Error {
     }
 }
 
+// TODO: is there a better way than converting to Strings?
 #[derive(Debug)]
 pub struct AnchorError {
     // the program the error came from
+    // TODO: better way to do this other than Option<Pubkey>?
     pub program_id: Option<Pubkey>,
     pub error_code_string: String,
     pub error_code_number: u32,
     pub error_msg: String,
     pub source: Source,
+}
+
+impl AnchorError {
+    pub fn log(&self) {
+        anchor_lang::solana_program::msg!(
+            "AnchorError thrown in {}:{} in program: {}. Error Code: {}. Error Number: {}. Error Message: {}.",
+            self.source.filename, self.source.line, self.program_id.unwrap().to_string(),
+            self.error_code_string, self.error_code_number, self.error_msg
+        );
+    }
 }
 
 impl std::convert::From<Error> for anchor_lang::solana_program::program_error::ProgramError {

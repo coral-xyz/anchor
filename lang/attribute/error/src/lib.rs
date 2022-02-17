@@ -80,6 +80,7 @@ pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
             format!(#error_code.to_string(), #(#error_msg_inputs),*)
         }
     };
+    // TODO: should this return an Err(Error) or an Error
     TokenStream::from(quote! {
             Err(anchor_lang::error::Error::from(
                     anchor_lang::error::AnchorError {
