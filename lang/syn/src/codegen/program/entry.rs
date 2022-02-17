@@ -6,7 +6,7 @@ use quote::quote;
 pub fn generate(program: &Program) -> proc_macro2::TokenStream {
     let name: proc_macro2::TokenStream = program.name.to_string().to_camel_case().parse().unwrap();
     let fallback_maybe = dispatch::gen_fallback(program).unwrap_or(quote! {
-        Err(anchor_lang::__private::ErrorCode::InstructionMissing.into());
+        Err(anchor_lang::error::ErrorCode::InstructionMissing.into());
     });
     quote! {
         #[cfg(not(feature = "no-entrypoint"))]
@@ -55,6 +55,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             #[cfg(feature = "anchor-debug")]
             {
                 msg!("anchor-debug is active");
+            }
+            if *program_id != ID {
+                return Err(anchor_lang::error::ErrorCode::DeclaredProgramIdMismatch.into());
             }
             if data.len() < 8 {
                 return #fallback_maybe
