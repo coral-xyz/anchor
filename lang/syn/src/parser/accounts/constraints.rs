@@ -586,7 +586,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         let spl_account = match (&token_mint, &token_authority) {
             (None, None) => None,
             _ => Some(ConstraintSplTokenAccount {
-<<<<<<< HEAD
                 mint: token_mint.as_ref().map(|a| a.clone().into_inner().mint),
                 auth: token_authority
                     .as_ref()
@@ -606,33 +605,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 mint_freeze_auth: mint_freeze_authority
                     .as_ref()
                     .map(|a| a.clone().into_inner().mint_freeze_auth),
-=======
-                mint: match &token_mint {
-                    Some(a) => Some(a.clone().into_inner().mint),
-                    _ => None,
-                },
-                auth: match &token_authority {
-                    Some(a) => Some(a.clone().into_inner().auth),
-                    _ => None,
-                },
-            }),
-        };
-        let spl_mint = match (&mint_decimals, &mint_authority, &mint_freeze_authority) {
-            (None, None, None) => None,
-            _ => Some(ConstraintSplTokenMint {
-                decimals: match &mint_decimals {
-                    Some(a) => Some(a.clone().into_inner().decimals),
-                    _ => None,
-                },
-                mint_auth: match &mint_authority {
-                    Some(a) => Some(a.clone().into_inner().mint_auth),
-                    _ => None,
-                },
-                mint_freeze_auth: match &mint_freeze_authority {
-                    Some(a) => Some(a.clone().into_inner().mint_freeze_auth),
-                    _ => None,
-                },
->>>>>>> 7844d29c0f5cb7d8ea6b16a0fe99af0a04f7e57b
             }),
         };
 
