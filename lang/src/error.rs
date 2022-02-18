@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 
 use solana_program::program_error::ProgramError;
 
@@ -175,6 +175,41 @@ pub enum Error {
     ProgramError(ProgramErrorWithOrigin),
 }
 
+impl std::error::Error for Error {}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::AnchorError(ae) => Display::fmt(&ae, f),
+            Error::ProgramError(pe) => Display::fmt(&pe, f),
+        }
+    }
+}
+
+impl Display for AnchorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(&self, f)
+    }
+}
+
+impl From<AnchorError> for Error {
+    fn from(ae: AnchorError) -> Self {
+        Self::AnchorError(ae)
+    }
+}
+
+impl From<ProgramError> for Error {
+    fn from(program_error: ProgramError) -> Self {
+        Self::ProgramError(program_error.into())
+    }
+}
+
+impl From<ProgramErrorWithOrigin> for Error {
+    fn from(pe: ProgramErrorWithOrigin) -> Self {
+        Self::ProgramError(pe)
+    }
+}
+
 impl Error {
     pub fn log(&self) {
         match self {
@@ -207,7 +242,7 @@ pub struct ProgramErrorWithOrigin {
 
 impl Display for ProgramErrorWithOrigin {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.program_error.fmt(f)
+        Display::fmt(&self.program_error, f)
     }
 }
 
@@ -248,24 +283,6 @@ impl From<ProgramError> for ProgramErrorWithOrigin {
             source: None,
             account_name: None,
         }
-    }
-}
-
-impl From<AnchorError> for Error {
-    fn from(ae: AnchorError) -> Self {
-        Self::AnchorError(ae)
-    }
-}
-
-impl From<ProgramError> for Error {
-    fn from(program_error: ProgramError) -> Self {
-        Self::ProgramError(program_error.into())
-    }
-}
-
-impl From<ProgramErrorWithOrigin> for Error {
-    fn from(pe: ProgramErrorWithOrigin) -> Self {
-        Self::ProgramError(pe)
     }
 }
 
