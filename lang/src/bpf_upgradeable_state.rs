@@ -19,15 +19,19 @@ impl AccountDeserialize for ProgramData {
         let program_state = AccountDeserialize::try_deserialize_unchecked(buf)?;
 
         match program_state {
-            UpgradeableLoaderState::Uninitialized => {
-                Err(anchor_attribute_error::error!(ErrorCode::AccountNotProgramData))
-            }
+            UpgradeableLoaderState::Uninitialized => Err(anchor_attribute_error::error!(
+                ErrorCode::AccountNotProgramData
+            )),
             UpgradeableLoaderState::Buffer {
                 authority_address: _,
-            } => Err(anchor_attribute_error::error!(ErrorCode::AccountNotProgramData)),
+            } => Err(anchor_attribute_error::error!(
+                ErrorCode::AccountNotProgramData
+            )),
             UpgradeableLoaderState::Program {
                 programdata_address: _,
-            } => Err(anchor_attribute_error::error!(ErrorCode::AccountNotProgramData)),
+            } => Err(anchor_attribute_error::error!(
+                ErrorCode::AccountNotProgramData
+            )),
             UpgradeableLoaderState::ProgramData {
                 slot,
                 upgrade_authority_address,

@@ -784,7 +784,9 @@ fn generate_custom_error(
 ) -> proc_macro2::TokenStream {
     let account_name = account_name.to_string();
     match custom_error {
-        Some(error) => quote! { Err(anchor_lang::anchor_attribute_error::error_with_account_name!(#error, #account_name)) },
+        Some(error) => {
+            quote! { Err(anchor_lang::anchor_attribute_error::error_with_account_name!(#error, #account_name)) }
+        }
         None => {
             quote! { Err(anchor_lang::anchor_attribute_error::error_with_account_name!(anchor_lang::error::ErrorCode::#error, #account_name)) }
         }

@@ -27,7 +27,9 @@ impl<'info> SystemAccount<'info> {
     #[inline(never)]
     pub fn try_from(info: &AccountInfo<'info>) -> AnchorResult<SystemAccount<'info>> {
         if *info.owner != system_program::ID {
-            return Err(anchor_attribute_error::error!(ErrorCode::AccountNotSystemOwned));
+            return Err(anchor_attribute_error::error_without_origin!(
+                ErrorCode::AccountNotSystemOwned
+            ));
         }
         Ok(SystemAccount::new(info.clone()))
     }
@@ -42,7 +44,9 @@ impl<'info> Accounts<'info> for SystemAccount<'info> {
         _bumps: &mut BTreeMap<String, u8>,
     ) -> AnchorResult<Self> {
         if accounts.is_empty() {
-            return Err(anchor_attribute_error::error!(ErrorCode::AccountNotEnoughKeys));
+            return Err(anchor_attribute_error::error_without_origin!(
+                ErrorCode::AccountNotEnoughKeys
+            ));
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];

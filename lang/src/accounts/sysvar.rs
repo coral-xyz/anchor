@@ -70,7 +70,7 @@ impl<'info, T: solana_program::sysvar::Sysvar> Accounts<'info> for Sysvar<'info,
         _bumps: &mut BTreeMap<String, u8>,
     ) -> AnchorResult<Self> {
         if accounts.is_empty() {
-            return Err(anchor_attribute_error::error!(
+            return Err(anchor_attribute_error::error_without_origin!(
                 ErrorCode::AccountNotEnoughKeys
             ));
         }

@@ -39,11 +39,13 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                             *accounts = &accounts[1..];
                         }
                     } else {
-                        let name = f.typed_ident();
+                        let name = f.ident.to_string();
+                        let typed_name = f.typed_ident();
                         quote! {
                             #[cfg(feature = "anchor-debug")]
-                            ::solana_program::log::sol_log(stringify!(#name));
-                            let #name = anchor_lang::Accounts::try_accounts(program_id, accounts, ix_data, __bumps)?;
+                            ::solana_program::log::sol_log(stringify!(#typed_name));
+                            let #typed_name = anchor_lang::Accounts::try_accounts(program_id, accounts, ix_data, __bumps)
+                                .map_err(|e| e.with_account_name(#name))?;
                         }
                     }
                 }

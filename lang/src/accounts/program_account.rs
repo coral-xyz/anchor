@@ -40,7 +40,9 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
         info: &AccountInfo<'a>,
     ) -> AnchorResult<ProgramAccount<'a, T>> {
         if info.owner != program_id {
-            return Err(anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram));
+            return Err(anchor_attribute_error::error_without_origin!(
+                ErrorCode::AccountOwnedByWrongProgram
+            ));
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramAccount::new(
@@ -58,7 +60,9 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
         info: &AccountInfo<'a>,
     ) -> AnchorResult<ProgramAccount<'a, T>> {
         if info.owner != program_id {
-            return Err(anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram));
+            return Err(anchor_attribute_error::error_without_origin!(
+                ErrorCode::AccountOwnedByWrongProgram
+            ));
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramAccount::new(
@@ -85,7 +89,9 @@ where
         _bumps: &mut BTreeMap<String, u8>,
     ) -> AnchorResult<Self> {
         if accounts.is_empty() {
-            return Err(anchor_attribute_error::error!(ErrorCode::AccountNotEnoughKeys));
+            return Err(anchor_attribute_error::error_without_origin!(
+                ErrorCode::AccountNotEnoughKeys
+            ));
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
