@@ -70,48 +70,30 @@ pub fn error_codes(
 pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
     let input = parse_macro_input!(ts as ErrorInput);
     let error_code = input.error_code;
-    let error_msg_inputs = input.error_msg_inputs;
-    let error_msg_inputs = if error_msg_inputs.is_empty() {
-        quote! {
-            #error_code.to_string()
-        }
-    } else {
-        quote! {
-            format!(#error_code.to_string(), #(#error_msg_inputs),*)
-        }
-    };
-    // TODO: should this return an Err(Error) or an Error
     TokenStream::from(quote! {
-            Err(anchor_lang::error::Error::from(
-                    anchor_lang::error::AnchorError {
-                        error_code_string: format!("{:?}", #error_code), // TODO: dont use format here
-                        error_code_number: #error_code.into(),
-                        error_msg: #error_msg_inputs,
-                        source: anchor_lang::error::Source {
-                            filename: file!(),
-                            line: line!()
-                        }
-                    }
-                )
-            )
+        anchor_lang::error::Error::from(
+            anchor_lang::error::AnchorError {
+                error_code_string: format!("{:?}", #error_code), // TODO: dont use format here
+                error_code_number: #error_code.into(),
+                error_msg: #error_code.to_string(),
+                source: anchor_lang::error::Source {
+                    filename: file!(),
+                    line: line!()
+                }
+            }
+        )
     })
 }
 
 struct ErrorInput {
     error_code: Expr,
-    error_msg_inputs: Vec<Expr>,
 }
 
 impl Parse for ErrorInput {
     fn parse(stream: syn::parse::ParseStream) -> ParseResult<Self> {
         let error_code = stream.call(Expr::parse)?;
-        let mut error_msg_inputs = vec![];
-        while stream.parse::<Token![,]>().is_ok() {
-            error_msg_inputs.push(stream.call(Expr::parse)?);
-        }
         Ok(Self {
             error_code,
-            error_msg_inputs,
         })
     }
 }

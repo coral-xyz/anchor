@@ -114,7 +114,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         })
         .collect();
     let fallback_fn = gen_fallback(program).unwrap_or(quote! {
-        anchor_lang::anchor_attribute_error::error!(anchor_lang::error::ErrorCode::InstructionFallbackNotFound)
+        Err(anchor_lang::anchor_attribute_error::error!(anchor_lang::error::ErrorCode::InstructionFallbackNotFound))
     });
     quote! {
         /// Performs method dispatch.

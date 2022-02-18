@@ -42,11 +42,11 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramState<'a, T> {
         info: &AccountInfo<'a>,
     ) -> AnchorResult<ProgramState<'a, T>> {
         if info.owner != program_id {
-            return anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram);
+            return Err(anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram));
         }
         if info.key != &Self::address(program_id) {
             solana_program::msg!("Invalid state address");
-            return anchor_attribute_error::error!(ErrorCode::StateInvalidAddress);
+            return Err(anchor_attribute_error::error!(ErrorCode::StateInvalidAddress));
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramState::new(
@@ -77,7 +77,7 @@ where
         _bumps: &mut BTreeMap<String, u8>,
     ) -> AnchorResult<Self> {
         if accounts.is_empty() {
-            return anchor_attribute_error::error!(ErrorCode::AccountNotEnoughKeys);
+            return Err(anchor_attribute_error::error!(ErrorCode::AccountNotEnoughKeys));
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];

@@ -20,14 +20,14 @@ impl AccountDeserialize for ProgramData {
 
         match program_state {
             UpgradeableLoaderState::Uninitialized => {
-                anchor_attribute_error::error!(ErrorCode::AccountNotProgramData)
+                Err(anchor_attribute_error::error!(ErrorCode::AccountNotProgramData))
             }
             UpgradeableLoaderState::Buffer {
                 authority_address: _,
-            } => anchor_attribute_error::error!(ErrorCode::AccountNotProgramData),
+            } => Err(anchor_attribute_error::error!(ErrorCode::AccountNotProgramData)),
             UpgradeableLoaderState::Program {
                 programdata_address: _,
-            } => anchor_attribute_error::error!(ErrorCode::AccountNotProgramData),
+            } => Err(anchor_attribute_error::error!(ErrorCode::AccountNotProgramData)),
             UpgradeableLoaderState::ProgramData {
                 slot,
                 upgrade_authority_address,

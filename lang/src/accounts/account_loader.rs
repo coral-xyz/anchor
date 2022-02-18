@@ -119,13 +119,13 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
     #[inline(never)]
     pub fn try_from(acc_info: &AccountInfo<'info>) -> AnchorResult<AccountLoader<'info, T>> {
         if acc_info.owner != &T::owner() {
-            return anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram);
+            return Err(anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram));
         }
         let data: &[u8] = &acc_info.try_borrow_data()?;
         // Discriminator must match.
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::discriminator() {
-            return anchor_attribute_error::error!(ErrorCode::AccountDiscriminatorMismatch);
+            return Err(anchor_attribute_error::error!(ErrorCode::AccountDiscriminatorMismatch));
         }
 
         Ok(AccountLoader::new(acc_info.clone()))
@@ -138,7 +138,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         acc_info: &AccountInfo<'info>,
     ) -> AnchorResult<AccountLoader<'info, T>> {
         if acc_info.owner != &T::owner() {
-            return anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram);
+            return Err(anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram));
         }
         Ok(AccountLoader::new(acc_info.clone()))
     }
@@ -149,7 +149,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
 
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::discriminator() {
-            return anchor_attribute_error::error!(ErrorCode::AccountDiscriminatorMismatch);
+            return Err(anchor_attribute_error::error!(ErrorCode::AccountDiscriminatorMismatch));
         }
 
         Ok(Ref::map(data, |data| {
@@ -162,14 +162,14 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
         if !self.acc_info.is_writable {
-            return anchor_attribute_error::error!(ErrorCode::AccountNotMutable);
+            return Err(anchor_attribute_error::error!(ErrorCode::AccountNotMutable));
         }
 
         let data = self.acc_info.try_borrow_mut_data()?;
 
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::discriminator() {
-            return anchor_attribute_error::error!(ErrorCode::AccountDiscriminatorMismatch);
+            return Err(anchor_attribute_error::error!(ErrorCode::AccountDiscriminatorMismatch));
         }
 
         Ok(RefMut::map(data, |data| {
@@ -183,7 +183,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
         if !self.acc_info.is_writable {
-            return anchor_attribute_error::error!(ErrorCode::AccountNotMutable);
+            return Err(anchor_attribute_error::error!(ErrorCode::AccountNotMutable));
         }
 
         let data = self.acc_info.try_borrow_mut_data()?;
@@ -193,7 +193,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         disc_bytes.copy_from_slice(&data[..8]);
         let discriminator = u64::from_le_bytes(disc_bytes);
         if discriminator != 0 {
-            return anchor_attribute_error::error!(ErrorCode::AccountDiscriminatorAlreadySet);
+            return Err(anchor_attribute_error::error!(ErrorCode::AccountDiscriminatorAlreadySet));
         }
 
         Ok(RefMut::map(data, |data| {
@@ -211,7 +211,7 @@ impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
         _bumps: &mut BTreeMap<String, u8>,
     ) -> AnchorResult<Self> {
         if accounts.is_empty() {
-            return anchor_attribute_error::error!(ErrorCode::AccountNotEnoughKeys);
+            return Err(anchor_attribute_error::error!(ErrorCode::AccountNotEnoughKeys));
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];

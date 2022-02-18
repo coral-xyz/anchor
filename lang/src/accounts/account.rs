@@ -243,10 +243,10 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
     #[inline(never)]
     pub fn try_from(info: &AccountInfo<'a>) -> AnchorResult<Account<'a, T>> {
         if info.owner == &system_program::ID && info.lamports() == 0 {
-            return anchor_attribute_error::error!(ErrorCode::AccountNotInitialized);
+            return Err(anchor_attribute_error::error!(ErrorCode::AccountNotInitialized));
         }
         if info.owner != &T::owner() {
-            return anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram);
+            return Err(anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram));
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(Account::new(info.clone(), T::try_deserialize(&mut data)?))
@@ -258,10 +258,10 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
     #[inline(never)]
     pub fn try_from_unchecked(info: &AccountInfo<'a>) -> AnchorResult<Account<'a, T>> {
         if info.owner == &system_program::ID && info.lamports() == 0 {
-            return anchor_attribute_error::error!(ErrorCode::AccountNotInitialized);
+            return Err(anchor_attribute_error::error!(ErrorCode::AccountNotInitialized));
         }
         if info.owner != &T::owner() {
-            return anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram);
+            return Err(anchor_attribute_error::error!(ErrorCode::AccountOwnedByWrongProgram));
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(Account::new(
@@ -316,7 +316,7 @@ where
         _bumps: &mut BTreeMap<String, u8>,
     ) -> AnchorResult<Self> {
         if accounts.is_empty() {
-            return anchor_attribute_error::error!(ErrorCode::AccountNotEnoughKeys);
+            return Err(anchor_attribute_error::error!(ErrorCode::AccountNotEnoughKeys));
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];

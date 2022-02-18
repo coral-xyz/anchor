@@ -359,12 +359,14 @@ pub mod __private {
 macro_rules! require {
     ($invariant:expr, $error:tt $(,)?) => {
         if !($invariant) {
-            return anchor_lang::anchor_attribute_error::error!(crate::ErrorCode::$error);
+            return Err(anchor_lang::anchor_attribute_error::error!(
+                crate::ErrorCode::$error
+            ));
         }
     };
     ($invariant:expr, $error:expr $(,)?) => {
         if !($invariant) {
-            return anchor_lang::anchor_attribute_error::error!($error);
+            return Err(anchor_lang::anchor_attribute_error::error!($error));
             return Err($error.into());
         }
     };

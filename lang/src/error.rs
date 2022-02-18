@@ -214,8 +214,11 @@ impl AnchorError {
     pub fn log(&self) {
         anchor_lang::solana_program::msg!(
             "AnchorError thrown in {}:{}. Error Code: {}. Error Number: {}. Error Message: {}.",
-            self.source.filename, self.source.line,
-            self.error_code_string, self.error_code_number, self.error_msg
+            self.source.filename,
+            self.source.line,
+            self.error_code_string,
+            self.error_code_number,
+            self.error_msg
         );
     }
 }
