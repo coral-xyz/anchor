@@ -84,7 +84,6 @@ pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
     TokenStream::from(quote! {
             Err(anchor_lang::error::Error::from(
                     anchor_lang::error::AnchorError {
-                        program_id: None,
                         error_code_string: format!("{:?}", #error_code), // TODO: dont use format here
                         error_code_number: #error_code.into(),
                         error_msg: #error_msg_inputs,

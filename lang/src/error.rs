@@ -204,9 +204,6 @@ impl From<ProgramError> for Error {
 // TODO: is there a better way than converting to Strings?
 #[derive(Debug)]
 pub struct AnchorError {
-    // the program the error came from
-    // TODO: better way to do this other than Option<Pubkey>?
-    pub program_id: Option<Pubkey>,
     pub error_code_string: String,
     pub error_code_number: u32,
     pub error_msg: String,
@@ -216,8 +213,8 @@ pub struct AnchorError {
 impl AnchorError {
     pub fn log(&self) {
         anchor_lang::solana_program::msg!(
-            "AnchorError thrown in {}:{} in program: {}. Error Code: {}. Error Number: {}. Error Message: {}.",
-            self.source.filename, self.source.line, self.program_id.unwrap().to_string(),
+            "AnchorError thrown in {}:{}. Error Code: {}. Error Number: {}. Error Message: {}.",
+            self.source.filename, self.source.line,
             self.error_code_string, self.error_code_number, self.error_msg
         );
     }
@@ -227,7 +224,6 @@ impl std::convert::From<Error> for anchor_lang::solana_program::program_error::P
     fn from(e: Error) -> anchor_lang::solana_program::program_error::ProgramError {
         match e {
             Error::AnchorError(AnchorError {
-                program_id: _,
                 error_code_string: _,
                 error_code_number,
                 error_msg: _,
