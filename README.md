@@ -113,6 +113,10 @@ For simple documentation changes, feel free to just open a pull request.
 If you're considering larger changes or self motivated features, please file an issue
 and engage with the maintainers in [Discord](https://discord.gg/sxy4zxBckh).
 
+<a href="https://github.com/project-serum/anchor/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=project-serum/anchor" />
+</a>
+
 ## License
 
 Anchor is licensed under [Apache 2.0](./LICENSE).
