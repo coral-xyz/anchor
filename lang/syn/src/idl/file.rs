@@ -255,12 +255,11 @@ pub fn parse(
             .unwrap()
             .req_features()
             .iter()
-            .find(|f| f.as_str() == "deprecated-layout")
-            .is_some();
+            .any(|f| f.as_str() == "deprecated-layout");
         if is_deprecated_layout {
             None
         } else {
-            Some("0.1.0".to_string())
+            Some("0.1.0".to_string()) // TODO: make this a u8?
         }
     };
 
