@@ -8,7 +8,8 @@ pub mod pda;
 #[serde(rename_all = "camelCase")]
 pub struct Idl {
     // Version of the idl protocol.
-    pub layout_version: String,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub layout_version: Option<String>,
     // Version of the program.
     pub version: String,
     pub name: String,

@@ -1,6 +1,6 @@
 import * as assert from "assert";
-import * as anchor from '@project-serum/anchor';
-import { Program, BorshAccountHeader } from '@project-serum/anchor';
+import * as anchor from "@project-serum/anchor";
+import { Program, BorshAccountHeader } from "@project-serum/anchor";
 import { Keypair } from "@solana/web3.js";
 import { DeprecatedLayout } from "../target/types/deprecated_layout";
 import { NewLayout } from "../target/types/new_layout";
@@ -10,8 +10,6 @@ describe("deprecated-layout", () => {
   anchor.setProvider(anchor.Provider.env());
 
   it("Has an 8 byte discriminator", async () => {
-    anchor.utils.features.set("deprecated-layout");
-
     const program = anchor.workspace
       .DeprecatedLayout as Program<DeprecatedLayout>;
 
@@ -27,7 +25,9 @@ describe("deprecated-layout", () => {
     const data = accountInfo.data;
     const header = data.slice(0, 8);
     const accountData = data.slice(8);
-    const expectedDiscriminator = BorshAccountHeader.discriminator("data");
+    const expectedDiscriminator = new BorshAccountHeader(
+      program.idl
+    ).discriminator("data");
 
     assert.ok(
       "0xce9c3bbc124ff0e8" ===
@@ -39,21 +39,9 @@ describe("deprecated-layout", () => {
 
     const dataAccount = await program.account.data.fetch(dataKeypair.publicKey);
     assert.ok(dataAccount.data.toNumber() === 2);
-
-    assert.rejects(
-      async () => {
-        anchor.utils.features.unset("deprecated-layout");
-        await program.account.data.fetch(dataKeypair.publicKey);
-      },
-      (err) => {
-        return err.toString() === "Error: Invalid account discriminator";
-      }
-    );
   });
 
   it("Has a 4 byte discriminator and 8 byte header", async () => {
-    anchor.utils.features.unset("deprecated-layout");
-
     const program = anchor.workspace.NewLayout as Program<NewLayout>;
 
     const dataKeypair = Keypair.generate();
@@ -69,7 +57,9 @@ describe("deprecated-layout", () => {
     const header = data.slice(0, 8);
     const givenDiscriminator = header.slice(2, 6);
     const accountData = data.slice(8);
-    const expectedDiscriminator = BorshAccountHeader.discriminator("data");
+    const expectedDiscriminator = new BorshAccountHeader(
+      program.idl
+    ).discriminator("data");
 
     assert.ok(
       "0xce9c3bbc" === anchor.utils.bytes.hex.encode(expectedDiscriminator)
@@ -84,15 +74,5 @@ describe("deprecated-layout", () => {
 
     const dataAccount = await program.account.data.fetch(dataKeypair.publicKey);
     assert.ok(dataAccount.data.toNumber() === 2);
-
-    assert.rejects(
-      async () => {
-        anchor.utils.features.set("deprecated-layout");
-        await program.account.data.fetch(dataKeypair.publicKey);
-      },
-      (err) => {
-        return err.toString() === "Error: Invalid account discriminator";
-      }
-    );
   });
 });

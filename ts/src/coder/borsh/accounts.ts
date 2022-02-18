@@ -8,7 +8,6 @@ import { Idl, IdlTypeDef } from "../../idl.js";
 import { IdlCoder } from "./idl.js";
 import { AccountsCoder } from "../index.js";
 import { accountSize } from "../common.js";
-import { FeatureSet } from "../../utils/features";
 
 /**
  * Number of bytes of the account header.
@@ -34,14 +33,14 @@ export class BorshAccountsCoder<A extends string = string>
   /**
    * IDL whose acconts will be coded.
    */
-	private idl: Idl;
+  private idl: Idl;
 
-	/**
-	 * Header configuration.
-	 */
-	readonly header: BorshAccountHeader;
+  /**
+   * Header configuration.
+   */
+  private header: BorshAccountHeader;
 
-	public constructor(idl: Idl) {
+  public constructor(idl: Idl) {
     if (idl.accounts === undefined) {
       this.accountLayouts = new Map();
       return;
@@ -52,7 +51,7 @@ export class BorshAccountsCoder<A extends string = string>
 
     this.accountLayouts = new Map(layouts);
     this.idl = idl;
-		this.header = new BorshAccountHeader(idl);
+    this.header = new BorshAccountHeader(idl);
   }
 
   public async encode<T = any>(accountName: A, account: T): Promise<Buffer> {
@@ -105,14 +104,13 @@ export class BorshAccountsCoder<A extends string = string>
 }
 
 export class BorshAccountHeader {
-
-	constructor(_idl: Idl) {}
+  constructor(private _idl: Idl) {}
 
   /**
    * Returns the default account header for an account with the given name.
    */
   public encode(accountName: string, nameSpace?: string): Buffer {
-    if (this._features.deprecatedLayout) {
+    if (this._idl.layoutVersion === undefined) {
       return this.discriminator(accountName, nameSpace);
     } else {
       return Buffer.concat([
@@ -138,7 +136,7 @@ export class BorshAccountHeader {
   }
 
   public discriminatorSize(): number {
-    return this._features.deprecatedLayout
+    return this._idl.layoutVersion === undefined
       ? DEPRECATED_ACCOUNT_DISCRIMINATOR_SIZE
       : ACCOUNT_DISCRIMINATOR_SIZE;
   }
@@ -147,7 +145,7 @@ export class BorshAccountHeader {
    * Returns the account data index at which the discriminator starts.
    */
   public discriminatorOffset(): number {
-    if (this._features.deprecatedLayout) {
+    if (this._idl.layoutVersion === undefined) {
       return 0;
     } else {
       return 2;
@@ -165,7 +163,7 @@ export class BorshAccountHeader {
    * Returns the discriminator from the given account data.
    */
   public parseDiscriminator(data: Buffer): Buffer {
-    if (this._features.deprecatedLayout) {
+    if (this._idl.layoutVersion === undefined) {
       return data.slice(0, 8);
     } else {
       return data.slice(2, 6);

@@ -6,7 +6,6 @@ import { Idl, IdlEvent, IdlTypeDef } from "../../idl.js";
 import { Event, EventData } from "../../program/event.js";
 import { IdlCoder } from "./idl.js";
 import { EventCoder } from "../index.js";
-import { FeatureSet } from "../../utils/features";
 
 export class BorshEventCoder implements EventCoder {
   /**
@@ -19,17 +18,17 @@ export class BorshEventCoder implements EventCoder {
    */
   private discriminators: Map<string, string>;
 
-	/**
-	 * Header configuration.
-	 */
-	private header: EventHeader;
+  /**
+   * Header configuration.
+   */
+  private header: EventHeader;
 
   public constructor(idl: Idl) {
     if (idl.events === undefined) {
       this.layouts = new Map();
       return;
     }
-		this.header = new EventHeader(features);
+    this.header = new EventHeader(idl);
     const layouts: [string, Layout<any>][] = idl.events.map((event) => {
       let eventTypeDef: IdlTypeDef = {
         name: event.name,
@@ -89,10 +88,10 @@ export function eventDiscriminator(name: string): Buffer {
 }
 
 class EventHeader {
-	constructor(private _features: FeatureSet) {}
+  constructor(private _idl: Idl) {}
 
   public parseDiscriminator(data: Buffer): Buffer {
-    if (this._features.deprecatedLayout) {
+    if (this._idl.layoutVersion === undefined) {
       return data.slice(0, 8);
     } else {
       return data.slice(0, 4);
@@ -100,7 +99,7 @@ class EventHeader {
   }
 
   public size(): number {
-    if (this._features.deprecatedLayout) {
+    if (this._idl.layoutVersion === undefined) {
       return 8;
     } else {
       return 4;
@@ -108,7 +107,7 @@ class EventHeader {
   }
 
   public discriminator(name: string): Buffer {
-    if (this._features.deprecatedLayout) {
+    if (this._idl.layoutVersion === undefined) {
       return Buffer.from(sha256.digest(`event:${name}`)).slice(0, 8);
     } else {
       return Buffer.from(sha256.digest(`event:${name}`)).slice(0, 4);

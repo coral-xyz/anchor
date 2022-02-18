@@ -83,10 +83,10 @@ impl Manifest {
     }
 
     pub fn version(&self) -> String {
-        match &self.package {
-            Some(package) => package.version.to_string(),
-            _ => "0.0.0".to_string(),
-        }
+        self.package
+            .as_ref()
+            .map(|p| p.version.clone())
+            .expect("Cargo.toml must have package version")
     }
 
     // Climbs each parent directory from the current dir until we find a Cargo.toml
@@ -161,10 +161,9 @@ impl WithPath<Config> {
         for path in self.get_program_list()? {
             let cargo = Manifest::from_path(&path.join("Cargo.toml"))?;
             let lib_name = cargo.lib_name()?;
-            let version = cargo.version();
             let idl = anchor_syn::idl::file::parse(
+                &*cargo,
                 path.join("src/lib.rs"),
-                version,
                 self.features.seeds,
                 false,
             )?;

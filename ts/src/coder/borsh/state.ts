@@ -3,19 +3,19 @@ import { Layout } from "buffer-layout";
 import { sha256 } from "js-sha256";
 import { Idl } from "../../idl.js";
 import { IdlCoder } from "./idl.js";
-import * as features from '../../utils/features';
+import * as features from "../../utils/features";
 import { BorshAccountHeader } from "./accounts";
 
 export class BorshStateCoder {
   private layout: Layout;
-	private header: BorshAccountHeader;
+  readonly header: BorshAccountHeader;
 
-  public constructor(idl: Idl, header: BorshAccountHeader) {
+  public constructor(idl: Idl) {
     if (idl.state === undefined) {
       throw new Error("Idl state not defined.");
     }
     this.layout = IdlCoder.typeDefLayout(idl.state.struct, idl.types);
-		this.header = header;
+    this.header = new BorshAccountHeader(idl);
   }
 
   public async encode<T = any>(name: string, account: T): Promise<Buffer> {

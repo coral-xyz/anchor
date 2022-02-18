@@ -252,6 +252,7 @@ dependencies = [
  "anyhow",
  "arrayref",
  "bs58 0.3.1",
+ "cargo_toml",
  "heck 0.3.3",
  "proc-macro2 1.0.32",
  "proc-macro2-diagnostics",

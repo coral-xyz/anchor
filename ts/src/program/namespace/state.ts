@@ -36,7 +36,7 @@ export default class StateFactory {
     if (idl.state === undefined) {
       return undefined;
     }
-    return new StateClient(idl, programId, provider, coder);
+    return new StateClient(idl, programId, provider, coder as BorshCoder);
   }
 }
 
@@ -74,7 +74,6 @@ export class StateClient<IDL extends Idl> {
   private _programId: PublicKey;
 
   private _address: PublicKey;
-  private _coder: Coder;
   private _idl: IDL;
   private _sub: Subscription | null;
 
@@ -88,7 +87,7 @@ export class StateClient<IDL extends Idl> {
     /**
      * Returns the coder.
      */
-    public readonly coder: Coder = new BorshCoder(idl)
+    public readonly coder: BorshCoder = new BorshCoder(idl)
   ) {
     this._idl = idl;
     this._programId = programId;
@@ -175,7 +174,7 @@ export class StateClient<IDL extends Idl> {
     }
 
     const expectedDiscriminator = await stateDiscriminator(state.struct.name);
-    const discriminator = BorshAccountHeader.parseDiscriminator(
+    const discriminator = this.coder.state.header.parseDiscriminator(
       accountInfo.data
     );
     if (discriminator.compare(expectedDiscriminator)) {

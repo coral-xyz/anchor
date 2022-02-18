@@ -1389,8 +1389,8 @@ fn extract_idl(cfg: &WithPath<Config>, file: &str) -> Result<Option<Idl>> {
     let cargo = Manifest::discover_from_path(manifest_from_path)?
         .ok_or_else(|| anyhow!("Cargo.toml not found"))?;
     anchor_syn::idl::file::parse(
+        &*cargo,
         &*file,
-        cargo.version(),
         cfg.features.seeds,
         cfg.features.safety_checks,
     )

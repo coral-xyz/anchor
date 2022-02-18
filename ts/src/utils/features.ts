@@ -1,15 +1,7 @@
 export const Features = {
   DeprecatedState: "anchor-deprecated-state",
   DebugLogs: "debug-logs",
-  DeprecatedLayout: "deprecated-layout",
 };
-
-const _AVAILABLE_FEATURES = new Set([
-  Features.DeprecatedState,
-  Features.DebugLogs,
-  Features.DeprecatedLayout,
-]);
-const _FEATURES = new Map();
 
 export function set(key: string) {
   if (!_AVAILABLE_FEATURES.has(key)) {
@@ -28,3 +20,9 @@ export function unset(key: string) {
 export function isSet(key: string): boolean {
   return _FEATURES.get(key) === true;
 }
+
+const _AVAILABLE_FEATURES = new Set([
+  Features.DeprecatedState,
+  Features.DebugLogs,
+]);
+const _FEATURES = new Map();

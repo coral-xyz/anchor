@@ -4,6 +4,7 @@ use crate::parser::{self, accounts, error, program};
 use crate::Ty;
 use crate::{AccountField, AccountsStruct, StateIx};
 use anyhow::Result;
+use cargo_toml::Manifest;
 use heck::MixedCase;
 use quote::ToTokens;
 use std::collections::{HashMap, HashSet};
@@ -15,8 +16,8 @@ const ERROR_CODE_OFFSET: u32 = 6000;
 
 // Parse an entire interface file.
 pub fn parse(
+    cargo: &Manifest,
     filename: impl AsRef<Path>,
-    version: String,
     seeds_feature: bool,
     safety_checks: bool,
 ) -> Result<Option<Idl>> {
@@ -241,8 +242,30 @@ pub fn parse(
         })
         .collect::<Vec<IdlConst>>();
 
+    let version = cargo
+        .package
+        .as_ref()
+        .map(|p| p.version.clone())
+        .expect("Cargo.toml must have package version");
+
+    let layout_version = {
+        let is_deprecated_layout = cargo
+            .dependencies
+            .get("anchor-lang")
+            .unwrap()
+            .req_features()
+            .iter()
+            .find(|f| f.as_str() == "deprecated-layout")
+            .is_some();
+        if is_deprecated_layout {
+            None
+        } else {
+            Some("0.1.0".to_string())
+        }
+    };
+
     Ok(Some(Idl {
-        layout_version: "0.1.0".to_string(),
+        layout_version,
         version,
         name: p.name.to_string(),
         state,
