@@ -1,4 +1,4 @@
-use solana_program::{program_error::ProgramError, pubkey::Pubkey};
+use solana_program::program_error::ProgramError;
 
 use anchor_attribute_error::error_codes;
 
