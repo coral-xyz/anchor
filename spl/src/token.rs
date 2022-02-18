@@ -1,10 +1,10 @@
-use anchor_lang::solana_program;
 use anchor_lang::solana_program::account_info::AccountInfo;
 use anchor_lang::solana_program::entrypoint::ProgramResult;
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::program_pack::Pack;
 use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::{context::CpiContext, Accounts};
+use anchor_lang::{solana_program, AnchorResult};
 use std::ops::Deref;
 
 pub use spl_token::ID;
@@ -310,8 +310,10 @@ impl TokenAccount {
 }
 
 impl anchor_lang::AccountDeserialize for TokenAccount {
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        spl_token::state::Account::unpack(buf).map(TokenAccount)
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> AnchorResult<Self> {
+        spl_token::state::Account::unpack(buf)
+            .map(TokenAccount)
+            .map_err(|pe| pe.into())
     }
 }
 
@@ -339,8 +341,10 @@ impl Mint {
 }
 
 impl anchor_lang::AccountDeserialize for Mint {
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        spl_token::state::Mint::unpack(buf).map(Mint)
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> AnchorResult<Self> {
+        spl_token::state::Mint::unpack(buf)
+            .map(Mint)
+            .map_err(|pe| pe.into())
     }
 }
 
