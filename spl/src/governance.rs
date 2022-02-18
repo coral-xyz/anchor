@@ -34,7 +34,9 @@ macro_rules! vote_weight_record {
                 &self,
                 writer: &mut W,
             ) -> std::result::Result<(), ProgramError> {
-                anchor_lang::AnchorSerialize::serialize(&self.0, writer)
+                let mut to_write = &mut self.0.clone();
+                to_write.account_discriminator = *b"2ef99b4b";
+                anchor_lang::AnchorSerialize::serialize(to_write, writer)
                     .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotSerialize)?;
                 Ok(())
             }
@@ -43,6 +45,12 @@ macro_rules! vote_weight_record {
         impl anchor_lang::Owner for VoterWeightRecord {
             fn owner() -> Pubkey {
                 $id
+            }
+        }
+
+        impl anchor_lang::Discriminator for VoterWeightRecord {
+            fn discriminator() -> [u8; 8] {
+                *b"2ef99b4b"
             }
         }
 
