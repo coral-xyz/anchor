@@ -1645,7 +1645,7 @@ describe("misc", () => {
         },
         signers: [mint],
       });
-  
+
       const token = anchor.web3.Keypair.generate();
       await program.rpc.testInitToken({
         accounts: {
@@ -1666,7 +1666,7 @@ describe("misc", () => {
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        }
+        },
       });
       const mintAccount = new Token(
         program.provider.connection,
@@ -1677,8 +1677,8 @@ describe("misc", () => {
       const account = await mintAccount.getAccountInfo(token.publicKey);
       assert.ok(account.owner.equals(program.provider.wallet.publicKey));
       assert.ok(account.mint.equals(mint.publicKey));
-    })
-  
+    });
+
     it("Token Constraint Test(no init) - Can make only token::authority", async () => {
       const mint = anchor.web3.Keypair.generate();
       await program.rpc.testInitMint({
@@ -1691,7 +1691,7 @@ describe("misc", () => {
         },
         signers: [mint],
       });
-  
+
       const token = anchor.web3.Keypair.generate();
       await program.rpc.testInitToken({
         accounts: {
@@ -1712,7 +1712,7 @@ describe("misc", () => {
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        }
+        },
       });
       const mintAccount = new Token(
         program.provider.connection,
@@ -1722,8 +1722,8 @@ describe("misc", () => {
       );
       const account = await mintAccount.getAccountInfo(token.publicKey);
       assert.ok(account.owner.equals(program.provider.wallet.publicKey));
-    })
-  
+    });
+
     it("Token Constraint Test(no init) - Can make only token::mint", async () => {
       const mint = anchor.web3.Keypair.generate();
       await program.rpc.testInitMint({
@@ -1736,7 +1736,7 @@ describe("misc", () => {
         },
         signers: [mint],
       });
-  
+
       const token = anchor.web3.Keypair.generate();
       await program.rpc.testInitToken({
         accounts: {
@@ -1757,7 +1757,7 @@ describe("misc", () => {
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        }
+        },
       });
       const mintAccount = new Token(
         program.provider.connection,
@@ -1767,8 +1767,8 @@ describe("misc", () => {
       );
       const account = await mintAccount.getAccountInfo(token.publicKey);
       assert.ok(account.mint.equals(mint.publicKey));
-    })
-  
+    });
+
     it("Token Constraint Test(no init) - throws if token::mint mismatch", async () => {
       const mint = anchor.web3.Keypair.generate();
       await program.rpc.testInitMint({
@@ -1781,7 +1781,7 @@ describe("misc", () => {
         },
         signers: [mint],
       });
-  
+
       const mint1 = anchor.web3.Keypair.generate();
       await program.rpc.testInitMint({
         accounts: {
@@ -1793,7 +1793,7 @@ describe("misc", () => {
         },
         signers: [mint1],
       });
-  
+
       const token = anchor.web3.Keypair.generate();
       await program.rpc.testInitToken({
         accounts: {
@@ -1815,14 +1815,14 @@ describe("misc", () => {
             systemProgram: anchor.web3.SystemProgram.programId,
             tokenProgram: TOKEN_PROGRAM_ID,
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-          }
+          },
         });
         assert.ok(false);
       } catch (err) {
         assert.equal(err.code, 2014);
       }
     });
-  
+
     it("Token Constraint Test(no init) - throws if token::authority mismatch", async () => {
       const mint = anchor.web3.Keypair.generate();
       await program.rpc.testInitMint({
@@ -1858,7 +1858,7 @@ describe("misc", () => {
             systemProgram: anchor.web3.SystemProgram.programId,
             tokenProgram: TOKEN_PROGRAM_ID,
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-          }
+          },
         });
         assert.ok(false);
       } catch (err) {
@@ -1866,7 +1866,7 @@ describe("misc", () => {
         assert.equal(err.code, 2015);
       }
     });
-  
+
     it("Token Constraint Test(no init) - throws if both token::authority, token::mint mismatch", async () => {
       const mint = anchor.web3.Keypair.generate();
       await program.rpc.testInitMint({
@@ -1913,14 +1913,14 @@ describe("misc", () => {
             systemProgram: anchor.web3.SystemProgram.programId,
             tokenProgram: TOKEN_PROGRAM_ID,
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-          }
+          },
         });
         assert.ok(false);
       } catch (err) {
         assert.equal(err.code, 2015);
       }
     });
-  
+
     it("Mint Constraint Test(no init) - mint::decimals, mint::authority, mint::freeze_authority", async () => {
       const mint = anchor.web3.Keypair.generate();
       await program.rpc.testInitMint({
@@ -1943,7 +1943,7 @@ describe("misc", () => {
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        }
+        },
       });
       const client = new Token(
         program.provider.connection,
@@ -1960,9 +1960,8 @@ describe("misc", () => {
         mintAccount.freezeAuthority.equals(program.provider.wallet.publicKey)
       );
     });
-  
-    it("Mint Constraint Test(no init) - throws if mint::decimals mismatch", async () => {  
-      
+
+    it("Mint Constraint Test(no init) - throws if mint::decimals mismatch", async () => {
       const mint = anchor.web3.Keypair.generate();
       await program.rpc.testInitMint({
         accounts: {
@@ -1985,16 +1984,15 @@ describe("misc", () => {
             systemProgram: anchor.web3.SystemProgram.programId,
             tokenProgram: TOKEN_PROGRAM_ID,
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-          }
+          },
         });
         assert.ok(false);
-      } catch(err) {
-        assert.equal(err.code, 2018)
+      } catch (err) {
+        assert.equal(err.code, 2018);
       }
     });
-  
-    it("Mint Constraint Test(no init) - throws if mint::mint_authority mismatch", async () => {  
-      
+
+    it("Mint Constraint Test(no init) - throws if mint::mint_authority mismatch", async () => {
       const mint = anchor.web3.Keypair.generate();
       await program.rpc.testInitMint({
         accounts: {
@@ -2006,7 +2004,7 @@ describe("misc", () => {
         },
         signers: [mint],
       });
-  
+
       // mintAuthority mismatch
       const fakeAuthority = Keypair.generate();
       try {
@@ -2019,16 +2017,15 @@ describe("misc", () => {
             systemProgram: anchor.web3.SystemProgram.programId,
             tokenProgram: TOKEN_PROGRAM_ID,
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-          }
+          },
         });
         assert.ok(false);
-      } catch(err) {
-        assert.equal(err.code, 2016)
+      } catch (err) {
+        assert.equal(err.code, 2016);
       }
     });
-  
-    it("Mint Constraint Test(no init) - throws if mint::freeze_authority mismatch", async () => {  
-      
+
+    it("Mint Constraint Test(no init) - throws if mint::freeze_authority mismatch", async () => {
       const mint = anchor.web3.Keypair.generate();
       await program.rpc.testInitMint({
         accounts: {
@@ -2040,7 +2037,7 @@ describe("misc", () => {
         },
         signers: [mint],
       });
-  
+
       const fakeAuthority = Keypair.generate();
       // freezeAuthority mismatch
       try {
@@ -2053,16 +2050,15 @@ describe("misc", () => {
             systemProgram: anchor.web3.SystemProgram.programId,
             tokenProgram: TOKEN_PROGRAM_ID,
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-          }
+          },
         });
         assert.ok(false);
-      } catch(err) {
-        assert.equal(err.code, 2017)
+      } catch (err) {
+        assert.equal(err.code, 2017);
       }
     });
-  
-    it("Mint Constraint Test(no init) - can write only mint::decimals", async () => {  
-      
+
+    it("Mint Constraint Test(no init) - can write only mint::decimals", async () => {
       const mint = anchor.web3.Keypair.generate();
       await program.rpc.testInitMint({
         accounts: {
@@ -2074,7 +2070,7 @@ describe("misc", () => {
         },
         signers: [mint],
       });
-  
+
       // right
       await program.rpc.testMintOnlyDecimalsConstraint(6, {
         accounts: {
@@ -2083,7 +2079,7 @@ describe("misc", () => {
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        }
+        },
       });
       const client = new Token(
         program.provider.connection,
@@ -2094,9 +2090,8 @@ describe("misc", () => {
       const mintAccount = await client.getMintInfo();
       assert.ok(mintAccount.decimals === 6);
     });
-  
-    it("Mint Constraint Test(no init) - can write only mint::authority and mint::freeze_authority", async () => {  
-      
+
+    it("Mint Constraint Test(no init) - can write only mint::authority and mint::freeze_authority", async () => {
       const mint = anchor.web3.Keypair.generate();
       await program.rpc.testInitMint({
         accounts: {
@@ -2108,7 +2103,7 @@ describe("misc", () => {
         },
         signers: [mint],
       });
-  
+
       // right
       await program.rpc.testMintOnlyAuthConstraint({
         accounts: {
@@ -2119,7 +2114,7 @@ describe("misc", () => {
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           mintAuthority: program.provider.wallet.publicKey,
           freezeAuthority: program.provider.wallet.publicKey,
-        }
+        },
       });
       const client = new Token(
         program.provider.connection,
@@ -2135,10 +2130,8 @@ describe("misc", () => {
         mintAccount.freezeAuthority.equals(program.provider.wallet.publicKey)
       );
     });
-  
-    
-    it("Mint Constraint Test(no init) - can write only mint::authority", async () => {  
-      
+
+    it("Mint Constraint Test(no init) - can write only mint::authority", async () => {
       const mint = anchor.web3.Keypair.generate();
       await program.rpc.testInitMint({
         accounts: {
@@ -2150,7 +2143,7 @@ describe("misc", () => {
         },
         signers: [mint],
       });
-  
+
       // right
       await program.rpc.testMintOnlyOneAuthConstraint({
         accounts: {
@@ -2160,7 +2153,7 @@ describe("misc", () => {
           tokenProgram: TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           mintAuthority: program.provider.wallet.publicKey,
-        }
+        },
       });
       const client = new Token(
         program.provider.connection,
@@ -2173,9 +2166,8 @@ describe("misc", () => {
         mintAccount.mintAuthority.equals(program.provider.wallet.publicKey)
       );
     });
-  
-    it("Mint Constraint Test(no init) - can write only mint::decimals and mint::freeze_authority", async () => {  
-      
+
+    it("Mint Constraint Test(no init) - can write only mint::decimals and mint::freeze_authority", async () => {
       const mint = anchor.web3.Keypair.generate();
       await program.rpc.testInitMint({
         accounts: {
@@ -2187,7 +2179,7 @@ describe("misc", () => {
         },
         signers: [mint],
       });
-  
+
       // right
       await program.rpc.testMintMissMintAuthConstraint(6, {
         accounts: {
@@ -2197,7 +2189,7 @@ describe("misc", () => {
           tokenProgram: TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           freezeAuthority: program.provider.wallet.publicKey,
-        }
+        },
       });
       const client = new Token(
         program.provider.connection,
@@ -2210,6 +2202,6 @@ describe("misc", () => {
       assert.ok(
         mintAccount.freezeAuthority.equals(program.provider.wallet.publicKey)
       );
-    });  
-  })
+    });
+  });
 });
