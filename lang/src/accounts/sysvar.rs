@@ -76,7 +76,7 @@ impl<'info, T: solana_program::sysvar::Sysvar> Accounts<'info> for Sysvar<'info,
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
-        Sysvar::from_account_info(account).map_err(|pe| pe.into())
+        Sysvar::from_account_info(account)
     }
 }
 
