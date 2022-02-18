@@ -464,43 +464,36 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
 
         // Token.
         if let Some(token_mint) = &self.token_mint {
-            if self.token_authority.is_none() {
+            if self.init.is_some() && self.token_authority.is_none() {
                 return Err(ParseError::new(
                     token_mint.span(),
-                    "token authority must be provided if token mint is",
-                ));
-            }
-
-            if self.init.is_none() {
-                return Err(ParseError::new(
-                    token_mint.span(),
-                    "init is required for a pda token",
+                    "token authority must be provided if token mint is when initialize",
                 ));
             }
         }
         if let Some(token_authority) = &self.token_authority {
-            if self.token_mint.is_none() {
+            if self.init.is_some() && self.token_mint.is_none() {
                 return Err(ParseError::new(
                     token_authority.span(),
-                    "token mint must be provided if token authority is",
+                    "token mint must be provided if token authority is when initialize",
                 ));
             }
         }
 
         // Mint.
         if let Some(mint_decimals) = &self.mint_decimals {
-            if self.mint_authority.is_none() {
+            if self.init.is_some() && self.mint_authority.is_none() {
                 return Err(ParseError::new(
                     mint_decimals.span(),
-                    "mint authority must be provided if mint decimals is",
+                    "mint authority must be provided if mint decimals is when initialize",
                 ));
             }
         }
         if let Some(mint_authority) = &self.mint_authority {
-            if self.mint_decimals.is_none() {
+            if self.init.is_some() && self.mint_decimals.is_none() {
                 return Err(ParseError::new(
                     mint_authority.span(),
-                    "mint decimals must be provided if mint authority is",
+                    "mint decimals must be provided if mint authority is when initialize",
                 ));
             }
         }
@@ -589,6 +582,38 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             }
             _ => None,
         };
+
+        let spl_account = match (&token_mint, &token_authority) {
+            (None, None) => None,
+            _ => Some(ConstraintSplTokenAccount {
+                mint: match &token_mint {
+                    Some(a) => Some(a.clone().into_inner().mint),
+                    _ => None,
+                },
+                auth: match &token_authority {
+                    Some(a) => Some(a.clone().into_inner().auth),
+                    _ => None,
+                },
+            }),
+        };
+        let spl_mint = match (&mint_decimals, &mint_authority, &mint_freeze_authority) {
+            (None, None, None) => None,
+            _ => Some(ConstraintSplTokenMint {
+                decimals: match &mint_decimals {
+                    Some(a) => Some(a.clone().into_inner().decimals),
+                    _ => None,
+                },
+                mint_auth: match &mint_authority {
+                    Some(a) => Some(a.clone().into_inner().mint_auth),
+                    _ => None,
+                },
+                mint_freeze_auth: match &mint_freeze_authority {
+                    Some(a) => Some(a.clone().into_inner().mint_freeze_auth),
+                    _ => None,
+                },
+            }),
+        };
+
         Ok(ConstraintGroup {
             init: init.as_ref().map(|i| Ok(ConstraintInitGroup {
                 if_needed: i.if_needed,
@@ -643,6 +668,8 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             address: into_inner!(address),
             associated_token: if !is_init { associated_token } else { None },
             seeds,
+            spl_account: if !is_init {spl_account} else {None},
+            spl_mint: if !is_init {spl_mint} else {None},
         })
     }
 
@@ -740,12 +767,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 "associated token mint already provided",
             ));
         }
-        if self.init.is_none() {
-            return Err(ParseError::new(
-                c.span(),
-                "init must be provided before token",
-            ));
-        }
         self.token_mint.replace(c);
         Ok(())
     }
@@ -812,12 +833,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 "token authority already provided",
             ));
         }
-        if self.init.is_none() {
-            return Err(ParseError::new(
-                c.span(),
-                "init must be provided before token authority",
-            ));
-        }
         self.token_authority.replace(c);
         Ok(())
     }
@@ -846,12 +861,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         if self.mint_authority.is_some() {
             return Err(ParseError::new(c.span(), "mint authority already provided"));
         }
-        if self.init.is_none() {
-            return Err(ParseError::new(
-                c.span(),
-                "init must be provided before mint authority",
-            ));
-        }
         self.mint_authority.replace(c);
         Ok(())
     }
@@ -866,12 +875,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 "mint freeze_authority already provided",
             ));
         }
-        if self.init.is_none() {
-            return Err(ParseError::new(
-                c.span(),
-                "init must be provided before mint freeze_authority",
-            ));
-        }
         self.mint_freeze_authority.replace(c);
         Ok(())
     }
@@ -879,12 +882,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
     fn add_mint_decimals(&mut self, c: Context<ConstraintMintDecimals>) -> ParseResult<()> {
         if self.mint_decimals.is_some() {
             return Err(ParseError::new(c.span(), "mint decimals already provided"));
-        }
-        if self.init.is_none() {
-            return Err(ParseError::new(
-                c.span(),
-                "init must be provided before mint decimals",
-            ));
         }
         self.mint_decimals.replace(c);
         Ok(())
