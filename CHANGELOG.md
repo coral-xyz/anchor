@@ -11,6 +11,11 @@ incremented for features.
 
 ## [Unreleased]
 
+### Features
+
+* lang: add check that declared id == program id ([#1451](https://github.com/project-serum/anchor/pull/1451))
+* ts: Added float types support ([#1425](https://github.com/project-serum/anchor/pull/1425)).
+
 ### Fixes
 
 * ts: Allow nullable types for `Option<T>` mapped types ([#1428](https://github.com/project-serum/anchor/pull/1428)).
@@ -21,6 +26,7 @@ incremented for features.
 * lang, client, ts: 8 byte account discriminator has been replaced with a versioned account header. This is a state breaking change. If you have existing Anchor programs, previously deployed, one can continue to use the old 8 byte account discriminator by using the `deprecated-layout` feature flag ([#1415](https://github.com/project-serum/anchor/pull/1415)).
 * lang: The `AccountLoader` and `Loader`'s `load_init` method has been removed. Instead, use `load_mut` ([#1415](https://github.com/project-serum/anchor/pull/1415)).
 * lang: All error-related code is now in the error module ([#1426](https://github.com/project-serum/anchor/pull/1426)).
+* lang: Require doc comments when using AccountInfo or UncheckedAccount types ([#1452](https://github.com/project-serum/anchor/pull/1452)).
 * ts: `BorshAccountsCoder.accountDiscriminator` method has been replaced with `BorshAccountHeader.discriminator` ([#1415](https://github.com/project-serum/anchor/pull/1415)).
 
 ## [0.21.0] - 2022-02-07
