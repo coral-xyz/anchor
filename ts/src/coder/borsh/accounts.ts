@@ -8,8 +8,7 @@ import { Idl, IdlTypeDef } from "../../idl.js";
 import { IdlCoder } from "./idl.js";
 import { AccountsCoder } from "../index.js";
 import { accountSize } from "../common.js";
-import * as features from "../../utils/features";
-import { Features } from "../../utils/features";
+import { FeatureSet } from "../../utils/features";
 
 /**
  * Number of bytes of the account header.
@@ -35,9 +34,14 @@ export class BorshAccountsCoder<A extends string = string>
   /**
    * IDL whose acconts will be coded.
    */
-  private idl: Idl;
+	private idl: Idl;
 
-  public constructor(idl: Idl) {
+	/**
+	 * Header configuration.
+	 */
+	readonly header: BorshAccountHeader;
+
+	public constructor(idl: Idl) {
     if (idl.accounts === undefined) {
       this.accountLayouts = new Map();
       return;
@@ -48,6 +52,7 @@ export class BorshAccountsCoder<A extends string = string>
 
     this.accountLayouts = new Map(layouts);
     this.idl = idl;
+		this.header = new BorshAccountHeader(idl);
   }
 
   public async encode<T = any>(accountName: A, account: T): Promise<Buffer> {
@@ -58,13 +63,13 @@ export class BorshAccountsCoder<A extends string = string>
     }
     const len = layout.encode(account, buffer);
     let accountData = buffer.slice(0, len);
-    let header = BorshAccountHeader.encode(accountName);
+    let header = this.header.encode(accountName);
     return Buffer.concat([header, accountData]);
   }
 
   public decode<T = any>(accountName: A, data: Buffer): T {
-    const expectedDiscriminator = BorshAccountHeader.discriminator(accountName);
-    const givenDisc = BorshAccountHeader.parseDiscriminator(data);
+    const expectedDiscriminator = this.header.discriminator(accountName);
+    const givenDisc = this.header.parseDiscriminator(data);
     if (expectedDiscriminator.compare(givenDisc)) {
       throw new Error("Invalid account discriminator");
     }
@@ -81,10 +86,10 @@ export class BorshAccountsCoder<A extends string = string>
   }
 
   public memcmp(accountName: A): GetProgramAccountsFilter {
-    const discriminator = BorshAccountHeader.discriminator(accountName);
+    const discriminator = this.header.discriminator(accountName);
     return {
       memcmp: {
-        offset: BorshAccountHeader.discriminatorOffset(),
+        offset: this.header.discriminatorOffset(),
         bytes: bs58.encode(discriminator),
       },
     };
@@ -100,17 +105,20 @@ export class BorshAccountsCoder<A extends string = string>
 }
 
 export class BorshAccountHeader {
+
+	constructor(_idl: Idl) {}
+
   /**
    * Returns the default account header for an account with the given name.
    */
-  public static encode(accountName: string, nameSpace?: string): Buffer {
-    if (features.isSet(Features.DeprecatedLayout)) {
-      return BorshAccountHeader.discriminator(accountName, nameSpace);
+  public encode(accountName: string, nameSpace?: string): Buffer {
+    if (this._features.deprecatedLayout) {
+      return this.discriminator(accountName, nameSpace);
     } else {
       return Buffer.concat([
         Buffer.from([0]), // Version.
         Buffer.from([0]), // Bump.
-        BorshAccountHeader.discriminator(accountName), // Disc.
+        this.discriminator(accountName, nameSpace), // Disc.
         Buffer.from([0, 0]), // Unused.
       ]);
     }
@@ -121,16 +129,16 @@ export class BorshAccountHeader {
    *
    * @param name The name of the account to calculate the discriminator.
    */
-  public static discriminator(name: string, nameSpace?: string): Buffer {
+  public discriminator(name: string, nameSpace?: string): Buffer {
     return Buffer.from(
       sha256.digest(
         `${nameSpace ?? "account"}:${camelcase(name, { pascalCase: true })}`
       )
-    ).slice(0, BorshAccountHeader.discriminatorSize());
+    ).slice(0, this.discriminatorSize());
   }
 
-  public static discriminatorSize(): number {
-    return features.isSet(Features.DeprecatedLayout)
+  public discriminatorSize(): number {
+    return this._features.deprecatedLayout
       ? DEPRECATED_ACCOUNT_DISCRIMINATOR_SIZE
       : ACCOUNT_DISCRIMINATOR_SIZE;
   }
@@ -138,8 +146,8 @@ export class BorshAccountHeader {
   /**
    * Returns the account data index at which the discriminator starts.
    */
-  public static discriminatorOffset(): number {
-    if (features.isSet(Features.DeprecatedLayout)) {
+  public discriminatorOffset(): number {
+    if (this._features.deprecatedLayout) {
       return 0;
     } else {
       return 2;
@@ -156,8 +164,8 @@ export class BorshAccountHeader {
   /**
    * Returns the discriminator from the given account data.
    */
-  public static parseDiscriminator(data: Buffer): Buffer {
-    if (features.isSet(Features.DeprecatedLayout)) {
+  public parseDiscriminator(data: Buffer): Buffer {
+    if (this._features.deprecatedLayout) {
       return data.slice(0, 8);
     } else {
       return data.slice(2, 6);
