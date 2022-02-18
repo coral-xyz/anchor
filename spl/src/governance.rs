@@ -35,7 +35,8 @@ macro_rules! vote_weight_record {
                 writer: &mut W,
             ) -> std::result::Result<(), ProgramError> {
                 let mut to_write = &mut self.0.clone();
-                to_write.account_discriminator = *b"2ef99b4b";
+                //to_write.account_discriminator = *b"2ef99b4b";
+                to_write.account_discriminator = VoterWeightRecord::discriminator();
                 anchor_lang::AnchorSerialize::serialize(to_write, writer)
                     .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotSerialize)?;
                 Ok(())
@@ -50,7 +51,8 @@ macro_rules! vote_weight_record {
 
         impl anchor_lang::Discriminator for VoterWeightRecord {
             fn discriminator() -> [u8; 8] {
-                *b"2ef99b4b"
+                //*b"2ef99b4b"
+                spl_governance_addin_api::voter_weight::VoterWeightRecord::ACCOUNT_DISCRIMINATOR
             }
         }
 
