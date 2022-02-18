@@ -1,8 +1,6 @@
 import * as assert from "assert";
-//import * as anchor from '@project-serum/anchor';
-//import { Program, BorshAccountHeader } from '@project-serum/anchor';
-import * as anchor from "../../../ts";
-import { Program, BorshAccountHeader } from "../../../ts";
+import * as anchor from '@project-serum/anchor';
+import { Program, BorshAccountHeader } from '@project-serum/anchor';
 import { Keypair } from "@solana/web3.js";
 import { DeprecatedLayout } from "../target/types/deprecated_layout";
 import { NewLayout } from "../target/types/new_layout";
