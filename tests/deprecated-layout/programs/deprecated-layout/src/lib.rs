@@ -15,10 +15,10 @@ pub mod deprecated_layout {
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(
-				init,
-				payer = payer,
-				space = 16,
-		)]
+        init,
+        payer = payer,
+        space = 16,
+    )]
     data: Account<'info, Data>,
     #[account(mut)]
     payer: Signer<'info>,
