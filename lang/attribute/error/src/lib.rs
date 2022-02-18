@@ -76,10 +76,29 @@ pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
                 error_code_string: format!("{:?}", #error_code), // TODO: dont use format here
                 error_code_number: #error_code.into(),
                 error_msg: #error_code.to_string(),
-                source: anchor_lang::error::Source {
+                source: Some(anchor_lang::error::Source {
                     filename: file!(),
                     line: line!()
-                }
+                }),
+                account_name: None
+            }
+        )
+    })
+}
+
+#[proc_macro]
+pub fn error_with_account_name(ts: proc_macro::TokenStream) -> TokenStream {
+    let input = parse_macro_input!(ts as ErrorWithAccountNameInput);
+    let error_code = input.error_code;
+    let account_name = input.account_name;
+    TokenStream::from(quote! {
+        anchor_lang::error::Error::from(
+            anchor_lang::error::AnchorError {
+                error_code_string: format!("{:?}", #error_code), // TODO: dont use format here
+                error_code_number: #error_code.into(),
+                error_msg: #error_code.to_string(),
+                source: None,
+                account_name: Some(#account_name.to_string())
             }
         )
     })
@@ -94,6 +113,23 @@ impl Parse for ErrorInput {
         let error_code = stream.call(Expr::parse)?;
         Ok(Self {
             error_code,
+        })
+    }
+}
+
+struct ErrorWithAccountNameInput {
+    error_code: Expr,
+    account_name: Expr
+}
+
+impl Parse for ErrorWithAccountNameInput {
+    fn parse(stream: syn::parse::ParseStream) -> ParseResult<Self> {
+        let error_code = stream.call(Expr::parse)?;
+        let _ = stream.parse::<Token!(,)>();
+        let account_name = stream.call(Expr::parse)?;
+        Ok(Self {
+            error_code,
+            account_name
         })
     }
 }

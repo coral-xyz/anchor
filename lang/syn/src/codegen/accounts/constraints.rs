@@ -111,7 +111,7 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::HasOne(c) => generate_constraint_has_one(f, c),
         Constraint::Signer(c) => generate_constraint_signer(f, c),
         Constraint::Literal(c) => generate_constraint_literal(c),
-        Constraint::Raw(c) => generate_constraint_raw(c),
+        Constraint::Raw(c) => generate_constraint_raw(&f.ident, c),
         Constraint::Owner(c) => generate_constraint_owner(f, c),
         Constraint::RentExempt(c) => generate_constraint_rent_exempt(f, c),
         Constraint::Seeds(c) => generate_constraint_seeds(f, c),
@@ -123,9 +123,9 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
     }
 }
 
-fn generate_constraint_composite(_f: &CompositeField, c: &Constraint) -> proc_macro2::TokenStream {
+fn generate_constraint_composite(f: &CompositeField, c: &Constraint) -> proc_macro2::TokenStream {
     match c {
-        Constraint::Raw(c) => generate_constraint_raw(c),
+        Constraint::Raw(c) => generate_constraint_raw(&f.ident, c),
         Constraint::Literal(c) => generate_constraint_literal(c),
         _ => panic!("Invariant violation"),
     }
@@ -134,7 +134,7 @@ fn generate_constraint_composite(_f: &CompositeField, c: &Constraint) -> proc_ma
 fn generate_constraint_address(f: &Field, c: &ConstraintAddress) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let addr = &c.address;
-    let error = generate_custom_error(&c.error, quote! { ConstraintAddress });
+    let error = generate_custom_error(field, &c.error, quote! { ConstraintAddress });
     quote! {
         if #field.key() != #addr {
             return #error;
@@ -176,7 +176,7 @@ pub fn generate_constraint_close(f: &Field, c: &ConstraintClose) -> proc_macro2:
 
 pub fn generate_constraint_mut(f: &Field, c: &ConstraintMut) -> proc_macro2::TokenStream {
     let ident = &f.ident;
-    let error = generate_custom_error(&c.error, quote! { ConstraintMut });
+    let error = generate_custom_error(ident, &c.error, quote! { ConstraintMut });
     quote! {
         if !#ident.to_account_info().is_writable {
             return #error;
@@ -192,7 +192,7 @@ pub fn generate_constraint_has_one(f: &Field, c: &ConstraintHasOne) -> proc_macr
         Ty::AccountLoader(_) => quote! {#ident.load()?},
         _ => quote! {#ident},
     };
-    let error = generate_custom_error(&c.error, quote! { ConstraintHasOne });
+    let error = generate_custom_error(ident, &c.error, quote! { ConstraintHasOne });
     quote! {
         if #field.#target != #target.key() {
             return #error;
@@ -211,7 +211,7 @@ pub fn generate_constraint_signer(f: &Field, c: &ConstraintSigner) -> proc_macro
         Ty::CpiAccount(_) => quote! { #ident.to_account_info() },
         _ => panic!("Invalid syntax: signer cannot be specified."),
     };
-    let error = generate_custom_error(&c.error, quote! { ConstraintSigner });
+    let error = generate_custom_error(ident, &c.error, quote! { ConstraintSigner });
     quote! {
         if !#info.is_signer {
             return #error;
@@ -237,9 +237,9 @@ pub fn generate_constraint_literal(c: &ConstraintLiteral) -> proc_macro2::TokenS
     }
 }
 
-pub fn generate_constraint_raw(c: &ConstraintRaw) -> proc_macro2::TokenStream {
+pub fn generate_constraint_raw(ident: &Ident, c: &ConstraintRaw) -> proc_macro2::TokenStream {
     let raw = &c.raw;
-    let error = generate_custom_error(&c.error, quote! { ConstraintRaw });
+    let error = generate_custom_error(ident, &c.error, quote! { ConstraintRaw });
     quote! {
         if !(#raw) {
             return #error;
@@ -250,7 +250,7 @@ pub fn generate_constraint_raw(c: &ConstraintRaw) -> proc_macro2::TokenStream {
 pub fn generate_constraint_owner(f: &Field, c: &ConstraintOwner) -> proc_macro2::TokenStream {
     let ident = &f.ident;
     let owner_address = &c.owner_address;
-    let error = generate_custom_error(&c.error, quote! { ConstraintOwner });
+    let error = generate_custom_error(ident, &c.error, quote! { ConstraintOwner });
     quote! {
         if #ident.as_ref().owner != &#owner_address {
             return #error;
@@ -778,13 +778,15 @@ pub fn generate_constraint_state(f: &Field, c: &ConstraintState) -> proc_macro2:
 }
 
 fn generate_custom_error(
+    account_name: &Ident,
     custom_error: &Option<Expr>,
     error: proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
+    let account_name = account_name.to_string();
     match custom_error {
-        Some(error) => quote! { Err(anchor_lang::anchor_attribute_error::error!(#error)) },
+        Some(error) => quote! { Err(anchor_lang::anchor_attribute_error::error_with_account_name!(#error, #account_name)) },
         None => {
-            quote! { Err(anchor_lang::anchor_attribute_error::error!(anchor_lang::error::ErrorCode::#error)) }
+            quote! { Err(anchor_lang::anchor_attribute_error::error_with_account_name!(anchor_lang::error::ErrorCode::#error, #account_name)) }
         }
     }
 }

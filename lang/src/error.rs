@@ -207,19 +207,30 @@ pub struct AnchorError {
     pub error_code_string: String,
     pub error_code_number: u32,
     pub error_msg: String,
-    pub source: Source,
+    pub source: Option<Source>,
+    pub account_name: Option<String>
 }
 
 impl AnchorError {
     pub fn log(&self) {
-        anchor_lang::solana_program::msg!(
-            "AnchorError thrown in {}:{}. Error Code: {}. Error Number: {}. Error Message: {}.",
-            self.source.filename,
-            self.source.line,
-            self.error_code_string,
-            self.error_code_number,
-            self.error_msg
-        );
+        if let Some(source) = &self.source {
+            anchor_lang::solana_program::msg!(
+                "AnchorError thrown in {}:{}. Error Code: {}. Error Number: {}. Error Message: {}.",
+                source.filename,
+                source.line,
+                self.error_code_string,
+                self.error_code_number,
+                self.error_msg
+            );
+        } else if let Some(account_name) = &self.account_name {
+            anchor_lang::solana_program::log::sol_log(&format!(
+                "AnchorError caused by account: {}. Error Code: {}. Error Number: {}. Error Message: {}.",
+                account_name,
+                self.error_code_string,
+                self.error_code_number,
+                self.error_msg
+            ));
+        }
     }
 }
 
@@ -231,6 +242,7 @@ impl std::convert::From<Error> for anchor_lang::solana_program::program_error::P
                 error_code_number,
                 error_msg: _,
                 source: _,
+                account_name: _
             }) => {
                 anchor_lang::solana_program::program_error::ProgramError::Custom(error_code_number)
             }
