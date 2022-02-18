@@ -206,7 +206,7 @@ pub fn visualize(idl: Idl, viz_args: Vec<String>, out: &str) {
             .expect("couldn't draw rect for instruction");
         backend
             .draw(&Text::new(
-                format!("Instruction:"),
+                "Instruction:".to_string(),
                 (
                     ((BOX_PX_WIDTH * ROW_WIDTH + SEP_WIDTH + (1 + ROW_WIDTH) * BUFFER_WIDTH) * i
                         + BUFFER_WIDTH
@@ -229,7 +229,7 @@ pub fn visualize(idl: Idl, viz_args: Vec<String>, out: &str) {
             .expect("couldn't write 'Instruction'");
         backend
             .draw(&Text::new(
-                format!("{}", instruction.name),
+                instruction.name.to_string(),
                 (
                     ((BOX_PX_WIDTH * ROW_WIDTH + SEP_WIDTH + (1 + ROW_WIDTH) * BUFFER_WIDTH) * i
                         + BUFFER_WIDTH
@@ -278,7 +278,7 @@ pub fn visualize(idl: Idl, viz_args: Vec<String>, out: &str) {
             .expect("couldn't draw rect for instruction");
         backend
             .draw(&Text::new(
-                format!("State Method:"),
+                "State Method:".to_string(),
                 (
                     ((BOX_PX_WIDTH * ROW_WIDTH + SEP_WIDTH + (1 + ROW_WIDTH) * BUFFER_WIDTH) * i
                         + BUFFER_WIDTH
@@ -325,7 +325,7 @@ pub fn visualize(idl: Idl, viz_args: Vec<String>, out: &str) {
     }
 
     // concat all instructions + methods
-    let mut all_instructions = idl.instructions.clone();
+    let mut all_instructions = idl.instructions;
     all_instructions.append(&mut state_methods);
     for (i, instruction) in all_instructions.iter().enumerate() {
         let accounts = unpack_group(IdlAccounts {
@@ -376,7 +376,7 @@ pub fn visualize(idl: Idl, viz_args: Vec<String>, out: &str) {
                 .expect("couldn't draw rect for signer");
             backend
                 .draw(&Text::new(
-                    format!("Signer:"),
+                    "Signer:".to_string(),
                     (
                         ((BOX_PX_WIDTH * ROW_WIDTH + SEP_WIDTH + (1 + ROW_WIDTH) * BUFFER_WIDTH)
                             * i
@@ -408,7 +408,7 @@ pub fn visualize(idl: Idl, viz_args: Vec<String>, out: &str) {
                 .expect("couldn't write 'Signer:'");
             backend
                 .draw(&Text::new(
-                    format!("{}", signer.name),
+                    signer.name.to_string(),
                     (
                         ((BOX_PX_WIDTH * ROW_WIDTH + SEP_WIDTH + (1 + ROW_WIDTH) * BUFFER_WIDTH)
                             * i
@@ -498,7 +498,7 @@ pub fn visualize(idl: Idl, viz_args: Vec<String>, out: &str) {
                     .expect("couldn't draw rect for mutable account");
                 backend
                     .draw(&Text::new(
-                        format!("Mutable Account:"),
+                        "Mutable Account:".to_string(),
                         (
                             ((BOX_PX_WIDTH * ROW_WIDTH
                                 + SEP_WIDTH
@@ -532,7 +532,7 @@ pub fn visualize(idl: Idl, viz_args: Vec<String>, out: &str) {
                     .expect("couldn't write 'Mutable Account:'");
                 backend
                     .draw(&Text::new(
-                        format!("{}", account.name),
+                        account.name.to_string(),
                         (
                             ((BOX_PX_WIDTH * ROW_WIDTH
                                 + SEP_WIDTH
@@ -614,7 +614,7 @@ pub fn visualize(idl: Idl, viz_args: Vec<String>, out: &str) {
                     .expect("couldn't draw rect for immutable account");
                 backend
                     .draw(&Text::new(
-                        format!("Immutable Account:"),
+                        "Immutable Account:".to_string(),
                         (
                             ((BOX_PX_WIDTH * ROW_WIDTH
                                 + SEP_WIDTH
@@ -648,7 +648,7 @@ pub fn visualize(idl: Idl, viz_args: Vec<String>, out: &str) {
                     .expect("couldn't write 'Immutable Account:'");
                 backend
                     .draw(&Text::new(
-                        format!("{}", account.name),
+                        account.name.to_string(),
                         (
                             ((BOX_PX_WIDTH * ROW_WIDTH
                                 + SEP_WIDTH
@@ -694,10 +694,10 @@ pub fn visualize(idl: Idl, viz_args: Vec<String>, out: &str) {
         };
         let offset = signer_offset + account_offset;
 
-        let mut args_drawn = 0;
+        let args_drawn = 0;
 
         // 7) Populate args
-        for arg in instruction.args.iter() {
+        for (args_drawn, arg) in instruction.args.iter().enumerate() {
             let (l, k) = (args_drawn / ROW_WIDTH, args_drawn % ROW_WIDTH);
 
             backend
@@ -738,7 +738,7 @@ pub fn visualize(idl: Idl, viz_args: Vec<String>, out: &str) {
                 .expect("couldn't draw rect for argument");
             backend
                 .draw(&Text::new(
-                    format!("Argument:"),
+                    "Argument:".to_string(),
                     (
                         ((BOX_PX_WIDTH * ROW_WIDTH + SEP_WIDTH + (1 + ROW_WIDTH) * BUFFER_WIDTH)
                             * i
@@ -770,7 +770,7 @@ pub fn visualize(idl: Idl, viz_args: Vec<String>, out: &str) {
                 .expect("couldn't write 'Argument:'");
             backend
                 .draw(&Text::new(
-                    format!("{}", arg.name),
+                    arg.name.to_string(),
                     (
                         ((BOX_PX_WIDTH * ROW_WIDTH + SEP_WIDTH + (1 + ROW_WIDTH) * BUFFER_WIDTH)
                             * i
@@ -800,8 +800,6 @@ pub fn visualize(idl: Idl, viz_args: Vec<String>, out: &str) {
                     },
                 ))
                 .expect("couldn't write argument");
-
-            args_drawn += 1;
         }
     }
 }

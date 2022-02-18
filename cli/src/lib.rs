@@ -2884,26 +2884,24 @@ fn visual(
     let extracted_idl = extract_idl(&cfg, "src/lib.rs");
 
     let idl;
-    if extracted_idl.is_ok() {
+    if let Ok(my_idl) = extracted_idl {
         // this works if you are in your programs/YOUR_program directory, not from project root dir
-        idl = extracted_idl.unwrap().unwrap();
+        idl = my_idl.unwrap();
+    } else if program_name.is_none() {
+        let stem = workspace_dir
+            .file_stem()
+            .unwrap()
+            .to_os_string()
+            .to_str()
+            .expect("invalid workspace")
+            .to_string();
+        idl = extract_idl(&cfg, &format!("programs/{}/src/lib.rs", stem))
+            .unwrap()
+            .unwrap_or_else(|| panic!("\n\n\nno program named {}.\nyour ./programs/PROGRAM name must not match your root anchor program name.\ncd into your program's directory or try anchor viz -p PROGRAM\n\n\n",stem));
     } else {
-        if program_name.is_none() {
-            let stem = workspace_dir
-                .file_stem()
-                .unwrap()
-                .to_os_string()
-                .to_str()
-                .expect("invalid workspace")
-                .to_string();
-            idl = extract_idl(&cfg, &format!("programs/{}/src/lib.rs", stem))
-                .expect(&format!("\n\n\nno program named {}.\nyour ./programs/PROGRAM name must not match your root anchor program name.\ncd into your program's directory or try anchor viz -p PROGRAM\n\n\n",stem))
-                .unwrap();
-        } else {
-            idl = extract_idl(&cfg, &format!("programs/{}/src/lib.rs", program_name.as_ref().unwrap()))
-                .expect(&format!("\n\n\nno program named {}.\ncd into your program's directory or try anchor viz -p PROGRAM again\n\n\n", program_name.as_ref().unwrap()))
-                .unwrap();
-        }
+        idl = extract_idl(&cfg, &format!("programs/{}/src/lib.rs", program_name.as_ref().unwrap()))
+            .unwrap()
+            .unwrap_or_else(|| panic!("\n\n\nno program named {}.\ncd into your program's directory or try anchor viz -p PROGRAM again\n\n\n", program_name.as_ref().unwrap()));
     }
 
     let viz_out: String = workspace_dir
