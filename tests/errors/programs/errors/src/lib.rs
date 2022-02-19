@@ -9,35 +9,35 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 mod errors {
     use super::*;
 
-    pub fn hello(_ctx: Context<Hello>) -> Result<()> {
-        Err(MyError::Hello.into())
+    pub fn hello(_ctx: Context<Hello>) -> AnchorResult<()> {
+        Err(error!(MyError::Hello))
     }
 
-    pub fn hello_no_msg(_ctx: Context<Hello>) -> Result<()> {
-        Err(MyError::HelloNoMsg.into())
+    pub fn hello_no_msg(_ctx: Context<Hello>) -> AnchorResult<()> {
+        Err(error!(MyError::HelloNoMsg))
     }
 
-    pub fn hello_next(_ctx: Context<Hello>) -> Result<()> {
-        Err(MyError::HelloNext.into())
+    pub fn hello_next(_ctx: Context<Hello>) -> AnchorResult<()> {
+        Err(error!(MyError::HelloNext))
     }
 
-    pub fn mut_error(_ctx: Context<MutError>) -> Result<()> {
+    pub fn mut_error(_ctx: Context<MutError>) -> AnchorResult<()> {
         Ok(())
     }
 
-    pub fn has_one_error(_ctx: Context<HasOneError>) -> Result<()> {
+    pub fn has_one_error(_ctx: Context<HasOneError>) -> AnchorResult<()> {
         Ok(())
     }
 
-    pub fn signer_error(_ctx: Context<SignerError>) -> Result<()> {
+    pub fn signer_error(_ctx: Context<SignerError>) -> AnchorResult<()> {
         Ok(())
     }
 
-    pub fn raw_custom_error(_ctx: Context<RawCustomError>) -> Result<()> {
+    pub fn raw_custom_error(_ctx: Context<RawCustomError>) -> AnchorResult<()> {
         Ok(())
     }
 
-    pub fn account_not_initialized_error(_ctx: Context<AccountNotInitializedError>) -> Result<()> {
+    pub fn account_not_initialized_error(_ctx: Context<AccountNotInitializedError>) -> AnchorResult<()> {
         Ok(())
     }
 }
@@ -82,7 +82,7 @@ pub struct AccountNotInitializedError<'info> {
     not_initialized_account: Account<'info, AnyAccount>,
 }
 
-#[error]
+#[error_codes]
 pub enum MyError {
     #[msg("This is an error message clients will automatically display")]
     Hello,
