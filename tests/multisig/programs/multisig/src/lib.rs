@@ -262,7 +262,7 @@ impl From<TransactionAccount> for AccountMeta {
     }
 }
 
-#[error_codes]
+#[error_code]
 pub enum ErrorCode {
     #[msg("The given owner is not part of this multisig.")]
     InvalidOwner,

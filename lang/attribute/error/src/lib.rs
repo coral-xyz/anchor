@@ -53,7 +53,7 @@ use syn::{
 /// The `#[msg(..)]` attribute is inert, and is used only as a marker so that
 /// parsers  and IDLs can map error codes to error messages.
 #[proc_macro_attribute]
-pub fn error_codes(
+pub fn error_code(
     args: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {

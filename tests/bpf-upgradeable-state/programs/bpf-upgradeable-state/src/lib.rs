@@ -37,7 +37,7 @@ pub struct Settings {
     admin_data: u64,
 }
 
-#[error_codes]
+#[error_code]
 pub enum CustomError {
     InvalidProgramDataAddress,
     AccountNotProgram,

@@ -66,7 +66,7 @@ pub trait Auth<'info, T: Accounts<'info>> {
     fn is_authorized(ctx: Context<T>, current: u64, new: u64) -> Result<()>;
 }
 
-#[error_codes]
+#[error_code]
 pub enum ErrorCode {
     #[msg("Invalid auth program.")]
     InvalidAuthProgram,

@@ -162,7 +162,7 @@ pub struct Check {
     burned: bool,
 }
 
-#[error_codes]
+#[error_code]
 pub enum ErrorCode {
     #[msg("The given nonce does not create a valid program derived address.")]
     InvalidCheckNonce,

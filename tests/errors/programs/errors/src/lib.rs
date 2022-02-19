@@ -82,7 +82,7 @@ pub struct AccountNotInitializedError<'info> {
     not_initialized_account: Account<'info, AnyAccount>,
 }
 
-#[error_codes]
+#[error_code]
 pub enum MyError {
     #[msg("This is an error message clients will automatically display")]
     Hello,

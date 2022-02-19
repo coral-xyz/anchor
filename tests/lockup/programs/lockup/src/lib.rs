@@ -365,7 +365,7 @@ pub struct WhitelistEntry {
     pub program_id: Pubkey,
 }
 
-#[error_codes]
+#[error_code]
 pub enum ErrorCode {
     #[msg("Vesting end must be greater than the current unix timestamp.")]
     InvalidTimestamp,

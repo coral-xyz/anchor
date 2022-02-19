@@ -278,7 +278,8 @@ impl<'info> OrderbookClient<'info> {
         let limit_price = 1;
         let max_coin_qty = {
             // The loaded market must be dropped before CPI.
-            let market = MarketState::load(&self.market.market, &dex::ID).map_err(|pe| ProgramError::from(pe))?;
+            let market = MarketState::load(&self.market.market, &dex::ID)
+                .map_err(|pe| ProgramError::from(pe))?;
             coin_lots(&market, base_amount)
         };
         let max_native_pc_qty = u64::MAX;
@@ -486,7 +487,7 @@ pub struct DidSwap {
     pub authority: Pubkey,
 }
 
-#[error_codes]
+#[error_code]
 pub enum ErrorCode {
     #[msg("The tokens being swapped must have different mints")]
     SwapTokensCannotMatch,

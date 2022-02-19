@@ -1,5 +1,5 @@
 // TODO: ADD MIGRATION GUIDE FOR ERRORS
-// error -> error_codes
+// error -> error_code
 // Err(ErrorCode.into()) -> Err(error!(ErrorCode))
 // ProgramResult -> Result<()>
 

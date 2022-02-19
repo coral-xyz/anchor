@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display};
 use borsh::maybestd::io::Error as BorshIoError;
 use solana_program::program_error::ProgramError;
 
-use anchor_attribute_error::error_codes;
+use anchor_attribute_error::error_code;
 
 /// The starting point for user defined error codes.
 pub const ERROR_CODE_OFFSET: u32 = 6000;
@@ -20,7 +20,7 @@ pub const ERROR_CODE_OFFSET: u32 = 6000;
 ///
 /// The starting point for user-defined errors is defined
 /// by the [ERROR_CODE_OFFSET](crate::error::ERROR_CODE_OFFSET).
-#[error_codes(offset = 0)]
+#[error_code(offset = 0)]
 pub enum ErrorCode {
     // Instructions
     /// 100 - 8 byte instruction identifier not provided

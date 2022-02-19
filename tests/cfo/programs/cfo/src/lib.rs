@@ -900,7 +900,7 @@ pub struct OfficerDidCreate {
 
 // Error.
 
-#[error_codes]
+#[error_code]
 pub enum ErrorCode {
     #[msg("Distribution does not add to 100")]
     InvalidDistribution,

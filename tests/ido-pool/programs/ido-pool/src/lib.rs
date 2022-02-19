@@ -573,7 +573,7 @@ pub struct PoolBumps {
     pub pool_usdc: u8,
 }
 
-#[error_codes]
+#[error_code]
 pub enum ErrorCode {
     #[msg("IDO must start in the future")]
     IdoFuture,
