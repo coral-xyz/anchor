@@ -1,4 +1,3 @@
-
 use crate::error::ErrorCode;
 use solana_program::account_info::AccountInfo;
 use std::io::Write;

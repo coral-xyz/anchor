@@ -2,8 +2,8 @@
 
 use crate::error::ErrorCode;
 use crate::{
-    Accounts, AccountsClose, AccountsExit, Owner, ToAccountInfo,
-    ToAccountInfos, ToAccountMetas, ZeroCopy,
+    Accounts, AccountsClose, AccountsExit, Owner, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+    ZeroCopy,
 };
 use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;

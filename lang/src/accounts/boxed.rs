@@ -13,9 +13,7 @@
 //! }
 //! ```
 
-use crate::{
-    Accounts, AccountsClose, AccountsExit, ToAccountInfos, ToAccountMetas,
-};
+use crate::{Accounts, AccountsClose, AccountsExit, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
