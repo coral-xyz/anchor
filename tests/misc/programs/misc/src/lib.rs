@@ -30,7 +30,7 @@ pub mod misc {
     }
 
     impl MyState {
-        pub fn new(_ctx: Context<Ctor>) -> Result<Self, ProgramError> {
+        pub fn new(_ctx: Context<Ctor>) -> Result<Self> {
             Ok(Self { v: vec![] })
         }
 

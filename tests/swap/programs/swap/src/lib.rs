@@ -274,11 +274,11 @@ impl<'info> OrderbookClient<'info> {
     //
     // `base_amount` is the "native" amount of the base currency, i.e., token
     // amount including decimals.
-    fn sell(&self, base_amount: u64, referral: Option<AccountInfo<'info>>) -> ProgramResult {
+    fn sell(&self, base_amount: u64, referral: Option<AccountInfo<'info>>) -> Result<()> {
         let limit_price = 1;
         let max_coin_qty = {
             // The loaded market must be dropped before CPI.
-            let market = MarketState::load(&self.market.market, &dex::ID)?;
+            let market = MarketState::load(&self.market.market, &dex::ID).map_err(|pe| ProgramError::from(pe))?;
             coin_lots(&market, base_amount)
         };
         let max_native_pc_qty = u64::MAX;
@@ -296,7 +296,7 @@ impl<'info> OrderbookClient<'info> {
     //
     // `quote_amount` is the "native" amount of the quote currency, i.e., token
     // amount including decimals.
-    fn buy(&self, quote_amount: u64, referral: Option<AccountInfo<'info>>) -> ProgramResult {
+    fn buy(&self, quote_amount: u64, referral: Option<AccountInfo<'info>>) -> Result<()> {
         let limit_price = u64::MAX;
         let max_coin_qty = u64::MAX;
         let max_native_pc_qty = quote_amount;
@@ -324,7 +324,7 @@ impl<'info> OrderbookClient<'info> {
         max_native_pc_qty: u64,
         side: Side,
         referral: Option<AccountInfo<'info>>,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         // Client order id is only used for cancels. Not used here so hardcode.
         let client_order_id = 0;
         // Limit is the dex's custom compute budge parameter, setting an upper
@@ -363,7 +363,7 @@ impl<'info> OrderbookClient<'info> {
         )
     }
 
-    fn settle(&self, referral: Option<AccountInfo<'info>>) -> ProgramResult {
+    fn settle(&self, referral: Option<AccountInfo<'info>>) -> Result<()> {
         let settle_accs = dex::SettleFunds {
             market: self.market.market.clone(),
             open_orders: self.market.open_orders.clone(),
