@@ -203,7 +203,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     {
                         use anchor_lang::Discriminator;
                         let mut __data = ctor_accounts.to.try_borrow_mut_data()?;
-                        anchor_lang::accounts::header::write_discriminator(
+                        anchor_lang::accounts::header::init(
                             &mut __data,
                             &#name::discriminator(),
                         );
