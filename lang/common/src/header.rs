@@ -6,8 +6,8 @@ use std::io::{Cursor, Write};
 pub const DISCRIMINATOR_LEN: usize = 8;
 #[cfg(not(feature = "deprecated-layout"))]
 pub const DISCRIMINATOR_LEN: usize = 4;
+pub const HEADER_LEN: usize = 8;
 
-const HEADER_LEN: usize = 8;
 const LAYOUT_VERSION: u8 = 1;
 const DEFAULT_ACCOUNT_VERSION: u8 = 1;
 
