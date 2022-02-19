@@ -14,16 +14,16 @@ pub mod basic_4 {
     }
 
     impl Counter {
-        pub fn new(ctx: Context<Auth>) -> Result<Self> {
+        pub fn new(ctx: Context<Auth>) -> AnchorResult<Self> {
             Ok(Self {
                 authority: *ctx.accounts.authority.key,
                 count: 0,
             })
         }
 
-        pub fn increment(&mut self, ctx: Context<Auth>) -> Result<()> {
+        pub fn increment(&mut self, ctx: Context<Auth>) -> AnchorResult<()> {
             if &self.authority != ctx.accounts.authority.key {
-                return Err(ErrorCode::Unauthorized.into());
+                return Err(error!(ErrorCode::Unauthorized));
             }
             self.count += 1;
             Ok(())
@@ -37,7 +37,7 @@ pub struct Auth<'info> {
 }
 // #endregion code
 
-#[error]
+#[error_codes]
 pub enum ErrorCode {
     #[msg("You are not authorized to perform this action.")]
     Unauthorized,

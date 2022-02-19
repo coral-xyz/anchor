@@ -1,6 +1,7 @@
 use std::fmt::{Debug, Display};
 
 use solana_program::program_error::ProgramError;
+use borsh::maybestd::io::Error as BorshIoError;
 
 use anchor_attribute_error::error_codes;
 
@@ -201,6 +202,11 @@ impl From<AnchorError> for Error {
 impl From<ProgramError> for Error {
     fn from(program_error: ProgramError) -> Self {
         Self::ProgramError(program_error.into())
+    }
+}
+impl From<BorshIoError> for Error {
+    fn from(error: BorshIoError) -> Self {
+        Error::ProgramError(ProgramError::from(error).into())
     }
 }
 

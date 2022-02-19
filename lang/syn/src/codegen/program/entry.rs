@@ -64,7 +64,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 msg!("anchor-debug is active");
             }
             if *program_id != ID {
-                return Err(anchor_lang::anchor_attribute_error::error_without_origin!(ErrorCode::DeclaredProgramIdMismatch));
+                return Err(anchor_lang::anchor_attribute_error::error_without_origin!(anchor_lang::error::ErrorCode::DeclaredProgramIdMismatch));
             }
             if data.len() < 8 {
                 return #fallback_maybe;
