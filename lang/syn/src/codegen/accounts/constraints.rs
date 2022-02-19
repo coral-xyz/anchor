@@ -110,7 +110,7 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::Mut(c) => generate_constraint_mut(f, c),
         Constraint::HasOne(c) => generate_constraint_has_one(f, c),
         Constraint::Signer(c) => generate_constraint_signer(f, c),
-        Constraint::Literal(c) => generate_constraint_literal(c),
+        Constraint::Literal(c) => generate_constraint_literal(&f.ident, c),
         Constraint::Raw(c) => generate_constraint_raw(&f.ident, c),
         Constraint::Owner(c) => generate_constraint_owner(f, c),
         Constraint::RentExempt(c) => generate_constraint_rent_exempt(f, c),
@@ -126,7 +126,7 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
 fn generate_constraint_composite(f: &CompositeField, c: &Constraint) -> proc_macro2::TokenStream {
     match c {
         Constraint::Raw(c) => generate_constraint_raw(&f.ident, c),
-        Constraint::Literal(c) => generate_constraint_literal(c),
+        Constraint::Literal(c) => generate_constraint_literal(&f.ident, c),
         _ => panic!("Invariant violation"),
     }
 }
