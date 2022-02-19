@@ -19,7 +19,7 @@ pub mod cashiers_check {
         amount: u64,
         memo: Option<String>,
         nonce: u8,
-    ) -> Result<()> {
+    ) -> AnchorResult<()> {
         // Transfer funds to the check.
         let cpi_accounts = Transfer {
             from: ctx.accounts.from.to_account_info().clone(),
@@ -43,7 +43,7 @@ pub mod cashiers_check {
     }
 
     #[access_control(not_burned(&ctx.accounts.check))]
-    pub fn cash_check(ctx: Context<CashCheck>) -> Result<()> {
+    pub fn cash_check(ctx: Context<CashCheck>) -> AnchorResult<()> {
         let seeds = &[
             ctx.accounts.check.to_account_info().key.as_ref(),
             &[ctx.accounts.check.nonce],
@@ -63,7 +63,7 @@ pub mod cashiers_check {
     }
 
     #[access_control(not_burned(&ctx.accounts.check))]
-    pub fn cancel_check(ctx: Context<CancelCheck>) -> Result<()> {
+    pub fn cancel_check(ctx: Context<CancelCheck>) -> AnchorResult<()> {
         let seeds = &[
             ctx.accounts.check.to_account_info().key.as_ref(),
             &[ctx.accounts.check.nonce],
@@ -104,14 +104,14 @@ pub struct CreateCheck<'info> {
 }
 
 impl<'info> CreateCheck<'info> {
-    pub fn accounts(ctx: &Context<CreateCheck>, nonce: u8) -> Result<()> {
+    pub fn accounts(ctx: &Context<CreateCheck>, nonce: u8) -> AnchorResult<()> {
         let signer = Pubkey::create_program_address(
             &[ctx.accounts.check.to_account_info().key.as_ref(), &[nonce]],
             ctx.program_id,
         )
-        .map_err(|_| ErrorCode::InvalidCheckNonce)?;
+        .map_err(|_| error!(ErrorCode::InvalidCheckNonce))?;
         if &signer != ctx.accounts.check_signer.to_account_info().key {
-            return Err(ErrorCode::InvalidCheckSigner.into());
+            return Err(error!(ErrorCode::InvalidCheckSigner));
         }
         Ok(())
     }
@@ -162,7 +162,7 @@ pub struct Check {
     burned: bool,
 }
 
-#[error]
+#[error_codes]
 pub enum ErrorCode {
     #[msg("The given nonce does not create a valid program derived address.")]
     InvalidCheckNonce,
@@ -172,9 +172,9 @@ pub enum ErrorCode {
     AlreadyBurned,
 }
 
-fn not_burned(check: &Check) -> Result<()> {
+fn not_burned(check: &Check) -> AnchorResult<()> {
     if check.burned {
-        return Err(ErrorCode::AlreadyBurned.into());
+        return Err(error!(ErrorCode::AlreadyBurned));
     }
     Ok(())
 }

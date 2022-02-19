@@ -592,10 +592,10 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
         let b = c.bump.as_ref().unwrap();
         quote! {
             if #name.key() != __pda_address {
-                return Err(anchor_lang::anchor_attribute_error::error!(anchor_lang::error::ErrorCode::ConstraintSeeds));
+                return Err(anchor_lang::anchor_attribute_error::error_with_account_name!(anchor_lang::error::ErrorCode::ConstraintSeeds, #name_str));
             }
             if __bump != #b {
-                return Err(anchor_lang::anchor_attribute_error::error!(anchor_lang::error::ErrorCode::ConstraintSeeds));
+                return Err(anchor_lang::anchor_attribute_error::error_with_account_name!(anchor_lang::error::ErrorCode::ConstraintSeeds, #name_str));
             }
         }
     }
@@ -607,7 +607,7 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
     else if c.is_init {
         quote! {
             if #name.key() != __pda_address {
-                return Err(anchor_lang::anchor_attribute_error::error!(anchor_lang::error::ErrorCode::ConstraintSeeds));
+                return Err(anchor_lang::anchor_attribute_error::error_with_account_name!(anchor_lang::error::ErrorCode::ConstraintSeeds, #name_str));
             }
         }
     }
@@ -616,6 +616,7 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
         let maybe_seeds_plus_comma = (!s.is_empty()).then(|| {
             quote! { #s, }
         });
+
         let define_pda = match c.bump.as_ref() {
             // Bump target not given. Find it.
             None => quote! {
@@ -630,7 +631,7 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
                 let __pda_address = Pubkey::create_program_address(
                     &[#maybe_seeds_plus_comma &[#b][..]],
                     &#deriving_program_id,
-                ).or_else(|_| anchor_lang::error::anchor_lang::error::ErrorCode::ConstraintSeeds)?;
+                ).map_err(|_| anchor_lang::anchor_attribute_error::error_with_account_name!(anchor_lang::error::ErrorCode::ConstraintSeeds, #name_str))?;
             },
         };
         quote! {
@@ -639,7 +640,7 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
 
             // Check it.
             if #name.key() != __pda_address {
-                return Err(anchor_lang::anchor_attribute_error::error!(anchor_lang::error::ErrorCode::ConstraintSeeds));
+                return Err(anchor_lang::anchor_attribute_error::error_with_account_name!(anchor_lang::error::ErrorCode::ConstraintSeeds, #name_str));
             }
         }
     }
