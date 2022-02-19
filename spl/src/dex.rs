@@ -1,7 +1,7 @@
 use anchor_lang::solana_program::account_info::AccountInfo;
-use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::solana_program::program_error::ProgramError;
-use anchor_lang::{context::CpiContext, Accounts, ToAccountInfos, Result};
+use anchor_lang::solana_program::pubkey::Pubkey;
+use anchor_lang::{context::CpiContext, Accounts, Result, ToAccountInfos};
 use serum_dex::instruction::SelfTradeBehavior;
 use serum_dex::matching::{OrderType, Side};
 use std::num::NonZeroU64;
@@ -50,7 +50,8 @@ pub fn new_order_v3<'info>(
         self_trade_behavior,
         limit,
         max_native_pc_qty_including_fees,
-    ).map_err(|pe| ProgramError::from(pe))?;
+    )
+    .map_err(|pe| ProgramError::from(pe))?;
     solana_program::program::invoke_signed(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
@@ -74,7 +75,8 @@ pub fn cancel_order_v2<'info>(
         ctx.accounts.event_queue.key,
         side,
         order_id,
-    ).map_err(|pe| ProgramError::from(pe))?;
+    )
+    .map_err(|pe| ProgramError::from(pe))?;
     solana_program::program::invoke_signed(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
@@ -83,9 +85,7 @@ pub fn cancel_order_v2<'info>(
     Ok(())
 }
 
-pub fn settle_funds<'info>(
-    ctx: CpiContext<'_, '_, '_, 'info, SettleFunds<'info>>,
-) -> Result<()> {
+pub fn settle_funds<'info>(ctx: CpiContext<'_, '_, '_, 'info, SettleFunds<'info>>) -> Result<()> {
     let referral = ctx.remaining_accounts.get(0);
     let ix = serum_dex::instruction::settle_funds(
         &ID,
@@ -99,7 +99,8 @@ pub fn settle_funds<'info>(
         ctx.accounts.pc_wallet.key,
         referral.map(|r| r.key),
         ctx.accounts.vault_signer.key,
-    ).map_err(|pe| ProgramError::from(pe))?;
+    )
+    .map_err(|pe| ProgramError::from(pe))?;
     solana_program::program::invoke_signed(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
@@ -117,7 +118,8 @@ pub fn init_open_orders<'info>(
         ctx.accounts.authority.key,
         ctx.accounts.market.key,
         ctx.remaining_accounts.first().map(|acc| acc.key),
-    ).map_err(|pe| ProgramError::from(pe))?;
+    )
+    .map_err(|pe| ProgramError::from(pe))?;
     solana_program::program::invoke_signed(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
@@ -135,7 +137,8 @@ pub fn close_open_orders<'info>(
         ctx.accounts.authority.key,
         ctx.accounts.destination.key,
         ctx.accounts.market.key,
-    ).map_err(|pe| ProgramError::from(pe))?;
+    )
+    .map_err(|pe| ProgramError::from(pe))?;
     solana_program::program::invoke_signed(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
@@ -153,7 +156,8 @@ pub fn sweep_fees<'info>(ctx: CpiContext<'_, '_, '_, 'info, SweepFees<'info>>) -
         ctx.accounts.sweep_receiver.key,
         ctx.accounts.vault_signer.key,
         ctx.accounts.token_program.key,
-    ).map_err(|pe| ProgramError::from(pe))?;
+    )
+    .map_err(|pe| ProgramError::from(pe))?;
     solana_program::program::invoke_signed(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
@@ -188,7 +192,8 @@ pub fn initialize_market<'info>(
         pc_lot_size,
         vault_signer_nonce,
         pc_dust_threshold,
-    ).map_err(|pe| ProgramError::from(pe))?;
+    )
+    .map_err(|pe| ProgramError::from(pe))?;
     solana_program::program::invoke_signed(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),

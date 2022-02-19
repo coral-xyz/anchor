@@ -28,7 +28,8 @@ pub fn transfer<'a, 'b, 'c, 'info>(
             ctx.accounts.authority.clone(),
         ],
         ctx.signer_seeds,
-    ).map_err(|pe| pe.into())
+    )
+    .map_err(|pe| pe.into())
 }
 
 pub fn mint_to<'a, 'b, 'c, 'info>(
@@ -51,7 +52,8 @@ pub fn mint_to<'a, 'b, 'c, 'info>(
             ctx.accounts.authority.clone(),
         ],
         ctx.signer_seeds,
-    ).map_err(|pe| pe.into())
+    )
+    .map_err(|pe| pe.into())
 }
 
 pub fn burn<'a, 'b, 'c, 'info>(
@@ -74,7 +76,8 @@ pub fn burn<'a, 'b, 'c, 'info>(
             ctx.accounts.authority.clone(),
         ],
         ctx.signer_seeds,
-    ).map_err(|pe| pe.into())
+    )
+    .map_err(|pe| pe.into())
 }
 
 pub fn approve<'a, 'b, 'c, 'info>(
@@ -97,7 +100,8 @@ pub fn approve<'a, 'b, 'c, 'info>(
             ctx.accounts.authority.clone(),
         ],
         ctx.signer_seeds,
-    ).map_err(|pe| pe.into())
+    )
+    .map_err(|pe| pe.into())
 }
 
 pub fn initialize_account<'a, 'b, 'c, 'info>(
@@ -118,7 +122,8 @@ pub fn initialize_account<'a, 'b, 'c, 'info>(
             ctx.accounts.rent.clone(),
         ],
         ctx.signer_seeds,
-    ).map_err(|pe| pe.into())
+    )
+    .map_err(|pe| pe.into())
 }
 
 pub fn close_account<'a, 'b, 'c, 'info>(
@@ -139,7 +144,8 @@ pub fn close_account<'a, 'b, 'c, 'info>(
             ctx.accounts.authority.clone(),
         ],
         ctx.signer_seeds,
-    ).map_err(|pe| pe.into())
+    )
+    .map_err(|pe| pe.into())
 }
 
 pub fn freeze_account<'a, 'b, 'c, 'info>(
@@ -160,7 +166,8 @@ pub fn freeze_account<'a, 'b, 'c, 'info>(
             ctx.accounts.authority.clone(),
         ],
         ctx.signer_seeds,
-    ).map_err(|pe| pe.into())
+    )
+    .map_err(|pe| pe.into())
 }
 
 pub fn thaw_account<'a, 'b, 'c, 'info>(
@@ -181,7 +188,8 @@ pub fn thaw_account<'a, 'b, 'c, 'info>(
             ctx.accounts.authority.clone(),
         ],
         ctx.signer_seeds,
-    ).map_err(|pe| pe.into())
+    )
+    .map_err(|pe| pe.into())
 }
 
 pub fn initialize_mint<'a, 'b, 'c, 'info>(
@@ -201,7 +209,8 @@ pub fn initialize_mint<'a, 'b, 'c, 'info>(
         &ix,
         &[ctx.accounts.mint.clone(), ctx.accounts.rent.clone()],
         ctx.signer_seeds,
-    ).map_err(|pe| pe.into())
+    )
+    .map_err(|pe| pe.into())
 }
 
 pub fn set_authority<'a, 'b, 'c, 'info>(
@@ -229,7 +238,8 @@ pub fn set_authority<'a, 'b, 'c, 'info>(
             ctx.accounts.current_authority.clone(),
         ],
         ctx.signer_seeds,
-    ).map_err(|pe| pe.into())
+    )
+    .map_err(|pe| pe.into())
 }
 
 #[derive(Accounts)]
