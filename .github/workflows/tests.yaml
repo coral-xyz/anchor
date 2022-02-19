@@ -272,8 +272,8 @@ jobs:
             path: tests/chat
           - cmd: cd tests/ido-pool && anchor test
             path: tests/ido-pool
-          #- cmd: cd tests/cfo && anchor run test-with-build
-          #  path: tests/cfo
+          - cmd: cd tests/cfo && anchor run test-with-build
+            path: tests/cfo
           - cmd: cd tests/auction-house && yarn && anchor test
             path: tests/auction-house
           - cmd: cd tests/floats && yarn && anchor test
