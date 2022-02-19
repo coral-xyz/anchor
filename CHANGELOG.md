@@ -1,3 +1,8 @@
+// TODO: ADD MIGRATION GUIDE FOR ERRORS
+// error -> error_codes
+// Err(ErrorCode.into()) -> Err(error!(ErrorCode))
+// ProgramResult -> anchor_lang::Result<()>
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
