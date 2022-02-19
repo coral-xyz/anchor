@@ -9,35 +9,35 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 mod errors {
     use super::*;
 
-    pub fn hello(_ctx: Context<Hello>) -> anchor_lang::Result<()> {
+    pub fn hello(_ctx: Context<Hello>) -> Result<()> {
         Err(error!(MyError::Hello))
     }
 
-    pub fn hello_no_msg(_ctx: Context<Hello>) -> anchor_lang::Result<()> {
+    pub fn hello_no_msg(_ctx: Context<Hello>) -> Result<()> {
         Err(error!(MyError::HelloNoMsg))
     }
 
-    pub fn hello_next(_ctx: Context<Hello>) -> anchor_lang::Result<()> {
+    pub fn hello_next(_ctx: Context<Hello>) -> Result<()> {
         Err(error!(MyError::HelloNext))
     }
 
-    pub fn mut_error(_ctx: Context<MutError>) -> anchor_lang::Result<()> {
+    pub fn mut_error(_ctx: Context<MutError>) -> Result<()> {
         Ok(())
     }
 
-    pub fn has_one_error(_ctx: Context<HasOneError>) -> anchor_lang::Result<()> {
+    pub fn has_one_error(_ctx: Context<HasOneError>) -> Result<()> {
         Ok(())
     }
 
-    pub fn signer_error(_ctx: Context<SignerError>) -> anchor_lang::Result<()> {
+    pub fn signer_error(_ctx: Context<SignerError>) -> Result<()> {
         Ok(())
     }
 
-    pub fn raw_custom_error(_ctx: Context<RawCustomError>) -> anchor_lang::Result<()> {
+    pub fn raw_custom_error(_ctx: Context<RawCustomError>) -> Result<()> {
         Ok(())
     }
 
-    pub fn account_not_initialized_error(_ctx: Context<AccountNotInitializedError>) -> anchor_lang::Result<()> {
+    pub fn account_not_initialized_error(_ctx: Context<AccountNotInitializedError>) -> Result<()> {
         Ok(())
     }
 }

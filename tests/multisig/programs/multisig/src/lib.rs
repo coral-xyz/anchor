@@ -17,8 +17,8 @@
 //! the `execute_transaction`, once enough (i.e. `threshold`) of the owners have
 //! signed.
 
-use anchor_lang::prelude::*;
 use anchor_lang::accounts::program_account::ProgramAccount;
+use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
 use anchor_lang::solana_program::instruction::Instruction;
 use std::convert::Into;
@@ -35,7 +35,7 @@ pub mod multisig {
         owners: Vec<Pubkey>,
         threshold: u64,
         nonce: u8,
-    ) -> anchor_lang::Result<()> {
+    ) -> Result<()> {
         let multisig = &mut ctx.accounts.multisig;
         multisig.owners = owners;
         multisig.threshold = threshold;
@@ -50,7 +50,7 @@ pub mod multisig {
         pid: Pubkey,
         accs: Vec<TransactionAccount>,
         data: Vec<u8>,
-    ) -> anchor_lang::Result<()> {
+    ) -> Result<()> {
         let owner_index = ctx
             .accounts
             .multisig
@@ -75,7 +75,7 @@ pub mod multisig {
     }
 
     // Approves a transaction on behalf of an owner of the multisig.
-    pub fn approve(ctx: Context<Approve>) -> anchor_lang::Result<()> {
+    pub fn approve(ctx: Context<Approve>) -> Result<()> {
         let owner_index = ctx
             .accounts
             .multisig
@@ -91,7 +91,7 @@ pub mod multisig {
 
     // Sets the owners field on the multisig. The only way this can be invoked
     // is via a recursive call from execute_transaction -> set_owners.
-    pub fn set_owners(ctx: Context<Auth>, owners: Vec<Pubkey>) -> anchor_lang::Result<()> {
+    pub fn set_owners(ctx: Context<Auth>, owners: Vec<Pubkey>) -> Result<()> {
         let multisig = &mut ctx.accounts.multisig;
 
         if (owners.len() as u64) < multisig.threshold {
@@ -105,7 +105,7 @@ pub mod multisig {
     // Changes the execution threshold of the multisig. The only way this can be
     // invoked is via a recursive call from execute_transaction ->
     // change_threshold.
-    pub fn change_threshold(ctx: Context<Auth>, threshold: u64) -> anchor_lang::Result<()> {
+    pub fn change_threshold(ctx: Context<Auth>, threshold: u64) -> Result<()> {
         if threshold > ctx.accounts.multisig.owners.len() as u64 {
             return Err(error!(ErrorCode::InvalidThreshold));
         }
@@ -115,7 +115,7 @@ pub mod multisig {
     }
 
     // Executes the given transaction if threshold owners have signed it.
-    pub fn execute_transaction(ctx: Context<ExecuteTransaction>) -> anchor_lang::Result<()> {
+    pub fn execute_transaction(ctx: Context<ExecuteTransaction>) -> Result<()> {
         // Has this been executed already?
         if ctx.accounts.transaction.did_execute {
             return Err(error!(ErrorCode::AlreadyExecuted));

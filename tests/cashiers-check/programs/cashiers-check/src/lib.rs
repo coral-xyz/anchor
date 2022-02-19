@@ -19,7 +19,7 @@ pub mod cashiers_check {
         amount: u64,
         memo: Option<String>,
         nonce: u8,
-    ) -> anchor_lang::Result<()> {
+    ) -> Result<()> {
         // Transfer funds to the check.
         let cpi_accounts = Transfer {
             from: ctx.accounts.from.to_account_info().clone(),
@@ -43,7 +43,7 @@ pub mod cashiers_check {
     }
 
     #[access_control(not_burned(&ctx.accounts.check))]
-    pub fn cash_check(ctx: Context<CashCheck>) -> anchor_lang::Result<()> {
+    pub fn cash_check(ctx: Context<CashCheck>) -> Result<()> {
         let seeds = &[
             ctx.accounts.check.to_account_info().key.as_ref(),
             &[ctx.accounts.check.nonce],
@@ -63,7 +63,7 @@ pub mod cashiers_check {
     }
 
     #[access_control(not_burned(&ctx.accounts.check))]
-    pub fn cancel_check(ctx: Context<CancelCheck>) -> anchor_lang::Result<()> {
+    pub fn cancel_check(ctx: Context<CancelCheck>) -> Result<()> {
         let seeds = &[
             ctx.accounts.check.to_account_info().key.as_ref(),
             &[ctx.accounts.check.nonce],
@@ -104,7 +104,7 @@ pub struct CreateCheck<'info> {
 }
 
 impl<'info> CreateCheck<'info> {
-    pub fn accounts(ctx: &Context<CreateCheck>, nonce: u8) -> anchor_lang::Result<()> {
+    pub fn accounts(ctx: &Context<CreateCheck>, nonce: u8) -> Result<()> {
         let signer = Pubkey::create_program_address(
             &[ctx.accounts.check.to_account_info().key.as_ref(), &[nonce]],
             ctx.program_id,
@@ -172,7 +172,7 @@ pub enum ErrorCode {
     AlreadyBurned,
 }
 
-fn not_burned(check: &Check) -> anchor_lang::Result<()> {
+fn not_burned(check: &Check) -> Result<()> {
     if check.burned {
         return Err(error!(ErrorCode::AlreadyBurned));
     }
