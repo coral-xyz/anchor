@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Display};
 
-use solana_program::program_error::ProgramError;
 use borsh::maybestd::io::Error as BorshIoError;
+use solana_program::program_error::ProgramError;
 
 use anchor_attribute_error::error_codes;
 
