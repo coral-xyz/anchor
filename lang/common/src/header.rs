@@ -3,30 +3,58 @@ use solana_program::hash;
 use std::io::{Cursor, Write};
 
 pub const HEADER_LEN: usize = 8;
+pub const LAYOUT_VERSION: u8 = 1;
+
+const HEADER_LAYOUT_VERSION_INDEX: usize = 0;
+const HEADER_TYPE_VERSION_INDEX: usize = 1;
+#[cfg(feature = "deprecated-layout")]
+const HEADER_DISCRIMINATOR_INDEX: usize = 0;
+#[cfg(not(feature = "deprecated-layout"))]
+const HEADER_DISCRIMINATOR_INDEX: usize = 2;
 
 #[cfg(feature = "deprecated-layout")]
-pub fn read_discriminator(data: &[u8]) -> &[u8; 8] {
-    array_ref![data, 0, 8]
-}
-
+pub const DISCRIMINATOR_LEN: usize = 8;
 #[cfg(not(feature = "deprecated-layout"))]
-pub fn read_discriminator(data: &[u8]) -> &[u8; 4] {
-    array_ref![data, 2, 4]
+pub const DISCRIMINATOR_LEN: usize = 4;
+
+pub const DEFAULT_ACCOUNT_VERSION: u8 = 1;
+
+// Initializes the header. Should only be run once.
+pub fn init(account_data: &mut [u8], discriminator: &[u8]) {
+    if !cfg!(feature = "deprecated-layout") {
+        write_layout_version(account_data, LAYOUT_VERSION);
+        write_account_version(account_data, DEFAULT_ACCOUNT_VERSION);
+    }
+    write_discriminator(account_data, discriminator);
 }
 
-#[cfg(feature = "deprecated-layout")]
-pub fn create_discriminator(account_name: &str, namespace: Option<&str>) -> [u8; 8] {
-    let discriminator_preimage = format!("{}:{}", namespace.unwrap_or("account"), account_name);
-    let mut discriminator = [0u8; 8];
-    discriminator.copy_from_slice(&hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..8]);
-    discriminator
+fn write_layout_version(account_data: &mut [u8], version: u8) {
+    account_data[HEADER_LAYOUT_VERSION_INDEX] = version;
 }
 
-#[cfg(not(feature = "deprecated-layout"))]
-pub fn create_discriminator(account_name: &str, namespace: Option<&str>) -> [u8; 4] {
+fn write_account_version(account_data: &mut [u8], version: u8) {
+    account_data[HEADER_TYPE_VERSION_INDEX] = version;
+}
+
+fn write_discriminator(account_data: &mut [u8], discriminator: &[u8]) {
+    let dst: &mut [u8] = &mut account_data[HEADER_DISCRIMINATOR_INDEX..];
+    let mut cursor = Cursor::new(dst);
+    cursor.write_all(discriminator).unwrap();
+}
+
+pub fn read_discriminator(data: &[u8]) -> &[u8; DISCRIMINATOR_LEN] {
+    array_ref![data, HEADER_DISCRIMINATOR_INDEX, DISCRIMINATOR_LEN]
+}
+
+pub fn create_discriminator(
+    account_name: &str,
+    namespace: Option<&str>,
+) -> [u8; DISCRIMINATOR_LEN] {
     let discriminator_preimage = format!("{}:{}", namespace.unwrap_or("account"), account_name);
-    let mut discriminator = [0u8; 4];
-    discriminator.copy_from_slice(&hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..4]);
+    let mut discriminator = [0u8; DISCRIMINATOR_LEN];
+    discriminator.copy_from_slice(
+        &hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..DISCRIMINATOR_LEN],
+    );
     discriminator
 }
 
@@ -36,20 +64,6 @@ pub fn read_data(account_data: &[u8]) -> &[u8] {
 
 pub fn read_data_mut(account_data: &mut [u8]) -> &mut [u8] {
     &mut account_data[HEADER_LEN..]
-}
-
-pub fn write_discriminator(account_data: &mut [u8], discriminator: &[u8]) {
-    #[cfg(feature = "deprecated-layout")]
-    {
-        let mut cursor = Cursor::new(account_data);
-        cursor.write_all(discriminator).unwrap();
-    }
-    #[cfg(not(feature = "deprecated-layout"))]
-    {
-        let dst: &mut [u8] = &mut account_data[2..];
-        let mut cursor = Cursor::new(dst);
-        cursor.write_all(discriminator).unwrap();
-    }
 }
 
 // Bit of a hack. We return the length as a string and then parse it into

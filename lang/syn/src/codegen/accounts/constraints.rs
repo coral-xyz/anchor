@@ -150,7 +150,7 @@ pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macr
     let header_write = quote! {
         {
             use anchor_lang::Discriminator;
-            anchor_lang::accounts::header::write_discriminator(&mut __data, &#account_ty::discriminator());
+            anchor_lang::accounts::header::init(&mut __data, &#account_ty::discriminator());
         }
     };
     // Check the *entire* account header is zero.
@@ -532,7 +532,7 @@ fn generate_constraint_init(f: &Field, c: &ConstraintInitGroup) -> proc_macro2::
                             {
                                 use anchor_lang::Discriminator;
                                 let mut __data = actual_field.try_borrow_mut_data()?;
-                                anchor_lang::accounts::header::write_discriminator(
+                                anchor_lang::accounts::header::init(
                                     &mut __data,
                                     &#account_ty::discriminator(),
                                 );

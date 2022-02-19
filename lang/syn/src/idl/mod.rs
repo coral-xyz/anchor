@@ -9,7 +9,7 @@ pub mod pda;
 pub struct Idl {
     // Version of the idl protocol.
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub layout_version: Option<String>,
+    pub layout_version: Option<u8>,
     // Version of the program.
     pub version: String,
     pub name: String,

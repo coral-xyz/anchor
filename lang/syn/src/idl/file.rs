@@ -259,7 +259,7 @@ pub fn parse(
         if is_deprecated_layout {
             None
         } else {
-            Some("0.1.0".to_string()) // TODO: make this a u8?
+            Some(1)
         }
     };
 

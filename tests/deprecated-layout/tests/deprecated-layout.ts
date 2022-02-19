@@ -67,8 +67,8 @@ describe("deprecated-layout", () => {
     assert.ok(expectedDiscriminator.length === 4);
     assert.ok(givenDiscriminator.compare(expectedDiscriminator) === 0);
     assert.ok(accountData.compare(Buffer.from([2, 0, 0, 0, 0, 0, 0, 0])) === 0);
-    assert.ok(header[0] === 0);
-    assert.ok(header[1] === 0);
+    assert.ok(header[0] === 1);
+    assert.ok(header[1] === 1);
     assert.ok(header[6] === 0);
     assert.ok(header[7] === 0);
 
