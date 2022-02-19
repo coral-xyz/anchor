@@ -14,7 +14,7 @@
 //! ```
 
 use crate::{
-    anchor_lang::Result, Accounts, AccountsClose, AccountsExit, ToAccountInfos, ToAccountMetas,
+    Accounts, AccountsClose, AccountsExit, ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;

@@ -1,6 +1,6 @@
 use crate::error::ErrorCode;
 use crate::{
-    anchor_lang::Result, Accounts, AccountsClose, AccountsExit, ToAccountInfo, ToAccountInfos,
+    Accounts, AccountsClose, AccountsExit, ToAccountInfo, ToAccountInfos,
     ToAccountMetas, ZeroCopy,
 };
 use arrayref::array_ref;

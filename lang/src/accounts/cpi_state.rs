@@ -2,7 +2,7 @@ use crate::error::ErrorCode;
 #[allow(deprecated)]
 use crate::{accounts::state::ProgramState, context::CpiStateContext};
 use crate::{
-    anchor_lang::Result, AccountDeserialize, AccountSerialize, Accounts, AccountsExit,
+    AccountDeserialize, AccountSerialize, Accounts, AccountsExit,
     ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;

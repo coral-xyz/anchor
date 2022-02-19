@@ -2,7 +2,7 @@
 
 use crate::error::ErrorCode;
 use crate::{
-    anchor_lang::Result, Accounts, AccountsClose, AccountsExit, Owner, ToAccountInfo,
+    Accounts, AccountsClose, AccountsExit, Owner, ToAccountInfo,
     ToAccountInfos, ToAccountMetas, ZeroCopy,
 };
 use arrayref::array_ref;

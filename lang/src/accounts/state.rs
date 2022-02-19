@@ -2,7 +2,7 @@
 use crate::accounts::cpi_account::CpiAccount;
 use crate::error::ErrorCode;
 use crate::{
-    anchor_lang::Result, AccountDeserialize, AccountSerialize, Accounts, AccountsExit,
+    AccountDeserialize, AccountSerialize, Accounts, AccountsExit,
     ToAccountInfo, ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;

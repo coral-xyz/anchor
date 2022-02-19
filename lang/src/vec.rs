@@ -1,4 +1,4 @@
-use crate::{anchor_lang::Result, Accounts, ToAccountInfos, ToAccountMetas};
+use crate::{Accounts, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
