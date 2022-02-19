@@ -40,7 +40,7 @@ pub mod swap {
         side: Side,
         amount: u64,
         min_expected_swap_amount: u64,
-    ) -> Result<()> {
+    ) -> AnchorResult<()> {
         // Optional referral account (earns a referral fee).
         let referral = ctx.remaining_accounts.iter().next().map(Clone::clone);
 
@@ -110,7 +110,7 @@ pub mod swap {
         ctx: Context<'_, '_, '_, 'info, SwapTransitive<'info>>,
         amount: u64,
         min_expected_swap_amount: u64,
-    ) -> Result<()> {
+    ) -> AnchorResult<()> {
         // Optional referral account (earns a referral fee).
         let referral = ctx.remaining_accounts.iter().next().map(Clone::clone);
 
@@ -176,10 +176,10 @@ pub mod swap {
 }
 
 // Asserts the swap event is valid.
-fn apply_risk_checks(event: DidSwap) -> Result<()> {
+fn apply_risk_checks(event: DidSwap) -> AnchorResult<()> {
     // Reject if the resulting amount is less than the client's expectation.
     if event.to_amount < event.min_expected_swap_amount {
-        return Err(ErrorCode::SlippageExceeded.into());
+        return Err(error!(ErrorCode::SlippageExceeded));
     }
     emit!(event);
     Ok(())
@@ -442,20 +442,20 @@ impl From<Side> for SerumSide {
 
 // Access control modifiers.
 
-fn is_valid_swap(ctx: &Context<Swap>) -> Result<()> {
+fn is_valid_swap(ctx: &Context<Swap>) -> AnchorResult<()> {
     _is_valid_swap(&ctx.accounts.market.coin_wallet, &ctx.accounts.pc_wallet)
 }
 
-fn is_valid_swap_transitive(ctx: &Context<SwapTransitive>) -> Result<()> {
+fn is_valid_swap_transitive(ctx: &Context<SwapTransitive>) -> AnchorResult<()> {
     _is_valid_swap(&ctx.accounts.from.coin_wallet, &ctx.accounts.to.coin_wallet)
 }
 
 // Validates the tokens being swapped are of different mints.
-fn _is_valid_swap<'info>(from: &AccountInfo<'info>, to: &AccountInfo<'info>) -> Result<()> {
+fn _is_valid_swap<'info>(from: &AccountInfo<'info>, to: &AccountInfo<'info>) -> AnchorResult<()> {
     let from_token_mint = token::accessor::mint(from)?;
     let to_token_mint = token::accessor::mint(to)?;
     if from_token_mint == to_token_mint {
-        return Err(ErrorCode::SwapTokensCannotMatch.into());
+        return Err(error!(ErrorCode::SwapTokensCannotMatch));
     }
     Ok(())
 }
@@ -486,7 +486,7 @@ pub struct DidSwap {
     pub authority: Pubkey,
 }
 
-#[error]
+#[error_codes]
 pub enum ErrorCode {
     #[msg("The tokens being swapped must have different mints")]
     SwapTokensCannotMatch,
