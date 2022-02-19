@@ -35,7 +35,7 @@ pub mod multisig {
         owners: Vec<Pubkey>,
         threshold: u64,
         nonce: u8,
-    ) -> Result<()> {
+    ) -> AnchorResult<()> {
         let multisig = &mut ctx.accounts.multisig;
         multisig.owners = owners;
         multisig.threshold = threshold;
@@ -50,14 +50,14 @@ pub mod multisig {
         pid: Pubkey,
         accs: Vec<TransactionAccount>,
         data: Vec<u8>,
-    ) -> Result<()> {
+    ) -> AnchorResult<()> {
         let owner_index = ctx
             .accounts
             .multisig
             .owners
             .iter()
             .position(|a| a == ctx.accounts.proposer.key)
-            .ok_or(ErrorCode::InvalidOwner)?;
+            .ok_or(error!(ErrorCode::InvalidOwner))?;
 
         let mut signers = Vec::new();
         signers.resize(ctx.accounts.multisig.owners.len(), false);
@@ -75,14 +75,14 @@ pub mod multisig {
     }
 
     // Approves a transaction on behalf of an owner of the multisig.
-    pub fn approve(ctx: Context<Approve>) -> Result<()> {
+    pub fn approve(ctx: Context<Approve>) -> AnchorResult<()> {
         let owner_index = ctx
             .accounts
             .multisig
             .owners
             .iter()
             .position(|a| a == ctx.accounts.owner.key)
-            .ok_or(ErrorCode::InvalidOwner)?;
+            .ok_or(error!(ErrorCode::InvalidOwner))?;
 
         ctx.accounts.transaction.signers[owner_index] = true;
 
@@ -91,7 +91,7 @@ pub mod multisig {
 
     // Sets the owners field on the multisig. The only way this can be invoked
     // is via a recursive call from execute_transaction -> set_owners.
-    pub fn set_owners(ctx: Context<Auth>, owners: Vec<Pubkey>) -> Result<()> {
+    pub fn set_owners(ctx: Context<Auth>, owners: Vec<Pubkey>) -> AnchorResult<()> {
         let multisig = &mut ctx.accounts.multisig;
 
         if (owners.len() as u64) < multisig.threshold {
@@ -105,9 +105,9 @@ pub mod multisig {
     // Changes the execution threshold of the multisig. The only way this can be
     // invoked is via a recursive call from execute_transaction ->
     // change_threshold.
-    pub fn change_threshold(ctx: Context<Auth>, threshold: u64) -> Result<()> {
+    pub fn change_threshold(ctx: Context<Auth>, threshold: u64) -> AnchorResult<()> {
         if threshold > ctx.accounts.multisig.owners.len() as u64 {
-            return Err(ErrorCode::InvalidThreshold.into());
+            return Err(error!(ErrorCode::InvalidThreshold));
         }
         let multisig = &mut ctx.accounts.multisig;
         multisig.threshold = threshold;
@@ -115,10 +115,10 @@ pub mod multisig {
     }
 
     // Executes the given transaction if threshold owners have signed it.
-    pub fn execute_transaction(ctx: Context<ExecuteTransaction>) -> Result<()> {
+    pub fn execute_transaction(ctx: Context<ExecuteTransaction>) -> AnchorResult<()> {
         // Has this been executed already?
         if ctx.accounts.transaction.did_execute {
-            return Err(ErrorCode::AlreadyExecuted.into());
+            return Err(error!(ErrorCode::AlreadyExecuted));
         }
 
         // Do we have enough signers?
@@ -134,7 +134,7 @@ pub mod multisig {
             .collect::<Vec<_>>()
             .len() as u64;
         if sig_count < ctx.accounts.multisig.threshold {
-            return Err(ErrorCode::NotEnoughSigners.into());
+            return Err(error!(ErrorCode::NotEnoughSigners));
         }
 
         // Execute the transaction signed by the multisig.
@@ -262,7 +262,7 @@ impl From<TransactionAccount> for AccountMeta {
     }
 }
 
-#[error]
+#[error_codes]
 pub enum ErrorCode {
     #[msg("The given owner is not part of this multisig.")]
     InvalidOwner,
