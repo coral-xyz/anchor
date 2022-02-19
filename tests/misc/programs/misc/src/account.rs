@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 pub const MAX_SIZE: usize = 10;
-pub const MAX_SIZE_U8: usize = 11;
+pub const MAX_SIZE_U8: u8 = 11;
 
 #[account]
 pub struct Data {

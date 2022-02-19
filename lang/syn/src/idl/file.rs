@@ -190,7 +190,7 @@ pub fn parse(
                     };
                     IdlEventField {
                         name: f.ident.clone().unwrap().to_string().to_mixed_case(),
-                        ty: parser::tts_to_string(&f.ty).parse().unwrap(),
+                        ty: to_idl_type(&ctx, f),
                         index,
                     }
                 })
@@ -405,16 +405,9 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
                     .named
                     .iter()
                     .map(|f: &syn::Field| {
-                        let mut tts = proc_macro2::TokenStream::new();
-                        f.ty.to_tokens(&mut tts);
-                        // Handle array sizes that are constants
-                        let mut tts_string = tts.to_string();
-                        if tts_string.starts_with('[') {
-                            tts_string = resolve_variable_array_length(ctx, tts_string);
-                        }
                         Ok(IdlField {
                             name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
-                            ty: tts_string.parse()?,
+                            ty: to_idl_type(ctx, f),
                         })
                     })
                     .collect::<Result<Vec<IdlField>>>(),
@@ -438,7 +431,7 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
                         syn::Fields::Unit => None,
                         syn::Fields::Unnamed(fields) => {
                             let fields: Vec<IdlType> =
-                                fields.unnamed.iter().map(to_idl_type).collect();
+                                fields.unnamed.iter().map(|f| to_idl_type(ctx, f)).collect();
                             Some(EnumFields::Tuple(fields))
                         }
                         syn::Fields::Named(fields) => {
@@ -447,7 +440,7 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
                                 .iter()
                                 .map(|f: &syn::Field| {
                                     let name = f.ident.as_ref().unwrap().to_string();
-                                    let ty = to_idl_type(f);
+                                    let ty = to_idl_type(ctx, f);
                                     IdlField { name, ty }
                                 })
                                 .collect();
@@ -468,9 +461,17 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
 // Replace variable array lengths with values
 fn resolve_variable_array_length(ctx: &CrateContext, tts_string: String) -> String {
     for constant in ctx.consts() {
-        if constant.ty.to_token_stream().to_string() == "usize"
-            && tts_string.contains(&constant.ident.to_string())
-        {
+        let size_string = constant.ident.to_string();
+        let cast_size_string = format!("{} as usize", size_string);
+
+        let mut replacement_string = None;
+        if tts_string.contains(format!("{}]", &cast_size_string).as_str()) {
+            replacement_string = Some(cast_size_string);
+        } else if tts_string.contains(format!("{}]", &size_string).as_str()) {
+            replacement_string = Some(size_string);
+        }
+
+        if replacement_string.is_some() {
             // Check for the existence of consts existing elsewhere in the
             // crate which have the same name, are usize, and have a
             // different value. We can't know which was intended for the
@@ -484,7 +485,7 @@ fn resolve_variable_array_length(ctx: &CrateContext, tts_string: String) -> Stri
                 panic!("Crate wide unique name required for array size const.");
             }
             return tts_string.replace(
-                &constant.ident.to_string(),
+                &replacement_string.unwrap(),
                 &constant.expr.to_token_stream().to_string(),
             );
         }
@@ -492,10 +493,14 @@ fn resolve_variable_array_length(ctx: &CrateContext, tts_string: String) -> Stri
     tts_string
 }
 
-fn to_idl_type(f: &syn::Field) -> IdlType {
+fn to_idl_type(ctx: &CrateContext, f: &syn::Field) -> IdlType {
     let mut tts = proc_macro2::TokenStream::new();
     f.ty.to_tokens(&mut tts);
-    tts.to_string().parse().unwrap()
+    let mut tts_string = tts.to_string();
+    if tts_string.starts_with('[') {
+        tts_string = resolve_variable_array_length(ctx, tts_string);
+    }
+    tts_string.parse().unwrap()
 }
 
 fn idl_accounts(
