@@ -248,8 +248,8 @@ jobs:
             path: tests/interface
           - cmd: cd tests/lockup && anchor test
             path: tests/lockup
-          #- cmd: cd tests/swap/deps/serum-dex/dex && cargo build-bpf && cd ../../../ && anchor test
-          #  path: tests/swap
+          - cmd: cd tests/swap/deps/serum-dex/dex && cargo build-bpf && cd ../../../ && anchor test
+            path: tests/swap
           - cmd: cd tests/escrow && anchor test
             path: tests/escrow
           - cmd: cd tests/pyth && anchor test
@@ -274,8 +274,8 @@ jobs:
             path: tests/ido-pool
           #- cmd: cd tests/cfo && anchor run test-with-build
           #  path: tests/cfo
-          #- cmd: cd tests/auction-house && yarn && anchor test
-          #  path: tests/auction-house
+          - cmd: cd tests/auction-house && yarn && anchor test
+            path: tests/auction-house
           - cmd: cd tests/floats && yarn && anchor test
             path: tests/floats
           - cmd: cd tests/safety-checks && ./test.sh
