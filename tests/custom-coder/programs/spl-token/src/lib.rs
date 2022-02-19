@@ -16,27 +16,27 @@ pub mod spl_token {
         decimals: u8,
         mint_authority: Pubkey,
         //        freeze_authority: COption<Pubkey>,
-    ) -> Result<()> {
+    ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn initialize_account(ctx: Context<InitializeAccount>) -> Result<()> {
+    pub fn initialize_account(ctx: Context<InitializeAccount>) -> ProgramResult {
         Ok(())
     }
 
-    pub fn initialize_multisig(ctx: Context<InitializeMultisig>, m: u8) -> Result<()> {
+    pub fn initialize_multisig(ctx: Context<InitializeMultisig>, m: u8) -> ProgramResult {
         Ok(())
     }
 
-    pub fn transfer(ctx: Context<Transfer>, amount: u64) -> Result<()> {
+    pub fn transfer(ctx: Context<Transfer>, amount: u64) -> ProgramResult {
         Ok(())
     }
 
-    pub fn approve(ctx: Context<Approve>, amount: u64) -> Result<()> {
+    pub fn approve(ctx: Context<Approve>, amount: u64) -> ProgramResult {
         Ok(())
     }
 
-    pub fn revoke(ctx: Context<Revoke>) -> Result<()> {
+    pub fn revoke(ctx: Context<Revoke>) -> ProgramResult {
         Ok(())
     }
 
@@ -44,27 +44,27 @@ pub mod spl_token {
         ctx: Context<SetAuthority>,
         authority_type: u8,
         //        new_authority: COption<Pubkey>,
-    ) -> Result<()> {
+    ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn mint_to(ctx: Context<MintTo>, amount: u64) -> Result<()> {
+    pub fn mint_to(ctx: Context<MintTo>, amount: u64) -> ProgramResult {
         Ok(())
     }
 
-    pub fn burn(ctx: Context<Burn>, amount: u64) -> Result<()> {
+    pub fn burn(ctx: Context<Burn>, amount: u64) -> ProgramResult {
         Ok(())
     }
 
-    pub fn close_account(ctx: Context<CloseAccount>) -> Result<()> {
+    pub fn close_account(ctx: Context<CloseAccount>) -> ProgramResult {
         Ok(())
     }
 
-    pub fn freeze_account(ctx: Context<FreezeAccount>) -> Result<()> {
+    pub fn freeze_account(ctx: Context<FreezeAccount>) -> ProgramResult {
         Ok(())
     }
 
-    pub fn thaw_account(ctx: Context<ThawAccount>) -> Result<()> {
+    pub fn thaw_account(ctx: Context<ThawAccount>) -> ProgramResult {
         Ok(())
     }
 
@@ -72,35 +72,49 @@ pub mod spl_token {
         ctx: Context<TransferChecked>,
         amount: u64,
         decimals: u8,
-    ) -> Result<()> {
+    ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn approve_checked(ctx: Context<ApproveChecked>, amount: u64, decimals: u8) -> Result<()> {
+    pub fn approve_checked(
+        ctx: Context<ApproveChecked>,
+        amount: u64,
+        decimals: u8,
+    ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn mint_to_checked(ctx: Context<MintToChecked>, amount: u64, decimals: u8) -> Result<()> {
+    pub fn mint_to_checked(
+        ctx: Context<MintToChecked>,
+        amount: u64,
+        decimals: u8,
+    ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn burn_checked(ctx: Context<BurnChecked>, amount: u64, decimals: u8) -> Result<()> {
+    pub fn burn_checked(ctx: Context<BurnChecked>, amount: u64, decimals: u8) -> ProgramResult {
         Ok(())
     }
 
-    pub fn initialize_account_2(ctx: Context<InitializeAccount2>, authority: Pubkey) -> Result<()> {
+    pub fn initialize_account_2(
+        ctx: Context<InitializeAccount2>,
+        authority: Pubkey,
+    ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn sync_native(ctx: Context<SyncNative>) -> Result<()> {
+    pub fn sync_native(ctx: Context<SyncNative>) -> ProgramResult {
         Ok(())
     }
 
-    pub fn initialize_account3(ctx: Context<InitializeAccount3>, authority: Pubkey) -> Result<()> {
+    pub fn initialize_account3(
+        ctx: Context<InitializeAccount3>,
+        authority: Pubkey,
+    ) -> ProgramResult {
         Ok(())
     }
 
-    pub fn initialize_multisig_2(ctx: Context<InitializeMultisig2>, m: u8) -> Result<()> {
+    pub fn initialize_multisig_2(ctx: Context<InitializeMultisig2>, m: u8) -> ProgramResult {
         Ok(())
     }
 
@@ -109,7 +123,7 @@ pub mod spl_token {
         decimals: u8,
         mint_authority: Pubkey,
         //        freeze_authority: COption<Pubkey>,
-    ) -> Result<()> {
+    ) -> ProgramResult {
         Ok(())
     }
 }
