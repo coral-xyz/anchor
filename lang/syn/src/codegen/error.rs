@@ -6,7 +6,7 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
     let enum_name = &error.ident;
     // Each arm of the `match` statement for implementing `std::fmt::Display`
     // on the user defined error code.
-    let variant_dispatch: Vec<proc_macro2::TokenStream> = error
+    let display_variant_dispatch: Vec<proc_macro2::TokenStream> = error
         .raw_enum
         .variants
         .iter()
@@ -14,7 +14,7 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
         .map(|(idx, variant)| {
             let ident = &variant.ident;
             let error_code = &error.codes[idx];
-            let msg = match &error_code.msg {
+            let display_msg = match &error_code.msg {
                 None => {
                     quote! {
                         <Self as std::fmt::Debug>::fmt(self, fmt)
@@ -27,7 +27,22 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
                 }
             };
             quote! {
-                #enum_name::#ident => #msg
+                #enum_name::#ident => #display_msg
+            }
+        })
+        .collect();
+
+    // Each arm of the `match` statement for implementing the `name` function
+    // on the user defined error code.
+    let name_variant_dispatch: Vec<proc_macro2::TokenStream> = error
+        .raw_enum
+        .variants
+        .iter()
+        .map(|variant| {
+            let ident = &variant.ident;
+            let ident_name = ident.to_string();
+            quote!{
+                #enum_name::#ident => #ident_name.to_string()
             }
         })
         .collect();
@@ -45,6 +60,14 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
         #[repr(u32)]
         #error_enum
 
+        impl #enum_name {
+            pub fn name(&self) -> String {
+                match self {
+                    #(#name_variant_dispatch),*
+                }
+            }
+        }
+
         impl From<#enum_name> for u32 {
             fn from(e: #enum_name) -> u32 {
                 e as u32 + #offset
@@ -54,7 +77,7 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
         impl std::fmt::Display for #enum_name {
             fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
                 match self {
-                    #(#variant_dispatch),*
+                    #(#display_variant_dispatch),*
                 }
             }
         }

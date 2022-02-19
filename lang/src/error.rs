@@ -289,7 +289,7 @@ impl From<ProgramError> for ProgramErrorWithOrigin {
 // TODO: is there a better way than converting to Strings?
 #[derive(Debug)]
 pub struct AnchorError {
-    pub error_code_string: String,
+    pub error_name: String,
     pub error_code_number: u32,
     pub error_msg: String,
     pub source: Option<Source>,
@@ -303,7 +303,7 @@ impl AnchorError {
                 "AnchorError thrown in {}:{}. Error Code: {}. Error Number: {}. Error Message: {}.",
                 source.filename,
                 source.line,
-                self.error_code_string,
+                self.error_name,
                 self.error_code_number,
                 self.error_msg
             );
@@ -311,14 +311,14 @@ impl AnchorError {
             anchor_lang::solana_program::log::sol_log(&format!(
                 "AnchorError caused by account: {}. Error Code: {}. Error Number: {}. Error Message: {}.",
                 account_name,
-                self.error_code_string,
+                self.error_name,
                 self.error_code_number,
                 self.error_msg
             ));
         } else {
             anchor_lang::solana_program::log::sol_log(&format!(
                 "AnchorError occurred. Error Code: {}. Error Number: {}. Error Message: {}.",
-                self.error_code_string, self.error_code_number, self.error_msg
+                self.error_name, self.error_code_number, self.error_msg
             ));
         }
     }
@@ -328,7 +328,7 @@ impl std::convert::From<Error> for anchor_lang::solana_program::program_error::P
     fn from(e: Error) -> anchor_lang::solana_program::program_error::ProgramError {
         match e {
             Error::AnchorError(AnchorError {
-                error_code_string: _,
+                error_name: _,
                 error_code_number,
                 error_msg: _,
                 source: _,

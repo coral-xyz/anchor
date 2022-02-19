@@ -73,7 +73,7 @@ pub fn error_without_origin(ts: proc_macro::TokenStream) -> TokenStream {
     TokenStream::from(quote! {
         anchor_lang::error::Error::from(
             anchor_lang::error::AnchorError {
-                error_code_string: format!("{:?}", #error_code), // TODO: dont use format here
+                error_name: #error_code.name(),
                 error_code_number: #error_code.into(),
                 error_msg: #error_code.to_string(),
                 source: None,
@@ -90,7 +90,7 @@ pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
     TokenStream::from(quote! {
         anchor_lang::error::Error::from(
             anchor_lang::error::AnchorError {
-                error_code_string: format!("{:?}", #error_code), // TODO: dont use format here
+                error_name: #error_code.name(),
                 error_code_number: #error_code.into(),
                 error_msg: #error_code.to_string(),
                 source: Some(anchor_lang::error::Source {
@@ -111,7 +111,7 @@ pub fn error_with_account_name(ts: proc_macro::TokenStream) -> TokenStream {
     TokenStream::from(quote! {
         anchor_lang::error::Error::from(
             anchor_lang::error::AnchorError {
-                error_code_string: format!("{:?}", #error_code), // TODO: dont use format here
+                error_name: #error_code.name(),
                 error_code_number: #error_code.into(),
                 error_msg: #error_code.to_string(),
                 source: None,
