@@ -63,7 +63,7 @@ impl<'info> SetCount<'info> {
 
 #[interface]
 pub trait Auth<'info, T: Accounts<'info>> {
-    fn is_authorized(ctx: Context<T>, current: u64, new: u64) -> ProgramResult;
+    fn is_authorized(ctx: Context<T>, current: u64, new: u64) -> Result<()>;
 }
 
 #[error_codes]
