@@ -41,7 +41,7 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
         .map(|variant| {
             let ident = &variant.ident;
             let ident_name = ident.to_string();
-            quote!{
+            quote! {
                 #enum_name::#ident => #ident_name.to_string()
             }
         })
