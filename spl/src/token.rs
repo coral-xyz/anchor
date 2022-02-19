@@ -1,5 +1,4 @@
 use anchor_lang::solana_program::account_info::AccountInfo;
-use anchor_lang::solana_program::entrypoint::ProgramResult;
 
 use anchor_lang::solana_program::program_pack::Pack;
 use anchor_lang::solana_program::pubkey::Pubkey;
@@ -12,7 +11,7 @@ pub use spl_token::ID;
 pub fn transfer<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>,
     amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token::instruction::transfer(
         &spl_token::ID,
         ctx.accounts.from.key,
@@ -29,13 +28,13 @@ pub fn transfer<'a, 'b, 'c, 'info>(
             ctx.accounts.authority.clone(),
         ],
         ctx.signer_seeds,
-    )
+    ).map_err(|pe| pe.into())
 }
 
 pub fn mint_to<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, MintTo<'info>>,
     amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token::instruction::mint_to(
         &spl_token::ID,
         ctx.accounts.mint.key,
@@ -52,13 +51,13 @@ pub fn mint_to<'a, 'b, 'c, 'info>(
             ctx.accounts.authority.clone(),
         ],
         ctx.signer_seeds,
-    )
+    ).map_err(|pe| pe.into())
 }
 
 pub fn burn<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, Burn<'info>>,
     amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token::instruction::burn(
         &spl_token::ID,
         ctx.accounts.to.key,
@@ -75,13 +74,13 @@ pub fn burn<'a, 'b, 'c, 'info>(
             ctx.accounts.authority.clone(),
         ],
         ctx.signer_seeds,
-    )
+    ).map_err(|pe| pe.into())
 }
 
 pub fn approve<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, Approve<'info>>,
     amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token::instruction::approve(
         &spl_token::ID,
         ctx.accounts.to.key,
@@ -98,12 +97,12 @@ pub fn approve<'a, 'b, 'c, 'info>(
             ctx.accounts.authority.clone(),
         ],
         ctx.signer_seeds,
-    )
+    ).map_err(|pe| pe.into())
 }
 
 pub fn initialize_account<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, InitializeAccount<'info>>,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token::instruction::initialize_account(
         &spl_token::ID,
         ctx.accounts.account.key,
@@ -119,12 +118,12 @@ pub fn initialize_account<'a, 'b, 'c, 'info>(
             ctx.accounts.rent.clone(),
         ],
         ctx.signer_seeds,
-    )
+    ).map_err(|pe| pe.into())
 }
 
 pub fn close_account<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, CloseAccount<'info>>,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token::instruction::close_account(
         &spl_token::ID,
         ctx.accounts.account.key,
@@ -140,12 +139,12 @@ pub fn close_account<'a, 'b, 'c, 'info>(
             ctx.accounts.authority.clone(),
         ],
         ctx.signer_seeds,
-    )
+    ).map_err(|pe| pe.into())
 }
 
 pub fn freeze_account<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, FreezeAccount<'info>>,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token::instruction::freeze_account(
         &spl_token::ID,
         ctx.accounts.account.key,
@@ -161,12 +160,12 @@ pub fn freeze_account<'a, 'b, 'c, 'info>(
             ctx.accounts.authority.clone(),
         ],
         ctx.signer_seeds,
-    )
+    ).map_err(|pe| pe.into())
 }
 
 pub fn thaw_account<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, ThawAccount<'info>>,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token::instruction::thaw_account(
         &spl_token::ID,
         ctx.accounts.account.key,
@@ -182,7 +181,7 @@ pub fn thaw_account<'a, 'b, 'c, 'info>(
             ctx.accounts.authority.clone(),
         ],
         ctx.signer_seeds,
-    )
+    ).map_err(|pe| pe.into())
 }
 
 pub fn initialize_mint<'a, 'b, 'c, 'info>(
@@ -190,7 +189,7 @@ pub fn initialize_mint<'a, 'b, 'c, 'info>(
     decimals: u8,
     authority: &Pubkey,
     freeze_authority: Option<&Pubkey>,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token::instruction::initialize_mint(
         &spl_token::ID,
         ctx.accounts.mint.key,
@@ -202,14 +201,14 @@ pub fn initialize_mint<'a, 'b, 'c, 'info>(
         &ix,
         &[ctx.accounts.mint.clone(), ctx.accounts.rent.clone()],
         ctx.signer_seeds,
-    )
+    ).map_err(|pe| pe.into())
 }
 
 pub fn set_authority<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, SetAuthority<'info>>,
     authority_type: spl_token::instruction::AuthorityType,
     new_authority: Option<Pubkey>,
-) -> ProgramResult {
+) -> Result<()> {
     let mut spl_new_authority: Option<&Pubkey> = None;
     if new_authority.is_some() {
         spl_new_authority = new_authority.as_ref()
@@ -230,7 +229,7 @@ pub fn set_authority<'a, 'b, 'c, 'info>(
             ctx.accounts.current_authority.clone(),
         ],
         ctx.signer_seeds,
-    )
+    ).map_err(|pe| pe.into())
 }
 
 #[derive(Accounts)]
