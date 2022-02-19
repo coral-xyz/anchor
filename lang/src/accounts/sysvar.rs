@@ -1,7 +1,7 @@
 //! Type validating that the account is a sysvar and deserializing it
 
 use crate::error::ErrorCode;
-use crate::{Accounts, AccountsExit, anchor_lang::Result, ToAccountInfos, ToAccountMetas};
+use crate::{anchor_lang::Result, Accounts, AccountsExit, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -45,7 +45,9 @@ impl<'info, T: solana_program::sysvar::Sysvar + fmt::Debug> fmt::Debug for Sysva
 }
 
 impl<'info, T: solana_program::sysvar::Sysvar> Sysvar<'info, T> {
-    pub fn from_account_info(acc_info: &AccountInfo<'info>) -> anchor_lang::Result<Sysvar<'info, T>> {
+    pub fn from_account_info(
+        acc_info: &AccountInfo<'info>,
+    ) -> anchor_lang::Result<Sysvar<'info, T>> {
         Ok(Sysvar {
             info: acc_info.clone(),
             account: T::from_account_info(acc_info)?,

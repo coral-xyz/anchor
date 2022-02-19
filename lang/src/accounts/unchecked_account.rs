@@ -2,7 +2,7 @@
 //! that no checks are performed
 
 use crate::error::ErrorCode;
-use crate::{Accounts, AccountsExit, anchor_lang::Result, ToAccountInfos, ToAccountMetas};
+use crate::{anchor_lang::Result, Accounts, AccountsExit, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
