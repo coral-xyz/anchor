@@ -10,7 +10,7 @@
   <p>
     <a href="https://github.com/project-serum/anchor/actions"><img alt="Build Status" src="https://github.com/project-serum/anchor/actions/workflows/tests.yaml/badge.svg" /></a>
     <a href="https://project-serum.github.io/anchor/"><img alt="Tutorials" src="https://img.shields.io/badge/docs-tutorials-blueviolet" /></a>
-    <a href="https://discord.com/channels/889577356681945098"><img alt="Discord Chat" src="https://img.shields.io/discord/889577356681945098?color=blueviolet" /></a>
+    <a href="https://discord.gg/PDeRXyVURd"><img alt="Discord Chat" src="https://img.shields.io/discord/889577356681945098?color=blueviolet" /></a>
     <a href="https://opensource.org/licenses/Apache-2.0"><img alt="License" src="https://img.shields.io/github/license/project-serum/anchor?color=blueviolet" /></a>
   </p>
 </div>
@@ -97,6 +97,14 @@ pub struct Counter {
 For more, see the [examples](https://github.com/project-serum/anchor/tree/master/examples)
 and [tests](https://github.com/project-serum/anchor/tree/master/tests) directories.
 
+## License
+
+Anchor is licensed under [Apache 2.0](./LICENSE).
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in Anchor by you, as defined in the Apache-2.0 license, shall be
+licensed as above, without any additional terms or conditions.
+
 ## Contribution
 
 Thank you for your interest in contributing to Anchor! All contributions are welcome no
@@ -113,10 +121,10 @@ For simple documentation changes, feel free to just open a pull request.
 If you're considering larger changes or self motivated features, please file an issue
 and engage with the maintainers in [Discord](https://discord.gg/sxy4zxBckh).
 
-## License
+### Thanks ❤️
 
-Anchor is licensed under [Apache 2.0](./LICENSE).
-
-Unless you explicitly state otherwise, any contribution intentionally submitted
-for inclusion in Anchor by you, as defined in the Apache-2.0 license, shall be
-licensed as above, without any additional terms or conditions.
+<div align="center">
+  <a href="https://github.com/project-serum/anchor/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=project-serum/anchor" width="100%" />
+  </a>
+</div>
