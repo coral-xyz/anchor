@@ -79,7 +79,6 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     #strct_inner
                 }
                 // TODO: check for ? in all dirs (should it be error_without_origin?)
-                // TODO: check elsewhere for error where there should be error_without_origin
                 let __Args {
                     #(#field_names),*
                 } = __Args::deserialize(&mut ix_data)
