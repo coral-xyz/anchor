@@ -208,7 +208,7 @@ pub fn interface(
                             #(#args_no_tys),*
                         };
                         let mut ix_data = anchor_lang::AnchorSerialize::try_to_vec(&ix)
-                            .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotSerialize)?;
+                            .map_err(|_| anchor_lang::anchor_attribute_error::error_without_origin!(anchor_lang::error::ErrorCode::InstructionDidNotSerialize))?;
                         let mut data = #sighash_tts.to_vec();
                         data.append(&mut ix_data);
                         let accounts = ctx.to_account_metas(None);
@@ -224,7 +224,7 @@ pub fn interface(
                         &ix,
                         &acc_infos,
                         ctx.signer_seeds,
-                    )
+                    ).map_err(|pe| pe.into())
                 }
             }
         })
