@@ -221,7 +221,10 @@ pub fn generate_constraint_signer(f: &Field, c: &ConstraintSigner) -> proc_macro
     }
 }
 
-pub fn generate_constraint_literal(ident: &Ident, c: &ConstraintLiteral) -> proc_macro2::TokenStream {
+pub fn generate_constraint_literal(
+    ident: &Ident,
+    c: &ConstraintLiteral,
+) -> proc_macro2::TokenStream {
     let name_str = ident.to_string();
     let lit: proc_macro2::TokenStream = {
         let lit = &c.lit;
