@@ -13,7 +13,9 @@
 //! }
 //! ```
 
-use crate::{Accounts, AccountsClose, AccountsExit, AnchorResult, ToAccountInfos, ToAccountMetas};
+use crate::{
+    anchor_lang::Result, Accounts, AccountsClose, AccountsExit, ToAccountInfos, ToAccountMetas,
+};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -26,13 +28,13 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Box<T> {
         accounts: &mut &[AccountInfo<'info>],
         ix_data: &[u8],
         bumps: &mut BTreeMap<String, u8>,
-    ) -> AnchorResult<Self> {
+    ) -> anchor_lang::Result<Self> {
         T::try_accounts(program_id, accounts, ix_data, bumps).map(Box::new)
     }
 }
 
 impl<'info, T: AccountsExit<'info>> AccountsExit<'info> for Box<T> {
-    fn exit(&self, program_id: &Pubkey) -> AnchorResult<()> {
+    fn exit(&self, program_id: &Pubkey) -> anchor_lang::Result<()> {
         T::exit(Deref::deref(self), program_id)
     }
 }
@@ -50,7 +52,7 @@ impl<T: ToAccountMetas> ToAccountMetas for Box<T> {
 }
 
 impl<'info, T: AccountsClose<'info>> AccountsClose<'info> for Box<T> {
-    fn close(&self, sol_destination: AccountInfo<'info>) -> AnchorResult<()> {
+    fn close(&self, sol_destination: AccountInfo<'info>) -> anchor_lang::Result<()> {
         T::close(self, sol_destination)
     }
 }

@@ -40,7 +40,7 @@ pub mod swap {
         side: Side,
         amount: u64,
         min_expected_swap_amount: u64,
-    ) -> AnchorResult<()> {
+    ) -> anchor_lang::Result<()> {
         // Optional referral account (earns a referral fee).
         let referral = ctx.remaining_accounts.iter().next().map(Clone::clone);
 
@@ -110,7 +110,7 @@ pub mod swap {
         ctx: Context<'_, '_, '_, 'info, SwapTransitive<'info>>,
         amount: u64,
         min_expected_swap_amount: u64,
-    ) -> AnchorResult<()> {
+    ) -> anchor_lang::Result<()> {
         // Optional referral account (earns a referral fee).
         let referral = ctx.remaining_accounts.iter().next().map(Clone::clone);
 
@@ -176,7 +176,7 @@ pub mod swap {
 }
 
 // Asserts the swap event is valid.
-fn apply_risk_checks(event: DidSwap) -> AnchorResult<()> {
+fn apply_risk_checks(event: DidSwap) -> anchor_lang::Result<()> {
     // Reject if the resulting amount is less than the client's expectation.
     if event.to_amount < event.min_expected_swap_amount {
         return Err(error!(ErrorCode::SlippageExceeded));
@@ -442,16 +442,16 @@ impl From<Side> for SerumSide {
 
 // Access control modifiers.
 
-fn is_valid_swap(ctx: &Context<Swap>) -> AnchorResult<()> {
+fn is_valid_swap(ctx: &Context<Swap>) -> anchor_lang::Result<()> {
     _is_valid_swap(&ctx.accounts.market.coin_wallet, &ctx.accounts.pc_wallet)
 }
 
-fn is_valid_swap_transitive(ctx: &Context<SwapTransitive>) -> AnchorResult<()> {
+fn is_valid_swap_transitive(ctx: &Context<SwapTransitive>) -> anchor_lang::Result<()> {
     _is_valid_swap(&ctx.accounts.from.coin_wallet, &ctx.accounts.to.coin_wallet)
 }
 
 // Validates the tokens being swapped are of different mints.
-fn _is_valid_swap<'info>(from: &AccountInfo<'info>, to: &AccountInfo<'info>) -> AnchorResult<()> {
+fn _is_valid_swap<'info>(from: &AccountInfo<'info>, to: &AccountInfo<'info>) -> anchor_lang::Result<()> {
     let from_token_mint = token::accessor::mint(from)?;
     let to_token_mint = token::accessor::mint(to)?;
     if from_token_mint == to_token_mint {

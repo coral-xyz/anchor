@@ -2,7 +2,7 @@
 //! that no checks are performed
 
 use crate::error::ErrorCode;
-use crate::{Accounts, AccountsExit, AnchorResult, ToAccountInfos, ToAccountMetas};
+use crate::{Accounts, AccountsExit, anchor_lang::Result, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -26,7 +26,7 @@ impl<'info> Accounts<'info> for UncheckedAccount<'info> {
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
-    ) -> AnchorResult<Self> {
+    ) -> anchor_lang::Result<Self> {
         if accounts.is_empty() {
             return Err(anchor_attribute_error::error_without_origin!(
                 ErrorCode::AccountNotEnoughKeys

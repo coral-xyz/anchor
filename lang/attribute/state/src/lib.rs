@@ -42,7 +42,7 @@ pub fn state(
             // as the initialized value. Use the default implementation.
             quote! {
                 impl anchor_lang::__private::AccountSize for #struct_ident {
-                    fn size(&self) -> anchor_lang::AnchorResult<u64> {
+                    fn size(&self) -> anchor_lang::Result<u64> {
                         Ok(8 + self
                             .try_to_vec()
                             .map_err(|_| anchor_lang::anchor_attribute_error::error_without_origin!(anchor_lang::error::ErrorCode::AccountDidNotSerialize))?
@@ -53,7 +53,7 @@ pub fn state(
         } else if is_zero_copy {
             quote! {
                 impl anchor_lang::__private::AccountSize for #struct_ident {
-                    fn size(&self) -> anchor_lang::AnchorResult<u64> {
+                    fn size(&self) -> anchor_lang::Result<u64> {
                         let len = anchor_lang::__private::bytemuck::bytes_of(self).len() as u64;
                         Ok(8 + len)
                     }
@@ -64,7 +64,7 @@ pub fn state(
             // Size override given to the macro. Use it.
             quote! {
                 impl anchor_lang::__private::AccountSize for #struct_ident {
-                    fn size(&self) -> anchor_lang::AnchorResult<u64> {
+                    fn size(&self) -> anchor_lang::Result<u64> {
                         Ok(#size)
                     }
                 }

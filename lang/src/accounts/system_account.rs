@@ -25,7 +25,7 @@ impl<'info> SystemAccount<'info> {
     }
 
     #[inline(never)]
-    pub fn try_from(info: &AccountInfo<'info>) -> AnchorResult<SystemAccount<'info>> {
+    pub fn try_from(info: &AccountInfo<'info>) -> anchor_lang::Result<SystemAccount<'info>> {
         if *info.owner != system_program::ID {
             return Err(anchor_attribute_error::error_without_origin!(
                 ErrorCode::AccountNotSystemOwned
@@ -42,7 +42,7 @@ impl<'info> Accounts<'info> for SystemAccount<'info> {
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
-    ) -> AnchorResult<Self> {
+    ) -> anchor_lang::Result<Self> {
         if accounts.is_empty() {
             return Err(anchor_attribute_error::error_without_origin!(
                 ErrorCode::AccountNotEnoughKeys

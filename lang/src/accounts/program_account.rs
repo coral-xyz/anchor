@@ -2,8 +2,8 @@
 use crate::accounts::cpi_account::CpiAccount;
 use crate::error::ErrorCode;
 use crate::{
-    AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, AnchorResult,
-    ToAccountInfo, ToAccountInfos, ToAccountMetas,
+    anchor_lang::Result, AccountDeserialize, AccountSerialize, Accounts, AccountsClose,
+    AccountsExit, ToAccountInfo, ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
@@ -38,7 +38,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
     pub fn try_from(
         program_id: &Pubkey,
         info: &AccountInfo<'a>,
-    ) -> AnchorResult<ProgramAccount<'a, T>> {
+    ) -> anchor_lang::Result<ProgramAccount<'a, T>> {
         if info.owner != program_id {
             return Err(anchor_attribute_error::error_without_origin!(
                 ErrorCode::AccountOwnedByWrongProgram
@@ -58,7 +58,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
     pub fn try_from_unchecked(
         program_id: &Pubkey,
         info: &AccountInfo<'a>,
-    ) -> AnchorResult<ProgramAccount<'a, T>> {
+    ) -> anchor_lang::Result<ProgramAccount<'a, T>> {
         if info.owner != program_id {
             return Err(anchor_attribute_error::error_without_origin!(
                 ErrorCode::AccountOwnedByWrongProgram
@@ -87,7 +87,7 @@ where
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
-    ) -> AnchorResult<Self> {
+    ) -> anchor_lang::Result<Self> {
         if accounts.is_empty() {
             return Err(anchor_attribute_error::error_without_origin!(
                 ErrorCode::AccountNotEnoughKeys
@@ -103,7 +103,7 @@ where
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info>
     for ProgramAccount<'info, T>
 {
-    fn exit(&self, _program_id: &Pubkey) -> AnchorResult<()> {
+    fn exit(&self, _program_id: &Pubkey) -> anchor_lang::Result<()> {
         let info = self.to_account_info();
         let mut data = info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
@@ -117,7 +117,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsClose<'info>
     for ProgramAccount<'info, T>
 {
-    fn close(&self, sol_destination: AccountInfo<'info>) -> AnchorResult<()> {
+    fn close(&self, sol_destination: AccountInfo<'info>) -> anchor_lang::Result<()> {
         crate::common::close(self.to_account_info(), sol_destination)
     }
 }

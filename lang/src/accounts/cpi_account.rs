@@ -21,7 +21,7 @@ impl<'a, T: AccountDeserialize + Clone> CpiAccount<'a, T> {
     }
 
     /// Deserializes the given `info` into a `CpiAccount`.
-    pub fn try_from(info: &AccountInfo<'a>) -> AnchorResult<CpiAccount<'a, T>> {
+    pub fn try_from(info: &AccountInfo<'a>) -> anchor_lang::Result<CpiAccount<'a, T>> {
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(CpiAccount::new(
             info.clone(),
@@ -29,13 +29,13 @@ impl<'a, T: AccountDeserialize + Clone> CpiAccount<'a, T> {
         ))
     }
 
-    pub fn try_from_unchecked(info: &AccountInfo<'a>) -> AnchorResult<CpiAccount<'a, T>> {
+    pub fn try_from_unchecked(info: &AccountInfo<'a>) -> anchor_lang::Result<CpiAccount<'a, T>> {
         Self::try_from(info)
     }
 
     /// Reloads the account from storage. This is useful, for example, when
     /// observing side effects after CPI.
-    pub fn reload(&mut self) -> AnchorResult<()> {
+    pub fn reload(&mut self) -> anchor_lang::Result<()> {
         let mut data: &[u8] = &self.info.try_borrow_data()?;
         self.account = Box::new(T::try_deserialize(&mut data)?);
         Ok(())
@@ -53,7 +53,7 @@ where
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
-    ) -> AnchorResult<Self> {
+    ) -> anchor_lang::Result<Self> {
         if accounts.is_empty() {
             return Err(anchor_attribute_error::error_without_origin!(
                 ErrorCode::AccountNotEnoughKeys

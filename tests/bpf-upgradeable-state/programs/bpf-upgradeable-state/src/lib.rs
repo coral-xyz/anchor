@@ -5,7 +5,7 @@ declare_id!("Cum9tTyj5HwcEiAmhgaS7Bbj4UczCwsucrCkxRECzM4e");
 #[program]
 pub mod bpf_upgradeable_state {
     use super::*;
-    pub fn set_admin_settings(ctx: Context<SetAdminSettings>, admin_data: u64) -> AnchorResult<()> {
+    pub fn set_admin_settings(ctx: Context<SetAdminSettings>, admin_data: u64) -> anchor_lang::Result<()> {
         match *ctx.accounts.program {
             UpgradeableLoaderState::Program {
                 programdata_address,
@@ -25,7 +25,7 @@ pub mod bpf_upgradeable_state {
     pub fn set_admin_settings_use_program_state(
         ctx: Context<SetAdminSettingsUseProgramState>,
         admin_data: u64,
-    ) -> AnchorResult<()> {
+    ) -> anchor_lang::Result<()> {
         ctx.accounts.settings.admin_data = admin_data;
         Ok(())
     }

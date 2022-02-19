@@ -1,12 +1,12 @@
+use crate::anchor_lang::Result;
 use crate::error::ErrorCode;
-use crate::AnchorResult;
 use solana_program::account_info::AccountInfo;
 use std::io::Write;
 
 pub fn close<'info>(
     info: AccountInfo<'info>,
     sol_destination: AccountInfo<'info>,
-) -> AnchorResult<()> {
+) -> anchor_lang::Result<()> {
     // Transfer tokens from the account to the sol_destination.
     let dest_starting_lamports = sol_destination.lamports();
     **sol_destination.lamports.borrow_mut() =

@@ -21,7 +21,7 @@ mod registry {
     }
 
     impl Registry {
-        pub fn new(ctx: Context<Ctor>) -> AnchorResult<Self> {
+        pub fn new(ctx: Context<Ctor>) -> anchor_lang::Result<Self> {
             Ok(Registry {
                 lockup_program: *ctx.accounts.lockup_program.key,
             })
@@ -31,7 +31,7 @@ mod registry {
             &mut self,
             ctx: Context<SetLockupProgram>,
             lockup_program: Pubkey,
-        ) -> AnchorResult<()> {
+        ) -> anchor_lang::Result<()> {
             // Hard code the authority because the first version of this program
             // did not set an authority account in the global state.
             //
@@ -51,7 +51,7 @@ mod registry {
     }
 
     impl<'info> RealizeLock<'info, IsRealized<'info>> for Registry {
-        fn is_realized(ctx: Context<IsRealized>, v: Vesting) -> AnchorResult<()> {
+        fn is_realized(ctx: Context<IsRealized>, v: Vesting) -> anchor_lang::Result<()> {
             if let Some(realizor) = &v.realizor {
                 if &realizor.metadata != ctx.accounts.member.to_account_info().key {
                     return Err(error!(ErrorCode::InvalidRealizorMetadata));
@@ -76,7 +76,7 @@ mod registry {
         withdrawal_timelock: i64,
         stake_rate: u64,
         reward_q_len: u32,
-    ) -> AnchorResult<()> {
+    ) -> anchor_lang::Result<()> {
         let registrar = &mut ctx.accounts.registrar;
 
         registrar.authority = authority;
@@ -99,7 +99,7 @@ mod registry {
         ctx: Context<UpdateRegistrar>,
         new_authority: Option<Pubkey>,
         withdrawal_timelock: Option<i64>,
-    ) -> AnchorResult<()> {
+    ) -> anchor_lang::Result<()> {
         let registrar = &mut ctx.accounts.registrar;
 
         if let Some(new_authority) = new_authority {
@@ -114,7 +114,7 @@ mod registry {
     }
 
     #[access_control(CreateMember::accounts(&ctx, nonce))]
-    pub fn create_member(ctx: Context<CreateMember>, nonce: u8) -> AnchorResult<()> {
+    pub fn create_member(ctx: Context<CreateMember>, nonce: u8) -> anchor_lang::Result<()> {
         let member = &mut ctx.accounts.member;
         member.registrar = *ctx.accounts.registrar.to_account_info().key;
         member.beneficiary = *ctx.accounts.beneficiary.key;
@@ -124,7 +124,7 @@ mod registry {
         Ok(())
     }
 
-    pub fn update_member(ctx: Context<UpdateMember>, metadata: Option<Pubkey>) -> AnchorResult<()> {
+    pub fn update_member(ctx: Context<UpdateMember>, metadata: Option<Pubkey>) -> anchor_lang::Result<()> {
         let member = &mut ctx.accounts.member;
         if let Some(m) = metadata {
             member.metadata = m;
@@ -133,12 +133,12 @@ mod registry {
     }
 
     // Deposits that can only come directly from the member beneficiary.
-    pub fn deposit(ctx: Context<Deposit>, amount: u64) -> AnchorResult<()> {
+    pub fn deposit(ctx: Context<Deposit>, amount: u64) -> anchor_lang::Result<()> {
         token::transfer(ctx.accounts.into(), amount).map_err(Into::into)
     }
 
     // Deposits that can only come from the beneficiary's vesting accounts.
-    pub fn deposit_locked(ctx: Context<DepositLocked>, amount: u64) -> AnchorResult<()> {
+    pub fn deposit_locked(ctx: Context<DepositLocked>, amount: u64) -> anchor_lang::Result<()> {
         token::transfer(ctx.accounts.into(), amount).map_err(Into::into)
     }
 
@@ -148,7 +148,7 @@ mod registry {
         &ctx.accounts.balances,
         &ctx.accounts.balances_locked,
     ))]
-    pub fn stake(ctx: Context<Stake>, spt_amount: u64, locked: bool) -> AnchorResult<()> {
+    pub fn stake(ctx: Context<Stake>, spt_amount: u64, locked: bool) -> anchor_lang::Result<()> {
         let balances = {
             if locked {
                 &ctx.accounts.balances_locked
@@ -214,7 +214,7 @@ mod registry {
         &ctx.accounts.balances,
         &ctx.accounts.balances_locked,
     ))]
-    pub fn start_unstake(ctx: Context<StartUnstake>, spt_amount: u64, locked: bool) -> AnchorResult<()> {
+    pub fn start_unstake(ctx: Context<StartUnstake>, spt_amount: u64, locked: bool) -> anchor_lang::Result<()> {
         let balances = {
             if locked {
                 &ctx.accounts.balances_locked
@@ -283,7 +283,7 @@ mod registry {
         Ok(())
     }
 
-    pub fn end_unstake(ctx: Context<EndUnstake>) -> AnchorResult<()> {
+    pub fn end_unstake(ctx: Context<EndUnstake>) -> anchor_lang::Result<()> {
         if ctx.accounts.pending_withdrawal.end_ts > ctx.accounts.clock.unix_timestamp {
             return Err(error!(ErrorCode::UnstakeTimelock));
         }
@@ -331,7 +331,7 @@ mod registry {
         Ok(())
     }
 
-    pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> AnchorResult<()> {
+    pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> anchor_lang::Result<()> {
         let seeds = &[
             ctx.accounts.registrar.to_account_info().key.as_ref(),
             ctx.accounts.member.to_account_info().key.as_ref(),
@@ -349,7 +349,7 @@ mod registry {
         token::transfer(cpi_ctx, amount).map_err(Into::into)
     }
 
-    pub fn withdraw_locked(ctx: Context<WithdrawLocked>, amount: u64) -> AnchorResult<()> {
+    pub fn withdraw_locked(ctx: Context<WithdrawLocked>, amount: u64) -> anchor_lang::Result<()> {
         let seeds = &[
             ctx.accounts.registrar.to_account_info().key.as_ref(),
             ctx.accounts.member.to_account_info().key.as_ref(),
@@ -375,7 +375,7 @@ mod registry {
         expiry_ts: i64,
         expiry_receiver: Pubkey,
         nonce: u8,
-    ) -> AnchorResult<()> {
+    ) -> anchor_lang::Result<()> {
         if total < ctx.accounts.pool_mint.supply {
             return Err(error!(ErrorCode::InsufficientReward));
         }
@@ -424,7 +424,7 @@ mod registry {
     }
 
     #[access_control(reward_eligible(&ctx.accounts.cmn))]
-    pub fn claim_reward(ctx: Context<ClaimReward>) -> AnchorResult<()> {
+    pub fn claim_reward(ctx: Context<ClaimReward>) -> anchor_lang::Result<()> {
         if RewardVendorKind::Unlocked != ctx.accounts.cmn.vendor.kind {
             return Err(error!(ErrorCode::ExpectedUnlockedVendor));
         }
@@ -467,7 +467,7 @@ mod registry {
     pub fn claim_reward_locked<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, ClaimRewardLocked<'info>>,
         nonce: u8,
-    ) -> AnchorResult<()> {
+    ) -> anchor_lang::Result<()> {
         let (start_ts, end_ts, period_count) = match ctx.accounts.cmn.vendor.kind {
             RewardVendorKind::Unlocked => return Err(error!(ErrorCode::ExpectedLockedVendor)),
             RewardVendorKind::Locked {
@@ -533,7 +533,7 @@ mod registry {
         Ok(())
     }
 
-    pub fn expire_reward(ctx: Context<ExpireReward>) -> AnchorResult<()> {
+    pub fn expire_reward(ctx: Context<ExpireReward>) -> anchor_lang::Result<()> {
         if ctx.accounts.clock.unix_timestamp < ctx.accounts.vendor.expiry_ts {
             return Err(error!(ErrorCode::VendorNotYetExpired));
         }
@@ -575,7 +575,7 @@ pub struct Initialize<'info> {
 }
 
 impl<'info> Initialize<'info> {
-    fn accounts(ctx: &Context<Initialize<'info>>, nonce: u8) -> AnchorResult<()> {
+    fn accounts(ctx: &Context<Initialize<'info>>, nonce: u8) -> anchor_lang::Result<()> {
         let registrar_signer = Pubkey::create_program_address(
             &[
                 ctx.accounts.registrar.to_account_info().key.as_ref(),
@@ -626,7 +626,7 @@ pub struct CreateMember<'info> {
 }
 
 impl<'info> CreateMember<'info> {
-    fn accounts(ctx: &Context<CreateMember>, nonce: u8) -> AnchorResult<()> {
+    fn accounts(ctx: &Context<CreateMember>, nonce: u8) -> anchor_lang::Result<()> {
         let seeds = &[
             ctx.accounts.registrar.to_account_info().key.as_ref(),
             ctx.accounts.member.to_account_info().key.as_ref(),
@@ -922,7 +922,7 @@ pub struct DropReward<'info> {
 }
 
 impl<'info> DropReward<'info> {
-    fn accounts(ctx: &Context<DropReward>, nonce: u8) -> AnchorResult<()> {
+    fn accounts(ctx: &Context<DropReward>, nonce: u8) -> anchor_lang::Result<()> {
         let vendor_signer = Pubkey::create_program_address(
             &[
                 ctx.accounts.registrar.to_account_info().key.as_ref(),
@@ -1101,7 +1101,7 @@ pub struct RewardQueue {
 }
 
 impl RewardQueue {
-    pub fn append(&mut self, event: RewardEvent) -> AnchorResult<u32> {
+    pub fn append(&mut self, event: RewardEvent) -> anchor_lang::Result<u32> {
         let cursor = self.head;
 
         // Insert into next available slot.
@@ -1280,7 +1280,7 @@ impl<'info> From<&BalanceSandboxAccounts<'info>> for BalanceSandbox {
     }
 }
 
-fn reward_eligible(cmn: &ClaimRewardCommon) -> AnchorResult<()> {
+fn reward_eligible(cmn: &ClaimRewardCommon) -> anchor_lang::Result<()> {
     let vendor = &cmn.vendor;
     let member = &cmn.member;
     if vendor.expired {
@@ -1302,7 +1302,7 @@ pub fn no_available_rewards<'info>(
     member: &Account<'info, Member>,
     balances: &BalanceSandboxAccounts<'info>,
     balances_locked: &BalanceSandboxAccounts<'info>,
-) -> AnchorResult<()> {
+) -> anchor_lang::Result<()> {
     let mut cursor = member.rewards_cursor;
 
     // If the member's cursor is less then the tail, then the ring buffer has

@@ -14,14 +14,14 @@ pub mod basic_4 {
     }
 
     impl Counter {
-        pub fn new(ctx: Context<Auth>) -> AnchorResult<Self> {
+        pub fn new(ctx: Context<Auth>) -> anchor_lang::Result<Self> {
             Ok(Self {
                 authority: *ctx.accounts.authority.key,
                 count: 0,
             })
         }
 
-        pub fn increment(&mut self, ctx: Context<Auth>) -> AnchorResult<()> {
+        pub fn increment(&mut self, ctx: Context<Auth>) -> anchor_lang::Result<()> {
             if &self.authority != ctx.accounts.authority.key {
                 return Err(error!(ErrorCode::Unauthorized));
             }

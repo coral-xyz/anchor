@@ -21,7 +21,7 @@ pub mod counter {
     }
 
     impl Counter {
-        pub fn new(_ctx: Context<Empty>, auth_program: Pubkey) -> AnchorResult<Self> {
+        pub fn new(_ctx: Context<Empty>, auth_program: Pubkey) -> anchor_lang::Result<Self> {
             Ok(Self {
                 count: 0,
                 auth_program,
@@ -29,7 +29,7 @@ pub mod counter {
         }
 
         #[access_control(SetCount::accounts(&self, &ctx))]
-        pub fn set_count(&mut self, ctx: Context<SetCount>, new_count: u64) -> AnchorResult<()> {
+        pub fn set_count(&mut self, ctx: Context<SetCount>, new_count: u64) -> anchor_lang::Result<()> {
             // Ask the auth program if we should approve the transaction.
             let cpi_program = ctx.accounts.auth_program.clone();
             let cpi_ctx = CpiContext::new(cpi_program, Empty {});
@@ -53,7 +53,7 @@ pub struct SetCount<'info> {
 impl<'info> SetCount<'info> {
     // Auxiliary account validation requiring program inputs. As a convention,
     // we separate it from the business logic of the instruction handler itself.
-    pub fn accounts(counter: &Counter, ctx: &Context<SetCount>) -> AnchorResult<()> {
+    pub fn accounts(counter: &Counter, ctx: &Context<SetCount>) -> anchor_lang::Result<()> {
         if ctx.accounts.auth_program.key != &counter.auth_program {
             return Err(error!(ErrorCode::InvalidAuthProgram));
         }

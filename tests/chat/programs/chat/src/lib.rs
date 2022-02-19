@@ -9,13 +9,13 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 pub mod chat {
     use super::*;
 
-    pub fn create_user(ctx: Context<CreateUser>, name: String) -> AnchorResult<()> {
+    pub fn create_user(ctx: Context<CreateUser>, name: String) -> anchor_lang::Result<()> {
         ctx.accounts.user.name = name;
         ctx.accounts.user.authority = *ctx.accounts.authority.key;
         ctx.accounts.user.bump = *ctx.bumps.get("user").unwrap();
         Ok(())
     }
-    pub fn create_chat_room(ctx: Context<CreateChatRoom>, name: String) -> AnchorResult<()> {
+    pub fn create_chat_room(ctx: Context<CreateChatRoom>, name: String) -> anchor_lang::Result<()> {
         let given_name = name.as_bytes();
         let mut name = [0u8; 280];
         name[..given_name.len()].copy_from_slice(given_name);
@@ -23,7 +23,7 @@ pub mod chat {
         chat.name = name;
         Ok(())
     }
-    pub fn send_message(ctx: Context<SendMessage>, msg: String) -> AnchorResult<()> {
+    pub fn send_message(ctx: Context<SendMessage>, msg: String) -> anchor_lang::Result<()> {
         let mut chat = ctx.accounts.chat_room.load_mut()?;
         chat.append({
             let src = msg.as_bytes();

@@ -1,6 +1,6 @@
 use crate::error::ErrorCode;
 use crate::{
-    Accounts, AccountsClose, AccountsExit, AnchorResult, ToAccountInfo, ToAccountInfos,
+    Accounts, AccountsClose, AccountsExit, anchor_lang::Result, ToAccountInfo, ToAccountInfos,
     ToAccountMetas, ZeroCopy,
 };
 use arrayref::array_ref;
@@ -56,7 +56,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
     pub fn try_from(
         program_id: &Pubkey,
         acc_info: &AccountInfo<'info>,
-    ) -> AnchorResult<Loader<'info, T>> {
+    ) -> anchor_lang::Result<Loader<'info, T>> {
         if acc_info.owner != program_id {
             return Err(anchor_attribute_error::error_without_origin!(
                 ErrorCode::AccountOwnedByWrongProgram
@@ -80,7 +80,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
     pub fn try_from_unchecked(
         program_id: &Pubkey,
         acc_info: &AccountInfo<'info>,
-    ) -> AnchorResult<Loader<'info, T>> {
+    ) -> anchor_lang::Result<Loader<'info, T>> {
         if acc_info.owner != program_id {
             return Err(anchor_attribute_error::error_without_origin!(
                 ErrorCode::AccountOwnedByWrongProgram
@@ -91,7 +91,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
 
     /// Returns a Ref to the account data structure for reading.
     #[allow(deprecated)]
-    pub fn load(&self) -> AnchorResult<Ref<T>> {
+    pub fn load(&self) -> anchor_lang::Result<Ref<T>> {
         let data = self.acc_info.try_borrow_data()?;
 
         let disc_bytes = array_ref![data, 0, 8];
@@ -106,7 +106,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
 
     /// Returns a `RefMut` to the account data structure for reading or writing.
     #[allow(deprecated)]
-    pub fn load_mut(&self) -> AnchorResult<RefMut<T>> {
+    pub fn load_mut(&self) -> anchor_lang::Result<RefMut<T>> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
         if !self.acc_info.is_writable {
@@ -132,7 +132,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
     /// Returns a `RefMut` to the account data structure for reading or writing.
     /// Should only be called once, when the account is being initialized.
     #[allow(deprecated)]
-    pub fn load_init(&self) -> AnchorResult<RefMut<T>> {
+    pub fn load_init(&self) -> anchor_lang::Result<RefMut<T>> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
         if !self.acc_info.is_writable {
@@ -167,7 +167,7 @@ impl<'info, T: ZeroCopy> Accounts<'info> for Loader<'info, T> {
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
-    ) -> AnchorResult<Self> {
+    ) -> anchor_lang::Result<Self> {
         if accounts.is_empty() {
             return Err(anchor_attribute_error::error_without_origin!(
                 ErrorCode::AccountNotEnoughKeys
@@ -183,7 +183,7 @@ impl<'info, T: ZeroCopy> Accounts<'info> for Loader<'info, T> {
 #[allow(deprecated)]
 impl<'info, T: ZeroCopy> AccountsExit<'info> for Loader<'info, T> {
     // The account *cannot* be loaded when this is called.
-    fn exit(&self, _program_id: &Pubkey) -> AnchorResult<()> {
+    fn exit(&self, _program_id: &Pubkey) -> anchor_lang::Result<()> {
         let mut data = self.acc_info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
         let mut cursor = std::io::Cursor::new(dst);
@@ -194,7 +194,7 @@ impl<'info, T: ZeroCopy> AccountsExit<'info> for Loader<'info, T> {
 
 #[allow(deprecated)]
 impl<'info, T: ZeroCopy> AccountsClose<'info> for Loader<'info, T> {
-    fn close(&self, sol_destination: AccountInfo<'info>) -> AnchorResult<()> {
+    fn close(&self, sol_destination: AccountInfo<'info>) -> anchor_lang::Result<()> {
         crate::common::close(self.to_account_info(), sol_destination)
     }
 }

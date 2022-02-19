@@ -58,7 +58,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             })
         }
 
-        fn try_entry(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> AnchorResult<()> {
+        fn try_entry(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> anchor_lang::Result<()> {
             #[cfg(feature = "anchor-debug")]
             {
                 msg!("anchor-debug is active");

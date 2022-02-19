@@ -146,7 +146,7 @@ pub fn account(
                 // It's expected on-chain programs deserialize via zero-copy.
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
-                    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::AnchorResult<Self> {
+                    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                         if buf.len() < #discriminator.len() {
                             return Err(anchor_lang::anchor_attribute_error::error!(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound));
                         }
@@ -157,7 +157,7 @@ pub fn account(
                         Self::try_deserialize_unchecked(buf)
                     }
 
-                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::AnchorResult<Self> {
+                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                         let data: &[u8] = &buf[8..];
                         // Re-interpret raw bytes into the POD data structure.
                         let account = anchor_lang::__private::bytemuck::from_bytes(data);
@@ -175,7 +175,7 @@ pub fn account(
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountSerialize for #account_name #type_gen #where_clause {
-                    fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> AnchorResult<()> {
+                    fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> anchor_lang::Result<()> {
                         if writer.write_all(&#discriminator).is_err() {
                             return Err(anchor_lang::anchor_attribute_error::error!(anchor_lang::error::ErrorCode::AccountDidNotSerialize));
                         }
@@ -189,7 +189,7 @@ pub fn account(
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
-                    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::AnchorResult<Self> {
+                    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                         if buf.len() < #discriminator.len() {
                             return Err(anchor_lang::anchor_attribute_error::error!(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound));
                         }
@@ -200,7 +200,7 @@ pub fn account(
                         Self::try_deserialize_unchecked(buf)
                     }
 
-                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::AnchorResult<Self> {
+                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                         let mut data: &[u8] = &buf[8..];
                         // TODO: is this really necessary?
                         AnchorDeserialize::deserialize(&mut data)

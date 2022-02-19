@@ -26,7 +26,7 @@ use syn::parse_macro_input;
 ///
 /// #[interface]
 /// pub trait Auth<'info, T: Accounts<'info>> {
-///     fn is_authorized(ctx: Context<T>, current: u64, new: u64) -> AnchorResult<()>;
+///     fn is_authorized(ctx: Context<T>, current: u64, new: u64) -> anchor_lang::Result<()>;
 /// }
 ///
 /// #[program]
@@ -104,7 +104,7 @@ use syn::parse_macro_input;
 ///     pub struct CounterAuth;
 ///
 ///     impl<'info> Auth<'info, Empty> for CounterAuth {
-///         fn is_authorized(_ctx: Context<Empty>, current: u64, new: u64) -> AnchorResult<()> {
+///         fn is_authorized(_ctx: Context<Empty>, current: u64, new: u64) -> anchor_lang::Result<()> {
 ///             if current % 2 == 0 {
 ///                 if new % 2 == 0 {
 ///                     return Err(ProgramError::Custom(50)); // Arbitrary error code.
@@ -200,7 +200,7 @@ pub fn interface(
                 pub fn #method_name<'a,'b, 'c, 'info, T: anchor_lang::Accounts<'info> + anchor_lang::ToAccountMetas + anchor_lang::ToAccountInfos<'info>>(
                     ctx: anchor_lang::context::CpiContext<'a, 'b, 'c, 'info, T>,
                     #(#args),*
-                ) -> anchor_lang::AnchorResult<()> {
+                ) -> anchor_lang::Result<()> {
                     #args_struct
 
                     let ix = {
