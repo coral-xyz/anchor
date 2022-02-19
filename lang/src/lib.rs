@@ -363,7 +363,6 @@ macro_rules! require {
     ($invariant:expr, $error:expr $(,)?) => {
         if !($invariant) {
             return Err(anchor_lang::anchor_attribute_error::error!($error));
-            return Err($error.into());
         }
     };
 }

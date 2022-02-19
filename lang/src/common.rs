@@ -20,7 +20,7 @@ pub fn close<'info>(
         .write_all(&crate::__private::CLOSED_ACCOUNT_DISCRIMINATOR)
         .is_err()
     {
-        return Err(anchor_attribute_error::error!(
+        return Err(anchor_attribute_error::error_without_origin!(
             ErrorCode::AccountDidNotSerialize
         ));
     }

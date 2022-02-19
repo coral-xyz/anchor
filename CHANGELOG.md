@@ -1,7 +1,7 @@
 // TODO: ADD MIGRATION GUIDE FOR ERRORS
 // error -> error_codes
 // Err(ErrorCode.into()) -> Err(error!(ErrorCode))
-// ProgramResult -> anchor_lang::Result<()>
+// ProgramResult -> Result<()>
 
 # Changelog
 
