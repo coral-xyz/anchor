@@ -2,8 +2,14 @@ use arrayref::array_ref;
 use solana_program::hash;
 use std::io::{Cursor, Write};
 
-pub const HEADER_LEN: usize = 8;
-pub const LAYOUT_VERSION: u8 = 1;
+#[cfg(feature = "deprecated-layout")]
+pub const DISCRIMINATOR_LEN: usize = 8;
+#[cfg(not(feature = "deprecated-layout"))]
+pub const DISCRIMINATOR_LEN: usize = 4;
+
+const HEADER_LEN: usize = 8;
+const LAYOUT_VERSION: u8 = 1;
+const DEFAULT_ACCOUNT_VERSION: u8 = 1;
 
 const HEADER_LAYOUT_VERSION_INDEX: usize = 0;
 const HEADER_TYPE_VERSION_INDEX: usize = 1;
@@ -11,13 +17,6 @@ const HEADER_TYPE_VERSION_INDEX: usize = 1;
 const HEADER_DISCRIMINATOR_INDEX: usize = 0;
 #[cfg(not(feature = "deprecated-layout"))]
 const HEADER_DISCRIMINATOR_INDEX: usize = 2;
-
-#[cfg(feature = "deprecated-layout")]
-pub const DISCRIMINATOR_LEN: usize = 8;
-#[cfg(not(feature = "deprecated-layout"))]
-pub const DISCRIMINATOR_LEN: usize = 4;
-
-pub const DEFAULT_ACCOUNT_VERSION: u8 = 1;
 
 // Initializes the header. Should only be run once.
 pub fn init(account_data: &mut [u8], discriminator: &[u8]) {
