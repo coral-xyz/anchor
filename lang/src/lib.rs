@@ -246,8 +246,7 @@ pub mod prelude {
         AnchorResult, AnchorSerialize, Id, Key, Owner, ProgramData, System, ToAccountInfo,
         ToAccountInfos, ToAccountMetas,
     };
-    pub use anchor_attribute_error;
-    pub use anchor_attribute_error::error;
+    pub use anchor_attribute_error::*;
     pub use borsh;
     pub use error::*;
     pub use solana_program::account_info::{next_account_info, AccountInfo};
