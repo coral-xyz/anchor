@@ -289,7 +289,7 @@ fn parse_error_enum(ctx: &CrateContext) -> Option<syn::ItemEnum> {
                 .iter()
                 .filter(|attr| {
                     let segment = attr.path.segments.last().unwrap();
-                    segment.ident == "error"
+                    segment.ident == "error_codes"
                 })
                 .count();
             match attrs_count {
