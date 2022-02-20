@@ -570,7 +570,7 @@ pub struct Initialize<'info> {
     registrar: Account<'info, Registrar>,
     #[account(zero)]
     reward_event_q: Account<'info, RewardQueue>,
-    #[account("pool_mint.decimals == 0")]
+    #[account(constraint = pool_mint.decimals == 0)]
     pool_mint: Account<'info, Mint>,
 }
 
@@ -608,20 +608,20 @@ pub struct CreateMember<'info> {
     member: Box<Account<'info, Member>>,
     beneficiary: Signer<'info>,
     #[account(
-        "&balances.spt.owner == member_signer.key",
-        "balances.spt.mint == registrar.pool_mint",
-        "balances.vault.mint == registrar.mint"
+        constraint = &balances.spt.owner == member_signer.key,
+        constraint = balances.spt.mint == registrar.pool_mint,
+        constraint = balances.vault.mint == registrar.mint
     )]
     balances: BalanceSandboxAccounts<'info>,
     #[account(
-        "&balances_locked.spt.owner == member_signer.key",
-        "balances_locked.spt.mint == registrar.pool_mint",
-        "balances_locked.vault.mint == registrar.mint"
+        constraint = &balances_locked.spt.owner == member_signer.key,
+        constraint = balances_locked.spt.mint == registrar.pool_mint,
+        constraint = balances_locked.vault.mint == registrar.mint
     )]
     balances_locked: BalanceSandboxAccounts<'info>,
     member_signer: AccountInfo<'info>,
     // Misc.
-    #[account("token_program.key == &token::ID")]
+    #[account(constraint = token_program.key == &token::ID)]
     token_program: AccountInfo<'info>,
 }
 
@@ -952,7 +952,7 @@ pub struct ClaimReward<'info> {
 pub struct ClaimRewardLocked<'info> {
     cmn: ClaimRewardCommon<'info>,
     registry: ProgramState<'info, Registry>,
-    #[account("lockup_program.key == &registry.lockup_program")]
+    #[account(constraint = lockup_program.key == &registry.lockup_program)]
     lockup_program: AccountInfo<'info>,
 }
 

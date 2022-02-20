@@ -293,7 +293,7 @@ pub struct WhitelistTransfer<'info> {
         bump = vesting.nonce,
     )]
     vesting_signer: AccountInfo<'info>,
-    #[account("token_program.key == &token::ID")]
+    #[account(constraint = token_program.key == &token::ID)]
     token_program: AccountInfo<'info>,
     #[account(mut)]
     whitelisted_program_vault: AccountInfo<'info>,
