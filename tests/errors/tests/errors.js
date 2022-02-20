@@ -34,6 +34,19 @@ describe("errors", () => {
     }
   });
 
+  it("Emits a Hello error via bail!", async () => {
+    try {
+      const tx = await program.rpc.testBail();
+      assert.ok(false);
+    } catch (err) {
+      const errMsg =
+        "This is an error message clients will automatically display";
+      assert.equal(err.toString(), errMsg);
+      assert.equal(err.msg, errMsg);
+      assert.equal(err.code, 6000);
+    }
+  });
+
   it("Emits a HelloNoMsg error", async () => {
     try {
       const tx = await program.rpc.helloNoMsg();

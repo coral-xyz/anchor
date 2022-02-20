@@ -239,7 +239,7 @@ pub mod prelude {
         access_control, account, accounts::account::Account,
         accounts::account_loader::AccountLoader, accounts::program::Program,
         accounts::signer::Signer, accounts::system_account::SystemAccount,
-        accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, constant,
+        accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, bail, constant,
         context::Context, context::CpiContext, declare_id, emit, error, event, interface, program,
         require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, state, zero_copy,
         AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AnchorDeserialize,
@@ -318,7 +318,7 @@ pub mod __private {
     pub use crate::accounts::state::PROGRAM_STATE_SEED;
 }
 
-/// Ensures a condition is true, otherwise returns the given error.
+/// Ensures a condition is true, otherwise returns with the given error.
 /// Use this with a custom error type.
 ///
 /// # Example
@@ -331,7 +331,7 @@ pub mod __private {
 /// }
 ///
 /// // An enum for custom error codes
-/// #[error]
+/// #[error_code]
 /// pub enum MyError {
 ///     MutationForbidden
 /// }
@@ -364,5 +364,33 @@ macro_rules! require {
         if !($invariant) {
             return Err(anchor_lang::anchor_attribute_error::error!($error));
         }
+    };
+}
+
+/// Returns with the given error.
+/// Use this with a custom error type.
+///
+/// # Example
+/// ```ignore
+/// // Instruction function
+/// pub fn example(ctx: Context<Example>) -> Result<()> {
+///     bail!(MyError::SomeError);
+/// }
+///
+/// // An enum for custom error codes
+/// #[error]
+/// pub enum MyError {
+///     SomeError
+/// }
+/// ```
+#[macro_export]
+macro_rules! bail {
+    ($error:tt $(,)?) => {
+        return Err(anchor_lang::anchor_attribute_error::error!(
+            crate::ErrorCode::$error
+        ));
+    };
+    ($error:expr $(,)?) => {
+        return Err(anchor_lang::anchor_attribute_error::error!($error));
     };
 }

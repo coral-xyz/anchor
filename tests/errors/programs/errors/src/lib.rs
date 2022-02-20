@@ -26,6 +26,10 @@ mod errors {
         Ok(())
     }
 
+    pub fn test_bail(_ctx: Context<Hello>) -> Result<()> {
+        bail!(MyError::Hello);
+    }
+
     pub fn mut_error(_ctx: Context<MutError>) -> Result<()> {
         Ok(())
     }
