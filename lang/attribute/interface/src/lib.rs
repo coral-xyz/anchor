@@ -74,13 +74,13 @@ use syn::parse_macro_input;
 /// impl<'info> SetCount<'info> {
 ///     pub fn accounts(counter: &Counter, ctx: &Context<SetCount>) -> Result<()> {
 ///         if ctx.accounts.auth_program.key != &counter.auth_program {
-///             return Err(ErrorCode::InvalidAuthProgram.into());
+///             return Err(error!(ErrorCode::InvalidAuthProgram));
 ///         }
 ///         Ok(())
 ///     }
 /// }
 ///
-/// #[error]
+/// #[error_code]
 /// pub enum ErrorCode {
 ///     #[msg("Invalid auth program.")]
 ///     InvalidAuthProgram,

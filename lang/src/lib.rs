@@ -378,7 +378,7 @@ macro_rules! require {
 /// }
 ///
 /// // An enum for custom error codes
-/// #[error]
+/// #[error_code]
 /// pub enum MyError {
 ///     SomeError
 /// }
