@@ -23,7 +23,7 @@ describe("errors", () => {
 
   it("Emits a Hello error via require!", async () => {
     try {
-      const tx = await program.rpc.test_require();
+      const tx = await program.rpc.testRequire();
       assert.ok(false);
     } catch (err) {
       const errMsg =
