@@ -2,8 +2,8 @@
 
 use crate::error::ErrorCode;
 use crate::{
-    Accounts, AccountsClose, AccountsExit, Owner, ToAccountInfo, ToAccountInfos, ToAccountMetas,
-    ZeroCopy,
+    Accounts, AccountsClose, AccountsExit, Owner, Result, ToAccountInfo, ToAccountInfos,
+    ToAccountMetas, ZeroCopy,
 };
 use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;
@@ -50,14 +50,14 @@ use std::ops::DerefMut;
 /// pub mod bar {
 ///     use super::*;
 ///
-///     pub fn create_bar(ctx: Context<CreateBar>, data: u64) -> anchor_lang::Result<()> {
+///     pub fn create_bar(ctx: Context<CreateBar>, data: u64) -> Result<()> {
 ///         let bar = &mut ctx.accounts.bar.load_init()?;
 ///         bar.authority = ctx.accounts.authority.key();
 ///         bar.data = data;
 ///         Ok(())
 ///     }
 ///
-///     pub fn update_bar(ctx: Context<UpdateBar>, data: u64) -> anchor_lang::Result<()> {
+///     pub fn update_bar(ctx: Context<UpdateBar>, data: u64) -> Result<()> {
 ///         (*ctx.accounts.bar.load_mut()?).data = data;
 ///         Ok(())
 ///     }
@@ -117,7 +117,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
 
     /// Constructs a new `Loader` from a previously initialized account.
     #[inline(never)]
-    pub fn try_from(acc_info: &AccountInfo<'info>) -> anchor_lang::Result<AccountLoader<'info, T>> {
+    pub fn try_from(acc_info: &AccountInfo<'info>) -> Result<AccountLoader<'info, T>> {
         if acc_info.owner != &T::owner() {
             return Err(ErrorCode::AccountOwnedByWrongProgram.into());
         }
@@ -136,7 +136,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
     pub fn try_from_unchecked(
         _program_id: &Pubkey,
         acc_info: &AccountInfo<'info>,
-    ) -> anchor_lang::Result<AccountLoader<'info, T>> {
+    ) -> Result<AccountLoader<'info, T>> {
         if acc_info.owner != &T::owner() {
             return Err(ErrorCode::AccountOwnedByWrongProgram.into());
         }
@@ -144,7 +144,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
     }
 
     /// Returns a Ref to the account data structure for reading.
-    pub fn load(&self) -> anchor_lang::Result<Ref<T>> {
+    pub fn load(&self) -> Result<Ref<T>> {
         let data = self.acc_info.try_borrow_data()?;
 
         let disc_bytes = array_ref![data, 0, 8];
@@ -158,7 +158,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
     }
 
     /// Returns a `RefMut` to the account data structure for reading or writing.
-    pub fn load_mut(&self) -> anchor_lang::Result<RefMut<T>> {
+    pub fn load_mut(&self) -> Result<RefMut<T>> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
         if !self.acc_info.is_writable {
@@ -179,7 +179,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
 
     /// Returns a `RefMut` to the account data structure for reading or writing.
     /// Should only be called once, when the account is being initialized.
-    pub fn load_init(&self) -> anchor_lang::Result<RefMut<T>> {
+    pub fn load_init(&self) -> Result<RefMut<T>> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
         if !self.acc_info.is_writable {
@@ -209,7 +209,7 @@ impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
-    ) -> anchor_lang::Result<Self> {
+    ) -> Result<Self> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
         }
@@ -222,7 +222,7 @@ impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
 
 impl<'info, T: ZeroCopy + Owner> AccountsExit<'info> for AccountLoader<'info, T> {
     // The account *cannot* be loaded when this is called.
-    fn exit(&self, _program_id: &Pubkey) -> anchor_lang::Result<()> {
+    fn exit(&self, _program_id: &Pubkey) -> Result<()> {
         let mut data = self.acc_info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
         let mut cursor = std::io::Cursor::new(dst);
@@ -232,7 +232,7 @@ impl<'info, T: ZeroCopy + Owner> AccountsExit<'info> for AccountLoader<'info, T>
 }
 
 impl<'info, T: ZeroCopy + Owner> AccountsClose<'info> for AccountLoader<'info, T> {
-    fn close(&self, sol_destination: AccountInfo<'info>) -> anchor_lang::Result<()> {
+    fn close(&self, sol_destination: AccountInfo<'info>) -> Result<()> {
         crate::common::close(self.to_account_info(), sol_destination)
     }
 }

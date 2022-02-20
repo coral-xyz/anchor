@@ -84,7 +84,7 @@ impl<'a, T: Id + Clone> Program<'a, T> {
 
     /// Deserializes the given `info` into a `Program`.
     #[inline(never)]
-    pub fn try_from(info: &AccountInfo<'a>) -> anchor_lang::Result<Program<'a, T>> {
+    pub fn try_from(info: &AccountInfo<'a>) -> Result<Program<'a, T>> {
         if info.key != &T::id() {
             return Err(ErrorCode::InvalidProgramId.into());
         }
@@ -136,7 +136,7 @@ where
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
-    ) -> anchor_lang::Result<Self> {
+    ) -> Result<Self> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
         }

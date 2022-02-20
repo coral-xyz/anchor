@@ -1,7 +1,7 @@
 //! Type validating that the account is a sysvar and deserializing it
 
 use crate::error::ErrorCode;
-use crate::{Accounts, AccountsExit, ToAccountInfos, ToAccountMetas};
+use crate::{Accounts, AccountsExit, Result, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -26,7 +26,7 @@ use std::ops::{Deref, DerefMut};
 ///     pub clock: Sysvar<'info, Clock>
 /// }
 /// // BETTER - via syscall in the instruction function
-/// fn better(ctx: Context<Better>) -> anchor_lang::Result<()> {
+/// fn better(ctx: Context<Better>) -> Result<()> {
 ///     let clock = Clock::get()?;
 /// }
 /// ```
@@ -45,9 +45,7 @@ impl<'info, T: solana_program::sysvar::Sysvar + fmt::Debug> fmt::Debug for Sysva
 }
 
 impl<'info, T: solana_program::sysvar::Sysvar> Sysvar<'info, T> {
-    pub fn from_account_info(
-        acc_info: &AccountInfo<'info>,
-    ) -> anchor_lang::Result<Sysvar<'info, T>> {
+    pub fn from_account_info(acc_info: &AccountInfo<'info>) -> Result<Sysvar<'info, T>> {
         Ok(Sysvar {
             info: acc_info.clone(),
             account: T::from_account_info(acc_info)?,
@@ -70,7 +68,7 @@ impl<'info, T: solana_program::sysvar::Sysvar> Accounts<'info> for Sysvar<'info,
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
-    ) -> anchor_lang::Result<Self> {
+    ) -> Result<Self> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
         }

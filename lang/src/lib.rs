@@ -82,14 +82,14 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
         accounts: &mut &[AccountInfo<'info>],
         ix_data: &[u8],
         bumps: &mut BTreeMap<String, u8>,
-    ) -> anchor_lang::Result<Self>;
+    ) -> Result<Self>;
 }
 
 /// The exit procedure for an account. Any cleanup or persistence to storage
 /// should be done here.
 pub trait AccountsExit<'info>: ToAccountMetas + ToAccountInfos<'info> {
     /// `program_id` is the currently executing program.
-    fn exit(&self, _program_id: &Pubkey) -> anchor_lang::Result<()> {
+    fn exit(&self, _program_id: &Pubkey) -> Result<()> {
         // no-op
         Ok(())
     }
@@ -98,7 +98,7 @@ pub trait AccountsExit<'info>: ToAccountMetas + ToAccountInfos<'info> {
 /// The close procedure to initiate garabage collection of an account, allowing
 /// one to retrieve the rent exemption.
 pub trait AccountsClose<'info>: ToAccountInfos<'info> {
-    fn close(&self, sol_destination: AccountInfo<'info>) -> anchor_lang::Result<()>;
+    fn close(&self, sol_destination: AccountInfo<'info>) -> Result<()>;
 }
 
 /// Transformation to
@@ -147,7 +147,7 @@ where
 /// [`#[account]`](./attr.account.html) attribute.
 pub trait AccountSerialize {
     /// Serializes the account data into `writer`.
-    fn try_serialize<W: Write>(&self, _writer: &mut W) -> anchor_lang::Result<()> {
+    fn try_serialize<W: Write>(&self, _writer: &mut W) -> Result<()> {
         Ok(())
     }
 }
@@ -164,14 +164,14 @@ pub trait AccountDeserialize: Sized {
     /// For example, if the SPL token program were to implement this trait,
     /// it should be impossible to deserialize a `Mint` account into a token
     /// `Account`.
-    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+    fn try_deserialize(buf: &mut &[u8]) -> Result<Self> {
         Self::try_deserialize_unchecked(buf)
     }
 
     /// Deserializes account data without checking the account discriminator.
     /// This should only be used on account initialization, when the bytes of
     /// the account are zeroed.
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self>;
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self>;
 }
 
 /// An account data structure capable of zero copy deserialization.
@@ -271,6 +271,7 @@ pub mod prelude {
 /// Internal module used by macros and unstable apis.
 #[doc(hidden)]
 pub mod __private {
+    use super::Result;
     /// The discriminator anchor uses to mark an account as closed.
     pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
 
@@ -294,7 +295,7 @@ pub mod __private {
     // data in it. This trait is currently only used for `#[state]` accounts.
     #[doc(hidden)]
     pub trait AccountSize {
-        fn size(&self) -> anchor_lang::Result<u64>;
+        fn size(&self) -> Result<u64>;
     }
 
     // Very experimental trait.
@@ -324,7 +325,7 @@ pub mod __private {
 /// # Example
 /// ```ignore
 /// // Instruction function
-/// pub fn set_data(ctx: Context<SetData>, data: u64) -> anchor_lang::Result<()> {
+/// pub fn set_data(ctx: Context<SetData>, data: u64) -> Result<()> {
 ///     require!(ctx.accounts.data.mutation_allowed, MyError::MutationForbidden);
 ///     ctx.accounts.data.data = data;
 ///     Ok(())

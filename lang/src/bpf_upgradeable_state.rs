@@ -1,5 +1,5 @@
 use crate::error::ErrorCode;
-use crate::{AccountDeserialize, AccountSerialize, Owner};
+use crate::{AccountDeserialize, AccountSerialize, Owner, Result};
 use solana_program::{
     bpf_loader_upgradeable::UpgradeableLoaderState, program_error::ProgramError, pubkey::Pubkey,
 };
@@ -11,11 +11,11 @@ pub struct ProgramData {
 }
 
 impl AccountDeserialize for ProgramData {
-    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+    fn try_deserialize(buf: &mut &[u8]) -> Result<Self> {
         ProgramData::try_deserialize_unchecked(buf)
     }
 
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self> {
         let program_state = AccountDeserialize::try_deserialize_unchecked(buf)?;
 
         match program_state {
@@ -38,7 +38,7 @@ impl AccountDeserialize for ProgramData {
 }
 
 impl AccountSerialize for ProgramData {
-    fn try_serialize<W: std::io::Write>(&self, _writer: &mut W) -> anchor_lang::Result<()> {
+    fn try_serialize<W: std::io::Write>(&self, _writer: &mut W) -> Result<()> {
         // no-op
         Ok(())
     }
@@ -57,18 +57,18 @@ impl Owner for UpgradeableLoaderState {
 }
 
 impl AccountSerialize for UpgradeableLoaderState {
-    fn try_serialize<W: std::io::Write>(&self, _writer: &mut W) -> anchor_lang::Result<()> {
+    fn try_serialize<W: std::io::Write>(&self, _writer: &mut W) -> Result<()> {
         // no-op
         Ok(())
     }
 }
 
 impl AccountDeserialize for UpgradeableLoaderState {
-    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+    fn try_deserialize(buf: &mut &[u8]) -> Result<Self> {
         UpgradeableLoaderState::try_deserialize_unchecked(buf)
     }
 
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self> {
         bincode::deserialize(buf).map_err(|_| ProgramError::InvalidAccountData.into())
     }
 }
