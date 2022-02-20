@@ -7,8 +7,6 @@ const withLogTest = async (callback, expectedLog) => {
   const listener = anchor.getProvider().connection.onLogs(
     "all",
     (logs) => {
-      console.log(logs);
-
       if (logs.logs.some((logLine) => logLine === expectedLog)) {
         logTestOk = true;
       } else {
@@ -156,6 +154,10 @@ describe("errors", () => {
   // instance since the client won't allow one to send a transaction
   // with an invalid signer account.
   it("Emits a signer error", async () => {
+    let signature;
+    const listener = anchor
+      .getProvider()
+      .connection.onLogs("all", (logs) => (signature = logs.signature));
     try {
       const account = new Account();
       const tx = new Transaction();
@@ -175,9 +177,11 @@ describe("errors", () => {
       await program.provider.send(tx);
       assert.ok(false);
     } catch (err) {
-      const errMsg =
-        "Error: failed to send transaction: Transaction simulation failed: Error processing Instruction 0: custom program error: 0xbc2";
+      anchor.getProvider().connection.removeOnLogsListener(listener);
+      const errMsg = `Error: Raw transaction ${signature} failed ({"err":{"InstructionError":[0,{"Custom":3010}]}})`;
       assert.equal(err.toString(), errMsg);
+    } finally {
+      anchor.getProvider().connection.removeOnLogsListener(listener);
     }
   });
 
