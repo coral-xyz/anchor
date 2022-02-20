@@ -74,6 +74,20 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
             }
         }
 
+        impl From<#enum_name> for anchor_lang::error::Error {
+            fn from(error_code: #enum_name) -> Error {
+                anchor_lang::error::Error::from(
+                    anchor_lang::error::AnchorError {
+                        error_name: error_code.name(),
+                        error_code_number: error_code.into(),
+                        error_msg: error_code.to_string(),
+                        source: None,
+                        account_name: None
+                    }
+                )
+            }
+        }
+
         impl std::fmt::Display for #enum_name {
             fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
                 match self {

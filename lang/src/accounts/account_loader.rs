@@ -119,17 +119,13 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
     #[inline(never)]
     pub fn try_from(acc_info: &AccountInfo<'info>) -> anchor_lang::Result<AccountLoader<'info, T>> {
         if acc_info.owner != &T::owner() {
-            return Err(anchor_attribute_error::error_without_origin!(
-                ErrorCode::AccountOwnedByWrongProgram
-            ));
+            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
         }
         let data: &[u8] = &acc_info.try_borrow_data()?;
         // Discriminator must match.
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::discriminator() {
-            return Err(anchor_attribute_error::error_without_origin!(
-                ErrorCode::AccountDiscriminatorMismatch
-            ));
+            return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
         Ok(AccountLoader::new(acc_info.clone()))
@@ -142,9 +138,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         acc_info: &AccountInfo<'info>,
     ) -> anchor_lang::Result<AccountLoader<'info, T>> {
         if acc_info.owner != &T::owner() {
-            return Err(anchor_attribute_error::error_without_origin!(
-                ErrorCode::AccountOwnedByWrongProgram
-            ));
+            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
         }
         Ok(AccountLoader::new(acc_info.clone()))
     }
@@ -155,9 +149,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
 
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::discriminator() {
-            return Err(anchor_attribute_error::error_without_origin!(
-                ErrorCode::AccountDiscriminatorMismatch
-            ));
+            return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
         Ok(Ref::map(data, |data| {
@@ -170,18 +162,14 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
         if !self.acc_info.is_writable {
-            return Err(anchor_attribute_error::error_without_origin!(
-                ErrorCode::AccountNotMutable
-            ));
+            return Err(ErrorCode::AccountNotMutable.into());
         }
 
         let data = self.acc_info.try_borrow_mut_data()?;
 
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::discriminator() {
-            return Err(anchor_attribute_error::error_without_origin!(
-                ErrorCode::AccountDiscriminatorMismatch
-            ));
+            return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
         Ok(RefMut::map(data, |data| {
@@ -195,9 +183,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
         if !self.acc_info.is_writable {
-            return Err(anchor_attribute_error::error_without_origin!(
-                ErrorCode::AccountNotMutable
-            ));
+            return Err(ErrorCode::AccountNotMutable.into());
         }
 
         let data = self.acc_info.try_borrow_mut_data()?;
@@ -207,9 +193,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         disc_bytes.copy_from_slice(&data[..8]);
         let discriminator = u64::from_le_bytes(disc_bytes);
         if discriminator != 0 {
-            return Err(anchor_attribute_error::error_without_origin!(
-                ErrorCode::AccountDiscriminatorAlreadySet
-            ));
+            return Err(ErrorCode::AccountDiscriminatorAlreadySet.into());
         }
 
         Ok(RefMut::map(data, |data| {
@@ -227,9 +211,7 @@ impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
         _bumps: &mut BTreeMap<String, u8>,
     ) -> anchor_lang::Result<Self> {
         if accounts.is_empty() {
-            return Err(anchor_attribute_error::error_without_origin!(
-                ErrorCode::AccountNotEnoughKeys
-            ));
+            return Err(ErrorCode::AccountNotEnoughKeys.into());
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];

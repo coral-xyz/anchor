@@ -45,7 +45,7 @@ pub fn state(
                     fn size(&self) -> anchor_lang::Result<u64> {
                         Ok(8 + self
                             .try_to_vec()
-                            .map_err(|_| anchor_lang::anchor_attribute_error::error_without_origin!(anchor_lang::error::ErrorCode::AccountDidNotSerialize))?
+                            .map_err(|_| anchor_lang::error::ErrorCode::AccountDidNotSerialize.into())?
                             .len() as u64)
                     }
                 }

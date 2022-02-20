@@ -48,9 +48,7 @@ impl<'info> Signer<'info> {
     #[inline(never)]
     pub fn try_from(info: &AccountInfo<'info>) -> anchor_lang::Result<Signer<'info>> {
         if !info.is_signer {
-            return Err(anchor_attribute_error::error_without_origin!(
-                ErrorCode::AccountNotSigner
-            ));
+            return Err(ErrorCode::AccountNotSigner.into());
         }
         Ok(Signer::new(info.clone()))
     }
@@ -65,9 +63,7 @@ impl<'info> Accounts<'info> for Signer<'info> {
         _bumps: &mut BTreeMap<String, u8>,
     ) -> anchor_lang::Result<Self> {
         if accounts.is_empty() {
-            return Err(anchor_attribute_error::error_without_origin!(
-                ErrorCode::AccountNotEnoughKeys
-            ));
+            return Err(ErrorCode::AccountNotEnoughKeys.into());
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];

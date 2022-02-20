@@ -89,13 +89,6 @@ pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
 }
 
 #[proc_macro]
-pub fn error_without_origin(ts: proc_macro::TokenStream) -> TokenStream {
-    let input = parse_macro_input!(ts as ErrorInput);
-    let error_code = input.error_code;
-    create_error(error_code, false, None)
-}
-
-#[proc_macro]
 pub fn error_with_account_name(ts: proc_macro::TokenStream) -> TokenStream {
     let input = parse_macro_input!(ts as ErrorWithAccountNameInput);
     let error_code = input.error_code;

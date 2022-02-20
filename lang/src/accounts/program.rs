@@ -86,14 +86,10 @@ impl<'a, T: Id + Clone> Program<'a, T> {
     #[inline(never)]
     pub fn try_from(info: &AccountInfo<'a>) -> anchor_lang::Result<Program<'a, T>> {
         if info.key != &T::id() {
-            return Err(anchor_attribute_error::error_without_origin!(
-                ErrorCode::InvalidProgramId
-            ));
+            return Err(ErrorCode::InvalidProgramId.into());
         }
         if !info.executable {
-            return Err(anchor_attribute_error::error_without_origin!(
-                ErrorCode::InvalidProgramExecutable
-            ));
+            return Err(ErrorCode::InvalidProgramExecutable.into());
         }
         let programdata_address = if *info.owner == bpf_loader_upgradeable::ID {
             let mut data: &[u8] = &info.try_borrow_data()?;
@@ -142,9 +138,7 @@ where
         _bumps: &mut BTreeMap<String, u8>,
     ) -> anchor_lang::Result<Self> {
         if accounts.is_empty() {
-            return Err(anchor_attribute_error::error_without_origin!(
-                ErrorCode::AccountNotEnoughKeys
-            ));
+            return Err(ErrorCode::AccountNotEnoughKeys.into());
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];

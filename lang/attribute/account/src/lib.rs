@@ -148,11 +148,11 @@ pub fn account(
                 impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
                     fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                         if buf.len() < #discriminator.len() {
-                            return Err(anchor_lang::anchor_attribute_error::error_without_origin!(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound));
+                            return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound.into());
                         }
                         let given_disc = &buf[..8];
                         if &#discriminator != given_disc {
-                            return Err(anchor_lang::anchor_attribute_error::error_without_origin!(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch));
+                            return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch.into());
                         }
                         Self::try_deserialize_unchecked(buf)
                     }
@@ -177,11 +177,11 @@ pub fn account(
                 impl #impl_gen anchor_lang::AccountSerialize for #account_name #type_gen #where_clause {
                     fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> anchor_lang::Result<()> {
                         if writer.write_all(&#discriminator).is_err() {
-                            return Err(anchor_lang::anchor_attribute_error::error_without_origin!(anchor_lang::error::ErrorCode::AccountDidNotSerialize));
+                            return Err(anchor_lang::error::ErrorCode::AccountDidNotSerialize.into());
                         }
 
                         if AnchorSerialize::serialize(self, writer).is_err() {
-                            return Err(anchor_lang::anchor_attribute_error::error_without_origin!(anchor_lang::error::ErrorCode::AccountDidNotSerialize));
+                            return Err(anchor_lang::error::ErrorCode::AccountDidNotSerialize.into());
                         }
                         Ok(())
                     }
@@ -191,11 +191,11 @@ pub fn account(
                 impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
                     fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                         if buf.len() < #discriminator.len() {
-                            return Err(anchor_lang::anchor_attribute_error::error_without_origin!(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound));
+                            return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound.into());
                         }
                         let given_disc = &buf[..8];
                         if &#discriminator != given_disc {
-                            return Err(anchor_lang::anchor_attribute_error::error_without_origin!(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch));
+                            return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch.into());
                         }
                         Self::try_deserialize_unchecked(buf)
                     }
@@ -203,7 +203,7 @@ pub fn account(
                     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                         let mut data: &[u8] = &buf[8..];
                         AnchorDeserialize::deserialize(&mut data)
-                            .map_err(|_| anchor_lang::anchor_attribute_error::error_without_origin!(anchor_lang::error::ErrorCode::AccountDidNotDeserialize))
+                            .map_err(|_| anchor_lang::error::ErrorCode::AccountDidNotDeserialize.into())
                     }
                 }
 
