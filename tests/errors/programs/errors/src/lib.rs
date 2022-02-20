@@ -21,6 +21,11 @@ mod errors {
         Err(error!(MyError::HelloNext))
     }
 
+    pub fn test_require(_ctx: Context<Hello>) -> Result<()> {
+        require!(false, MyError::Hello);
+        Ok(())
+    }
+
     pub fn mut_error(_ctx: Context<MutError>) -> Result<()> {
         Ok(())
     }

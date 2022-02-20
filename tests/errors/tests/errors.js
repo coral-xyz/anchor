@@ -21,6 +21,19 @@ describe("errors", () => {
     }
   });
 
+  it("Emits a Hello error via require!", async () => {
+    try {
+      const tx = await program.rpc.test_require();
+      assert.ok(false);
+    } catch (err) {
+      const errMsg =
+        "This is an error message clients will automatically display";
+      assert.equal(err.toString(), errMsg);
+      assert.equal(err.msg, errMsg);
+      assert.equal(err.code, 6000);
+    }
+  });
+
   it("Emits a HelloNoMsg error", async () => {
     try {
       const tx = await program.rpc.helloNoMsg();
