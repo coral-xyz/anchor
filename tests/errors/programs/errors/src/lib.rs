@@ -30,6 +30,10 @@ mod errors {
         bail!(MyError::Hello);
     }
 
+    pub fn test_program_error(_ctx: Context<Hello>) -> Result<()> {
+        Err(ProgramError::InvalidAccountData.into())
+    }
+
     pub fn mut_error(_ctx: Context<MutError>) -> Result<()> {
         Ok(())
     }

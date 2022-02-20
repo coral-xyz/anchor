@@ -2,23 +2,51 @@ const assert = require("assert");
 const anchor = require("@project-serum/anchor");
 const { Account, Transaction, TransactionInstruction } = anchor.web3;
 
+const withLogTest = async (callback, expectedLog) => {
+  let logTestOk = false;
+  const listener = anchor.getProvider().connection.onLogs("all", (logs) => {
+    console.log(logs);
+
+    if (logs.logs.some(
+      (logLine) => logLine === expectedLog
+        )) {
+          logTestOk = true;
+        } else {
+          console.log(logs);
+        }
+  }, "recent");
+  try {
+    await callback();
+  } catch (err) {
+    anchor.getProvider().connection.removeOnLogsListener(listener);
+    throw err;
+  }
+  anchor.getProvider().connection.removeOnLogsListener(listener);
+  assert.ok(logTestOk);
+}
+
 describe("errors", () => {
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.Provider.local());
+  const localProvider = anchor.Provider.local();
+  localProvider.opts.skipPreflight = true;
+  anchor.setProvider(localProvider);
 
   const program = anchor.workspace.Errors;
 
+
   it("Emits a Hello error", async () => {
-    try {
-      const tx = await program.rpc.hello();
-      assert.ok(false);
-    } catch (err) {
-      const errMsg =
-        "This is an error message clients will automatically display";
-      assert.equal(err.toString(), errMsg);
-      assert.equal(err.msg, errMsg);
-      assert.equal(err.code, 6000);
-    }
+    await withLogTest(async () => {
+      try {
+        const tx = await program.rpc.hello();
+        assert.ok(false);
+      } catch (err) {
+        const errMsg =
+          "This is an error message clients will automatically display";
+        assert.equal(err.toString(), errMsg);
+        assert.equal(err.msg, errMsg);
+        assert.equal(err.code, 6000);
+      }
+    }, "Program log: AnchorError thrown in programs/errors/src/lib.rs:13. Error Code: Hello. Error Number: 6000. Error Message: This is an error message clients will automatically display.");
   });
 
   it("Emits a Hello error via require!", async () => {
@@ -47,6 +75,17 @@ describe("errors", () => {
     }
   });
 
+  it("Logs a ProgramError", async () => {
+    await withLogTest(async () => {
+        try {
+          const tx = await program.rpc.testProgramError();
+          assert.ok(false);
+        } catch (err) {
+          // No-op (withLogTest expects the callback to catch the initial tx error)
+        }
+    }, "Program log: ProgramError occurred. Error Code: InvalidAccountData. Error Number: 17179869184. Error Message: An account's data contents was invalid.");
+  });
+
   it("Emits a HelloNoMsg error", async () => {
     try {
       const tx = await program.rpc.helloNoMsg();
@@ -72,19 +111,21 @@ describe("errors", () => {
   });
 
   it("Emits a mut error", async () => {
-    try {
-      const tx = await program.rpc.mutError({
-        accounts: {
-          myAccount: anchor.web3.SYSVAR_RENT_PUBKEY,
-        },
-      });
-      assert.ok(false);
-    } catch (err) {
-      const errMsg = "A mut constraint was violated";
-      assert.equal(err.toString(), errMsg);
-      assert.equal(err.msg, errMsg);
-      assert.equal(err.code, 2000);
-    }
+    await withLogTest(async () => {
+      try {
+        const tx = await program.rpc.mutError({
+          accounts: {
+            myAccount: anchor.web3.SYSVAR_RENT_PUBKEY,
+          },
+        });
+        assert.ok(false);
+      } catch (err) {
+        const errMsg = "A mut constraint was violated";
+        assert.equal(err.toString(), errMsg);
+        assert.equal(err.msg, errMsg);
+        assert.equal(err.code, 2000);
+      }
+    }, "Program log: AnchorError caused by account: my_account. Error Code: ConstraintMut. Error Number: 2000. Error Message: A mut constraint was violated.");
   });
 
   it("Emits a has one error", async () => {
@@ -156,19 +197,21 @@ describe("errors", () => {
   });
 
   it("Emits a account not initialized error", async () => {
-    try {
-      const tx = await program.rpc.accountNotInitializedError({
-        accounts: {
-          notInitializedAccount: new anchor.web3.Keypair().publicKey,
-        },
-      });
-      assert.fail(
-        "Unexpected success in creating a transaction that should have fail with `AccountNotInitialized` error"
-      );
-    } catch (err) {
-      const errMsg =
-        "The program expected this account to be already initialized";
-      assert.equal(err.toString(), errMsg);
-    }
+    await withLogTest(async () => {
+      try {
+        const tx = await program.rpc.accountNotInitializedError({
+          accounts: {
+            notInitializedAccount: new anchor.web3.Keypair().publicKey,
+          },
+        });
+        assert.fail(
+          "Unexpected success in creating a transaction that should have fail with `AccountNotInitialized` error"
+        );
+      } catch (err) {
+        const errMsg =
+          "The program expected this account to be already initialized";
+        assert.equal(err.toString(), errMsg);
+      }
+    }, "Program log: AnchorError caused by account: not_initialized_account. Error Code: AccountNotInitialized. Error Number: 3012. Error Message: The program expected this account to be already initialized.");
   });
 });
