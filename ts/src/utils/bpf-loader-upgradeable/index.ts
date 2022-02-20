@@ -1,4 +1,4 @@
-import * as BufferLayout from "@solana/buffer-layout";
+import * as BufferLayout from "buffer-layout";
 import {
   PACKET_DATA_SIZE,
   PublicKey,
