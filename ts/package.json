@@ -2,11 +2,6 @@
   "name": "@project-serum/anchor",
   "version": "0.21.0",
   "description": "Anchor client",
-  "module": "./dist/esm/index.js",
-  "main": "./dist/cjs/index.js",
-  "browser": "./dist/browser/index.js",
-  "license": "(MIT OR Apache-2.0)",
-  "types": "dist/cjs/index.d.ts",
   "homepage": "https://github.com/project-serum/anchor#readme",
   "bugs": {
     "url": "https://github.com/project-serum/anchor/issues"
@@ -15,25 +10,27 @@
     "type": "git",
     "url": "https://github.com/project-serum/anchor.git"
   },
-  "publishConfig": {
-    "access": "public"
-  },
-  "engines": {
-    "node": ">=11"
-  },
+  "license": "(MIT OR Apache-2.0)",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "browser": "./dist/browser/index.js",
+  "types": "dist/cjs/index.d.ts",
   "scripts": {
     "build": "rimraf dist/ && yarn build:node && yarn build:browser",
-    "build:node": "tsc && tsc -p tsconfig.cjs.json",
     "build:browser": "rollup --config",
-    "lint:fix": "prettier src/** tests/** -w",
-    "lint": "prettier src/** tests/** --check",
-    "watch": "tsc -p tsconfig.cjs.json --watch",
-    "prepublishOnly": "yarn build",
+    "build:node": "tsc && tsc -p tsconfig.cjs.json",
     "docs": "typedoc --excludePrivate --includeVersion --out ../docs/src/.vuepress/dist/ts/ --readme none src/index.ts",
-    "test": "jest tests --detectOpenHandles"
+    "lint": "prettier src/** tests/**/*.ts --check",
+    "lint:fix": "prettier src/** tests/**/*.ts -w",
+    "prepublishOnly": "yarn build",
+    "test": "jest tests --detectOpenHandles",
+    "test:live": "TEST_LIVE=1 yarn test",
+    "test:live-with-test-validator": "start-server-and-test 'solana-test-validator --reset --quiet' http://127.0.0.1:8899/health test:live",
+    "watch": "tsc -p tsconfig.cjs.json --watch"
   },
   "dependencies": {
     "@project-serum/borsh": "^0.2.5",
+    "@solana/buffer-layout": "^3.0.0",
     "@solana/web3.js": "^1.17.0",
     "base64-js": "^1.5.1",
     "bn.js": "^5.1.2",
@@ -69,15 +66,23 @@
     "jest": "27.3.1",
     "jest-config": "27.3.1",
     "lint-staged": "^10.5.0",
+    "mockttp": "^2.0.1",
     "prettier": "^2.1.2",
     "rimraf": "^3.0.2",
     "rollup": "^2.60.2",
     "rollup-plugin-terser": "^7.0.2",
+    "start-server-and-test": "^1.12.0",
     "ts-jest": "^27.0.7",
     "ts-jest-resolver": "^2.0.0",
     "ts-node": "^9.0.0",
     "tslib": "^2.3.1",
     "typedoc": "^0.22.10",
     "typescript": "^4.5.2"
+  },
+  "engines": {
+    "node": ">=11"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

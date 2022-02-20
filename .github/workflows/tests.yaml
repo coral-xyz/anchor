@@ -39,7 +39,7 @@ jobs:
       - run: cargo +nightly clippy --all-targets -- -D warnings
       - run: cargo test
       - run: cd ts && yarn
-      - run: cd ts && yarn test
+      - run: cd ts && yarn test:live-with-test-validator
       - run: cd ts && yarn lint
       - run: cd examples/tutorial && yarn
       - run: cd examples/tutorial && yarn lint

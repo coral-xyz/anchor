@@ -34,6 +34,7 @@ export default {
   ],
   external: [
     "@project-serum/borsh",
+    "@solana/buffer-layout",
     "@solana/web3.js",
     "assert",
     "base64-js",
