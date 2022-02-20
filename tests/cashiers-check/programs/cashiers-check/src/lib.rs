@@ -111,7 +111,7 @@ impl<'info> CreateCheck<'info> {
         )
         .map_err(|_| error!(ErrorCode::InvalidCheckNonce))?;
         if &signer != ctx.accounts.check_signer.to_account_info().key {
-            return Err(error!(ErrorCode::InvalidCheckSigner));
+            return err!(ErrorCode::InvalidCheckSigner);
         }
         Ok(())
     }
@@ -174,7 +174,7 @@ pub enum ErrorCode {
 
 fn not_burned(check: &Check) -> Result<()> {
     if check.burned {
-        return Err(error!(ErrorCode::AlreadyBurned));
+        return err!(ErrorCode::AlreadyBurned);
     }
     Ok(())
 }

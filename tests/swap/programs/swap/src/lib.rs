@@ -179,7 +179,7 @@ pub mod swap {
 fn apply_risk_checks(event: DidSwap) -> Result<()> {
     // Reject if the resulting amount is less than the client's expectation.
     if event.to_amount < event.min_expected_swap_amount {
-        return Err(error!(ErrorCode::SlippageExceeded));
+        return err!(ErrorCode::SlippageExceeded);
     }
     emit!(event);
     Ok(())
@@ -456,7 +456,7 @@ fn _is_valid_swap<'info>(from: &AccountInfo<'info>, to: &AccountInfo<'info>) -> 
     let from_token_mint = token::accessor::mint(from)?;
     let to_token_mint = token::accessor::mint(to)?;
     if from_token_mint == to_token_mint {
-        return Err(error!(ErrorCode::SwapTokensCannotMatch));
+        return err!(ErrorCode::SwapTokensCannotMatch);
     }
     Ok(())
 }

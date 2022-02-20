@@ -11,11 +11,11 @@ pub mod bpf_upgradeable_state {
                 programdata_address,
             } => {
                 if programdata_address != ctx.accounts.program_data.key() {
-                    return Err(error!(CustomError::InvalidProgramDataAddress));
+                    return err!(CustomError::InvalidProgramDataAddress);
                 }
             }
             _ => {
-                return Err(error!(CustomError::AccountNotProgram));
+                return err!(CustomError::AccountNotProgram);
             }
         };
         ctx.accounts.settings.admin_data = admin_data;

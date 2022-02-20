@@ -107,7 +107,7 @@ pub mod multisig {
     // change_threshold.
     pub fn change_threshold(ctx: Context<Auth>, threshold: u64) -> Result<()> {
         if threshold > ctx.accounts.multisig.owners.len() as u64 {
-            return Err(error!(ErrorCode::InvalidThreshold));
+            return err!(ErrorCode::InvalidThreshold);
         }
         let multisig = &mut ctx.accounts.multisig;
         multisig.threshold = threshold;
@@ -118,7 +118,7 @@ pub mod multisig {
     pub fn execute_transaction(ctx: Context<ExecuteTransaction>) -> Result<()> {
         // Has this been executed already?
         if ctx.accounts.transaction.did_execute {
-            return Err(error!(ErrorCode::AlreadyExecuted));
+            return err!(ErrorCode::AlreadyExecuted);
         }
 
         // Do we have enough signers?
@@ -134,7 +134,7 @@ pub mod multisig {
             .collect::<Vec<_>>()
             .len() as u64;
         if sig_count < ctx.accounts.multisig.threshold {
-            return Err(error!(ErrorCode::NotEnoughSigners));
+            return err!(ErrorCode::NotEnoughSigners);
         }
 
         // Execute the transaction signed by the multisig.

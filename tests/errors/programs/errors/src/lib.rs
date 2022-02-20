@@ -10,15 +10,15 @@ mod errors {
     use super::*;
 
     pub fn hello(_ctx: Context<Hello>) -> Result<()> {
-        Err(error!(MyError::Hello))
+        err!(MyError::Hello)
     }
 
     pub fn hello_no_msg(_ctx: Context<Hello>) -> Result<()> {
-        Err(error!(MyError::HelloNoMsg))
+        err!(MyError::HelloNoMsg)
     }
 
     pub fn hello_next(_ctx: Context<Hello>) -> Result<()> {
-        Err(error!(MyError::HelloNext))
+        err!(MyError::HelloNext)
     }
 
     pub fn test_require(_ctx: Context<Hello>) -> Result<()> {

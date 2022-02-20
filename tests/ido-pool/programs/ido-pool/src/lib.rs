@@ -76,7 +76,7 @@ pub mod ido_pool {
         msg!("EXCHANGE USDC FOR REDEEMABLE");
         // While token::transfer will check this, we prefer a verbose err msg.
         if ctx.accounts.user_usdc.amount < amount {
-            return Err(error!(ErrorCode::LowUsdc));
+            return err!(ErrorCode::LowUsdc);
         }
 
         // Transfer user's USDC to pool USDC account.
@@ -122,7 +122,7 @@ pub mod ido_pool {
         msg!("EXCHANGE REDEEMABLE FOR USDC");
         // While token::burn will check this, we prefer a verbose err msg.
         if ctx.accounts.user_redeemable.amount < amount {
-            return Err(error!(ErrorCode::LowRedeemable));
+            return err!(ErrorCode::LowRedeemable);
         }
 
         let ido_name = ctx.accounts.ido_account.ido_name.as_ref();
@@ -163,7 +163,7 @@ pub mod ido_pool {
         msg!("EXCHANGE REDEEMABLE FOR WATERMELON");
         // While token::burn will check this, we prefer a verbose err msg.
         if ctx.accounts.user_redeemable.amount < amount {
-            return Err(error!(ErrorCode::LowRedeemable));
+            return err!(ErrorCode::LowRedeemable);
         }
 
         // Calculate watermelon tokens due.
@@ -243,7 +243,7 @@ pub mod ido_pool {
         msg!("WITHDRAW FROM ESCROW");
         // While token::transfer will check this, we prefer a verbose err msg.
         if ctx.accounts.escrow_usdc.amount < amount {
-            return Err(error!(ErrorCode::LowUsdc));
+            return err!(ErrorCode::LowUsdc);
         }
 
         let ido_name = ctx.accounts.ido_account.ido_name.as_ref();
@@ -605,13 +605,13 @@ pub enum ErrorCode {
 fn validate_ido_times(ido_times: IdoTimes) -> Result<()> {
     let clock = Clock::get()?;
     if ido_times.start_ido <= clock.unix_timestamp {
-        return Err(error!(ErrorCode::IdoFuture));
+        return err!(ErrorCode::IdoFuture);
     }
     if !(ido_times.start_ido < ido_times.end_deposits
         && ido_times.end_deposits < ido_times.end_ido
         && ido_times.end_ido < ido_times.end_escrow)
     {
-        return Err(error!(ErrorCode::SeqTimes));
+        return err!(ErrorCode::SeqTimes);
     }
     Ok(())
 }
@@ -620,9 +620,9 @@ fn validate_ido_times(ido_times: IdoTimes) -> Result<()> {
 fn unrestricted_phase(ido_account: &IdoAccount) -> Result<()> {
     let clock = Clock::get()?;
     if clock.unix_timestamp <= ido_account.ido_times.start_ido {
-        return Err(error!(ErrorCode::StartIdoTime));
+        return err!(ErrorCode::StartIdoTime);
     } else if ido_account.ido_times.end_deposits <= clock.unix_timestamp {
-        return Err(error!(ErrorCode::EndDepositsTime));
+        return err!(ErrorCode::EndDepositsTime);
     }
     Ok(())
 }
@@ -631,9 +631,9 @@ fn unrestricted_phase(ido_account: &IdoAccount) -> Result<()> {
 fn withdraw_phase(ido_account: &IdoAccount) -> Result<()> {
     let clock = Clock::get()?;
     if clock.unix_timestamp <= ido_account.ido_times.start_ido {
-        return Err(error!(ErrorCode::StartIdoTime));
+        return err!(ErrorCode::StartIdoTime);
     } else if ido_account.ido_times.end_ido <= clock.unix_timestamp {
-        return Err(error!(ErrorCode::EndIdoTime));
+        return err!(ErrorCode::EndIdoTime);
     }
     Ok(())
 }
@@ -642,7 +642,7 @@ fn withdraw_phase(ido_account: &IdoAccount) -> Result<()> {
 fn ido_over(ido_account: &IdoAccount) -> Result<()> {
     let clock = Clock::get()?;
     if clock.unix_timestamp <= ido_account.ido_times.end_ido {
-        return Err(error!(ErrorCode::IdoNotOver));
+        return err!(ErrorCode::IdoNotOver);
     }
     Ok(())
 }
@@ -650,7 +650,7 @@ fn ido_over(ido_account: &IdoAccount) -> Result<()> {
 fn escrow_over(ido_account: &IdoAccount) -> Result<()> {
     let clock = Clock::get()?;
     if clock.unix_timestamp <= ido_account.ido_times.end_escrow {
-        return Err(error!(ErrorCode::EscrowNotOver));
+        return err!(ErrorCode::EscrowNotOver);
     }
     Ok(())
 }

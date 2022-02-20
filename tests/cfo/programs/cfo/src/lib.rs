@@ -918,14 +918,14 @@ pub enum ErrorCode {
 
 fn is_distribution_valid(d: &Distribution) -> Result<()> {
     if d.burn + d.stake + d.treasury != 100 {
-        return Err(error!(ErrorCode::InvalidDistribution));
+        return err!(ErrorCode::InvalidDistribution);
     }
     Ok(())
 }
 
 fn is_distribution_ready(accounts: &Distribute) -> Result<()> {
     if accounts.srm_vault.amount < 1_000_000 {
-        return Err(error!(ErrorCode::InsufficientDistributionAmount));
+        return err!(ErrorCode::InsufficientDistributionAmount);
     }
     Ok(())
 }
@@ -934,7 +934,7 @@ fn is_distribution_ready(accounts: &Distribute) -> Result<()> {
 fn is_not_trading(ixs: &UncheckedAccount) -> Result<()> {
     let data = ixs.try_borrow_data()?;
     match tx_instructions::load_instruction_at(1, &data) {
-        Ok(_) => Err(error!(ErrorCode::TooManyInstructions)),
+        Ok(_) => err!(ErrorCode::TooManyInstructions),
         Err(_) => Ok(()),
     }
 }
@@ -943,7 +943,7 @@ fn is_stake_reward_ready(accounts: &DropStakeReward) -> Result<()> {
     // Min drop is 15,0000 SRM.
     let min_reward: u64 = 15_000_000_000;
     if accounts.stake.amount < min_reward {
-        return Err(error!(ErrorCode::InsufficientStakeReward));
+        return err!(ErrorCode::InsufficientStakeReward);
     }
     Ok(())
 }

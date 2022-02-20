@@ -55,7 +55,7 @@ impl<'info> SetCount<'info> {
     // we separate it from the business logic of the instruction handler itself.
     pub fn accounts(counter: &Counter, ctx: &Context<SetCount>) -> Result<()> {
         if ctx.accounts.auth_program.key != &counter.auth_program {
-            return Err(error!(ErrorCode::InvalidAuthProgram));
+            return err!(ErrorCode::InvalidAuthProgram);
         }
         Ok(())
     }
