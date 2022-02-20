@@ -3,11 +3,10 @@ const anchor = require("@project-serum/anchor");
 const { Account, Transaction, TransactionInstruction } = anchor.web3;
 
 // sleep to allow logs to come in
-const sleep = async (ms) => {
+const sleep = (ms) =>
   new Promise((resolve) => {
     setTimeout(() => resolve(), ms);
   });
-};
 
 const withLogTest = async (callback, expectedLog) => {
   let logTestOk = false;
@@ -28,7 +27,7 @@ const withLogTest = async (callback, expectedLog) => {
     anchor.getProvider().connection.removeOnLogsListener(listener);
     throw err;
   }
-  sleep(3000);
+  await sleep(3000);
   anchor.getProvider().connection.removeOnLogsListener(listener);
   assert.ok(logTestOk);
 };
@@ -221,7 +220,7 @@ describe("errors", () => {
           "Unexpected success in creating a transaction that should have fail with `AccountNotInitialized` error"
         );
       } catch (err) {
-        sleep(3000);
+        await sleep(3000);
         const errMsg =
           "The program expected this account to be already initialized";
         assert.equal(err.toString(), errMsg);
