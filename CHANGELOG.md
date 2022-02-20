@@ -1,8 +1,3 @@
-// TODO: ADD MIGRATION GUIDE FOR ERRORS
-// error -> error_code
-// Err(ErrorCode.into()) -> Err(error!(ErrorCode))
-// ProgramResult -> Result<()>
-
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -20,6 +15,7 @@ incremented for features.
 
 * lang: add check that declared id == program id ([#1451](https://github.com/project-serum/anchor/pull/1451))
 * ts: Added float types support ([#1425](https://github.com/project-serum/anchor/pull/1425)).
+* lang: add [`error!`](https://docs.rs/anchor-lang/latest/anchor_lang/prelude/macro.error.html) macro and `Result` type ([#1462](https://github.com/project-serum/anchor/pull/1462)). This change will break most programs. Do the following things to upgrade: 1) change all `ProgramResult`'s to `Result<()>` 2) change `#[error]` to `#[error_code]` 3) change all `Err(MyError::SomeError.into())` to `Err(error!(MyError::SomeError))` and all `Err(ProgramError::SomeProgramError)` to `Err(ProgramError::SomeProgramError.into())`
 
 ### Fixes
 
