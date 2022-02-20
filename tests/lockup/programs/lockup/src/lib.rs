@@ -114,7 +114,7 @@ pub mod lockup {
                 ctx.accounts.clock.unix_timestamp,
             )
         {
-            return err!(ErrorCode::InsufficientWithdrawalBalance
+            return err!(ErrorCode::InsufficientWithdrawalBalance);
         }
 
         // Transfer funds out.
@@ -151,7 +151,7 @@ pub mod lockup {
         // CPI safety checks.
         let withdraw_amount = before_amount - after_amount;
         if withdraw_amount > amount {
-            return err!(ErrorCode::WhitelistWithdrawLimit
+            return err!(ErrorCode::WhitelistWithdrawLimit);
         }
 
         // Bookeeping.
@@ -177,7 +177,7 @@ pub mod lockup {
         // CPI safety checks.
         let deposit_amount = after_amount - before_amount;
         if deposit_amount <= 0 {
-            return err!(ErrorCode::InsufficientWhitelistDepositAmount
+            return err!(ErrorCode::InsufficientWhitelistDepositAmount);
         }
         if deposit_amount > ctx.accounts.transfer.vesting.whitelist_owned {
             return err!(ErrorCode::WhitelistDepositOverflow)?;
