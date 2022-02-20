@@ -166,7 +166,6 @@ describe("errors", () => {
       .getProvider()
       .connection.onLogs("all", (logs) => (signature = logs.signature));
     try {
-      const account = new Account();
       const tx = new Transaction();
       tx.add(
         new TransactionInstruction({
@@ -184,6 +183,7 @@ describe("errors", () => {
       await program.provider.send(tx);
       assert.ok(false);
     } catch (err) {
+      await sleep(3000);
       anchor.getProvider().connection.removeOnLogsListener(listener);
       const errMsg = `Error: Raw transaction ${signature} failed ({"err":{"InstructionError":[0,{"Custom":3010}]}})`;
       assert.equal(err.toString(), errMsg);
@@ -220,7 +220,6 @@ describe("errors", () => {
           "Unexpected success in creating a transaction that should have fail with `AccountNotInitialized` error"
         );
       } catch (err) {
-        await sleep(3000);
         const errMsg =
           "The program expected this account to be already initialized";
         assert.equal(err.toString(), errMsg);
