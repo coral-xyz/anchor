@@ -1,7 +1,6 @@
+use crate::{Error, ErrorArgs, ErrorCode};
 use syn::parse::{Parse, Result as ParseResult};
 use syn::{Expr, Token};
-
-use crate::{Error, ErrorArgs, ErrorCode};
 
 // Removes any internal #[msg] attributes, as they are inert.
 pub fn parse(error_enum: &mut syn::ItemEnum, args: Option<ErrorArgs>) -> Error {
