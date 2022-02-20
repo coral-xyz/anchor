@@ -26,8 +26,8 @@ mod errors {
         Ok(())
     }
 
-    pub fn test_bail(_ctx: Context<Hello>) -> Result<()> {
-        bail!(MyError::Hello);
+    pub fn test_err(_ctx: Context<Hello>) -> Result<()> {
+        err!(MyError::Hello)
     }
 
     pub fn test_program_error(_ctx: Context<Hello>) -> Result<()> {

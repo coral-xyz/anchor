@@ -239,12 +239,12 @@ pub mod prelude {
         access_control, account, accounts::account::Account,
         accounts::account_loader::AccountLoader, accounts::program::Program,
         accounts::signer::Signer, accounts::system_account::SystemAccount,
-        accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, bail, constant,
-        context::Context, context::CpiContext, declare_id, emit, error, event, interface, program,
-        require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source, state,
-        zero_copy, AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AnchorDeserialize,
-        AnchorSerialize, Id, Key, Owner, ProgramData, Result, System, ToAccountInfo,
-        ToAccountInfos, ToAccountMetas,
+        accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, constant,
+        context::Context, context::CpiContext, declare_id, emit, err, error, event, interface,
+        program, require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source,
+        state, zero_copy, AccountDeserialize, AccountSerialize, Accounts, AccountsExit,
+        AnchorDeserialize, AnchorSerialize, Id, Key, Owner, ProgramData, Result, System,
+        ToAccountInfo, ToAccountInfos, ToAccountMetas,
     };
     pub use anchor_attribute_error::*;
     pub use borsh;
@@ -374,7 +374,7 @@ macro_rules! require {
 /// ```ignore
 /// // Instruction function
 /// pub fn example(ctx: Context<Example>) -> Result<()> {
-///     bail!(MyError::SomeError);
+///     err!(MyError::SomeError)
 /// }
 ///
 /// // An enum for custom error codes
@@ -384,14 +384,14 @@ macro_rules! require {
 /// }
 /// ```
 #[macro_export]
-macro_rules! bail {
+macro_rules! err {
     ($error:tt $(,)?) => {
-        return Err(anchor_lang::anchor_attribute_error::error!(
+        Err(anchor_lang::anchor_attribute_error::error!(
             crate::ErrorCode::$error
-        ));
+        ))
     };
     ($error:expr $(,)?) => {
-        return Err(anchor_lang::anchor_attribute_error::error!($error));
+        Err(anchor_lang::anchor_attribute_error::error!($error))
     };
 }
 

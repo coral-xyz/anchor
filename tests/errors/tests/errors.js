@@ -68,9 +68,9 @@ describe("errors", () => {
     }
   });
 
-  it("Emits a Hello error via bail!", async () => {
+  it("Emits a Hello error via err!", async () => {
     try {
-      const tx = await program.rpc.testBail();
+      const tx = await program.rpc.testErr();
       assert.ok(false);
     } catch (err) {
       const errMsg =
