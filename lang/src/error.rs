@@ -1,9 +1,7 @@
-use std::fmt::{Debug, Display};
-
+use anchor_attribute_error::error_code;
 use borsh::maybestd::io::Error as BorshIoError;
 use solana_program::program_error::ProgramError;
-
-use anchor_attribute_error::error_code;
+use std::fmt::{Debug, Display};
 
 /// The starting point for user defined error codes.
 pub const ERROR_CODE_OFFSET: u32 = 6000;
