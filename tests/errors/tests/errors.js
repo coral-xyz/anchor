@@ -4,17 +4,19 @@ const { Account, Transaction, TransactionInstruction } = anchor.web3;
 
 const withLogTest = async (callback, expectedLog) => {
   let logTestOk = false;
-  const listener = anchor.getProvider().connection.onLogs("all", (logs) => {
-    console.log(logs);
+  const listener = anchor.getProvider().connection.onLogs(
+    "all",
+    (logs) => {
+      console.log(logs);
 
-    if (logs.logs.some(
-      (logLine) => logLine === expectedLog
-        )) {
-          logTestOk = true;
-        } else {
-          console.log(logs);
-        }
-  }, "recent");
+      if (logs.logs.some((logLine) => logLine === expectedLog)) {
+        logTestOk = true;
+      } else {
+        console.log(logs);
+      }
+    },
+    "recent"
+  );
   try {
     await callback();
   } catch (err) {
@@ -23,7 +25,7 @@ const withLogTest = async (callback, expectedLog) => {
   }
   anchor.getProvider().connection.removeOnLogsListener(listener);
   assert.ok(logTestOk);
-}
+};
 
 describe("errors", () => {
   // Configure the client to use the local cluster.
@@ -32,7 +34,6 @@ describe("errors", () => {
   anchor.setProvider(localProvider);
 
   const program = anchor.workspace.Errors;
-
 
   it("Emits a Hello error", async () => {
     await withLogTest(async () => {
@@ -77,12 +78,12 @@ describe("errors", () => {
 
   it("Logs a ProgramError", async () => {
     await withLogTest(async () => {
-        try {
-          const tx = await program.rpc.testProgramError();
-          assert.ok(false);
-        } catch (err) {
-          // No-op (withLogTest expects the callback to catch the initial tx error)
-        }
+      try {
+        const tx = await program.rpc.testProgramError();
+        assert.ok(false);
+      } catch (err) {
+        // No-op (withLogTest expects the callback to catch the initial tx error)
+      }
     }, "Program log: ProgramError occurred. Error Code: InvalidAccountData. Error Number: 17179869184. Error Message: An account's data contents was invalid.");
   });
 
