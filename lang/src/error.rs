@@ -287,7 +287,6 @@ impl From<ProgramError> for ProgramErrorWithOrigin {
     }
 }
 
-// TODO: is there a better way than converting to Strings?
 #[derive(Debug)]
 pub struct AnchorError {
     pub error_name: String,
