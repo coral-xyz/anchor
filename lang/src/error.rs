@@ -220,13 +220,7 @@ impl From<ProgramErrorWithOrigin> for Error {
 impl Error {
     pub fn log(&self) {
         match self {
-            Error::ProgramError(program_error) => {
-                anchor_lang::solana_program::msg!(
-                    "ProgramError: {:?}. Message: {}.",
-                    program_error,
-                    program_error
-                )
-            }
+            Error::ProgramError(program_error) => program_error.log(),
             Error::AnchorError(anchor_error) => anchor_error.log(),
         }
     }
