@@ -2124,7 +2124,7 @@ fn clean(cfg_override: &ConfigOverride) -> Result<()> {
 
     for file in fs::read_dir(deploy_dir)? {
         let path = file?.path();
-        if !path.to_string_lossy().ends_with("-keypair.json") {
+        if path.extension() != Some(&OsString::from("json")) {
             fs::remove_file(&path).unwrap_or_else(|err| {
                 println!("Could not remove file '{}': {}", path.display(), err)
             });
