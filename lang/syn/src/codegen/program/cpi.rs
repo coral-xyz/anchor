@@ -47,7 +47,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                         &ix,
                                         &acc_infos,
                                         ctx.signer_seeds(),
-                                    ).map_err(|pe| pe.into())
+                                    ).map_err(Into::into)
                                 }
                             }
                         })
@@ -95,7 +95,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             &ix,
                             &acc_infos,
                             ctx.signer_seeds,
-                        ).map_err(|pe| pe.into())
+                        ).map_err(Into::into)
                     }
                 }
             };

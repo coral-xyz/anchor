@@ -29,7 +29,7 @@ pub fn transfer<'a, 'b, 'c, 'info>(
         ],
         ctx.signer_seeds,
     )
-    .map_err(|pe| pe.into())
+    .map_err(Into::into)
 }
 
 pub fn mint_to<'a, 'b, 'c, 'info>(
@@ -53,7 +53,7 @@ pub fn mint_to<'a, 'b, 'c, 'info>(
         ],
         ctx.signer_seeds,
     )
-    .map_err(|pe| pe.into())
+    .map_err(Into::into)
 }
 
 pub fn burn<'a, 'b, 'c, 'info>(
@@ -77,7 +77,7 @@ pub fn burn<'a, 'b, 'c, 'info>(
         ],
         ctx.signer_seeds,
     )
-    .map_err(|pe| pe.into())
+    .map_err(Into::into)
 }
 
 pub fn approve<'a, 'b, 'c, 'info>(
@@ -101,7 +101,7 @@ pub fn approve<'a, 'b, 'c, 'info>(
         ],
         ctx.signer_seeds,
     )
-    .map_err(|pe| pe.into())
+    .map_err(Into::into)
 }
 
 pub fn initialize_account<'a, 'b, 'c, 'info>(
@@ -123,7 +123,7 @@ pub fn initialize_account<'a, 'b, 'c, 'info>(
         ],
         ctx.signer_seeds,
     )
-    .map_err(|pe| pe.into())
+    .map_err(Into::into)
 }
 
 pub fn close_account<'a, 'b, 'c, 'info>(
@@ -145,7 +145,7 @@ pub fn close_account<'a, 'b, 'c, 'info>(
         ],
         ctx.signer_seeds,
     )
-    .map_err(|pe| pe.into())
+    .map_err(Into::into)
 }
 
 pub fn freeze_account<'a, 'b, 'c, 'info>(
@@ -167,7 +167,7 @@ pub fn freeze_account<'a, 'b, 'c, 'info>(
         ],
         ctx.signer_seeds,
     )
-    .map_err(|pe| pe.into())
+    .map_err(Into::into)
 }
 
 pub fn thaw_account<'a, 'b, 'c, 'info>(
@@ -189,7 +189,7 @@ pub fn thaw_account<'a, 'b, 'c, 'info>(
         ],
         ctx.signer_seeds,
     )
-    .map_err(|pe| pe.into())
+    .map_err(Into::into)
 }
 
 pub fn initialize_mint<'a, 'b, 'c, 'info>(
@@ -210,7 +210,7 @@ pub fn initialize_mint<'a, 'b, 'c, 'info>(
         &[ctx.accounts.mint.clone(), ctx.accounts.rent.clone()],
         ctx.signer_seeds,
     )
-    .map_err(|pe| pe.into())
+    .map_err(Into::into)
 }
 
 pub fn set_authority<'a, 'b, 'c, 'info>(
@@ -239,7 +239,7 @@ pub fn set_authority<'a, 'b, 'c, 'info>(
         ],
         ctx.signer_seeds,
     )
-    .map_err(|pe| pe.into())
+    .map_err(Into::into)
 }
 
 #[derive(Accounts)]
@@ -322,7 +322,7 @@ impl anchor_lang::AccountDeserialize for TokenAccount {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
         spl_token::state::Account::unpack(buf)
             .map(TokenAccount)
-            .map_err(|pe| pe.into())
+            .map_err(Into::into)
     }
 }
 
@@ -353,7 +353,7 @@ impl anchor_lang::AccountDeserialize for Mint {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
         spl_token::state::Mint::unpack(buf)
             .map(Mint)
-            .map_err(|pe| pe.into())
+            .map_err(Into::into)
     }
 }
 

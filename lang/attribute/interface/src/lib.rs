@@ -224,7 +224,7 @@ pub fn interface(
                         &ix,
                         &acc_infos,
                         ctx.signer_seeds,
-                    ).map_err(|pe| pe.into())
+                    ).map_err(Into::into)
                 }
             }
         })

@@ -279,7 +279,7 @@ impl<'info> OrderbookClient<'info> {
         let max_coin_qty = {
             // The loaded market must be dropped before CPI.
             let market = MarketState::load(&self.market.market, &dex::ID)
-                .map_err(|pe| ProgramError::from(pe))?;
+                .map_err(|de| ProgramError::from(de))?;
             coin_lots(&market, base_amount)
         };
         let max_native_pc_qty = u64::MAX;
