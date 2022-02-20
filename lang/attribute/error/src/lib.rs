@@ -109,7 +109,7 @@ fn create_error(error_code: Expr, source: bool, account_name: Option<Expr>) -> T
             Some(anchor_lang::error::Source {
                 filename: file!(),
                 line: line!()
-            }),
+            })
         }
     } else {
         quote! {
