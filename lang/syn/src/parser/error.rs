@@ -1,7 +1,5 @@
-use syn::{
-    parse::{Parse, Result as ParseResult},
-    Expr, Token,
-};
+use syn::parse::{Parse, Result as ParseResult};
+use syn::{Expr, Token};
 
 use crate::{Error, ErrorArgs, ErrorCode};
 
