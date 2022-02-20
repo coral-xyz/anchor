@@ -104,14 +104,14 @@ use syn::parse_macro_input;
 ///     pub struct CounterAuth;
 ///
 ///     impl<'info> Auth<'info, Empty> for CounterAuth {
-///         fn is_authorized(_ctx: Context<Empty>, current: u64, new: u64) -> anchor_lang::Result<()> {
+///         fn is_authorized(_ctx: Context<Empty>, current: u64, new: u64) -> Result<()> {
 ///             if current % 2 == 0 {
 ///                 if new % 2 == 0 {
-///                     return Err(ProgramError::Custom(50)); // Arbitrary error code.
+///                     return Err(ProgramError::Custom(50).into()); // Arbitrary error code.
 ///                 }
 ///             } else {
 ///                 if new % 2 == 1 {
-///                     return Err(ProgramError::Custom(60)); // Arbitrary error code.
+///                     return Err(ProgramError::Custom(60).into()); // Arbitrary error code.
 ///                 }
 ///             }
 ///             Ok(())

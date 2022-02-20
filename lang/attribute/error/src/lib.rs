@@ -24,14 +24,14 @@ use syn::{parse_macro_input, Expr};
 /// mod errors {
 ///     use super::*;
 ///     pub fn hello(_ctx: Context<Hello>) -> Result<()> {
-///         Err(MyError::Hello.into())
+///         Err(error!(MyError::Hello))
 ///     }
 /// }
 ///
 /// #[derive(Accounts)]
 /// pub struct Hello {}
 ///
-/// #[error]
+/// #[error_code]
 /// pub enum MyError {
 ///     #[msg("This is an error message clients will automatically display")]
 ///     Hello,
@@ -43,7 +43,7 @@ use syn::{parse_macro_input, Expr};
 /// [`ProgramError`](../solana_program/enum.ProgramError.html), which is used
 /// pervasively, throughout solana program crates. The generated `Error` type
 /// should almost never be used directly, as the user defined error is
-/// preferred. In the example above, `MyError::Hello.into()`.
+/// preferred. In the example above, `error!(MyError::Hello)`.
 ///
 /// # Msg
 ///
@@ -63,6 +63,24 @@ pub fn error_code(
     proc_macro::TokenStream::from(error)
 }
 
+/// Generates an [`Error::AnchorError`](../../anchor_lang/error/enum.Error.html) that includes file and line information.
+///
+/// # Example
+/// ```rust,ignore
+/// #[program]
+/// mod errors {
+///     use super::*;
+///     pub fn example(_ctx: Context<Example>) -> Result<()> {
+///         Err(error!(MyError::Hello))
+///     }
+/// }
+///
+/// #[error_code]
+/// pub enum MyError {
+///     #[msg("This is an error message clients will automatically display")]
+///     Hello,
+/// }
+/// ```
 #[proc_macro]
 pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
     let input = parse_macro_input!(ts as ErrorInput);

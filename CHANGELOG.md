@@ -3,7 +3,6 @@
 // Err(ErrorCode.into()) -> Err(error!(ErrorCode))
 // ProgramResult -> Result<()>
 
-// TODO: update reference
 # Changelog
 
 All notable changes to this project will be documented in this file.

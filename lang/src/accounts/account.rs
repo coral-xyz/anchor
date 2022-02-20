@@ -102,7 +102,7 @@ use std::ops::{Deref, DerefMut};
 /// // "try_deserialize_unchecked" by default which is what we want here
 /// // because non-anchor accounts don't have a discriminator to check
 /// impl anchor_lang::AccountDeserialize for Mint {
-///     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError> {
+///     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self> {
 ///         spl_token::state::Mint::unpack(buf).map(Mint)
 ///     }
 /// }
