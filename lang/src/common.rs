@@ -1,4 +1,5 @@
 use crate::error::ErrorCode;
+use crate::prelude::error;
 use solana_program::account_info::AccountInfo;
 use std::io::Write;
 
@@ -16,11 +17,7 @@ pub fn close<'info>(
     let mut data = info.try_borrow_mut_data()?;
     let dst: &mut [u8] = &mut data;
     let mut cursor = std::io::Cursor::new(dst);
-    if cursor
+    cursor
         .write_all(&crate::__private::CLOSED_ACCOUNT_DISCRIMINATOR)
-        .is_err()
-    {
-        return Err(ErrorCode::AccountDidNotSerialize.into());
-    }
-    Ok(())
+        .map_err(|_| error!(ErrorCode::AccountDidNotSerialize))
 }
