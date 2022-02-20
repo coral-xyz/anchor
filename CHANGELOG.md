@@ -13,16 +13,46 @@ incremented for features.
 
 ### Features
 
-* lang: Add `seeds::program` constraint for specifying which program_id to use when deriving PDAs.([#1197](https://github.com/project-serum/anchor/pull/1197))
-* lang: `Context` now has a new `bumps: BTree<String, u8>` argument, mapping account name to bump seed "found" by the accounts context. This allows one to access bump seeds without having to pass them in from the client or recalculate them in the handler ([#1367](calculated )).
-* ts: Remove error logging in the event parser when log websocket encounters a program error ([#1313](https://github.com/project-serum/anchor/pull/1313)).
-* ts: Add new `methods` namespace to the program client, introducing a more ergonomic builder API ([#1324](https://github.com/project-serum/anchor/pull/1324)).
+* lang: add check that declared id == program id ([#1451](https://github.com/project-serum/anchor/pull/1451))
+* ts: Added float types support ([#1425](https://github.com/project-serum/anchor/pull/1425)).
+
+### Fixes
+
+* ts: Allow nullable types for `Option<T>` mapped types ([#1428](https://github.com/project-serum/anchor/pull/1428)).
 
 ### Breaking
 
+* lang: Enforce that the payer for an init-ed account be marked `mut` ([#1271](https://github.com/project-serum/anchor/pull/1271)).
+* lang: All error-related code is now in the error module ([#1426](https://github.com/project-serum/anchor/pull/1426)).
+* lang: Require doc comments when using AccountInfo or UncheckedAccount types ([#1452](https://github.com/project-serum/anchor/pull/1452)).
+
+## [0.21.0] - 2022-02-07
+
+### Fixes
+
+* ts: Fix the root type declaration of the `Wallet` / `NodeWallet` class ([#1363](https://github.com/project-serum/anchor/pull/1363)).
+* ts: Improve type mapping of Account fields into Typescript with additional support for `Option<T>` and `Vec<String>` types ([#1393](https://github.com/project-serum/anchor/pull/1393)).
+
+### Features
+
+* lang: Add `seeds::program` constraint for specifying which program_id to use when deriving PDAs ([#1197](https://github.com/project-serum/anchor/pull/1197)).
+* lang: `Context` now has a new `bumps: BTree<String, u8>` argument, mapping account name to bump seed "found" by the accounts context. This allows one to access bump seeds without having to pass them in from the client or recalculate them in the handler ([#1367](https://github.com/project-serum/anchor/pull/1367)).
+* lang, ts: Automatically infer PDA addresses ([#1331](https://github.com/project-serum/anchor/pull/1331)).
+* ts: Remove error logging in the event parser when log websocket encounters a program error ([#1313](https://github.com/project-serum/anchor/pull/1313)).
+* ts: Add new `methods` namespace to the program client, introducing a more ergonomic builder API ([#1324](https://github.com/project-serum/anchor/pull/1324)).
+* ts: Add registry utility for fetching the latest verified build ([#1371](https://github.com/project-serum/anchor/pull/1371)).
+* cli: Expose the solana-test-validator --account flag in Anchor.toml via [[test.validator.account]] ([#1366](https://github.com/project-serum/anchor/pull/1366)).
+* cli: Add avm, a tool for managing anchor-cli versions ([#1385](https://github.com/project-serum/anchor/pull/1385)).
+
+### Breaking
+
+* lang: Put `init_if_needed` behind a feature flag to decrease wrong usage ([#1258](https://github.com/project-serum/anchor/pull/1258)).
 * lang: rename `loader_account` module to `account_loader` module ([#1279](https://github.com/project-serum/anchor/pull/1279))
 * lang: The `Accounts` trait's `try_accounts` method now has an additional `bumps: &mut BTreeMap<String, u8>` argument, which accumulates bump seeds ([#1367](https://github.com/project-serum/anchor/pull/1367)).
+* lang: Providing `bump = <target>` targets with `init` will now error. On `init` only, it is required to use `bump` without a target and access the seed inside function handlers via `ctx.bumps.get("<pda-account-name")`. For subsequent seeds constraints (without init), it is recommended to store the bump on your account and use it as a `bump = <target>` target to minimize compute units used ([#1380](https://github.com/project-serum/anchor/pull/1380)).
 * ts: `Coder` is now an interface and the existing class has been renamed to `BorshCoder`. This change allows the generation of Anchor clients for non anchor programs  ([#1259](https://github.com/project-serum/anchor/pull/1259/files)).
+* cli: [[test.clone]] key in Anchor.toml is renamed to [[test.validator.clone]] ([#1366](https://github.com/project-serum/anchor/pull/1366)).
+
 
 ## [0.20.1] - 2022-01-09
 

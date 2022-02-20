@@ -373,6 +373,17 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
     pub fn build(mut self) -> ParseResult<ConstraintGroup> {
         // Init.
         if let Some(i) = &self.init {
+            if cfg!(not(feature = "init-if-needed")) && i.if_needed {
+                return Err(ParseError::new(
+                    i.span(),
+                    "init_if_needed requires that anchor-lang be imported \
+                    with the init-if-needed cargo feature enabled. \
+                    Carefully read the init_if_needed docs before using this feature \
+                    to make sure you know how to protect yourself against \
+                    re-initialization attacks.",
+                ));
+            }
+
             match self.mutable {
                 Some(m) => {
                     return Err(ParseError::new(
@@ -402,6 +413,16 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             {
                 self.signer
                     .replace(Context::new(i.span(), ConstraintSigner { error: None }));
+            }
+
+            // Assert a bump target is not given on init.
+            if let Some(b) = &self.bump {
+                if b.bump.is_some() {
+                    return Err(ParseError::new(
+                        b.span(),
+                        "bump targets should not be provided with init. Please use bump without a target."
+                    ));
+                }
             }
         }
 

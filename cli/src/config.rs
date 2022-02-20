@@ -166,6 +166,7 @@ impl WithPath<Config> {
                 path.join("src/lib.rs"),
                 version,
                 self.features.seeds,
+                false,
             )?;
             r.push(Program {
                 lib_name,
@@ -256,9 +257,26 @@ pub struct Config {
     pub test: Option<Test>,
 }
 
-#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FeaturesConfig {
+    #[serde(default)]
     pub seeds: bool,
+    #[serde(default = "default_safety_checks")]
+    pub safety_checks: bool,
+}
+
+impl Default for FeaturesConfig {
+    fn default() -> Self {
+        Self {
+            seeds: false,
+            // Anchor safety checks on by default
+            safety_checks: true,
+        }
+    }
+}
+
+fn default_safety_checks() -> bool {
+    true
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -506,7 +524,6 @@ fn deser_programs(
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Test {
     pub genesis: Option<Vec<GenesisEntry>>,
-    pub clone: Option<Vec<CloneEntry>>,
     pub validator: Option<Validator>,
     pub startup_wait: Option<i32>,
 }
@@ -525,11 +542,25 @@ pub struct CloneEntry {
     pub address: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountEntry {
+    // Base58 pubkey string.
+    pub address: String,
+    // Name of JSON file containing the account data.
+    pub filename: String,
+}
+
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Validator {
+    // Load an account from the provided JSON file
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account: Option<Vec<AccountEntry>>,
     // IP address to bind the validator ports. [default: 0.0.0.0]
     #[serde(default = "default_bind_address")]
     pub bind_address: String,
+    // Copy an account from the cluster referenced by the url argument.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub clone: Option<Vec<CloneEntry>>,
     // Range to use for dynamically assigned ports. [default: 1024-65535]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dynamic_port_range: Option<String>,

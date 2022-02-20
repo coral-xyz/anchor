@@ -417,7 +417,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             cargo_args,
         ),
         #[cfg(feature = "dev")]
-        Command::Airdrop => airdrop(cfg_override),
+        Command::Airdrop { .. } => airdrop(&opts.cfg_override),
         Command::Cluster { subcmd } => cluster(subcmd),
         Command::Shell => shell(&opts.cfg_override),
         Command::Run { script } => run(&opts.cfg_override, script),
@@ -1388,7 +1388,12 @@ fn extract_idl(cfg: &WithPath<Config>, file: &str) -> Result<Option<Idl>> {
     let manifest_from_path = std::env::current_dir()?.join(PathBuf::from(&*file).parent().unwrap());
     let cargo = Manifest::discover_from_path(manifest_from_path)?
         .ok_or_else(|| anyhow!("Cargo.toml not found"))?;
-    anchor_syn::idl::file::parse(&*file, cargo.version(), cfg.features.seeds)
+    anchor_syn::idl::file::parse(
+        &*file,
+        cargo.version(),
+        cfg.features.seeds,
+        cfg.features.safety_checks,
+    )
 }
 
 fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
@@ -1891,22 +1896,34 @@ fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
                 flags.push(entry.program.clone());
             }
         }
-        if let Some(clone) = &test.clone {
-            for entry in clone {
-                flags.push("--clone".to_string());
-                flags.push(entry.address.clone());
-            }
-        }
         if let Some(validator) = &test.validator {
             for (key, value) in serde_json::to_value(validator)?.as_object().unwrap() {
                 if key == "ledger" {
+                    // Ledger flag is a special case as it is passed separately to the rest of
+                    // these validator flags.
                     continue;
                 };
-                flags.push(format!("--{}", key.replace('_', "-")));
-                if let serde_json::Value::String(v) = value {
-                    flags.push(v.to_string());
+                if key == "account" {
+                    for entry in value.as_array().unwrap() {
+                        // Push the account flag for each array entry
+                        flags.push("--account".to_string());
+                        flags.push(entry["address"].as_str().unwrap().to_string());
+                        flags.push(entry["filename"].as_str().unwrap().to_string());
+                    }
+                } else if key == "clone" {
+                    for entry in value.as_array().unwrap() {
+                        // Push the clone flag for each array entry
+                        flags.push("--clone".to_string());
+                        flags.push(entry["address"].as_str().unwrap().to_string());
+                    }
                 } else {
-                    flags.push(value.to_string());
+                    // Remaining validator flags are non-array types
+                    flags.push(format!("--{}", key.replace('_', "-")));
+                    if let serde_json::Value::String(v) = value {
+                        flags.push(v.to_string());
+                    } else {
+                        flags.push(value.to_string());
+                    }
                 }
             }
         }
@@ -2398,7 +2415,9 @@ fn set_workspace_dir_or_exit() {
 fn airdrop(cfg_override: &ConfigOverride) -> Result<()> {
     let url = cfg_override
         .cluster
-        .unwrap_or_else(|| "https://api.devnet.solana.com".to_string());
+        .as_ref()
+        .unwrap_or_else(|| &Cluster::Devnet)
+        .url();
     loop {
         let exit = std::process::Command::new("solana")
             .arg("airdrop")

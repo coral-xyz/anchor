@@ -28,6 +28,7 @@ export type Idl = {
   errors?: IdlErrorCode[];
   constants?: IdlConstant[];
   camelized?: boolean;
+  metadata?: IdlMetadata;
 };
 
 type RawIdlEvent = {
@@ -44,7 +45,10 @@ export type RawIdlConstant = {
   name: string;
   type: RawIdlType;
   value: string;
+
 };
+
+export type IdlMetadata = any;
 
 export type IdlConstant = {
   name: string;
@@ -212,8 +216,10 @@ export type LiteralIdlType =
   | "i16"
   | "u32"
   | "i32"
+  | "f32"
   | "u64"
   | "i64"
+  | "f64"
   | "u128"
   | "i128"
   | "bytes"

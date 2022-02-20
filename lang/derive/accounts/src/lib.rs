@@ -96,7 +96,9 @@ use syn::parse_macro_input;
 ///                 Creates the account via a CPI to the system program and
 ///                 initializes it (sets its account discriminator).<br>
 ///                 Marks the account as mutable and is mutually exclusive with <code>mut</code>.<br>
-///                 Makes the account rent exempt unless skipped with `rent_exempt = skip`.<br>
+///                 Makes the account rent exempt unless skipped with <code>rent_exempt = skip</code>.<br><br>
+///                 Use <code>#[account(zero)]</code> for accounts larger than 10 Kibibyte.<br><br>
+///                 <code>init</code> has to be used with additional constraints:
 ///                 <ul>
 ///                     <li>
 ///                         Requires the <code>payer</code> constraint to also be on the account.
@@ -200,8 +202,18 @@ use syn::parse_macro_input;
 ///             </td>
 ///             <td>
 ///                 Exact same functionality as the <code>init</code> constraint but only runs if the account does not exist yet.<br>
-///                 If it does exist, it still checks whether the given init constraints are correct,
-///                 e.g. that the account has the expected amount of space and, if it's a PDA, the correct seeds etc.
+///                 If the account does exist, it still checks whether the given init constraints are correct,
+///                 e.g. that the account has the expected amount of space and, if it's a PDA, the correct seeds etc.<br><br>
+///                 This feature should be used with care and is therefore behind a feature flag.
+///                 You can enable it by importing <code>anchor-lang</code> with the <code>init-if-needed</code> cargo feature.<br>
+///                 When using <code>init_if_needed</code>, you need to make sure you properly protect yourself
+///                 against re-initialization attacks. You need to include checks in your code that check
+///                 that the initialized account cannot be reset to its initial settings after the first time it was
+///                 initialized (unless that it what you want).<br>
+///                 Because of the possibility of re-initialization attacks and the general guideline that instructions
+///                 should avoid having multiple execution flows (which is important so they remain easy to understand),
+///                 consider breaking up your instruction into two instructions - one for initializing and one for using
+///                 the account - unless you have a good reason not to do so.
 ///                 <br><br>
 ///                 Example:
 ///                 <pre>
@@ -361,7 +373,14 @@ use syn::parse_macro_input;
 ///             </td>
 ///             <td>
 ///                 Checks the account discriminator is zero.<br>
-///                 Enforces rent exemption unless skipped with <code>rent_exempt = skip</code><br><br>
+///                 Enforces rent exemption unless skipped with <code>rent_exempt = skip</code>.<br><br>
+///                 Use this constraint if you want to create an account in a previous instruction
+///                 and then initialize it in your instruction instead of using <code>init</code>.
+///                 This is necessary for accounts that are larger than 10 Kibibyte because those
+///                 accounts cannot be created via a CPI (which is what <code>init</code> would do).<br><br>
+///                 Anchor adds internal data to the account when using <code>zero</code> just like it
+///                 does with <code>init</code> which is why <code>zero</code> implies <code>mut</code>.
+///                 <br><br>
 ///                 Example:
 ///                 <pre><code>
 /// #[account(zero)]
