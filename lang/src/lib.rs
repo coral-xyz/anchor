@@ -241,8 +241,8 @@ pub mod prelude {
         accounts::signer::Signer, accounts::system_account::SystemAccount,
         accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, bail, constant,
         context::Context, context::CpiContext, declare_id, emit, error, event, interface, program,
-        require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, state, zero_copy,
-        AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AnchorDeserialize,
+        require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source, state,
+        zero_copy, AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AnchorDeserialize,
         AnchorSerialize, Id, Key, Owner, ProgramData, Result, System, ToAccountInfo,
         ToAccountInfos, ToAccountMetas,
     };
@@ -392,5 +392,16 @@ macro_rules! bail {
     };
     ($error:expr $(,)?) => {
         return Err(anchor_lang::anchor_attribute_error::error!($error));
+    };
+}
+
+/// Creates a [`Source`](crate::error::Source)
+#[macro_export]
+macro_rules! source {
+    () => {
+        anchor_lang::error::Source {
+            filename: file!(),
+            line: line!(),
+        }
     };
 }

@@ -232,6 +232,14 @@ impl Error {
         };
         self
     }
+
+    pub fn with_source(mut self, source: Source) -> Self {
+        match &mut self {
+            Error::AnchorError(ae) => ae.source = Some(source),
+            Error::ProgramError(pe) => pe.source = Some(source),
+        };
+        self
+    }
 }
 
 #[derive(Debug)]

@@ -92,6 +92,17 @@ describe("errors", () => {
     }, "Program log: ProgramError occurred. Error Code: InvalidAccountData. Error Number: 17179869184. Error Message: An account's data contents was invalid.");
   });
 
+  it("Logs a ProgramError with source", async () => {
+    await withLogTest(async () => {
+      try {
+        const tx = await program.rpc.testProgramErrorWithSource();
+        assert.ok(false);
+      } catch (err) {
+        // No-op (withLogTest expects the callback to catch the initial tx error)
+      }
+    }, "Program log: ProgramError thrown in programs/errors/src/lib.rs:38. Error Code: InvalidAccountData. Error Number: 17179869184. Error Message: An account's data contents was invalid.");
+  });
+
   it("Emits a HelloNoMsg error", async () => {
     try {
       const tx = await program.rpc.helloNoMsg();

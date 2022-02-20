@@ -34,6 +34,10 @@ mod errors {
         Err(ProgramError::InvalidAccountData.into())
     }
 
+    pub fn test_program_error_with_source(_ctx: Context<Hello>) -> Result<()> {
+        Err(Error::from(ProgramError::InvalidAccountData).with_source(source!()))
+    }
+
     pub fn mut_error(_ctx: Context<MutError>) -> Result<()> {
         Ok(())
     }
