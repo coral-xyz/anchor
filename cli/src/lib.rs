@@ -181,7 +181,7 @@ pub enum Command {
         #[clap(subcommand)]
         subcmd: IdlCommand,
     },
-    /// Remove generated artifacts.
+    /// Remove all artifacts from the target directory except program keypairs.
     Clean,
     /// Deploys each program in the workspace.
     Deploy {
@@ -2112,16 +2112,22 @@ fn clean(cfg_override: &ConfigOverride) -> Result<()> {
     for entry in fs::read_dir(target_dir)? {
         let path = entry?.path();
         if path.is_dir() && path != deploy_dir {
-            fs::remove_dir_all(path).expect("Could not remove directory.");
+            fs::remove_dir_all(&path).unwrap_or_else(|err| {
+                println!("Could not remove directory '{}': {}", path.display(), err)
+            });
         } else if path.is_file() {
-            fs::remove_file(path).expect("Could not remove file.");
+            fs::remove_file(&path).unwrap_or_else(|err| {
+                println!("Could not remove file '{}': {}", path.display(), err)
+            });
         }
     }
 
     for file in fs::read_dir(deploy_dir)? {
         let path = file?.path();
         if !path.to_string_lossy().ends_with("-keypair.json") {
-            fs::remove_file(path).expect("Could not remove file.");
+            fs::remove_file(&path).unwrap_or_else(|err| {
+                println!("Could not remove file '{}': {}", path.display(), err)
+            });
         }
     }
 
