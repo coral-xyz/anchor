@@ -43,4 +43,3 @@ address = "6ebQNeTPZ1j7k3TtkCCtEPRvG7GQsucQrZ7sSEDQi9Ks"
 program = "./deps/stake/target/deploy/lockup.so"
 
 [features]
-safety_checks = false
