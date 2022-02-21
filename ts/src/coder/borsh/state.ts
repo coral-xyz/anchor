@@ -35,12 +35,12 @@ export class BorshStateCoder {
     return this.layout.decode(data);
   }
 
-	// Calculates unique 8 byte discriminator prepended to all anchor state accounts.
-	async discriminator(name: string): Promise<Buffer> {
-		let ns = features.isSet("anchor-deprecated-state") ? "account" : "state";
-		return Buffer.from(sha256.digest(`${ns}:${name}`)).slice(
-			0,
-			this.header.discriminatorSize()
-		);
-	}
+  // Calculates unique 8 byte discriminator prepended to all anchor state accounts.
+  async discriminator(name: string): Promise<Buffer> {
+    let ns = features.isSet("anchor-deprecated-state") ? "account" : "state";
+    return Buffer.from(sha256.digest(`${ns}:${name}`)).slice(
+      0,
+      this.header.discriminatorSize()
+    );
+  }
 }

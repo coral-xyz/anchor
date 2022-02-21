@@ -85,7 +85,7 @@ export class StateClient<IDL extends Idl> {
     public readonly provider: Provider = getProvider(),
     /**
      * Returns the coder. Note that we use BorshCoder and not `Coder` because
-		 * the deprecated state abstraction only applies to Anchor programs.
+     * the deprecated state abstraction only applies to Anchor programs.
      */
     public readonly coder: BorshCoder = new BorshCoder(idl)
   ) {
@@ -173,7 +173,9 @@ export class StateClient<IDL extends Idl> {
       throw new Error("State is not specified in IDL.");
     }
 
-    const expectedDiscriminator = await this.coder.state.discriminator(state.struct.name);
+    const expectedDiscriminator = await this.coder.state.discriminator(
+      state.struct.name
+    );
     const discriminator = this.coder.state.header.parseDiscriminator(
       accountInfo.data
     );
