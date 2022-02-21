@@ -1,5 +1,4 @@
-//! This example demonstrates how custom errors and associated error messsages
-//! can be defined and transparently propagated to clients.
+//! This example enforces the missing documentation lint.
 #![deny(missing_docs)]
 
 use anchor_lang::prelude::*;
