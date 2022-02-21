@@ -141,7 +141,7 @@ module.exports = async function (provider) {
   anchor.setProvider(provider);
 
   // Add your deploy script here.
-}
+};
 "#
 }
 
@@ -157,7 +157,7 @@ module.exports = async function (provider) {
   anchor.setProvider(provider);
 
   // Add your deploy script here.
-}
+};
 "#
 }
 
@@ -176,7 +176,8 @@ declare_id!("{}");
 #[program]
 pub mod {} {{
     use super::*;
-    pub fn initialize(ctx: Context<Initialize>) -> ProgramResult {{
+
+    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {{
         Ok(())
     }}
 }}
@@ -191,14 +192,13 @@ pub struct Initialize {{}}
 
 pub fn mocha(name: &str) -> String {
     format!(
-        r#"const anchor = require('@project-serum/anchor');
+        r#"const anchor = require("@project-serum/anchor");
 
-describe('{}', () => {{
-
+describe("{}", () => {{
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.Provider.env());
 
-  it('Is initialized!', async () => {{
+  it("Is initialized!", async () => {{
     // Add your test here.
     const program = anchor.workspace.{};
     const tx = await program.rpc.initialize();
@@ -248,18 +248,17 @@ pub fn ts_package_json() -> String {
 
 pub fn ts_mocha(name: &str) -> String {
     format!(
-        r#"import * as anchor from '@project-serum/anchor';
-import {{ Program }} from '@project-serum/anchor';
-import {{ {} }} from '../target/types/{}';
+        r#"import * as anchor from "@project-serum/anchor";
+import {{ Program }} from "@project-serum/anchor";
+import {{ {} }} from "../target/types/{}";
 
-describe('{}', () => {{
-
+describe("{}", () => {{
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.Provider.env());
 
   const program = anchor.workspace.{} as Program<{}>;
 
-  it('Is initialized!', async () => {{
+  it("Is initialized!", async () => {{
     // Add your test here.
     const tx = await program.rpc.initialize({{}});
     console.log("Your transaction signature", tx);
