@@ -510,9 +510,7 @@ fn resolve_variable_array_lengths(ctx: &CrateContext, mut tts_string: String) ->
 }
 
 fn to_idl_type(ctx: &CrateContext, f: &syn::Field) -> IdlType {
-    let mut tts = proc_macro2::TokenStream::new();
-    f.ty.to_tokens(&mut tts);
-    let mut tts_string = tts.to_string();
+    let mut tts_string = parser::tts_to_string(f);
     if tts_string.starts_with('[') {
         tts_string = resolve_variable_array_lengths(ctx, tts_string);
     }
