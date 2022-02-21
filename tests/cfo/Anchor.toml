@@ -12,7 +12,7 @@ lockup = { address = "6ebQNeTPZ1j7k3TtkCCtEPRvG7GQsucQrZ7sSEDQi9Ks", idl = "./de
 # Testing.
 #
 test = "yarn run mocha -t 1000000 tests/"
-test-with-build = "anchor run build --skip-lint && anchor test --skip-build --skip-lint"
+test-with-build = "anchor run build && anchor test --skip-build --skip-lint"
 #
 # Build the program and all CPI dependencies.
 #
