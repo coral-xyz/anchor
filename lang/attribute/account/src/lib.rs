@@ -149,7 +149,7 @@ pub fn account(
                 // It's expected on-chain programs deserialize via zero-copy.
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
-                    fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
+                    fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self> {
                         // Header is always 8 bytes.
                         if buf.len() < anchor_lang::accounts::header::HEADER_LEN {
                             return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound.into());
@@ -161,7 +161,7 @@ pub fn account(
                         Self::try_deserialize_unchecked(buf)
                     }
 
-                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
+                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                         let data: &[u8] = &buf[8..];
                         // Re-interpret raw bytes into the POD data structure.
                         let account = anchor_lang::__private::bytemuck::from_bytes(data);
@@ -179,7 +179,7 @@ pub fn account(
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountSerialize for #account_name #type_gen #where_clause {
-                    fn try_serialize(&self, buf: &mut [u8]) -> std::result::Result<(), ProgramError> {
+                    fn try_serialize(&self, buf: &mut [u8]) -> anchor_lang::Result<()> {
                         let dst = anchor_lang::accounts::header::read_data_mut(buf);
                         let mut writer = std::io::Cursor::new(dst);
                         AnchorSerialize::serialize(
@@ -193,7 +193,7 @@ pub fn account(
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
-                    fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
+                    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                         if buf.len() < #discriminator.len() {
                             return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound.into());
                         }
@@ -204,7 +204,7 @@ pub fn account(
                         Self::try_deserialize_unchecked(buf)
                     }
 
-                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
+                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                         let mut data: &[u8] = &buf[8..];
                         AnchorDeserialize::deserialize(&mut data)
                             .map_err(|_| anchor_lang::error::ErrorCode::AccountDidNotDeserialize.into())

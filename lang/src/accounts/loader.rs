@@ -1,10 +1,9 @@
 use crate::accounts::header;
 use crate::error::ErrorCode;
 use crate::*;
+use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;
-use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
-use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::cell::{Ref, RefMut};
 use std::collections::BTreeMap;
@@ -54,7 +53,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
     pub fn try_from(
         program_id: &Pubkey,
         acc_info: &AccountInfo<'info>,
-    ) -> Result<Loader<'info, T>, ProgramError> {
+    ) -> Result<Loader<'info, T>> {
         if acc_info.owner != program_id {
             return Err(ErrorCode::AccountOwnedByWrongProgram.into());
         }
@@ -73,7 +72,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
     pub fn try_from_unchecked(
         program_id: &Pubkey,
         acc_info: &AccountInfo<'info>,
-    ) -> Result<Loader<'info, T>, ProgramError> {
+    ) -> Result<Loader<'info, T>> {
         if acc_info.owner != program_id {
             return Err(ErrorCode::AccountOwnedByWrongProgram.into());
         }
@@ -82,7 +81,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
 
     /// Returns a Ref to the account data structure for reading.
     #[allow(deprecated)]
-    pub fn load(&self) -> Result<Ref<T>, ProgramError> {
+    pub fn load(&self) -> Result<Ref<T>> {
         let data = self.acc_info.try_borrow_data()?;
         let disc_bytes = header::read_discriminator(&data);
         if disc_bytes != &T::discriminator() {
@@ -94,7 +93,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
 
     /// Returns a `RefMut` to the account data structure for reading or writing.
     #[allow(deprecated)]
-    pub fn load_mut(&self) -> Result<RefMut<T>, ProgramError> {
+    pub fn load_mut(&self) -> Result<RefMut<T>> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
         if !self.acc_info.is_writable {
@@ -121,7 +120,7 @@ impl<'info, T: ZeroCopy> Accounts<'info> for Loader<'info, T> {
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
-    ) -> Result<Self, ProgramError> {
+    ) -> Result<Self> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
         }
@@ -141,9 +140,16 @@ impl<'info, T: ZeroCopy> AccountsExit<'info> for Loader<'info, T> {
     }
 }
 
+/// This function is for INTERNAL USE ONLY.
+/// Do NOT use this function in a program.
+/// Manual closing of `Loader<'info, T>` types is NOT supported.
+///
+/// Details: Using `close` with `Loader<'info, T>` is not safe because
+/// it requires the `mut` constraint but for that type the constraint
+/// overwrites the "closed account" discriminator at the end of the instruction.
 #[allow(deprecated)]
 impl<'info, T: ZeroCopy> AccountsClose<'info> for Loader<'info, T> {
-    fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult {
+    fn close(&self, sol_destination: AccountInfo<'info>) -> Result<()> {
         crate::common::close(self.to_account_info(), sol_destination)
     }
 }
