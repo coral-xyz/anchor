@@ -4,7 +4,7 @@ use anchor_lang::solana_program::program_pack::Pack;
 use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::{context::CpiContext, Accounts};
 use anchor_lang::{solana_program, Result};
-use std::{fmt::Result, ops::Deref};
+use std::ops::Deref;
 
 pub use spl_token::ID;
 
