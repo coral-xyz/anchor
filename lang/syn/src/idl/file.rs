@@ -468,11 +468,21 @@ fn resolve_variable_array_lengths(ctx: &CrateContext, mut tts_string: String) ->
         // Filter to only those consts that are of type usize or could be cast to usize
         syn::Type::Path(ref p) => {
             let segment = p.path.segments.last().unwrap();
-            match segment.ident.to_string().as_str() {
-                "usize" | "u8" | "u16" | "u32" | "u64" | "u128" | "isize" | "i8" | "i16"
-                | "i32" | "i64" | "i128" => true,
-                _ => false,
-            }
+            matches!(
+                segment.ident.to_string().as_str(),
+                "usize"
+                    | "u8"
+                    | "u16"
+                    | "u32"
+                    | "u64"
+                    | "u128"
+                    | "isize"
+                    | "i8"
+                    | "i16"
+                    | "i32"
+                    | "i64"
+                    | "i128"
+            )
         }
         _ => false,
     }) {
@@ -485,7 +495,7 @@ fn resolve_variable_array_lengths(ctx: &CrateContext, mut tts_string: String) ->
         } else if tts_string.contains(size_string.as_str()) {
             replacement_string = Some(size_string);
         }
-        if replacement_string.is_some() {
+        if let Some(replacement_string) = replacement_string {
             // Check for the existence of consts existing elsewhere in the
             // crate which have the same name, are usize, and have a
             // different value. We can't know which was intended for the
@@ -501,7 +511,7 @@ fn resolve_variable_array_lengths(ctx: &CrateContext, mut tts_string: String) ->
             // Replace the match, don't break because there might be multiple replacements to be
             // made in the case of multidimensional arrays
             tts_string = tts_string.replace(
-                &replacement_string.unwrap(),
+                &replacement_string,
                 format!("{}]", &constant.expr.to_token_stream()).as_str(),
             );
         }
