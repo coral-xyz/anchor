@@ -115,10 +115,11 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             .collect()
     };
 
-    let struct_doc = proc_macro2::TokenStream::from(format!(
+    let struct_doc = proc_macro2::TokenStream::from_str(&format!(
         "#[doc = \"Generated client accounts for [`{}`].\"]",
-        name.to_string()
-    ));
+        name
+    ))
+    .unwrap();
 
     quote! {
         /// An internal, Anchor generated module. This is used (as an
