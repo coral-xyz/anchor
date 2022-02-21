@@ -11,6 +11,10 @@ incremented for features.
 
 ## [Unreleased]
 
+### Fixes
+
+* cli: fix rust template ([]())
+
 ## [0.22.0] - 2022-02-20
 
 ### Features
