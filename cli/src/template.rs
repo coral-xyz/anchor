@@ -176,6 +176,7 @@ declare_id!("{}");
 #[program]
 pub mod {} {{
     use super::*;
+    
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {{
         Ok(())
     }}
