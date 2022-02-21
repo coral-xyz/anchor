@@ -164,10 +164,16 @@ describe("misc", () => {
     assert.ok(resp.events[1].data.data === 1234);
     assert.ok(resp.events[2].name === "E3");
     assert.ok(resp.events[2].data.data === 9);
-    assert.ok(resp.events[3].name === "E4");
-    assert.ok(resp.events[3].data.data === [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-    assert.ok(resp.events[2].name === "E5");
-    assert.ok(resp.events[4].data.data === [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    assert.ok(resp.events[3].name === "E5");
+    assert.deepStrictEqual(
+      resp.events[3].data.data,
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    );
+    assert.ok(resp.events[4].name === "E6");
+    assert.deepStrictEqual(
+      resp.events[4].data.data,
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    );
   });
 
   let dataI8;
