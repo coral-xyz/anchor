@@ -154,7 +154,7 @@ dependencies = [
  "cargo_toml",
  "chrono",
  "clap 3.0.13",
- "dirs 3.0.2",
+ "dirs",
  "flate2",
  "heck 0.3.3",
  "pathdiff",
@@ -300,24 +300,6 @@ name = "autocfg"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
-
-[[package]]
-name = "avm"
-version = "0.22.0"
-dependencies = [
- "anyhow",
- "cfg-if 1.0.0",
- "clap 3.0.13",
- "dialoguer 0.9.0",
- "dirs 4.0.0",
- "once_cell",
- "reqwest",
- "semver 1.0.4",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror",
-]
 
 [[package]]
 name = "backtrace"
@@ -978,18 +960,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dialoguer"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61579ada4ec0c6031cfac3f86fdba0d195a7ebeb5e36693bd53cb5999a25beeb"
-dependencies = [
- "console 0.15.0",
- "lazy_static",
- "tempfile",
- "zeroize",
-]
-
-[[package]]
 name = "digest"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1021,15 +991,6 @@ name = "dirs"
 version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30baa043103c9d0c2a57cf537cc2f35623889dc0d405e6c3cccfadbc81c71309"
-dependencies = [
- "dirs-sys",
-]
-
-[[package]]
-name = "dirs"
-version = "4.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca3aa72a6f96ea37bbc5aa912f6788242832f75369bdfdadcb0e38423f100059"
 dependencies = [
  "dirs-sys",
 ]
@@ -3339,7 +3300,7 @@ checksum = "82b91d441ed00427226b08e9990367ecb4c952c70ab827c0250bd233e1ae9540"
 dependencies = [
  "base32",
  "console 0.14.1",
- "dialoguer 0.6.2",
+ "dialoguer",
  "hidapi",
  "log",
  "num-derive",
