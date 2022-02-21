@@ -20,8 +20,10 @@ mod docs {
 #[derive(Accounts)]
 pub struct Hello<'info> {
     /// Rent sysvar.
+    /// Multi line docs.
     pub rent: Sysvar<'info, Rent>,
     /// Composite accounts test.
+    /// Multiple lines supported.
     pub other: HelloComposite<'info>,
 }
 
