@@ -136,7 +136,7 @@ pub fn parse_account_field(f: &syn::Field, has_instruction_api: bool) -> ParseRe
             if let Ok(syn::Meta::NameValue(meta)) = meta_result {
                 if meta.path.is_ident("doc") {
                     if let syn::Lit::Str(doc) = meta.lit {
-                        return format!("{}\n", doc.value().trim());
+                        return format!(" {}\n", doc.value().trim());
                     }
                 }
             }
