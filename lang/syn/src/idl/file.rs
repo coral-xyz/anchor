@@ -463,18 +463,28 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
 }
 
 // Replace variable array lengths with values
-fn resolve_variable_array_length(ctx: &CrateContext, tts_string: String) -> String {
-    for constant in ctx.consts() {
-        let size_string = constant.ident.to_string();
-        let cast_size_string = format!("{} as usize", size_string);
-
+fn resolve_variable_array_lengths(ctx: &CrateContext, mut tts_string: String) -> String {
+    for constant in ctx.consts().filter(|c| match *c.ty {
+        // Filter to only those consts that are of type usize or could be cast to usize
+        syn::Type::Path(ref p) => {
+            let segment = p.path.segments.last().unwrap();
+            match segment.ident.to_string().as_str() {
+                "usize" | "u8" | "u16" | "u32" | "u64" | "u128" | "isize" | "i8" | "i16"
+                | "i32" | "i64" | "i128" => true,
+                _ => false,
+            }
+        }
+        _ => false,
+    }) {
+        let size_string = format!("{}]", &constant.ident.to_string());
+        let cast_size_string = format!("{} as usize]", &constant.ident.to_string());
+        // Check for something to replace
         let mut replacement_string = None;
-        if tts_string.contains(format!("{}]", &cast_size_string).as_str()) {
+        if tts_string.contains(cast_size_string.as_str()) {
             replacement_string = Some(cast_size_string);
-        } else if tts_string.contains(format!("{}]", &size_string).as_str()) {
+        } else if tts_string.contains(size_string.as_str()) {
             replacement_string = Some(size_string);
         }
-
         if replacement_string.is_some() {
             // Check for the existence of consts existing elsewhere in the
             // crate which have the same name, are usize, and have a
@@ -488,9 +498,11 @@ fn resolve_variable_array_length(ctx: &CrateContext, tts_string: String) -> Stri
             }) {
                 panic!("Crate wide unique name required for array size const.");
             }
-            return tts_string.replace(
+            // Replace the match, don't break because there might be multiple replacements to be
+            // made in the case of multidimensional arrays
+            tts_string = tts_string.replace(
                 &replacement_string.unwrap(),
-                &constant.expr.to_token_stream().to_string(),
+                format!("{}]", &constant.expr.to_token_stream()).as_str(),
             );
         }
     }
@@ -502,7 +514,7 @@ fn to_idl_type(ctx: &CrateContext, f: &syn::Field) -> IdlType {
     f.ty.to_tokens(&mut tts);
     let mut tts_string = tts.to_string();
     if tts_string.starts_with('[') {
-        tts_string = resolve_variable_array_length(ctx, tts_string);
+        tts_string = resolve_variable_array_lengths(ctx, tts_string);
     }
     tts_string.parse().unwrap()
 }

@@ -1,6 +1,7 @@
 //! Misc example is a catchall program for testing unrelated features.
 //! It's not too instructive/coherent by itself, so please see other examples.
 
+use account::{MAX_SIZE, MAX_SIZE_U8};
 use anchor_lang::prelude::*;
 use context::*;
 use event::*;
@@ -82,6 +83,12 @@ pub mod misc {
         emit!(E1 { data });
         emit!(E2 { data: 1234 });
         emit!(E3 { data: 9 });
+        // emit!(E4 {
+        //     data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        // });
+        // emit!(E5 {
+        //     data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        // });
         Ok(())
     }
 
@@ -247,6 +254,13 @@ pub mod misc {
         Ok(())
     }
 
+    pub fn test_multidimensional_array_const_sizes(
+        ctx: Context<TestMultidimensionalArrayConstSizes>,
+        data: [[u8; 11]; 10],
+    ) -> ProgramResult {
+        ctx.accounts.data.data = data;
+        Ok(())
+    }
     pub fn test_no_rent_exempt(ctx: Context<NoRentExempt>) -> ProgramResult {
         Ok(())
     }

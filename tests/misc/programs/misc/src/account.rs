@@ -52,5 +52,11 @@ pub struct DataConstArraySize {
 
 #[account]
 pub struct DataConstCastArraySize {
-    pub data: [u8; MAX_SIZE_U8 as usize],
+    pub data_one: [u8; MAX_SIZE as usize],
+    pub data_two: [u8; MAX_SIZE_U8 as usize],
+}
+
+#[account]
+pub struct DataMultidimensionalArrayConstSizes {
+    pub data: [[u8; MAX_SIZE_U8 as usize]; MAX_SIZE],
 }
