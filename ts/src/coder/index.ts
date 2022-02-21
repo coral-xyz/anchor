@@ -1,3 +1,4 @@
+import { GetProgramAccountsFilter } from "@solana/web3.js";
 import { IdlEvent, IdlTypeDef } from "../idl.js";
 import { Event } from "../program/event.js";
 
@@ -38,7 +39,8 @@ export interface AccountsCoder<A extends string = string> {
   encode<T = any>(accountName: A, account: T): Promise<Buffer>;
   decode<T = any>(accountName: A, ix: Buffer): T;
   decodeUnchecked<T = any>(accountName: A, ix: Buffer): T;
-  memcmp(accountName: A, appendData?: Buffer): any;
+  memcmp(accountName: A): GetProgramAccountsFilter;
+  memcmpDataOffset(): number;
   size(idlAccount: IdlTypeDef): number;
 }
 

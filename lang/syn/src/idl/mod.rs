@@ -5,7 +5,12 @@ pub mod file;
 pub mod pda;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct Idl {
+    // Version of the idl protocol.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub layout_version: Option<u8>,
+    // Version of the program.
     pub version: String,
     pub name: String,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]

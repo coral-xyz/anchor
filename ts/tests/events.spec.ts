@@ -12,6 +12,7 @@ describe("Events", () => {
       "Program J2XMGdW2qQLx7rAdwWtSZpTXDgAQ988BLP9QTgUZvm54 success",
     ];
     const idl = {
+      layoutVersion: "0.1.0",
       version: "0.0.0",
       name: "basic_0",
       instructions: [

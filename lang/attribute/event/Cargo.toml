@@ -12,6 +12,7 @@ proc-macro = true
 
 [features]
 anchor-debug = ["anchor-syn/anchor-debug"]
+deprecated-layout = ["anchor-common/deprecated-layout"]
 
 [dependencies]
 proc-macro2 = "1.0"
@@ -19,3 +20,5 @@ quote = "1.0"
 syn = { version = "1.0.60", features = ["full"] }
 anyhow = "1.0.32"
 anchor-syn = { path = "../../syn", version = "0.22.0", features = ["hash"] }
+anchor-common = { path = "../../common", version = "0.22.0" }
+

@@ -8,7 +8,7 @@ import {
 } from "@solana/web3.js";
 import Provider, { getProvider } from "../../provider.js";
 import { Idl, IdlInstruction, IdlStateMethod, IdlTypeDef } from "../../idl.js";
-import { BorshCoder, Coder, stateDiscriminator } from "../../coder/index.js";
+import { BorshCoder, Coder } from "../../coder/index.js";
 import {
   RpcNamespace,
   InstructionNamespace,
@@ -35,7 +35,7 @@ export default class StateFactory {
     if (idl.state === undefined) {
       return undefined;
     }
-    return new StateClient(idl, programId, provider, coder);
+    return new StateClient(idl, programId, provider, coder as BorshCoder);
   }
 }
 
@@ -73,7 +73,6 @@ export class StateClient<IDL extends Idl> {
   private _programId: PublicKey;
 
   private _address: PublicKey;
-  private _coder: Coder;
   private _idl: IDL;
   private _sub: Subscription | null;
 
@@ -85,9 +84,10 @@ export class StateClient<IDL extends Idl> {
      */
     public readonly provider: Provider = getProvider(),
     /**
-     * Returns the coder.
+     * Returns the coder. Note that we use BorshCoder and not `Coder` because
+     * the deprecated state abstraction only applies to Anchor programs.
      */
-    public readonly coder: Coder = new BorshCoder(idl)
+    public readonly coder: BorshCoder = new BorshCoder(idl)
   ) {
     this._idl = idl;
     this._programId = programId;
@@ -172,10 +172,17 @@ export class StateClient<IDL extends Idl> {
     if (!state) {
       throw new Error("State is not specified in IDL.");
     }
-    const expectedDiscriminator = await stateDiscriminator(state.struct.name);
-    if (expectedDiscriminator.compare(accountInfo.data.slice(0, 8))) {
-      throw new Error("Invalid account discriminator");
+
+    const expectedDiscriminator = await this.coder.state.discriminator(
+      state.struct.name
+    );
+    const discriminator = this.coder.state.header.parseDiscriminator(
+      accountInfo.data
+    );
+    if (discriminator.compare(expectedDiscriminator)) {
+      throw new Error("Invalid state discriminator");
     }
+
     return this.coder.state.decode(accountInfo.data);
   }
 

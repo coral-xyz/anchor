@@ -28,7 +28,6 @@ use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use std::collections::BTreeMap;
-use std::io::Write;
 
 mod account_meta;
 pub mod accounts;
@@ -146,8 +145,9 @@ where
 /// In most cases, one can use the default implementation provided by the
 /// [`#[account]`](./attr.account.html) attribute.
 pub trait AccountSerialize {
-    /// Serializes the account data into `writer`.
-    fn try_serialize<W: Write>(&self, _writer: &mut W) -> Result<()> {
+    /// Serializes the account into the data buffer. Does not modify the
+    /// account header.
+    fn try_serialize(&self, _data: &mut [u8]) -> Result<()> {
         Ok(())
     }
 }
@@ -200,7 +200,10 @@ pub trait EventData: AnchorSerialize + Discriminator {
 
 /// 8 byte unique identifier for a type.
 pub trait Discriminator {
+    #[cfg(feature = "deprecated-layout")]
     fn discriminator() -> [u8; 8];
+    #[cfg(not(feature = "deprecated-layout"))]
+    fn discriminator() -> [u8; 4];
 }
 
 /// Bump seed for program derived addresses.

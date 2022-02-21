@@ -89,19 +89,13 @@ pub fn account(
     let (impl_gen, type_gen, where_clause) = account_strct.generics.split_for_impl();
 
     let discriminator: proc_macro2::TokenStream = {
-        // Namespace the discriminator to prevent collisions.
-        let discriminator_preimage = {
-            // For now, zero copy accounts can't be namespaced.
+        let discriminator = anchor_common::header::create_discriminator(
+            &account_name.to_string(),
             if namespace.is_empty() {
-                format!("account:{}", account_name)
+                None
             } else {
-                format!("{}:{}", namespace, account_name)
-            }
-        };
-
-        let mut discriminator = [0u8; 8];
-        discriminator.copy_from_slice(
-            &anchor_syn::hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..8],
+                Some(&namespace)
+            },
         );
         format!("{:?}", discriminator).parse().unwrap()
     };
@@ -121,6 +115,17 @@ pub fn account(
         }
     };
 
+    let disc_fn = {
+        let len: proc_macro2::TokenStream = anchor_common::header::discriminator_len_str()
+            .parse()
+            .unwrap();
+        quote! {
+            fn discriminator() -> [u8; #len] {
+                #discriminator
+            }
+        }
+    };
+
     proc_macro::TokenStream::from({
         if is_zero_copy {
             quote! {
@@ -137,9 +142,7 @@ pub fn account(
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::Discriminator for #account_name #type_gen #where_clause {
-                    fn discriminator() -> [u8; 8] {
-                        #discriminator
-                    }
+                    #disc_fn
                 }
 
                 // This trait is useful for clients deserializing accounts.
@@ -147,10 +150,11 @@ pub fn account(
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
                     fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
-                        if buf.len() < #discriminator.len() {
+                        // Header is always 8 bytes.
+                        if buf.len() < anchor_lang::accounts::header::HEADER_LEN {
                             return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound.into());
                         }
-                        let given_disc = &buf[..8];
+                        let given_disc = anchor_lang::accounts::header::read_discriminator(&buf);
                         if &#discriminator != given_disc {
                             return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch.into());
                         }
@@ -175,14 +179,14 @@ pub fn account(
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountSerialize for #account_name #type_gen #where_clause {
-                    fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> anchor_lang::Result<()> {
-                        if writer.write_all(&#discriminator).is_err() {
-                            return Err(anchor_lang::error::ErrorCode::AccountDidNotSerialize.into());
-                        }
-
-                        if AnchorSerialize::serialize(self, writer).is_err() {
-                            return Err(anchor_lang::error::ErrorCode::AccountDidNotSerialize.into());
-                        }
+                    fn try_serialize(&self, buf: &mut [u8]) -> anchor_lang::Result<()> {
+                        let dst = anchor_lang::accounts::header::read_data_mut(buf);
+                        let mut writer = std::io::Cursor::new(dst);
+                        AnchorSerialize::serialize(
+                            self,
+                            &mut writer
+                        )
+                            .map_err(|_| anchor_lang::error::ErrorCode::AccountDidNotSerialize)?;
                         Ok(())
                     }
                 }
@@ -193,7 +197,7 @@ pub fn account(
                         if buf.len() < #discriminator.len() {
                             return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound.into());
                         }
-                        let given_disc = &buf[..8];
+                        let given_disc = anchor_lang::accounts::header::read_discriminator(&buf);
                         if &#discriminator != given_disc {
                             return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch.into());
                         }
@@ -209,9 +213,7 @@ pub fn account(
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::Discriminator for #account_name #type_gen #where_clause {
-                    fn discriminator() -> [u8; 8] {
-                        #discriminator
-                    }
+                    #disc_fn
                 }
 
                 #owner_impl

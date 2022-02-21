@@ -1,10 +1,7 @@
 #[allow(deprecated)]
 use crate::accounts::cpi_account::CpiAccount;
 use crate::error::ErrorCode;
-use crate::{
-    AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, Result,
-    ToAccountInfo, ToAccountInfos, ToAccountMetas,
-};
+use crate::*;
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -97,9 +94,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info
     fn exit(&self, _program_id: &Pubkey) -> Result<()> {
         let info = self.to_account_info();
         let mut data = info.try_borrow_mut_data()?;
-        let dst: &mut [u8] = &mut data;
-        let mut cursor = std::io::Cursor::new(dst);
-        self.inner.account.try_serialize(&mut cursor)?;
+        self.inner.account.try_serialize(&mut data)?;
         Ok(())
     }
 }
@@ -181,5 +176,12 @@ where
 {
     fn from(a: CpiAccount<'info, T>) -> Self {
         Self::new(a.to_account_info(), Deref::deref(&a).clone())
+    }
+}
+
+#[cfg(not(feature = "deprecated-layout"))]
+impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Bump for ProgramAccount<'a, T> {
+    fn seed(&self) -> u8 {
+        self.inner.info.data.borrow()[1]
     }
 }

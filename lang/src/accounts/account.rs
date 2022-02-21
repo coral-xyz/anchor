@@ -332,9 +332,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsEx
         if &T::owner() == program_id {
             let info = self.to_account_info();
             let mut data = info.try_borrow_mut_data()?;
-            let dst: &mut [u8] = &mut data;
-            let mut cursor = std::io::Cursor::new(dst);
-            self.account.try_serialize(&mut cursor)?;
+            self.account.try_serialize(&mut data)?;
         }
         Ok(())
     }
@@ -408,5 +406,12 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> DerefMut for 
             panic!();
         }
         &mut self.account
+    }
+}
+
+#[cfg(not(feature = "deprecated-layout"))]
+impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Bump for Account<'a, T> {
+    fn seed(&self) -> u8 {
+        self.info.data.borrow()[1]
     }
 }

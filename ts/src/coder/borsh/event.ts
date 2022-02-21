@@ -18,11 +18,17 @@ export class BorshEventCoder implements EventCoder {
    */
   private discriminators: Map<string, string>;
 
+  /**
+   * Header configuration.
+   */
+  private header: EventHeader;
+
   public constructor(idl: Idl) {
     if (idl.events === undefined) {
       this.layouts = new Map();
       return;
     }
+    this.header = new EventHeader(idl);
     const layouts: [string, Layout<any>][] = idl.events.map((event) => {
       let eventTypeDef: IdlTypeDef = {
         name: event.name,
@@ -41,7 +47,7 @@ export class BorshEventCoder implements EventCoder {
       idl.events === undefined
         ? []
         : idl.events.map((e) => [
-            base64.fromByteArray(eventDiscriminator(e.name)),
+            base64.fromByteArray(this.header.discriminator(e.name)),
             e.name,
           ])
     );
@@ -57,7 +63,7 @@ export class BorshEventCoder implements EventCoder {
     } catch (e) {
       return null;
     }
-    const disc = base64.fromByteArray(logArr.slice(0, 8));
+    const disc = base64.fromByteArray(this.header.parseDiscriminator(logArr));
 
     // Only deserialize if the discriminator implies a proper event.
     const eventName = this.discriminators.get(disc);
@@ -69,7 +75,7 @@ export class BorshEventCoder implements EventCoder {
     if (!layout) {
       throw new Error(`Unknown event: ${eventName}`);
     }
-    const data = layout.decode(logArr.slice(8)) as EventData<
+    const data = layout.decode(logArr.slice(this.header.size())) as EventData<
       E["fields"][number],
       T
     >;
@@ -77,6 +83,30 @@ export class BorshEventCoder implements EventCoder {
   }
 }
 
-export function eventDiscriminator(name: string): Buffer {
-  return Buffer.from(sha256.digest(`event:${name}`)).slice(0, 8);
+class EventHeader {
+  constructor(private _idl: Idl) {}
+
+  public parseDiscriminator(data: Buffer): Buffer {
+    if (this._idl.layoutVersion === undefined) {
+      return data.slice(0, 8);
+    } else {
+      return data.slice(0, 4);
+    }
+  }
+
+  public size(): number {
+    if (this._idl.layoutVersion === undefined) {
+      return 8;
+    } else {
+      return 4;
+    }
+  }
+
+  public discriminator(name: string): Buffer {
+    if (this._idl.layoutVersion === undefined) {
+      return Buffer.from(sha256.digest(`event:${name}`)).slice(0, 8);
+    } else {
+      return Buffer.from(sha256.digest(`event:${name}`)).slice(0, 4);
+    }
+  }
 }
