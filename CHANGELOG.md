@@ -13,7 +13,7 @@ incremented for features.
 
 ### Fixes
 
-* cli: fix rust template ([]())
+* cli: fix rust template ([#1488](https://github.com/project-serum/anchor/pull/1488))
 
 ## [0.22.0] - 2022-02-20
 
