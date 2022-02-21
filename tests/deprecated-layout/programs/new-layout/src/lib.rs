@@ -6,7 +6,7 @@ declare_id!("9LA72twzmEHH6EH8oEiNnb2CsUdN9CqAtDNXCkj1c9Uw");
 pub mod new_layout {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> ProgramResult {
+    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
         ctx.accounts.data.data = 2;
         Ok(())
     }
