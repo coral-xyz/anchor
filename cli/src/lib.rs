@@ -2112,22 +2112,24 @@ fn clean(cfg_override: &ConfigOverride) -> Result<()> {
     for entry in fs::read_dir(target_dir)? {
         let path = entry?.path();
         if path.is_dir() && path != deploy_dir {
-            fs::remove_dir_all(&path).unwrap_or_else(|err| {
-                println!("Could not remove directory '{}': {}", path.display(), err)
-            });
+            fs::remove_dir_all(&path)
+                .map_err(|e| anyhow!("Could not remove directory {}: {}", path.display(), e,))?;
         } else if path.is_file() {
-            fs::remove_file(&path).unwrap_or_else(|err| {
-                println!("Could not remove file '{}': {}", path.display(), err)
-            });
+            fs::remove_file(&path)
+                .map_err(|e| anyhow!("Could not remove file {}: {}", path.display(), e))?;
         }
     }
 
     for file in fs::read_dir(deploy_dir)? {
         let path = file?.path();
         if path.extension() != Some(&OsString::from("json")) {
-            fs::remove_file(&path).unwrap_or_else(|err| {
-                println!("Could not remove file '{}': {}", path.display(), err)
-            });
+            fs::remove_file(&path).map_err(|e| {
+                anyhow!(
+                    "Could not remove file {}: {}",
+                    path.display(),
+                    e.to_string()
+                )
+            })?;
         }
     }
 
