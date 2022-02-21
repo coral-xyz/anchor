@@ -7,8 +7,8 @@ import { Coder } from "../index.js";
 
 export { BorshInstructionCoder } from "./instruction.js";
 export { BorshAccountsCoder, BorshAccountHeader } from "./accounts.js";
-export { BorshEventCoder, eventDiscriminator } from "./event.js";
-export { BorshStateCoder, stateDiscriminator } from "./state.js";
+export { BorshEventCoder } from "./event.js";
+export { BorshStateCoder } from "./state.js";
 
 /**
  * BorshCoder is the default Coder for Anchor programs implementing the

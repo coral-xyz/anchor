@@ -8,7 +8,7 @@ import {
 } from "@solana/web3.js";
 import Provider, { getProvider } from "../../provider.js";
 import { Idl, IdlInstruction, IdlStateMethod, IdlTypeDef } from "../../idl.js";
-import { BorshCoder, Coder, stateDiscriminator } from "../../coder/index.js";
+import { BorshCoder, Coder } from "../../coder/index.js";
 import {
   RpcNamespace,
   InstructionNamespace,
@@ -24,7 +24,6 @@ import InstructionNamespaceFactory from "./instruction.js";
 import RpcNamespaceFactory from "./rpc.js";
 import TransactionNamespaceFactory from "./transaction.js";
 import { IdlTypes, TypeDef } from "./types.js";
-import { BorshAccountHeader } from "../../coder/borsh/accounts.js";
 
 export default class StateFactory {
   public static build<IDL extends Idl>(
@@ -85,7 +84,8 @@ export class StateClient<IDL extends Idl> {
      */
     public readonly provider: Provider = getProvider(),
     /**
-     * Returns the coder.
+     * Returns the coder. Note that we use BorshCoder and not `Coder` because
+		 * the deprecated state abstraction only applies to Anchor programs.
      */
     public readonly coder: BorshCoder = new BorshCoder(idl)
   ) {
@@ -173,7 +173,7 @@ export class StateClient<IDL extends Idl> {
       throw new Error("State is not specified in IDL.");
     }
 
-    const expectedDiscriminator = await stateDiscriminator(state.struct.name);
+    const expectedDiscriminator = await this.coder.state.discriminator(state.struct.name);
     const discriminator = this.coder.state.header.parseDiscriminator(
       accountInfo.data
     );

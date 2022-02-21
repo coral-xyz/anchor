@@ -83,10 +83,6 @@ export class BorshEventCoder implements EventCoder {
   }
 }
 
-export function eventDiscriminator(name: string): Buffer {
-  return this.header.discriminator(name);
-}
-
 class EventHeader {
   constructor(private _idl: Idl) {}
 
