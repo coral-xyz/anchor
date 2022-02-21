@@ -1,7 +1,6 @@
 //! Misc example is a catchall program for testing unrelated features.
 //! It's not too instructive/coherent by itself, so please see other examples.
 
-use account::{MAX_SIZE, MAX_SIZE_U8};
 use anchor_lang::prelude::*;
 use context::*;
 use event::*;
@@ -257,7 +256,7 @@ pub mod misc {
     pub fn test_multidimensional_array_const_sizes(
         ctx: Context<TestMultidimensionalArrayConstSizes>,
         data: [[u8; 11]; 10],
-    ) -> ProgramResult {
+    ) -> Result<()> {
         ctx.accounts.data.data = data;
         Ok(())
     }
