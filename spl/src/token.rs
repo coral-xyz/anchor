@@ -4,7 +4,7 @@ use anchor_lang::solana_program::program_pack::Pack;
 use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::{context::CpiContext, Accounts};
 use anchor_lang::{solana_program, Result};
-use std::ops::Deref;
+use std::{fmt::Result, ops::Deref};
 
 pub use spl_token::ID;
 
@@ -99,6 +99,21 @@ pub fn approve<'a, 'b, 'c, 'info>(
             ctx.accounts.delegate.clone(),
             ctx.accounts.authority.clone(),
         ],
+        ctx.signer_seeds,
+    )
+    .map_err(Into::into)
+}
+
+pub fn revoke<'a, 'b, 'c, 'info>(ctx: CpiContext<'a, 'b, 'c, 'info, Revoke<'info>>) -> Result<()> {
+    let ix = spl_token::instruction::revoke(
+        &spl_token::ID,
+        ctx.accounts.source.key,
+        ctx.accounts.owner.key,
+        &[],
+    )?;
+    solana_program::program::invoke_signed(
+        &ix,
+        &[ctx.accounts.source.clone(), ctx.accounts.owner.clone()],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -268,6 +283,12 @@ pub struct Approve<'info> {
     pub to: AccountInfo<'info>,
     pub delegate: AccountInfo<'info>,
     pub authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct Revoke<'info> {
+    pub source: AccountInfo<'info>,
+    pub owner: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
