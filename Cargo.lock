@@ -194,7 +194,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-common"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "arrayref",
  "solana-program",

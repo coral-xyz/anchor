@@ -147,7 +147,7 @@ where
 pub trait AccountSerialize {
     /// Serializes the account into the data buffer. Does not modify the
     /// account header.
-    fn try_serialize(&self, _data: &mut [u8]) -> Result<(), ProgramError> {
+    fn try_serialize(&self, _data: &mut [u8]) -> Result<()> {
         Ok(())
     }
 }

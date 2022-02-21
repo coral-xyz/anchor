@@ -1,7 +1,6 @@
 use crate::accounts::header;
 use crate::error::ErrorCode;
 use crate::*;
-use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -134,7 +133,7 @@ impl<'info, T: ZeroCopy> Accounts<'info> for Loader<'info, T> {
 #[allow(deprecated)]
 impl<'info, T: ZeroCopy> AccountsExit<'info> for Loader<'info, T> {
     // The account *cannot* be loaded when this is called.
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
+    fn exit(&self, _program_id: &Pubkey) -> Result<()> {
         // No-op.
         Ok(())
     }

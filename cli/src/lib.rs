@@ -1429,13 +1429,7 @@ fn extract_idl(cfg: &WithPath<Config>, file: &str, skip_lint: bool) -> Result<Op
     let manifest_from_path = std::env::current_dir()?.join(PathBuf::from(&*file).parent().unwrap());
     let cargo = Manifest::discover_from_path(manifest_from_path)?
         .ok_or_else(|| anyhow!("Cargo.toml not found"))?;
-    anchor_syn::idl::file::parse(
-        &*cargo,
-        &*file,
-        cfg.features.seeds,
-        cfg.features.safety_checks,
-        !skip_lint,
-    )
+    anchor_syn::idl::file::parse(&*cargo, &*file, cfg.features.seeds, !skip_lint)
 }
 
 fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
