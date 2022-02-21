@@ -4,15 +4,6 @@ use crate::Result;
 use solana_program::account_info::AccountInfo;
 use std::io::Write;
 
-/// When used by a user inside their program,
-/// this function should only be used with
-/// the AccountInfo or UncheckedAccount types.
-///
-/// Do NOT use this function with other types.
-///
-/// Details: Using `close` with types like `Account<'info, T>` is not safe because
-/// it requires the `mut` constraint but for that type the constraint
-/// overwrites the "closed account" discriminator at the end of the instruction.
 pub fn close<'info>(info: AccountInfo<'info>, sol_destination: AccountInfo<'info>) -> Result<()> {
     // Transfer tokens from the account to the sol_destination.
     let dest_starting_lamports = sol_destination.lamports();
