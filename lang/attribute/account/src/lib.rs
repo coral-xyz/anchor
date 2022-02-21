@@ -149,7 +149,7 @@ pub fn account(
                 // It's expected on-chain programs deserialize via zero-copy.
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
-                    fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self> {
+                    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                         // Header is always 8 bytes.
                         if buf.len() < anchor_lang::accounts::header::HEADER_LEN {
                             return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound.into());
