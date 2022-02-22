@@ -1938,19 +1938,6 @@ fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
         }
         if let Some(validator) = &test.validator {
             let entries = serde_json::to_value(validator)?;
-
-            // Client for fetching accounts data in case of clonning
-            let mut client: Option<RpcClient> = None;
-            if !entries["clone"].is_null() {
-                if let Some(url) = entries["url"].as_str() {
-                    client = Some(RpcClient::new(url.to_string()));
-                } else {
-                    return Err(anyhow!(
-                    "Validator url for Solana's JSON RPC should be provided in order to clone accounts"
-                ));
-                }
-            }
-
             for (key, value) in entries.as_object().unwrap() {
                 if key == "ledger" {
                     // Ledger flag is a special case as it is passed separately to the rest of
@@ -1965,6 +1952,15 @@ fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
                         flags.push(entry["filename"].as_str().unwrap().to_string());
                     }
                 } else if key == "clone" {
+                    // Client for fetching accounts data
+                    let client = if let Some(url) = entries["url"].as_str() {
+                        RpcClient::new(url.to_string())
+                    } else {
+                        return Err(anyhow!(
+                    "Validator url for Solana's JSON RPC should be provided in order to clone accounts"
+                ));
+                    };
+
                     for entry in value.as_array().unwrap() {
                         // Push the clone flag for each array entry
                         flags.push("--clone".to_string());
@@ -1974,23 +1970,27 @@ fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
                         let pubkey = Pubkey::from_str(flags.last().unwrap())
                             .map_err(|_| anyhow!("Invalid pubkey {}", flags.last().unwrap()))?;
 
-                        if let Some(ref client) = client {
-                            let account = client
-                                .get_account_with_commitment(&pubkey, CommitmentConfig::default())?
-                                .value
-                                .map_or(Err(anyhow!("Account {} not found", pubkey)), Ok)?;
+                        let account = client
+                            .get_account_with_commitment(&pubkey, CommitmentConfig::default())?
+                            .value
+                            .map_or(Err(anyhow!("Account {} not found", pubkey)), Ok)?;
 
-                            if account.owner == bpf_loader_upgradeable::id() {
-                                let upgradable: UpgradeableLoaderState = account
-                                    .deserialize_data()
-                                    .map_err(|_| anyhow!("Invalid program account {}", pubkey))?;
+                        if account.owner == bpf_loader_upgradeable::id() {
+                            let upgradable: UpgradeableLoaderState = account
+                                .deserialize_data()
+                                .map_err(|_| anyhow!("Invalid program account {}", pubkey))?;
 
-                                if let UpgradeableLoaderState::Program {
-                                    programdata_address,
-                                } = upgradable
-                                {
+                            if let UpgradeableLoaderState::Program {
+                                programdata_address,
+                            } = upgradable
+                            {
+                                let programdata_address = programdata_address.to_string();
+                                if value.as_array().unwrap().iter().all(|entry| {
+                                    *entry["address"].as_str().unwrap().to_string()
+                                        != programdata_address
+                                }) {
                                     flags.push("--clone".to_string());
-                                    flags.push(programdata_address.to_string());
+                                    flags.push(programdata_address);
                                 }
                             }
                         }
