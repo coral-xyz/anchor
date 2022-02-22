@@ -1397,8 +1397,24 @@ pub enum BinVerificationState {
 
 // Fetches an IDL for the given program_id.
 fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
-    let cfg = Config::discover(cfg_override)?.expect("Inside a workspace");
-    let url = cluster_url(&cfg);
+    let url = match Config::discover(cfg_override)? {
+        Some(cfg) => cluster_url(&cfg),
+        None => {
+            // If the command is not run inside a workspace,
+            // provider.cluster option has to be provided
+            if let Some(cluster) = cfg_override.cluster.clone() {
+                let is_localnet = cluster == Cluster::Localnet;
+                match is_localnet {
+                    // If Cluster is Localnet, default url will be used
+                    true => "http://localhost:8899".to_string(),
+                    false => cluster.url().to_string(),
+                }
+            } else {
+                return Err(anyhow!("provider.cluster option required"));
+            }
+        }
+    };
+
     let client = RpcClient::new(url);
 
     let mut account = client
