@@ -587,6 +587,8 @@ pub struct ConstraintGroup {
     close: Option<ConstraintClose>,
     address: Option<ConstraintAddress>,
     associated_token: Option<ConstraintAssociatedToken>,
+    spl_account: Option<ConstraintSplTokenAccount>,
+    spl_mint: Option<ConstraintSplTokenMint>,
 }
 
 impl ConstraintGroup {
@@ -628,6 +630,8 @@ pub enum Constraint {
     State(ConstraintState),
     Close(ConstraintClose),
     Address(ConstraintAddress),
+    SplAccount(ConstraintSplTokenAccount),
+    SplMint(ConstraintSplTokenMint),
 }
 
 // Constraint token is a single keyword in a `#[account(<TOKEN>)]` attribute.
@@ -830,6 +834,19 @@ pub struct ConstraintProgramSeed {
 pub struct ConstraintAssociatedToken {
     pub wallet: Expr,
     pub mint: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintSplTokenAccount {
+    pub mint: Option<Expr>,
+    pub auth: Option<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintSplTokenMint {
+    pub decimals: Option<Expr>,
+    pub mint_auth: Option<Expr>,
+    pub mint_freeze_auth: Option<Expr>,
 }
 
 // Syntaxt context object for preserving metadata about the inner item.

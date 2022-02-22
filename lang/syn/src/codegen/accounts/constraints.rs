@@ -57,6 +57,8 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
         close,
         address,
         associated_token,
+        spl_account,
+        spl_mint,
     } = c_group.clone();
 
     let mut constraints = Vec::new();
@@ -100,6 +102,12 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
     if let Some(c) = address {
         constraints.push(Constraint::Address(c));
     }
+    if let Some(c) = spl_account {
+        constraints.push(Constraint::SplAccount(c));
+    }
+    if let Some(c) = spl_mint {
+        constraints.push(Constraint::SplMint(c));
+    }
     constraints
 }
 
@@ -120,6 +128,8 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::Close(c) => generate_constraint_close(f, c),
         Constraint::Address(c) => generate_constraint_address(f, c),
         Constraint::AssociatedToken(c) => generate_constraint_associated_token(f, c),
+        Constraint::SplAccount(c) => generate_constraint_spl_account(f, c),
+        Constraint::SplMint(c) => generate_constraint_spl_mint(f, c),
     }
 }
 
@@ -678,6 +688,66 @@ fn generate_constraint_associated_token(
             if my_key != __associated_token_address {
                 return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintAssociated).with_account_name(#name_str).with_pubkeys((my_key, __associated_token_address)));
             }
+        }
+    }
+}
+
+fn generate_constraint_spl_account(
+    f: &Field,
+    c: &ConstraintSplTokenAccount,
+) -> proc_macro2::TokenStream {
+    let name = &f.ident;
+    let account_owner = match &c.auth {
+        Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key()) },
+        None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
+    };
+
+    let spl_token_mint = match &c.mint {
+        Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key()) },
+        None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
+    };
+
+    quote! {
+        if #account_owner.is_some() && #name.owner != *#account_owner.unwrap() {
+            return Err(anchor_lang::error::ErrorCode::ConstraintTokenOwner.into());
+        }
+        if #spl_token_mint.is_some() && #name.mint != *#spl_token_mint.unwrap() {
+            return Err(anchor_lang::error::ErrorCode::ConstraintTokenMint.into());
+        }
+    }
+}
+
+fn generate_constraint_spl_mint(f: &Field, c: &ConstraintSplTokenMint) -> proc_macro2::TokenStream {
+    let name = &f.ident;
+
+    let decimals = match &c.decimals {
+        Some(fa) => quote! { Option::<u8>::Some(#fa) },
+        None => quote! { Option::<u8>::None },
+    };
+    let mint_authority = match &c.mint_auth {
+        Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key()) },
+        None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
+    };
+    let freeze_authority = match &c.mint_freeze_auth {
+        Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key()) },
+        None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
+    };
+
+    quote! {
+        if #decimals.is_some() && #name.decimals != #decimals.unwrap() {
+            return Err(anchor_lang::error::ErrorCode::ConstraintMintDecimals.into());
+        }
+        if #mint_authority
+            .as_ref()
+            .map(|fa| #name.mint_authority.as_ref().map(|expected_fa| *fa != expected_fa).unwrap_or(true))
+            .unwrap_or(false) {
+            return Err(anchor_lang::error::ErrorCode::ConstraintMintMintAuthority.into());
+        }
+        if #freeze_authority
+            .as_ref()
+            .map(|fa| #name.freeze_authority.as_ref().map(|expected_fa| *fa != expected_fa).unwrap_or(true))
+            .unwrap_or(false) {
+            return Err(anchor_lang::error::ErrorCode::ConstraintMintFreezeAuthority.into());
         }
     }
 }
