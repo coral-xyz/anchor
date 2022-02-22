@@ -513,6 +513,7 @@ fn idl_accounts(
         .iter()
         .map(|acc: &AccountField| match acc {
             AccountField::CompositeField(comp_f) => {
+                println!(comp_f.symbol);
                 let accs_strct = global_accs
                     .get(&comp_f.symbol)
                     .expect("Could not resolve Accounts symbol");
