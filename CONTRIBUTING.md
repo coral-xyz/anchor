@@ -1,9 +1,4 @@
-<div align="center">
-  <img height="170x" src="https://media.discordapp.net/attachments/813444514949103658/890278520553603092/export.png?width=746&height=746" />
-
-  <h1>Anchor</h1>
-</div>
-<br>
+# Contributing to Anchor
 
 Thank you for your interest in contributing to Anchor! All contributions are welcome no
 matter how big or small. This includes (but is not limited to) filing issues,
