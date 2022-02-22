@@ -38,6 +38,7 @@ jobs:
       - run: rustup toolchain install nightly --profile minimal --component clippy
       - run: cargo +nightly clippy --all-targets -- -D warnings
       - run: cargo test
+      - run: cd avm && cargo test
       - run: cd ts && yarn
       - run: cd ts && yarn test
       - run: cd ts && yarn lint
