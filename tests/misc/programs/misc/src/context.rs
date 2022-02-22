@@ -467,8 +467,8 @@ pub struct TestConstraintToken<'info> {
     )] 
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
-    #[account(signer)]
-    pub payer: AccountInfo<'info>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
@@ -482,8 +482,8 @@ pub struct TestAuthorityConstraint<'info> {
     )] 
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
-    #[account(signer)]
-    pub payer: AccountInfo<'info>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
     pub fake_authority: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
@@ -496,8 +496,8 @@ pub struct TestOnlyAuthorityConstraint<'info> {
     )] 
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
-    #[account(signer)]
-    pub payer: AccountInfo<'info>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
@@ -509,8 +509,8 @@ pub struct TestOnlyMintConstraint<'info> {
     )] 
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
-    #[account(signer)]
-    pub payer: AccountInfo<'info>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
@@ -525,8 +525,8 @@ pub struct TestMintConstraint<'info> {
         mint::freeze_authority = freeze_authority
     )]
     pub mint: Account<'info, Mint>,
-    #[account(signer)]
-    pub payer: AccountInfo<'info>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
@@ -541,8 +541,8 @@ pub struct TestMintOnlyDecimalsConstraint<'info> {
         mint::decimals = _decimals,
     )]
     pub mint: Account<'info, Mint>,
-    #[account(signer)]
-    pub payer: AccountInfo<'info>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
@@ -555,8 +555,8 @@ pub struct TestMintAuthorityConstraint<'info> {
         mint::freeze_authority = freeze_authority
     )]
     pub mint: Account<'info, Mint>,
-    #[account(signer)]
-    pub payer: AccountInfo<'info>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
@@ -570,8 +570,8 @@ pub struct TestMintOneAuthorityConstraint<'info> {
         mint::authority = mint_authority,
     )]
     pub mint: Account<'info, Mint>,
-    #[account(signer)]
-    pub payer: AccountInfo<'info>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
@@ -587,8 +587,8 @@ pub struct TestMintMissMintAuthConstraint<'info> {
         mint::freeze_authority = freeze_authority,
     )]
     pub mint: Account<'info, Mint>,
-    #[account(signer)]
-    pub payer: AccountInfo<'info>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
