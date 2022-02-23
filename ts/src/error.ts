@@ -15,16 +15,28 @@ export class ProgramError extends Error {
     err: any,
     idlErrors: Map<number, string>
   ): ProgramError | null {
+    const errString: string = err.toString();
     // TODO: don't rely on the error string. web3.js should preserve the error
     //       code information instead of giving us an untyped string.
-    let components = err.toString().split("custom program error: ");
-    if (components.length !== 2) {
-      return null;
+    let unparsedErrorCode: string;
+    if (errString.includes("custom program error:")) {
+      let components = errString.split("custom program error: ");
+      if (components.length !== 2) {
+        return null;
+      } else {
+        unparsedErrorCode = components[1];
+      }
+    } else {
+      const matches = errString.match(/"Custom":([0-9]+)}/g);
+      if (!matches || matches.length > 1) {
+        return null;
+      }
+      unparsedErrorCode = matches[0].match(/([0-9]+)/g)![0];
     }
 
     let errorCode: number;
     try {
-      errorCode = parseInt(components[1]);
+      errorCode = parseInt(unparsedErrorCode);
     } catch (parseErr) {
       return null;
     }
@@ -101,6 +113,9 @@ const LangErrorCode = {
   AccountNotAssociatedTokenAccount: 3014,
   // State.
   StateInvalidAddress: 4000,
+
+  // Miscellaneous
+  DeclaredProgramIdMismatch: 4100,
 
   // Used for APIs that shouldn't be used anymore.
   Deprecated: 5000,
@@ -219,7 +234,13 @@ const LangErrorMessage = new Map([
     "The given state account does not have the correct address",
   ],
 
-  // Misc.
+  // Miscellaneous
+  [
+    LangErrorCode.DeclaredProgramIdMismatch,
+    "The declared program id does not match the actual program id",
+  ],
+
+  // Deprecated
   [
     LangErrorCode.Deprecated,
     "The API being used is deprecated and should no longer be used",
