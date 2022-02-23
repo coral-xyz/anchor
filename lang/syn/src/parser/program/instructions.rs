@@ -24,9 +24,11 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<(Vec<Ix>, Option<Fallbac
         .map(|method: &syn::ItemFn| {
             let (ctx, args) = parse_args(method)?;
             let anchor_ident = ctx_accounts_ident(&ctx.raw_arg)?;
+            let description = parse_description(method);
             Ok(Ix {
                 raw_method: method.clone(),
                 ident: method.sig.ident.clone(),
+                description,
                 args,
                 anchor_ident,
             })
@@ -90,4 +92,31 @@ pub fn parse_args(method: &syn::ItemFn) -> ParseResult<(IxArg, Vec<IxArg>)> {
     let ctx = args.remove(0);
 
     Ok((ctx, args))
+}
+
+pub fn parse_description(method: &syn::ItemFn) -> Option<String> {
+    let description: Vec<String> = method
+        .attrs
+        .iter()
+        .filter_map(|attr| match attr.parse_meta().unwrap() {
+            syn::Meta::NameValue(meta) => {
+                if meta.path.is_ident("doc") {
+                    let lit = meta.lit.clone();
+                    match lit {
+                        syn::Lit::Str(lit) => Some(lit.value().trim().to_string()),
+                        _ => None,
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        })
+        .collect();
+
+    if description.is_empty() {
+        None
+    } else {
+        Some(description.join(" "))
+    }
 }

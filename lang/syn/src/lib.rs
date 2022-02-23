@@ -85,6 +85,8 @@ pub struct Ix {
     pub raw_method: ItemFn,
     pub ident: Ident,
     pub args: Vec<IxArg>,
+    // Description of the instruction from doc comments.
+    pub description: Option<String>,
     // The ident for the struct deriving Accounts.
     pub anchor_ident: Ident,
 }

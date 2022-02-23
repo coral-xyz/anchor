@@ -43,6 +43,8 @@ pub struct IdlState {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IdlInstruction {
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub description: Option<String>,
     pub accounts: Vec<IdlAccountItem>,
     pub args: Vec<IdlField>,
 }

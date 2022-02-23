@@ -64,6 +64,7 @@ pub fn parse(
                                     idl_accounts(&ctx, accounts_strct, &accs, seeds_feature);
                                 IdlInstruction {
                                     name,
+                                    description: None,
                                     accounts,
                                     args,
                                 }
@@ -103,6 +104,7 @@ pub fn parse(
                     let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature);
                     IdlInstruction {
                         name,
+                        description: None,
                         accounts,
                         args,
                     }
@@ -171,6 +173,7 @@ pub fn parse(
             let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature);
             IdlInstruction {
                 name: ix.ident.to_string().to_mixed_case(),
+                description: ix.description.clone(),
                 accounts,
                 args,
             }
