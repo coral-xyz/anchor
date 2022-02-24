@@ -373,6 +373,13 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
     pub fn build(mut self) -> ParseResult<ConstraintGroup> {
         // Init.
         if let Some(i) = &self.init {
+            // add exception for known lengths such as Mint or TokenAccount
+            if self.space.is_none() {
+                return Err(ParseError::new(
+                    i.span(),
+                    "space must be provided with init.",
+                ));
+            }
             if cfg!(not(feature = "init-if-needed")) && i.if_needed {
                 return Err(ParseError::new(
                     i.span(),
@@ -505,7 +512,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             }
         }
 
-        // SPL Space.
+        /*         // SPL Space.
         if self.init.is_some()
             && self.seeds.is_some()
             && self.token_mint.is_some()
@@ -516,7 +523,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 self.space.as_ref().unwrap().span(),
                 "space is not required for initializing an spl account",
             ));
-        }
+        } */
 
         let ConstraintGroupBuilder {
             f_ty: _,
@@ -593,8 +600,8 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             init: init.as_ref().map(|i| Ok(ConstraintInitGroup {
                 if_needed: i.if_needed,
                 seeds: seeds.clone(),
-                payer: into_inner!(payer.clone()).map(|a| a.target),
-                space: space.clone().map(|s| s.space.clone()),
+                payer: into_inner!(payer.clone()).unwrap().target,
+                space: into_inner!(space.clone()).unwrap().space,
                 kind: if let Some(tm) = &token_mint {
                     InitKind::Token {
                         mint: tm.clone().into_inner().mint,

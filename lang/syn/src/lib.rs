@@ -721,8 +721,8 @@ pub enum ConstraintRentExempt {
 pub struct ConstraintInitGroup {
     pub if_needed: bool,
     pub seeds: Option<ConstraintSeedsGroup>,
-    pub payer: Option<Expr>,
-    pub space: Option<Expr>,
+    pub payer: Expr,
+    pub space: Expr,
     pub kind: InitKind,
 }
 
