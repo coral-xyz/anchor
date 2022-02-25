@@ -165,7 +165,7 @@ export class AccountClient<
   async fetchMultiple(
     addresses: Address[],
     commitment?: Commitment
-  ): Promise<(Object | null)[]> {
+  ): Promise<(T | null)[]> {
     const accounts = await rpcUtil.getMultipleAccounts(
       this._provider.connection,
       addresses.map((address) => translateAddress(address)),
