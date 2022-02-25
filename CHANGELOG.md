@@ -13,6 +13,7 @@ incremented for features.
 
 ### Fixes
 
+* cli: Changing `fetchMultiple` return type of `AccountClient` to `Promise<(T | null)[]>` ([#1521](https://github.com/project-serum/anchor/pull/1521)).
 * cli: Fix rust template ([#1488](https://github.com/project-serum/anchor/pull/1488)).
 
 ## [0.22.0] - 2022-02-20
