@@ -76,24 +76,85 @@ pub fn use_version(version: &Version) -> Result<()> {
 
 /// Install a version of anchor-cli
 pub fn install_version(version: &Version) -> Result<()> {
-    let exit = std::process::Command::new("cargo")
-        .args(&[
-            "install",
-            "--git",
-            "https://github.com/project-serum/anchor",
-            "--tag",
-            &format!("v{}", &version),
-            "anchor-cli",
-            "--locked",
-            "--root",
-            AVM_HOME.to_str().unwrap(),
-        ])
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .output()
-        .map_err(|e| {
-            anyhow::format_err!("Cargo install for {} failed: {}", version, e.to_string())
-        })?;
+    let exit = if std::env::consts::OS == "linux" && std::env::consts::ARCH == "x86_64" {
+        // Download tarball from NPM
+        std::process::Command::new("npm")
+            .args(&[
+                "pack",
+                &format!("@project-serum/anchor-cli@{}", &version),
+                "--pack-destination",
+                AVM_HOME.to_str().unwrap(),
+            ])
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .map_err(|e| {
+                anyhow::format_err!("TAR download for {} failed: {}", version, e.to_string())
+            })?;
+
+        // Extract binary
+        std::process::Command::new("tar")
+            .args(&[
+                "-xf",
+                AVM_HOME
+                    .join(&format!("project-serum-anchor-cli-{}.tgz", &version))
+                    .to_str()
+                    .unwrap(),
+                "-C",
+                AVM_HOME.to_str().unwrap(),
+            ])
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .map_err(|e| {
+                anyhow::format_err!("TAR extraction for {} failed: {}", version, e.to_string())
+            })?;
+
+        // Copy to version directory
+        std::process::Command::new("mv")
+            .args(&[
+                AVM_HOME.join("package").join("anchor").to_str().unwrap(),
+                AVM_HOME.join("bin").to_str().unwrap(),
+            ])
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .map_err(|e| anyhow::format_err!("Copy for {} failed: {}", version, e.to_string()))?;
+
+        // Remove unnecessary files
+        std::process::Command::new("rm")
+            .args(&[
+                "-rf",
+                AVM_HOME
+                    .join(&format!("project-serum-anchor-cli-{}.tgz", &version))
+                    .to_str()
+                    .unwrap(),
+                AVM_HOME.join("package").to_str().unwrap(),
+            ])
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .map_err(|e| anyhow::format_err!("Cleanup for {} failed: {}", version, e.to_string()))?
+    } else {
+        std::process::Command::new("cargo")
+            .args(&[
+                "install",
+                "--git",
+                "https://github.com/project-serum/anchor",
+                "--tag",
+                &format!("v{}", &version),
+                "anchor-cli",
+                "--locked",
+                "--root",
+                AVM_HOME.to_str().unwrap(),
+            ])
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .map_err(|e| {
+                anyhow::format_err!("Cargo install for {} failed: {}", version, e.to_string())
+            })?
+    };
     if !exit.status.success() {
         return Err(anyhow!(
             "Failed to install {}, is it a valid version?",
