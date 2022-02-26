@@ -373,13 +373,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
     pub fn build(mut self) -> ParseResult<ConstraintGroup> {
         // Init.
         if let Some(i) = &self.init {
-            // add exception for known lengths such as Mint or TokenAccount
-            if self.space.is_none() {
-                return Err(ParseError::new(
-                    i.span(),
-                    "space must be provided with init.",
-                ));
-            }
             if cfg!(not(feature = "init-if-needed")) && i.if_needed {
                 return Err(ParseError::new(
                     i.span(),
@@ -512,18 +505,29 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             }
         }
 
-        /*         // SPL Space.
-        if self.init.is_some()
-            && self.seeds.is_some()
-            && self.token_mint.is_some()
-            && (self.mint_authority.is_some() || self.token_authority.is_some())
-            && self.space.is_some()
-        {
-            return Err(ParseError::new(
-                self.space.as_ref().unwrap().span(),
-                "space is not required for initializing an spl account",
-            ));
-        } */
+        // Space.
+        if let Some(i) = &self.init {
+            let initializing_token_program_acc = self.token_mint.is_some()
+                || self.mint_authority.is_some()
+                || self.token_authority.is_some()
+                || self.associated_token_authority.is_some();
+
+            match (self.space.is_some(), initializing_token_program_acc) {
+                (true, true) => {
+                    return Err(ParseError::new(
+                        self.space.as_ref().unwrap().span(),
+                        "space is not required for initializing an spl account",
+                    ));
+                }
+                (false, false) => {
+                    return Err(ParseError::new(
+                        i.span(),
+                        "space must be provided with init.",
+                    ));
+                }
+                _ => (),
+            }
+        }
 
         let ConstraintGroupBuilder {
             f_ty: _,
@@ -601,7 +605,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 if_needed: i.if_needed,
                 seeds: seeds.clone(),
                 payer: into_inner!(payer.clone()).unwrap().target,
-                space: into_inner!(space.clone()).unwrap().space,
+                space: space.clone().map(|s| s.space.clone()),
                 kind: if let Some(tm) = &token_mint {
                     InitKind::Token {
                         mint: tm.clone().into_inner().mint,

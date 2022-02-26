@@ -334,7 +334,7 @@ pub struct CreateOfficer<'info> {
         payer = authority,
         token::mint = srm_mint,
         token::authority = officer,
-        space = TokenAccount::LEN
+        
     )]
     srm_vault: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -344,7 +344,7 @@ pub struct CreateOfficer<'info> {
         payer = authority,
         token::mint = usdc_mint,
         token::authority = officer,
-        space = TokenAccount::LEN
+        
     )]
     usdc_vault: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -354,7 +354,7 @@ pub struct CreateOfficer<'info> {
         payer = authority,
         token::mint = srm_mint,
         token::authority = officer,
-        space = TokenAccount::LEN
+        
     )]
     stake: Box<Account<'info, TokenAccount>>,
     #[account(
@@ -364,7 +364,7 @@ pub struct CreateOfficer<'info> {
         payer = authority,
         token::mint = srm_mint,
         token::authority = officer,
-        space = TokenAccount::LEN
+        
     )]
     treasury: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
@@ -428,7 +428,7 @@ pub struct CreateOfficerToken<'info> {
         token::mint = mint,
         token::authority = officer,
         payer = payer,
-        space = TokenAccount::LEN
+        
     )]
     token: Account<'info, TokenAccount>,
     mint: Account<'info, Mint>,

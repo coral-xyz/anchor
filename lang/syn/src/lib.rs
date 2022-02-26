@@ -722,7 +722,7 @@ pub struct ConstraintInitGroup {
     pub if_needed: bool,
     pub seeds: Option<ConstraintSeedsGroup>,
     pub payer: Expr,
-    pub space: Expr,
+    pub space: Option<Expr>,
     pub kind: InitKind,
 }
 

@@ -16,7 +16,7 @@ pub struct TestTokenSeedsInit<'info> {
         payer = authority,
         mint::decimals = 6,
         mint::authority = authority,
-        space = Mint::LEN
+        
     )]
     pub mint: Account<'info, Mint>,
     #[account(
@@ -26,7 +26,7 @@ pub struct TestTokenSeedsInit<'info> {
         payer = authority,
         token::mint = mint,
         token::authority = authority,
-        space = TokenAccount::LEN
+        
     )]
     pub my_pda: Account<'info, TokenAccount>,
     #[account(mut)]
@@ -44,7 +44,7 @@ pub struct TestInitAssociatedToken<'info> {
         payer = payer,
         associated_token::mint = mint,
         associated_token::authority = payer,
-        space = TokenAccount::LEN
+        
     )]
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
@@ -227,7 +227,7 @@ pub struct TestInitZeroCopy<'info> {
 
 #[derive(Accounts)]
 pub struct TestInitMint<'info> {
-    #[account(init, mint::decimals = 6, mint::authority = payer, mint::freeze_authority = payer, payer = payer, space = Mint::LEN)]
+    #[account(init, mint::decimals = 6, mint::authority = payer, mint::freeze_authority = payer, payer = payer, )]
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -238,7 +238,7 @@ pub struct TestInitMint<'info> {
 
 #[derive(Accounts)]
 pub struct TestInitToken<'info> {
-    #[account(init, token::mint = mint, token::authority = payer, payer = payer, space = TokenAccount::LEN)]
+    #[account(init, token::mint = mint, token::authority = payer, payer = payer, )]
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
     #[account(mut)]
@@ -326,7 +326,7 @@ pub struct TestInitIfNeededChecksSeeds<'info> {
 #[derive(Accounts)]
 #[instruction(decimals: u8)]
 pub struct TestInitMintIfNeeded<'info> {
-    #[account(init_if_needed, space = Mint::LEN, mint::decimals = decimals, mint::authority = mint_authority, mint::freeze_authority = freeze_authority, payer = payer)]
+    #[account(init_if_needed, mint::decimals = decimals, mint::authority = mint_authority, mint::freeze_authority = freeze_authority, payer = payer)]
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -341,7 +341,7 @@ pub struct TestInitMintIfNeeded<'info> {
 
 #[derive(Accounts)]
 pub struct TestInitTokenIfNeeded<'info> {
-    #[account(init_if_needed, token::mint = mint, token::authority = authority, payer = payer, space = TokenAccount::LEN)]
+    #[account(init_if_needed, token::mint = mint, token::authority = authority, payer = payer, )]
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
     #[account(mut)]
@@ -360,7 +360,7 @@ pub struct TestInitAssociatedTokenIfNeeded<'info> {
         payer = payer,
         associated_token::mint = mint,
         associated_token::authority = authority,
-        space = TokenAccount::LEN
+        
     )]
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
