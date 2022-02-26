@@ -5,6 +5,8 @@ use syn::parse_macro_input;
 
 mod id;
 
+// TODO: adjust INIT and SPACE constraints docs
+
 /// An attribute for a data structure representing a Solana account.
 ///
 /// `#[account]` generates trait implementations for the following traits:
