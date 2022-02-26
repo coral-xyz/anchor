@@ -262,7 +262,9 @@ jobs:
           name: anchor-binary
           path: ~/.cargo/bin/
       - run: cd "$(mktemp -d)"
-      - run: anchor init hello-anchor && cd hello-anchor
+      - run: anchor init hello-anchor
+      - run: cd hello-anchor
+      - run: pwd
       - run: anchor test
 
   test-programs:
