@@ -189,7 +189,11 @@ impl WithPath<Config> {
                     .join(m)
                     .canonicalize()
                     .unwrap_or_else(|_| {
-                        panic!("Error reading workspace.members. File {:?} does not exist at path {:?}.", m, self.path)
+                        panic!(
+                            "Error reading workspace.members. \
+                                File {:?} does not exist at path {:?}.",
+                            m, self.path
+                        )
                     })
             })
             .collect();
@@ -204,7 +208,11 @@ impl WithPath<Config> {
                     .join(m)
                     .canonicalize()
                     .unwrap_or_else(|_| {
-                        panic!("Error reading workspace.exclude. File {:?} does not exist at path {:?}.", m, self.path)
+                        panic!(
+                            "Error reading workspace.exclude. \
+                                File {:?} does not exist at path {:?}.",
+                            m, self.path
+                        )
                     })
             })
             .collect();
