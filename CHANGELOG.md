@@ -15,6 +15,10 @@ incremented for features.
 
 * cli: Fix rust template ([#1488](https://github.com/project-serum/anchor/pull/1488)).
 
+### Breaking
+
+* lang: remove space calculation using [`#[derive(Default)]`](https://github.com/project-serum/anchor/pull/1519).
+
 ## [0.22.0] - 2022-02-20
 
 ### Features
