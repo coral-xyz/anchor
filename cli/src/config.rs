@@ -183,18 +183,14 @@ impl WithPath<Config> {
             .members
             .iter()
             .map(|m| {
-                self.path()
-                    .parent()
-                    .unwrap()
-                    .join(m)
-                    .canonicalize()
-                    .unwrap_or_else(|_| {
-                        panic!(
-                            "Error reading workspace.members. \
-                                File {:?} does not exist at path {:?}.",
-                            m, self.path
-                        )
-                    })
+                self.path().parent().unwrap().join(m).canonicalize().expect(
+                    format!(
+                        "Error reading workspace.members. \
+                         File {:?} does not exist at path {:?}.",
+                        m, self.path
+                    )
+                    .as_str(),
+                )
             })
             .collect();
         let exclude = self
@@ -202,18 +198,14 @@ impl WithPath<Config> {
             .exclude
             .iter()
             .map(|m| {
-                self.path()
-                    .parent()
-                    .unwrap()
-                    .join(m)
-                    .canonicalize()
-                    .unwrap_or_else(|_| {
-                        panic!(
-                            "Error reading workspace.exclude. \
-                                File {:?} does not exist at path {:?}.",
-                            m, self.path
-                        )
-                    })
+                self.path().parent().unwrap().join(m).canonicalize().expect(
+                    format!(
+                        "Error reading workspace.exclude. \
+                         File {:?} does not exist at path {:?}.",
+                        m, self.path
+                    )
+                    .as_str(),
+                )
             })
             .collect();
         Ok((members, exclude))
