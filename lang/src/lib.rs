@@ -39,10 +39,10 @@ pub mod error;
 #[doc(hidden)]
 pub mod idl;
 mod system_program;
-
-pub use crate::system_program::System;
 mod vec;
+
 pub use crate::bpf_upgradeable_state::*;
+pub use crate::system_program::System;
 pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::{account, declare_id, zero_copy};
 pub use anchor_attribute_constant::constant;
