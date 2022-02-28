@@ -1632,4 +1632,10 @@ describe("misc", () => {
       });
     });
   });
+
+  it.only("includes instruction doc comments in IDL description for instructions", () => {
+    await program.idl.instructions.find(i => i.name === "test_instruction");
+  });
+
+  it("includes multiline instruction doc comments in IDL description for instructions", () => {});
 });

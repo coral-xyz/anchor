@@ -36,6 +36,7 @@ export type IdlEventField = {
 
 export type IdlInstruction = {
   name: string;
+  description?: string;
   accounts: IdlAccountItem[];
   args: IdlField[];
 };

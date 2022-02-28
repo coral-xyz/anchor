@@ -458,3 +458,6 @@ pub struct TestUnsafeFieldSafetyErrors<'info> {
     pub signer: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
+
+#[derive(Accounts)]
+pub struct TestIdlDescription<'info> {}

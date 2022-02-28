@@ -280,4 +280,15 @@ pub mod misc {
     ) -> Result<()> {
         Ok(())
     }
+
+    /// Test that the IDL includes description for instructions in doc comments.
+    pub fn test_idl_description(_ctx: Context<TestIdlDescription>) -> Result<()> {
+        Ok(())
+    }
+
+    /// Test that the IDL includes description for instructions in doc comments when they wrap
+    /// acrosss multiple lines.
+    pub fn test_idl_description_multiline(_ctx: Context<TestIdlDescription>) -> Result<()> {
+        Ok(())
+    }
 }
