@@ -15,6 +15,10 @@ incremented for features.
 
 * cli: Fix rust template ([#1488](https://github.com/project-serum/anchor/pull/1488)).
 
+### Features
+
+* cli: [[test.validator.clone]] also clones program data account ([#1481](https://github.com/project-serum/anchor/issues/1481)).
+
 ## [0.22.0] - 2022-02-20
 
 ### Features
