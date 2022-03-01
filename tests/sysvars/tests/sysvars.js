@@ -1,11 +1,12 @@
 const anchor = require("@project-serum/anchor");
+const assert = require("assert");
 
 describe("sysvars", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.Provider.local());
+  const program = anchor.workspace.Sysvars;
 
   it("Is initialized!", async () => {
-    const program = anchor.workspace.Sysvars;
     const tx = await program.rpc.sysvars({
       accounts: {
         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
@@ -15,4 +16,20 @@ describe("sysvars", () => {
     });
     console.log("Your transaction signature", tx);
   });
+
+  it('Fails when the wrote pubkeys are provided', async () => {
+    try {
+      await program.rpc.sysvars({
+        accounts: {
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          stakeHistory: anchor.web3.SYSVAR_REWARDS_PUBKEY,
+        },
+      })
+      assert.ok(false)
+    } catch (err) {
+      const errMsg = "Error: failed to send transaction: Transaction simulation failed: Error processing Instruction 0: invalid program argument";
+      assert.strictEqual(err.toString(), errMsg);
+    }
+  })
 });
