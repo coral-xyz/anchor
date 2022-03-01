@@ -28,8 +28,10 @@ describe("sysvars", () => {
       })
       assert.ok(false)
     } catch (err) {
-      const errMsg = "Error: failed to send transaction: Transaction simulation failed: Error processing Instruction 0: invalid program argument";
+      const errMsg = "The given public key does not match the required sysvar";
       assert.strictEqual(err.toString(), errMsg);
+      assert.strictEqual(err.msg, errMsg);
+      assert.strictEqual(err.code, 3015);
     }
   })
 });
