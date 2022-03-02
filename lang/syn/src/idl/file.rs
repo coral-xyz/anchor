@@ -18,6 +18,7 @@ pub fn parse(
     filename: impl AsRef<Path>,
     version: String,
     seeds_feature: bool,
+    idl_descriptions_feature: bool,
     safety_checks: bool,
 ) -> Result<Option<Idl>> {
     let ctx = CrateContext::parse(filename)?;
@@ -171,9 +172,14 @@ pub fn parse(
             // todo: don't unwrap
             let accounts_strct = accs.get(&ix.anchor_ident.to_string()).unwrap();
             let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature);
+            let description = if idl_descriptions_feature {
+                ix.description.clone()
+            } else {
+                None
+            };
             IdlInstruction {
                 name: ix.ident.to_string().to_mixed_case(),
-                description: ix.description.clone(),
+                description,
                 accounts,
                 args,
             }

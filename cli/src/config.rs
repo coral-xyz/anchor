@@ -166,6 +166,7 @@ impl WithPath<Config> {
                 path.join("src/lib.rs"),
                 version,
                 self.features.seeds,
+                self.features.idl_descriptions,
                 false,
             )?;
             r.push(Program {
@@ -261,6 +262,8 @@ pub struct Config {
 pub struct FeaturesConfig {
     #[serde(default)]
     pub seeds: bool,
+    #[serde(default)]
+    pub idl_descriptions: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
