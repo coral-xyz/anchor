@@ -250,6 +250,7 @@ pub struct ProgramErrorWithOrigin {
     pub account_name: Option<String>,
 }
 
+// Two ProgramErrors are equal when they have the same error code
 impl PartialEq for ProgramErrorWithOrigin {
     fn eq(&self, other: &Self) -> bool {
         self.program_error == other.program_error
@@ -340,6 +341,7 @@ impl AnchorError {
     }
 }
 
+// Two AnchorError are equal when they have the same error code
 impl PartialEq for AnchorError {
     fn eq(&self, other: &Self) -> bool {
         self.error_code_number == other.error_code_number
