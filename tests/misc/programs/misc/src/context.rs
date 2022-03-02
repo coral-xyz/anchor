@@ -460,4 +460,7 @@ pub struct TestUnsafeFieldSafetyErrors<'info> {
 }
 
 #[derive(Accounts)]
-pub struct TestIdlDescription<'info> {}
+pub struct TestIdlDescription<'info> {
+    /// CHECK:
+    pub data: AccountInfo<'info>,
+}

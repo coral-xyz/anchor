@@ -1633,9 +1633,23 @@ describe("misc", () => {
     });
   });
 
-  it.only("includes instruction doc comments in IDL description for instructions", () => {
-    await program.idl.instructions.find(i => i.name === "test_instruction");
+  it("includes instruction doc comments in IDL description for instructions", () => {
+    const instruction = program.idl.instructions.find(
+      (i) => i.name === "testIdlDescription"
+    );
+    assert(
+      instruction.description ==
+        "Test that the IDL includes description for instructions in doc comments."
+    );
   });
 
-  it("includes multiline instruction doc comments in IDL description for instructions", () => {});
+  it("includes multiline instruction doc comments in IDL description for instructions", () => {
+    const instruction = program.idl.instructions.find(
+      (i) => i.name === "testIdlDescriptionMultiline"
+    );
+    assert(
+      instruction.description ==
+        "Test that the IDL includes description for instructions in doc comments when they wrap acrosss multiple lines."
+    );
+  });
 });
