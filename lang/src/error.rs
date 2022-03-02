@@ -172,7 +172,7 @@ pub enum ErrorCode {
     Deprecated = 5000,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Error {
     AnchorError(AnchorError),
     ProgramError(ProgramErrorWithOrigin),
@@ -249,6 +249,13 @@ pub struct ProgramErrorWithOrigin {
     pub source: Option<Source>,
     pub account_name: Option<String>,
 }
+
+impl PartialEq for ProgramErrorWithOrigin {
+    fn eq(&self, other: &Self) -> bool {
+        self.program_error == other.program_error
+    }
+}
+impl Eq for ProgramErrorWithOrigin {}
 
 impl Display for ProgramErrorWithOrigin {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -332,6 +339,14 @@ impl AnchorError {
         }
     }
 }
+
+impl PartialEq for AnchorError {
+    fn eq(&self, other: &Self) -> bool {
+        self.error_code_number == other.error_code_number
+    }
+}
+
+impl Eq for AnchorError {}
 
 impl std::convert::From<Error> for anchor_lang::solana_program::program_error::ProgramError {
     fn from(e: Error) -> anchor_lang::solana_program::program_error::ProgramError {
