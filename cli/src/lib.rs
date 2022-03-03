@@ -1671,7 +1671,12 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
     let client = RpcClient::new(url);
 
     // Serialize and compress the idl.
-    let idl_data = serialize_idl(&idl)?;
+    let idl_data = {
+        let json_bytes = serde_json::to_vec(&idl)?;
+        let mut e = ZlibEncoder::new(Vec::new(), Compression::default());
+        e.write_all(&json_bytes)?;
+        e.finish()?
+    };
 
     const MAX_WRITE_SIZE: usize = 1000;
     let mut offset = 0;
