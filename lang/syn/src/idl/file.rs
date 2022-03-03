@@ -513,9 +513,9 @@ fn idl_accounts(
         .iter()
         .map(|acc: &AccountField| match acc {
             AccountField::CompositeField(comp_f) => {
-                let accs_strct = global_accs
-                    .get(&comp_f.symbol)
-                    .expect(format!("Could not resolve Accounts symbol {}", comp_f.symbol).as_str());
+                let accs_strct = global_accs.get(&comp_f.symbol).unwrap_or_else(|_| {
+                    panic!("Could not resolve Accounts symbol {}", comp_f.symbol)
+                });
                 let accounts = idl_accounts(ctx, accs_strct, global_accs, seeds_feature);
                 IdlAccountItem::IdlAccounts(IdlAccounts {
                     name: comp_f.ident.to_string().to_mixed_case(),
