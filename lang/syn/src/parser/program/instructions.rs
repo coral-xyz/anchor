@@ -98,8 +98,8 @@ pub fn parse_description(method: &syn::ItemFn) -> Option<String> {
     let description: Vec<String> = method
         .attrs
         .iter()
-        .filter_map(|attr| match attr.parse_meta().unwrap() {
-            syn::Meta::NameValue(meta) => {
+        .filter_map(|attr| match attr.parse_meta() {
+            Ok(syn::Meta::NameValue(meta)) => {
                 if meta.path.is_ident("doc") {
                     match meta.lit {
                         syn::Lit::Str(lit) => Some(lit.value().trim().to_string()),
