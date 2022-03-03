@@ -14,7 +14,7 @@ incremented for features.
 ### Features
 
 * lang: Add new `AccountSysvarMismatch` error code and test cases for sysvars ([#1535](https://github.com/project-serum/anchor/pull/1535)).
-* lang: Add description field to Idl with parsed doc comments for instructions ([]())
+* lang: Add description field to Idl parsed from doc comments for instructions ([#1546](https://github.com/project-serum/anchor/pull/1546)).
 
 ### Fixes
 
