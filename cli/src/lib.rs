@@ -1429,7 +1429,13 @@ fn extract_idl(cfg: &WithPath<Config>, file: &str, skip_lint: bool) -> Result<Op
     let manifest_from_path = std::env::current_dir()?.join(PathBuf::from(&*file).parent().unwrap());
     let cargo = Manifest::discover_from_path(manifest_from_path)?
         .ok_or_else(|| anyhow!("Cargo.toml not found"))?;
-    anchor_syn::idl::file::parse(&*file, cargo.version(), cfg.features.seeds, !skip_lint)
+    anchor_syn::idl::file::parse(
+        &*file,
+        cargo.version(),
+        cfg.features.seeds,
+        cfg.features.idl_descriptions,
+        !skip_lint,
+    )
 }
 
 fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
@@ -1665,12 +1671,7 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
     let client = RpcClient::new(url);
 
     // Serialize and compress the idl.
-    let idl_data = {
-        let json_bytes = serde_json::to_vec(&idl)?;
-        let mut e = ZlibEncoder::new(Vec::new(), Compression::default());
-        e.write_all(&json_bytes)?;
-        e.finish()?
-    };
+    let idl_data = serialize_idl(&idl)?;
 
     const MAX_WRITE_SIZE: usize = 1000;
     let mut offset = 0;
