@@ -101,8 +101,7 @@ pub fn parse_description(method: &syn::ItemFn) -> Option<String> {
         .filter_map(|attr| match attr.parse_meta().unwrap() {
             syn::Meta::NameValue(meta) => {
                 if meta.path.is_ident("doc") {
-                    let lit = meta.lit.clone();
-                    match lit {
+                    match meta.lit {
                         syn::Lit::Str(lit) => Some(lit.value().trim().to_string()),
                         _ => None,
                     }
