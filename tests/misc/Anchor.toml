@@ -15,3 +15,6 @@ exclude = ["programs/shared"]
 
 [scripts]
 test = "yarn run mocha -t 1000000 tests/"
+
+[features]
+idl_descriptions = true
