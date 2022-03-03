@@ -80,11 +80,9 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   }
 
   public accounts(
-    accounts: Accounts<
-      Exclude<
-        I["accounts"][number],
-        keyof typeof AccountsResolver.CONST_ACCOUNTS
-      >
+    accounts: Omit<
+      Accounts<I["accounts"][number]>,
+      keyof typeof AccountsResolver.CONST_ACCOUNTS
     >
   ): MethodsBuilder<IDL, I> {
     Object.assign(this._accounts, accounts);
