@@ -15,6 +15,7 @@ incremented for features.
 
 * lang: Add new `AccountSysvarMismatch` error code and test cases for sysvars ([#1535](https://github.com/project-serum/anchor/pull/1535)).
 * lang: Add description field to Idl parsed from doc comments for instructions ([#1546](https://github.com/project-serum/anchor/pull/1546)).
+* spl: Add support for revoke instruction ([#1493](https://github.com/project-serum/anchor/pull/1493)).
 
 ### Fixes
 
@@ -23,6 +24,7 @@ incremented for features.
 ### Breaking
 
 * ts: Mark `transaction`, `instruction`, `simulate` and `rpc` program namespaces as deprecated in favor of `methods` ([#1539](https://github.com/project-serum/anchor/pull/1539)).
+* ts: No longer allow manual setting of globally resolvable program public keys in `methods#accounts()`. ([#1548][https://github.com/project-serum/anchor/pull/1548])
 
 ## [0.22.1] - 2022-02-28
 
