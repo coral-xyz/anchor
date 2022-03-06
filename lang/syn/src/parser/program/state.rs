@@ -1,5 +1,6 @@
 use crate::parser;
 use crate::parser::program::ctx_accounts_ident;
+use crate::parser::doc;
 use crate::{IxArg, State, StateInterface, StateIx};
 use syn::parse::{Error as ParseError, Result as ParseResult};
 use syn::spanned::Spanned;
@@ -175,6 +176,7 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<Option<State>> {
                             syn::FnArg::Typed(arg) => Some(arg),
                         })
                         .map(|raw_arg| {
+                            let doc = doc::parse_any(&raw_arg.attrs);
                             let ident = match &*raw_arg.pat {
                                 syn::Pat::Ident(ident) => &ident.ident,
                                 _ => {
@@ -186,6 +188,7 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<Option<State>> {
                             };
                             Ok(IxArg {
                                 name: ident.clone(),
+                                doc: doc.clone(),
                                 raw_arg: raw_arg.clone(),
                             })
                         })
@@ -256,12 +259,14 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<Option<State>> {
                                             syn::FnArg::Typed(arg) => Some(arg),
                                         })
                                         .map(|raw_arg| {
+                                            let doc = doc::parse_any(&raw_arg.attrs);
                                             let ident = match &*raw_arg.pat {
                                                 syn::Pat::Ident(ident) => &ident.ident,
                                                 _ => panic!("invalid syntax"),
                                             };
                                             IxArg {
                                                 name: ident.clone(),
+                                                doc: doc.clone(),
                                                 raw_arg: raw_arg.clone(),
                                             }
                                         })

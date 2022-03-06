@@ -73,12 +73,14 @@ pub fn parse_args(method: &syn::ItemFn) -> ParseResult<(IxArg, Vec<IxArg>)> {
         .iter()
         .map(|arg: &syn::FnArg| match arg {
             syn::FnArg::Typed(arg) => {
+                let doc = doc::parse_any(&arg.attrs);
                 let ident = match &*arg.pat {
                     syn::Pat::Ident(ident) => &ident.ident,
                     _ => return Err(ParseError::new(arg.pat.span(), "expected argument name")),
                 };
                 Ok(IxArg {
                     name: ident.clone(),
+                    doc: doc.clone(),
                     raw_arg: arg.clone(),
                 })
             }

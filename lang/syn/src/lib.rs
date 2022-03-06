@@ -94,6 +94,7 @@ pub struct Ix {
 #[derive(Debug)]
 pub struct IxArg {
     pub name: Ident,
+    pub doc: Option<String>,
     pub raw_arg: PatType,
 }
 
