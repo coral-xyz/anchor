@@ -46,18 +46,23 @@ pub fn version_binary_path(version: &Version) -> PathBuf {
 }
 
 /// Update the current version to a new version
-pub fn use_version(version: &Version) -> Result<()> {
+pub fn use_version(version: &Version, force_yes: bool) -> Result<()> {
     let installed_versions = read_installed_versions();
     // Make sure the requested version is installed
     if !installed_versions.contains(version) {
-        let input: String = Input::new()
-            .with_prompt(format!(
-                "anchor-cli {} is not installed, would you like to install it? (y/n)",
-                version
-            ))
-            .default("n".into())
-            .interact_text()?;
-        if matches!(input.as_str(), "y" | "yy" | "Y" | "yes" | "Yes") {
+        let mut matches_yes = true;
+        if !force_yes {
+            let input: String = Input::new()
+                .with_prompt(format!(
+                    "anchor-cli {} is not installed, would you like to install it? (y/n)",
+                    version
+                ))
+                .default("n".into())
+                .interact_text()?;
+            matches_yes = matches!(input.as_str(), "y" | "yy" | "Y" | "yes" | "Yes")
+        }
+
+        if matches_yes {
             install_version(version)?;
         } else {
             println!(

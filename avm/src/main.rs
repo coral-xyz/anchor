@@ -15,8 +15,13 @@ pub struct Cli {
 pub enum Commands {
     #[clap(about = "Use a specific version of Anchor")]
     Use {
+        // Version to install
         #[clap(parse(try_from_str = parse_version))]
         version: Version,
+
+        // Don't prompt y/n (useful for non-interactive scripts)
+        #[clap(short, long)]
+        yes: bool,
     },
     #[clap(about = "Install a version of Anchor")]
     Install {
@@ -42,7 +47,7 @@ fn parse_version(version: &str) -> Result<Version, Error> {
 }
 pub fn entry(opts: Cli) -> Result<()> {
     match opts.command {
-        Commands::Use { version } => avm::use_version(&version),
+        Commands::Use { version, yes } => avm::use_version(&version, yes),
         Commands::Install { version } => avm::install_version(&version),
         Commands::Uninstall { version } => avm::uninstall_version(&version),
         Commands::List {} => avm::list_versions(),
