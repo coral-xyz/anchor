@@ -1,5 +1,6 @@
 use crate::parser::program::ctx_accounts_ident;
 use crate::{FallbackFn, Ix, IxArg};
+use crate::parser::doc;
 use syn::parse::{Error as ParseError, Result as ParseResult};
 use syn::spanned::Spanned;
 
@@ -23,10 +24,12 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<(Vec<Ix>, Option<Fallbac
         })
         .map(|method: &syn::ItemFn| {
             let (ctx, args) = parse_args(method)?;
+            let doc = doc::parse_inner(&method.attrs);
             let anchor_ident = ctx_accounts_ident(&ctx.raw_arg)?;
             Ok(Ix {
                 raw_method: method.clone(),
                 ident: method.sig.ident.clone(),
+                doc,
                 args,
                 anchor_ident,
             })

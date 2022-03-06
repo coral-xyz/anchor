@@ -31,6 +31,7 @@ pub struct Program {
     pub state: Option<State>,
     pub ixs: Vec<Ix>,
     pub name: Ident,
+    pub doc: Option<String>,
     pub program_mod: ItemMod,
     pub fallback_fn: Option<FallbackFn>,
 }
@@ -84,6 +85,7 @@ pub struct StateInterface {
 pub struct Ix {
     pub raw_method: ItemFn,
     pub ident: Ident,
+    pub doc: Option<String>,
     pub args: Vec<IxArg>,
     // The ident for the struct deriving Accounts.
     pub anchor_ident: Ident,

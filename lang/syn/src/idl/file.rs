@@ -1,6 +1,6 @@
 use crate::idl::*;
 use crate::parser::context::CrateContext;
-use crate::parser::{self, accounts, error, program};
+use crate::parser::{self, accounts, error, program, doc};
 use crate::Ty;
 use crate::{AccountField, AccountsStruct, StateIx};
 use anyhow::Result;
@@ -51,9 +51,11 @@ pub fn parse(
                                     .map(|arg| {
                                         let mut tts = proc_macro2::TokenStream::new();
                                         arg.raw_arg.ty.to_tokens(&mut tts);
+                                        let doc = doc::parse_any(&arg.raw_arg.attrs);
                                         let ty = tts.to_string().parse().unwrap();
                                         IdlField {
                                             name: arg.name.to_string().to_mixed_case(),
+                                            doc,
                                             ty,
                                         }
                                     })
@@ -64,6 +66,7 @@ pub fn parse(
                                     idl_accounts(&ctx, accounts_strct, &accs, seeds_feature);
                                 IdlInstruction {
                                     name,
+                                    doc: None,
                                     accounts,
                                     args,
                                 }
@@ -90,9 +93,11 @@ pub fn parse(
                             syn::FnArg::Typed(arg_typed) => {
                                 let mut tts = proc_macro2::TokenStream::new();
                                 arg_typed.ty.to_tokens(&mut tts);
+                                let doc = doc::parse_any(&arg_typed.attrs);
                                 let ty = tts.to_string().parse().unwrap();
                                 IdlField {
                                     name: parser::tts_to_string(&arg_typed.pat).to_mixed_case(),
+                                    doc,
                                     ty,
                                 }
                             }
@@ -103,6 +108,7 @@ pub fn parse(
                     let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature);
                     IdlInstruction {
                         name,
+                        doc: None,
                         accounts,
                         args,
                     }
@@ -118,9 +124,11 @@ pub fn parse(
                             .map(|f: &syn::Field| {
                                 let mut tts = proc_macro2::TokenStream::new();
                                 f.ty.to_tokens(&mut tts);
+                                let doc = doc::parse_any(&f.attrs);
                                 let ty = tts.to_string().parse().unwrap();
                                 IdlField {
                                     name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
+                                    doc,
                                     ty,
                                 }
                             })
@@ -129,6 +137,7 @@ pub fn parse(
                     };
                     IdlTypeDefinition {
                         name: state.name,
+                        doc: None,
                         ty: IdlTypeDefinitionTy::Struct { fields },
                     }
                 };
@@ -159,9 +168,11 @@ pub fn parse(
                 .map(|arg| {
                     let mut tts = proc_macro2::TokenStream::new();
                     arg.raw_arg.ty.to_tokens(&mut tts);
+                    let doc = doc::parse_any(&arg.raw_arg.attrs);
                     let ty = tts.to_string().parse().unwrap();
                     IdlField {
                         name: arg.name.to_string().to_mixed_case(),
+                        doc,
                         ty,
                     }
                 })
@@ -171,6 +182,7 @@ pub fn parse(
             let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature);
             IdlInstruction {
                 name: ix.ident.to_string().to_mixed_case(),
+                doc: ix.doc.clone(),
                 accounts,
                 args,
             }
@@ -244,6 +256,7 @@ pub fn parse(
     Ok(Some(Idl {
         version,
         name: p.name.to_string(),
+        doc: p.doc.clone(),
         state,
         instructions,
         types,
@@ -404,6 +417,7 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
             }
 
             let name = item_strct.ident.to_string();
+            let doc = doc::parse_inner(&item_strct.attrs);
             let fields = match &item_strct.fields {
                 syn::Fields::Named(fields) => fields
                     .named
@@ -413,11 +427,13 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
                         f.ty.to_tokens(&mut tts);
                         // Handle array sizes that are constants
                         let mut tts_string = tts.to_string();
+                        let doc = doc::parse_any(&f.attrs);
                         if tts_string.starts_with('[') {
                             tts_string = resolve_variable_array_length(ctx, tts_string);
                         }
                         Ok(IdlField {
                             name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
+                            doc,
                             ty: tts_string.parse()?,
                         })
                     })
@@ -428,11 +444,13 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
 
             Some(fields.map(|fields| IdlTypeDefinition {
                 name,
+                doc,
                 ty: IdlTypeDefinitionTy::Struct { fields },
             }))
         })
         .chain(ctx.enums().map(|enm| {
             let name = enm.ident.to_string();
+            let doc = doc::parse_inner(&enm.attrs);
             let variants = enm
                 .variants
                 .iter()
@@ -451,8 +469,9 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
                                 .iter()
                                 .map(|f: &syn::Field| {
                                     let name = f.ident.as_ref().unwrap().to_string();
+                                    let doc = doc::parse_any(&f.attrs);
                                     let ty = to_idl_type(f);
-                                    IdlField { name, ty }
+                                    IdlField { name, doc, ty }
                                 })
                                 .collect();
                             Some(EnumFields::Named(fields))
@@ -463,6 +482,7 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
                 .collect::<Vec<IdlEnumVariant>>();
             Ok(IdlTypeDefinition {
                 name,
+                doc: doc,
                 ty: IdlTypeDefinitionTy::Enum { variants },
             })
         }))
