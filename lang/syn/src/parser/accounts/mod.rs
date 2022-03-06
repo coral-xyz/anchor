@@ -1,5 +1,5 @@
-use crate::*;
 use crate::parser::doc;
+use crate::*;
 use syn::parse::{Error as ParseError, Result as ParseResult};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;

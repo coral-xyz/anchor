@@ -1,5 +1,5 @@
-use crate::Program;
 use crate::parser::doc;
+use crate::Program;
 use syn::parse::{Error as ParseError, Result as ParseResult};
 use syn::spanned::Spanned;
 

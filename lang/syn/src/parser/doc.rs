@@ -1,13 +1,13 @@
 use syn::AttrStyle::Inner;
-use syn::{Meta::NameValue, Lit::Str};
+use syn::{Lit::Str, Meta::NameValue};
 
 // Returns first match or None
 pub fn parse_inner(attrs: &Vec<syn::Attribute>) -> Option<String> {
     for attr in attrs {
         if let syn::Attribute {
-            style: Inner(..),
-            ..
-        } = attr {
+            style: Inner(..), ..
+        } = attr
+        {
             let meta_result = attr.parse_meta();
             if let Ok(NameValue(meta)) = meta_result {
                 if meta.path.is_ident("doc") {

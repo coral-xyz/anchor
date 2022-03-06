@@ -1,6 +1,6 @@
 use crate::parser;
-use crate::parser::program::ctx_accounts_ident;
 use crate::parser::doc;
+use crate::parser::program::ctx_accounts_ident;
 use crate::{IxArg, State, StateInterface, StateIx};
 use syn::parse::{Error as ParseError, Result as ParseResult};
 use syn::spanned::Spanned;

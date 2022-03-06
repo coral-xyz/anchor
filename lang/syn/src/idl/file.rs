@@ -1,6 +1,6 @@
 use crate::idl::*;
 use crate::parser::context::CrateContext;
-use crate::parser::{self, accounts, error, program, doc};
+use crate::parser::{self, accounts, doc, error, program};
 use crate::Ty;
 use crate::{AccountField, AccountsStruct, StateIx};
 use anyhow::Result;

@@ -8,7 +8,7 @@ pub mod pda;
 pub struct Idl {
     pub version: String,
     pub name: String,
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub doc: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub constants: Vec<IdlConst>,
@@ -45,7 +45,7 @@ pub struct IdlState {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IdlInstruction {
     pub name: String,
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub doc: Option<String>,
     pub accounts: Vec<IdlAccountItem>,
     pub args: Vec<IdlField>,
@@ -71,7 +71,7 @@ pub struct IdlAccount {
     pub name: String,
     pub is_mut: bool,
     pub is_signer: bool,
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub doc: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub pda: Option<IdlPda>,
@@ -124,7 +124,7 @@ pub struct IdlSeedConst {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IdlField {
     pub name: String,
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub doc: Option<String>,
     #[serde(rename = "type")]
     pub ty: IdlType,
@@ -147,7 +147,7 @@ pub struct IdlEventField {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IdlTypeDefinition {
     pub name: String,
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub doc: Option<String>,
     #[serde(rename = "type")]
     pub ty: IdlTypeDefinitionTy,
