@@ -307,8 +307,7 @@ pub struct InitializePool<'info> {
         mint::authority = ido_account,
         seeds = [ido_name.as_bytes(), b"redeemable_mint".as_ref()],
         bump,
-        payer = ido_authority,
-        
+        payer = ido_authority
     )]
     pub redeemable_mint: Box<Account<'info, Mint>>,
     #[account(constraint = watermelon_mint.key() == ido_authority_watermelon.mint)]
@@ -318,8 +317,7 @@ pub struct InitializePool<'info> {
         token::authority = ido_account,
         seeds = [ido_name.as_bytes(), b"pool_watermelon"],
         bump,
-        payer = ido_authority,
-        
+        payer = ido_authority
     )]
     pub pool_watermelon: Box<Account<'info, TokenAccount>>,
     #[account(init,
@@ -327,8 +325,7 @@ pub struct InitializePool<'info> {
         token::authority = ido_account,
         seeds = [ido_name.as_bytes(), b"pool_usdc"],
         bump,
-        payer = ido_authority,
-        
+        payer = ido_authority
     )]
     pub pool_usdc: Box<Account<'info, TokenAccount>>,
     // Programs and Sysvars
@@ -349,8 +346,7 @@ pub struct InitUserRedeemable<'info> {
             ido_account.ido_name.as_ref().trim_ascii_whitespace(),
             b"user_redeemable"],
         bump,
-        payer = user_authority,
-        
+        payer = user_authority
     )]
     pub user_redeemable: Box<Account<'info, TokenAccount>>,
     // IDO Accounts
@@ -411,8 +407,7 @@ pub struct InitEscrowUsdc<'info> {
             ido_account.ido_name.as_ref().trim_ascii_whitespace(),
             b"escrow_usdc"],
         bump,
-        payer = user_authority,
-        
+        payer = user_authority
     )]
     pub escrow_usdc: Box<Account<'info, TokenAccount>>,
     #[account(seeds = [ido_account.ido_name.as_ref().trim_ascii_whitespace()],

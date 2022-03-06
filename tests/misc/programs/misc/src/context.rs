@@ -21,7 +21,7 @@ pub struct TestTokenSeedsInit<'info> {
     pub mint: Account<'info, Mint>,
     #[account(
         init,
-        seeds = [b"my-token-seed".as_ref(),],
+        seeds = [b"my-token-seed".as_ref()],
         bump,
         payer = authority,
         token::mint = mint,
@@ -219,7 +219,7 @@ pub struct TestInit<'info> {
 #[derive(Accounts)]
 pub struct TestInitZeroCopy<'info> {
     #[account(init, payer = payer, space = DataZeroCopy::LEN + 8)]
-    pub data: AccountLoader<'info, DataZeroCopy>,
+    pub data: Loader<'info, DataZeroCopy>,
     #[account(mut)]
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -359,8 +359,7 @@ pub struct TestInitAssociatedTokenIfNeeded<'info> {
         init_if_needed,
         payer = payer,
         associated_token::mint = mint,
-        associated_token::authority = authority,
-        
+        associated_token::authority = authority
     )]
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,

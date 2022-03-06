@@ -522,7 +522,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 (false, false) => {
                     return Err(ParseError::new(
                         i.span(),
-                        "space must be provided with init.",
+                        "space must be provided with init",
                     ));
                 }
                 _ => (),
