@@ -1,4 +1,5 @@
 use crate::*;
+use crate::parser::doc;
 use syn::parse::{Error as ParseError, Result as ParseResult};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
@@ -143,6 +144,7 @@ pub fn parse_account_field(f: &syn::Field, has_instruction_api: bool) -> ParseRe
             "".to_string()
         })
         .collect::<String>();
+    let doc = doc::parse_any(&f.attrs);
     let account_field = match is_field_primitive(f)? {
         true => {
             let ty = parse_ty(f)?;
@@ -153,6 +155,7 @@ pub fn parse_account_field(f: &syn::Field, has_instruction_api: bool) -> ParseRe
                 ty,
                 constraints: account_constraints,
                 instruction_constraints,
+                doc,
                 docs,
             })
         }
@@ -165,6 +168,7 @@ pub fn parse_account_field(f: &syn::Field, has_instruction_api: bool) -> ParseRe
                 instruction_constraints,
                 symbol: ident_string(f)?,
                 raw_field: f.clone(),
+                doc,
                 docs,
             })
         }

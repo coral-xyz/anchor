@@ -549,6 +549,7 @@ fn idl_accounts(
                     Ty::Signer => true,
                     _ => acc.constraints.is_signer(),
                 },
+                doc: acc.doc.clone(),
                 pda: pda::parse(ctx, accounts, acc, seeds_feature),
             }),
         })

@@ -210,6 +210,8 @@ pub struct Field {
     pub constraints: ConstraintGroup,
     pub instruction_constraints: ConstraintGroup,
     pub ty: Ty,
+    /// IDL Doc comment
+    pub doc: Option<String>,
     /// Documentation string.
     pub docs: String,
 }
@@ -446,6 +448,8 @@ pub struct CompositeField {
     pub instruction_constraints: ConstraintGroup,
     pub symbol: String,
     pub raw_field: syn::Field,
+    /// IDL Doc comment
+    pub doc: Option<String>,
     /// Documentation string.
     pub docs: String,
 }

@@ -71,6 +71,8 @@ pub struct IdlAccount {
     pub name: String,
     pub is_mut: bool,
     pub is_signer: bool,
+    #[serde(skip_serializing_if="Option::is_none")]
+    pub doc: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub pda: Option<IdlPda>,
 }
