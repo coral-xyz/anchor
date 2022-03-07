@@ -57,6 +57,10 @@ mod errors {
     pub fn account_not_initialized_error(_ctx: Context<AccountNotInitializedError>) -> Result<()> {
         Ok(())
     }
+
+    pub fn account_owned_by_wrong_program_error(_ctx: Context<AccountOwnedByWrongProgramError>) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -97,6 +101,11 @@ pub struct AnyAccount {}
 #[derive(Accounts)]
 pub struct AccountNotInitializedError<'info> {
     not_initialized_account: Account<'info, AnyAccount>,
+}
+
+#[derive(Accounts)]
+pub struct AccountOwnedByWrongProgramError<'info> {
+    pub wrong_account: Account<'info, AnyAccount>
 }
 
 #[error_code]

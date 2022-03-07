@@ -386,12 +386,6 @@ macro_rules! require {
 /// ```
 #[macro_export]
 macro_rules! err {
-    ($error:expr, pub $value1:expr, pub $value2: expr) => {
-        Err(anchor_lang::anchor_attribute_error::error!($error, pub $value1, pub $value2))
-    };
-    ($error:expr, $value1:expr, $value2: expr) => {
-        Err(anchor_lang::anchor_attribute_error::error!($error, $value1, $value2))
-    };
     ($error:tt $(,)?) => {
         Err(anchor_lang::anchor_attribute_error::error!(
             crate::ErrorCode::$error

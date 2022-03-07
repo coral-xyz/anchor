@@ -248,6 +248,7 @@ pub struct ProgramErrorWithOrigin {
     pub program_error: ProgramError,
     pub source: Option<Source>,
     pub account_name: Option<String>,
+    pub expected_actual: Option<ExpectedActual>
 }
 
 impl Display for ProgramErrorWithOrigin {

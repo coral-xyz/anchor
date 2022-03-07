@@ -1,6 +1,7 @@
 use crate::{Error, ErrorArgs, ErrorCode};
-use syn::parse::{Parse, Result as ParseResult};
-use syn::{Expr, Token};
+use syn::ext::IdentExt;
+use syn::parse::{Parse, Result as ParseResult, Error as ParseError};
+use syn::{Expr, Token, Ident};
 
 // Removes any internal #[msg] attributes, as they are inert.
 pub fn parse(error_enum: &mut syn::ItemEnum, args: Option<ErrorArgs>) -> Error {
@@ -120,21 +121,35 @@ impl Parse for ErrorWithAccountNameInput {
     }
 }
 
-pub struct ExpectedActualInput {
-    pub pubkeys: bool,
-    pub expected: Expr,
-    pub actual: Expr,
+pub enum ExpectedActualInput {
+    Pubkeys(Expr, Expr),
+    Values(Expr, Expr)
 }
 
 impl Parse for ExpectedActualInput {
     fn parse(stream: syn::parse::ParseStream) -> ParseResult<Self> {
-        let expected = stream.call(Expr::parse)?;
-        let _ = stream.parse::<Token!(,)>();
-        let actual = stream.call(Expr::parse)?;
-        Ok(Self {
-            pubkeys: false,
-            expected,
-            actual,
-        })
+        let pubkey_maybe = stream.call(Ident::parse_any);
+        match pubkey_maybe {
+            Err(_) => {
+                let expected = stream.call(Expr::parse)?;
+                let _ = stream.parse::<Token!(,)>();
+                let actual = stream.call(Expr::parse)?;
+                Ok(Self::Values(expected, actual))
+            },
+            Ok(pubkey_maybe) => {
+                if &pubkey_maybe.to_string() == "pubkey" {
+                    let expected = stream.call(Expr::parse)?;
+                    let _ = stream.parse::<Token!(,)>();
+                    let second_pubkey_maybe = stream.call(Ident::parse_any)?;
+                    if second_pubkey_maybe.to_string() != "pubkey" {
+                        return ParseResult::Err(ParseError::new(second_pubkey_maybe.span(), "Expected \"pubkey\""));
+                    }
+                    let actual = stream.call(Expr::parse)?;
+                    Ok(Self::Pubkeys(expected, actual))
+                } else {
+                    return ParseResult::Err(ParseError::new(pubkey_maybe.span(), "Expected \"pubkey\""));
+                }
+            }
+        }
     }
 }

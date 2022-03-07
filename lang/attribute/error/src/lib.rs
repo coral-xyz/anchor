@@ -125,15 +125,12 @@ fn create_error(
     };
 
     let expected_actual = match expected_actual {
-        Some(expected_actual) => {
-            let expected = expected_actual.expected;
-            let actual = expected_actual.actual;
-            if expected_actual.pubkeys {
-                quote! { Some(anchor_lang::error::ExpectedActual::Pubkeys([#expected, #actual])) }
-            } else {
+        Some(ExpectedActualInput::Values(expected, actual)) => {
                 quote! { Some(anchor_lang::error::ExpectedActual::Values([#expected.to_string(), #actual.to_string()])) }
-            }
-        }
+        },
+        Some(ExpectedActualInput::Pubkeys(expected, actual)) => {
+                quote! { Some(anchor_lang::error::ExpectedActual::Pubkeys([#expected, #actual])) }
+        },
         None => quote! { None },
     };
 

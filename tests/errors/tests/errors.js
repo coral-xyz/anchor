@@ -1,6 +1,10 @@
 const assert = require("assert");
 const anchor = require("@project-serum/anchor");
 const { Account, Transaction, TransactionInstruction } = anchor.web3;
+const {
+  TOKEN_PROGRAM_ID,
+  Token,
+} = require("@solana/spl-token");
 
 // sleep to allow logs to come in
 const sleep = (ms) =>
@@ -237,4 +241,32 @@ describe("errors", () => {
       }
     }, "Program log: AnchorError caused by account: not_initialized_account. Error Code: AccountNotInitialized. Error Number: 3012. Error Message: The program expected this account to be already initialized.");
   });
+  
+  it("Emits an AccountOwnedByWrongProgram error", async () => {
+    let client = await Token.createMint(
+      program.provider.connection,
+      program.provider.wallet.payer,
+      program.provider.wallet.publicKey,
+      program.provider.wallet.publicKey,
+      9,
+      TOKEN_PROGRAM_ID
+    );
+
+    await withLogTest(async () => {
+      try {
+        const tx = await program.rpc.accountOwnedByWrongProgramError({
+          accounts: {
+            wrongAccount: client.publicKey
+          },
+        });
+        assert.fail(
+          "Unexpected success in creating a transaction that should have fail with `AccountNotInitialized` error"
+        );
+      } catch (err) {
+        const errMsg =
+          "The program expected this account to be already initialized";
+        assert.equal(err.toString(), errMsg);
+      }
+    }, "Program log: AnchorError caused by account: not_initialized_account. Error Code: AccountNotInitialized. Error Number: 3012. Error Message: The program expected this account to be already initialized."); 
+  })
 });
