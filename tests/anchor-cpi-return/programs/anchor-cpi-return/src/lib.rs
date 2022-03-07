@@ -6,10 +6,10 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 pub mod anchor_cpi_return {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<u64> {
+    pub fn initialize_return(ctx: Context<InitializeReturn>) -> Result<u64> {
         Ok(10)
     }
 }
 
 #[derive(Accounts)]
-pub struct Initialize {}
+pub struct InitializeReturn {}
