@@ -1,6 +1,6 @@
 use anchor_attribute_error::error_code;
 use borsh::maybestd::io::Error as BorshIoError;
-use solana_program::program_error::ProgramError;
+use solana_program::{program_error::ProgramError, pubkey::Pubkey};
 use std::fmt::{Debug, Display};
 
 /// The starting point for user defined error codes.
@@ -297,38 +297,76 @@ impl From<ProgramError> for ProgramErrorWithOrigin {
 }
 
 #[derive(Debug)]
+pub enum ExpectedActual {
+    Values([String; 2]),
+    Pubkeys([Pubkey; 2]),
+}
+
+#[derive(Debug)]
 pub struct AnchorError {
     pub error_name: String,
     pub error_code_number: u32,
     pub error_msg: String,
     pub source: Option<Source>,
     pub account_name: Option<String>,
+    pub expected_actual: Option<ExpectedActual>,
 }
 
 impl AnchorError {
     pub fn log(&self) {
         if let Some(source) = &self.source {
-            anchor_lang::solana_program::msg!(
-                "AnchorError thrown in {}:{}. Error Code: {}. Error Number: {}. Error Message: {}.",
-                source.filename,
-                source.line,
-                self.error_name,
-                self.error_code_number,
-                self.error_msg
-            );
+            if let Some(ExpectedActual::Values(values)) = &self.expected_actual {
+                anchor_lang::solana_program::msg!(
+                    "AnchorError thrown in {}:{}. Error Code: {}. Error Number: {}. Error Message: {}. Expected: {}. Actual: {}",
+                    source.filename,
+                    source.line,
+                    self.error_name,
+                    self.error_code_number,
+                    self.error_msg,
+                    values[0],
+                    values[1]
+                );
+            } else {
+                anchor_lang::solana_program::msg!(
+                    "AnchorError thrown in {}:{}. Error Code: {}. Error Number: {}. Error Message: {}.",
+                    source.filename,
+                    source.line,
+                    self.error_name,
+                    self.error_code_number,
+                    self.error_msg
+                );
+            }
         } else if let Some(account_name) = &self.account_name {
-            anchor_lang::solana_program::log::sol_log(&format!(
-                "AnchorError caused by account: {}. Error Code: {}. Error Number: {}. Error Message: {}.",
-                account_name,
-                self.error_name,
-                self.error_code_number,
-                self.error_msg
-            ));
+            if let Some(ExpectedActual::Values(values)) = &self.expected_actual {
+                anchor_lang::solana_program::log::sol_log(&format!(
+                    "AnchorError caused by account: {}. Error Code: {}. Error Number: {}. Error Message: {}. Expected: {}. Actual: {}",
+                    account_name,
+                    self.error_name,
+                    self.error_code_number,
+                    self.error_msg,
+                    values[0],
+                    values[1]
+                ));
+            } else {
+                anchor_lang::solana_program::log::sol_log(&format!(
+                    "AnchorError caused by account: {}. Error Code: {}. Error Number: {}. Error Message: {}.",
+                    account_name,
+                    self.error_name,
+                    self.error_code_number,
+                    self.error_msg
+                ));
+            }
         } else {
             anchor_lang::solana_program::log::sol_log(&format!(
                 "AnchorError occurred. Error Code: {}. Error Number: {}. Error Message: {}.",
                 self.error_name, self.error_code_number, self.error_msg
             ));
+        }
+        if let Some(ExpectedActual::Pubkeys(pubkeys)) = &self.expected_actual {
+            anchor_lang::solana_program::msg!("Expected:");
+            pubkeys[0].log();
+            anchor_lang::solana_program::msg!("Actual:");
+            pubkeys[1].log();
         }
     }
 }
@@ -337,11 +375,7 @@ impl std::convert::From<Error> for anchor_lang::solana_program::program_error::P
     fn from(e: Error) -> anchor_lang::solana_program::program_error::ProgramError {
         match e {
             Error::AnchorError(AnchorError {
-                error_name: _,
-                error_code_number,
-                error_msg: _,
-                source: _,
-                account_name: _,
+                error_code_number, ..
             }) => {
                 anchor_lang::solana_program::program_error::ProgramError::Custom(error_code_number)
             }

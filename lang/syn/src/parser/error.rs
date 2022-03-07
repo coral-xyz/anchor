@@ -80,18 +80,27 @@ fn parse_error_attribute(variant: &syn::Variant) -> Option<String> {
 
 pub struct ErrorInput {
     pub error_code: Expr,
+    pub expected_actual: Option<ExpectedActualInput>,
 }
 
 impl Parse for ErrorInput {
     fn parse(stream: syn::parse::ParseStream) -> ParseResult<Self> {
         let error_code = stream.call(Expr::parse)?;
-        Ok(Self { error_code })
+        let expected_actual = match stream.parse::<Token!(,)>() {
+            Ok(_) => Some(stream.parse::<ExpectedActualInput>()?),
+            _ => None,
+        };
+        Ok(Self {
+            error_code,
+            expected_actual,
+        })
     }
 }
 
 pub struct ErrorWithAccountNameInput {
     pub error_code: Expr,
     pub account_name: Expr,
+    pub expected_actual: Option<ExpectedActualInput>,
 }
 
 impl Parse for ErrorWithAccountNameInput {
@@ -99,9 +108,33 @@ impl Parse for ErrorWithAccountNameInput {
         let error_code = stream.call(Expr::parse)?;
         let _ = stream.parse::<Token!(,)>();
         let account_name = stream.call(Expr::parse)?;
+        let expected_actual = match stream.parse::<Token!(,)>() {
+            Ok(_) => Some(stream.parse::<ExpectedActualInput>()?),
+            _ => None,
+        };
         Ok(Self {
             error_code,
             account_name,
+            expected_actual,
+        })
+    }
+}
+
+pub struct ExpectedActualInput {
+    pub pubkeys: bool,
+    pub expected: Expr,
+    pub actual: Expr,
+}
+
+impl Parse for ExpectedActualInput {
+    fn parse(stream: syn::parse::ParseStream) -> ParseResult<Self> {
+        let expected = stream.call(Expr::parse)?;
+        let _ = stream.parse::<Token!(,)>();
+        let actual = stream.call(Expr::parse)?;
+        Ok(Self {
+            pubkeys: false,
+            expected,
+            actual,
         })
     }
 }

@@ -3,9 +3,11 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 use quote::quote;
 
-use anchor_syn::parser::error::{self as error_parser, ErrorWithAccountNameInput};
+use anchor_syn::codegen;
+use anchor_syn::parser::error::{
+    self as error_parser, ErrorInput, ErrorWithAccountNameInput, ExpectedActualInput,
+};
 use anchor_syn::ErrorArgs;
-use anchor_syn::{codegen, parser::error::ErrorInput};
 use syn::{parse_macro_input, Expr};
 
 /// Generates `Error` and `type Result<T> = Result<T, Error>` types to be
@@ -85,18 +87,26 @@ pub fn error_code(
 pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
     let input = parse_macro_input!(ts as ErrorInput);
     let error_code = input.error_code;
-    create_error(error_code, true, None)
+    create_error(error_code, true, None, input.expected_actual)
 }
 
 #[proc_macro]
 pub fn error_with_account_name(ts: proc_macro::TokenStream) -> TokenStream {
     let input = parse_macro_input!(ts as ErrorWithAccountNameInput);
-    let error_code = input.error_code;
-    let account_name = input.account_name;
-    create_error(error_code, false, Some(account_name))
+    create_error(
+        input.error_code,
+        false,
+        Some(input.account_name),
+        input.expected_actual,
+    )
 }
 
-fn create_error(error_code: Expr, source: bool, account_name: Option<Expr>) -> TokenStream {
+fn create_error(
+    error_code: Expr,
+    source: bool,
+    account_name: Option<Expr>,
+    expected_actual: Option<ExpectedActualInput>,
+) -> TokenStream {
     let source = if source {
         quote! {
             Some(anchor_lang::error::Source {
@@ -110,9 +120,23 @@ fn create_error(error_code: Expr, source: bool, account_name: Option<Expr>) -> T
         }
     };
     let account_name = match account_name {
-        Some(_) => quote! { Some(#account_name.to_string()) },
+        Some(account_name) => quote! { Some(#account_name.to_string()) },
         None => quote! { None },
     };
+
+    let expected_actual = match expected_actual {
+        Some(expected_actual) => {
+            let expected = expected_actual.expected;
+            let actual = expected_actual.actual;
+            if expected_actual.pubkeys {
+                quote! { Some(anchor_lang::error::ExpectedActual::Pubkeys([#expected, #actual])) }
+            } else {
+                quote! { Some(anchor_lang::error::ExpectedActual::Values([#expected.to_string(), #actual.to_string()])) }
+            }
+        }
+        None => quote! { None },
+    };
+
     TokenStream::from(quote! {
         anchor_lang::error::Error::from(
             anchor_lang::error::AnchorError {
@@ -120,7 +144,8 @@ fn create_error(error_code: Expr, source: bool, account_name: Option<Expr>) -> T
                 error_code_number: #error_code.into(),
                 error_msg: #error_code.to_string(),
                 source: #source,
-                account_name: #account_name
+                account_name: #account_name,
+                expected_actual: #expected_actual
             }
         )
     })

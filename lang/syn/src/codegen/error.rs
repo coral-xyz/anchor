@@ -83,7 +83,8 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
                         error_code_number: error_code.into(),
                         error_msg: error_code.to_string(),
                         source: None,
-                        account_name: None
+                        account_name: None,
+                        expected_actual: None
                     }
                 )
             }
