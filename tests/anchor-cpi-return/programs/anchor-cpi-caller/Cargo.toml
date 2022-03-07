@@ -1,0 +1,20 @@
+[package]
+name = "anchor-cpi-caller"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "anchor_cpi_caller"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = { path = "../../../../lang", features = ["init-if-needed"] }
+anchor-cpi-return = { path = "../anchor-cpi-return", features = ["cpi"] }
