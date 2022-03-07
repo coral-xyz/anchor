@@ -17,7 +17,7 @@ incremented for features.
 
 ### Breaking
 
-* lang: remove space calculation using [`#[derive(Default)]`](https://github.com/project-serum/anchor/pull/1519).
+* lang: Remove space calculation using [`#[derive(Default)]`] (https://github.com/project-serum/anchor/pull/1519).
 
 ## [0.22.0] - 2022-02-20
 
