@@ -58,7 +58,14 @@ mod errors {
         Ok(())
     }
 
-    pub fn account_owned_by_wrong_program_error(_ctx: Context<AccountOwnedByWrongProgramError>) -> Result<()> {
+    pub fn account_owned_by_wrong_program_error(
+        _ctx: Context<AccountOwnedByWrongProgramError>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn require_eq(_ctx: Context<RequireEq>) -> Result<()> {
+        require_eq!(5241, 124124124, MyError::ValueMismatch);
         Ok(())
     }
 }
@@ -105,8 +112,11 @@ pub struct AccountNotInitializedError<'info> {
 
 #[derive(Accounts)]
 pub struct AccountOwnedByWrongProgramError<'info> {
-    pub wrong_account: Account<'info, AnyAccount>
+    pub wrong_account: Account<'info, AnyAccount>,
 }
+
+#[derive(Accounts)]
+pub struct RequireEq {}
 
 #[error_code]
 pub enum MyError {
@@ -115,4 +125,17 @@ pub enum MyError {
     HelloNoMsg = 123,
     HelloNext,
     HelloCustom,
+    ValueMismatch,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct SomeStruct {
+    pub val: u64,
+    pub other_val: String,
+}
+
+impl std::fmt::Display for SomeStruct {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        <Self as std::fmt::Debug>::fmt(self, f)
+    }
 }

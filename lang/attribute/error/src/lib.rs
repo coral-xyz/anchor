@@ -4,7 +4,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 
 use anchor_syn::codegen;
-use anchor_syn::parser::error::{self as error_parser, ErrorInput, ErrorWithAccountNameInput};
+use anchor_syn::parser::error::{self as error_parser, ErrorInput};
 use anchor_syn::ErrorArgs;
 use syn::{parse_macro_input, Expr};
 

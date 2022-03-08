@@ -256,7 +256,7 @@ impl Error {
     }
 
     /// adds an actual and expected value (in that order) to the error
-    pub fn with_values(mut self, values: [&impl ToString; 2]) -> Self {
+    pub fn with_values(mut self, values: [impl ToString; 2]) -> Self {
         match &mut self {
             Error::AnchorError(ae) => {
                 ae.expected_actual = Some(ActualExpected::Values([
@@ -351,13 +351,13 @@ impl AnchorError {
         if let Some(source) = &self.source {
             if let Some(ActualExpected::Values(values)) = &self.expected_actual {
                 anchor_lang::solana_program::msg!(
-                    "AnchorError thrown in {}:{}. Error Code: {}. Error Number: {}. Error Message: {}. Expected: {}. Actual: {}",
+                    "AnchorError thrown in {}:{}. Error Code: {}. Error Number: {}. Error Message: {}. Expected: {}. Actual: {}.",
                     source.filename,
                     source.line,
                     self.error_name,
                     self.error_code_number,
                     self.error_msg,
-                    values[1],
+                    values[0],
                     values[1]
                 );
             } else {
@@ -373,7 +373,7 @@ impl AnchorError {
         } else if let Some(account_name) = &self.account_name {
             if let Some(ActualExpected::Values(values)) = &self.expected_actual {
                 anchor_lang::solana_program::log::sol_log(&format!(
-                    "AnchorError caused by account: {}. Error Code: {}. Error Number: {}. Error Message: {}. Expected: {}. Actual: {}",
+                    "AnchorError caused by account: {}. Error Code: {}. Error Number: {}. Error Message: {}. Expected: {}. Actual: {}.",
                     account_name,
                     self.error_name,
                     self.error_code_number,

@@ -268,7 +268,7 @@ describe("errors", () => {
           },
         });
         assert.fail(
-          "Unexpected success in creating a transaction that should have fail with `AccountNotInitialized` error"
+          "Unexpected success in creating a transaction that should have failed with `AccountOwnedByWrongProgram` error"
         );
       } catch (err) {
         const errMsg =
@@ -281,6 +281,21 @@ describe("errors", () => {
       "Program log: Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS",
       "Program log: Actual:",
       "Program log: TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+    ]); 
+  })
+
+  it("Emits a ValueMismatch error", async () => {
+    await withLogTest(async () => {
+      try {
+        const tx = await program.rpc.requireEq();
+        assert.fail(
+          "Unexpected success in creating a transaction that should have failed with `ValueMismatch` error"
+        );
+      } catch (err) {
+        assert.equal(err.code, 6126);
+      }
+    }, [
+      "Program log: AnchorError thrown in programs/errors/src/lib.rs:66. Error Code: ValueMismatch. Error Number: 6126. Error Message: ValueMismatch. Expected: 124124124. Actual: 5241."
     ]); 
   })
 });

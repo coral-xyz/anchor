@@ -241,10 +241,11 @@ pub mod prelude {
         accounts::signer::Signer, accounts::system_account::SystemAccount,
         accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, constant,
         context::Context, context::CpiContext, declare_id, emit, err, error, event, interface,
-        program, require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source,
-        state, zero_copy, AccountDeserialize, AccountSerialize, Accounts, AccountsExit,
-        AnchorDeserialize, AnchorSerialize, Id, Key, Owner, ProgramData, Result, System,
-        ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        program, require, require_eq,
+        solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source, state, zero_copy,
+        AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AnchorDeserialize,
+        AnchorSerialize, Id, Key, Owner, ProgramData, Result, System, ToAccountInfo,
+        ToAccountInfos, ToAccountMetas,
     };
     pub use anchor_attribute_error::*;
     pub use borsh;
@@ -368,6 +369,15 @@ macro_rules! require {
     };
 }
 
+#[macro_export]
+macro_rules! require_eq {
+    ($value1: expr, $value2: expr, $error_code:expr $(,)?) => {
+        if $value1 != $value2 {
+            return Err(error!($error_code).with_values([$value1, $value2]));
+        }
+    };
+}
+
 /// Returns with the given error.
 /// Use this with a custom error type.
 ///
@@ -386,13 +396,13 @@ macro_rules! require {
 /// ```
 #[macro_export]
 macro_rules! err {
+    ($error:expr $(,)?) => {
+        Err(anchor_lang::anchor_attribute_error::error!($error))
+    };
     ($error:tt $(,)?) => {
         Err(anchor_lang::anchor_attribute_error::error!(
             crate::ErrorCode::$error
         ))
-    };
-    ($error:expr $(,)?) => {
-        Err(anchor_lang::anchor_attribute_error::error!($error))
     };
 }
 
