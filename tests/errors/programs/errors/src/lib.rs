@@ -68,6 +68,11 @@ mod errors {
         require_eq!(5241, 124124124, MyError::ValueMismatch);
         Ok(())
     }
+
+    pub fn require_keys_eq(ctx: Context<RequireKeysEq>) -> Result<()> {
+        require_keys_eq!(ctx.accounts.some_account.key(), *ctx.program_id, MyError::ValueMismatch);
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -118,6 +123,11 @@ pub struct AccountOwnedByWrongProgramError<'info> {
 #[derive(Accounts)]
 pub struct RequireEq {}
 
+#[derive(Accounts)]
+pub struct RequireKeysEq<'info> {
+    pub some_account: UncheckedAccount<'info>
+}
+
 #[error_code]
 pub enum MyError {
     #[msg("This is an error message clients will automatically display")]
@@ -132,10 +142,4 @@ pub enum MyError {
 pub struct SomeStruct {
     pub val: u64,
     pub other_val: String,
-}
-
-impl std::fmt::Display for SomeStruct {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        <Self as std::fmt::Debug>::fmt(self, f)
-    }
 }

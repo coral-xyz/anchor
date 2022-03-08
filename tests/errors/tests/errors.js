@@ -18,13 +18,19 @@ const withLogTest = async (callback, expectedLogs) => {
         (logLine) => logLine === expectedLogs[0]
       );
       if (index === -1) {
+        console.log("Expected: ");
+        console.log(expectedLogs);
+        console.log("Actual: ");
         console.log(logs);
       } else {
         const actualLogs = logs.logs.slice(index, index + expectedLogs.length);
         for (let i = 0; i < expectedLogs.length; i++) {
           if (actualLogs[i] !== expectedLogs[i]) {
+            console.log("Expected: ");
+            console.log(expectedLogs);
+            console.log("Actual: ");
             console.log(logs);
-            return logs;
+            return;
           }
         }
         logTestOk = true;
@@ -293,7 +299,7 @@ describe("errors", () => {
     ]);
   });
 
-  it("Emits a ValueMismatch error", async () => {
+  it("Emits a ValueMismatch error via require_eq", async () => {
     await withLogTest(async () => {
       try {
         const tx = await program.rpc.requireEq();
@@ -307,6 +313,30 @@ describe("errors", () => {
       "Program log: AnchorError thrown in programs/errors/src/lib.rs:68. Error Code: ValueMismatch. Error Number: 6126. Error Message: ValueMismatch.",
       "Program log: Left: 5241",
       "Program log: Right: 124124124"
+    ]);
+  });
+
+  it("Emits a ValueMismatch error via require_keys_eq", async () => {
+    const someAccount = anchor.web3.Keypair.generate().publicKey;
+    await withLogTest(async () => {
+      try {
+        const tx = await program.rpc.requireKeysEq({
+          accounts: {
+            someAccount
+          }
+        });
+        assert.fail(
+          "Unexpected success in creating a transaction that should have failed with `ValueMismatch` error"
+        );
+      } catch (err) {
+        assert.equal(err.code, 6126);
+      }
+    }, [
+      "Program log: AnchorError thrown in programs/errors/src/lib.rs:73. Error Code: ValueMismatch. Error Number: 6126. Error Message: ValueMismatch.",
+      "Program log: Left:",
+      `Program log: ${someAccount}`,
+      "Program log: Right:",
+      `Program log: ${program.programId}`
     ]);
   });
 });

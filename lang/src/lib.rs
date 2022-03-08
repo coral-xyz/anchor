@@ -241,7 +241,7 @@ pub mod prelude {
         accounts::signer::Signer, accounts::system_account::SystemAccount,
         accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, constant,
         context::Context, context::CpiContext, declare_id, emit, err, error, event, interface,
-        program, require, require_eq,
+        program, require, require_eq, require_keys_eq,
         solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source, state, zero_copy,
         AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AnchorDeserialize,
         AnchorSerialize, Id, Key, Owner, ProgramData, Result, System, ToAccountInfo,
@@ -374,6 +374,15 @@ macro_rules! require_eq {
     ($value1: expr, $value2: expr, $error_code:expr $(,)?) => {
         if $value1 != $value2 {
             return Err(error!($error_code).with_values(($value1, $value2)));
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! require_keys_eq {
+    ($value1: expr, $value2: expr, $error_code:expr $(,)?) => {
+        if $value1 != $value2 {
+            return Err(error!($error_code).with_pubkeys(($value1, $value2)));
         }
     };
 }
