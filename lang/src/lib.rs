@@ -405,13 +405,13 @@ macro_rules! require_keys_eq {
 /// ```
 #[macro_export]
 macro_rules! err {
-    ($error:expr $(,)?) => {
-        Err(anchor_lang::anchor_attribute_error::error!($error))
-    };
     ($error:tt $(,)?) => {
         Err(anchor_lang::anchor_attribute_error::error!(
             crate::ErrorCode::$error
         ))
+    };
+    ($error:expr $(,)?) => {
+        Err(anchor_lang::anchor_attribute_error::error!($error))
     };
 }
 
