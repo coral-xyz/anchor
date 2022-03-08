@@ -376,6 +376,12 @@ macro_rules! require_eq {
             return Err(error!($error_code).with_values(($value1, $value2)));
         }
     };
+    ($value1: expr, $value2: expr $(,)?) => {
+        if $value1 != $value2 {
+            return Err(error!(anchor_lang::error::ErrorCode::RequireEqViolated)
+                .with_values(($value1, $value2)));
+        }
+    };
 }
 
 #[macro_export]
@@ -383,6 +389,12 @@ macro_rules! require_keys_eq {
     ($value1: expr, $value2: expr, $error_code:expr $(,)?) => {
         if $value1 != $value2 {
             return Err(error!($error_code).with_pubkeys(($value1, $value2)));
+        }
+    };
+    ($value1: expr, $value2: expr $(,)?) => {
+        if $value1 != $value2 {
+            return Err(error!(anchor_lang::error::ErrorCode::RequireKeysEqViolated)
+                .with_pubkeys(($value1, $value2)));
         }
     };
 }

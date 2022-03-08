@@ -69,8 +69,18 @@ mod errors {
         Ok(())
     }
 
+    pub fn require_eq_default_error(_ctx: Context<RequireEq>) -> Result<()> {
+        require_eq!(5241, 124124124);
+        Ok(())
+    }
+
     pub fn require_keys_eq(ctx: Context<RequireKeysEq>) -> Result<()> {
         require_keys_eq!(ctx.accounts.some_account.key(), *ctx.program_id, MyError::ValueMismatch);
+        Ok(())
+    }
+
+    pub fn require_keys_eq_default_error(ctx: Context<RequireKeysEq>) -> Result<()> {
+        require_keys_eq!(ctx.accounts.some_account.key(), *ctx.program_id);
         Ok(())
     }
 }

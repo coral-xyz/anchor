@@ -316,6 +316,23 @@ describe("errors", () => {
     ]);
   });
 
+  it("Emits a RequireEqViolated error via require_eq", async () => {
+    await withLogTest(async () => {
+      try {
+        const tx = await program.rpc.requireEqDefaultError();
+        assert.fail(
+          "Unexpected success in creating a transaction that should have failed with `ValueMismatch` error"
+        );
+      } catch (err) {
+        assert.equal(err.code, 2501);
+      }
+    }, [
+      "Program log: AnchorError thrown in programs/errors/src/lib.rs:73. Error Code: RequireEqViolated. Error Number: 2501. Error Message: A require_eq expression was violated.",
+      "Program log: Left: 5241",
+      "Program log: Right: 124124124",
+    ]);
+  });
+
   it("Emits a ValueMismatch error via require_keys_eq", async () => {
     const someAccount = anchor.web3.Keypair.generate().publicKey;
     await withLogTest(async () => {
@@ -332,7 +349,31 @@ describe("errors", () => {
         assert.equal(err.code, 6126);
       }
     }, [
-      "Program log: AnchorError thrown in programs/errors/src/lib.rs:73. Error Code: ValueMismatch. Error Number: 6126. Error Message: ValueMismatch.",
+      "Program log: AnchorError thrown in programs/errors/src/lib.rs:78. Error Code: ValueMismatch. Error Number: 6126. Error Message: ValueMismatch.",
+      "Program log: Left:",
+      `Program log: ${someAccount}`,
+      "Program log: Right:",
+      `Program log: ${program.programId}`,
+    ]);
+  });
+
+  it("Emits a RequireKeysEqViolated error via require_keys_eq", async () => {
+    const someAccount = anchor.web3.Keypair.generate().publicKey;
+    await withLogTest(async () => {
+      try {
+        const tx = await program.rpc.requireKeysEqDefaultError({
+          accounts: {
+            someAccount,
+          },
+        });
+        assert.fail(
+          "Unexpected success in creating a transaction that should have failed with `ValueMismatch` error"
+        );
+      } catch (err) {
+        assert.equal(err.code, 2502);
+      }
+    }, [
+      "Program log: AnchorError thrown in programs/errors/src/lib.rs:83. Error Code: RequireKeysEqViolated. Error Number: 2502. Error Message: A require_keys_eq expression was violated.",
       "Program log: Left:",
       `Program log: ${someAccount}`,
       "Program log: Right:",

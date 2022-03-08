@@ -106,6 +106,17 @@ pub enum ErrorCode {
     #[msg("A space constraint was violated")]
     ConstraintSpace,
 
+    // Require
+    /// 2500 - A require expression was violated
+    #[msg("A require expression was violated")]
+    RequireViolated = 2500,
+    /// 2501 - A require_eq expression was violated
+    #[msg("A require_eq expression was violated")]
+    RequireEqViolated,
+    /// 2502 - A require_keys_eq expression was violated
+    #[msg("A require_keys_eq expression was violated")]
+    RequireKeysEqViolated,
+
     // Accounts.
     /// 3000 - The account discriminator was already set on this account
     #[msg("The account discriminator was already set on this account")]
