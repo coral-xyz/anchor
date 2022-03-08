@@ -109,7 +109,7 @@ fn create_error(error_code: Expr, source: bool, account_name: Option<Expr>) -> T
                 error_code_number: #error_code.into(),
                 error_msg: #error_code.to_string(),
                 error_origin: #error_origin,
-                expected_actual: None
+                compared_values: None
             }
         )
     })

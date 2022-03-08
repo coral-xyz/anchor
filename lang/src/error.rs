@@ -256,10 +256,10 @@ impl Error {
     }
 
     pub fn with_pubkeys(mut self, pubkeys: (Pubkey, Pubkey)) -> Self {
-        let pubkeys = Some(ActualExpected::Pubkeys((pubkeys.0, pubkeys.1)));
+        let pubkeys = Some(ComparedValues::Pubkeys((pubkeys.0, pubkeys.1)));
         match &mut self {
-            Error::AnchorError(ae) => ae.expected_actual = pubkeys,
-            Error::ProgramError(pe) => pe.expected_actual = pubkeys,
+            Error::AnchorError(ae) => ae.compared_values = pubkeys,
+            Error::ProgramError(pe) => pe.compared_values = pubkeys,
         };
         self
     }
@@ -267,13 +267,13 @@ impl Error {
     pub fn with_values(mut self, values: (impl ToString, impl ToString)) -> Self {
         match &mut self {
             Error::AnchorError(ae) => {
-                ae.expected_actual = Some(ActualExpected::Values((
+                ae.compared_values = Some(ComparedValues::Values((
                     values.0.to_string(),
                     values.1.to_string(),
                 )))
             }
             Error::ProgramError(pe) => {
-                pe.expected_actual = Some(ActualExpected::Values((
+                pe.compared_values = Some(ComparedValues::Values((
                     values.0.to_string(),
                     values.1.to_string(),
                 )))
@@ -287,7 +287,7 @@ impl Error {
 pub struct ProgramErrorWithOrigin {
     pub program_error: ProgramError,
     pub error_origin: Option<ErrorOrigin>,
-    pub expected_actual: Option<ActualExpected>,
+    pub compared_values: Option<ComparedValues>,
 }
 
 impl Display for ProgramErrorWithOrigin {
@@ -328,14 +328,14 @@ impl ProgramErrorWithOrigin {
                 ));
             }
         }
-        match &self.expected_actual {
-            Some(ActualExpected::Pubkeys((left, right))) => {
+        match &self.compared_values {
+            Some(ComparedValues::Pubkeys((left, right))) => {
                 anchor_lang::solana_program::msg!("Left:");
                 left.log();
                 anchor_lang::solana_program::msg!("Right:");
                 right.log();
             }
-            Some(ActualExpected::Values((left, right))) => {
+            Some(ComparedValues::Values((left, right))) => {
                 anchor_lang::solana_program::msg!("Left: {}", left);
                 anchor_lang::solana_program::msg!("Right: {}", right);
             }
@@ -359,13 +359,13 @@ impl From<ProgramError> for ProgramErrorWithOrigin {
         Self {
             program_error,
             error_origin: None,
-            expected_actual: None,
+            compared_values: None,
         }
     }
 }
 
 #[derive(Debug)]
-pub enum ActualExpected {
+pub enum ComparedValues {
     Values((String, String)),
     Pubkeys((Pubkey, Pubkey)),
 }
@@ -382,7 +382,7 @@ pub struct AnchorError {
     pub error_code_number: u32,
     pub error_msg: String,
     pub error_origin: Option<ErrorOrigin>,
-    pub expected_actual: Option<ActualExpected>,
+    pub compared_values: Option<ComparedValues>,
 }
 
 impl AnchorError {
@@ -414,14 +414,14 @@ impl AnchorError {
                 ));
             }
         }
-        match &self.expected_actual {
-            Some(ActualExpected::Pubkeys((left, right))) => {
+        match &self.compared_values {
+            Some(ComparedValues::Pubkeys((left, right))) => {
                 anchor_lang::solana_program::msg!("Left:");
                 left.log();
                 anchor_lang::solana_program::msg!("Right:");
                 right.log();
             }
-            Some(ActualExpected::Values((left, right))) => {
+            Some(ComparedValues::Values((left, right))) => {
                 anchor_lang::solana_program::msg!("Left: {}", left);
                 anchor_lang::solana_program::msg!("Right: {}", right);
             }
