@@ -1,6 +1,6 @@
 //! Type validating that the account is the given Program
 
-use crate::error::ErrorCode;
+use crate::error::{Error, ErrorCode};
 use crate::*;
 use solana_program::account_info::AccountInfo;
 use solana_program::bpf_loader_upgradeable::{self, UpgradeableLoaderState};
@@ -86,7 +86,7 @@ impl<'a, T: Id + Clone> Program<'a, T> {
     #[inline(never)]
     pub fn try_from(info: &AccountInfo<'a>) -> Result<Program<'a, T>> {
         if info.key != &T::id() {
-            return Err(ErrorCode::InvalidProgramId.into());
+            return Err(Error::from(ErrorCode::InvalidProgramId).with_pubkeys([*info.key, T::id()]));
         }
         if !info.executable {
             return Err(ErrorCode::InvalidProgramExecutable.into());

@@ -263,7 +263,8 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
             return Err(ErrorCode::AccountNotInitialized.into());
         }
         if info.owner != &T::owner() {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
+                .with_pubkeys([*info.owner, T::owner()]));
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(Account::new(
