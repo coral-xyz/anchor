@@ -304,7 +304,7 @@ describe("errors", () => {
         assert.equal(err.code, 6126);
       }
     }, [
-      "Program log: AnchorError thrown in programs/errors/src/lib.rs:66. Error Code: ValueMismatch. Error Number: 6126. Error Message: ValueMismatch. Expected: 124124124. Actual: 5241.",
+      "Program log: AnchorError thrown in programs/errors/src/lib.rs:68. Error Code: ValueMismatch. Error Number: 6126. Error Message: ValueMismatch. Expected: 124124124. Actual: 5241.",
     ]);
   });
 });
