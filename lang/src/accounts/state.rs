@@ -40,7 +40,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramState<'a, T> {
     pub fn try_from(program_id: &Pubkey, info: &AccountInfo<'a>) -> Result<ProgramState<'a, T>> {
         if info.owner != program_id {
             return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
-                .with_pubkeys([*info.owner, *program_id]));
+                .with_pubkeys((*info.owner, *program_id)));
         }
         if info.key != &Self::address(program_id) {
             solana_program::msg!("Invalid state address");

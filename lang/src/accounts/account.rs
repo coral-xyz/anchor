@@ -248,7 +248,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
         }
         if info.owner != &T::owner() {
             return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
-                .with_pubkeys([*info.owner, T::owner()]));
+                .with_pubkeys((*info.owner, T::owner())));
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(Account::new(info.clone(), T::try_deserialize(&mut data)?))
@@ -264,7 +264,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
         }
         if info.owner != &T::owner() {
             return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
-                .with_pubkeys([*info.owner, T::owner()]));
+                .with_pubkeys((*info.owner, T::owner())));
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(Account::new(

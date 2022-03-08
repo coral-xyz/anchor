@@ -286,10 +286,10 @@ describe("errors", () => {
       }
     }, [
       "Program log: AnchorError caused by account: wrong_account. Error Code: AccountOwnedByWrongProgram. Error Number: 3007. Error Message: The given account is owned by a different program than expected.",
-      "Program log: Expected:",
-      "Program log: Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS",
-      "Program log: Actual:",
+      "Program log: Left:",
       "Program log: TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "Program log: Right:",
+      "Program log: Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS",
     ]);
   });
 
@@ -304,7 +304,9 @@ describe("errors", () => {
         assert.equal(err.code, 6126);
       }
     }, [
-      "Program log: AnchorError thrown in programs/errors/src/lib.rs:68. Error Code: ValueMismatch. Error Number: 6126. Error Message: ValueMismatch. Expected: 124124124. Actual: 5241.",
+      "Program log: AnchorError thrown in programs/errors/src/lib.rs:68. Error Code: ValueMismatch. Error Number: 6126. Error Message: ValueMismatch.",
+      "Program log: Left: 5241",
+      "Program log: Right: 124124124"
     ]);
   });
 });

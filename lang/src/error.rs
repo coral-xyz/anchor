@@ -242,33 +242,32 @@ impl Error {
         self
     }
 
-    /// adds an actual and expected key (in that order) to the error
-    pub fn with_pubkeys(mut self, pubkeys: [Pubkey; 2]) -> Self {
+    pub fn with_pubkeys(mut self, pubkeys: (Pubkey, Pubkey)) -> Self {
+        let pubkeys = Some(ActualExpected::Pubkeys((pubkeys.0, pubkeys.1)));
         match &mut self {
             Error::AnchorError(ae) => {
-                ae.expected_actual = Some(ActualExpected::Pubkeys([pubkeys[1], pubkeys[0]]))
+                ae.expected_actual = pubkeys
             }
             Error::ProgramError(pe) => {
-                pe.expected_actual = Some(ActualExpected::Pubkeys([pubkeys[1], pubkeys[0]]))
+                pe.expected_actual = pubkeys
             }
         };
         self
     }
 
-    /// adds an actual and expected value (in that order) to the error
-    pub fn with_values(mut self, values: [impl ToString; 2]) -> Self {
+    pub fn with_values(mut self, values: (impl ToString, impl ToString)) -> Self {
         match &mut self {
             Error::AnchorError(ae) => {
-                ae.expected_actual = Some(ActualExpected::Values([
-                    values[1].to_string(),
-                    values[0].to_string(),
-                ]))
+                ae.expected_actual = Some(ActualExpected::Values((
+                    values.0.to_string(),
+                    values.1.to_string(),
+                )))
             }
             Error::ProgramError(pe) => {
-                pe.expected_actual = Some(ActualExpected::Values([
-                    values[1].to_string(),
-                    values[0].to_string(),
-                ]))
+                pe.expected_actual = Some(ActualExpected::Values((
+                    values.0.to_string(),
+                    values.1.to_string(),
+                )))
             }
         };
         self
@@ -332,8 +331,8 @@ impl From<ProgramError> for ProgramErrorWithOrigin {
 
 #[derive(Debug)]
 pub enum ActualExpected {
-    Values([String; 2]),
-    Pubkeys([Pubkey; 2]),
+    Values((String, String)),
+    Pubkeys((Pubkey, Pubkey)),
 }
 
 #[derive(Debug)]
@@ -349,18 +348,6 @@ pub struct AnchorError {
 impl AnchorError {
     pub fn log(&self) {
         if let Some(source) = &self.source {
-            if let Some(ActualExpected::Values(values)) = &self.expected_actual {
-                anchor_lang::solana_program::msg!(
-                    "AnchorError thrown in {}:{}. Error Code: {}. Error Number: {}. Error Message: {}. Expected: {}. Actual: {}.",
-                    source.filename,
-                    source.line,
-                    self.error_name,
-                    self.error_code_number,
-                    self.error_msg,
-                    values[0],
-                    values[1]
-                );
-            } else {
                 anchor_lang::solana_program::msg!(
                     "AnchorError thrown in {}:{}. Error Code: {}. Error Number: {}. Error Message: {}.",
                     source.filename,
@@ -369,19 +356,9 @@ impl AnchorError {
                     self.error_code_number,
                     self.error_msg
                 );
-            }
+            
         } else if let Some(account_name) = &self.account_name {
-            if let Some(ActualExpected::Values(values)) = &self.expected_actual {
-                anchor_lang::solana_program::log::sol_log(&format!(
-                    "AnchorError caused by account: {}. Error Code: {}. Error Number: {}. Error Message: {}. Expected: {}. Actual: {}.",
-                    account_name,
-                    self.error_name,
-                    self.error_code_number,
-                    self.error_msg,
-                    values[0],
-                    values[1]
-                ));
-            } else {
+
                 anchor_lang::solana_program::log::sol_log(&format!(
                     "AnchorError caused by account: {}. Error Code: {}. Error Number: {}. Error Message: {}.",
                     account_name,
@@ -389,7 +366,7 @@ impl AnchorError {
                     self.error_code_number,
                     self.error_msg
                 ));
-            }
+            
         } else {
             anchor_lang::solana_program::log::sol_log(&format!(
                 "AnchorError occurred. Error Code: {}. Error Number: {}. Error Message: {}.",
@@ -397,10 +374,13 @@ impl AnchorError {
             ));
         }
         if let Some(ActualExpected::Pubkeys(pubkeys)) = &self.expected_actual {
-            anchor_lang::solana_program::msg!("Expected:");
-            pubkeys[0].log();
-            anchor_lang::solana_program::msg!("Actual:");
-            pubkeys[1].log();
+            anchor_lang::solana_program::msg!("Left:");
+            pubkeys.0.log();
+            anchor_lang::solana_program::msg!("Right:");
+            pubkeys.1.log();
+        } else if let Some(ActualExpected::Values(values)) = &self.expected_actual {
+            anchor_lang::solana_program::msg!("Left: {}", values.0);
+            anchor_lang::solana_program::msg!("Right: {}", values.1);
         }
     }
 }

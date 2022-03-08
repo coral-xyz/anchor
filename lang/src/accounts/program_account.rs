@@ -38,7 +38,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
     pub fn try_from(program_id: &Pubkey, info: &AccountInfo<'a>) -> Result<ProgramAccount<'a, T>> {
         if info.owner != program_id {
             return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
-                .with_pubkeys([*info.owner, *program_id]));
+                .with_pubkeys((*info.owner, *program_id)));
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramAccount::new(
@@ -57,7 +57,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
     ) -> Result<ProgramAccount<'a, T>> {
         if info.owner != program_id {
             return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
-                .with_pubkeys([*info.owner, *program_id]));
+                .with_pubkeys((*info.owner, *program_id)));
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramAccount::new(

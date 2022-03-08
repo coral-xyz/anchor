@@ -120,7 +120,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
     pub fn try_from(acc_info: &AccountInfo<'info>) -> Result<AccountLoader<'info, T>> {
         if acc_info.owner != &T::owner() {
             return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
-                .with_pubkeys([*acc_info.owner, T::owner()]));
+                .with_pubkeys((*acc_info.owner, T::owner())));
         }
         let data: &[u8] = &acc_info.try_borrow_data()?;
         // Discriminator must match.
@@ -140,7 +140,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
     ) -> Result<AccountLoader<'info, T>> {
         if acc_info.owner != &T::owner() {
             return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
-                .with_pubkeys([*acc_info.owner, T::owner()]));
+                .with_pubkeys((*acc_info.owner, T::owner())));
         }
         Ok(AccountLoader::new(acc_info.clone()))
     }
