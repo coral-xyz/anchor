@@ -55,7 +55,7 @@ mod id;
 ///
 /// To facilitate this, all fields in an account must be constrained to be
 /// "plain old  data", i.e., they must implement
-/// [`Pod`](../bytemuck/trait.Pod.html). Please review the
+/// [`Pod`](https://docs.rs/bytemuck/latest/bytemuck/trait.Pod.html). Please review the
 /// [`safety`](../bytemuck/trait.Pod.html#safety)
 /// section before using.
 #[proc_macro_attribute]
