@@ -1,7 +1,7 @@
 use crate::{Error, ErrorArgs, ErrorCode};
 use syn::ext::IdentExt;
-use syn::parse::{Parse, Result as ParseResult, Error as ParseError};
-use syn::{Expr, Token, Ident};
+use syn::parse::{Error as ParseError, Parse, Result as ParseResult};
+use syn::{Expr, Ident, Token};
 
 // Removes any internal #[msg] attributes, as they are inert.
 pub fn parse(error_enum: &mut syn::ItemEnum, args: Option<ErrorArgs>) -> Error {
@@ -81,27 +81,18 @@ fn parse_error_attribute(variant: &syn::Variant) -> Option<String> {
 
 pub struct ErrorInput {
     pub error_code: Expr,
-    pub expected_actual: Option<ExpectedActualInput>,
 }
 
 impl Parse for ErrorInput {
     fn parse(stream: syn::parse::ParseStream) -> ParseResult<Self> {
         let error_code = stream.call(Expr::parse)?;
-        let expected_actual = match stream.parse::<Token!(,)>() {
-            Ok(_) => Some(stream.parse::<ExpectedActualInput>()?),
-            _ => None,
-        };
-        Ok(Self {
-            error_code,
-            expected_actual,
-        })
+        Ok(Self { error_code })
     }
 }
 
 pub struct ErrorWithAccountNameInput {
     pub error_code: Expr,
     pub account_name: Expr,
-    pub expected_actual: Option<ExpectedActualInput>,
 }
 
 impl Parse for ErrorWithAccountNameInput {
@@ -109,47 +100,9 @@ impl Parse for ErrorWithAccountNameInput {
         let error_code = stream.call(Expr::parse)?;
         let _ = stream.parse::<Token!(,)>();
         let account_name = stream.call(Expr::parse)?;
-        let expected_actual = match stream.parse::<Token!(,)>() {
-            Ok(_) => Some(stream.parse::<ExpectedActualInput>()?),
-            _ => None,
-        };
         Ok(Self {
             error_code,
             account_name,
-            expected_actual,
         })
-    }
-}
-
-pub enum ExpectedActualInput {
-    Pubkeys(Expr, Expr),
-    Values(Expr, Expr)
-}
-
-impl Parse for ExpectedActualInput {
-    fn parse(stream: syn::parse::ParseStream) -> ParseResult<Self> {
-        let pubkey_maybe = stream.call(Ident::parse_any);
-        match pubkey_maybe {
-            Err(_) => {
-                let expected = stream.call(Expr::parse)?;
-                let _ = stream.parse::<Token!(,)>();
-                let actual = stream.call(Expr::parse)?;
-                Ok(Self::Values(expected, actual))
-            },
-            Ok(pubkey_maybe) => {
-                if &pubkey_maybe.to_string() == "pubkey" {
-                    let expected = stream.call(Expr::parse)?;
-                    let _ = stream.parse::<Token!(,)>();
-                    let second_pubkey_maybe = stream.call(Ident::parse_any)?;
-                    if second_pubkey_maybe.to_string() != "pubkey" {
-                        return ParseResult::Err(ParseError::new(second_pubkey_maybe.span(), "Expected \"pubkey\""));
-                    }
-                    let actual = stream.call(Expr::parse)?;
-                    Ok(Self::Pubkeys(expected, actual))
-                } else {
-                    return ParseResult::Err(ParseError::new(pubkey_maybe.span(), "Expected \"pubkey\""));
-                }
-            }
-        }
     }
 }

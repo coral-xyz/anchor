@@ -12,15 +12,23 @@ const sleep = (ms) =>
     setTimeout(() => resolve(), ms);
   });
 
-const withLogTest = async (callback, expectedLog) => {
+const withLogTest = async (callback, expectedLogs) => {
   let logTestOk = false;
   const listener = anchor.getProvider().connection.onLogs(
     "all",
     (logs) => {
-      if (logs.logs.some((logLine) => logLine === expectedLog)) {
-        logTestOk = true;
-      } else {
+      const index = logs.logs.findIndex((logLine) => logLine === expectedLogs[0]);
+      if (index === - 1) {
         console.log(logs);
+      } else {
+        const actualLogs = logs.logs.slice(index, index + expectedLogs.length);
+        for (let i = 0; i < expectedLogs.length; i++) {
+          if (actualLogs[i] !== expectedLogs[i]) {
+            console.log(logs);
+            return logs;
+          }
+        }
+        logTestOk = true;
       }
     },
     "recent"
@@ -56,7 +64,7 @@ describe("errors", () => {
         assert.equal(err.msg, errMsg);
         assert.equal(err.code, 6000);
       }
-    }, "Program log: AnchorError thrown in programs/errors/src/lib.rs:13. Error Code: Hello. Error Number: 6000. Error Message: This is an error message clients will automatically display.");
+    }, ["Program log: AnchorError thrown in programs/errors/src/lib.rs:13. Error Code: Hello. Error Number: 6000. Error Message: This is an error message clients will automatically display."]);
   });
 
   it("Emits a Hello error via require!", async () => {
@@ -93,7 +101,7 @@ describe("errors", () => {
       } catch (err) {
         // No-op (withLogTest expects the callback to catch the initial tx error)
       }
-    }, "Program log: ProgramError occurred. Error Code: InvalidAccountData. Error Number: 17179869184. Error Message: An account's data contents was invalid.");
+    }, ["Program log: ProgramError occurred. Error Code: InvalidAccountData. Error Number: 17179869184. Error Message: An account's data contents was invalid."]);
   });
 
   it("Logs a ProgramError with source", async () => {
@@ -104,7 +112,7 @@ describe("errors", () => {
       } catch (err) {
         // No-op (withLogTest expects the callback to catch the initial tx error)
       }
-    }, "Program log: ProgramError thrown in programs/errors/src/lib.rs:38. Error Code: InvalidAccountData. Error Number: 17179869184. Error Message: An account's data contents was invalid.");
+    }, ["Program log: ProgramError thrown in programs/errors/src/lib.rs:38. Error Code: InvalidAccountData. Error Number: 17179869184. Error Message: An account's data contents was invalid."]);
   });
 
   it("Emits a HelloNoMsg error", async () => {
@@ -146,7 +154,7 @@ describe("errors", () => {
         assert.equal(err.msg, errMsg);
         assert.equal(err.code, 2000);
       }
-    }, "Program log: AnchorError caused by account: my_account. Error Code: ConstraintMut. Error Number: 2000. Error Message: A mut constraint was violated.");
+    }, ["Program log: AnchorError caused by account: my_account. Error Code: ConstraintMut. Error Number: 2000. Error Message: A mut constraint was violated."]);
   });
 
   it("Emits a has one error", async () => {
@@ -239,7 +247,7 @@ describe("errors", () => {
           "The program expected this account to be already initialized";
         assert.equal(err.toString(), errMsg);
       }
-    }, "Program log: AnchorError caused by account: not_initialized_account. Error Code: AccountNotInitialized. Error Number: 3012. Error Message: The program expected this account to be already initialized.");
+    }, ["Program log: AnchorError caused by account: not_initialized_account. Error Code: AccountNotInitialized. Error Number: 3012. Error Message: The program expected this account to be already initialized."]);
   });
   
   it("Emits an AccountOwnedByWrongProgram error", async () => {
@@ -264,9 +272,15 @@ describe("errors", () => {
         );
       } catch (err) {
         const errMsg =
-          "The program expected this account to be already initialized";
+          "The given account is owned by a different program than expected";
         assert.equal(err.toString(), errMsg);
       }
-    }, "Program log: AnchorError caused by account: not_initialized_account. Error Code: AccountNotInitialized. Error Number: 3012. Error Message: The program expected this account to be already initialized."); 
+    }, [
+      "Program log: AnchorError caused by account: wrong_account. Error Code: AccountOwnedByWrongProgram. Error Number: 3007. Error Message: The given account is owned by a different program than expected.",
+      "Program log: Expected:",
+      "Program log: Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS",
+      "Program log: Actual:",
+      "Program log: TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+    ]); 
   })
 });

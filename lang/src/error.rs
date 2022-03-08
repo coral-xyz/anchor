@@ -241,6 +241,37 @@ impl Error {
         };
         self
     }
+
+    /// adds an actual and expected key (in that order) to the error
+    pub fn with_pubkeys(mut self, pubkeys: [Pubkey; 2]) -> Self {
+        match &mut self {
+            Error::AnchorError(ae) => {
+                ae.expected_actual = Some(ActualExpected::Pubkeys([pubkeys[1], pubkeys[0]]))
+            }
+            Error::ProgramError(pe) => {
+                pe.expected_actual = Some(ActualExpected::Pubkeys([pubkeys[1], pubkeys[0]]))
+            }
+        };
+        self
+    }
+
+    pub fn with_values(mut self, values: [&impl ToString; 2]) -> Self {
+        match &mut self {
+            Error::AnchorError(ae) => {
+                ae.expected_actual = Some(ActualExpected::Values([
+                    values[1].to_string(),
+                    values[0].to_string(),
+                ]))
+            }
+            Error::ProgramError(pe) => {
+                pe.expected_actual = Some(ActualExpected::Values([
+                    values[1].to_string(),
+                    values[0].to_string(),
+                ]))
+            }
+        };
+        self
+    }
 }
 
 #[derive(Debug)]
@@ -248,7 +279,7 @@ pub struct ProgramErrorWithOrigin {
     pub program_error: ProgramError,
     pub source: Option<Source>,
     pub account_name: Option<String>,
-    pub expected_actual: Option<ExpectedActual>
+    pub expected_actual: Option<ActualExpected>,
 }
 
 impl Display for ProgramErrorWithOrigin {
@@ -293,12 +324,13 @@ impl From<ProgramError> for ProgramErrorWithOrigin {
             program_error,
             source: None,
             account_name: None,
+            expected_actual: None,
         }
     }
 }
 
 #[derive(Debug)]
-pub enum ExpectedActual {
+pub enum ActualExpected {
     Values([String; 2]),
     Pubkeys([Pubkey; 2]),
 }
@@ -310,13 +342,13 @@ pub struct AnchorError {
     pub error_msg: String,
     pub source: Option<Source>,
     pub account_name: Option<String>,
-    pub expected_actual: Option<ExpectedActual>,
+    pub expected_actual: Option<ActualExpected>,
 }
 
 impl AnchorError {
     pub fn log(&self) {
         if let Some(source) = &self.source {
-            if let Some(ExpectedActual::Values(values)) = &self.expected_actual {
+            if let Some(ActualExpected::Values(values)) = &self.expected_actual {
                 anchor_lang::solana_program::msg!(
                     "AnchorError thrown in {}:{}. Error Code: {}. Error Number: {}. Error Message: {}. Expected: {}. Actual: {}",
                     source.filename,
@@ -324,7 +356,7 @@ impl AnchorError {
                     self.error_name,
                     self.error_code_number,
                     self.error_msg,
-                    values[0],
+                    values[1],
                     values[1]
                 );
             } else {
@@ -338,7 +370,7 @@ impl AnchorError {
                 );
             }
         } else if let Some(account_name) = &self.account_name {
-            if let Some(ExpectedActual::Values(values)) = &self.expected_actual {
+            if let Some(ActualExpected::Values(values)) = &self.expected_actual {
                 anchor_lang::solana_program::log::sol_log(&format!(
                     "AnchorError caused by account: {}. Error Code: {}. Error Number: {}. Error Message: {}. Expected: {}. Actual: {}",
                     account_name,
@@ -363,7 +395,7 @@ impl AnchorError {
                 self.error_name, self.error_code_number, self.error_msg
             ));
         }
-        if let Some(ExpectedActual::Pubkeys(pubkeys)) = &self.expected_actual {
+        if let Some(ActualExpected::Pubkeys(pubkeys)) = &self.expected_actual {
             anchor_lang::solana_program::msg!("Expected:");
             pubkeys[0].log();
             anchor_lang::solana_program::msg!("Actual:");

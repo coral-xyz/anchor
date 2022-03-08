@@ -4,9 +4,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 
 use anchor_syn::codegen;
-use anchor_syn::parser::error::{
-    self as error_parser, ErrorInput, ErrorWithAccountNameInput, ExpectedActualInput,
-};
+use anchor_syn::parser::error::{self as error_parser, ErrorInput, ErrorWithAccountNameInput};
 use anchor_syn::ErrorArgs;
 use syn::{parse_macro_input, Expr};
 
@@ -87,26 +85,16 @@ pub fn error_code(
 pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
     let input = parse_macro_input!(ts as ErrorInput);
     let error_code = input.error_code;
-    create_error(error_code, true, None, input.expected_actual)
+    create_error(error_code, true, None)
 }
 
 #[proc_macro]
 pub fn error_with_account_name(ts: proc_macro::TokenStream) -> TokenStream {
     let input = parse_macro_input!(ts as ErrorWithAccountNameInput);
-    create_error(
-        input.error_code,
-        false,
-        Some(input.account_name),
-        input.expected_actual,
-    )
+    create_error(input.error_code, false, Some(input.account_name))
 }
 
-fn create_error(
-    error_code: Expr,
-    source: bool,
-    account_name: Option<Expr>,
-    expected_actual: Option<ExpectedActualInput>,
-) -> TokenStream {
+fn create_error(error_code: Expr, source: bool, account_name: Option<Expr>) -> TokenStream {
     let source = if source {
         quote! {
             Some(anchor_lang::error::Source {
@@ -124,16 +112,6 @@ fn create_error(
         None => quote! { None },
     };
 
-    let expected_actual = match expected_actual {
-        Some(ExpectedActualInput::Values(expected, actual)) => {
-                quote! { Some(anchor_lang::error::ExpectedActual::Values([#expected.to_string(), #actual.to_string()])) }
-        },
-        Some(ExpectedActualInput::Pubkeys(expected, actual)) => {
-                quote! { Some(anchor_lang::error::ExpectedActual::Pubkeys([#expected, #actual])) }
-        },
-        None => quote! { None },
-    };
-
     TokenStream::from(quote! {
         anchor_lang::error::Error::from(
             anchor_lang::error::AnchorError {
@@ -142,7 +120,7 @@ fn create_error(
                 error_msg: #error_code.to_string(),
                 source: #source,
                 account_name: #account_name,
-                expected_actual: #expected_actual
+                expected_actual: None
             }
         )
     })
