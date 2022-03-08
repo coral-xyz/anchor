@@ -147,9 +147,3 @@ pub enum MyError {
     HelloCustom,
     ValueMismatch,
 }
-
-#[derive(Debug, PartialEq)]
-pub struct SomeStruct {
-    pub val: u64,
-    pub other_val: String,
-}
