@@ -147,10 +147,38 @@ export class EventManager {
       }
     }
   }
+
+  public async getEventsFromTransaction(
+    signature: string,
+    eventType?: string
+  ): Promise<Event<IdlEvent, Record<string, string>>[] | null> {
+    const tx = await this._provider.connection.getTransaction(signature, {
+      commitment: "confirmed",
+    });
+
+    if (!tx || !tx.meta || !tx.meta.logMessages) return null;
+    else if (tx.meta.logMessages.length === 0) return [];
+
+    let events = tx.meta.logMessages.reduce((acc, curr) => {
+      if (!curr.startsWith("Program log:")) return acc;
+
+      const event = this._eventParser.coder.events.decode(
+        curr.slice(LOG_START_INDEX)
+      );
+
+      return event ? [...acc, event] : acc;
+    }, []);
+
+    if (eventType !== undefined) {
+      events = events.filter((e) => e.name === eventType);
+    }
+
+    return events;
+  }
 }
 
 export class EventParser {
-  private coder: Coder;
+  public coder: Coder;
   private programId: PublicKey;
 
   constructor(programId: PublicKey, coder: Coder) {
