@@ -312,7 +312,7 @@ describe("errors", () => {
     }, [
       "Program log: AnchorError thrown in programs/errors/src/lib.rs:68. Error Code: ValueMismatch. Error Number: 6126. Error Message: ValueMismatch.",
       "Program log: Left: 5241",
-      "Program log: Right: 124124124"
+      "Program log: Right: 124124124",
     ]);
   });
 
@@ -322,8 +322,8 @@ describe("errors", () => {
       try {
         const tx = await program.rpc.requireKeysEq({
           accounts: {
-            someAccount
-          }
+            someAccount,
+          },
         });
         assert.fail(
           "Unexpected success in creating a transaction that should have failed with `ValueMismatch` error"
@@ -336,7 +336,7 @@ describe("errors", () => {
       "Program log: Left:",
       `Program log: ${someAccount}`,
       "Program log: Right:",
-      `Program log: ${program.programId}`
+      `Program log: ${program.programId}`,
     ]);
   });
 });
