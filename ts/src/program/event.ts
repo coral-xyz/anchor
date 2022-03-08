@@ -7,6 +7,8 @@ import Provider from "../provider.js";
 
 const LOG_START_INDEX = "Program log: ".length;
 
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // Deserialized event.
 export type Event<
   E extends IdlEvent = IdlEvent,
@@ -159,15 +161,19 @@ export class EventManager {
     if (!tx || !tx.meta || !tx.meta.logMessages) return null;
     else if (tx.meta.logMessages.length === 0) return [];
 
-    let events = tx.meta.logMessages.reduce((acc, curr) => {
-      if (!curr.startsWith("Program log:")) return acc;
+    let complete = false;
+    let events: Array<Event<IdlEvent, Record<string, string>>> = [];
+    this._eventParser.parseLogs(tx.meta.logMessages, (log, done) => {
+      events.push(log);
 
-      const event = this._eventParser.coder.events.decode(
-        curr.slice(LOG_START_INDEX)
-      );
+      if (done) {
+        complete = true;
+      }
+    });
 
-      return event ? [...acc, event] : acc;
-    }, []);
+    while (!complete) {
+      await wait(50);
+    }
 
     if (eventType !== undefined) {
       events = events.filter((e) => e.name === eventType);
@@ -178,7 +184,7 @@ export class EventManager {
 }
 
 export class EventParser {
-  public coder: Coder;
+  private coder: Coder;
   private programId: PublicKey;
 
   constructor(programId: PublicKey, coder: Coder) {
@@ -197,14 +203,17 @@ export class EventParser {
   // its emission, thereby allowing us to know if a given log event was
   // emitted by *this* program. If it was, then we parse the raw string and
   // emit the event if the string matches the event being subscribed to.
-  public parseLogs(logs: string[], callback: (log: Event) => void) {
+  public parseLogs(
+    logs: string[],
+    callback: (log: Event, done: boolean) => void
+  ) {
     const logScanner = new LogScanner(logs);
     const execution = new ExecutionContext(logScanner.next() as string);
     let log = logScanner.next();
     while (log !== null) {
       let [event, newProgram, didPop] = this.handleLog(execution, log);
       if (event) {
-        callback(event);
+        callback(event, !logScanner.hasNext());
       }
       if (newProgram) {
         execution.push(newProgram);
@@ -316,5 +325,9 @@ class LogScanner {
     let l = this.logs[0];
     this.logs = this.logs.slice(1);
     return l;
+  }
+
+  hasNext(): boolean {
+    return this.logs.length > 0;
   }
 }
