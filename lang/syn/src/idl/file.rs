@@ -482,7 +482,7 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
                 .collect::<Vec<IdlEnumVariant>>();
             Ok(IdlTypeDefinition {
                 name,
-                doc: doc,
+                doc,
                 ty: IdlTypeDefinitionTy::Enum { variants },
             })
         }))

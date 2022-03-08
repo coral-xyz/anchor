@@ -2,7 +2,7 @@ use syn::AttrStyle::Inner;
 use syn::{Lit::Str, Meta::NameValue};
 
 // Returns first match or None
-pub fn parse_inner(attrs: &Vec<syn::Attribute>) -> Option<String> {
+pub fn parse_inner(attrs: &[syn::Attribute]) -> Option<String> {
     for attr in attrs {
         if let syn::Attribute {
             style: Inner(..), ..
@@ -22,7 +22,7 @@ pub fn parse_inner(attrs: &Vec<syn::Attribute>) -> Option<String> {
 }
 
 // Returns first match or None
-pub fn parse_any(attrs: &Vec<syn::Attribute>) -> Option<String> {
+pub fn parse_any(attrs: &[syn::Attribute]) -> Option<String> {
     for attr in attrs {
         let meta_result = attr.parse_meta();
         if let Ok(NameValue(meta)) = meta_result {

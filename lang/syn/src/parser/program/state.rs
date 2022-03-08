@@ -188,7 +188,7 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<Option<State>> {
                             };
                             Ok(IxArg {
                                 name: ident.clone(),
-                                doc: doc.clone(),
+                                doc: doc,
                                 raw_arg: raw_arg.clone(),
                             })
                         })
@@ -266,7 +266,7 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<Option<State>> {
                                             };
                                             IxArg {
                                                 name: ident.clone(),
-                                                doc: doc.clone(),
+                                                doc: doc,
                                                 raw_arg: raw_arg.clone(),
                                             }
                                         })
