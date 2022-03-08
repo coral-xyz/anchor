@@ -189,12 +189,6 @@ impl Display for Error {
     }
 }
 
-impl Display for AnchorError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Debug::fmt(&self, f)
-    }
-}
-
 impl From<AnchorError> for Error {
     fn from(ae: AnchorError) -> Self {
         Self::AnchorError(ae)
@@ -228,16 +222,24 @@ impl Error {
 
     pub fn with_account_name(mut self, account_name: impl ToString) -> Self {
         match &mut self {
-            Error::AnchorError(ae) => ae.account_name = Some(account_name.to_string()),
-            Error::ProgramError(pe) => pe.account_name = Some(account_name.to_string()),
+            Error::AnchorError(ae) => {
+                ae.error_origin = Some(ErrorOrigin::AccountName(account_name.to_string()));
+            }
+            Error::ProgramError(pe) => {
+                pe.error_origin = Some(ErrorOrigin::AccountName(account_name.to_string()));
+            }
         };
         self
     }
 
     pub fn with_source(mut self, source: Source) -> Self {
         match &mut self {
-            Error::AnchorError(ae) => ae.source = Some(source),
-            Error::ProgramError(pe) => pe.source = Some(source),
+            Error::AnchorError(ae) => {
+                ae.error_origin = Some(ErrorOrigin::Source(source));
+            }
+            Error::ProgramError(pe) => {
+                pe.error_origin = Some(ErrorOrigin::Source(source));
+            }
         };
         self
     }
@@ -245,12 +247,8 @@ impl Error {
     pub fn with_pubkeys(mut self, pubkeys: (Pubkey, Pubkey)) -> Self {
         let pubkeys = Some(ActualExpected::Pubkeys((pubkeys.0, pubkeys.1)));
         match &mut self {
-            Error::AnchorError(ae) => {
-                ae.expected_actual = pubkeys
-            }
-            Error::ProgramError(pe) => {
-                pe.expected_actual = pubkeys
-            }
+            Error::AnchorError(ae) => ae.expected_actual = pubkeys,
+            Error::ProgramError(pe) => pe.expected_actual = pubkeys,
         };
         self
     }
@@ -277,8 +275,7 @@ impl Error {
 #[derive(Debug)]
 pub struct ProgramErrorWithOrigin {
     pub program_error: ProgramError,
-    pub source: Option<Source>,
-    pub account_name: Option<String>,
+    pub error_origin: Option<ErrorOrigin>,
     pub expected_actual: Option<ActualExpected>,
 }
 
@@ -290,31 +287,59 @@ impl Display for ProgramErrorWithOrigin {
 
 impl ProgramErrorWithOrigin {
     pub fn log(&self) {
-        if let Some(source) = &self.source {
-            anchor_lang::solana_program::msg!(
-                "ProgramError thrown in {}:{}. Error Code: {:?}. Error Number: {}. Error Message: {}.",
-                source.filename,
-                source.line,
-                self.program_error,
-                u64::from(self.program_error.clone()),
-                self.program_error
-            );
-        } else if let Some(account_name) = &self.account_name {
-            anchor_lang::solana_program::log::sol_log(&format!(
-                "ProgramError caused by account: {}. Error Code: {:?}. Error Number: {}. Error Message: {}.",
-                account_name,
-                self.program_error,
-                u64::from(self.program_error.clone()),
-                self.program_error
-            ));
-        } else {
-            anchor_lang::solana_program::log::sol_log(&format!(
-                "ProgramError occurred. Error Code: {:?}. Error Number: {}. Error Message: {}.",
-                self.program_error,
-                u64::from(self.program_error.clone()),
-                self.program_error
-            ));
+        match &self.error_origin {
+            None => {
+                anchor_lang::solana_program::msg!(
+                    "ProgramError occurred. Error Code: {:?}. Error Number: {}. Error Message: {}.",
+                    self.program_error,
+                    u64::from(self.program_error.clone()),
+                    self.program_error
+                );
+            }
+            Some(ErrorOrigin::Source(source)) => {
+                anchor_lang::solana_program::msg!(
+                    "ProgramError thrown in {}:{}. Error Code: {:?}. Error Number: {}. Error Message: {}.",
+                    source.filename,
+                    source.line,
+                    self.program_error,
+                    u64::from(self.program_error.clone()),
+                    self.program_error
+                );
+            }
+            Some(ErrorOrigin::AccountName(account_name)) => {
+                // using sol_log because msg! wrongly interprets 5 inputs as u64
+                anchor_lang::solana_program::log::sol_log(&format!(
+                    "ProgramError caused by account: {}. Error Code: {:?}. Error Number: {}. Error Message: {}.",
+                    account_name,
+                    self.program_error,
+                    u64::from(self.program_error.clone()),
+                    self.program_error
+                ));
+            }
         }
+        match &self.expected_actual {
+            Some(ActualExpected::Pubkeys((left, right))) => {
+                anchor_lang::solana_program::msg!("Left:");
+                left.log();
+                anchor_lang::solana_program::msg!("Right:");
+                right.log();
+            }
+            Some(ActualExpected::Values((left, right))) => {
+                anchor_lang::solana_program::msg!("Left: {}", left);
+                anchor_lang::solana_program::msg!("Right: {}", right);
+            }
+            None => (),
+        }
+    }
+
+    pub fn with_source(mut self, source: Source) -> Self {
+        self.error_origin = Some(ErrorOrigin::Source(source));
+        self
+    }
+
+    pub fn with_account_name(mut self, account_name: impl ToString) -> Self {
+        self.error_origin = Some(ErrorOrigin::AccountName(account_name.to_string()));
+        self
     }
 }
 
@@ -322,8 +347,7 @@ impl From<ProgramError> for ProgramErrorWithOrigin {
     fn from(program_error: ProgramError) -> Self {
         Self {
             program_error,
-            source: None,
-            account_name: None,
+            error_origin: None,
             expected_actual: None,
         }
     }
@@ -336,18 +360,30 @@ pub enum ActualExpected {
 }
 
 #[derive(Debug)]
+pub enum ErrorOrigin {
+    Source(Source),
+    AccountName(String),
+}
+
+#[derive(Debug)]
 pub struct AnchorError {
     pub error_name: String,
     pub error_code_number: u32,
     pub error_msg: String,
-    pub source: Option<Source>,
-    pub account_name: Option<String>,
+    pub error_origin: Option<ErrorOrigin>,
     pub expected_actual: Option<ActualExpected>,
 }
 
 impl AnchorError {
     pub fn log(&self) {
-        if let Some(source) = &self.source {
+        match &self.error_origin {
+            None => {
+                anchor_lang::solana_program::log::sol_log(&format!(
+                    "AnchorError occurred. Error Code: {}. Error Number: {}. Error Message: {}.",
+                    self.error_name, self.error_code_number, self.error_msg
+                ));
+            }
+            Some(ErrorOrigin::Source(source)) => {
                 anchor_lang::solana_program::msg!(
                     "AnchorError thrown in {}:{}. Error Code: {}. Error Number: {}. Error Message: {}.",
                     source.filename,
@@ -356,9 +392,8 @@ impl AnchorError {
                     self.error_code_number,
                     self.error_msg
                 );
-            
-        } else if let Some(account_name) = &self.account_name {
-
+            }
+            Some(ErrorOrigin::AccountName(account_name)) => {
                 anchor_lang::solana_program::log::sol_log(&format!(
                     "AnchorError caused by account: {}. Error Code: {}. Error Number: {}. Error Message: {}.",
                     account_name,
@@ -366,22 +401,37 @@ impl AnchorError {
                     self.error_code_number,
                     self.error_msg
                 ));
-            
-        } else {
-            anchor_lang::solana_program::log::sol_log(&format!(
-                "AnchorError occurred. Error Code: {}. Error Number: {}. Error Message: {}.",
-                self.error_name, self.error_code_number, self.error_msg
-            ));
+            }
         }
-        if let Some(ActualExpected::Pubkeys(pubkeys)) = &self.expected_actual {
-            anchor_lang::solana_program::msg!("Left:");
-            pubkeys.0.log();
-            anchor_lang::solana_program::msg!("Right:");
-            pubkeys.1.log();
-        } else if let Some(ActualExpected::Values(values)) = &self.expected_actual {
-            anchor_lang::solana_program::msg!("Left: {}", values.0);
-            anchor_lang::solana_program::msg!("Right: {}", values.1);
+        match &self.expected_actual {
+            Some(ActualExpected::Pubkeys((left, right))) => {
+                anchor_lang::solana_program::msg!("Left:");
+                left.log();
+                anchor_lang::solana_program::msg!("Right:");
+                right.log();
+            }
+            Some(ActualExpected::Values((left, right))) => {
+                anchor_lang::solana_program::msg!("Left: {}", left);
+                anchor_lang::solana_program::msg!("Right: {}", right);
+            }
+            None => (),
         }
+    }
+
+    pub fn with_source(mut self, source: Source) -> Self {
+        self.error_origin = Some(ErrorOrigin::Source(source));
+        self
+    }
+
+    pub fn with_account_name(mut self, account_name: impl ToString) -> Self {
+        self.error_origin = Some(ErrorOrigin::AccountName(account_name.to_string()));
+        self
+    }
+}
+
+impl Display for AnchorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(&self, f)
     }
 }
 

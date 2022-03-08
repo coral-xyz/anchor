@@ -89,21 +89,17 @@ pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
 }
 
 fn create_error(error_code: Expr, source: bool, account_name: Option<Expr>) -> TokenStream {
-    let source = if source {
-        quote! {
-            Some(anchor_lang::error::Source {
+    let error_origin = match (source, account_name) {
+        (false, None) => quote! { None },
+        (false, Some(account_name)) => quote! {
+            Some(anchor_lang::error::ErrorOrigin::AccountName(#account_name.to_string()))
+        },
+        (true, _) => quote! {
+            Some(anchor_lang::error::ErrorOrigin::Source(anchor_lang::error::Source {
                 filename: file!(),
                 line: line!()
-            })
-        }
-    } else {
-        quote! {
-            None
-        }
-    };
-    let account_name = match account_name {
-        Some(account_name) => quote! { Some(#account_name.to_string()) },
-        None => quote! { None },
+            }))
+        },
     };
 
     TokenStream::from(quote! {
@@ -112,8 +108,7 @@ fn create_error(error_code: Expr, source: bool, account_name: Option<Expr>) -> T
                 error_name: #error_code.name(),
                 error_code_number: #error_code.into(),
                 error_msg: #error_code.to_string(),
-                source: #source,
-                account_name: #account_name,
+                error_origin: #error_origin,
                 expected_actual: None
             }
         )
