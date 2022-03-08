@@ -7,7 +7,7 @@ macro_rules! vote_weight_record {
         pub struct VoterWeightRecord(spl_governance_addin_api::voter_weight::VoterWeightRecord);
 
         impl anchor_lang::AccountDeserialize for VoterWeightRecord {
-            fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
+            fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self, anchor_lang::error::Error> {
                 let mut data = buf;
                 let vwr: spl_governance_addin_api::voter_weight::VoterWeightRecord =
                     anchor_lang::AnchorDeserialize::deserialize(&mut data)
@@ -20,7 +20,7 @@ macro_rules! vote_weight_record {
 
             fn try_deserialize_unchecked(
                 buf: &mut &[u8],
-            ) -> std::result::Result<Self, ProgramError> {
+            ) -> std::result::Result<Self, anchor_lang::error::Error> {
                 let mut data = buf;
                 let vwr: spl_governance_addin_api::voter_weight::VoterWeightRecord =
                     anchor_lang::AnchorDeserialize::deserialize(&mut data)
@@ -33,7 +33,7 @@ macro_rules! vote_weight_record {
             fn try_serialize<W: std::io::Write>(
                 &self,
                 writer: &mut W,
-            ) -> std::result::Result<(), ProgramError> {
+            ) -> std::result::Result<(), anchor_lang::error::Error> {
                 anchor_lang::AnchorSerialize::serialize(&self.0, writer)
                     .map_err(|_| anchor_lang::error::ErrorCode::AccountDidNotSerialize)?;
                 Ok(())
