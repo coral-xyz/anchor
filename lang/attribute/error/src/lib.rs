@@ -88,12 +88,6 @@ pub fn error(ts: proc_macro::TokenStream) -> TokenStream {
     create_error(error_code, true, None)
 }
 
-#[proc_macro]
-pub fn error_with_account_name(ts: proc_macro::TokenStream) -> TokenStream {
-    let input = parse_macro_input!(ts as ErrorWithAccountNameInput);
-    create_error(input.error_code, false, Some(input.account_name))
-}
-
 fn create_error(error_code: Expr, source: bool, account_name: Option<Expr>) -> TokenStream {
     let source = if source {
         quote! {

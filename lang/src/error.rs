@@ -255,6 +255,7 @@ impl Error {
         self
     }
 
+    /// adds an actual and expected value (in that order) to the error
     pub fn with_values(mut self, values: [&impl ToString; 2]) -> Self {
         match &mut self {
             Error::AnchorError(ae) => {
