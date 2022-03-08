@@ -369,12 +369,11 @@ macro_rules! require {
     };
 }
 
-
 /// Ensures two NON-PUBKEY values are equal.
-/// 
+///
 /// Use [require_keys_eq](crate::prelude::require_keys_eq)
 /// to compare two pubkeys.
-/// 
+///
 /// Can be used with or without a custom error code.
 ///
 /// # Example
@@ -401,10 +400,10 @@ macro_rules! require_eq {
 }
 
 /// Ensures two pubkeys values are equal.
-/// 
+///
 /// Use [require_eq](crate::prelude::require_eq)
 /// to compare two non-pubkey values.
-/// 
+///
 /// Can be used with or without a custom error code.
 ///
 /// # Example
