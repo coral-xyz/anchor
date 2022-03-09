@@ -10,8 +10,9 @@ use {
             signature::{Keypair, Signer},
             transaction::Transaction,
         },
-        Client, Cluster,
+        Client,
     },
+    anchor_config::cluster::Cluster,
     solana_program_test::{tokio, ProgramTest},
     std::rc::Rc,
 };
