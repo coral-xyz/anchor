@@ -148,6 +148,7 @@ name = "anchor-cli"
 version = "0.22.1"
 dependencies = [
  "anchor-client",
+ "anchor-config",
  "anchor-lang",
  "anchor-syn",
  "anyhow",
@@ -188,6 +189,37 @@ dependencies = [
  "solana-sdk",
  "thiserror",
  "url",
+]
+
+[[package]]
+name = "anchor-config"
+version = "0.22.1"
+dependencies = [
+ "anchor-client",
+ "anchor-lang",
+ "anchor-syn",
+ "anyhow",
+ "cargo_toml",
+ "chrono",
+ "clap 3.0.13",
+ "dirs 3.0.2",
+ "flate2",
+ "heck 0.3.3",
+ "rand",
+ "reqwest",
+ "semver 1.0.4",
+ "serde",
+ "serde_json",
+ "serum-common",
+ "shellexpand",
+ "solana-client",
+ "solana-program",
+ "solana-sdk",
+ "syn 1.0.81",
+ "tar",
+ "tokio",
+ "toml",
+ "walkdir",
 ]
 
 [[package]]

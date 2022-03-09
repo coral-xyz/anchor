@@ -4,6 +4,7 @@ use quote::quote;
 mod accounts;
 pub mod common;
 mod cpi;
+mod declare_id;
 mod dispatch;
 mod entry;
 mod handlers;
@@ -12,6 +13,7 @@ mod instruction;
 pub fn generate(program: &Program) -> proc_macro2::TokenStream {
     let mod_name = &program.name;
 
+    let declare_id = declare_id::generate(program);
     let entry = entry::generate(program);
     let dispatch = dispatch::generate(program);
     let handlers = handlers::generate(program);

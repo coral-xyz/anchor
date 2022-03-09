@@ -1,5 +1,5 @@
-use crate::config::ProgramWorkspace;
 use crate::VERSION;
+use anchor_config::config::ProgramWorkspace;
 use anchor_syn::idl::Idl;
 use anyhow::Result;
 use heck::{CamelCase, MixedCase, SnakeCase};

@@ -15,6 +15,10 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 
+// Version of the docker image.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const DOCKER_BUILDER_VERSION: &str = VERSION;
+
 #[derive(Default, Debug, Parser)]
 pub struct ConfigOverride {
     /// Cluster override.
@@ -315,7 +319,7 @@ impl Config {
         let ver = self
             .anchor_version
             .clone()
-            .unwrap_or_else(|| crate::DOCKER_BUILDER_VERSION.to_string());
+            .unwrap_or_else(|| DOCKER_BUILDER_VERSION.to_string());
         format!("projectserum/build:v{}", ver)
     }
 

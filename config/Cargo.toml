@@ -1,16 +1,10 @@
 [package]
-name = "anchor-cli"
+name = "anchor-config"
 version = "0.22.1"
-authors = ["armaniferrante <armaniferrante@gmail.com>"]
+authors = ["Serum Foundation <foundation@projectserum.com>"]
 edition = "2018"
-
-[[bin]]
-name = "anchor"
-path = "src/bin/main.rs"
-
-[features]
-dev = []
-default = []
+license = "Apache-2.0"
+description = "Reading from and writing to the Anchor workspace config"
 
 [dependencies]
 clap = { version = "3.0.13", features = ["derive"] }
@@ -19,7 +13,6 @@ syn = { version = "1.0.60", features = ["full", "extra-traits"] }
 anchor-lang = { path = "../lang" }
 anchor-client = { path = "../client" }
 anchor-syn = { path = "../lang/syn", features = ["idl", "init-if-needed"] }
-anchor-config = { path = "../config" }
 serde_json = "1.0"
 shellexpand = "2.1.0"
 toml = "0.5.8"
@@ -36,7 +29,6 @@ rand = "0.7.3"
 tar = "0.4.35"
 reqwest = { version = "0.11.4", features = ["multipart", "blocking"] }
 tokio = "1.0"
-pathdiff = "0.2.0"
 cargo_toml = "0.9.2"
 walkdir = "2"
 chrono = "0.4.19"
