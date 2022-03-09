@@ -1,8 +1,8 @@
-use crate::idl::*;
 use crate::parser;
 use crate::parser::context::CrateContext;
 use crate::ConstraintSeedsGroup;
 use crate::{AccountsStruct, Field};
+use anchor_idl::*;
 use std::collections::HashMap;
 use std::str::FromStr;
 use syn::Expr;

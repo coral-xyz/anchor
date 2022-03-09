@@ -1,5 +1,5 @@
-use anchor_client::Cluster;
-use anchor_syn::idl::Idl;
+use crate::cluster::Cluster;
+use anchor_idl::Idl;
 use anyhow::{anyhow, Error, Result};
 use clap::{ArgEnum, Parser};
 use heck::SnakeCase;
@@ -14,6 +14,10 @@ use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
+
+// Version of the docker image.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const DOCKER_BUILDER_VERSION: &str = VERSION;
 
 #[derive(Default, Debug, Parser)]
 pub struct ConfigOverride {
@@ -155,23 +159,21 @@ impl WithPath<Config> {
             .collect())
     }
 
-    // TODO: this should read idl dir instead of parsing source.
     pub fn read_all_programs(&self) -> Result<Vec<Program>> {
         let mut r = vec![];
+        let workspace_root =
+            Config::discover(&ConfigOverride::default())?.expect("Not in workspace.");
+        let workspace_root_path = workspace_root.path().parent().unwrap();
+        let idl_dir = workspace_root_path.join("target/idl");
         for path in self.get_program_list()? {
-            let cargo = Manifest::from_path(&path.join("Cargo.toml"))?;
-            let lib_name = cargo.lib_name()?;
-            let version = cargo.version();
-            let idl = anchor_syn::idl::file::parse(
-                path.join("src/lib.rs"),
-                version,
-                self.features.seeds,
-                false,
-            )?;
+            let lib_name = Manifest::from_path(&path.join("Cargo.toml"))?.lib_name()?;
+            let idl: anchor_idl::Idl = serde_json::from_str(&fs::read_to_string(
+                idl_dir.join(&lib_name).with_extension("json"),
+            )?)?;
             r.push(Program {
                 lib_name,
                 path,
-                idl,
+                idl: Some(idl),
             });
         }
         Ok(r)
@@ -315,7 +317,7 @@ impl Config {
         let ver = self
             .anchor_version
             .clone()
-            .unwrap_or_else(|| crate::DOCKER_BUILDER_VERSION.to_string());
+            .unwrap_or_else(|| DOCKER_BUILDER_VERSION.to_string());
         format!("projectserum/build:v{}", ver)
     }
 

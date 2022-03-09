@@ -1,11 +1,11 @@
-use crate::config::{
+use anchor_config::cluster::Cluster;
+use anchor_config::config::{
     AnchorPackage, BootstrapMode, BuildConfig, Config, ConfigOverride, Manifest, ProgramDeployment,
-    ProgramWorkspace, Test, WithPath,
+    ProgramWorkspace, Test, WithPath, VERSION,
 };
-use anchor_client::Cluster;
+use anchor_idl::Idl;
 use anchor_lang::idl::{IdlAccount, IdlInstruction};
 use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
-use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use flate2::read::GzDecoder;
@@ -41,12 +41,7 @@ use std::process::{Child, Stdio};
 use std::string::ToString;
 use tar::Archive;
 
-pub mod config;
 pub mod template;
-
-// Version of the docker image.
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-pub const DOCKER_BUILDER_VERSION: &str = VERSION;
 
 #[derive(Debug, Parser)]
 #[clap(version = VERSION)]

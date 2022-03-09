@@ -148,6 +148,8 @@ name = "anchor-cli"
 version = "0.22.1"
 dependencies = [
  "anchor-client",
+ "anchor-config",
+ "anchor-idl",
  "anchor-lang",
  "anchor-syn",
  "anyhow",
@@ -179,6 +181,7 @@ dependencies = [
 name = "anchor-client"
 version = "0.22.1"
 dependencies = [
+ "anchor-config",
  "anchor-lang",
  "anyhow",
  "regex",
@@ -191,6 +194,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "anchor-config"
+version = "0.22.1"
+dependencies = [
+ "anchor-idl",
+ "anyhow",
+ "cargo_toml",
+ "chrono",
+ "clap 3.0.13",
+ "dirs 3.0.2",
+ "flate2",
+ "heck 0.3.3",
+ "rand",
+ "reqwest",
+ "semver 1.0.4",
+ "serde",
+ "serde_json",
+ "serum-common",
+ "shellexpand",
+ "solana-client",
+ "solana-program",
+ "solana-sdk",
+ "syn 1.0.81",
+ "tar",
+ "tokio",
+ "toml",
+ "url",
+ "walkdir",
+]
+
+[[package]]
 name = "anchor-derive-accounts"
 version = "0.22.1"
 dependencies = [
@@ -199,6 +232,15 @@ dependencies = [
  "proc-macro2 1.0.32",
  "quote 1.0.10",
  "syn 1.0.81",
+]
+
+[[package]]
+name = "anchor-idl"
+version = "0.22.1"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -238,6 +280,8 @@ dependencies = [
 name = "anchor-syn"
 version = "0.22.1"
 dependencies = [
+ "anchor-config",
+ "anchor-idl",
  "anyhow",
  "bs58 0.3.1",
  "heck 0.3.3",

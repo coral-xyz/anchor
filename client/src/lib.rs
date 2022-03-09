@@ -1,11 +1,13 @@
 //! `anchor_client` provides an RPC client to send transactions and fetch
 //! deserialized accounts from Solana programs written in `anchor_lang`.
 
+use anchor_config::cluster::Cluster;
 use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::solana_program::system_program;
 use anchor_lang::{AccountDeserialize, Discriminator, InstructionData, ToAccountMetas};
+
 use regex::Regex;
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::client_error::ClientError as SolanaClientError;
@@ -29,11 +31,8 @@ use std::vec::IntoIter;
 use thiserror::Error;
 
 pub use anchor_lang;
-pub use cluster::Cluster;
 pub use solana_client;
 pub use solana_sdk;
-
-mod cluster;
 
 /// EventHandle unsubscribes from a program event stream on drop.
 pub type EventHandle = PubsubClientSubscription<RpcResponse<RpcLogsResponse>>;

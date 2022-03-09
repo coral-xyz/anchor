@@ -11,6 +11,7 @@ debug = []
 
 [dependencies]
 anchor-lang = { path = "../lang", version = "0.22.1" }
+anchor-config = { path = "../config", version = "0.22.1" }
 anyhow = "1.0.32"
 regex = "1.4.5"
 serde = { version = "1.0.122", features = ["derive"] }
