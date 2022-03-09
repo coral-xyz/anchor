@@ -76,6 +76,8 @@ publish:
 	sleep 25
 	cd spl/ && cargo publish && cd ../
 	sleep 25
+	cd idl/ && cargo publish && cd ../
+	sleep 25
 	cd config/ && cargo publish && cd ../
 	sleep 25
 	cd client/ && cargo publish && cd ../

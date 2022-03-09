@@ -1,11 +1,11 @@
-use anchor_client::Cluster;
+use anchor_config::cluster::Cluster;
 use anchor_config::config::{
     AnchorPackage, BootstrapMode, BuildConfig, Config, ConfigOverride, Manifest, ProgramDeployment,
     ProgramWorkspace, Test, WithPath, VERSION,
 };
 use anchor_lang::idl::{IdlAccount, IdlInstruction};
 use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
-use anchor_syn::idl::Idl;
+use anchor_idl::Idl;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use flate2::read::GzDecoder;

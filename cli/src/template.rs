@@ -1,6 +1,6 @@
 use crate::VERSION;
 use anchor_config::config::ProgramWorkspace;
-use anchor_syn::idl::Idl;
+use anchor_idl::Idl;
 use anyhow::Result;
 use heck::{CamelCase, MixedCase, SnakeCase};
 use solana_sdk::pubkey::Pubkey;

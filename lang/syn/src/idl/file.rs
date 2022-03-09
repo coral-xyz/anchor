@@ -1,4 +1,4 @@
-use crate::idl::*;
+use anchor_idl::*;
 use crate::parser::context::CrateContext;
 use crate::parser::{self, accounts, error, program};
 use crate::Ty;
@@ -529,7 +529,7 @@ fn idl_accounts(
                     Ty::Signer => true,
                     _ => acc.constraints.is_signer(),
                 },
-                pda: pda::parse(ctx, accounts, acc, seeds_feature),
+                pda: crate::idl::pda::parse(ctx, accounts, acc, seeds_feature),
             }),
         })
         .collect::<Vec<_>>()

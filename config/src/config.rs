@@ -1,5 +1,5 @@
-use anchor_client::Cluster;
-use anchor_syn::idl::Idl;
+use crate::cluster::Cluster;
+use anchor_idl::Idl;
 use anyhow::{anyhow, Error, Result};
 use clap::{ArgEnum, Parser};
 use heck::SnakeCase;
@@ -162,7 +162,8 @@ impl WithPath<Config> {
     // TODO: this should read idl dir instead of parsing source.
     pub fn read_all_programs(&self) -> Result<Vec<Program>> {
         let mut r = vec![];
-        for path in self.get_program_list()? {
+        
+        /* for path in self.get_program_list()? {
             let cargo = Manifest::from_path(&path.join("Cargo.toml"))?;
             let lib_name = cargo.lib_name()?;
             let version = cargo.version();
@@ -177,7 +178,7 @@ impl WithPath<Config> {
                 path,
                 idl,
             });
-        }
+        } */
         Ok(r)
     }
 

@@ -14,7 +14,8 @@ members = [
     "lang/derive/*",
     "lang/syn",
     "spl",
-    "config"
+    "config",
+    "idl"
 ]
 exclude = [
     "tests/swap/deps/serum-dex",

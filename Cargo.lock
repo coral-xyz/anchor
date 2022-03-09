@@ -149,6 +149,7 @@ version = "0.22.1"
 dependencies = [
  "anchor-client",
  "anchor-config",
+ "anchor-idl",
  "anchor-lang",
  "anchor-syn",
  "anyhow",
@@ -180,6 +181,7 @@ dependencies = [
 name = "anchor-client"
 version = "0.22.1"
 dependencies = [
+ "anchor-config",
  "anchor-lang",
  "anyhow",
  "regex",
@@ -195,9 +197,7 @@ dependencies = [
 name = "anchor-config"
 version = "0.22.1"
 dependencies = [
- "anchor-client",
- "anchor-lang",
- "anchor-syn",
+ "anchor-idl",
  "anyhow",
  "cargo_toml",
  "chrono",
@@ -219,6 +219,7 @@ dependencies = [
  "tar",
  "tokio",
  "toml",
+ "url",
  "walkdir",
 ]
 
@@ -231,6 +232,15 @@ dependencies = [
  "proc-macro2 1.0.32",
  "quote 1.0.10",
  "syn 1.0.81",
+]
+
+[[package]]
+name = "anchor-idl"
+version = "0.22.1"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -270,6 +280,8 @@ dependencies = [
 name = "anchor-syn"
 version = "0.22.1"
 dependencies = [
+ "anchor-config",
+ "anchor-idl",
  "anyhow",
  "bs58 0.3.1",
  "heck 0.3.3",
