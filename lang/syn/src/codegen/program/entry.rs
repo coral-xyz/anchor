@@ -73,8 +73,6 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             dispatch(program_id, accounts, data)
         }
 
-
-
         /// Module representing the program.
         pub mod program {
             use super::*;
