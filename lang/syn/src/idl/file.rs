@@ -1,8 +1,8 @@
-use anchor_idl::*;
 use crate::parser::context::CrateContext;
 use crate::parser::{self, accounts, error, program};
 use crate::Ty;
 use crate::{AccountField, AccountsStruct, StateIx};
+use anchor_idl::*;
 use anyhow::Result;
 use heck::MixedCase;
 use quote::ToTokens;

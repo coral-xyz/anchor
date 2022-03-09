@@ -1,11 +1,11 @@
-use anchor_idl::*;
 use crate::parser;
 use crate::parser::context::CrateContext;
 use crate::ConstraintSeedsGroup;
 use crate::{AccountsStruct, Field};
+use anchor_idl::*;
 use std::collections::HashMap;
-use syn::Expr;
 use std::str::FromStr;
+use syn::Expr;
 
 // Parses a seeds constraint, extracting the IdlSeed types.
 //

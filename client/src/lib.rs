@@ -1,12 +1,12 @@
 //! `anchor_client` provides an RPC client to send transactions and fetch
 //! deserialized accounts from Solana programs written in `anchor_lang`.
 
+use anchor_config::cluster::Cluster;
 use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::solana_program::system_program;
 use anchor_lang::{AccountDeserialize, Discriminator, InstructionData, ToAccountMetas};
-use anchor_config::cluster::Cluster;
 
 use regex::Regex;
 use solana_account_decoder::UiAccountEncoding;

@@ -159,26 +159,23 @@ impl WithPath<Config> {
             .collect())
     }
 
-    // TODO: this should read idl dir instead of parsing source.
     pub fn read_all_programs(&self) -> Result<Vec<Program>> {
         let mut r = vec![];
-        
-        /* for path in self.get_program_list()? {
-            let cargo = Manifest::from_path(&path.join("Cargo.toml"))?;
-            let lib_name = cargo.lib_name()?;
-            let version = cargo.version();
-            let idl = anchor_syn::idl::file::parse(
-                path.join("src/lib.rs"),
-                version,
-                self.features.seeds,
-                false,
-            )?;
+        let workspace_root =
+            Config::discover(&ConfigOverride::default())?.expect("Not in workspace.");
+        let workspace_root_path = workspace_root.path().parent().unwrap();
+        let idl_dir = workspace_root_path.join("target/idl");
+        for path in self.get_program_list()? {
+            let lib_name = Manifest::from_path(&path.join("Cargo.toml"))?.lib_name()?;
+            let idl: anchor_idl::Idl = serde_json::from_str(&fs::read_to_string(
+                idl_dir.join(&lib_name).with_extension("json"),
+            )?)?;
             r.push(Program {
                 lib_name,
                 path,
-                idl,
+                idl: Some(idl),
             });
-        } */
+        }
         Ok(r)
     }
 
