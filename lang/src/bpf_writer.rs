@@ -1,4 +1,4 @@
-use solana_program::program_memory;
+use solana_program::program_memory::sol_memcpy;
 use std::cmp;
 use std::io::{self, Write};
 
@@ -17,15 +17,9 @@ impl<T> BpfWriter<T> {
 impl Write for BpfWriter<&mut [u8]> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let pos = cmp::min(self.pos, self.inner.len() as u64);
-        let writable_size = self.inner.len().saturating_sub(pos as usize);
-
-        if writable_size == 0 {
-            return Err(io::Error::from(io::ErrorKind::WriteZero));
-        }
-
-        program_memory::sol_memcpy(&mut self.inner[(pos as usize)..], buf, writable_size);
-        self.pos += writable_size as u64;
-        Ok(writable_size)
+        sol_memcpy(&mut self.inner[(pos as usize)..], buf, buf.len());
+        self.pos += buf.len() as u64;
+        Ok(buf.len())
     }
 
     fn flush(&mut self) -> io::Result<()> {
