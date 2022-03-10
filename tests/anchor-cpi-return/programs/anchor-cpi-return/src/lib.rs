@@ -6,8 +6,9 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 pub mod anchor_cpi_return {
     use super::*;
 
+    #[derive(AnchorSerialize, AnchorDeserialize)]
     pub struct StructReturn {
-        pub data: u64,
+        pub value: u64,
     }
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
@@ -18,12 +19,10 @@ pub mod anchor_cpi_return {
         Ok(10)
     }
 
-    /*
     pub fn return_struct(ctx: Context<CpiReturn>) -> Result<StructReturn> {
-        let s = StructReturn { data: 10 };
+        let s = StructReturn { value: 11 };
         Ok(s)
     }
-    */
 }
 
 #[derive(Accounts)]

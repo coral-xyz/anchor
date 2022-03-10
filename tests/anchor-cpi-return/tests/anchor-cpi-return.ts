@@ -1,4 +1,6 @@
+import assert from "assert";
 import * as anchor from "@project-serum/anchor";
+import * as borsh from "borsh";
 import { Program } from "@project-serum/anchor";
 import { AnchorCpiReturn } from "../target/types/anchor_cpi_return";
 import { AnchorCpiCaller } from "../target/types/anchor_cpi_caller";
@@ -15,7 +17,7 @@ describe("anchor-cpi-return", () => {
   const returnProgram = anchor.workspace
     .AnchorCpiReturn as Program<AnchorCpiReturn>;
 
-  it("Is initialized!", async () => {
+  it("can return u64 from a cpi call", async () => {
     const cpiReturn = anchor.web3.Keypair.generate();
     await returnProgram.methods
       .initialize()
@@ -33,6 +35,69 @@ describe("anchor-cpi-return", () => {
         cpiReturnProgram: returnProgram.programId,
       })
       .rpc();
-    console.log("Your transaction signature", tx);
+
+    await provider.connection.confirmTransaction(tx, "confirmed");
+    let t = await provider.connection.getTransaction(tx, {
+      commitment: "confirmed",
+    });
+
+    // "Program return: <key> <val>"
+    const prefix = "Program return: ";
+    let log = t.meta.logMessages.find((log) => log.startsWith(prefix));
+    log = log.slice(prefix.length);
+    let [key, data] = log.split(" ", 2);
+    assert.equal(key, returnProgram.programId);
+    let buf = Buffer.from(data, "base64");
+    const reader = new borsh.BinaryReader(buf);
+    assert.equal(reader.readU64().toNumber(), 10);
+  });
+
+  it("can return a struct from a cpi call", async () => {
+    const cpiReturn = anchor.web3.Keypair.generate();
+    await returnProgram.methods
+      .initialize()
+      .accounts({
+        account: cpiReturn.publicKey,
+        user: provider.wallet.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([cpiReturn])
+      .rpc();
+    const tx = await callerProgram.methods
+      .cpiCallReturnStruct()
+      .accounts({
+        cpiReturn: cpiReturn.publicKey,
+        cpiReturnProgram: returnProgram.programId,
+      })
+      .rpc();
+
+    await provider.connection.confirmTransaction(tx, "confirmed");
+    let t = await provider.connection.getTransaction(tx, {
+      commitment: "confirmed",
+    });
+
+    // "Program return: <key> <val>"
+    const prefix = "Program return: ";
+    let log = t.meta.logMessages.find((log) => log.startsWith(prefix));
+    log = log.slice(prefix.length);
+    let [key, data] = log.split(" ", 2);
+    assert.equal(key, returnProgram.programId);
+    let buf = Buffer.from(data, "base64");
+
+    class Assignable {
+      constructor(properties) {
+        Object.keys(properties).map((key) => {
+          this[key] = properties[key];
+        });
+      }
+    }
+    class Data extends Assignable {}
+
+    const schema = new Map([
+      [Data, { kind: "struct", fields: [["value", "u64"]] }],
+    ]);
+    const deserialized = borsh.deserialize(schema, Data, buf);
+
+    assert(deserialized.value.toNumber() === 11);
   });
 });
