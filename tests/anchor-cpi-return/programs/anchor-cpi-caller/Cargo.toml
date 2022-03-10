@@ -18,3 +18,4 @@ default = []
 [dependencies]
 anchor-lang = { path = "../../../../lang", features = ["init-if-needed"] }
 anchor-cpi-return = { path = "../anchor-cpi-return", features = ["cpi"] }
+base64 = "0.13.0"

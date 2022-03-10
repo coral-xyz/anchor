@@ -17,6 +17,17 @@ describe("anchor-cpi-return", () => {
   const returnProgram = anchor.workspace
     .AnchorCpiReturn as Program<AnchorCpiReturn>;
 
+  const getReturnLog = (confirmedTransaction) => {
+    const prefix = "Program return: ";
+    let log = confirmedTransaction.meta.logMessages.find((log) =>
+      log.startsWith(prefix)
+    );
+    log = log.slice(prefix.length);
+    const [key, data] = log.split(" ", 2);
+    const buffer = Buffer.from(data, "base64");
+    return [key, data, buffer];
+  };
+
   it("can return u64 from a cpi call", async () => {
     const cpiReturn = anchor.web3.Keypair.generate();
     await returnProgram.methods
@@ -41,14 +52,17 @@ describe("anchor-cpi-return", () => {
       commitment: "confirmed",
     });
 
-    // "Program return: <key> <val>"
-    const prefix = "Program return: ";
-    let log = t.meta.logMessages.find((log) => log.startsWith(prefix));
-    log = log.slice(prefix.length);
-    let [key, data] = log.split(" ", 2);
+    const [key, data, buffer] = getReturnLog(t);
     assert.equal(key, returnProgram.programId);
+
+    // Check for matching log on receive side
+    let receiveLog = t.meta.logMessages.find(
+      (log) => log == `Program log: ${data}`
+    );
+    assert(receiveLog !== undefined);
+
     let buf = Buffer.from(data, "base64");
-    const reader = new borsh.BinaryReader(buf);
+    const reader = new borsh.BinaryReader(buffer);
     assert.equal(reader.readU64().toNumber(), 10);
   });
 
@@ -76,14 +90,16 @@ describe("anchor-cpi-return", () => {
       commitment: "confirmed",
     });
 
-    // "Program return: <key> <val>"
-    const prefix = "Program return: ";
-    let log = t.meta.logMessages.find((log) => log.startsWith(prefix));
-    log = log.slice(prefix.length);
-    let [key, data] = log.split(" ", 2);
+    const [key, data, buffer] = getReturnLog(t);
     assert.equal(key, returnProgram.programId);
-    let buf = Buffer.from(data, "base64");
 
+    // Check for matching log on receive side
+    let receiveLog = t.meta.logMessages.find(
+      (log) => log == `Program log: ${data}`
+    );
+    assert(receiveLog !== undefined);
+
+    // Deserialize the struct and validate
     class Assignable {
       constructor(properties) {
         Object.keys(properties).map((key) => {
@@ -92,12 +108,10 @@ describe("anchor-cpi-return", () => {
       }
     }
     class Data extends Assignable {}
-
     const schema = new Map([
       [Data, { kind: "struct", fields: [["value", "u64"]] }],
     ]);
-    const deserialized = borsh.deserialize(schema, Data, buf);
-
+    const deserialized = borsh.deserialize(schema, Data, buffer);
     assert(deserialized.value.toNumber() === 11);
   });
 });

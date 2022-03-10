@@ -15,7 +15,10 @@ pub mod anchor_cpi_caller {
             account: ctx.accounts.cpi_return.to_account_info(),
         };
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-        let data = anchor_cpi_return::cpi::return_u64(cpi_ctx)?;
+        let result = anchor_cpi_return::cpi::return_u64(cpi_ctx)?;
+        let mut buffer: Vec<u8> = Vec::new();
+        result.serialize(&mut buffer)?;
+        msg!(&base64::encode(buffer));
         Ok(())
     }
 
@@ -25,7 +28,10 @@ pub mod anchor_cpi_caller {
             account: ctx.accounts.cpi_return.to_account_info(),
         };
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-        let data = anchor_cpi_return::cpi::return_struct(cpi_ctx)?;
+        let result = anchor_cpi_return::cpi::return_struct(cpi_ctx)?;
+        let mut buffer: Vec<u8> = Vec::new();
+        result.serialize(&mut buffer)?;
+        msg!(&base64::encode(buffer));
         Ok(())
     }
 }
