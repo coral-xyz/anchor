@@ -13,7 +13,19 @@ incremented for features.
 
 ### Features
 
-* cli: Add `anchor clean` command ([#1470](https://github.com/project-serum/anchor/issues/1470)).
+* cli: Add `anchor clean` command that's the same as `cargo clean` but preserves keypairs inside `target/deploy` ([#1470](https://github.com/project-serum/anchor/issues/1470)).
+* lang: Add new `AccountSysvarMismatch` error code and test cases for sysvars ([#1535](https://github.com/project-serum/anchor/pull/1535)).
+* spl: Add support for revoke instruction ([#1493](https://github.com/project-serum/anchor/pull/1493)).
+
+### Fixes
+
+* ts: Fix the loss of strict typing using the `methods` namespace on builder functions ([#1539](https://github.com/project-serum/anchor/pull/1539)).
+
+### Breaking
+
+* ts: Mark `transaction`, `instruction`, `simulate` and `rpc` program namespaces as deprecated in favor of `methods` ([#1539](https://github.com/project-serum/anchor/pull/1539)).
+* ts: No longer allow manual setting of globally resolvable program public keys in `methods#accounts()`. ([#1548][https://github.com/project-serum/anchor/pull/1548])
+* lang: Remove space calculation using [`#[derive(Default)]`] (https://github.com/project-serum/anchor/pull/1519).
 
 ## [0.22.1] - 2022-02-28
 
