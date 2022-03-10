@@ -25,7 +25,6 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<(Vec<Ix>, Option<Fallbac
             let (ctx, args) = parse_args(method)?;
             let returns = parse_return(method)?;
             let anchor_ident = ctx_accounts_ident(&ctx.raw_arg)?;
-            dbg!(&returns);
             Ok(Ix {
                 raw_method: method.clone(),
                 ident: method.sig.ident.clone(),

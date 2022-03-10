@@ -722,7 +722,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     )?;
 
                     // Invoke user defined handler.
-                    #program_name::#ix_method_name(
+                    let result = #program_name::#ix_method_name(
                         anchor_lang::context::Context::new(
                             program_id,
                             &mut accounts,
@@ -731,6 +731,11 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         ),
                         #(#ix_arg_names),*
                     )?;
+
+                    // Set return data.
+                    let mut buffer: Vec<u8> = Vec::new();
+                    result.serialize(&mut buffer)?;
+                    anchor_lang::solana_program::program::set_return_data(&buffer.as_slice());
 
                     // Exit routine.
                     accounts.exit(program_id)

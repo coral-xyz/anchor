@@ -2,7 +2,7 @@ use crate::codegen::program::common::{generate_ix_variant, sighash, SIGHASH_GLOB
 use crate::Program;
 use crate::StateIx;
 use heck::SnakeCase;
-use quote::quote;
+use quote::{quote, ToTokens};
 
 pub fn generate(program: &Program) -> proc_macro2::TokenStream {
     // Generate cpi methods for the state struct.
@@ -70,11 +70,13 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let sighash_arr = sighash(SIGHASH_GLOBAL_NAMESPACE, name);
                 let sighash_tts: proc_macro2::TokenStream =
                     format!("{:?}", sighash_arr).parse().unwrap();
+                // TODO Cfg if cpi-return else ()
+                let ret_type = &ix.returns.return_type.to_token_stream();
                 quote! {
                     pub fn #method_name<'a, 'b, 'c, 'info>(
                         ctx: anchor_lang::context::CpiContext<'a, 'b, 'c, 'info, #accounts_ident<'info>>,
                         #(#args),*
-                    ) -> anchor_lang::Result<()> {
+                    ) -> anchor_lang::Result<#ret_type> {
                         let ix = {
                             let ix = instruction::#ix_variant;
                             let mut ix_data = AnchorSerialize::try_to_vec(&ix)
@@ -93,7 +95,10 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             &ix,
                             &acc_infos,
                             ctx.signer_seeds,
-                        ).map_err(Into::into)
+                        );
+                        let (_key, data) = anchor_lang::solana_program::program::get_return_data().unwrap();
+                        let data = <#ret_type>::try_from_slice(&data)?;
+                        Ok(data)
                     }
                 }
             };
