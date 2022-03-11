@@ -372,7 +372,7 @@ impl Config {
         fs::read_to_string(&p)
             .with_context(|| {
                 format!(
-                    "Something went wrong reading the file with path: {}",
+                    "Error reading the file with path: {}",
                     p.as_ref().display()
                 )
             })?
