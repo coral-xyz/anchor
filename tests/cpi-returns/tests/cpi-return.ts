@@ -2,20 +2,18 @@ import assert from "assert";
 import * as anchor from "@project-serum/anchor";
 import * as borsh from "borsh";
 import { Program } from "@project-serum/anchor";
-import { AnchorCpiReturn } from "../target/types/anchor_cpi_return";
-import { AnchorCpiCaller } from "../target/types/anchor_cpi_caller";
+import { Callee } from "../target/types/callee";
+import { Caller } from "../target/types/caller";
 
 const { SystemProgram } = anchor.web3;
 
-describe("anchor-cpi-return", () => {
+describe("CPI return", () => {
   // Configure the client to use the local cluster.
   const provider = anchor.Provider.env();
   anchor.setProvider(provider);
 
-  const callerProgram = anchor.workspace
-    .AnchorCpiCaller as Program<AnchorCpiCaller>;
-  const returnProgram = anchor.workspace
-    .AnchorCpiReturn as Program<AnchorCpiReturn>;
+  const callerProgram = anchor.workspace.Caller as Program<Caller>;
+  const returnProgram = anchor.workspace.Callee as Program<Callee>;
 
   const getReturnLog = (confirmedTransaction) => {
     const prefix = "Program return: ";

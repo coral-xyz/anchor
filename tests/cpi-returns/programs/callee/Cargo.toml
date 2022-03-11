@@ -1,12 +1,12 @@
 [package]
-name = "anchor-cpi-return"
+name = "callee"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2018"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "anchor_cpi_return"
+name = "callee"
 
 [features]
 no-entrypoint = []

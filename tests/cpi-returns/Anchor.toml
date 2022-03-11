@@ -2,8 +2,8 @@
 seeds = false
 
 [programs.localnet]
-anchor_cpi_return = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
-anchor_cpi_caller = "HmbTLCmaGvZhKnn1Zfa1JVnp7vkMV4DYVxPLWBVoN65L"
+callee = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+caller = "HmbTLCmaGvZhKnn1Zfa1JVnp7vkMV4DYVxPLWBVoN65L"
 
 [registry]
 url = "https://anchor.projectserum.com"
