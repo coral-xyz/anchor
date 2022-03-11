@@ -1,10 +1,14 @@
 //! Account container that checks ownership on deserialization.
 
 use crate::error::ErrorCode;
-use crate::*;
+use crate::{
+    AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, Key, Owner,
+    Result, ToAccountInfos, ToAccountMetas, ToAccountInfo
+};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
+use solana_program::system_program;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
@@ -234,7 +238,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone + fmt::Debu
     }
 }
 
-impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T> {
+impl<'a, T: AccountSerialize + AccountDeserialize + crate::Owner + Clone> Account<'a, T> {
     fn new(info: AccountInfo<'a>, account: T) -> Account<'a, T> {
         Self { info, account }
     }
@@ -408,5 +412,11 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> DerefMut for 
             panic!();
         }
         &mut self.account
+    }
+}
+
+impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> Key for Account<'info, T> {
+    fn key(&self) -> Pubkey {
+        *self.info.key
     }
 }
