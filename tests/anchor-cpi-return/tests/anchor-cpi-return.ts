@@ -28,8 +28,11 @@ describe("anchor-cpi-return", () => {
     return [key, data, buffer];
   };
 
-  it("can return u64 from a cpi call", async () => {
-    const cpiReturn = anchor.web3.Keypair.generate();
+  const cpiReturn = anchor.web3.Keypair.generate();
+
+  const confirmOptions = { commitment: "confirmed" };
+
+  it("can initialize", async () => {
     await returnProgram.methods
       .initialize()
       .accounts({
@@ -39,15 +42,16 @@ describe("anchor-cpi-return", () => {
       })
       .signers([cpiReturn])
       .rpc();
+  });
+
+  it("can return u64 from a cpi", async () => {
     const tx = await callerProgram.methods
       .cpiCallReturnU64()
       .accounts({
         cpiReturn: cpiReturn.publicKey,
         cpiReturnProgram: returnProgram.programId,
       })
-      .rpc();
-
-    await provider.connection.confirmTransaction(tx, "confirmed");
+      .rpc(confirmOptions);
     let t = await provider.connection.getTransaction(tx, {
       commitment: "confirmed",
     });
@@ -61,31 +65,34 @@ describe("anchor-cpi-return", () => {
     );
     assert(receiveLog !== undefined);
 
-    let buf = Buffer.from(data, "base64");
     const reader = new borsh.BinaryReader(buffer);
     assert.equal(reader.readU64().toNumber(), 10);
   });
 
-  it("can return a struct from a cpi call", async () => {
-    const cpiReturn = anchor.web3.Keypair.generate();
-    await returnProgram.methods
-      .initialize()
+  it("can make a non-cpi call to a function that returns a u64", async () => {
+    const tx = await returnProgram.methods
+      .returnU64()
       .accounts({
         account: cpiReturn.publicKey,
-        user: provider.wallet.publicKey,
-        systemProgram: SystemProgram.programId,
       })
-      .signers([cpiReturn])
-      .rpc();
+      .rpc(confirmOptions);
+    let t = await provider.connection.getTransaction(tx, {
+      commitment: "confirmed",
+    });
+    const [key, , buffer] = getReturnLog(t);
+    assert.equal(key, returnProgram.programId);
+    const reader = new borsh.BinaryReader(buffer);
+    assert.equal(reader.readU64().toNumber(), 10);
+  });
+
+  it("can return a struct from a cpi", async () => {
     const tx = await callerProgram.methods
       .cpiCallReturnStruct()
       .accounts({
         cpiReturn: cpiReturn.publicKey,
         cpiReturnProgram: returnProgram.programId,
       })
-      .rpc();
-
-    await provider.connection.confirmTransaction(tx, "confirmed");
+      .rpc(confirmOptions);
     let t = await provider.connection.getTransaction(tx, {
       commitment: "confirmed",
     });

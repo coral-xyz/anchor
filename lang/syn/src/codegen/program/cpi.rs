@@ -70,8 +70,15 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let sighash_arr = sighash(SIGHASH_GLOBAL_NAMESPACE, name);
                 let sighash_tts: proc_macro2::TokenStream =
                     format!("{:?}", sighash_arr).parse().unwrap();
-                // TODO Cfg if cpi-return else ()
                 let ret_type = &ix.returns.return_type.to_token_stream();
+                let result_handler = match ret_type.to_string().as_str() {
+                    "()" => quote! { Ok(()) },
+                    _ =>  quote! {
+                        let (_key, data) = anchor_lang::solana_program::program::get_return_data().unwrap();
+                        let data = <#ret_type>::try_from_slice(&data)?;
+                        Ok(data)
+                    }
+                };
                 quote! {
                     pub fn #method_name<'a, 'b, 'c, 'info>(
                         ctx: anchor_lang::context::CpiContext<'a, 'b, 'c, 'info, #accounts_ident<'info>>,
@@ -95,10 +102,11 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             &ix,
                             &acc_infos,
                             ctx.signer_seeds,
-                        );
-                        let (_key, data) = anchor_lang::solana_program::program::get_return_data().unwrap();
-                        let data = <#ret_type>::try_from_slice(&data)?;
-                        Ok(data)
+                        ).map_or_else(
+                            |e| Err(Into::into(e)),
+                            // Maybe handle Solana return data.
+                            |_| { #result_handler }
+                        )
                     }
                 }
             };
