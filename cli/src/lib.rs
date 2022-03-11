@@ -1958,7 +1958,7 @@ fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
                         RpcClient::new(url.to_string())
                     } else {
                         return Err(anyhow!(
-                    "Validator url for Solana's JSON RPC should be provided in order to clone accounts"
+                    "Validator url for Solana's JSON RPC should be provided in order to clone accounts from it"
                 ));
                     };
 
