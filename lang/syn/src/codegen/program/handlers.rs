@@ -694,7 +694,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             let anchor = &ix.anchor_ident;
             let variant_arm = generate_ix_variant(ix.raw_method.sig.ident.to_string(), &ix.args);
             let ix_name_log = format!("Instruction: {}", ix_name);
-            let ret_type = &ix.returns.return_type.to_token_stream();
+            let ret_type = &ix.returns.ty.to_token_stream();
             let result_handler = match ret_type.to_string().as_str() {
                 "()" => quote! {},
                 _ => quote! {

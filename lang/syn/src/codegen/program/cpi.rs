@@ -70,7 +70,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let sighash_arr = sighash(SIGHASH_GLOBAL_NAMESPACE, name);
                 let sighash_tts: proc_macro2::TokenStream =
                     format!("{:?}", sighash_arr).parse().unwrap();
-                let ret_type = &ix.returns.return_type.to_token_stream();
+                let ret_type = &ix.returns.ty.to_token_stream();
                 let result_handler = match ret_type.to_string().as_str() {
                     "()" => quote! { Ok(()) },
                     _ =>  quote! {

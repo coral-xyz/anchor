@@ -110,7 +110,7 @@ pub fn parse_return(method: &syn::ItemFn) -> ParseResult<IxReturn> {
                     ))
                 }
             };
-            let return_type = match generic_args {
+            let ty = match generic_args {
                 syn::GenericArgument::Type(ty) => ty.clone(),
                 _ => {
                     return Err(ParseError::new(
@@ -119,7 +119,7 @@ pub fn parse_return(method: &syn::ItemFn) -> ParseResult<IxReturn> {
                     ))
                 }
             };
-            Ok(IxReturn { return_type })
+            Ok(IxReturn { ty })
         }
         _ => Err(ParseError::new(
             method.sig.output.span(),

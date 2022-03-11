@@ -98,7 +98,7 @@ pub struct IxArg {
 
 #[derive(Debug)]
 pub struct IxReturn {
-    pub return_type: Type,
+    pub ty: Type,
 }
 
 #[derive(Debug)]
