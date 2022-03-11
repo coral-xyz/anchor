@@ -319,6 +319,8 @@ jobs:
             path: tests/floats
           - cmd: cd tests/safety-checks && ./test.sh
             path: tests/safety-checks
+          - cmd: cd tests/cpi-returns && anchor test --skip-lint
+            path: tests/cpi-returns
     steps:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup/
