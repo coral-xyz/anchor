@@ -30,7 +30,8 @@
     "tictactoe",
     "typescript",
     "zero-copy",
-    "declare-id"
+    "declare-id",
+    "cpi-returns"
   ],
   "dependencies": {
     "@project-serum/anchor": "^0.22.1",
