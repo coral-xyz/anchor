@@ -13,13 +13,16 @@ incremented for features.
 
 ### Features
 
+* cli: Add `anchor clean` command that's the same as `cargo clean` but preserves keypairs inside `target/deploy` ([#1470](https://github.com/project-serum/anchor/issues/1470)).
 * lang: Add new `AccountSysvarMismatch` error code and test cases for sysvars ([#1535](https://github.com/project-serum/anchor/pull/1535)).
 * spl: Add support for revoke instruction ([#1493](https://github.com/project-serum/anchor/pull/1493)).
 * cli: Add support for `anchor idl fetch` to work outside anchor workspace ([#1509](https://github.com/project-serum/anchor/pull/1509)).
+* ts: Add provider parameter to `Spl.token` factory method ([#1597](https://github.com/project-serum/anchor/pull/1597)).
 
 ### Fixes
 
 * ts: Fix the loss of strict typing using the `methods` namespace on builder functions ([#1539](https://github.com/project-serum/anchor/pull/1539)).
+* spl: Update `spl/governance` to use new errors ([#1582](https://github.com/project-serum/anchor/pull/1582)).
 
 ### Breaking
 
