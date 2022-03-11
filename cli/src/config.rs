@@ -370,12 +370,7 @@ impl Config {
 
     fn from_path(p: impl AsRef<Path>) -> Result<Self> {
         fs::read_to_string(&p)
-            .with_context(|| {
-                format!(
-                    "Error reading the file with path: {}",
-                    p.as_ref().display()
-                )
-            })?
+            .with_context(|| format!("Error reading the file with path: {}", p.as_ref().display()))?
             .parse()
     }
 
