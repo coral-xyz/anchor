@@ -1962,13 +1962,16 @@ fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
                 ));
                     };
 
-                    let mut pubkeys = HashSet::new();
-                    for entry in value.as_array().unwrap() {
-                        let address = entry["address"].as_str().unwrap();
-                        let address = Pubkey::from_str(address)
-                            .map_err(|_| anyhow!("Invalid pubkey {}", address))?;
-                        pubkeys.insert(address);
-                    }
+                    let mut pubkeys = value
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .map(|entry| {
+                            let address = entry["address"].as_str().unwrap();
+                            Pubkey::from_str(address)
+                                .map_err(|_| anyhow!("Invalid pubkey {}", address))
+                        })
+                        .collect::<Result<HashSet<Pubkey>>>()?;
 
                     let accounts_keys = pubkeys.iter().cloned().collect::<Vec<_>>();
                     let accounts = client
