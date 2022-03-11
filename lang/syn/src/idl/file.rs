@@ -486,13 +486,16 @@ fn resolve_variable_array_lengths(ctx: &CrateContext, mut tts_string: String) ->
         }
         _ => false,
     }) {
+        let mut check_string = tts_string.clone();
+        // Strip whitespace to handle accidental double whitespaces
+        check_string.retain(|c| !c.is_whitespace());
         let size_string = format!("{}]", &constant.ident.to_string());
-        let cast_size_string = format!("{} as usize]", &constant.ident.to_string());
+        let cast_size_string = format!("{}asusize]", &constant.ident.to_string());
         // Check for something to replace
         let mut replacement_string = None;
-        if tts_string.contains(cast_size_string.as_str()) {
+        if check_string.contains(cast_size_string.as_str()) {
             replacement_string = Some(cast_size_string);
-        } else if tts_string.contains(size_string.as_str()) {
+        } else if check_string.contains(size_string.as_str()) {
             replacement_string = Some(size_string);
         }
         if let Some(replacement_string) = replacement_string {
@@ -510,7 +513,7 @@ fn resolve_variable_array_lengths(ctx: &CrateContext, mut tts_string: String) ->
             }
             // Replace the match, don't break because there might be multiple replacements to be
             // made in the case of multidimensional arrays
-            tts_string = tts_string.replace(
+            tts_string = check_string.replace(
                 &replacement_string,
                 format!("{}]", &constant.expr.to_token_stream()).as_str(),
             );
