@@ -11,7 +11,7 @@ pub mod callee {
         pub value: u64,
     }
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+    pub fn initialize(_ctx: Context<Initialize>) -> Result<()> {
         Ok(())
     }
 
@@ -19,7 +19,7 @@ pub mod callee {
         Ok(10)
     }
 
-    pub fn return_struct(ctx: Context<CpiReturn>) -> Result<StructReturn> {
+    pub fn return_struct(_ctx: Context<CpiReturn>) -> Result<StructReturn> {
         let s = StructReturn { value: 11 };
         Ok(s)
     }

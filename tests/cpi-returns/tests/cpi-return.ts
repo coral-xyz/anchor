@@ -8,7 +8,6 @@ import { Caller } from "../target/types/caller";
 const { SystemProgram } = anchor.web3;
 
 describe("CPI return", () => {
-  // Configure the client to use the local cluster.
   const provider = anchor.Provider.env();
   anchor.setProvider(provider);
 
