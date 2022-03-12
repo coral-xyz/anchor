@@ -22,9 +22,15 @@ use std::ops::Deref;
 /// - `Account.info.key == Program`
 /// - `Account.info.executable == true`
 ///
+/// Between the [`anchor_lang`](https://docs.rs/anchor-lang/latest/anchor_lang) and [`anchor_spl`](https://docs.rs/anchor_spl/latest/anchor_spl) crates,
+/// the following `Program` types are provided out of the box:
+///
+/// - [`AssociatedToken`](https://docs.rs/anchor-spl/latest/anchor_spl/associated_token/struct.AssociatedToken.html)
+/// - [`System`](https://docs.rs/anchor-lang/latest/anchor_lang/struct.System.html)
+/// - [`Token`](https://docs.rs/anchor-spl/latest/anchor_spl/token/struct.Token.html)
+///
 /// # Example
 /// ```ignore
-///
 /// #[program]
 /// mod my_program {
 ///     fn set_admin_settings(...){...}
