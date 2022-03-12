@@ -35,6 +35,9 @@ pub use solana_sdk;
 
 mod cluster;
 
+const PROGRAM_LOG: &str = "Program log: ";
+const PROGRAM_DATA: &str = "Program data: ";
+
 /// EventHandle unsubscribes from a program event stream on drop.
 pub type EventHandle = PubsubClientSubscription<RpcResponse<RpcLogsResponse>>;
 
@@ -279,8 +282,14 @@ fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
     l: &str,
 ) -> Result<(Option<T>, Option<String>, bool), ClientError> {
     // Log emitted from the current program.
-    if l.starts_with("Program log:") {
-        let log = l.to_string().split_off("Program log: ".len());
+    if l.starts_with(PROGRAM_LOG) || l.starts_with(PROGRAM_DATA) {
+        let log = {
+            if l.starts_with(PROGRAM_LOG) {
+                l.to_string().split_off(PROGRAM_LOG.len())
+            } else {
+                l.to_string().split_off(PROGRAM_DATA.len())
+            }
+        };
         let borsh_bytes = match anchor_lang::__private::base64::decode(&log) {
             Ok(borsh_bytes) => borsh_bytes,
             _ => {
