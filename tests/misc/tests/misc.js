@@ -164,6 +164,16 @@ describe("misc", () => {
     assert.ok(resp.events[1].data.data === 1234);
     assert.ok(resp.events[2].name === "E3");
     assert.ok(resp.events[2].data.data === 9);
+    assert.ok(resp.events[3].name === "E5");
+    assert.deepStrictEqual(
+      resp.events[3].data.data,
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    );
+    assert.ok(resp.events[4].name === "E6");
+    assert.deepStrictEqual(
+      resp.events[4].data.data,
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    );
   });
 
   let dataI8;
@@ -1002,7 +1012,8 @@ describe("misc", () => {
 
   it("init_if_needed throws if account exists but is not the expected space", async () => {
     const newAcc = anchor.web3.Keypair.generate();
-    await program.rpc.initWithSpace(3, {
+    const _irrelevantForTest = 3;
+    await program.rpc.initWithSpace(_irrelevantForTest, {
       accounts: {
         data: newAcc.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
@@ -1012,7 +1023,7 @@ describe("misc", () => {
     });
 
     try {
-      await program.rpc.testInitIfNeeded(3, {
+      await program.rpc.testInitIfNeeded(_irrelevantForTest, {
         accounts: {
           data: newAcc.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
@@ -1431,7 +1442,7 @@ describe("misc", () => {
   it("Can use multidimensional array", async () => {
     const array2d = new Array(10).fill(new Array(10).fill(99));
     const data = anchor.web3.Keypair.generate();
-    const tx = await program.rpc.testMultidimensionalArray(array2d, {
+    await program.rpc.testMultidimensionalArray(array2d, {
       accounts: {
         data: data.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
@@ -1444,6 +1455,28 @@ describe("misc", () => {
     const dataAccount = await program.account.dataMultidimensionalArray.fetch(
       data.publicKey
     );
+    assert.deepStrictEqual(dataAccount.data, array2d);
+  });
+
+  it("Can use multidimensional array with const sizes", async () => {
+    const array2d = new Array(10).fill(new Array(11).fill(22));
+    const data = anchor.web3.Keypair.generate();
+    await program.rpc.testMultidimensionalArrayConstSizes(array2d, {
+      accounts: {
+        data: data.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [data],
+      instructions: [
+        await program.account.dataMultidimensionalArrayConstSizes.createInstruction(
+          data
+        ),
+      ],
+    });
+    const dataAccount =
+      await program.account.dataMultidimensionalArrayConstSizes.fetch(
+        data.publicKey
+      );
     assert.deepStrictEqual(dataAccount.data, array2d);
   });
 
