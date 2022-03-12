@@ -574,6 +574,16 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool) -> Result
         println!("Failed to install node dependencies")
     }
 
+    let git_result = std::process::Command::new("git")
+        .arg("init")
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .output()
+        .map_err(|e| anyhow::format_err!("git init failed: {}", e.to_string()))?;
+    if !git_result.status.success() {
+        eprintln!("Failed to automatically initialize a new git repository");
+    }
+
     println!("{} initialized", name);
 
     Ok(())
