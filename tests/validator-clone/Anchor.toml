@@ -26,6 +26,9 @@ address = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
 address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 
 [[test.validator.clone]]
+address = "So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo"
+
+[[test.validator.clone]]
 address = "mv3ekLzLbnVPNxjSKvqBpU3ZeZXPQdEC3bp5MDEBG68"
 
 [[test.validator.clone]]

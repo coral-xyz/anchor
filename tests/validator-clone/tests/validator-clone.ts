@@ -10,7 +10,7 @@ describe("validator-clone", () => {
   const program = anchor.workspace.ValidatorClone as Program<ValidatorClone>;
   const connection = program.provider.connection;
 
-  it("Clone non-executable account", async () => {
+  it("Cloned non-executable account", async () => {
     // Metadata program upgrade authority
     const account = "AqH29mZfQFgRpfwaPoTMWSKJ5kqauoc1FwVBRksZyQrt";
     const [accountInfo] = await anchor.utils.rpc.getMultipleAccounts(
@@ -20,7 +20,7 @@ describe("validator-clone", () => {
     assert.ok(accountInfo !== null, "Account " + account + " not found");
   });
 
-  it("Clone bpf2-program account", async () => {
+  it("Cloned bpf2-program account", async () => {
     // Memo program
     const account = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
     const [accountInfo] = await anchor.utils.rpc.getMultipleAccounts(
@@ -30,12 +30,16 @@ describe("validator-clone", () => {
     assert.ok(accountInfo !== null, "Account " + account + " not found");
   });
 
-  it("Clone bpf3-program account and its program data", async () => {
+  it("Cloned bpf3-program accounts and their program data", async () => {
     const accounts = [
       // Metadata program
       "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s",
       // Metadata program executable data
       "PwDiXFxQsGra4sFFTT8r1QWRMd4vfumiWC1jfWNfdYT",
+      // Solend program
+      "So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo",
+      // Solend program executable data
+      "DMCvGv1fS5rMcAvEDPDDBawPqbDRSzJh2Bo6qXCmgJkR",
     ];
     const accountInfos = await anchor.utils.rpc.getMultipleAccounts(
       connection,
@@ -47,7 +51,7 @@ describe("validator-clone", () => {
     });
   });
 
-  it("Clone bpf3-program account and its program data (both explicitly declared)", async () => {
+  it("Cloned bpf3-program account and its program data (both explicitly declared)", async () => {
     const accounts = [
       // Mango v3 program
       "mv3ekLzLbnVPNxjSKvqBpU3ZeZXPQdEC3bp5MDEBG68",
