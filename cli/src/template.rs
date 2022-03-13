@@ -2,7 +2,7 @@ use crate::config::ProgramWorkspace;
 use crate::VERSION;
 use anchor_syn::idl::Idl;
 use anyhow::Result;
-use heck::{CamelCase, MixedCase, SnakeCase};
+use heck::{CamelCase, SnakeCase};
 use solana_sdk::pubkey::Pubkey;
 
 pub fn default_program_id() -> Pubkey {
@@ -29,10 +29,6 @@ token = "{}"
 }
 
 pub fn idl_ts(idl: &Idl) -> Result<String> {
-    let mut idl = idl.clone();
-    for acc in idl.accounts.iter_mut() {
-        acc.name = acc.name.to_mixed_case();
-    }
     let idl_json = serde_json::to_string_pretty(&idl)?;
     Ok(format!(
         r#"export type {} = {};
