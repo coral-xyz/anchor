@@ -25,7 +25,7 @@ use std::ops::Deref;
 ///
 /// Checks:
 ///
-/// - `account_info.key == Program`
+/// - `account_info.key == expected_program`
 /// - `account_info.executable == true`
 ///
 /// # Example
@@ -71,6 +71,7 @@ use std::ops::Deref;
 /// - [`System`](https://docs.rs/anchor-lang/latest/anchor_lang/struct.System.html)
 /// - [`AssociatedToken`](https://docs.rs/anchor-spl/latest/anchor_spl/associated_token/struct.AssociatedToken.html)
 /// - [`Token`](https://docs.rs/anchor-spl/latest/anchor_spl/token/struct.Token.html)
+/// 
 #[derive(Clone)]
 pub struct Program<'info, T: Id + Clone> {
     info: AccountInfo<'info>,
