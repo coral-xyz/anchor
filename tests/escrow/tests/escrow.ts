@@ -21,6 +21,9 @@ describe("escrow", () => {
   let takerTokenAccountB: PublicKey = null;
   let pda: PublicKey = null;
 
+  const initializerABalance = 10000;
+  const takerBBalance = 5000;
+
   const takerAmount = 1000;
   const initializerAmount = 500;
 
@@ -28,7 +31,7 @@ describe("escrow", () => {
   const payer = Keypair.generate();
   const mintAuthority = Keypair.generate();
 
-  it("Initialise escrow state", async () => {
+  before(async () => {
     // Airdropping tokens to a payer.
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(payer.publicKey, 10000000000),
@@ -67,14 +70,14 @@ describe("escrow", () => {
       initializerTokenAccountA,
       mintAuthority.publicKey,
       [mintAuthority],
-      initializerAmount
+      initializerABalance
     );
 
     await mintB.mintTo(
       takerTokenAccountB,
       mintAuthority.publicKey,
       [mintAuthority],
-      takerAmount
+      takerBBalance
     );
 
     let _initializerTokenAccountA = await mintA.getAccountInfo(
@@ -82,8 +85,14 @@ describe("escrow", () => {
     );
     let _takerTokenAccountB = await mintB.getAccountInfo(takerTokenAccountB);
 
-    assert.ok(_initializerTokenAccountA.amount.toNumber() == initializerAmount);
-    assert.ok(_takerTokenAccountB.amount.toNumber() == takerAmount);
+    assert.ok(_initializerTokenAccountA.amount.toNumber() == initializerABalance);
+    assert.ok(_takerTokenAccountB.amount.toNumber() == takerBBalance);
+    const [_pda, _bumpSeed] = await PublicKey.findProgramAddress(
+      [Buffer.from(anchor.utils.bytes.utf8.encode("escrow"))],
+      program.programId
+    );
+
+    pda = _pda;
   });
 
   it("Initialize escrow", async () => {
@@ -103,13 +112,6 @@ describe("escrow", () => {
       }
     );
 
-    // Get the PDA that is assigned authority to token account.
-    const [_pda, _nonce] = await PublicKey.findProgramAddress(
-      [Buffer.from(anchor.utils.bytes.utf8.encode("escrow"))],
-      program.programId
-    );
-
-    pda = _pda;
 
     let _initializerTokenAccountA = await mintA.getAccountInfo(
       initializerTokenAccountA
@@ -165,14 +167,14 @@ describe("escrow", () => {
     assert.ok(_takerTokenAccountA.owner.equals(provider.wallet.publicKey));
 
     assert.ok(_takerTokenAccountA.amount.toNumber() == initializerAmount);
-    assert.ok(_initializerTokenAccountA.amount.toNumber() == 0);
+    assert.ok(_initializerTokenAccountA.amount.toNumber() == initializerABalance - initializerAmount);
     assert.ok(_initializerTokenAccountB.amount.toNumber() == takerAmount);
-    assert.ok(_takerTokenAccountB.amount.toNumber() == 0);
+    assert.ok(_takerTokenAccountB.amount.toNumber() == takerBBalance - takerAmount);
   });
 
-  let newEscrow = Keypair.generate();
-
   it("Initialize escrow and cancel escrow", async () => {
+    let newEscrow = Keypair.generate();
+
     // Put back tokens into initializer token A account.
     await mintA.mintTo(
       initializerTokenAccountA,
@@ -224,6 +226,6 @@ describe("escrow", () => {
     );
 
     // Check all the funds are still there.
-    assert.ok(_initializerTokenAccountA.amount.toNumber() == initializerAmount);
+    assert.ok(_initializerTokenAccountA.amount.toNumber() == initializerABalance);
   });
 });
