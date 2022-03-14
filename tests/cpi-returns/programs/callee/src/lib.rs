@@ -23,6 +23,10 @@ pub mod callee {
         let s = StructReturn { value: 11 };
         Ok(s)
     }
+
+    pub fn return_vec(_ctx: Context<CpiReturn>) -> Result<Vec<u8>> {
+        Ok(vec![12, 13, 14, 100])
+    }
 }
 
 #[derive(Accounts)]

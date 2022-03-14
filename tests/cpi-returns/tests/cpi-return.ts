@@ -119,6 +119,32 @@ describe("CPI return", () => {
     assert(deserialized.value.toNumber() === 11);
   });
 
+  it("can return a vec from a cpi", async () => {
+    const tx = await callerProgram.methods
+      .cpiCallReturnVec()
+      .accounts({
+        cpiReturn: cpiReturn.publicKey,
+        cpiReturnProgram: calleeProgram.programId,
+      })
+      .rpc(confirmOptions);
+    let t = await provider.connection.getTransaction(tx, {
+      commitment: "confirmed",
+    });
+
+    const [key, data, buffer] = getReturnLog(t);
+    assert.equal(key, calleeProgram.programId);
+
+    // Check for matching log on receive side
+    let receiveLog = t.meta.logMessages.find(
+      (log) => log == `Program data: ${data}`
+    );
+    assert(receiveLog !== undefined);
+
+    const reader = new borsh.BinaryReader(buffer);
+    const array = reader.readArray(() => reader.readU8());
+    assert.deepStrictEqual(array, [12, 13, 14, 100]);
+  });
+
   it("sets a return value in idl", async () => {
     const returnu64Instruction = calleeProgram._idl.instructions.find(
       (f) => f.name == "returnU64"
