@@ -38,7 +38,7 @@ export type IdlInstruction = {
   name: string;
   accounts: IdlAccountItem[];
   args: IdlField[];
-  returns: IdlTypeDefTy;
+  returns?: IdlTypeDefTy;
 };
 
 export type IdlState = {
