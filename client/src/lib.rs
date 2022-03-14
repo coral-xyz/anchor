@@ -282,14 +282,10 @@ fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
     l: &str,
 ) -> Result<(Option<T>, Option<String>, bool), ClientError> {
     // Log emitted from the current program.
-    if l.starts_with(PROGRAM_LOG) || l.starts_with(PROGRAM_DATA) {
-        let log = {
-            if l.starts_with(PROGRAM_LOG) {
-                l.to_string().split_off(PROGRAM_LOG.len())
-            } else {
-                l.to_string().split_off(PROGRAM_DATA.len())
-            }
-        };
+    if let Some(log) = l
+        .strip_prefix(PROGRAM_LOG)
+        .or_else(|| l.strip_prefix(PROGRAM_DATA))
+    {
         let borsh_bytes = match anchor_lang::__private::base64::decode(&log) {
             Ok(borsh_bytes) => borsh_bytes,
             _ => {
