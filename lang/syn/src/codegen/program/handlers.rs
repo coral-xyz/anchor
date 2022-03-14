@@ -695,12 +695,10 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             let variant_arm = generate_ix_variant(ix.raw_method.sig.ident.to_string(), &ix.args);
             let ix_name_log = format!("Instruction: {}", ix_name);
             let ret_type = &ix.returns.ty.to_token_stream();
-            let result_handler = match ret_type.to_string().as_str() {
+            let maybe_set_return_data = match ret_type.to_string().as_str() {
                 "()" => quote! {},
                 _ => quote! {
-                    let mut buffer: Vec<u8> = Vec::new();
-                    result.serialize(&mut buffer)?;
-                    anchor_lang::solana_program::program::set_return_data(&buffer.as_slice());
+                    anchor_lang::solana_program::program::set_return_data(&result.try_to_vec().unwrap());
                 },
             };
             quote! {
@@ -742,7 +740,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     )?;
 
                     // Maybe set Solana return data.
-                    #result_handler
+                    #maybe_set_return_data
 
                     // Exit routine.
                     accounts.exit(program_id)

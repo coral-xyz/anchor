@@ -71,7 +71,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let sighash_tts: proc_macro2::TokenStream =
                     format!("{:?}", sighash_arr).parse().unwrap();
                 let ret_type = &ix.returns.ty.to_token_stream();
-                let result_handler = match ret_type.to_string().as_str() {
+                let maybe_get_return_data = match ret_type.to_string().as_str() {
                     "()" => quote! { Ok(()) },
                     _ =>  quote! {
                         let (_key, data) = anchor_lang::solana_program::program::get_return_data().unwrap();
@@ -105,7 +105,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         ).map_or_else(
                             |e| Err(Into::into(e)),
                             // Maybe handle Solana return data.
-                            |_| { #result_handler }
+                            |_| { #maybe_get_return_data }
                         )
                     }
                 }
