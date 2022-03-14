@@ -12,7 +12,7 @@ describe("CPI return", () => {
   anchor.setProvider(provider);
 
   const callerProgram = anchor.workspace.Caller as Program<Caller>;
-  const returnProgram = anchor.workspace.Callee as Program<Callee>;
+  const calleeProgram = anchor.workspace.Callee as Program<Callee>;
 
   const getReturnLog = (confirmedTransaction) => {
     const prefix = "Program return: ";
@@ -30,7 +30,7 @@ describe("CPI return", () => {
   const confirmOptions = { commitment: "confirmed" };
 
   it("can initialize", async () => {
-    await returnProgram.methods
+    await calleeProgram.methods
       .initialize()
       .accounts({
         account: cpiReturn.publicKey,
@@ -46,7 +46,7 @@ describe("CPI return", () => {
       .cpiCallReturnU64()
       .accounts({
         cpiReturn: cpiReturn.publicKey,
-        cpiReturnProgram: returnProgram.programId,
+        cpiReturnProgram: calleeProgram.programId,
       })
       .rpc(confirmOptions);
     let t = await provider.connection.getTransaction(tx, {
@@ -54,11 +54,11 @@ describe("CPI return", () => {
     });
 
     const [key, data, buffer] = getReturnLog(t);
-    assert.equal(key, returnProgram.programId);
+    assert.equal(key, calleeProgram.programId);
 
     // Check for matching log on receive side
     let receiveLog = t.meta.logMessages.find(
-      (log) => log == `Program log: ${data}`
+      (log) => log == `Program data: ${data}`
     );
     assert(receiveLog !== undefined);
 
@@ -67,7 +67,7 @@ describe("CPI return", () => {
   });
 
   it("can make a non-cpi call to a function that returns a u64", async () => {
-    const tx = await returnProgram.methods
+    const tx = await calleeProgram.methods
       .returnU64()
       .accounts({
         account: cpiReturn.publicKey,
@@ -77,7 +77,7 @@ describe("CPI return", () => {
       commitment: "confirmed",
     });
     const [key, , buffer] = getReturnLog(t);
-    assert.equal(key, returnProgram.programId);
+    assert.equal(key, calleeProgram.programId);
     const reader = new borsh.BinaryReader(buffer);
     assert.equal(reader.readU64().toNumber(), 10);
   });
@@ -87,7 +87,7 @@ describe("CPI return", () => {
       .cpiCallReturnStruct()
       .accounts({
         cpiReturn: cpiReturn.publicKey,
-        cpiReturnProgram: returnProgram.programId,
+        cpiReturnProgram: calleeProgram.programId,
       })
       .rpc(confirmOptions);
     let t = await provider.connection.getTransaction(tx, {
@@ -95,11 +95,11 @@ describe("CPI return", () => {
     });
 
     const [key, data, buffer] = getReturnLog(t);
-    assert.equal(key, returnProgram.programId);
+    assert.equal(key, calleeProgram.programId);
 
     // Check for matching log on receive side
     let receiveLog = t.meta.logMessages.find(
-      (log) => log == `Program log: ${data}`
+      (log) => log == `Program data: ${data}`
     );
     assert(receiveLog !== undefined);
 
@@ -117,5 +117,19 @@ describe("CPI return", () => {
     ]);
     const deserialized = borsh.deserialize(schema, Data, buffer);
     assert(deserialized.value.toNumber() === 11);
+  });
+
+  it("sets a return value in idl", async () => {
+    const returnu64Instruction = calleeProgram._idl.instructions.find(
+      (f) => f.name == "returnU64"
+    );
+    assert.equal(returnu64Instruction.returns, "u64");
+
+    const returnStructInstruction = calleeProgram._idl.instructions.find(
+      (f) => f.name == "returnStruct"
+    );
+    assert.deepStrictEqual(returnStructInstruction.returns, {
+      defined: "StructReturn",
+    });
   });
 });
