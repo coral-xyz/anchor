@@ -41,6 +41,10 @@ pub mod caller {
         anchor_lang::solana_program::log::sol_log_data(&[&result.try_to_vec().unwrap()]);
         Ok(())
     }
+
+    pub fn return_u64(ctx: Context<ReturnContext>) -> Result<u64> {
+        Ok(99)
+    }
 }
 
 #[derive(Accounts)]
@@ -49,3 +53,6 @@ pub struct CpiReturnContext<'info> {
     pub cpi_return: Account<'info, CpiReturnAccount>,
     pub cpi_return_program: Program<'info, Callee>,
 }
+
+#[derive(Accounts)]
+pub struct ReturnContext {}

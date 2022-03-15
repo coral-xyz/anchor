@@ -11,6 +11,7 @@ import AccountFactory, { AccountNamespace } from "./account.js";
 import SimulateFactory, { SimulateNamespace } from "./simulate.js";
 import { parseIdlErrors } from "../common.js";
 import { MethodsBuilderFactory, MethodsNamespace } from "./methods";
+import ViewsFactory, { ViewsNamespace } from "./views";
 
 // Re-exports.
 export { StateClient } from "./state.js";
@@ -21,6 +22,7 @@ export { AccountNamespace, AccountClient, ProgramAccount } from "./account.js";
 export { SimulateNamespace, SimulateFn } from "./simulate.js";
 export { IdlAccounts, IdlTypes } from "./types.js";
 export { MethodsBuilderFactory, MethodsNamespace } from "./methods";
+export { ViewsNamespace } from "./views";
 
 export default class NamespaceFactory {
   /**
@@ -38,13 +40,15 @@ export default class NamespaceFactory {
     AccountNamespace<IDL>,
     SimulateNamespace<IDL>,
     MethodsNamespace<IDL>,
-    StateClient<IDL> | undefined
+    StateClient<IDL> | undefined,
+    ViewsNamespace<IDL> | undefined
   ] {
     const rpc: RpcNamespace = {};
     const instruction: InstructionNamespace = {};
     const transaction: TransactionNamespace = {};
     const simulate: SimulateNamespace = {};
     const methods: MethodsNamespace = {};
+    const views: ViewsNamespace = {};
 
     const idlErrors = parseIdlErrors(idl);
 
@@ -81,6 +85,11 @@ export default class NamespaceFactory {
         simulateItem,
         account
       );
+      const viewsItem = ViewsFactory.build<IDL, typeof idlIx>(
+        programId,
+        idlIx,
+        simulateItem
+      );
 
       const name = camelCase(idlIx.name);
 
@@ -89,6 +98,9 @@ export default class NamespaceFactory {
       rpc[name] = rpcItem;
       simulate[name] = simulateItem;
       methods[name] = methodItem;
+      if (viewsItem) {
+        views[name] = viewsItem;
+      }
     });
 
     return [
@@ -99,6 +111,7 @@ export default class NamespaceFactory {
       simulate as SimulateNamespace<IDL>,
       methods as MethodsNamespace<IDL>,
       state,
+      views as ViewsNamespace<IDL>,
     ];
   }
 }

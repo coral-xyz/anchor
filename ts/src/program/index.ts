@@ -11,6 +11,7 @@ import NamespaceFactory, {
   StateClient,
   SimulateNamespace,
   MethodsNamespace,
+  ViewsNamespace,
 } from "./namespace/index.js";
 import { utf8 } from "../utils/bytes/index.js";
 import { EventManager } from "./event.js";
@@ -217,6 +218,8 @@ export class Program<IDL extends Idl = Idl> {
    */
   readonly methods: MethodsNamespace<IDL>;
 
+  readonly views?: ViewsNamespace<IDL>;
+
   /**
    * Address of the program.
    */
@@ -288,6 +291,7 @@ export class Program<IDL extends Idl = Idl> {
       simulate,
       methods,
       state,
+      views,
     ] = NamespaceFactory.build(idl, this._coder, programId, provider);
     this.rpc = rpc;
     this.instruction = instruction;
@@ -296,6 +300,7 @@ export class Program<IDL extends Idl = Idl> {
     this.simulate = simulate;
     this.methods = methods;
     this.state = state;
+    this.views = views;
   }
 
   /**

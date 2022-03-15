@@ -158,4 +158,8 @@ describe("CPI return", () => {
       defined: "StructReturn",
     });
   });
+
+  it("can query a u64 via view", async () => {
+    assert(new anchor.BN(99).eq(await callerProgram.views.returnU64()));
+  });
 });
