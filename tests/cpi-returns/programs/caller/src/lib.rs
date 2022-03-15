@@ -9,6 +9,12 @@ declare_id!("HmbTLCmaGvZhKnn1Zfa1JVnp7vkMV4DYVxPLWBVoN65L");
 pub mod caller {
     use super::*;
 
+    #[derive(AnchorSerialize, AnchorDeserialize)]
+    pub struct ReturnStruct {
+        pub a: u8,
+        pub b: u64,
+    }
+
     pub fn cpi_call_return_u64(ctx: Context<CpiReturnContext>) -> Result<()> {
         let cpi_program = ctx.accounts.cpi_return_program.to_account_info();
         let cpi_accounts = CpiReturn {
@@ -42,8 +48,13 @@ pub mod caller {
         Ok(())
     }
 
-    pub fn return_u64(ctx: Context<ReturnContext>) -> Result<u64> {
-        Ok(99)
+    pub fn return_u64(_ctx: Context<ReturnContext>) -> Result<u64> {
+        let result = 5_u64.checked_add(99).unwrap();
+        Ok(result)
+    }
+
+    pub fn return_struct(_ctx: Context<ReturnContext>) -> Result<ReturnStruct> {
+        Ok(ReturnStruct { a: 5, b: 300 })
     }
 }
 

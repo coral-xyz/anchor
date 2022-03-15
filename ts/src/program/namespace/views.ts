@@ -1,14 +1,8 @@
-import {
-  PublicKey,
-  RpcResponseAndContext,
-  SimulatedTransactionResponse,
-} from "@solana/web3.js";
-import Provider from "../../provider.js";
-import { Idl, IdlEvent } from "../../idl.js";
+import { PublicKey } from "@solana/web3.js";
+import { Idl, IdlAccount } from "../../idl.js";
 import { SimulateFn } from "./simulate.js";
 import {
   AllInstructions,
-  IdlTypes,
   InstructionContextFn,
   MakeInstructionsNamespace,
 } from "./types";
@@ -19,9 +13,10 @@ export default class ViewsFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
     programId: PublicKey,
     idlIx: AllInstructions<IDL>,
-    simulateFn: SimulateFn<IDL>
+    simulateFn: SimulateFn<IDL>,
+    idl: IDL
   ): ViewsFn<IDL, I> | undefined {
-    const isMut = idlIx.accounts.find((a) => a.isMut);
+    const isMut = idlIx.accounts.find((a: IdlAccount) => a.isMut);
     const hasReturn = !!idlIx.returns;
     if (isMut || !hasReturn) return;
 
@@ -32,15 +27,17 @@ export default class ViewsFactory {
         l.startsWith(returnPrefix)
       );
       if (!returnLog) {
-        throw new Error("Expected return log");
+        throw new Error("View expected return log");
       }
       let returnData = decode(returnLog.slice(returnPrefix.length));
       let returnType = idlIx.returns;
-
       if (!returnType) {
-        throw new Error("Expected return type");
+        throw new Error("View expected return type");
       }
-      const coder = IdlCoder.fieldLayout({ type: returnType });
+      const coder = IdlCoder.fieldLayout(
+        { type: returnType },
+        Array.from([...(idl.accounts ?? []), ...(idl.types ?? [])])
+      );
       return coder.decode(returnData);
     };
     return view;
@@ -50,7 +47,7 @@ export default class ViewsFactory {
 export type ViewsNamespace<
   IDL extends Idl = Idl,
   I extends AllInstructions<IDL> = AllInstructions<IDL>
-> = MakeInstructionsNamespace<IDL, I, Promise<ViewsResponse>>;
+> = MakeInstructionsNamespace<IDL, I, Promise<any>>;
 
 /**
  * ViewsFn is a single method generated from an IDL. It simulates a method
@@ -60,6 +57,4 @@ export type ViewsNamespace<
 export type ViewsFn<
   IDL extends Idl = Idl,
   I extends AllInstructions<IDL> = AllInstructions<IDL>
-> = InstructionContextFn<IDL, I, Promise<ViewsResponse>>;
-
-export type ViewsResponse = any;
+> = InstructionContextFn<IDL, I, Promise<any>>;

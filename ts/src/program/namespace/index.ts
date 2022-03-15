@@ -88,7 +88,8 @@ export default class NamespaceFactory {
       const viewsItem = ViewsFactory.build<IDL, typeof idlIx>(
         programId,
         idlIx,
-        simulateItem
+        simulateItem,
+        idl
       );
 
       const name = camelCase(idlIx.name);
