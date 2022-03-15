@@ -33,6 +33,7 @@ use std::io::Write;
 mod account_meta;
 pub mod accounts;
 mod bpf_upgradeable_state;
+mod bpf_writer;
 mod common;
 pub mod context;
 mod ctor;
@@ -223,12 +224,9 @@ pub trait Key {
     fn key(&self) -> Pubkey;
 }
 
-impl<'info, T> Key for T
-where
-    T: AsRef<AccountInfo<'info>>,
-{
+impl Key for Pubkey {
     fn key(&self) -> Pubkey {
-        *self.as_ref().key
+        *self
     }
 }
 
@@ -241,10 +239,11 @@ pub mod prelude {
         accounts::signer::Signer, accounts::system_account::SystemAccount,
         accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, constant,
         context::Context, context::CpiContext, declare_id, emit, err, error, event, interface,
-        program, require, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source,
-        state, zero_copy, AccountDeserialize, AccountSerialize, Accounts, AccountsExit,
-        AnchorDeserialize, AnchorSerialize, Id, Key, Owner, ProgramData, Result, System,
-        ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        program, require, require_eq, require_keys_eq,
+        solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source, state, zero_copy,
+        AccountDeserialize, AccountSerialize, Accounts, AccountsExit, AnchorDeserialize,
+        AnchorSerialize, Id, Key, Owner, ProgramData, Result, System, ToAccountInfo,
+        ToAccountInfos, ToAccountMetas,
     };
     pub use anchor_attribute_error::*;
     pub use borsh;
@@ -320,7 +319,7 @@ pub mod __private {
 }
 
 /// Ensures a condition is true, otherwise returns with the given error.
-/// Use this with a custom error type.
+/// Use this with or without a custom error type.
 ///
 /// # Example
 /// ```ignore
@@ -364,6 +363,66 @@ macro_rules! require {
     ($invariant:expr, $error:expr $(,)?) => {
         if !($invariant) {
             return Err(anchor_lang::anchor_attribute_error::error!($error));
+        }
+    };
+}
+
+/// Ensures two NON-PUBKEY values are equal.
+///
+/// Use [require_keys_eq](crate::prelude::require_keys_eq)
+/// to compare two pubkeys.
+///
+/// Can be used with or without a custom error code.
+///
+/// # Example
+/// ```rust,ignore
+/// pub fn set_data(ctx: Context<SetData>, data: u64) -> Result<()> {
+///     require_eq!(ctx.accounts.data.data, 0);
+///     ctx.accounts.data.data = data;
+///     Ok(())
+/// }
+/// ```
+#[macro_export]
+macro_rules! require_eq {
+    ($value1: expr, $value2: expr, $error_code:expr $(,)?) => {
+        if $value1 != $value2 {
+            return Err(error!($error_code).with_values(($value1, $value2)));
+        }
+    };
+    ($value1: expr, $value2: expr $(,)?) => {
+        if $value1 != $value2 {
+            return Err(error!(anchor_lang::error::ErrorCode::RequireEqViolated)
+                .with_values(($value1, $value2)));
+        }
+    };
+}
+
+/// Ensures two pubkeys values are equal.
+///
+/// Use [require_eq](crate::prelude::require_eq)
+/// to compare two non-pubkey values.
+///
+/// Can be used with or without a custom error code.
+///
+/// # Example
+/// ```rust,ignore
+/// pub fn set_data(ctx: Context<SetData>, data: u64) -> Result<()> {
+///     require_keys_eq!(ctx.accounts.data.authority.key(), ctx.accounts.authority.key());
+///     ctx.accounts.data.data = data;
+///     Ok(())
+/// }
+/// ```
+#[macro_export]
+macro_rules! require_keys_eq {
+    ($value1: expr, $value2: expr, $error_code:expr $(,)?) => {
+        if $value1 != $value2 {
+            return Err(error!($error_code).with_pubkeys(($value1, $value2)));
+        }
+    };
+    ($value1: expr, $value2: expr $(,)?) => {
+        if $value1 != $value2 {
+            return Err(error!(anchor_lang::error::ErrorCode::RequireKeysEqViolated)
+                .with_pubkeys(($value1, $value2)));
         }
     };
 }
