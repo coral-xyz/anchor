@@ -134,10 +134,22 @@ fn generate_constraint_composite(f: &CompositeField, c: &Constraint) -> proc_mac
 fn generate_constraint_address(f: &Field, c: &ConstraintAddress) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let addr = &c.address;
-    let error = generate_custom_error(field, &c.error, quote! { ConstraintAddress });
+    let error = generate_custom_error(
+        field,
+        &c.error,
+        quote! { ConstraintAddress },
+        &Some(&ComparedValues::Pubkeys((
+            quote! { actual },
+            quote! { expected },
+        ))),
+    );
     quote! {
-        if #field.key() != #addr {
-            return #error;
+        {
+            let actual = #field.key();
+            let expected = #addr;
+            if actual != expected {
+                return #error;
+            }
         }
     }
 }
@@ -178,7 +190,7 @@ pub fn generate_constraint_close(f: &Field, c: &ConstraintClose) -> proc_macro2:
 
 pub fn generate_constraint_mut(f: &Field, c: &ConstraintMut) -> proc_macro2::TokenStream {
     let ident = &f.ident;
-    let error = generate_custom_error(ident, &c.error, quote! { ConstraintMut });
+    let error = generate_custom_error(ident, &c.error, quote! { ConstraintMut }, &None);
     quote! {
         if !#ident.to_account_info().is_writable {
             return #error;
@@ -194,10 +206,22 @@ pub fn generate_constraint_has_one(f: &Field, c: &ConstraintHasOne) -> proc_macr
         Ty::AccountLoader(_) => quote! {#ident.load()?},
         _ => quote! {#ident},
     };
-    let error = generate_custom_error(ident, &c.error, quote! { ConstraintHasOne });
+    let error = generate_custom_error(
+        ident,
+        &c.error,
+        quote! { ConstraintHasOne },
+        &Some(&ComparedValues::Pubkeys((
+            quote! { my_key },
+            quote! { target_key },
+        ))),
+    );
     quote! {
-        if #field.#target != #target.key() {
-            return #error;
+        {
+            let my_key = #field.#target;
+            let target_key = #target.key();
+            if my_key != target_key {
+                return #error;
+            }
         }
     }
 }
@@ -213,7 +237,7 @@ pub fn generate_constraint_signer(f: &Field, c: &ConstraintSigner) -> proc_macro
         Ty::CpiAccount(_) => quote! { #ident.to_account_info() },
         _ => panic!("Invalid syntax: signer cannot be specified."),
     };
-    let error = generate_custom_error(ident, &c.error, quote! { ConstraintSigner });
+    let error = generate_custom_error(ident, &c.error, quote! { ConstraintSigner }, &None);
     quote! {
         if !#info.is_signer {
             return #error;
@@ -245,7 +269,7 @@ pub fn generate_constraint_literal(
 
 pub fn generate_constraint_raw(ident: &Ident, c: &ConstraintRaw) -> proc_macro2::TokenStream {
     let raw = &c.raw;
-    let error = generate_custom_error(ident, &c.error, quote! { ConstraintRaw });
+    let error = generate_custom_error(ident, &c.error, quote! { ConstraintRaw }, &None);
     quote! {
         if !(#raw) {
             return #error;
@@ -256,10 +280,14 @@ pub fn generate_constraint_raw(ident: &Ident, c: &ConstraintRaw) -> proc_macro2:
 pub fn generate_constraint_owner(f: &Field, c: &ConstraintOwner) -> proc_macro2::TokenStream {
     let ident = &f.ident;
     let owner_address = &c.owner_address;
-    let error = generate_custom_error(ident, &c.error, quote! { ConstraintOwner });
+    let error = generate_custom_error(ident, &c.error, quote! { ConstraintOwner }, &None);
     quote! {
-        if #ident.as_ref().owner != &#owner_address {
-            return #error;
+        {
+            let my_owner = #ident.as_ref().owner;
+            let owner_address = #owner_address;
+            if my_owner != &owner_address {
+                return #error;
+            }
         }
     }
 }
@@ -640,12 +668,17 @@ fn generate_constraint_associated_token(
     let wallet_address = &c.wallet;
     let spl_token_mint_address = &c.mint;
     quote! {
-        if #name.owner != #wallet_address.key() {
-            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenOwner).with_account_name(#name_str));
-        }
-        let __associated_token_address = anchor_spl::associated_token::get_associated_token_address(&#wallet_address.key(), &#spl_token_mint_address.key());
-        if #name.key() != __associated_token_address {
-            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintAssociated).with_account_name(#name_str));
+        {
+            let my_owner = #name.owner;
+            let wallet_address = #wallet_address.key();
+            if my_owner != wallet_address {
+                return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenOwner).with_account_name(#name_str).with_pubkeys((my_owner, wallet_address)));
+            }
+            let __associated_token_address = anchor_spl::associated_token::get_associated_token_address(&wallet_address, &#spl_token_mint_address.key());
+            let my_key = #name.key();
+            if my_key != __associated_token_address {
+                return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintAssociated).with_account_name(#name_str).with_pubkeys((my_key, __associated_token_address)));
+            }
         }
     }
 }
@@ -766,18 +799,36 @@ pub fn generate_constraint_state(f: &Field, c: &ConstraintState) -> proc_macro2:
     }
 }
 
+enum ComparedValues {
+    Pubkeys((proc_macro2::TokenStream, proc_macro2::TokenStream)),
+    Values((proc_macro2::TokenStream, proc_macro2::TokenStream)),
+}
+
 fn generate_custom_error(
     account_name: &Ident,
     custom_error: &Option<Expr>,
     error: proc_macro2::TokenStream,
+    compared_values: &Option<&ComparedValues>,
 ) -> proc_macro2::TokenStream {
     let account_name = account_name.to_string();
-    match custom_error {
+    let mut error = match custom_error {
         Some(error) => {
-            quote! { Err(anchor_lang::error::Error::from(#error).with_account_name(#account_name)) }
+            quote! { anchor_lang::error::Error::from(#error).with_account_name(#account_name) }
         }
         None => {
-            quote! { Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::#error).with_account_name(#account_name)) }
+            quote! { anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::#error).with_account_name(#account_name) }
         }
+    };
+
+    let compared_values = match compared_values {
+        Some(ComparedValues::Pubkeys((left, right))) => quote! { .with_pubkeys((#left, #right)) },
+        Some(ComparedValues::Values((left, right))) => quote! { .with_values((#left, #right)) },
+        None => quote! {},
+    };
+
+    error.extend(compared_values);
+
+    quote! {
+        Err(#error)
     }
 }
