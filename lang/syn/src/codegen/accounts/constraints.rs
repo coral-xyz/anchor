@@ -274,7 +274,12 @@ pub fn generate_constraint_raw(ident: &Ident, c: &ConstraintRaw) -> proc_macro2:
 pub fn generate_constraint_owner(f: &Field, c: &ConstraintOwner) -> proc_macro2::TokenStream {
     let ident = &f.ident;
     let owner_address = &c.owner_address;
-    let error = generate_custom_error(ident, &c.error, quote! { ConstraintOwner }, &None);
+    let error = generate_custom_error(
+        ident,
+        &c.error,
+        quote! { ConstraintOwner },
+        &Some(&(quote! { *my_owner }, quote! { owner_address })),
+    );
     quote! {
         {
             let my_owner = #ident.as_ref().owner;
@@ -493,7 +498,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintMintFreezeAuthority).with_account_name(#name_str));
                         }
                         if pa.decimals != #decimals {
-                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintMintDecimals).with_account_name(#name_str).with_pubkeys((pa.decimals, #decimals)));
+                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintMintDecimals).with_account_name(#name_str).with_values((pa.decimals, #decimals)));
                         }
                     }
                     pa
@@ -551,7 +556,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                         }
 
                         if actual_owner != #owner {
-                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintOwner).with_account_name(#name_str).with_pubkeys((actual_owner, #owner)));
+                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintOwner).with_account_name(#name_str).with_pubkeys((*actual_owner, *#owner)));
                         }
 
                         {
