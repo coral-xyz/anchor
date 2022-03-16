@@ -21,6 +21,7 @@ export class SplTokenAccountsCoder<A extends string = string>
         return buffer.slice(0, len);
       }
       default: {
+        console.log("ENCODE");
         throw new Error(`Invalid account name: ${accountName}`);
       }
     }
@@ -39,6 +40,7 @@ export class SplTokenAccountsCoder<A extends string = string>
         return decodeMintAccount(ix);
       }
       default: {
+        console.log("DECODE UNCHECKED");
         throw new Error(`Invalid account name: ${accountName}`);
       }
     }
@@ -58,6 +60,7 @@ export class SplTokenAccountsCoder<A extends string = string>
         };
       }
       default: {
+        console.log("MEMCMP");
         throw new Error(`Invalid account name: ${accountName}`);
       }
     }
