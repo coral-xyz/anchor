@@ -1,4 +1,4 @@
-use anchor_attribute_error::error_code;
+use anchor_lang::error_code;
 use borsh::maybestd::io::Error as BorshIoError;
 use solana_program::{program_error::ProgramError, pubkey::Pubkey};
 use std::fmt::{Debug, Display};
@@ -116,6 +116,18 @@ pub enum ErrorCode {
     /// 2502 - A require_keys_eq expression was violated
     #[msg("A require_keys_eq expression was violated")]
     RequireKeysEqViolated,
+    /// 2503 - A require_neq expression was violated
+    #[msg("A require_neq expression was violated")]
+    RequireNeqViolated,
+    /// 2504 - A require_keys_neq expression was violated
+    #[msg("A require_keys_neq expression was violated")]
+    RequireKeysNeqViolated,
+    /// 2505 - A require_gt expression was violated
+    #[msg("A require_gt expression was violated")]
+    RequireGtViolated,
+    /// 2506 - A require_gte expression was violated
+    #[msg("A require_gte expression was violated")]
+    RequireGteViolated,
 
     // Accounts.
     /// 3000 - The account discriminator was already set on this account

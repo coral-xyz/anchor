@@ -15,12 +15,13 @@ incremented for features.
 
 * cli: Add `anchor clean` command that's the same as `cargo clean` but preserves keypairs inside `target/deploy` ([#1470](https://github.com/project-serum/anchor/issues/1470)).
 * cli: Running `anchor init` now initializes a new git repository for the workspace. This can be disabled with the `--no-git` flag ([#1605](https://github.com/project-serum/anchor/pull/1605)).
+* cli: Add support for `anchor idl fetch` to work outside anchor workspace ([#1509](https://github.com/project-serum/anchor/pull/1509)).
+* cli: [[test.validator.clone]] also clones the program data account of programs owned by the bpf upgradeable loader ([#1481](https://github.com/project-serum/anchor/issues/1481)).
 * lang: Add new `AccountSysvarMismatch` error code and test cases for sysvars ([#1535](https://github.com/project-serum/anchor/pull/1535)).
 * lang: Replace `std::io::Cursor` with a custom `Write` impl that uses the Solana mem syscalls ([#1589](https://github.com/project-serum/anchor/pull/1589)).
+* lang: Add `require_neq`, `require_keys_neq`, `require_gt`, and `require_gte` comparison macros ([#1622](https://github.com/project-serum/anchor/pull/1622)).
 * spl: Add support for revoke instruction ([#1493](https://github.com/project-serum/anchor/pull/1493)).
-* cli: Add support for `anchor idl fetch` to work outside anchor workspace ([#1509](https://github.com/project-serum/anchor/pull/1509)).
 * ts: Add provider parameter to `Spl.token` factory method ([#1597](https://github.com/project-serum/anchor/pull/1597)).
-* cli: [[test.validator.clone]] also clones the program data account of programs owned by the bpf upgradeable loader ([#1481](https://github.com/project-serum/anchor/issues/1481)).
 
 ### Fixes
 
@@ -28,6 +29,7 @@ incremented for features.
 * spl: Update `spl/governance` to use new errors ([#1582](https://github.com/project-serum/anchor/pull/1582)).
 * client: Fix `Cluster`'s `FromStr` implementation ([#1362](https://github.com/project-serum/anchor/pull/1362)).
 * lang: implement `Key` for `Pubkey` again, so `associated_token::*` constraints can use pubkey targets again ([#1601](https://github.com/project-serum/anchor/pull/1601)).
+* lang: adjust error code so `#[error_code]` works with just importing `anchor_lang::error_code` ([#1610](https://github.com/project-serum/anchor/pull/1610)).
 * cli/ts: generated `IDL` variable in `types/<project-name.ts>` should equal the `<project-name>.json` idl file ([#1609](https://github.com/project-serum/anchor/pull/1609)) 
 
 ### Breaking
@@ -37,6 +39,7 @@ incremented for features.
 * lang/ts: Events are now emitted using the `sol_log_data` syscall ([#1608](https://github.com/project-serum/anchor/pull/1608)).
 * lang: Remove space calculation using `#[derive(Default)]` ([#1519](https://github.com/project-serum/anchor/pull/1519)).
 * lang: Add support for logging expected and actual values and pubkeys. Add `require_eq` and `require_keys_eq` macros. Add default error code to `require` macro ([#1572](https://github.com/project-serum/anchor/pull/1572)).
+* lang: Add `system_program` CPI wrapper functions. Make `system_program` module public instead of re-exporting `system_program::System`([#1629](https://github.com/project-serum/anchor/pull/1629)).
 
 ## [0.22.1] - 2022-02-28
 
