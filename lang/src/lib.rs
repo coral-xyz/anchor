@@ -47,7 +47,7 @@ pub use crate::bpf_upgradeable_state::*;
 pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::{account, declare_id, zero_copy};
 pub use anchor_attribute_constant::constant;
-pub use anchor_attribute_error;
+pub use anchor_attribute_error::*;
 pub use anchor_attribute_event::{emit, event};
 pub use anchor_attribute_interface::interface;
 pub use anchor_attribute_program::program;
@@ -238,8 +238,8 @@ pub mod prelude {
         accounts::signer::Signer, accounts::system_account::SystemAccount,
         accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, constant,
         context::Context, context::CpiContext, declare_id, emit, err, error, event, interface,
-        program, require, require_eq, require_keys_eq,
-        solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source, state,
+        program, require, require_eq, require_gt, require_gte, require_keys_eq, require_keys_neq,
+        require_neq, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source, state,
         system_program::System, zero_copy, AccountDeserialize, AccountSerialize, Accounts,
         AccountsExit, AnchorDeserialize, AnchorSerialize, Id, Key, Owner, ProgramData, Result,
         ToAccountInfo, ToAccountInfos, ToAccountMetas,
@@ -354,14 +354,12 @@ pub mod __private {
 macro_rules! require {
     ($invariant:expr, $error:tt $(,)?) => {
         if !($invariant) {
-            return Err(anchor_lang::anchor_attribute_error::error!(
-                crate::ErrorCode::$error
-            ));
+            return Err(anchor_lang::error!(crate::ErrorCode::$error));
         }
     };
     ($invariant:expr, $error:expr $(,)?) => {
         if !($invariant) {
-            return Err(anchor_lang::anchor_attribute_error::error!($error));
+            return Err(anchor_lang::error!($error));
         }
     };
 }
@@ -391,6 +389,36 @@ macro_rules! require_eq {
     ($value1: expr, $value2: expr $(,)?) => {
         if $value1 != $value2 {
             return Err(error!(anchor_lang::error::ErrorCode::RequireEqViolated)
+                .with_values(($value1, $value2)));
+        }
+    };
+}
+
+/// Ensures two NON-PUBKEY values are not equal.
+///
+/// Use [require_keys_neq](crate::prelude::require_keys_neq)
+/// to compare two pubkeys.
+///
+/// Can be used with or without a custom error code.
+///
+/// # Example
+/// ```rust,ignore
+/// pub fn set_data(ctx: Context<SetData>, data: u64) -> Result<()> {
+///     require_neq!(ctx.accounts.data.data, 0);
+///     ctx.accounts.data.data = data;
+///     Ok(());
+/// }
+/// ```
+#[macro_export]
+macro_rules! require_neq {
+    ($value1: expr, $value2: expr, $error_code: expr $(,)?) => {
+        if $value1 == $value2 {
+            return Err(error!($error_code).with_values(($value1, $value2)));
+        }
+    };
+    ($value1: expr, $value2: expr $(,)?) => {
+        if $value1 == $value2 {
+            return Err(error!(anchor_lang::error::ErrorCode::RequireNeqViolated)
                 .with_values(($value1, $value2)));
         }
     };
@@ -426,6 +454,96 @@ macro_rules! require_keys_eq {
     };
 }
 
+/// Ensures two pubkeys are not equal.
+///
+/// Use [require_neq](crate::prelude::require_neq)
+/// to compare two non-pubkey values.
+///
+/// Can be used with or without a custom error code.
+///
+/// # Example
+/// ```rust,ignore
+/// pub fn set_data(ctx: Context<SetData>, data: u64) -> Result<()> {
+///     require_keys_neq!(ctx.accounts.data.authority.key(), ctx.accounts.other.key());
+///     ctx.accounts.data.data = data;
+///     Ok(())
+/// }
+/// ```
+#[macro_export]
+macro_rules! require_keys_neq {
+    ($value1: expr, $value2: expr, $error_code: expr $(,)?) => {
+        if $value1 == $value2 {
+            return Err(error!($error_code).with_pubkeys(($value1, $value2)));
+        }
+    };
+    ($value1: expr, $value2: expr $(,)?) => {
+        if $value1 == $value2 {
+            return Err(
+                error!(anchor_lang::error::ErrorCode::RequireKeysNeqViolated)
+                    .with_pubkeys(($value1, $value2)),
+            );
+        }
+    };
+}
+
+/// Ensures the first NON-PUBKEY value is greater than the second
+/// NON-PUBKEY value.
+///
+/// To include an equality check, use [require_gte](crate::require_gte).
+///
+/// Can be used with or without a custom error code.
+///
+/// # Example
+/// ```rust,ignore
+/// pub fn set_data(ctx: Context<SetData>, data: u64) -> Result<()> {
+///     require_gt!(ctx.accounts.data.data, 0);
+///     ctx.accounts.data.data = data;
+///     Ok(());
+/// }
+/// ```
+#[macro_export]
+macro_rules! require_gt {
+    ($value1: expr, $value2: expr, $error_code: expr $(,)?) => {
+        if $value1 <= $value2 {
+            return Err(error!($error_code).with_values(($value1, $value2)));
+        }
+    };
+    ($value1: expr, $value2: expr $(,)?) => {
+        if $value1 <= $value2 {
+            return Err(error!(anchor_lang::error::ErrorCode::RequireGtViolated)
+                .with_values(($value1, $value2)));
+        }
+    };
+}
+
+/// Ensures the first NON-PUBKEY value is greater than or equal
+/// to the second NON-PUBKEY value.
+///
+/// Can be used with or without a custom error code.
+///
+/// # Example
+/// ```rust,ignore
+/// pub fn set_data(ctx: Context<SetData>, data: u64) -> Result<()> {
+///     require_gte!(ctx.accounts.data.data, 1);
+///     ctx.accounts.data.data = data;
+///     Ok(());
+/// }
+/// ```
+#[macro_export]
+macro_rules! require_gte {
+    ($value1: expr, $value2: expr, $error_code: expr $(,)?) => {
+        if $value1 < $value2 {
+            return Err(error!($error_code).with_values(($value1, $value2)));
+        }
+    };
+    ($value1: expr, $value2: expr $(,)?) => {
+        if $value1 < $value2 {
+            return Err(error!(anchor_lang::error::ErrorCode::RequireGteViolated)
+                .with_values(($value1, $value2)));
+        }
+    };
+}
+
 /// Returns with the given error.
 /// Use this with a custom error type.
 ///
@@ -445,12 +563,10 @@ macro_rules! require_keys_eq {
 #[macro_export]
 macro_rules! err {
     ($error:tt $(,)?) => {
-        Err(anchor_lang::anchor_attribute_error::error!(
-            crate::ErrorCode::$error
-        ))
+        Err(anchor_lang::error!(crate::ErrorCode::$error))
     };
     ($error:expr $(,)?) => {
-        Err(anchor_lang::anchor_attribute_error::error!($error))
+        Err(anchor_lang::error!($error))
     };
 }
 
