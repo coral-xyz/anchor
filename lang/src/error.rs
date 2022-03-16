@@ -1,6 +1,6 @@
 use anchor_attribute_error::error_code;
 use borsh::maybestd::io::Error as BorshIoError;
-use solana_program::program_error::ProgramError;
+use solana_program::{program_error::ProgramError, pubkey::Pubkey};
 use std::fmt::{Debug, Display};
 
 /// The starting point for user defined error codes.
@@ -106,6 +106,29 @@ pub enum ErrorCode {
     #[msg("A space constraint was violated")]
     ConstraintSpace,
 
+    // Require
+    /// 2500 - A require expression was violated
+    #[msg("A require expression was violated")]
+    RequireViolated = 2500,
+    /// 2501 - A require_eq expression was violated
+    #[msg("A require_eq expression was violated")]
+    RequireEqViolated,
+    /// 2502 - A require_keys_eq expression was violated
+    #[msg("A require_keys_eq expression was violated")]
+    RequireKeysEqViolated,
+    /// 2503 - A require_neq expression was violated
+    #[msg("A require_neq expression was violated")]
+    RequireNeqViolated,
+    /// 2504 - A require_keys_neq expression was violated
+    #[msg("A require_keys_neq expression was violated")]
+    RequireKeysNeqViolated,
+    /// 2505 - A require_gt expression was violated
+    #[msg("A require_gt expression was violated")]
+    RequireGtViolated,
+    /// 2506 - A require_gte expression was violated
+    #[msg("A require_gte expression was violated")]
+    RequireGteViolated,
+
     // Accounts.
     /// 3000 - The account discriminator was already set on this account
     #[msg("The account discriminator was already set on this account")]
@@ -189,12 +212,6 @@ impl Display for Error {
     }
 }
 
-impl Display for AnchorError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Debug::fmt(&self, f)
-    }
-}
-
 impl From<AnchorError> for Error {
     fn from(ae: AnchorError) -> Self {
         Self::AnchorError(ae)
@@ -228,16 +245,51 @@ impl Error {
 
     pub fn with_account_name(mut self, account_name: impl ToString) -> Self {
         match &mut self {
-            Error::AnchorError(ae) => ae.account_name = Some(account_name.to_string()),
-            Error::ProgramError(pe) => pe.account_name = Some(account_name.to_string()),
+            Error::AnchorError(ae) => {
+                ae.error_origin = Some(ErrorOrigin::AccountName(account_name.to_string()));
+            }
+            Error::ProgramError(pe) => {
+                pe.error_origin = Some(ErrorOrigin::AccountName(account_name.to_string()));
+            }
         };
         self
     }
 
     pub fn with_source(mut self, source: Source) -> Self {
         match &mut self {
-            Error::AnchorError(ae) => ae.source = Some(source),
-            Error::ProgramError(pe) => pe.source = Some(source),
+            Error::AnchorError(ae) => {
+                ae.error_origin = Some(ErrorOrigin::Source(source));
+            }
+            Error::ProgramError(pe) => {
+                pe.error_origin = Some(ErrorOrigin::Source(source));
+            }
+        };
+        self
+    }
+
+    pub fn with_pubkeys(mut self, pubkeys: (Pubkey, Pubkey)) -> Self {
+        let pubkeys = Some(ComparedValues::Pubkeys((pubkeys.0, pubkeys.1)));
+        match &mut self {
+            Error::AnchorError(ae) => ae.compared_values = pubkeys,
+            Error::ProgramError(pe) => pe.compared_values = pubkeys,
+        };
+        self
+    }
+
+    pub fn with_values(mut self, values: (impl ToString, impl ToString)) -> Self {
+        match &mut self {
+            Error::AnchorError(ae) => {
+                ae.compared_values = Some(ComparedValues::Values((
+                    values.0.to_string(),
+                    values.1.to_string(),
+                )))
+            }
+            Error::ProgramError(pe) => {
+                pe.compared_values = Some(ComparedValues::Values((
+                    values.0.to_string(),
+                    values.1.to_string(),
+                )))
+            }
         };
         self
     }
@@ -246,8 +298,8 @@ impl Error {
 #[derive(Debug)]
 pub struct ProgramErrorWithOrigin {
     pub program_error: ProgramError,
-    pub source: Option<Source>,
-    pub account_name: Option<String>,
+    pub error_origin: Option<ErrorOrigin>,
+    pub compared_values: Option<ComparedValues>,
 }
 
 impl Display for ProgramErrorWithOrigin {
@@ -258,31 +310,59 @@ impl Display for ProgramErrorWithOrigin {
 
 impl ProgramErrorWithOrigin {
     pub fn log(&self) {
-        if let Some(source) = &self.source {
-            anchor_lang::solana_program::msg!(
-                "ProgramError thrown in {}:{}. Error Code: {:?}. Error Number: {}. Error Message: {}.",
-                source.filename,
-                source.line,
-                self.program_error,
-                u64::from(self.program_error.clone()),
-                self.program_error
-            );
-        } else if let Some(account_name) = &self.account_name {
-            anchor_lang::solana_program::log::sol_log(&format!(
-                "ProgramError caused by account: {}. Error Code: {:?}. Error Number: {}. Error Message: {}.",
-                account_name,
-                self.program_error,
-                u64::from(self.program_error.clone()),
-                self.program_error
-            ));
-        } else {
-            anchor_lang::solana_program::log::sol_log(&format!(
-                "ProgramError occurred. Error Code: {:?}. Error Number: {}. Error Message: {}.",
-                self.program_error,
-                u64::from(self.program_error.clone()),
-                self.program_error
-            ));
+        match &self.error_origin {
+            None => {
+                anchor_lang::solana_program::msg!(
+                    "ProgramError occurred. Error Code: {:?}. Error Number: {}. Error Message: {}.",
+                    self.program_error,
+                    u64::from(self.program_error.clone()),
+                    self.program_error
+                );
+            }
+            Some(ErrorOrigin::Source(source)) => {
+                anchor_lang::solana_program::msg!(
+                    "ProgramError thrown in {}:{}. Error Code: {:?}. Error Number: {}. Error Message: {}.",
+                    source.filename,
+                    source.line,
+                    self.program_error,
+                    u64::from(self.program_error.clone()),
+                    self.program_error
+                );
+            }
+            Some(ErrorOrigin::AccountName(account_name)) => {
+                // using sol_log because msg! wrongly interprets 5 inputs as u64
+                anchor_lang::solana_program::log::sol_log(&format!(
+                    "ProgramError caused by account: {}. Error Code: {:?}. Error Number: {}. Error Message: {}.",
+                    account_name,
+                    self.program_error,
+                    u64::from(self.program_error.clone()),
+                    self.program_error
+                ));
+            }
         }
+        match &self.compared_values {
+            Some(ComparedValues::Pubkeys((left, right))) => {
+                anchor_lang::solana_program::msg!("Left:");
+                left.log();
+                anchor_lang::solana_program::msg!("Right:");
+                right.log();
+            }
+            Some(ComparedValues::Values((left, right))) => {
+                anchor_lang::solana_program::msg!("Left: {}", left);
+                anchor_lang::solana_program::msg!("Right: {}", right);
+            }
+            None => (),
+        }
+    }
+
+    pub fn with_source(mut self, source: Source) -> Self {
+        self.error_origin = Some(ErrorOrigin::Source(source));
+        self
+    }
+
+    pub fn with_account_name(mut self, account_name: impl ToString) -> Self {
+        self.error_origin = Some(ErrorOrigin::AccountName(account_name.to_string()));
+        self
     }
 }
 
@@ -290,10 +370,22 @@ impl From<ProgramError> for ProgramErrorWithOrigin {
     fn from(program_error: ProgramError) -> Self {
         Self {
             program_error,
-            source: None,
-            account_name: None,
+            error_origin: None,
+            compared_values: None,
         }
     }
+}
+
+#[derive(Debug)]
+pub enum ComparedValues {
+    Values((String, String)),
+    Pubkeys((Pubkey, Pubkey)),
+}
+
+#[derive(Debug)]
+pub enum ErrorOrigin {
+    Source(Source),
+    AccountName(String),
 }
 
 #[derive(Debug)]
@@ -301,35 +393,68 @@ pub struct AnchorError {
     pub error_name: String,
     pub error_code_number: u32,
     pub error_msg: String,
-    pub source: Option<Source>,
-    pub account_name: Option<String>,
+    pub error_origin: Option<ErrorOrigin>,
+    pub compared_values: Option<ComparedValues>,
 }
 
 impl AnchorError {
     pub fn log(&self) {
-        if let Some(source) = &self.source {
-            anchor_lang::solana_program::msg!(
-                "AnchorError thrown in {}:{}. Error Code: {}. Error Number: {}. Error Message: {}.",
-                source.filename,
-                source.line,
-                self.error_name,
-                self.error_code_number,
-                self.error_msg
-            );
-        } else if let Some(account_name) = &self.account_name {
-            anchor_lang::solana_program::log::sol_log(&format!(
-                "AnchorError caused by account: {}. Error Code: {}. Error Number: {}. Error Message: {}.",
-                account_name,
-                self.error_name,
-                self.error_code_number,
-                self.error_msg
-            ));
-        } else {
-            anchor_lang::solana_program::log::sol_log(&format!(
-                "AnchorError occurred. Error Code: {}. Error Number: {}. Error Message: {}.",
-                self.error_name, self.error_code_number, self.error_msg
-            ));
+        match &self.error_origin {
+            None => {
+                anchor_lang::solana_program::log::sol_log(&format!(
+                    "AnchorError occurred. Error Code: {}. Error Number: {}. Error Message: {}.",
+                    self.error_name, self.error_code_number, self.error_msg
+                ));
+            }
+            Some(ErrorOrigin::Source(source)) => {
+                anchor_lang::solana_program::msg!(
+                    "AnchorError thrown in {}:{}. Error Code: {}. Error Number: {}. Error Message: {}.",
+                    source.filename,
+                    source.line,
+                    self.error_name,
+                    self.error_code_number,
+                    self.error_msg
+                );
+            }
+            Some(ErrorOrigin::AccountName(account_name)) => {
+                anchor_lang::solana_program::log::sol_log(&format!(
+                    "AnchorError caused by account: {}. Error Code: {}. Error Number: {}. Error Message: {}.",
+                    account_name,
+                    self.error_name,
+                    self.error_code_number,
+                    self.error_msg
+                ));
+            }
         }
+        match &self.compared_values {
+            Some(ComparedValues::Pubkeys((left, right))) => {
+                anchor_lang::solana_program::msg!("Left:");
+                left.log();
+                anchor_lang::solana_program::msg!("Right:");
+                right.log();
+            }
+            Some(ComparedValues::Values((left, right))) => {
+                anchor_lang::solana_program::msg!("Left: {}", left);
+                anchor_lang::solana_program::msg!("Right: {}", right);
+            }
+            None => (),
+        }
+    }
+
+    pub fn with_source(mut self, source: Source) -> Self {
+        self.error_origin = Some(ErrorOrigin::Source(source));
+        self
+    }
+
+    pub fn with_account_name(mut self, account_name: impl ToString) -> Self {
+        self.error_origin = Some(ErrorOrigin::AccountName(account_name.to_string()));
+        self
+    }
+}
+
+impl Display for AnchorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(&self, f)
     }
 }
 
@@ -337,11 +462,7 @@ impl std::convert::From<Error> for anchor_lang::solana_program::program_error::P
     fn from(e: Error) -> anchor_lang::solana_program::program_error::ProgramError {
         match e {
             Error::AnchorError(AnchorError {
-                error_name: _,
-                error_code_number,
-                error_msg: _,
-                source: _,
-                account_name: _,
+                error_code_number, ..
             }) => {
                 anchor_lang::solana_program::program_error::ProgramError::Custom(error_code_number)
             }
