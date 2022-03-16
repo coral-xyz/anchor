@@ -138,10 +138,7 @@ fn generate_constraint_address(f: &Field, c: &ConstraintAddress) -> proc_macro2:
         field,
         &c.error,
         quote! { ConstraintAddress },
-        &Some(&ComparedValues::Pubkeys((
-            quote! { actual },
-            quote! { expected },
-        ))),
+        &Some(&(quote! { actual }, quote! { expected })),
     );
     quote! {
         {
@@ -210,10 +207,7 @@ pub fn generate_constraint_has_one(f: &Field, c: &ConstraintHasOne) -> proc_macr
         ident,
         &c.error,
         quote! { ConstraintHasOne },
-        &Some(&ComparedValues::Pubkeys((
-            quote! { my_key },
-            quote! { target_key },
-        ))),
+        &Some(&(quote! { my_key }, quote! { target_key })),
     );
     quote! {
         {
@@ -402,10 +396,10 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                     let pa: #ty_decl = #from_account_info;
                     if #if_needed {
                         if pa.mint != #mint.key() {
-                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenMint).with_account_name(#name_str));
+                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenMint).with_account_name(#name_str).with_pubkeys((pa.mint, #mint.key())));
                         }
                         if pa.owner != #owner.key() {
-                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenOwner).with_account_name(#name_str));
+                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenOwner).with_account_name(#name_str).with_pubkeys((pa.owner, #owner.key())));
                         }
                     }
                     pa
@@ -437,10 +431,10 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                     let pa: #ty_decl = #from_account_info;
                     if #if_needed {
                         if pa.mint != #mint.key() {
-                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenMint).with_account_name(#name_str));
+                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenMint).with_account_name(#name_str).with_pubkeys((pa.mint, #mint.key())));
                         }
                         if pa.owner != #owner.key() {
-                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenOwner).with_account_name(#name_str));
+                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenOwner).with_account_name(#name_str).with_pubkeys((pa.owner, #owner.key())));
                         }
 
                         if pa.key() != anchor_spl::associated_token::get_associated_token_address(&#owner.key(), &#mint.key()) {
@@ -499,7 +493,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintMintFreezeAuthority).with_account_name(#name_str));
                         }
                         if pa.decimals != #decimals {
-                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintMintDecimals).with_account_name(#name_str));
+                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintMintDecimals).with_account_name(#name_str).with_pubkeys((pa.decimals, #decimals)));
                         }
                     }
                     pa
@@ -553,11 +547,11 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                     // Assert the account was created correctly.
                     if #if_needed {
                         if space != actual_field.data_len() {
-                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintSpace).with_account_name(#name_str));
+                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintSpace).with_account_name(#name_str).with_values((space, actual_field.data_len())));
                         }
 
                         if actual_owner != #owner {
-                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintOwner).with_account_name(#name_str));
+                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintOwner).with_account_name(#name_str).with_pubkeys((actual_owner, #owner)));
                         }
 
                         {
@@ -605,10 +599,10 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
         let b = c.bump.as_ref().unwrap();
         quote! {
             if #name.key() != __pda_address {
-                return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintSeeds).with_account_name(#name_str));
+                return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintSeeds).with_account_name(#name_str).with_pubkeys((#name.key(), __pda_address)));
             }
             if __bump != #b {
-                return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintSeeds).with_account_name(#name_str));
+                return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintSeeds).with_account_name(#name_str).with_values((__bump, #b)));
             }
         }
     }
@@ -620,7 +614,7 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
     else if c.is_init {
         quote! {
             if #name.key() != __pda_address {
-                return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintSeeds).with_account_name(#name_str));
+                return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintSeeds).with_account_name(#name_str).with_pubkeys((#name.key(), __pda_address)));
             }
         }
     }
@@ -653,7 +647,7 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
 
             // Check it.
             if #name.key() != __pda_address {
-                return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintSeeds).with_account_name(#name_str));
+                return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintSeeds).with_account_name(#name_str).with_pubkeys((#name.key(), __pda_address)));
             }
         }
     }
@@ -799,16 +793,11 @@ pub fn generate_constraint_state(f: &Field, c: &ConstraintState) -> proc_macro2:
     }
 }
 
-enum ComparedValues {
-    Pubkeys((proc_macro2::TokenStream, proc_macro2::TokenStream)),
-    Values((proc_macro2::TokenStream, proc_macro2::TokenStream)),
-}
-
 fn generate_custom_error(
     account_name: &Ident,
     custom_error: &Option<Expr>,
     error: proc_macro2::TokenStream,
-    compared_values: &Option<&ComparedValues>,
+    compared_values: &Option<&(proc_macro2::TokenStream, proc_macro2::TokenStream)>,
 ) -> proc_macro2::TokenStream {
     let account_name = account_name.to_string();
     let mut error = match custom_error {
@@ -821,8 +810,7 @@ fn generate_custom_error(
     };
 
     let compared_values = match compared_values {
-        Some(ComparedValues::Pubkeys((left, right))) => quote! { .with_pubkeys((#left, #right)) },
-        Some(ComparedValues::Values((left, right))) => quote! { .with_values((#left, #right)) },
+        Some((left, right)) => quote! { .with_pubkeys((#left, #right)) },
         None => quote! {},
     };
 
