@@ -7,7 +7,6 @@ on:
   pull_request:
     branches:
       - master
-
 env:
   SOLANA_CLI_VERSION: 1.8.5
   NODE_VERSION: 17.0.1
