@@ -159,7 +159,9 @@ pub fn parse(
                 .map(|arg| {
                     let mut tts = proc_macro2::TokenStream::new();
                     arg.raw_arg.ty.to_tokens(&mut tts);
-                    let ty = tts.to_string().parse().unwrap();
+                    let ty: IdlType = resolve_variable_array_lengths(&ctx, tts.to_string())
+                        .parse()
+                        .unwrap();
                     IdlField {
                         name: arg.name.to_string().to_mixed_case(),
                         ty,
