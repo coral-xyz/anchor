@@ -350,7 +350,7 @@ describe("errors", () => {
     ]);
   });
 
-  it('Emits a RequireNeqViolated error via require_neq', async () => {
+  it("Emits a RequireNeqViolated error via require_neq", async () => {
     await withLogTest(async () => {
       try {
         const tx = await program.rpc.requireNeqDefaultError();
@@ -365,7 +365,7 @@ describe("errors", () => {
       "Program log: Left: 500",
       "Program log: Right: 500",
     ]);
-  })
+  });
 
   it("Emits a ValueMismatch error via require_keys_eq", async () => {
     const someAccount = anchor.web3.Keypair.generate().publicKey;
@@ -383,7 +383,7 @@ describe("errors", () => {
         assert.equal(err.code, 6126);
       }
     }, [
-      "Program log: AnchorError thrown in programs/errors/src/lib.rs:78. Error Code: ValueMismatch. Error Number: 6126. Error Message: ValueMismatch.",
+      "Program log: AnchorError thrown in programs/errors/src/lib.rs:88. Error Code: ValueMismatch. Error Number: 6126. Error Message: ValueMismatch.",
       "Program log: Left:",
       `Program log: ${someAccount}`,
       "Program log: Right:",
@@ -407,7 +407,7 @@ describe("errors", () => {
         assert.equal(err.code, 2502);
       }
     }, [
-      "Program log: AnchorError thrown in programs/errors/src/lib.rs:83. Error Code: RequireKeysEqViolated. Error Number: 2502. Error Message: A require_keys_eq expression was violated.",
+      "Program log: AnchorError thrown in programs/errors/src/lib.rs:97. Error Code: RequireKeysEqViolated. Error Number: 2502. Error Message: A require_keys_eq expression was violated.",
       "Program log: Left:",
       `Program log: ${someAccount}`,
       "Program log: Right:",
@@ -416,8 +416,8 @@ describe("errors", () => {
   });
 
   it("Emits a ValueMatch error via require_keys_neq", async () => {
+    const someAccount = program.programId;
     await withLogTest(async () => {
-      const someAccount = program.programId
       try {
         const tx = await program.rpc.requireKeysNeq({
           accounts: {
@@ -463,63 +463,71 @@ describe("errors", () => {
     ]);
   });
 
-  it('Emits a ValueLessOrEqual error via require_gt', async () => {
+  it("Emits a ValueLessOrEqual error via require_gt", async () => {
     await withLogTest(async () => {
       try {
-        const tx = await program.rpc.requireGt()
-        assert.fail("Unexpected success in creating a transaction that should have failed with `ValueLessOrEqual` error")
+        const tx = await program.rpc.requireGt();
+        assert.fail(
+          "Unexpected success in creating a transaction that should have failed with `ValueLessOrEqual` error"
+        );
       } catch (err) {
-        assert.equal(err.code, 6129)
+        assert.equal(err.code, 6129);
       }
     }, [
       "Program log: AnchorError thrown in programs/errors/src/lib.rs:116. Error Code: ValueLessOrEqual. Error Number: 6129. Error Message: ValueLessOrEqual.",
       "Program log: Left: 5",
       "Program log: Right: 10",
-    ])
-  })
+    ]);
+  });
 
-  it('Emits a RequireGtViolated error via require_gt', async () => {
+  it("Emits a RequireGtViolated error via require_gt", async () => {
     await withLogTest(async () => {
       try {
-        const tx = await program.rpc.requireGtDefaultError()
-        assert.fail("Unexpected success in creating a transaction that should have failed with `RequireGtViolated` error")
+        const tx = await program.rpc.requireGtDefaultError();
+        assert.fail(
+          "Unexpected success in creating a transaction that should have failed with `RequireGtViolated` error"
+        );
       } catch (err) {
-        assert.equal(err.code, 2505)
+        assert.equal(err.code, 2505);
       }
     }, [
       "Program log: AnchorError thrown in programs/errors/src/lib.rs:121. Error Code: RequireGtViolated. Error Number: 2505. Error Message: A require_gt expression was violated.",
       "Program log: Left: 10",
       "Program log: Right: 10",
-    ])
-  })
+    ]);
+  });
 
-  it('Emits a ValueLess error via require_gte', async () => {
+  it("Emits a ValueLess error via require_gte", async () => {
     await withLogTest(async () => {
       try {
-        const tx = await program.rpc.requireGte()
-        assert.fail("Unexpected success in creating a transaction that should have failed with `ValueLess` error")
+        const tx = await program.rpc.requireGte();
+        assert.fail(
+          "Unexpected success in creating a transaction that should have failed with `ValueLess` error"
+        );
       } catch (err) {
-        assert.equal(err.code, 6128)
+        assert.equal(err.code, 6128);
       }
     }, [
       "Program log: AnchorError thrown in programs/errors/src/lib.rs:126. Error Code: ValueLess. Error Number: 6128. Error Message: ValueLess.",
       "Program log: Left: 5",
       "Program log: Right: 10",
-    ])
-  })
+    ]);
+  });
 
-  it('Emits a RequireGteViolated error via require_gte', async () => {
+  it("Emits a RequireGteViolated error via require_gte", async () => {
     await withLogTest(async () => {
       try {
-        const tx = await program.rpc.requireGteDefaultError()
-        assert.fail("Unexpected success in creating a transaction that should have failed with `RequireGteViolated` error")
+        const tx = await program.rpc.requireGteDefaultError();
+        assert.fail(
+          "Unexpected success in creating a transaction that should have failed with `RequireGteViolated` error"
+        );
       } catch (err) {
-        assert.equal(err.code, 2506)
+        assert.equal(err.code, 2506);
       }
     }, [
       "Program log: AnchorError thrown in programs/errors/src/lib.rs:131. Error Code: RequireGteViolated. Error Number: 2506. Error Message: A require_gte expression was violated.",
       "Program log: Left: 5",
       "Program log: Right: 10",
-    ])
-  })
+    ]);
+  });
 });
