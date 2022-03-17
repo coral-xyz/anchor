@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("EVFzuVuE2DGP7VVAFafVq4knkQ4dqF3mmCtdMcpNLoSA");
+declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 /// Converted https://github.com/pyth-network/pyth-examples/blob/main/program/src/lib.rs to anchor
 #[program]
