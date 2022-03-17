@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("D46LzWxNfmtAL6H2Dcn9uZVxjauKGhYVm9kCd3UPje2h");
+declare_id!("EVFzuVuE2DGP7VVAFafVq4knkQ4dqF3mmCtdMcpNLoSA");
 
 /// Converted https://github.com/pyth-network/pyth-examples/blob/main/program/src/lib.rs to anchor
 #[program]
@@ -49,7 +49,7 @@ pub mod pyth_get_price {
         msg!("    price_type ... {:?}", price_account.ptype);
         msg!("    price ........ {}", price_account.agg.price);
 
-        // TODO: These are all thowing onchain errors:
+        // TODO: Other values pyth offers.
         // Program failed to complete: Access violation in stack frame 5 at address 0x200005fd0 of size 8 by instruction #3018
         // msg!("    exponent ..... {}", price_account.expo);
         // msg!("    status ....... {:?}", price_account.agg.status);
