@@ -1,0 +1,14 @@
+[features]
+seeds = false
+[programs.localnet]
+pyth_get_price = "EVFzuVuE2DGP7VVAFafVq4knkQ4dqF3mmCtdMcpNLoSA"
+
+[registry]
+url = "https://anchor.projectserum.com"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
