@@ -293,6 +293,8 @@ jobs:
             path: tests/escrow
           - cmd: cd tests/pyth && anchor test --skip-lint
             path: tests/pyth
+          - cmd: cd tests/pyth-get-price && anchor test --skip-lint
+            path: tests/pyth-get-price
           - cmd: cd tests/system-accounts && anchor test --skip-lint
             path: tests/system-accounts
           - cmd: cd tests/misc && anchor test --skip-lint
