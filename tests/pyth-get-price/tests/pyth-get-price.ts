@@ -49,7 +49,7 @@ describe("pyth-get-price", () => {
             assert.ok(false, "No error was thrown")
         } catch (err) {
             console.log(err.toString())
-            assert.equal(err.toString(),"Error: failed to send transaction: Transaction simulation failed: Error processing Instruction 0: invalid program argument")
+            assert.equal(err.toString(), "Error: failed to send transaction: Transaction simulation failed: Error processing Instruction 0: invalid program argument")
         }
     });
 });
