@@ -45,7 +45,6 @@ const withLogTest = async (callback, expectedLogs) => {
     anchor.getProvider().connection.removeOnLogsListener(listener);
     throw err;
   }
-  await sleep(3000);
   anchor.getProvider().connection.removeOnLogsListener(listener);
   assert.ok(logTestOk);
 };
@@ -228,7 +227,6 @@ describe("errors", () => {
       await program.provider.send(tx);
       assert.ok(false);
     } catch (err) {
-      await sleep(3000);
       anchor.getProvider().connection.removeOnLogsListener(listener);
       const errMsg = `Error: Raw transaction ${signature} failed ({"err":{"InstructionError":[0,{"Custom":3010}]}})`;
       assert.equal(err.toString(), errMsg);

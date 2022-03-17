@@ -15,6 +15,7 @@ export class ProgramError extends Error {
     err: any,
     idlErrors: Map<number, string>
   ): ProgramError | null {
+    console.log("\n\nHELLO FROM PARSE");
     const errString: string = err.toString();
     // TODO: don't rely on the error string. web3.js should preserve the error
     //       code information instead of giving us an untyped string.
