@@ -14,7 +14,7 @@ wallet = "~/.config/solana/id.json"
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 
 [test.validator]
-url = "https://api.mainnet-beta.solana.com"
+url = "http://localhost:8900"
 
 [[test.validator.clone]]
 address = "AqH29mZfQFgRpfwaPoTMWSKJ5kqauoc1FwVBRksZyQrt"
