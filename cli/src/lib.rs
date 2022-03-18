@@ -1992,8 +1992,8 @@ fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
                         RpcClient::new(url.to_string())
                     } else {
                         return Err(anyhow!(
-                    "Validator url for Solana's JSON RPC should be provided in order to clone accounts from it"
-                ));
+                            "JSON RPC should be provided using [test.validator.url] in Anchor.toml to clone accounts"
+                        ));
                     };
 
                     let mut pubkeys = value
