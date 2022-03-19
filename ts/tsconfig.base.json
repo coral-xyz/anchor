@@ -2,11 +2,6 @@
   "include": [
     "./src/**/*"
   ],
-  "exclude": [
-    "node_modules",
-    "**/*.spec.ts",
-    "**/*.test.ts"
-  ],
   "compilerOptions": {
     "sourceMap": true,
     "declaration": true,
@@ -20,7 +15,6 @@
     "resolveJsonModule": true,
     "composite": true,
     "baseUrl": ".",
-    "types": ["jest"],
     "typeRoots": [
       "types/",
       "node_modules/@types"
