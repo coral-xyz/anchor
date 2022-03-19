@@ -10,6 +10,7 @@ import {
   InstructionContextFn,
   MakeInstructionsNamespace,
 } from "./types.js";
+import { AnchorError } from "../../error.js";
 
 export default class RpcFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
@@ -28,11 +29,13 @@ export default class RpcFactory {
           console.log("Translating error:", err);
         }
 
-        let translatedErr = ProgramError.parse(err, idlErrors);
-        if (translatedErr === null) {
-          throw err;
+        const anchorError = AnchorError.parse(err.logs);
+        if (anchorError) {
+          throw anchorError;
         }
-        throw translatedErr;
+
+        const translatedErr = ProgramError.parse(err, idlErrors);
+        throw translatedErr === null ? err : translatedErr;
       }
     };
 

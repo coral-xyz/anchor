@@ -1,3 +1,5 @@
+import { PublicKey } from "@solana/web3.js";
+
 export class IdlError extends Error {
   constructor(message: string) {
     super(message);
@@ -5,17 +7,209 @@ export class IdlError extends Error {
   }
 }
 
+interface ErrorCode {
+  code: string;
+  number: number;
+}
+
+interface FileLine {
+  file: string;
+  line: number;
+}
+
+type Origin = string | FileLine;
+type ComparedAccountNames = [string, string];
+type ComparedPublicKeys = [PublicKey, PublicKey];
+type ComparedValues = ComparedAccountNames | ComparedPublicKeys;
+
+export class ProgramErrorStack {
+  constructor(readonly stack: PublicKey[]) {}
+
+  public static parse(logs: string[]) {
+    const programKeyRegex = /^Program (\w*) invoke/;
+    const successRegex = /^Program \w* success/;
+
+    const programStack: PublicKey[] = [];
+    for (let i = 0; i < logs.length; i++) {
+      if (successRegex.exec(logs[i])) {
+        programStack.pop();
+        continue;
+      }
+
+      const programKey = programKeyRegex.exec(logs[i])?.[1];
+      if (!programKey) {
+        continue;
+      }
+      programStack.push(new PublicKey(programKey));
+    }
+    return new ProgramErrorStack(programStack);
+  }
+}
+
+export class AnchorError extends Error {
+  readonly error: {
+    errorCode: ErrorCode;
+    errorMessage: string;
+    comparedValues?: ComparedValues;
+    origin?: Origin;
+  };
+  private readonly _programErrorStack: ProgramErrorStack;
+
+  constructor(
+    errorCode: ErrorCode,
+    errorMessage: string,
+    readonly errorLogs: string[],
+    readonly logs: string[],
+    origin?: Origin,
+    comparedValues?: ComparedValues
+  ) {
+    super(errorLogs.join("\n"));
+    this.error = { errorCode, errorMessage, comparedValues, origin };
+    this._programErrorStack = ProgramErrorStack.parse(logs);
+  }
+
+  public static parse(logs: string[]) {
+    if (!logs) {
+      return null;
+    }
+
+    const anchorErrorLogIndex = logs.findIndex((log) =>
+      log.startsWith("Program log: AnchorError")
+    );
+    if (anchorErrorLogIndex === -1) {
+      return null;
+    }
+    const anchorErrorLog = logs[anchorErrorLogIndex];
+    const errorLogs = [anchorErrorLog];
+    let comparedValues: ComparedValues | undefined;
+    if (anchorErrorLogIndex + 1 < logs.length) {
+      if (logs[anchorErrorLogIndex + 1] === "Program log: Left:") {
+        const pubkeyRegex = /^Program log: (.*)$/;
+        const leftPubkey = pubkeyRegex.exec(logs[anchorErrorLogIndex + 2])![1];
+        const rightPubkey = pubkeyRegex.exec(logs[anchorErrorLogIndex + 4])![1];
+        comparedValues = [
+          new PublicKey(leftPubkey),
+          new PublicKey(rightPubkey),
+        ];
+        errorLogs.push(
+          ...logs.slice(anchorErrorLogIndex + 1, anchorErrorLogIndex + 5)
+        );
+      } else if (
+        logs[anchorErrorLogIndex + 1].startsWith("Program log: Left:")
+      ) {
+        const valueRegex = /^Program log: (Left|Right): (.*)$/;
+        const leftValue = valueRegex.exec(logs[anchorErrorLogIndex + 1])![2];
+        const rightValue = valueRegex.exec(logs[anchorErrorLogIndex + 2])![2];
+        errorLogs.push(
+          ...logs.slice(anchorErrorLogIndex + 1, anchorErrorLogIndex + 3)
+        );
+        comparedValues = [leftValue, rightValue];
+      }
+    }
+    const regexNoInfo = /^Program log: AnchorError occurred\. Error Code: (.*)\. Error Number: (\d*)\. Error Message: (.*)\./;
+    const noInfoAnchorErrorLog = regexNoInfo.exec(anchorErrorLog);
+    const regexFileLine = /^Program log: AnchorError thrown in (.*):(\d*)\. Error Code: (.*)\. Error Number: (\d*)\. Error Message: (.*)\./;
+    const fileLineAnchorErrorLog = regexFileLine.exec(anchorErrorLog);
+    const regexAccountName = /^Program log: AnchorError caused by account: (.*)\. Error Code: (.*)\. Error Number: (\d*)\. Error Message: (.*)\./;
+    const accountNameAnchorErrorLog = regexAccountName.exec(anchorErrorLog);
+    if (noInfoAnchorErrorLog) {
+      const [
+        errorCodeString,
+        errorNumber,
+        errorMessage,
+      ] = noInfoAnchorErrorLog.slice(1, 4);
+      const errorCode = {
+        code: errorCodeString,
+        number: parseInt(errorNumber),
+      };
+      return new AnchorError(
+        errorCode,
+        errorMessage,
+        errorLogs,
+        logs,
+        undefined,
+        comparedValues
+      );
+    } else if (fileLineAnchorErrorLog) {
+      const [
+        file,
+        line,
+        errorCodeString,
+        errorNumber,
+        errorMessage,
+      ] = fileLineAnchorErrorLog.slice(1, 6);
+      const errorCode = {
+        code: errorCodeString,
+        number: parseInt(errorNumber),
+      };
+      const fileLine = { file, line: parseInt(line) };
+      return new AnchorError(
+        errorCode,
+        errorMessage,
+        errorLogs,
+        logs,
+        fileLine,
+        comparedValues
+      );
+    } else if (accountNameAnchorErrorLog) {
+      const [
+        accountName,
+        errorCodeString,
+        errorNumber,
+        errorMessage,
+      ] = accountNameAnchorErrorLog.slice(1, 5);
+      const origin = accountName;
+      const errorCode = {
+        code: errorCodeString,
+        number: parseInt(errorNumber),
+      };
+      return new AnchorError(
+        errorCode,
+        errorMessage,
+        errorLogs,
+        logs,
+        origin,
+        comparedValues
+      );
+    } else {
+      return null;
+    }
+  }
+
+  get program(): PublicKey {
+    return this._programErrorStack.stack[
+      this._programErrorStack.stack.length - 1
+    ];
+  }
+
+  get programErrorStack(): PublicKey[] {
+    return this._programErrorStack.stack;
+  }
+
+  toString(): string {
+    return this.message;
+  }
+}
+
 // An error from a user defined program.
 export class ProgramError extends Error {
-  constructor(readonly code: number, readonly msg: string, ...params: any[]) {
-    super(...params);
+  private readonly _programErrorStack?: ProgramErrorStack;
+
+  constructor(
+    readonly code: number,
+    message: string,
+    readonly logs?: string[]
+  ) {
+    super(message);
+    if (logs) {
+      this._programErrorStack = ProgramErrorStack.parse(logs);
+    }
   }
 
   public static parse(
     err: any,
     idlErrors: Map<number, string>
   ): ProgramError | null {
-    console.log("\n\nHELLO FROM PARSE");
     const errString: string = err.toString();
     // TODO: don't rely on the error string. web3.js should preserve the error
     //       code information instead of giving us an untyped string.
@@ -45,21 +239,27 @@ export class ProgramError extends Error {
     // Parse user error.
     let errorMsg = idlErrors.get(errorCode);
     if (errorMsg !== undefined) {
-      return new ProgramError(errorCode, errorMsg, errorCode + ": " + errorMsg);
+      return new ProgramError(errorCode, errorMsg, err.logs);
     }
 
     // Parse framework internal error.
     errorMsg = LangErrorMessage.get(errorCode);
     if (errorMsg !== undefined) {
-      return new ProgramError(errorCode, errorMsg, errorCode + ": " + errorMsg);
+      return new ProgramError(errorCode, errorMsg, err.logs);
     }
 
     // Unable to parse the error. Just return the untranslated error.
     return null;
   }
 
-  public toString(): string {
-    return this.msg;
+  get program(): PublicKey | undefined {
+    return this._programErrorStack?.stack[
+      this._programErrorStack.stack.length - 1
+    ];
+  }
+
+  get programErrorStack(): PublicKey[] | undefined {
+    return this._programErrorStack?.stack;
   }
 }
 
