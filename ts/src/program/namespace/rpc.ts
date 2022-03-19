@@ -22,8 +22,7 @@ export default class RpcFactory {
       const tx = txFn(...args);
       const [, ctx] = splitArgsAndCtx(idlIx, [...args]);
       try {
-        const txSig = await provider.send(tx, ctx.signers, ctx.options);
-        return txSig;
+        return await provider.send(tx, ctx.signers, ctx.options);
       } catch (err) {
         if (features.isSet("debug-logs")) {
           console.log("Translating error:", err);
