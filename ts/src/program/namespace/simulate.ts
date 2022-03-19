@@ -9,7 +9,7 @@ import { TransactionFn } from "./transaction.js";
 import { EventParser, Event } from "../event.js";
 import { Coder } from "../../coder/index.js";
 import { Idl, IdlEvent } from "../../idl.js";
-import { AnchorError, ProgramError } from "../../error.js";
+import { AnchorError, ProgramError, ProgramErrorStack } from "../../error.js";
 import * as features from "../../utils/features.js";
 import {
   AllInstructions,
@@ -45,8 +45,14 @@ export default class SimulateFactory {
           throw anchorError;
         }
 
-        let translatedErr = ProgramError.parse(err, idlErrors);
-        throw translatedErr === null ? err : translatedErr;
+        const translatedErr = ProgramError.parse(err, idlErrors);
+        if (translatedErr) {
+          throw translatedErr;
+        }
+        if (err.logs) {
+          err.programErrorStack = ProgramErrorStack.parse(err.logs);
+        }
+        throw err;
       }
       if (resp === undefined) {
         throw new Error("Unable to simulate transaction");

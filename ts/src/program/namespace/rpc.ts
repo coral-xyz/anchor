@@ -3,7 +3,7 @@ import Provider from "../../provider.js";
 import { Idl } from "../../idl.js";
 import { splitArgsAndCtx } from "../context.js";
 import { TransactionFn } from "./transaction.js";
-import { ProgramError } from "../../error.js";
+import { ProgramError, ProgramErrorStack } from "../../error.js";
 import * as features from "../../utils/features.js";
 import {
   AllInstructions,
@@ -29,13 +29,20 @@ export default class RpcFactory {
           console.log("Translating error:", err);
         }
 
+        // TODO: move this into provider.send ?
         const anchorError = AnchorError.parse(err.logs);
         if (anchorError) {
           throw anchorError;
         }
 
         const translatedErr = ProgramError.parse(err, idlErrors);
-        throw translatedErr === null ? err : translatedErr;
+        if (translatedErr) {
+          throw translatedErr;
+        }
+        if (err.logs) {
+          err.programErrorStack = ProgramErrorStack.parse(err.logs);
+        }
+        throw err;
       }
     };
 

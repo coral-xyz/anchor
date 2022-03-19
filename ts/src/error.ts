@@ -63,7 +63,7 @@ export class AnchorError extends Error {
     origin?: Origin,
     comparedValues?: ComparedValues
   ) {
-    super(errorLogs.join("\n"));
+    super(errorLogs.join("\n").replace("Program log: ", ""));
     this.error = { errorCode, errorMessage, comparedValues, origin };
     this._programErrorStack = ProgramErrorStack.parse(logs);
   }
@@ -197,10 +197,10 @@ export class ProgramError extends Error {
 
   constructor(
     readonly code: number,
-    message: string,
+    readonly msg: string,
     readonly logs?: string[]
   ) {
-    super(message);
+    super();
     if (logs) {
       this._programErrorStack = ProgramErrorStack.parse(logs);
     }
@@ -260,6 +260,10 @@ export class ProgramError extends Error {
 
   get programErrorStack(): PublicKey[] | undefined {
     return this._programErrorStack?.stack;
+  }
+
+  toString(): string {
+    return this.msg;
   }
 }
 
