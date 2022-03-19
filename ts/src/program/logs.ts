@@ -11,10 +11,12 @@ interface FileLine {
 }
 
 type Origin = string | FileLine;
-type ComparedValues = [string, string] | [PublicKey, PublicKey];
+type ComparedAccountNames = [string, string];
+type ComparedPublicKeys = [PublicKey, PublicKey];
+type ComparedValues = ComparedAccountNames | ComparedPublicKeys;
 
 export class AnchorError extends Error {
-    constructor(readonly errorCode: ErrorCode, readonly errorMessage: string, readonly errorLogs: string[], readonly programStack: string[], readonly origin?: Origin, readonly comparedValues?: ComparedValues) {
+    constructor(readonly errorCode: ErrorCode, readonly errorMessage: string, readonly errorLogs: string[], readonly programStack: PublicKey[], readonly origin?: Origin, readonly comparedValues?: ComparedValues) {
         super(errorLogs.join("\n"));
     }
 
@@ -65,19 +67,17 @@ export class AnchorError extends Error {
         }
     }
 
-    // TODO: should return a `Pubkey`
-    get program(): string {
+    get program(): PublicKey {
         return this.programStack[this.programStack.length - 1];
     }
 }
 
 // TODO: dont export this?
-// TODO: should return Pubkeys
-export function getProgramStackFromLogs(logs: string[]) {
+export function getProgramStackFromLogs(logs: string[]): PublicKey[] {
     const programKeyRegex = /^Program (\w*) invoke/;
     const successRegex = /^Program \w* success/;
 
-    const programStack: string[] = [];
+    const programStack: PublicKey[] = [];
     for (let i = 0; i < logs.length; i++) {
         if (successRegex.exec(logs[i])) {
             programStack.pop();
@@ -88,7 +88,7 @@ export function getProgramStackFromLogs(logs: string[]) {
         if (!programKey) {
             continue;
         }
-        programStack.push(programKey);
+        programStack.push(new PublicKey(programKey));
     }
     return programStack;
 }

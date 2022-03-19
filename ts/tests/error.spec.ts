@@ -1,3 +1,4 @@
+import { publicKey } from "@project-serum/borsh";
 import { getProgramStackFromLogs, AnchorError } from "../src/program/logs";
 
 describe("Error log parsing", () => {
@@ -8,7 +9,7 @@ describe("Error log parsing", () => {
             "Program ERRM6YCMsccM22TEaPuu35KVU4iCY3GLCz4qMsKLYReE failed: custom program error: 0x29"
         ];
 
-        expect(getProgramStackFromLogs(logs)).toEqual(["ERRM6YCMsccM22TEaPuu35KVU4iCY3GLCz4qMsKLYReE"])
+        expect(getProgramStackFromLogs(logs).map((publicKey) => publicKey.toString())).toEqual(["ERRM6YCMsccM22TEaPuu35KVU4iCY3GLCz4qMsKLYReE"])
     })
 
     it("basic multiple ix", () => {
@@ -21,7 +22,7 @@ describe("Error log parsing", () => {
             "Program ERRM6YCMsccM22TEaPuu35KVU4iCY3GLCz4qMsKLYReE failed: custom program error: 0x29"
         ];
 
-        expect(getProgramStackFromLogs(logs)).toEqual(["ERRM6YCMsccM22TEaPuu35KVU4iCY3GLCz4qMsKLYReE"])
+        expect(getProgramStackFromLogs(logs).map((publicKey) => publicKey.toString())).toEqual(["ERRM6YCMsccM22TEaPuu35KVU4iCY3GLCz4qMsKLYReE"])
     })
 
     it("failed inner ix", () => {
@@ -34,7 +35,7 @@ describe("Error log parsing", () => {
             'Program failed to complete: BPF program panicked',
             'Program Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS failed: Program failed to complete'
         ];
-        expect(getProgramStackFromLogs(logs)).toEqual(["Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS", "11111111111111111111111111111111"])
+        expect(getProgramStackFromLogs(logs).map((publicKey) => publicKey.toString())).toEqual(["Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS", "11111111111111111111111111111111"])
     })
 
     it("ignore successful inner ix", () => {
@@ -48,7 +49,7 @@ describe("Error log parsing", () => {
             'Program failed to complete: BPF program panicked',
             'Program Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS failed: Program failed to complete'
         ];
-        expect(getProgramStackFromLogs(logs)).toEqual(["Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"])
+        expect(getProgramStackFromLogs(logs).map((publicKey) => publicKey.toString())).toEqual(["Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"])
     })
 
     it("ignore successful inner ix but don't ignore failing inner ix", () => {
@@ -63,7 +64,7 @@ describe("Error log parsing", () => {
             'Program failed to complete: BPF program panicked',
             'Program Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS failed: Program failed to complete'
         ];
-        expect(getProgramStackFromLogs(logs)).toEqual(["Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS", "ERRM6YCMsccM22TEaPuu35KVU4iCY3GLCz4qMsKLYReE"])
+        expect(getProgramStackFromLogs(logs).map((publicKey) => publicKey.toString())).toEqual(["Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS", "ERRM6YCMsccM22TEaPuu35KVU4iCY3GLCz4qMsKLYReE"])
     })
 
     it("ignore successful inner ix but don't ignore failing inner ix - big nested", () => {
@@ -98,7 +99,7 @@ describe("Error log parsing", () => {
             'Program Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS failed: Program failed to complete'
         ];
 
-        expect(getProgramStackFromLogs(logs))
+        expect(getProgramStackFromLogs(logs).map((publicKey) => publicKey.toString()))
             .toEqual(["Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS", "777UGK3pU4ygVWwnn7MDnetec1nSVg4Xi53DFSHu9D6A", "888E49S65VpyDmydi6juT7tsSwNyD3ZEVkV8te1rL3iH", "ERRM6YCMsccM22TEaPuu35KVU4iCY3GLCz4qMsKLYReE"])
     })
 })
@@ -116,7 +117,7 @@ describe("AnchorError", () => {
         const anchorError = AnchorError.parse(logs)!;
         expect(anchorError.errorCode).toEqual({ code: "OracleMismatchError", number: 6021 });
         expect(anchorError.errorMessage).toEqual("An unexpected oracle account was provided for the transaction.");
-        expect(anchorError.programStack).toEqual(["SW1TCH7qEPTdLsDHRgPuMQjbQxKdH2aBStViMFnt64f"]);
+        expect(anchorError.programStack.map((publicKey) => publicKey.toString())).toEqual(["SW1TCH7qEPTdLsDHRgPuMQjbQxKdH2aBStViMFnt64f"]);
         expect(anchorError.origin).toEqual({ file: "programs/switchboard_v2/src/actions/aggregator_save_result_action.rs", line: 235 });
     })
 })
