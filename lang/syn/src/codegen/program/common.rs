@@ -55,7 +55,7 @@ pub fn generate_ctor_args(state: &State) -> Vec<syn::Pat> {
 
 pub fn generate_ctor_typed_args(state: &State) -> Vec<syn::PatType> {
     state
-        .ctor_and_anchor
+        .ctor_and_accounts_struct
         .as_ref()
         .map(|(ctor, _anchor_ident)| {
             ctor.sig

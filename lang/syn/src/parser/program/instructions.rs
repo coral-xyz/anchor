@@ -1,4 +1,4 @@
-use crate::parser::program::ctx_accounts_ident;
+use crate::parser::program::ctx_accounts_path_segment;
 use crate::{FallbackFn, Ix, IxArg};
 use syn::parse::{Error as ParseError, Result as ParseResult};
 use syn::spanned::Spanned;
@@ -16,19 +16,19 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<(Vec<Ix>, Option<Fallbac
         .filter_map(|item| match item {
             syn::Item::Fn(item_fn) => {
                 let (ctx, _) = parse_args(item_fn).ok()?;
-                ctx_accounts_ident(&ctx.raw_arg).ok()?;
+                ctx_accounts_path_segment(&ctx.raw_arg).ok()?;
                 Some(item_fn)
             }
             _ => None,
         })
         .map(|method: &syn::ItemFn| {
             let (ctx, args) = parse_args(method)?;
-            let anchor_ident = ctx_accounts_ident(&ctx.raw_arg)?;
+            let anchor_ident = ctx_accounts_path_segment(&ctx.raw_arg)?;
             Ok(Ix {
                 raw_method: method.clone(),
                 ident: method.sig.ident.clone(),
                 args,
-                anchor_ident,
+                accounts_struct_path_segment: anchor_ident,
             })
         })
         .collect::<ParseResult<Vec<Ix>>>()?;
@@ -39,7 +39,7 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<(Vec<Ix>, Option<Fallbac
             .filter_map(|item| match item {
                 syn::Item::Fn(item_fn) => {
                     let (ctx, _args) = parse_args(item_fn).ok()?;
-                    if ctx_accounts_ident(&ctx.raw_arg).is_ok() {
+                    if ctx_accounts_path_segment(&ctx.raw_arg).is_ok() {
                         return None;
                     }
                     Some(item_fn)

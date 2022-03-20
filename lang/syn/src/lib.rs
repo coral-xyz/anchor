@@ -12,6 +12,7 @@ use syn::parse::{Error as ParseError, Parse, ParseStream, Result as ParseResult}
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::token::Comma;
+use syn::PathSegment;
 use syn::{
     Expr, Generics, Ident, ImplItemMethod, ItemEnum, ItemFn, ItemImpl, ItemMod, ItemStruct, LitInt,
     LitStr, PatType, Token, TypePath,
@@ -58,7 +59,7 @@ impl ToTokens for Program {
 pub struct State {
     pub name: String,
     pub strct: ItemStruct,
-    pub ctor_and_anchor: Option<(ImplItemMethod, Ident)>,
+    pub ctor_and_accounts_struct: Option<(ImplItemMethod, PathSegment)>,
     pub impl_block_and_methods: Option<(ItemImpl, Vec<StateIx>)>,
     pub interfaces: Option<Vec<StateInterface>>,
     pub is_zero_copy: bool,
@@ -69,7 +70,7 @@ pub struct StateIx {
     pub raw_method: ImplItemMethod,
     pub ident: Ident,
     pub args: Vec<IxArg>,
-    pub anchor_ident: Ident,
+    pub accounts_struct_path_segment: PathSegment,
     // True if there exists a &self on the method.
     pub has_receiver: bool,
 }
@@ -85,8 +86,8 @@ pub struct Ix {
     pub raw_method: ItemFn,
     pub ident: Ident,
     pub args: Vec<IxArg>,
-    // The ident for the struct deriving Accounts.
-    pub anchor_ident: Ident,
+    // The path for the struct deriving Accounts.
+    pub accounts_struct_path_segment: PathSegment,
 }
 
 #[derive(Debug)]

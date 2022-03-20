@@ -8,17 +8,17 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
     // Go through state accounts.
     if let Some(state) = &program.state {
         // Ctor.
-        if let Some((_ctor, ctor_accounts)) = &state.ctor_and_anchor {
+        if let Some((_ctor, ctor_accounts)) = &state.ctor_and_accounts_struct {
             let macro_name = format!(
                 "__client_accounts_{}",
-                ctor_accounts.to_string().to_snake_case()
+                ctor_accounts.ident.clone().to_string().to_snake_case()
             );
             accounts.insert(macro_name);
         }
         // Methods.
         if let Some((_impl_block, methods)) = &state.impl_block_and_methods {
             for ix in methods {
-                let anchor_ident = &ix.anchor_ident;
+                let anchor_ident = &ix.accounts_struct_path_segment.ident.clone();
                 // TODO: move to fn and share with accounts.rs.
                 let macro_name = format!(
                     "__client_accounts_{}",
@@ -31,7 +31,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
     // Go through instruction accounts.
     for ix in &program.ixs {
-        let anchor_ident = &ix.anchor_ident;
+        let anchor_ident = &ix.accounts_struct_path_segment.ident.clone();
         // TODO: move to fn and share with accounts.rs.
         let macro_name = format!(
             "__client_accounts_{}",

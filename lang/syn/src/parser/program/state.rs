@@ -1,5 +1,5 @@
 use crate::parser;
-use crate::parser::program::ctx_accounts_ident;
+use crate::parser::program::ctx_accounts_path_segment;
 use crate::{IxArg, State, StateInterface, StateIx};
 use syn::parse::{Error as ParseError, Result as ParseResult};
 use syn::spanned::Spanned;
@@ -61,7 +61,7 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<Option<State>> {
     };
 
     // Parse ctor and the generic type in `Context<MY-TYPE>`.
-    let ctor_and_anchor: Option<(syn::ImplItemMethod, syn::Ident)> = impl_block
+    let ctor_and_anchor: Option<(syn::ImplItemMethod, syn::PathSegment)> = impl_block
         .as_ref()
         .map(|impl_block| {
             let r: Option<ParseResult<_>> = impl_block
@@ -143,7 +143,7 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<Option<State>> {
                             }
                         }
                     };
-                    Ok((m.clone(), ctx_accounts_ident(ctx_arg)?))
+                    Ok((m.clone(), ctx_accounts_path_segment(ctx_arg)?))
                 })
                 .next();
             r.transpose()
@@ -192,13 +192,12 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<Option<State>> {
                         .collect::<ParseResult<Vec<IxArg>>>()?;
                     // Remove the Anchor accounts argument
                     let anchor = args.remove(0);
-                    let anchor_ident = ctx_accounts_ident(&anchor.raw_arg)?;
 
                     Ok(StateIx {
                         raw_method: m.clone(),
                         ident: m.sig.ident.clone(),
                         args,
-                        anchor_ident,
+                        accounts_struct_path_segment: ctx_accounts_path_segment(&anchor.raw_arg)?,
                         has_receiver: true,
                     })
                 })
@@ -268,13 +267,13 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<Option<State>> {
                                         .collect::<Vec<IxArg>>();
                                     // Remove the Anchor accounts argument
                                     let anchor = args.remove(0);
-                                    let anchor_ident = ctx_accounts_ident(&anchor.raw_arg)?;
+                                    let anchor_ident = ctx_accounts_path_segment(&anchor.raw_arg)?;
 
                                     Ok(StateIx {
                                         raw_method: m.clone(),
                                         ident: m.sig.ident.clone(),
                                         args,
-                                        anchor_ident,
+                                        accounts_struct_path_segment: anchor_ident,
                                         has_receiver,
                                     })
                                 }
@@ -303,7 +302,7 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<Option<State>> {
             strct,
             interfaces: trait_impls,
             impl_block_and_methods: impl_block.map(|impl_block| (impl_block, methods.unwrap())),
-            ctor_and_anchor,
+            ctor_and_accounts_struct: ctor_and_anchor,
             is_zero_copy,
         }
     }))

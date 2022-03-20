@@ -2,6 +2,10 @@ use anchor_lang::prelude::*;
 
 declare_id!("HmbTLCmaGvZhKnn1Zfa1JVnp7vkMV4DYVxPLWBVoN65L");
 
+mod account;
+
+use account::*;
+
 #[program]
 pub mod misc2 {
     use super::*;
@@ -28,6 +32,18 @@ pub mod misc2 {
             Ok(())
         }
     }
+
+    // this exists so we can test whether it compiles
+    // it's not used in a test
+    pub fn empty_accounts_struct_cpi(_ctx: Context<EmptyAccountsStructCpi>) -> Result<()> {
+        Ok(())
+    }
+
+    // this exists so we can test whether it compiles
+    // it's not used in a test
+    pub fn accounts_struct_from_other_module(_ctx: Context<StructFromOtherModule>) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -36,3 +52,6 @@ pub struct Auth<'info> {
     /// CHECK:
     pub authority: AccountInfo<'info>,
 }
+
+#[derive(Accounts)]
+pub struct EmptyAccountsStructCpi{}
