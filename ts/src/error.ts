@@ -196,7 +196,7 @@ export class AnchorError extends Error {
     return this._programErrorStack.stack;
   }
 
-  toString(): string {
+  public toString(): string {
     return this.message;
   }
 }
@@ -272,7 +272,7 @@ export class ProgramError extends Error {
     return this._programErrorStack?.stack;
   }
 
-  toString(): string {
+  public toString(): string {
     return this.msg;
   }
 }
@@ -293,13 +293,18 @@ export function translateError(err: any, idlErrors: Map<number, string>) {
   }
   if (err.logs) {
     const handler = {
-      get(target, prop) {
+      get: function (target, prop) {
         if (prop === "programErrorStack") {
           return target.programErrorStack.stack;
         } else if (prop === "program") {
           return target.programErrorStack.stack[
             err.programErrorStack.stack.length - 1
           ];
+        } else {
+          // this is the normal way to return all other props
+          // without modifying them.
+          // @ts-expect-error
+          return Reflect.get(...arguments);
         }
       },
     };
