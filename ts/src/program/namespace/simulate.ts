@@ -9,9 +9,7 @@ import { TransactionFn } from "./transaction.js";
 import { EventParser, Event } from "../event.js";
 import { Coder } from "../../coder/index.js";
 import { Idl, IdlEvent } from "../../idl.js";
-import {
-  translateError,
-} from "../../error.js";
+import { translateError } from "../../error.js";
 import {
   AllInstructions,
   IdlTypes,

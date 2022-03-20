@@ -3,9 +3,7 @@ import Provider from "../../provider.js";
 import { Idl } from "../../idl.js";
 import { splitArgsAndCtx } from "../context.js";
 import { TransactionFn } from "./transaction.js";
-import {
-  translateError,
-} from "../../error.js";
+import { translateError } from "../../error.js";
 import {
   AllInstructions,
   InstructionContextFn,
