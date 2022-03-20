@@ -134,10 +134,10 @@ describe("errors", () => {
         const tx = await program.rpc.testProgramError();
         assert.ok(false);
       } catch (err) {
-        expect(
-          err.programErrorStack.stack.map((pk) => pk.toString())
-        ).to.deep.equal([program.programId.toString()]);
-        // No-op (withLogTest expects the callback to catch the initial tx error)
+        expect(err.programErrorStack.map((pk) => pk.toString())).to.deep.equal([
+          program.programId.toString(),
+        ]);
+        expect(err.program.toString()).to.equal(program.programId.toString());
       }
     }, [
       "Program log: ProgramError occurred. Error Code: InvalidAccountData. Error Number: 17179869184. Error Message: An account's data contents was invalid.",
@@ -150,10 +150,9 @@ describe("errors", () => {
         const tx = await program.rpc.testProgramErrorWithSource();
         assert.ok(false);
       } catch (err) {
-        expect(
-          err.programErrorStack.stack.map((pk) => pk.toString())
-        ).to.deep.equal([program.programId.toString()]);
-        // No-op (withLogTest expects the callback to catch the initial tx error)
+        expect(err.programErrorStack.map((pk) => pk.toString())).to.deep.equal([
+          program.programId.toString(),
+        ]);
       }
     }, [
       "Program log: ProgramError thrown in programs/errors/src/lib.rs:38. Error Code: InvalidAccountData. Error Number: 17179869184. Error Message: An account's data contents was invalid.",

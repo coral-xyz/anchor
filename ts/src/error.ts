@@ -1,4 +1,5 @@
 import { PublicKey } from "@solana/web3.js";
+import * as features from "./utils/features.js";
 
 export class IdlError extends Error {
   constructor(message: string) {
@@ -274,6 +275,38 @@ export class ProgramError extends Error {
   toString(): string {
     return this.msg;
   }
+}
+
+export function translateError(err: any, idlErrors: Map<number, string>) {
+  if (features.isSet("debug-logs")) {
+    console.log("Translating error:", err);
+  }
+
+  const anchorError = AnchorError.parse(err.logs);
+  if (anchorError) {
+    return anchorError;
+  }
+
+  const programError = ProgramError.parse(err, idlErrors);
+  if (programError) {
+    return programError;
+  }
+  if (err.logs) {
+    const handler = {
+      get(target, prop) {
+        if (prop === "programErrorStack") {
+          return target.programErrorStack.stack;
+        } else if (prop === "program") {
+          return target.programErrorStack.stack[
+            err.programErrorStack.stack.length - 1
+          ];
+        }
+      },
+    };
+    err.programErrorStack = ProgramErrorStack.parse(err.logs);
+    return new Proxy(err, handler);
+  }
+  return err;
 }
 
 const LangErrorCode = {

@@ -3,14 +3,14 @@ import Provider from "../../provider.js";
 import { Idl } from "../../idl.js";
 import { splitArgsAndCtx } from "../context.js";
 import { TransactionFn } from "./transaction.js";
-import { ProgramError, ProgramErrorStack } from "../../error.js";
-import * as features from "../../utils/features.js";
+import {
+  translateError,
+} from "../../error.js";
 import {
   AllInstructions,
   InstructionContextFn,
   MakeInstructionsNamespace,
 } from "./types.js";
-import { AnchorError } from "../../error.js";
 
 export default class RpcFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
@@ -25,24 +25,7 @@ export default class RpcFactory {
       try {
         return await provider.send(tx, ctx.signers, ctx.options);
       } catch (err) {
-        if (features.isSet("debug-logs")) {
-          console.log("Translating error:", err);
-        }
-
-        // TODO: move this into provider.send ?
-        const anchorError = AnchorError.parse(err.logs);
-        if (anchorError) {
-          throw anchorError;
-        }
-
-        const translatedErr = ProgramError.parse(err, idlErrors);
-        if (translatedErr) {
-          throw translatedErr;
-        }
-        if (err.logs) {
-          err.programErrorStack = ProgramErrorStack.parse(err.logs);
-        }
-        throw err;
+        throw translateError(err, idlErrors);
       }
     };
 
