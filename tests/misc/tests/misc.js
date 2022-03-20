@@ -149,21 +149,34 @@ describe("misc", () => {
   it("Can retrieve events when simulating a transaction", async () => {
     const resp = await program.simulate.testSimulate(44);
     const expectedRaw = [
-      "Program Z2Ddx1Lcd8CHTV9tkWtNnFQrSz6kxz2H38wrr18zZRZ invoke [1]",
-      "Program log: NgyCA9omwbMsAAAA",
-      "Program log: fPhuIELK/k7SBAAA",
-      "Program log: jvbowsvlmkcJAAAA",
-      "Program Z2Ddx1Lcd8CHTV9tkWtNnFQrSz6kxz2H38wrr18zZRZ consumed 4819 of 200000 compute units",
-      "Program Z2Ddx1Lcd8CHTV9tkWtNnFQrSz6kxz2H38wrr18zZRZ success",
+      "Program Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS invoke [1]",
+      "Program log: Instruction: TestSimulate",
+      "Program data: NgyCA9omwbMsAAAA",
+      "Program data: fPhuIELK/k7SBAAA",
+      "Program data: jvbowsvlmkcJAAAA",
+      "Program data: zxM5neEnS1kBAgMEBQYHCAkK",
+      "Program data: g06Ei2GL1gIBAgMEBQYHCAkKCw==",
+      "Program Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS consumed 5320 of 200000 compute units",
+      "Program Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS success",
     ];
 
-    assert.ok(JSON.stringify(expectedRaw), resp.raw);
+    assert.deepStrictEqual(expectedRaw, resp.raw);
     assert.ok(resp.events[0].name === "E1");
     assert.ok(resp.events[0].data.data === 44);
     assert.ok(resp.events[1].name === "E2");
     assert.ok(resp.events[1].data.data === 1234);
     assert.ok(resp.events[2].name === "E3");
     assert.ok(resp.events[2].data.data === 9);
+    assert.ok(resp.events[3].name === "E5");
+    assert.deepStrictEqual(
+      resp.events[3].data.data,
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    );
+    assert.ok(resp.events[4].name === "E6");
+    assert.deepStrictEqual(
+      resp.events[4].data.data,
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    );
   });
 
   let dataI8;
@@ -318,7 +331,7 @@ describe("misc", () => {
 
     const myPdaAccount = await program.account.dataZeroCopy.fetch(myPda);
     assert.ok(myPdaAccount.data === 9);
-    assert.ok((myPdaAccount.bump = nonce));
+    assert.ok(myPdaAccount.bump === nonce);
   });
 
   it("Can write to a zero copy PDA account", async () => {
@@ -335,7 +348,7 @@ describe("misc", () => {
 
     const myPdaAccount = await program.account.dataZeroCopy.fetch(myPda);
     assert.ok(myPdaAccount.data === 1234);
-    assert.ok((myPdaAccount.bump = bump));
+    assert.ok(myPdaAccount.bump === bump);
   });
 
   it("Can create a token account from seeds pda", async () => {
@@ -877,7 +890,7 @@ describe("misc", () => {
       signers: [ifNeededAcc],
     });
     const account = await program.account.dataU16.fetch(ifNeededAcc.publicKey);
-    assert.ok(account.data, 1);
+    assert.equal(account.data, 1);
   });
 
   it("Can init if needed a previously created account", async () => {
@@ -890,7 +903,7 @@ describe("misc", () => {
       signers: [ifNeededAcc],
     });
     const account = await program.account.dataU16.fetch(ifNeededAcc.publicKey);
-    assert.ok(account.data, 3);
+    assert.equal(account.data, 3);
   });
 
   it("Can use const for array size", async () => {
@@ -1002,7 +1015,8 @@ describe("misc", () => {
 
   it("init_if_needed throws if account exists but is not the expected space", async () => {
     const newAcc = anchor.web3.Keypair.generate();
-    await program.rpc.initWithSpace(3, {
+    const _irrelevantForTest = 3;
+    await program.rpc.initWithSpace(_irrelevantForTest, {
       accounts: {
         data: newAcc.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
@@ -1012,7 +1026,7 @@ describe("misc", () => {
     });
 
     try {
-      await program.rpc.testInitIfNeeded(3, {
+      await program.rpc.testInitIfNeeded(_irrelevantForTest, {
         accounts: {
           data: newAcc.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
@@ -1431,7 +1445,7 @@ describe("misc", () => {
   it("Can use multidimensional array", async () => {
     const array2d = new Array(10).fill(new Array(10).fill(99));
     const data = anchor.web3.Keypair.generate();
-    const tx = await program.rpc.testMultidimensionalArray(array2d, {
+    await program.rpc.testMultidimensionalArray(array2d, {
       accounts: {
         data: data.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
@@ -1444,6 +1458,28 @@ describe("misc", () => {
     const dataAccount = await program.account.dataMultidimensionalArray.fetch(
       data.publicKey
     );
+    assert.deepStrictEqual(dataAccount.data, array2d);
+  });
+
+  it("Can use multidimensional array with const sizes", async () => {
+    const array2d = new Array(10).fill(new Array(11).fill(22));
+    const data = anchor.web3.Keypair.generate();
+    await program.rpc.testMultidimensionalArrayConstSizes(array2d, {
+      accounts: {
+        data: data.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [data],
+      instructions: [
+        await program.account.dataMultidimensionalArrayConstSizes.createInstruction(
+          data
+        ),
+      ],
+    });
+    const dataAccount =
+      await program.account.dataMultidimensionalArrayConstSizes.fetch(
+        data.publicKey
+      );
     assert.deepStrictEqual(dataAccount.data, array2d);
   });
 

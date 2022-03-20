@@ -1,7 +1,8 @@
-use crate::error::ErrorCode;
+use crate::bpf_writer::BpfWriter;
+use crate::error::{Error, ErrorCode};
 use crate::{
-    Accounts, AccountsClose, AccountsExit, Result, ToAccountInfo, ToAccountInfos, ToAccountMetas,
-    ZeroCopy,
+    Accounts, AccountsClose, AccountsExit, Key, Result, ToAccountInfo, ToAccountInfos,
+    ToAccountMetas, ZeroCopy,
 };
 use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;
@@ -58,7 +59,8 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         acc_info: &AccountInfo<'info>,
     ) -> Result<Loader<'info, T>> {
         if acc_info.owner != program_id {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
+                .with_pubkeys((*acc_info.owner, *program_id)));
         }
         let data: &[u8] = &acc_info.try_borrow_data()?;
         // Discriminator must match.
@@ -78,7 +80,8 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         acc_info: &AccountInfo<'info>,
     ) -> Result<Loader<'info, T>> {
         if acc_info.owner != program_id {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
+                .with_pubkeys((*acc_info.owner, *program_id)));
         }
         Ok(Loader::new(acc_info.clone()))
     }
@@ -168,8 +171,8 @@ impl<'info, T: ZeroCopy> AccountsExit<'info> for Loader<'info, T> {
     fn exit(&self, _program_id: &Pubkey) -> Result<()> {
         let mut data = self.acc_info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
-        let mut cursor = std::io::Cursor::new(dst);
-        cursor.write_all(&T::discriminator()).unwrap();
+        let mut writer = BpfWriter::new(dst);
+        writer.write_all(&T::discriminator()).unwrap();
         Ok(())
     }
 }
@@ -211,5 +214,12 @@ impl<'info, T: ZeroCopy> AsRef<AccountInfo<'info>> for Loader<'info, T> {
 impl<'info, T: ZeroCopy> ToAccountInfos<'info> for Loader<'info, T> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         vec![self.acc_info.clone()]
+    }
+}
+
+#[allow(deprecated)]
+impl<'info, T: ZeroCopy> Key for Loader<'info, T> {
+    fn key(&self) -> Pubkey {
+        *self.acc_info.key
     }
 }
