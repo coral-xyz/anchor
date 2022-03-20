@@ -83,6 +83,12 @@ export class AnchorError extends Error {
     const errorLogs = [anchorErrorLog];
     let comparedValues: ComparedValues | undefined;
     if (anchorErrorLogIndex + 1 < logs.length) {
+      // This catches the comparedValues where the following is logged
+      // <AnchorError>
+      // Left:
+      // <Pubkey>
+      // Right:
+      // <Pubkey>
       if (logs[anchorErrorLogIndex + 1] === "Program log: Left:") {
         const pubkeyRegex = /^Program log: (.*)$/;
         const leftPubkey = pubkeyRegex.exec(logs[anchorErrorLogIndex + 2])![1];
@@ -94,9 +100,12 @@ export class AnchorError extends Error {
         errorLogs.push(
           ...logs.slice(anchorErrorLogIndex + 1, anchorErrorLogIndex + 5)
         );
-      } else if (
-        logs[anchorErrorLogIndex + 1].startsWith("Program log: Left:")
-      ) {
+      }
+      // This catches the comparedValues where the following is logged
+      // <AnchorError>
+      // Left: <value>
+      // Right: <value>
+      else if (logs[anchorErrorLogIndex + 1].startsWith("Program log: Left:")) {
         const valueRegex = /^Program log: (Left|Right): (.*)$/;
         const leftValue = valueRegex.exec(logs[anchorErrorLogIndex + 1])![2];
         const rightValue = valueRegex.exec(logs[anchorErrorLogIndex + 2])![2];
