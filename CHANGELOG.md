@@ -23,6 +23,7 @@ incremented for features.
 * lang: Handle arrays with const as size in instruction data ([#1623](https://github.com/project-serum/anchor/issues/1623).
 * spl: Add support for revoke instruction ([#1493](https://github.com/project-serum/anchor/pull/1493)).
 * ts: Add provider parameter to `Spl.token` factory method ([#1597](https://github.com/project-serum/anchor/pull/1597)).
+* lang, cli, spl: Update solana toolchain to v1.9.0 ([#1653](https://github.com/project-serum/anchor/pull/1653)).
 
 ### Fixes
 
