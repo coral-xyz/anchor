@@ -20,6 +20,7 @@ incremented for features.
 * lang: Add new `AccountSysvarMismatch` error code and test cases for sysvars ([#1535](https://github.com/project-serum/anchor/pull/1535)).
 * lang: Replace `std::io::Cursor` with a custom `Write` impl that uses the Solana mem syscalls ([#1589](https://github.com/project-serum/anchor/pull/1589)).
 * lang: Add `require_neq`, `require_keys_neq`, `require_gt`, and `require_gte` comparison macros ([#1622](https://github.com/project-serum/anchor/pull/1622)).
+* lang: Handle arrays with const as size in instruction data ([#1623](https://github.com/project-serum/anchor/issues/1623).
 * spl: Add support for revoke instruction ([#1493](https://github.com/project-serum/anchor/pull/1493)).
 * ts: Add provider parameter to `Spl.token` factory method ([#1597](https://github.com/project-serum/anchor/pull/1597)).
 * ts: Add `AnchorError` with program stack and also a program stack for non-`AnchorError` errors ([#1640](https://github.com/project-serum/anchor/pull/1640)). `AnchorError` is not returned for `processed` tx that have `skipPreflight` set to `true` (it falls back to `ProgramError` or the raw solana library error).
@@ -34,6 +35,7 @@ incremented for features.
 * ts: Fix `spl-token` coder account parsing ([#1604](https://github.com/project-serum/anchor/pull/1604)).
 * cli: Fix `npm install` fallback if `yarn` install doesn't work ([#1643](https://github.com/project-serum/anchor/pull/1643)).
 * lang: Fix bug where `owner = <target>` would not compile because of missing type annotation ([#1648](https://github.com/project-serum/anchor/pull/1648)).
+* ts: Adjust `send` and `simulate` functions in `provider.ts`, so they use the return value of `Wallet.signTransaction`([#1527](https://github.com/project-serum/anchor/pull/1527)).
 
 ### Breaking
 

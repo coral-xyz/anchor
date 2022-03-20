@@ -107,7 +107,7 @@ export default class Provider {
       await this.connection.getRecentBlockhash(opts.preflightCommitment)
     ).blockhash;
 
-    await this.wallet.signTransaction(tx);
+    tx = await this.wallet.signTransaction(tx);
     signers
       .filter((s): s is Signer => s !== undefined)
       .forEach((kp) => {
@@ -215,7 +215,7 @@ export default class Provider {
       )
     ).blockhash;
 
-    await this.wallet.signTransaction(tx);
+    tx = await this.wallet.signTransaction(tx);
     signers
       .filter((s): s is Signer => s !== undefined)
       .forEach((kp) => {
