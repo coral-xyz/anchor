@@ -46,8 +46,11 @@ pub fn event(
 }
 
 /// Logs an event that can be subscribed to by clients.
-/// Uses the `sol_log_data` syscall which results in the following log:
+/// Uses the [`sol_log_data`](https://docs.rs/solana-program/latest/solana_program/log/fn.sol_log_data.html)
+/// syscall which results in the following log:
+/// ```ignore
 /// Program data: <Base64EncodedEvent>
+/// ```
 #[proc_macro]
 pub fn emit(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let data: proc_macro2::TokenStream = input.into();
