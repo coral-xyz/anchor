@@ -1,18 +1,20 @@
-const anchor = require("@project-serum/anchor");
-const assert = require("assert");
-const {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
+import * as anchor from "@project-serum/anchor";
+import { Program, BN, IdlAccounts, AnchorError } from "@project-serum/anchor";
+import {
+  PublicKey,
+  Keypair,
+  SystemProgram,
+  SYSVAR_RENT_PUBKEY,
+} from "@solana/web3.js";
+import {
   TOKEN_PROGRAM_ID,
   Token,
-} = require("@solana/spl-token");
-const miscIdl = require("../target/idl/misc.json");
-const {
-  SystemProgram,
-  Keypair,
-  PublicKey,
-  SYSVAR_RENT_PUBKEY,
-} = require("@solana/web3.js");
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
+import { Misc } from "../target/types/misc";
 const utf8 = anchor.utils.bytes.utf8;
+const assert = require("assert");
+const miscIdl = require("../target/idl/misc.json");
 
 describe("misc", () => {
   // Configure the client to use the local cluster.
@@ -228,9 +230,8 @@ describe("misc", () => {
       assert.ok(false);
     } catch (err) {
       const errMsg = "A close constraint was violated";
-      assert.equal(err.toString(), errMsg);
-      assert.equal(err.msg, errMsg);
-      assert.equal(err.code, 2011);
+      assert.equal(err.error.errorMessage, errMsg);
+      assert.equal(err.error.errorCode.number, 2011);
     }
   });
 
@@ -699,7 +700,7 @@ describe("misc", () => {
           });
         },
         (err) => {
-          assert.equal(err.code, 2009);
+          assert.equal(err.error.errorCode.number, 2009);
           return true;
         }
       );
@@ -734,7 +735,7 @@ describe("misc", () => {
           });
         },
         (err) => {
-          assert.equal(err.code, 2015);
+          assert.equal(err.error.errorCode.number, 2015);
           return true;
         }
       );
@@ -869,7 +870,7 @@ describe("misc", () => {
         },
       }),
       (err) => {
-        assert.equal(err.code, 2006);
+        assert.equal(err.error.errorCode.number, 2006);
         return true;
       }
     );
@@ -968,8 +969,10 @@ describe("misc", () => {
         },
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2004);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2004);
     }
   });
 
@@ -1005,8 +1008,10 @@ describe("misc", () => {
         },
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2006);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2006);
     }
   });
 
@@ -1032,8 +1037,10 @@ describe("misc", () => {
         signers: [newAcc],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2019);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2019);
     }
   });
 
@@ -1064,8 +1071,10 @@ describe("misc", () => {
         signers: [mint],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2016);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2016);
     }
   });
 
@@ -1096,8 +1105,10 @@ describe("misc", () => {
         signers: [mint],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2017);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2017);
     }
   });
 
@@ -1128,8 +1139,10 @@ describe("misc", () => {
         signers: [mint],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2018);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2018);
     }
   });
 
@@ -1173,8 +1186,10 @@ describe("misc", () => {
         signers: [token],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2015);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2015);
     }
   });
 
@@ -1230,8 +1245,10 @@ describe("misc", () => {
         signers: [token],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2014);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2014);
     }
   });
 
@@ -1281,8 +1298,10 @@ describe("misc", () => {
         },
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2015);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2015);
     }
   });
 
@@ -1344,8 +1363,10 @@ describe("misc", () => {
         },
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2014);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2014);
     }
   });
 
@@ -1408,8 +1429,10 @@ describe("misc", () => {
         },
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 3014);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 3014);
     }
   });
 
@@ -1434,8 +1457,10 @@ describe("misc", () => {
         signers: [data],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2005);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2005);
     }
   });
 
@@ -1560,9 +1585,14 @@ describe("misc", () => {
         },
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(2005, err.code);
-      assert.equal("A rent exempt constraint was violated", err.msg);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2005);
+      assert.equal(
+        "A rent exemption constraint was violated",
+        err.error.errorMessage
+      );
     }
   });
 
@@ -1589,8 +1619,10 @@ describe("misc", () => {
           },
         });
         assert.ok(false);
-      } catch (err) {
-        assert.equal(err.code, 2006);
+      } catch (_err) {
+        assert.ok(_err instanceof AnchorError);
+        const err: AnchorError = _err;
+        assert.equal(err.error.errorCode.number, 2006);
       }
 
       // matching bump seed for wrong address but derived from wrong program
@@ -1602,8 +1634,10 @@ describe("misc", () => {
           },
         });
         assert.ok(false);
-      } catch (err) {
-        assert.equal(err.code, 2006);
+      } catch (_err) {
+        assert.ok(_err instanceof AnchorError);
+        const err: AnchorError = _err;
+        assert.equal(err.error.errorCode.number, 2006);
       }
 
       // correct inputs should lead to successful tx
@@ -1639,8 +1673,10 @@ describe("misc", () => {
           },
         });
         assert.ok(false);
-      } catch (err) {
-        assert.equal(err.code, 2006);
+      } catch (_err) {
+        assert.ok(_err instanceof AnchorError);
+        const err: AnchorError = _err;
+        assert.equal(err.error.errorCode.number, 2006);
       }
 
       // same seeds but derived from wrong program
@@ -1652,8 +1688,10 @@ describe("misc", () => {
           },
         });
         assert.ok(false);
-      } catch (err) {
-        assert.equal(err.code, 2006);
+      } catch (_err) {
+        assert.ok(_err instanceof AnchorError);
+        const err: AnchorError = _err;
+        assert.equal(err.error.errorCode.number, 2006);
       }
 
       // correct inputs should lead to successful tx
