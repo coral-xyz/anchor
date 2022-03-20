@@ -1556,12 +1556,12 @@ fn idl_set_buffer(cfg_override: &ConfigOverride, program_id: Pubkey, buffer: Pub
         };
 
         // Build the transaction.
-        let (recent_hash, _fee_calc) = client.get_recent_blockhash()?;
+        let latest_hash = client.get_latest_blockhash()?;
         let tx = Transaction::new_signed_with_payer(
             &[set_buffer_ix],
             Some(&keypair.pubkey()),
             &[&keypair],
-            recent_hash,
+            latest_hash,
         );
 
         // Send the transaction.
@@ -1647,12 +1647,12 @@ fn idl_set_authority(
             data,
         };
         // Send transaction.
-        let (recent_hash, _fee_calc) = client.get_recent_blockhash()?;
+        let latest_hash = client.get_latest_blockhash()?;
         let tx = Transaction::new_signed_with_payer(
             &[ix],
             Some(&keypair.pubkey()),
             &[&keypair],
-            recent_hash,
+            latest_hash,
         );
         client.send_and_confirm_transaction_with_spinner_and_config(
             &tx,
@@ -1732,12 +1732,12 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
             data,
         };
         // Send transaction.
-        let (recent_hash, _fee_calc) = client.get_recent_blockhash()?;
+        let latest_hash = client.get_latest_blockhash()?;
         let tx = Transaction::new_signed_with_payer(
             &[ix],
             Some(&keypair.pubkey()),
             &[&keypair],
-            recent_hash,
+            latest_hash,
         );
         client.send_and_confirm_transaction_with_spinner_and_config(
             &tx,
@@ -2156,7 +2156,7 @@ fn start_test_validator(
         .and_then(|test| test.startup_wait)
         .unwrap_or(5_000);
     while count < ms_wait {
-        let r = client.get_recent_blockhash();
+        let r = client.get_latest_blockhash();
         if r.is_ok() {
             break;
         }
@@ -2165,7 +2165,7 @@ fn start_test_validator(
     }
     if count == ms_wait {
         eprintln!(
-            "Unable to get recent blockhash. Test validator does not look started. Check {} for errors. Consider increasing [test.startup_wait] in Anchor.toml.",
+            "Unable to get latest blockhash. Test validator does not look started. Check {} for errors. Consider increasing [test.startup_wait] in Anchor.toml.",
             test_ledger_log_filename
         );
         validator_handle.kill()?;
@@ -2385,12 +2385,12 @@ fn create_idl_account(
             accounts,
             data,
         };
-        let (recent_hash, _fee_calc) = client.get_recent_blockhash()?;
+        let latest_hash = client.get_latest_blockhash()?;
         let tx = Transaction::new_signed_with_payer(
             &[ix],
             Some(&keypair.pubkey()),
             &[&keypair],
-            recent_hash,
+            latest_hash,
         );
         client.send_and_confirm_transaction_with_spinner_and_config(
             &tx,
@@ -2451,12 +2451,12 @@ fn create_idl_buffer(
     };
 
     // Build the transaction.
-    let (recent_hash, _fee_calc) = client.get_recent_blockhash()?;
+    let latest_hash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(
         &[create_account_ix, create_buffer_ix],
         Some(&keypair.pubkey()),
         &[&keypair, &buffer],
-        recent_hash,
+        latest_hash,
     );
 
     // Send the transaction.
