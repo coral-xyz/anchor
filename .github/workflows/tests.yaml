@@ -46,6 +46,7 @@ jobs:
       - run: cd examples/tutorial && yarn lint
       - run: cd tests && yarn
       - run: cd tests && yarn lint
+      - uses: ./.github/actions/git-diff/
 
   setup-anchor-cli:
     name: Setup Anchor cli
@@ -71,6 +72,8 @@ jobs:
         with:
           name: anchor-binary
           path: ~/.cargo/bin/anchor
+
+      - uses: ./.github/actions/git-diff/
 
   test-examples:
     needs: setup-anchor-cli
@@ -118,6 +121,7 @@ jobs:
           path: ./examples/tutorial/basic-4/target
           key: cargo-${{ runner.os }}-${{ hashFiles('./examples/tutorial/basic-4/**/Cargo.toml') }}-${{ env.SOLANA_CLI_VERSION }}-${{ hashFiles('**/Cargo.lock') }}
       - run: cd examples/tutorial && yarn workspaces run test
+      - uses: ./.github/actions/git-diff/
 
   setup-client-example:
     needs: setup-anchor-cli
@@ -151,6 +155,7 @@ jobs:
         with:
           name: ${{ matrix.node.name }}
           path: ${{ matrix.node.path }}target/deploy/${{ matrix.node.name }}
+      - uses: ./.github/actions/git-diff/
 
   test-client-example:
     needs: setup-client-example
@@ -190,6 +195,7 @@ jobs:
           key: cargo-${{ runner.os }}-client/example-${{ env.ANCHOR_VERSION }}-${{ env.SOLANA_CLI_VERSION }}-${{ hashFiles('**/Cargo.lock') }}
       - uses: ./.github/actions/setup-solana/
       - run: cd client/example && ./run-test.sh
+      - uses: ./.github/actions/git-diff/
 
   test-bpf-upgradeable-state:
     needs: setup-anchor-cli
@@ -233,6 +239,7 @@ jobs:
       - run: cd tests/bpf-upgradeable-state && anchor build --skip-lint
       - run: cd tests/bpf-upgradeable-state && solana program deploy --program-id program_with_different_programdata.json target/deploy/bpf_upgradeable_state.so
       - run: cd tests/bpf-upgradeable-state && cp bpf_upgradeable_state-keypair.json target/deploy/bpf_upgradeable_state-keypair.json && anchor deploy && anchor test --skip-deploy --skip-build --skip-lint
+      - uses: ./.github/actions/git-diff/
 
   test-anchor-init:
     needs: setup-anchor-cli
@@ -263,6 +270,7 @@ jobs:
           path: ~/.cargo/bin/
 
       - run: cd "$(mktemp -d)" && anchor init hello-anchor && cd hello-anchor && anchor test
+      - uses: ./.github/actions/git-diff/
 
   test-programs:
     needs: setup-anchor-cli
@@ -355,3 +363,5 @@ jobs:
 
       - run: ${{ matrix.node.cmd }}
         name: ${{ matrix.node.path }} program test
+
+      - uses: ./.github/actions/git-diff/
