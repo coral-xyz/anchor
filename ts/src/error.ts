@@ -95,6 +95,15 @@ const LangErrorCode = {
   ConstraintMintDecimals: 2018,
   ConstraintSpace: 2019,
 
+  // Require.
+  RequireViolated: 2500,
+  RequireEqViolated: 2501,
+  RequireKeysEqViolated: 2502,
+  RequireNeqViolated: 2503,
+  RequireKeysNeqViolated: 2504,
+  RequireGtViolated: 2505,
+  RequireGteViolated: 2506,
+
   // Accounts.
   AccountDiscriminatorAlreadySet: 3000,
   AccountDiscriminatorNotFound: 3001,
@@ -111,6 +120,7 @@ const LangErrorCode = {
   AccountNotInitialized: 3012,
   AccountNotProgramData: 3013,
   AccountNotAssociatedTokenAccount: 3014,
+  AccountSysvarMismatch: 3015,
   // State.
   StateInvalidAddress: 4000,
 
@@ -184,6 +194,21 @@ const LangErrorMessage = new Map([
   ],
   [LangErrorCode.ConstraintSpace, "A space constraint was violated"],
 
+  // Require.
+  [LangErrorCode.RequireViolated, "A require expression was violated"],
+  [LangErrorCode.RequireEqViolated, "A require_eq expression was violated"],
+  [
+    LangErrorCode.RequireKeysEqViolated,
+    "A require_keys_eq expression was violated",
+  ],
+  [LangErrorCode.RequireNeqViolated, "A require_neq expression was violated"],
+  [
+    LangErrorCode.RequireKeysNeqViolated,
+    "A require_keys_neq expression was violated",
+  ],
+  [LangErrorCode.RequireGtViolated, "A require_gt expression was violated"],
+  [LangErrorCode.RequireGteViolated, "A require_gte expression was violated"],
+
   // Accounts.
   [
     LangErrorCode.AccountDiscriminatorAlreadySet,
@@ -226,6 +251,10 @@ const LangErrorMessage = new Map([
   [
     LangErrorCode.AccountNotAssociatedTokenAccount,
     "The given account is not the associated token account",
+  ],
+  [
+    LangErrorCode.AccountSysvarMismatch,
+    "The given public key does not match the required sysvar",
   ],
 
   // State.

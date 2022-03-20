@@ -1,8 +1,9 @@
 #[allow(deprecated)]
 use crate::accounts::cpi_account::CpiAccount;
-use crate::error::ErrorCode;
+use crate::bpf_writer::BpfWriter;
+use crate::error::{Error, ErrorCode};
 use crate::{
-    AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, Result,
+    AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, Key, Result,
     ToAccountInfo, ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
@@ -37,7 +38,8 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
     #[inline(never)]
     pub fn try_from(program_id: &Pubkey, info: &AccountInfo<'a>) -> Result<ProgramAccount<'a, T>> {
         if info.owner != program_id {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
+                .with_pubkeys((*info.owner, *program_id)));
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramAccount::new(
@@ -55,7 +57,8 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
         info: &AccountInfo<'a>,
     ) -> Result<ProgramAccount<'a, T>> {
         if info.owner != program_id {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
+                .with_pubkeys((*info.owner, *program_id)));
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramAccount::new(
@@ -98,12 +101,19 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info
         let info = self.to_account_info();
         let mut data = info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
-        let mut cursor = std::io::Cursor::new(dst);
-        self.inner.account.try_serialize(&mut cursor)?;
+        let mut writer = BpfWriter::new(dst);
+        self.inner.account.try_serialize(&mut writer)?;
         Ok(())
     }
 }
 
+/// This function is for INTERNAL USE ONLY.
+/// Do NOT use this function in a program.
+/// Manual closing of `ProgramAccount<'info, T>` types is NOT supported.
+///
+/// Details: Using `close` with `ProgramAccount<'info, T>` is not safe because
+/// it requires the `mut` constraint but for that type the constraint
+/// overwrites the "closed account" discriminator at the end of the instruction.
 #[allow(deprecated)]
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsClose<'info>
     for ProgramAccount<'info, T>
@@ -174,5 +184,12 @@ where
 {
     fn from(a: CpiAccount<'info, T>) -> Self {
         Self::new(a.to_account_info(), Deref::deref(&a).clone())
+    }
+}
+
+#[allow(deprecated)]
+impl<'info, T: AccountSerialize + AccountDeserialize + Clone> Key for ProgramAccount<'info, T> {
+    fn key(&self) -> Pubkey {
+        *self.inner.info.key
     }
 }

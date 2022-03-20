@@ -1,10 +1,15 @@
 //! Account container that checks ownership on deserialization.
 
-use crate::error::ErrorCode;
-use crate::*;
+use crate::bpf_writer::BpfWriter;
+use crate::error::{Error, ErrorCode};
+use crate::{
+    AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, Key, Owner,
+    Result, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
+use solana_program::system_program;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
@@ -234,7 +239,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone + fmt::Debu
     }
 }
 
-impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T> {
+impl<'a, T: AccountSerialize + AccountDeserialize + crate::Owner + Clone> Account<'a, T> {
     fn new(info: AccountInfo<'a>, account: T) -> Account<'a, T> {
         Self { info, account }
     }
@@ -246,7 +251,8 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
             return Err(ErrorCode::AccountNotInitialized.into());
         }
         if info.owner != &T::owner() {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
+                .with_pubkeys((*info.owner, T::owner())));
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(Account::new(info.clone(), T::try_deserialize(&mut data)?))
@@ -261,7 +267,8 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
             return Err(ErrorCode::AccountNotInitialized.into());
         }
         if info.owner != &T::owner() {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
+                .with_pubkeys((*info.owner, T::owner())));
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(Account::new(
@@ -333,13 +340,20 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsEx
             let info = self.to_account_info();
             let mut data = info.try_borrow_mut_data()?;
             let dst: &mut [u8] = &mut data;
-            let mut cursor = std::io::Cursor::new(dst);
-            self.account.try_serialize(&mut cursor)?;
+            let mut writer = BpfWriter::new(dst);
+            self.account.try_serialize(&mut writer)?;
         }
         Ok(())
     }
 }
 
+/// This function is for INTERNAL USE ONLY.
+/// Do NOT use this function in a program.
+/// Manual closing of `Account<'info, T>` types is NOT supported.
+///
+/// Details: Using `close` with `Account<'info, T>` is not safe because
+/// it requires the `mut` constraint but for that type the constraint
+/// overwrites the "closed account" discriminator at the end of the instruction.
 impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsClose<'info>
     for Account<'info, T>
 {
@@ -401,5 +415,11 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> DerefMut for 
             panic!();
         }
         &mut self.account
+    }
+}
+
+impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> Key for Account<'info, T> {
+    fn key(&self) -> Pubkey {
+        *self.info.key
     }
 }
