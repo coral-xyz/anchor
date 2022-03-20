@@ -890,7 +890,7 @@ describe("misc", () => {
       signers: [ifNeededAcc],
     });
     const account = await program.account.dataU16.fetch(ifNeededAcc.publicKey);
-    assert.equals(account.data, 1);
+    assert.equal(account.data, 1);
   });
 
   it("Can init if needed a previously created account", async () => {
@@ -903,7 +903,7 @@ describe("misc", () => {
       signers: [ifNeededAcc],
     });
     const account = await program.account.dataU16.fetch(ifNeededAcc.publicKey);
-    assert.equals(account.data, 3);
+    assert.equal(account.data, 3);
   });
 
   it("Can use const for array size", async () => {
