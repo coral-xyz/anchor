@@ -44,8 +44,8 @@ use std::string::ToString;
 use tar::Archive;
 
 pub mod config;
-pub mod template;
 mod path;
+pub mod template;
 
 // Version of the docker image.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
