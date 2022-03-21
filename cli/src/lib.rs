@@ -45,6 +45,7 @@ use tar::Archive;
 
 pub mod config;
 pub mod template;
+mod path;
 
 // Version of the docker image.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
