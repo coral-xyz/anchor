@@ -1,18 +1,20 @@
-const anchor = require("@project-serum/anchor");
-const assert = require("assert");
-const {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
+import * as anchor from "@project-serum/anchor";
+import { Program, BN, IdlAccounts, AnchorError } from "@project-serum/anchor";
+import {
+  PublicKey,
+  Keypair,
+  SystemProgram,
+  SYSVAR_RENT_PUBKEY,
+} from "@solana/web3.js";
+import {
   TOKEN_PROGRAM_ID,
   Token,
-} = require("@solana/spl-token");
-const miscIdl = require("../target/idl/misc.json");
-const {
-  SystemProgram,
-  Keypair,
-  PublicKey,
-  SYSVAR_RENT_PUBKEY,
-} = require("@solana/web3.js");
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
+import { Misc } from "../target/types/misc";
 const utf8 = anchor.utils.bytes.utf8;
+const assert = require("assert");
+const miscIdl = require("../target/idl/misc.json");
 
 describe("misc", () => {
   // Configure the client to use the local cluster.
@@ -149,15 +151,18 @@ describe("misc", () => {
   it("Can retrieve events when simulating a transaction", async () => {
     const resp = await program.simulate.testSimulate(44);
     const expectedRaw = [
-      "Program Z2Ddx1Lcd8CHTV9tkWtNnFQrSz6kxz2H38wrr18zZRZ invoke [1]",
-      "Program log: NgyCA9omwbMsAAAA",
-      "Program log: fPhuIELK/k7SBAAA",
-      "Program log: jvbowsvlmkcJAAAA",
-      "Program Z2Ddx1Lcd8CHTV9tkWtNnFQrSz6kxz2H38wrr18zZRZ consumed 4819 of 200000 compute units",
-      "Program Z2Ddx1Lcd8CHTV9tkWtNnFQrSz6kxz2H38wrr18zZRZ success",
+      "Program Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS invoke [1]",
+      "Program log: Instruction: TestSimulate",
+      "Program data: NgyCA9omwbMsAAAA",
+      "Program data: fPhuIELK/k7SBAAA",
+      "Program data: jvbowsvlmkcJAAAA",
+      "Program data: zxM5neEnS1kBAgMEBQYHCAkK",
+      "Program data: g06Ei2GL1gIBAgMEBQYHCAkKCw==",
+      "Program Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS consumed 5320 of 200000 compute units",
+      "Program Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS success",
     ];
 
-    assert.ok(JSON.stringify(expectedRaw), resp.raw);
+    assert.deepStrictEqual(expectedRaw, resp.raw);
     assert.ok(resp.events[0].name === "E1");
     assert.ok(resp.events[0].data.data === 44);
     assert.ok(resp.events[1].name === "E2");
@@ -228,9 +233,8 @@ describe("misc", () => {
       assert.ok(false);
     } catch (err) {
       const errMsg = "A close constraint was violated";
-      assert.equal(err.toString(), errMsg);
-      assert.equal(err.msg, errMsg);
-      assert.equal(err.code, 2011);
+      assert.equal(err.error.errorMessage, errMsg);
+      assert.equal(err.error.errorCode.number, 2011);
     }
   });
 
@@ -328,7 +332,7 @@ describe("misc", () => {
 
     const myPdaAccount = await program.account.dataZeroCopy.fetch(myPda);
     assert.ok(myPdaAccount.data === 9);
-    assert.ok((myPdaAccount.bump = nonce));
+    assert.ok(myPdaAccount.bump === nonce);
   });
 
   it("Can write to a zero copy PDA account", async () => {
@@ -345,7 +349,7 @@ describe("misc", () => {
 
     const myPdaAccount = await program.account.dataZeroCopy.fetch(myPda);
     assert.ok(myPdaAccount.data === 1234);
-    assert.ok((myPdaAccount.bump = bump));
+    assert.ok(myPdaAccount.bump === bump);
   });
 
   it("Can create a token account from seeds pda", async () => {
@@ -699,7 +703,7 @@ describe("misc", () => {
           });
         },
         (err) => {
-          assert.equal(err.code, 2009);
+          assert.equal(err.error.errorCode.number, 2009);
           return true;
         }
       );
@@ -734,7 +738,7 @@ describe("misc", () => {
           });
         },
         (err) => {
-          assert.equal(err.code, 2015);
+          assert.equal(err.error.errorCode.number, 2015);
           return true;
         }
       );
@@ -869,7 +873,7 @@ describe("misc", () => {
         },
       }),
       (err) => {
-        assert.equal(err.code, 2006);
+        assert.equal(err.error.errorCode.number, 2006);
         return true;
       }
     );
@@ -887,7 +891,7 @@ describe("misc", () => {
       signers: [ifNeededAcc],
     });
     const account = await program.account.dataU16.fetch(ifNeededAcc.publicKey);
-    assert.ok(account.data, 1);
+    assert.equal(account.data, 1);
   });
 
   it("Can init if needed a previously created account", async () => {
@@ -900,7 +904,7 @@ describe("misc", () => {
       signers: [ifNeededAcc],
     });
     const account = await program.account.dataU16.fetch(ifNeededAcc.publicKey);
-    assert.ok(account.data, 3);
+    assert.equal(account.data, 3);
   });
 
   it("Can use const for array size", async () => {
@@ -919,6 +923,25 @@ describe("misc", () => {
       data.publicKey
     );
     assert.deepStrictEqual(dataAccount.data, [99, ...new Array(9).fill(0)]);
+  });
+
+  it("Can use const for instruction data size", async () => {
+    const data = anchor.web3.Keypair.generate();
+    const dataArray = [99, ...new Array(9).fill(0)];
+    const tx = await program.rpc.testConstIxDataSize(dataArray, {
+      accounts: {
+        data: data.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [data],
+      instructions: [
+        await program.account.dataConstArraySize.createInstruction(data),
+      ],
+    });
+    const dataAccount = await program.account.dataConstArraySize.fetch(
+      data.publicKey
+    );
+    assert.deepStrictEqual(dataAccount.data, dataArray);
   });
 
   it("Should include BASE const in IDL", async () => {
@@ -968,8 +991,10 @@ describe("misc", () => {
         },
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2004);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2004);
     }
   });
 
@@ -1005,8 +1030,10 @@ describe("misc", () => {
         },
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2006);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2006);
     }
   });
 
@@ -1032,8 +1059,10 @@ describe("misc", () => {
         signers: [newAcc],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2019);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2019);
     }
   });
 
@@ -1064,8 +1093,10 @@ describe("misc", () => {
         signers: [mint],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2016);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2016);
     }
   });
 
@@ -1096,8 +1127,10 @@ describe("misc", () => {
         signers: [mint],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2017);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2017);
     }
   });
 
@@ -1128,8 +1161,10 @@ describe("misc", () => {
         signers: [mint],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2018);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2018);
     }
   });
 
@@ -1173,8 +1208,10 @@ describe("misc", () => {
         signers: [token],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2015);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2015);
     }
   });
 
@@ -1230,8 +1267,10 @@ describe("misc", () => {
         signers: [token],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2014);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2014);
     }
   });
 
@@ -1281,8 +1320,10 @@ describe("misc", () => {
         },
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2015);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2015);
     }
   });
 
@@ -1344,8 +1385,10 @@ describe("misc", () => {
         },
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2014);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2014);
     }
   });
 
@@ -1408,8 +1451,10 @@ describe("misc", () => {
         },
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 3014);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 3014);
     }
   });
 
@@ -1434,8 +1479,10 @@ describe("misc", () => {
         signers: [data],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2005);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2005);
     }
   });
 
@@ -1560,9 +1607,14 @@ describe("misc", () => {
         },
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(2005, err.code);
-      assert.equal("A rent exempt constraint was violated", err.msg);
+    } catch (_err) {
+      assert.ok(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.equal(err.error.errorCode.number, 2005);
+      assert.equal(
+        "A rent exemption constraint was violated",
+        err.error.errorMessage
+      );
     }
   });
 
@@ -1589,8 +1641,10 @@ describe("misc", () => {
           },
         });
         assert.ok(false);
-      } catch (err) {
-        assert.equal(err.code, 2006);
+      } catch (_err) {
+        assert.ok(_err instanceof AnchorError);
+        const err: AnchorError = _err;
+        assert.equal(err.error.errorCode.number, 2006);
       }
 
       // matching bump seed for wrong address but derived from wrong program
@@ -1602,8 +1656,10 @@ describe("misc", () => {
           },
         });
         assert.ok(false);
-      } catch (err) {
-        assert.equal(err.code, 2006);
+      } catch (_err) {
+        assert.ok(_err instanceof AnchorError);
+        const err: AnchorError = _err;
+        assert.equal(err.error.errorCode.number, 2006);
       }
 
       // correct inputs should lead to successful tx
@@ -1639,8 +1695,10 @@ describe("misc", () => {
           },
         });
         assert.ok(false);
-      } catch (err) {
-        assert.equal(err.code, 2006);
+      } catch (_err) {
+        assert.ok(_err instanceof AnchorError);
+        const err: AnchorError = _err;
+        assert.equal(err.error.errorCode.number, 2006);
       }
 
       // same seeds but derived from wrong program
@@ -1652,8 +1710,10 @@ describe("misc", () => {
           },
         });
         assert.ok(false);
-      } catch (err) {
-        assert.equal(err.code, 2006);
+      } catch (_err) {
+        assert.ok(_err instanceof AnchorError);
+        const err: AnchorError = _err;
+        assert.equal(err.error.errorCode.number, 2006);
       }
 
       // correct inputs should lead to successful tx
