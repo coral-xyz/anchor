@@ -548,7 +548,7 @@ fn new(cfg_override: &ConfigOverride, name: String) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         match cfg.path().parent() {
             None => {
-                println!("Unable to make new program");
+                return Err(anyhow!("Unable to make new program"));
             }
             Some(parent) => {
                 std::env::set_current_dir(&parent)?;
@@ -565,7 +565,7 @@ fn rename(cfg_override: &ConfigOverride, from: String, to: String) -> Result<()>
     with_workspace(cfg_override, |cfg| {
         match cfg.path().parent() {
             None => {
-                println!("Unable to rename workspace");
+                return Err(anyhow!("Unable to rename workspace/program."));
             }
             Some(parent) => {
                 std::env::set_current_dir(&parent)?;
