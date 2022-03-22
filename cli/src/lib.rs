@@ -2879,12 +2879,12 @@ fn is_name_valid(name: &str) -> Result<()> {
 
     if key_words.contains(&name[..].into()) {
         return Err(anyhow!(
-            "{} is a reserved word in rust, name your project something else!",
+            "{} is a reserved word in rust, choose a different name!",
             name
         ));
     } else if name.chars().next().unwrap().is_numeric() {
         return Err(anyhow!(
-            "Cannot start project name with numbers, name your project something else!"
+            "Name cannot start with numbers, choose a different name!"
         ));
     }
 
