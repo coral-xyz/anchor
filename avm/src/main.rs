@@ -30,6 +30,8 @@ pub enum Commands {
     },
     #[clap(about = "List available versions of Anchor")]
     List {},
+    #[clap(about = "Update to the latest Anchor version")]
+    Update {},
 }
 
 // If `latest` is passed use the latest available version.
@@ -46,6 +48,7 @@ pub fn entry(opts: Cli) -> Result<()> {
         Commands::Install { version } => avm::install_version(&version),
         Commands::Uninstall { version } => avm::uninstall_version(&version),
         Commands::List {} => avm::list_versions(),
+        Commands::Update {} => avm::update(),
     }
 }
 
