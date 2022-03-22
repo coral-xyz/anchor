@@ -156,7 +156,7 @@ dependencies = [
  "clap 3.0.13",
  "dirs 3.0.2",
  "flate2",
- "heck 0.3.3",
+ "heck 0.4.0",
  "pathdiff",
  "rand",
  "reqwest",

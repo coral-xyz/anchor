@@ -2,7 +2,7 @@ use anchor_client::Cluster;
 use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Error, Result};
 use clap::{ArgEnum, Parser};
-use heck::SnakeCase;
+use heck::ToSnakeCase;
 use serde::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{Keypair, Signer};

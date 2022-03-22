@@ -12,7 +12,10 @@ use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
 use flate2::write::{GzEncoder, ZlibEncoder};
 use flate2::Compression;
-use heck::{SnakeCase, CamelCase};
+use heck::{
+    ToKebabCase, ToLowerCamelCase, ToShoutyKebabCase, ToShoutySnakeCase, 
+    ToSnakeCase, ToTitleCase, ToUpperCamelCase
+};
 use rand::rngs::OsRng;
 use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
@@ -604,14 +607,15 @@ fn rename_program(from: &str, to: &str) -> Result<()> {
 
 fn rename_in_file(path: &Path, from: &str, to: &str) -> Result<()> {
     let contents = fs::read_to_string(&path)?;
-    let from_snake = from.to_snake_case();
-    let from_camel = from.to_camel_case();
-    let to_snake = to.to_snake_case();
-    let to_camel = to.to_camel_case();
     let new_contents = contents.
         replace(&from, &to).
-        replace(&from_snake, &to_snake).
-        replace(&from_camel, &to_camel);
+        replace(&from.to_kebab_case(), &to.to_kebab_case()).
+        replace(&from.to_lower_camel_case(), &to.to_lower_camel_case()).
+        replace(&from.to_shouty_kebab_case(), &to.to_shouty_kebab_case()).
+        replace(&from.to_shouty_snake_case(), &to.to_shouty_snake_case()).
+        replace(&from.to_snake_case(), &to.to_snake_case()).
+        replace(&from.to_title_case(), &to.to_title_case()).
+        replace(&from.to_upper_camel_case(), &to.to_upper_camel_case());
     fs::write(&path, &new_contents)?;
     Ok(())
 }
