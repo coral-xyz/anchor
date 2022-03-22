@@ -70,7 +70,7 @@ pub fn use_version(version: &Version) -> Result<()> {
     Ok(())
 }
 
-/// Update to latest stable version
+/// Update to the latest version
 pub fn update() -> Result<()> {
     // Find last stable version
     let version = &get_latest_version();
