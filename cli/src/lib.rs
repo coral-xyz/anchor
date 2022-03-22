@@ -544,6 +544,7 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool) -> Result
 
 // Creates a new program crate in the `programs/<name>` directory.
 fn new(cfg_override: &ConfigOverride, name: String) -> Result<()> {
+    is_name_valid(&name)?;
     with_workspace(cfg_override, |cfg| {
         match cfg.path().parent() {
             None => {
