@@ -597,10 +597,10 @@ fn rename_program(from: &str, to: &str) -> Result<()> {
     fs::rename(&format!("programs/{}", from), &format!("programs/{}", to))?;
     
     // Users probably have either .js or .ts tests, not both. Don't panic.
-    rename_in_file(&Path::new(&format!("tests/{}.js", from)), &from, &to).ok();
-    rename_in_file(&Path::new(&format!("tests/{}.ts", from)), &from, &to).ok();
-    fs::rename(&format!("tests/{}.js", from), &format!("tests/{}.js", to)).ok();
-    fs::rename(&format!("tests/{}.ts", from), &format!("tests/{}.ts", to)).ok();
+    let _ = rename_in_file(&Path::new(&format!("tests/{}.js", from)), &from, &to);
+    let _ = rename_in_file(&Path::new(&format!("tests/{}.ts", from)), &from, &to);
+    let _ = fs::rename(&format!("tests/{}.js", from), &format!("tests/{}.js", to));
+    let _ = fs::rename(&format!("tests/{}.ts", from), &format!("tests/{}.ts", to));
 
     Ok(())
 }
