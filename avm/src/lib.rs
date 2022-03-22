@@ -75,15 +75,15 @@ pub fn update() -> Result<()> {
     // Find last stable version
     let version = &get_latest_version();
 
-    install_version(version)?;
+    install_version(version, false)?;
     Ok(())
 }
 
 /// Install a version of anchor-cli
-pub fn install_version(version: &Version) -> Result<()> {
+pub fn install_version(version: &Version, force: bool) -> Result<()> {
     // If version is already installed we ignore the request.
     let installed_versions = read_installed_versions();
-    if installed_versions.contains(version) {
+    if installed_versions.contains(version) && !force {
         println!("Version {} is already installed", version);
         return Ok(());
     }

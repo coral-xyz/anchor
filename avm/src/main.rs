@@ -22,6 +22,10 @@ pub enum Commands {
     Install {
         #[clap(parse(try_from_str = parse_version))]
         version: Version,
+        #[clap(long)]
+        /// Flag to force installation even if the version
+        /// is already installed
+        force: bool,
     },
     #[clap(about = "Uninstall a version of Anchor")]
     Uninstall {
@@ -45,7 +49,7 @@ fn parse_version(version: &str) -> Result<Version, Error> {
 pub fn entry(opts: Cli) -> Result<()> {
     match opts.command {
         Commands::Use { version } => avm::use_version(&version),
-        Commands::Install { version } => avm::install_version(&version),
+        Commands::Install { version, force } => avm::install_version(&version, force),
         Commands::Uninstall { version } => avm::uninstall_version(&version),
         Commands::List {} => avm::list_versions(),
         Commands::Update {} => avm::update(),
