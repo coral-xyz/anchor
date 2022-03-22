@@ -75,8 +75,7 @@ pub fn update() -> Result<()> {
     // Find last stable version
     let version = &get_latest_version();
 
-    install_version(version, false)?;
-    Ok(())
+    install_version(version, false)
 }
 
 /// Install a version of anchor-cli
@@ -122,8 +121,7 @@ pub fn install_version(version: &Version, force: bool) -> Result<()> {
         current_version_file.write_all(version.to_string().as_bytes())?;
     }
 
-    use_version(version)?;
-    Ok(())
+    use_version(version)
 }
 
 /// Remove an installed version of anchor-cli
