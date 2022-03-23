@@ -30,7 +30,9 @@ describe("bpf_upgradeable_state", () => {
       signers: [settings],
     });
     assert.strictEqual(
-      (await program.account.settings.fetch(settings.publicKey)).adminData,
+      (
+        await program.account.settings.fetch(settings.publicKey)
+      ).adminData.toNumber(),
       500
     );
   });
@@ -51,7 +53,9 @@ describe("bpf_upgradeable_state", () => {
       }
     );
     assert.strictEqual(
-      (await program.account.settings.fetch(settings.publicKey)).adminData,
+      (
+        await program.account.settings.fetch(settings.publicKey)
+      ).adminData.toNumber(),
       500
     );
   });

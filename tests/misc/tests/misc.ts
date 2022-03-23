@@ -14,6 +14,7 @@ import {
 import { Misc } from "../target/types/misc";
 const utf8 = anchor.utils.bytes.utf8;
 const { assert } = require("chai");
+const nativeAssert = require("assert");
 const miscIdl = require("../target/idl/misc.json");
 
 describe("misc", () => {
@@ -89,7 +90,7 @@ describe("misc", () => {
       },
     });
 
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         await program.rpc.testOwner({
           accounts: {
@@ -111,7 +112,7 @@ describe("misc", () => {
       },
     });
 
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         await program.rpc.testExecutable({
           accounts: {
@@ -387,7 +388,7 @@ describe("misc", () => {
   });
 
   it("Can execute a fallback function", async () => {
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         await anchor.utils.rpc.invoke(program.programId);
       },
@@ -628,8 +629,8 @@ describe("misc", () => {
     assert.strictEqual(account1.data, 1);
 
     const account2 = await program.account.data.fetch(data2.publicKey);
-    assert.strictEqual(account2.udata, 2);
-    assert.strictEqual(account2.idata, 3);
+    assert.strictEqual(account2.udata.toNumber(), 2);
+    assert.strictEqual(account2.idata.toNumber(), 3);
   });
 
   describe("associated_token constraints", () => {
@@ -692,7 +693,7 @@ describe("misc", () => {
         TOKEN_PROGRAM_ID
       );
 
-      await assert.rejects(
+      await nativeAssert.rejects(
         async () => {
           await program.rpc.testValidateAssociatedToken({
             accounts: {
@@ -727,7 +728,7 @@ describe("misc", () => {
         []
       );
 
-      await assert.rejects(
+      await nativeAssert.rejects(
         async () => {
           await program.rpc.testValidateAssociatedToken({
             accounts: {
@@ -866,7 +867,7 @@ describe("misc", () => {
       ["non-empty"],
       program.programId
     );
-    await assert.rejects(
+    await nativeAssert.rejects(
       program.rpc.testEmptySeedsConstraint({
         accounts: {
           pda: pda2,

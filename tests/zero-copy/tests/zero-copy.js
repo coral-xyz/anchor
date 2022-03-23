@@ -1,5 +1,6 @@
 const anchor = require("@project-serum/anchor");
 const { assert } = require("chai");
+const nativeAssert = require("assert");
 const PublicKey = anchor.web3.PublicKey;
 const BN = anchor.BN;
 
@@ -245,7 +246,7 @@ describe("zero-copy", () => {
 
   it("Errors when setting an out of bounds index", async () => {
     // Fail to set non existing index.
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         await program.rpc.updateLargeAccount(25000, new BN(1), {
           accounts: {

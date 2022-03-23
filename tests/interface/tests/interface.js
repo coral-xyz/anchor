@@ -1,5 +1,6 @@
 const anchor = require("@project-serum/anchor");
 const { assert } = require("chai");
+const nativeAssert = require("assert");
 
 describe("interface", () => {
   // Configure the client to use the local cluster.
@@ -16,7 +17,7 @@ describe("interface", () => {
   });
 
   it("Should fail to go from even to even", async () => {
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         await counter.state.rpc.setCount(new anchor.BN(4), {
           accounts: {

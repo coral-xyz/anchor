@@ -3,6 +3,7 @@ const serumCmn = require("@project-serum/common");
 const { TOKEN_PROGRAM_ID } = require("@solana/spl-token");
 const utils = require("./utils");
 const { assert, expect } = require("chai");
+const nativeAssert = require("assert");
 
 anchor.utils.features.set("anchor-deprecated-state");
 
@@ -112,7 +113,7 @@ describe("Lockup and Registry", () => {
 
     assert.deepEqual(lockupAccount.whitelist, entries);
 
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         const e = await generateEntry();
         await lockup.state.rpc.whitelistAdd(e, { accounts });
@@ -201,7 +202,7 @@ describe("Lockup and Registry", () => {
   });
 
   it("Fails to withdraw from a vesting account before vesting", async () => {
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         await lockup.rpc.withdraw(new anchor.BN(100), {
           accounts: {
@@ -292,7 +293,7 @@ describe("Lockup and Registry", () => {
     assert.isTrue(state.lockupProgram.equals(lockup.programId));
 
     // Should not allow a second initializatoin.
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         await registry.state.rpc.new(lockup.programId);
       },
@@ -754,7 +755,7 @@ describe("Lockup and Registry", () => {
       mint,
       provider.wallet.publicKey
     );
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         const withdrawAmount = new anchor.BN(10);
         await lockup.rpc.withdraw(withdrawAmount, {
@@ -873,7 +874,7 @@ describe("Lockup and Registry", () => {
   };
 
   it("Fails to end unstaking before timelock", async () => {
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         await tryEndUnstake();
       },
