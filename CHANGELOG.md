@@ -13,7 +13,7 @@ incremented for features.
 
 ### Features
 
-* spl: Re-exports the `spl_token::instruction::AuthorityType` enum ([#1665](https://github.com/project-serum/anchor/pull/1665)).
+* spl: Re-export the `spl_token` crate ([#1665](https://github.com/project-serum/anchor/pull/1665)).
 
 ## [0.23.0] - 2022-03-20
 
