@@ -1,6 +1,6 @@
 [package]
 name = "anchor-cli"
-version = "0.22.1"
+version = "0.23.0"
 authors = ["armaniferrante <armaniferrante@gmail.com>"]
 rust-version = "1.56"
 edition = "2021"
@@ -29,7 +29,6 @@ solana-sdk = "~1.8.14"
 solana-program = "~1.8.14"
 solana-client = "~1.8.14"
 solana-cli-config = "~1.8.14"
-serum-common = { git = "https://github.com/project-serum/serum-dex", features = ["client"] }
 dirs = "3.0"
 heck = "0.3.1"
 flate2 = "1.0.19"
