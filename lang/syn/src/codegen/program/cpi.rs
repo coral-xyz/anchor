@@ -71,19 +71,19 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let sighash_tts: proc_macro2::TokenStream =
                     format!("{:?}", sighash_arr).parse().unwrap();
                 let ret_type = &ix.returns.ty.to_token_stream();
-                let maybe_get_return_data = match ret_type.to_string().as_str() {
-                    "()" => quote! { Ok(()) },
-                    _ =>  quote! {
-                        let (_key, data) = anchor_lang::solana_program::program::get_return_data().unwrap();
-                        let data = <#ret_type>::try_from_slice(&data)?;
-                        Ok(data)
-                    }
+                let (method_ret, maybe_return) = match ret_type.to_string().as_str() {
+                    "()" => (quote! {anchor_lang::Result<()> }, quote! { Ok(()) }),
+                    _ => (
+                        quote! { anchor_lang::Result<Return::<#ret_type>> },
+                        quote! { Ok(Return::<#ret_type> { phantom: PhantomData }) }
+                    )
                 };
+
                 quote! {
                     pub fn #method_name<'a, 'b, 'c, 'info>(
                         ctx: anchor_lang::context::CpiContext<'a, 'b, 'c, 'info, #accounts_ident<'info>>,
                         #(#args),*
-                    ) -> anchor_lang::Result<#ret_type> {
+                    ) -> #method_ret {
                         let ix = {
                             let ix = instruction::#ix_variant;
                             let mut ix_data = AnchorSerialize::try_to_vec(&ix)
@@ -105,7 +105,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         ).map_or_else(
                             |e| Err(Into::into(e)),
                             // Maybe handle Solana return data.
-                            |_| { #maybe_get_return_data }
+                            |_| { #maybe_return }
                         )
                     }
                 }
@@ -121,11 +121,24 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         #[cfg(feature = "cpi")]
         pub mod cpi {
             use super::*;
+            use std::marker::PhantomData;
 
             pub mod state {
                 use super::*;
 
                 #(#state_cpi_methods)*
+            }
+
+            pub struct Return<T> {
+                phantom: PhantomData<T>
+            }
+
+            impl<T: AnchorDeserialize> Return<T> {
+                pub fn get(&self) -> Result<T> {
+                    let (_key, data) = anchor_lang::solana_program::program::get_return_data().unwrap();
+                    let value = T::try_from_slice(&data).unwrap();
+                    Ok(value)
+                }
             }
 
             #(#global_cpi_methods)*
