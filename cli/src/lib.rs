@@ -566,7 +566,7 @@ fn rename(cfg_override: &ConfigOverride, from: String, to: String) -> Result<()>
     with_workspace(cfg_override, |cfg| {
         match cfg.path().parent() {
             None => {
-                return Err(anyhow!("Unable to rename workspace/program."));
+                return Err(anyhow!("Unable to rename program."));
             }
             Some(parent) => {
                 std::env::set_current_dir(&parent)?;
@@ -581,31 +581,29 @@ fn rename(cfg_override: &ConfigOverride, from: String, to: String) -> Result<()>
                     .require_git(false)
                     .build() {
                     if let Ok(dent) = result {
-                        let p = dent.path();
+                        let p = dent.into_path();
                         if p.is_file() {
-                            println!("Renaming contents at: {:?}", p);
                             rename_in_file(&p, &from, &to)?;
                         }
                         // Store paths and rename these AFTER traversal.
-                        // Renaming within traversal may cause files inside said
-                        // directories to be skipped.
+                        // Changing the file system within traversal will
+                        // likely cause files inside matching directories 
+                        // to be skipped.
                         if let Some(stem) = p.file_stem() {
-                            if stem.to_str().unwrap() == &from {
-                                matching_paths.push(p.to_path_buf());
+                            if stem.to_str().unwrap() == from {
+                                matching_paths.push(p);
                             }
                         }
                     }
                 }
 
                 for p in matching_paths {
-                    println!("path to rename: {:?}", p);
                     let mut new_path = PathBuf::from(&p);
                     new_path.set_file_name(&to);
                     if let Some(ext) = p.extension() {
                         new_path.set_extension(ext);
                     }
-                    println!("new path: {:?}", new_path);
-                    fs::rename(p, new_path)?;
+                    fs::rename(&p, &new_path)?;
                 }
                 println!("{} renamed to {}.", from, to);
             }
