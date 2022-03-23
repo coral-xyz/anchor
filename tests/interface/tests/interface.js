@@ -1,5 +1,5 @@
 const anchor = require("@project-serum/anchor");
-const assert = require("assert");
+const { assert } = require("chai");
 
 describe("interface", () => {
   // Configure the client to use the local cluster.
@@ -11,8 +11,8 @@ describe("interface", () => {
     await counter.state.rpc.new(counterAuth.programId);
 
     const stateAccount = await counter.state.fetch();
-    assert.ok(stateAccount.count.eq(new anchor.BN(0)));
-    assert.ok(stateAccount.authProgram.equals(counterAuth.programId));
+    assert.isTrue(stateAccount.count.eq(new anchor.BN(0)));
+    assert.isTrue(stateAccount.authProgram.equals(counterAuth.programId));
   });
 
   it("Should fail to go from even to even", async () => {
@@ -40,6 +40,6 @@ describe("interface", () => {
       },
     });
     const stateAccount = await counter.state.fetch();
-    assert.ok(stateAccount.count.eq(new anchor.BN(3)));
+    assert.isTrue(stateAccount.count.eq(new anchor.BN(3)));
   });
 });

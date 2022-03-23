@@ -2,7 +2,7 @@ import * as anchor from "@project-serum/anchor";
 import { AnchorError, Program } from "@project-serum/anchor";
 import { findProgramAddressSync } from "@project-serum/anchor/dist/cjs/utils/pubkey";
 import { PublicKey } from "@solana/web3.js";
-import assert from "assert";
+import { assert } from "chai";
 import { BpfUpgradeableState } from "../target/types/bpf_upgradeable_state";
 
 describe("bpf_upgradeable_state", () => {
@@ -29,7 +29,7 @@ describe("bpf_upgradeable_state", () => {
       },
       signers: [settings],
     });
-    assert.equal(
+    assert.strictEqual(
       (await program.account.settings.fetch(settings.publicKey)).adminData,
       500
     );
@@ -50,7 +50,7 @@ describe("bpf_upgradeable_state", () => {
         signers: [settings],
       }
     );
-    assert.equal(
+    assert.strictEqual(
       (await program.account.settings.fetch(settings.publicKey)).adminData,
       500
     );
@@ -79,10 +79,13 @@ describe("bpf_upgradeable_state", () => {
       });
       assert.ok(false);
     } catch (_err) {
-      assert.ok(_err instanceof AnchorError);
+      assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
-      assert.equal(err.error.errorCode.number, 2003);
-      assert.equal(err.error.errorMessage, "A raw constraint was violated");
+      assert.strictEqual(err.error.errorCode.number, 2003);
+      assert.strictEqual(
+        err.error.errorMessage,
+        "A raw constraint was violated"
+      );
     }
   });
 
@@ -101,10 +104,10 @@ describe("bpf_upgradeable_state", () => {
       });
       assert.ok(false);
     } catch (_err) {
-      assert.ok(_err instanceof AnchorError);
+      assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
-      assert.equal(err.error.errorCode.number, 3013);
-      assert.equal(
+      assert.strictEqual(err.error.errorCode.number, 3013);
+      assert.strictEqual(
         err.error.errorMessage,
         "The given account is not a program data account"
       );
@@ -126,10 +129,10 @@ describe("bpf_upgradeable_state", () => {
       });
       assert.ok(false);
     } catch (_err) {
-      assert.ok(_err instanceof AnchorError);
+      assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
-      assert.equal(err.error.errorCode.number, 3007);
-      assert.equal(
+      assert.strictEqual(err.error.errorCode.number, 3007);
+      assert.strictEqual(
         err.error.errorMessage,
         "The given account is owned by a different program than expected"
       );
@@ -159,9 +162,9 @@ describe("bpf_upgradeable_state", () => {
       });
       assert.ok(false);
     } catch (_err) {
-      assert.ok(_err instanceof AnchorError);
+      assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
-      assert.equal(err.error.errorCode.number, 6000);
+      assert.strictEqual(err.error.errorCode.number, 6000);
     }
   });
 
@@ -188,9 +191,9 @@ describe("bpf_upgradeable_state", () => {
       });
       assert.ok(false);
     } catch (_err) {
-      assert.ok(_err instanceof AnchorError);
+      assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
-      assert.equal(err.error.errorCode.number, 2003);
+      assert.strictEqual(err.error.errorCode.number, 2003);
     }
   });
 });
