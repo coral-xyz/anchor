@@ -43,6 +43,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Stdio};
 use std::string::ToString;
 use tar::Archive;
+use ignore::WalkBuilder;
 
 pub mod config;
 pub mod template;
@@ -569,9 +570,43 @@ fn rename(cfg_override: &ConfigOverride, from: String, to: String) -> Result<()>
             }
             Some(parent) => {
                 std::env::set_current_dir(&parent)?;
-                rename_in_file(&Path::new("Anchor.toml"), &from, &to)?;
-                rename_in_file(&Path::new("Cargo.toml"), &from, &to)?;
-                rename_program(&from, &to)?;
+
+                // Traverse the directory tree. 
+                // WalkBuilder, by default, checks for matching entries in 
+                // .gitignore and skips them.
+                // WalkBuilder also expects .git to be initialized, but
+                // we're forcing it to search uninitialized workspaces here.
+                let mut matching_paths: Vec<PathBuf> = Vec::new();
+                for result in WalkBuilder::new("./")
+                    .require_git(false)
+                    .build() {
+                    if let Ok(dent) = result {
+                        let p = dent.path();
+                        if p.is_file() {
+                            println!("Renaming contents at: {:?}", p);
+                            rename_in_file(&p, &from, &to)?;
+                        }
+                        // Store paths and rename these AFTER traversal.
+                        // Renaming within traversal may cause files inside said
+                        // directories to be skipped.
+                        if let Some(stem) = p.file_stem() {
+                            if stem.to_str().unwrap() == &from {
+                                matching_paths.push(p.to_path_buf());
+                            }
+                        }
+                    }
+                }
+
+                for p in matching_paths {
+                    println!("path to rename: {:?}", p);
+                    let mut new_path = PathBuf::from(&p);
+                    new_path.set_file_name(&to);
+                    if let Some(ext) = p.extension() {
+                        new_path.set_extension(ext);
+                    }
+                    println!("new path: {:?}", new_path);
+                    fs::rename(p, new_path)?;
+                }
                 println!("{} renamed to {}.", from, to);
             }
         };
@@ -589,20 +624,6 @@ fn new_program(name: &str) -> Result<()> {
     xargo_toml.write_all(template::xargo_toml().as_bytes())?;
     let mut lib_rs = File::create(&format!("programs/{}/src/lib.rs", name))?;
     lib_rs.write_all(template::lib_rs(name).as_bytes())?;
-    Ok(())
-}
-
-fn rename_program(from: &str, to: &str) -> Result<()> {
-    rename_in_file(&Path::new(&format!("programs/{}/Cargo.toml", from)), &from, &to)?;
-    rename_in_file(&Path::new(&format!("programs/{}/src/lib.rs", from)), &from, &to)?;
-    fs::rename(&format!("programs/{}", from), &format!("programs/{}", to))?;
-    
-    // Users probably have either .js or .ts tests, not both. Don't panic.
-    let _ = rename_in_file(&Path::new(&format!("tests/{}.js", from)), &from, &to);
-    let _ = rename_in_file(&Path::new(&format!("tests/{}.ts", from)), &from, &to);
-    let _ = fs::rename(&format!("tests/{}.js", from), &format!("tests/{}.js", to));
-    let _ = fs::rename(&format!("tests/{}.ts", from), &format!("tests/{}.ts", to));
-
     Ok(())
 }
 
