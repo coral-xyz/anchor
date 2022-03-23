@@ -21,6 +21,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 ### Breaking
 
 * avm: `amv install` switches to the newly installed version after installation finishes ([#1670](https://github.com/project-serum/anchor/pull/1670)).
+* spl: Re-export the `spl_token` crate ([#1665](https://github.com/project-serum/anchor/pull/1665)).
 
 ## [0.23.0] - 2022-03-20
 
