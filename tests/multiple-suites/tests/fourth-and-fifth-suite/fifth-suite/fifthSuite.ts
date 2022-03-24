@@ -10,7 +10,7 @@ describe("multiple-suites", () => {
 
   it("Is initialized!", async () => {
     // Add your test here.
-    const tx = await program.rpc.initialize({});
+    const tx = await program.rpc.initialize(new anchor.BN(4389242), {});
     console.log("Your transaction signature", tx);
   });
 });
