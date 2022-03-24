@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use solana_cli_config::{Config as SolanaConfig, CONFIG_FILE};
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{Keypair, Signer};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
 use std::fs::{self, File};
 use std::io;
@@ -16,6 +16,13 @@ use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
+use walkdir::WalkDir;
+
+use crate::is_hidden;
+
+pub trait Merge: Sized {
+    fn merge(&mut self, _other: Self) {}
+}
 
 #[derive(Default, Debug, Parser)]
 pub struct ConfigOverride {
@@ -267,7 +274,11 @@ pub struct Config {
     pub programs: ProgramsConfig,
     pub scripts: ScriptsConfig,
     pub workspace: WorkspaceConfig,
-    pub test: Option<Test>,
+    // separate entry next to test_config because
+    // "anchor localnet" only has access to the Anchor.toml,
+    // not the Test.toml files
+    pub test_validator: Option<TestValidator>,
+    pub test_config: Option<TestConfig>,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
@@ -324,6 +335,11 @@ pub struct BuildConfig {
 }
 
 impl Config {
+    pub fn with_test_config(mut self, p: impl AsRef<Path>) -> Result<Self> {
+        self.test_config = TestConfig::discover(p)?;
+        Ok(self)
+    }
+
     pub fn docker(&self) -> String {
         let ver = self
             .anchor_version
@@ -375,9 +391,10 @@ impl Config {
     }
 
     fn from_path(p: impl AsRef<Path>) -> Result<Self> {
-        fs::read_to_string(&p)
+        Ok(fs::read_to_string(&p)
             .with_context(|| format!("Error reading the file with path: {}", p.as_ref().display()))?
-            .parse()
+            .parse::<Self>()?
+            .with_test_config(p)?)
     }
 
     pub fn wallet_kp(&self) -> Result<Keypair> {
@@ -396,7 +413,7 @@ struct _Config {
     provider: Provider,
     workspace: Option<WorkspaceConfig>,
     scripts: Option<ScriptsConfig>,
-    test: Option<Test>,
+    test: Option<TestValidator>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -424,7 +441,7 @@ impl ToString for Config {
                 cluster: format!("{}", self.provider.cluster),
                 wallet: self.provider.wallet.to_string(),
             },
-            test: self.test.clone(),
+            test: self.test_validator.clone(),
             scripts: match self.scripts.is_empty() {
                 true => None,
                 false => Some(self.scripts.clone()),
@@ -454,7 +471,8 @@ impl FromStr for Config {
                 wallet: shellexpand::tilde(&cfg.provider.wallet).parse()?,
             },
             scripts: cfg.scripts.unwrap_or_default(),
-            test: cfg.test,
+            test_validator: cfg.test,
+            test_config: None,
             programs: cfg.programs.map_or(Ok(BTreeMap::new()), deser_programs)?,
             workspace: cfg.workspace.unwrap_or_default(),
         })
@@ -531,11 +549,187 @@ fn deser_programs(
         .collect::<Result<BTreeMap<Cluster, BTreeMap<String, ProgramDeployment>>>>()
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Test {
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+pub struct TestValidator {
     pub genesis: Option<Vec<GenesisEntry>>,
     pub validator: Option<Validator>,
     pub startup_wait: Option<i32>,
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+pub struct _TestValidator {
+    pub genesis: Option<Vec<GenesisEntry>>,
+    pub validator: Option<_Validator>,
+    pub startup_wait: Option<i32>,
+}
+
+impl From<_TestValidator> for TestValidator {
+    fn from(_test_validator: _TestValidator) -> Self {
+        Self {
+            startup_wait: _test_validator.startup_wait,
+            genesis: _test_validator.genesis,
+            validator: _test_validator.validator.map(Into::into),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TestConfig {
+    pub test_suite_configs: HashMap<PathBuf, TestToml>,
+}
+
+impl TestConfig {
+    pub fn discover(root: impl AsRef<Path>) -> Result<Option<Self>> {
+        let walker = WalkDir::new(root).into_iter();
+        let mut test_suite_configs = HashMap::new();
+        for entry in walker.filter_entry(|e| !is_hidden(e)) {
+            let entry = entry?;
+            if entry.file_name() == "Test.toml" {
+                let test_toml = TestToml::from_path(entry.path())?;
+                test_suite_configs.insert(entry.path().into(), test_toml);
+            }
+        }
+        Ok(Some(Self { test_suite_configs }))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct _TestToml {
+    pub extends: Option<Vec<String>>,
+    // TODO: make "test" transparent, because it's redundant since this is a test config file ?
+    pub test: Option<_TestValidator>,
+    pub scripts: Option<ScriptsConfig>,
+}
+
+impl FromStr for _TestToml {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        toml::from_str(s).map_err(Into::into)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestToml {
+    // TODO: make "test" transparent, because it's redundant since this is a test config file ?
+    pub test: Option<TestValidator>,
+    pub scripts: Option<ScriptsConfig>,
+}
+
+impl TestToml {
+    pub fn from_path(p: impl AsRef<Path>) -> Result<Self> {
+        WithPath::new(
+            fs::read_to_string(&p)?.parse::<_TestToml>()?,
+            p.as_ref().into(),
+        )
+        .try_into()
+    }
+}
+
+impl From<_TestToml> for TestToml {
+    fn from(_test_toml: _TestToml) -> Self {
+        Self {
+            test: _test_toml.test.map(Into::into),
+            scripts: _test_toml.scripts,
+        }
+    }
+}
+
+impl Merge for _TestToml {
+    fn merge(&mut self, other: Self) {
+        let mut my_scripts = self.scripts.take();
+        match &mut my_scripts {
+            None => my_scripts = other.scripts,
+            Some(my_scripts) => {
+                if let Some(other_scripts) = other.scripts {
+                    for (name, script) in other_scripts {
+                        my_scripts.insert(name, script);
+                    }
+                }
+            }
+        }
+
+        let mut my_test = self.test.take();
+        match &mut my_test {
+            Some(my_test) => {
+                if let Some(other_test) = other.test {
+                    if let Some(startup_wait) = other_test.startup_wait {
+                        my_test.startup_wait = Some(startup_wait);
+                    }
+                    if let Some(other_genesis) = other_test.genesis {
+                        match &mut my_test.genesis {
+                            Some(my_genesis) => {
+                                for other_entry in other_genesis {
+                                    match my_genesis
+                                        .iter()
+                                        .position(|g| *g.address == other_entry.address)
+                                    {
+                                        None => my_genesis.push(other_entry),
+                                        Some(i) => my_genesis[i] = other_entry,
+                                    }
+                                }
+                            }
+                            None => my_test.genesis = Some(other_genesis),
+                        }
+                    }
+                    let mut my_validator = my_test.validator.take();
+                    match &mut my_validator {
+                        None => my_validator = other_test.validator,
+                        Some(my_validator) => {
+                            if let Some(other_validator) = other_test.validator {
+                                my_validator.merge(other_validator)
+                            }
+                        }
+                    }
+
+                    my_test.validator = my_validator;
+                }
+            }
+            None => my_test = other.test,
+        };
+
+        // Instantiating a new Self object here ensures that
+        // this function will fail to compile if new fields get added
+        // to Self. This is useful as a reminder if they also require merging
+        *self = Self {
+            test: my_test,
+            scripts: my_scripts,
+            extends: self.extends.take(),
+        };
+    }
+}
+
+impl TryFrom<WithPath<_TestToml>> for TestToml {
+    type Error = Error;
+
+    fn try_from(value: WithPath<_TestToml>) -> Result<Self, Self::Error> {
+        let bases = &value.extends;
+        match bases {
+            None => Ok(Self {
+                test: value.test.clone().map(Into::into),
+                scripts: value.scripts.clone(),
+            }),
+            Some(bases) => {
+                let previous_dir = std::env::current_dir()?;
+                std::env::set_current_dir(&value.path)?;
+                let mut current_toml = _TestToml {
+                    extends: None,
+                    test: None,
+                    scripts: None,
+                };
+                for base in bases {
+                    let canonical_base = std::fs::canonicalize(base)?;
+                    let _test_toml = fs::read_to_string(&canonical_base)?.parse::<_TestToml>()?;
+                    current_toml.merge(_test_toml);
+                }
+
+                std::env::set_current_dir(previous_dir)?;
+
+                current_toml.merge(value.inner);
+                Ok(current_toml.into())
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -561,13 +755,13 @@ pub struct AccountEntry {
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct Validator {
+pub struct _Validator {
     // Load an account from the provided JSON file
     #[serde(skip_serializing_if = "Option::is_none")]
     pub account: Option<Vec<AccountEntry>>,
     // IP address to bind the validator ports. [default: 0.0.0.0]
-    #[serde(default = "default_bind_address")]
-    pub bind_address: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bind_address: Option<String>,
     // Copy an account from the cluster referenced by the url argument.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub clone: Option<Vec<CloneEntry>>,
@@ -575,8 +769,8 @@ pub struct Validator {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dynamic_port_range: Option<String>,
     // Enable the faucet on this port [default: 9900].
-    #[serde(default = "default_faucet_port")]
-    pub faucet_port: u16,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub faucet_port: Option<u16>,
     // Give the faucet address this much SOL in genesis. [default: 1000000]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub faucet_sol: Option<String>,
@@ -590,14 +784,14 @@ pub struct Validator {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
     // Use DIR as ledger location
-    #[serde(default = "default_ledger_path")]
-    pub ledger: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ledger: Option<String>,
     // Keep this amount of shreds in root slots. [default: 10000]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit_ledger_size: Option<String>,
     // Enable JSON RPC on this port, and the next port for the RPC websocket. [default: 8899]
-    #[serde(default = "default_rpc_port")]
-    pub rpc_port: u16,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rpc_port: Option<u16>,
     // Override the number of slots in an epoch.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub slots_per_epoch: Option<String>,
@@ -606,20 +800,108 @@ pub struct Validator {
     pub warp_slot: Option<String>,
 }
 
-fn default_ledger_path() -> String {
-    ".anchor/test-ledger".to_string()
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Validator {
+    pub account: Option<Vec<AccountEntry>>,
+    pub bind_address: String,
+    pub clone: Option<Vec<CloneEntry>>,
+    pub dynamic_port_range: Option<String>,
+    pub faucet_port: Option<u16>,
+    pub faucet_sol: Option<String>,
+    pub gossip_host: Option<String>,
+    pub gossip_port: Option<u16>,
+    pub url: Option<String>,
+    pub ledger: String,
+    pub limit_ledger_size: Option<String>,
+    pub rpc_port: u16,
+    pub slots_per_epoch: Option<String>,
+    pub warp_slot: Option<String>,
 }
 
-fn default_bind_address() -> String {
-    "0.0.0.0".to_string()
+impl From<_Validator> for Validator {
+    fn from(_validator: _Validator) -> Self {
+        Self {
+            account: _validator.account,
+            bind_address: _validator
+                .bind_address
+                .unwrap_or(DEFAULT_BIND_ADDRESS.to_string()),
+            clone: _validator.clone,
+            dynamic_port_range: _validator.dynamic_port_range,
+            faucet_port: _validator.faucet_port,
+            faucet_sol: _validator.faucet_sol,
+            gossip_host: _validator.gossip_host,
+            gossip_port: _validator.gossip_port,
+            url: _validator.url,
+            ledger: _validator.ledger.unwrap_or(DEFAULT_LEDGER_PATH.to_string()),
+            limit_ledger_size: _validator.limit_ledger_size,
+            rpc_port: _validator
+                .rpc_port
+                .unwrap_or(solana_sdk::rpc_port::DEFAULT_RPC_PORT),
+            slots_per_epoch: _validator.slots_per_epoch,
+            warp_slot: _validator.warp_slot,
+        }
+    }
 }
 
-pub fn default_rpc_port() -> u16 {
-    solana_sdk::rpc_port::DEFAULT_RPC_PORT
-}
+const DEFAULT_LEDGER_PATH: &str = ".anchor/test-ledger";
+const DEFAULT_BIND_ADDRESS: &str = "0.0.0.0";
 
-pub fn default_faucet_port() -> u16 {
-    solana_faucet::faucet::FAUCET_PORT
+impl Merge for _Validator {
+    fn merge(&mut self, other: Self) {
+        // Instantiating a new Self object here ensures that
+        // this function will fail to compile if new fields get added
+        // to Self. This is useful as a reminder if they also require merging
+        *self = Self {
+            account: match self.account.take() {
+                None => other.account,
+                Some(mut entries) => match other.account {
+                    None => Some(entries),
+                    Some(other_entries) => {
+                        for other_entry in other_entries {
+                            match entries
+                                .iter()
+                                .position(|my_entry| *my_entry.address == other_entry.address)
+                            {
+                                None => entries.push(other_entry),
+                                Some(i) => entries[i] = other_entry,
+                            };
+                        }
+                        Some(entries)
+                    }
+                },
+            },
+            bind_address: other.bind_address.or(self.bind_address.take()),
+            clone: match self.clone.take() {
+                None => other.clone,
+                Some(mut entries) => match other.clone {
+                    None => Some(entries),
+                    Some(other_entries) => {
+                        for other_entry in other_entries {
+                            match entries
+                                .iter()
+                                .position(|my_entry| *my_entry.address == other_entry.address)
+                            {
+                                None => entries.push(other_entry),
+                                Some(i) => entries[i] = other_entry,
+                            };
+                        }
+                        Some(entries)
+                    }
+                },
+            },
+            dynamic_port_range: other.dynamic_port_range.or(self.dynamic_port_range.take()),
+            faucet_port: other.faucet_port.or(self.faucet_port.take()),
+            faucet_sol: other.faucet_sol.or(self.faucet_sol.take()),
+            gossip_host: other.gossip_host.or(self.gossip_host.take()),
+            gossip_port: other.gossip_port.or(self.gossip_port.take()),
+            url: other.url.or(self.url.take()),
+            ledger: other.ledger.or(self.ledger.take()),
+            limit_ledger_size: other.limit_ledger_size.or(self.limit_ledger_size.take()),
+            rpc_port: other.rpc_port.or(self.rpc_port.take()),
+            slots_per_epoch: other.slots_per_epoch.or(self.slots_per_epoch.take()),
+            warp_slot: other.warp_slot.or(self.warp_slot.take()),
+        };
+    }
 }
 
 #[derive(Debug, Clone)]

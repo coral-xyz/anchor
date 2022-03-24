@@ -1,6 +1,6 @@
 use crate::config::{
     AnchorPackage, BootstrapMode, BuildConfig, Config, ConfigOverride, Manifest, ProgramDeployment,
-    ProgramWorkspace, Test, WithPath,
+    ProgramWorkspace, TestValidator, WithPath,
 };
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction};
@@ -1959,7 +1959,7 @@ fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
         }
     }
 
-    if let Some(test) = cfg.test.as_ref() {
+    if let Some(test) = cfg.test_validator.as_ref() {
         if let Some(genesis) = &test.genesis {
             for entry in genesis {
                 let program_path = Path::new(&entry.program);
@@ -2090,7 +2090,7 @@ fn stream_logs(config: &WithPath<Config>, rpc_url: &str) -> Result<Vec<std::proc
             .spawn()?;
         handles.push(child);
     }
-    if let Some(test) = config.test.as_ref() {
+    if let Some(test) = config.test_validator.as_ref() {
         if let Some(genesis) = &test.genesis {
             for entry in genesis {
                 let log_file = File::create(format!("{}/{}.log", program_logs_dir, entry.address))?;
@@ -2174,7 +2174,7 @@ fn start_test_validator(
     let client = RpcClient::new(rpc_url);
     let mut count = 0;
     let ms_wait = cfg
-        .test
+        .test_validator
         .as_ref()
         .and_then(|test| test.startup_wait)
         .unwrap_or(5_000);
@@ -2200,8 +2200,8 @@ fn start_test_validator(
 // Return the URL that solana-test-validator should be running on given the
 // configuration
 fn test_validator_rpc_url(cfg: &Config) -> String {
-    match &cfg.test.as_ref() {
-        Some(Test {
+    match &cfg.test_validator.as_ref() {
+        Some(TestValidator {
             validator: Some(validator),
             ..
         }) => format!("http://{}:{}", validator.bind_address, validator.rpc_port),
@@ -2212,8 +2212,8 @@ fn test_validator_rpc_url(cfg: &Config) -> String {
 // Setup and return paths to the solana-test-validator ledger directory and log
 // files given the configuration
 fn test_validator_file_paths(cfg: &Config) -> (String, String) {
-    let ledger_directory = match &cfg.test.as_ref() {
-        Some(Test {
+    let ledger_directory = match &cfg.test_validator.as_ref() {
+        Some(TestValidator {
             validator: Some(validator),
             ..
         }) => &validator.ledger,
