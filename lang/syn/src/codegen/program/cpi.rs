@@ -134,10 +134,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             }
 
             impl<T: AnchorDeserialize> Return<T> {
-                pub fn get(&self) -> Result<T> {
+                pub fn get(&self) -> T {
                     let (_key, data) = anchor_lang::solana_program::program::get_return_data().unwrap();
-                    let value = T::try_from_slice(&data).unwrap();
-                    Ok(value)
+                    T::try_from_slice(&data).unwrap()
                 }
             }
 
