@@ -150,9 +150,9 @@ pub fn ts_deploy_script() -> &'static str {
 // single deploy script that's invoked from the CLI, injecting a provider
 // configured from the workspace's Anchor.toml.
 
-const anchor = require("@project-serum/anchor");
+import * as anchor from '@project-serum/anchor';
 
-module.exports = async function (provider) {
+export default async function (provider: anchor.Provider): Promise<void> {
   // Configure client to use the provider.
   anchor.setProvider(provider);
 
