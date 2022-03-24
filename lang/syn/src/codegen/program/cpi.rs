@@ -74,8 +74,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let (method_ret, maybe_return) = match ret_type.to_string().as_str() {
                     "()" => (quote! {anchor_lang::Result<()> }, quote! { Ok(()) }),
                     _ => (
-                        quote! { anchor_lang::Result<Return::<#ret_type>> },
-                        quote! { Ok(Return::<#ret_type> { phantom: PhantomData }) }
+                        quote! { anchor_lang::Result<crate::cpi::Return::<#ret_type>> },
+                        quote! { Ok(crate::cpi::Return::<#ret_type> { phantom: crate::cpi::PhantomData }) }
                     )
                 };
 
@@ -130,7 +130,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             }
 
             pub struct Return<T> {
-                phantom: PhantomData<T>
+                phantom: std::marker::PhantomData<T>
             }
 
             impl<T: AnchorDeserialize> Return<T> {
