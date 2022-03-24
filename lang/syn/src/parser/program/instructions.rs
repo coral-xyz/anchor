@@ -101,6 +101,12 @@ pub fn parse_return(method: &syn::ItemFn) -> ParseResult<IxReturn> {
                 syn::Type::Path(ty) => ty,
                 _ => return Err(ParseError::new(ty.span(), "expected a return type")),
             };
+            if &ty.path.segments.last().unwrap().ident.to_string() != "Result" {
+                return Err(ParseError::new(
+                    ty.path.span(),
+                    "expected instruction return type to be Result<T>",
+                ));
+            }
             // Assume unit return by default
             let default_generic_arg = syn::GenericArgument::Type(syn::parse_str("()").unwrap());
             let generic_args = match &ty.path.segments.last().unwrap().arguments {
