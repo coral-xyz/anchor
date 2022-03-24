@@ -35,9 +35,9 @@ pub fn parse(
 
     let state = match p.state {
         None => None,
-        Some(state) => match state.ctor_and_anchor {
+        Some(state) => match state.ctor_and_accounts_struct {
             None => None, // State struct defined but no implementation
-            Some((ctor, anchor_ident)) => {
+            Some((ctor, accounts_struct_path)) => {
                 let mut methods = state
                     .impl_block_and_methods
                     .map(|(_impl_block, methods)| {
@@ -58,8 +58,9 @@ pub fn parse(
                                         }
                                     })
                                     .collect::<Vec<_>>();
-                                let accounts_strct =
-                                    accs.get(&method.anchor_ident.to_string()).unwrap();
+                                let accounts_strct = accs
+                                    .get(&method.accounts_struct_path_segment.ident.to_string())
+                                    .unwrap();
                                 let accounts =
                                     idl_accounts(&ctx, accounts_strct, &accs, seeds_feature);
                                 IdlInstruction {
@@ -99,7 +100,7 @@ pub fn parse(
                             _ => panic!("Invalid syntax"),
                         })
                         .collect();
-                    let accounts_strct = accs.get(&anchor_ident.to_string()).unwrap();
+                    let accounts_strct = accs.get(&accounts_struct_path.ident.to_string()).unwrap();
                     let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature);
                     IdlInstruction {
                         name,
@@ -162,7 +163,9 @@ pub fn parse(
                 })
                 .collect::<Vec<_>>();
             // todo: don't unwrap
-            let accounts_strct = accs.get(&ix.anchor_ident.to_string()).unwrap();
+            let accounts_strct = accs
+                .get(&ix.accounts_struct_path_segment.ident.to_string())
+                .unwrap();
             let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature);
             IdlInstruction {
                 name: ix.ident.to_string().to_mixed_case(),

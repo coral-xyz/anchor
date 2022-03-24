@@ -17,7 +17,7 @@ pub fn parse(program_mod: syn::ItemMod) -> ParseResult<Program> {
     })
 }
 
-fn ctx_accounts_ident(path_ty: &syn::PatType) -> ParseResult<proc_macro2::Ident> {
+fn ctx_accounts_path_segment(path_ty: &syn::PatType) -> ParseResult<syn::PathSegment> {
     let p = match &*path_ty.ty {
         syn::Type::Path(p) => &p.path,
         _ => return Err(ParseError::new(path_ty.ty.span(), "invalid type")),
@@ -42,7 +42,7 @@ fn ctx_accounts_ident(path_ty: &syn::PatType) -> ParseResult<proc_macro2::Ident>
         .ok_or_else(|| ParseError::new(generic_args.span(), "expected Accounts type"))?;
 
     let path = match generic_ty {
-        syn::Type::Path(ty_path) => &ty_path.path,
+        syn::Type::Path(ty_path) => ty_path.path.clone(),
         _ => {
             return Err(ParseError::new(
                 generic_ty.span(),
@@ -50,5 +50,5 @@ fn ctx_accounts_ident(path_ty: &syn::PatType) -> ParseResult<proc_macro2::Ident>
             ))
         }
     };
-    Ok(path.segments[0].ident.clone())
+    Ok(path.segments.last().unwrap().clone())
 }

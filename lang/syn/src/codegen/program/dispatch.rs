@@ -6,7 +6,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
     // Dispatch the state constructor.
     let ctor_state_dispatch_arm = match &program.state {
         None => quote! { /* no-op */ },
-        Some(state) => match state.ctor_and_anchor.is_some() {
+        Some(state) => match state.ctor_and_accounts_struct.is_some() {
             false => quote! {},
             true => {
                 let sighash_arr = sighash_ctor();

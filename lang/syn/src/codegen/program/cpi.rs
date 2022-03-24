@@ -18,7 +18,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     methods
                         .iter()
                         .map(|method: &StateIx| {
-                            let accounts_ident = &method.anchor_ident;
+                            // this code breaks when using the path segment
+                            // but it's deprecated anyway so no point investigating why
+                            let accounts_ident = &method.accounts_struct_path_segment.clone().ident;
                             let ix_variant = generate_ix_variant(
                                 method.raw_method.sig.ident.to_string(),
                                 &method.args,
@@ -61,7 +63,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         .ixs
         .iter()
         .map(|ix| {
-            let accounts_ident: proc_macro2::TokenStream = format!("crate::cpi::accounts::{}", &ix.anchor_ident.to_string()).parse().unwrap();
+            let accounts_arg = ix.accounts_struct_path_segment.clone();
             let cpi_method = {
                 let ix_variant = generate_ix_variant(ix.raw_method.sig.ident.to_string(), &ix.args);
                 let method_name = &ix.ident;
@@ -72,7 +74,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     format!("{:?}", sighash_arr).parse().unwrap();
                 quote! {
                     pub fn #method_name<'a, 'b, 'c, 'info>(
-                        ctx: anchor_lang::context::CpiContext<'a, 'b, 'c, 'info, #accounts_ident<'info>>,
+                        ctx: anchor_lang::context::CpiContext<'a, 'b, 'c, 'info, crate::cpi::accounts::#accounts_arg>,
                         #(#args),*
                     ) -> anchor_lang::Result<()> {
                         let ix = {
@@ -128,21 +130,23 @@ pub fn generate_accounts(program: &Program) -> proc_macro2::TokenStream {
     // Go through state accounts.
     if let Some(state) = &program.state {
         // Ctor.
-        if let Some((_ctor, ctor_accounts)) = &state.ctor_and_anchor {
+        if let Some((_ctor, ctor_accounts)) = &state.ctor_and_accounts_struct {
             let macro_name = format!(
                 "__cpi_client_accounts_{}",
-                ctor_accounts.to_string().to_snake_case()
+                ctor_accounts.ident.to_string().to_snake_case()
             );
             accounts.insert(macro_name);
         }
         // Methods.
         if let Some((_impl_block, methods)) = &state.impl_block_and_methods {
             for ix in methods {
-                let anchor_ident = &ix.anchor_ident;
                 // TODO: move to fn and share with accounts.rs.
                 let macro_name = format!(
                     "__cpi_client_accounts_{}",
-                    anchor_ident.to_string().to_snake_case()
+                    &ix.accounts_struct_path_segment
+                        .ident
+                        .to_string()
+                        .to_snake_case()
                 );
                 accounts.insert(macro_name);
             }
@@ -151,11 +155,13 @@ pub fn generate_accounts(program: &Program) -> proc_macro2::TokenStream {
 
     // Go through instruction accounts.
     for ix in &program.ixs {
-        let anchor_ident = &ix.anchor_ident;
         // TODO: move to fn and share with accounts.rs.
         let macro_name = format!(
             "__cpi_client_accounts_{}",
-            anchor_ident.to_string().to_snake_case()
+            &ix.accounts_struct_path_segment
+                .ident
+                .to_string()
+                .to_snake_case()
         );
         accounts.insert(macro_name);
     }

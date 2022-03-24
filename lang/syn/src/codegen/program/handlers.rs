@@ -191,7 +191,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
     // Constructor handler.
     let non_inlined_ctor: proc_macro2::TokenStream = match &program.state {
         None => quote! {},
-        Some(state) => match state.ctor_and_anchor.as_ref() {
+        Some(state) => match state.ctor_and_accounts_struct.as_ref() {
             None => quote! {},
             Some((_ctor, anchor_ident)) => {
                 let ctor_untyped_args = generate_ctor_args(state);
@@ -377,7 +377,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         };
                         let ix_method_name = &ix.raw_method.sig.ident;
                         let state_ty: proc_macro2::TokenStream = state.name.parse().unwrap();
-                        let anchor_ident = &ix.anchor_ident;
+                        let anchor_ident = &ix.accounts_struct_path_segment;
                         let name = &state.strct.ident;
                         let mod_name = &program.name;
 
@@ -538,7 +538,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                 };
                                 let ix_method_name = &ix.raw_method.sig.ident;
                                 let state_ty: proc_macro2::TokenStream = state.name.parse().unwrap();
-                                let anchor_ident = &ix.anchor_ident;
+                                let anchor_ident = &ix.accounts_struct_path_segment;
                                 let ix_name = generate_ix_variant_name(ix.raw_method.sig.ident.to_string());
                                 let ix_name_log = format!("Instruction: {}", ix_name);
 
@@ -691,7 +691,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             let ix_arg_names: Vec<&syn::Ident> = ix.args.iter().map(|arg| &arg.name).collect();
             let ix_name = generate_ix_variant_name(ix.raw_method.sig.ident.to_string());
             let ix_method_name = &ix.raw_method.sig.ident;
-            let anchor = &ix.anchor_ident;
+            let anchor = &ix.accounts_struct_path_segment;
             let variant_arm = generate_ix_variant(ix.raw_method.sig.ident.to_string(), &ix.args);
             let ix_name_log = format!("Instruction: {}", ix_name);
             quote! {
