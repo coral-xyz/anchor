@@ -34,6 +34,7 @@ pub struct ConfigOverride {
     pub wallet: Option<WalletPath>,
 }
 
+#[derive(Debug)]
 pub struct WithPath<T> {
     inner: T,
     path: PathBuf,
@@ -335,7 +336,7 @@ pub struct BuildConfig {
 }
 
 impl Config {
-    pub fn with_test_config(mut self, p: impl AsRef<Path>) -> Result<Self> {
+    fn with_test_config(mut self, p: impl AsRef<Path>) -> Result<Self> {
         self.test_config = TestConfig::discover(p)?;
         Ok(self)
     }
@@ -394,7 +395,7 @@ impl Config {
         Ok(fs::read_to_string(&p)
             .with_context(|| format!("Error reading the file with path: {}", p.as_ref().display()))?
             .parse::<Self>()?
-            .with_test_config(p)?)
+            .with_test_config(p.as_ref().parent().unwrap())?)
     }
 
     pub fn wallet_kp(&self) -> Result<Keypair> {
@@ -413,7 +414,7 @@ struct _Config {
     provider: Provider,
     workspace: Option<WorkspaceConfig>,
     scripts: Option<ScriptsConfig>,
-    test: Option<TestValidator>,
+    test: Option<_TestValidator>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -441,7 +442,7 @@ impl ToString for Config {
                 cluster: format!("{}", self.provider.cluster),
                 wallet: self.provider.wallet.to_string(),
             },
-            test: self.test_validator.clone(),
+            test: self.test_validator.clone().map(Into::into),
             scripts: match self.scripts.is_empty() {
                 true => None,
                 false => Some(self.scripts.clone()),
@@ -471,7 +472,7 @@ impl FromStr for Config {
                 wallet: shellexpand::tilde(&cfg.provider.wallet).parse()?,
             },
             scripts: cfg.scripts.unwrap_or_default(),
-            test_validator: cfg.test,
+            test_validator: cfg.test.map(Into::into),
             test_config: None,
             programs: cfg.programs.map_or(Ok(BTreeMap::new()), deser_programs)?,
             workspace: cfg.workspace.unwrap_or_default(),
@@ -553,22 +554,43 @@ fn deser_programs(
 pub struct TestValidator {
     pub genesis: Option<Vec<GenesisEntry>>,
     pub validator: Option<Validator>,
-    pub startup_wait: Option<i32>,
+    pub startup_wait: i32,
+    pub shutdown_wait: i32,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct _TestValidator {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub genesis: Option<Vec<GenesisEntry>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub validator: Option<_Validator>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub startup_wait: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shutdown_wait: Option<i32>,
 }
+
+pub const STARTUP_WAIT: i32 = 5000;
+pub const SHUTDOWN_WAIT: i32 = 2000;
 
 impl From<_TestValidator> for TestValidator {
     fn from(_test_validator: _TestValidator) -> Self {
         Self {
-            startup_wait: _test_validator.startup_wait,
+            shutdown_wait: _test_validator.shutdown_wait.unwrap_or(SHUTDOWN_WAIT),
+            startup_wait: _test_validator.startup_wait.unwrap_or(STARTUP_WAIT),
             genesis: _test_validator.genesis,
             validator: _test_validator.validator.map(Into::into),
+        }
+    }
+}
+
+impl From<TestValidator> for _TestValidator {
+    fn from(test_validator: TestValidator) -> Self {
+        Self {
+            shutdown_wait: Some(test_validator.shutdown_wait),
+            startup_wait: Some(test_validator.startup_wait),
+            genesis: test_validator.genesis,
+            validator: test_validator.validator.map(Into::into),
         }
     }
 }
@@ -576,6 +598,14 @@ impl From<_TestValidator> for TestValidator {
 #[derive(Debug, Clone)]
 pub struct TestConfig {
     pub test_suite_configs: HashMap<PathBuf, TestToml>,
+}
+
+impl Deref for TestConfig {
+    type Target = HashMap<PathBuf, TestToml>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.test_suite_configs
+    }
 }
 
 impl TestConfig {
@@ -589,7 +619,11 @@ impl TestConfig {
                 test_suite_configs.insert(entry.path().into(), test_toml);
             }
         }
-        Ok(Some(Self { test_suite_configs }))
+
+        Ok(match test_suite_configs.is_empty() {
+            true => None,
+            false => Some(Self { test_suite_configs }),
+        })
     }
 }
 
@@ -612,7 +646,9 @@ impl FromStr for _TestToml {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestToml {
     // TODO: make "test" transparent, because it's redundant since this is a test config file ?
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub test: Option<TestValidator>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub scripts: Option<ScriptsConfig>,
 }
 
@@ -711,7 +747,7 @@ impl TryFrom<WithPath<_TestToml>> for TestToml {
             }),
             Some(bases) => {
                 let previous_dir = std::env::current_dir()?;
-                std::env::set_current_dir(&value.path)?;
+                std::env::set_current_dir(&value.path.parent().unwrap())?;
                 let mut current_toml = _TestToml {
                     extends: None,
                     test: None,
@@ -802,19 +838,30 @@ pub struct _Validator {
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Validator {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub account: Option<Vec<AccountEntry>>,
     pub bind_address: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub clone: Option<Vec<CloneEntry>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dynamic_port_range: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub faucet_port: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub faucet_sol: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub gossip_host: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub gossip_port: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
     pub ledger: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub limit_ledger_size: Option<String>,
     pub rpc_port: u16,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub slots_per_epoch: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub warp_slot: Option<String>,
 }
 
@@ -839,6 +886,27 @@ impl From<_Validator> for Validator {
                 .unwrap_or(solana_sdk::rpc_port::DEFAULT_RPC_PORT),
             slots_per_epoch: _validator.slots_per_epoch,
             warp_slot: _validator.warp_slot,
+        }
+    }
+}
+
+impl From<Validator> for _Validator {
+    fn from(validator: Validator) -> Self {
+        Self {
+            account: validator.account,
+            bind_address: Some(validator.bind_address),
+            clone: validator.clone,
+            dynamic_port_range: validator.dynamic_port_range,
+            faucet_port: validator.faucet_port,
+            faucet_sol: validator.faucet_sol,
+            gossip_host: validator.gossip_host,
+            gossip_port: validator.gossip_port,
+            url: validator.url,
+            ledger: Some(validator.ledger),
+            limit_ledger_size: validator.limit_ledger_size,
+            rpc_port: Some(validator.rpc_port),
+            slots_per_epoch: validator.slots_per_epoch,
+            warp_slot: validator.warp_slot,
         }
     }
 }
