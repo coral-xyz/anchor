@@ -1,5 +1,5 @@
 use crate::bpf_writer::BpfWriter;
-use crate::error::ErrorCode;
+use crate::error::{Error, ErrorCode};
 use crate::{
     Accounts, AccountsClose, AccountsExit, Key, Result, ToAccountInfo, ToAccountInfos,
     ToAccountMetas, ZeroCopy,
@@ -59,9 +59,13 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         acc_info: &AccountInfo<'info>,
     ) -> Result<Loader<'info, T>> {
         if acc_info.owner != program_id {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
+                .with_pubkeys((*acc_info.owner, *program_id)));
         }
         let data: &[u8] = &acc_info.try_borrow_data()?;
+        if data.len() < T::discriminator().len() {
+            return Err(ErrorCode::AccountDiscriminatorNotFound.into());
+        }
         // Discriminator must match.
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::discriminator() {
@@ -79,7 +83,8 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         acc_info: &AccountInfo<'info>,
     ) -> Result<Loader<'info, T>> {
         if acc_info.owner != program_id {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
+                .with_pubkeys((*acc_info.owner, *program_id)));
         }
         Ok(Loader::new(acc_info.clone()))
     }
@@ -88,6 +93,9 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
     #[allow(deprecated)]
     pub fn load(&self) -> Result<Ref<T>> {
         let data = self.acc_info.try_borrow_data()?;
+        if data.len() < T::discriminator().len() {
+            return Err(ErrorCode::AccountDiscriminatorNotFound.into());
+        }
 
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::discriminator() {
@@ -107,6 +115,9 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         }
 
         let data = self.acc_info.try_borrow_mut_data()?;
+        if data.len() < T::discriminator().len() {
+            return Err(ErrorCode::AccountDiscriminatorNotFound.into());
+        }
 
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::discriminator() {

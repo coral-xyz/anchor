@@ -44,6 +44,7 @@ use std::string::ToString;
 use tar::Archive;
 
 pub mod config;
+mod path;
 pub mod template;
 
 // Version of the docker image.
@@ -575,6 +576,7 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
     if !yarn_result.status.success() {
         println!("Failed yarn install will attempt to npm install");
         std::process::Command::new("npm")
+            .arg("install")
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .output()

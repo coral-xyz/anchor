@@ -150,29 +150,12 @@ describe("CPI return", () => {
       (f) => f.name == "returnU64"
     );
     assert.equal(returnu64Instruction.returns, "u64");
+
     const returnStructInstruction = calleeProgram._idl.instructions.find(
       (f) => f.name == "returnStruct"
     );
     assert.deepStrictEqual(returnStructInstruction.returns, {
       defined: "StructReturn",
     });
-  });
-});
-
-describe("View return", async () => {
-  const callerProgram = anchor.workspace.Caller as Program<Caller>;
-
-  it("can query a u64 via view", async () => {
-    assert(
-      new anchor.BN(104).eq(
-        await callerProgram.views.returnU64(new anchor.BN(5))
-      )
-    );
-  });
-
-  it("can query a struct via view", async () => {
-    const data = await callerProgram.views.returnStruct();
-    assert.equal(data.a, 5);
-    assert(new anchor.BN(300).eq(data.b));
   });
 });
