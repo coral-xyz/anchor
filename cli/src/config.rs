@@ -392,10 +392,10 @@ impl Config {
     }
 
     fn from_path(p: impl AsRef<Path>) -> Result<Self> {
-        Ok(fs::read_to_string(&p)
+        fs::read_to_string(&p)
             .with_context(|| format!("Error reading the file with path: {}", p.as_ref().display()))?
             .parse::<Self>()?
-            .with_test_config(p.as_ref().parent().unwrap())?)
+            .with_test_config(p.as_ref().parent().unwrap())
     }
 
     pub fn wallet_kp(&self) -> Result<Keypair> {
@@ -736,7 +736,7 @@ impl TryFrom<WithPath<_TestToml>> for TestToml {
                 scripts: value
                     .scripts
                     .clone()
-                    .ok_or(anyhow!("Missing 'scripts' section in Test.toml file."))?,
+                    .ok_or_else(|| anyhow!("Missing 'scripts' section in Test.toml file."))?,
             }),
             Some(bases) => {
                 let previous_dir = std::env::current_dir()?;
@@ -759,7 +759,7 @@ impl TryFrom<WithPath<_TestToml>> for TestToml {
                     test: current_toml.test.clone().map(Into::into),
                     scripts: current_toml
                         .scripts
-                        .ok_or(anyhow!("Missing 'scripts' section in Test.toml file."))?,
+                        .ok_or_else(|| anyhow!("Missing 'scripts' section in Test.toml file."))?,
                 })
             }
         }
@@ -869,7 +869,7 @@ impl From<_Validator> for Validator {
             account: _validator.account,
             bind_address: _validator
                 .bind_address
-                .unwrap_or(DEFAULT_BIND_ADDRESS.to_string()),
+                .unwrap_or_else(|| DEFAULT_BIND_ADDRESS.to_string()),
             clone: _validator.clone,
             dynamic_port_range: _validator.dynamic_port_range,
             faucet_port: _validator.faucet_port,
@@ -877,7 +877,9 @@ impl From<_Validator> for Validator {
             gossip_host: _validator.gossip_host,
             gossip_port: _validator.gossip_port,
             url: _validator.url,
-            ledger: _validator.ledger.unwrap_or(DEFAULT_LEDGER_PATH.to_string()),
+            ledger: _validator
+                .ledger
+                .unwrap_or_else(|| DEFAULT_LEDGER_PATH.to_string()),
             limit_ledger_size: _validator.limit_ledger_size,
             rpc_port: _validator
                 .rpc_port
@@ -936,7 +938,7 @@ impl Merge for _Validator {
                     }
                 },
             },
-            bind_address: other.bind_address.or(self.bind_address.take()),
+            bind_address: other.bind_address.or_else(|| self.bind_address.take()),
             clone: match self.clone.take() {
                 None => other.clone,
                 Some(mut entries) => match other.clone {
@@ -955,17 +957,23 @@ impl Merge for _Validator {
                     }
                 },
             },
-            dynamic_port_range: other.dynamic_port_range.or(self.dynamic_port_range.take()),
-            faucet_port: other.faucet_port.or(self.faucet_port.take()),
-            faucet_sol: other.faucet_sol.or(self.faucet_sol.take()),
-            gossip_host: other.gossip_host.or(self.gossip_host.take()),
-            gossip_port: other.gossip_port.or(self.gossip_port.take()),
-            url: other.url.or(self.url.take()),
-            ledger: other.ledger.or(self.ledger.take()),
-            limit_ledger_size: other.limit_ledger_size.or(self.limit_ledger_size.take()),
-            rpc_port: other.rpc_port.or(self.rpc_port.take()),
-            slots_per_epoch: other.slots_per_epoch.or(self.slots_per_epoch.take()),
-            warp_slot: other.warp_slot.or(self.warp_slot.take()),
+            dynamic_port_range: other
+                .dynamic_port_range
+                .or_else(|| self.dynamic_port_range.take()),
+            faucet_port: other.faucet_port.or_else(|| self.faucet_port.take()),
+            faucet_sol: other.faucet_sol.or_else(|| self.faucet_sol.take()),
+            gossip_host: other.gossip_host.or_else(|| self.gossip_host.take()),
+            gossip_port: other.gossip_port.or_else(|| self.gossip_port.take()),
+            url: other.url.or_else(|| self.url.take()),
+            ledger: other.ledger.or_else(|| self.ledger.take()),
+            limit_ledger_size: other
+                .limit_ledger_size
+                .or_else(|| self.limit_ledger_size.take()),
+            rpc_port: other.rpc_port.or_else(|| self.rpc_port.take()),
+            slots_per_epoch: other
+                .slots_per_epoch
+                .or_else(|| self.slots_per_epoch.take()),
+            warp_slot: other.warp_slot.or_else(|| self.warp_slot.take()),
         };
     }
 }

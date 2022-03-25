@@ -1888,6 +1888,7 @@ fn test(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn run_test_suite(
     test_suite_path: impl AsRef<Path>,
     cfg: &WithPath<Config>,
@@ -1905,12 +1906,12 @@ fn run_test_suite(
     if is_localnet && (!skip_local_validator) {
         let flags = match skip_deploy {
             true => None,
-            false => Some(validator_flags(cfg, &test_validator)?),
+            false => Some(validator_flags(cfg, test_validator)?),
         };
-        validator_handle = Some(start_test_validator(cfg, &test_validator, flags, true)?);
+        validator_handle = Some(start_test_validator(cfg, test_validator, flags, true)?);
     }
 
-    let url = cluster_url(cfg, &test_validator);
+    let url = cluster_url(cfg, test_validator);
 
     let node_options = format!(
         "{} {}",
