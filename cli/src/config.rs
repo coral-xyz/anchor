@@ -627,25 +627,64 @@ impl TestConfig {
     }
 }
 
+// This file needs to have the same (sub)structure as Anchor.toml
+// so it be parsed as a base test file from an Anchor.toml
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct _TestToml {
     pub extends: Option<Vec<String>>,
-    // TODO: make "test" transparent, because it's redundant since this is a test config file ?
     pub test: Option<_TestValidator>,
     pub scripts: Option<ScriptsConfig>,
 }
 
-impl FromStr for _TestToml {
-    type Err = Error;
+impl _TestToml {
+    fn from_path(path: impl AsRef<Path>) -> Result<Self, Error> {
+        let s = fs::read_to_string(&path)?;
+        let parsed_toml: Self = toml::from_str(&s)?;
+        let mut current_toml = _TestToml {
+            extends: None,
+            test: None,
+            scripts: None,
+        };
+        if let Some(bases) = &parsed_toml.extends {
+            for base in bases {
+                let mut canonical_base = base.clone();
+                canonicalize_filepath(&mut canonical_base, &path)?;
+                current_toml.merge(_TestToml::from_path(&canonical_base)?);
+            }
+        }
+        current_toml.merge(parsed_toml);
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        toml::from_str(s).map_err(Into::into)
+        if let Some(test) = &mut current_toml.test {
+            if let Some(genesis_programs) = &mut test.genesis {
+                for entry in genesis_programs {
+                    canonicalize_filepath(&mut entry.program, &path)?;
+                }
+            }
+            if let Some(validator) = &mut test.validator {
+                if let Some(ledger_dir) = &mut validator.ledger {
+                    canonicalize_filepath(ledger_dir, &path)?;
+                }
+                if let Some(accounts) = &mut validator.account {
+                    for entry in accounts {
+                        canonicalize_filepath(&mut entry.filename, &path)?;
+                    }
+                }
+            }
+        }
+        Ok(current_toml)
     }
+}
+
+fn canonicalize_filepath(s: &mut String, path: impl AsRef<Path>) -> Result<()> {
+    let previous_dir = std::env::current_dir()?;
+    std::env::set_current_dir(path.as_ref().parent().unwrap())?;
+    *s = fs::canonicalize(&s)?.display().to_string();
+    std::env::set_current_dir(previous_dir)?;
+    Ok(())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestToml {
-    // TODO: make "test" transparent, because it's redundant since this is a test config file ?
     #[serde(skip_serializing_if = "Option::is_none")]
     pub test: Option<TestValidator>,
     pub scripts: ScriptsConfig,
@@ -653,11 +692,7 @@ pub struct TestToml {
 
 impl TestToml {
     pub fn from_path(p: impl AsRef<Path>) -> Result<Self> {
-        WithPath::new(
-            fs::read_to_string(&p)?.parse::<_TestToml>()?,
-            p.as_ref().into(),
-        )
-        .try_into()
+        WithPath::new(_TestToml::from_path(&p)?, p.as_ref().into()).try_into()
     }
 }
 
@@ -728,41 +763,14 @@ impl Merge for _TestToml {
 impl TryFrom<WithPath<_TestToml>> for TestToml {
     type Error = Error;
 
-    fn try_from(value: WithPath<_TestToml>) -> Result<Self, Self::Error> {
-        let bases = &value.extends;
-        match bases {
-            None => Ok(Self {
-                test: value.test.clone().map(Into::into),
-                scripts: value
-                    .scripts
-                    .clone()
-                    .ok_or_else(|| anyhow!("Missing 'scripts' section in Test.toml file."))?,
-            }),
-            Some(bases) => {
-                let previous_dir = std::env::current_dir()?;
-                std::env::set_current_dir(&value.path.parent().unwrap())?;
-                let mut current_toml = _TestToml {
-                    extends: None,
-                    test: None,
-                    scripts: None,
-                };
-                for base in bases {
-                    let canonical_base = std::fs::canonicalize(base)?;
-                    let _test_toml = fs::read_to_string(&canonical_base)?.parse::<_TestToml>()?;
-                    current_toml.merge(_test_toml);
-                }
-
-                std::env::set_current_dir(previous_dir)?;
-
-                current_toml.merge(value.inner);
-                Ok(Self {
-                    test: current_toml.test.clone().map(Into::into),
-                    scripts: current_toml
-                        .scripts
-                        .ok_or_else(|| anyhow!("Missing 'scripts' section in Test.toml file."))?,
-                })
-            }
-        }
+    fn try_from(mut value: WithPath<_TestToml>) -> Result<Self, Self::Error> {
+        Ok(Self {
+            test: value.test.take().map(Into::into),
+            scripts: value
+                .scripts
+                .take()
+                .ok_or_else(|| anyhow!("Missing 'scripts' section in Test.toml file."))?,
+        })
     }
 }
 
