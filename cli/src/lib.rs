@@ -1,6 +1,6 @@
 use crate::config::{
     AnchorPackage, BootstrapMode, BuildConfig, Config, ConfigOverride, Manifest, ProgramDeployment,
-    ProgramWorkspace, TestValidator, WithPath, SHUTDOWN_WAIT, STARTUP_WAIT, ScriptsConfig
+    ProgramWorkspace, ScriptsConfig, TestValidator, WithPath, SHUTDOWN_WAIT, STARTUP_WAIT,
 };
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction};
@@ -2201,20 +2201,20 @@ fn start_test_validator(
     let rpc_url = test_validator_rpc_url(test_validator);
 
     let rpc_port = cfg
-        .test
+        .test_validator
         .as_ref()
         .and_then(|test| test.validator.as_ref().map(|v| v.rpc_port))
-        .unwrap_or_else(default_rpc_port);
+        .unwrap_or(solana_sdk::rpc_port::DEFAULT_RPC_PORT);
     if !portpicker::is_free(rpc_port) {
         return Err(anyhow!(
             "Your configured rpc port: {rpc_port} is already in use"
         ));
     }
     let faucet_port = cfg
-        .test
+        .test_validator
         .as_ref()
-        .and_then(|test| test.validator.as_ref().map(|v| v.faucet_port))
-        .unwrap_or_else(default_faucet_port);
+        .and_then(|test| test.validator.as_ref().and_then(|v| v.faucet_port))
+        .unwrap_or(solana_faucet::faucet::FAUCET_PORT);
     if !portpicker::is_free(faucet_port) {
         return Err(anyhow!(
             "Your configured faucet port: {faucet_port} is already in use"
