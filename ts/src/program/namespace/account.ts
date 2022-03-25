@@ -177,7 +177,7 @@ export class AccountClient<
       if (account == null) {
         return null;
       }
-      return this._coder.accounts.decode(
+      return this._coder.accounts.decode<T>(
         this._idlAccount.name,
         account?.account.data
       );
