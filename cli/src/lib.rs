@@ -2250,9 +2250,8 @@ fn start_test_validator(
     if count == ms_wait {
         eprintln!(
             "Unable to get recent blockhash. Test validator does not look started. Check {} for errors. Consider increasing [test.startup_wait] in Anchor.toml.",
-            &test_ledger_log_filename
+            test_ledger_log_filename
         );
-        println!("{}", fs::read_to_string(test_ledger_log_filename)?);
         validator_handle.kill()?;
         std::process::exit(1);
     }
