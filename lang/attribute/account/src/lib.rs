@@ -13,8 +13,9 @@ mod id;
 /// - [`AccountDeserialize`](./trait.AccountDeserialize.html)
 /// - [`AnchorSerialize`](./trait.AnchorSerialize.html)
 /// - [`AnchorDeserialize`](./trait.AnchorDeserialize.html)
-/// - [`Owner`](./trait.Owner.html)
+/// - [`Clone`](https://doc.rust-lang.org/std/clone/trait.Clone.html)
 /// - [`Discriminator`](./trait.Discriminator.html)
+/// - [`Owner`](./trait.Owner.html)
 ///
 /// When implementing account serialization traits the first 8 bytes are
 /// reserved for a unique account discriminator, self described by the first 8
@@ -42,7 +43,7 @@ mod id;
 ///
 /// This can be used to conveniently implement
 /// [`ZeroCopy`](./trait.ZeroCopy.html) so that the account can be used
-/// with [`Loader`](./struct.Loader.html).
+/// with [`AccountLoader`](./accounts/account_loader/struct.AccountLoader.html).
 ///
 /// Other than being more efficient, the most salient benefit this provides is
 /// the ability to define account types larger than the max stack or heap size.
@@ -55,8 +56,8 @@ mod id;
 ///
 /// To facilitate this, all fields in an account must be constrained to be
 /// "plain old  data", i.e., they must implement
-/// [`Pod`](../bytemuck/trait.Pod.html). Please review the
-/// [`safety`](../bytemuck/trait.Pod.html#safety)
+/// [`Pod`](https://docs.rs/bytemuck/latest/bytemuck/trait.Pod.html). Please review the
+/// [`safety`](https://docs.rs/bytemuck/latest/bytemuck/trait.Pod.html#safety)
 /// section before using.
 #[proc_macro_attribute]
 pub fn account(
