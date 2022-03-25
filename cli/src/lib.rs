@@ -1,6 +1,6 @@
 use crate::config::{
     AnchorPackage, BootstrapMode, BuildConfig, Config, ConfigOverride, Manifest, ProgramDeployment,
-    ProgramWorkspace, TestValidator, WithPath, SHUTDOWN_WAIT, STARTUP_WAIT
+    ProgramWorkspace, TestValidator, WithPath, SHUTDOWN_WAIT, STARTUP_WAIT, ScriptsConfig
 };
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction};
@@ -1840,121 +1840,148 @@ fn test(
         if (!is_localnet || skip_local_validator) && !skip_deploy {
             deploy(cfg_override, None)?;
         }
-        let test_config = match &cfg.test_config {
-            Some(test_config) => test_config,
-            None => return Err(anyhow!("Didn't find test any suites.")),
-        };
-        println!("\n\nFound {} test suites!", test_config.len());
         let mut is_first_suite = true;
-        for test_suite in test_config.iter() {
-            if !is_first_suite {
-                std::thread::sleep(std::time::Duration::from_millis(
-                    test_suite
-                        .1
-                        .test
-                        .as_ref()
-                        .map(|val| val.shutdown_wait)
-                        .unwrap_or(SHUTDOWN_WAIT) as u64,
-                ));
-            } else {
-                is_first_suite = false;
-            }
-
-            println!("\n\nRunning test suite at Path: {:#?}", test_suite.0);
-            // Start local test validator, if needed.
-            let mut validator_handle = None;
-            if is_localnet && (!skip_local_validator) {
-                let flags = match skip_deploy {
-                    true => None,
-                    false => Some(validator_flags(cfg, &test_suite.1.test)?),
-                };
-                validator_handle =
-                    Some(start_test_validator(cfg, &test_suite.1.test, flags, true)?);
-            }
-
-            let url = cluster_url(cfg, &test_suite.1.test);
-
-            let node_options = format!(
-                "{} {}",
-                match std::env::var_os("NODE_OPTIONS") {
-                    Some(value) => value
-                        .into_string()
-                        .map_err(std::env::VarError::NotUnicode)?,
-                    None => "".to_owned(),
-                },
-                get_node_dns_option()?,
-            );
-
-            // Setup log reader.
-            let log_streams = stream_logs(cfg, &url);
-
-            let scripts = match &test_suite.1.scripts {
-                Some(scripts) => scripts,
-                None => {
-                    return Err(anyhow!(
-                        "Didn't find test any scripts. You need to define a 'test' script."
-                    ))
+        if cfg.scripts.get("test").is_some() {
+            is_first_suite = false;
+            println!("\nFound a 'test' script in the Anchor.toml. Running it as a test suite!");
+            run_test_suite(
+                cfg.path(),
+                cfg,
+                is_localnet,
+                skip_local_validator,
+                skip_deploy,
+                detach,
+                &cfg.test_validator,
+                &cfg.scripts,
+                &extra_args,
+            )?;
+        }
+        if let Some(test_config) = &cfg.test_config {
+            for test_suite in test_config.iter() {
+                if !is_first_suite {
+                    std::thread::sleep(std::time::Duration::from_millis(
+                        test_suite
+                            .1
+                            .test
+                            .as_ref()
+                            .map(|val| val.shutdown_wait)
+                            .unwrap_or(SHUTDOWN_WAIT) as u64,
+                    ));
+                } else {
+                    is_first_suite = false;
                 }
-            };
 
-            // Run the tests.
-            let test_result: Result<_> = {
-                let cmd = scripts
-                    .get("test")
-                    .expect("Not able to find command for `test`")
-                    .clone();
-                let mut args: Vec<&str> = cmd
-                    .split(' ')
-                    .chain(extra_args.iter().map(|arg| arg.as_str()))
-                    .collect();
-                let program = args.remove(0);
-
-                std::process::Command::new(program)
-                    .args(args)
-                    .env("ANCHOR_PROVIDER_URL", url)
-                    .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
-                    .env("NODE_OPTIONS", node_options)
-                    .stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit())
-                    .output()
-                    .map_err(anyhow::Error::from)
-                    .context(cmd)
-            };
-
-            // Keep validator running if needed.
-            if test_result.is_ok() && detach {
-                println!("Local validator still running. Press Ctrl + C quit.");
-                std::io::stdin().lock().lines().next().unwrap().unwrap();
-            }
-
-            // Check all errors and shut down.
-            if let Some(mut child) = validator_handle {
-                if let Err(err) = child.kill() {
-                    println!("Failed to kill subprocess {}: {}", child.id(), err);
-                }
-            }
-            for mut child in log_streams? {
-                if let Err(err) = child.kill() {
-                    println!("Failed to kill subprocess {}: {}", child.id(), err);
-                }
-            }
-
-            // Must exist *after* shutting down the validator and log streams.
-            match test_result {
-                Ok(exit) => {
-                    if !exit.status.success() {
-                        std::process::exit(exit.status.code().unwrap());
-                    }
-                }
-                Err(err) => {
-                    println!("Failed to run test: {:#}", err)
-                }
+                run_test_suite(
+                    test_suite.0,
+                    cfg,
+                    is_localnet,
+                    skip_local_validator,
+                    skip_deploy,
+                    detach,
+                    &test_suite.1.test,
+                    &test_suite.1.scripts,
+                    &extra_args,
+                )?;
             }
         }
         Ok(())
     })
 }
 
+fn run_test_suite(
+    test_suite_path: impl AsRef<Path>,
+    cfg: &WithPath<Config>,
+    is_localnet: bool,
+    skip_local_validator: bool,
+    skip_deploy: bool,
+    detach: bool,
+    test_validator: &Option<TestValidator>,
+    scripts: &ScriptsConfig,
+    extra_args: &[String],
+) -> Result<()> {
+    println!("\nRunning test suite: {:#?}\n", test_suite_path.as_ref());
+    // Start local test validator, if needed.
+    let mut validator_handle = None;
+    if is_localnet && (!skip_local_validator) {
+        let flags = match skip_deploy {
+            true => None,
+            false => Some(validator_flags(cfg, &test_validator)?),
+        };
+        validator_handle = Some(start_test_validator(cfg, &test_validator, flags, true)?);
+    }
+
+    let url = cluster_url(cfg, &test_validator);
+
+    let node_options = format!(
+        "{} {}",
+        match std::env::var_os("NODE_OPTIONS") {
+            Some(value) => value
+                .into_string()
+                .map_err(std::env::VarError::NotUnicode)?,
+            None => "".to_owned(),
+        },
+        get_node_dns_option()?,
+    );
+
+    // Setup log reader.
+    let log_streams = stream_logs(cfg, &url);
+
+    // Run the tests.
+    let test_result: Result<_> = {
+        let cmd = scripts
+            .get("test")
+            .expect("Not able to find script for `test`")
+            .clone();
+        let mut args: Vec<&str> = cmd
+            .split(' ')
+            .chain(extra_args.iter().map(|arg| arg.as_str()))
+            .collect();
+        let program = args.remove(0);
+
+        std::process::Command::new(program)
+            .args(args)
+            .env("ANCHOR_PROVIDER_URL", url)
+            .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
+            .env("NODE_OPTIONS", node_options)
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .map_err(anyhow::Error::from)
+            .context(cmd)
+    };
+
+    // Keep validator running if needed.
+    if test_result.is_ok() && detach {
+        println!("Local validator still running. Press Ctrl + C quit.");
+        std::io::stdin().lock().lines().next().unwrap().unwrap();
+    }
+
+    // Check all errors and shut down.
+    if let Some(mut child) = validator_handle {
+        if let Err(err) = child.kill() {
+            println!("Failed to kill subprocess {}: {}", child.id(), err);
+        }
+    }
+    for mut child in log_streams? {
+        if let Err(err) = child.kill() {
+            println!("Failed to kill subprocess {}: {}", child.id(), err);
+        }
+    }
+
+    // Must exist *after* shutting down the validator and log streams.
+    match test_result {
+        Ok(exit) => {
+            if !exit.status.success() {
+                std::process::exit(exit.status.code().unwrap());
+            }
+        }
+        Err(err) => {
+            println!("Failed to run test: {:#}", err)
+        }
+    }
+
+    Ok(())
+}
 // Returns the solana-test-validator flags. This will embed the workspace
 // programs in the genesis block so we don't have to deploy every time. It also
 // allows control of other solana-test-validator features.

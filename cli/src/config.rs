@@ -648,8 +648,7 @@ pub struct TestToml {
     // TODO: make "test" transparent, because it's redundant since this is a test config file ?
     #[serde(skip_serializing_if = "Option::is_none")]
     pub test: Option<TestValidator>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub scripts: Option<ScriptsConfig>,
+    pub scripts: ScriptsConfig,
 }
 
 impl TestToml {
@@ -659,15 +658,6 @@ impl TestToml {
             p.as_ref().into(),
         )
         .try_into()
-    }
-}
-
-impl From<_TestToml> for TestToml {
-    fn from(_test_toml: _TestToml) -> Self {
-        Self {
-            test: _test_toml.test.map(Into::into),
-            scripts: _test_toml.scripts,
-        }
     }
 }
 
@@ -743,7 +733,10 @@ impl TryFrom<WithPath<_TestToml>> for TestToml {
         match bases {
             None => Ok(Self {
                 test: value.test.clone().map(Into::into),
-                scripts: value.scripts.clone(),
+                scripts: value
+                    .scripts
+                    .clone()
+                    .ok_or(anyhow!("Missing 'scripts' section in Test.toml file."))?,
             }),
             Some(bases) => {
                 let previous_dir = std::env::current_dir()?;
@@ -762,7 +755,12 @@ impl TryFrom<WithPath<_TestToml>> for TestToml {
                 std::env::set_current_dir(previous_dir)?;
 
                 current_toml.merge(value.inner);
-                Ok(current_toml.into())
+                Ok(Self {
+                    test: current_toml.test.clone().map(Into::into),
+                    scripts: current_toml
+                        .scripts
+                        .ok_or(anyhow!("Missing 'scripts' section in Test.toml file."))?,
+                })
             }
         }
     }
