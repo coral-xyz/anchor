@@ -283,9 +283,10 @@ jobs:
       - run: cd tests/misc && yarn --frozen-lockfile
       - run: cd tests/misc && yarn link @project-serum/anchor
       - run: cd tests/misc && anchor build --skip-lint
-      - run: solana-test-validator --bpf-program Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS tests/misc/target/deploy/misc.so -r --quiet &
+      - run: solana-test-validator -r --quiet &
       - run: sleep 5
         name: wait for validator to start up
+      - run: cd tests/misc && solana program deploy --program-id Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS target/deploy/misc.so
       - run: cat ./test-ledger/validator.log
       - run: cd tests/misc && anchor run test_non_rent_exempt
 
