@@ -197,7 +197,9 @@ impl WithPath<Config> {
                     .unwrap()
                     .join(m)
                     .canonicalize()
-                    .unwrap()
+                    .unwrap_or_else(|_| {
+                        panic!("Error reading workspace.members. File {:?} does not exist at path {:?}.", m, self.path)
+                    })
             })
             .collect();
         let exclude = self
@@ -210,7 +212,9 @@ impl WithPath<Config> {
                     .unwrap()
                     .join(m)
                     .canonicalize()
-                    .unwrap()
+                    .unwrap_or_else(|_| {
+                        panic!("Error reading workspace.exclude. File {:?} does not exist at path {:?}.", m, self.path)
+                    })
             })
             .collect();
         Ok((members, exclude))
@@ -570,9 +574,9 @@ pub struct Validator {
     // Range to use for dynamically assigned ports. [default: 1024-65535]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dynamic_port_range: Option<String>,
-    // Enable the faucet on this port [deafult: 9900].
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub faucet_port: Option<u16>,
+    // Enable the faucet on this port [default: 9900].
+    #[serde(default = "default_faucet_port")]
+    pub faucet_port: u16,
     // Give the faucet address this much SOL in genesis. [default: 1000000]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub faucet_sol: Option<String>,
@@ -610,8 +614,12 @@ fn default_bind_address() -> String {
     "0.0.0.0".to_string()
 }
 
-fn default_rpc_port() -> u16 {
-    8899
+pub fn default_rpc_port() -> u16 {
+    solana_sdk::rpc_port::DEFAULT_RPC_PORT
+}
+
+pub fn default_faucet_port() -> u16 {
+    solana_faucet::faucet::FAUCET_PORT
 }
 
 #[derive(Debug, Clone)]
@@ -728,4 +736,4 @@ impl AnchorPackage {
     }
 }
 
-serum_common::home_path!(WalletPath, ".config/solana/id.json");
+crate::home_path!(WalletPath, ".config/solana/id.json");
