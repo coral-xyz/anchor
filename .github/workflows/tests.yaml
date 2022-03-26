@@ -285,7 +285,7 @@ jobs:
       - run: cd tests/misc && yarn link @project-serum/anchor
       - run: cd tests/misc && anchor build --skip-lint
       - run: cd tests/misc && solana program deploy --program-id USED_IN_CI.json target/deploy/misc.so
-      - run: cd tests/misc && anchor run test_non_rent_exempt
+      - run: cd tests/misc && anchor test --skip-lint
       - uses: ./.github/actions/git-diff/
 
   test-anchor-init:
