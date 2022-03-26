@@ -14,4 +14,5 @@ program = "./target/deploy/misc.so"
 exclude = ["programs/shared"]
 
 [scripts]
-test = "yarn run ts-mocha -t 1000000 tests/*.ts"
+test = "yarn run ts-mocha -t 1000000 tests/misc.ts"
+test_non_rent_exempt = "yarn run ts-mocha -t 1000000 tests/miscNonRentExempt.ts"
