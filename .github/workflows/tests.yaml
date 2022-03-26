@@ -272,7 +272,7 @@ jobs:
         with:
           name: anchor-binary
           path: ~/.cargo/bin/
-
+      - run: chmod +x ~/.cargo/bin/anchor
       - uses: actions/cache@v2
         name: Cache tests/misc target
         id: cache-test-target
