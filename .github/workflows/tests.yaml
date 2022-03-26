@@ -280,15 +280,13 @@ jobs:
           path: tests/misc/target
           key: cargo-${{ runner.os }}-tests/misc-${{ env.ANCHOR_VERSION }}-1.8.14-${{ hashFiles('**/Cargo.lock') }}
       
+      - run: solana-test-validator -r --quiet &
       - run: cd tests/misc && yarn --frozen-lockfile
       - run: cd tests/misc && yarn link @project-serum/anchor
       - run: cd tests/misc && anchor build --skip-lint
-      - run: solana-test-validator -r --quiet &
-      - run: sleep 5
-        name: wait for validator to start up
       - run: cd tests/misc && solana program deploy --program-id USED_IN_CI.json target/deploy/misc.so
-      - run: cat ./test-ledger/validator.log
       - run: cd tests/misc && anchor run test_non_rent_exempt
+      - uses: ./.github/actions/git-diff/
 
   test-anchor-init:
     needs: setup-anchor-cli
