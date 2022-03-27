@@ -1,8 +1,10 @@
 use anchor_client::Cluster;
 use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Context, Error, Result};
+use cargo_toml::Dependency;
 use clap::{ArgEnum, Parser};
 use heck::SnakeCase;
+use semver::{self, Version};
 use serde::{Deserialize, Serialize};
 use solana_cli_config::{Config as SolanaConfig, CONFIG_FILE};
 use solana_sdk::pubkey::Pubkey;
@@ -83,6 +85,25 @@ impl Manifest {
                 .to_string()
                 .to_snake_case())
         }
+    }
+
+    pub fn check_crate_version(&self, program: &str, name: &str) -> Result<(), semver::Error> {
+        if let Some(dep) = self.dependencies.get(name) {
+            let dep_version = match dep {
+                Dependency::Simple(v) => v.clone(),
+                Dependency::Detailed(d) => d.version.clone().unwrap_or_else(|| "0.0.0".to_string()),
+            };
+
+            let cli_version = env!("CARGO_PKG_VERSION");
+
+            if Version::from_str(&dep_version)? != Version::from_str(cli_version)? {
+                println!(
+                    "Warning: version mismatch with `anchor-cli` ({}) and `{}` ({}) in program {}.",
+                    cli_version, name, dep_version, program,
+                );
+            }
+        }
+        Ok(())
     }
 
     pub fn version(&self) -> String {
@@ -229,8 +250,12 @@ impl WithPath<Config> {
                     program.path.display()
                 ));
             }
-            let p_lib_name = Manifest::from_path(&cargo_toml)?.lib_name()?;
-            if name == p_lib_name {
+
+            let m = Manifest::from_path(&cargo_toml)?;
+            m.check_crate_version(name, "anchor-lang")?;
+            m.check_crate_version(name, "anchor-spl")?;
+
+            if name == m.lib_name()? {
                 let path = self
                     .path()
                     .parent()
