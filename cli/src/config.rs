@@ -91,7 +91,13 @@ impl Manifest {
         if let Some(dep) = self.dependencies.get(name) {
             let dep_version = match dep {
                 Dependency::Simple(v) => v.clone(),
-                Dependency::Detailed(d) => d.version.clone().unwrap_or_else(|| "0.0.0".to_string()),
+                Dependency::Detailed(d) => {
+                    if let Some(v) = d.version.clone() {
+                        v
+                    } else {
+                        return Ok(());
+                    }
+                }
             };
 
             let cli_version = env!("CARGO_PKG_VERSION");
