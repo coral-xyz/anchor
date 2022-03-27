@@ -64,11 +64,12 @@ const withLogTest = async (callback, expectedLogs) => {
 
 describe("errors", () => {
   // Configure the client to use the local cluster.
-  const localProvider = anchor.Provider.local();
-  localProvider.opts.skipPreflight = true;
   // processed failed tx do not result in AnchorErrors in the client
   // because we cannot get logs for them (only through overkill `onLogs`)
-  localProvider.opts.commitment = "confirmed";
+  const localProvider = anchor.Provider.local(undefined, {
+    skipPreflight: true,
+    commitment: "confirmed",
+  });
   anchor.setProvider(localProvider);
 
   const program = anchor.workspace.Errors as Program<Errors>;

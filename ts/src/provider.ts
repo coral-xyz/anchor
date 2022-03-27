@@ -64,7 +64,7 @@ export default class Provider {
    *
    * (This api is for Node only.)
    */
-  static env(): Provider {
+  static env(opts?: ConfirmOptions): Provider {
     if (isBrowser) {
       throw new Error(`Provider env is not available on browser.`);
     }
@@ -74,7 +74,7 @@ export default class Provider {
     if (url === undefined) {
       throw new Error("ANCHOR_PROVIDER_URL is not defined");
     }
-    const options = Provider.defaultOptions();
+    const options = opts ?? Provider.defaultOptions();
     const connection = new Connection(url, options.commitment);
     const NodeWallet = require("./nodewallet.js").default;
     const wallet = NodeWallet.local();
