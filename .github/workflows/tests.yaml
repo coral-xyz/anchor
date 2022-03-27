@@ -243,7 +243,9 @@ jobs:
   # checks rent correctly for legacy accounts
   # that don't have to be rent-exempt
   test-misc-non-rent-exempt:
-    needs: setup-anchor-cli # this is built with a different solana version but that's fine since it's just the cli
+    # the anchor cli is built with a different solana version
+    # but that's fine since it's just the cli
+    needs: setup-anchor-cli 
     name: Test tests/misc/nonRentExempt
     runs-on: ubuntu-18.04
     timeout-minutes: 30
@@ -259,7 +261,9 @@ jobs:
             ~/.cache/solana/
             ~/.local/share/solana/
           key: solana-${{ runner.os }}-v0000-1.8.14
-      # using an outdated validator but that is ok as long as the test doesn't include newer incompatible features
+      # using an outdated validator but that
+      # is ok as long as the test doesn't
+      # include newer incompatible features
       - run: sh -c "$(curl -sSfL https://release.solana.com/v1.8.14/install)"
         shell: bash
       - run: echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
