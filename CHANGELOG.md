@@ -14,6 +14,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * lang: Add return values to CPI client. ([#1598](https://github.com/project-serum/anchor/pull/1598)).
 * avm: New `avm update` command to update the Anchor CLI to the latest version ([#1670](https://github.com/project-serum/anchor/pull/1670)).
+* cli: Emits a warning when a program is discovered with mismatched versions of Anchor crates from the CLI version ([#1690](https://github.com/project-serum/anchor/pull/1690)).
 
 ### Fixes
 
