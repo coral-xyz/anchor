@@ -262,9 +262,11 @@ describe("errors", () => {
   // with an invalid signer account.
   it("Emits a signer error", async () => {
     let signature;
-    const listener = anchor
-      .getProvider()
-      .connection.onLogs("all", (logs) => (signature = logs.signature));
+    const listener = anchor.getProvider().connection.onLogs(
+      "all",
+      (logs) => (signature = logs.signature),
+      "processed" // Lower commitment for listener to avoid race condition
+    );
     try {
       const tx = new Transaction();
       tx.add(
