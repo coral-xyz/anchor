@@ -11,7 +11,7 @@ import NamespaceFactory, {
   StateClient,
   SimulateNamespace,
   MethodsNamespace,
-  ViewsNamespace,
+  ViewNamespace,
 } from "./namespace/index.js";
 import { utf8 } from "../utils/bytes/index.js";
 import { EventManager } from "./event.js";
@@ -218,7 +218,7 @@ export class Program<IDL extends Idl = Idl> {
    */
   readonly methods: MethodsNamespace<IDL>;
 
-  readonly views?: ViewsNamespace<IDL>;
+  readonly views?: ViewNamespace<IDL>;
 
   /**
    * Address of the program.

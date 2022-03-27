@@ -11,7 +11,7 @@ import AccountFactory, { AccountNamespace } from "./account.js";
 import SimulateFactory, { SimulateNamespace } from "./simulate.js";
 import { parseIdlErrors } from "../common.js";
 import { MethodsBuilderFactory, MethodsNamespace } from "./methods";
-import ViewsFactory, { ViewsNamespace } from "./views";
+import ViewFactory, { ViewNamespace } from "./views";
 
 // Re-exports.
 export { StateClient } from "./state.js";
@@ -22,7 +22,7 @@ export { AccountNamespace, AccountClient, ProgramAccount } from "./account.js";
 export { SimulateNamespace, SimulateFn } from "./simulate.js";
 export { IdlAccounts, IdlTypes } from "./types.js";
 export { MethodsBuilderFactory, MethodsNamespace } from "./methods";
-export { ViewsNamespace } from "./views";
+export { ViewNamespace, ViewFn } from "./views";
 
 export default class NamespaceFactory {
   /**
@@ -41,14 +41,14 @@ export default class NamespaceFactory {
     SimulateNamespace<IDL>,
     MethodsNamespace<IDL>,
     StateClient<IDL> | undefined,
-    ViewsNamespace<IDL> | undefined
+    ViewNamespace<IDL> | undefined
   ] {
     const rpc: RpcNamespace = {};
     const instruction: InstructionNamespace = {};
     const transaction: TransactionNamespace = {};
     const simulate: SimulateNamespace = {};
     const methods: MethodsNamespace = {};
-    const views: ViewsNamespace = {};
+    const view: ViewNamespace = {};
 
     const idlErrors = parseIdlErrors(idl);
 
@@ -75,6 +75,12 @@ export default class NamespaceFactory {
         programId,
         idl
       );
+      const viewItem = ViewFactory.build<IDL, typeof idlIx>(
+        programId,
+        idlIx,
+        simulateItem,
+        idl
+      );
       const methodItem = MethodsBuilderFactory.build<IDL, typeof idlIx>(
         provider,
         programId,
@@ -83,15 +89,9 @@ export default class NamespaceFactory {
         txItem,
         rpcItem,
         simulateItem,
+        viewItem,
         account
       );
-      const viewsItem = ViewsFactory.build<IDL, typeof idlIx>(
-        programId,
-        idlIx,
-        simulateItem,
-        idl
-      );
-
       const name = camelCase(idlIx.name);
 
       instruction[name] = ixItem;
@@ -99,8 +99,8 @@ export default class NamespaceFactory {
       rpc[name] = rpcItem;
       simulate[name] = simulateItem;
       methods[name] = methodItem;
-      if (viewsItem) {
-        views[name] = viewsItem;
+      if (viewItem) {
+        view[name] = viewItem;
       }
     });
 
@@ -112,7 +112,7 @@ export default class NamespaceFactory {
       simulate as SimulateNamespace<IDL>,
       methods as MethodsNamespace<IDL>,
       state,
-      views as ViewsNamespace<IDL>,
+      view as ViewNamespace<IDL>,
     ];
   }
 }
