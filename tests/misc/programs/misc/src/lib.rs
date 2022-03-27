@@ -1,6 +1,7 @@
 //! Misc example is a catchall program for testing unrelated features.
 //! It's not too instructive/coherent by itself, so please see other examples.
 
+use account::MAX_SIZE;
 use anchor_lang::prelude::*;
 use context::*;
 use event::*;
@@ -10,7 +11,7 @@ mod account;
 mod context;
 mod event;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("3TEqcc8xhrhdspwbvoamUJe2borm4Nr72JxL66k6rgrh");
 
 #[constant]
 pub const BASE: u128 = 1_000_000;
@@ -103,6 +104,14 @@ pub mod misc {
 
     pub fn test_const_array_size(ctx: Context<TestConstArraySize>, data: u8) -> Result<()> {
         ctx.accounts.data.data[0] = data;
+        Ok(())
+    }
+
+    pub fn test_const_ix_data_size(
+        ctx: Context<TestConstIxDataSize>,
+        data: [u8; MAX_SIZE],
+    ) -> Result<()> {
+        ctx.accounts.data.data = data;
         Ok(())
     }
 

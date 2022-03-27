@@ -6,10 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 **Note:** Version 0 of Semantic Versioning is handled differently from version 1 and above.
-The minor version will be incremented upon a breaking change and the patch version will be
-incremented for features.
+The minor version will be incremented upon a breaking change and the patch version will be incremented for features.
 
 ## [Unreleased]
+
+### Features
+
+* lang: Add return values to CPI client. ([#1598](https://github.com/project-serum/anchor/pull/1598)).
+* avm: New `avm update` command to update the Anchor CLI to the latest version ([#1670](https://github.com/project-serum/anchor/pull/1670)).
+
+### Fixes
+
+* avm: `avm install` no longer downloads the version if already installed in the machine ([#1670](https://github.com/project-serum/anchor/pull/1670)).
+* cli: make `anchor test` fail when used with `--skip-deploy` option and without `--skip-local-validator` option but there already is a running validator ([#1675](https://github.com/project-serum/anchor/pull/1675)).
+* lang: Return proper error instead of panicking if account length is smaller than discriminator in functions of `(Account)Loader` ([#1678](https://github.com/project-serum/anchor/pull/1678)).
+
+### Breaking
+
+* avm: `amv install` switches to the newly installed version after installation finishes ([#1670](https://github.com/project-serum/anchor/pull/1670)).
+* spl: Re-export the `spl_token` crate ([#1665](https://github.com/project-serum/anchor/pull/1665)).
+* lang, cli, spl: Update solana toolchain to v1.9.13 ([#1653](https://github.com/project-serum/anchor/pull/1653)).
+
+## [0.23.0] - 2022-03-20
 
 ### Features
 
@@ -20,6 +38,7 @@ incremented for features.
 * lang: Add new `AccountSysvarMismatch` error code and test cases for sysvars ([#1535](https://github.com/project-serum/anchor/pull/1535)).
 * lang: Replace `std::io::Cursor` with a custom `Write` impl that uses the Solana mem syscalls ([#1589](https://github.com/project-serum/anchor/pull/1589)).
 * lang: Add `require_neq`, `require_keys_neq`, `require_gt`, and `require_gte` comparison macros ([#1622](https://github.com/project-serum/anchor/pull/1622)).
+* lang: Handle arrays with const as size in instruction data ([#1623](https://github.com/project-serum/anchor/issues/1623).
 * spl: Add support for revoke instruction ([#1493](https://github.com/project-serum/anchor/pull/1493)).
 * ts: Add provider parameter to `Spl.token` factory method ([#1597](https://github.com/project-serum/anchor/pull/1597)).
 
@@ -28,9 +47,12 @@ incremented for features.
 * ts: Fix the loss of strict typing using the `methods` namespace on builder functions ([#1539](https://github.com/project-serum/anchor/pull/1539)).
 * spl: Update `spl/governance` to use new errors ([#1582](https://github.com/project-serum/anchor/pull/1582)).
 * client: Fix `Cluster`'s `FromStr` implementation ([#1362](https://github.com/project-serum/anchor/pull/1362)).
-* lang: implement `Key` for `Pubkey` again, so `associated_token::*` constraints can use pubkey targets again ([#1601](https://github.com/project-serum/anchor/pull/1601)).
-* lang: adjust error code so `#[error_code]` works with just importing `anchor_lang::error_code` ([#1610](https://github.com/project-serum/anchor/pull/1610)).
-* ts: fix `spl-token` coder account parsing ([#1604](https://github.com/project-serum/anchor/pull/1604)).
+* lang: Implement `Key` for `Pubkey` again, so `associated_token::*` constraints can use pubkey targets again ([#1601](https://github.com/project-serum/anchor/pull/1601)).
+* lang: Adjust error code so `#[error_code]` works with just importing `anchor_lang::error_code` ([#1610](https://github.com/project-serum/anchor/pull/1610)).
+* ts: Fix `spl-token` coder account parsing ([#1604](https://github.com/project-serum/anchor/pull/1604)).
+* cli: Fix `npm install` fallback if `yarn` install doesn't work ([#1643](https://github.com/project-serum/anchor/pull/1643)).
+* lang: Fix bug where `owner = <target>` would not compile because of missing type annotation ([#1648](https://github.com/project-serum/anchor/pull/1648)).
+* ts: Adjust `send` and `simulate` functions in `provider.ts`, so they use the return value of `Wallet.signTransaction`([#1527](https://github.com/project-serum/anchor/pull/1527)).
 
 ### Breaking
 
@@ -41,6 +63,7 @@ incremented for features.
 * lang: Add support for logging expected and actual values and pubkeys. Add `require_eq` and `require_keys_eq` macros. Add default error code to `require` macro ([#1572](https://github.com/project-serum/anchor/pull/1572)).
 * lang: Add `system_program` CPI wrapper functions. Make `system_program` module public instead of re-exporting `system_program::System`([#1629](https://github.com/project-serum/anchor/pull/1629)).
 * cli: `avm use` no long prompts [y/n] if an install is needed first - it just tells the user to `avm install` ([#1565](https://github.com/project-serum/anchor/pull/1565))
+* ts: Add `AnchorError` with program stack and also a program stack for non-`AnchorError` errors ([#1640](https://github.com/project-serum/anchor/pull/1640)). `AnchorError` is not returned for `processed` tx that have `skipPreflight` set to `true` (it falls back to `ProgramError` or the raw solana library error).
 
 ## [0.22.1] - 2022-02-28
 
