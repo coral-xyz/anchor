@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo "Starting local validator for test"
+
 solana-test-validator \
   --reset \
   --rpc-port 8900 \
@@ -11,4 +13,10 @@ solana-test-validator \
   --account mv3ekLzLbnVPNxjSKvqBpU3ZeZXPQdEC3bp5MDEBG68 accounts/mv3ekLzLbnVPNxjSKvqBpU3ZeZXPQdEC3bp5MDEBG68.json \
   --account So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo accounts/So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo.json \
   --account PwDiXFxQsGra4sFFTT8r1QWRMd4vfumiWC1jfWNfdYT accounts/PwDiXFxQsGra4sFFTT8r1QWRMd4vfumiWC1jfWNfdYT.json \
-  --account DMCvGv1fS5rMcAvEDPDDBawPqbDRSzJh2Bo6qXCmgJkR accounts/DMCvGv1fS5rMcAvEDPDDBawPqbDRSzJh2Bo6qXCmgJkR.json
+  --account DMCvGv1fS5rMcAvEDPDDBawPqbDRSzJh2Bo6qXCmgJkR accounts/DMCvGv1fS5rMcAvEDPDDBawPqbDRSzJh2Bo6qXCmgJkR.json -q &
+
+sleep 10
+
+echo "Validator started, running tests"
+
+anchor test
