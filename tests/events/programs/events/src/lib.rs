@@ -11,7 +11,7 @@ pub mod events {
     pub fn initialize(_ctx: Context<Initialize>) -> Result<()> {
         emit!(MyEvent {
             data: 5,
-            label: [1,2,3,4,5],
+            label: "hello".to_string(),
         });
         Ok(())
     }
@@ -35,7 +35,7 @@ pub struct TestEvent {}
 pub struct MyEvent {
     pub data: u64,
     #[index]
-    pub label: [u8; 5],
+    pub label: String,
 }
 
 #[event]
