@@ -160,21 +160,10 @@ describe("CPI return", () => {
   });
 
   it("can return a u64 via view", async () => {
-    assert(
-      new anchor.BN(99).eq(
-        await callerProgram.views.returnU64({
-          account: cpiReturn.publicKey,
-        })
-      )
-    );
+    assert(new anchor.BN(99).eq(await callerProgram.views.returnU64()));
     // Via methods API
     assert(
-      new anchor.BN(99).eq(
-        await callerProgram.methods
-          .returnU64()
-          .accounts({ account: cpiReturn.publicKey })
-          .view()
-      )
+      new anchor.BN(99).eq(await callerProgram.methods.returnU64().view())
     );
   });
 
