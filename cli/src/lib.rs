@@ -16,6 +16,7 @@ use heck::{
     ToKebabCase, ToLowerCamelCase, ToShoutyKebabCase, ToShoutySnakeCase, 
     ToSnakeCase, ToTitleCase, ToUpperCamelCase
 };
+use ignore::WalkBuilder;
 use rand::rngs::OsRng;
 use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
