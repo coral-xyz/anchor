@@ -35,7 +35,7 @@ export class MethodsBuilderFactory {
     txFn: TransactionFn<IDL>,
     rpcFn: RpcFn<IDL>,
     simulateFn: SimulateFn<IDL>,
-    viewFn: ViewFn<IDL>,
+    viewFn: ViewFn<IDL> | undefined,
     accountNamespace: AccountNamespace<IDL>
   ): MethodsFn<IDL, I, MethodsBuilder<IDL, I>> {
     return (...args) =>
@@ -68,7 +68,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     private _txFn: TransactionFn<IDL>,
     private _rpcFn: RpcFn<IDL>,
     private _simulateFn: SimulateFn<IDL>,
-    private _viewFn: ViewFn<IDL>,
+    private _viewFn: ViewFn<IDL> | undefined,
     _provider: Provider,
     _programId: PublicKey,
     _idlIx: AllInstructions<IDL>,
@@ -130,8 +130,12 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     });
   }
 
-  public async view(options?: ConfirmOptions): Promise<Transaction> {
+  public async view(options?: ConfirmOptions): Promise<any> {
     await this._accountsResolver.resolve();
+    if (!this._viewFn) {
+      throw new Error("Method does not support views");
+    }
+    // @ts-ignore
     return this._viewFn(...this._args, {
       accounts: this._accounts,
       signers: this._signers,

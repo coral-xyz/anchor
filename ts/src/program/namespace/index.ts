@@ -75,12 +75,7 @@ export default class NamespaceFactory {
         programId,
         idl
       );
-      const viewItem = ViewFactory.build<IDL, typeof idlIx>(
-        programId,
-        idlIx,
-        simulateItem,
-        idl
-      );
+      const viewItem = ViewFactory.build(programId, idlIx, simulateItem, idl);
       const methodItem = MethodsBuilderFactory.build<IDL, typeof idlIx>(
         provider,
         programId,
