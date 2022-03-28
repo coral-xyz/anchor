@@ -8,6 +8,7 @@ use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
 use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
+use config::{default_faucet_port, default_rpc_port};
 use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
 use flate2::write::{GzEncoder, ZlibEncoder};
@@ -1557,12 +1558,12 @@ fn idl_set_buffer(cfg_override: &ConfigOverride, program_id: Pubkey, buffer: Pub
         };
 
         // Build the transaction.
-        let (recent_hash, _fee_calc) = client.get_recent_blockhash()?;
+        let latest_hash = client.get_latest_blockhash()?;
         let tx = Transaction::new_signed_with_payer(
             &[set_buffer_ix],
             Some(&keypair.pubkey()),
             &[&keypair],
-            recent_hash,
+            latest_hash,
         );
 
         // Send the transaction.
@@ -1648,12 +1649,12 @@ fn idl_set_authority(
             data,
         };
         // Send transaction.
-        let (recent_hash, _fee_calc) = client.get_recent_blockhash()?;
+        let latest_hash = client.get_latest_blockhash()?;
         let tx = Transaction::new_signed_with_payer(
             &[ix],
             Some(&keypair.pubkey()),
             &[&keypair],
-            recent_hash,
+            latest_hash,
         );
         client.send_and_confirm_transaction_with_spinner_and_config(
             &tx,
@@ -1733,12 +1734,12 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
             data,
         };
         // Send transaction.
-        let (recent_hash, _fee_calc) = client.get_recent_blockhash()?;
+        let latest_hash = client.get_latest_blockhash()?;
         let tx = Transaction::new_signed_with_payer(
             &[ix],
             Some(&keypair.pubkey()),
             &[&keypair],
-            recent_hash,
+            latest_hash,
         );
         client.send_and_confirm_transaction_with_spinner_and_config(
             &tx,
@@ -2137,6 +2138,27 @@ fn start_test_validator(
 
     let rpc_url = test_validator_rpc_url(cfg);
 
+    let rpc_port = cfg
+        .test
+        .as_ref()
+        .and_then(|test| test.validator.as_ref().map(|v| v.rpc_port))
+        .unwrap_or_else(default_rpc_port);
+    if !portpicker::is_free(rpc_port) {
+        return Err(anyhow!(
+            "Your configured rpc port: {rpc_port} is already in use"
+        ));
+    }
+    let faucet_port = cfg
+        .test
+        .as_ref()
+        .and_then(|test| test.validator.as_ref().map(|v| v.faucet_port))
+        .unwrap_or_else(default_faucet_port);
+    if !portpicker::is_free(faucet_port) {
+        return Err(anyhow!(
+            "Your configured faucet port: {faucet_port} is already in use"
+        ));
+    }
+
     let mut validator_handle = std::process::Command::new("solana-test-validator")
         .arg("--ledger")
         .arg(test_ledger_directory)
@@ -2157,7 +2179,7 @@ fn start_test_validator(
         .and_then(|test| test.startup_wait)
         .unwrap_or(5_000);
     while count < ms_wait {
-        let r = client.get_recent_blockhash();
+        let r = client.get_latest_blockhash();
         if r.is_ok() {
             break;
         }
@@ -2166,7 +2188,7 @@ fn start_test_validator(
     }
     if count == ms_wait {
         eprintln!(
-            "Unable to get recent blockhash. Test validator does not look started. Check {} for errors. Consider increasing [test.startup_wait] in Anchor.toml.",
+            "Unable to get latest blockhash. Test validator does not look started. Check {} for errors. Consider increasing [test.startup_wait] in Anchor.toml.",
             test_ledger_log_filename
         );
         validator_handle.kill()?;
@@ -2386,12 +2408,12 @@ fn create_idl_account(
             accounts,
             data,
         };
-        let (recent_hash, _fee_calc) = client.get_recent_blockhash()?;
+        let latest_hash = client.get_latest_blockhash()?;
         let tx = Transaction::new_signed_with_payer(
             &[ix],
             Some(&keypair.pubkey()),
             &[&keypair],
-            recent_hash,
+            latest_hash,
         );
         client.send_and_confirm_transaction_with_spinner_and_config(
             &tx,
@@ -2452,12 +2474,12 @@ fn create_idl_buffer(
     };
 
     // Build the transaction.
-    let (recent_hash, _fee_calc) = client.get_recent_blockhash()?;
+    let latest_hash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(
         &[create_account_ix, create_buffer_ix],
         Some(&keypair.pubkey()),
         &[&keypair, &buffer],
-        recent_hash,
+        latest_hash,
     );
 
     // Send the transaction.

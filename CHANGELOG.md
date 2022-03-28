@@ -18,12 +18,14 @@ The minor version will be incremented upon a breaking change and the patch versi
 ### Fixes
 
 * avm: `avm install` no longer downloads the version if already installed in the machine ([#1670](https://github.com/project-serum/anchor/pull/1670)).
+* cli: make `anchor test` fail when used with `--skip-deploy` option and without `--skip-local-validator` option but there already is a running validator ([#1675](https://github.com/project-serum/anchor/pull/1675)).
 * lang: Return proper error instead of panicking if account length is smaller than discriminator in functions of `(Account)Loader` ([#1678](https://github.com/project-serum/anchor/pull/1678)).
 
 ### Breaking
 
 * avm: `amv install` switches to the newly installed version after installation finishes ([#1670](https://github.com/project-serum/anchor/pull/1670)).
 * spl: Re-export the `spl_token` crate ([#1665](https://github.com/project-serum/anchor/pull/1665)).
+* lang, cli, spl: Update solana toolchain to v1.9.13 ([#1653](https://github.com/project-serum/anchor/pull/1653)).
 
 ## [0.23.0] - 2022-03-20
 
