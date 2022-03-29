@@ -39,6 +39,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fs::{self, File};
+use std::io::BufReader;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Stdio};
@@ -561,6 +562,54 @@ fn new(cfg_override: &ConfigOverride, name: String) -> Result<()> {
     })
 }
 
+fn get_rename_patterns(from: &str, to: &str) -> (Vec<String>, Vec<String>) {
+    let from_patterns = [
+        from.to_string(),
+        from.to_string().to_kebab_case(),
+        from.to_string().to_lower_camel_case(),
+        from.to_string().to_shouty_kebab_case(),
+        from.to_string().to_shouty_snake_case(),
+        from.to_string().to_snake_case(),
+        from.to_string().to_title_case(),
+        from.to_string().to_upper_camel_case(),
+    ];
+    let to_patterns = [
+        to.to_string(),
+        to.to_string().to_kebab_case(),
+        to.to_string().to_lower_camel_case(),
+        to.to_string().to_shouty_kebab_case(),
+        to.to_string().to_shouty_snake_case(),
+        to.to_string().to_snake_case(),
+        to.to_string().to_title_case(),
+        to.to_string().to_upper_camel_case(),
+    ];
+
+    // Use empty strings in `from` to indicate a duplicate pattern
+    let mut from_patterns_dedupe: Vec<String> = Vec::new();
+    let mut to_patterns_dedupe: Vec<String> = Vec::new();
+    from_patterns_dedupe.push(from_patterns[0].to_string());
+    to_patterns_dedupe.push(to_patterns[0].to_string());
+    for i in 1..from_patterns.len() {
+        if !from_patterns_dedupe.contains(&from_patterns[i]) {
+            from_patterns_dedupe.push(from_patterns[i].to_string());
+        } else {
+            from_patterns_dedupe.push("".to_string());
+        }
+        to_patterns_dedupe.push(to_patterns[i].to_string());
+    }
+    
+    for i in 0..from_patterns_dedupe.len() {
+        if from_patterns_dedupe[i] != "" {
+            println!("{} -> {}", 
+                from_patterns_dedupe[i], 
+                to_patterns_dedupe[i]
+            );
+        }
+    }
+
+    (from_patterns_dedupe, to_patterns_dedupe)
+}
+
 fn rename(cfg_override: &ConfigOverride, from: String, to: String) -> Result<()> {
     is_name_valid(&to)?;
     with_workspace(cfg_override, |cfg| {
@@ -570,6 +619,9 @@ fn rename(cfg_override: &ConfigOverride, from: String, to: String) -> Result<()>
             }
             Some(parent) => {
                 std::env::set_current_dir(&parent)?;
+
+                let (from_patterns, to_patterns) 
+                    = get_rename_patterns(&from, &to);
 
                 // Traverse the directory tree. 
                 // WalkBuilder, by default, checks for matching entries in 
@@ -583,7 +635,7 @@ fn rename(cfg_override: &ConfigOverride, from: String, to: String) -> Result<()>
                     if let Ok(dent) = result {
                         let p = dent.into_path();
                         if p.is_file() {
-                            rename_in_file(&p, &from, &to)?;
+                            rename_in_file(&p, &from_patterns, &to_patterns)?;
                         }
                         // Store paths and rename these AFTER traversal.
                         // Changing the file system within traversal will
@@ -603,9 +655,9 @@ fn rename(cfg_override: &ConfigOverride, from: String, to: String) -> Result<()>
                     if let Some(ext) = p.extension() {
                         new_path.set_extension(ext);
                     }
-                    fs::rename(&p, &new_path)?;
+                    // fs::rename(&p, &new_path)?;
+                    println!("{:?} renamed to {:?}.", p, new_path);
                 }
-                println!("{} renamed to {}.", from, to);
             }
         };
         Ok(())
@@ -625,18 +677,52 @@ fn new_program(name: &str) -> Result<()> {
     Ok(())
 }
 
-fn rename_in_file(path: &Path, from: &str, to: &str) -> Result<()> {
-    let contents = fs::read_to_string(&path)?;
-    let new_contents = contents.
-        replace(&from, &to).
-        replace(&from.to_kebab_case(), &to.to_kebab_case()).
-        replace(&from.to_lower_camel_case(), &to.to_lower_camel_case()).
-        replace(&from.to_shouty_kebab_case(), &to.to_shouty_kebab_case()).
-        replace(&from.to_shouty_snake_case(), &to.to_shouty_snake_case()).
-        replace(&from.to_snake_case(), &to.to_snake_case()).
-        replace(&from.to_title_case(), &to.to_title_case()).
-        replace(&from.to_upper_camel_case(), &to.to_upper_camel_case());
-    fs::write(&path, &new_contents)?;
+fn rename_in_file(path: &Path, from: &Vec<String>, to: &Vec<String>) -> Result<()> {
+    println!("Searching file: {:?}", path);
+    let file =  File::open(path)?;
+    let lines = BufReader::new(file).lines();
+    let file_name = path.file_name().unwrap().to_str().unwrap();
+    let ext = path.extension().unwrap().to_str().unwrap();
+    
+    // in Cargo.toml anything under [package] should be the desired name,
+    // but anything under [lib] should be snake case
+    let mut matches_found = 0;
+    for line in lines {
+        if let Ok(l) = line { 
+            for i in 0..from.len() {
+                // The `from` vector can contain empty strings which
+                // indicate it's a duplicate pattern
+                if l.contains(&from[i]) && &from[i] != "" {
+                    matches_found += 1;
+                    println!("{}. {}", matches_found, l);
+                    // Certain files need casing to be forced.
+                    // Basing these off of template.rs
+                    let (from_final, to_final) = match ext {
+                        "rs" => {
+                            let to_final = to[i].to_snake_case();
+                            (from[i], to_final)
+                        }
+                        // "ts" | "js" => {
+                        //     let idl_import = "/target/types/";
+                        //     let mut from_idl_import = idl_import.to_string();
+                        //     from_idl_import.push_str(&from[i]);
+                        //     if l.contains(&from_idl_import) {
+                        //         let mut to_idl_import = idl_import.to_string();
+                        //         to_idl_import.push_str(&to[i].to_snake_case());
+                        //         // to_idl_import.as_str()
+                        //     }
+                        // }
+                        _ => { 
+                            println!("No special cases.");
+                            (from[i], to[i])
+                        }
+                    };
+                    println!("{:?} -> {:?}", from_final, to_final);
+                }
+            }
+        }
+    }
+    println!("");
     Ok(())
 }
 
