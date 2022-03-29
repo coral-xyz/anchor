@@ -18,7 +18,6 @@ export interface Provider {
   readonly connection: Connection,
 
   send?(req: SendTxRequest, opts?: SendOptions): Promise<TransactionSignature>;
-  confirm?(signature: string, commitment?: Commitment): Promise<TransactionSignature>;
   sendAndConfirm?(req: SendTxRequest, opts?: ConfirmOptions): Promise<TransactionSignature>;
   sendAll?(reqs: Array<SendTxRequest>, opts?: ConfirmOptions): Promise<Array<TransactionSignature>>;
   simulate?(req: SendTxRequest, preflightCommitment?: Commitment, includeAccounts?: boolean | PublicKey[]): Promise<SuccessfulTxSimulationResponse>;
