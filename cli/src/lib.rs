@@ -44,7 +44,6 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Stdio};
 use std::string::ToString;
 use tar::Archive;
-use ignore::WalkBuilder;
 
 pub mod config;
 pub mod template;
