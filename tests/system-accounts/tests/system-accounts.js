@@ -1,5 +1,4 @@
 const anchor = require("@project-serum/anchor");
-const splToken = require("@solana/spl-token");
 const assert = require("assert");
 
 describe("system_accounts", () => {
@@ -27,7 +26,7 @@ describe("system_accounts", () => {
       authority.publicKey,
       null,
       9,
-      splToken.TOKEN_PROGRAM_ID
+      anchor.utils.token.TOKEN_PROGRAM_ID
     );
 
     const tokenAccount = await mint.createAssociatedTokenAccount(

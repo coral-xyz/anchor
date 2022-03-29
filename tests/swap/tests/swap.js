@@ -2,7 +2,6 @@ const assert = require("assert");
 const anchor = require("@project-serum/anchor");
 const BN = anchor.BN;
 const OpenOrders = require("@project-serum/serum").OpenOrders;
-const TOKEN_PROGRAM_ID = require("@solana/spl-token").TOKEN_PROGRAM_ID;
 const serumCmn = require("@project-serum/common");
 const utils = require("./utils");
 
@@ -68,7 +67,7 @@ describe("swap", () => {
       pcWallet: ORDERBOOK_ENV.godUsdc,
       authority: program.provider.wallet.publicKey,
       dexProgram: utils.DEX_PID,
-      tokenProgram: TOKEN_PROGRAM_ID,
+      tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
     };
     SWAP_A_USDC_ACCOUNTS = {
@@ -200,7 +199,7 @@ describe("swap", () => {
               pcWallet: ORDERBOOK_ENV.godUsdc,
               authority: program.provider.wallet.publicKey,
               dexProgram: utils.DEX_PID,
-              tokenProgram: TOKEN_PROGRAM_ID,
+              tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
               rent: anchor.web3.SYSVAR_RENT_PUBKEY,
             },
           }
@@ -261,7 +260,7 @@ describe("swap", () => {
               pcWallet: ORDERBOOK_ENV.godUsdc,
               authority: program.provider.wallet.publicKey,
               dexProgram: utils.DEX_PID,
-              tokenProgram: TOKEN_PROGRAM_ID,
+              tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
               rent: anchor.web3.SYSVAR_RENT_PUBKEY,
             },
           }

@@ -1,7 +1,6 @@
 const assert = require("assert");
 const anchor = require("@project-serum/anchor");
 const serumCmn = require("@project-serum/common");
-const { TOKEN_PROGRAM_ID } = require("@solana/spl-token");
 const utils = require("./utils");
 
 anchor.utils.features.set("anchor-deprecated-state");
@@ -168,7 +167,7 @@ describe("Lockup and Registry", () => {
           vault: vault.publicKey,
           depositor: god,
           depositorAuthority: provider.wallet.publicKey,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
         },
@@ -210,7 +209,7 @@ describe("Lockup and Registry", () => {
             token: god,
             vault: vestingAccount.vault,
             vestingSigner: vestingSigner,
-            tokenProgram: TOKEN_PROGRAM_ID,
+            tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
             clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
           },
         });
@@ -241,7 +240,7 @@ describe("Lockup and Registry", () => {
         token,
         vault: vestingAccount.vault,
         vestingSigner,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       },
     });
@@ -371,7 +370,7 @@ describe("Lockup and Registry", () => {
         memberSigner,
         balances,
         balancesLocked,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       instructions: [await registry.account.member.createInstruction(member)],
@@ -406,7 +405,7 @@ describe("Lockup and Registry", () => {
       accounts: {
         depositor: god,
         depositorAuthority: provider.wallet.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         vault: memberAccount.balances.vault,
         beneficiary: provider.wallet.publicKey,
         member: member.publicKey,
@@ -438,7 +437,7 @@ describe("Lockup and Registry", () => {
         registrarSigner,
         // Misc.
         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       },
     });
 
@@ -495,7 +494,7 @@ describe("Lockup and Registry", () => {
           depositor: god,
           depositorAuthority: provider.wallet.publicKey,
 
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
           clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
@@ -558,7 +557,7 @@ describe("Lockup and Registry", () => {
           vault: unlockedVendorVault.publicKey,
           vendorSigner: unlockedVendorSigner,
 
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
           clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
         },
       },
@@ -612,7 +611,7 @@ describe("Lockup and Registry", () => {
           depositor: god,
           depositorAuthority: provider.wallet.publicKey,
 
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
           clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
@@ -676,7 +675,7 @@ describe("Lockup and Registry", () => {
         vault: vendoredVestingVault.publicKey,
         depositor: lockedVendorVault.publicKey,
         depositorAuthority: lockedVendorSigner,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       })
@@ -702,7 +701,7 @@ describe("Lockup and Registry", () => {
           vault: lockedVendorVault.publicKey,
           vendorSigner: lockedVendorSigner,
 
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
           clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
         },
       },
@@ -757,7 +756,7 @@ describe("Lockup and Registry", () => {
             token,
             vault: vendoredVestingVault.publicKey,
             vestingSigner: vendoredVestingSigner,
-            tokenProgram: TOKEN_PROGRAM_ID,
+            tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
             clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
           },
           // TODO: trait methods generated on the client. Until then, we need to manually
@@ -799,7 +798,7 @@ describe("Lockup and Registry", () => {
 
         memberSigner,
 
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
@@ -844,7 +843,7 @@ describe("Lockup and Registry", () => {
         memberSigner,
 
         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       },
     });
   };
@@ -897,7 +896,7 @@ describe("Lockup and Registry", () => {
         vault: memberAccount.balances.vault,
         memberSigner,
         depositor: token,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       },
     });
 
@@ -920,7 +919,7 @@ describe("Lockup and Registry", () => {
         token,
         vault: vendoredVestingVault.publicKey,
         vestingSigner: vendoredVestingSigner,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       },
       // TODO: trait methods generated on the client. Until then, we need to manually
