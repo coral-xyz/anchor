@@ -95,6 +95,10 @@ impl Manifest {
                     if let Some(v) = d.version.clone() {
                         v
                     } else {
+                        println!(
+                            "Warning: No version selected for dependency `{}` in program {}.",
+                            name, program
+                        );
                         return Ok(());
                     }
                 }
@@ -104,7 +108,7 @@ impl Manifest {
 
             if Version::from_str(&dep_version)? != Version::from_str(cli_version)? {
                 println!(
-                    "Warning: version mismatch with `anchor-cli` ({}) and `{}` ({}) in program {}.",
+                    "Warning: Version mismatch with `anchor-cli` ({}) and `{}` ({}) in program {}.",
                     cli_version, name, dep_version, program,
                 );
             }
