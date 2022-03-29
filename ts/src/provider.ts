@@ -9,15 +9,26 @@ import {
   SimulatedTransactionResponse,
   Commitment,
   SendTransactionError,
+  SendOptions,
 } from "@solana/web3.js";
 import { bs58 } from "./utils/bytes/index.js";
 import { isBrowser } from "./utils/common.js";
+
+export interface Provider {
+  readonly connection: Connection,
+
+  send?(req: SendTxRequest, opts?: SendOptions): Promise<TransactionSignature>;
+  confirm?(signature: string, commitment?: Commitment): Promise<TransactionSignature>;
+  sendAndConfirm?(req: SendTxRequest, opts?: ConfirmOptions): Promise<TransactionSignature>;
+  sendAll?(reqs: Array<SendTxRequest>, opts?: ConfirmOptions): Promise<Array<TransactionSignature>>;
+  simulate?(req: SendTxRequest, preflightCommitment?: Commitment, includeAccounts?: boolean | PublicKey[]): Promise<SuccessfulTxSimulationResponse>;
+}
 
 /**
  * The network and wallet context used to send transactions paid for and signed
  * by the provider.
  */
-export default class Provider {
+export default class AnchorProvider implements Provider {
   /**
    * @param connection The cluster connection where the program is deployed.
    * @param wallet     The wallet used to pay for and sign all transactions.
@@ -44,18 +55,18 @@ export default class Provider {
    *
    * (This api is for Node only.)
    */
-  static local(url?: string, opts?: ConfirmOptions): Provider {
+  static local(url?: string, opts?: ConfirmOptions): AnchorProvider {
     if (isBrowser) {
       throw new Error(`Provider local is not available on browser.`);
     }
-    opts = opts ?? Provider.defaultOptions();
+    opts = opts ?? AnchorProvider.defaultOptions();
     const connection = new Connection(
       url ?? "http://localhost:8899",
       opts.preflightCommitment
     );
     const NodeWallet = require("./nodewallet.js").default;
     const wallet = NodeWallet.local();
-    return new Provider(connection, wallet, opts);
+    return new AnchorProvider(connection, wallet, opts);
   }
 
   /**
@@ -64,7 +75,7 @@ export default class Provider {
    *
    * (This api is for Node only.)
    */
-  static env(): Provider {
+  static env(): AnchorProvider {
     if (isBrowser) {
       throw new Error(`Provider env is not available on browser.`);
     }
@@ -74,47 +85,41 @@ export default class Provider {
     if (url === undefined) {
       throw new Error("ANCHOR_PROVIDER_URL is not defined");
     }
-    const options = Provider.defaultOptions();
+    const options = AnchorProvider.defaultOptions();
     const connection = new Connection(url, options.commitment);
     const NodeWallet = require("./nodewallet.js").default;
     const wallet = NodeWallet.local();
 
-    return new Provider(connection, wallet, options);
+    return new AnchorProvider(connection, wallet, options);
   }
 
   /**
    * Sends the given transaction, paid for and signed by the provider's wallet.
    *
-   * @param tx      The transaction to send.
-   * @param signers The set of signers in addition to the provider wallet that
-   *                will sign the transaction.
+   * @param req     The transaction request to send.
    * @param opts    Transaction confirmation options.
    */
   async send(
-    tx: Transaction,
-    signers?: Array<Signer | undefined>,
+    req: SendTxRequest,
     opts?: ConfirmOptions
   ): Promise<TransactionSignature> {
-    if (signers === undefined) {
-      signers = [];
-    }
     if (opts === undefined) {
       opts = this.opts;
     }
 
-    tx.feePayer = this.wallet.publicKey;
-    tx.recentBlockhash = (
+    req.tx.feePayer = this.wallet.publicKey;
+    req.tx.recentBlockhash = (
       await this.connection.getRecentBlockhash(opts.preflightCommitment)
     ).blockhash;
 
-    tx = await this.wallet.signTransaction(tx);
-    signers
+    req.tx = await this.wallet.signTransaction(req.tx);
+    req.signers
       .filter((s): s is Signer => s !== undefined)
       .forEach((kp) => {
-        tx.partialSign(kp);
+        req.tx.partialSign(kp);
       });
 
-    const rawTx = tx.serialize();
+    const rawTx = req.tx.serialize();
 
     try {
       return await sendAndConfirmRawTransaction(this.connection, rawTx, opts);
@@ -127,7 +132,7 @@ export default class Provider {
         // because that will see the tx sent with `sendAndConfirmRawTransaction` no matter which
         // commitment `sendAndConfirmRawTransaction` used
         const failedTx = await this.connection.getTransaction(
-          bs58.encode(tx.signature!),
+          bs58.encode(req.tx.signature!),
           { commitment: "confirmed" }
         );
         if (!failedTx) {
@@ -194,39 +199,52 @@ export default class Provider {
   /**
    * Simulates the given transaction, returning emitted logs from execution.
    *
-   * @param tx      The transaction to send.
-   * @param signers The set of signers in addition to the provdier wallet that
-   *                will sign the transaction.
+   * @param req     The transaction request to send.
    * @param opts    Transaction confirmation options.
    */
   async simulate(
-    tx: Transaction,
-    signers?: Array<Signer | undefined>,
-    opts: ConfirmOptions = this.opts
-  ): Promise<RpcResponseAndContext<SimulatedTransactionResponse>> {
-    if (signers === undefined) {
-      signers = [];
+    req: SendTxRequest,
+    commitmentMaybe?: Commitment,
+    includeAccounts?: boolean | PublicKey[]
+  ): Promise<SuccessfulTxSimulationResponse> {
+    const commitment = commitmentMaybe ?? this.connection.commitment;
+    req.tx.feePayer = this.wallet.publicKey;
+    req.tx = await this.wallet.signTransaction(req.tx);
+
+    // this allows us to pass a commitment arg into `simulateTransaction`
+    // instead of having to copy the function here and adjust it
+    const commitmentOverride = {
+      get: function (_, prop) {
+        if (prop === "commitment") {
+          return commitment;
+        } else {
+          // this is the normal way to return all other props
+          // without modifying them.
+          // @ts-expect-error
+          return Reflect.get(...arguments);
+        }
+      },
+    };
+    const simulateTransactionWithCommitment = this.connection.simulateTransaction.bind(new Proxy(this.connection, commitmentOverride));
+    const result = await simulateTransactionWithCommitment.bind(
+      req.tx,
+      req.signers,
+      includeAccounts
+    );
+
+    if (result.value.err) {
+      throw new SimulateError(result.value);
     }
 
-    tx.feePayer = this.wallet.publicKey;
-    tx.recentBlockhash = (
-      await this.connection.getRecentBlockhash(
-        opts.preflightCommitment ?? this.opts.preflightCommitment
-      )
-    ).blockhash;
+    return result.value;
+  }
+}
 
-    tx = await this.wallet.signTransaction(tx);
-    signers
-      .filter((s): s is Signer => s !== undefined)
-      .forEach((kp) => {
-        tx.partialSign(kp);
-      });
+type SuccessfulTxSimulationResponse = Omit<SimulatedTransactionResponse, "err">;
 
-    return await simulateTransaction(
-      this.connection,
-      tx,
-      opts.commitment ?? this.opts.commitment ?? "processed"
-    );
+class SimulateError extends Error {
+  constructor(readonly simulationResponse: SimulatedTransactionResponse, message?: string) {
+    super(message);
   }
 }
 
@@ -242,33 +260,6 @@ export interface Wallet {
   signTransaction(tx: Transaction): Promise<Transaction>;
   signAllTransactions(txs: Transaction[]): Promise<Transaction[]>;
   publicKey: PublicKey;
-}
-
-// Copy of Connection.simulateTransaction that takes a commitment parameter.
-async function simulateTransaction(
-  connection: Connection,
-  transaction: Transaction,
-  commitment: Commitment
-): Promise<RpcResponseAndContext<SimulatedTransactionResponse>> {
-  // @ts-ignore
-  transaction.recentBlockhash = await connection._recentBlockhash(
-    // @ts-ignore
-    connection._disableBlockhashCaching
-  );
-
-  const signData = transaction.serializeMessage();
-  // @ts-ignore
-  const wireTransaction = transaction._serialize(signData);
-  const encodedTransaction = wireTransaction.toString("base64");
-  const config: any = { encoding: "base64", commitment };
-  const args = [encodedTransaction, config];
-
-  // @ts-ignore
-  const res = await connection._rpcRequest("simulateTransaction", args);
-  if (res.error) {
-    throw new Error("failed to simulate transaction: " + res.error.message);
-  }
-  return res.result;
 }
 
 // Copy of Connection.sendAndConfirmRawTransaction that throws
@@ -313,19 +304,19 @@ class ConfirmError extends Error {
 /**
  * Sets the default provider on the client.
  */
-export function setProvider(provider: Provider) {
+export function setProvider(provider: AnchorProvider) {
   _provider = provider;
 }
 
 /**
  * Returns the default provider being used by the client.
  */
-export function getProvider(): Provider {
+export function getProvider(): AnchorProvider {
   if (_provider === null) {
-    return Provider.local();
+    return AnchorProvider.local();
   }
   return _provider;
 }
 
 // Global provider used as the default when a provider is not given.
-let _provider: Provider | null = null;
+let _provider: AnchorProvider | null = null;
