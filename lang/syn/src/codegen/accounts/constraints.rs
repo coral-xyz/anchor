@@ -57,8 +57,8 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
         close,
         address,
         associated_token,
-        spl_account,
-        spl_mint,
+        token_account,
+        mint,
     } = c_group.clone();
 
     let mut constraints = Vec::new();
@@ -102,11 +102,11 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
     if let Some(c) = address {
         constraints.push(Constraint::Address(c));
     }
-    if let Some(c) = spl_account {
-        constraints.push(Constraint::SplAccount(c));
+    if let Some(c) = token_account {
+        constraints.push(Constraint::TokenAccount(c));
     }
-    if let Some(c) = spl_mint {
-        constraints.push(Constraint::SplMint(c));
+    if let Some(c) = mint {
+        constraints.push(Constraint::Mint(c));
     }
     constraints
 }
@@ -128,8 +128,8 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::Close(c) => generate_constraint_close(f, c),
         Constraint::Address(c) => generate_constraint_address(f, c),
         Constraint::AssociatedToken(c) => generate_constraint_associated_token(f, c),
-        Constraint::SplAccount(c) => generate_constraint_spl_account(f, c),
-        Constraint::SplMint(c) => generate_constraint_spl_mint(f, c),
+        Constraint::TokenAccount(c) => generate_constraint_token_account(f, c),
+        Constraint::Mint(c) => generate_constraint_mint(f, c),
     }
 }
 
@@ -692,12 +692,12 @@ fn generate_constraint_associated_token(
     }
 }
 
-fn generate_constraint_spl_account(
+fn generate_constraint_token_account(
     f: &Field,
-    c: &ConstraintSplTokenAccount,
+    c: &ConstraintTokenAccountGroup,
 ) -> proc_macro2::TokenStream {
     let name = &f.ident;
-    let account_owner = match &c.auth {
+    let account_owner = match &c.authority {
         Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key()) },
         None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
     };
@@ -717,18 +717,18 @@ fn generate_constraint_spl_account(
     }
 }
 
-fn generate_constraint_spl_mint(f: &Field, c: &ConstraintSplTokenMint) -> proc_macro2::TokenStream {
+fn generate_constraint_mint(f: &Field, c: &ConstraintTokenMintGroup) -> proc_macro2::TokenStream {
     let name = &f.ident;
 
     let decimals = match &c.decimals {
         Some(fa) => quote! { Option::<u8>::Some(#fa) },
         None => quote! { Option::<u8>::None },
     };
-    let mint_authority = match &c.mint_auth {
+    let mint_authority = match &c.mint_authority {
         Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key()) },
         None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
     };
-    let freeze_authority = match &c.mint_freeze_auth {
+    let freeze_authority = match &c.mint_freeze_authority {
         Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key()) },
         None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
     };

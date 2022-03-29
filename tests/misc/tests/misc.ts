@@ -1791,8 +1791,10 @@ describe("misc", () => {
           },
         });
         assert.ok(false);
-      } catch (err) {
-        assert.equal(err.code, 2014);
+      } catch (_err) {
+        assert.isTrue(_err instanceof AnchorError);
+        const err: AnchorError = _err;
+        assert.strictEqual(err.error.errorCode.number, 2014);
       }
     });
 
@@ -1834,9 +1836,10 @@ describe("misc", () => {
           },
         });
         assert.ok(false);
-      } catch (err) {
-        console.log("err", err);
-        assert.equal(err.code, 2015);
+      } catch (_err) {
+        assert.isTrue(_err instanceof AnchorError);
+        const err: AnchorError = _err;
+        assert.strictEqual(err.error.errorCode.number, 2015);
       }
     });
 
@@ -1889,8 +1892,10 @@ describe("misc", () => {
           },
         });
         assert.ok(false);
-      } catch (err) {
-        assert.equal(err.code, 2015);
+      } catch (_err) {
+        assert.isTrue(_err instanceof AnchorError);
+        const err: AnchorError = _err;
+        assert.strictEqual(err.error.errorCode.number, 2015);
       }
     });
 
@@ -1906,7 +1911,6 @@ describe("misc", () => {
         },
         signers: [mint],
       });
-      // right
       await program.rpc.testMintConstraint(6, {
         accounts: {
           mint: mint.publicKey,
@@ -1960,8 +1964,10 @@ describe("misc", () => {
           },
         });
         assert.ok(false);
-      } catch (err) {
-        assert.equal(err.code, 2018);
+      } catch (_err) {
+        assert.isTrue(_err instanceof AnchorError);
+        const err: AnchorError = _err;
+        assert.strictEqual(err.error.errorCode.number, 2018);
       }
     });
 
@@ -1978,7 +1984,6 @@ describe("misc", () => {
         signers: [mint],
       });
 
-      // mintAuthority mismatch
       const fakeAuthority = Keypair.generate();
       try {
         await program.rpc.testMintConstraint(6, {
@@ -1993,8 +1998,10 @@ describe("misc", () => {
           },
         });
         assert.ok(false);
-      } catch (err) {
-        assert.equal(err.code, 2016);
+      } catch (_err) {
+        assert.isTrue(_err instanceof AnchorError);
+        const err: AnchorError = _err;
+        assert.strictEqual(err.error.errorCode.number, 2016);
       }
     });
 
@@ -2012,7 +2019,6 @@ describe("misc", () => {
       });
 
       const fakeAuthority = Keypair.generate();
-      // freezeAuthority mismatch
       try {
         await program.rpc.testMintConstraint(6, {
           accounts: {
@@ -2026,8 +2032,10 @@ describe("misc", () => {
           },
         });
         assert.ok(false);
-      } catch (err) {
-        assert.equal(err.code, 2017);
+      } catch (_err) {
+        assert.isTrue(_err instanceof AnchorError);
+        const err: AnchorError = _err;
+        assert.strictEqual(err.error.errorCode.number, 2017);
       }
     });
 
@@ -2044,7 +2052,6 @@ describe("misc", () => {
         signers: [mint],
       });
 
-      // right
       await program.rpc.testMintOnlyDecimalsConstraint(6, {
         accounts: {
           mint: mint.publicKey,
@@ -2077,7 +2084,6 @@ describe("misc", () => {
         signers: [mint],
       });
 
-      // right
       await program.rpc.testMintOnlyAuthConstraint({
         accounts: {
           mint: mint.publicKey,
@@ -2117,7 +2123,6 @@ describe("misc", () => {
         signers: [mint],
       });
 
-      // right
       await program.rpc.testMintOnlyOneAuthConstraint({
         accounts: {
           mint: mint.publicKey,
@@ -2153,7 +2158,6 @@ describe("misc", () => {
         signers: [mint],
       });
 
-      // right
       await program.rpc.testMintMissMintAuthConstraint(6, {
         accounts: {
           mint: mint.publicKey,

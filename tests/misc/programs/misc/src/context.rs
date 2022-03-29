@@ -487,9 +487,9 @@ pub struct TestConstraintToken<'info> {
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -502,10 +502,11 @@ pub struct TestAuthorityConstraint<'info> {
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
+    /// CHECK:
     pub fake_authority: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
 }
 #[derive(Accounts)]
 pub struct TestOnlyAuthorityConstraint<'info> {
@@ -516,9 +517,9 @@ pub struct TestOnlyAuthorityConstraint<'info> {
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
 }
 #[derive(Accounts)]
 pub struct TestOnlyMintConstraint<'info> {
@@ -529,41 +530,43 @@ pub struct TestOnlyMintConstraint<'info> {
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
-#[instruction(_decimals: u8)]
+#[instruction(decimals: u8)]
 pub struct TestMintConstraint<'info> {
     #[account(
-        mint::decimals = _decimals,
+        mint::decimals = decimals,
         mint::authority = mint_authority,
         mint::freeze_authority = freeze_authority
     )]
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
+    /// CHECK:
     pub mint_authority: AccountInfo<'info>,
+    /// CHECK:
     pub freeze_authority: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
-#[instruction(_decimals: u8)]
+#[instruction(decimals: u8)]
 pub struct TestMintOnlyDecimalsConstraint<'info> {
     #[account(
-        mint::decimals = _decimals,
+        mint::decimals = decimals,
     )]
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -575,11 +578,13 @@ pub struct TestMintAuthorityConstraint<'info> {
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
+    /// CHECK:
     pub mint_authority: AccountInfo<'info>,
+    /// CHECK:
     pub freeze_authority: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
@@ -590,26 +595,28 @@ pub struct TestMintOneAuthorityConstraint<'info> {
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
+    /// CHECK:
     pub mint_authority: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
-#[instruction(_decimals: u8)]
+#[instruction(decimals: u8)]
 pub struct TestMintMissMintAuthConstraint<'info> {
     #[account(
-        mint::decimals = _decimals,
+        mint::decimals = decimals,
         mint::freeze_authority = freeze_authority,
     )]
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
+    /// CHECK:
     pub freeze_authority: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
@@ -621,9 +628,10 @@ pub struct TestAssociatedToken<'info> {
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
     pub payer: Signer<'info>,
-    pub rent: Sysvar<'info, Rent>,
-    pub system_program: Program<'info, System>,
+    /// CHECK:
+    pub authority: AccountInfo<'info>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-    pub authority: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
 }
