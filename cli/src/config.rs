@@ -1,14 +1,16 @@
 use anchor_client::Cluster;
 use anchor_syn::idl::Idl;
-use anyhow::{anyhow, Error, Result};
+use anyhow::{anyhow, Context, Error, Result};
 use clap::{ArgEnum, Parser};
 use heck::ToSnakeCase;
 use serde::{Deserialize, Serialize};
+use solana_cli_config::{Config as SolanaConfig, CONFIG_FILE};
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{Keypair, Signer};
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use std::fs::{self, File};
+use std::io;
 use std::io::prelude::*;
 use std::ops::Deref;
 use std::path::Path;
@@ -55,9 +57,10 @@ pub struct Manifest(cargo_toml::Manifest);
 
 impl Manifest {
     pub fn from_path(p: impl AsRef<Path>) -> Result<Self> {
-        cargo_toml::Manifest::from_path(p)
+        cargo_toml::Manifest::from_path(&p)
             .map(Manifest)
-            .map_err(Into::into)
+            .map_err(anyhow::Error::from)
+            .with_context(|| format!("Error reading manifest from path: {}", p.as_ref().display()))
     }
 
     pub fn lib_name(&self) -> Result<String> {
@@ -99,8 +102,14 @@ impl Manifest {
         let mut cwd_opt = Some(start_from.as_path());
 
         while let Some(cwd) = cwd_opt {
-            for f in fs::read_dir(cwd)? {
-                let p = f?.path();
+            for f in fs::read_dir(cwd).with_context(|| {
+                format!("Error reading the directory with path: {}", cwd.display())
+            })? {
+                let p = f
+                    .with_context(|| {
+                        format!("Error reading the directory with path: {}", cwd.display())
+                    })?
+                    .path();
                 if let Some(filename) = p.file_name() {
                     if filename.to_str() == Some("Cargo.toml") {
                         let m = WithPath::new(Manifest::from_path(&p)?, p);
@@ -166,6 +175,7 @@ impl WithPath<Config> {
                 path.join("src/lib.rs"),
                 version,
                 self.features.seeds,
+                false,
             )?;
             r.push(Program {
                 lib_name,
@@ -187,7 +197,9 @@ impl WithPath<Config> {
                     .unwrap()
                     .join(m)
                     .canonicalize()
-                    .unwrap()
+                    .unwrap_or_else(|_| {
+                        panic!("Error reading workspace.members. File {:?} does not exist at path {:?}.", m, self.path)
+                    })
             })
             .collect();
         let exclude = self
@@ -200,7 +212,9 @@ impl WithPath<Config> {
                     .unwrap()
                     .join(m)
                     .canonicalize()
-                    .unwrap()
+                    .unwrap_or_else(|_| {
+                        panic!("Error reading workspace.exclude. File {:?} does not exist at path {:?}.", m, self.path)
+                    })
             })
             .collect();
         Ok((members, exclude))
@@ -258,6 +272,7 @@ pub struct Config {
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct FeaturesConfig {
+    #[serde(default)]
     pub seeds: bool,
 }
 
@@ -337,8 +352,14 @@ impl Config {
         let mut cwd_opt = Some(_cwd.as_path());
 
         while let Some(cwd) = cwd_opt {
-            for f in fs::read_dir(cwd)? {
-                let p = f?.path();
+            for f in fs::read_dir(cwd).with_context(|| {
+                format!("Error reading the directory with path: {}", cwd.display())
+            })? {
+                let p = f
+                    .with_context(|| {
+                        format!("Error reading the directory with path: {}", cwd.display())
+                    })?
+                    .path();
                 if let Some(filename) = p.file_name() {
                     if filename.to_str() == Some("Anchor.toml") {
                         let cfg = Config::from_path(&p)?;
@@ -354,12 +375,9 @@ impl Config {
     }
 
     fn from_path(p: impl AsRef<Path>) -> Result<Self> {
-        let mut cfg_file = File::open(&p)?;
-        let mut cfg_contents = String::new();
-        cfg_file.read_to_string(&mut cfg_contents)?;
-        let cfg = cfg_contents.parse()?;
-
-        Ok(cfg)
+        fs::read_to_string(&p)
+            .with_context(|| format!("Error reading the file with path: {}", p.as_ref().display()))?
+            .parse()
     }
 
     pub fn wallet_kp(&self) -> Result<Keypair> {
@@ -441,6 +459,16 @@ impl FromStr for Config {
             workspace: cfg.workspace.unwrap_or_default(),
         })
     }
+}
+
+pub fn get_solana_cfg_url() -> Result<String, io::Error> {
+    let config_file = CONFIG_FILE.as_ref().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::NotFound,
+            "Default Solana config was not found",
+        )
+    })?;
+    SolanaConfig::load(config_file).map(|config| config.json_rpc_url)
 }
 
 fn ser_programs(
@@ -546,9 +574,9 @@ pub struct Validator {
     // Range to use for dynamically assigned ports. [default: 1024-65535]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dynamic_port_range: Option<String>,
-    // Enable the faucet on this port [deafult: 9900].
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub faucet_port: Option<u16>,
+    // Enable the faucet on this port [default: 9900].
+    #[serde(default = "default_faucet_port")]
+    pub faucet_port: u16,
     // Give the faucet address this much SOL in genesis. [default: 1000000]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub faucet_sol: Option<String>,
@@ -586,8 +614,12 @@ fn default_bind_address() -> String {
     "0.0.0.0".to_string()
 }
 
-fn default_rpc_port() -> u16 {
-    8899
+pub fn default_rpc_port() -> u16 {
+    solana_sdk::rpc_port::DEFAULT_RPC_PORT
+}
+
+pub fn default_faucet_port() -> u16 {
+    solana_faucet::faucet::FAUCET_PORT
 }
 
 #[derive(Debug, Clone)]
@@ -611,15 +643,22 @@ impl Program {
 
     // Lazily initializes the keypair file with a new key if it doesn't exist.
     pub fn keypair_file(&self) -> Result<WithPath<File>> {
-        fs::create_dir_all("target/deploy/")?;
+        let deploy_dir_path = "target/deploy/";
+        fs::create_dir_all(deploy_dir_path)
+            .with_context(|| format!("Error creating directory with path: {}", deploy_dir_path))?;
         let path = std::env::current_dir()
             .expect("Must have current dir")
             .join(format!("target/deploy/{}-keypair.json", self.lib_name));
         if path.exists() {
-            return Ok(WithPath::new(File::open(&path)?, path));
+            return Ok(WithPath::new(
+                File::open(&path)
+                    .with_context(|| format!("Error opening file with path: {}", path.display()))?,
+                path,
+            ));
         }
         let program_kp = Keypair::generate(&mut rand::rngs::OsRng);
-        let mut file = File::create(&path)?;
+        let mut file = File::create(&path)
+            .with_context(|| format!("Error creating file with path: {}", path.display()))?;
         file.write_all(format!("{:?}", &program_kp.to_bytes()).as_bytes())?;
         Ok(WithPath::new(file, path))
     }
@@ -697,4 +736,4 @@ impl AnchorPackage {
     }
 }
 
-serum_common::home_path!(WalletPath, ".config/solana/id.json");
+crate::home_path!(WalletPath, ".config/solana/id.json");

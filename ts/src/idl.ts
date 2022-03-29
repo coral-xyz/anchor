@@ -7,12 +7,15 @@ export type Idl = {
   name: string;
   instructions: IdlInstruction[];
   state?: IdlState;
-  accounts?: IdlTypeDef[];
+  accounts?: IdlAccountDef[];
   types?: IdlTypeDef[];
   events?: IdlEvent[];
   errors?: IdlErrorCode[];
   constants?: IdlConstant[];
+  metadata?: IdlMetadata;
 };
+
+export type IdlMetadata = any;
 
 export type IdlConstant = {
   name: string;
@@ -35,6 +38,7 @@ export type IdlInstruction = {
   name: string;
   accounts: IdlAccountItem[];
   args: IdlField[];
+  returns?: IdlType;
 };
 
 export type IdlState = {
@@ -76,6 +80,11 @@ export type IdlTypeDef = {
   type: IdlTypeDefTy;
 };
 
+export type IdlAccountDef = {
+  name: string;
+  type: IdlTypeDefTyStruct;
+};
+
 export type IdlTypeDefTyStruct = {
   kind: "struct";
   fields: IdlTypeDefStruct;
@@ -98,8 +107,10 @@ export type IdlType =
   | "i16"
   | "u32"
   | "i32"
+  | "f32"
   | "u64"
   | "i64"
+  | "f64"
   | "u128"
   | "i128"
   | "bytes"

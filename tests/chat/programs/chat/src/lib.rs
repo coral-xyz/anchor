@@ -49,8 +49,8 @@ pub struct CreateUser<'info> {
         space = 320,
     )]
     user: Account<'info, User>,
-    #[account(signer)]
-    authority: AccountInfo<'info>,
+    #[account(mut)]
+    authority: Signer<'info>,
     system_program: AccountInfo<'info>,
 }
 
@@ -68,8 +68,7 @@ pub struct SendMessage<'info> {
         has_one = authority,
     )]
     user: Account<'info, User>,
-    #[account(signer)]
-    authority: AccountInfo<'info>,
+    authority: Signer<'info>,
     #[account(mut)]
     chat_room: Loader<'info, ChatRoom>,
 }
@@ -108,7 +107,7 @@ pub struct Message {
     pub data: [u8; 280],
 }
 
-#[error]
+#[error_code]
 pub enum ErrorCode {
     Unknown,
 }

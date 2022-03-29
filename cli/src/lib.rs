@@ -8,6 +8,7 @@ use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
 use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
+use config::{default_faucet_port, default_rpc_port};
 use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
 use flate2::write::{GzEncoder, ZlibEncoder};
@@ -37,16 +38,19 @@ use solana_sdk::sysvar;
 use solana_sdk::transaction::Transaction;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::BufReader;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Stdio};
+use std::str::FromStr;
 use std::string::ToString;
 use tar::Archive;
 
 pub mod config;
+mod path;
 pub mod template;
 
 // Version of the docker image.
@@ -69,12 +73,18 @@ pub enum Command {
         name: String,
         #[clap(short, long)]
         javascript: bool,
+        #[clap(long)]
+        no_git: bool,
     },
     /// Builds the workspace.
     Build {
         /// Output directory for the IDL.
         #[clap(short, long)]
         idl: Option<String>,
+        /// True if the build should not fail even if there are
+        /// no "CHECK" comments where normally required
+        #[clap(long)]
+        skip_lint: bool,
         /// Output directory for the TypeScript IDL.
         #[clap(short = 't', long)]
         idl_ts: Option<String>,
@@ -156,6 +166,10 @@ pub enum Command {
         /// programs.
         #[clap(long)]
         skip_deploy: bool,
+        /// True if the build should not fail even if there are
+        /// no "CHECK" comments where normally required
+        #[clap(long)]
+        skip_lint: bool,
         /// Flag to skip starting a local validator, if the configured cluster
         /// url is a localnet.
         #[clap(long)]
@@ -191,6 +205,8 @@ pub enum Command {
         #[clap(subcommand)]
         subcmd: IdlCommand,
     },
+    /// Remove all artifacts from the target directory except program keypairs.
+    Clean,
     /// Deploys each program in the workspace.
     Deploy {
         #[clap(short, long)]
@@ -260,6 +276,10 @@ pub enum Command {
         /// programs.
         #[clap(long)]
         skip_deploy: bool,
+        /// True if the build should not fail even if there are
+        /// no "CHECK" comments where normally required
+        #[clap(long)]
+        skip_lint: bool,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
         #[clap(
             required = false,
@@ -359,7 +379,11 @@ pub enum ClusterCommand {
 
 pub fn entry(opts: Opts) -> Result<()> {
     match opts.command {
-        Command::Init { name, javascript } => init(&opts.cfg_override, name, javascript),
+        Command::Init {
+            name,
+            javascript,
+            no_git,
+        } => init(&opts.cfg_override, name, javascript, no_git),
         Command::New { name } => new(&opts.cfg_override, name),
         Command::Rename { from, to } => rename(&opts.cfg_override, from, to),
         Command::Build {
@@ -371,11 +395,13 @@ pub fn entry(opts: Opts) -> Result<()> {
             docker_image,
             bootstrap,
             cargo_args,
+            skip_lint,
         } => build(
             &opts.cfg_override,
             idl,
             idl_ts,
             verifiable,
+            skip_lint,
             program_name,
             solana_version,
             docker_image,
@@ -400,6 +426,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             bootstrap,
             cargo_args,
         ),
+        Command::Clean => clean(&opts.cfg_override),
         Command::Deploy { program_name } => deploy(&opts.cfg_override, program_name),
         Command::Expand {
             program_name,
@@ -418,11 +445,13 @@ pub fn entry(opts: Opts) -> Result<()> {
             detach,
             args,
             cargo_args,
+            skip_lint,
         } => test(
             &opts.cfg_override,
             skip_deploy,
             skip_local_validator,
             skip_build,
+            skip_lint,
             detach,
             args,
             cargo_args,
@@ -441,12 +470,19 @@ pub fn entry(opts: Opts) -> Result<()> {
         Command::Localnet {
             skip_build,
             skip_deploy,
+            skip_lint,
             cargo_args,
-        } => localnet(&opts.cfg_override, skip_build, skip_deploy, cargo_args),
+        } => localnet(
+            &opts.cfg_override,
+            skip_build,
+            skip_deploy,
+            skip_lint,
+            cargo_args,
+        ),
     }
 }
 
-fn init(cfg_override: &ConfigOverride, name: String, javascript: bool) -> Result<()> {
+fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: bool) -> Result<()> {
     if Config::discover(cfg_override)?.is_some() {
         return Err(anyhow!("Workspace already initialized"));
     }
@@ -532,11 +568,24 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool) -> Result
     if !yarn_result.status.success() {
         println!("Failed yarn install will attempt to npm install");
         std::process::Command::new("npm")
+            .arg("install")
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .output()
             .map_err(|e| anyhow::format_err!("npm install failed: {}", e.to_string()))?;
         println!("Failed to install node dependencies")
+    }
+
+    if !no_git {
+        let git_result = std::process::Command::new("git")
+            .arg("init")
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .map_err(|e| anyhow::format_err!("git init failed: {}", e.to_string()))?;
+        if !git_result.status.success() {
+            eprintln!("Failed to automatically initialize a new git repository");
+        }
     }
 
     println!("{} initialized", name);
@@ -828,6 +877,7 @@ pub fn build(
     idl: Option<String>,
     idl_ts: Option<String>,
     verifiable: bool,
+    skip_lint: bool,
     program_name: Option<String>,
     solana_version: Option<String>,
     docker_image: Option<String>,
@@ -879,6 +929,7 @@ pub fn build(
             stdout,
             stderr,
             cargo_args,
+            skip_lint,
         )?,
         // If the Cargo.toml is at the root, build the entire workspace.
         Some(cargo) if cargo.path().parent() == cfg.path().parent() => build_all(
@@ -890,6 +941,7 @@ pub fn build(
             stdout,
             stderr,
             cargo_args,
+            skip_lint,
         )?,
         // Cargo.toml represents a single package. Build it.
         Some(cargo) => build_cwd(
@@ -901,6 +953,7 @@ pub fn build(
             stdout,
             stderr,
             cargo_args,
+            skip_lint,
         )?,
     }
 
@@ -919,6 +972,7 @@ fn build_all(
     stdout: Option<File>, // Used for the package registry server.
     stderr: Option<File>, // Used for the package registry server.
     cargo_args: Vec<String>,
+    skip_lint: bool,
 ) -> Result<()> {
     let cur_dir = std::env::current_dir()?;
     let r = match cfg_path.parent() {
@@ -934,6 +988,7 @@ fn build_all(
                     stdout.as_ref().map(|f| f.try_clone()).transpose()?,
                     stderr.as_ref().map(|f| f.try_clone()).transpose()?,
                     cargo_args.clone(),
+                    skip_lint,
                 )?;
             }
             Ok(())
@@ -954,14 +1009,23 @@ fn build_cwd(
     stdout: Option<File>,
     stderr: Option<File>,
     cargo_args: Vec<String>,
+    skip_lint: bool,
 ) -> Result<()> {
     match cargo_toml.parent() {
         None => return Err(anyhow!("Unable to find parent")),
         Some(p) => std::env::set_current_dir(&p)?,
     };
     match build_config.verifiable {
-        false => _build_cwd(cfg, idl_out, idl_ts_out, cargo_args),
-        true => build_cwd_verifiable(cfg, cargo_toml, build_config, stdout, stderr, cargo_args),
+        false => _build_cwd(cfg, idl_out, idl_ts_out, skip_lint, cargo_args),
+        true => build_cwd_verifiable(
+            cfg,
+            cargo_toml,
+            build_config,
+            stdout,
+            stderr,
+            skip_lint,
+            cargo_args,
+        ),
     }
 }
 
@@ -973,6 +1037,7 @@ fn build_cwd_verifiable(
     build_config: &BuildConfig,
     stdout: Option<File>,
     stderr: Option<File>,
+    skip_lint: bool,
     cargo_args: Vec<String>,
 ) -> Result<()> {
     // Create output dirs.
@@ -1004,7 +1069,7 @@ fn build_cwd_verifiable(
         Ok(_) => {
             // Build the idl.
             println!("Extracting the IDL");
-            if let Ok(Some(idl)) = extract_idl(cfg, "src/lib.rs") {
+            if let Ok(Some(idl)) = extract_idl(cfg, "src/lib.rs", skip_lint) {
                 // Write out the JSON file.
                 println!("Writing the IDL file");
                 let out_file = workspace_dir.join(format!("target/idl/{}.json", idl.name));
@@ -1264,6 +1329,7 @@ fn _build_cwd(
     cfg: &WithPath<Config>,
     idl_out: Option<PathBuf>,
     idl_ts_out: Option<PathBuf>,
+    skip_lint: bool,
     cargo_args: Vec<String>,
 ) -> Result<()> {
     let exit = std::process::Command::new("cargo")
@@ -1278,7 +1344,7 @@ fn _build_cwd(
     }
 
     // Always assume idl is located at src/lib.rs.
-    if let Some(idl) = extract_idl(cfg, "src/lib.rs")? {
+    if let Some(idl) = extract_idl(cfg, "src/lib.rs", skip_lint)? {
         // JSON out path.
         let out = match idl_out {
             None => PathBuf::from(".").join(&idl.name).with_extension("json"),
@@ -1335,6 +1401,7 @@ fn verify(
         None,                                                  // idl
         None,                                                  // idl ts
         true,                                                  // verifiable
+        true,                                                  // skip lint
         None,                                                  // program name
         solana_version.or_else(|| cfg.solana_version.clone()), // solana version
         docker_image,                                          // docker image
@@ -1362,7 +1429,7 @@ fn verify(
     }
 
     // Verify IDL (only if it's not a buffer account).
-    if let Some(local_idl) = extract_idl(&cfg, "src/lib.rs")? {
+    if let Some(local_idl) = extract_idl(&cfg, "src/lib.rs", true)? {
         if bin_ver.state != BinVerificationState::Buffer {
             let deployed_idl = fetch_idl(cfg_override, program_id)?;
             if local_idl != deployed_idl {
@@ -1499,8 +1566,21 @@ pub enum BinVerificationState {
 
 // Fetches an IDL for the given program_id.
 fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
-    let cfg = Config::discover(cfg_override)?.expect("Inside a workspace");
-    let url = cluster_url(&cfg);
+    let url = match Config::discover(cfg_override)? {
+        Some(cfg) => cluster_url(&cfg),
+        None => {
+            // If the command is not run inside a workspace,
+            // cluster_url will be used from default solana config
+            // provider.cluster option can be used to override this
+
+            if let Some(cluster) = cfg_override.cluster.clone() {
+                cluster.url().to_string()
+            } else {
+                config::get_solana_cfg_url()?
+            }
+        }
+    };
+
     let client = RpcClient::new(url);
 
     let mut account = client
@@ -1526,12 +1606,12 @@ fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
     serde_json::from_slice(&s[..]).map_err(Into::into)
 }
 
-fn extract_idl(cfg: &WithPath<Config>, file: &str) -> Result<Option<Idl>> {
+fn extract_idl(cfg: &WithPath<Config>, file: &str, skip_lint: bool) -> Result<Option<Idl>> {
     let file = shellexpand::tilde(file);
     let manifest_from_path = std::env::current_dir()?.join(PathBuf::from(&*file).parent().unwrap());
     let cargo = Manifest::discover_from_path(manifest_from_path)?
         .ok_or_else(|| anyhow!("Cargo.toml not found"))?;
-    anchor_syn::idl::file::parse(&*file, cargo.version(), cfg.features.seeds)
+    anchor_syn::idl::file::parse(&*file, cargo.version(), cfg.features.seeds, !skip_lint)
 }
 
 fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
@@ -1621,12 +1701,12 @@ fn idl_set_buffer(cfg_override: &ConfigOverride, program_id: Pubkey, buffer: Pub
         };
 
         // Build the transaction.
-        let (recent_hash, _fee_calc) = client.get_recent_blockhash()?;
+        let latest_hash = client.get_latest_blockhash()?;
         let tx = Transaction::new_signed_with_payer(
             &[set_buffer_ix],
             Some(&keypair.pubkey()),
             &[&keypair],
-            recent_hash,
+            latest_hash,
         );
 
         // Send the transaction.
@@ -1712,12 +1792,12 @@ fn idl_set_authority(
             data,
         };
         // Send transaction.
-        let (recent_hash, _fee_calc) = client.get_recent_blockhash()?;
+        let latest_hash = client.get_latest_blockhash()?;
         let tx = Transaction::new_signed_with_payer(
             &[ix],
             Some(&keypair.pubkey()),
             &[&keypair],
-            recent_hash,
+            latest_hash,
         );
         client.send_and_confirm_transaction_with_spinner_and_config(
             &tx,
@@ -1797,12 +1877,12 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
             data,
         };
         // Send transaction.
-        let (recent_hash, _fee_calc) = client.get_recent_blockhash()?;
+        let latest_hash = client.get_latest_blockhash()?;
         let tx = Transaction::new_signed_with_payer(
             &[ix],
             Some(&keypair.pubkey()),
             &[&keypair],
-            recent_hash,
+            latest_hash,
         );
         client.send_and_confirm_transaction_with_spinner_and_config(
             &tx,
@@ -1824,7 +1904,7 @@ fn idl_parse(
     out_ts: Option<String>,
 ) -> Result<()> {
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
-    let idl = extract_idl(&cfg, &file)?.ok_or_else(|| anyhow!("IDL not parsed"))?;
+    let idl = extract_idl(&cfg, &file, true)?.ok_or_else(|| anyhow!("IDL not parsed"))?;
     let out = match out {
         None => OutFile::Stdout,
         Some(out) => OutFile::File(PathBuf::from(out)),
@@ -1864,11 +1944,13 @@ enum OutFile {
 }
 
 // Builds, deploys, and tests all workspace programs in a single command.
+#[allow(clippy::too_many_arguments)]
 fn test(
     cfg_override: &ConfigOverride,
     skip_deploy: bool,
     skip_local_validator: bool,
     skip_build: bool,
+    skip_lint: bool,
     detach: bool,
     extra_args: Vec<String>,
     cargo_args: Vec<String>,
@@ -1881,6 +1963,7 @@ fn test(
                 None,
                 None,
                 false,
+                skip_lint,
                 None,
                 None,
                 None,
@@ -2035,7 +2118,8 @@ fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
             }
         }
         if let Some(validator) = &test.validator {
-            for (key, value) in serde_json::to_value(validator)?.as_object().unwrap() {
+            let entries = serde_json::to_value(validator)?;
+            for (key, value) in entries.as_object().unwrap() {
                 if key == "ledger" {
                     // Ledger flag is a special case as it is passed separately to the rest of
                     // these validator flags.
@@ -2049,10 +2133,58 @@ fn validator_flags(cfg: &WithPath<Config>) -> Result<Vec<String>> {
                         flags.push(entry["filename"].as_str().unwrap().to_string());
                     }
                 } else if key == "clone" {
-                    for entry in value.as_array().unwrap() {
+                    // Client for fetching accounts data
+                    let client = if let Some(url) = entries["url"].as_str() {
+                        RpcClient::new(url.to_string())
+                    } else {
+                        return Err(anyhow!(
+                    "Validator url for Solana's JSON RPC should be provided in order to clone accounts from it"
+                ));
+                    };
+
+                    let mut pubkeys = value
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .map(|entry| {
+                            let address = entry["address"].as_str().unwrap();
+                            Pubkey::from_str(address)
+                                .map_err(|_| anyhow!("Invalid pubkey {}", address))
+                        })
+                        .collect::<Result<HashSet<Pubkey>>>()?;
+
+                    let accounts_keys = pubkeys.iter().cloned().collect::<Vec<_>>();
+                    let accounts = client
+                        .get_multiple_accounts_with_commitment(
+                            &accounts_keys,
+                            CommitmentConfig::default(),
+                        )?
+                        .value;
+
+                    // Check if there are program accounts
+                    for (account, acc_key) in accounts.iter().zip(accounts_keys) {
+                        if let Some(account) = account {
+                            if account.owner == bpf_loader_upgradeable::id() {
+                                let upgradable: UpgradeableLoaderState = account
+                                    .deserialize_data()
+                                    .map_err(|_| anyhow!("Invalid program account {}", acc_key))?;
+
+                                if let UpgradeableLoaderState::Program {
+                                    programdata_address,
+                                } = upgradable
+                                {
+                                    pubkeys.insert(programdata_address);
+                                }
+                            }
+                        } else {
+                            return Err(anyhow!("Account {} not found", acc_key));
+                        }
+                    }
+
+                    for pubkey in &pubkeys {
                         // Push the clone flag for each array entry
                         flags.push("--clone".to_string());
-                        flags.push(entry["address"].as_str().unwrap().to_string());
+                        flags.push(pubkey.to_string());
                     }
                 } else {
                     // Remaining validator flags are non-array types
@@ -2149,6 +2281,27 @@ fn start_test_validator(
 
     let rpc_url = test_validator_rpc_url(cfg);
 
+    let rpc_port = cfg
+        .test
+        .as_ref()
+        .and_then(|test| test.validator.as_ref().map(|v| v.rpc_port))
+        .unwrap_or_else(default_rpc_port);
+    if !portpicker::is_free(rpc_port) {
+        return Err(anyhow!(
+            "Your configured rpc port: {rpc_port} is already in use"
+        ));
+    }
+    let faucet_port = cfg
+        .test
+        .as_ref()
+        .and_then(|test| test.validator.as_ref().map(|v| v.faucet_port))
+        .unwrap_or_else(default_faucet_port);
+    if !portpicker::is_free(faucet_port) {
+        return Err(anyhow!(
+            "Your configured faucet port: {faucet_port} is already in use"
+        ));
+    }
+
     let mut validator_handle = std::process::Command::new("solana-test-validator")
         .arg("--ledger")
         .arg(test_ledger_directory)
@@ -2169,7 +2322,7 @@ fn start_test_validator(
         .and_then(|test| test.startup_wait)
         .unwrap_or(5_000);
     while count < ms_wait {
-        let r = client.get_recent_blockhash();
+        let r = client.get_latest_blockhash();
         if r.is_ok() {
             break;
         }
@@ -2178,7 +2331,7 @@ fn start_test_validator(
     }
     if count == ms_wait {
         eprintln!(
-            "Unable to get recent blockhash. Test validator does not look started. Check {} for errors. Consider increasing [test.startup_wait] in Anchor.toml.",
+            "Unable to get latest blockhash. Test validator does not look started. Check {} for errors. Consider increasing [test.startup_wait] in Anchor.toml.",
             test_ledger_log_filename
         );
         validator_handle.kill()?;
@@ -2236,6 +2389,34 @@ fn cluster_url(cfg: &Config) -> String {
         true => test_validator_rpc_url(cfg),
         false => cfg.provider.cluster.url().to_string(),
     }
+}
+
+fn clean(cfg_override: &ConfigOverride) -> Result<()> {
+    let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
+    let cfg_parent = cfg.path().parent().expect("Invalid Anchor.toml");
+    let target_dir = cfg_parent.join("target");
+    let deploy_dir = target_dir.join("deploy");
+
+    for entry in fs::read_dir(target_dir)? {
+        let path = entry?.path();
+        if path.is_dir() && path != deploy_dir {
+            fs::remove_dir_all(&path)
+                .map_err(|e| anyhow!("Could not remove directory {}: {}", path.display(), e))?;
+        } else if path.is_file() {
+            fs::remove_file(&path)
+                .map_err(|e| anyhow!("Could not remove file {}: {}", path.display(), e))?;
+        }
+    }
+
+    for file in fs::read_dir(deploy_dir)? {
+        let path = file?.path();
+        if path.extension() != Some(&OsString::from("json")) {
+            fs::remove_file(&path)
+                .map_err(|e| anyhow!("Could not remove file {}: {}", path.display(), e))?;
+        }
+    }
+
+    Ok(())
 }
 
 fn deploy(cfg_override: &ConfigOverride, program_str: Option<String>) -> Result<()> {
@@ -2370,12 +2551,12 @@ fn create_idl_account(
             accounts,
             data,
         };
-        let (recent_hash, _fee_calc) = client.get_recent_blockhash()?;
+        let latest_hash = client.get_latest_blockhash()?;
         let tx = Transaction::new_signed_with_payer(
             &[ix],
             Some(&keypair.pubkey()),
             &[&keypair],
-            recent_hash,
+            latest_hash,
         );
         client.send_and_confirm_transaction_with_spinner_and_config(
             &tx,
@@ -2436,12 +2617,12 @@ fn create_idl_buffer(
     };
 
     // Build the transaction.
-    let (recent_hash, _fee_calc) = client.get_recent_blockhash()?;
+    let latest_hash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(
         &[create_account_ix, create_buffer_ix],
         Some(&keypair.pubkey()),
         &[&keypair, &buffer],
-        recent_hash,
+        latest_hash,
     );
 
     // Send the transaction.
@@ -2805,6 +2986,7 @@ fn publish(
         None,
         None,
         true,
+        false,
         Some(program_name),
         None,
         None,
@@ -2892,6 +3074,7 @@ fn localnet(
     cfg_override: &ConfigOverride,
     skip_build: bool,
     skip_deploy: bool,
+    skip_lint: bool,
     cargo_args: Vec<String>,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
@@ -2902,6 +3085,7 @@ fn localnet(
                 None,
                 None,
                 false,
+                skip_lint,
                 None,
                 None,
                 None,

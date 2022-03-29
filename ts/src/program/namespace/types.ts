@@ -10,6 +10,7 @@ import {
   IdlTypeDefTyStruct,
 } from "../../idl";
 import { Accounts, Context } from "../context";
+import { MethodsBuilder } from "./methods";
 
 /**
  * All instructions for an IDL.
@@ -66,7 +67,11 @@ export type MakeInstructionsNamespace<
 };
 
 export type MakeMethodsNamespace<IDL extends Idl, I extends IdlInstruction> = {
-  [M in keyof InstructionMap<I>]: MethodsFn<IDL, InstructionMap<I>[M], any>;
+  [M in keyof InstructionMap<I>]: MethodsFn<
+    IDL,
+    InstructionMap<I>[M],
+    MethodsBuilder<IDL, InstructionMap<I>[M]>
+  >;
 };
 
 export type InstructionContextFn<
@@ -94,11 +99,10 @@ type TypeMap = {
   bool: boolean;
   string: string;
 } & {
-  [K in "u8" | "i8" | "u16" | "i16" | "u32" | "i32"]: number;
-} &
-  {
-    [K in "u64" | "i64" | "u128" | "i128"]: BN;
-  };
+  [K in "u8" | "i8" | "u16" | "i16" | "u32" | "i32" | "f32" | "f64"]: number;
+} & {
+  [K in "u64" | "i64" | "u128" | "i128"]: BN;
+};
 
 export type DecodeType<T extends IdlType, Defined> = T extends keyof TypeMap
   ? TypeMap[T]
@@ -107,7 +111,7 @@ export type DecodeType<T extends IdlType, Defined> = T extends keyof TypeMap
   : T extends { option: { defined: keyof Defined } }
   ? Defined[T["option"]["defined"]] | null
   : T extends { option: keyof TypeMap }
-  ? TypeMap[T["option"]]
+  ? TypeMap[T["option"]] | null
   : T extends { vec: keyof TypeMap }
   ? TypeMap[T["vec"]][]
   : T extends { array: [defined: keyof TypeMap, size: number] }
@@ -121,8 +125,7 @@ type ArgsTuple<A extends IdlField[], Defined> = {
   [K in keyof A]: A[K] extends IdlField
     ? DecodeType<A[K]["type"], Defined>
     : unknown;
-} &
-  unknown[];
+} & unknown[];
 
 type FieldsOfType<I extends IdlTypeDef> = NonNullable<
   I["type"] extends IdlTypeDefTyStruct

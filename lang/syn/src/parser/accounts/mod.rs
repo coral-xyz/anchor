@@ -39,55 +39,84 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
 
 fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
     // INIT
-    let init_field = fields.iter().find(|f| {
-        if let AccountField::Field(field) = f {
-            field.constraints.init.is_some()
-        } else {
-            false
-        }
-    });
-    if let Some(init_field) = init_field {
+    let init_fields: Vec<&Field> = fields
+        .iter()
+        .filter_map(|f| match f {
+            AccountField::Field(field) if field.constraints.init.is_some() => Some(field),
+            _ => None,
+        })
+        .collect();
+
+    if !init_fields.is_empty() {
         // init needs system program.
         if fields.iter().all(|f| f.ident() != "system_program") {
             return Err(ParseError::new(
-                init_field.ident().span(),
+                init_fields[0].ident.span(),
                 "the init constraint requires \
                 the system_program field to exist in the account \
                 validation struct. Use the program type to add \
                 the system_program field to your validation struct.",
             ));
         }
-        if let AccountField::Field(field) = init_field {
-            let kind = &field.constraints.init.as_ref().unwrap().kind;
-            // init token/a_token/mint needs token program.
-            match kind {
-                InitKind::Program { .. } => (),
-                InitKind::Token { .. }
-                | InitKind::AssociatedToken { .. }
-                | InitKind::Mint { .. } => {
-                    if fields.iter().all(|f| f.ident() != "token_program") {
-                        return Err(ParseError::new(
-                            init_field.ident().span(),
-                            "the init constraint requires \
+
+        let kind = &init_fields[0].constraints.init.as_ref().unwrap().kind;
+        // init token/a_token/mint needs token program.
+        match kind {
+            InitKind::Program { .. } => (),
+            InitKind::Token { .. } | InitKind::AssociatedToken { .. } | InitKind::Mint { .. } => {
+                if fields.iter().all(|f| f.ident() != "token_program") {
+                    return Err(ParseError::new(
+                        init_fields[0].ident.span(),
+                        "the init constraint requires \
                             the token_program field to exist in the account \
                             validation struct. Use the program type to add \
                             the token_program field to your validation struct.",
-                        ));
-                    }
+                    ));
                 }
             }
-            // a_token needs associated token program.
-            if let InitKind::AssociatedToken { .. } = kind {
-                if fields
-                    .iter()
-                    .all(|f| f.ident() != "associated_token_program")
-                {
-                    return Err(ParseError::new(
-                        init_field.ident().span(),
-                        "the init constraint requires \
+        }
+        // a_token needs associated token program.
+        if let InitKind::AssociatedToken { .. } = kind {
+            if fields
+                .iter()
+                .all(|f| f.ident() != "associated_token_program")
+            {
+                return Err(ParseError::new(
+                    init_fields[0].ident.span(),
+                    "the init constraint requires \
                     the associated_token_program field to exist in the account \
                     validation struct. Use the program type to add \
                     the associated_token_program field to your validation struct.",
+                ));
+            }
+        }
+
+        for field in init_fields {
+            // Get payer for init-ed account
+            let associated_payer_name = match field.constraints.init.clone().unwrap().payer {
+                // composite payer, check not supported
+                Expr::Field(_) => continue,
+                field_name => field_name.to_token_stream().to_string(),
+            };
+
+            // Check payer is mutable
+            let associated_payer_field = fields.iter().find_map(|f| match f {
+                AccountField::Field(field) if *f.ident() == associated_payer_name => Some(field),
+                _ => None,
+            });
+            match associated_payer_field {
+                Some(associated_payer_field) => {
+                    if !associated_payer_field.constraints.is_mutable() {
+                        return Err(ParseError::new(
+                            field.ident.span(),
+                            "the payer specified for an init constraint must be mutable.",
+                        ));
+                    }
+                }
+                _ => {
+                    return Err(ParseError::new(
+                        field.ident.span(),
+                        "the payer specified does not exist.",
                     ));
                 }
             }
@@ -98,6 +127,21 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
 
 pub fn parse_account_field(f: &syn::Field, has_instruction_api: bool) -> ParseResult<AccountField> {
     let ident = f.ident.clone().unwrap();
+    let docs: String = f
+        .attrs
+        .iter()
+        .map(|a| {
+            let meta_result = a.parse_meta();
+            if let Ok(syn::Meta::NameValue(meta)) = meta_result {
+                if meta.path.is_ident("doc") {
+                    if let syn::Lit::Str(doc) = meta.lit {
+                        return format!(" {}\n", doc.value().trim());
+                    }
+                }
+            }
+            "".to_string()
+        })
+        .collect::<String>();
     let account_field = match is_field_primitive(f)? {
         true => {
             let ty = parse_ty(f)?;
@@ -108,6 +152,7 @@ pub fn parse_account_field(f: &syn::Field, has_instruction_api: bool) -> ParseRe
                 ty,
                 constraints: account_constraints,
                 instruction_constraints,
+                docs,
             })
         }
         false => {
@@ -119,6 +164,7 @@ pub fn parse_account_field(f: &syn::Field, has_instruction_api: bool) -> ParseRe
                 instruction_constraints,
                 symbol: ident_string(f)?,
                 raw_field: f.clone(),
+                docs,
             })
         }
     };

@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Result};
-use dialoguer::Input;
 use once_cell::sync::Lazy;
 use reqwest::header::USER_AGENT;
 use semver::Version;
@@ -50,26 +49,44 @@ pub fn use_version(version: &Version) -> Result<()> {
     let installed_versions = read_installed_versions();
     // Make sure the requested version is installed
     if !installed_versions.contains(version) {
-        let input: String = Input::new()
-            .with_prompt(format!(
-                "anchor-cli {} is not installed, would you like to install it? (y/n)",
-                version
-            ))
-            .with_initial_text("y")
-            .default("n".into())
-            .interact_text()?;
-        if matches!(input.as_str(), "y" | "yy" | "Y" | "yes" | "Yes") {
-            install_version(version)?;
+        if let Ok(current) = current_version() {
+            println!(
+                "Version {} is not installed, staying on version {}.",
+                version, current
+            );
+        } else {
+            println!("Version {} is not installed, no current version.", version);
         }
+
+        return Err(anyhow!(
+            "You need to run 'avm install {}' to install it before using it.",
+            version
+        ));
     }
 
     let mut current_version_file = fs::File::create(current_version_file_path().as_path())?;
     current_version_file.write_all(version.to_string().as_bytes())?;
+    println!("Now using anchor version {}.", current_version()?);
     Ok(())
 }
 
+/// Update to the latest version
+pub fn update() -> Result<()> {
+    // Find last stable version
+    let version = &get_latest_version();
+
+    install_version(version, false)
+}
+
 /// Install a version of anchor-cli
-pub fn install_version(version: &Version) -> Result<()> {
+pub fn install_version(version: &Version, force: bool) -> Result<()> {
+    // If version is already installed we ignore the request.
+    let installed_versions = read_installed_versions();
+    if installed_versions.contains(version) && !force {
+        println!("Version {} is already installed", version);
+        return Ok(());
+    }
+
     let exit = std::process::Command::new("cargo")
         .args(&[
             "install",
@@ -98,7 +115,13 @@ pub fn install_version(version: &Version) -> Result<()> {
         &AVM_HOME.join("bin").join("anchor"),
         &AVM_HOME.join("bin").join(format!("anchor-{}", version)),
     )?;
-    Ok(())
+    // If .version file is empty or not parseable, write the newly installed version to it
+    if current_version().is_err() {
+        let mut current_version_file = fs::File::create(current_version_file_path().as_path())?;
+        current_version_file.write_all(version.to_string().as_bytes())?;
+    }
+
+    use_version(version)
 }
 
 /// Remove an installed version of anchor-cli
@@ -174,7 +197,7 @@ pub fn list_versions() -> Result<()> {
         if installed_versions.contains(v) {
             flags.push("installed");
         }
-        if current_version().unwrap() == v.clone() {
+        if current_version().is_ok() && current_version().unwrap() == v.clone() {
             flags.push("current");
         }
         if flags.is_empty() {
@@ -250,6 +273,9 @@ mod tests {
         let mut current_version_file =
             fs::File::create(current_version_file_path().as_path()).unwrap();
         current_version_file.write_all("0.18.2".as_bytes()).unwrap();
+        // Sync the file to disk before the read in current_version() to
+        // mitigate the read not seeing the written version bytes.
+        current_version_file.sync_all().unwrap();
         assert!(current_version().unwrap() == Version::parse("0.18.2").unwrap());
     }
 
@@ -267,6 +293,9 @@ mod tests {
         let mut current_version_file =
             fs::File::create(current_version_file_path().as_path()).unwrap();
         current_version_file.write_all("0.18.2".as_bytes()).unwrap();
+        // Sync the file to disk before the read in current_version() to
+        // mitigate the read not seeing the written version bytes.
+        current_version_file.sync_all().unwrap();
         // Create a fake binary for anchor-0.18.2 in the bin directory
         fs::File::create(version_binary_path(&version)).unwrap();
         uninstall_version(&version).unwrap();

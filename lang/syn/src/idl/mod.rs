@@ -45,6 +45,7 @@ pub struct IdlInstruction {
     pub name: String,
     pub accounts: Vec<IdlAccountItem>,
     pub args: Vec<IdlField>,
+    pub returns: Option<IdlType>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -174,8 +175,10 @@ pub enum IdlType {
     I16,
     U32,
     I32,
+    F32,
     U64,
     I64,
+    F64,
     U128,
     I128,
     Bytes,
@@ -213,8 +216,10 @@ impl std::str::FromStr for IdlType {
             "i16" => IdlType::I16,
             "u32" => IdlType::U32,
             "i32" => IdlType::I32,
+            "f32" => IdlType::F32,
             "u64" => IdlType::U64,
             "i64" => IdlType::I64,
+            "f64" => IdlType::F64,
             "u128" => IdlType::U128,
             "i128" => IdlType::I128,
             "Vec<u8>" => IdlType::Bytes,
