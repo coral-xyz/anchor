@@ -1,6 +1,6 @@
 const anchor = require("@project-serum/anchor");
 const serumCmn = require("@project-serum/common");
-const assert = require("assert");
+const { assert } = require("chai");
 
 describe("cashiers-check", () => {
   // Configure the client to use the local cluster.
@@ -63,19 +63,19 @@ describe("cashiers-check", () => {
     });
 
     const checkAccount = await program.account.check.fetch(check.publicKey);
-    assert.ok(checkAccount.from.equals(god));
-    assert.ok(checkAccount.to.equals(receiver));
-    assert.ok(checkAccount.amount.eq(new anchor.BN(100)));
-    assert.ok(checkAccount.memo === "Hello world");
-    assert.ok(checkAccount.vault.equals(vault.publicKey));
-    assert.ok(checkAccount.nonce === nonce);
-    assert.ok(checkAccount.burned === false);
+    assert.isTrue(checkAccount.from.equals(god));
+    assert.isTrue(checkAccount.to.equals(receiver));
+    assert.isTrue(checkAccount.amount.eq(new anchor.BN(100)));
+    assert.strictEqual(checkAccount.memo, "Hello world");
+    assert.isTrue(checkAccount.vault.equals(vault.publicKey));
+    assert.strictEqual(checkAccount.nonce, nonce);
+    assert.isFalse(checkAccount.burned);
 
     let vaultAccount = await serumCmn.getTokenAccount(
       program.provider,
       checkAccount.vault
     );
-    assert.ok(vaultAccount.amount.eq(new anchor.BN(100)));
+    assert.isTrue(vaultAccount.amount.eq(new anchor.BN(100)));
   });
 
   it("Cashes a check", async () => {
@@ -91,18 +91,18 @@ describe("cashiers-check", () => {
     });
 
     const checkAccount = await program.account.check.fetch(check.publicKey);
-    assert.ok(checkAccount.burned === true);
+    assert.isTrue(checkAccount.burned);
 
     let vaultAccount = await serumCmn.getTokenAccount(
       program.provider,
       checkAccount.vault
     );
-    assert.ok(vaultAccount.amount.eq(new anchor.BN(0)));
+    assert.isTrue(vaultAccount.amount.eq(new anchor.BN(0)));
 
     let receiverAccount = await serumCmn.getTokenAccount(
       program.provider,
       receiver
     );
-    assert.ok(receiverAccount.amount.eq(new anchor.BN(100)));
+    assert.isTrue(receiverAccount.amount.eq(new anchor.BN(100)));
   });
 });

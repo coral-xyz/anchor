@@ -1,5 +1,6 @@
 const anchor = require("@project-serum/anchor");
-const assert = require("assert");
+const splToken = require("@solana/spl-token");
+const { assert } = require("chai");
 
 describe("system_accounts", () => {
   anchor.setProvider(anchor.Provider.local());
@@ -51,9 +52,8 @@ describe("system_accounts", () => {
       assert.ok(false);
     } catch (err) {
       const errMsg = "The given account is not owned by the system program";
-      assert.equal(err.toString(), errMsg);
-      assert.equal(err.msg, errMsg);
-      assert.equal(err.code, 3011);
+      assert.strictEqual(err.error.errorMessage, errMsg);
+      assert.strictEqual(err.error.errorCode.number, 3011);
     }
   });
 });

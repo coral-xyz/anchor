@@ -35,6 +35,9 @@ pub use solana_sdk;
 
 mod cluster;
 
+const PROGRAM_LOG: &str = "Program log: ";
+const PROGRAM_DATA: &str = "Program data: ";
+
 /// EventHandle unsubscribes from a program event stream on drop.
 pub type EventHandle = PubsubClientSubscription<RpcResponse<RpcLogsResponse>>;
 
@@ -279,8 +282,10 @@ fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
     l: &str,
 ) -> Result<(Option<T>, Option<String>, bool), ClientError> {
     // Log emitted from the current program.
-    if l.starts_with("Program log:") {
-        let log = l.to_string().split_off("Program log: ".len());
+    if let Some(log) = l
+        .strip_prefix(PROGRAM_LOG)
+        .or_else(|| l.strip_prefix(PROGRAM_DATA))
+    {
         let borsh_bytes = match anchor_lang::__private::base64::decode(&log) {
             Ok(borsh_bytes) => borsh_bytes,
             _ => {
@@ -539,12 +544,12 @@ impl<'a> RequestBuilder<'a> {
         let rpc_client = RpcClient::new_with_commitment(self.cluster, self.options);
 
         let tx = {
-            let (recent_hash, _fee_calc) = rpc_client.get_recent_blockhash()?;
+            let latest_hash = rpc_client.get_latest_blockhash()?;
             Transaction::new_signed_with_payer(
                 &instructions,
                 Some(&self.payer.pubkey()),
                 &signers,
-                recent_hash,
+                latest_hash,
             )
         };
 
