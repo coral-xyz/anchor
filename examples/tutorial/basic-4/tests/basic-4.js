@@ -38,4 +38,24 @@ describe("basic-4", () => {
     const state = await program.state.fetch();
     assert.ok(state.count.eq(new anchor.BN(1)));
   });
+
+  it("Is not authorized", async () => {
+    try {
+      let unauthorizedKey = anchor.web3.Keypair.generate();
+      // #region instruction
+      await program.state.rpc.increment({
+        accounts: {
+          authority: unauthorizedKey.publicKey,
+        },
+        signers: [unauthorizedKey],
+      });
+      // #endregion instruction
+      assert.fail();
+    } catch (err) {
+      assert.equal(
+        "You are not authorized to perform this action.",
+        err.error.errorMessage
+      );
+    }
+  });
 });
