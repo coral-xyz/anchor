@@ -12,6 +12,12 @@ name = "basic_1"
 [features]
 no-entrypoint = []
 cpi = ["no-entrypoint"]
+test-bpf = [ "solana-validator" ]
 
 [dependencies]
 anchor-lang = { path = "../../../../../lang" }
+solana-validator = { version = "1.9.14", optional = true }
+
+[dev-dependencies]
+solana-program-test = "1.9.14"
+solana-sdk = "1.9.14"
