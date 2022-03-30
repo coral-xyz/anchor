@@ -1,3 +1,4 @@
+use crate::is_hidden;
 use anchor_client::Cluster;
 use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Context, Error, Result};
@@ -17,7 +18,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use walkdir::WalkDir;
-use crate::is_hidden;
 
 pub trait Merge: Sized {
     fn merge(&mut self, _other: Self) {}
