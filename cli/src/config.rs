@@ -17,7 +17,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use walkdir::WalkDir;
-
 use crate::is_hidden;
 
 pub trait Merge: Sized {
