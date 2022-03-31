@@ -142,13 +142,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         ) -> anchor_lang::Result<()> {
             // Split the instruction data into the first 8 byte method
             // identifier (sighash) and the serialized instruction data.
-            let mut ix_data: &[u8] = data;
-            let sighash: [u8; 8] = {
-                let mut sighash: [u8; 8] = [0; 8];
-                sighash.copy_from_slice(&ix_data[..8]);
-                ix_data = &ix_data[8..];
-                sighash
-            };
+            let (sighash, mut ix_data) = data.split_at(8);
 
             // If the method identifier is the IDL tag, then execute an IDL
             // instruction, injected into all Anchor programs.
