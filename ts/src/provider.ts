@@ -15,12 +15,28 @@ import { bs58 } from "./utils/bytes/index.js";
 import { isBrowser } from "./utils/common.js";
 
 export interface Provider {
-  readonly connection: Connection,
+  readonly connection: Connection;
 
-  send?(req: SendTxRequest, opts?: SendOptions): Promise<TransactionSignature>;
-  sendAndConfirm?(req: SendTxRequest, opts?: ConfirmOptions): Promise<TransactionSignature>;
-  sendAll?(reqs: Array<SendTxRequest>, opts?: ConfirmOptions): Promise<Array<TransactionSignature>>;
-  simulate?(req: SendTxRequest, preflightCommitment?: Commitment, includeAccounts?: boolean | PublicKey[]): Promise<SuccessfulTxSimulationResponse>;
+  send?(
+    tx: Transaction,
+    signers: Signer[],
+    opts?: SendOptions
+  ): Promise<TransactionSignature>;
+  sendAndConfirm?(
+    tx: Transaction,
+    signers: Signer[],
+    opts?: ConfirmOptions
+  ): Promise<TransactionSignature>;
+  sendAll?(
+    txWithSigners: { tx: Transaction; signers: Signer[] }[],
+    opts?: ConfirmOptions
+  ): Promise<Array<TransactionSignature>>;
+  simulate?(
+    tx: Transaction,
+    signers: Signer[],
+    commitment?: Commitment,
+    includeAccounts?: boolean | PublicKey[]
+  ): Promise<SuccessfulTxSimulationResponse>;
 }
 
 /**
@@ -99,26 +115,27 @@ export default class AnchorProvider implements Provider {
    * @param opts    Transaction confirmation options.
    */
   async send(
-    req: SendTxRequest,
+    tx: Transaction,
+    signers: Signer[],
     opts?: ConfirmOptions
   ): Promise<TransactionSignature> {
     if (opts === undefined) {
       opts = this.opts;
     }
 
-    req.tx.feePayer = this.wallet.publicKey;
-    req.tx.recentBlockhash = (
+    tx.feePayer = this.wallet.publicKey;
+    tx.recentBlockhash = (
       await this.connection.getRecentBlockhash(opts.preflightCommitment)
     ).blockhash;
 
-    req.tx = await this.wallet.signTransaction(req.tx);
-    req.signers
+    tx = await this.wallet.signTransaction(tx);
+    signers
       .filter((s): s is Signer => s !== undefined)
       .forEach((kp) => {
-        req.tx.partialSign(kp);
+        tx.partialSign(kp);
       });
 
-    const rawTx = req.tx.serialize();
+    const rawTx = tx.serialize();
 
     try {
       return await sendAndConfirmRawTransaction(this.connection, rawTx, opts);
@@ -131,7 +148,7 @@ export default class AnchorProvider implements Provider {
         // because that will see the tx sent with `sendAndConfirmRawTransaction` no matter which
         // commitment `sendAndConfirmRawTransaction` used
         const failedTx = await this.connection.getTransaction(
-          bs58.encode(req.tx.signature!),
+          bs58.encode(tx.signature!),
           { commitment: "confirmed" }
         );
         if (!failedTx) {
@@ -150,7 +167,7 @@ export default class AnchorProvider implements Provider {
    * Similar to `send`, but for an array of transactions and signers.
    */
   async sendAll(
-    reqs: Array<SendTxRequest>,
+    txWithSigners: { tx: Transaction; signers: Signer[] }[],
     opts?: ConfirmOptions
   ): Promise<Array<TransactionSignature>> {
     if (opts === undefined) {
@@ -160,7 +177,7 @@ export default class AnchorProvider implements Provider {
       opts.preflightCommitment
     );
 
-    let txs = reqs.map((r) => {
+    let txs = txWithSigners.map((r) => {
       let tx = r.tx;
       let signers = r.signers;
 
@@ -202,13 +219,14 @@ export default class AnchorProvider implements Provider {
    * @param opts    Transaction confirmation options.
    */
   async simulate(
-    req: SendTxRequest,
+    tx: Transaction,
+    signers: Signer[],
     commitmentMaybe?: Commitment,
     includeAccounts?: boolean | PublicKey[]
   ): Promise<SuccessfulTxSimulationResponse> {
     const commitment = commitmentMaybe ?? this.connection.commitment;
-    req.tx.feePayer = this.wallet.publicKey;
-    req.tx = await this.wallet.signTransaction(req.tx);
+    tx.feePayer = this.wallet.publicKey;
+    tx = await this.wallet.signTransaction(tx);
 
     // this allows us to pass a commitment arg into `simulateTransaction`
     // instead of having to copy the function here and adjust it
@@ -224,10 +242,13 @@ export default class AnchorProvider implements Provider {
         }
       },
     };
-    const simulateTransactionWithCommitment = this.connection.simulateTransaction.bind(new Proxy(this.connection, commitmentOverride));
+    const simulateTransactionWithCommitment =
+      this.connection.simulateTransaction.bind(
+        new Proxy(this.connection, commitmentOverride)
+      );
     const result = await simulateTransactionWithCommitment.bind(
-      req.tx,
-      req.signers,
+      tx,
+      signers,
       includeAccounts
     );
 
@@ -242,7 +263,10 @@ export default class AnchorProvider implements Provider {
 type SuccessfulTxSimulationResponse = Omit<SimulatedTransactionResponse, "err">;
 
 class SimulateError extends Error {
-  constructor(readonly simulationResponse: SimulatedTransactionResponse, message?: string) {
+  constructor(
+    readonly simulationResponse: SimulatedTransactionResponse,
+    message?: string
+  ) {
     super(message);
   }
 }
