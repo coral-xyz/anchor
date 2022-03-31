@@ -134,7 +134,7 @@ export default class AnchorProvider implements Provider {
    * @param signers The signers of the transaction.
    * @param opts    Transaction confirmation options.
    */
-  async send(
+  async sendAndConfirm(
     tx: Transaction,
     signers?: Signer[],
     opts?: ConfirmOptions

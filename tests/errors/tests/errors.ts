@@ -279,7 +279,7 @@ describe("errors", () => {
           data: program.coder.instruction.encode("signer_error", {}),
         })
       );
-      await program.provider.send(tx);
+      await program.provider.sendAndConfirm(tx);
       assert.ok(false);
     } catch (err) {
       anchor.getProvider().connection.removeOnLogsListener(listener);

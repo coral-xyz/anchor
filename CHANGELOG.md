@@ -26,6 +26,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * avm: `amv install` switches to the newly installed version after installation finishes ([#1670](https://github.com/project-serum/anchor/pull/1670)).
 * spl: Re-export the `spl_token` crate ([#1665](https://github.com/project-serum/anchor/pull/1665)).
 * lang, cli, spl: Update solana toolchain to v1.9.13 ([#1653](https://github.com/project-serum/anchor/pull/1653)).
+* ts: Make `Provider` an interface and create `AnchorProvider` class. Adjust  ([#1707](https://github.com/project-serum/anchor/pull/1707)).
 
 ## [0.23.0] - 2022-03-20
 
