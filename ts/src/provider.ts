@@ -129,11 +129,9 @@ export default class AnchorProvider implements Provider {
     ).blockhash;
 
     tx = await this.wallet.signTransaction(tx);
-    signers
-      .filter((s): s is Signer => s !== undefined)
-      .forEach((kp) => {
-        tx.partialSign(kp);
-      });
+    signers.forEach((kp) => {
+      tx.partialSign(kp);
+    });
 
     const rawTx = tx.serialize();
 
@@ -181,18 +179,12 @@ export default class AnchorProvider implements Provider {
       let tx = r.tx;
       let signers = r.signers;
 
-      if (signers === undefined) {
-        signers = [];
-      }
-
       tx.feePayer = this.wallet.publicKey;
       tx.recentBlockhash = blockhash.blockhash;
 
-      signers
-        .filter((s): s is Signer => s !== undefined)
-        .forEach((kp) => {
-          tx.partialSign(kp);
-        });
+      signers.forEach((kp) => {
+        tx.partialSign(kp);
+      });
 
       return tx;
     });
