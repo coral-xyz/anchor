@@ -289,7 +289,9 @@ export class AccountClient<
 
     // @ts-expect-error
     if (this._provider.wallet === undefined) {
-      throw new Error("This function requires the Provider interface implementor to have a 'wallet' field.");
+      throw new Error(
+        "This function requires the Provider interface implementor to have a 'wallet' field."
+      );
     }
 
     return SystemProgram.createAccount({

@@ -21,7 +21,9 @@ export default class RpcFactory {
       const tx = txFn(...args);
       const [, ctx] = splitArgsAndCtx(idlIx, [...args]);
       if (provider.sendAndConfirm === undefined) {
-        throw new Error("This function requires 'Provider.sendAndConfirm' to be implemented.");
+        throw new Error(
+          "This function requires 'Provider.sendAndConfirm' to be implemented."
+        );
       }
       try {
         return await provider.sendAndConfirm(

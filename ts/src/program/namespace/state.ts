@@ -247,7 +247,9 @@ function stateInstructionKeys<M extends IdlStateMethod>(
     const [programSigner] = findProgramAddressSync([], programId);
     // @ts-expect-error
     if (provider.wallet === undefined) {
-      throw new Error("This function requires the Provider interface implementor to have a 'wallet' field.");
+      throw new Error(
+        "This function requires the Provider interface implementor to have a 'wallet' field."
+      );
     }
     return [
       {
