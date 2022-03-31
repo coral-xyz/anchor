@@ -24,10 +24,12 @@ const FEES = "6160355581";
 
 describe("cfo", () => {
   const provider = anchor.AnchorProvider.env();
-  provider.send = provider.sendAndConfirm;
   anchor.setProvider(provider);
 
   const program = anchor.workspace.Cfo;
+  // hack so we don't have to update serum-common library
+  // to the new AnchorProvider class and Provider interface
+  program.provider.send = provider.sendAndConfirm;
   const sweepAuthority = program.provider.wallet.publicKey;
   let officer, srmVault, usdcVault, bVault, stake, treasury;
   let officerBump, srmBump, usdcBump, bBump, stakeBump, treasuryBump;

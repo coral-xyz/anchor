@@ -760,7 +760,7 @@ describe("misc", () => {
     const anotherProgram = new anchor.Program(
       miscIdl,
       program.programId,
-      new anchor.Provider(
+      new anchor.AnchorProvider(
         program.provider.connection,
         new anchor.Wallet(anchor.web3.Keypair.generate()),
         { commitment: program.provider.connection.commitment }

@@ -6,6 +6,9 @@ const utils = require("../tests/utils");
 const fs = require("fs");
 const anchor = require("@project-serum/anchor");
 const provider = anchor.AnchorProvider.local();
+// hack so we don't have to update serum-common library
+// to the new AnchorProvider class and Provider interface
+provider.send = provider.sendAndConfirm;
 
 async function main() {
   ORDERBOOK_ENV = await utils.initMarket({
