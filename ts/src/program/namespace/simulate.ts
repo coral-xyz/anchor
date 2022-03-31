@@ -35,7 +35,7 @@ export default class SimulateFactory {
         resp = await provider!.simulate(
           tx,
           ctx.signers ?? [],
-          ctx.options === undefined ? undefined : ctx.options.commitment
+          ctx.options?.commitment
         );
       } catch (err) {
         throw translateError(err, idlErrors);
