@@ -11,7 +11,9 @@ const TAKER_FEE = 0.0022;
 
 describe("swap", () => {
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.AnchorProvider.env());
+  const provider = anchor.AnchorProvider.env();
+  provider.send = provider.sendAndConfirm;
+  anchor.setProvider(provider);
 
   // Swap program client.
   const program = anchor.workspace.Swap;

@@ -23,7 +23,9 @@ const SYSVAR_INSTRUCTIONS_PUBKEY = new PublicKey(
 const FEES = "6160355581";
 
 describe("cfo", () => {
-  anchor.setProvider(anchor.AnchorProvider.env());
+  const provider = anchor.AnchorProvider.env();
+  provider.send = provider.sendAndConfirm;
+  anchor.setProvider(provider);
 
   const program = anchor.workspace.Cfo;
   const sweepAuthority = program.provider.wallet.publicKey;
