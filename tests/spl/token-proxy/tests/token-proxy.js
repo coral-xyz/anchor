@@ -118,7 +118,7 @@ async function createMint(provider, authority) {
   const tx = new anchor.web3.Transaction();
   tx.add(...instructions);
 
-  await provider.send(tx, [mint]);
+  await provider.sendAndConfirm(tx, [mint]);
 
   return mint.publicKey;
 }
@@ -147,7 +147,7 @@ async function createTokenAccount(provider, mint, owner) {
   tx.add(
     ...(await createTokenAccountInstrs(provider, vault.publicKey, mint, owner))
   );
-  await provider.send(tx, [vault]);
+  await provider.sendAndConfirm(tx, [vault]);
   return vault.publicKey;
 }
 
