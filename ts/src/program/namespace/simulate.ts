@@ -34,7 +34,7 @@ export default class SimulateFactory {
       try {
         resp = await provider!.simulate(
           tx,
-          ctx.signers ?? [],
+          ctx.signers,
           ctx.options?.commitment
         );
       } catch (err) {

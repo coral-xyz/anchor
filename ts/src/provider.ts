@@ -9,9 +9,29 @@ import {
   Commitment,
   SendTransactionError,
   SendOptions,
+  RpcResponseAndContext,
 } from "@solana/web3.js";
 import { bs58 } from "./utils/bytes/index.js";
 import { isBrowser } from "./utils/common.js";
+import {
+  type as pick,
+  number,
+  string,
+  array,
+  boolean,
+  literal,
+  record,
+  union,
+  optional,
+  nullable,
+  coerce,
+  instance,
+  create,
+  tuple,
+  unknown,
+  any,
+  Struct,
+} from "superstruct";
 
 export interface Provider {
   readonly connection: Connection;
@@ -214,34 +234,17 @@ export default class AnchorProvider implements Provider {
   async simulate(
     tx: Transaction,
     signers?: Signer[],
-    commitmentMaybe?: Commitment,
+    commitment?: Commitment,
     includeAccounts?: boolean | PublicKey[]
   ): Promise<SuccessfulTxSimulationResponse> {
-    const commitment = commitmentMaybe ?? this.connection.commitment;
     tx.feePayer = this.wallet.publicKey;
-    tx = await this.wallet.signTransaction(tx);
 
-    // this allows us to pass a commitment arg into `simulateTransaction`
-    // instead of having to copy the function here and adjust it
-    const commitmentOverride = {
-      get: function (_, prop) {
-        if (prop === "commitment") {
-          return commitment;
-        } else {
-          // this is the normal way to return all other props
-          // without modifying them.
-          // @ts-expect-error
-          return Reflect.get(...arguments);
-        }
-      },
-    };
-    const simulateTransactionWithCommitment =
-      this.connection.simulateTransaction.bind(
-        new Proxy(this.connection, commitmentOverride)
-      );
-    const result = await simulateTransactionWithCommitment.bind(
+    const result = await simulateTransaction(
+      this.connection,
       tx,
-      signers ?? [],
+      this.wallet,
+      signers,
+      commitment,
       includeAccounts
     );
 
@@ -252,6 +255,188 @@ export default class AnchorProvider implements Provider {
     return result.value;
   }
 }
+
+// copy from @solana/web3.js that allows a wallet to sign
+// and has a commitment param
+async function simulateTransaction(
+  connection: Connection,
+  transactionOrMessage: Transaction,
+  wallet?: Wallet,
+  signers?: Array<Signer>,
+  commitment?: Commitment,
+  includeAccounts?: boolean | Array<PublicKey>
+): Promise<RpcResponseAndContext<SimulatedTransactionResponse>> {
+  let transaction;
+  if (transactionOrMessage instanceof Transaction) {
+    transaction = transactionOrMessage;
+  } else {
+    transaction = Transaction.populate(transactionOrMessage);
+  }
+
+  if (transaction.nonceInfo && signers) {
+    if (wallet) {
+      transaction = await wallet.signTransaction(transaction);
+    }
+    transaction.sign(...signers);
+  } else {
+    //@ts-expect-error
+    let disableCache = connection._disableBlockhashCaching;
+    for (;;) {
+      // @ts-expect-error
+      transaction.recentBlockhash = await connection._recentBlockhash(
+        disableCache
+      );
+
+      if (wallet) {
+        transaction = await wallet.signTransaction(transaction);
+      }
+      if (!signers) break;
+
+      transaction.sign(...signers);
+      if (!transaction.signature) {
+        throw new Error("!signature"); // should never happen
+      }
+
+      const signature = transaction.signature.toString("base64");
+      if (
+        // @ts-expect-error
+        !connection._blockhashInfo.simulatedSignatures.includes(signature) &&
+        // @ts-expect-error
+        !connection._blockhashInfo.transactionSignatures.includes(signature)
+      ) {
+        // The signature of connection transaction has not been seen before with the
+        // current recentBlockhash, all done. Let's break
+        // @ts-expect-error
+        connection._blockhashInfo.simulatedSignatures.push(signature);
+        break;
+      } else {
+        // This transaction would be treated as duplicate (its derived signature
+        // matched to one of already recorded signatures).
+        // So, we must fetch a new blockhash for a different signature by disabling
+        // our cache not to wait for the cache expiration (BLOCKHASH_CACHE_TIMEOUT_MS).
+        disableCache = true;
+      }
+    }
+  }
+
+  const message = transaction._compile();
+  const signData = message.serialize();
+  const wireTransaction = transaction._serialize(signData);
+  const encodedTransaction = wireTransaction.toString("base64");
+  const config: any = {
+    encoding: "base64",
+    commitment: commitment ?? connection.commitment,
+  };
+
+  if (includeAccounts) {
+    const addresses = (
+      Array.isArray(includeAccounts) ? includeAccounts : message.nonProgramIds()
+    ).map((key) => key.toBase58());
+
+    config["accounts"] = {
+      encoding: "base64",
+      addresses,
+    };
+  }
+
+  if (signers) {
+    config.sigVerify = true;
+  }
+
+  const args = [encodedTransaction, config];
+  // @ts-expect-error
+  const unsafeRes = await connection._rpcRequest("simulateTransaction", args);
+  const res = create(unsafeRes, SimulatedTransactionResponseStruct);
+  if ("error" in res) {
+    let logs;
+    if ("data" in res.error) {
+      logs = res.error.data.logs;
+      if (logs && Array.isArray(logs)) {
+        const traceIndent = "\n    ";
+        const logTrace = traceIndent + logs.join(traceIndent);
+        console.error(res.error.message, logTrace);
+      }
+    }
+    throw new SendTransactionError(
+      "failed to simulate transaction: " + res.error.message,
+      logs
+    );
+  }
+  return res.result;
+}
+
+// copy from @solana/web3.js
+function jsonRpcResult<T, U>(schema: Struct<T, U>) {
+  return coerce(createRpcResult(schema), UnknownRpcResult, (value) => {
+    if ("error" in value) {
+      return value;
+    } else {
+      return {
+        ...value,
+        result: create(value.result, schema),
+      };
+    }
+  });
+}
+
+// copy from @solana/web3.js
+const UnknownRpcResult = createRpcResult(unknown());
+
+// copy from @solana/web3.js
+function createRpcResult<T, U>(result: Struct<T, U>) {
+  return union([
+    pick({
+      jsonrpc: literal("2.0"),
+      id: string(),
+      result,
+    }),
+    pick({
+      jsonrpc: literal("2.0"),
+      id: string(),
+      error: pick({
+        code: unknown(),
+        message: string(),
+        data: optional(any()),
+      }),
+    }),
+  ]);
+}
+
+// copy from @solana/web3.js
+function jsonRpcResultAndContext<T, U>(value: Struct<T, U>) {
+  return jsonRpcResult(
+    pick({
+      context: pick({
+        slot: number(),
+      }),
+      value,
+    })
+  );
+}
+
+// copy from @solana/web3.js
+const SimulatedTransactionResponseStruct = jsonRpcResultAndContext(
+  pick({
+    err: nullable(union([pick({}), string()])),
+    logs: nullable(array(string())),
+    accounts: optional(
+      nullable(
+        array(
+          nullable(
+            pick({
+              executable: boolean(),
+              owner: string(),
+              lamports: number(),
+              data: array(string()),
+              rentEpoch: optional(number()),
+            })
+          )
+        )
+      )
+    ),
+    unitsConsumed: optional(number()),
+  })
+);
 
 export type SuccessfulTxSimulationResponse = Omit<
   SimulatedTransactionResponse,
