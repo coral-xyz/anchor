@@ -9,7 +9,8 @@ anchor.utils.features.set("anchor-deprecated-state");
 
 describe("Lockup and Registry", () => {
   // Read the provider from the configured environmnet.
-  const provider = anchor.Provider.env();
+  const provider = anchor.AnchorProvider.env();
+  provider.send = provider.sendAndConfirm;
 
   // Configure the client to use the provider.
   anchor.setProvider(provider);

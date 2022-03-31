@@ -5,7 +5,7 @@
 const utils = require("../tests/utils");
 const fs = require("fs");
 const anchor = require("@project-serum/anchor");
-const provider = anchor.Provider.local();
+const provider = anchor.AnchorProvider.local();
 
 async function main() {
   ORDERBOOK_ENV = await utils.initMarket({

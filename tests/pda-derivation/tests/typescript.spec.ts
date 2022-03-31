@@ -4,7 +4,7 @@ import { Keypair } from "@solana/web3.js";
 
 describe("typescript", () => {
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.Provider.env());
+  anchor.setProvider(anchor.AnchorProvider.env());
 
   const program = anchor.workspace.PdaDerivation;
   const base = Keypair.generate();

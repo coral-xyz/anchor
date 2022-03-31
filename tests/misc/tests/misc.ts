@@ -20,7 +20,7 @@ const miscIdl = require("../target/idl/misc.json");
 
 describe("misc", () => {
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.Provider.env());
+  anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.Misc as Program<Misc>;
   const misc2Program = anchor.workspace.Misc2 as Program<Misc2>;
 

@@ -2,7 +2,7 @@ const anchor = require("@project-serum/anchor");
 const { assert } = require("chai");
 
 describe("token", () => {
-  const provider = anchor.Provider.local();
+  const provider = anchor.AnchorProvider.local();
 
   // Configure the client to use the local cluster.
   anchor.setProvider(provider);

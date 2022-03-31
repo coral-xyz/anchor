@@ -5,7 +5,7 @@ const utils = require("../../deps/stake/tests/utils");
 
 const lockup = anchor.workspace.Lockup;
 const registry = anchor.workspace.Registry;
-const provider = anchor.Provider.env();
+const provider = anchor.AnchorProvider.env();
 
 let lockupAddress = null;
 let mint = null;

@@ -14,7 +14,7 @@ const {
 const { token } = require("@project-serum/anchor/dist/cjs/utils");
 
 describe("ido-pool", () => {
-  const provider = anchor.Provider.local();
+  const provider = anchor.AnchorProvider.local();
 
   // Configure the client to use the local cluster.
   anchor.setProvider(provider);

@@ -5,7 +5,9 @@ const { TOKEN_PROGRAM_ID } = require("@solana/spl-token");
 
 describe("cashiers-check", () => {
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.Provider.env());
+  const provider = anchor.AnchorProvider.env();
+  provider.send = provider.sendAndConfirm;
+  anchor.setProvider(provider);
 
   const program = anchor.workspace.CashiersCheck;
 
