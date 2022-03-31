@@ -21,7 +21,7 @@ export default class RpcFactory {
       const tx = txFn(...args);
       const [, ctx] = splitArgsAndCtx(idlIx, [...args]);
       try {
-        return await provider.send(tx, ctx.signers, ctx.options);
+        return await provider.send(tx, ctx.signers ?? [], ctx.options);
       } catch (err) {
         throw translateError(err, idlErrors);
       }

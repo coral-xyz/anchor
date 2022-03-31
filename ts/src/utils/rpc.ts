@@ -38,7 +38,7 @@ export async function invoke(
     })
   );
 
-  return await provider.send(tx);
+  return await provider.send(tx, []);
 }
 
 const GET_MULTIPLE_ACCOUNTS_LIMIT: number = 99;

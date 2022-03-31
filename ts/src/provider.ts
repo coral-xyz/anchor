@@ -111,7 +111,8 @@ export default class AnchorProvider implements Provider {
   /**
    * Sends the given transaction, paid for and signed by the provider's wallet.
    *
-   * @param req     The transaction request to send.
+   * @param tx      The transaction to send.
+   * @param signers The signers of the transaction.
    * @param opts    Transaction confirmation options.
    */
   async send(
@@ -207,7 +208,8 @@ export default class AnchorProvider implements Provider {
   /**
    * Simulates the given transaction, returning emitted logs from execution.
    *
-   * @param req     The transaction request to send.
+   * @param tx      The transaction to send.
+   * @param signers The signers of the transaction.
    * @param opts    Transaction confirmation options.
    */
   async simulate(
@@ -252,7 +254,10 @@ export default class AnchorProvider implements Provider {
   }
 }
 
-type SuccessfulTxSimulationResponse = Omit<SimulatedTransactionResponse, "err">;
+export type SuccessfulTxSimulationResponse = Omit<
+  SimulatedTransactionResponse,
+  "err"
+>;
 
 class SimulateError extends Error {
   constructor(
