@@ -5,7 +5,6 @@ import {
   Transaction,
   TransactionSignature,
   ConfirmOptions,
-  RpcResponseAndContext,
   SimulatedTransactionResponse,
   Commitment,
   SendTransactionError,
@@ -19,21 +18,21 @@ export interface Provider {
 
   send?(
     tx: Transaction,
-    signers: Signer[],
+    signers?: Signer[],
     opts?: SendOptions
   ): Promise<TransactionSignature>;
   sendAndConfirm?(
     tx: Transaction,
-    signers: Signer[],
+    signers?: Signer[],
     opts?: ConfirmOptions
   ): Promise<TransactionSignature>;
   sendAll?(
-    txWithSigners: { tx: Transaction; signers: Signer[] }[],
+    txWithSigners: { tx: Transaction; signers?: Signer[] }[],
     opts?: ConfirmOptions
   ): Promise<Array<TransactionSignature>>;
   simulate?(
     tx: Transaction,
-    signers: Signer[],
+    signers?: Signer[],
     commitment?: Commitment,
     includeAccounts?: boolean | PublicKey[]
   ): Promise<SuccessfulTxSimulationResponse>;
@@ -117,7 +116,7 @@ export default class AnchorProvider implements Provider {
    */
   async send(
     tx: Transaction,
-    signers: Signer[],
+    signers?: Signer[],
     opts?: ConfirmOptions
   ): Promise<TransactionSignature> {
     if (opts === undefined) {
@@ -130,7 +129,7 @@ export default class AnchorProvider implements Provider {
     ).blockhash;
 
     tx = await this.wallet.signTransaction(tx);
-    signers.forEach((kp) => {
+    (signers ?? []).forEach((kp) => {
       tx.partialSign(kp);
     });
 
@@ -166,7 +165,7 @@ export default class AnchorProvider implements Provider {
    * Similar to `send`, but for an array of transactions and signers.
    */
   async sendAll(
-    txWithSigners: { tx: Transaction; signers: Signer[] }[],
+    txWithSigners: { tx: Transaction; signers?: Signer[] }[],
     opts?: ConfirmOptions
   ): Promise<Array<TransactionSignature>> {
     if (opts === undefined) {
@@ -178,7 +177,7 @@ export default class AnchorProvider implements Provider {
 
     let txs = txWithSigners.map((r) => {
       let tx = r.tx;
-      let signers = r.signers;
+      let signers = r.signers ?? [];
 
       tx.feePayer = this.wallet.publicKey;
       tx.recentBlockhash = blockhash.blockhash;
@@ -214,7 +213,7 @@ export default class AnchorProvider implements Provider {
    */
   async simulate(
     tx: Transaction,
-    signers: Signer[],
+    signers?: Signer[],
     commitmentMaybe?: Commitment,
     includeAccounts?: boolean | PublicKey[]
   ): Promise<SuccessfulTxSimulationResponse> {
@@ -242,7 +241,7 @@ export default class AnchorProvider implements Provider {
       );
     const result = await simulateTransactionWithCommitment.bind(
       tx,
-      signers,
+      signers ?? [],
       includeAccounts
     );
 
