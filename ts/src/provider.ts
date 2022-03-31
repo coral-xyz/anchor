@@ -33,7 +33,7 @@ import {
   Struct,
 } from "superstruct";
 
-export interface Provider {
+export default interface Provider {
   readonly connection: Connection;
 
   send?(
@@ -62,7 +62,7 @@ export interface Provider {
  * The network and wallet context used to send transactions paid for and signed
  * by the provider.
  */
-export default class AnchorProvider implements Provider {
+export class AnchorProvider implements Provider {
   /**
    * @param connection The cluster connection where the program is deployed.
    * @param wallet     The wallet used to pay for and sign all transactions.
@@ -508,14 +508,14 @@ class ConfirmError extends Error {
 /**
  * Sets the default provider on the client.
  */
-export function setProvider(provider: AnchorProvider) {
+export function setProvider(provider: Provider) {
   _provider = provider;
 }
 
 /**
  * Returns the default provider being used by the client.
  */
-export function getProvider(): AnchorProvider {
+export function getProvider(): Provider {
   if (_provider === null) {
     return AnchorProvider.local();
   }
@@ -523,4 +523,4 @@ export function getProvider(): AnchorProvider {
 }
 
 // Global provider used as the default when a provider is not given.
-let _provider: AnchorProvider | null = null;
+let _provider: Provider | null = null;

@@ -38,6 +38,10 @@ export async function invoke(
     })
   );
 
+  if (provider.sendAndConfirm === undefined) {
+    throw new Error("This function requires 'Provider.sendAndConfirm' to be implemented.");
+  }
+
   return await provider.sendAndConfirm(tx, []);
 }
 

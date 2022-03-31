@@ -31,6 +31,9 @@ export default class SimulateFactory {
       const tx = txFn(...args);
       const [, ctx] = splitArgsAndCtx(idlIx, [...args]);
       let resp: SuccessfulTxSimulationResponse | undefined = undefined;
+      if (provider.simulate === undefined) {
+        throw new Error("This function requires 'Provider.simulate' to be implemented.");
+      }
       try {
         resp = await provider!.simulate(
           tx,
