@@ -846,7 +846,7 @@ pub struct ConstraintTokenAccountGroup {
 pub struct ConstraintTokenMintGroup {
     pub decimals: Option<Expr>,
     pub mint_authority: Option<Expr>,
-    pub mint_freeze_authority: Option<Expr>,
+    pub freeze_authority: Option<Expr>,
 }
 
 // Syntaxt context object for preserving metadata about the inner item.

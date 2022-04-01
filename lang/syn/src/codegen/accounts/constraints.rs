@@ -697,58 +697,55 @@ fn generate_constraint_token_account(
     c: &ConstraintTokenAccountGroup,
 ) -> proc_macro2::TokenStream {
     let name = &f.ident;
-    let account_owner = match &c.authority {
-        Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key()) },
-        None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
+    let authority_check = match &c.authority {
+        Some(authority) => {
+            quote! { if #name.owner != #authority.key() { return Err(anchor_lang::error::ErrorCode::ConstraintTokenOwner.into()); } }
+        }
+        None => quote! {},
     };
-
-    let spl_token_mint = match &c.mint {
-        Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key()) },
-        None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
+    let mint_check = match &c.mint {
+        Some(mint) => {
+            quote! { if #name.mint != #mint.key() { return Err(anchor_lang::error::ErrorCode::ConstraintTokenMint.into()); } }
+        }
+        None => quote! {},
     };
-
     quote! {
-        if #account_owner.is_some() && #name.owner != *#account_owner.unwrap() {
-            return Err(anchor_lang::error::ErrorCode::ConstraintTokenOwner.into());
-        }
-        if #spl_token_mint.is_some() && #name.mint != *#spl_token_mint.unwrap() {
-            return Err(anchor_lang::error::ErrorCode::ConstraintTokenMint.into());
-        }
+        #authority_check
+        #mint_check
     }
 }
 
 fn generate_constraint_mint(f: &Field, c: &ConstraintTokenMintGroup) -> proc_macro2::TokenStream {
     let name = &f.ident;
 
-    let decimals = match &c.decimals {
-        Some(fa) => quote! { Option::<u8>::Some(#fa) },
-        None => quote! { Option::<u8>::None },
+    let decimal_check = match &c.decimals {
+        Some(decimals) => quote! {
+            if #name.decimals != #decimals {
+                return Err(anchor_lang::error::ErrorCode::ConstraintMintDecimals.into());
+            }
+        },
+        None => quote! {},
     };
-    let mint_authority = match &c.mint_authority {
-        Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key()) },
-        None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
+    let mint_authority_check = match &c.mint_authority {
+        Some(mint_authority) => quote! {
+            if #name.mint_authority.is_none() || #name.mint_authority.unwrap() != #mint_authority.key() {
+                return Err(anchor_lang::error::ErrorCode::ConstraintMintMintAuthority.into());
+            }
+        },
+        None => quote! {},
     };
-    let freeze_authority = match &c.mint_freeze_authority {
-        Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key()) },
-        None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
+    let freeze_authority_check = match &c.freeze_authority {
+        Some(freeze_authority) => quote! {
+            if #name.freeze_authority.is_none() || #name.freeze_authority.unwrap() != #freeze_authority.key() {
+                return Err(anchor_lang::error::ErrorCode::ConstraintMintFreezeAuthority.into());
+            }
+        },
+        None => quote! {},
     };
-
     quote! {
-        if #decimals.is_some() && #name.decimals != #decimals.unwrap() {
-            return Err(anchor_lang::error::ErrorCode::ConstraintMintDecimals.into());
-        }
-        if #mint_authority
-            .as_ref()
-            .map(|fa| #name.mint_authority.as_ref().map(|expected_fa| *fa != expected_fa).unwrap_or(true))
-            .unwrap_or(false) {
-            return Err(anchor_lang::error::ErrorCode::ConstraintMintMintAuthority.into());
-        }
-        if #freeze_authority
-            .as_ref()
-            .map(|fa| #name.freeze_authority.as_ref().map(|expected_fa| *fa != expected_fa).unwrap_or(true))
-            .unwrap_or(false) {
-            return Err(anchor_lang::error::ErrorCode::ConstraintMintFreezeAuthority.into());
-        }
+        #decimal_check
+        #mint_authority_check
+        #freeze_authority_check
     }
 }
 

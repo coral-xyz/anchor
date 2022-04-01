@@ -612,7 +612,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 mint_authority: mint_authority
                     .as_ref()
                     .map(|a| a.clone().into_inner().mint_auth),
-                mint_freeze_authority: mint_freeze_authority
+                freeze_authority: mint_freeze_authority
                     .as_ref()
                     .map(|a| a.clone().into_inner().mint_freeze_auth),
             }),
@@ -713,6 +713,48 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         }
         if self.zeroed.is_some() {
             return Err(ParseError::new(c.span(), "zeroed already provided"));
+        }
+        if self.token_mint.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before token mint",
+            ));
+        }
+        if self.associated_token_mint.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before associated token mint",
+            ));
+        }
+        if self.token_authority.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before token authority",
+            ));
+        }
+        if self.associated_token_authority.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before associated token authority",
+            ));
+        }
+        if self.mint_authority.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before mint authority",
+            ));
+        }
+        if self.mint_freeze_authority.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before mint freeze authority",
+            ));
+        }
+        if self.mint_decimals.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before mint decimals",
+            ));
         }
         self.init.replace(c);
         Ok(())

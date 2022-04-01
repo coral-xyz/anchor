@@ -16,7 +16,6 @@ pub struct TestTokenSeedsInit<'info> {
         payer = authority,
         mint::decimals = 6,
         mint::authority = authority,
-        
     )]
     pub mint: Account<'info, Mint>,
     #[account(
@@ -26,7 +25,6 @@ pub struct TestTokenSeedsInit<'info> {
         payer = authority,
         token::mint = mint,
         token::authority = authority,
-        
     )]
     pub my_pda: Account<'info, TokenAccount>,
     #[account(mut)]
@@ -41,10 +39,9 @@ pub struct TestTokenSeedsInit<'info> {
 pub struct TestInitAssociatedToken<'info> {
     #[account(
         init,
-        payer = payer,
         associated_token::mint = mint,
+        payer = payer,
         associated_token::authority = payer,
-        
     )]
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,

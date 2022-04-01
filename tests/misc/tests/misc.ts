@@ -1648,8 +1648,8 @@ describe("misc", () => {
         program.provider.wallet.payer
       );
       const account = await mintAccount.getAccountInfo(token.publicKey);
-      assert.ok(account.owner.equals(program.provider.wallet.publicKey));
-      assert.ok(account.mint.equals(mint.publicKey));
+      assert.isTrue(account.owner.equals(program.provider.wallet.publicKey));
+      assert.isTrue(account.mint.equals(mint.publicKey));
     });
 
     it("Token Constraint Test(no init) - Can make only token::authority", async () => {
@@ -1694,7 +1694,7 @@ describe("misc", () => {
         program.provider.wallet.payer
       );
       const account = await mintAccount.getAccountInfo(token.publicKey);
-      assert.ok(account.owner.equals(program.provider.wallet.publicKey));
+      assert.isTrue(account.owner.equals(program.provider.wallet.publicKey));
     });
 
     it("Token Constraint Test(no init) - Can make only token::mint", async () => {
@@ -1739,7 +1739,7 @@ describe("misc", () => {
         program.provider.wallet.payer
       );
       const account = await mintAccount.getAccountInfo(token.publicKey);
-      assert.ok(account.mint.equals(mint.publicKey));
+      assert.isTrue(account.mint.equals(mint.publicKey));
     });
 
     it("Token Constraint Test(no init) - throws if token::mint mismatch", async () => {
@@ -1790,7 +1790,7 @@ describe("misc", () => {
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
         });
-        assert.ok(false);
+        assert.isTrue(false);
       } catch (_err) {
         assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
@@ -1835,7 +1835,7 @@ describe("misc", () => {
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
         });
-        assert.ok(false);
+        assert.isTrue(false);
       } catch (_err) {
         assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
@@ -1891,7 +1891,7 @@ describe("misc", () => {
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
         });
-        assert.ok(false);
+        assert.isTrue(false);
       } catch (_err) {
         assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
@@ -1929,11 +1929,11 @@ describe("misc", () => {
         program.provider.wallet.payer
       );
       const mintAccount = await client.getMintInfo();
-      assert.ok(mintAccount.decimals === 6);
-      assert.ok(
+      assert.strictEqual(mintAccount.decimals, 6);
+      assert.isTrue(
         mintAccount.mintAuthority.equals(program.provider.wallet.publicKey)
       );
-      assert.ok(
+      assert.isTrue(
         mintAccount.freezeAuthority.equals(program.provider.wallet.publicKey)
       );
     });
@@ -1963,7 +1963,7 @@ describe("misc", () => {
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
         });
-        assert.ok(false);
+        assert.isTrue(false);
       } catch (_err) {
         assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
@@ -1997,7 +1997,7 @@ describe("misc", () => {
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
         });
-        assert.ok(false);
+        assert.isTrue(false);
       } catch (_err) {
         assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
@@ -2031,7 +2031,7 @@ describe("misc", () => {
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
         });
-        assert.ok(false);
+        assert.isTrue(false);
       } catch (_err) {
         assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
@@ -2068,7 +2068,7 @@ describe("misc", () => {
         program.provider.wallet.payer
       );
       const mintAccount = await client.getMintInfo();
-      assert.ok(mintAccount.decimals === 6);
+      assert.strictEqual(mintAccount.decimals, 6);
     });
 
     it("Mint Constraint Test(no init) - can write only mint::authority and mint::freeze_authority", async () => {
@@ -2102,10 +2102,10 @@ describe("misc", () => {
         program.provider.wallet.payer
       );
       const mintAccount = await client.getMintInfo();
-      assert.ok(
+      assert.isTrue(
         mintAccount.mintAuthority.equals(program.provider.wallet.publicKey)
       );
-      assert.ok(
+      assert.isTrue(
         mintAccount.freezeAuthority.equals(program.provider.wallet.publicKey)
       );
     });
@@ -2140,7 +2140,7 @@ describe("misc", () => {
         program.provider.wallet.payer
       );
       const mintAccount = await client.getMintInfo();
-      assert.ok(
+      assert.isTrue(
         mintAccount.mintAuthority.equals(program.provider.wallet.publicKey)
       );
     });
@@ -2175,8 +2175,8 @@ describe("misc", () => {
         program.provider.wallet.payer
       );
       const mintAccount = await client.getMintInfo();
-      assert.ok(mintAccount.decimals === 6);
-      assert.ok(
+      assert.strictEqual(mintAccount.decimals, 6);
+      assert.isTrue(
         mintAccount.freezeAuthority.equals(program.provider.wallet.publicKey)
       );
     });
