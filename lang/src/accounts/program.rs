@@ -15,9 +15,9 @@ use std::ops::Deref;
 
 /// Type validating that the account is the given Program
 ///
-/// The type has a `programdata_address` property that will be set
+/// The type has a `programdata_address` function that will return `Option::Some`
 /// if the program is owned by the [`BPFUpgradeableLoader`](https://docs.rs/solana-program/latest/solana_program/bpf_loader_upgradeable/index.html)
-/// and will contain the `programdata_address` property of the `Program` variant of the [`UpgradeableLoaderState`](https://docs.rs/solana-program/latest/solana_program/bpf_loader_upgradeable/enum.UpgradeableLoaderState.html) enum.
+/// which will contain the `programdata_address` property of the `Program` variant of the [`UpgradeableLoaderState`](https://docs.rs/solana-program/latest/solana_program/bpf_loader_upgradeable/enum.UpgradeableLoaderState.html) enum.
 ///
 /// # Table of Contents
 /// - [Basic Functionality](#basic-functionality)
@@ -47,7 +47,7 @@ use std::ops::Deref;
 /// pub struct SetAdminSettings<'info> {
 ///     #[account(mut, seeds = [b"admin"], bump)]
 ///     pub admin_settings: Account<'info, AdminSettings>,
-///     #[account(constraint = program.programdata_address() == Some(program_data.key()))]
+///     #[account(constraint = program.programdata_address()? == Some(program_data.key()))]
 ///     pub program: Program<'info, MyProgram>,
 ///     #[account(constraint = program_data.upgrade_authority_address == Some(authority.key()))]
 ///     pub program_data: Account<'info, ProgramData>,
@@ -60,7 +60,7 @@ use std::ops::Deref;
 ///
 /// - `program` is the account of the program itself.
 /// Its constraint checks that `program_data` is the account that contains the program's upgrade authority.
-/// Implicitly, this checks that `program` is a BPFUpgradeable program (`program.programdata_address()`
+/// Implicitly, this checks that `program` is a BPFUpgradeable program (`program.programdata_address()?`
 /// will be `None` if it's not).
 /// - `program_data`'s constraint checks that its upgrade authority is the `authority` account.
 /// - Finally, `authority` needs to sign the transaction.
