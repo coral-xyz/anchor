@@ -77,24 +77,19 @@ use std::ops::Deref;
 #[derive(Clone)]
 pub struct Program<'info, T: Id + Clone> {
     info: AccountInfo<'info>,
-    programdata_address: Option<Pubkey>,
     _phantom: PhantomData<T>,
 }
 
 impl<'info, T: Id + Clone + fmt::Debug> fmt::Debug for Program<'info, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Program")
-            .field("info", &self.info)
-            .field("programdata_address", &self.programdata_address)
-            .finish()
+        f.debug_struct("Program").field("info", &self.info).finish()
     }
 }
 
 impl<'a, T: Id + Clone> Program<'a, T> {
-    fn new(info: AccountInfo<'a>, programdata_address: Option<Pubkey>) -> Program<'a, T> {
+    fn new(info: AccountInfo<'a>) -> Program<'a, T> {
         Self {
             info,
-            programdata_address,
             _phantom: PhantomData,
         }
     }
@@ -108,8 +103,13 @@ impl<'a, T: Id + Clone> Program<'a, T> {
         if !info.executable {
             return Err(ErrorCode::InvalidProgramExecutable.into());
         }
-        let programdata_address = if *info.owner == bpf_loader_upgradeable::ID {
-            let mut data: &[u8] = &info.try_borrow_data()?;
+
+        Ok(Program::new(info.clone()))
+    }
+
+    pub fn programdata_address(&self) -> Result<Option<Pubkey>> {
+        if *self.info.owner == bpf_loader_upgradeable::ID {
+            let mut data: &[u8] = &self.info.try_borrow_data()?;
             let upgradable_loader_state =
                 UpgradeableLoaderState::try_deserialize_unchecked(&mut data)?;
 
@@ -122,24 +122,18 @@ impl<'a, T: Id + Clone> Program<'a, T> {
                     slot: _,
                     upgrade_authority_address: _,
                 } => {
-                    // Unreachable because check above already
+                    // Unreachable because check in try_from
                     // ensures that program is executable
                     // and therefore a program account.
                     unreachable!()
                 }
                 UpgradeableLoaderState::Program {
                     programdata_address,
-                } => Some(programdata_address),
+                } => Ok(Some(programdata_address)),
             }
         } else {
-            None
-        };
-
-        Ok(Program::new(info.clone(), programdata_address))
-    }
-
-    pub fn programdata_address(&self) -> Option<Pubkey> {
-        self.programdata_address
+            Ok(None)
+        }
     }
 }
 
