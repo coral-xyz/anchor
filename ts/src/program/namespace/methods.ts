@@ -19,7 +19,6 @@ import Provider from "../../provider.js";
 import { AccountNamespace } from "./account.js";
 import { AccountsResolver } from "../accounts-resolver.js";
 import { Accounts } from "../context.js";
-import { decode } from "../../utils/bytes/base64";
 
 export type MethodsNamespace<
   IDL extends Idl = Idl,
