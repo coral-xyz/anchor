@@ -88,9 +88,11 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     );
   }
 
-  public async pubkeys(): Promise<InstructionAccountAddresses<IDL, I>> {
+  public async pubkeys(): Promise<
+    Partial<InstructionAccountAddresses<IDL, I>>
+  > {
     await this._accountsResolver.resolve();
-    return this._accounts as InstructionAccountAddresses<IDL, I>;
+    return this._accounts as Partial<InstructionAccountAddresses<IDL, I>>;
   }
 
   public accounts(
