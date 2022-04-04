@@ -19,11 +19,6 @@ export type Event<
   data: EventData<E["fields"][number], Defined>;
 };
 
-export type EventError = {
-  name: '$error', // Reserve error event name, because in rust you can't name struct starting with $.
-  data: string // Same type as Event, and return different callback (error in this situation)
-}
-
 export type EventData<T extends IdlEventField, Defined> = {
   [N in T["name"]]: DecodeType<(T & { name: N })["type"], Defined>;
 };
@@ -177,7 +172,7 @@ export class EventParser {
   // its emission, thereby allowing us to know if a given log event was
   // emitted by *this* program. If it was, then we parse the raw string and
   // emit the event if the string matches the event being subscribed to.
-  public parseLogs(logs: string[], callback: (log: Event | EventError) => void) {
+  public parseLogs(logs: string[], callback: (log: Event) => void) {
     try {
       const logScanner = new LogScanner(logs);
       const execution = new ExecutionContext(logScanner.next() as string);
@@ -197,9 +192,9 @@ export class EventParser {
       }
     } catch (e: any) {
       callback({
-        name: '$error',
-        data: e.message
-      })
+        name: "$error",
+        data: e.message,
+      });
     }
   }
 
