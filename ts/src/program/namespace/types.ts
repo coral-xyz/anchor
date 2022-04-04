@@ -146,18 +146,57 @@ export type TypeDef<I extends IdlTypeDef, Defined> = {
   >;
 };
 
+type ValueOf<T> = T[keyof T];
+type FindUserDefinedDeps<I extends IdlTypeDef> = ValueOf<{
+  [F in FieldsOfType<I>["name"]]: (FieldsOfType<I> & {
+    name: F;
+  })["type"] extends infer T
+    ? T extends {
+        defined: string;
+      }
+      ? T["defined"]
+      : T extends { option: { defined: string } }
+      ? T["option"]["defined"]
+      : never
+    : never;
+}>;
+type FindUserDefined<T extends Record<string, IdlTypeDef>> = ValueOf<{
+  [K in keyof T]: FindUserDefinedDeps<T[K]>;
+}>;
+type UserDefinedDeps<T extends Record<string, IdlTypeDef>> = {
+  [K in FindUserDefined<T>]: FindUserDefinedDeps<T[K]>;
+};
+
+type UserDefinedDicionary<T extends Record<string, IdlTypeDef>, Defined> = {
+  [K in keyof UserDefinedDeps<T>]: TypeDef<
+    T[K] & { name: K },
+    UserDefinedDeps<T>[K] extends never
+      ? Defined
+      : UserDefinedDicionary<Pick<T, UserDefinedDeps<T>[K]>, Defined>
+  >;
+};
+type MapIdlTypeDefs<T extends IdlTypeDef[]> = {
+  [K in T[number]["name"]]: T[number] & { name: K };
+};
+
 type TypeDefDictionary<T extends IdlTypeDef[], Defined> = {
   [K in T[number]["name"]]: TypeDef<T[number] & { name: K }, Defined>;
 };
 
 export type IdlTypes<T extends Idl> = TypeDefDictionary<
   NonNullable<T["types"]>,
-  Record<string, never>
+  UserDefinedDicionary<
+    MapIdlTypeDefs<NonNullable<T["types"]>>,
+    Record<string, never>
+  >
 >;
 
 export type IdlAccounts<T extends Idl> = TypeDefDictionary<
   NonNullable<T["accounts"]>,
-  Record<string, never>
+  UserDefinedDicionary<
+    MapIdlTypeDefs<NonNullable<T["types"]>>,
+    Record<string, never>
+  >
 >;
 
 export type IdlErrorInfo<IDL extends Idl> = NonNullable<IDL["errors"]>[number];
