@@ -9,7 +9,7 @@ describe("validator-warp-slot", () => {
   const program = anchor.workspace
     .ValidatorWarpSlot as Program<ValidatorWarpSlot>;
 
-  it("Is initialized!", async () => {
+  it("Has the same slot as mainnet", async () => {
     const mainnetConnection = new anchor.web3.Connection(
       "https://api.mainnet-beta.solana.com"
     );
@@ -25,6 +25,6 @@ describe("validator-warp-slot", () => {
 
     const mainnetSlot = new anchor.BN(clockInfo.account.data.slice(0, 8), "le");
     const tx = await program.methods.initialize(mainnetSlot).rpc();
-    console.log("Your transaction signature", tx);
+    console.log("tx signature:", tx);
   });
 });
