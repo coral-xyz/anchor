@@ -5,6 +5,7 @@ use parser::program as program_parser;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use quote::ToTokens;
+use std::collections::HashMap;
 use std::ops::Deref;
 use syn::ext::IdentExt;
 use syn::parse::{Error as ParseError, Parse, ParseStream, Result as ParseResult};
@@ -13,7 +14,7 @@ use syn::spanned::Spanned;
 use syn::token::Comma;
 use syn::{
     Expr, Generics, Ident, ImplItemMethod, ItemEnum, ItemFn, ItemImpl, ItemMod, ItemStruct, LitInt,
-    LitStr, PatType, Token, TypePath,
+    LitStr, PatType, Token, Type, TypePath,
 };
 
 pub mod codegen;
@@ -84,6 +85,7 @@ pub struct Ix {
     pub raw_method: ItemFn,
     pub ident: Ident,
     pub args: Vec<IxArg>,
+    pub returns: IxReturn,
     // The ident for the struct deriving Accounts.
     pub anchor_ident: Ident,
 }
@@ -92,6 +94,11 @@ pub struct Ix {
 pub struct IxArg {
     pub name: Ident,
     pub raw_arg: PatType,
+}
+
+#[derive(Debug)]
+pub struct IxReturn {
+    pub ty: Type,
 }
 
 #[derive(Debug)]
@@ -145,6 +152,30 @@ impl AccountsStruct {
             instruction_api,
         }
     }
+
+    // Return value maps instruction name to type.
+    // E.g. if we have `#[instruction(data: u64)]` then returns
+    // { "data": "u64"}.
+    pub fn instruction_args(&self) -> Option<HashMap<String, String>> {
+        self.instruction_api.as_ref().map(|instruction_api| {
+            instruction_api
+                .iter()
+                .map(|expr| {
+                    let arg = parser::tts_to_string(&expr);
+                    let components: Vec<&str> = arg.split(" : ").collect();
+                    assert!(components.len() == 2);
+                    (components[0].to_string(), components[1].to_string())
+                })
+                .collect()
+        })
+    }
+
+    pub fn field_names(&self) -> Vec<String> {
+        self.fields
+            .iter()
+            .map(|field| field.ident().to_string())
+            .collect()
+    }
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -154,12 +185,36 @@ pub enum AccountField {
     CompositeField(CompositeField),
 }
 
+impl AccountField {
+    fn ident(&self) -> &Ident {
+        match self {
+            AccountField::Field(field) => &field.ident,
+            AccountField::CompositeField(c_field) => &c_field.ident,
+        }
+    }
+
+    pub fn ty_name(&self) -> Option<String> {
+        match self {
+            AccountField::Field(field) => match &field.ty {
+                Ty::Account(account) => Some(parser::tts_to_string(&account.account_type_path)),
+                Ty::ProgramAccount(account) => {
+                    Some(parser::tts_to_string(&account.account_type_path))
+                }
+                _ => None,
+            },
+            AccountField::CompositeField(field) => Some(field.symbol.clone()),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Field {
     pub ident: Ident,
     pub constraints: ConstraintGroup,
     pub instruction_constraints: ConstraintGroup,
     pub ty: Ty,
+    /// Documentation string.
+    pub docs: String,
 }
 
 impl Field {
@@ -279,24 +334,24 @@ impl Field {
     pub fn container_ty(&self) -> proc_macro2::TokenStream {
         match &self.ty {
             Ty::ProgramAccount(_) => quote! {
-                anchor_lang::ProgramAccount
+                anchor_lang::accounts::program_account::ProgramAccount
             },
             Ty::Account(_) => quote! {
-                anchor_lang::Account
+                anchor_lang::accounts::account::Account
             },
             Ty::AccountLoader(_) => quote! {
-                anchor_lang::AccountLoader
+                anchor_lang::accounts::account_loader::AccountLoader
             },
             Ty::Loader(_) => quote! {
-                anchor_lang::Loader
+                anchor_lang::accounts::loader::Loader
             },
             Ty::CpiAccount(_) => quote! {
-                anchor_lang::CpiAccount
+                anchor_lang::accounts::cpi_account::CpiAccount
             },
-            Ty::Sysvar(_) => quote! { anchor_lang::Sysvar },
-            Ty::CpiState(_) => quote! { anchor_lang::CpiState },
-            Ty::ProgramState(_) => quote! { anchor_lang::ProgramState },
-            Ty::Program(_) => quote! { anchor_lang::Program },
+            Ty::Sysvar(_) => quote! { anchor_lang::accounts::sysvar::Sysvar },
+            Ty::CpiState(_) => quote! { anchor_lang::accounts::cpi_state::CpiState },
+            Ty::ProgramState(_) => quote! { anchor_lang::accounts::state::ProgramState },
+            Ty::Program(_) => quote! { anchor_lang::accounts::program::Program },
             Ty::AccountInfo => quote! {},
             Ty::UncheckedAccount => quote! {},
             Ty::Signer => quote! {},
@@ -394,6 +449,8 @@ pub struct CompositeField {
     pub instruction_constraints: ConstraintGroup,
     pub symbol: String,
     pub raw_field: syn::Field,
+    /// Documentation string.
+    pub docs: String,
 }
 
 // A type of an account field.
@@ -405,7 +462,7 @@ pub enum Ty {
     CpiState(CpiStateTy),
     ProgramAccount(ProgramAccountTy),
     Loader(LoaderTy),
-    AccountLoader(LoaderAccountTy),
+    AccountLoader(AccountLoaderTy),
     CpiAccount(CpiAccountTy),
     Sysvar(SysvarTy),
     Account(AccountTy),
@@ -452,7 +509,7 @@ pub struct CpiAccountTy {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct LoaderAccountTy {
+pub struct AccountLoaderTy {
     // The struct type of the account.
     pub account_type_path: TypePath,
 }
@@ -601,6 +658,7 @@ pub enum ConstraintToken {
     MintFreezeAuthority(Context<ConstraintMintFreezeAuthority>),
     MintDecimals(Context<ConstraintMintDecimals>),
     Bump(Context<ConstraintTokenBump>),
+    ProgramSeed(Context<ConstraintProgramSeed>),
 }
 
 impl Parse for ConstraintToken {
@@ -669,7 +727,7 @@ pub enum ConstraintRentExempt {
 pub struct ConstraintInitGroup {
     pub if_needed: bool,
     pub seeds: Option<ConstraintSeedsGroup>,
-    pub payer: Option<Expr>,
+    pub payer: Expr,
     pub space: Option<Expr>,
     pub kind: InitKind,
 }
@@ -678,7 +736,8 @@ pub struct ConstraintInitGroup {
 pub struct ConstraintSeedsGroup {
     pub is_init: bool,
     pub seeds: Punctuated<Expr, Token![,]>,
-    pub bump: Option<Expr>, // None => bump was given without a target.
+    pub bump: Option<Expr>,         // None => bump was given without a target.
+    pub program_seed: Option<Expr>, // None => use the current program's program_id.
 }
 
 #[derive(Debug, Clone)]
@@ -760,6 +819,11 @@ pub struct ConstraintMintDecimals {
 #[derive(Debug, Clone)]
 pub struct ConstraintTokenBump {
     bump: Option<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintProgramSeed {
+    program_seed: Expr,
 }
 
 #[derive(Debug, Clone)]

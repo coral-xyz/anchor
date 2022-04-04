@@ -5,11 +5,12 @@ import {
   Transaction,
   TransactionSignature,
   ConfirmOptions,
-  sendAndConfirmRawTransaction,
   RpcResponseAndContext,
   SimulatedTransactionResponse,
   Commitment,
+  SendTransactionError,
 } from "@solana/web3.js";
+import { bs58 } from "./utils/bytes/index.js";
 import { isBrowser } from "./utils/common.js";
 
 /**
@@ -30,8 +31,8 @@ export default class Provider {
 
   static defaultOptions(): ConfirmOptions {
     return {
-      preflightCommitment: "recent",
-      commitment: "recent",
+      preflightCommitment: "processed",
+      commitment: "processed",
     };
   }
 
@@ -106,7 +107,7 @@ export default class Provider {
       await this.connection.getRecentBlockhash(opts.preflightCommitment)
     ).blockhash;
 
-    await this.wallet.signTransaction(tx);
+    tx = await this.wallet.signTransaction(tx);
     signers
       .filter((s): s is Signer => s !== undefined)
       .forEach((kp) => {
@@ -115,13 +116,30 @@ export default class Provider {
 
     const rawTx = tx.serialize();
 
-    const txId = await sendAndConfirmRawTransaction(
-      this.connection,
-      rawTx,
-      opts
-    );
-
-    return txId;
+    try {
+      return await sendAndConfirmRawTransaction(this.connection, rawTx, opts);
+    } catch (err) {
+      // thrown if the underlying 'confirmTransaction' encounters a failed tx
+      // the 'confirmTransaction' error does not return logs so we make another rpc call to get them
+      if (err instanceof ConfirmError) {
+        // choose the shortest available commitment for 'getTransaction'
+        // (the json RPC does not support any shorter than "confirmed" for 'getTransaction')
+        // because that will see the tx sent with `sendAndConfirmRawTransaction` no matter which
+        // commitment `sendAndConfirmRawTransaction` used
+        const failedTx = await this.connection.getTransaction(
+          bs58.encode(tx.signature!),
+          { commitment: "confirmed" }
+        );
+        if (!failedTx) {
+          throw err;
+        } else {
+          const logs = failedTx.meta?.logMessages;
+          throw !logs ? err : new SendTransactionError(err.message, logs);
+        }
+      } else {
+        throw err;
+      }
+    }
   }
 
   /**
@@ -197,7 +215,7 @@ export default class Provider {
       )
     ).blockhash;
 
-    await this.wallet.signTransaction(tx);
+    tx = await this.wallet.signTransaction(tx);
     signers
       .filter((s): s is Signer => s !== undefined)
       .forEach((kp) => {
@@ -207,7 +225,7 @@ export default class Provider {
     return await simulateTransaction(
       this.connection,
       tx,
-      opts.commitment ?? this.opts.commitment ?? "recent"
+      opts.commitment ?? this.opts.commitment ?? "processed"
     );
   }
 }
@@ -251,6 +269,45 @@ async function simulateTransaction(
     throw new Error("failed to simulate transaction: " + res.error.message);
   }
   return res.result;
+}
+
+// Copy of Connection.sendAndConfirmRawTransaction that throws
+// a better error if 'confirmTransaction` returns an error status
+async function sendAndConfirmRawTransaction(
+  connection: Connection,
+  rawTransaction: Buffer,
+  options?: ConfirmOptions
+): Promise<TransactionSignature> {
+  const sendOptions = options && {
+    skipPreflight: options.skipPreflight,
+    preflightCommitment: options.preflightCommitment || options.commitment,
+  };
+
+  const signature = await connection.sendRawTransaction(
+    rawTransaction,
+    sendOptions
+  );
+
+  const status = (
+    await connection.confirmTransaction(
+      signature,
+      options && options.commitment
+    )
+  ).value;
+
+  if (status.err) {
+    throw new ConfirmError(
+      `Raw transaction ${signature} failed (${JSON.stringify(status)})`
+    );
+  }
+
+  return signature;
+}
+
+class ConfirmError extends Error {
+  constructor(message?: string) {
+    super(message);
+  }
 }
 
 /**

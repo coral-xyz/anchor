@@ -25,7 +25,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     quote! {
                         #[cfg(feature = "anchor-debug")]
                         ::solana_program::log::sol_log(stringify!(#name));
-                        let #name: #ty = anchor_lang::Accounts::try_accounts(program_id, accounts, ix_data)?;
+                        let #name: #ty = anchor_lang::Accounts::try_accounts(program_id, accounts, ix_data, __bumps)?;
                     }
                 }
                 AccountField::Field(f) => {
@@ -35,15 +35,20 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     if is_init(af) || f.constraints.zeroed.is_some() {
                         let name = &f.ident;
                         quote!{
+                            if accounts.is_empty() {
+                                return Err(anchor_lang::error::ErrorCode::AccountNotEnoughKeys.into());
+                            }
                             let #name = &accounts[0];
                             *accounts = &accounts[1..];
                         }
                     } else {
-                        let name = f.typed_ident();
+                        let name = f.ident.to_string();
+                        let typed_name = f.typed_ident();
                         quote! {
                             #[cfg(feature = "anchor-debug")]
-                            ::solana_program::log::sol_log(stringify!(#name));
-                            let #name = anchor_lang::Accounts::try_accounts(program_id, accounts, ix_data)?;
+                            ::solana_program::log::sol_log(stringify!(#typed_name));
+                            let #typed_name = anchor_lang::Accounts::try_accounts(program_id, accounts, ix_data, __bumps)
+                                .map_err(|e| e.with_account_name(#name))?;
                         }
                     }
                 }
@@ -79,7 +84,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 let __Args {
                     #(#field_names),*
                 } = __Args::deserialize(&mut ix_data)
-                    .map_err(|_| anchor_lang::__private::ErrorCode::InstructionDidNotDeserialize)?;
+                    .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
             }
         }
     };
@@ -92,7 +97,8 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 program_id: &anchor_lang::solana_program::pubkey::Pubkey,
                 accounts: &mut &[anchor_lang::solana_program::account_info::AccountInfo<'info>],
                 ix_data: &[u8],
-            ) -> std::result::Result<Self, anchor_lang::solana_program::program_error::ProgramError> {
+                __bumps: &mut std::collections::BTreeMap<String, u8>,
+            ) -> anchor_lang::Result<Self> {
                 // Deserialize instruction, if declared.
                 #ix_de
                 // Deserialize each account.

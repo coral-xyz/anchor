@@ -109,9 +109,9 @@ impl<'info> CreateCheck<'info> {
             &[ctx.accounts.check.to_account_info().key.as_ref(), &[nonce]],
             ctx.program_id,
         )
-        .map_err(|_| ErrorCode::InvalidCheckNonce)?;
+        .map_err(|_| error!(ErrorCode::InvalidCheckNonce))?;
         if &signer != ctx.accounts.check_signer.to_account_info().key {
-            return Err(ErrorCode::InvalidCheckSigner.into());
+            return err!(ErrorCode::InvalidCheckSigner);
         }
         Ok(())
     }
@@ -130,8 +130,7 @@ pub struct CashCheck<'info> {
     check_signer: AccountInfo<'info>,
     #[account(mut, has_one = owner)]
     to: Account<'info, TokenAccount>,
-    #[account(signer)]
-    owner: AccountInfo<'info>,
+    owner: Signer<'info>,
     token_program: AccountInfo<'info>,
 }
 
@@ -148,8 +147,7 @@ pub struct CancelCheck<'info> {
     check_signer: AccountInfo<'info>,
     #[account(mut, has_one = owner)]
     from: Account<'info, TokenAccount>,
-    #[account(signer)]
-    owner: AccountInfo<'info>,
+    owner: Signer<'info>,
     token_program: AccountInfo<'info>,
 }
 
@@ -164,7 +162,7 @@ pub struct Check {
     burned: bool,
 }
 
-#[error]
+#[error_code]
 pub enum ErrorCode {
     #[msg("The given nonce does not create a valid program derived address.")]
     InvalidCheckNonce,
@@ -176,7 +174,7 @@ pub enum ErrorCode {
 
 fn not_burned(check: &Check) -> Result<()> {
     if check.burned {
-        return Err(ErrorCode::AlreadyBurned.into());
+        return err!(ErrorCode::AlreadyBurned);
     }
     Ok(())
 }

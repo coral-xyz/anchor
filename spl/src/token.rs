@@ -1,19 +1,18 @@
-use anchor_lang::solana_program;
 use anchor_lang::solana_program::account_info::AccountInfo;
-use anchor_lang::solana_program::entrypoint::ProgramResult;
-use anchor_lang::solana_program::program_error::ProgramError;
+
 use anchor_lang::solana_program::program_pack::Pack;
 use anchor_lang::solana_program::pubkey::Pubkey;
-use anchor_lang::{Accounts, CpiContext};
-use std::io::Write;
+use anchor_lang::{context::CpiContext, Accounts};
+use anchor_lang::{solana_program, Result};
 use std::ops::Deref;
 
+pub use spl_token;
 pub use spl_token::ID;
 
 pub fn transfer<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>,
     amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token::instruction::transfer(
         &spl_token::ID,
         ctx.accounts.from.key,
@@ -28,16 +27,16 @@ pub fn transfer<'a, 'b, 'c, 'info>(
             ctx.accounts.from.clone(),
             ctx.accounts.to.clone(),
             ctx.accounts.authority.clone(),
-            ctx.program.clone(),
         ],
         ctx.signer_seeds,
     )
+    .map_err(Into::into)
 }
 
 pub fn mint_to<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, MintTo<'info>>,
     amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token::instruction::mint_to(
         &spl_token::ID,
         ctx.accounts.mint.key,
@@ -52,16 +51,16 @@ pub fn mint_to<'a, 'b, 'c, 'info>(
             ctx.accounts.to.clone(),
             ctx.accounts.mint.clone(),
             ctx.accounts.authority.clone(),
-            ctx.program.clone(),
         ],
         ctx.signer_seeds,
     )
+    .map_err(Into::into)
 }
 
 pub fn burn<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, Burn<'info>>,
     amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token::instruction::burn(
         &spl_token::ID,
         ctx.accounts.to.key,
@@ -76,16 +75,16 @@ pub fn burn<'a, 'b, 'c, 'info>(
             ctx.accounts.to.clone(),
             ctx.accounts.mint.clone(),
             ctx.accounts.authority.clone(),
-            ctx.program.clone(),
         ],
         ctx.signer_seeds,
     )
+    .map_err(Into::into)
 }
 
 pub fn approve<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, Approve<'info>>,
     amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token::instruction::approve(
         &spl_token::ID,
         ctx.accounts.to.key,
@@ -100,15 +99,30 @@ pub fn approve<'a, 'b, 'c, 'info>(
             ctx.accounts.to.clone(),
             ctx.accounts.delegate.clone(),
             ctx.accounts.authority.clone(),
-            ctx.program.clone(),
         ],
         ctx.signer_seeds,
     )
+    .map_err(Into::into)
+}
+
+pub fn revoke<'a, 'b, 'c, 'info>(ctx: CpiContext<'a, 'b, 'c, 'info, Revoke<'info>>) -> Result<()> {
+    let ix = spl_token::instruction::revoke(
+        &spl_token::ID,
+        ctx.accounts.source.key,
+        ctx.accounts.authority.key,
+        &[],
+    )?;
+    solana_program::program::invoke_signed(
+        &ix,
+        &[ctx.accounts.source.clone(), ctx.accounts.authority.clone()],
+        ctx.signer_seeds,
+    )
+    .map_err(Into::into)
 }
 
 pub fn initialize_account<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, InitializeAccount<'info>>,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token::instruction::initialize_account(
         &spl_token::ID,
         ctx.accounts.account.key,
@@ -122,15 +136,15 @@ pub fn initialize_account<'a, 'b, 'c, 'info>(
             ctx.accounts.mint.clone(),
             ctx.accounts.authority.clone(),
             ctx.accounts.rent.clone(),
-            ctx.program.clone(),
         ],
         ctx.signer_seeds,
     )
+    .map_err(Into::into)
 }
 
 pub fn close_account<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, CloseAccount<'info>>,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token::instruction::close_account(
         &spl_token::ID,
         ctx.accounts.account.key,
@@ -147,11 +161,12 @@ pub fn close_account<'a, 'b, 'c, 'info>(
         ],
         ctx.signer_seeds,
     )
+    .map_err(Into::into)
 }
 
 pub fn freeze_account<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, FreezeAccount<'info>>,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token::instruction::freeze_account(
         &spl_token::ID,
         ctx.accounts.account.key,
@@ -168,11 +183,12 @@ pub fn freeze_account<'a, 'b, 'c, 'info>(
         ],
         ctx.signer_seeds,
     )
+    .map_err(Into::into)
 }
 
 pub fn thaw_account<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, ThawAccount<'info>>,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token::instruction::thaw_account(
         &spl_token::ID,
         ctx.accounts.account.key,
@@ -189,6 +205,7 @@ pub fn thaw_account<'a, 'b, 'c, 'info>(
         ],
         ctx.signer_seeds,
     )
+    .map_err(Into::into)
 }
 
 pub fn initialize_mint<'a, 'b, 'c, 'info>(
@@ -196,7 +213,7 @@ pub fn initialize_mint<'a, 'b, 'c, 'info>(
     decimals: u8,
     authority: &Pubkey,
     freeze_authority: Option<&Pubkey>,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token::instruction::initialize_mint(
         &spl_token::ID,
         ctx.accounts.mint.key,
@@ -206,20 +223,17 @@ pub fn initialize_mint<'a, 'b, 'c, 'info>(
     )?;
     solana_program::program::invoke_signed(
         &ix,
-        &[
-            ctx.accounts.mint.clone(),
-            ctx.accounts.rent.clone(),
-            ctx.program.clone(),
-        ],
+        &[ctx.accounts.mint.clone(), ctx.accounts.rent.clone()],
         ctx.signer_seeds,
     )
+    .map_err(Into::into)
 }
 
 pub fn set_authority<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, SetAuthority<'info>>,
     authority_type: spl_token::instruction::AuthorityType,
     new_authority: Option<Pubkey>,
-) -> ProgramResult {
+) -> Result<()> {
     let mut spl_new_authority: Option<&Pubkey> = None;
     if new_authority.is_some() {
         spl_new_authority = new_authority.as_ref()
@@ -238,10 +252,10 @@ pub fn set_authority<'a, 'b, 'c, 'info>(
         &[
             ctx.accounts.account_or_mint.clone(),
             ctx.accounts.current_authority.clone(),
-            ctx.program.clone(),
         ],
         ctx.signer_seeds,
     )
+    .map_err(Into::into)
 }
 
 #[derive(Accounts)]
@@ -269,6 +283,12 @@ pub struct Burn<'info> {
 pub struct Approve<'info> {
     pub to: AccountInfo<'info>,
     pub delegate: AccountInfo<'info>,
+    pub authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct Revoke<'info> {
+    pub source: AccountInfo<'info>,
     pub authority: AccountInfo<'info>,
 }
 
@@ -321,21 +341,14 @@ impl TokenAccount {
 }
 
 impl anchor_lang::AccountDeserialize for TokenAccount {
-    fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        TokenAccount::try_deserialize_unchecked(buf)
-    }
-
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        spl_token::state::Account::unpack(buf).map(TokenAccount)
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+        spl_token::state::Account::unpack(buf)
+            .map(TokenAccount)
+            .map_err(Into::into)
     }
 }
 
-impl anchor_lang::AccountSerialize for TokenAccount {
-    fn try_serialize<W: Write>(&self, _writer: &mut W) -> Result<(), ProgramError> {
-        // no-op
-        Ok(())
-    }
-}
+impl anchor_lang::AccountSerialize for TokenAccount {}
 
 impl anchor_lang::Owner for TokenAccount {
     fn owner() -> Pubkey {
@@ -359,21 +372,14 @@ impl Mint {
 }
 
 impl anchor_lang::AccountDeserialize for Mint {
-    fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        Mint::try_deserialize_unchecked(buf)
-    }
-
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        spl_token::state::Mint::unpack(buf).map(Mint)
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+        spl_token::state::Mint::unpack(buf)
+            .map(Mint)
+            .map_err(Into::into)
     }
 }
 
-impl anchor_lang::AccountSerialize for Mint {
-    fn try_serialize<W: Write>(&self, _writer: &mut W) -> Result<(), ProgramError> {
-        // no-op
-        Ok(())
-    }
-}
+impl anchor_lang::AccountSerialize for Mint {}
 
 impl anchor_lang::Owner for Mint {
     fn owner() -> Pubkey {
@@ -392,16 +398,6 @@ impl Deref for Mint {
 #[derive(Clone)]
 pub struct Token;
 
-impl anchor_lang::AccountDeserialize for Token {
-    fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        Token::try_deserialize_unchecked(buf)
-    }
-
-    fn try_deserialize_unchecked(_buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        Ok(Token)
-    }
-}
-
 impl anchor_lang::Id for Token {
     fn id() -> Pubkey {
         ID
@@ -413,21 +409,21 @@ impl anchor_lang::Id for Token {
 pub mod accessor {
     use super::*;
 
-    pub fn amount(account: &AccountInfo) -> Result<u64, ProgramError> {
+    pub fn amount(account: &AccountInfo) -> Result<u64> {
         let bytes = account.try_borrow_data()?;
         let mut amount_bytes = [0u8; 8];
         amount_bytes.copy_from_slice(&bytes[64..72]);
         Ok(u64::from_le_bytes(amount_bytes))
     }
 
-    pub fn mint(account: &AccountInfo) -> Result<Pubkey, ProgramError> {
+    pub fn mint(account: &AccountInfo) -> Result<Pubkey> {
         let bytes = account.try_borrow_data()?;
         let mut mint_bytes = [0u8; 32];
         mint_bytes.copy_from_slice(&bytes[..32]);
         Ok(Pubkey::new_from_array(mint_bytes))
     }
 
-    pub fn authority(account: &AccountInfo) -> Result<Pubkey, ProgramError> {
+    pub fn authority(account: &AccountInfo) -> Result<Pubkey> {
         let bytes = account.try_borrow_data()?;
         let mut owner_bytes = [0u8; 32];
         owner_bytes.copy_from_slice(&bytes[32..64]);

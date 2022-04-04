@@ -1,5 +1,6 @@
-const anchor = require('@project-serum/anchor');
-const assert = require("assert");
+const anchor = require("@project-serum/anchor");
+const { assert } = require("chai");
+const nativeAssert = require("assert");
 
 describe("interface", () => {
   // Configure the client to use the local cluster.
@@ -11,12 +12,12 @@ describe("interface", () => {
     await counter.state.rpc.new(counterAuth.programId);
 
     const stateAccount = await counter.state.fetch();
-    assert.ok(stateAccount.count.eq(new anchor.BN(0)));
-    assert.ok(stateAccount.authProgram.equals(counterAuth.programId));
+    assert.isTrue(stateAccount.count.eq(new anchor.BN(0)));
+    assert.isTrue(stateAccount.authProgram.equals(counterAuth.programId));
   });
 
   it("Should fail to go from even to even", async () => {
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         await counter.state.rpc.setCount(new anchor.BN(4), {
           accounts: {
@@ -25,7 +26,7 @@ describe("interface", () => {
         });
       },
       (err) => {
-        if (err.toString().split("custom program error: 0x32").length !== 2) {
+        if (err.toString().split("custom program error: 0x3a98").length !== 2) {
           return false;
         }
         return true;
@@ -33,13 +34,13 @@ describe("interface", () => {
     );
   });
 
-  it("Shold succeed to go from even to odd", async () => {
+  it("Should succeed to go from even to odd", async () => {
     await counter.state.rpc.setCount(new anchor.BN(3), {
       accounts: {
         authProgram: counterAuth.programId,
       },
     });
     const stateAccount = await counter.state.fetch();
-    assert.ok(stateAccount.count.eq(new anchor.BN(3)));
+    assert.isTrue(stateAccount.count.eq(new anchor.BN(3)));
   });
 });

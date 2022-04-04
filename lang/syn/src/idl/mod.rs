@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
 pub mod file;
+pub mod pda;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Idl {
@@ -44,6 +45,7 @@ pub struct IdlInstruction {
     pub name: String,
     pub accounts: Vec<IdlAccountItem>,
     pub args: Vec<IdlField>,
+    pub returns: Option<IdlType>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -66,6 +68,52 @@ pub struct IdlAccount {
     pub name: String,
     pub is_mut: bool,
     pub is_signer: bool,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub pda: Option<IdlPda>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct IdlPda {
+    pub seeds: Vec<IdlSeed>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub program_id: Option<IdlSeed>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", tag = "kind")]
+pub enum IdlSeed {
+    Const(IdlSeedConst),
+    Arg(IdlSeedArg),
+    Account(IdlSeedAccount),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct IdlSeedAccount {
+    #[serde(rename = "type")]
+    pub ty: IdlType,
+    // account_ty points to the entry in the "accounts" section.
+    // Some only if the `Account<T>` type is used.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account: Option<String>,
+    pub path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct IdlSeedArg {
+    #[serde(rename = "type")]
+    pub ty: IdlType,
+    pub path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct IdlSeedConst {
+    #[serde(rename = "type")]
+    pub ty: IdlType,
+    pub value: serde_json::Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -127,8 +175,10 @@ pub enum IdlType {
     I16,
     U32,
     I32,
+    F32,
     U64,
     I64,
+    F64,
     U128,
     I128,
     Bytes,
@@ -150,13 +200,14 @@ impl std::str::FromStr for IdlType {
                 None => {
                     let (raw_type, raw_length) = inner.rsplit_once(';').unwrap();
                     let ty = IdlType::from_str(raw_type).unwrap();
-                    let len = raw_length.replace("_", "").parse::<usize>().unwrap();
+                    let len = raw_length.replace('_', "").parse::<usize>().unwrap();
                     IdlType::Array(Box::new(ty), len)
                 }
                 Some(nested_inner) => array_from_str(&nested_inner[1..]),
             }
         }
         s.retain(|c| !c.is_whitespace());
+
         let r = match s.as_str() {
             "bool" => IdlType::Bool,
             "u8" => IdlType::U8,
@@ -165,12 +216,14 @@ impl std::str::FromStr for IdlType {
             "i16" => IdlType::I16,
             "u32" => IdlType::U32,
             "i32" => IdlType::I32,
+            "f32" => IdlType::F32,
             "u64" => IdlType::U64,
             "i64" => IdlType::I64,
+            "f64" => IdlType::F64,
             "u128" => IdlType::U128,
             "i128" => IdlType::I128,
             "Vec<u8>" => IdlType::Bytes,
-            "String" => IdlType::String,
+            "String" | "&str" => IdlType::String,
             "Pubkey" => IdlType::PublicKey,
             _ => match s.to_string().strip_prefix("Option<") {
                 None => match s.to_string().strip_prefix("Vec<") {

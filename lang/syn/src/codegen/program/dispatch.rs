@@ -114,7 +114,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         })
         .collect();
     let fallback_fn = gen_fallback(program).unwrap_or(quote! {
-        Err(anchor_lang::__private::ErrorCode::InstructionFallbackNotFound.into())
+        Err(anchor_lang::error::ErrorCode::InstructionFallbackNotFound.into())
     });
     quote! {
         /// Performs method dispatch.
@@ -139,37 +139,47 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             program_id: &Pubkey,
             accounts: &[AccountInfo],
             data: &[u8],
-        ) -> ProgramResult {
+        ) -> anchor_lang::Result<()> {
             // Split the instruction data into the first 8 byte method
             // identifier (sighash) and the serialized instruction data.
             let mut ix_data: &[u8] = data;
-            let sighash: [u8; 8] = {
+            let sighash: Option<[u8; 8]> = {
                 let mut sighash: [u8; 8] = [0; 8];
-                sighash.copy_from_slice(&ix_data[..8]);
-                ix_data = &ix_data[8..];
-                sighash
+                if ix_data.len() < 8 {
+                    None
+                } else {
+                    sighash.copy_from_slice(&ix_data[..8]);
+                    ix_data = &ix_data[8..];
+                    Some(sighash)
+                }
             };
 
             // If the method identifier is the IDL tag, then execute an IDL
             // instruction, injected into all Anchor programs.
             if cfg!(not(feature = "no-idl")) {
-                if sighash == anchor_lang::idl::IDL_IX_TAG.to_le_bytes() {
-                    return __private::__idl::__idl_dispatch(
-                        program_id,
-                        accounts,
-                        &ix_data,
-                    );
+                if let Some(sighash) = sighash {
+                    if sighash == anchor_lang::idl::IDL_IX_TAG.to_le_bytes() {
+                        return __private::__idl::__idl_dispatch(
+                            program_id,
+                            accounts,
+                            &ix_data,
+                        );
+                    }
                 }
             }
-
             match sighash {
-                #ctor_state_dispatch_arm
-                #(#state_dispatch_arms)*
-                #(#trait_dispatch_arms)*
-                #(#global_dispatch_arms)*
-                _ => {
-                    #fallback_fn
+                Some(sighash) => {
+                    match sighash {
+                        #ctor_state_dispatch_arm
+                        #(#state_dispatch_arms)*
+                        #(#trait_dispatch_arms)*
+                        #(#global_dispatch_arms)*
+                        _ => {
+                            #fallback_fn
+                        }
+                    }
                 }
+                None => #fallback_fn
             }
         }
     }

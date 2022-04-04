@@ -155,7 +155,7 @@ pub mod cfo {
             .checked_div(100)
             .unwrap()
             .try_into()
-            .map_err(|_| ErrorCode::U128CannotConvert)?;
+            .map_err(|_| error!(ErrorCode::U128CannotConvert))?;
         token::burn(ctx.accounts.into_burn().with_signer(&[&seeds]), burn_amount)?;
 
         // Stake.
@@ -165,7 +165,7 @@ pub mod cfo {
             .checked_div(100)
             .unwrap()
             .try_into()
-            .map_err(|_| ErrorCode::U128CannotConvert)?;
+            .map_err(|_| error!(ErrorCode::U128CannotConvert))?;
         token::transfer(
             ctx.accounts.into_stake_transfer().with_signer(&[&seeds]),
             stake_amount,
@@ -178,7 +178,7 @@ pub mod cfo {
             .checked_div(100)
             .unwrap()
             .try_into()
-            .map_err(|_| ErrorCode::U128CannotConvert)?;
+            .map_err(|_| error!(ErrorCode::U128CannotConvert))?;
         token::transfer(
             ctx.accounts.into_treasury_transfer().with_signer(&[&seeds]),
             treasury_amount,
@@ -195,7 +195,7 @@ pub mod cfo {
         let expiry_ts = 1853942400; // 9/30/2028.
         let expiry_receiver = *ctx.accounts.officer.to_account_info().key;
         let locked_kind = {
-            let start_ts = 1633017600; // 9/30/2021.
+            let start_ts = 1633017600; // 9/30.23.0.
             let end_ts = 1822320000; // 9/30/2027.
             let period_count = 2191;
             RewardVendorKind::Locked {
@@ -236,7 +236,7 @@ pub mod cfo {
             .checked_div(total_pool_value)
             .unwrap()
             .try_into()
-            .map_err(|_| ErrorCode::U128CannotConvert)?;
+            .map_err(|_| error!(ErrorCode::U128CannotConvert))?;
 
         // Proportion of the reward going to the msrm pool.
         //
@@ -248,7 +248,7 @@ pub mod cfo {
             .checked_div(total_pool_value)
             .unwrap()
             .try_into()
-            .map_err(|_| ErrorCode::U128CannotConvert)?;
+            .map_err(|_| error!(ErrorCode::U128CannotConvert))?;
 
         // SRM drop.
         {
@@ -322,46 +322,48 @@ pub struct CreateOfficer<'info> {
     #[account(
         init,
         seeds = [dex_program.key.as_ref()],
-        bump = bumps.bump,
+        bump,
         payer = authority,
+        space = Officer::LEN + 8
     )]
     officer: Box<Account<'info, Officer>>,
     #[account(
         init,
         seeds = [b"token", officer.key().as_ref(), srm_mint.key().as_ref()],
-        bump = bumps.srm,
+        bump,
         payer = authority,
         token::mint = srm_mint,
-        token::authority = officer,
+        token::authority = officer
     )]
     srm_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         init,
         seeds = [b"token", officer.key().as_ref(), usdc_mint.key().as_ref()],
-        bump = bumps.usdc,
+        bump,
         payer = authority,
         token::mint = usdc_mint,
-        token::authority = officer,
+        token::authority = officer
     )]
     usdc_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         init,
         seeds = [b"stake", officer.key().as_ref()],
-        bump = bumps.stake,
+        bump,
         payer = authority,
         token::mint = srm_mint,
-        token::authority = officer,
+        token::authority = officer
     )]
     stake: Box<Account<'info, TokenAccount>>,
     #[account(
         init,
         seeds = [b"treasury", officer.key().as_ref()],
-        bump = bumps.treasury,
+        bump,
         payer = authority,
         token::mint = srm_mint,
-        token::authority = officer,
+        token::authority = officer
     )]
     treasury: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
     authority: Signer<'info>,
     #[cfg_attr(
         not(feature = "test"),
@@ -390,9 +392,11 @@ pub struct AuthorizeMarket<'info> {
         init,
         payer = payer,
         seeds = [b"market-auth", officer.key().as_ref(), market.key.as_ref()],
-        bump = bump,
+        bump,
+        space = MarketAuth::LEN + 8
     )]
     market_auth: Account<'info, MarketAuth>,
+    #[account(mut)]
     payer: Signer<'info>,
     // Not read or written to so not validated.
     market: UncheckedAccount<'info>,
@@ -416,10 +420,10 @@ pub struct CreateOfficerToken<'info> {
     #[account(
         init,
         seeds = [b"token", officer.key().as_ref(), mint.key().as_ref()],
-        bump = bump,
+        bump,
         token::mint = mint,
         token::authority = officer,
-        payer = payer,
+        payer = payer
     )]
     token: Account<'info, TokenAccount>,
     mint: Account<'info, Mint>,
@@ -437,7 +441,7 @@ pub struct CreateOfficerOpenOrders<'info> {
     #[account(
         init,
         seeds = [b"open-orders", officer.key().as_ref(), market.key.as_ref()],
-        bump = bump,
+        bump,
         space = 12 + size_of::<OpenOrders>(),
         payer = payer,
         owner = dex::ID,
@@ -604,9 +608,9 @@ pub struct Distribute<'info> {
         has_one = treasury,
         has_one = stake,
     )]
-    officer: Account<'info, Officer>,
+    officer: Box<Account<'info, Officer>>,
     #[account(mut)]
-    treasury: Account<'info, TokenAccount>,
+    treasury: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
     stake: Account<'info, TokenAccount>,
     #[account(mut)]
@@ -664,28 +668,31 @@ pub struct DropStakeRewardPool<'info> {
 ///
 /// PDA - [dex_program_id].
 #[account]
-#[derive(Default)]
 pub struct Officer {
     // Priviledged account.
-    pub authority: Pubkey,
+    pub authority: Pubkey, // 32
     // Vault holding the officer's SRM tokens prior to distribution.
-    pub srm_vault: Pubkey,
+    pub srm_vault: Pubkey, // 32
     // Escrow SRM vault holding tokens which are dropped onto stakers.
-    pub stake: Pubkey,
+    pub stake: Pubkey, // 32
     // SRM token account to send treasury earned tokens to.
-    pub treasury: Pubkey,
+    pub treasury: Pubkey, // 32
     // Defines the fee distribution, i.e., what percent each fee category gets.
-    pub distribution: Distribution,
+    pub distribution: Distribution, // Distribution::LEN
     // Swap frontend for the dex.
-    pub swap_program: Pubkey,
+    pub swap_program: Pubkey, // 32
     // Dex program the officer is associated with.
-    pub dex_program: Pubkey,
+    pub dex_program: Pubkey, // 32
     // SRM stake pool address
-    pub registrar: Pubkey,
+    pub registrar: Pubkey, // 32
     // MSRM stake pool address.
-    pub msrm_registrar: Pubkey,
+    pub msrm_registrar: Pubkey, // 32
     // Bump seeds for pdas.
-    pub bumps: OfficerBumps,
+    pub bumps: OfficerBumps, // OfficerBumps::LEN
+}
+
+impl Officer {
+    pub const LEN: usize = 8 * 32 + Distribution::LEN + OfficerBumps::LEN;
 }
 
 /// MarketAuth represents an authorization token created by the Officer
@@ -700,26 +707,37 @@ pub struct Officer {
 ///
 /// PDA - [b"market-auth", officer, market_address]
 #[account]
-#[derive(Default)]
 pub struct MarketAuth {
     // Bump seed for this account's PDA.
-    pub bump: u8,
+    pub bump: u8, // 1
+}
+
+impl MarketAuth {
+    pub const LEN: usize = 1;
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
 pub struct OfficerBumps {
-    pub bump: u8,
-    pub srm: u8,
-    pub usdc: u8,
-    pub stake: u8,
-    pub treasury: u8,
+    pub bump: u8,     // 1
+    pub srm: u8,      // 1
+    pub usdc: u8,     // 1
+    pub stake: u8,    // 1
+    pub treasury: u8, // 1
+}
+
+impl OfficerBumps {
+    pub const LEN: usize = 5;
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Default, Clone)]
 pub struct Distribution {
-    burn: u8,
-    stake: u8,
-    treasury: u8,
+    burn: u8,     // 1
+    stake: u8,    // 1
+    treasury: u8, // 1
+}
+
+impl Distribution {
+    pub const LEN: usize = 3;
 }
 
 // CpiContext transformations.
@@ -898,7 +916,7 @@ pub struct OfficerDidCreate {
 
 // Error.
 
-#[error]
+#[error_code]
 pub enum ErrorCode {
     #[msg("Distribution does not add to 100")]
     InvalidDistribution,
@@ -916,14 +934,14 @@ pub enum ErrorCode {
 
 fn is_distribution_valid(d: &Distribution) -> Result<()> {
     if d.burn + d.stake + d.treasury != 100 {
-        return Err(ErrorCode::InvalidDistribution.into());
+        return err!(ErrorCode::InvalidDistribution);
     }
     Ok(())
 }
 
 fn is_distribution_ready(accounts: &Distribute) -> Result<()> {
     if accounts.srm_vault.amount < 1_000_000 {
-        return Err(ErrorCode::InsufficientDistributionAmount.into());
+        return err!(ErrorCode::InsufficientDistributionAmount);
     }
     Ok(())
 }
@@ -932,7 +950,7 @@ fn is_distribution_ready(accounts: &Distribute) -> Result<()> {
 fn is_not_trading(ixs: &UncheckedAccount) -> Result<()> {
     let data = ixs.try_borrow_data()?;
     match tx_instructions::load_instruction_at(1, &data) {
-        Ok(_) => Err(ErrorCode::TooManyInstructions.into()),
+        Ok(_) => err!(ErrorCode::TooManyInstructions),
         Err(_) => Ok(()),
     }
 }
@@ -941,7 +959,7 @@ fn is_stake_reward_ready(accounts: &DropStakeReward) -> Result<()> {
     // Min drop is 15,0000 SRM.
     let min_reward: u64 = 15_000_000_000;
     if accounts.stake.amount < min_reward {
-        return Err(ErrorCode::InsufficientStakeReward.into());
+        return err!(ErrorCode::InsufficientStakeReward);
     }
     Ok(())
 }

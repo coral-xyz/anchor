@@ -2,7 +2,8 @@
 name = "misc"
 version = "0.1.0"
 description = "Created with Anchor"
-edition = "2018"
+rust-version = "1.56"
+edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -15,6 +16,7 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = { path = "../../../../lang" }
+anchor-lang = { path = "../../../../lang", features = ["init-if-needed"] }
 anchor-spl = { path = "../../../../spl" }
 misc2 = { path = "../misc2", features = ["cpi"] }
+spl-associated-token-account = "=1.0.3"

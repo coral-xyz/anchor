@@ -14,8 +14,16 @@ const DERIVE_NAME: &str = "Accounts";
 const ERROR_CODE_OFFSET: u32 = 6000;
 
 // Parse an entire interface file.
-pub fn parse(filename: impl AsRef<Path>, version: String) -> Result<Option<Idl>> {
+pub fn parse(
+    filename: impl AsRef<Path>,
+    version: String,
+    seeds_feature: bool,
+    safety_checks: bool,
+) -> Result<Option<Idl>> {
     let ctx = CrateContext::parse(filename)?;
+    if safety_checks {
+        ctx.safety_checks()?;
+    }
 
     let program_mod = match parse_program_mod(&ctx) {
         None => return Ok(None),
@@ -52,11 +60,13 @@ pub fn parse(filename: impl AsRef<Path>, version: String) -> Result<Option<Idl>>
                                     .collect::<Vec<_>>();
                                 let accounts_strct =
                                     accs.get(&method.anchor_ident.to_string()).unwrap();
-                                let accounts = idl_accounts(accounts_strct, &accs);
+                                let accounts =
+                                    idl_accounts(&ctx, accounts_strct, &accs, seeds_feature);
                                 IdlInstruction {
                                     name,
                                     accounts,
                                     args,
+                                    returns: None,
                                 }
                             })
                             .collect::<Vec<_>>()
@@ -91,11 +101,12 @@ pub fn parse(filename: impl AsRef<Path>, version: String) -> Result<Option<Idl>>
                         })
                         .collect();
                     let accounts_strct = accs.get(&anchor_ident.to_string()).unwrap();
-                    let accounts = idl_accounts(accounts_strct, &accs);
+                    let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature);
                     IdlInstruction {
                         name,
                         accounts,
                         args,
+                        returns: None,
                     }
                 };
 
@@ -147,23 +158,24 @@ pub fn parse(filename: impl AsRef<Path>, version: String) -> Result<Option<Idl>>
             let args = ix
                 .args
                 .iter()
-                .map(|arg| {
-                    let mut tts = proc_macro2::TokenStream::new();
-                    arg.raw_arg.ty.to_tokens(&mut tts);
-                    let ty = tts.to_string().parse().unwrap();
-                    IdlField {
-                        name: arg.name.to_string().to_mixed_case(),
-                        ty,
-                    }
+                .map(|arg| IdlField {
+                    name: arg.name.to_string().to_mixed_case(),
+                    ty: to_idl_type(&ctx, &arg.raw_arg.ty),
                 })
                 .collect::<Vec<_>>();
             // todo: don't unwrap
             let accounts_strct = accs.get(&ix.anchor_ident.to_string()).unwrap();
-            let accounts = idl_accounts(accounts_strct, &accs);
+            let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature);
+            let ret_type_str = ix.returns.ty.to_token_stream().to_string();
+            let returns = match ret_type_str.as_str() {
+                "()" => None,
+                _ => Some(ret_type_str.parse().unwrap()),
+            };
             IdlInstruction {
                 name: ix.ident.to_string().to_mixed_case(),
                 accounts,
                 args,
+                returns,
             }
         })
         .collect::<Vec<_>>();
@@ -185,7 +197,7 @@ pub fn parse(filename: impl AsRef<Path>, version: String) -> Result<Option<Idl>>
                     };
                     IdlEventField {
                         name: f.ident.clone().unwrap().to_string().to_mixed_case(),
-                        ty: parser::tts_to_string(&f.ty).parse().unwrap(),
+                        ty: to_idl_type(&ctx, &f.ty),
                         index,
                     }
                 })
@@ -284,7 +296,7 @@ fn parse_error_enum(ctx: &CrateContext) -> Option<syn::ItemEnum> {
                 .iter()
                 .filter(|attr| {
                     let segment = attr.path.segments.last().unwrap();
-                    segment.ident == "error"
+                    segment.ident == "error_code"
                 })
                 .count();
             match attrs_count {
@@ -344,7 +356,7 @@ fn parse_account_derives(ctx: &CrateContext) -> HashMap<String, AccountsStruct> 
     ctx.structs()
         .filter_map(|i_strct| {
             for attr in &i_strct.attrs {
-                if attr.tokens.to_string().contains(DERIVE_NAME) {
+                if attr.path.is_ident("derive") && attr.tokens.to_string().contains(DERIVE_NAME) {
                     let strct = accounts::parse(i_strct).expect("Code not parseable");
                     return Some((strct.ident.to_string(), strct));
                 }
@@ -400,11 +412,9 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
                     .named
                     .iter()
                     .map(|f: &syn::Field| {
-                        let mut tts = proc_macro2::TokenStream::new();
-                        f.ty.to_tokens(&mut tts);
                         Ok(IdlField {
                             name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
-                            ty: tts.to_string().parse()?,
+                            ty: to_idl_type(ctx, &f.ty),
                         })
                     })
                     .collect::<Result<Vec<IdlField>>>(),
@@ -427,8 +437,11 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
                     let fields = match &variant.fields {
                         syn::Fields::Unit => None,
                         syn::Fields::Unnamed(fields) => {
-                            let fields: Vec<IdlType> =
-                                fields.unnamed.iter().map(to_idl_type).collect();
+                            let fields: Vec<IdlType> = fields
+                                .unnamed
+                                .iter()
+                                .map(|f| to_idl_type(ctx, &f.ty))
+                                .collect();
                             Some(EnumFields::Tuple(fields))
                         }
                         syn::Fields::Named(fields) => {
@@ -437,7 +450,7 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
                                 .iter()
                                 .map(|f: &syn::Field| {
                                     let name = f.ident.as_ref().unwrap().to_string();
-                                    let ty = to_idl_type(f);
+                                    let ty = to_idl_type(ctx, &f.ty);
                                     IdlField { name, ty }
                                 })
                                 .collect();
@@ -455,25 +468,89 @@ fn parse_ty_defs(ctx: &CrateContext) -> Result<Vec<IdlTypeDefinition>> {
         .collect()
 }
 
-fn to_idl_type(f: &syn::Field) -> IdlType {
-    let mut tts = proc_macro2::TokenStream::new();
-    f.ty.to_tokens(&mut tts);
-    tts.to_string().parse().unwrap()
+// Replace variable array lengths with values
+fn resolve_variable_array_lengths(ctx: &CrateContext, mut tts_string: String) -> String {
+    for constant in ctx.consts().filter(|c| match *c.ty {
+        // Filter to only those consts that are of type usize or could be cast to usize
+        syn::Type::Path(ref p) => {
+            let segment = p.path.segments.last().unwrap();
+            matches!(
+                segment.ident.to_string().as_str(),
+                "usize"
+                    | "u8"
+                    | "u16"
+                    | "u32"
+                    | "u64"
+                    | "u128"
+                    | "isize"
+                    | "i8"
+                    | "i16"
+                    | "i32"
+                    | "i64"
+                    | "i128"
+            )
+        }
+        _ => false,
+    }) {
+        let mut check_string = tts_string.clone();
+        // Strip whitespace to handle accidental double whitespaces
+        check_string.retain(|c| !c.is_whitespace());
+        let size_string = format!("{}]", &constant.ident.to_string());
+        let cast_size_string = format!("{}asusize]", &constant.ident.to_string());
+        // Check for something to replace
+        let mut replacement_string = None;
+        if check_string.contains(cast_size_string.as_str()) {
+            replacement_string = Some(cast_size_string);
+        } else if check_string.contains(size_string.as_str()) {
+            replacement_string = Some(size_string);
+        }
+        if let Some(replacement_string) = replacement_string {
+            // Check for the existence of consts existing elsewhere in the
+            // crate which have the same name, are usize, and have a
+            // different value. We can't know which was intended for the
+            // array size from ctx.
+            if ctx.consts().any(|c| {
+                c != constant
+                    && c.ident == constant.ident
+                    && c.ty == constant.ty
+                    && c.expr != constant.expr
+            }) {
+                panic!("Crate wide unique name required for array size const.");
+            }
+            // Replace the match, don't break because there might be multiple replacements to be
+            // made in the case of multidimensional arrays
+            tts_string = check_string.replace(
+                &replacement_string,
+                format!("{}]", &constant.expr.to_token_stream()).as_str(),
+            );
+        }
+    }
+    tts_string
+}
+
+fn to_idl_type(ctx: &CrateContext, ty: &syn::Type) -> IdlType {
+    let mut tts_string = parser::tts_to_string(&ty);
+    if tts_string.starts_with('[') {
+        tts_string = resolve_variable_array_lengths(ctx, tts_string);
+    }
+    tts_string.parse().unwrap()
 }
 
 fn idl_accounts(
+    ctx: &CrateContext,
     accounts: &AccountsStruct,
     global_accs: &HashMap<String, AccountsStruct>,
+    seeds_feature: bool,
 ) -> Vec<IdlAccountItem> {
     accounts
         .fields
         .iter()
         .map(|acc: &AccountField| match acc {
             AccountField::CompositeField(comp_f) => {
-                let accs_strct = global_accs
-                    .get(&comp_f.symbol)
-                    .expect("Could not resolve Accounts symbol");
-                let accounts = idl_accounts(accs_strct, global_accs);
+                let accs_strct = global_accs.get(&comp_f.symbol).unwrap_or_else(|| {
+                    panic!("Could not resolve Accounts symbol {}", comp_f.symbol)
+                });
+                let accounts = idl_accounts(ctx, accs_strct, global_accs, seeds_feature);
                 IdlAccountItem::IdlAccounts(IdlAccounts {
                     name: comp_f.ident.to_string().to_mixed_case(),
                     accounts,
@@ -486,6 +563,7 @@ fn idl_accounts(
                     Ty::Signer => true,
                     _ => acc.constraints.is_signer(),
                 },
+                pda: pda::parse(ctx, accounts, acc, seeds_feature),
             }),
         })
         .collect::<Vec<_>>()

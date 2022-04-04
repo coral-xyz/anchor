@@ -5,12 +5,17 @@ use syn::parse_macro_input;
 
 mod id;
 
-/// A data structure representing a Solana account, implementing various traits:
+/// An attribute for a data structure representing a Solana account.
+///
+/// `#[account]` generates trait implementations for the following traits:
 ///
 /// - [`AccountSerialize`](./trait.AccountSerialize.html)
 /// - [`AccountDeserialize`](./trait.AccountDeserialize.html)
 /// - [`AnchorSerialize`](./trait.AnchorSerialize.html)
 /// - [`AnchorDeserialize`](./trait.AnchorDeserialize.html)
+/// - [`Clone`](https://doc.rust-lang.org/std/clone/trait.Clone.html)
+/// - [`Discriminator`](./trait.Discriminator.html)
+/// - [`Owner`](./trait.Owner.html)
 ///
 /// When implementing account serialization traits the first 8 bytes are
 /// reserved for a unique account discriminator, self described by the first 8
@@ -38,7 +43,7 @@ mod id;
 ///
 /// This can be used to conveniently implement
 /// [`ZeroCopy`](./trait.ZeroCopy.html) so that the account can be used
-/// with [`Loader`](./struct.Loader.html).
+/// with [`AccountLoader`](./accounts/account_loader/struct.AccountLoader.html).
 ///
 /// Other than being more efficient, the most salient benefit this provides is
 /// the ability to define account types larger than the max stack or heap size.
@@ -51,8 +56,8 @@ mod id;
 ///
 /// To facilitate this, all fields in an account must be constrained to be
 /// "plain old  data", i.e., they must implement
-/// [`Pod`](../bytemuck/trait.Pod.html). Please review the
-/// [`safety`](file:///home/armaniferrante/Documents/code/src/github.com/project-serum/anchor/target/doc/bytemuck/trait.Pod.html#safety)
+/// [`Pod`](https://docs.rs/bytemuck/latest/bytemuck/trait.Pod.html). Please review the
+/// [`safety`](https://docs.rs/bytemuck/latest/bytemuck/trait.Pod.html#safety)
 /// section before using.
 #[proc_macro_attribute]
 pub fn account(
@@ -69,7 +74,7 @@ pub fn account(
     for arg in args {
         let ns = arg
             .to_string()
-            .replace("\"", "")
+            .replace('\"', "")
             .chars()
             .filter(|c| !c.is_whitespace())
             .collect();
@@ -142,18 +147,18 @@ pub fn account(
                 // It's expected on-chain programs deserialize via zero-copy.
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
-                    fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
+                    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                         if buf.len() < #discriminator.len() {
-                            return Err(anchor_lang::__private::ErrorCode::AccountDiscriminatorNotFound.into());
+                            return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound.into());
                         }
                         let given_disc = &buf[..8];
                         if &#discriminator != given_disc {
-                            return Err(anchor_lang::__private::ErrorCode::AccountDiscriminatorMismatch.into());
+                            return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch.into());
                         }
                         Self::try_deserialize_unchecked(buf)
                     }
 
-                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
+                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                         let data: &[u8] = &buf[8..];
                         // Re-interpret raw bytes into the POD data structure.
                         let account = anchor_lang::__private::bytemuck::from_bytes(data);
@@ -171,34 +176,35 @@ pub fn account(
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountSerialize for #account_name #type_gen #where_clause {
-                    fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> std::result::Result<(), ProgramError> {
-                        writer.write_all(&#discriminator).map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotSerialize)?;
-                        AnchorSerialize::serialize(
-                            self,
-                            writer
-                        )
-                            .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotSerialize)?;
+                    fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> anchor_lang::Result<()> {
+                        if writer.write_all(&#discriminator).is_err() {
+                            return Err(anchor_lang::error::ErrorCode::AccountDidNotSerialize.into());
+                        }
+
+                        if AnchorSerialize::serialize(self, writer).is_err() {
+                            return Err(anchor_lang::error::ErrorCode::AccountDidNotSerialize.into());
+                        }
                         Ok(())
                     }
                 }
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
-                    fn try_deserialize(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
+                    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                         if buf.len() < #discriminator.len() {
-                            return Err(anchor_lang::__private::ErrorCode::AccountDiscriminatorNotFound.into());
+                            return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound.into());
                         }
                         let given_disc = &buf[..8];
                         if &#discriminator != given_disc {
-                            return Err(anchor_lang::__private::ErrorCode::AccountDiscriminatorMismatch.into());
+                            return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch.into());
                         }
                         Self::try_deserialize_unchecked(buf)
                     }
 
-                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> std::result::Result<Self, ProgramError> {
+                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                         let mut data: &[u8] = &buf[8..];
                         AnchorDeserialize::deserialize(&mut data)
-                            .map_err(|_| anchor_lang::__private::ErrorCode::AccountDidNotDeserialize.into())
+                            .map_err(|_| anchor_lang::error::ErrorCode::AccountDidNotDeserialize.into())
                     }
                 }
 
@@ -287,9 +293,21 @@ pub fn zero_copy(
 ) -> proc_macro::TokenStream {
     let account_strct = parse_macro_input!(item as syn::ItemStruct);
 
+    // Takes the first repr. It's assumed that more than one are not on the
+    // struct.
+    let attr = account_strct
+        .attrs
+        .iter()
+        .find(|attr| anchor_syn::parser::tts_to_string(&attr.path) == "repr");
+
+    let repr = match attr {
+        Some(_attr) => quote! {},
+        None => quote! {#[repr(C)]},
+    };
+
     proc_macro::TokenStream::from(quote! {
         #[derive(anchor_lang::__private::ZeroCopyAccessor, Copy, Clone)]
-        #[repr(packed)]
+        #repr
         #account_strct
     })
 }

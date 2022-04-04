@@ -201,48 +201,44 @@ async function setupMarket({
   const MARKET_A_USDC = await Market.load(
     provider.connection,
     marketAPublicKey,
-    { commitment: "recent" },
+    { commitment: "processed" },
     DEX_PID
   );
   for (let k = 0; k < asks.length; k += 1) {
     let ask = asks[k];
-    const {
-      transaction,
-      signers,
-    } = await MARKET_A_USDC.makePlaceOrderTransaction(provider.connection, {
-      owner: marketMaker.account,
-      payer: marketMaker.baseToken,
-      side: "sell",
-      price: ask[0],
-      size: ask[1],
-      orderType: "postOnly",
-      clientId: undefined,
-      openOrdersAddressKey: undefined,
-      openOrdersAccount: undefined,
-      feeDiscountPubkey: null,
-      selfTradeBehavior: "abortTransaction",
-    });
+    const { transaction, signers } =
+      await MARKET_A_USDC.makePlaceOrderTransaction(provider.connection, {
+        owner: marketMaker.account,
+        payer: marketMaker.baseToken,
+        side: "sell",
+        price: ask[0],
+        size: ask[1],
+        orderType: "postOnly",
+        clientId: undefined,
+        openOrdersAddressKey: undefined,
+        openOrdersAccount: undefined,
+        feeDiscountPubkey: null,
+        selfTradeBehavior: "abortTransaction",
+      });
     await provider.send(transaction, signers.concat(marketMaker.account));
   }
 
   for (let k = 0; k < bids.length; k += 1) {
     let bid = bids[k];
-    const {
-      transaction,
-      signers,
-    } = await MARKET_A_USDC.makePlaceOrderTransaction(provider.connection, {
-      owner: marketMaker.account,
-      payer: marketMaker.quoteToken,
-      side: "buy",
-      price: bid[0],
-      size: bid[1],
-      orderType: "postOnly",
-      clientId: undefined,
-      openOrdersAddressKey: undefined,
-      openOrdersAccount: undefined,
-      feeDiscountPubkey: null,
-      selfTradeBehavior: "abortTransaction",
-    });
+    const { transaction, signers } =
+      await MARKET_A_USDC.makePlaceOrderTransaction(provider.connection, {
+        owner: marketMaker.account,
+        payer: marketMaker.quoteToken,
+        side: "buy",
+        price: bid[0],
+        size: bid[1],
+        orderType: "postOnly",
+        clientId: undefined,
+        openOrdersAddressKey: undefined,
+        openOrdersAccount: undefined,
+        feeDiscountPubkey: null,
+        selfTradeBehavior: "abortTransaction",
+      });
     await provider.send(transaction, signers.concat(marketMaker.account));
   }
 
@@ -386,7 +382,8 @@ async function signTransactions({
   wallet,
   connection,
 }) {
-  const blockhash = (await connection.getRecentBlockhash("max")).blockhash;
+  const blockhash = (await connection.getRecentBlockhash("finalized"))
+    .blockhash;
   transactionsAndSigners.forEach(({ transaction, signers = [] }) => {
     transaction.recentBlockhash = blockhash;
     transaction.setSigners(
@@ -405,7 +402,7 @@ async function signTransactions({
 async function sendAndConfirmRawTransaction(
   connection,
   raw,
-  commitment = "recent"
+  commitment = "processed"
 ) {
   let tx = await connection.sendRawTransaction(raw, {
     skipPreflight: true,
@@ -433,7 +430,7 @@ async function runTradeBot(market, provider, iterations = undefined) {
   let marketClient = await Market.load(
     provider.connection,
     market,
-    { commitment: "recent" },
+    { commitment: "processed" },
     DEX_PID
   );
   const baseTokenUser1 = (
@@ -516,42 +513,38 @@ async function runTradeBot(market, provider, iterations = undefined) {
     }
 
     // Post ask.
-    const {
-      transaction: tx_ask,
-      signers: sigs_ask,
-    } = await marketClient.makePlaceOrderTransaction(provider.connection, {
-      owner: maker,
-      payer: baseToken,
-      side: "sell",
-      price,
-      size,
-      orderType: "postOnly",
-      clientId,
-      openOrdersAddressKey: undefined,
-      openOrdersAccount: undefined,
-      feeDiscountPubkey: null,
-      selfTradeBehavior: "abortTransaction",
-    });
+    const { transaction: tx_ask, signers: sigs_ask } =
+      await marketClient.makePlaceOrderTransaction(provider.connection, {
+        owner: maker,
+        payer: baseToken,
+        side: "sell",
+        price,
+        size,
+        orderType: "postOnly",
+        clientId,
+        openOrdersAddressKey: undefined,
+        openOrdersAccount: undefined,
+        feeDiscountPubkey: null,
+        selfTradeBehavior: "abortTransaction",
+      });
     let txSig = await provider.send(tx_ask, sigs_ask.concat(maker));
     console.log("Ask", txSig);
 
     // Take.
-    const {
-      transaction: tx_bid,
-      signers: sigs_bid,
-    } = await marketClient.makePlaceOrderTransaction(provider.connection, {
-      owner: taker,
-      payer: quoteToken,
-      side: "buy",
-      price,
-      size,
-      orderType: "ioc",
-      clientId: undefined,
-      openOrdersAddressKey: undefined,
-      openOrdersAccount: undefined,
-      feeDiscountPubkey: null,
-      selfTradeBehavior: "abortTransaction",
-    });
+    const { transaction: tx_bid, signers: sigs_bid } =
+      await marketClient.makePlaceOrderTransaction(provider.connection, {
+        owner: taker,
+        payer: quoteToken,
+        side: "buy",
+        price,
+        size,
+        orderType: "ioc",
+        clientId: undefined,
+        openOrdersAddressKey: undefined,
+        openOrdersAccount: undefined,
+        feeDiscountPubkey: null,
+        selfTradeBehavior: "abortTransaction",
+      });
     txSig = await provider.send(tx_bid, sigs_bid.concat(taker));
     console.log("Bid", txSig);
 
