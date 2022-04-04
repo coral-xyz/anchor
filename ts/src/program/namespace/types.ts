@@ -2,6 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { Idl } from "../../";
 import {
+  IdlEnumVariant,
   IdlField,
   IdlInstruction,
   IdlType,
@@ -131,37 +132,71 @@ type ArgsTuple<A extends IdlField[], Defined> = {
     : unknown;
 } & unknown[];
 
-type FieldsOfType<I extends IdlTypeDef> = NonNullable<
-  I["type"] extends IdlTypeDefTyStruct
-    ? I["type"]["fields"]
-    : I["type"] extends IdlTypeDefTyEnum
-    ? I["type"]["variants"][number]["fields"]
-    : any[]
->[number];
-
-export type TypeDef<I extends IdlTypeDef, Defined> = {
-  [F in FieldsOfType<I>["name"]]: DecodeType<
-    (FieldsOfType<I> & { name: F })["type"],
+type StructDef<I extends IdlField[], Defined> = {
+  [F in I[number]["name"]]: DecodeType<
+    (I[number] & { name: F })["type"],
     Defined
   >;
 };
 
-type ValueOf<T> = T[keyof T];
-type FindUserDefinedDeps<I extends IdlTypeDef> = ValueOf<{
-  [F in FieldsOfType<I>["name"]]: (FieldsOfType<I> & {
-    name: F;
-  })["type"] extends infer T
-    ? T extends {
-        defined: string;
-      }
-      ? T["defined"]
-      : T extends { option: { defined: string } }
-      ? T["option"]["defined"]
-      : T extends { coption: { defined: string } }
-      ? T["coption"]["defined"]
-      : never
-    : never;
+type VariantDef<
+  T extends IdlEnumVariant,
+  Defined
+> = T["fields"] extends IdlField[]
+  ? StructDef<T["fields"], Defined>
+  : T["fields"] extends IdlType[]
+  ? unknown // TODO: Tuple enum variants are not supported yet.
+  : Record<string, never>;
+
+type XorVariantDefs<T extends Record<string, unknown>> = ValueOf<{
+  [K1 in keyof T]: {
+    [K2 in Exclude<keyof T, K1>]?: never;
+  } & { [K2 in K1]: T[K2] };
 }>;
+type VariantDefs<I extends IdlEnumVariant[], Defined> = {
+  [K in I[number]["name"]]: VariantDef<I[number] & { name: K }, Defined>;
+};
+type EnumDef<I extends IdlEnumVariant[], Defined> = XorVariantDefs<
+  VariantDefs<I, Defined>
+>;
+
+export type TypeDef<
+  I extends IdlTypeDef,
+  Defined
+> = I["type"] extends IdlTypeDefTyStruct
+  ? StructDef<I["type"]["fields"], Defined>
+  : I["type"] extends IdlTypeDefTyEnum
+  ? EnumDef<I["type"]["variants"], Defined>
+  : never;
+
+type ValueOf<T> = T[keyof T];
+type FindTypeDeps<T extends IdlType> = T extends {
+  defined: string;
+}
+  ? T["defined"]
+  : T extends { option: { defined: string } }
+  ? T["option"]["defined"]
+  : T extends { coption: { defined: string } }
+  ? T["coption"]["defined"]
+  : never;
+type FindStructDeps<I extends IdlTypeDefTyStruct> = FindTypeDeps<
+  I["fields"][number]["type"]
+>;
+type FindEnumDeps<I extends IdlTypeDefTyEnum> = NonNullable<
+  I["variants"][number]["fields"]
+> extends infer T
+  ? T extends IdlField[]
+    ? FindTypeDeps<T[number]["type"]>
+    : T extends IdlType[]
+    ? FindTypeDeps<T[number]>
+    : never
+  : never;
+type FindUserDefinedDeps<I extends IdlTypeDef> =
+  I["type"] extends IdlTypeDefTyStruct
+    ? FindStructDeps<I["type"]>
+    : I["type"] extends IdlTypeDefTyEnum
+    ? FindEnumDeps<I["type"]>
+    : never;
 type FindUserDefined<T extends Record<string, IdlTypeDef>> = ValueOf<{
   [K in keyof T]: FindUserDefinedDeps<T[K]>;
 }>;

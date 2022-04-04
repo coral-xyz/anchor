@@ -9,8 +9,7 @@ export class IdlCoder {
     field: { name?: string } & Pick<IdlField, "type">,
     types?: IdlTypeDef[]
   ): Layout {
-    const fieldName =
-      field.name !== undefined ? camelCase(field.name) : undefined;
+    const fieldName = field.name;
     switch (field.type) {
       case "bool": {
         return borsh.bool(fieldName);
@@ -124,8 +123,8 @@ export class IdlCoder {
       });
       return borsh.struct(fieldLayouts, name);
     } else if (typeDef.type.kind === "enum") {
-      let variants = typeDef.type.variants.map((variant: IdlEnumVariant) => {
-        const name = camelCase(variant.name);
+      const variants = typeDef.type.variants.map((variant: IdlEnumVariant) => {
+        const name = variant.name;
         if (variant.fields === undefined) {
           return borsh.struct([], name);
         }
