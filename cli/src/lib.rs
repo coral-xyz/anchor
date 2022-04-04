@@ -2107,7 +2107,15 @@ fn validator_flags(
                     // Remaining validator flags are non-array types
                     flags.push(format!("--{}", key.replace('_', "-")));
                     if let serde_json::Value::String(v) = value {
-                        flags.push(v.to_string());
+                        if key == "warp_slot" && v.is_empty() {
+                            if !entries.as_object().unwrap().contains_key("url") {
+                                return Err(anyhow!(
+                                    "Validator url for Solana's JSON RPC should be provided in order to get its current slot"
+                                ));
+                            }
+                        } else {
+                            flags.push(v.to_string());
+                        }
                     } else {
                         flags.push(value.to_string());
                     }
