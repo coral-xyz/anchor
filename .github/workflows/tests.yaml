@@ -379,6 +379,8 @@ jobs:
             path: tests/custom-coder
           - cmd: cd tests/validator-clone && yarn --frozen-lockfile && anchor test --skip-lint
             path: tests/validator-clone
+          - cmd: cd tests/validator-warp-slot && yarn --frozen-lockfile && anchor test --skip-lint
+            path: tests/validator-warp-slot
           - cmd: cd tests/cpi-returns && anchor test --skip-lint
             path: tests/cpi-returns
           - cmd: cd tests/multiple-suites && anchor test --skip-lint
