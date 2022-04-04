@@ -157,6 +157,8 @@ type FindUserDefinedDeps<I extends IdlTypeDef> = ValueOf<{
       ? T["defined"]
       : T extends { option: { defined: string } }
       ? T["option"]["defined"]
+      : T extends { coption: { defined: string } }
+      ? T["coption"]["defined"]
       : never
     : never;
 }>;
