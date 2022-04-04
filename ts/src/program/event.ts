@@ -1,7 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 import * as assert from "assert";
 import { IdlEvent, IdlEventField } from "../idl.js";
-import { Coder } from "../coder/index.js";
+import { Coder } from "../coder";
 import { DecodeType } from "./namespace/types.js";
 import Provider from "../provider.js";
 
@@ -19,6 +19,11 @@ export type Event<
   data: EventData<E["fields"][number], Defined>;
 };
 
+export type EventError = {
+  name: '$error', // Reserve error event name, because in rust you can't name struct starting with $.
+  data: string // Same type as Event, and return different callback (error in this situation)
+}
+
 export type EventData<T extends IdlEventField, Defined> = {
   [N in T["name"]]: DecodeType<(T & { name: N })["type"], Defined>;
 };
@@ -29,7 +34,7 @@ export class EventManager {
   /**
    * Program ID for event subscriptions.
    */
-  private _programId: PublicKey;
+  private readonly _programId: PublicKey;
 
   /**
    * Network and wallet provider.
@@ -44,7 +49,7 @@ export class EventManager {
   /**
    * Maps event listener id to [event-name, callback].
    */
-  private _eventCallbacks: Map<number, [string, EventCallback]>;
+  private readonly _eventCallbacks: Map<number, [string, EventCallback]>;
 
   /**
    * Maps event name to all listeners for the event.
@@ -172,22 +177,29 @@ export class EventParser {
   // its emission, thereby allowing us to know if a given log event was
   // emitted by *this* program. If it was, then we parse the raw string and
   // emit the event if the string matches the event being subscribed to.
-  public parseLogs(logs: string[], callback: (log: Event) => void) {
-    const logScanner = new LogScanner(logs);
-    const execution = new ExecutionContext(logScanner.next() as string);
-    let log = logScanner.next();
-    while (log !== null) {
-      let [event, newProgram, didPop] = this.handleLog(execution, log);
-      if (event) {
-        callback(event);
+  public parseLogs(logs: string[], callback: (log: Event | EventError) => void) {
+    try {
+      const logScanner = new LogScanner(logs);
+      const execution = new ExecutionContext(logScanner.next() as string);
+      let log = logScanner.next();
+      while (log !== null) {
+        let [event, newProgram, didPop] = this.handleLog(execution, log);
+        if (event) {
+          callback(event);
+        }
+        if (newProgram) {
+          execution.push(newProgram);
+        }
+        if (didPop) {
+          execution.pop();
+        }
+        log = logScanner.next();
       }
-      if (newProgram) {
-        execution.push(newProgram);
-      }
-      if (didPop) {
-        execution.pop();
-      }
-      log = logScanner.next();
+    } catch (e: any) {
+      callback({
+        name: '$error',
+        data: e.message
+      })
     }
   }
 
