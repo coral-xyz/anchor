@@ -63,7 +63,7 @@ pub fn burn<'a, 'b, 'c, 'info>(
 ) -> Result<()> {
     let ix = spl_token::instruction::burn(
         &spl_token::ID,
-        ctx.accounts.to.key,
+        ctx.accounts.account.key,
         ctx.accounts.mint.key,
         ctx.accounts.authority.key,
         &[],
@@ -72,7 +72,7 @@ pub fn burn<'a, 'b, 'c, 'info>(
     solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.to.clone(),
+            ctx.accounts.account.clone(),
             ctx.accounts.mint.clone(),
             ctx.accounts.authority.clone(),
         ],
@@ -87,7 +87,7 @@ pub fn approve<'a, 'b, 'c, 'info>(
 ) -> Result<()> {
     let ix = spl_token::instruction::approve(
         &spl_token::ID,
-        ctx.accounts.to.key,
+        ctx.accounts.source.key,
         ctx.accounts.delegate.key,
         ctx.accounts.authority.key,
         &[],
@@ -96,7 +96,7 @@ pub fn approve<'a, 'b, 'c, 'info>(
     solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.to.clone(),
+            ctx.accounts.source.clone(),
             ctx.accounts.delegate.clone(),
             ctx.accounts.authority.clone(),
         ],
@@ -275,13 +275,13 @@ pub struct MintTo<'info> {
 #[derive(Accounts)]
 pub struct Burn<'info> {
     pub mint: AccountInfo<'info>,
-    pub to: AccountInfo<'info>,
+    pub account: AccountInfo<'info>,
     pub authority: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct Approve<'info> {
-    pub to: AccountInfo<'info>,
+    pub source: AccountInfo<'info>,
     pub delegate: AccountInfo<'info>,
     pub authority: AccountInfo<'info>,
 }
