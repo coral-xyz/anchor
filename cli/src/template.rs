@@ -52,7 +52,7 @@ pub fn cargo_toml(name: &str) -> String {
 name = "{0}"
 version = "0.1.0"
 description = "Created with Anchor"
-edition = "2018"
+edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -237,6 +237,7 @@ pub fn ts_package_json() -> String {
         "chai": "^4.3.4",
         "mocha": "^9.0.3",
         "ts-mocha": "^8.0.0",
+        "@types/bn.js": "^5.1.0",
         "@types/chai": "^4.3.0",
         "@types/mocha": "^9.0.0",
         "typescript": "^4.3.5"
@@ -295,6 +296,7 @@ pub fn git_ignore() -> &'static str {
 target
 **/*.rs.bk
 node_modules
+test-ledger
 "#
 }
 

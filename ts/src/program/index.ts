@@ -11,6 +11,7 @@ import NamespaceFactory, {
   StateClient,
   SimulateNamespace,
   MethodsNamespace,
+  ViewNamespace,
 } from "./namespace/index.js";
 import { utf8 } from "../utils/bytes/index.js";
 import { EventManager } from "./event.js";
@@ -77,6 +78,7 @@ export class Program<IDL extends Idl = Idl> {
    *   },
    * });
    * ```
+   * @deprecated
    */
   readonly rpc: RpcNamespace<IDL>;
 
@@ -130,6 +132,7 @@ export class Program<IDL extends Idl = Idl> {
    *   },
    * });
    * ```
+   * @deprecated
    */
   readonly instruction: InstructionNamespace<IDL>;
 
@@ -161,6 +164,7 @@ export class Program<IDL extends Idl = Idl> {
    *   },
    * });
    * ```
+   * @deprecated
    */
   readonly transaction: TransactionNamespace<IDL>;
 
@@ -197,6 +201,7 @@ export class Program<IDL extends Idl = Idl> {
    *   },
    * });
    * ```
+   * @deprecated
    */
   readonly simulate: SimulateNamespace<IDL>;
 
@@ -212,6 +217,8 @@ export class Program<IDL extends Idl = Idl> {
    * This is an alternative to using namespace the other namespaces..
    */
   readonly methods: MethodsNamespace<IDL>;
+
+  readonly views?: ViewNamespace<IDL>;
 
   /**
    * Address of the program.
@@ -284,6 +291,7 @@ export class Program<IDL extends Idl = Idl> {
       simulate,
       methods,
       state,
+      views,
     ] = NamespaceFactory.build(idl, this._coder, programId, provider);
     this.rpc = rpc;
     this.instruction = instruction;
@@ -292,6 +300,7 @@ export class Program<IDL extends Idl = Idl> {
     this.simulate = simulate;
     this.methods = methods;
     this.state = state;
+    this.views = views;
   }
 
   /**

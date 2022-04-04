@@ -1,6 +1,7 @@
 //! Misc example is a catchall program for testing unrelated features.
 //! It's not too instructive/coherent by itself, so please see other examples.
 
+use account::MAX_SIZE;
 use anchor_lang::prelude::*;
 use context::*;
 use event::*;
@@ -10,7 +11,7 @@ mod account;
 mod context;
 mod event;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("3TEqcc8xhrhdspwbvoamUJe2borm4Nr72JxL66k6rgrh");
 
 #[constant]
 pub const BASE: u128 = 1_000_000;
@@ -82,6 +83,12 @@ pub mod misc {
         emit!(E1 { data });
         emit!(E2 { data: 1234 });
         emit!(E3 { data: 9 });
+        emit!(E5 {
+            data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        });
+        emit!(E6 {
+            data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        });
         Ok(())
     }
 
@@ -97,6 +104,14 @@ pub mod misc {
 
     pub fn test_const_array_size(ctx: Context<TestConstArraySize>, data: u8) -> Result<()> {
         ctx.accounts.data.data[0] = data;
+        Ok(())
+    }
+
+    pub fn test_const_ix_data_size(
+        ctx: Context<TestConstIxDataSize>,
+        data: [u8; MAX_SIZE],
+    ) -> Result<()> {
+        ctx.accounts.data.data = data;
         Ok(())
     }
 
@@ -242,6 +257,14 @@ pub mod misc {
     pub fn test_multidimensional_array(
         ctx: Context<TestMultidimensionalArray>,
         data: [[u8; 10]; 10],
+    ) -> Result<()> {
+        ctx.accounts.data.data = data;
+        Ok(())
+    }
+
+    pub fn test_multidimensional_array_const_sizes(
+        ctx: Context<TestMultidimensionalArrayConstSizes>,
+        data: [[u8; 11]; 10],
     ) -> Result<()> {
         ctx.accounts.data.data = data;
         Ok(())

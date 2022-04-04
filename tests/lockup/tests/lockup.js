@@ -1,8 +1,9 @@
-const assert = require("assert");
 const anchor = require("@project-serum/anchor");
 const serumCmn = require("@project-serum/common");
 const { TOKEN_PROGRAM_ID } = require("@solana/spl-token");
 const utils = require("./utils");
+const { assert, expect } = require("chai");
+const nativeAssert = require("assert");
 
 anchor.utils.features.set("anchor-deprecated-state");
 
@@ -41,10 +42,10 @@ describe("Lockup and Registry", () => {
     lockupAddress = await lockup.state.address();
     const lockupAccount = await lockup.state.fetch();
 
-    assert.ok(lockupAccount.authority.equals(provider.wallet.publicKey));
-    assert.ok(lockupAccount.whitelist.length === WHITELIST_SIZE);
+    assert.isTrue(lockupAccount.authority.equals(provider.wallet.publicKey));
+    assert.strictEqual(lockupAccount.whitelist.length, WHITELIST_SIZE);
     lockupAccount.whitelist.forEach((e) => {
-      assert.ok(e.programId.equals(anchor.web3.PublicKey.default));
+      assert.isTrue(e.programId.equals(anchor.web3.PublicKey.default));
     });
   });
 
@@ -66,7 +67,7 @@ describe("Lockup and Registry", () => {
     });
 
     let lockupAccount = await lockup.state.fetch();
-    assert.ok(lockupAccount.authority.equals(newAuthority.publicKey));
+    assert.isTrue(lockupAccount.authority.equals(newAuthority.publicKey));
 
     await lockup.state.rpc.setAuthority(provider.wallet.publicKey, {
       accounts: {
@@ -76,7 +77,7 @@ describe("Lockup and Registry", () => {
     });
 
     lockupAccount = await lockup.state.fetch();
-    assert.ok(lockupAccount.authority.equals(provider.wallet.publicKey));
+    assert.isTrue(lockupAccount.authority.equals(provider.wallet.publicKey));
   });
 
   const entries = [];
@@ -101,7 +102,7 @@ describe("Lockup and Registry", () => {
 
     let lockupAccount = await lockup.state.fetch();
 
-    assert.ok(lockupAccount.whitelist.length === 1);
+    assert.lengthOf(lockupAccount.whitelist, 1);
     assert.deepEqual(lockupAccount.whitelist, [entries[0]]);
 
     for (let k = 1; k < WHITELIST_SIZE; k += 1) {
@@ -112,14 +113,14 @@ describe("Lockup and Registry", () => {
 
     assert.deepEqual(lockupAccount.whitelist, entries);
 
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         const e = await generateEntry();
         await lockup.state.rpc.whitelistAdd(e, { accounts });
       },
       (err) => {
-        assert.equal(err.code, 6008);
-        assert.equal(err.msg, "Whitelist is full");
+        assert.strictEqual(err.error.errorCode.number, 6008);
+        assert.strictEqual(err.error.errorMessage, "Whitelist is full");
         return true;
       }
     );
@@ -187,21 +188,21 @@ describe("Lockup and Registry", () => {
 
     vestingAccount = await lockup.account.vesting.fetch(vesting.publicKey);
 
-    assert.ok(vestingAccount.beneficiary.equals(provider.wallet.publicKey));
-    assert.ok(vestingAccount.mint.equals(mint));
-    assert.ok(vestingAccount.grantor.equals(provider.wallet.publicKey));
-    assert.ok(vestingAccount.outstanding.eq(depositAmount));
-    assert.ok(vestingAccount.startBalance.eq(depositAmount));
-    assert.ok(vestingAccount.whitelistOwned.eq(new anchor.BN(0)));
-    assert.equal(vestingAccount.nonce, nonce);
-    assert.ok(vestingAccount.createdTs.gt(new anchor.BN(0)));
-    assert.ok(vestingAccount.startTs.eq(startTs));
-    assert.ok(vestingAccount.endTs.eq(endTs));
-    assert.ok(vestingAccount.realizor === null);
+    assert.isTrue(vestingAccount.beneficiary.equals(provider.wallet.publicKey));
+    assert.isTrue(vestingAccount.mint.equals(mint));
+    assert.isTrue(vestingAccount.grantor.equals(provider.wallet.publicKey));
+    assert.isTrue(vestingAccount.outstanding.eq(depositAmount));
+    assert.isTrue(vestingAccount.startBalance.eq(depositAmount));
+    assert.isTrue(vestingAccount.whitelistOwned.eq(new anchor.BN(0)));
+    assert.strictEqual(vestingAccount.nonce, nonce);
+    assert.isTrue(vestingAccount.createdTs.gt(new anchor.BN(0)));
+    assert.isTrue(vestingAccount.startTs.eq(startTs));
+    assert.isTrue(vestingAccount.endTs.eq(endTs));
+    assert.isNull(vestingAccount.realizor);
   });
 
   it("Fails to withdraw from a vesting account before vesting", async () => {
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         await lockup.rpc.withdraw(new anchor.BN(100), {
           accounts: {
@@ -216,8 +217,11 @@ describe("Lockup and Registry", () => {
         });
       },
       (err) => {
-        assert.equal(err.code, 6007);
-        assert.equal(err.msg, "Insufficient withdrawal balance.");
+        assert.strictEqual(err.error.errorCode.number, 6007);
+        assert.strictEqual(
+          err.error.errorMessage,
+          "Insufficient withdrawal balance."
+        );
         return true;
       }
     );
@@ -247,16 +251,16 @@ describe("Lockup and Registry", () => {
     });
 
     vestingAccount = await lockup.account.vesting.fetch(vesting.publicKey);
-    assert.ok(vestingAccount.outstanding.eq(new anchor.BN(0)));
+    assert.isTrue(vestingAccount.outstanding.eq(new anchor.BN(0)));
 
     const vaultAccount = await serumCmn.getTokenAccount(
       provider,
       vestingAccount.vault
     );
-    assert.ok(vaultAccount.amount.eq(new anchor.BN(0)));
+    assert.isTrue(vaultAccount.amount.eq(new anchor.BN(0)));
 
     const tokenAccount = await serumCmn.getTokenAccount(provider, token);
-    assert.ok(tokenAccount.amount.eq(new anchor.BN(100)));
+    assert.isTrue(tokenAccount.amount.eq(new anchor.BN(100)));
   });
 
   const registrar = anchor.web3.Keypair.generate();
@@ -286,10 +290,10 @@ describe("Lockup and Registry", () => {
     });
 
     const state = await registry.state.fetch();
-    assert.ok(state.lockupProgram.equals(lockup.programId));
+    assert.isTrue(state.lockupProgram.equals(lockup.programId));
 
     // Should not allow a second initializatoin.
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         await registry.state.rpc.new(lockup.programId);
       },
@@ -326,13 +330,13 @@ describe("Lockup and Registry", () => {
       registrar.publicKey
     );
 
-    assert.ok(registrarAccount.authority.equals(provider.wallet.publicKey));
-    assert.equal(registrarAccount.nonce, nonce);
-    assert.ok(registrarAccount.mint.equals(mint));
-    assert.ok(registrarAccount.poolMint.equals(poolMint));
-    assert.ok(registrarAccount.stakeRate.eq(stakeRate));
-    assert.ok(registrarAccount.rewardEventQ.equals(rewardQ.publicKey));
-    assert.ok(registrarAccount.withdrawalTimelock.eq(withdrawalTimelock));
+    assert.isTrue(registrarAccount.authority.equals(provider.wallet.publicKey));
+    assert.strictEqual(registrarAccount.nonce, nonce);
+    assert.isTrue(registrarAccount.mint.equals(mint));
+    assert.isTrue(registrarAccount.poolMint.equals(poolMint));
+    assert.isTrue(registrarAccount.stakeRate.eq(stakeRate));
+    assert.isTrue(registrarAccount.rewardEventQ.equals(rewardQ.publicKey));
+    assert.isTrue(registrarAccount.withdrawalTimelock.eq(withdrawalTimelock));
   });
 
   const member = anchor.web3.Keypair.generate();
@@ -385,19 +389,19 @@ describe("Lockup and Registry", () => {
 
     memberAccount = await registry.account.member.fetch(member.publicKey);
 
-    assert.ok(memberAccount.registrar.equals(registrar.publicKey));
-    assert.ok(memberAccount.beneficiary.equals(provider.wallet.publicKey));
-    assert.ok(memberAccount.metadata.equals(anchor.web3.PublicKey.default));
-    assert.equal(
+    assert.isTrue(memberAccount.registrar.equals(registrar.publicKey));
+    assert.isTrue(memberAccount.beneficiary.equals(provider.wallet.publicKey));
+    assert.isTrue(memberAccount.metadata.equals(anchor.web3.PublicKey.default));
+    assert.strictEqual(
       JSON.stringify(memberAccount.balances),
       JSON.stringify(balances)
     );
-    assert.equal(
+    assert.strictEqual(
       JSON.stringify(memberAccount.balancesLocked),
       JSON.stringify(balancesLocked)
     );
-    assert.ok(memberAccount.rewardsCursor === 0);
-    assert.ok(memberAccount.lastStakeTs.eq(new anchor.BN(0)));
+    assert.strictEqual(memberAccount.rewardsCursor, 0);
+    assert.isTrue(memberAccount.lastStakeTs.eq(new anchor.BN(0)));
   });
 
   it("Deposits (unlocked) to a member", async () => {
@@ -417,7 +421,7 @@ describe("Lockup and Registry", () => {
       provider,
       memberAccount.balances.vault
     );
-    assert.ok(memberVault.amount.eq(depositAmount));
+    assert.isTrue(memberVault.amount.eq(depositAmount));
   });
 
   it("Stakes to a member (unlocked)", async () => {
@@ -455,9 +459,9 @@ describe("Lockup and Registry", () => {
       memberAccount.balances.spt
     );
 
-    assert.ok(vault.amount.eq(new anchor.BN(100)));
-    assert.ok(vaultStake.amount.eq(new anchor.BN(20)));
-    assert.ok(spt.amount.eq(new anchor.BN(10)));
+    assert.isTrue(vault.amount.eq(new anchor.BN(100)));
+    assert.isTrue(vaultStake.amount.eq(new anchor.BN(20)));
+    assert.isTrue(spt.amount.eq(new anchor.BN(10)));
   });
 
   const unlockedVendor = anchor.web3.Keypair.generate();
@@ -516,25 +520,27 @@ describe("Lockup and Registry", () => {
       unlockedVendor.publicKey
     );
 
-    assert.ok(vendorAccount.registrar.equals(registrar.publicKey));
-    assert.ok(vendorAccount.vault.equals(unlockedVendorVault.publicKey));
-    assert.ok(vendorAccount.nonce === nonce);
-    assert.ok(vendorAccount.poolTokenSupply.eq(new anchor.BN(10)));
-    assert.ok(vendorAccount.expiryTs.eq(expiry));
-    assert.ok(vendorAccount.expiryReceiver.equals(provider.wallet.publicKey));
-    assert.ok(vendorAccount.total.eq(rewardAmount));
-    assert.ok(vendorAccount.expired === false);
-    assert.ok(vendorAccount.rewardEventQCursor === 0);
+    assert.isTrue(vendorAccount.registrar.equals(registrar.publicKey));
+    assert.isTrue(vendorAccount.vault.equals(unlockedVendorVault.publicKey));
+    assert.strictEqual(vendorAccount.nonce, nonce);
+    assert.isTrue(vendorAccount.poolTokenSupply.eq(new anchor.BN(10)));
+    assert.isTrue(vendorAccount.expiryTs.eq(expiry));
+    assert.isTrue(
+      vendorAccount.expiryReceiver.equals(provider.wallet.publicKey)
+    );
+    assert.isTrue(vendorAccount.total.eq(rewardAmount));
+    assert.isFalse(vendorAccount.expired);
+    assert.strictEqual(vendorAccount.rewardEventQCursor, 0);
     assert.deepEqual(vendorAccount.kind, rewardKind);
 
     const rewardQAccount = await registry.account.rewardQueue.fetch(
       rewardQ.publicKey
     );
-    assert.ok(rewardQAccount.head === 1);
-    assert.ok(rewardQAccount.tail === 0);
+    assert.strictEqual(rewardQAccount.head, 1);
+    assert.strictEqual(rewardQAccount.tail, 0);
     const e = rewardQAccount.events[0];
-    assert.ok(e.vendor.equals(unlockedVendor.publicKey));
-    assert.equal(e.locked, false);
+    assert.isTrue(e.vendor.equals(unlockedVendor.publicKey));
+    assert.strictEqual(e.locked, false);
   });
 
   it("Collects an unlocked reward", async () => {
@@ -565,10 +571,10 @@ describe("Lockup and Registry", () => {
     });
 
     let tokenAccount = await serumCmn.getTokenAccount(provider, token);
-    assert.ok(tokenAccount.amount.eq(new anchor.BN(200)));
+    assert.isTrue(tokenAccount.amount.eq(new anchor.BN(200)));
 
     const memberAccount = await registry.account.member.fetch(member.publicKey);
-    assert.ok(memberAccount.rewardsCursor == 1);
+    assert.strictEqual(memberAccount.rewardsCursor, 1);
   });
 
   const lockedVendor = anchor.web3.Keypair.generate();
@@ -633,16 +639,18 @@ describe("Lockup and Registry", () => {
       lockedVendor.publicKey
     );
 
-    assert.ok(vendorAccount.registrar.equals(registrar.publicKey));
-    assert.ok(vendorAccount.vault.equals(lockedVendorVault.publicKey));
-    assert.ok(vendorAccount.nonce === nonce);
-    assert.ok(vendorAccount.poolTokenSupply.eq(new anchor.BN(10)));
-    assert.ok(vendorAccount.expiryTs.eq(expiry));
-    assert.ok(vendorAccount.expiryReceiver.equals(provider.wallet.publicKey));
-    assert.ok(vendorAccount.total.eq(lockedRewardAmount));
-    assert.ok(vendorAccount.expired === false);
-    assert.ok(vendorAccount.rewardEventQCursor === 1);
-    assert.equal(
+    assert.isTrue(vendorAccount.registrar.equals(registrar.publicKey));
+    assert.isTrue(vendorAccount.vault.equals(lockedVendorVault.publicKey));
+    assert.strictEqual(vendorAccount.nonce, nonce);
+    assert.isTrue(vendorAccount.poolTokenSupply.eq(new anchor.BN(10)));
+    assert.isTrue(vendorAccount.expiryTs.eq(expiry));
+    assert.isTrue(
+      vendorAccount.expiryReceiver.equals(provider.wallet.publicKey)
+    );
+    assert.isTrue(vendorAccount.total.eq(lockedRewardAmount));
+    assert.isFalse(vendorAccount.expired);
+    assert.strictEqual(vendorAccount.rewardEventQCursor, 1);
+    assert.strictEqual(
       JSON.stringify(vendorAccount.kind),
       JSON.stringify(lockedRewardKind)
     );
@@ -650,11 +658,11 @@ describe("Lockup and Registry", () => {
     const rewardQAccount = await registry.account.rewardQueue.fetch(
       rewardQ.publicKey
     );
-    assert.ok(rewardQAccount.head === 2);
-    assert.ok(rewardQAccount.tail === 0);
+    assert.strictEqual(rewardQAccount.head, 2);
+    assert.strictEqual(rewardQAccount.tail, 0);
     const e = rewardQAccount.events[1];
-    assert.ok(e.vendor.equals(lockedVendor.publicKey));
-    assert.ok(e.locked === true);
+    assert.isTrue(e.vendor.equals(lockedVendor.publicKey));
+    assert.isTrue(e.locked);
   });
 
   let vendoredVesting = null;
@@ -723,18 +731,18 @@ describe("Lockup and Registry", () => {
       vendoredVesting.publicKey
     );
 
-    assert.ok(lockupAccount.beneficiary.equals(provider.wallet.publicKey));
-    assert.ok(lockupAccount.mint.equals(mint));
-    assert.ok(lockupAccount.vault.equals(vendoredVestingVault.publicKey));
-    assert.ok(lockupAccount.outstanding.eq(lockedRewardAmount));
-    assert.ok(lockupAccount.startBalance.eq(lockedRewardAmount));
-    assert.ok(lockupAccount.endTs.eq(lockedRewardKind.locked.endTs));
-    assert.ok(
+    assert.isTrue(lockupAccount.beneficiary.equals(provider.wallet.publicKey));
+    assert.isTrue(lockupAccount.mint.equals(mint));
+    assert.isTrue(lockupAccount.vault.equals(vendoredVestingVault.publicKey));
+    assert.isTrue(lockupAccount.outstanding.eq(lockedRewardAmount));
+    assert.isTrue(lockupAccount.startBalance.eq(lockedRewardAmount));
+    assert.isTrue(lockupAccount.endTs.eq(lockedRewardKind.locked.endTs));
+    assert.isTrue(
       lockupAccount.periodCount.eq(lockedRewardKind.locked.periodCount)
     );
-    assert.ok(lockupAccount.whitelistOwned.eq(new anchor.BN(0)));
-    assert.ok(lockupAccount.realizor.program.equals(registry.programId));
-    assert.ok(lockupAccount.realizor.metadata.equals(member.publicKey));
+    assert.isTrue(lockupAccount.whitelistOwned.eq(new anchor.BN(0)));
+    assert.isTrue(lockupAccount.realizor.program.equals(registry.programId));
+    assert.isTrue(lockupAccount.realizor.metadata.equals(member.publicKey));
   });
 
   it("Waits for the lockup period to pass", async () => {
@@ -747,7 +755,7 @@ describe("Lockup and Registry", () => {
       mint,
       provider.wallet.publicKey
     );
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         const withdrawAmount = new anchor.BN(10);
         await lockup.rpc.withdraw(withdrawAmount, {
@@ -773,8 +781,24 @@ describe("Lockup and Registry", () => {
       (err) => {
         // Solana doesn't propagate errors across CPI. So we receive the registry's error code,
         // not the lockup's.
-        const errorCode = "custom program error: 0x1784";
-        assert.ok(err.toString().split(errorCode).length === 2);
+        assert.strictEqual(err.error.errorCode.number, 6020);
+        assert.strictEqual(err.error.errorCode.code, "UnrealizedReward");
+        assert.strictEqual(
+          err.error.errorMessage,
+          "Locked rewards cannot be realized until one unstaked all tokens."
+        );
+        expect(err.error.origin).to.deep.equal({
+          file: "programs/registry/src/lib.rs",
+          line: 63,
+        });
+        assert.strictEqual(
+          err.program.toString(),
+          "HmbTLCmaGvZhKnn1Zfa1JVnp7vkMV4DYVxPLWBVoN65L"
+        );
+        expect(err.programErrorStack.map((pk) => pk.toString())).to.deep.equal([
+          "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS",
+          "HmbTLCmaGvZhKnn1Zfa1JVnp7vkMV4DYVxPLWBVoN65L",
+        ]);
         return true;
       }
     );
@@ -824,9 +848,9 @@ describe("Lockup and Registry", () => {
       memberAccount.balances.spt
     );
 
-    assert.ok(vaultPw.amount.eq(new anchor.BN(20)));
-    assert.ok(vaultStake.amount.eq(new anchor.BN(0)));
-    assert.ok(spt.amount.eq(new anchor.BN(0)));
+    assert.isTrue(vaultPw.amount.eq(new anchor.BN(20)));
+    assert.isTrue(vaultStake.amount.eq(new anchor.BN(0)));
+    assert.isTrue(spt.amount.eq(new anchor.BN(0)));
   });
 
   const tryEndUnstake = async () => {
@@ -850,13 +874,16 @@ describe("Lockup and Registry", () => {
   };
 
   it("Fails to end unstaking before timelock", async () => {
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         await tryEndUnstake();
       },
       (err) => {
-        assert.equal(err.code, 6009);
-        assert.equal(err.msg, "The unstake timelock has not yet expired.");
+        assert.strictEqual(err.error.errorCode.number, 6009);
+        assert.strictEqual(
+          err.error.errorMessage,
+          "The unstake timelock has not yet expired."
+        );
         return true;
       }
     );
@@ -878,8 +905,8 @@ describe("Lockup and Registry", () => {
       memberAccount.balances.vaultPw
     );
 
-    assert.ok(vault.amount.eq(new anchor.BN(120)));
-    assert.ok(vaultPw.amount.eq(new anchor.BN(0)));
+    assert.isTrue(vault.amount.eq(new anchor.BN(120)));
+    assert.isTrue(vaultPw.amount.eq(new anchor.BN(0)));
   });
 
   it("Withdraws deposits (unlocked)", async () => {
@@ -902,7 +929,7 @@ describe("Lockup and Registry", () => {
     });
 
     const tokenAccount = await serumCmn.getTokenAccount(provider, token);
-    assert.ok(tokenAccount.amount.eq(withdrawAmount));
+    assert.isTrue(tokenAccount.amount.eq(withdrawAmount));
   });
 
   it("Should succesfully unlock a locked reward after unstaking", async () => {
@@ -933,6 +960,6 @@ describe("Lockup and Registry", () => {
       ],
     });
     const tokenAccount = await serumCmn.getTokenAccount(provider, token);
-    assert.ok(tokenAccount.amount.eq(withdrawAmount));
+    assert.isTrue(tokenAccount.amount.eq(withdrawAmount));
   });
 });
