@@ -1,4 +1,6 @@
 use crate::{Error, ErrorArgs, ErrorCode};
+use syn::parse::{Parse, Result as ParseResult};
+use syn::Expr;
 
 // Removes any internal #[msg] attributes, as they are inert.
 pub fn parse(error_enum: &mut syn::ItemEnum, args: Option<ErrorArgs>) -> Error {
@@ -24,8 +26,13 @@ pub fn parse(error_enum: &mut syn::ItemEnum, args: Option<ErrorArgs>) -> Error {
             };
             last_discriminant = id + 1;
 
-            // Remove any attributes on the error variant.
-            variant.attrs = vec![];
+            // Remove any non-doc attributes on the error variant.
+            variant.attrs = variant
+                .attrs
+                .iter()
+                .filter(|attr| attr.path.segments[0].ident == "doc")
+                .cloned()
+                .collect();
 
             ErrorCode { id, ident, msg }
         })
@@ -40,7 +47,11 @@ pub fn parse(error_enum: &mut syn::ItemEnum, args: Option<ErrorArgs>) -> Error {
 }
 
 fn parse_error_attribute(variant: &syn::Variant) -> Option<String> {
-    let attrs = &variant.attrs;
+    let attrs = variant
+        .attrs
+        .iter()
+        .filter(|attr| attr.path.segments[0].ident != "doc")
+        .collect::<Vec<_>>();
     match attrs.len() {
         0 => None,
         1 => {
@@ -56,7 +67,7 @@ fn parse_error_attribute(variant: &syn::Variant) -> Option<String> {
 
             let msg = match g_stream.into_iter().next() {
                 None => panic!("Must specify a message string"),
-                Some(msg) => msg.to_string().replace("\"", ""),
+                Some(msg) => msg.to_string().replace('\"', ""),
             };
 
             Some(msg)
@@ -64,5 +75,16 @@ fn parse_error_attribute(variant: &syn::Variant) -> Option<String> {
         _ => {
             panic!("Too many attributes found. Use `msg` to specify error strings");
         }
+    }
+}
+
+pub struct ErrorInput {
+    pub error_code: Expr,
+}
+
+impl Parse for ErrorInput {
+    fn parse(stream: syn::parse::ParseStream) -> ParseResult<Self> {
+        let error_code = stream.call(Expr::parse)?;
+        Ok(Self { error_code })
     }
 }

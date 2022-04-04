@@ -1,20 +1,27 @@
 {
   "name": "anchor-tests",
   "private": true,
+  "scripts": {
+    "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
+    "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
+  },
   "workspaces": [
     "cashiers-check",
     "cfo",
     "chat",
     "composite",
+    "custom-coder",
     "errors",
     "escrow",
     "events",
+    "floats",
     "ido-pool",
     "interface",
     "lockup",
     "misc",
     "multisig",
     "permissioned-markets",
+    "pda-derivation",
     "pyth",
     "spl/token-proxy",
     "swap",
@@ -22,10 +29,14 @@
     "sysvars",
     "tictactoe",
     "typescript",
-    "zero-copy"
+    "validator-clone",
+    "zero-copy",
+    "declare-id",
+    "cpi-returns",
+    "multiple-suites"
   ],
   "dependencies": {
-    "@project-serum/anchor": "^0.18.2",
+    "@project-serum/anchor": "^0.23.0",
     "@project-serum/common": "^0.0.1-beta.3",
     "@project-serum/serum": "^0.13.60",
     "@solana/spl-token": "^0.1.8"
@@ -33,8 +44,11 @@
   "devDependencies": {
     "@types/node": "^14.14.37",
     "chai": "^4.3.4",
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^9.1.0",
     "mocha": "^9.1.3",
     "ts-mocha": "^8.0.0",
-    "typescript": "^4.4.4"
+    "typescript": "^4.4.4",
+    "prettier": "^2.5.1"
   }
 }

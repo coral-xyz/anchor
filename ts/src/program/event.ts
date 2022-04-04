@@ -1,11 +1,14 @@
 import { PublicKey } from "@solana/web3.js";
 import * as assert from "assert";
 import { IdlEvent, IdlEventField } from "../idl.js";
-import Coder from "../coder/index.js";
+import { Coder } from "../coder/index.js";
 import { DecodeType } from "./namespace/types.js";
 import Provider from "../provider.js";
 
-const LOG_START_INDEX = "Program log: ".length;
+const PROGRAM_LOG = "Program log: ";
+const PROGRAM_DATA = "Program data: ";
+const PROGRAM_LOG_START_INDEX = PROGRAM_LOG.length;
+const PROGRAM_DATA_START_INDEX = PROGRAM_DATA.length;
 
 // Deserialized event.
 export type Event<
@@ -95,7 +98,6 @@ export class EventManager {
       this._programId,
       (logs, ctx) => {
         if (logs.err) {
-          console.error(logs);
           return;
         }
         this._eventParser.parseLogs(logs.logs, (event) => {
@@ -214,9 +216,11 @@ export class EventParser {
   private handleProgramLog(
     log: string
   ): [Event | null, string | null, boolean] {
-    // This is a `msg!` log.
-    if (log.startsWith("Program log:")) {
-      const logStr = log.slice(LOG_START_INDEX);
+    // This is a `msg!` log or a `sol_log_data` log.
+    if (log.startsWith(PROGRAM_LOG) || log.startsWith(PROGRAM_DATA)) {
+      const logStr = log.startsWith(PROGRAM_LOG)
+        ? log.slice(PROGRAM_LOG_START_INDEX)
+        : log.slice(PROGRAM_DATA_START_INDEX);
       const event = this.coder.events.decode(logStr);
       return [event, null, false];
     }

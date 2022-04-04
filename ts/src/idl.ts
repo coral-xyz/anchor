@@ -7,10 +7,20 @@ export type Idl = {
   name: string;
   instructions: IdlInstruction[];
   state?: IdlState;
-  accounts?: IdlTypeDef[];
+  accounts?: IdlAccountDef[];
   types?: IdlTypeDef[];
   events?: IdlEvent[];
   errors?: IdlErrorCode[];
+  constants?: IdlConstant[];
+  metadata?: IdlMetadata;
+};
+
+export type IdlMetadata = any;
+
+export type IdlConstant = {
+  name: string;
+  type: IdlType;
+  value: string;
 };
 
 export type IdlEvent = {
@@ -28,6 +38,7 @@ export type IdlInstruction = {
   name: string;
   accounts: IdlAccountItem[];
   args: IdlField[];
+  returns?: IdlType;
 };
 
 export type IdlState = {
@@ -43,7 +54,15 @@ export type IdlAccount = {
   name: string;
   isMut: boolean;
   isSigner: boolean;
+  pda?: IdlPda;
 };
+
+export type IdlPda = {
+  seeds: IdlSeed[];
+  programId?: IdlSeed;
+};
+
+export type IdlSeed = any; // TODO
 
 // A nested/recursive version of IdlAccount.
 export type IdlAccounts = {
@@ -59,6 +78,11 @@ export type IdlField = {
 export type IdlTypeDef = {
   name: string;
   type: IdlTypeDefTy;
+};
+
+export type IdlAccountDef = {
+  name: string;
+  type: IdlTypeDefTyStruct;
 };
 
 export type IdlTypeDefTyStruct = {
@@ -83,8 +107,10 @@ export type IdlType =
   | "i16"
   | "u32"
   | "i32"
+  | "f32"
   | "u64"
   | "i64"
+  | "f64"
   | "u128"
   | "i128"
   | "bytes"
@@ -92,6 +118,7 @@ export type IdlType =
   | "publicKey"
   | IdlTypeDefined
   | IdlTypeOption
+  | IdlTypeCOption
   | IdlTypeVec
   | IdlTypeArray;
 
@@ -102,6 +129,10 @@ export type IdlTypeDefined = {
 
 export type IdlTypeOption = {
   option: IdlType;
+};
+
+export type IdlTypeCOption = {
+  coption: IdlType;
 };
 
 export type IdlTypeVec = {

@@ -1,4 +1,4 @@
-const assert = require("assert");
+const { assert } = require("chai");
 const { Token } = require("@solana/spl-token");
 const anchor = require("@project-serum/anchor");
 const serumCmn = require("@project-serum/common");
@@ -90,7 +90,7 @@ describe("cfo", () => {
     const tokenAccount = await USDC_TOKEN_CLIENT.getAccountInfo(
       ORDERBOOK_ENV.marketA._decoded.quoteVault
     );
-    assert.ok(tokenAccount.amount.toString() === "10000902263700");
+    assert.strictEqual(tokenAccount.amount.toString(), "10000902263700");
   });
 
   it("BOILERPLATE: Executes trades to generate fees", async () => {
@@ -102,16 +102,19 @@ describe("cfo", () => {
     marketAClient = await Market.load(
       program.provider.connection,
       ORDERBOOK_ENV.marketA.address,
-      { commitment: "recent" },
+      { commitment: "processed" },
       DEX_PID
     );
     marketBClient = await Market.load(
       program.provider.connection,
       ORDERBOOK_ENV.marketB.address,
-      { commitment: "recent" },
+      { commitment: "processed" },
       DEX_PID
     );
-    assert.ok(marketAClient._decoded.quoteFeesAccrued.toString() === FEES);
+    assert.strictEqual(
+      marketAClient._decoded.quoteFeesAccrued.toString(),
+      FEES
+    );
   });
 
   it("BOILERPLATE: Sets up the staking pools", async () => {
@@ -225,43 +228,39 @@ describe("cfo", () => {
       stake: stakeBump,
       treasury: treasuryBump,
     };
-    await program.rpc.createOfficer(
-      bumps,
-      distribution,
-      registrar,
-      msrmRegistrar,
-      {
-        accounts: {
-          officer,
-          srmVault,
-          usdcVault,
-          stake,
-          treasury,
-          srmMint: ORDERBOOK_ENV.mintA,
-          usdcMint: ORDERBOOK_ENV.usdc,
-          authority: program.provider.wallet.publicKey,
-          dexProgram: DEX_PID,
-          swapProgram: SWAP_PID,
-          tokenProgram: TOKEN_PID,
-          systemProgram: SystemProgram.programId,
-          rent: SYSVAR_RENT_PUBKEY,
-        },
-      }
-    );
+    await program.methods
+      .createOfficer(bumps, distribution, registrar, msrmRegistrar)
+      .accounts({
+        officer,
+        srmVault,
+        usdcVault,
+        stake,
+        treasury,
+        srmMint: ORDERBOOK_ENV.mintA,
+        usdcMint: ORDERBOOK_ENV.usdc,
+        authority: program.provider.wallet.publicKey,
+        dexProgram: DEX_PID,
+        swapProgram: SWAP_PID,
+        tokenProgram: TOKEN_PID,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .rpc();
 
     officerAccount = await program.account.officer.fetch(officer);
-    assert.ok(
+    assert.isTrue(
       officerAccount.authority.equals(program.provider.wallet.publicKey)
     );
-    assert.ok(
-      JSON.stringify(officerAccount.distribution) ===
-        JSON.stringify(distribution)
+    assert.strictEqual(
+      JSON.stringify(officerAccount.distribution),
+      JSON.stringify(distribution)
     );
   });
 
   it("Creates a token account for the officer associated with the market", async () => {
-    await program.rpc.createOfficerToken(bBump, {
-      accounts: {
+    await program.methods
+      .createOfficerToken(bBump)
+      .accounts({
         officer,
         token: bVault,
         mint: ORDERBOOK_ENV.mintB,
@@ -269,16 +268,17 @@ describe("cfo", () => {
         systemProgram: SystemProgram.programId,
         tokenProgram: TOKEN_PID,
         rent: SYSVAR_RENT_PUBKEY,
-      },
-    });
+      })
+      .rpc();
     const tokenAccount = await B_TOKEN_CLIENT.getAccountInfo(bVault);
-    assert.ok(tokenAccount.state === 1);
-    assert.ok(tokenAccount.isInitialized);
+    assert.strictEqual(tokenAccount.state, 1);
+    assert.isTrue(tokenAccount.isInitialized);
   });
 
   it("Creates an open orders account for the officer", async () => {
-    await program.rpc.createOfficerOpenOrders(openOrdersBump, {
-      accounts: {
+    await program.methods
+      .createOfficerOpenOrders(openOrdersBump)
+      .accounts({
         officer,
         openOrders,
         payer: program.provider.wallet.publicKey,
@@ -286,8 +286,8 @@ describe("cfo", () => {
         systemProgram: SystemProgram.programId,
         rent: SYSVAR_RENT_PUBKEY,
         market: ORDERBOOK_ENV.marketA.address,
-      },
-    });
+      })
+      .rpc();
     await program.rpc.createOfficerOpenOrders(openOrdersBumpB, {
       accounts: {
         officer,
@@ -310,8 +310,9 @@ describe("cfo", () => {
       program.provider,
       sweepVault
     );
-    await program.rpc.sweepFees({
-      accounts: {
+    await program.methods
+      .sweepFees()
+      .accounts({
         officer,
         sweepVault,
         mint: ORDERBOOK_ENV.usdc,
@@ -323,39 +324,41 @@ describe("cfo", () => {
           dexProgram: DEX_PID,
           tokenProgram: TOKEN_PID,
         },
-      },
-    });
+      })
+      .rpc();
     const afterTokenAccount = await serumCmn.getTokenAccount(
       program.provider,
       sweepVault
     );
-    assert.ok(
-      afterTokenAccount.amount.sub(beforeTokenAccount.amount).toString() ===
-        FEES
+    assert.strictEqual(
+      afterTokenAccount.amount.sub(beforeTokenAccount.amount).toString(),
+      FEES
     );
   });
 
   it("Creates a market auth token", async () => {
-    await program.rpc.authorizeMarket(marketAuthBump, {
-      accounts: {
+    await program.methods
+      .authorizeMarket(marketAuthBump)
+      .accounts({
         officer,
         authority: program.provider.wallet.publicKey,
         marketAuth,
         payer: program.provider.wallet.publicKey,
         market: ORDERBOOK_ENV.marketA.address,
         systemProgram: SystemProgram.programId,
-      },
-    });
-    await program.rpc.authorizeMarket(marketAuthBumpB, {
-      accounts: {
+      })
+      .rpc();
+    await program.methods
+      .authorizeMarket(marketAuthBumpB)
+      .accounts({
         officer,
         authority: program.provider.wallet.publicKey,
         marketAuth: marketAuthB,
         payer: program.provider.wallet.publicKey,
         market: ORDERBOOK_ENV.marketB.address,
         systemProgram: SystemProgram.programId,
-      },
-    });
+      })
+      .rpc();
   });
 
   it("Transfers into the mintB vault", async () => {
@@ -378,8 +381,9 @@ describe("cfo", () => {
       quoteDecimals: 6,
       strict: false,
     };
-    await program.rpc.swapToUsdc(minExchangeRate, {
-      accounts: {
+    await program.methods
+      .swapToUsdc(minExchangeRate)
+      .accounts({
         officer,
         market: {
           market: marketBClient.address,
@@ -402,16 +406,16 @@ describe("cfo", () => {
         tokenProgram: TOKEN_PID,
         instructions: SYSVAR_INSTRUCTIONS_PUBKEY,
         rent: SYSVAR_RENT_PUBKEY,
-      },
-    });
+      })
+      .rpc();
 
     const bVaultAfter = await B_TOKEN_CLIENT.getAccountInfo(bVault);
     const usdcVaultAfter = await USDC_TOKEN_CLIENT.getAccountInfo(usdcVault);
 
-    assert.ok(bVaultBefore.amount.toNumber() === 616035558100);
-    assert.ok(usdcVaultBefore.amount.toNumber() === 6160355581);
-    assert.ok(bVaultAfter.amount.toNumber() === 615884458100);
-    assert.ok(usdcVaultAfter.amount.toNumber() === 7060634298);
+    assert.strictEqual(bVaultBefore.amount.toNumber(), 616035558100);
+    assert.strictEqual(usdcVaultBefore.amount.toNumber(), 6160355581);
+    assert.strictEqual(bVaultAfter.amount.toNumber(), 615884458100);
+    assert.strictEqual(usdcVaultAfter.amount.toNumber(), 7060634298);
   });
 
   it("Swaps to SRM", async () => {
@@ -424,8 +428,9 @@ describe("cfo", () => {
       quoteDecimals: 6,
       strict: false,
     };
-    await program.rpc.swapToSrm(minExchangeRate, {
-      accounts: {
+    await program.methods
+      .swapToSrm(minExchangeRate)
+      .accounts({
         officer,
         market: {
           market: marketAClient.address,
@@ -449,16 +454,16 @@ describe("cfo", () => {
         tokenProgram: TOKEN_PID,
         instructions: SYSVAR_INSTRUCTIONS_PUBKEY,
         rent: SYSVAR_RENT_PUBKEY,
-      },
-    });
+      })
+      .rpc();
 
     const srmVaultAfter = await SRM_TOKEN_CLIENT.getAccountInfo(srmVault);
     const usdcVaultAfter = await USDC_TOKEN_CLIENT.getAccountInfo(usdcVault);
 
-    assert.ok(srmVaultBefore.amount.toNumber() === 0);
-    assert.ok(srmVaultAfter.amount.toNumber() === 1152000000);
-    assert.ok(usdcVaultBefore.amount.toNumber() === 7060634298);
-    assert.ok(usdcVaultAfter.amount.toNumber() === 530863);
+    assert.strictEqual(srmVaultBefore.amount.toNumber(), 0);
+    assert.strictEqual(srmVaultAfter.amount.toNumber(), 1152000000);
+    assert.strictEqual(usdcVaultBefore.amount.toNumber(), 7060634298);
+    assert.strictEqual(usdcVaultAfter.amount.toNumber(), 530863);
   });
 
   it("Distributes the tokens to categories", async () => {
@@ -467,8 +472,9 @@ describe("cfo", () => {
     const stakeBefore = await SRM_TOKEN_CLIENT.getAccountInfo(stake);
     const mintInfoBefore = await SRM_TOKEN_CLIENT.getMintInfo();
 
-    await program.rpc.distribute({
-      accounts: {
+    await program.methods
+      .distribute()
+      .accounts({
         officer,
         treasury,
         stake,
@@ -476,8 +482,8 @@ describe("cfo", () => {
         srmMint: ORDERBOOK_ENV.mintA,
         tokenProgram: TOKEN_PID,
         dexProgram: DEX_PID,
-      },
-    });
+      })
+      .rpc();
 
     const srmVaultAfter = await SRM_TOKEN_CLIENT.getAccountInfo(srmVault);
     const treasuryAfter = await SRM_TOKEN_CLIENT.getAccountInfo(treasury);
@@ -485,21 +491,21 @@ describe("cfo", () => {
     const mintInfoAfter = await SRM_TOKEN_CLIENT.getMintInfo();
 
     const beforeAmount = 1152000000;
-    assert.ok(srmVaultBefore.amount.toNumber() === beforeAmount);
-    assert.ok(srmVaultAfter.amount.toNumber() === 0); // Fully distributed.
-    assert.ok(
-      stakeAfter.amount.toNumber() ===
-        beforeAmount * (distribution.stake / 100.0)
+    assert.strictEqual(srmVaultBefore.amount.toNumber(), beforeAmount);
+    assert.strictEqual(srmVaultAfter.amount.toNumber(), 0); // Fully distributed.
+    assert.strictEqual(
+      stakeAfter.amount.toNumber(),
+      beforeAmount * (distribution.stake / 100.0)
     );
-    assert.ok(
-      treasuryAfter.amount.toNumber() ===
-        beforeAmount * (distribution.treasury / 100.0)
+    assert.strictEqual(
+      treasuryAfter.amount.toNumber(),
+      beforeAmount * (distribution.treasury / 100.0)
     );
     // Check burn amount.
-    assert.ok(mintInfoBefore.supply.toString() === "1000000000000000000");
-    assert.ok(
-      mintInfoBefore.supply.sub(mintInfoAfter.supply).toNumber() ===
-        beforeAmount * (distribution.burn / 100.0)
+    assert.strictEqual(mintInfoBefore.supply.toString(), "1000000000000000000");
+    assert.strictEqual(
+      mintInfoBefore.supply.sub(mintInfoAfter.supply).toNumber(),
+      beforeAmount * (distribution.burn / 100.0)
     );
   });
 });

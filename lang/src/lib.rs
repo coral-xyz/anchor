@@ -25,65 +25,29 @@ extern crate self as anchor_lang;
 
 use bytemuck::{Pod, Zeroable};
 use solana_program::account_info::AccountInfo;
-use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
-use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
+use std::collections::BTreeMap;
 use std::io::Write;
 
-mod account;
-mod account_info;
 mod account_meta;
-mod boxed;
+pub mod accounts;
+mod bpf_upgradeable_state;
+mod bpf_writer;
 mod common;
-mod context;
-mod cpi_account;
-mod cpi_state;
+pub mod context;
 mod ctor;
-mod error;
+pub mod error;
 #[doc(hidden)]
 pub mod idl;
-mod loader;
-mod loader_account;
-mod program;
-mod program_account;
-mod signer;
-pub mod state;
-mod system_account;
-mod system_program;
-mod sysvar;
-mod unchecked_account;
-mod vec;
+pub mod system_program;
 
-pub use crate::account::Account;
-#[doc(hidden)]
-#[allow(deprecated)]
-pub use crate::context::CpiStateContext;
-pub use crate::context::{Context, CpiContext};
-#[doc(hidden)]
-#[allow(deprecated)]
-pub use crate::cpi_account::CpiAccount;
-#[doc(hidden)]
-#[allow(deprecated)]
-pub use crate::cpi_state::CpiState;
-#[allow(deprecated)]
-pub use crate::loader::Loader;
-pub use crate::loader_account::AccountLoader;
-pub use crate::program::Program;
-#[doc(hidden)]
-#[allow(deprecated)]
-pub use crate::program_account::ProgramAccount;
-pub use crate::signer::Signer;
-#[doc(hidden)]
-#[allow(deprecated)]
-pub use crate::state::ProgramState;
-pub use crate::system_account::SystemAccount;
-pub use crate::system_program::System;
-pub use crate::sysvar::Sysvar;
-pub use crate::unchecked_account::UncheckedAccount;
+mod vec;
+pub use crate::bpf_upgradeable_state::*;
 pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::{account, declare_id, zero_copy};
-pub use anchor_attribute_error::error;
+pub use anchor_attribute_constant::constant;
+pub use anchor_attribute_error::*;
 pub use anchor_attribute_event::{emit, event};
 pub use anchor_attribute_interface::interface;
 pub use anchor_attribute_program::program;
@@ -92,6 +56,8 @@ pub use anchor_derive_accounts::Accounts;
 /// Borsh is the default serialization format for instructions and accounts.
 pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorSerialize};
 pub use solana_program;
+
+pub type Result<T> = std::result::Result<T, error::Error>;
 
 /// A data structure of validated accounts that can be deserialized from the
 /// input to a Solana program. Implementations of this trait should perform any
@@ -115,20 +81,24 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
         program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         ix_data: &[u8],
-    ) -> Result<Self, ProgramError>;
+        bumps: &mut BTreeMap<String, u8>,
+    ) -> Result<Self>;
 }
 
 /// The exit procedure for an account. Any cleanup or persistence to storage
 /// should be done here.
 pub trait AccountsExit<'info>: ToAccountMetas + ToAccountInfos<'info> {
     /// `program_id` is the currently executing program.
-    fn exit(&self, program_id: &Pubkey) -> ProgramResult;
+    fn exit(&self, _program_id: &Pubkey) -> Result<()> {
+        // no-op
+        Ok(())
+    }
 }
 
 /// The close procedure to initiate garabage collection of an account, allowing
 /// one to retrieve the rent exemption.
 pub trait AccountsClose<'info>: ToAccountInfos<'info> {
-    fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult;
+    fn close(&self, sol_destination: AccountInfo<'info>) -> Result<()>;
 }
 
 /// Transformation to
@@ -155,6 +125,15 @@ pub trait ToAccountInfo<'info> {
     fn to_account_info(&self) -> AccountInfo<'info>;
 }
 
+impl<'info, T> ToAccountInfo<'info> for T
+where
+    T: AsRef<AccountInfo<'info>>,
+{
+    fn to_account_info(&self) -> AccountInfo<'info> {
+        self.as_ref().clone()
+    }
+}
+
 /// A data structure that can be serialized and stored into account storage,
 /// i.e. an
 /// [`AccountInfo`](../solana_program/account_info/struct.AccountInfo.html#structfield.data)'s
@@ -168,7 +147,9 @@ pub trait ToAccountInfo<'info> {
 /// [`#[account]`](./attr.account.html) attribute.
 pub trait AccountSerialize {
     /// Serializes the account data into `writer`.
-    fn try_serialize<W: Write>(&self, writer: &mut W) -> Result<(), ProgramError>;
+    fn try_serialize<W: Write>(&self, _writer: &mut W) -> Result<()> {
+        Ok(())
+    }
 }
 
 /// A data structure that can be deserialized and stored into account storage,
@@ -180,15 +161,17 @@ pub trait AccountDeserialize: Sized {
     /// uninitialized accounts, where the bytes are zeroed. Implementations
     /// should be unique to a particular account type so that one can never
     /// successfully deserialize the data of one account type into another.
-    /// For example, if the SPL token program where to implement this trait,
-    /// it should impossible to deserialize a `Mint` account into a token
+    /// For example, if the SPL token program were to implement this trait,
+    /// it should be impossible to deserialize a `Mint` account into a token
     /// `Account`.
-    fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError>;
+    fn try_deserialize(buf: &mut &[u8]) -> Result<Self> {
+        Self::try_deserialize_unchecked(buf)
+    }
 
     /// Deserializes account data without checking the account discriminator.
     /// This should only be used on account initialization, when the bytes of
     /// the account are zeroed.
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError>;
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self>;
 }
 
 /// An account data structure capable of zero copy deserialization.
@@ -202,7 +185,7 @@ pub trait InstructionData: AnchorSerialize {
     fn data(&self) -> Vec<u8>;
 }
 
-/// An event that can be emitted via a Solana log.
+/// An event that can be emitted via a Solana log. See [`emit!`](crate::prelude::emit) for an example.
 pub trait Event: AnchorSerialize + AnchorDeserialize + Discriminator {
     fn data(&self) -> Vec<u8>;
 }
@@ -250,28 +233,28 @@ impl Key for Pubkey {
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
     pub use super::{
-        access_control, account, declare_id, emit, error, event, interface, program, require,
-        state, zero_copy, Account, AccountDeserialize, AccountLoader, AccountSerialize, Accounts,
-        AccountsExit, AnchorDeserialize, AnchorSerialize, Context, CpiContext, Id, Key, Owner,
-        Program, Signer, System, SystemAccount, Sysvar, ToAccountInfo, ToAccountInfos,
-        ToAccountMetas, UncheckedAccount,
+        access_control, account, accounts::account::Account,
+        accounts::account_loader::AccountLoader, accounts::program::Program,
+        accounts::signer::Signer, accounts::system_account::SystemAccount,
+        accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, constant,
+        context::Context, context::CpiContext, declare_id, emit, err, error, event, interface,
+        program, require, require_eq, require_gt, require_gte, require_keys_eq, require_keys_neq,
+        require_neq, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source, state,
+        system_program::System, zero_copy, AccountDeserialize, AccountSerialize, Accounts,
+        AccountsExit, AnchorDeserialize, AnchorSerialize, Id, Key, Owner, ProgramData, Result,
+        ToAccountInfo, ToAccountInfos, ToAccountMetas,
     };
-
-    #[allow(deprecated)]
-    pub use super::{CpiAccount, CpiState, CpiStateContext, Loader, ProgramAccount, ProgramState};
-
+    pub use anchor_attribute_error::*;
     pub use borsh;
+    pub use error::*;
     pub use solana_program::account_info::{next_account_info, AccountInfo};
-    pub use solana_program::entrypoint::ProgramResult;
     pub use solana_program::instruction::AccountMeta;
     pub use solana_program::msg;
     pub use solana_program::program_error::ProgramError;
     pub use solana_program::pubkey::Pubkey;
     pub use solana_program::sysvar::clock::Clock;
     pub use solana_program::sysvar::epoch_schedule::EpochSchedule;
-    pub use solana_program::sysvar::fees::Fees;
     pub use solana_program::sysvar::instructions::Instructions;
-    pub use solana_program::sysvar::recent_blockhashes::RecentBlockhashes;
     pub use solana_program::sysvar::rent::Rent;
     pub use solana_program::sysvar::rewards::Rewards;
     pub use solana_program::sysvar::slot_hashes::SlotHashes;
@@ -281,39 +264,44 @@ pub mod prelude {
     pub use thiserror;
 }
 
-// Internal module used by macros and unstable apis.
+/// Internal module used by macros and unstable apis.
 #[doc(hidden)]
 pub mod __private {
-    use solana_program::program_error::ProgramError;
-    use solana_program::pubkey::Pubkey;
+    use super::Result;
+    /// The discriminator anchor uses to mark an account as closed.
+    pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
 
     pub use crate::ctor::Ctor;
-    pub use crate::error::{Error, ErrorCode};
+
     pub use anchor_attribute_account::ZeroCopyAccessor;
+
     pub use anchor_attribute_event::EventIndex;
+
     pub use base64;
+
     pub use bytemuck;
 
-    pub mod state {
-        pub use crate::state::*;
-    }
+    use solana_program::pubkey::Pubkey;
 
-    // The starting point for user defined error codes.
-    pub const ERROR_CODE_OFFSET: u32 = 300;
+    pub mod state {
+        pub use crate::accounts::state::*;
+    }
 
     // Calculates the size of an account, which may be larger than the deserialized
     // data in it. This trait is currently only used for `#[state]` accounts.
     #[doc(hidden)]
     pub trait AccountSize {
-        fn size(&self) -> Result<u64, ProgramError>;
+        fn size(&self) -> Result<u64>;
     }
 
     // Very experimental trait.
+    #[doc(hidden)]
     pub trait ZeroCopyAccessor<Ty> {
         fn get(&self) -> Ty;
         fn set(input: &Ty) -> Self;
     }
 
+    #[doc(hidden)]
     impl ZeroCopyAccessor<Pubkey> for [u8; 32] {
         fn get(&self) -> Pubkey {
             Pubkey::new(self)
@@ -323,42 +311,270 @@ pub mod __private {
         }
     }
 
-    pub use crate::state::PROGRAM_STATE_SEED;
-    pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
+    #[doc(hidden)]
+    pub use crate::accounts::state::PROGRAM_STATE_SEED;
 }
 
-/// Ensures a condition is true, otherwise returns the given error.
-/// Use this with a custom error type.
+/// Ensures a condition is true, otherwise returns with the given error.
+/// Use this with or without a custom error type.
 ///
 /// # Example
-///
-/// After defining an `ErrorCode`
-///
 /// ```ignore
-/// #[error]
-/// pub struct ErrorCode {
-///     InvalidArgument,
+/// // Instruction function
+/// pub fn set_data(ctx: Context<SetData>, data: u64) -> Result<()> {
+///     require!(ctx.accounts.data.mutation_allowed, MyError::MutationForbidden);
+///     ctx.accounts.data.data = data;
+///     Ok(())
+/// }
+///
+/// // An enum for custom error codes
+/// #[error_code]
+/// pub enum MyError {
+///     MutationForbidden
+/// }
+///
+/// // An account definition
+/// #[account]
+/// #[derive(Default)]
+/// pub struct MyData {
+///     mutation_allowed: bool,
+///     data: u64
+/// }
+///
+/// // An account validation struct
+/// #[derive(Accounts)]
+/// pub struct SetData<'info> {
+///     #[account(mut)]
+///     pub data: Account<'info, MyData>
 /// }
 /// ```
-///
-/// One can write a `require` assertion as
-///
-/// ```ignore
-/// require!(condition, InvalidArgument);
-/// ```
-///
-/// which would exit the program with the `InvalidArgument` error code if
-/// `condition` is false.
 #[macro_export]
 macro_rules! require {
     ($invariant:expr, $error:tt $(,)?) => {
         if !($invariant) {
-            return Err(crate::ErrorCode::$error.into());
+            return Err(anchor_lang::error!(crate::ErrorCode::$error));
         }
     };
     ($invariant:expr, $error:expr $(,)?) => {
         if !($invariant) {
-            return Err($error.into());
+            return Err(anchor_lang::error!($error));
+        }
+    };
+}
+
+/// Ensures two NON-PUBKEY values are equal.
+///
+/// Use [require_keys_eq](crate::prelude::require_keys_eq)
+/// to compare two pubkeys.
+///
+/// Can be used with or without a custom error code.
+///
+/// # Example
+/// ```rust,ignore
+/// pub fn set_data(ctx: Context<SetData>, data: u64) -> Result<()> {
+///     require_eq!(ctx.accounts.data.data, 0);
+///     ctx.accounts.data.data = data;
+///     Ok(())
+/// }
+/// ```
+#[macro_export]
+macro_rules! require_eq {
+    ($value1: expr, $value2: expr, $error_code:expr $(,)?) => {
+        if $value1 != $value2 {
+            return Err(error!($error_code).with_values(($value1, $value2)));
+        }
+    };
+    ($value1: expr, $value2: expr $(,)?) => {
+        if $value1 != $value2 {
+            return Err(error!(anchor_lang::error::ErrorCode::RequireEqViolated)
+                .with_values(($value1, $value2)));
+        }
+    };
+}
+
+/// Ensures two NON-PUBKEY values are not equal.
+///
+/// Use [require_keys_neq](crate::prelude::require_keys_neq)
+/// to compare two pubkeys.
+///
+/// Can be used with or without a custom error code.
+///
+/// # Example
+/// ```rust,ignore
+/// pub fn set_data(ctx: Context<SetData>, data: u64) -> Result<()> {
+///     require_neq!(ctx.accounts.data.data, 0);
+///     ctx.accounts.data.data = data;
+///     Ok(());
+/// }
+/// ```
+#[macro_export]
+macro_rules! require_neq {
+    ($value1: expr, $value2: expr, $error_code: expr $(,)?) => {
+        if $value1 == $value2 {
+            return Err(error!($error_code).with_values(($value1, $value2)));
+        }
+    };
+    ($value1: expr, $value2: expr $(,)?) => {
+        if $value1 == $value2 {
+            return Err(error!(anchor_lang::error::ErrorCode::RequireNeqViolated)
+                .with_values(($value1, $value2)));
+        }
+    };
+}
+
+/// Ensures two pubkeys values are equal.
+///
+/// Use [require_eq](crate::prelude::require_eq)
+/// to compare two non-pubkey values.
+///
+/// Can be used with or without a custom error code.
+///
+/// # Example
+/// ```rust,ignore
+/// pub fn set_data(ctx: Context<SetData>, data: u64) -> Result<()> {
+///     require_keys_eq!(ctx.accounts.data.authority.key(), ctx.accounts.authority.key());
+///     ctx.accounts.data.data = data;
+///     Ok(())
+/// }
+/// ```
+#[macro_export]
+macro_rules! require_keys_eq {
+    ($value1: expr, $value2: expr, $error_code:expr $(,)?) => {
+        if $value1 != $value2 {
+            return Err(error!($error_code).with_pubkeys(($value1, $value2)));
+        }
+    };
+    ($value1: expr, $value2: expr $(,)?) => {
+        if $value1 != $value2 {
+            return Err(error!(anchor_lang::error::ErrorCode::RequireKeysEqViolated)
+                .with_pubkeys(($value1, $value2)));
+        }
+    };
+}
+
+/// Ensures two pubkeys are not equal.
+///
+/// Use [require_neq](crate::prelude::require_neq)
+/// to compare two non-pubkey values.
+///
+/// Can be used with or without a custom error code.
+///
+/// # Example
+/// ```rust,ignore
+/// pub fn set_data(ctx: Context<SetData>, data: u64) -> Result<()> {
+///     require_keys_neq!(ctx.accounts.data.authority.key(), ctx.accounts.other.key());
+///     ctx.accounts.data.data = data;
+///     Ok(())
+/// }
+/// ```
+#[macro_export]
+macro_rules! require_keys_neq {
+    ($value1: expr, $value2: expr, $error_code: expr $(,)?) => {
+        if $value1 == $value2 {
+            return Err(error!($error_code).with_pubkeys(($value1, $value2)));
+        }
+    };
+    ($value1: expr, $value2: expr $(,)?) => {
+        if $value1 == $value2 {
+            return Err(
+                error!(anchor_lang::error::ErrorCode::RequireKeysNeqViolated)
+                    .with_pubkeys(($value1, $value2)),
+            );
+        }
+    };
+}
+
+/// Ensures the first NON-PUBKEY value is greater than the second
+/// NON-PUBKEY value.
+///
+/// To include an equality check, use [require_gte](crate::require_gte).
+///
+/// Can be used with or without a custom error code.
+///
+/// # Example
+/// ```rust,ignore
+/// pub fn set_data(ctx: Context<SetData>, data: u64) -> Result<()> {
+///     require_gt!(ctx.accounts.data.data, 0);
+///     ctx.accounts.data.data = data;
+///     Ok(());
+/// }
+/// ```
+#[macro_export]
+macro_rules! require_gt {
+    ($value1: expr, $value2: expr, $error_code: expr $(,)?) => {
+        if $value1 <= $value2 {
+            return Err(error!($error_code).with_values(($value1, $value2)));
+        }
+    };
+    ($value1: expr, $value2: expr $(,)?) => {
+        if $value1 <= $value2 {
+            return Err(error!(anchor_lang::error::ErrorCode::RequireGtViolated)
+                .with_values(($value1, $value2)));
+        }
+    };
+}
+
+/// Ensures the first NON-PUBKEY value is greater than or equal
+/// to the second NON-PUBKEY value.
+///
+/// Can be used with or without a custom error code.
+///
+/// # Example
+/// ```rust,ignore
+/// pub fn set_data(ctx: Context<SetData>, data: u64) -> Result<()> {
+///     require_gte!(ctx.accounts.data.data, 1);
+///     ctx.accounts.data.data = data;
+///     Ok(());
+/// }
+/// ```
+#[macro_export]
+macro_rules! require_gte {
+    ($value1: expr, $value2: expr, $error_code: expr $(,)?) => {
+        if $value1 < $value2 {
+            return Err(error!($error_code).with_values(($value1, $value2)));
+        }
+    };
+    ($value1: expr, $value2: expr $(,)?) => {
+        if $value1 < $value2 {
+            return Err(error!(anchor_lang::error::ErrorCode::RequireGteViolated)
+                .with_values(($value1, $value2)));
+        }
+    };
+}
+
+/// Returns with the given error.
+/// Use this with a custom error type.
+///
+/// # Example
+/// ```ignore
+/// // Instruction function
+/// pub fn example(ctx: Context<Example>) -> Result<()> {
+///     err!(MyError::SomeError)
+/// }
+///
+/// // An enum for custom error codes
+/// #[error_code]
+/// pub enum MyError {
+///     SomeError
+/// }
+/// ```
+#[macro_export]
+macro_rules! err {
+    ($error:tt $(,)?) => {
+        Err(anchor_lang::error!(crate::ErrorCode::$error))
+    };
+    ($error:expr $(,)?) => {
+        Err(anchor_lang::error!($error))
+    };
+}
+
+/// Creates a [`Source`](crate::error::Source)
+#[macro_export]
+macro_rules! source {
+    () => {
+        anchor_lang::error::Source {
+            filename: file!(),
+            line: line!(),
         }
     };
 }

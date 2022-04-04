@@ -182,6 +182,43 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
             };
             ConstraintToken::Bump(Context::new(ident.span(), ConstraintTokenBump { bump }))
         }
+        "seeds" => {
+            if stream.peek(Token![:]) {
+                stream.parse::<Token![:]>()?;
+                stream.parse::<Token![:]>()?;
+                let kw = stream.call(Ident::parse_any)?.to_string();
+                stream.parse::<Token![=]>()?;
+
+                let span = ident
+                    .span()
+                    .join(stream.span())
+                    .unwrap_or_else(|| ident.span());
+
+                match kw.as_str() {
+                    "program" => ConstraintToken::ProgramSeed(Context::new(
+                        span,
+                        ConstraintProgramSeed {
+                            program_seed: stream.parse()?,
+                        },
+                    )),
+                    _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
+                }
+            } else {
+                stream.parse::<Token![=]>()?;
+                let span = ident
+                    .span()
+                    .join(stream.span())
+                    .unwrap_or_else(|| ident.span());
+                let seeds;
+                let bracket = bracketed!(seeds in stream);
+                ConstraintToken::Seeds(Context::new(
+                    span.join(bracket.span).unwrap_or(span),
+                    ConstraintSeeds {
+                        seeds: seeds.parse_terminated(Expr::parse)?,
+                    },
+                ))
+            }
+        }
         _ => {
             stream.parse::<Token![=]>()?;
             let span = ident
@@ -234,16 +271,6 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         space: stream.parse()?,
                     },
                 )),
-                "seeds" => {
-                    let seeds;
-                    let bracket = bracketed!(seeds in stream);
-                    ConstraintToken::Seeds(Context::new(
-                        span.join(bracket.span).unwrap_or(span),
-                        ConstraintSeeds {
-                            seeds: seeds.parse_terminated(Expr::parse)?,
-                        },
-                    ))
-                }
                 "constraint" => ConstraintToken::Raw(Context::new(
                     span,
                     ConstraintRaw {
@@ -308,6 +335,7 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub mint_freeze_authority: Option<Context<ConstraintMintFreezeAuthority>>,
     pub mint_decimals: Option<Context<ConstraintMintDecimals>>,
     pub bump: Option<Context<ConstraintTokenBump>>,
+    pub program_seed: Option<Context<ConstraintProgramSeed>>,
 }
 
 impl<'ty> ConstraintGroupBuilder<'ty> {
@@ -338,12 +366,24 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             mint_freeze_authority: None,
             mint_decimals: None,
             bump: None,
+            program_seed: None,
         }
     }
 
     pub fn build(mut self) -> ParseResult<ConstraintGroup> {
         // Init.
         if let Some(i) = &self.init {
+            if cfg!(not(feature = "init-if-needed")) && i.if_needed {
+                return Err(ParseError::new(
+                    i.span(),
+                    "init_if_needed requires that anchor-lang be imported \
+                    with the init-if-needed cargo feature enabled. \
+                    Carefully read the init_if_needed docs before using this feature \
+                    to make sure you know how to protect yourself against \
+                    re-initialization attacks.",
+                ));
+            }
+
             match self.mutable {
                 Some(m) => {
                     return Err(ParseError::new(
@@ -373,6 +413,16 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             {
                 self.signer
                     .replace(Context::new(i.span(), ConstraintSigner { error: None }));
+            }
+
+            // Assert a bump target is not given on init.
+            if let Some(b) = &self.bump {
+                if b.bump.is_some() {
+                    return Err(ParseError::new(
+                        b.span(),
+                        "bump targets should not be provided with init. Please use bump without a target."
+                    ));
+                }
             }
         }
 
@@ -432,7 +482,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             if self.token_mint.is_none() {
                 return Err(ParseError::new(
                     token_authority.span(),
-                    "token authority must be provided if token mint is",
+                    "token mint must be provided if token authority is",
                 ));
             }
         }
@@ -455,17 +505,28 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             }
         }
 
-        // SPL Space.
-        if self.init.is_some()
-            && self.seeds.is_some()
-            && self.token_mint.is_some()
-            && (self.mint_authority.is_some() || self.token_authority.is_some())
-            && self.space.is_some()
-        {
-            return Err(ParseError::new(
-                self.space.as_ref().unwrap().span(),
-                "space is not required for initializing an spl account",
-            ));
+        // Space.
+        if let Some(i) = &self.init {
+            let initializing_token_program_acc = self.token_mint.is_some()
+                || self.mint_authority.is_some()
+                || self.token_authority.is_some()
+                || self.associated_token_authority.is_some();
+
+            match (self.space.is_some(), initializing_token_program_acc) {
+                (true, true) => {
+                    return Err(ParseError::new(
+                        self.space.as_ref().unwrap().span(),
+                        "space is not required for initializing an spl account",
+                    ));
+                }
+                (false, false) => {
+                    return Err(ParseError::new(
+                        i.span(),
+                        "space must be provided with init",
+                    ));
+                }
+                _ => (),
+            }
         }
 
         let ConstraintGroupBuilder {
@@ -494,6 +555,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             mint_freeze_authority,
             mint_decimals,
             bump,
+            program_seed,
         } = self;
 
         // Converts Option<Context<T>> -> Option<T>.
@@ -519,6 +581,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             bump: into_inner!(bump)
                 .map(|b| b.bump)
                 .expect("bump must be provided with seeds"),
+            program_seed: into_inner!(program_seed).map(|id| id.program_seed),
         });
         let associated_token = match (associated_token_mint, associated_token_authority) {
             (Some(mint), Some(auth)) => Some(ConstraintAssociatedToken {
@@ -539,9 +602,9 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         };
         Ok(ConstraintGroup {
             init: init.as_ref().map(|i| Ok(ConstraintInitGroup {
-            if_needed: i.if_needed,
+                if_needed: i.if_needed,
                 seeds: seeds.clone(),
-                payer: into_inner!(payer.clone()).map(|a| a.target),
+                payer: into_inner!(payer.clone()).unwrap().target,
                 space: space.clone().map(|s| s.space.clone()),
                 kind: if let Some(tm) = &token_mint {
                     InitKind::Token {
@@ -620,6 +683,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::MintFreezeAuthority(c) => self.add_mint_freeze_authority(c),
             ConstraintToken::MintDecimals(c) => self.add_mint_decimals(c),
             ConstraintToken::Bump(c) => self.add_bump(c),
+            ConstraintToken::ProgramSeed(c) => self.add_program_seed(c),
         }
     }
 
@@ -722,6 +786,33 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ));
         }
         self.bump.replace(c);
+        Ok(())
+    }
+
+    fn add_program_seed(&mut self, c: Context<ConstraintProgramSeed>) -> ParseResult<()> {
+        if self.program_seed.is_some() {
+            return Err(ParseError::new(c.span(), "seeds::program already provided"));
+        }
+        if self.seeds.is_none() {
+            return Err(ParseError::new(
+                c.span(),
+                "seeds must be provided before seeds::program",
+            ));
+        }
+        if let Some(ref init) = self.init {
+            if init.if_needed {
+                return Err(ParseError::new(
+                    c.span(),
+                    "seeds::program cannot be used with init_if_needed",
+                ));
+            } else {
+                return Err(ParseError::new(
+                    c.span(),
+                    "seeds::program cannot be used with init",
+                ));
+            }
+        }
+        self.program_seed.replace(c);
         Ok(())
     }
 

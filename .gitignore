@@ -12,9 +12,12 @@ examples/*/Cargo.lock
 examples/**/Cargo.lock
 tests/*/Cargo.lock
 tests/**/Cargo.lock
+tests/*/yarn.lock
+tests/**/yarn.lock
 .DS_Store
 docs/yarn.lock
 ts/docs/
 cli/npm-package/anchor
 cli/npm-package/*.tgz
 docker-target
+.rollup.cache/

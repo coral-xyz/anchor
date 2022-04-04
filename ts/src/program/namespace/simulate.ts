@@ -7,10 +7,9 @@ import Provider from "../../provider.js";
 import { splitArgsAndCtx } from "../context.js";
 import { TransactionFn } from "./transaction.js";
 import { EventParser, Event } from "../event.js";
-import Coder from "../../coder/index.js";
+import { Coder } from "../../coder/index.js";
 import { Idl, IdlEvent } from "../../idl.js";
-import { ProgramError } from "../../error.js";
-import * as features from "../../utils/features.js";
+import { translateError } from "../../error.js";
 import {
   AllInstructions,
   IdlTypes,
@@ -37,15 +36,7 @@ export default class SimulateFactory {
       try {
         resp = await provider!.simulate(tx, ctx.signers, ctx.options);
       } catch (err) {
-        if (features.isSet("debug-logs")) {
-          console.log("Translating error:", err);
-        }
-
-        let translatedErr = ProgramError.parse(err, idlErrors);
-        if (translatedErr === null) {
-          throw err;
-        }
-        throw translatedErr;
+        throw translateError(err, idlErrors);
       }
       if (resp === undefined) {
         throw new Error("Unable to simulate transaction");
@@ -134,7 +125,7 @@ export type SimulateFn<
   Promise<SimulateResponse<NullableEvents<IDL>, IdlTypes<IDL>>>
 >;
 
-type SimulateResponse<E extends IdlEvent, Defined> = {
+export type SimulateResponse<E extends IdlEvent, Defined> = {
   events: readonly Event<E, Defined>[];
   raw: readonly string[];
 };

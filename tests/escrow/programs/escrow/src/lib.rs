@@ -31,7 +31,7 @@ pub mod escrow {
         ctx: Context<InitializeEscrow>,
         initializer_amount: u64,
         taker_amount: u64,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         ctx.accounts.escrow_account.initializer_key = *ctx.accounts.initializer.key;
         ctx.accounts
             .escrow_account
@@ -55,7 +55,7 @@ pub mod escrow {
         Ok(())
     }
 
-    pub fn cancel_escrow(ctx: Context<CancelEscrow>) -> ProgramResult {
+    pub fn cancel_escrow(ctx: Context<CancelEscrow>) -> Result<()> {
         let (_pda, bump_seed) = Pubkey::find_program_address(&[ESCROW_PDA_SEED], ctx.program_id);
         let seeds = &[&ESCROW_PDA_SEED[..], &[bump_seed]];
 
@@ -70,7 +70,7 @@ pub mod escrow {
         Ok(())
     }
 
-    pub fn exchange(ctx: Context<Exchange>) -> ProgramResult {
+    pub fn exchange(ctx: Context<Exchange>) -> Result<()> {
         // Transferring from initializer to taker
         let (_pda, bump_seed) = Pubkey::find_program_address(&[ESCROW_PDA_SEED], ctx.program_id);
         let seeds = &[&ESCROW_PDA_SEED[..], &[bump_seed]];
@@ -102,8 +102,8 @@ pub mod escrow {
 #[derive(Accounts)]
 #[instruction(initializer_amount: u64)]
 pub struct InitializeEscrow<'info> {
-    #[account(signer)]
-    pub initializer: AccountInfo<'info>,
+    #[account(mut)]
+    pub initializer: Signer<'info>,
     #[account(
         mut,
         constraint = initializer_deposit_token_account.amount >= initializer_amount
@@ -181,7 +181,7 @@ impl<'info> From<&mut InitializeEscrow<'info>>
                 .initializer_deposit_token_account
                 .to_account_info()
                 .clone(),
-            current_authority: accounts.initializer.clone(),
+            current_authority: accounts.initializer.to_account_info().clone(),
         };
         let cpi_program = accounts.token_program.to_account_info();
         CpiContext::new(cpi_program, cpi_accounts)
