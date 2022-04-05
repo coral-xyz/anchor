@@ -205,12 +205,17 @@ type UserDefinedDeps<T extends Record<string, IdlTypeDef>> = {
 };
 
 type UserDefinedDicionary<T extends Record<string, IdlTypeDef>, Defined> = {
-  [K in keyof UserDefinedDeps<T>]: TypeDef<
-    T[K] & { name: K },
-    UserDefinedDeps<T>[K] extends never
-      ? Defined
-      : UserDefinedDicionary<Pick<T, UserDefinedDeps<T>[K]>, Defined>
-  >;
+  [K in keyof Defined]: K extends keyof T
+    ? Defined[K] extends keyof T
+      ? TypeDef<
+          T[K],
+          UserDefinedDicionary<
+            T,
+            Pick<T, Defined[K]> & UserDefinedDeps<Pick<T, Defined[K]>>
+          >
+        >
+      : TypeDef<T[K], Record<string, never>>
+    : never;
 };
 type MapIdlTypeDefs<T extends IdlTypeDef[]> = {
   [K in T[number]["name"]]: T[number] & { name: K };
@@ -224,7 +229,7 @@ export type IdlTypes<T extends Idl> = TypeDefDictionary<
   NonNullable<T["types"]>,
   UserDefinedDicionary<
     MapIdlTypeDefs<NonNullable<T["types"]>>,
-    Record<string, never>
+    UserDefinedDeps<MapIdlTypeDefs<NonNullable<T["types"]>>>
   >
 >;
 
@@ -232,7 +237,7 @@ export type IdlAccounts<T extends Idl> = TypeDefDictionary<
   NonNullable<T["accounts"]>,
   UserDefinedDicionary<
     MapIdlTypeDefs<NonNullable<T["types"]>>,
-    Record<string, never>
+    UserDefinedDeps<MapIdlTypeDefs<NonNullable<T["types"]>>>
   >
 >;
 
