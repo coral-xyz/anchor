@@ -203,7 +203,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let ix_name_log = format!("Instruction: {}", ix_name);
                 if state.is_zero_copy {
                     quote! {
-                        // One time state account initializer. Will faill on subsequent
+                        // One time state account initializer. Will fail on subsequent
                         // invocations.
                         #[inline(never)]
                         pub fn __ctor(program_id: &Pubkey, accounts: &[AccountInfo], ix_data: &[u8]) -> anchor_lang::Result<()> {
@@ -255,13 +255,13 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             )?;
 
                             // Zero copy deserialize.
-                            let loader: anchor_lang::accounts::loader::Loader<#mod_name::#name> = anchor_lang::accounts::loader::Loader::try_from_unchecked(program_id, &ctor_accounts.to)?;
+                            let loader: anchor_lang::accounts::loader::Loader<#mod_name::#name> = anchor_lang::accounts::loader::Loader::init(&ctor_accounts.to, program_id)?;
 
                             // Invoke the ctor in a new lexical scope so that
                             // the zero-copy RefMut gets dropped. Required
                             // so that we can subsequently run the exit routine.
                             {
-                                let mut instance = loader.load_init()?;
+                                let mut instance = loader.load_mut()?;
                                 instance.new(
                                     anchor_lang::context::Context::new(
                                         program_id,
@@ -282,7 +282,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     }
                 } else {
                     quote! {
-                        // One time state account initializer. Will faill on subsequent
+                        // One time state account initializer. Will fail on subsequent
                         // invocations.
                         #[inline(never)]
                         pub fn __ctor(program_id: &Pubkey, accounts: &[AccountInfo], ix_data: &[u8]) -> anchor_lang::Result<()> {
@@ -499,7 +499,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     accounts.exit(program_id)?;
                                     let acc_info = state.to_account_info();
                                     let mut data = acc_info.try_borrow_mut_data()?;
-                                    let dst: &mut [u8] = &mut data;
+                                    let dst: &mut [u8] = &mut data[8..];
                                     let mut cursor = std::io::Cursor::new(dst);
                                     state.try_serialize(&mut cursor)?;
 

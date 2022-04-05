@@ -23,8 +23,6 @@ use std::ops::DerefMut;
 /// Note that using accounts in this way is distinctly different from using,
 /// for example, the [`Account`](./struct.Account.html). Namely,
 /// one must call
-/// - `load_init` after initializing an account (this will ignore the missing
-/// account discriminator that gets added only after the user's instruction code)
 /// - `load` when the account is not mutable
 /// - `load_mut` when the account is mutable
 ///
@@ -52,7 +50,7 @@ use std::ops::DerefMut;
 ///     use super::*;
 ///
 ///     pub fn create_bar(ctx: Context<CreateBar>, data: u64) -> Result<()> {
-///         let bar = &mut ctx.accounts.bar.load_init()?;
+///         let bar = &mut ctx.accounts.bar.load_mut()?;
 ///         bar.authority = ctx.accounts.authority.key();
 ///         bar.data = data;
 ///         Ok(())
@@ -171,15 +169,6 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
     /// Returns a Ref to the account data structure for reading.
     pub fn load(&self) -> Result<Ref<T>> {
         let data = self.acc_info.try_borrow_data()?;
-        if data.len() < T::DISCRIMINATOR.len() {
-            return Err(ErrorCode::AccountDiscriminatorNotFound.into());
-        }
-
-        let disc_bytes = array_ref![data, 0, 8];
-        if disc_bytes != &T::DISCRIMINATOR {
-            return Err(ErrorCode::AccountDiscriminatorMismatch.into());
-        }
-
         Ok(Ref::map(data, |data| {
             bytemuck::from_bytes(&data[8..mem::size_of::<T>() + 8])
         }))
@@ -194,15 +183,6 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         }
 
         let data = self.acc_info.try_borrow_mut_data()?;
-        if data.len() < T::DISCRIMINATOR.len() {
-            return Err(ErrorCode::AccountDiscriminatorNotFound.into());
-        }
-
-        let disc_bytes = array_ref![data, 0, 8];
-        if disc_bytes != &T::DISCRIMINATOR {
-            return Err(ErrorCode::AccountDiscriminatorMismatch.into());
-        }
-
         Ok(RefMut::map(data, |data| {
             bytemuck::from_bytes_mut(&mut data.deref_mut()[8..mem::size_of::<T>() + 8])
         }))
