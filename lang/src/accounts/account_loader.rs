@@ -124,12 +124,12 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
                 .with_pubkeys((*acc_info.owner, T::owner())));
         }
         let data: &[u8] = &acc_info.try_borrow_data()?;
-        if data.len() < T::discriminator().len() {
+        if data.len() < T::DISCRIMINATOR.len() {
             return Err(ErrorCode::AccountDiscriminatorNotFound.into());
         }
         // Discriminator must match.
         let disc_bytes = array_ref![data, 0, 8];
-        if disc_bytes != &T::discriminator() {
+        if disc_bytes != &T::DISCRIMINATOR {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
@@ -152,12 +152,12 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
     /// Returns a Ref to the account data structure for reading.
     pub fn load(&self) -> Result<Ref<T>> {
         let data = self.acc_info.try_borrow_data()?;
-        if data.len() < T::discriminator().len() {
+        if data.len() < T::DISCRIMINATOR.len() {
             return Err(ErrorCode::AccountDiscriminatorNotFound.into());
         }
 
         let disc_bytes = array_ref![data, 0, 8];
-        if disc_bytes != &T::discriminator() {
+        if disc_bytes != &T::DISCRIMINATOR {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
@@ -175,12 +175,12 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         }
 
         let data = self.acc_info.try_borrow_mut_data()?;
-        if data.len() < T::discriminator().len() {
+        if data.len() < T::DISCRIMINATOR.len() {
             return Err(ErrorCode::AccountDiscriminatorNotFound.into());
         }
 
         let disc_bytes = array_ref![data, 0, 8];
-        if disc_bytes != &T::discriminator() {
+        if disc_bytes != &T::DISCRIMINATOR {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
@@ -238,7 +238,7 @@ impl<'info, T: ZeroCopy + Owner> AccountsExit<'info> for AccountLoader<'info, T>
         let mut data = self.acc_info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
         let mut writer = BpfWriter::new(dst);
-        writer.write_all(&T::discriminator()).unwrap();
+        writer.write_all(&T::DISCRIMINATOR).unwrap();
         Ok(())
     }
 }

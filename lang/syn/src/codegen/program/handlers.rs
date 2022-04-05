@@ -349,6 +349,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             let mut data = ctor_accounts.to.try_borrow_mut_data()?;
                             let dst: &mut [u8] = &mut data;
                             let mut cursor = std::io::Cursor::new(dst);
+                            <std::io::Cursor::<&mut [u8]> as std::io::Write>::write_all(&mut cursor, &<#mod_name::#name as anchor_lang::Discriminator>::DISCRIMINATOR)?;
                             instance.try_serialize(&mut cursor)?;
 
                             Ok(())

@@ -135,6 +135,7 @@ describe("misc", () => {
       },
     });
     let stateAccount = await misc2Program.state.fetch();
+    console.log("HELLOHELLOHELLO");
     assert.isTrue(stateAccount.data.eq(oldData));
     assert.isTrue(stateAccount.auth.equals(program.provider.wallet.publicKey));
     const newData = new anchor.BN(2134);
@@ -145,7 +146,9 @@ describe("misc", () => {
         misc2Program: misc2Program.programId,
       },
     });
+    console.log("BYEBYEBYE");
     stateAccount = await misc2Program.state.fetch();
+    console.log("BYEBYEBYE");
     assert.isTrue(stateAccount.data.eq(newData));
     assert.isTrue(stateAccount.auth.equals(program.provider.wallet.publicKey));
   });

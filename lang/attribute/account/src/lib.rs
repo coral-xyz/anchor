@@ -138,8 +138,24 @@ pub fn account(
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::Discriminator for #account_name #type_gen #where_clause {
-                    fn discriminator() -> [u8; 8] {
-                        #discriminator
+                    const DISCRIMINATOR: [u8; 8] = #discriminator;
+                }
+
+                #[automatically_derived]
+                impl #impl_gen anchor_lang::AccountDeserializeWithHeader for #account_name #type_gen #where_clause {
+                    fn try_deserialize_checked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+                        if buf.len() < #discriminator.len() {
+                            return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound.into());
+                        }
+                        let given_disc = &buf[..8];
+                        if &#discriminator != given_disc {
+                            return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch.into());
+                        }
+                        <Self as anchor_lang::AccountDeserializeWithHeader>::try_deserialize_unchecked(buf)
+                    }
+
+                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self> {
+                        <Self as anchor_lang::AccountDeserialize>::try_deserialize(&mut &buf[8..])
                     }
                 }
 
@@ -148,20 +164,8 @@ pub fn account(
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
                     fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
-                        if buf.len() < #discriminator.len() {
-                            return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound.into());
-                        }
-                        let given_disc = &buf[..8];
-                        if &#discriminator != given_disc {
-                            return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch.into());
-                        }
-                        Self::try_deserialize_unchecked(buf)
-                    }
-
-                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
-                        let data: &[u8] = &buf[8..];
                         // Re-interpret raw bytes into the POD data structure.
-                        let account = anchor_lang::__private::bytemuck::from_bytes(data);
+                        let account = anchor_lang::__private::bytemuck::from_bytes(&buf);
                         // Copy out the bytes into a new, owned data structure.
                         Ok(*account)
                     }
@@ -175,12 +179,15 @@ pub fn account(
                 #account_strct
 
                 #[automatically_derived]
+                impl #impl_gen anchor_lang::AccountSerializeWithHeader for #account_name #type_gen #where_clause {
+                    fn try_serialize_skip_header(&self, dst: &mut [u8]) -> anchor_lang::Result<()> {
+                        Self::try_serialize(&self, &mut anchor_lang::BpfWriter::new(&mut dst[8..]))
+                    }
+                }
+
+                #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountSerialize for #account_name #type_gen #where_clause {
                     fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> anchor_lang::Result<()> {
-                        if writer.write_all(&#discriminator).is_err() {
-                            return Err(anchor_lang::error::ErrorCode::AccountDidNotSerialize.into());
-                        }
-
                         if AnchorSerialize::serialize(self, writer).is_err() {
                             return Err(anchor_lang::error::ErrorCode::AccountDidNotSerialize.into());
                         }
@@ -189,8 +196,8 @@ pub fn account(
                 }
 
                 #[automatically_derived]
-                impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
-                    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+                impl #impl_gen anchor_lang::AccountDeserializeWithHeader for #account_name #type_gen #where_clause {
+                    fn try_deserialize_checked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                         if buf.len() < #discriminator.len() {
                             return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound.into());
                         }
@@ -198,21 +205,25 @@ pub fn account(
                         if &#discriminator != given_disc {
                             return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch.into());
                         }
-                        Self::try_deserialize_unchecked(buf)
+                        <Self as anchor_lang::AccountDeserializeWithHeader>::try_deserialize_unchecked(buf)
                     }
 
-                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
-                        let mut data: &[u8] = &buf[8..];
-                        AnchorDeserialize::deserialize(&mut data)
+                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self> {
+                        <Self as anchor_lang::AccountDeserialize>::try_deserialize(&mut &buf[8..])
+                    }
+                }
+
+                #[automatically_derived]
+                impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
+                    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+                        AnchorDeserialize::deserialize(buf)
                             .map_err(|_| anchor_lang::error::ErrorCode::AccountDidNotDeserialize.into())
                     }
                 }
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::Discriminator for #account_name #type_gen #where_clause {
-                    fn discriminator() -> [u8; 8] {
-                        #discriminator
-                    }
+                    const DISCRIMINATOR: [u8; 8] = #discriminator;
                 }
 
                 #owner_impl

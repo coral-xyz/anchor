@@ -340,8 +340,10 @@ impl TokenAccount {
     pub const LEN: usize = spl_token::state::Account::LEN;
 }
 
+impl anchor_lang::AccountDeserializeWithHeader for TokenAccount {}
+
 impl anchor_lang::AccountDeserialize for TokenAccount {
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
         spl_token::state::Account::unpack(buf)
             .map(TokenAccount)
             .map_err(Into::into)
@@ -371,8 +373,10 @@ impl Mint {
     pub const LEN: usize = spl_token::state::Mint::LEN;
 }
 
+impl anchor_lang::AccountDeserializeWithHeader for Mint {}
+
 impl anchor_lang::AccountDeserialize for Mint {
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
         spl_token::state::Mint::unpack(buf)
             .map(Mint)
             .map_err(Into::into)

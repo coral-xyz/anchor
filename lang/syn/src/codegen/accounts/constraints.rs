@@ -162,12 +162,15 @@ pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macr
     let from_account_info = f.from_account_info_unchecked(None);
     quote! {
         let #field: #ty_decl = {
-            let mut __data: &[u8] = &#field.try_borrow_data()?;
-            let mut __disc_bytes = [0u8; 8];
-            __disc_bytes.copy_from_slice(&__data[..8]);
-            let __discriminator = u64::from_le_bytes(__disc_bytes);
-            if __discriminator != 0 {
-                return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintZero).with_account_name(#name_str));
+            {
+                // separate lexical scope so `__data` is dropped before #from_account_info
+                let mut __data: &[u8] = &#field.try_borrow_data()?;
+                let mut __disc_bytes = [0u8; 8];
+                __disc_bytes.copy_from_slice(&__data[..8]);
+                let __discriminator = u64::from_le_bytes(__disc_bytes);
+                if __discriminator != 0 {
+                    return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintZero).with_account_name(#name_str));
+                }
             }
             #from_account_info
         };

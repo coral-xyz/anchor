@@ -290,19 +290,29 @@ impl Field {
                 quote! { UncheckedAccount::try_from(#field.to_account_info()) }
             }
             Ty::Account(AccountTy { boxed, .. }) => {
+                let mut stream = match kind {
+                    Some(init_kind) => match init_kind {
+                        InitKind::Program { .. } => quote! { #container_ty::init(
+                            &#field,
+                            program_id
+                        )?},
+                        InitKind::Token { .. }
+                        | InitKind::AssociatedToken { .. }
+                        | InitKind::Mint { .. } => {
+                            quote! { #container_ty::try_from_unchecked(
+                                &#field,
+                            )?}
+                        }
+                    },
+                    None => quote! { #container_ty::init(
+                        &#field,
+                        program_id
+                    )?},
+                };
                 if *boxed {
-                    quote! {
-                        Box::new(#container_ty::try_from_unchecked(
-                            &#field,
-                        )?)
-                    }
-                } else {
-                    quote! {
-                        #container_ty::try_from_unchecked(
-                            &#field,
-                        )?
-                    }
+                    stream = quote! { Box::new(#stream) };
                 }
+                stream
             }
             Ty::CpiAccount(_) => {
                 quote! {
@@ -313,8 +323,7 @@ impl Field {
             }
             _ => {
                 let owner_addr = match &kind {
-                    None => quote! { program_id },
-                    Some(InitKind::Program { .. }) => quote! {
+                    None | Some(InitKind::Program { .. }) => quote! {
                         program_id
                     },
                     _ => quote! {

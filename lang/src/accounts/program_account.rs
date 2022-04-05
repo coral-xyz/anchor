@@ -1,10 +1,9 @@
 #[allow(deprecated)]
 use crate::accounts::cpi_account::CpiAccount;
-use crate::bpf_writer::BpfWriter;
 use crate::error::{Error, ErrorCode};
 use crate::{
-    AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, Key, Result,
-    ToAccountInfo, ToAccountInfos, ToAccountMetas,
+    AccountDeserializeWithHeader, AccountSerialize, AccountSerializeWithHeader, Accounts,
+    AccountsClose, AccountsExit, Key, Result, ToAccountInfo, ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
@@ -16,18 +15,18 @@ use std::ops::{Deref, DerefMut};
 /// account owned by the currently executing program.
 #[derive(Clone)]
 #[deprecated(since = "0.15.0", note = "Please use Account instead")]
-pub struct ProgramAccount<'info, T: AccountSerialize + AccountDeserialize + Clone> {
+pub struct ProgramAccount<'info, T: AccountSerialize + AccountDeserializeWithHeader + Clone> {
     inner: Box<Inner<'info, T>>,
 }
 
 #[derive(Clone)]
-struct Inner<'info, T: AccountSerialize + AccountDeserialize + Clone> {
+struct Inner<'info, T: AccountSerialize + AccountDeserializeWithHeader + Clone> {
     info: AccountInfo<'info>,
     account: T,
 }
 
 #[allow(deprecated)]
-impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T> {
+impl<'a, T: AccountSerialize + AccountDeserializeWithHeader + Clone> ProgramAccount<'a, T> {
     fn new(info: AccountInfo<'a>, account: T) -> ProgramAccount<'a, T> {
         Self {
             inner: Box::new(Inner { info, account }),
@@ -75,7 +74,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> ProgramAccount<'a, T>
 #[allow(deprecated)]
 impl<'info, T> Accounts<'info> for ProgramAccount<'info, T>
 where
-    T: AccountSerialize + AccountDeserialize + Clone,
+    T: AccountSerialize + AccountDeserializeWithHeader + Clone,
 {
     #[inline(never)]
     fn try_accounts(
@@ -94,15 +93,13 @@ where
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info>
-    for ProgramAccount<'info, T>
+impl<'info, T: AccountSerializeWithHeader + AccountDeserializeWithHeader + Clone>
+    AccountsExit<'info> for ProgramAccount<'info, T>
 {
     fn exit(&self, _program_id: &Pubkey) -> Result<()> {
-        let info = self.to_account_info();
-        let mut data = info.try_borrow_mut_data()?;
-        let dst: &mut [u8] = &mut data;
-        let mut writer = BpfWriter::new(dst);
-        self.inner.account.try_serialize(&mut writer)?;
+        self.inner
+            .account
+            .try_serialize_skip_header(&mut self.inner.info.try_borrow_mut_data()?)?;
         Ok(())
     }
 }
@@ -115,7 +112,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info
 /// it requires the `mut` constraint but for that type the constraint
 /// overwrites the "closed account" discriminator at the end of the instruction.
 #[allow(deprecated)]
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsClose<'info>
+impl<'info, T: AccountSerialize + AccountDeserializeWithHeader + Clone> AccountsClose<'info>
     for ProgramAccount<'info, T>
 {
     fn close(&self, sol_destination: AccountInfo<'info>) -> Result<()> {
@@ -124,7 +121,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsClose<'inf
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountMetas
+impl<'info, T: AccountSerialize + AccountDeserializeWithHeader + Clone> ToAccountMetas
     for ProgramAccount<'info, T>
 {
     fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
@@ -138,7 +135,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountMetas
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfos<'info>
+impl<'info, T: AccountSerialize + AccountDeserializeWithHeader + Clone> ToAccountInfos<'info>
     for ProgramAccount<'info, T>
 {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
@@ -147,7 +144,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfos<'in
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AsRef<AccountInfo<'info>>
+impl<'info, T: AccountSerialize + AccountDeserializeWithHeader + Clone> AsRef<AccountInfo<'info>>
     for ProgramAccount<'info, T>
 {
     fn as_ref(&self) -> &AccountInfo<'info> {
@@ -156,7 +153,9 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AsRef<AccountInfo<
 }
 
 #[allow(deprecated)]
-impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Deref for ProgramAccount<'a, T> {
+impl<'a, T: AccountSerialize + AccountDeserializeWithHeader + Clone> Deref
+    for ProgramAccount<'a, T>
+{
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -165,7 +164,9 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Deref for ProgramAcco
 }
 
 #[allow(deprecated)]
-impl<'a, T: AccountSerialize + AccountDeserialize + Clone> DerefMut for ProgramAccount<'a, T> {
+impl<'a, T: AccountSerialize + AccountDeserializeWithHeader + Clone> DerefMut
+    for ProgramAccount<'a, T>
+{
     fn deref_mut(&mut self) -> &mut Self::Target {
         #[cfg(feature = "anchor-debug")]
         if !self.inner.info.is_writable {
@@ -180,7 +181,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> DerefMut for ProgramA
 #[allow(deprecated)]
 impl<'info, T> From<CpiAccount<'info, T>> for ProgramAccount<'info, T>
 where
-    T: AccountSerialize + AccountDeserialize + Clone,
+    T: AccountSerialize + AccountDeserializeWithHeader + Clone,
 {
     fn from(a: CpiAccount<'info, T>) -> Self {
         Self::new(a.to_account_info(), Deref::deref(&a).clone())
@@ -188,7 +189,9 @@ where
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> Key for ProgramAccount<'info, T> {
+impl<'info, T: AccountSerialize + AccountDeserializeWithHeader + Clone> Key
+    for ProgramAccount<'info, T>
+{
     fn key(&self) -> Pubkey {
         *self.inner.info.key
     }

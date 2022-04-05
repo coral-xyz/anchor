@@ -63,12 +63,12 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
                 .with_pubkeys((*acc_info.owner, *program_id)));
         }
         let data: &[u8] = &acc_info.try_borrow_data()?;
-        if data.len() < T::discriminator().len() {
+        if data.len() < T::DISCRIMINATOR.len() {
             return Err(ErrorCode::AccountDiscriminatorNotFound.into());
         }
         // Discriminator must match.
         let disc_bytes = array_ref![data, 0, 8];
-        if disc_bytes != &T::discriminator() {
+        if disc_bytes != &T::DISCRIMINATOR {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
@@ -93,12 +93,12 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
     #[allow(deprecated)]
     pub fn load(&self) -> Result<Ref<T>> {
         let data = self.acc_info.try_borrow_data()?;
-        if data.len() < T::discriminator().len() {
+        if data.len() < T::DISCRIMINATOR.len() {
             return Err(ErrorCode::AccountDiscriminatorNotFound.into());
         }
 
         let disc_bytes = array_ref![data, 0, 8];
-        if disc_bytes != &T::discriminator() {
+        if disc_bytes != &T::DISCRIMINATOR {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
@@ -115,12 +115,12 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         }
 
         let data = self.acc_info.try_borrow_mut_data()?;
-        if data.len() < T::discriminator().len() {
+        if data.len() < T::DISCRIMINATOR.len() {
             return Err(ErrorCode::AccountDiscriminatorNotFound.into());
         }
 
         let disc_bytes = array_ref![data, 0, 8];
-        if disc_bytes != &T::discriminator() {
+        if disc_bytes != &T::DISCRIMINATOR {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
@@ -181,7 +181,7 @@ impl<'info, T: ZeroCopy> AccountsExit<'info> for Loader<'info, T> {
         let mut data = self.acc_info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
         let mut writer = BpfWriter::new(dst);
-        writer.write_all(&T::discriminator()).unwrap();
+        writer.write_all(&T::DISCRIMINATOR).unwrap();
         Ok(())
     }
 }

@@ -1,5 +1,5 @@
 use crate::error::ErrorCode;
-use crate::{AccountDeserialize, AccountSerialize, Owner, Result};
+use crate::{AccountDeserialize, AccountDeserializeWithHeader, AccountSerialize, Owner, Result};
 use solana_program::{
     bpf_loader_upgradeable::UpgradeableLoaderState, program_error::ProgramError, pubkey::Pubkey,
 };
@@ -10,13 +10,11 @@ pub struct ProgramData {
     pub upgrade_authority_address: Option<Pubkey>,
 }
 
+impl AccountDeserializeWithHeader for ProgramData {}
+
 impl AccountDeserialize for ProgramData {
     fn try_deserialize(buf: &mut &[u8]) -> Result<Self> {
-        ProgramData::try_deserialize_unchecked(buf)
-    }
-
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self> {
-        let program_state = AccountDeserialize::try_deserialize_unchecked(buf)?;
+        let program_state = AccountDeserializeWithHeader::try_deserialize_unchecked(buf)?;
 
         match program_state {
             UpgradeableLoaderState::Uninitialized => Err(ErrorCode::AccountNotProgramData.into()),
@@ -37,12 +35,7 @@ impl AccountDeserialize for ProgramData {
     }
 }
 
-impl AccountSerialize for ProgramData {
-    fn try_serialize<W: std::io::Write>(&self, _writer: &mut W) -> Result<()> {
-        // no-op
-        Ok(())
-    }
-}
+impl AccountSerialize for ProgramData {}
 
 impl Owner for ProgramData {
     fn owner() -> solana_program::pubkey::Pubkey {
@@ -56,19 +49,12 @@ impl Owner for UpgradeableLoaderState {
     }
 }
 
-impl AccountSerialize for UpgradeableLoaderState {
-    fn try_serialize<W: std::io::Write>(&self, _writer: &mut W) -> Result<()> {
-        // no-op
-        Ok(())
-    }
-}
+impl AccountSerialize for UpgradeableLoaderState {}
+
+impl AccountDeserializeWithHeader for UpgradeableLoaderState {}
 
 impl AccountDeserialize for UpgradeableLoaderState {
     fn try_deserialize(buf: &mut &[u8]) -> Result<Self> {
-        UpgradeableLoaderState::try_deserialize_unchecked(buf)
-    }
-
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self> {
         bincode::deserialize(buf).map_err(|_| ProgramError::InvalidAccountData.into())
     }
 }

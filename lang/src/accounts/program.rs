@@ -2,7 +2,8 @@
 
 use crate::error::{Error, ErrorCode};
 use crate::{
-    AccountDeserialize, Accounts, AccountsExit, Id, Key, Result, ToAccountInfos, ToAccountMetas,
+    AccountDeserializeWithHeader, Accounts, AccountsExit, Id, Key, Result, ToAccountInfos,
+    ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::bpf_loader_upgradeable::{self, UpgradeableLoaderState};
@@ -194,9 +195,12 @@ impl<'info, T: Id + Clone> Deref for Program<'info, T> {
     }
 }
 
-impl<'info, T: AccountDeserialize + Id + Clone> AccountsExit<'info> for Program<'info, T> {}
+impl<'info, T: AccountDeserializeWithHeader + Id + Clone> AccountsExit<'info>
+    for Program<'info, T>
+{
+}
 
-impl<'info, T: AccountDeserialize + Id + Clone> Key for Program<'info, T> {
+impl<'info, T: AccountDeserializeWithHeader + Id + Clone> Key for Program<'info, T> {
     fn key(&self) -> Pubkey {
         *self.info.key
     }

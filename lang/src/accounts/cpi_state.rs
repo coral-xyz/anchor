@@ -2,8 +2,8 @@ use crate::error::ErrorCode;
 #[allow(deprecated)]
 use crate::{accounts::state::ProgramState, context::CpiStateContext};
 use crate::{
-    AccountDeserialize, AccountSerialize, Accounts, AccountsExit, Key, Result, ToAccountInfos,
-    ToAccountMetas,
+    AccountDeserializeWithHeader, AccountSerializeWithHeader, Accounts, AccountsExit, Key, Result,
+    ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
@@ -15,18 +15,20 @@ use std::ops::{Deref, DerefMut};
 /// is for a program not currently executing.
 #[derive(Clone)]
 #[deprecated]
-pub struct CpiState<'info, T: AccountSerialize + AccountDeserialize + Clone> {
+pub struct CpiState<'info, T: AccountSerializeWithHeader + AccountDeserializeWithHeader + Clone> {
     inner: Box<Inner<'info, T>>,
 }
 
 #[derive(Clone)]
-struct Inner<'info, T: AccountSerialize + AccountDeserialize + Clone> {
+struct Inner<'info, T: AccountSerializeWithHeader + AccountDeserializeWithHeader + Clone> {
     info: AccountInfo<'info>,
     account: T,
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> CpiState<'info, T> {
+impl<'info, T: AccountSerializeWithHeader + AccountDeserializeWithHeader + Clone>
+    CpiState<'info, T>
+{
     pub fn new(i: AccountInfo<'info>, account: T) -> CpiState<'info, T> {
         Self {
             inner: Box::new(Inner { info: i, account }),
@@ -64,7 +66,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> CpiState<'info, T>
 #[allow(deprecated)]
 impl<'info, T> Accounts<'info> for CpiState<'info, T>
 where
-    T: AccountSerialize + AccountDeserialize + Clone,
+    T: AccountSerializeWithHeader + AccountDeserializeWithHeader + Clone,
 {
     #[inline(never)]
     fn try_accounts(
@@ -87,7 +89,7 @@ where
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountMetas
+impl<'info, T: AccountSerializeWithHeader + AccountDeserializeWithHeader + Clone> ToAccountMetas
     for CpiState<'info, T>
 {
     fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
@@ -101,8 +103,8 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountMetas
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfos<'info>
-    for CpiState<'info, T>
+impl<'info, T: AccountSerializeWithHeader + AccountDeserializeWithHeader + Clone>
+    ToAccountInfos<'info> for CpiState<'info, T>
 {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         vec![self.inner.info.clone()]
@@ -110,8 +112,8 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfos<'in
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AsRef<AccountInfo<'info>>
-    for CpiState<'info, T>
+impl<'info, T: AccountSerializeWithHeader + AccountDeserializeWithHeader + Clone>
+    AsRef<AccountInfo<'info>> for CpiState<'info, T>
 {
     fn as_ref(&self) -> &AccountInfo<'info> {
         &self.inner.info
@@ -119,7 +121,9 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AsRef<AccountInfo<
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> Deref for CpiState<'info, T> {
+impl<'info, T: AccountSerializeWithHeader + AccountDeserializeWithHeader + Clone> Deref
+    for CpiState<'info, T>
+{
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -128,20 +132,24 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> Deref for CpiState
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> DerefMut for CpiState<'info, T> {
+impl<'info, T: AccountSerializeWithHeader + AccountDeserializeWithHeader + Clone> DerefMut
+    for CpiState<'info, T>
+{
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut DerefMut::deref_mut(&mut self.inner).account
     }
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info>
-    for CpiState<'info, T>
+impl<'info, T: AccountSerializeWithHeader + AccountDeserializeWithHeader + Clone>
+    AccountsExit<'info> for CpiState<'info, T>
 {
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> Key for CpiState<'info, T> {
+impl<'info, T: AccountSerializeWithHeader + AccountDeserializeWithHeader + Clone> Key
+    for CpiState<'info, T>
+{
     fn key(&self) -> Pubkey {
         *self.inner.info.key
     }

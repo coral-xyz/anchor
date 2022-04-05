@@ -23,6 +23,7 @@
 
 extern crate self as anchor_lang;
 
+use bpf_writer::BpfWriter;
 use bytemuck::{Pod, Zeroable};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
@@ -134,6 +135,13 @@ where
     }
 }
 
+pub trait AccountSerializeWithHeader: AccountSerialize {
+    /// Serializes the account data into `writer` without the header.
+    fn try_serialize_skip_header(&self, dst: &mut [u8]) -> Result<()> {
+        Self::try_serialize(&self, &mut BpfWriter::new(dst))
+    }
+}
+
 /// A data structure that can be serialized and stored into account storage,
 /// i.e. an
 /// [`AccountInfo`](../solana_program/account_info/struct.AccountInfo.html#structfield.data)'s
@@ -152,8 +160,22 @@ pub trait AccountSerialize {
     }
 }
 
-pub trait AccountDeserializeChecked: Sized + AccountDeserialize {
+pub trait AccountDeserializeWithHeader: Sized + AccountDeserialize {
+    /// Deserializes previously initialized account data. Should fail for all
+    /// uninitialized accounts, where the bytes are zeroed. Implementations
+    /// should be unique to a particular account type so that one can never
+    /// successfully deserialize the data of one account type into another.
+    /// For example, if the SPL token program were to implement this trait,
+    /// it should be impossible to deserialize a `Mint` account into a token
+    /// `Account`.
     fn try_deserialize_checked(buf: &mut &[u8]) -> Result<Self> {
+        <Self as anchor_lang::AccountDeserializeWithHeader>::try_deserialize_unchecked(buf)
+    }
+
+    /// Deserializes account data without checking the account discriminator.
+    /// This should only be used on account initialization, when the bytes of
+    /// the account are zeroed.
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self> {
         <Self as anchor_lang::AccountDeserialize>::try_deserialize(buf)
     }
 }
@@ -163,21 +185,7 @@ pub trait AccountDeserializeChecked: Sized + AccountDeserialize {
 /// [`AccountInfo`](../solana_program/account_info/struct.AccountInfo.html#structfield.data)'s
 /// mutable data slice.
 pub trait AccountDeserialize: Sized {
-    /// Deserializes previously initialized account data. Should fail for all
-    /// uninitialized accounts, where the bytes are zeroed. Implementations
-    /// should be unique to a particular account type so that one can never
-    /// successfully deserialize the data of one account type into another.
-    /// For example, if the SPL token program were to implement this trait,
-    /// it should be impossible to deserialize a `Mint` account into a token
-    /// `Account`.
-    fn try_deserialize(buf: &mut &[u8]) -> Result<Self> {
-        Self::try_deserialize_unchecked(buf)
-    }
-
-    /// Deserializes account data without checking the account discriminator.
-    /// This should only be used on account initialization, when the bytes of
-    /// the account are zeroed.
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self>;
+    fn try_deserialize(buf: &mut &[u8]) -> Result<Self>;
 }
 
 /// An account data structure capable of zero copy deserialization.
