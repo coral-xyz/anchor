@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
-use anchor_lang::prelude::borsh::maybestd::io::Write;
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::borsh::maybestd::io::Write, AccountDeserializeWithHeader};
+use anchor_lang::{prelude::*, AccountSerializeWithHeader};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
 
@@ -11,7 +11,7 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 #[derive(Accounts)]
 pub struct GenericsTest<'info, T, U, const N: usize>
 where
-    T: AccountSerialize + AccountDeserialize + Owner + Clone,
+    T: AccountSerializeWithHeader + AccountDeserializeWithHeader + Owner + Clone,
     U: BorshSerialize + BorshDeserialize + Default + Clone,
 {
     pub non_generic: AccountInfo<'info>,

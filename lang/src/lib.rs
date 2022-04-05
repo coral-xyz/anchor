@@ -23,7 +23,7 @@
 
 extern crate self as anchor_lang;
 
-use bpf_writer::BpfWriter;
+pub use bpf_writer::BpfWriter;
 use bytemuck::{Pod, Zeroable};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
@@ -34,7 +34,7 @@ use std::io::Write;
 mod account_meta;
 pub mod accounts;
 mod bpf_upgradeable_state;
-mod bpf_writer;
+pub mod bpf_writer;
 mod common;
 pub mod context;
 mod ctor;
@@ -138,7 +138,7 @@ where
 pub trait AccountSerializeWithHeader: AccountSerialize {
     /// Serializes the account data into `writer` without the header.
     fn try_serialize_skip_header(&self, dst: &mut [u8]) -> Result<()> {
-        Self::try_serialize(&self, &mut BpfWriter::new(dst))
+        Self::try_serialize(self, &mut BpfWriter::new(dst))
     }
 }
 

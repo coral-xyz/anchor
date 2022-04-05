@@ -337,7 +337,7 @@ where
             crate::solana_program::program_memory::sol_memcpy(data, &T::DISCRIMINATOR, 8);
         }
         // We just set the discriminator, so there is no need to check it
-        Self::try_from_unchecked(&info)
+        Self::try_from_unchecked(info)
     }
 }
 

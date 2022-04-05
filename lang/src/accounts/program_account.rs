@@ -43,7 +43,7 @@ impl<'a, T: AccountSerialize + AccountDeserializeWithHeader + Clone> ProgramAcco
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramAccount::new(
             info.clone(),
-            T::try_deserialize(&mut data)?,
+            T::try_deserialize_checked(&mut data)?,
         ))
     }
 

@@ -118,7 +118,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let mut idl_account = {
                     let mut account_data =  accounts.to.try_borrow_data()?;
                     let mut account_data_slice: &[u8] = &account_data;
-                    anchor_lang::idl::IdlAccount::try_deserialize_unchecked(
+                    <anchor_lang::idl::IdlAccount as anchor_lang::AccountDeserializeWithHeader>::try_deserialize_unchecked(
                         &mut account_data_slice,
                     )?
                 };

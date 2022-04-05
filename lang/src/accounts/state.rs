@@ -50,7 +50,7 @@ impl<'a, T: AccountSerializeWithHeader + AccountDeserializeWithHeader + Clone> P
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(ProgramState::new(
             info.clone(),
-            T::try_deserialize(&mut data)?,
+            T::try_deserialize_checked(&mut data)?,
         ))
     }
 

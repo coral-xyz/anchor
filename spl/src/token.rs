@@ -341,7 +341,6 @@ impl TokenAccount {
 }
 
 impl anchor_lang::AccountDeserializeWithHeader for TokenAccount {}
-
 impl anchor_lang::AccountDeserialize for TokenAccount {
     fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
         spl_token::state::Account::unpack(buf)
@@ -350,6 +349,7 @@ impl anchor_lang::AccountDeserialize for TokenAccount {
     }
 }
 
+impl anchor_lang::AccountSerializeWithHeader for TokenAccount {}
 impl anchor_lang::AccountSerialize for TokenAccount {}
 
 impl anchor_lang::Owner for TokenAccount {
@@ -383,6 +383,7 @@ impl anchor_lang::AccountDeserialize for Mint {
     }
 }
 
+impl anchor_lang::AccountSerializeWithHeader for Mint {}
 impl anchor_lang::AccountSerialize for Mint {}
 
 impl anchor_lang::Owner for Mint {

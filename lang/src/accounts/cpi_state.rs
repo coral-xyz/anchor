@@ -39,7 +39,10 @@ impl<'info, T: AccountSerializeWithHeader + AccountDeserializeWithHeader + Clone
     #[inline(never)]
     pub fn try_from(info: &AccountInfo<'info>) -> Result<CpiState<'info, T>> {
         let mut data: &[u8] = &info.try_borrow_data()?;
-        Ok(CpiState::new(info.clone(), T::try_deserialize(&mut data)?))
+        Ok(CpiState::new(
+            info.clone(),
+            T::try_deserialize_checked(&mut data)?,
+        ))
     }
 
     fn seed() -> &'static str {

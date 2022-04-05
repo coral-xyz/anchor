@@ -6,6 +6,8 @@ macro_rules! vote_weight_record {
         #[derive(Clone)]
         pub struct VoterWeightRecord(spl_governance_addin_api::voter_weight::VoterWeightRecord);
 
+        impl anchor_lang::AccountDeserializeWithHeader for VoterWeightRecord {}
+
         impl anchor_lang::AccountDeserialize for VoterWeightRecord {
             fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                 let mut data = buf;
@@ -26,6 +28,8 @@ macro_rules! vote_weight_record {
                 Ok(VoterWeightRecord(vwr))
             }
         }
+
+        impl anchor_lang::AccountSerializeWithHeader for VoterWeightRecord {}
 
         impl anchor_lang::AccountSerialize for VoterWeightRecord {
             fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> anchor_lang::Result<()> {
