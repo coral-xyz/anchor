@@ -51,6 +51,18 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         }
     }
 
+    pub fn init(info: &AccountInfo<'info>, program_id: &Pubkey) -> Result<Loader<'info, T>> {
+        {
+            // separate lexical scope so `data` gets dropped before the `try_from_unchecked` call
+            let data: &mut [u8] = &mut info.try_borrow_mut_data()?;
+            if data.len() < 8 {
+                return Err(anchor_lang::error::ErrorCode::AccountDidNotSerialize.into());
+            }
+            crate::solana_program::program_memory::sol_memcpy(data, &T::DISCRIMINATOR, 8);
+        }
+        Self::try_from_unchecked(program_id, info)
+    }
+
     /// Constructs a new `Loader` from a previously initialized account.
     #[inline(never)]
     #[allow(deprecated)]
@@ -122,31 +134,6 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::DISCRIMINATOR {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
-        }
-
-        Ok(RefMut::map(data, |data| {
-            bytemuck::from_bytes_mut(&mut data.deref_mut()[8..])
-        }))
-    }
-
-    /// Returns a `RefMut` to the account data structure for reading or writing.
-    /// Should only be called once, when the account is being initialized.
-    #[allow(deprecated)]
-    pub fn load_init(&self) -> Result<RefMut<T>> {
-        // AccountInfo api allows you to borrow mut even if the account isn't
-        // writable, so add this check for a better dev experience.
-        if !self.acc_info.is_writable {
-            return Err(ErrorCode::AccountNotMutable.into());
-        }
-
-        let data = self.acc_info.try_borrow_mut_data()?;
-
-        // The discriminator should be zero, since we're initializing.
-        let mut disc_bytes = [0u8; 8];
-        disc_bytes.copy_from_slice(&data[..8]);
-        let discriminator = u64::from_le_bytes(disc_bytes);
-        if discriminator != 0 {
-            return Err(ErrorCode::AccountDiscriminatorAlreadySet.into());
         }
 
         Ok(RefMut::map(data, |data| {
