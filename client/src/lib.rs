@@ -157,7 +157,7 @@ impl Program {
     ) -> Result<ProgramAccountsIterator<T>, ClientError> {
         let account_type_filter = RpcFilterType::Memcmp(Memcmp {
             offset: 0,
-            bytes: MemcmpEncodedBytes::Base58(bs58::encode(T::discriminator()).into_string()),
+            bytes: MemcmpEncodedBytes::Base58(bs58::encode(T::DISCRIMINATOR).into_string()),
             encoding: None,
         });
         let config = RpcProgramAccountsConfig {
@@ -303,7 +303,7 @@ fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
             disc
         };
         let mut event = None;
-        if disc == T::discriminator() {
+        if disc == T::DISCRIMINATOR {
             let e: T = anchor_lang::AnchorDeserialize::deserialize(&mut slice)
                 .map_err(|e| ClientError::LogParseError(e.to_string()))?;
             event = Some(e);

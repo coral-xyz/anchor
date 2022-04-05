@@ -152,6 +152,12 @@ pub trait AccountSerialize {
     }
 }
 
+pub trait AccountDeserializeChecked: Sized + AccountDeserialize {
+    fn try_deserialize_checked(buf: &mut &[u8]) -> Result<Self> {
+        <Self as anchor_lang::AccountDeserialize>::try_deserialize(buf)
+    }
+}
+
 /// A data structure that can be deserialized and stored into account storage,
 /// i.e. an
 /// [`AccountInfo`](../solana_program/account_info/struct.AccountInfo.html#structfield.data)'s
@@ -200,7 +206,7 @@ pub trait EventData: AnchorSerialize + Discriminator {
 
 /// 8 byte unique identifier for a type.
 pub trait Discriminator {
-    fn discriminator() -> [u8; 8];
+    const DISCRIMINATOR: [u8; 8] = [0u8; 8];
 }
 
 /// Bump seed for program derived addresses.
