@@ -331,9 +331,9 @@ impl Field {
                     },
                 };
                 quote! {
-                    #container_ty::try_from_unchecked(
-                        #owner_addr,
+                    #container_ty::init(
                         &#field,
+                        #owner_addr,
                     )?
                 }
             }

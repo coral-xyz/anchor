@@ -1,5 +1,8 @@
 use crate::error::ErrorCode;
-use crate::{AccountDeserialize, AccountDeserializeWithHeader, AccountSerialize, Owner, Result, AccountSerializeWithHeader};
+use crate::{
+    AccountDeserialize, AccountDeserializeWithHeader, AccountSerialize, AccountSerializeWithHeader,
+    Owner, Result,
+};
 use solana_program::{
     bpf_loader_upgradeable::UpgradeableLoaderState, program_error::ProgramError, pubkey::Pubkey,
 };
