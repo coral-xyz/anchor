@@ -1,5 +1,5 @@
 use crate::error::ErrorCode;
-use crate::{AccountDeserialize, AccountDeserializeWithHeader, AccountSerialize, Owner, Result};
+use crate::{AccountDeserialize, AccountDeserializeWithHeader, AccountSerialize, Owner, Result, AccountSerializeWithHeader};
 use solana_program::{
     bpf_loader_upgradeable::UpgradeableLoaderState, program_error::ProgramError, pubkey::Pubkey,
 };
@@ -35,6 +35,7 @@ impl AccountDeserialize for ProgramData {
     }
 }
 
+impl AccountSerializeWithHeader for ProgramData {}
 impl AccountSerialize for ProgramData {}
 
 impl Owner for ProgramData {
@@ -49,10 +50,10 @@ impl Owner for UpgradeableLoaderState {
     }
 }
 
+impl AccountSerializeWithHeader for UpgradeableLoaderState {}
 impl AccountSerialize for UpgradeableLoaderState {}
 
 impl AccountDeserializeWithHeader for UpgradeableLoaderState {}
-
 impl AccountDeserialize for UpgradeableLoaderState {
     fn try_deserialize(buf: &mut &[u8]) -> Result<Self> {
         bincode::deserialize(buf).map_err(|_| ProgramError::InvalidAccountData.into())
