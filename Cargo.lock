@@ -235,6 +235,7 @@ name = "anchor-spl"
 version = "0.23.0"
 dependencies = [
  "anchor-lang",
+ "borsh",
  "serum_dex",
  "solana-program",
  "spl-associated-token-account",
