@@ -310,6 +310,18 @@ test-ledger
 "#
 }
 
+pub fn prettier_ignore() -> &'static str {
+    r#"
+.anchor
+.DS_Store
+target
+node_modules
+dist
+build
+test-ledger
+"#
+}
+
 pub fn node_shell(
     cluster_url: &str,
     wallet_path: &str,
