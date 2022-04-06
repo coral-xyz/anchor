@@ -33,6 +33,7 @@ build-example-bpf-all: build-example-bpf-misc
 build-example-bpf-all: build-example-bpf-multisig
 build-example-bpf-all: build-example-bpf-permissioned-markets
 build-example-bpf-all: build-example-bpf-pyth
+build-example-bpf-all: build-example-bpf-pyth-get-price
 build-example-bpf-all: build-example-bpf-spl_token-proxy
 build-example-bpf-all: build-example-bpf-swap
 build-example-bpf-all: build-example-bpf-sysvars
