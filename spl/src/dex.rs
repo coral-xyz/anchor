@@ -218,7 +218,8 @@ pub fn consume_events_permissioned<'info>(
         ctx.accounts.event_q.key,
         ctx.accounts.crank_authority.key,
         std::u16::MAX,
-    )?;
+    )
+    .map_err(|pe| ProgramError::from(pe))?;
     solana_program::program::invoke_signed(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
@@ -238,7 +239,8 @@ pub fn prune<'info>(ctx: CpiContext<'_, '_, '_, 'info, Prune<'info>>, limit: u16
         ctx.accounts.open_orders_owner.key,
         ctx.accounts.event_q.key,
         limit,
-    )?;
+    )
+    .map_err(|pe| ProgramError::from(pe))?;
     solana_program::program::invoke_signed(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
@@ -259,7 +261,8 @@ pub fn close_market<'info>(
         ctx.accounts.asks.key,
         ctx.accounts.prune_authority.key,
         ctx.accounts.destination.key,
-    )?;
+    )
+    .map_err(|pe| ProgramError::from(pe))?;
 
     solana_program::program::invoke_signed(
         &ix,
