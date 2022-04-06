@@ -4,7 +4,7 @@ use crate::config::{
 };
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction, ERASED_AUTHORITY};
-use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
+use anchor_lang::{AccountDeserializeWithHeader, AnchorDeserialize, AnchorSerialize};
 use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
@@ -1606,7 +1606,8 @@ fn idl_authority(cfg_override: &ConfigOverride, program_id: Pubkey) -> Result<()
 
         let account = client.get_account(&idl_address)?;
         let mut data: &[u8] = &account.data;
-        let idl_account: IdlAccount = AccountDeserialize::try_deserialize(&mut data)?;
+        let idl_account: IdlAccount =
+            AccountDeserializeWithHeader::try_deserialize_checked(&mut data)?;
 
         println!("{:?}", idl_account.authority);
 
