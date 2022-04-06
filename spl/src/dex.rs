@@ -249,9 +249,7 @@ pub fn prune<'info>(ctx: CpiContext<'_, '_, '_, 'info, Prune<'info>>, limit: u16
     Ok(())
 }
 
-pub fn close_market<'info>(
-    ctx: CpiContext<'_, '_, '_, 'info, CloseMarket<'info>>,
-) -> Result<()> {
+pub fn close_market<'info>(ctx: CpiContext<'_, '_, '_, 'info, CloseMarket<'info>>) -> Result<()> {
     let ix = serum_dex::instruction::close_market(
         &ID,
         ctx.accounts.market.key,
