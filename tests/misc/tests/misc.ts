@@ -1795,6 +1795,7 @@ describe("misc", () => {
         assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
         assert.strictEqual(err.error.errorCode.number, 2014);
+        assert.strictEqual(err.error.errorCode.code, "ConstraintTokenMint");
       }
     });
 
@@ -1840,6 +1841,7 @@ describe("misc", () => {
         assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
         assert.strictEqual(err.error.errorCode.number, 2015);
+        assert.strictEqual(err.error.errorCode.code, "ConstraintTokenOwner");
       }
     });
 
@@ -1896,6 +1898,7 @@ describe("misc", () => {
         assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
         assert.strictEqual(err.error.errorCode.number, 2015);
+        assert.strictEqual(err.error.errorCode.code, "ConstraintTokenOwner");
       }
     });
 
@@ -1968,6 +1971,7 @@ describe("misc", () => {
         assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
         assert.strictEqual(err.error.errorCode.number, 2018);
+        assert.strictEqual(err.error.errorCode.code, "ConstraintMintDecimals");
       }
     });
 
@@ -2002,6 +2006,10 @@ describe("misc", () => {
         assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
         assert.strictEqual(err.error.errorCode.number, 2016);
+        assert.strictEqual(
+          err.error.errorCode.code,
+          "ConstraintMintMintAuthority"
+        );
       }
     });
 
@@ -2036,6 +2044,10 @@ describe("misc", () => {
         assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
         assert.strictEqual(err.error.errorCode.number, 2017);
+        assert.strictEqual(
+          err.error.errorCode.code,
+          "ConstraintMintFreezeAuthority"
+        );
       }
     });
 
