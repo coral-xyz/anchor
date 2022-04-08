@@ -1,5 +1,5 @@
 import { PublicKey } from "@solana/web3.js";
-import { EventParser } from "../src/program/event";
+import { EventParser } from "../src";
 import { BorshCoder } from "../src";
 
 describe("Events", () => {
@@ -28,6 +28,33 @@ describe("Events", () => {
 
     eventParser.parseLogs(logs, () => {
       throw new Error("Should never find logs");
+    });
+  });
+
+  it("Program Upgrade Event", () => {
+    const logs = [
+      "Upgraded program J2XMGdW2qQLx7rAdwWtSZpTXDgAQ988BLP9QTgUZvm54",
+    ];
+
+    const idl = {
+      version: "0.0.0",
+      name: "basic_1",
+      instructions: [
+        {
+          name: "initialize",
+          accounts: [],
+          args: [],
+        },
+      ],
+    };
+
+    const coder = new BorshCoder(idl);
+    const programId = PublicKey.default;
+    const eventParser = new EventParser(programId, coder);
+
+    eventParser.parseLogs(logs, (event) => {
+      expect(event.name).toEqual("$error");
+      expect(event.data).toEqual("Could not find program invocation log line");
     });
   });
 });
