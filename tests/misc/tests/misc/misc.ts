@@ -11,12 +11,12 @@ import {
   Token,
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import { Misc } from "../target/types/misc";
-import { Misc2 } from "../target/types/misc2";
+import { Misc } from "../../target/types/misc";
+import { Misc2 } from "../../target/types/misc2";
 const utf8 = anchor.utils.bytes.utf8;
 const { assert } = require("chai");
 const nativeAssert = require("assert");
-const miscIdl = require("../target/idl/misc.json");
+const miscIdl = require("../../target/idl/misc.json");
 
 describe("misc", () => {
   // Configure the client to use the local cluster.

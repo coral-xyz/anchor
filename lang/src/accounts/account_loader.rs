@@ -118,7 +118,10 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
 
     /// Constructs a new `Loader` from a previously initialized account.
     #[inline(never)]
-    pub fn try_from(acc_info: &AccountInfo<'info>) -> Result<AccountLoader<'info, T>> {
+    pub fn try_from(
+        _program_id: &Pubkey,
+        acc_info: &AccountInfo<'info>,
+    ) -> Result<AccountLoader<'info, T>> {
         if acc_info.owner != &T::owner() {
             return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
                 .with_pubkeys((*acc_info.owner, T::owner())));
@@ -217,7 +220,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
 impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
     #[inline(never)]
     fn try_accounts(
-        _program_id: &Pubkey,
+        program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
@@ -227,7 +230,7 @@ impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
-        let l = AccountLoader::try_from(account)?;
+        let l = AccountLoader::try_from(program_id, account)?;
         Ok(l)
     }
 }
