@@ -164,9 +164,8 @@ describe("BPF Loader Upgradeable", () => {
       const bufferAccountSize = BpfLoaderUpgradeable.getBufferAccountSize(
         programData.length
       );
-      const bufferAccountBalance = await connection.getMinimumBalanceForRentExemption(
-        bufferAccountSize
-      );
+      const bufferAccountBalance =
+        await connection.getMinimumBalanceForRentExemption(bufferAccountSize);
 
       await airdrop({
         connection,
@@ -252,21 +251,20 @@ describe("BPF Loader Upgradeable", () => {
       const bufferAccountSize = BpfLoaderUpgradeable.getBufferAccountSize(
         programData.length
       );
-      const bufferAccountBalance = await connection.getMinimumBalanceForRentExemption(
-        bufferAccountSize
-      );
+      const bufferAccountBalance =
+        await connection.getMinimumBalanceForRentExemption(bufferAccountSize);
       const programAccountSize = BpfLoaderUpgradeable.getBufferAccountSize(
         BpfLoaderUpgradeable.BUFFER_PROGRAM_SIZE
       );
-      const programAccountBalance = await connection.getMinimumBalanceForRentExemption(
-        programAccountSize
-      );
+      const programAccountBalance =
+        await connection.getMinimumBalanceForRentExemption(programAccountSize);
       const programDataAccountSize =
         BpfLoaderUpgradeable.BUFFER_PROGRAM_DATA_HEADER_SIZE +
         programData.length * 2;
-      const programDataAccountBalance = await connection.getMinimumBalanceForRentExemption(
-        programDataAccountSize
-      );
+      const programDataAccountBalance =
+        await connection.getMinimumBalanceForRentExemption(
+          programDataAccountSize
+        );
 
       await airdrop({
         connection,
@@ -368,9 +366,10 @@ describe("BPF Loader Upgradeable", () => {
         payerAccount.publicKey
       );
 
-      const programDataAccount = await BpfLoaderUpgradeableProgram.getProgramDataAddress(
-        programAccount.publicKey
-      );
+      const programDataAccount =
+        await BpfLoaderUpgradeableProgram.getProgramDataAddress(
+          programAccount.publicKey
+        );
       expect(await connection.getAccountInfo(programDataAccount)).toBeNull();
     }, 120_000);
   }
