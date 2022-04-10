@@ -1,6 +1,6 @@
 {
   "name": "@project-serum/anchor",
-  "version": "0.21.0",
+  "version": "0.23.0",
   "description": "Anchor client",
   "homepage": "https://github.com/project-serum/anchor#readme",
   "bugs": {
@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "@project-serum/borsh": "^0.2.5",
-    "@solana/web3.js": "^1.17.0",
+    "@solana/web3.js": "^1.36.0",
     "base64-js": "^1.5.1",
     "bn.js": "^5.1.2",
     "bs58": "^4.0.1",
@@ -39,7 +39,6 @@
     "cross-fetch": "^3.1.5",
     "crypto-hash": "^1.3.0",
     "eventemitter3": "^4.0.7",
-    "find": "^0.3.0",
     "js-sha256": "^0.9.0",
     "pako": "^2.0.3",
     "snake-case": "^3.0.4",
@@ -55,7 +54,7 @@
     "@types/bn.js": "^4.11.6",
     "@types/bs58": "^4.0.1",
     "@types/crypto-hash": "^1.1.2",
-    "@types/jest": "^27.0.3",
+    "@types/jest": "^27.4.1",
     "@types/pako": "^1.0.1",
     "@typescript-eslint/eslint-plugin": "^4.6.0",
     "@typescript-eslint/parser": "^4.6.0",

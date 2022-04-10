@@ -52,7 +52,7 @@ pub fn cargo_toml(name: &str) -> String {
 name = "{0}"
 version = "0.1.0"
 description = "Created with Anchor"
-edition = "2018"
+edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -176,7 +176,8 @@ declare_id!("{}");
 #[program]
 pub mod {} {{
     use super::*;
-    pub fn initialize(ctx: Context<Initialize>) -> ProgramResult {{
+
+    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {{
         Ok(())
     }}
 }}
@@ -200,7 +201,7 @@ describe("{}", () => {{
   it("Is initialized!", async () => {{
     // Add your test here.
     const program = anchor.workspace.{};
-    const tx = await program.rpc.initialize();
+    const tx = await program.methods.initialize().rpc();
     console.log("Your transaction signature", tx);
   }});
 }});
@@ -213,12 +214,17 @@ describe("{}", () => {{
 pub fn package_json() -> String {
     format!(
         r#"{{
+    "scripts": {{
+        "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
+        "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
+    }},
     "dependencies": {{
         "@project-serum/anchor": "^{0}"
     }},
     "devDependencies": {{
         "chai": "^4.3.4",
-        "mocha": "^9.0.3"
+        "mocha": "^9.0.3",
+        "prettier": "^2.6.2"
     }}
 }}
 "#,
@@ -229,6 +235,10 @@ pub fn package_json() -> String {
 pub fn ts_package_json() -> String {
     format!(
         r#"{{
+    "scripts": {{
+        "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
+        "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
+    }},
     "dependencies": {{
         "@project-serum/anchor": "^{0}"
     }},
@@ -236,8 +246,11 @@ pub fn ts_package_json() -> String {
         "chai": "^4.3.4",
         "mocha": "^9.0.3",
         "ts-mocha": "^8.0.0",
+        "@types/bn.js": "^5.1.0",
+        "@types/chai": "^4.3.0",
         "@types/mocha": "^9.0.0",
-        "typescript": "^4.3.5"
+        "typescript": "^4.3.5",
+        "prettier": "^2.6.2"
     }}
 }}
 "#,
@@ -259,7 +272,7 @@ describe("{}", () => {{
 
   it("Is initialized!", async () => {{
     // Add your test here.
-    const tx = await program.rpc.initialize({{}});
+    const tx = await program.methods.initialize().rpc();
     console.log("Your transaction signature", tx);
   }});
 }});
@@ -293,6 +306,19 @@ pub fn git_ignore() -> &'static str {
 target
 **/*.rs.bk
 node_modules
+test-ledger
+"#
+}
+
+pub fn prettier_ignore() -> &'static str {
+    r#"
+.anchor
+.DS_Store
+target
+node_modules
+dist
+build
+test-ledger
 "#
 }
 

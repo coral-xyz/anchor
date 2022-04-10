@@ -1,15 +1,14 @@
 //! Type facilitating on demand zero copy deserialization.
 
-use crate::error::ErrorCode;
+use crate::bpf_writer::BpfWriter;
+use crate::error::{Error, ErrorCode};
 use crate::{
-    Accounts, AccountsClose, AccountsExit, Owner, ToAccountInfo, ToAccountInfos, ToAccountMetas,
-    ZeroCopy,
+    Accounts, AccountsClose, AccountsExit, Key, Owner, Result, ToAccountInfo, ToAccountInfos,
+    ToAccountMetas, ZeroCopy,
 };
 use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;
-use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
-use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::cell::{Ref, RefMut};
 use std::collections::BTreeMap;
@@ -52,14 +51,14 @@ use std::ops::DerefMut;
 /// pub mod bar {
 ///     use super::*;
 ///
-///     pub fn create_bar(ctx: Context<CreateBar>, data: u64) -> ProgramResult {
+///     pub fn create_bar(ctx: Context<CreateBar>, data: u64) -> Result<()> {
 ///         let bar = &mut ctx.accounts.bar.load_init()?;
 ///         bar.authority = ctx.accounts.authority.key();
 ///         bar.data = data;
 ///         Ok(())
 ///     }
 ///
-///     pub fn update_bar(ctx: Context<UpdateBar>, data: u64) -> ProgramResult {
+///     pub fn update_bar(ctx: Context<UpdateBar>, data: u64) -> Result<()> {
 ///         (*ctx.accounts.bar.load_mut()?).data = data;
 ///         Ok(())
 ///     }
@@ -119,13 +118,15 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
 
     /// Constructs a new `Loader` from a previously initialized account.
     #[inline(never)]
-    pub fn try_from(
-        acc_info: &AccountInfo<'info>,
-    ) -> Result<AccountLoader<'info, T>, ProgramError> {
+    pub fn try_from(acc_info: &AccountInfo<'info>) -> Result<AccountLoader<'info, T>> {
         if acc_info.owner != &T::owner() {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
+                .with_pubkeys((*acc_info.owner, T::owner())));
         }
         let data: &[u8] = &acc_info.try_borrow_data()?;
+        if data.len() < T::discriminator().len() {
+            return Err(ErrorCode::AccountDiscriminatorNotFound.into());
+        }
         // Discriminator must match.
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::discriminator() {
@@ -140,16 +141,20 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
     pub fn try_from_unchecked(
         _program_id: &Pubkey,
         acc_info: &AccountInfo<'info>,
-    ) -> Result<AccountLoader<'info, T>, ProgramError> {
+    ) -> Result<AccountLoader<'info, T>> {
         if acc_info.owner != &T::owner() {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
+                .with_pubkeys((*acc_info.owner, T::owner())));
         }
         Ok(AccountLoader::new(acc_info.clone()))
     }
 
     /// Returns a Ref to the account data structure for reading.
-    pub fn load(&self) -> Result<Ref<T>, ProgramError> {
+    pub fn load(&self) -> Result<Ref<T>> {
         let data = self.acc_info.try_borrow_data()?;
+        if data.len() < T::discriminator().len() {
+            return Err(ErrorCode::AccountDiscriminatorNotFound.into());
+        }
 
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::discriminator() {
@@ -162,7 +167,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
     }
 
     /// Returns a `RefMut` to the account data structure for reading or writing.
-    pub fn load_mut(&self) -> Result<RefMut<T>, ProgramError> {
+    pub fn load_mut(&self) -> Result<RefMut<T>> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
         if !self.acc_info.is_writable {
@@ -170,6 +175,9 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         }
 
         let data = self.acc_info.try_borrow_mut_data()?;
+        if data.len() < T::discriminator().len() {
+            return Err(ErrorCode::AccountDiscriminatorNotFound.into());
+        }
 
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::discriminator() {
@@ -183,7 +191,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
 
     /// Returns a `RefMut` to the account data structure for reading or writing.
     /// Should only be called once, when the account is being initialized.
-    pub fn load_init(&self) -> Result<RefMut<T>, ProgramError> {
+    pub fn load_init(&self) -> Result<RefMut<T>> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
         if !self.acc_info.is_writable {
@@ -213,7 +221,7 @@ impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
-    ) -> Result<Self, ProgramError> {
+    ) -> Result<Self> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
         }
@@ -226,17 +234,24 @@ impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
 
 impl<'info, T: ZeroCopy + Owner> AccountsExit<'info> for AccountLoader<'info, T> {
     // The account *cannot* be loaded when this is called.
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
+    fn exit(&self, _program_id: &Pubkey) -> Result<()> {
         let mut data = self.acc_info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
-        let mut cursor = std::io::Cursor::new(dst);
-        cursor.write_all(&T::discriminator()).unwrap();
+        let mut writer = BpfWriter::new(dst);
+        writer.write_all(&T::discriminator()).unwrap();
         Ok(())
     }
 }
 
+/// This function is for INTERNAL USE ONLY.
+/// Do NOT use this function in a program.
+/// Manual closing of `AccountLoader<'info, T>` types is NOT supported.
+///
+/// Details: Using `close` with `AccountLoader<'info, T>` is not safe because
+/// it requires the `mut` constraint but for that type the constraint
+/// overwrites the "closed account" discriminator at the end of the instruction.
 impl<'info, T: ZeroCopy + Owner> AccountsClose<'info> for AccountLoader<'info, T> {
-    fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult {
+    fn close(&self, sol_destination: AccountInfo<'info>) -> Result<()> {
         crate::common::close(self.to_account_info(), sol_destination)
     }
 }
@@ -261,5 +276,11 @@ impl<'info, T: ZeroCopy + Owner> AsRef<AccountInfo<'info>> for AccountLoader<'in
 impl<'info, T: ZeroCopy + Owner> ToAccountInfos<'info> for AccountLoader<'info, T> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         vec![self.acc_info.clone()]
+    }
+}
+
+impl<'info, T: ZeroCopy + Owner> Key for AccountLoader<'info, T> {
+    fn key(&self) -> Pubkey {
+        *self.acc_info.key
     }
 }
