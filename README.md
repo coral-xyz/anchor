@@ -1,4 +1,8 @@
-> :warning: **This is a forked version of Anchor**
+### :warning: **This is a forked version of Anchor**
+
+In order to keep up with Solana's rapid software release schedule and publish testnet-compatable versions of Cronos, we use this forked version of Anchor in development. This dependency versions in this repo are automatically updated to latest `BETA_CHANNEL` release of Solana. To learn more, please see the [Solana release](https://github.com/solana-labs/solana/blob/master/RELEASE.md) documentation. 
+
+---
 
 <div align="center">
   <img height="170x" src="https://media.discordapp.net/attachments/813444514949103658/890278520553603092/export.png?width=746&height=746" />
