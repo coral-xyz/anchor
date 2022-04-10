@@ -12,23 +12,25 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { Misc } from "../target/types/misc";
+import { Misc2 } from "../target/types/misc2";
 const utf8 = anchor.utils.bytes.utf8;
-const assert = require("assert");
+const { assert } = require("chai");
+const nativeAssert = require("assert");
 const miscIdl = require("../target/idl/misc.json");
 
 describe("misc", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.Provider.env());
-  const program = anchor.workspace.Misc;
-  const misc2Program = anchor.workspace.Misc2;
+  const program = anchor.workspace.Misc as Program<Misc>;
+  const misc2Program = anchor.workspace.Misc2 as Program<Misc2>;
 
   it("Can allocate extra space for a state constructor", async () => {
     const tx = await program.state.rpc.new();
     const addr = await program.state.address();
     const state = await program.state.fetch();
     const accountInfo = await program.provider.connection.getAccountInfo(addr);
-    assert.ok(state.v.equals(Buffer.from([])));
-    assert.ok(accountInfo.data.length === 99);
+    assert.isTrue(state.v.equals(Buffer.from([])));
+    assert.lengthOf(accountInfo.data, 99);
   });
 
   it("Can use remaining accounts for a state instruction", async () => {
@@ -55,8 +57,8 @@ describe("misc", () => {
       }
     );
     const dataAccount = await program.account.data.fetch(data.publicKey);
-    assert.ok(dataAccount.udata.eq(new anchor.BN(1234)));
-    assert.ok(dataAccount.idata.eq(new anchor.BN(22)));
+    assert.isTrue(dataAccount.udata.eq(new anchor.BN(1234)));
+    assert.isTrue(dataAccount.idata.eq(new anchor.BN(22)));
   });
 
   it("Can use u16", async () => {
@@ -70,7 +72,7 @@ describe("misc", () => {
       instructions: [await program.account.dataU16.createInstruction(data)],
     });
     const dataAccount = await program.account.dataU16.fetch(data.publicKey);
-    assert.ok(dataAccount.data === 99);
+    assert.strictEqual(dataAccount.data, 99);
   });
 
   it("Can embed programs into genesis from the Anchor.toml", async () => {
@@ -78,7 +80,7 @@ describe("misc", () => {
       "FtMNMKp9DZHKWUyVAsj3Q5QV8ow4P3fUPP7ZrWEQJzKr"
     );
     let accInfo = await anchor.getProvider().connection.getAccountInfo(pid);
-    assert.ok(accInfo.executable);
+    assert.isTrue(accInfo.executable);
   });
 
   it("Can use the owner constraint", async () => {
@@ -89,7 +91,7 @@ describe("misc", () => {
       },
     });
 
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         await program.rpc.testOwner({
           accounts: {
@@ -111,7 +113,7 @@ describe("misc", () => {
       },
     });
 
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         await program.rpc.testExecutable({
           accounts: {
@@ -133,8 +135,8 @@ describe("misc", () => {
       },
     });
     let stateAccount = await misc2Program.state.fetch();
-    assert.ok(stateAccount.data.eq(oldData));
-    assert.ok(stateAccount.auth.equals(program.provider.wallet.publicKey));
+    assert.isTrue(stateAccount.data.eq(oldData));
+    assert.isTrue(stateAccount.auth.equals(program.provider.wallet.publicKey));
     const newData = new anchor.BN(2134);
     await program.rpc.testStateCpi(newData, {
       accounts: {
@@ -144,37 +146,37 @@ describe("misc", () => {
       },
     });
     stateAccount = await misc2Program.state.fetch();
-    assert.ok(stateAccount.data.eq(newData));
-    assert.ok(stateAccount.auth.equals(program.provider.wallet.publicKey));
+    assert.isTrue(stateAccount.data.eq(newData));
+    assert.isTrue(stateAccount.auth.equals(program.provider.wallet.publicKey));
   });
 
   it("Can retrieve events when simulating a transaction", async () => {
     const resp = await program.simulate.testSimulate(44);
     const expectedRaw = [
-      "Program Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS invoke [1]",
+      "Program 3TEqcc8xhrhdspwbvoamUJe2borm4Nr72JxL66k6rgrh invoke [1]",
       "Program log: Instruction: TestSimulate",
       "Program data: NgyCA9omwbMsAAAA",
       "Program data: fPhuIELK/k7SBAAA",
       "Program data: jvbowsvlmkcJAAAA",
       "Program data: zxM5neEnS1kBAgMEBQYHCAkK",
       "Program data: g06Ei2GL1gIBAgMEBQYHCAkKCw==",
-      "Program Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS consumed 5320 of 200000 compute units",
-      "Program Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS success",
+      "Program 3TEqcc8xhrhdspwbvoamUJe2borm4Nr72JxL66k6rgrh consumed 5395 of 1400000 compute units",
+      "Program 3TEqcc8xhrhdspwbvoamUJe2borm4Nr72JxL66k6rgrh success",
     ];
 
     assert.deepStrictEqual(expectedRaw, resp.raw);
-    assert.ok(resp.events[0].name === "E1");
-    assert.ok(resp.events[0].data.data === 44);
-    assert.ok(resp.events[1].name === "E2");
-    assert.ok(resp.events[1].data.data === 1234);
-    assert.ok(resp.events[2].name === "E3");
-    assert.ok(resp.events[2].data.data === 9);
-    assert.ok(resp.events[3].name === "E5");
+    assert.strictEqual(resp.events[0].name, "E1");
+    assert.strictEqual(resp.events[0].data.data, 44);
+    assert.strictEqual(resp.events[1].name, "E2");
+    assert.strictEqual(resp.events[1].data.data, 1234);
+    assert.strictEqual(resp.events[2].name, "E3");
+    assert.strictEqual(resp.events[2].data.data, 9);
+    assert.strictEqual(resp.events[3].name, "E5");
     assert.deepStrictEqual(
       resp.events[3].data.data,
       [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     );
-    assert.ok(resp.events[4].name === "E6");
+    assert.strictEqual(resp.events[4].name, "E6");
     assert.deepStrictEqual(
       resp.events[4].data.data,
       [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
@@ -194,7 +196,7 @@ describe("misc", () => {
       signers: [dataI8],
     });
     const dataAccount = await program.account.dataI8.fetch(dataI8.publicKey);
-    assert.ok(dataAccount.data === -3);
+    assert.strictEqual(dataAccount.data, -3);
   });
 
   let dataPubkey;
@@ -210,7 +212,7 @@ describe("misc", () => {
       signers: [data],
     });
     const dataAccount = await program.account.dataI16.fetch(data.publicKey);
-    assert.ok(dataAccount.data === -2048);
+    assert.strictEqual(dataAccount.data, -2048);
 
     dataPubkey = data.publicKey;
   });
@@ -219,7 +221,7 @@ describe("misc", () => {
     const dataAccount = await program.account.dataI16.fetch(
       dataPubkey.toString()
     );
-    assert.ok(dataAccount.data === -2048);
+    assert.strictEqual(dataAccount.data, -2048);
   });
 
   it("Should fail to close an account when sending lamports to itself", async () => {
@@ -233,8 +235,8 @@ describe("misc", () => {
       assert.ok(false);
     } catch (err) {
       const errMsg = "A close constraint was violated";
-      assert.equal(err.error.errorMessage, errMsg);
-      assert.equal(err.error.errorCode.number, 2011);
+      assert.strictEqual(err.error.errorMessage, errMsg);
+      assert.strictEqual(err.error.errorCode.number, 2011);
     }
   });
 
@@ -242,7 +244,7 @@ describe("misc", () => {
     const openAccount = await program.provider.connection.getAccountInfo(
       data.publicKey
     );
-    assert.ok(openAccount !== null);
+    assert.isNotNull(openAccount);
 
     let beforeBalance = (
       await program.provider.connection.getAccountInfo(
@@ -269,7 +271,7 @@ describe("misc", () => {
     const closedAccount = await program.provider.connection.getAccountInfo(
       data.publicKey
     );
-    assert.ok(closedAccount === null);
+    assert.isNull(closedAccount);
   });
 
   it("Can use instruction data in accounts constraints", async () => {
@@ -313,7 +315,7 @@ describe("misc", () => {
     });
 
     const myPdaAccount = await program.account.dataU16.fetch(myPda);
-    assert.ok(myPdaAccount.data === 6);
+    assert.strictEqual(myPdaAccount.data, 6);
   });
 
   it("Can create a zero copy PDA account", async () => {
@@ -331,8 +333,8 @@ describe("misc", () => {
     });
 
     const myPdaAccount = await program.account.dataZeroCopy.fetch(myPda);
-    assert.ok(myPdaAccount.data === 9);
-    assert.ok(myPdaAccount.bump === nonce);
+    assert.strictEqual(myPdaAccount.data, 9);
+    assert.strictEqual(myPdaAccount.bump, nonce);
   });
 
   it("Can write to a zero copy PDA account", async () => {
@@ -348,8 +350,8 @@ describe("misc", () => {
     });
 
     const myPdaAccount = await program.account.dataZeroCopy.fetch(myPda);
-    assert.ok(myPdaAccount.data === 1234);
-    assert.ok(myPdaAccount.bump === bump);
+    assert.strictEqual(myPdaAccount.data, 1234);
+    assert.strictEqual(myPdaAccount.bump, bump);
   });
 
   it("Can create a token account from seeds pda", async () => {
@@ -379,20 +381,20 @@ describe("misc", () => {
       program.provider.wallet.payer
     );
     const account = await mintAccount.getAccountInfo(myPda);
-    assert.ok(account.state === 1);
-    assert.ok(account.amount.toNumber() === 0);
-    assert.ok(account.isInitialized);
-    assert.ok(account.owner.equals(program.provider.wallet.publicKey));
-    assert.ok(account.mint.equals(mint));
+    assert.strictEqual(account.state, 1);
+    assert.strictEqual(account.amount.toNumber(), 0);
+    assert.isTrue(account.isInitialized);
+    assert.isTrue(account.owner.equals(program.provider.wallet.publicKey));
+    assert.isTrue(account.mint.equals(mint));
   });
 
   it("Can execute a fallback function", async () => {
-    await assert.rejects(
+    await nativeAssert.rejects(
       async () => {
         await anchor.utils.rpc.invoke(program.programId);
       },
       (err) => {
-        assert.ok(err.toString().includes("custom program error: 0x4d2"));
+        assert.isTrue(err.toString().includes("custom program error: 0x4d2"));
         return true;
       }
     );
@@ -410,7 +412,7 @@ describe("misc", () => {
     });
 
     const account = await program.account.dataI8.fetch(data.publicKey);
-    assert.ok(account.data === 3);
+    assert.strictEqual(account.data, 3);
   });
 
   it("Can init a random account prefunded", async () => {
@@ -432,7 +434,7 @@ describe("misc", () => {
     });
 
     const account = await program.account.dataI8.fetch(data.publicKey);
-    assert.ok(account.data === 3);
+    assert.strictEqual(account.data, 3);
   });
 
   it("Can init a random zero copy account", async () => {
@@ -446,8 +448,8 @@ describe("misc", () => {
       signers: [data],
     });
     const account = await program.account.dataZeroCopy.fetch(data.publicKey);
-    assert.ok(account.data === 10);
-    assert.ok(account.bump === 2);
+    assert.strictEqual(account.data, 10);
+    assert.strictEqual(account.bump, 2);
   });
 
   let mint = undefined;
@@ -471,11 +473,11 @@ describe("misc", () => {
       program.provider.wallet.payer
     );
     const mintAccount = await client.getMintInfo();
-    assert.ok(mintAccount.decimals === 6);
-    assert.ok(
+    assert.strictEqual(mintAccount.decimals, 6);
+    assert.isTrue(
       mintAccount.mintAuthority.equals(program.provider.wallet.publicKey)
     );
-    assert.ok(
+    assert.isTrue(
       mintAccount.freezeAuthority.equals(program.provider.wallet.publicKey)
     );
   });
@@ -506,8 +508,8 @@ describe("misc", () => {
       program.provider.wallet.payer
     );
     const mintAccount = await client.getMintInfo();
-    assert.ok(mintAccount.decimals === 6);
-    assert.ok(
+    assert.strictEqual(mintAccount.decimals, 6);
+    assert.isTrue(
       mintAccount.mintAuthority.equals(program.provider.wallet.publicKey)
     );
   });
@@ -532,11 +534,11 @@ describe("misc", () => {
       program.provider.wallet.payer
     );
     const account = await client.getAccountInfo(token.publicKey);
-    assert.ok(account.state === 1);
-    assert.ok(account.amount.toNumber() === 0);
-    assert.ok(account.isInitialized);
-    assert.ok(account.owner.equals(program.provider.wallet.publicKey));
-    assert.ok(account.mint.equals(mint.publicKey));
+    assert.strictEqual(account.state, 1);
+    assert.strictEqual(account.amount.toNumber(), 0);
+    assert.isTrue(account.isInitialized);
+    assert.isTrue(account.owner.equals(program.provider.wallet.publicKey));
+    assert.isTrue(account.mint.equals(mint.publicKey));
   });
 
   it("Can create a random token with prefunding", async () => {
@@ -566,11 +568,11 @@ describe("misc", () => {
       program.provider.wallet.payer
     );
     const account = await client.getAccountInfo(token.publicKey);
-    assert.ok(account.state === 1);
-    assert.ok(account.amount.toNumber() === 0);
-    assert.ok(account.isInitialized);
-    assert.ok(account.owner.equals(program.provider.wallet.publicKey));
-    assert.ok(account.mint.equals(mint.publicKey));
+    assert.strictEqual(account.state, 1);
+    assert.strictEqual(account.amount.toNumber(), 0);
+    assert.isTrue(account.isInitialized);
+    assert.isTrue(account.owner.equals(program.provider.wallet.publicKey));
+    assert.isTrue(account.mint.equals(mint.publicKey));
   });
 
   it("Can create a random token with prefunding under the rent exemption", async () => {
@@ -600,11 +602,11 @@ describe("misc", () => {
       program.provider.wallet.payer
     );
     const account = await client.getAccountInfo(token.publicKey);
-    assert.ok(account.state === 1);
-    assert.ok(account.amount.toNumber() === 0);
-    assert.ok(account.isInitialized);
-    assert.ok(account.owner.equals(program.provider.wallet.publicKey));
-    assert.ok(account.mint.equals(mint.publicKey));
+    assert.strictEqual(account.state, 1);
+    assert.strictEqual(account.amount.toNumber(), 0);
+    assert.isTrue(account.isInitialized);
+    assert.isTrue(account.owner.equals(program.provider.wallet.publicKey));
+    assert.isTrue(account.mint.equals(mint.publicKey));
   });
 
   it("Can initialize multiple accounts via a composite payer", async () => {
@@ -625,11 +627,11 @@ describe("misc", () => {
     });
 
     const account1 = await program.account.dataI8.fetch(data1.publicKey);
-    assert.equal(account1.data, 1);
+    assert.strictEqual(account1.data, 1);
 
     const account2 = await program.account.data.fetch(data2.publicKey);
-    assert.equal(account2.udata, 2);
-    assert.equal(account2.idata, 3);
+    assert.strictEqual(account2.udata.toNumber(), 2);
+    assert.strictEqual(account2.idata.toNumber(), 3);
   });
 
   describe("associated_token constraints", () => {
@@ -666,11 +668,11 @@ describe("misc", () => {
       });
 
       const account = await localClient.getAccountInfo(associatedToken);
-      assert.ok(account.state === 1);
-      assert.ok(account.amount.toNumber() === 0);
-      assert.ok(account.isInitialized);
-      assert.ok(account.owner.equals(program.provider.wallet.publicKey));
-      assert.ok(account.mint.equals(localClient.publicKey));
+      assert.strictEqual(account.state, 1);
+      assert.strictEqual(account.amount.toNumber(), 0);
+      assert.isTrue(account.isInitialized);
+      assert.isTrue(account.owner.equals(program.provider.wallet.publicKey));
+      assert.isTrue(account.mint.equals(localClient.publicKey));
     });
 
     it("Can validate associated_token constraints", async () => {
@@ -692,7 +694,7 @@ describe("misc", () => {
         TOKEN_PROGRAM_ID
       );
 
-      await assert.rejects(
+      await nativeAssert.rejects(
         async () => {
           await program.rpc.testValidateAssociatedToken({
             accounts: {
@@ -703,7 +705,7 @@ describe("misc", () => {
           });
         },
         (err) => {
-          assert.equal(err.error.errorCode.number, 2009);
+          assert.strictEqual(err.error.errorCode.number, 2009);
           return true;
         }
       );
@@ -727,7 +729,7 @@ describe("misc", () => {
         []
       );
 
-      await assert.rejects(
+      await nativeAssert.rejects(
         async () => {
           await program.rpc.testValidateAssociatedToken({
             accounts: {
@@ -738,7 +740,7 @@ describe("misc", () => {
           });
         },
         (err) => {
-          assert.equal(err.error.errorCode.number, 2015);
+          assert.strictEqual(err.error.errorCode.number, 2015);
           return true;
         }
       );
@@ -832,15 +834,15 @@ describe("misc", () => {
         { memcmp: { offset: 40, bytes: filterable2.toBase58() } },
       ]);
     // Without filters there should be 4 accounts.
-    assert.equal(allAccounts.length, 4);
+    assert.lengthOf(allAccounts, 4);
     // Filtering by main wallet there should be 3 accounts.
-    assert.equal(allAccountsFilteredByBuffer.length, 3);
+    assert.lengthOf(allAccountsFilteredByBuffer, 3);
     // Filtering all the main wallet accounts and matching the filterable1 value
     // results in a 2 accounts.
-    assert.equal(allAccountsFilteredByProgramFilters1.length, 2);
+    assert.lengthOf(allAccountsFilteredByProgramFilters1, 2);
     // Filtering all the main wallet accounts and matching the filterable2 value
     // results in 1 account.
-    assert.equal(allAccountsFilteredByProgramFilters2.length, 1);
+    assert.lengthOf(allAccountsFilteredByProgramFilters2, 1);
   });
 
   it("Can use pdas with empty seeds", async () => {
@@ -866,7 +868,7 @@ describe("misc", () => {
       ["non-empty"],
       program.programId
     );
-    await assert.rejects(
+    await nativeAssert.rejects(
       program.rpc.testEmptySeedsConstraint({
         accounts: {
           pda: pda2,
@@ -891,7 +893,7 @@ describe("misc", () => {
       signers: [ifNeededAcc],
     });
     const account = await program.account.dataU16.fetch(ifNeededAcc.publicKey);
-    assert.equal(account.data, 1);
+    assert.strictEqual(account.data, 1);
   });
 
   it("Can init if needed a previously created account", async () => {
@@ -904,7 +906,7 @@ describe("misc", () => {
       signers: [ifNeededAcc],
     });
     const account = await program.account.dataU16.fetch(ifNeededAcc.publicKey);
-    assert.equal(account.data, 3);
+    assert.strictEqual(account.data, 3);
   });
 
   it("Can use const for array size", async () => {
@@ -945,26 +947,23 @@ describe("misc", () => {
   });
 
   it("Should include BASE const in IDL", async () => {
-    assert(
+    assert.isDefined(
       miscIdl.constants.find(
         (c) => c.name === "BASE" && c.type === "u128" && c.value === "1_000_000"
-      ) !== undefined
+      )
     );
   });
 
   it("Should include DECIMALS const in IDL", async () => {
-    assert(
+    assert.isDefined(
       miscIdl.constants.find(
         (c) => c.name === "DECIMALS" && c.type === "u8" && c.value === "6"
-      ) !== undefined
+      )
     );
   });
 
   it("Should not include NO_IDL const in IDL", async () => {
-    assert.equal(
-      miscIdl.constants.find((c) => c.name === "NO_IDL"),
-      undefined
-    );
+    assert.isUndefined(miscIdl.constants.find((c) => c.name === "NO_IDL"));
   });
 
   it("init_if_needed throws if account exists but is not owned by the expected program", async () => {
@@ -992,9 +991,9 @@ describe("misc", () => {
       });
       assert.ok(false);
     } catch (_err) {
-      assert.ok(_err instanceof AnchorError);
+      assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
-      assert.equal(err.error.errorCode.number, 2004);
+      assert.strictEqual(err.error.errorCode.number, 2004);
     }
   });
 
@@ -1031,9 +1030,9 @@ describe("misc", () => {
       });
       assert.ok(false);
     } catch (_err) {
-      assert.ok(_err instanceof AnchorError);
+      assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
-      assert.equal(err.error.errorCode.number, 2006);
+      assert.strictEqual(err.error.errorCode.number, 2006);
     }
   });
 
@@ -1060,9 +1059,9 @@ describe("misc", () => {
       });
       assert.ok(false);
     } catch (_err) {
-      assert.ok(_err instanceof AnchorError);
+      assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
-      assert.equal(err.error.errorCode.number, 2019);
+      assert.strictEqual(err.error.errorCode.number, 2019);
     }
   });
 
@@ -1094,9 +1093,9 @@ describe("misc", () => {
       });
       assert.ok(false);
     } catch (_err) {
-      assert.ok(_err instanceof AnchorError);
+      assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
-      assert.equal(err.error.errorCode.number, 2016);
+      assert.strictEqual(err.error.errorCode.number, 2016);
     }
   });
 
@@ -1128,9 +1127,9 @@ describe("misc", () => {
       });
       assert.ok(false);
     } catch (_err) {
-      assert.ok(_err instanceof AnchorError);
+      assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
-      assert.equal(err.error.errorCode.number, 2017);
+      assert.strictEqual(err.error.errorCode.number, 2017);
     }
   });
 
@@ -1162,9 +1161,9 @@ describe("misc", () => {
       });
       assert.ok(false);
     } catch (_err) {
-      assert.ok(_err instanceof AnchorError);
+      assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
-      assert.equal(err.error.errorCode.number, 2018);
+      assert.strictEqual(err.error.errorCode.number, 2018);
     }
   });
 
@@ -1209,9 +1208,9 @@ describe("misc", () => {
       });
       assert.ok(false);
     } catch (_err) {
-      assert.ok(_err instanceof AnchorError);
+      assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
-      assert.equal(err.error.errorCode.number, 2015);
+      assert.strictEqual(err.error.errorCode.number, 2015);
     }
   });
 
@@ -1268,9 +1267,9 @@ describe("misc", () => {
       });
       assert.ok(false);
     } catch (_err) {
-      assert.ok(_err instanceof AnchorError);
+      assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
-      assert.equal(err.error.errorCode.number, 2014);
+      assert.strictEqual(err.error.errorCode.number, 2014);
     }
   });
 
@@ -1321,9 +1320,9 @@ describe("misc", () => {
       });
       assert.ok(false);
     } catch (_err) {
-      assert.ok(_err instanceof AnchorError);
+      assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
-      assert.equal(err.error.errorCode.number, 2015);
+      assert.strictEqual(err.error.errorCode.number, 2015);
     }
   });
 
@@ -1386,9 +1385,9 @@ describe("misc", () => {
       });
       assert.ok(false);
     } catch (_err) {
-      assert.ok(_err instanceof AnchorError);
+      assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
-      assert.equal(err.error.errorCode.number, 2014);
+      assert.strictEqual(err.error.errorCode.number, 2014);
     }
   });
 
@@ -1452,37 +1451,9 @@ describe("misc", () => {
       });
       assert.ok(false);
     } catch (_err) {
-      assert.ok(_err instanceof AnchorError);
+      assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
-      assert.equal(err.error.errorCode.number, 3014);
-    }
-  });
-
-  it("init_if_needed checks rent_exemption if init is not needed", async () => {
-    const data = anchor.web3.Keypair.generate();
-    await program.rpc.initDecreaseLamports({
-      accounts: {
-        data: data.publicKey,
-        user: anchor.getProvider().wallet.publicKey,
-        systemProgram: SystemProgram.programId,
-      },
-      signers: [data],
-    });
-
-    try {
-      await program.rpc.initIfNeededChecksRentExemption({
-        accounts: {
-          data: data.publicKey,
-          user: anchor.getProvider().wallet.publicKey,
-          systemProgram: SystemProgram.programId,
-        },
-        signers: [data],
-      });
-      assert.ok(false);
-    } catch (_err) {
-      assert.ok(_err instanceof AnchorError);
-      const err: AnchorError = _err;
-      assert.equal(err.error.errorCode.number, 2005);
+      assert.strictEqual(err.error.errorCode.number, 3014);
     }
   });
 
@@ -1527,97 +1498,6 @@ describe("misc", () => {
     assert.deepStrictEqual(dataAccount.data, array2d);
   });
 
-  it("allows non-rent exempt accounts", async () => {
-    const data = anchor.web3.Keypair.generate();
-    await program.rpc.initializeNoRentExempt({
-      accounts: {
-        data: data.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      },
-      signers: [data],
-      instructions: [
-        SystemProgram.createAccount({
-          programId: program.programId,
-          space: 8 + 16 + 16,
-          lamports:
-            await program.provider.connection.getMinimumBalanceForRentExemption(
-              39
-            ),
-          fromPubkey: anchor.getProvider().wallet.publicKey,
-          newAccountPubkey: data.publicKey,
-        }),
-      ],
-    });
-    await program.rpc.testNoRentExempt({
-      accounts: {
-        data: data.publicKey,
-      },
-    });
-  });
-
-  it("allows rent exemption to be skipped", async () => {
-    const data = anchor.web3.Keypair.generate();
-    await program.rpc.initializeSkipRentExempt({
-      accounts: {
-        data: data.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      },
-      signers: [data],
-      instructions: [
-        SystemProgram.createAccount({
-          programId: program.programId,
-          space: 8 + 16 + 16,
-          lamports:
-            await program.provider.connection.getMinimumBalanceForRentExemption(
-              39
-            ),
-          fromPubkey: anchor.getProvider().wallet.publicKey,
-          newAccountPubkey: data.publicKey,
-        }),
-      ],
-    });
-  });
-
-  it("can use rent_exempt to enforce rent exemption", async () => {
-    const data = anchor.web3.Keypair.generate();
-    await program.rpc.initializeSkipRentExempt({
-      accounts: {
-        data: data.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      },
-      signers: [data],
-      instructions: [
-        SystemProgram.createAccount({
-          programId: program.programId,
-          space: 8 + 16 + 16,
-          lamports:
-            await program.provider.connection.getMinimumBalanceForRentExemption(
-              39
-            ),
-          fromPubkey: anchor.getProvider().wallet.publicKey,
-          newAccountPubkey: data.publicKey,
-        }),
-      ],
-    });
-
-    try {
-      await program.rpc.testEnforceRentExempt({
-        accounts: {
-          data: data.publicKey,
-        },
-      });
-      assert.ok(false);
-    } catch (_err) {
-      assert.ok(_err instanceof AnchorError);
-      const err: AnchorError = _err;
-      assert.equal(err.error.errorCode.number, 2005);
-      assert.equal(
-        "A rent exemption constraint was violated",
-        err.error.errorMessage
-      );
-    }
-  });
-
   describe("Can validate PDAs derived from other program ids", () => {
     it("With bumps using create_program_address", async () => {
       const [firstPDA, firstBump] =
@@ -1642,9 +1522,9 @@ describe("misc", () => {
         });
         assert.ok(false);
       } catch (_err) {
-        assert.ok(_err instanceof AnchorError);
+        assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
-        assert.equal(err.error.errorCode.number, 2006);
+        assert.strictEqual(err.error.errorCode.number, 2006);
       }
 
       // matching bump seed for wrong address but derived from wrong program
@@ -1657,9 +1537,9 @@ describe("misc", () => {
         });
         assert.ok(false);
       } catch (_err) {
-        assert.ok(_err instanceof AnchorError);
+        assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
-        assert.equal(err.error.errorCode.number, 2006);
+        assert.strictEqual(err.error.errorCode.number, 2006);
       }
 
       // correct inputs should lead to successful tx
@@ -1696,9 +1576,9 @@ describe("misc", () => {
         });
         assert.ok(false);
       } catch (_err) {
-        assert.ok(_err instanceof AnchorError);
+        assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
-        assert.equal(err.error.errorCode.number, 2006);
+        assert.strictEqual(err.error.errorCode.number, 2006);
       }
 
       // same seeds but derived from wrong program
@@ -1711,9 +1591,9 @@ describe("misc", () => {
         });
         assert.ok(false);
       } catch (_err) {
-        assert.ok(_err instanceof AnchorError);
+        assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
-        assert.equal(err.error.errorCode.number, 2006);
+        assert.strictEqual(err.error.errorCode.number, 2006);
       }
 
       // correct inputs should lead to successful tx

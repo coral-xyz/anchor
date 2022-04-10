@@ -88,6 +88,13 @@ export type InstructionContextFnArgs<
   Context<Accounts<I["accounts"][number]>>
 ];
 
+export type InstructionAccountAddresses<
+  IDL extends Idl,
+  I extends AllInstructions<IDL>
+> = {
+  [N in keyof Accounts<I["accounts"][number]>]: PublicKey;
+};
+
 export type MethodsFn<
   IDL extends Idl,
   I extends IDL["instructions"][number],
@@ -112,6 +119,10 @@ export type DecodeType<T extends IdlType, Defined> = T extends keyof TypeMap
   ? Defined[T["option"]["defined"]] | null
   : T extends { option: keyof TypeMap }
   ? TypeMap[T["option"]] | null
+  : T extends { coption: { defined: keyof Defined } }
+  ? Defined[T["coption"]["defined"]] | null
+  : T extends { coption: keyof TypeMap }
+  ? TypeMap[T["coption"]] | null
   : T extends { vec: keyof TypeMap }
   ? TypeMap[T["vec"]][]
   : T extends { array: [defined: keyof TypeMap, size: number] }
