@@ -73,7 +73,10 @@ async function getMultipleAccountsCore(
   Array<null | { publicKey: PublicKey; account: AccountInfo<Buffer> }>
 > {
   const commitment = commitmentOverride ?? connection.commitment;
-  const accounts = await connection.getMultipleAccountsInfo(publicKeys, commitment);
+  const accounts = await connection.getMultipleAccountsInfo(
+    publicKeys,
+    commitment
+  );
   return accounts.map((account, idx) => {
     if (account === null) {
       return null;
