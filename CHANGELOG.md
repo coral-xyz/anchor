@@ -28,7 +28,6 @@ The minor version will be incremented upon a breaking change and the patch versi
 * lang: Return proper error instead of panicking if account length is smaller than discriminator in functions of `(Account)Loader` ([#1678](https://github.com/project-serum/anchor/pull/1678)).
 * cli: Add `@types/bn.js` to `devDependencies` in cli template ([#1712](https://github.com/project-serum/anchor/pull/1712)).
 * ts: Event listener no longer crashes on Program Upgrade or any other unexpected log ([#1757](https://github.com/project-serum/anchor/pull/1757)).
-* lang: Fix missing discriminator check when using `init_if_needed` and init is not needed ([]()).
 
 ### Breaking
 
