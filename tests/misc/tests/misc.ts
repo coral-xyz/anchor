@@ -1463,7 +1463,6 @@ describe("misc", () => {
     await program.rpc.testMultidimensionalArray(array2d, {
       accounts: {
         data: data.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [data],
       instructions: [
@@ -1482,7 +1481,6 @@ describe("misc", () => {
     await program.rpc.testMultidimensionalArrayConstSizes(array2d, {
       accounts: {
         data: data.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [data],
       instructions: [
@@ -1636,9 +1634,6 @@ describe("misc", () => {
           token: token.publicKey,
           mint: mint.publicKey,
           payer: program.provider.wallet.publicKey,
-          systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
       });
       const mintAccount = new Token(
@@ -1682,9 +1677,6 @@ describe("misc", () => {
           token: token.publicKey,
           mint: mint.publicKey,
           payer: program.provider.wallet.publicKey,
-          systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
       });
       const mintAccount = new Token(
@@ -1726,10 +1718,6 @@ describe("misc", () => {
         accounts: {
           token: token.publicKey,
           mint: mint.publicKey,
-          payer: program.provider.wallet.publicKey,
-          systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
       });
       const mintAccount = new Token(
@@ -1785,9 +1773,6 @@ describe("misc", () => {
             token: token.publicKey,
             mint: mint1.publicKey,
             payer: program.provider.wallet.publicKey,
-            systemProgram: anchor.web3.SystemProgram.programId,
-            tokenProgram: TOKEN_PROGRAM_ID,
-            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
         });
         assert.isTrue(false);
@@ -1829,11 +1814,7 @@ describe("misc", () => {
           accounts: {
             token: token.publicKey,
             mint: mint.publicKey,
-            payer: program.provider.wallet.publicKey,
             fakeAuthority: fakeAuthority.publicKey,
-            systemProgram: anchor.web3.SystemProgram.programId,
-            tokenProgram: TOKEN_PROGRAM_ID,
-            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
         });
         assert.isTrue(false);
@@ -1886,11 +1867,7 @@ describe("misc", () => {
           accounts: {
             token: token.publicKey,
             mint: mint1.publicKey,
-            payer: program.provider.wallet.publicKey,
             fakeAuthority: fakeAuthority.publicKey,
-            systemProgram: anchor.web3.SystemProgram.programId,
-            tokenProgram: TOKEN_PROGRAM_ID,
-            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
         });
         assert.isTrue(false);
@@ -1919,10 +1896,6 @@ describe("misc", () => {
           mint: mint.publicKey,
           mintAuthority: program.provider.wallet.publicKey,
           freezeAuthority: program.provider.wallet.publicKey,
-          payer: program.provider.wallet.publicKey,
-          systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
       });
       const client = new Token(
@@ -1960,10 +1933,6 @@ describe("misc", () => {
             mint: mint.publicKey,
             mintAuthority: program.provider.wallet.publicKey,
             freezeAuthority: program.provider.wallet.publicKey,
-            payer: program.provider.wallet.publicKey,
-            systemProgram: anchor.web3.SystemProgram.programId,
-            tokenProgram: TOKEN_PROGRAM_ID,
-            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
         });
         assert.isTrue(false);
@@ -1995,10 +1964,6 @@ describe("misc", () => {
             mint: mint.publicKey,
             mintAuthority: fakeAuthority.publicKey,
             freezeAuthority: program.provider.wallet.publicKey,
-            payer: program.provider.wallet.publicKey,
-            systemProgram: anchor.web3.SystemProgram.programId,
-            tokenProgram: TOKEN_PROGRAM_ID,
-            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
         });
         assert.isTrue(false);
@@ -2033,10 +1998,6 @@ describe("misc", () => {
             mint: mint.publicKey,
             mintAuthority: program.provider.wallet.publicKey,
             freezeAuthority: fakeAuthority.publicKey,
-            payer: program.provider.wallet.publicKey,
-            systemProgram: anchor.web3.SystemProgram.programId,
-            tokenProgram: TOKEN_PROGRAM_ID,
-            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
         });
         assert.isTrue(false);
@@ -2067,10 +2028,6 @@ describe("misc", () => {
       await program.rpc.testMintOnlyDecimalsConstraint(6, {
         accounts: {
           mint: mint.publicKey,
-          payer: program.provider.wallet.publicKey,
-          systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
       });
       const client = new Token(
@@ -2099,10 +2056,6 @@ describe("misc", () => {
       await program.rpc.testMintOnlyAuthConstraint({
         accounts: {
           mint: mint.publicKey,
-          payer: program.provider.wallet.publicKey,
-          systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           mintAuthority: program.provider.wallet.publicKey,
           freezeAuthority: program.provider.wallet.publicKey,
         },
@@ -2138,10 +2091,6 @@ describe("misc", () => {
       await program.rpc.testMintOnlyOneAuthConstraint({
         accounts: {
           mint: mint.publicKey,
-          payer: program.provider.wallet.publicKey,
-          systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           mintAuthority: program.provider.wallet.publicKey,
         },
       });
@@ -2173,10 +2122,6 @@ describe("misc", () => {
       await program.rpc.testMintMissMintAuthConstraint(6, {
         accounts: {
           mint: mint.publicKey,
-          payer: program.provider.wallet.publicKey,
-          systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           freezeAuthority: program.provider.wallet.publicKey,
         },
       });

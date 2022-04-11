@@ -482,11 +482,7 @@ pub struct TestConstraintToken<'info> {
     )]
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
-    #[account(mut)]
     pub payer: Signer<'info>,
-    pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
@@ -497,13 +493,7 @@ pub struct TestAuthorityConstraint<'info> {
     )]
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    /// CHECK:
     pub fake_authority: AccountInfo<'info>,
-    pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
 }
 #[derive(Accounts)]
 pub struct TestOnlyAuthorityConstraint<'info> {
@@ -512,11 +502,7 @@ pub struct TestOnlyAuthorityConstraint<'info> {
     )]
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
-    #[account(mut)]
     pub payer: Signer<'info>,
-    pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
 }
 #[derive(Accounts)]
 pub struct TestOnlyMintConstraint<'info> {
@@ -525,11 +511,6 @@ pub struct TestOnlyMintConstraint<'info> {
     )]
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
@@ -541,15 +522,8 @@ pub struct TestMintConstraint<'info> {
         mint::freeze_authority = freeze_authority
     )]
     pub mint: Account<'info, Mint>,
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    /// CHECK:
     pub mint_authority: AccountInfo<'info>,
-    /// CHECK:
     pub freeze_authority: AccountInfo<'info>,
-    pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
@@ -559,11 +533,6 @@ pub struct TestMintOnlyDecimalsConstraint<'info> {
         mint::decimals = decimals,
     )]
     pub mint: Account<'info, Mint>,
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
@@ -573,15 +542,8 @@ pub struct TestMintAuthorityConstraint<'info> {
         mint::freeze_authority = freeze_authority
     )]
     pub mint: Account<'info, Mint>,
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    /// CHECK:
     pub mint_authority: AccountInfo<'info>,
-    /// CHECK:
     pub freeze_authority: AccountInfo<'info>,
-    pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
@@ -590,13 +552,7 @@ pub struct TestMintOneAuthorityConstraint<'info> {
         mint::authority = mint_authority,
     )]
     pub mint: Account<'info, Mint>,
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    /// CHECK:
     pub mint_authority: AccountInfo<'info>,
-    pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
@@ -607,13 +563,7 @@ pub struct TestMintMissMintAuthConstraint<'info> {
         mint::freeze_authority = freeze_authority,
     )]
     pub mint: Account<'info, Mint>,
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    /// CHECK:
     pub freeze_authority: AccountInfo<'info>,
-    pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
@@ -624,11 +574,5 @@ pub struct TestAssociatedToken<'info> {
     )]
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
-    pub payer: Signer<'info>,
-    /// CHECK:
     pub authority: AccountInfo<'info>,
-    pub token_program: Program<'info, Token>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
 }
