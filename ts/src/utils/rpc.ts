@@ -120,60 +120,19 @@ async function getMultipleAccountsCore(
 // copy from @solana/web3.js that has a commitment param
 export async function simulateTransaction(
   connection: Connection,
-  transactionOrMessage: Transaction,
+  transaction: Transaction,
   signers?: Array<Signer>,
   commitment?: Commitment,
   includeAccounts?: boolean | Array<PublicKey>
 ): Promise<RpcResponseAndContext<SimulatedTransactionResponse>> {
-  let transaction;
-  if (transactionOrMessage instanceof Transaction) {
-    transaction = transactionOrMessage;
-  } else {
-    transaction = Transaction.populate(transactionOrMessage);
-  }
-
-  if (transaction.nonceInfo && signers) {
+  if (signers && signers.length > 0) {
     transaction.sign(...signers);
-  } else {
-    //@ts-expect-error
-    let disableCache = connection._disableBlockhashCaching;
-    for (;;) {
-      // @ts-expect-error
-      transaction.recentBlockhash = await connection._recentBlockhash(
-        disableCache
-      );
-
-      if (!signers) break;
-
-      transaction.sign(...signers);
-      if (!transaction.signature) {
-        throw new Error("!signature"); // should never happen
-      }
-
-      const signature = transaction.signature.toString("base64");
-      if (
-        // @ts-expect-error
-        !connection._blockhashInfo.simulatedSignatures.includes(signature) &&
-        // @ts-expect-error
-        !connection._blockhashInfo.transactionSignatures.includes(signature)
-      ) {
-        // The signature of connection transaction has not been seen before with the
-        // current recentBlockhash, all done. Let's break
-        // @ts-expect-error
-        connection._blockhashInfo.simulatedSignatures.push(signature);
-        break;
-      } else {
-        // This transaction would be treated as duplicate (its derived signature
-        // matched to one of already recorded signatures).
-        // So, we must fetch a new blockhash for a different signature by disabling
-        // our cache not to wait for the cache expiration (BLOCKHASH_CACHE_TIMEOUT_MS).
-        disableCache = true;
-      }
-    }
   }
 
+  // @ts-expect-error
   const message = transaction._compile();
   const signData = message.serialize();
+  // @ts-expect-error
   const wireTransaction = transaction._serialize(signData);
   const encodedTransaction = wireTransaction.toString("base64");
   const config: any = {

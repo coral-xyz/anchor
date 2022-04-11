@@ -223,6 +223,11 @@ export class AnchorProvider implements Provider {
     includeAccounts?: boolean | PublicKey[]
   ): Promise<SuccessfulTxSimulationResponse> {
     tx.feePayer = this.wallet.publicKey;
+    tx.recentBlockhash = (
+      await this.connection.getLatestBlockhash(
+        commitment ?? this.connection.commitment
+      )
+    ).blockhash;
 
     tx = await this.wallet.signTransaction(tx);
     const result = await simulateTransaction(
