@@ -20,7 +20,7 @@ const miscIdl = require("../../target/idl/misc.json");
 
 describe("misc", () => {
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.Provider.env());
+  anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.Misc as Program<Misc>;
   const misc2Program = anchor.workspace.Misc2 as Program<Misc2>;
 
@@ -160,7 +160,7 @@ describe("misc", () => {
       "Program data: jvbowsvlmkcJAAAA",
       "Program data: zxM5neEnS1kBAgMEBQYHCAkK",
       "Program data: g06Ei2GL1gIBAgMEBQYHCAkKCw==",
-      "Program 3TEqcc8xhrhdspwbvoamUJe2borm4Nr72JxL66k6rgrh consumed 5418 of 1400000 compute units",
+      "Program 3TEqcc8xhrhdspwbvoamUJe2borm4Nr72JxL66k6rgrh consumed 5395 of 1400000 compute units",
       "Program 3TEqcc8xhrhdspwbvoamUJe2borm4Nr72JxL66k6rgrh success",
     ];
 
@@ -760,7 +760,7 @@ describe("misc", () => {
     const anotherProgram = new anchor.Program(
       miscIdl,
       program.programId,
-      new anchor.Provider(
+      new anchor.AnchorProvider(
         program.provider.connection,
         new anchor.Wallet(anchor.web3.Keypair.generate()),
         { commitment: program.provider.connection.commitment }
