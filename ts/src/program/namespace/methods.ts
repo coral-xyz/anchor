@@ -10,10 +10,16 @@ import {
 import { SimulateResponse } from "./simulate.js";
 import { TransactionFn } from "./transaction.js";
 import { Idl } from "../../idl.js";
-import { AllInstructions, MethodsFn, MakeMethodsNamespace } from "./types.js";
+import {
+  AllInstructions,
+  MethodsFn,
+  MakeMethodsNamespace,
+  InstructionAccountAddresses,
+} from "./types.js";
 import { InstructionFn } from "./instruction.js";
 import { RpcFn } from "./rpc.js";
 import { SimulateFn } from "./simulate.js";
+import { ViewFn } from "./views.js";
 import Provider from "../../provider.js";
 import { AccountNamespace } from "./account.js";
 import { AccountsResolver } from "../accounts-resolver.js";
@@ -33,6 +39,7 @@ export class MethodsBuilderFactory {
     txFn: TransactionFn<IDL>,
     rpcFn: RpcFn<IDL>,
     simulateFn: SimulateFn<IDL>,
+    viewFn: ViewFn<IDL> | undefined,
     accountNamespace: AccountNamespace<IDL>
   ): MethodsFn<IDL, I, MethodsBuilder<IDL, I>> {
     return (...args) =>
@@ -42,6 +49,7 @@ export class MethodsBuilderFactory {
         txFn,
         rpcFn,
         simulateFn,
+        viewFn,
         provider,
         programId,
         idlIx,
@@ -64,6 +72,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     private _txFn: TransactionFn<IDL>,
     private _rpcFn: RpcFn<IDL>,
     private _simulateFn: SimulateFn<IDL>,
+    private _viewFn: ViewFn<IDL> | undefined,
     _provider: Provider,
     _programId: PublicKey,
     _idlIx: AllInstructions<IDL>,
@@ -77,6 +86,13 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
       _idlIx,
       _accountNamespace
     );
+  }
+
+  public async pubkeys(): Promise<
+    Partial<InstructionAccountAddresses<IDL, I>>
+  > {
+    await this._accountsResolver.resolve();
+    return this._accounts as Partial<InstructionAccountAddresses<IDL, I>>;
   }
 
   public accounts(
@@ -116,6 +132,22 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     await this._accountsResolver.resolve();
     // @ts-ignore
     return this._rpcFn(...this._args, {
+      accounts: this._accounts,
+      signers: this._signers,
+      remainingAccounts: this._remainingAccounts,
+      preInstructions: this._preInstructions,
+      postInstructions: this._postInstructions,
+      options: options,
+    });
+  }
+
+  public async view(options?: ConfirmOptions): Promise<any> {
+    await this._accountsResolver.resolve();
+    if (!this._viewFn) {
+      throw new Error("Method does not support views");
+    }
+    // @ts-ignore
+    return this._viewFn(...this._args, {
       accounts: this._accounts,
       signers: this._signers,
       remainingAccounts: this._remainingAccounts,

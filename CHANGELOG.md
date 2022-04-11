@@ -13,21 +13,29 @@ The minor version will be incremented upon a breaking change and the patch versi
 ### Features
 
 * lang: Add support for multiple test suites with separate local validators ([#1681](https://github.com/project-serum/anchor/pull/1681)).
-* lang: Add return values to CPI client. ([#1598](https://github.com/project-serum/anchor/pull/1598)).
+* lang: Add return values to CPI client ([#1598](https://github.com/project-serum/anchor/pull/1598)).
+* ts: Add view functions ([#1695](https://github.com/project-serum/anchor/pull/1695)).
 * avm: New `avm update` command to update the Anchor CLI to the latest version ([#1670](https://github.com/project-serum/anchor/pull/1670)).
+* cli: Update js/ts templates to use new `program.methods` syntax ([#1732](https://github.com/project-serum/anchor/pull/1732)).
+* cli: Workspaces created with `anchor init` now come with the `prettier` formatter and scripts included ([#1741](https://github.com/project-serum/anchor/pull/1741)).
+* ts: Add `pubkeys` function to methods builder to get all instruction account addresses ([#1733](https://github.com/project-serum/anchor/pull/1733)).
 
 ### Fixes
 
 * avm: `avm install` no longer downloads the version if already installed in the machine ([#1670](https://github.com/project-serum/anchor/pull/1670)).
 * cli: make `anchor test` fail when used with `--skip-deploy` option and without `--skip-local-validator` option but there already is a running validator ([#1675](https://github.com/project-serum/anchor/pull/1675)).
 * lang: Return proper error instead of panicking if account length is smaller than discriminator in functions of `(Account)Loader` ([#1678](https://github.com/project-serum/anchor/pull/1678)).
+* cli: Add `@types/bn.js` to `devDependencies` in cli template ([#1712](https://github.com/project-serum/anchor/pull/1712)).
+* ts: Event listener no longer crashes on Program Upgrade or any other unexpected log ([#1757](https://github.com/project-serum/anchor/pull/1757)).
 
 ### Breaking
 
-* avm: `amv install` switches to the newly installed version after installation finishes ([#1670](https://github.com/project-serum/anchor/pull/1670)).
+* avm: `avm install` switches to the newly installed version after installation finishes ([#1670](https://github.com/project-serum/anchor/pull/1670)).
 * spl: Re-export the `spl_token` crate ([#1665](https://github.com/project-serum/anchor/pull/1665)).
-* lang, cli, spl: Update solana toolchain to v1.9.13 ([#1653](https://github.com/project-serum/anchor/pull/1653)).
+* lang, cli, spl: Update solana toolchain to v1.9.13 ([#1653](https://github.com/project-serum/anchor/pull/1653) and [#1751](https://github.com/project-serum/anchor/pull/1751)).
+* lang: `Program` type now deserializes `programdata_address` only on demand ([#1723](https://github.com/project-serum/anchor/pull/1723)).
 * ts: Make `Provider` an interface and adjust its signatures and add `AnchorProvider` implementor class. ([#1707](https://github.com/project-serum/anchor/pull/1707)).
+
 
 ## [0.23.0] - 2022-03-20
 
