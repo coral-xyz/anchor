@@ -720,22 +720,10 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 "init must be provided before token mint",
             ));
         }
-        if self.associated_token_mint.is_some() {
-            return Err(ParseError::new(
-                c.span(),
-                "init must be provided before associated token mint",
-            ));
-        }
         if self.token_authority.is_some() {
             return Err(ParseError::new(
                 c.span(),
                 "init must be provided before token authority",
-            ));
-        }
-        if self.associated_token_authority.is_some() {
-            return Err(ParseError::new(
-                c.span(),
-                "init must be provided before associated token authority",
             ));
         }
         if self.mint_authority.is_some() {
@@ -754,6 +742,18 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             return Err(ParseError::new(
                 c.span(),
                 "init must be provided before mint decimals",
+            ));
+        }
+        if self.associated_token_mint.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before associated token mint",
+            ));
+        }
+        if self.associated_token_authority.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before associated token authority",
             ));
         }
         self.init.replace(c);

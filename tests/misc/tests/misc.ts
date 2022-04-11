@@ -14,7 +14,7 @@ import {
 import { Misc } from "../target/types/misc";
 import { Misc2 } from "../target/types/misc2";
 const utf8 = anchor.utils.bytes.utf8;
-const { assert } = require("chai");
+const { assert, expect } = require("chai");
 const nativeAssert = require("assert");
 const miscIdl = require("../target/idl/misc.json");
 
@@ -232,7 +232,7 @@ describe("misc", () => {
           solDest: data.publicKey,
         },
       });
-      assert.ok(false);
+      expect(false).to.be.true;
     } catch (err) {
       const errMsg = "A close constraint was violated";
       assert.strictEqual(err.error.errorMessage, errMsg);
@@ -266,7 +266,7 @@ describe("misc", () => {
     ).lamports;
 
     // Retrieved rent exemption sol.
-    assert.ok(afterBalance > beforeBalance);
+    expect(afterBalance > beforeBalance).to.be.true;
 
     const closedAccount = await program.provider.connection.getAccountInfo(
       data.publicKey
@@ -989,7 +989,7 @@ describe("misc", () => {
           owner: anchor.web3.Keypair.generate().publicKey,
         },
       });
-      assert.ok(false);
+      expect(false).to.be.true;
     } catch (_err) {
       assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
@@ -1028,7 +1028,7 @@ describe("misc", () => {
           owner: anchor.web3.Keypair.generate().publicKey,
         },
       });
-      assert.ok(false);
+      expect(false).to.be.true;
     } catch (_err) {
       assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
@@ -1057,7 +1057,7 @@ describe("misc", () => {
         },
         signers: [newAcc],
       });
-      assert.ok(false);
+      expect(false).to.be.true;
     } catch (_err) {
       assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
@@ -1091,7 +1091,7 @@ describe("misc", () => {
         },
         signers: [mint],
       });
-      assert.ok(false);
+      expect(false).to.be.true;
     } catch (_err) {
       assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
@@ -1125,7 +1125,7 @@ describe("misc", () => {
         },
         signers: [mint],
       });
-      assert.ok(false);
+      expect(false).to.be.true;
     } catch (_err) {
       assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
@@ -1159,7 +1159,7 @@ describe("misc", () => {
         },
         signers: [mint],
       });
-      assert.ok(false);
+      expect(false).to.be.true;
     } catch (_err) {
       assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
@@ -1206,7 +1206,7 @@ describe("misc", () => {
         },
         signers: [token],
       });
-      assert.ok(false);
+      expect(false).to.be.true;
     } catch (_err) {
       assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
@@ -1265,7 +1265,7 @@ describe("misc", () => {
         },
         signers: [token],
       });
-      assert.ok(false);
+      expect(false).to.be.true;
     } catch (_err) {
       assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
@@ -1318,7 +1318,7 @@ describe("misc", () => {
           authority: anchor.web3.Keypair.generate().publicKey,
         },
       });
-      assert.ok(false);
+      expect(false).to.be.true;
     } catch (_err) {
       assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
@@ -1383,7 +1383,7 @@ describe("misc", () => {
           authority: program.provider.wallet.publicKey,
         },
       });
-      assert.ok(false);
+      expect(false).to.be.true;
     } catch (_err) {
       assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
@@ -1449,7 +1449,7 @@ describe("misc", () => {
           authority: program.provider.wallet.publicKey,
         },
       });
-      assert.ok(false);
+      expect(false).to.be.true;
     } catch (_err) {
       assert.isTrue(_err instanceof AnchorError);
       const err: AnchorError = _err;
@@ -1520,7 +1520,7 @@ describe("misc", () => {
             second: secondPDA,
           },
         });
-        assert.ok(false);
+        expect(false).to.be.true;
       } catch (_err) {
         assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
@@ -1535,7 +1535,7 @@ describe("misc", () => {
             second: secondPDA,
           },
         });
-        assert.ok(false);
+        expect(false).to.be.true;
       } catch (_err) {
         assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
@@ -1574,7 +1574,7 @@ describe("misc", () => {
             second: secondPDA,
           },
         });
-        assert.ok(false);
+        expect(false).to.be.true;
       } catch (_err) {
         assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;
@@ -1589,7 +1589,7 @@ describe("misc", () => {
             second: secondPDA,
           },
         });
-        assert.ok(false);
+        expect(false).to.be.true;
       } catch (_err) {
         assert.isTrue(_err instanceof AnchorError);
         const err: AnchorError = _err;

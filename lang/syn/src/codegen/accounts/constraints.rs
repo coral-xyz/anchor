@@ -728,7 +728,7 @@ fn generate_constraint_mint(f: &Field, c: &ConstraintTokenMintGroup) -> proc_mac
     };
     let mint_authority_check = match &c.mint_authority {
         Some(mint_authority) => quote! {
-            if #name.mint_authority.is_none() || #name.mint_authority.unwrap() != #mint_authority.key() {
+            if #name.mint_authority != anchor_lang::solana_program::program_option::COption::Some(anchor_lang::Key::key(&#mint_authority)) {
                 return Err(anchor_lang::error::ErrorCode::ConstraintMintMintAuthority.into());
             }
         },
@@ -736,7 +736,7 @@ fn generate_constraint_mint(f: &Field, c: &ConstraintTokenMintGroup) -> proc_mac
     };
     let freeze_authority_check = match &c.freeze_authority {
         Some(freeze_authority) => quote! {
-            if #name.freeze_authority.is_none() || #name.freeze_authority.unwrap() != #freeze_authority.key() {
+            if #name.freeze_authority != anchor_lang::solana_program::program_option::COption::Some(anchor_lang::Key::key(&#freeze_authority)) {
                 return Err(anchor_lang::error::ErrorCode::ConstraintMintFreezeAuthority.into());
             }
         },
