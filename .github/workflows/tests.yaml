@@ -37,6 +37,8 @@ jobs:
       - run: cargo fmt -- --check
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test
+      # using singlethreaded testing for avm so that tests that change files do not conflict with each other
+      - run: cd avm && cargo fmt -- --check && cargo clippy --all-targets -- -D warnings && cargo test -- --test-threads=1
       - run: cd ts && yarn --frozen-lockfile
       - run: cd ts && yarn test
       - run: cd ts && yarn lint
@@ -317,7 +319,7 @@ jobs:
           name: anchor-binary
           path: ~/.cargo/bin/
 
-      - run: cd "$(mktemp -d)" && anchor init hello-anchor && cd hello-anchor && anchor test
+      - run: cd "$(mktemp -d)" && anchor init hello-anchor && cd hello-anchor && anchor test && yarn lint:fix
       - uses: ./.github/actions/git-diff/
 
   test-programs:
@@ -381,6 +383,8 @@ jobs:
             path: tests/validator-clone
           - cmd: cd tests/cpi-returns && anchor test --skip-lint
             path: tests/cpi-returns
+          - cmd: cd tests/multiple-suites && anchor test --skip-lint
+            path: tests/multiple-suites
     steps:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup/
