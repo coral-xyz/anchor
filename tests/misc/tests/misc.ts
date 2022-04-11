@@ -370,14 +370,14 @@ describe("misc", () => {
         authority: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       },
     });
 
     const mintAccount = new Token(
       program.provider.connection,
       mint,
-      TOKEN_PROGRAM_ID,
+      anchor.utils.token.TOKEN_PROGRAM_ID,
       program.provider.wallet.payer
     );
     const account = await mintAccount.getAccountInfo(myPda);
@@ -461,7 +461,7 @@ describe("misc", () => {
         mint: mint.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
@@ -469,7 +469,7 @@ describe("misc", () => {
     const client = new Token(
       program.provider.connection,
       mint.publicKey,
-      TOKEN_PROGRAM_ID,
+      anchor.utils.token.TOKEN_PROGRAM_ID,
       program.provider.wallet.payer
     );
     const mintAccount = await client.getMintInfo();
@@ -489,7 +489,7 @@ describe("misc", () => {
         mint: mint.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
@@ -504,7 +504,7 @@ describe("misc", () => {
     const client = new Token(
       program.provider.connection,
       mint.publicKey,
-      TOKEN_PROGRAM_ID,
+      anchor.utils.token.TOKEN_PROGRAM_ID,
       program.provider.wallet.payer
     );
     const mintAccount = await client.getMintInfo();
@@ -522,7 +522,7 @@ describe("misc", () => {
         mint: mint.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [token],
@@ -530,7 +530,7 @@ describe("misc", () => {
     const client = new Token(
       program.provider.connection,
       mint.publicKey,
-      TOKEN_PROGRAM_ID,
+      anchor.utils.token.TOKEN_PROGRAM_ID,
       program.provider.wallet.payer
     );
     const account = await client.getAccountInfo(token.publicKey);
@@ -549,7 +549,7 @@ describe("misc", () => {
         mint: mint.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [token],
@@ -564,7 +564,7 @@ describe("misc", () => {
     const client = new Token(
       program.provider.connection,
       mint.publicKey,
-      TOKEN_PROGRAM_ID,
+      anchor.utils.token.TOKEN_PROGRAM_ID,
       program.provider.wallet.payer
     );
     const account = await client.getAccountInfo(token.publicKey);
@@ -583,7 +583,7 @@ describe("misc", () => {
         mint: mint.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [token],
@@ -598,7 +598,7 @@ describe("misc", () => {
     const client = new Token(
       program.provider.connection,
       mint.publicKey,
-      TOKEN_PROGRAM_ID,
+      anchor.utils.token.TOKEN_PROGRAM_ID,
       program.provider.wallet.payer
     );
     const account = await client.getAccountInfo(token.publicKey);
@@ -643,14 +643,14 @@ describe("misc", () => {
       program.provider.wallet.publicKey,
       program.provider.wallet.publicKey,
       9,
-      TOKEN_PROGRAM_ID
+      anchor.utils.token.TOKEN_PROGRAM_ID
     );
 
     it("Can create an associated token account", async () => {
       const localClient = await client;
       associatedToken = await Token.getAssociatedTokenAddress(
         ASSOCIATED_TOKEN_PROGRAM_ID,
-        TOKEN_PROGRAM_ID,
+        anchor.utils.token.TOKEN_PROGRAM_ID,
         localClient.publicKey,
         program.provider.wallet.publicKey
       );
@@ -662,7 +662,7 @@ describe("misc", () => {
           payer: program.provider.wallet.publicKey,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
         },
       });
@@ -691,7 +691,7 @@ describe("misc", () => {
         program.provider.wallet.publicKey,
         program.provider.wallet.publicKey,
         9,
-        TOKEN_PROGRAM_ID
+        anchor.utils.token.TOKEN_PROGRAM_ID
       );
 
       await nativeAssert.rejects(
@@ -1072,7 +1072,7 @@ describe("misc", () => {
         mint: mint.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
@@ -1084,7 +1084,7 @@ describe("misc", () => {
           mint: mint.publicKey,
           payer: program.provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           mintAuthority: anchor.web3.Keypair.generate().publicKey,
           freezeAuthority: program.provider.wallet.publicKey,
@@ -1106,7 +1106,7 @@ describe("misc", () => {
         mint: mint.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
@@ -1118,7 +1118,7 @@ describe("misc", () => {
           mint: mint.publicKey,
           payer: program.provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           mintAuthority: program.provider.wallet.publicKey,
           freezeAuthority: anchor.web3.Keypair.generate().publicKey,
@@ -1140,7 +1140,7 @@ describe("misc", () => {
         mint: mint.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
@@ -1152,7 +1152,7 @@ describe("misc", () => {
           mint: mint.publicKey,
           payer: program.provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           mintAuthority: program.provider.wallet.publicKey,
           freezeAuthority: program.provider.wallet.publicKey,
@@ -1174,7 +1174,7 @@ describe("misc", () => {
         mint: mint.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
@@ -1187,7 +1187,7 @@ describe("misc", () => {
         mint: mint.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [token],
@@ -1200,7 +1200,7 @@ describe("misc", () => {
           mint: mint.publicKey,
           payer: program.provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           authority: anchor.web3.Keypair.generate().publicKey,
         },
@@ -1221,7 +1221,7 @@ describe("misc", () => {
         mint: mint.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
@@ -1233,7 +1233,7 @@ describe("misc", () => {
         mint: mint2.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint2],
@@ -1246,7 +1246,7 @@ describe("misc", () => {
         mint: mint.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [token],
@@ -1259,7 +1259,7 @@ describe("misc", () => {
           mint: mint2.publicKey,
           payer: program.provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           authority: program.provider.wallet.publicKey,
         },
@@ -1280,7 +1280,7 @@ describe("misc", () => {
         mint: mint.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram: SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
@@ -1288,7 +1288,7 @@ describe("misc", () => {
 
     const associatedToken = await Token.getAssociatedTokenAddress(
       ASSOCIATED_TOKEN_PROGRAM_ID,
-      TOKEN_PROGRAM_ID,
+      anchor.utils.token.TOKEN_PROGRAM_ID,
       mint.publicKey,
       program.provider.wallet.publicKey
     );
@@ -1300,7 +1300,7 @@ describe("misc", () => {
         payer: program.provider.wallet.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
       },
     });
@@ -1313,7 +1313,7 @@ describe("misc", () => {
           payer: program.provider.wallet.publicKey,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
           authority: anchor.web3.Keypair.generate().publicKey,
         },
@@ -1333,7 +1333,7 @@ describe("misc", () => {
         mint: mint.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
@@ -1345,7 +1345,7 @@ describe("misc", () => {
         mint: mint2.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint2],
@@ -1353,7 +1353,7 @@ describe("misc", () => {
 
     const associatedToken = await Token.getAssociatedTokenAddress(
       ASSOCIATED_TOKEN_PROGRAM_ID,
-      TOKEN_PROGRAM_ID,
+      anchor.utils.token.TOKEN_PROGRAM_ID,
       mint.publicKey,
       program.provider.wallet.publicKey
     );
@@ -1365,7 +1365,7 @@ describe("misc", () => {
         payer: program.provider.wallet.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
       },
     });
@@ -1378,7 +1378,7 @@ describe("misc", () => {
           payer: program.provider.wallet.publicKey,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
           authority: program.provider.wallet.publicKey,
         },
@@ -1398,7 +1398,7 @@ describe("misc", () => {
         mint: mint.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
@@ -1406,7 +1406,7 @@ describe("misc", () => {
 
     const associatedToken = await Token.getAssociatedTokenAddress(
       ASSOCIATED_TOKEN_PROGRAM_ID,
-      TOKEN_PROGRAM_ID,
+      anchor.utils.token.TOKEN_PROGRAM_ID,
       mint.publicKey,
       program.provider.wallet.publicKey
     );
@@ -1418,7 +1418,7 @@ describe("misc", () => {
         payer: program.provider.wallet.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
       },
     });
@@ -1430,7 +1430,7 @@ describe("misc", () => {
         mint: mint.publicKey,
         payer: program.provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [token],
@@ -1444,7 +1444,7 @@ describe("misc", () => {
           payer: program.provider.wallet.publicKey,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
           authority: program.provider.wallet.publicKey,
         },

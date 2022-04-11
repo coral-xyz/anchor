@@ -1,7 +1,6 @@
 const anchor = require("@project-serum/anchor");
 const serumCmn = require("@project-serum/common");
 const { assert } = require("chai");
-const { TOKEN_PROGRAM_ID } = require("@solana/spl-token");
 
 describe("cashiers-check", () => {
   // Configure the client to use the local cluster.
@@ -48,7 +47,7 @@ describe("cashiers-check", () => {
         from: god,
         to: receiver,
         owner: program.provider.wallet.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [check, vault],
@@ -87,7 +86,7 @@ describe("cashiers-check", () => {
         checkSigner: checkSigner,
         to: receiver,
         owner: program.provider.wallet.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       },
     });
 

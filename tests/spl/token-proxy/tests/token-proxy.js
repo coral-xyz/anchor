@@ -25,7 +25,7 @@ describe("token", () => {
         authority: provider.wallet.publicKey,
         mint,
         to: from,
-        tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       },
     });
 
@@ -40,7 +40,7 @@ describe("token", () => {
         authority: provider.wallet.publicKey,
         to,
         from,
-        tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       },
     });
 
@@ -57,7 +57,7 @@ describe("token", () => {
         authority: provider.wallet.publicKey,
         mint,
         to,
-        tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       },
     });
 
@@ -74,7 +74,7 @@ describe("token", () => {
         accounts: {
           accountOrMint: mint,
           currentAuthority: provider.wallet.publicKey,
-          tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         },
       }
     );
@@ -92,9 +92,6 @@ const TokenInstructions = require("@project-serum/serum").TokenInstructions;
 
 // TODO: remove this constant once @project-serum/serum uses the same version
 //       of @solana/web3.js as anchor (or switch packages).
-const TOKEN_PROGRAM_ID = new anchor.web3.PublicKey(
-  TokenInstructions.TOKEN_PROGRAM_ID.toString()
-);
 
 async function getTokenAccount(provider, addr) {
   return await serumCmn.getTokenAccount(provider, addr);
@@ -130,7 +127,7 @@ async function createMintInstructions(provider, authority, mint) {
       newAccountPubkey: mint,
       space: 82,
       lamports: await provider.connection.getMinimumBalanceForRentExemption(82),
-      programId: TOKEN_PROGRAM_ID,
+      programId: anchor.utils.token.TOKEN_PROGRAM_ID,
     }),
     TokenInstructions.initializeMint({
       mint,
@@ -167,7 +164,7 @@ async function createTokenAccountInstrs(
       newAccountPubkey,
       space: 165,
       lamports,
-      programId: TOKEN_PROGRAM_ID,
+      programId: anchor.utils.token.TOKEN_PROGRAM_ID,
     }),
     TokenInstructions.initializeAccount({
       account: newAccountPubkey,

@@ -1,7 +1,7 @@
 import * as anchor from "@project-serum/anchor";
 import { Program, BN, IdlAccounts } from "@project-serum/anchor";
 import { PublicKey, Keypair, SystemProgram } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
+import { Token } from "@solana/spl-token";
 import { assert } from "chai";
 import { Escrow } from "../target/types/escrow";
 
@@ -41,7 +41,7 @@ describe("escrow", () => {
       mintAuthority.publicKey,
       null,
       0,
-      TOKEN_PROGRAM_ID
+      anchor.utils.token.TOKEN_PROGRAM_ID
     );
 
     mintB = await Token.createMint(
@@ -50,7 +50,7 @@ describe("escrow", () => {
       mintAuthority.publicKey,
       null,
       0,
-      TOKEN_PROGRAM_ID
+      anchor.utils.token.TOKEN_PROGRAM_ID
     );
 
     initializerTokenAccountA = await mintA.createAccount(
@@ -100,7 +100,7 @@ describe("escrow", () => {
           initializerReceiveTokenAccount: initializerTokenAccountB,
           escrowAccount: escrowAccount.publicKey,
           systemProgram: SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         },
         signers: [escrowAccount],
       }
@@ -156,7 +156,7 @@ describe("escrow", () => {
         initializerMainAccount: provider.wallet.publicKey,
         escrowAccount: escrowAccount.publicKey,
         pdaAccount: pda,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       },
     });
 
@@ -205,7 +205,7 @@ describe("escrow", () => {
           initializerReceiveTokenAccount: initializerTokenAccountB,
           escrowAccount: newEscrow.publicKey,
           systemProgram: SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         },
         signers: [newEscrow],
       }
@@ -225,7 +225,7 @@ describe("escrow", () => {
         pdaDepositTokenAccount: initializerTokenAccountA,
         pdaAccount: pda,
         escrowAccount: newEscrow.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       },
     });
 

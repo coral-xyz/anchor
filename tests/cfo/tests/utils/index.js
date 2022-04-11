@@ -5,7 +5,6 @@
 // TODO: Modernize all these apis. This is all quite clunky.
 
 const Token = require("@solana/spl-token").Token;
-const TOKEN_PROGRAM_ID = require("@solana/spl-token").TOKEN_PROGRAM_ID;
 const TokenInstructions = require("@project-serum/serum").TokenInstructions;
 const { Market, OpenOrders } = require("@project-serum/serum");
 const DexInstructions = require("@project-serum/serum").DexInstructions;
@@ -148,7 +147,7 @@ async function fundAccount({ provider, mints }) {
     const mintAClient = new Token(
       provider.connection,
       MINT_A,
-      TOKEN_PROGRAM_ID,
+      anchor.utils.token.TOKEN_PROGRAM_ID,
       provider.wallet.payer // node only
     );
     const marketMakerTokenA = await mintAClient.createAccount(
@@ -160,7 +159,7 @@ async function fundAccount({ provider, mints }) {
         const tx = new Transaction();
         tx.add(
           Token.createTransferCheckedInstruction(
-            TOKEN_PROGRAM_ID,
+            anchor.utils.token.TOKEN_PROGRAM_ID,
             GOD_A,
             MINT_A,
             marketMakerTokenA,
@@ -276,14 +275,14 @@ async function listMarket({
       newAccountPubkey: baseVault.publicKey,
       lamports: await connection.getMinimumBalanceForRentExemption(165),
       space: 165,
-      programId: TOKEN_PROGRAM_ID,
+      programId: anchor.utils.token.TOKEN_PROGRAM_ID,
     }),
     SystemProgram.createAccount({
       fromPubkey: wallet.publicKey,
       newAccountPubkey: quoteVault.publicKey,
       lamports: await connection.getMinimumBalanceForRentExemption(165),
       space: 165,
-      programId: TOKEN_PROGRAM_ID,
+      programId: anchor.utils.token.TOKEN_PROGRAM_ID,
     }),
     TokenInstructions.initializeAccount({
       account: baseVault.publicKey,

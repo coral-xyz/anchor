@@ -2,7 +2,6 @@ const anchor = require("@project-serum/anchor");
 const { assert } = require("chai");
 const {
   ASSOCIATED_TOKEN_PROGRAM_ID,
-  TOKEN_PROGRAM_ID,
   Token,
 } = require("@solana/spl-token");
 const {
@@ -123,7 +122,7 @@ describe("ido-pool", () => {
           poolWatermelon,
           poolUsdc,
           systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
       }
@@ -166,14 +165,14 @@ describe("ido-pool", () => {
 
     userUsdc = await Token.getAssociatedTokenAddress(
       ASSOCIATED_TOKEN_PROGRAM_ID,
-      TOKEN_PROGRAM_ID,
+      anchor.utils.token.TOKEN_PROGRAM_ID,
       usdcMint,
       program.provider.wallet.publicKey
     );
     // Get the instructions to add to the RPC call
     let createUserUsdcInstr = Token.createAssociatedTokenAccountInstruction(
       ASSOCIATED_TOKEN_PROGRAM_ID,
-      TOKEN_PROGRAM_ID,
+      anchor.utils.token.TOKEN_PROGRAM_ID,
       usdcMint,
       userUsdc,
       program.provider.wallet.publicKey,
@@ -214,7 +213,7 @@ describe("ido-pool", () => {
           redeemableMint,
           watermelonMint,
           poolUsdc,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         },
         instructions: [
           program.instruction.initUserRedeemable({
@@ -224,7 +223,7 @@ describe("ido-pool", () => {
               idoAccount,
               redeemableMint,
               systemProgram: anchor.web3.SystemProgram.programId,
-              tokenProgram: TOKEN_PROGRAM_ID,
+              tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
               rent: anchor.web3.SYSVAR_RENT_PUBKEY,
             },
           }),
@@ -268,13 +267,13 @@ describe("ido-pool", () => {
     });
     secondUserUsdc = await Token.getAssociatedTokenAddress(
       ASSOCIATED_TOKEN_PROGRAM_ID,
-      TOKEN_PROGRAM_ID,
+      anchor.utils.token.TOKEN_PROGRAM_ID,
       usdcMint,
       secondUserKeypair.publicKey
     );
     createSecondUserUsdcInstr = Token.createAssociatedTokenAccountInstruction(
       ASSOCIATED_TOKEN_PROGRAM_ID,
-      TOKEN_PROGRAM_ID,
+      anchor.utils.token.TOKEN_PROGRAM_ID,
       usdcMint,
       secondUserUsdc,
       secondUserKeypair.publicKey,
@@ -315,7 +314,7 @@ describe("ido-pool", () => {
         redeemableMint,
         watermelonMint,
         poolUsdc,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       },
       instructions: [
         program.instruction.initUserRedeemable({
@@ -325,7 +324,7 @@ describe("ido-pool", () => {
             idoAccount,
             redeemableMint,
             systemProgram: anchor.web3.SystemProgram.programId,
-            tokenProgram: TOKEN_PROGRAM_ID,
+            tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
         }),
@@ -390,7 +389,7 @@ describe("ido-pool", () => {
         redeemableMint,
         watermelonMint,
         poolUsdc,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       },
       instructions: [
         program.instruction.initEscrowUsdc({
@@ -400,7 +399,7 @@ describe("ido-pool", () => {
             idoAccount,
             usdcMint,
             systemProgram: anchor.web3.SystemProgram.programId,
-            tokenProgram: TOKEN_PROGRAM_ID,
+            tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
         }),
@@ -462,7 +461,7 @@ describe("ido-pool", () => {
         watermelonMint,
         redeemableMint,
         poolWatermelon,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       },
     });
 
@@ -518,7 +517,7 @@ describe("ido-pool", () => {
         watermelonMint,
         redeemableMint,
         poolWatermelon,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       },
     });
 
@@ -545,7 +544,7 @@ describe("ido-pool", () => {
         usdcMint,
         watermelonMint,
         poolUsdc,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       },
     });
 
@@ -583,7 +582,7 @@ describe("ido-pool", () => {
         escrowUsdc,
         idoAccount,
         usdcMint,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       },
     });
 

@@ -1,6 +1,5 @@
 const anchor = require("@project-serum/anchor");
 const serumCmn = require("@project-serum/common");
-const TokenInstructions = require("@project-serum/serum").TokenInstructions;
 const utils = require("../../deps/stake/tests/utils");
 
 const lockup = anchor.workspace.Lockup;
@@ -120,7 +119,7 @@ async function setupStakePool(mint, god) {
       memberSigner,
       balances,
       balancesLocked,
-      tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+      tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
     },
     instructions: [
@@ -149,7 +148,7 @@ async function setupStakePool(mint, god) {
     accounts: {
       depositor: god,
       depositorAuthority: provider.wallet.publicKey,
-      tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+      tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       vault: memberAccount.balances.vault,
       beneficiary: provider.wallet.publicKey,
       member: member,
@@ -174,7 +173,7 @@ async function setupStakePool(mint, god) {
       registrarSigner,
       // Misc.
       clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
-      tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+      tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
     },
   });
 }
