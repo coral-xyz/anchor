@@ -341,11 +341,19 @@ impl Field {
                     },
                 };
                 if checked {
-                    quote! {
-                        #container_ty::try_from(
-                            #owner_addr,
-                            &#field,
-                        )?
+                    if let Ty::AccountLoader(_) = &self.ty {
+                        quote! {
+                            #container_ty::try_from(
+                                &#field,
+                            )?
+                        }
+                    } else {
+                        quote! {
+                            #container_ty::try_from(
+                                #owner_addr,
+                                &#field,
+                            )?
+                        }
                     }
                 } else {
                     quote! {
