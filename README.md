@@ -1,7 +1,7 @@
 ### :warning: **This is a forked version of Anchor**
 
-In order to keep up with Solana's rapid release schedule and publish testnet-compatable versions of Cronos, we use this forked version of Anchor in development. The dependency versions in this repo are automatically updated to latest `BETA_CHANNEL` release of Solana. To learn more, please see the [Solana release](https://github.com/solana-labs/solana/blob/master/RELEASE.md) documentation. 
-
+In order to keep up with Solana's rapid release schedule and build testnet-compatable versions of Cronos, we use a forked version of Anchor. The dependencies in this repo are automatically updated to latest `BETA_CHANNEL` release from Solana. For details, please see [Solana's release](https://github.com/solana-labs/solana/blob/master/RELEASE.md) documentation.
+ 
 ---
 
 <div align="center">
