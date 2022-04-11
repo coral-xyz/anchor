@@ -1,9 +1,6 @@
-import {
-  PublicKey,
-  RpcResponseAndContext,
-  SimulatedTransactionResponse,
-} from "@solana/web3.js";
-import Provider, { SuccessfulTxSimulationResponse } from "../../provider.js";
+import { PublicKey } from "@solana/web3.js";
+import Provider from "../../provider.js";
+import { SuccessfulTxSimulationResponse } from "src/utils/rpc.js";
 import { splitArgsAndCtx } from "../context.js";
 import { TransactionFn } from "./transaction.js";
 import { EventParser, Event } from "../event.js";
