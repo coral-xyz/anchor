@@ -13,6 +13,11 @@ pub mod init_if_needed {
         Ok(())
     }
 
+    pub fn second_initialize(ctx: Context<SecondInitialize>, _val: u8) -> Result<()> {
+        ctx.accounts.acc.other_val = 2000;
+        Ok(())
+    }
+
     pub fn close(ctx: Context<Close>) -> Result<()> {
         ctx.accounts.acc.val = 5000;
         Ok(())
@@ -21,7 +26,12 @@ pub mod init_if_needed {
 
 #[account]
 pub struct MyData {
-    pub val: u64
+    pub val: u64,
+}
+
+#[account]
+pub struct OtherData {
+    pub other_val: u64,
 }
 
 #[derive(Accounts)]
@@ -34,9 +44,18 @@ pub struct Initialize<'info> {
 }
 
 #[derive(Accounts)]
+pub struct SecondInitialize<'info> {
+    #[account(init, payer = payer, space = 8 + 8)]
+    pub acc: Account<'info, OtherData>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
 pub struct Close<'info> {
     #[account(mut, close = receiver)]
     pub acc: Account<'info, MyData>,
     #[account(mut)]
-    pub receiver: UncheckedAccount<'info>
+    pub receiver: UncheckedAccount<'info>,
 }

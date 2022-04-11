@@ -160,11 +160,9 @@ describe("misc", () => {
       "Program data: jvbowsvlmkcJAAAA",
       "Program data: zxM5neEnS1kBAgMEBQYHCAkK",
       "Program data: g06Ei2GL1gIBAgMEBQYHCAkKCw==",
-      "Program 3TEqcc8xhrhdspwbvoamUJe2borm4Nr72JxL66k6rgrh consumed 3983 of 1400000 compute units",
-      "Program 3TEqcc8xhrhdspwbvoamUJe2borm4Nr72JxL66k6rgrh success",
     ];
 
-    assert.deepStrictEqual(expectedRaw, resp.raw);
+    assert.deepStrictEqual(expectedRaw, resp.raw.slice(0, -2));
     assert.strictEqual(resp.events[0].name, "E1");
     assert.strictEqual(resp.events[0].data.data, 44);
     assert.strictEqual(resp.events[1].name, "E2");
