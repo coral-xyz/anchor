@@ -276,7 +276,6 @@ mod tests {
         // Sync the file to disk before the read in current_version() to
         // mitigate the read not seeing the written version bytes.
         current_version_file.sync_all().unwrap();
-        ::std::thread::sleep(::std::time::Duration::from_secs(5));
         assert!(current_version().unwrap() == Version::parse("0.18.2").unwrap());
     }
 
