@@ -5,7 +5,7 @@ import { SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { expect } from "chai";
 
 describe("init-if-needed", () => {
-  anchor.setProvider(anchor.Provider.env());
+  anchor.setProvider(anchor.AnchorProvider.env());
 
   const program = anchor.workspace.InitIfNeeded as Program<InitIfNeeded>;
 
