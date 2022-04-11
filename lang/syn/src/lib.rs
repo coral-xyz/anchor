@@ -288,6 +288,15 @@ impl Field {
     ) -> proc_macro2::TokenStream {
         let field = &self.ident;
         let container_ty = self.container_ty();
+        let owner_addr = match &kind {
+            None => quote! { program_id },
+            Some(InitKind::Program { .. }) => quote! {
+                program_id
+            },
+            _ => quote! {
+                &anchor_spl::token::ID
+            },
+        };
         match &self.ty {
             Ty::AccountInfo => quote! { #field.to_account_info() },
             Ty::UncheckedAccount => {
@@ -330,30 +339,29 @@ impl Field {
                     }
                 }
             }
-            _ => {
-                let owner_addr = match &kind {
-                    None => quote! { program_id },
-                    Some(InitKind::Program { .. }) => quote! {
-                        program_id
-                    },
-                    _ => quote! {
-                        &anchor_spl::token::ID
-                    },
-                };
+            Ty::AccountLoader(_) => {
                 if checked {
-                    if let Ty::AccountLoader(_) = &self.ty {
-                        quote! {
-                            #container_ty::try_from(
-                                &#field,
-                            )?
-                        }
-                    } else {
-                        quote! {
-                            #container_ty::try_from(
-                                #owner_addr,
-                                &#field,
-                            )?
-                        }
+                    quote! {
+                        #container_ty::try_from(
+                            &#field,
+                        )?
+                    }
+                } else {
+                    quote! {
+                        #container_ty::try_from_unchecked(
+                            #owner_addr,
+                            &#field,
+                        )?
+                    }
+                }
+            }
+            _ => {
+                if checked {
+                    quote! {
+                        #container_ty::try_from(
+                            #owner_addr,
+                            &#field,
+                        )?
                     }
                 } else {
                     quote! {
