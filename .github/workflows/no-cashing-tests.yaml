@@ -1,7 +1,9 @@
 name: No Cashing Tests
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - master
 env:
   SOLANA_CLI_VERSION: 1.9.13
   NODE_VERSION: 17.0.1
