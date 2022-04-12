@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - master
-  pull_request:
-    branches:
-      - master
 env:
   SOLANA_CLI_VERSION: 1.9.13
   NODE_VERSION: 17.0.1
@@ -100,7 +97,7 @@ jobs:
           name: anchor-binary-no-caching
           path: ~/.cargo/bin/
       - run: chmod +rwx ~/.cargo/bin/anchor
-      
+
       - run: cd ${{ matrix.node.path }} && anchor build --skip-lint
       - uses: actions/upload-artifact@v2
         with:
