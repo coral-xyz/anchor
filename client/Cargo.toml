@@ -2,7 +2,7 @@
 name = "anchor-client"
 version = "0.24.0"
 authors = ["Serum Foundation <foundation@projectserum.com>"]
-rust-version = "1.56"
+rust-version = "1.58"
 edition = "2021"
 license = "Apache-2.0"
 description = "Rust client for Anchor programs"

@@ -2,7 +2,7 @@
 name = "anchor-cli"
 version = "0.24.0"
 authors = ["armaniferrante <armaniferrante@gmail.com>"]
-rust-version = "1.56"
+rust-version = "1.58"
 edition = "2021"
 
 [[bin]]
