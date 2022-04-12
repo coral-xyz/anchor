@@ -68,6 +68,7 @@ jobs:
             ./target/
           key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
       - run: cargo install --path cli anchor-cli --locked --force
+      - run: chmod +x ~/.cargo/bin/anchor
       - uses: actions/upload-artifact@v2
         with:
           name: anchor-binary
