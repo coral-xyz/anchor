@@ -66,6 +66,7 @@ jobs:
           name: anchor-binary-no-caching
           path: ~/.cargo/bin/
       - run: chmod +rwx ~/.cargo/bin/anchor
+
       - uses: ./.github/actions/setup/
       - uses: ./.github/actions/setup-solana/
       - uses: ./.github/actions/setup-ts/
@@ -99,6 +100,7 @@ jobs:
           name: anchor-binary-no-caching
           path: ~/.cargo/bin/
       - run: chmod +rwx ~/.cargo/bin/anchor
+      
       - run: cd ${{ matrix.node.path }} && anchor build --skip-lint
       - uses: actions/upload-artifact@v2
         with:
@@ -120,6 +122,8 @@ jobs:
         with:
           name: anchor-binary-no-caching
           path: ~/.cargo/bin/
+      - run: chmod +x ~/.cargo/bin/anchor
+
       - uses: actions/download-artifact@v2
         with:
           name: events.so
@@ -155,6 +159,7 @@ jobs:
         with:
           name: anchor-binary-no-caching
           path: ~/.cargo/bin/
+      - run: chmod +x ~/.cargo/bin/anchor
 
       - run: solana-test-validator -r --quiet &
         name: start validator
@@ -216,6 +221,7 @@ jobs:
         with:
           name: anchor-binary-no-caching
           path: ~/.cargo/bin/
+      - run: chmod +x ~/.cargo/bin/anchor
 
       - run: cd "$(mktemp -d)" && anchor init hello-anchor && cd hello-anchor && yarn link @project-serum/anchor && anchor test && yarn lint:fix
       - uses: ./.github/actions/git-diff/
@@ -293,6 +299,7 @@ jobs:
         with:
           name: anchor-binary-no-caching
           path: ~/.cargo/bin/
+      - run: chmod +x ~/.cargo/bin/anchor
 
       - run: ${{ matrix.node.cmd }}
         name: ${{ matrix.node.path }} program test
