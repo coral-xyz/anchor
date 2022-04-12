@@ -10,6 +10,10 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ## [Unreleased]
 
+### Fixes
+
+* lang: Fix `returns` being serialized as `null` instead of `undefined` ([]()).
+
 ## [0.24.1] - 2022-04-12
 
 ### Fixes
