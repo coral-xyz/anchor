@@ -6,12 +6,12 @@ import {
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
-import { Misc } from "../target/types/misc";
+import { Misc } from "../../target/types/misc";
 const { assert } = require("chai");
 
 describe("miscNonRentExempt", () => {
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.Provider.env());
+  anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.Misc as Program<Misc>;
 
   it("init_if_needed checks rent_exemption if init is not needed", async () => {

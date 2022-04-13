@@ -68,6 +68,7 @@ jobs:
             ./target/
           key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
       - run: cargo install --path cli anchor-cli --locked --force
+      - run: chmod +x ~/.cargo/bin/anchor
       - uses: actions/upload-artifact@v2
         with:
           name: anchor-binary
@@ -87,6 +88,7 @@ jobs:
           name: anchor-binary
           path: ~/.cargo/bin/
       - run: chmod +rwx ~/.cargo/bin/anchor
+
       - uses: ./.github/actions/setup/
       - uses: ./.github/actions/setup-solana/
       - uses: ./.github/actions/setup-ts/
@@ -150,6 +152,7 @@ jobs:
           name: anchor-binary
           path: ~/.cargo/bin/
       - run: chmod +rwx ~/.cargo/bin/anchor
+
       - run: cd ${{ matrix.node.path }} && anchor build --skip-lint
       - uses: actions/upload-artifact@v2
         with:
@@ -171,6 +174,8 @@ jobs:
         with:
           name: anchor-binary
           path: ~/.cargo/bin/
+      - run: chmod +x ~/.cargo/bin/anchor
+
       - uses: actions/download-artifact@v2
         with:
           name: events.so
@@ -224,6 +229,7 @@ jobs:
         with:
           name: anchor-binary
           path: ~/.cargo/bin/
+      - run: chmod +x ~/.cargo/bin/anchor
 
       - uses: actions/cache@v2
         name: Cache tests/bpf-upgradeable-state target
@@ -235,7 +241,7 @@ jobs:
       - run: solana-test-validator -r --quiet &
         name: start validator
       - run: cd tests/bpf-upgradeable-state && yarn --frozen-lockfile
-      - run: cd tests/bpf-upgradeable-state && yarn link @project-serum/anchor
+      - run: cd tests/bpf-upgradeable-state
       - run: cd tests/bpf-upgradeable-state && anchor build --skip-lint
       - run: cd tests/bpf-upgradeable-state && solana program deploy --program-id program_with_different_programdata.json target/deploy/bpf_upgradeable_state.so
       - run: cd tests/bpf-upgradeable-state && cp bpf_upgradeable_state-keypair.json target/deploy/bpf_upgradeable_state-keypair.json && anchor test --skip-local-validator --skip-build --skip-lint
@@ -279,6 +285,7 @@ jobs:
           name: anchor-binary
           path: ~/.cargo/bin/
       - run: chmod +x ~/.cargo/bin/anchor
+
       - uses: actions/cache@v2
         name: Cache tests/misc target
         id: cache-test-target
@@ -287,7 +294,7 @@ jobs:
           key: cargo-${{ runner.os }}-tests/misc-${{ env.ANCHOR_VERSION }}-1.8.14-${{ hashFiles('**/Cargo.lock') }}
       
       - run: cd tests/misc && yarn --frozen-lockfile
-      - run: cd tests/misc && yarn link @project-serum/anchor
+      - run: cd tests/misc
       - run: cd tests/misc && chmod +x ci.sh && ./ci.sh
       - run: cd tests/misc && anchor test --skip-lint
 
@@ -318,8 +325,9 @@ jobs:
         with:
           name: anchor-binary
           path: ~/.cargo/bin/
+      - run: chmod +x ~/.cargo/bin/anchor
 
-      - run: cd "$(mktemp -d)" && anchor init hello-anchor && cd hello-anchor && anchor test && yarn lint:fix
+      - run: cd "$(mktemp -d)" && anchor init hello-anchor && cd hello-anchor && yarn link @project-serum/anchor && yarn && anchor test && yarn lint:fix
       - uses: ./.github/actions/git-diff/
 
   test-programs:
@@ -407,7 +415,8 @@ jobs:
         with:
           name: anchor-binary
           path: ~/.cargo/bin/
-
+      - run: chmod +x ~/.cargo/bin/anchor
+      
       - uses: actions/cache@v2
         name: Cache ${{ matrix.node.path }} target
         id: cache-test-target

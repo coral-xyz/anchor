@@ -10,6 +10,19 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ## [Unreleased]
 
+### Fixes
+
+* lang: Fix `returns` being serialized as `null` instead of `undefined` in IDL ([#1782](https://github.com/project-serum/anchor/pull/1782)).
+
+## [0.24.1] - 2022-04-12
+
+### Fixes
+
+* lang: Fix `anchor build` failing if `Test.toml` included a relative path that didn't exist yet because it's created by `anchor build` ([#1772](https://github.com/project-serum/anchor/pull/1772)).
+* cli: Update js/ts template to use new `AnchorProvider` class ([#1770](https://github.com/project-serum/anchor/pull/1770)).
+
+## [0.24.0] - 2022-04-12
+
 ### Features
 
 * lang: Add support for multiple test suites with separate local validators ([#1681](https://github.com/project-serum/anchor/pull/1681)).
@@ -35,6 +48,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * spl: Re-export the `spl_token` crate ([#1665](https://github.com/project-serum/anchor/pull/1665)).
 * lang, cli, spl: Update solana toolchain to v1.9.13 ([#1653](https://github.com/project-serum/anchor/pull/1653) and [#1751](https://github.com/project-serum/anchor/pull/1751)).
 * lang: `Program` type now deserializes `programdata_address` only on demand ([#1723](https://github.com/project-serum/anchor/pull/1723)).
+* ts: Make `Provider` an interface and adjust its signatures and add `AnchorProvider` implementor class ([#1707](https://github.com/project-serum/anchor/pull/1707)).
 * spl: Change "to" to "from" in `token::burn` ([#1080](https://github.com/project-serum/anchor/pull/1080)).
 
 ## [0.23.0] - 2022-03-20

@@ -57,6 +57,8 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
         close,
         address,
         associated_token,
+        token_account,
+        mint,
     } = c_group.clone();
 
     let mut constraints = Vec::new();
@@ -100,6 +102,12 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
     if let Some(c) = address {
         constraints.push(Constraint::Address(c));
     }
+    if let Some(c) = token_account {
+        constraints.push(Constraint::TokenAccount(c));
+    }
+    if let Some(c) = mint {
+        constraints.push(Constraint::Mint(c));
+    }
     constraints
 }
 
@@ -120,6 +128,8 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::Close(c) => generate_constraint_close(f, c),
         Constraint::Address(c) => generate_constraint_address(f, c),
         Constraint::AssociatedToken(c) => generate_constraint_associated_token(f, c),
+        Constraint::TokenAccount(c) => generate_constraint_token_account(f, c),
+        Constraint::Mint(c) => generate_constraint_mint(f, c),
     }
 }
 
@@ -159,7 +169,7 @@ pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macr
     let field = &f.ident;
     let name_str = field.to_string();
     let ty_decl = f.ty_decl();
-    let from_account_info = f.from_account_info_unchecked(None);
+    let from_account_info = f.from_account_info(None, false);
     quote! {
         let #field: #ty_decl = {
             let mut __data: &[u8] = &#field.try_borrow_data()?;
@@ -330,7 +340,8 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
     };
 
     // Convert from account info to account context wrapper type.
-    let from_account_info = f.from_account_info_unchecked(Some(&c.kind));
+    let from_account_info = f.from_account_info(Some(&c.kind), true);
+    let from_account_info_unchecked = f.from_account_info(Some(&c.kind), false);
 
     // PDA bump seeds.
     let (find_pda, seeds_with_bump) = match &c.seeds {
@@ -398,7 +409,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                         anchor_spl::token::initialize_account(cpi_ctx)?;
                     }
 
-                    let pa: #ty_decl = #from_account_info;
+                    let pa: #ty_decl = #from_account_info_unchecked;
                     if #if_needed {
                         if pa.mint != #mint.key() {
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenMint).with_account_name(#name_str).with_pubkeys((pa.mint, #mint.key())));
@@ -433,7 +444,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                         let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, cpi_accounts);
                         anchor_spl::associated_token::create(cpi_ctx)?;
                     }
-                    let pa: #ty_decl = #from_account_info;
+                    let pa: #ty_decl = #from_account_info_unchecked;
                     if #if_needed {
                         if pa.mint != #mint.key() {
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenMint).with_account_name(#name_str).with_pubkeys((pa.mint, #mint.key())));
@@ -486,7 +497,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                         let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
                         anchor_spl::token::initialize_mint(cpi_ctx, #decimals, &#owner.key(), #freeze_authority)?;
                     }
-                    let pa: #ty_decl = #from_account_info;
+                    let pa: #ty_decl = #from_account_info_unchecked;
                     if #if_needed {
                         if pa.mint_authority != anchor_lang::solana_program::program_option::COption::Some(#owner.key()) {
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintMintMintAuthority).with_account_name(#name_str));
@@ -538,16 +549,19 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
 
                     // Create the account. Always do this in the event
                     // if needed is not specified or the system program is the owner.
-                    if !#if_needed || actual_owner == &anchor_lang::solana_program::system_program::ID {
+                    let pa: #ty_decl = if !#if_needed || actual_owner == &anchor_lang::solana_program::system_program::ID {
                         // Define the payer variable.
                         #payer
 
                         // CPI to the system program to create.
                         #create_account
-                    }
 
-                    // Convert from account info to account context wrapper type.
-                    let pa: #ty_decl = #from_account_info;
+                        // Convert from account info to account context wrapper type.
+                        #from_account_info_unchecked
+                    } else {
+                        // Convert from account info to account context wrapper type.
+                        #from_account_info
+                    };
 
                     // Assert the account was created correctly.
                     if #if_needed {
@@ -679,6 +693,63 @@ fn generate_constraint_associated_token(
                 return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintAssociated).with_account_name(#name_str).with_pubkeys((my_key, __associated_token_address)));
             }
         }
+    }
+}
+
+fn generate_constraint_token_account(
+    f: &Field,
+    c: &ConstraintTokenAccountGroup,
+) -> proc_macro2::TokenStream {
+    let name = &f.ident;
+    let authority_check = match &c.authority {
+        Some(authority) => {
+            quote! { if #name.owner != #authority.key() { return Err(anchor_lang::error::ErrorCode::ConstraintTokenOwner.into()); } }
+        }
+        None => quote! {},
+    };
+    let mint_check = match &c.mint {
+        Some(mint) => {
+            quote! { if #name.mint != #mint.key() { return Err(anchor_lang::error::ErrorCode::ConstraintTokenMint.into()); } }
+        }
+        None => quote! {},
+    };
+    quote! {
+        #authority_check
+        #mint_check
+    }
+}
+
+fn generate_constraint_mint(f: &Field, c: &ConstraintTokenMintGroup) -> proc_macro2::TokenStream {
+    let name = &f.ident;
+
+    let decimal_check = match &c.decimals {
+        Some(decimals) => quote! {
+            if #name.decimals != #decimals {
+                return Err(anchor_lang::error::ErrorCode::ConstraintMintDecimals.into());
+            }
+        },
+        None => quote! {},
+    };
+    let mint_authority_check = match &c.mint_authority {
+        Some(mint_authority) => quote! {
+            if #name.mint_authority != anchor_lang::solana_program::program_option::COption::Some(anchor_lang::Key::key(&#mint_authority)) {
+                return Err(anchor_lang::error::ErrorCode::ConstraintMintMintAuthority.into());
+            }
+        },
+        None => quote! {},
+    };
+    let freeze_authority_check = match &c.freeze_authority {
+        Some(freeze_authority) => quote! {
+            if #name.freeze_authority != anchor_lang::solana_program::program_option::COption::Some(anchor_lang::Key::key(&#freeze_authority)) {
+                return Err(anchor_lang::error::ErrorCode::ConstraintMintFreezeAuthority.into());
+            }
+        },
+        None => quote! {},
+    };
+    quote! {
+        #decimal_check
+        #mint_authority_check
+        #freeze_authority_check
     }
 }
 

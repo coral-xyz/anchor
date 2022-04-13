@@ -115,7 +115,9 @@ use syn::parse_macro_input;
 ///                         for accounts owned by anchor programs.<br>
 ///                         The given space number is the size of the account in bytes, so accounts that hold
 ///                         a variable number of items such as a <code>Vec</code> should allocate sufficient space for all items that may
-///                         be added to the data structure because account size is fixed. Check out the <a href = "https://borsh.io/" target = "_blank" rel = "noopener noreferrer">borsh library</a>
+///                         be added to the data structure because account size is fixed.
+///                         Check out the <a href = "https://book.anchor-lang.com/chapter_5/space.html" target = "_blank" rel = "noopener noreferrer">space reference</a>
+///                         and the <a href = "https://borsh.io/" target = "_blank" rel = "noopener noreferrer">borsh library</a>
 ///                         (which anchor uses under the hood for serialization) specification to learn how much
 ///                         space different data structures require.
 ///                     </li>
@@ -436,8 +438,9 @@ use syn::parse_macro_input;
 ///                 <code>#[account(token::mint = &lt;target_account&gt;, token::authority = &lt;target_account&gt;)]</code>
 ///             </td>
 ///             <td>
-///                 Can currently only be used with <code>init</code> to create a token
-///                 account with the given mint address and authority.
+///                 Can be used as a check or with <code>init</code> to create a token
+///                 account with the given mint address and authority.<br>
+///                  When used as a check, it's possible to only specify a subset of the constraints.
 ///                 <br><br>
 ///                 Example:
 ///                 <pre>
@@ -466,9 +469,10 @@ use syn::parse_macro_input;
 ///                 <code>#[account(mint::authority = &lt;target_account&gt;, mint::decimals = &lt;expr&gt;, mint::freeze_authority = &lt;target_account&gt;)]</code>
 ///             </td>
 ///             <td>
-///                 Can currently only be used with <code>init</code> to create a mint
+///                 Can be used as a check or with <code>init</code> to create a mint
 ///                 account with the given mint decimals and mint authority.<br>
-///                 The freeze authority is optional.
+///                 The freeze authority is optional when used with <code>init</code>.<br>
+///                 When used as a check, it's possible to only specify a subset of the constraints.
 ///                 <br><br>
 ///                 Example:
 ///                 <pre>
