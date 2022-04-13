@@ -272,7 +272,6 @@ describe("misc", () => {
     assert.isNull(closedAccount);
   });
 
-
   it("Can execute a fallback function", async () => {
     await nativeAssert.rejects(
       async () => {
@@ -283,8 +282,8 @@ describe("misc", () => {
         return true;
       }
     );
-  }); 
-  
+  });
+
   it("Can initialize multiple accounts via a composite payer", async () => {
     const data1 = anchor.web3.Keypair.generate();
     const data2 = anchor.web3.Keypair.generate();
@@ -528,7 +527,7 @@ describe("misc", () => {
   it("Should not include NO_IDL const in IDL", async () => {
     assert.isUndefined(miscIdl.constants.find((c) => c.name === "NO_IDL"));
   });
-  
+
   it("init_if_needed throws if associated token exists but has the wrong owner", async () => {
     const mint = Keypair.generate();
     await program.rpc.testInitMint({
