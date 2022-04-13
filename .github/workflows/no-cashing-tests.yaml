@@ -1,10 +1,7 @@
-name: Tests
+name: No Cashing Tests
 
 on:
   push:
-    branches:
-      - master
-  pull_request:
     branches:
       - master
 env:
@@ -22,17 +19,6 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - uses: actions/cache@v2
-        name: Cache Cargo registry + index
-        id: cache-cargo-build
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            ./target/
-          key: cargo-${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
       - run: cargo build
       - run: cargo fmt -- --check
       - run: cargo clippy --all-targets -- -D warnings
@@ -56,22 +42,11 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup/
 
-      - uses: actions/cache@v2
-        name: Cache Cargo registry + index
-        id: cache-anchor
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            ./target/
-          key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
       - run: cargo install --path cli anchor-cli --locked --force
       - run: chmod +x ~/.cargo/bin/anchor
       - uses: actions/upload-artifact@v2
         with:
-          name: anchor-binary
+          name: anchor-binary-no-caching
           path: ~/.cargo/bin/anchor
 
       - uses: ./.github/actions/git-diff/
@@ -85,43 +60,13 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
         with:
-          name: anchor-binary
+          name: anchor-binary-no-caching
           path: ~/.cargo/bin/
       - run: chmod +rwx ~/.cargo/bin/anchor
 
       - uses: ./.github/actions/setup/
       - uses: ./.github/actions/setup-solana/
       - uses: ./.github/actions/setup-ts/
-      - uses: actions/cache@v2
-        name: basic-0 cache
-        id: cache-basic-0
-        with:
-          path: ./examples/tutorial/basic-0/target
-          key: cargo-${{ runner.os }}-${{ hashFiles('./examples/tutorial/basic-0/**/Cargo.toml') }}-${{ env.SOLANA_CLI_VERSION }}-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions/cache@v2
-        name: basic-1 cache
-        id: cache-basic-1
-        with:
-          path: ./examples/tutorial/basic-1/target
-          key: cargo-${{ runner.os }}-${{ hashFiles('./examples/tutorial/basic-1/**/Cargo.toml') }}-${{ env.SOLANA_CLI_VERSION }}-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions/cache@v2
-        name: basic-2 cache
-        id: cache-basic-2
-        with:
-          path: ./examples/tutorial/basic-2/target
-          key: cargo-${{ runner.os }}-${{ hashFiles('./examples/tutorial/basic-2/**/Cargo.toml') }}-${{ env.SOLANA_CLI_VERSION }}-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions/cache@v2
-        name: basic-3 cache
-        id: cache-basic-3
-        with:
-          path: ./examples/tutorial/basic-3/target
-          key: cargo-${{ runner.os }}-${{ hashFiles('./examples/tutorial/basic-3/**/Cargo.toml') }}-${{ env.SOLANA_CLI_VERSION }}-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions/cache@v2
-        name: basic-4 cache
-        id: cache-basic-4
-        with:
-          path: ./examples/tutorial/basic-4/target
-          key: cargo-${{ runner.os }}-${{ hashFiles('./examples/tutorial/basic-4/**/Cargo.toml') }}-${{ env.SOLANA_CLI_VERSION }}-${{ hashFiles('**/Cargo.lock') }}
       - run: cd examples/tutorial && yarn workspaces run test
       - uses: ./.github/actions/git-diff/
 
@@ -149,7 +94,7 @@ jobs:
 
       - uses: actions/download-artifact@v2
         with:
-          name: anchor-binary
+          name: anchor-binary-no-caching
           path: ~/.cargo/bin/
       - run: chmod +rwx ~/.cargo/bin/anchor
 
@@ -172,7 +117,7 @@ jobs:
 
       - uses: actions/download-artifact@v2
         with:
-          name: anchor-binary
+          name: anchor-binary-no-caching
           path: ~/.cargo/bin/
       - run: chmod +x ~/.cargo/bin/anchor
 
@@ -192,12 +137,6 @@ jobs:
         with:
           name: composite.so
           path: tests/composite/target/deploy/
-      - uses: actions/cache@v2
-        name: Cache client/example target
-        id: cache-test-target
-        with:
-          path: client/example/target
-          key: cargo-${{ runner.os }}-client/example-${{ env.ANCHOR_VERSION }}-${{ env.SOLANA_CLI_VERSION }}-${{ hashFiles('**/Cargo.lock') }}
       - uses: ./.github/actions/setup-solana/
       - run: cd client/example && ./run-test.sh
       - uses: ./.github/actions/git-diff/
@@ -213,30 +152,11 @@ jobs:
       - uses: ./.github/actions/setup-ts/
       - uses: ./.github/actions/setup-solana/
 
-      - uses: actions/cache@v2
-        name: Cache Cargo registry + index
-        id: cache-anchor
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            ./target/
-          key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
-
       - uses: actions/download-artifact@v2
         with:
-          name: anchor-binary
+          name: anchor-binary-no-caching
           path: ~/.cargo/bin/
       - run: chmod +x ~/.cargo/bin/anchor
-
-      - uses: actions/cache@v2
-        name: Cache tests/bpf-upgradeable-state target
-        id: cache-test-target
-        with:
-          path: tests/bpf-upgradeable-state/target
-          key: cargo-${{ runner.os }}-tests/bpf-upgradeable-state-${{ env.ANCHOR_VERSION }}-${{ env.SOLANA_CLI_VERSION }}-${{ hashFiles('**/Cargo.lock') }}
 
       - run: solana-test-validator -r --quiet &
         name: start validator
@@ -253,7 +173,7 @@ jobs:
   test-misc-non-rent-exempt:
     # the anchor cli is built with a different solana version
     # but that's fine since it's just the cli
-    needs: setup-anchor-cli
+    needs: setup-anchor-cli 
     name: Test tests/misc/nonRentExempt
     runs-on: ubuntu-18.04
     timeout-minutes: 30
@@ -261,14 +181,6 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup/
       - uses: ./.github/actions/setup-ts/
-      - uses: actions/cache@v2
-        name: Cache Solana Tool Suite
-        id: cache-solana
-        with:
-          path: |
-            ~/.cache/solana/
-            ~/.local/share/solana/
-          key: solana-${{ runner.os }}-v0000-1.8.14
       # using an outdated validator but that
       # is ok as long as the test doesn't
       # include newer incompatible features
@@ -282,17 +194,10 @@ jobs:
         shell: bash
       - uses: actions/download-artifact@v2
         with:
-          name: anchor-binary
+          name: anchor-binary-no-caching
           path: ~/.cargo/bin/
       - run: chmod +x ~/.cargo/bin/anchor
-
-      - uses: actions/cache@v2
-        name: Cache tests/misc target
-        id: cache-test-target
-        with:
-          path: tests/misc/target
-          key: cargo-${{ runner.os }}-tests/misc-${{ env.ANCHOR_VERSION }}-1.8.14-${{ hashFiles('**/Cargo.lock') }}
-
+      
       - run: cd tests/misc && yarn --frozen-lockfile
       - run: cd tests/misc
       - run: cd tests/misc && chmod +x ci.sh && ./ci.sh
@@ -309,25 +214,13 @@ jobs:
       - uses: ./.github/actions/setup-ts/
       - uses: ./.github/actions/setup-solana/
 
-      - uses: actions/cache@v2
-        name: Cache Cargo registry + index
-        id: cache-anchor
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            ./target/
-          key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
-
       - uses: actions/download-artifact@v2
         with:
-          name: anchor-binary
+          name: anchor-binary-no-caching
           path: ~/.cargo/bin/
       - run: chmod +x ~/.cargo/bin/anchor
 
-      - run: cd "$(mktemp -d)" && anchor init hello-anchor && cd hello-anchor && yarn link @project-serum/anchor && yarn && anchor test && yarn lint:fix
+      - run: cd "$(mktemp -d)" && anchor init hello-anchor && cd hello-anchor && yarn link @project-serum/anchor && anchor test && yarn lint:fix
       - uses: ./.github/actions/git-diff/
 
   test-programs:
@@ -399,30 +292,11 @@ jobs:
       - uses: ./.github/actions/setup-ts/
       - uses: ./.github/actions/setup-solana/
 
-      - uses: actions/cache@v2
-        name: Cache Cargo registry + index
-        id: cache-anchor
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            ./target/
-          key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
-
       - uses: actions/download-artifact@v2
         with:
-          name: anchor-binary
+          name: anchor-binary-no-caching
           path: ~/.cargo/bin/
       - run: chmod +x ~/.cargo/bin/anchor
-
-      - uses: actions/cache@v2
-        name: Cache ${{ matrix.node.path }} target
-        id: cache-test-target
-        with:
-          path: ${{ matrix.node.path }}/target
-          key: cargo-${{ runner.os }}-${{ matrix.node.path }}-${{ env.ANCHOR_VERSION }}-${{ env.SOLANA_CLI_VERSION }}-${{ hashFiles('**/Cargo.lock') }}
 
       - run: ${{ matrix.node.cmd }}
         name: ${{ matrix.node.path }} program test
