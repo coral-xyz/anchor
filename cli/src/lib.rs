@@ -2373,8 +2373,8 @@ fn deploy(
             );
             println!("Program path: {}...", binary_path);
 
-            let program_keypair_filepath = match program_keypair.clone() {
-                Some(program_keypair) => program_keypair,
+            let program_keypair_filepath = match &program_keypair {
+                Some(program_keypair) => program_keypair.clone(),
                 None => program.keypair_file()?.path().display().to_string(),
             };
 
