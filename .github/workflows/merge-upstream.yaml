@@ -1,0 +1,17 @@
+name: Merge Upstream
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+
+jobs:
+  merge-upstream:
+    name: Merge Upstream
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/merge-upstream/
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          workflow-token: ${{ secrets.WORKFLOW_TOKEN }}
