@@ -13,7 +13,7 @@ describe("composite", () => {
     const dummyA = anchor.web3.Keypair.generate();
     const dummyB = anchor.web3.Keypair.generate();
 
-    const tx = await program.rpc.initialize({
+    const tx = await program.methods.initialize({
       accounts: {
         dummyA: dummyA.publicKey,
         dummyB: dummyB.publicKey,

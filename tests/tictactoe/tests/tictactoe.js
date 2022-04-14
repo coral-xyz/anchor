@@ -24,7 +24,7 @@ describe("tictactoe", () => {
   });
 
   it("Initialize Game", async () => {
-    const tx = await program.rpc.initialize({
+    const tx = await program.methods.initialize({
       accounts: {
         playerX: program.provider.wallet.publicKey,
         dashboard: dashboard.publicKey,

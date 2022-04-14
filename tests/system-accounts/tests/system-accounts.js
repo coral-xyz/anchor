@@ -9,7 +9,7 @@ describe("system_accounts", () => {
   const wallet = anchor.web3.Keypair.generate();
 
   it("Is initialized!", async () => {
-    const tx = await program.rpc.initialize({
+    const tx = await program.methods.initialize({
       accounts: {
         authority: authority.publicKey,
         wallet: wallet.publicKey,
@@ -42,7 +42,7 @@ describe("system_accounts", () => {
     );
 
     try {
-      await program.rpc.initialize({
+      await program.methods.initialize({
         accounts: {
           authority: authority.publicKey,
           wallet: tokenAccount,

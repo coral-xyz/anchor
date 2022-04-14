@@ -19,7 +19,7 @@ describe("basic-1", () => {
 
     // Create the new account and initialize it with the program.
     // #region code-simplified
-    await program.rpc.initialize(new anchor.BN(1234), {
+    await program.methods.initialize(new anchor.BN(1234), {
       accounts: {
         myAccount: myAccount.publicKey,
         user: provider.wallet.publicKey,

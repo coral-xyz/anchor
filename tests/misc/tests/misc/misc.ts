@@ -44,7 +44,7 @@ describe("misc", () => {
   const data = anchor.web3.Keypair.generate();
 
   it("Can use u128 and i128", async () => {
-    const tx = await program.rpc.initialize(
+    const tx = await program.methods.initialize(
       new anchor.BN(1234),
       new anchor.BN(22),
       {
