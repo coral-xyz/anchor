@@ -20,7 +20,7 @@ async function main() {
   // Generate the program client from IDL.
   const program = new anchor.Program(idl, programId);
 
-  // Execute the RPC.
+  // Execute the method.
   await program.methods.initialize();
   // #endregion main
 }
