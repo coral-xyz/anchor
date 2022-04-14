@@ -30,7 +30,7 @@ describe("CPI return", () => {
   const confirmOptions = { commitment: "confirmed" };
 
   it("can initialize", async () => {
-    await calleeProgram.methods
+    const tx = await calleeProgram.methods
       .initialize()
       .accounts({
         account: cpiReturn.publicKey,
@@ -39,6 +39,10 @@ describe("CPI return", () => {
       })
       .signers([cpiReturn])
       .rpc();
+
+    await provider.connection.getTransaction(tx, {
+      commitment: "confirmed",
+    });
   });
 
   it("can return u64 from a cpi", async () => {
