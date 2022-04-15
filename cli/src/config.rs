@@ -274,6 +274,7 @@ pub struct Config {
     pub provider: ProviderConfig,
     pub programs: ProgramsConfig,
     pub scripts: ScriptsConfig,
+    pub hooks: Option<HooksConfig>,
     pub workspace: WorkspaceConfig,
     // Separate entry next to test_config because
     // "anchor localnet" only has access to the Anchor.toml,
@@ -308,6 +309,16 @@ pub struct ProviderConfig {
 }
 
 pub type ScriptsConfig = BTreeMap<String, String>;
+
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct HooksConfig {
+    pub pre_build: Option<String>,
+    pub post_build: Option<String>,
+    pub pre_test: Option<String>,
+    pub post_test: Option<String>,
+    pub pre_deploy: Option<String>,
+    pub post_deploy: Option<String>,
+}
 
 pub type ProgramsConfig = BTreeMap<Cluster, BTreeMap<String, ProgramDeployment>>;
 
@@ -413,6 +424,7 @@ struct _Config {
     provider: Provider,
     workspace: Option<WorkspaceConfig>,
     scripts: Option<ScriptsConfig>,
+    hooks: Option<HooksConfig>,
     test: Option<_TestValidator>,
 }
 
@@ -446,6 +458,7 @@ impl ToString for Config {
                 true => None,
                 false => Some(self.scripts.clone()),
             },
+            hooks: self.hooks.clone(),
             programs,
             workspace: (!self.workspace.members.is_empty() || !self.workspace.exclude.is_empty())
                 .then(|| self.workspace.clone()),
@@ -471,6 +484,7 @@ impl FromStr for Config {
                 wallet: shellexpand::tilde(&cfg.provider.wallet).parse()?,
             },
             scripts: cfg.scripts.unwrap_or_default(),
+            hooks: cfg.hooks,
             test_validator: cfg.test.map(Into::into),
             test_config: None,
             programs: cfg.programs.map_or(Ok(BTreeMap::new()), deser_programs)?,
