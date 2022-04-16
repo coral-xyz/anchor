@@ -12,7 +12,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Fixes
 
-* lang: Fix missing account name information when deserialization fails when using `init` or `zero` ([]()).
+* lang: Fix missing account name information when deserialization fails when using `init` or `zero` ([#1800](https://github.com/project-serum/anchor/pull/1800)).
 
 ## [0.24.2] - 2022-04-13
 
