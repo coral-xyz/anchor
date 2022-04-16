@@ -195,7 +195,7 @@ pub mod cfo {
         let expiry_ts = 1853942400; // 9/30/2028.
         let expiry_receiver = *ctx.accounts.officer.to_account_info().key;
         let locked_kind = {
-            let start_ts = 1633017600; // 9/30.23.0.
+            let start_ts = 1633017600; // 9/30.24.2.
             let end_ts = 1822320000; // 9/30/2027.
             let period_count = 2191;
             RewardVendorKind::Locked {
@@ -835,7 +835,7 @@ impl<'info> Distribute<'info> {
         let program = self.token_program.to_account_info();
         let accounts = token::Burn {
             mint: self.srm_mint.to_account_info(),
-            to: self.srm_vault.to_account_info(),
+            from: self.srm_vault.to_account_info(),
             authority: self.officer.to_account_info(),
         };
         CpiContext::new(program, accounts)

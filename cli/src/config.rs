@@ -335,9 +335,9 @@ pub struct BuildConfig {
 }
 
 impl Config {
-    fn with_test_config(mut self, p: impl AsRef<Path>) -> Result<Self> {
-        self.test_config = TestConfig::discover(p)?;
-        Ok(self)
+    pub fn add_test_config(&mut self, root: impl AsRef<Path>) -> Result<()> {
+        self.test_config = TestConfig::discover(root)?;
+        Ok(())
     }
 
     pub fn docker(&self) -> String {
@@ -393,8 +393,7 @@ impl Config {
     fn from_path(p: impl AsRef<Path>) -> Result<Self> {
         fs::read_to_string(&p)
             .with_context(|| format!("Error reading the file with path: {}", p.as_ref().display()))?
-            .parse::<Self>()?
-            .with_test_config(p.as_ref().parent().unwrap())
+            .parse::<Self>()
     }
 
     pub fn wallet_kp(&self) -> Result<Keypair> {
@@ -680,11 +679,20 @@ impl _TestToml {
 /// into a canonical one
 fn canonicalize_filepath_from_origin(
     file_path: impl AsRef<Path>,
-    path: impl AsRef<Path>,
+    origin: impl AsRef<Path>,
 ) -> Result<String> {
     let previous_dir = std::env::current_dir()?;
-    std::env::set_current_dir(path.as_ref().parent().unwrap())?;
-    let result = fs::canonicalize(file_path)?.display().to_string();
+    std::env::set_current_dir(origin.as_ref().parent().unwrap())?;
+    let result = fs::canonicalize(&file_path)
+        .with_context(|| {
+            format!(
+                "Error reading (possibly relative) path: {}. If relative, this is the path that was used as the current path: {}",
+                &file_path.as_ref().display(),
+                &origin.as_ref().display()
+            )
+        })?
+        .display()
+        .to_string();
     std::env::set_current_dir(previous_dir)?;
     Ok(result)
 }

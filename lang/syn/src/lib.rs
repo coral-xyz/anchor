@@ -281,9 +281,22 @@ impl Field {
 
     // TODO: remove the option once `CpiAccount` is completely removed (not
     //       just deprecated).
-    pub fn from_account_info_unchecked(&self, kind: Option<&InitKind>) -> proc_macro2::TokenStream {
+    pub fn from_account_info(
+        &self,
+        kind: Option<&InitKind>,
+        checked: bool,
+    ) -> proc_macro2::TokenStream {
         let field = &self.ident;
         let container_ty = self.container_ty();
+        let owner_addr = match &kind {
+            None => quote! { program_id },
+            Some(InitKind::Program { .. }) => quote! {
+                program_id
+            },
+            _ => quote! {
+                &anchor_spl::token::ID
+            },
+        };
         match &self.ty {
             Ty::AccountInfo => quote! { #field.to_account_info() },
             Ty::UncheckedAccount => {
@@ -314,11 +327,20 @@ impl Field {
                 }
                 stream
             }
-            Ty::CpiAccount(_) => {
-                quote! {
-                    #container_ty::try_from_unchecked(
-                        &#field,
-                    )?
+            Ty::AccountLoader(_) => {
+                if checked {
+                    quote! {
+                        #container_ty::try_from(
+                            &#field,
+                        )?
+                    }
+                } else {
+                    quote! {
+                        #container_ty::try_from_unchecked(
+                            #owner_addr,
+                            &#field,
+                        )?
+                    }
                 }
             }
             _ => {
@@ -596,6 +618,8 @@ pub struct ConstraintGroup {
     close: Option<ConstraintClose>,
     address: Option<ConstraintAddress>,
     associated_token: Option<ConstraintAssociatedToken>,
+    token_account: Option<ConstraintTokenAccountGroup>,
+    mint: Option<ConstraintTokenMintGroup>,
 }
 
 impl ConstraintGroup {
@@ -637,6 +661,8 @@ pub enum Constraint {
     State(ConstraintState),
     Close(ConstraintClose),
     Address(ConstraintAddress),
+    TokenAccount(ConstraintTokenAccountGroup),
+    Mint(ConstraintTokenMintGroup),
 }
 
 // Constraint token is a single keyword in a `#[account(<TOKEN>)]` attribute.
@@ -839,6 +865,19 @@ pub struct ConstraintProgramSeed {
 pub struct ConstraintAssociatedToken {
     pub wallet: Expr,
     pub mint: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintTokenAccountGroup {
+    pub mint: Option<Expr>,
+    pub authority: Option<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintTokenMintGroup {
+    pub decimals: Option<Expr>,
+    pub mint_authority: Option<Expr>,
+    pub freeze_authority: Option<Expr>,
 }
 
 // Syntaxt context object for preserving metadata about the inner item.

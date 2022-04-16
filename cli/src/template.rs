@@ -65,6 +65,9 @@ no-log-ix-name = []
 cpi = ["no-entrypoint"]
 default = []
 
+[profile.release]
+overflow-checks = true
+
 [dependencies]
 anchor-lang = "{2}"
 "#,
@@ -88,7 +91,7 @@ async function main() {{
     const connection = new anchor.web3.Connection(url, preflightCommitment);
     const wallet = anchor.Wallet.local();
 
-    const provider = new anchor.Provider(connection, wallet, {{
+    const provider = new anchor.AnchorProvider(connection, wallet, {{
         preflightCommitment,
         commitment: 'recent',
     }});
@@ -115,7 +118,7 @@ async function main() {{
     const connection = new anchor.web3.Connection(url, preflightCommitment);
     const wallet = anchor.Wallet.local();
 
-    const provider = new anchor.Provider(connection, wallet, {{
+    const provider = new anchor.AnchorProvider(connection, wallet, {{
         preflightCommitment,
         commitment: 'recent',
     }});
@@ -196,7 +199,7 @@ pub fn mocha(name: &str) -> String {
 
 describe("{}", () => {{
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.Provider.env());
+  anchor.setProvider(anchor.AnchorProvider.env());
 
   it("Is initialized!", async () => {{
     // Add your test here.
@@ -214,12 +217,17 @@ describe("{}", () => {{
 pub fn package_json() -> String {
     format!(
         r#"{{
+    "scripts": {{
+        "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
+        "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
+    }},
     "dependencies": {{
         "@project-serum/anchor": "^{0}"
     }},
     "devDependencies": {{
         "chai": "^4.3.4",
-        "mocha": "^9.0.3"
+        "mocha": "^9.0.3",
+        "prettier": "^2.6.2"
     }}
 }}
 "#,
@@ -230,6 +238,10 @@ pub fn package_json() -> String {
 pub fn ts_package_json() -> String {
     format!(
         r#"{{
+    "scripts": {{
+        "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
+        "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
+    }},
     "dependencies": {{
         "@project-serum/anchor": "^{0}"
     }},
@@ -240,7 +252,8 @@ pub fn ts_package_json() -> String {
         "@types/bn.js": "^5.1.0",
         "@types/chai": "^4.3.0",
         "@types/mocha": "^9.0.0",
-        "typescript": "^4.3.5"
+        "typescript": "^4.3.5",
+        "prettier": "^2.6.2"
     }}
 }}
 "#,
@@ -256,7 +269,7 @@ import {{ {} }} from "../target/types/{}";
 
 describe("{}", () => {{
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.Provider.env());
+  anchor.setProvider(anchor.AnchorProvider.env());
 
   const program = anchor.workspace.{} as Program<{}>;
 
@@ -300,6 +313,18 @@ test-ledger
 "#
 }
 
+pub fn prettier_ignore() -> &'static str {
+    r#"
+.anchor
+.DS_Store
+target
+node_modules
+dist
+build
+test-ledger
+"#
+}
+
 pub fn node_shell(
     cluster_url: &str,
     wallet_path: &str,
@@ -327,7 +352,7 @@ const __wallet = new anchor.Wallet(
   ),
 );
 const __connection = new web3.Connection("{}", "processed");
-const provider = new anchor.Provider(__connection, __wallet, {{
+const provider = new anchor.AnchorProvider(__connection, __wallet, {{
   commitment: "processed",
   preflightcommitment: "processed",
 }});
