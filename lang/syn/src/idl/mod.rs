@@ -8,7 +8,7 @@ pub mod pda;
 pub struct Idl {
     pub version: String,
     pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub doc: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub constants: Vec<IdlConst>,
