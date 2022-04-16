@@ -1632,4 +1632,49 @@ describe("misc", () => {
       });
     });
   });
+
+  describe("IDL doc strings", () => {
+    const instruction = program.idl.instructions.find(
+        (i) => i.name === "testIdlDocParse"
+    );
+    it("includes instruction doc comment", async () => {
+        assert(
+            instruction.doc === 
+                "This instruction doc should appear in the IDL"
+        );
+    });
+
+    it("includes account doc comment", async () => {
+        const act = instruction.accounts.find(
+            (i) => i.name === 'act'
+        );
+        console.log(act);
+        assert(
+            act.doc === 
+                "This account doc comment should appear in the IDL"
+        );
+    });
+
+    const dataWithDoc = program.idl.accounts.find(
+        (i) => i.name === 'DataWithDoc'
+    );
+    console.log(dataWithDoc);
+
+    it("includes accounts doc comment", async () => {
+        assert(
+            dataWithDoc.doc === 
+                "Custom account doc comment should appear in the IDL"
+        );
+    });
+
+    it("includes account attribute doc comment", async () => {
+        const dataField = dataWithDoc.type.fields.find(
+            (i) => i.name === 'data'
+        );
+        assert(
+            dataField.doc === 
+                "Account attribute doc comment should appear in the IDL"
+        );
+    });
+  });
 });

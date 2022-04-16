@@ -280,4 +280,11 @@ pub mod misc {
     ) -> Result<()> {
         Ok(())
     }
+
+    /// This instruction doc should appear in the IDL
+    pub fn test_idl_doc_parse(
+        _ctx: Context<TestIdlDocParse>,
+    ) -> Result<()> {
+        Ok(())
+    }
 }

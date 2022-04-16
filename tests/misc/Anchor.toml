@@ -15,3 +15,4 @@ exclude = ["programs/shared"]
 
 [scripts]
 test = "yarn run mocha -t 1000000 tests/"
+

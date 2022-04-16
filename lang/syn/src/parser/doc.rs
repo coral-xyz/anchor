@@ -9,7 +9,11 @@ pub fn parse(attrs: &[syn::Attribute]) -> Option<String> {
             Ok(NameValue(meta)) => {
                 if meta.path.is_ident("doc") {
                     if let Str(doc) = meta.lit {
-                        return Some(doc.value().trim().to_string());
+                        let val = doc.value().trim().to_string();
+                        if val.starts_with("CHECK:") {
+                            return None;
+                        }
+                        return Some(val);
                     }
                 }
                 return None;

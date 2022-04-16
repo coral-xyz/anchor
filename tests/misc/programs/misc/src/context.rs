@@ -458,3 +458,10 @@ pub struct TestUnsafeFieldSafetyErrors<'info> {
     pub signer: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
+
+#[derive(Accounts)]
+pub struct TestIdlDocParse<'info> {
+    /// This account doc comment should appear in the IDL
+    /// CHECK:
+    pub act: Account<'info, DataWithDoc>,
+}

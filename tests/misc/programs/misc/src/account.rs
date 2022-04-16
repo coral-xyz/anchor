@@ -48,3 +48,10 @@ pub struct DataMultidimensionalArray {
 pub struct DataConstArraySize {
     pub data: [u8; MAX_SIZE],
 }
+
+/// Custom account doc comment should appear in the IDL
+#[account]
+pub struct DataWithDoc {
+    /// Account attribute doc comment should appear in the IDL
+    pub data: u16,
+}
