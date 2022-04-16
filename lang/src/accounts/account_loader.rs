@@ -114,20 +114,18 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         }
     }
 
-    pub fn init(info: &AccountInfo<'info>, program_id: &Pubkey) -> Result<AccountLoader<'info, T>> {
-        // init is also called by the `zero` constraint which may be used
-        // to init an account from a different program through a CPI and then
-        // read its data once the CPI returns. Therefore, the caller of the CPI
-        // shouldn't try to initialize the account
-        // because it's not owned by them.
-        if T::owner() == *program_id {
+    pub fn init(info: &AccountInfo<'info>) -> Result<AccountLoader<'info, T>> {
+        {
+            // separate lexical scope so "data" is dropped
+            // before calling try_from_unchecked
             let data: &mut [u8] = &mut info.try_borrow_mut_data()?;
             if data.len() < 8 {
                 return Err(anchor_lang::error::ErrorCode::AccountDidNotSerialize.into());
             }
             crate::solana_program::program_memory::sol_memcpy(data, &T::DISCRIMINATOR, 8);
         }
-        Self::try_from_unchecked(program_id, info)
+        // We just set the discriminator, so there is no need to check it
+        Self::try_from_unchecked(info)
     }
 
     /// Constructs a new `AccountLoader` from a previously initialized account.
@@ -150,10 +148,7 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
 
     /// Constructs a new `AccountLoader` without checking the discriminator.
     #[inline(never)]
-    pub fn try_from_unchecked(
-        _program_id: &Pubkey,
-        info: &AccountInfo<'info>,
-    ) -> Result<AccountLoader<'info, T>> {
+    pub fn try_from_unchecked(info: &AccountInfo<'info>) -> Result<AccountLoader<'info, T>> {
         Self::account_checks(info)?;
         Ok(AccountLoader::new(info.clone()))
     }

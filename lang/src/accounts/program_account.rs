@@ -32,9 +32,10 @@ struct Inner<'info, T: AccountSerializeWithHeader + AccountDeserializeWithHeader
 impl<'a, T: AccountSerializeWithHeader + AccountDeserializeWithHeader + Clone + Discriminator>
     ProgramAccount<'a, T>
 {
-    pub fn init(info: &AccountInfo<'a>, program_id: &Pubkey) -> Result<Self> {
+    pub fn init(program_id: &Pubkey, info: &AccountInfo<'a>) -> Result<Self> {
         {
-            // separate lexical scope so `data` gets dropped before the `try_from_unchecked` call
+            // separate lexical scope so `data` gets dropped
+            // before the `try_from_unchecked` call
             let data: &mut [u8] = &mut info.try_borrow_mut_data()?;
             if data.len() < 8 {
                 return Err(anchor_lang::error::ErrorCode::AccountDidNotSerialize.into());

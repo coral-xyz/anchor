@@ -323,13 +323,10 @@ impl<'a, T> Account<'a, T>
 where
     T: Discriminator + AccountDeserializeWithHeader + Owner,
 {
-    pub fn init(info: &AccountInfo<'a>, program_id: &Pubkey) -> Result<Self> {
-        // init is also called by the `zero` constraint which may be used
-        // to init an account from a different program through a CPI and then
-        // read its data once the CPI returns. Therefore, the caller of the CPI
-        // shouldn't try to initialize the account
-        // because it's not owned by them.
-        if T::owner() == *program_id {
+    pub fn init(info: &AccountInfo<'a>) -> Result<Self> {
+        {
+            // separate lexical scope so "data" is dropped
+            // before calling try_from_unchecked
             let data: &mut [u8] = &mut info.try_borrow_mut_data()?;
             if data.len() < 8 {
                 return Err(anchor_lang::error::ErrorCode::AccountDidNotSerialize.into());

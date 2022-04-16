@@ -51,15 +51,17 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         }
     }
 
-    pub fn init(info: &AccountInfo<'info>, program_id: &Pubkey) -> Result<Loader<'info, T>> {
+    pub fn init(program_id: &Pubkey, info: &AccountInfo<'info>) -> Result<Loader<'info, T>> {
         {
-            // separate lexical scope so `data` gets dropped before the `try_from_unchecked` call
+            // separate lexical scope so `data` gets dropped
+            // before the `try_from_unchecked` call
             let data: &mut [u8] = &mut info.try_borrow_mut_data()?;
             if data.len() < 8 {
                 return Err(anchor_lang::error::ErrorCode::AccountDidNotSerialize.into());
             }
             crate::solana_program::program_memory::sol_memcpy(data, &T::DISCRIMINATOR, 8);
         }
+        // We just set the discriminator, so there is no need to check it
         Self::try_from_unchecked(program_id, info)
     }
 
