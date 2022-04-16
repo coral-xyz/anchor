@@ -24,7 +24,7 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<(Vec<Ix>, Option<Fallbac
         })
         .map(|method: &syn::ItemFn| {
             let (ctx, args) = parse_args(method)?;
-            let doc = doc::parse_inner(&method.attrs);
+            let doc = doc::parse(&method.attrs);
             let anchor_ident = ctx_accounts_ident(&ctx.raw_arg)?;
             Ok(Ix {
                 raw_method: method.clone(),
@@ -73,7 +73,7 @@ pub fn parse_args(method: &syn::ItemFn) -> ParseResult<(IxArg, Vec<IxArg>)> {
         .iter()
         .map(|arg: &syn::FnArg| match arg {
             syn::FnArg::Typed(arg) => {
-                let doc = doc::parse_any(&arg.attrs);
+                let doc = doc::parse(&arg.attrs);
                 let ident = match &*arg.pat {
                     syn::Pat::Ident(ident) => &ident.ident,
                     _ => return Err(ParseError::new(arg.pat.span(), "expected argument name")),

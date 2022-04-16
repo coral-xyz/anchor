@@ -144,7 +144,7 @@ pub fn parse_account_field(f: &syn::Field, has_instruction_api: bool) -> ParseRe
             "".to_string()
         })
         .collect::<String>();
-    let doc = doc::parse_any(&f.attrs);
+    let doc = doc::parse(&f.attrs);
     let account_field = match is_field_primitive(f)? {
         true => {
             let ty = parse_ty(f)?;

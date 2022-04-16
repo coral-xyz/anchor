@@ -8,7 +8,7 @@ mod state;
 
 pub fn parse(program_mod: syn::ItemMod) -> ParseResult<Program> {
     let state = state::parse(&program_mod)?;
-    let doc = doc::parse_inner(&program_mod.attrs);
+    let doc = doc::parse(&program_mod.attrs);
     let (ixs, fallback_fn) = instructions::parse(&program_mod)?;
     Ok(Program {
         state,

@@ -1,37 +1,25 @@
-use syn::AttrStyle::Inner;
 use syn::{Lit::Str, Meta::NameValue};
 
-// Returns first match or None
-pub fn parse_inner(attrs: &[syn::Attribute]) -> Option<String> {
-    for attr in attrs {
-        if let syn::Attribute {
-            style: Inner(..), ..
-        } = attr
-        {
-            let meta_result = attr.parse_meta();
-            if let Ok(NameValue(meta)) = meta_result {
+
+// Returns space separated doc comments
+pub fn parse(attrs: &[syn::Attribute]) -> Option<String> {
+    let doc_strings: Vec<String> = attrs
+        .iter()
+        .filter_map(|attr| match attr.parse_meta() {
+            Ok(NameValue(meta)) => {
                 if meta.path.is_ident("doc") {
                     if let Str(doc) = meta.lit {
                         return Some(doc.value().trim().to_string());
                     }
                 }
-            }
-        }
+                return None;
+            },
+            _ => None,
+        })
+        .collect();
+    if doc_strings.is_empty() {
+        None
+    } else {
+        Some(doc_strings.join(" "))
     }
-    None
-}
-
-// Returns first match or None
-pub fn parse_any(attrs: &[syn::Attribute]) -> Option<String> {
-    for attr in attrs {
-        let meta_result = attr.parse_meta();
-        if let Ok(NameValue(meta)) = meta_result {
-            if meta.path.is_ident("doc") {
-                if let Str(doc) = meta.lit {
-                    return Some(doc.value().trim().to_string());
-                }
-            }
-        }
-    }
-    None
 }
