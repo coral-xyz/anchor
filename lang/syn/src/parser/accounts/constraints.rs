@@ -598,7 +598,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 return Err(ParseError::new(
                     associated_token.mint.span(),
                     "'associated_token' constraints cannot be used with the 'seeds' constraint",
-                ))
+                ));
             }
         }
 
