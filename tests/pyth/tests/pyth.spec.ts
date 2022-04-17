@@ -14,7 +14,7 @@ describe("pyth-oracle", () => {
       oracleProgram: program,
       initPrice: price,
       expo: -6,
-      provider
+      provider,
     });
     const feedData = await getFeedData(program, priceFeedAddress);
     assert.strictEqual(feedData.price, price);
@@ -27,7 +27,7 @@ describe("pyth-oracle", () => {
       oracleProgram: program,
       initPrice: price,
       expo: expo,
-      provider
+      provider,
     });
     const feedDataBefore = await getFeedData(program, priceFeedAddress);
     assert.strictEqual(feedDataBefore.price, price);

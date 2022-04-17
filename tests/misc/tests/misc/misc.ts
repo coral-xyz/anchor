@@ -760,18 +760,19 @@ describe("misc", () => {
     const filterable1 = anchor.web3.Keypair.generate().publicKey;
     const filterable2 = anchor.web3.Keypair.generate().publicKey;
     // Set up a secondary wallet and program.
+    const anotherProvider = new anchor.AnchorProvider(
+      program.provider.connection,
+      new anchor.Wallet(anchor.web3.Keypair.generate()),
+      { commitment: program.provider.connection.commitment }
+    );
     const anotherProgram = new anchor.Program(
       miscIdl,
       program.programId,
-      new anchor.AnchorProvider(
-        program.provider.connection,
-        new anchor.Wallet(anchor.web3.Keypair.generate()),
-        { commitment: program.provider.connection.commitment }
-      )
+      anotherProvider
     );
     // Request airdrop for secondary wallet.
     const signature = await program.provider.connection.requestAirdrop(
-      provider.wallet.publicKey,
+      anotherProvider.wallet.publicKey,
       anchor.web3.LAMPORTS_PER_SOL
     );
     await program.provider.connection.confirmTransaction(signature);
@@ -804,7 +805,7 @@ describe("misc", () => {
       anotherProgram.rpc.testFetchAll(filterable1, {
         accounts: {
           data: data4.publicKey,
-          authority: wallet.publicKey,
+          authority: anotherProvider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
         },
         signers: [data4],

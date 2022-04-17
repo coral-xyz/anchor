@@ -152,7 +152,7 @@ describe("CPI return", () => {
       (f) => f.name == "returnU64"
     );
     assert.equal(returnu64Instruction.returns, "u64");
-    
+
     // @ts-expect-error
     const returnStructInstruction = calleeProgram._idl.instructions.find(
       (f) => f.name == "returnStruct"

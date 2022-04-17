@@ -24,7 +24,7 @@ export const createPriceFeed = async ({
   initPrice,
   confidence,
   expo = -4,
-  provider
+  provider,
 }: ICreatePriceFeed) => {
   const conf = confidence || new BN((initPrice / 10) * 10 ** -expo);
   const collateralTokenFeed = new web3.Account();
@@ -40,10 +40,9 @@ export const createPriceFeed = async ({
           fromPubkey: provider.wallet.publicKey,
           newAccountPubkey: collateralTokenFeed.publicKey,
           space: 3312,
-          lamports:
-            await provider.connection.getMinimumBalanceForRentExemption(
-              3312
-            ),
+          lamports: await provider.connection.getMinimumBalanceForRentExemption(
+            3312
+          ),
           programId: oracleProgram.programId,
         }),
       ],
