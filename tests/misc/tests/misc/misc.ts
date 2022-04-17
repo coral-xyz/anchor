@@ -1,5 +1,11 @@
 import * as anchor from "@project-serum/anchor";
-import { Program, BN, IdlAccounts, AnchorError, Wallet } from "@project-serum/anchor";
+import {
+  Program,
+  BN,
+  IdlAccounts,
+  AnchorError,
+  Wallet,
+} from "@project-serum/anchor";
 import {
   PublicKey,
   Keypair,
@@ -471,9 +477,7 @@ describe("misc", () => {
     );
     const mintAccount = await client.getMintInfo();
     assert.strictEqual(mintAccount.decimals, 6);
-    assert.isTrue(
-      mintAccount.mintAuthority.equals(provider.wallet.publicKey)
-    );
+    assert.isTrue(mintAccount.mintAuthority.equals(provider.wallet.publicKey));
     assert.isTrue(
       mintAccount.freezeAuthority.equals(provider.wallet.publicKey)
     );
@@ -506,9 +510,7 @@ describe("misc", () => {
     );
     const mintAccount = await client.getMintInfo();
     assert.strictEqual(mintAccount.decimals, 6);
-    assert.isTrue(
-      mintAccount.mintAuthority.equals(provider.wallet.publicKey)
-    );
+    assert.isTrue(mintAccount.mintAuthority.equals(provider.wallet.publicKey));
   });
 
   it("Can create a random token account", async () => {
@@ -914,7 +916,7 @@ describe("misc", () => {
     const data = anchor.web3.Keypair.generate();
     const tx = await program.rpc.testConstArraySize(99, {
       accounts: {
-        data: data.publicKey
+        data: data.publicKey,
       },
       signers: [data],
       instructions: [
