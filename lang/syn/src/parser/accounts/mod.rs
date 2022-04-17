@@ -120,6 +120,18 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                     ));
                 }
             }
+            match kind {
+                InitKind::Token { mint, .. } |
+                InitKind::AssociatedToken { mint, .. } => {
+                    if !fields.iter().any(|f| f.ident().to_string().starts_with(&mint.to_token_stream().to_string())) {
+                        return Err(ParseError::new(
+                            field.ident.span(),
+                            "the mint constraint has to be an account field for token initializations (not a public key)",
+                        ));
+                    } 
+                },
+                _ => ()
+            }
         }
     }
     Ok(())
