@@ -1,27 +1,16 @@
 import * as anchor from "@project-serum/anchor";
 import {
   Program,
-  BN,
-  IdlAccounts,
   AnchorError,
-  ProgramError,
 } from "@project-serum/anchor";
 import {
-  PublicKey,
   Keypair,
-  SystemProgram,
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import { assert, expect } from "chai";
 import { Errors } from "../target/types/errors";
-
-// sleep to allow logs to come in
-const sleep = (ms) =>
-  new Promise((resolve) => {
-    setTimeout(() => resolve(0), ms);
-  });
 
 const withLogTest = async (callback, expectedLogs) => {
   let logTestOk = false;
@@ -64,19 +53,19 @@ const withLogTest = async (callback, expectedLogs) => {
 
 describe("errors", () => {
   // Configure the client to use the local cluster.
-  const localProvider = anchor.AnchorProvider.local();
-  localProvider.opts.skipPreflight = true;
+  const provider = anchor.AnchorProvider.local();
+  provider.opts.skipPreflight = true;
   // processed failed tx do not result in AnchorErrors in the client
   // because we cannot get logs for them (only through overkill `onLogs`)
-  localProvider.opts.commitment = "confirmed";
-  anchor.setProvider(localProvider);
+  provider.opts.commitment = "confirmed";
+  anchor.setProvider(provider);
 
   const program = anchor.workspace.Errors as Program<Errors>;
 
   it("Emits a Hello error", async () => {
     await withLogTest(async () => {
       try {
-        const tx = await program.rpc.hello();
+        const tx = await program.methods.hello().rpc();
         assert.ok(false);
       } catch (_err) {
         assert.isTrue(_err instanceof AnchorError);
@@ -104,7 +93,7 @@ describe("errors", () => {
 
   it("Emits a Hello error via require!", async () => {
     try {
-      const tx = await program.rpc.testRequire();
+      const tx = await program.methods.testRequire().rpc();
       assert.ok(false);
     } catch (_err) {
       assert.isTrue(_err instanceof AnchorError);
@@ -119,7 +108,7 @@ describe("errors", () => {
 
   it("Emits a Hello error via err!", async () => {
     try {
-      const tx = await program.rpc.testErr();
+      const tx = await program.methods.testErr().rpc();
       assert.ok(false);
     } catch (_err) {
       assert.isTrue(_err instanceof AnchorError);
@@ -134,7 +123,7 @@ describe("errors", () => {
   it("Logs a ProgramError", async () => {
     await withLogTest(async () => {
       try {
-        const tx = await program.rpc.testProgramError();
+        const tx = await program.methods.testProgramError().rpc();
         assert.ok(false);
       } catch (err) {
         expect(err.programErrorStack.map((pk) => pk.toString())).to.deep.equal([
@@ -150,7 +139,7 @@ describe("errors", () => {
   it("Logs a ProgramError with source", async () => {
     await withLogTest(async () => {
       try {
-        const tx = await program.rpc.testProgramErrorWithSource();
+        const tx = await program.methods.testProgramErrorWithSource().rpc();
         assert.ok(false);
       } catch (err) {
         expect(err.programErrorStack.map((pk) => pk.toString())).to.deep.equal([
@@ -164,7 +153,7 @@ describe("errors", () => {
 
   it("Emits a HelloNoMsg error", async () => {
     try {
-      const tx = await program.rpc.helloNoMsg();
+      const tx = await program.methods.helloNoMsg().rpc();
       assert.ok(false);
     } catch (_err) {
       assert.isTrue(_err instanceof AnchorError);
@@ -176,7 +165,7 @@ describe("errors", () => {
 
   it("Emits a HelloNext error", async () => {
     try {
-      const tx = await program.rpc.helloNext();
+      const tx = await program.methods.helloNext().rpc();
       assert.ok(false);
     } catch (_err) {
       assert.isTrue(_err instanceof AnchorError);
@@ -333,9 +322,9 @@ describe("errors", () => {
   it("Emits an AccountOwnedByWrongProgram error", async () => {
     let client = await Token.createMint(
       program.provider.connection,
-      program.provider.wallet.payer,
-      program.provider.wallet.publicKey,
-      program.provider.wallet.publicKey,
+      (provider.wallet as anchor.Wallet).payer,
+      provider.wallet.publicKey,
+      provider.wallet.publicKey,
       9,
       TOKEN_PROGRAM_ID
     );
@@ -369,7 +358,7 @@ describe("errors", () => {
   it("Emits a ValueMismatch error via require_eq", async () => {
     await withLogTest(async () => {
       try {
-        const tx = await program.rpc.requireEq();
+        const tx = await program.methods.requireEq().rpc();
         assert.fail(
           "Unexpected success in creating a transaction that should have failed with `ValueMismatch` error"
         );
@@ -389,7 +378,7 @@ describe("errors", () => {
   it("Emits a RequireEqViolated error via require_eq", async () => {
     await withLogTest(async () => {
       try {
-        const tx = await program.rpc.requireEqDefaultError();
+        const tx = await program.methods.requireEqDefaultError().rpc();
         assert.fail(
           "Unexpected success in creating a transaction that should have failed with `ValueMismatch` error"
         );
@@ -408,7 +397,7 @@ describe("errors", () => {
   it("Emits a ValueMatch error via require_neq", async () => {
     await withLogTest(async () => {
       try {
-        const tx = await program.rpc.requireNeq();
+        const tx = await program.methods.requireNeq().rpc();
         assert.fail(
           "Unexpected success in creating a transaction that should have failed with `ValueMatch` error"
         );
@@ -427,7 +416,7 @@ describe("errors", () => {
   it("Emits a RequireNeqViolated error via require_neq", async () => {
     await withLogTest(async () => {
       try {
-        const tx = await program.rpc.requireNeqDefaultError();
+        const tx = await program.methods.requireNeqDefaultError().rpc();
         assert.fail(
           "Unexpected success in creating a transaction that should have failed with `RequireNeqViolated` error"
         );
@@ -550,7 +539,7 @@ describe("errors", () => {
   it("Emits a ValueLessOrEqual error via require_gt", async () => {
     await withLogTest(async () => {
       try {
-        const tx = await program.rpc.requireGt();
+        const tx = await program.methods.requireGt().rpc();
         assert.fail(
           "Unexpected success in creating a transaction that should have failed with `ValueLessOrEqual` error"
         );
@@ -569,7 +558,7 @@ describe("errors", () => {
   it("Emits a RequireGtViolated error via require_gt", async () => {
     await withLogTest(async () => {
       try {
-        const tx = await program.rpc.requireGtDefaultError();
+        const tx = await program.methods.requireGtDefaultError().rpc();
         assert.fail(
           "Unexpected success in creating a transaction that should have failed with `RequireGtViolated` error"
         );
@@ -588,7 +577,7 @@ describe("errors", () => {
   it("Emits a ValueLess error via require_gte", async () => {
     await withLogTest(async () => {
       try {
-        const tx = await program.rpc.requireGte();
+        const tx = await program.methods.requireGte().rpc();
         assert.fail(
           "Unexpected success in creating a transaction that should have failed with `ValueLess` error"
         );
@@ -607,7 +596,7 @@ describe("errors", () => {
   it("Emits a RequireGteViolated error via require_gte", async () => {
     await withLogTest(async () => {
       try {
-        const tx = await program.rpc.requireGteDefaultError();
+        const tx = await program.methods.requireGteDefaultError().rpc();
         assert.fail(
           "Unexpected success in creating a transaction that should have failed with `RequireGteViolated` error"
         );
