@@ -1648,7 +1648,6 @@ describe("misc", () => {
         const act = instruction.accounts.find(
             (i) => i.name === 'act'
         );
-        console.log(act);
         assert(
             act.doc === 
                 "This account doc comment should appear in the IDL"
@@ -1658,7 +1657,6 @@ describe("misc", () => {
     const dataWithDoc = program.idl.accounts.find(
         (i) => i.name === 'DataWithDoc'
     );
-    console.log(dataWithDoc);
 
     it("includes accounts doc comment", async () => {
         assert(

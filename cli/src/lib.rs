@@ -1435,7 +1435,7 @@ fn extract_idl(cfg: &WithPath<Config>, file: &str, skip_lint: bool, no_doc: bool
         &*file,
         cargo.version(),
         cfg.features.seeds,
-        no_doc | cfg.features.no_docs,
+        no_doc,
         !skip_lint,
     )
 }

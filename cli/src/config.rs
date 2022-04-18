@@ -262,8 +262,6 @@ pub struct Config {
 pub struct FeaturesConfig {
     #[serde(default)]
     pub seeds: bool,
-    #[serde(default)]
-    pub no_docs: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
