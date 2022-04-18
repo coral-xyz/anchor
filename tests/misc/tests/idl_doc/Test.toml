@@ -1,0 +1,6 @@
+[[test.genesis]]
+address = "BqmKjZGVa8fqyWuojJzG16zaKSV1GjAisZToNuvEaz6m"
+program = "../../target/deploy/idl_doc.so"
+
+[scripts]
+test = "yarn run ts-mocha -t 1000000 ./tests/idl_doc/*.ts"
