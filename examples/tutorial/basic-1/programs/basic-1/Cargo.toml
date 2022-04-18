@@ -20,4 +20,4 @@ anchor-lang = { path = "../../../../../lang" }
 [dev-dependencies]
 solana-program-test = "1.9.14"
 solana-sdk = "1.9.14"
-solana-validator = { version = "1.9.14" }
+solana-validator = "1.9.14"
