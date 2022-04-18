@@ -18,7 +18,7 @@ use std::ops::DerefMut;
 /// Account loader facilitating on demand zero copy deserialization.
 /// Note that using accounts in this way is distinctly different from using,
 /// for example, the [`Account`](./struct.Account.html). Namely,
-/// one must call `load`, `load_mut`, or `load_init`, before reading or writing
+/// one must call `load`, `load_mut`, before reading or writing
 /// to the account. For more details on zero-copy-deserialization, see the
 /// [`account`](./attr.account.html) attribute.
 ///
@@ -51,6 +51,20 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         }
     }
 
+    pub fn init(program_id: &Pubkey, info: &AccountInfo<'info>) -> Result<Loader<'info, T>> {
+        {
+            // separate lexical scope so `data` gets dropped
+            // before the `try_from_unchecked` call
+            let data: &mut [u8] = &mut info.try_borrow_mut_data()?;
+            if data.len() < 8 {
+                return Err(anchor_lang::error::ErrorCode::AccountDidNotSerialize.into());
+            }
+            crate::solana_program::program_memory::sol_memcpy(data, &T::DISCRIMINATOR, 8);
+        }
+        // We just set the discriminator, so there is no need to check it
+        Self::try_from_unchecked(program_id, info)
+    }
+
     /// Constructs a new `Loader` from a previously initialized account.
     #[inline(never)]
     #[allow(deprecated)]
@@ -63,12 +77,12 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
                 .with_pubkeys((*acc_info.owner, *program_id)));
         }
         let data: &[u8] = &acc_info.try_borrow_data()?;
-        if data.len() < T::discriminator().len() {
+        if data.len() < T::DISCRIMINATOR.len() {
             return Err(ErrorCode::AccountDiscriminatorNotFound.into());
         }
         // Discriminator must match.
         let disc_bytes = array_ref![data, 0, 8];
-        if disc_bytes != &T::discriminator() {
+        if disc_bytes != &T::DISCRIMINATOR {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
@@ -93,12 +107,12 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
     #[allow(deprecated)]
     pub fn load(&self) -> Result<Ref<T>> {
         let data = self.acc_info.try_borrow_data()?;
-        if data.len() < T::discriminator().len() {
+        if data.len() < T::DISCRIMINATOR.len() {
             return Err(ErrorCode::AccountDiscriminatorNotFound.into());
         }
 
         let disc_bytes = array_ref![data, 0, 8];
-        if disc_bytes != &T::discriminator() {
+        if disc_bytes != &T::DISCRIMINATOR {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
@@ -115,38 +129,13 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         }
 
         let data = self.acc_info.try_borrow_mut_data()?;
-        if data.len() < T::discriminator().len() {
+        if data.len() < T::DISCRIMINATOR.len() {
             return Err(ErrorCode::AccountDiscriminatorNotFound.into());
         }
 
         let disc_bytes = array_ref![data, 0, 8];
-        if disc_bytes != &T::discriminator() {
+        if disc_bytes != &T::DISCRIMINATOR {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
-        }
-
-        Ok(RefMut::map(data, |data| {
-            bytemuck::from_bytes_mut(&mut data.deref_mut()[8..])
-        }))
-    }
-
-    /// Returns a `RefMut` to the account data structure for reading or writing.
-    /// Should only be called once, when the account is being initialized.
-    #[allow(deprecated)]
-    pub fn load_init(&self) -> Result<RefMut<T>> {
-        // AccountInfo api allows you to borrow mut even if the account isn't
-        // writable, so add this check for a better dev experience.
-        if !self.acc_info.is_writable {
-            return Err(ErrorCode::AccountNotMutable.into());
-        }
-
-        let data = self.acc_info.try_borrow_mut_data()?;
-
-        // The discriminator should be zero, since we're initializing.
-        let mut disc_bytes = [0u8; 8];
-        disc_bytes.copy_from_slice(&data[..8]);
-        let discriminator = u64::from_le_bytes(disc_bytes);
-        if discriminator != 0 {
-            return Err(ErrorCode::AccountDiscriminatorAlreadySet.into());
         }
 
         Ok(RefMut::map(data, |data| {
@@ -181,7 +170,7 @@ impl<'info, T: ZeroCopy> AccountsExit<'info> for Loader<'info, T> {
         let mut data = self.acc_info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
         let mut writer = BpfWriter::new(dst);
-        writer.write_all(&T::discriminator()).unwrap();
+        writer.write_all(&T::DISCRIMINATOR).unwrap();
         Ok(())
     }
 }

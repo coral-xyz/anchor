@@ -5,7 +5,7 @@ use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::solana_program::system_program;
-use anchor_lang::{AccountDeserialize, Discriminator, InstructionData, ToAccountMetas};
+use anchor_lang::{AccountDeserializeWithHeader, Discriminator, InstructionData, ToAccountMetas};
 use regex::Regex;
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::client_error::ClientError as SolanaClientError;
@@ -128,7 +128,10 @@ impl Program {
     }
 
     /// Returns the account at the given address.
-    pub fn account<T: AccountDeserialize>(&self, address: Pubkey) -> Result<T, ClientError> {
+    pub fn account<T: AccountDeserializeWithHeader>(
+        &self,
+        address: Pubkey,
+    ) -> Result<T, ClientError> {
         let rpc_client = RpcClient::new_with_commitment(
             self.cfg.cluster.url().to_string(),
             self.cfg.options.unwrap_or_default(),
@@ -138,11 +141,11 @@ impl Program {
             .value
             .ok_or(ClientError::AccountNotFound)?;
         let mut data: &[u8] = &account.data;
-        T::try_deserialize(&mut data).map_err(Into::into)
+        T::try_deserialize_checked(&mut data).map_err(Into::into)
     }
 
     /// Returns all program accounts of the given type matching the given filters
-    pub fn accounts<T: AccountDeserialize + Discriminator>(
+    pub fn accounts<T: AccountDeserializeWithHeader + Discriminator>(
         &self,
         filters: Vec<RpcFilterType>,
     ) -> Result<Vec<(Pubkey, T)>, ClientError> {
@@ -151,13 +154,13 @@ impl Program {
 
     /// Returns all program accounts of the given type matching the given filters as an iterator
     /// Deserialization is executed lazily
-    pub fn accounts_lazy<T: AccountDeserialize + Discriminator>(
+    pub fn accounts_lazy<T: AccountDeserializeWithHeader + Discriminator>(
         &self,
         filters: Vec<RpcFilterType>,
     ) -> Result<ProgramAccountsIterator<T>, ClientError> {
         let account_type_filter = RpcFilterType::Memcmp(Memcmp {
             offset: 0,
-            bytes: MemcmpEncodedBytes::Base58(bs58::encode(T::discriminator()).into_string()),
+            bytes: MemcmpEncodedBytes::Base58(bs58::encode(T::DISCRIMINATOR).into_string()),
             encoding: None,
         });
         let config = RpcProgramAccountsConfig {
@@ -175,12 +178,15 @@ impl Program {
                 .get_program_accounts_with_config(&self.id(), config)?
                 .into_iter()
                 .map(|(key, account)| {
-                    Ok((key, T::try_deserialize(&mut (&account.data as &[u8]))?))
+                    Ok((
+                        key,
+                        T::try_deserialize_checked(&mut (&account.data as &[u8]))?,
+                    ))
                 }),
         })
     }
 
-    pub fn state<T: AccountDeserialize>(&self) -> Result<T, ClientError> {
+    pub fn state<T: AccountDeserializeWithHeader>(&self) -> Result<T, ClientError> {
         self.account(anchor_lang::__private::state::address(&self.program_id))
     }
 
@@ -303,7 +309,7 @@ fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
             disc
         };
         let mut event = None;
-        if disc == T::discriminator() {
+        if disc == T::DISCRIMINATOR {
             let e: T = anchor_lang::AnchorDeserialize::deserialize(&mut slice)
                 .map_err(|e| ClientError::LogParseError(e.to_string()))?;
             event = Some(e);

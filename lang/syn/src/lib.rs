@@ -284,88 +284,88 @@ impl Field {
     pub fn from_account_info(
         &self,
         kind: Option<&InitKind>,
-        checked: bool,
+        init: bool,
     ) -> proc_macro2::TokenStream {
         let field = &self.ident;
         let container_ty = self.container_ty();
-        let owner_addr = match &kind {
-            None => quote! { program_id },
-            Some(InitKind::Program { .. }) => quote! {
-                program_id
-            },
-            _ => quote! {
-                &anchor_spl::token::ID
-            },
-        };
         match &self.ty {
             Ty::AccountInfo => quote! { #field.to_account_info() },
             Ty::UncheckedAccount => {
                 quote! { UncheckedAccount::try_from(#field.to_account_info()) }
             }
             Ty::Account(AccountTy { boxed, .. }) => {
-                let stream = if checked {
-                    quote! {
-                        #container_ty::try_from(
-                            &#field,
-                        )?
-                    }
-                } else {
-                    quote! {
-                        #container_ty::try_from_unchecked(
-                            &#field,
-                        )?
+                let mut stream = match kind {
+                    Some(init_kind) => match init_kind {
+                        InitKind::Program { .. } => {
+                            if init {
+                                quote! { #container_ty::init(
+                                    &#field,
+                                )?}
+                            } else {
+                                quote! {
+                                    #container_ty::try_from(&#field)?
+                                }
+                            }
+                        }
+                        InitKind::Token { .. }
+                        | InitKind::AssociatedToken { .. }
+                        | InitKind::Mint { .. } => {
+                            if init {
+                                quote! { #container_ty::init(
+                                    &#field,
+                                )?}
+                            } else {
+                                quote! {
+                                    #container_ty::try_from(
+                                        &#field,
+                                    )?
+                                }
+                            }
+                        }
+                    },
+                    None => {
+                        if init {
+                            quote! { #container_ty::init(
+                                &#field
+                            )?}
+                        } else {
+                            quote! { #container_ty::try_from(
+                                &#field
+                            )? }
+                        }
                     }
                 };
                 if *boxed {
-                    quote! {
-                        Box::new(#stream)
-                    }
-                } else {
-                    stream
+                    stream = quote! { Box::new(#stream) };
                 }
-            }
-            Ty::CpiAccount(_) => {
-                if checked {
-                    quote! {
-                        #container_ty::try_from(
-                            &#field,
-                        )?
-                    }
-                } else {
-                    quote! {
-                        #container_ty::try_from_unchecked(
-                            &#field,
-                        )?
-                    }
-                }
+                stream
             }
             Ty::AccountLoader(_) => {
-                if checked {
-                    quote! {
-                        #container_ty::try_from(
-                            &#field,
-                        )?
-                    }
+                if init {
+                    quote! { #container_ty::init(&#field)?}
                 } else {
-                    quote! {
-                        #container_ty::try_from_unchecked(
-                            #owner_addr,
-                            &#field,
-                        )?
-                    }
+                    quote! {#container_ty::try_from(&#field)?}
                 }
             }
             _ => {
-                if checked {
+                let owner_addr = match &kind {
+                    None | Some(InitKind::Program { .. }) => quote! {
+                        program_id
+                    },
+                    _ => quote! {
+                        &anchor_spl::token::ID
+                    },
+                };
+                if init {
                     quote! {
-                        #container_ty::try_from(
+                        #container_ty::init(
                             #owner_addr,
                             &#field,
                         )?
                     }
                 } else {
                     quote! {
-                        #container_ty::try_from_unchecked(
+                        #container_ty::try_from(
                             #owner_addr,
                             &#field,
                         )?

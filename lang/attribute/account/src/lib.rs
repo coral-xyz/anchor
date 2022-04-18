@@ -66,6 +66,7 @@ pub fn account(
 ) -> proc_macro::TokenStream {
     let mut namespace = "".to_string();
     let mut is_zero_copy = false;
+    let mut custom_serde = false;
     let args_str = args.to_string();
     let args: Vec<&str> = args_str.split(',').collect();
     if args.len() > 2 {
@@ -80,6 +81,8 @@ pub fn account(
             .collect();
         if ns == "zero_copy" {
             is_zero_copy = true;
+        } else if ns == "custom_serde" {
+            custom_serde = true;
         } else {
             namespace = ns;
         }
@@ -122,6 +125,44 @@ pub fn account(
         }
     };
 
+    let serde = if custom_serde {
+        quote! {}
+    } else if is_zero_copy {
+        quote! {
+            // This trait is useful for clients deserializing accounts.
+            // It's expected on-chain programs deserialize via zero-copy.
+            #[automatically_derived]
+            impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
+                fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+                    // Re-interpret raw bytes into the POD data structure.
+                    let account = anchor_lang::__private::bytemuck::from_bytes(&buf);
+                    // Copy out the bytes into a new, owned data structure.
+                    Ok(*account)
+                }
+            }
+        }
+    } else {
+        quote! {
+            #[automatically_derived]
+            impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
+                fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+                    AnchorDeserialize::deserialize(buf)
+                        .map_err(|_| anchor_lang::error::ErrorCode::AccountDidNotDeserialize.into())
+                }
+            }
+
+            #[automatically_derived]
+            impl #impl_gen anchor_lang::AccountSerialize for #account_name #type_gen #where_clause {
+                fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> anchor_lang::Result<()> {
+                    if AnchorSerialize::serialize(self, writer).is_err() {
+                        return Err(anchor_lang::error::ErrorCode::AccountDidNotSerialize.into());
+                    }
+                    Ok(())
+                }
+            }
+        }
+    };
+
     proc_macro::TokenStream::from({
         if is_zero_copy {
             quote! {
@@ -138,16 +179,12 @@ pub fn account(
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::Discriminator for #account_name #type_gen #where_clause {
-                    fn discriminator() -> [u8; 8] {
-                        #discriminator
-                    }
+                    const DISCRIMINATOR: [u8; 8] = #discriminator;
                 }
 
-                // This trait is useful for clients deserializing accounts.
-                // It's expected on-chain programs deserialize via zero-copy.
                 #[automatically_derived]
-                impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
-                    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+                impl #impl_gen anchor_lang::AccountDeserializeWithHeader for #account_name #type_gen #where_clause {
+                    fn try_deserialize_checked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                         if buf.len() < #discriminator.len() {
                             return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound.into());
                         }
@@ -155,17 +192,15 @@ pub fn account(
                         if &#discriminator != given_disc {
                             return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch.into());
                         }
-                        Self::try_deserialize_unchecked(buf)
+                        <Self as anchor_lang::AccountDeserializeWithHeader>::try_deserialize_unchecked(buf)
                     }
 
-                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
-                        let data: &[u8] = &buf[8..];
-                        // Re-interpret raw bytes into the POD data structure.
-                        let account = anchor_lang::__private::bytemuck::from_bytes(data);
-                        // Copy out the bytes into a new, owned data structure.
-                        Ok(*account)
+                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self> {
+                        <Self as anchor_lang::AccountDeserialize>::try_deserialize(&mut &buf[8..])
                     }
                 }
+
+                #serde
 
                 #owner_impl
             }
@@ -175,22 +210,15 @@ pub fn account(
                 #account_strct
 
                 #[automatically_derived]
-                impl #impl_gen anchor_lang::AccountSerialize for #account_name #type_gen #where_clause {
-                    fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> anchor_lang::Result<()> {
-                        if writer.write_all(&#discriminator).is_err() {
-                            return Err(anchor_lang::error::ErrorCode::AccountDidNotSerialize.into());
-                        }
-
-                        if AnchorSerialize::serialize(self, writer).is_err() {
-                            return Err(anchor_lang::error::ErrorCode::AccountDidNotSerialize.into());
-                        }
-                        Ok(())
+                impl #impl_gen anchor_lang::AccountSerializeWithHeader for #account_name #type_gen #where_clause {
+                    fn try_serialize_skip_header(&self, dst: &mut [u8]) -> anchor_lang::Result<()> {
+                        Self::try_serialize(&self, &mut anchor_lang::BpfWriter::new(&mut dst[8..]))
                     }
                 }
 
                 #[automatically_derived]
-                impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
-                    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+                impl #impl_gen anchor_lang::AccountDeserializeWithHeader for #account_name #type_gen #where_clause {
+                    fn try_deserialize_checked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
                         if buf.len() < #discriminator.len() {
                             return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound.into());
                         }
@@ -198,21 +226,19 @@ pub fn account(
                         if &#discriminator != given_disc {
                             return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch.into());
                         }
-                        Self::try_deserialize_unchecked(buf)
+                        <Self as anchor_lang::AccountDeserializeWithHeader>::try_deserialize_unchecked(buf)
                     }
 
-                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
-                        let mut data: &[u8] = &buf[8..];
-                        AnchorDeserialize::deserialize(&mut data)
-                            .map_err(|_| anchor_lang::error::ErrorCode::AccountDidNotDeserialize.into())
+                    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self> {
+                        <Self as anchor_lang::AccountDeserialize>::try_deserialize(&mut &buf[8..])
                     }
                 }
 
+                #serde
+
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::Discriminator for #account_name #type_gen #where_clause {
-                    fn discriminator() -> [u8; 8] {
-                        #discriminator
-                    }
+                    const DISCRIMINATOR: [u8; 8] = #discriminator;
                 }
 
                 #owner_impl
