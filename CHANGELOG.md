@@ -10,6 +10,10 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ## [Unreleased]
 
+### Fixes
+
+* cli: Move `overflow-checks` into workspace `Cargo.toml` so that it will not be ignored by compiler ([]()).
+
 ## [0.24.2] - 2022-04-13
 
 ### Fixes
