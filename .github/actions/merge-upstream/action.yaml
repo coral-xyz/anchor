@@ -22,6 +22,8 @@ runs:
     - run: git pull upstream master --no-ff
       shell: bash
     - run: git push origin master
+      with:
+        token:
       shell: bash
     - run: git checkout -b latest
       shell: bash
