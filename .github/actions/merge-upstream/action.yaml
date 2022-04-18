@@ -13,7 +13,7 @@ runs:
       with:
         ref: master # set the branch to merge to
         fetch-depth: 0
-        token:
+        token: ${{ secrets.GITHUB_TOKEN }}
     - run: git config --global user.email "Elias.cmoreno17@gmail.com"
       shell: bash
     - run: git config --global user.name "Eliascm17"
