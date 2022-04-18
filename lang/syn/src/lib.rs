@@ -14,7 +14,7 @@ use syn::spanned::Spanned;
 use syn::token::Comma;
 use syn::{
     Expr, Generics, Ident, ImplItemMethod, ItemEnum, ItemFn, ItemImpl, ItemMod, ItemStruct, LitInt,
-    LitStr, PatType, Token, TypePath,
+    LitStr, PatType, Token, Type, TypePath,
 };
 
 pub mod codegen;
@@ -87,6 +87,7 @@ pub struct Ix {
     pub ident: Ident,
     pub doc: Option<Vec<String>>,
     pub args: Vec<IxArg>,
+    pub returns: IxReturn,
     // The ident for the struct deriving Accounts.
     pub anchor_ident: Ident,
 }
@@ -96,6 +97,11 @@ pub struct IxArg {
     pub name: Ident,
     pub doc: Option<Vec<String>>,
     pub raw_arg: PatType,
+}
+
+#[derive(Debug)]
+pub struct IxReturn {
+    pub ty: Type,
 }
 
 #[derive(Debug)]
@@ -280,20 +286,55 @@ impl Field {
 
     // TODO: remove the option once `CpiAccount` is completely removed (not
     //       just deprecated).
-    pub fn from_account_info_unchecked(&self, kind: Option<&InitKind>) -> proc_macro2::TokenStream {
+    pub fn from_account_info(
+        &self,
+        kind: Option<&InitKind>,
+        checked: bool,
+    ) -> proc_macro2::TokenStream {
         let field = &self.ident;
         let container_ty = self.container_ty();
+        let owner_addr = match &kind {
+            None => quote! { program_id },
+            Some(InitKind::Program { .. }) => quote! {
+                program_id
+            },
+            _ => quote! {
+                &anchor_spl::token::ID
+            },
+        };
         match &self.ty {
             Ty::AccountInfo => quote! { #field.to_account_info() },
             Ty::UncheckedAccount => {
                 quote! { UncheckedAccount::try_from(#field.to_account_info()) }
             }
             Ty::Account(AccountTy { boxed, .. }) => {
+                let stream = if checked {
+                    quote! {
+                        #container_ty::try_from(
+                            &#field,
+                        )?
+                    }
+                } else {
+                    quote! {
+                        #container_ty::try_from_unchecked(
+                            &#field,
+                        )?
+                    }
+                };
                 if *boxed {
                     quote! {
-                        Box::new(#container_ty::try_from_unchecked(
+                        Box::new(#stream)
+                    }
+                } else {
+                    stream
+                }
+            }
+            Ty::CpiAccount(_) => {
+                if checked {
+                    quote! {
+                        #container_ty::try_from(
                             &#field,
-                        )?)
+                        )?
                     }
                 } else {
                     quote! {
@@ -303,28 +344,37 @@ impl Field {
                     }
                 }
             }
-            Ty::CpiAccount(_) => {
-                quote! {
-                    #container_ty::try_from_unchecked(
-                        &#field,
-                    )?
+            Ty::AccountLoader(_) => {
+                if checked {
+                    quote! {
+                        #container_ty::try_from(
+                            &#field,
+                        )?
+                    }
+                } else {
+                    quote! {
+                        #container_ty::try_from_unchecked(
+                            #owner_addr,
+                            &#field,
+                        )?
+                    }
                 }
             }
             _ => {
-                let owner_addr = match &kind {
-                    None => quote! { program_id },
-                    Some(InitKind::Program { .. }) => quote! {
-                        program_id
-                    },
-                    _ => quote! {
-                        &anchor_spl::token::ID
-                    },
-                };
-                quote! {
-                    #container_ty::try_from_unchecked(
-                        #owner_addr,
-                        &#field,
-                    )?
+                if checked {
+                    quote! {
+                        #container_ty::try_from(
+                            #owner_addr,
+                            &#field,
+                        )?
+                    }
+                } else {
+                    quote! {
+                        #container_ty::try_from_unchecked(
+                            #owner_addr,
+                            &#field,
+                        )?
+                    }
                 }
             }
         }
@@ -588,6 +638,8 @@ pub struct ConstraintGroup {
     close: Option<ConstraintClose>,
     address: Option<ConstraintAddress>,
     associated_token: Option<ConstraintAssociatedToken>,
+    token_account: Option<ConstraintTokenAccountGroup>,
+    mint: Option<ConstraintTokenMintGroup>,
 }
 
 impl ConstraintGroup {
@@ -629,6 +681,8 @@ pub enum Constraint {
     State(ConstraintState),
     Close(ConstraintClose),
     Address(ConstraintAddress),
+    TokenAccount(ConstraintTokenAccountGroup),
+    Mint(ConstraintTokenMintGroup),
 }
 
 // Constraint token is a single keyword in a `#[account(<TOKEN>)]` attribute.
@@ -728,7 +782,7 @@ pub enum ConstraintRentExempt {
 pub struct ConstraintInitGroup {
     pub if_needed: bool,
     pub seeds: Option<ConstraintSeedsGroup>,
-    pub payer: Option<Expr>,
+    pub payer: Expr,
     pub space: Option<Expr>,
     pub kind: InitKind,
 }
@@ -831,6 +885,19 @@ pub struct ConstraintProgramSeed {
 pub struct ConstraintAssociatedToken {
     pub wallet: Expr,
     pub mint: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintTokenAccountGroup {
+    pub mint: Option<Expr>,
+    pub authority: Option<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintTokenMintGroup {
+    pub decimals: Option<Expr>,
+    pub mint_authority: Option<Expr>,
+    pub freeze_authority: Option<Expr>,
 }
 
 // Syntaxt context object for preserving metadata about the inner item.

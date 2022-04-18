@@ -2,7 +2,8 @@
 name = "zero-copy"
 version = "0.1.0"
 description = "Created with Anchor"
-edition = "2018"
+rust-version = "1.56"
+edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -21,4 +22,4 @@ anchor-lang = { path = "../../../../lang" }
 [dev-dependencies]
 anchor-client = { path = "../../../../client", features = ["debug"] }
 bytemuck = "1.4.0"
-solana-program-test = "1.8.0"
+solana-program-test = "1.9.13"

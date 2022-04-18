@@ -1,4 +1,4 @@
-const assert = require("assert");
+const { assert } = require("chai");
 const anchor = require("@project-serum/anchor");
 const BN = anchor.BN;
 const OpenOrders = require("@project-serum/serum").OpenOrders;
@@ -11,7 +11,11 @@ const TAKER_FEE = 0.0022;
 
 describe("swap", () => {
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.Provider.env());
+  const provider = anchor.AnchorProvider.env();
+  // hack so we don't have to update serum-common library
+  // to the new AnchorProvider class and Provider interface
+  provider.send = provider.sendAndConfirm;
+  anchor.setProvider(provider);
 
   // Swap program client.
   const program = anchor.workspace.Swap;
@@ -120,8 +124,8 @@ describe("swap", () => {
       }
     );
 
-    assert.ok(tokenAChange === expectedResultantAmount);
-    assert.ok(usdcChange === -swapAmount.toNumber() / 10 ** 6);
+    assert.strictEqual(tokenAChange, expectedResultantAmount);
+    assert.strictEqual(usdcChange, -swapAmount.toNumber() / 10 ** 6);
   });
 
   it("Swaps from Token A to USDC", async () => {
@@ -149,8 +153,8 @@ describe("swap", () => {
       }
     );
 
-    assert.ok(tokenAChange === -swapAmount);
-    assert.ok(usdcChange === resultantAmount.toNumber() / 10 ** 6);
+    assert.strictEqual(tokenAChange, -swapAmount);
+    assert.strictEqual(usdcChange, resultantAmount.toNumber() / 10 ** 6);
   });
 
   it("Swaps from Token A to Token B", async () => {
@@ -208,10 +212,10 @@ describe("swap", () => {
       }
     );
 
-    assert.ok(tokenAChange === -swapAmount);
+    assert.strictEqual(tokenAChange, -swapAmount);
     // TODO: calculate this dynamically from the swap amount.
-    assert.ok(tokenBChange === 9.8);
-    assert.ok(usdcChange === 0);
+    assert.strictEqual(tokenBChange, 9.8);
+    assert.strictEqual(usdcChange, 0);
   });
 
   it("Swaps from Token B to Token A", async () => {
@@ -270,9 +274,9 @@ describe("swap", () => {
     );
 
     // TODO: calculate this dynamically from the swap amount.
-    assert.ok(tokenAChange === 22.6);
-    assert.ok(tokenBChange === -swapAmount);
-    assert.ok(usdcChange === 0);
+    assert.strictEqual(tokenAChange, 22.6);
+    assert.strictEqual(tokenBChange, -swapAmount);
+    assert.strictEqual(usdcChange, 0);
   });
 });
 

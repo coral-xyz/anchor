@@ -1,8 +1,8 @@
 const anchor = require("@project-serum/anchor");
-const assert = require("assert");
+const { assert } = require("chai");
 
 describe("token", () => {
-  const provider = anchor.Provider.local();
+  const provider = anchor.AnchorProvider.local();
 
   // Configure the client to use the local cluster.
   anchor.setProvider(provider);
@@ -31,7 +31,7 @@ describe("token", () => {
 
     const fromAccount = await getTokenAccount(provider, from);
 
-    assert.ok(fromAccount.amount.eq(new anchor.BN(1000)));
+    assert.isTrue(fromAccount.amount.eq(new anchor.BN(1000)));
   });
 
   it("Transfers a token", async () => {
@@ -47,8 +47,8 @@ describe("token", () => {
     const fromAccount = await getTokenAccount(provider, from);
     const toAccount = await getTokenAccount(provider, to);
 
-    assert.ok(fromAccount.amount.eq(new anchor.BN(600)));
-    assert.ok(toAccount.amount.eq(new anchor.BN(400)));
+    assert.isTrue(fromAccount.amount.eq(new anchor.BN(600)));
+    assert.isTrue(toAccount.amount.eq(new anchor.BN(400)));
   });
 
   it("Burns a token", async () => {
@@ -56,13 +56,13 @@ describe("token", () => {
       accounts: {
         authority: provider.wallet.publicKey,
         mint,
-        to,
+        from: to,
         tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
       },
     });
 
     const toAccount = await getTokenAccount(provider, to);
-    assert.ok(toAccount.amount.eq(new anchor.BN(1)));
+    assert.isTrue(toAccount.amount.eq(new anchor.BN(1)));
   });
 
   it("Set new mint authority", async () => {
@@ -80,7 +80,7 @@ describe("token", () => {
     );
 
     const mintInfo = await getMintInfo(provider, mint);
-    assert.ok(mintInfo.mintAuthority.equals(newMintAuthority.publicKey));
+    assert.isTrue(mintInfo.mintAuthority.equals(newMintAuthority.publicKey));
   });
 });
 
@@ -118,7 +118,7 @@ async function createMint(provider, authority) {
   const tx = new anchor.web3.Transaction();
   tx.add(...instructions);
 
-  await provider.send(tx, [mint]);
+  await provider.sendAndConfirm(tx, [mint]);
 
   return mint.publicKey;
 }
@@ -147,7 +147,7 @@ async function createTokenAccount(provider, mint, owner) {
   tx.add(
     ...(await createTokenAccountInstrs(provider, vault.publicKey, mint, owner))
   );
-  await provider.send(tx, [vault]);
+  await provider.sendAndConfirm(tx, [vault]);
   return vault.publicKey;
 }
 

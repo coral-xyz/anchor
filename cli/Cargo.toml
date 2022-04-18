@@ -1,8 +1,9 @@
 [package]
 name = "anchor-cli"
-version = "0.22.1"
+version = "0.24.2"
 authors = ["armaniferrante <armaniferrante@gmail.com>"]
-edition = "2018"
+rust-version = "1.56"
+edition = "2021"
 
 [[bin]]
 name = "anchor"
@@ -24,10 +25,11 @@ shellexpand = "2.1.0"
 toml = "0.5.8"
 semver = "1.0.4"
 serde = { version = "1.0.122", features = ["derive"] }
-solana-sdk = "1.8.5"
-solana-program = "1.8.5"
-solana-client = "1.8.5"
-serum-common = { git = "https://github.com/project-serum/serum-dex", features = ["client"] }
+solana-sdk = "~1.9.13"
+solana-program = "~1.9.13"
+solana-client = "~1.9.13"
+solana-cli-config = "~1.9.13"
+solana-faucet = "~1.9.13"
 dirs = "3.0"
 heck = "0.3.1"
 flate2 = "1.0.19"
@@ -37,5 +39,6 @@ reqwest = { version = "0.11.4", features = ["multipart", "blocking"] }
 tokio = "1.0"
 pathdiff = "0.2.0"
 cargo_toml = "0.9.2"
-walkdir = "2"
+walkdir = "2.3.2"
 chrono = "0.4.19"
+portpicker = "0.1.1"

@@ -3,8 +3,7 @@ import Provider from "../../provider.js";
 import { Idl } from "../../idl.js";
 import { splitArgsAndCtx } from "../context.js";
 import { TransactionFn } from "./transaction.js";
-import { ProgramError } from "../../error.js";
-import * as features from "../../utils/features.js";
+import { translateError } from "../../error.js";
 import {
   AllInstructions,
   InstructionContextFn,
@@ -21,19 +20,19 @@ export default class RpcFactory {
     const rpc: RpcFn<IDL, I> = async (...args) => {
       const tx = txFn(...args);
       const [, ctx] = splitArgsAndCtx(idlIx, [...args]);
+      if (provider.sendAndConfirm === undefined) {
+        throw new Error(
+          "This function requires 'Provider.sendAndConfirm' to be implemented."
+        );
+      }
       try {
-        const txSig = await provider.send(tx, ctx.signers, ctx.options);
-        return txSig;
+        return await provider.sendAndConfirm(
+          tx,
+          ctx.signers ?? [],
+          ctx.options
+        );
       } catch (err) {
-        if (features.isSet("debug-logs")) {
-          console.log("Translating error:", err);
-        }
-
-        let translatedErr = ProgramError.parse(err, idlErrors);
-        if (translatedErr === null) {
-          throw err;
-        }
-        throw translatedErr;
+        throw translateError(err, idlErrors);
       }
     };
 
