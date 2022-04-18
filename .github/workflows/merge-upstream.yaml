@@ -13,5 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/merge-upstream/
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          workflow-token: ${{ secrets.WORKFLOW_TOKEN }}
