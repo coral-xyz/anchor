@@ -13,5 +13,5 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          workflow-token: ${{ secrets.WORKFLOW_TOKEN }}
+          token: ${{ secrets.WORKFLOW_TOKEN }}
       - uses: ./.github/actions/merge-upstream/
