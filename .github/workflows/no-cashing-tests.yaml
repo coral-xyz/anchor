@@ -7,6 +7,7 @@ on:
 env:
   SOLANA_CLI_VERSION: 1.9.13
   NODE_VERSION: 17.0.1
+  workflow-token: ${{ secrets.WORKFLOW_TOKEN }}
 
 jobs:
   test-core:
