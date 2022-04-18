@@ -33,10 +33,11 @@
     "zero-copy",
     "declare-id",
     "cpi-returns",
-    "multiple-suites"
+    "multiple-suites",
+    "bpf-upgradeable-state"
   ],
   "dependencies": {
-    "@project-serum/anchor": "^0.24.0",
+    "@project-serum/anchor": "file:../ts",
     "@project-serum/common": "^0.0.1-beta.3",
     "@project-serum/serum": "^0.13.60",
     "@solana/spl-token": "^0.1.8"
@@ -49,6 +50,7 @@
     "mocha": "^9.1.3",
     "ts-mocha": "^8.0.0",
     "typescript": "^4.4.4",
-    "prettier": "^2.5.1"
+    "prettier": "^2.5.1",
+    "tsc": "^2.0.4"
   }
 }
