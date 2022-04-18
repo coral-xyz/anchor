@@ -15,3 +15,5 @@ jobs:
         with:
           token: ${{ secrets.WORKFLOW_TOKEN }}
       - uses: ./.github/actions/merge-upstream/
+        with:
+          token: ${{ secrets.WORKFLOW_TOKEN }}

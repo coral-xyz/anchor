@@ -2,7 +2,7 @@ name: "Merge Anchor Upstream"
 description: "Merge Anchor Upstream"
 
 inputs:
-  workflow-token:
+  token:
     description: "Token for workflows permissions"
 
 runs:
