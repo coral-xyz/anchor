@@ -3,6 +3,7 @@ description: "Merge Anchor Upstream"
 
 inputs:
   github_token:
+    description: "Token with permissions"
 
 runs:
   using: "composite"
