@@ -18,17 +18,17 @@ pub mod idl_doc {
     }
 }
 
-#[derive(Accounts)]
-pub struct TestIdlDocParse<'info> {
-    /// This account doc comment should appear in the IDL
-    /// This is a multi-line comment
-    /// CHECK:
-    pub act: Account<'info, DataWithDoc>,
-}
-
 /// Custom account doc comment should appear in the IDL
 #[account]
 pub struct DataWithDoc {
     /// Account attribute doc comment should appear in the IDL
     pub data: u16,
+}
+
+
+#[derive(Accounts)]
+pub struct TestIdlDocParse<'info> {
+    /// This account doc comment should appear in the IDL
+    /// This is a multi-line comment
+    pub act: Account<'info, DataWithDoc>,
 }
