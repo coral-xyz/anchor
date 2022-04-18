@@ -1638,8 +1638,8 @@ describe("misc", () => {
         (i) => i.name === "testIdlDocParse"
     );
     it("includes instruction doc comment", async () => {
-        assert(
-            instruction.doc === 
+        assert.equal(
+            instruction.doc,
                 "This instruction doc should appear in the IDL"
         );
     });
@@ -1648,8 +1648,8 @@ describe("misc", () => {
         const act = instruction.accounts.find(
             (i) => i.name === 'act'
         );
-        assert(
-            act.doc === 
+        assert.equal(
+            act.doc,
                 "This account doc comment should appear in the IDL"
         );
     });
@@ -1659,8 +1659,8 @@ describe("misc", () => {
     );
 
     it("includes accounts doc comment", async () => {
-        assert(
-            dataWithDoc.doc === 
+        assert.equal(
+            dataWithDoc.doc,
                 "Custom account doc comment should appear in the IDL"
         );
     });
@@ -1669,8 +1669,8 @@ describe("misc", () => {
         const dataField = dataWithDoc.type.fields.find(
             (i) => i.name === 'data'
         );
-        assert(
-            dataField.doc === 
+        assert.equal(
+            dataField.doc, 
                 "Account attribute doc comment should appear in the IDL"
         );
     });

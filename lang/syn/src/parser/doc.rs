@@ -2,7 +2,7 @@ use syn::{Lit::Str, Meta::NameValue};
 
 
 // Returns space separated doc comments
-pub fn parse(attrs: &[syn::Attribute]) -> Option<String> {
+pub fn parse(attrs: &[syn::Attribute]) -> Option<Vec<String>> {
     let doc_strings: Vec<String> = attrs
         .iter()
         .filter_map(|attr| match attr.parse_meta() {
@@ -24,6 +24,6 @@ pub fn parse(attrs: &[syn::Attribute]) -> Option<String> {
     if doc_strings.is_empty() {
         None
     } else {
-        Some(doc_strings.join(" "))
+        Some(doc_strings)
     }
 }

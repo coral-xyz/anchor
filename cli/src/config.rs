@@ -166,7 +166,7 @@ impl WithPath<Config> {
                 path.join("src/lib.rs"),
                 version,
                 self.features.seeds,
-                self.features.no_docs,
+                false,
                 false,
             )?;
             r.push(Program {
