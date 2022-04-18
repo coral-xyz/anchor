@@ -14,4 +14,4 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/merge-upstream/
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.WORKFLOW_TOKEN }}

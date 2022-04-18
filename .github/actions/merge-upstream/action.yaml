@@ -1,9 +1,9 @@
 name: "Merge Anchor Upstream"
 description: "Merge Anchor Upstream"
 
-inputs:
-  token:
-    description: "Token for workflows permissions"
+# inputs:
+#   token:
+#     description: "Token for workflows permissions"
 
 runs:
   using: "composite"
