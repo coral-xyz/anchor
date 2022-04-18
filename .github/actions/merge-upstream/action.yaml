@@ -3,9 +3,9 @@ description: "Merge Anchor Upstream"
 
 inputs:
   repo-token:
-    description: "Token with permissions to do repo things"
+    description: "Repo token"
   workflow-token:
-    description: "Token for workflow bs"
+    description: "Token for workflows permissions"
 
 runs:
   using: "composite"
