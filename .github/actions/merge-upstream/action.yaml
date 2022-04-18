@@ -2,8 +2,10 @@ name: "Merge Anchor Upstream"
 description: "Merge Anchor Upstream"
 
 inputs:
-  github_token:
-    description: "Token with permissions"
+  repo-token:
+    description: "Token with permissions to do repo things"
+  workflow-token:
+    description: "Token for workflow bs"
 
 runs:
   using: "composite"
