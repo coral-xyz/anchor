@@ -13,6 +13,7 @@ runs:
       with:
         ref: master # set the branch to merge to
         fetch-depth: 0
+        token:
     - run: git config --global user.email "Elias.cmoreno17@gmail.com"
       shell: bash
     - run: git config --global user.name "Eliascm17"
@@ -22,8 +23,6 @@ runs:
     - run: git pull upstream master --no-ff
       shell: bash
     - run: git push origin master
-      with:
-        token:
       shell: bash
     - run: git checkout -b latest
       shell: bash
