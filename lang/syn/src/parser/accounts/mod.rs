@@ -121,10 +121,9 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                 }
             }
             match kind {
-                // this doesn't catch cases like
-                // account.key() or account.key but
-                // my guess is that doesn't happen often and we
-                // can revisit this if I'm wrong
+                // This doesn't catch cases like account.key() or account.key.
+                // My guess is that doesn't happen often and we can revisit
+                // this if I'm wrong.
                 InitKind::Token { mint, .. } | InitKind::AssociatedToken { mint, .. } => {
                     if !fields.iter().any(|f| {
                         f.ident()
