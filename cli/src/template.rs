@@ -16,6 +16,14 @@ pub fn virtual_manifest() -> &'static str {
 members = [
     "programs/*"
 ]
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+[profile.release.build-override]
+opt-level = 3
+incremental = false
+codegen-units = 1
 "#
 }
 
