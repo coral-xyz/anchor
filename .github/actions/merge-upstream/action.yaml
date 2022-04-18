@@ -2,8 +2,6 @@ name: "Merge Anchor Upstream"
 description: "Merge Anchor Upstream"
 
 inputs:
-  repo-token:
-    description: "Repo token"
   workflow-token:
     description: "Token for workflows permissions"
 
