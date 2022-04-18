@@ -1,8 +1,9 @@
 name: Merge Upstream
 
 on:
-  schedule:
-    - cron: "*/30 * * * *"
+  push:
+  # schedule:
+  #   - cron: "*/30 * * * *"
 
 jobs:
   merge-upstream:
