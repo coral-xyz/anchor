@@ -6,7 +6,7 @@ cp keypairs/idl_commands_one-keypair.json target/deploy
 
 echo "Starting local validator for test"
 
-solana-test-validator --reset -q --mint 65YSPtxtGVG21kq91FC7uLsrsVV2tNzACM2uzYwpLUcF &
+solana-test-validator --reset -q --mint tgyXxAhCkpgtKCEi4W6xWJSzqwVGs3uk2RodbZP2J49 &
 
 sleep 10
 
