@@ -3,14 +3,13 @@ import { Buffer } from "buffer";
 import { PublicKey } from "@solana/web3.js";
 import * as borsh from "@project-serum/borsh";
 import camelcase from "camelcase";
-import { size } from "lodash";
 
 export type RawIdl = {
   version: string;
   name: string;
   instructions: RawIdlInstruction[];
   state?: RawIdlState;
-  accounts?: RawIdlTypeDef[];
+  accounts?: RawIdlAccountDef[];
   types?: RawIdlTypeDef[];
   events?: RawIdlEvent[];
   errors?: IdlErrorCode[];
@@ -166,6 +165,11 @@ export type IdlAccountDef = {
   name: string;
   type: IdlTypeDefTyStruct;
 };
+
+type RawIdlAccountDef = {
+  name: string,
+  type: RawIdlTypeDefTyStruct;
+}
 
 export type IdlTypeDefTyStruct = {
   kind: "struct";

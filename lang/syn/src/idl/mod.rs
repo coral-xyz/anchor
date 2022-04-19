@@ -74,7 +74,6 @@ pub struct IdlAccount {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct IdlPda {
     pub seeds: Vec<IdlSeed>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -82,7 +81,6 @@ pub struct IdlPda {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase", tag = "kind")]
 pub enum IdlSeed {
     Const(IdlSeedConst),
     Arg(IdlSeedArg),
@@ -90,7 +88,6 @@ pub enum IdlSeed {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct IdlSeedAccount {
     #[serde(rename = "type")]
     pub ty: IdlType,
@@ -102,7 +99,6 @@ pub struct IdlSeedAccount {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct IdlSeedArg {
     #[serde(rename = "type")]
     pub ty: IdlType,
@@ -110,7 +106,6 @@ pub struct IdlSeedArg {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct IdlSeedConst {
     #[serde(rename = "type")]
     pub ty: IdlType,
