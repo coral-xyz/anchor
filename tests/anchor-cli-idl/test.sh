@@ -12,10 +12,10 @@ sleep 10
 
 echo "Building and deploying programs"
 
-anchor build && anchor deploy -p idl-commands-one
+anchor build && anchor deploy
 
 echo "Running tests"
 
 anchor test --skip-deploy --skip-local-validator
 
-# trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
+trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
