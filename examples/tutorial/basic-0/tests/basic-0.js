@@ -9,7 +9,7 @@ describe("basic-0", () => {
     // Read the deployed program from the workspace.
     const program = anchor.workspace.Basic0;
 
-    // Execute the method.
+    // Execute the RPC.
     await program.methods.initialize().rpc();
     // #endregion code
   });
