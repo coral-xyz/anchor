@@ -123,7 +123,9 @@ Once built, we can deploy the program by running
 anchor deploy
 ```
 
-Take note of the program's deployed address. We'll use it next.
+Take note of the program's deployed address. The address is the actual address of your program as opposed to the sample "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS" address that we have used above.
+
+You can also obtain the program address by running `anchor keys list`.
 
 ## Generating a Client
 
