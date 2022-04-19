@@ -10,7 +10,7 @@ describe("declare_id", () => {
 
   it("throws error!", async () => {
     try {
-      await program.methods.initialize();
+      await program.methods.initialize().rpc();
       assert.ok(false);
     } catch (_err) {
       assert.isTrue(_err instanceof AnchorError);

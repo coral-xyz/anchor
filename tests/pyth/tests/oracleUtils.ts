@@ -46,7 +46,7 @@ export const createPriceFeed = async ({
         }),
       ],
     }
-  );
+  ).rpc();
   return collateralTokenFeed.publicKey;
 };
 export const setFeedPrice = async (

@@ -21,7 +21,7 @@ async function main() {
   const program = new anchor.Program(idl, programId);
 
   // Execute the method.
-  await program.methods.initialize();
+  await program.methods.initialize().rpc();
   // #endregion main
 }
 

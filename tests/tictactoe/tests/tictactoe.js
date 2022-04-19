@@ -33,7 +33,7 @@ describe("tictactoe", () => {
       },
       signers: [game],
       instructions: [await program.account.game.createInstruction(game)],
-    });
+    }).rpc();
 
     console.log("transaction: ", tx);
   });

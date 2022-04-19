@@ -26,7 +26,7 @@ describe("basic-1", () => {
         systemProgram: SystemProgram.programId,
       },
       signers: [myAccount],
-    });
+    }).rpc();
     // #endregion code-simplified
 
     // Fetch the newly created account from the cluster.

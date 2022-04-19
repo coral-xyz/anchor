@@ -15,7 +15,7 @@ describe("system_accounts", () => {
         wallet: wallet.publicKey,
       },
       signers: [authority],
-    });
+    }).rpc();
 
     console.log("Your transaction signature", tx);
   });
@@ -48,7 +48,7 @@ describe("system_accounts", () => {
           wallet: tokenAccount,
         },
         signers: [authority],
-      });
+      }).rpc();
       assert.ok(false);
     } catch (err) {
       const errMsg = "The given account is not owned by the system program";

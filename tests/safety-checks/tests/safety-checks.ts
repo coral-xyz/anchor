@@ -10,7 +10,7 @@ describe("safety-checks", () => {
 
   it("Is initialized!", async () => {
     // Add your test here.
-    const tx = await program.methods.initialize({});
+    const tx = await program.methods.initialize({}).rpc();
     console.log("Your transaction signature", tx);
   });
 });

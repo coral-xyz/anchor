@@ -55,7 +55,7 @@ describe("misc", () => {
         signers: [data],
         instructions: [await program.account.data.createInstruction(data)],
       }
-    );
+    ).rpc();
     const dataAccount = await program.account.data.fetch(data.publicKey);
     assert.isTrue(dataAccount.udata.eq(new anchor.BN(1234)));
     assert.isTrue(dataAccount.idata.eq(new anchor.BN(22)));
