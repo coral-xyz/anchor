@@ -1,3 +1,6 @@
+[profile.release]
+overflow-checks = true
+
 [workspace]
 members = [
     "programs/*"
