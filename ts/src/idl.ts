@@ -44,7 +44,6 @@ export type RawIdlConstant = {
   name: string;
   type: RawIdlType;
   value: string;
-
 };
 
 export type IdlMetadata = any;
@@ -159,7 +158,7 @@ export type IdlTypeDef = {
 type RawIdlTypeDefTyStruct = {
   kind: "struct";
   fields: RawIdlTypeDefStruct;
-}
+};
 
 export type IdlAccountDef = {
   name: string;
@@ -167,9 +166,9 @@ export type IdlAccountDef = {
 };
 
 type RawIdlAccountDef = {
-  name: string,
+  name: string;
   type: RawIdlTypeDefTyStruct;
-}
+};
 
 export type IdlTypeDefTyStruct = {
   kind: "struct";
