@@ -51,6 +51,7 @@
     "mocha": "^9.1.3",
     "ts-mocha": "^8.0.0",
     "typescript": "^4.4.4",
-    "prettier": "^2.5.1"
+    "prettier": "^2.5.1",
+    "tsc": "^2.0.4"
   }
 }
