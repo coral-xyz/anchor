@@ -1,12 +1,12 @@
-use crate::error::ErrorCode;
+use crate::bpf_writer::BpfWriter;
+use crate::error::{Error, ErrorCode};
 use crate::{
-    Accounts, AccountsClose, AccountsExit, ToAccountInfo, ToAccountInfos, ToAccountMetas, ZeroCopy,
+    Accounts, AccountsClose, AccountsExit, Key, Result, ToAccountInfo, ToAccountInfos,
+    ToAccountMetas, ZeroCopy,
 };
 use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;
-use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::AccountMeta;
-use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::cell::{Ref, RefMut};
 use std::collections::BTreeMap;
@@ -57,11 +57,15 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
     pub fn try_from(
         program_id: &Pubkey,
         acc_info: &AccountInfo<'info>,
-    ) -> Result<Loader<'info, T>, ProgramError> {
+    ) -> Result<Loader<'info, T>> {
         if acc_info.owner != program_id {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
+                .with_pubkeys((*acc_info.owner, *program_id)));
         }
         let data: &[u8] = &acc_info.try_borrow_data()?;
+        if data.len() < T::discriminator().len() {
+            return Err(ErrorCode::AccountDiscriminatorNotFound.into());
+        }
         // Discriminator must match.
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::discriminator() {
@@ -77,17 +81,21 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
     pub fn try_from_unchecked(
         program_id: &Pubkey,
         acc_info: &AccountInfo<'info>,
-    ) -> Result<Loader<'info, T>, ProgramError> {
+    ) -> Result<Loader<'info, T>> {
         if acc_info.owner != program_id {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
+                .with_pubkeys((*acc_info.owner, *program_id)));
         }
         Ok(Loader::new(acc_info.clone()))
     }
 
     /// Returns a Ref to the account data structure for reading.
     #[allow(deprecated)]
-    pub fn load(&self) -> Result<Ref<T>, ProgramError> {
+    pub fn load(&self) -> Result<Ref<T>> {
         let data = self.acc_info.try_borrow_data()?;
+        if data.len() < T::discriminator().len() {
+            return Err(ErrorCode::AccountDiscriminatorNotFound.into());
+        }
 
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::discriminator() {
@@ -99,7 +107,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
 
     /// Returns a `RefMut` to the account data structure for reading or writing.
     #[allow(deprecated)]
-    pub fn load_mut(&self) -> Result<RefMut<T>, ProgramError> {
+    pub fn load_mut(&self) -> Result<RefMut<T>> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
         if !self.acc_info.is_writable {
@@ -107,6 +115,9 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
         }
 
         let data = self.acc_info.try_borrow_mut_data()?;
+        if data.len() < T::discriminator().len() {
+            return Err(ErrorCode::AccountDiscriminatorNotFound.into());
+        }
 
         let disc_bytes = array_ref![data, 0, 8];
         if disc_bytes != &T::discriminator() {
@@ -121,7 +132,7 @@ impl<'info, T: ZeroCopy> Loader<'info, T> {
     /// Returns a `RefMut` to the account data structure for reading or writing.
     /// Should only be called once, when the account is being initialized.
     #[allow(deprecated)]
-    pub fn load_init(&self) -> Result<RefMut<T>, ProgramError> {
+    pub fn load_init(&self) -> Result<RefMut<T>> {
         // AccountInfo api allows you to borrow mut even if the account isn't
         // writable, so add this check for a better dev experience.
         if !self.acc_info.is_writable {
@@ -152,7 +163,7 @@ impl<'info, T: ZeroCopy> Accounts<'info> for Loader<'info, T> {
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
-    ) -> Result<Self, ProgramError> {
+    ) -> Result<Self> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
         }
@@ -166,18 +177,25 @@ impl<'info, T: ZeroCopy> Accounts<'info> for Loader<'info, T> {
 #[allow(deprecated)]
 impl<'info, T: ZeroCopy> AccountsExit<'info> for Loader<'info, T> {
     // The account *cannot* be loaded when this is called.
-    fn exit(&self, _program_id: &Pubkey) -> ProgramResult {
+    fn exit(&self, _program_id: &Pubkey) -> Result<()> {
         let mut data = self.acc_info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
-        let mut cursor = std::io::Cursor::new(dst);
-        cursor.write_all(&T::discriminator()).unwrap();
+        let mut writer = BpfWriter::new(dst);
+        writer.write_all(&T::discriminator()).unwrap();
         Ok(())
     }
 }
 
+/// This function is for INTERNAL USE ONLY.
+/// Do NOT use this function in a program.
+/// Manual closing of `Loader<'info, T>` types is NOT supported.
+///
+/// Details: Using `close` with `Loader<'info, T>` is not safe because
+/// it requires the `mut` constraint but for that type the constraint
+/// overwrites the "closed account" discriminator at the end of the instruction.
 #[allow(deprecated)]
 impl<'info, T: ZeroCopy> AccountsClose<'info> for Loader<'info, T> {
-    fn close(&self, sol_destination: AccountInfo<'info>) -> ProgramResult {
+    fn close(&self, sol_destination: AccountInfo<'info>) -> Result<()> {
         crate::common::close(self.to_account_info(), sol_destination)
     }
 }
@@ -205,5 +223,12 @@ impl<'info, T: ZeroCopy> AsRef<AccountInfo<'info>> for Loader<'info, T> {
 impl<'info, T: ZeroCopy> ToAccountInfos<'info> for Loader<'info, T> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         vec![self.acc_info.clone()]
+    }
+}
+
+#[allow(deprecated)]
+impl<'info, T: ZeroCopy> Key for Loader<'info, T> {
+    fn key(&self) -> Pubkey {
+        *self.acc_info.key
     }
 }

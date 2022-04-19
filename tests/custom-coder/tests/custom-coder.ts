@@ -1,12 +1,13 @@
 import * as anchor from "@project-serum/anchor";
 import { Spl } from "@project-serum/anchor";
-import * as assert from "assert";
+import { assert } from "chai";
 import BN from "bn.js";
 import { Keypair, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 
 describe("custom-coder", () => {
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.Provider.env());
+  const provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
 
   // Client.
   const program = Spl.token();
@@ -18,29 +19,22 @@ describe("custom-coder", () => {
   const rent = SYSVAR_RENT_PUBKEY;
 
   it("Creates a mint", async () => {
-    await program.rpc.initializeMint(
-      6,
-      program.provider.wallet.publicKey,
-      null,
-      {
-        accounts: {
-          mint: mintKeypair.publicKey,
-          rent,
-        },
-        signers: [mintKeypair],
-        preInstructions: [
-          await program.account.mint.createInstruction(mintKeypair),
-        ],
-      }
-    );
+    await program.rpc.initializeMint(6, provider.wallet.publicKey, null, {
+      accounts: {
+        mint: mintKeypair.publicKey,
+        rent,
+      },
+      signers: [mintKeypair],
+      preInstructions: [
+        await program.account.mint.createInstruction(mintKeypair),
+      ],
+    });
     const mintAccount = await program.account.mint.fetch(mintKeypair.publicKey);
-    assert.ok(
-      mintAccount.mintAuthority.equals(program.provider.wallet.publicKey)
-    );
-    assert.ok(mintAccount.freezeAuthority === null);
-    assert.ok(mintAccount.decimals === 6);
-    assert.ok(mintAccount.isInitialized);
-    assert.ok(mintAccount.supply.toNumber() === 0);
+    assert.isTrue(mintAccount.mintAuthority.equals(provider.wallet.publicKey));
+    assert.isNull(mintAccount.freezeAuthority);
+    assert.strictEqual(mintAccount.decimals, 6);
+    assert.isTrue(mintAccount.isInitialized);
+    assert.strictEqual(mintAccount.supply.toNumber(), 0);
   });
 
   it("Creates a token account for alice", async () => {
@@ -48,7 +42,7 @@ describe("custom-coder", () => {
       accounts: {
         account: aliceTokenKeypair.publicKey,
         mint: mintKeypair.publicKey,
-        authority: program.provider.wallet.publicKey,
+        authority: provider.wallet.publicKey,
         rent,
       },
       signers: [aliceTokenKeypair],
@@ -59,14 +53,14 @@ describe("custom-coder", () => {
     const token = await program.account.token.fetch(
       aliceTokenKeypair.publicKey
     );
-    assert.ok(token.authority.equals(program.provider.wallet.publicKey));
-    assert.ok(token.mint.equals(mintKeypair.publicKey));
-    assert.ok(token.amount.toNumber() === 0);
-    assert.ok(token.delegate === null);
-    assert.ok(token.state === 0);
-    assert.ok(token.isNative === null);
-    assert.ok(token.delegatedAmount.toNumber() === 0);
-    assert.ok(token.closeAuthority === null);
+    assert.isTrue(token.authority.equals(provider.wallet.publicKey));
+    assert.isTrue(token.mint.equals(mintKeypair.publicKey));
+    assert.strictEqual(token.amount.toNumber(), 0);
+    assert.isNull(token.delegate);
+    assert.strictEqual(token.state, 1);
+    assert.isNull(token.isNative);
+    assert.strictEqual(token.delegatedAmount.toNumber(), 0);
+    assert.isNull(token.closeAuthority);
   });
 
   it("Mints a token to alice", async () => {
@@ -74,7 +68,7 @@ describe("custom-coder", () => {
       accounts: {
         mint: mintKeypair.publicKey,
         to: aliceTokenKeypair.publicKey,
-        authority: program.provider.wallet.publicKey,
+        authority: provider.wallet.publicKey,
       },
     });
 
@@ -82,8 +76,8 @@ describe("custom-coder", () => {
       aliceTokenKeypair.publicKey
     );
     const mint = await program.account.mint.fetch(mintKeypair.publicKey);
-    assert.ok(token.amount.toNumber() === 2);
-    assert.ok(mint.supply.toNumber() === 2);
+    assert.strictEqual(token.amount.toNumber(), 2);
+    assert.strictEqual(mint.supply.toNumber(), 2);
   });
 
   it("Creates a token for bob", async () => {
@@ -91,7 +85,7 @@ describe("custom-coder", () => {
       accounts: {
         account: bobTokenKeypair.publicKey,
         mint: mintKeypair.publicKey,
-        authority: program.provider.wallet.publicKey,
+        authority: provider.wallet.publicKey,
         rent,
       },
       signers: [bobTokenKeypair],
@@ -106,7 +100,7 @@ describe("custom-coder", () => {
       accounts: {
         source: aliceTokenKeypair.publicKey,
         destination: bobTokenKeypair.publicKey,
-        authority: program.provider.wallet.publicKey,
+        authority: provider.wallet.publicKey,
       },
     });
     const aliceToken = await program.account.token.fetch(
@@ -115,8 +109,8 @@ describe("custom-coder", () => {
     const bobToken = await program.account.token.fetch(
       bobTokenKeypair.publicKey
     );
-    assert.ok(aliceToken.amount.toNumber() === 1);
-    assert.ok(bobToken.amount.toNumber() === 1);
+    assert.strictEqual(aliceToken.amount.toNumber(), 1);
+    assert.strictEqual(bobToken.amount.toNumber(), 1);
   });
 
   it("Alice burns a token", async () => {
@@ -124,14 +118,14 @@ describe("custom-coder", () => {
       accounts: {
         source: aliceTokenKeypair.publicKey,
         mint: mintKeypair.publicKey,
-        authority: program.provider.wallet.publicKey,
+        authority: provider.wallet.publicKey,
       },
     });
     const aliceToken = await program.account.token.fetch(
       aliceTokenKeypair.publicKey
     );
     const mint = await program.account.mint.fetch(mintKeypair.publicKey);
-    assert.ok(aliceToken.amount.toNumber() === 0);
-    assert.ok(mint.supply.toNumber() === 1);
+    assert.strictEqual(aliceToken.amount.toNumber(), 0);
+    assert.strictEqual(mint.supply.toNumber(), 1);
   });
 });

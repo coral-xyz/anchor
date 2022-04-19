@@ -9,15 +9,15 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 mod token_proxy {
     use super::*;
 
-    pub fn proxy_transfer(ctx: Context<ProxyTransfer>, amount: u64) -> ProgramResult {
+    pub fn proxy_transfer(ctx: Context<ProxyTransfer>, amount: u64) -> Result<()> {
         token::transfer(ctx.accounts.into(), amount)
     }
 
-    pub fn proxy_mint_to(ctx: Context<ProxyMintTo>, amount: u64) -> ProgramResult {
+    pub fn proxy_mint_to(ctx: Context<ProxyMintTo>, amount: u64) -> Result<()> {
         token::mint_to(ctx.accounts.into(), amount)
     }
 
-    pub fn proxy_burn(ctx: Context<ProxyBurn>, amount: u64) -> ProgramResult {
+    pub fn proxy_burn(ctx: Context<ProxyBurn>, amount: u64) -> Result<()> {
         token::burn(ctx.accounts.into(), amount)
     }
 
@@ -25,7 +25,7 @@ mod token_proxy {
         ctx: Context<ProxySetAuthority>,
         authority_type: AuthorityType,
         new_authority: Option<Pubkey>,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         token::set_authority(ctx.accounts.into(), authority_type.into(), new_authority)
     }
 }
@@ -71,7 +71,7 @@ pub struct ProxyBurn<'info> {
     #[account(mut)]
     pub mint: AccountInfo<'info>,
     #[account(mut)]
-    pub to: AccountInfo<'info>,
+    pub from: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
 }
 
@@ -116,7 +116,7 @@ impl<'a, 'b, 'c, 'info> From<&mut ProxyBurn<'info>> for CpiContext<'a, 'b, 'c, '
     fn from(accounts: &mut ProxyBurn<'info>) -> CpiContext<'a, 'b, 'c, 'info, Burn<'info>> {
         let cpi_accounts = Burn {
             mint: accounts.mint.clone(),
-            to: accounts.to.clone(),
+            from: accounts.from.clone(),
             authority: accounts.authority.clone(),
         };
         let cpi_program = accounts.token_program.clone();

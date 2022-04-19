@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::{AccountField, AccountsStruct, Ty};
 use heck::SnakeCase;
 use quote::quote;
@@ -20,6 +22,12 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         .map(|f: &AccountField| match f {
             AccountField::CompositeField(s) => {
                 let name = &s.ident;
+                let docs = if !s.docs.is_empty() {
+                    proc_macro2::TokenStream::from_str(&format!("#[doc = r#\"{}\"#]", s.docs))
+                        .unwrap()
+                } else {
+                    quote!()
+                };
                 let symbol: proc_macro2::TokenStream = format!(
                     "__cpi_client_accounts_{0}::{1}",
                     s.symbol.to_snake_case(),
@@ -28,12 +36,20 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 .parse()
                 .unwrap();
                 quote! {
+                    #docs
                     pub #name: #symbol<'info>
                 }
             }
             AccountField::Field(f) => {
                 let name = &f.ident;
+                let docs = if !f.docs.is_empty() {
+                    proc_macro2::TokenStream::from_str(&format!("#[doc = r#\"{}\"#]", f.docs))
+                        .unwrap()
+                } else {
+                    quote!()
+                };
                 quote! {
+                    #docs
                     pub #name: anchor_lang::solana_program::account_info::AccountInfo<'info>
                 }
             }
@@ -124,6 +140,11 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     } else {
         quote! {<'info>}
     };
+    let struct_doc = proc_macro2::TokenStream::from_str(&format!(
+        "#[doc = \" Generated CPI struct of the accounts for [`{}`].\"]",
+        name
+    ))
+    .unwrap();
     quote! {
         /// An internal, Anchor generated module. This is used (as an
         /// implementation detail), to generate a CPI struct for a given
@@ -131,18 +152,19 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         /// AccountInfo.
         ///
         /// To access the struct in this module, one should use the sibling
-        /// `cpi::accounts` module (also generated), which re-exports this.
+        /// [`cpi::accounts`] module (also generated), which re-exports this.
         pub(crate) mod #account_mod_name {
             use super::*;
 
             #(#re_exports)*
 
-            pub struct #name#generics {
+            #struct_doc
+            pub struct #name #generics {
                 #(#account_struct_fields),*
             }
 
             #[automatically_derived]
-            impl#generics anchor_lang::ToAccountMetas for #name#generics {
+            impl #generics anchor_lang::ToAccountMetas for #name #generics {
                 fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<anchor_lang::solana_program::instruction::AccountMeta> {
                     let mut account_metas = vec![];
                     #(#account_struct_metas)*
@@ -151,7 +173,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             }
 
             #[automatically_derived]
-            impl<'info> anchor_lang::ToAccountInfos<'info> for #name#generics {
+            impl<'info> anchor_lang::ToAccountInfos<'info> for #name #generics {
                 fn to_account_infos(&self) -> Vec<anchor_lang::solana_program::account_info::AccountInfo<'info>> {
                     let mut account_infos = vec![];
                     #(#account_struct_infos)*

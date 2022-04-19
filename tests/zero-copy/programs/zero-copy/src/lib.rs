@@ -13,38 +13,38 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 pub mod zero_copy {
     use super::*;
 
-    pub fn create_foo(ctx: Context<CreateFoo>) -> ProgramResult {
+    pub fn create_foo(ctx: Context<CreateFoo>) -> Result<()> {
         let foo = &mut ctx.accounts.foo.load_init()?;
         foo.authority = *ctx.accounts.authority.key;
         foo.set_second_authority(ctx.accounts.authority.key);
         Ok(())
     }
 
-    pub fn update_foo(ctx: Context<UpdateFoo>, data: u64) -> ProgramResult {
+    pub fn update_foo(ctx: Context<UpdateFoo>, data: u64) -> Result<()> {
         let mut foo = ctx.accounts.foo.load_mut()?;
         foo.data = data;
         Ok(())
     }
 
-    pub fn update_foo_second(ctx: Context<UpdateFooSecond>, second_data: u64) -> ProgramResult {
+    pub fn update_foo_second(ctx: Context<UpdateFooSecond>, second_data: u64) -> Result<()> {
         let mut foo = ctx.accounts.foo.load_mut()?;
         foo.second_data = second_data;
         Ok(())
     }
 
-    pub fn create_bar(ctx: Context<CreateBar>) -> ProgramResult {
+    pub fn create_bar(ctx: Context<CreateBar>) -> Result<()> {
         let bar = &mut ctx.accounts.bar.load_init()?;
         bar.authority = *ctx.accounts.authority.key;
         Ok(())
     }
 
-    pub fn update_bar(ctx: Context<UpdateBar>, data: u64) -> ProgramResult {
+    pub fn update_bar(ctx: Context<UpdateBar>, data: u64) -> Result<()> {
         let bar = &mut ctx.accounts.bar.load_mut()?;
         bar.data = data;
         Ok(())
     }
 
-    pub fn create_large_account(_ctx: Context<CreateLargeAccount>) -> ProgramResult {
+    pub fn create_large_account(_ctx: Context<CreateLargeAccount>) -> Result<()> {
         Ok(())
     }
 
@@ -52,7 +52,7 @@ pub mod zero_copy {
         ctx: Context<UpdateLargeAccount>,
         idx: u32,
         data: u64,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         let event_q = &mut ctx.accounts.event_q.load_mut()?;
         event_q.events[idx as usize] = Event {
             data,
@@ -97,7 +97,8 @@ pub struct CreateBar<'info> {
         init,
         seeds = [authority.key().as_ref(), foo.key().as_ref()],
         bump,
-        payer = authority, owner = *program_id
+        payer = authority, owner = *program_id,
+        space = Bar::LEN + 8
     )]
     bar: AccountLoader<'info, Bar>,
     #[account(mut)]
@@ -132,8 +133,8 @@ pub struct UpdateLargeAccount<'info> {
 }
 
 #[account(zero_copy)]
-#[derive(Default)]
 #[repr(packed)]
+#[derive(Default)]
 pub struct Foo {
     pub authority: Pubkey,
     pub data: u64,
@@ -143,10 +144,13 @@ pub struct Foo {
 }
 
 #[account(zero_copy)]
-#[derive(Default)]
 pub struct Bar {
-    pub authority: Pubkey,
-    pub data: u64,
+    pub authority: Pubkey, // 32
+    pub data: u64,         // 8
+}
+
+impl Bar {
+    pub const LEN: usize = 32 + 8;
 }
 
 #[account(zero_copy)]
