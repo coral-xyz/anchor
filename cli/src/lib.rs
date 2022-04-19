@@ -1570,7 +1570,7 @@ fn idl_set_buffer(cfg_override: &ConfigOverride, program_id: Pubkey, buffer: Pub
             &tx,
             CommitmentConfig::confirmed(),
             RpcSendTransactionConfig {
-                skip_preflight: true,
+                skip_preflight: false,
                 ..RpcSendTransactionConfig::default()
             },
         )?;
@@ -1659,7 +1659,7 @@ fn idl_set_authority(
             &tx,
             CommitmentConfig::confirmed(),
             RpcSendTransactionConfig {
-                skip_preflight: true,
+                skip_preflight: false,
                 ..RpcSendTransactionConfig::default()
             },
         )?;
@@ -1742,7 +1742,7 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
             &tx,
             CommitmentConfig::confirmed(),
             RpcSendTransactionConfig {
-                skip_preflight: true,
+                skip_preflight: false,
                 ..RpcSendTransactionConfig::default()
             },
         )?;
@@ -2479,9 +2479,9 @@ fn create_idl_account(
         );
         client.send_and_confirm_transaction_with_spinner_and_config(
             &tx,
-            CommitmentConfig::confirmed(),
+            CommitmentConfig::finalized(),
             RpcSendTransactionConfig {
-                skip_preflight: true,
+                skip_preflight: false,
                 ..RpcSendTransactionConfig::default()
             },
         )?;
@@ -2549,7 +2549,7 @@ fn create_idl_buffer(
         &tx,
         CommitmentConfig::confirmed(),
         RpcSendTransactionConfig {
-            skip_preflight: true,
+            skip_preflight: false,
             ..RpcSendTransactionConfig::default()
         },
     )?;
