@@ -14,6 +14,7 @@ export type RawIdl = {
   events?: RawIdlEvent[];
   errors?: IdlErrorCode[];
   constants?: RawIdlConstant[];
+  metadata?: IdlMetadata;
 };
 
 export type Idl = {
@@ -570,6 +571,7 @@ export function camelCaseIdl<IDL extends Idl = Idl>(rawIdl: RawIdl): IDL {
     errors: rawIdl.errors,
     constants: camelCaseConstants(rawIdl.constants),
     camelized: true,
+    metadata: rawIdl.metadata,
   } as IDL;
 }
 
