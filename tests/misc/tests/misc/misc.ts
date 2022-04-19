@@ -966,6 +966,10 @@ describe("misc", () => {
   });
 
   it("Should not include NO_IDL const in IDL", async () => {
+    // The type system sees that this constant does not exist and the
+    // ts-expect-error makes sure that ts compilation fails if that ever
+    // changes.
+    // @ts-expect-error
     assert.isUndefined(miscIdl.constants.find((c) => c.name === "NO_IDL"));
   });
 
