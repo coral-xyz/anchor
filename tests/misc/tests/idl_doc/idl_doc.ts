@@ -1,25 +1,7 @@
 import * as anchor from "@project-serum/anchor";
-import {
-  Program,
-  BN,
-  IdlAccounts,
-  AnchorError,
-  Wallet,
-} from "@project-serum/anchor";
-import {
-  PublicKey,
-  Keypair,
-  SystemProgram,
-  SYSVAR_RENT_PUBKEY,
-} from "@solana/web3.js";
-import {
-  TOKEN_PROGRAM_ID,
-  Token,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
+import { Program, Wallet } from "@project-serum/anchor";
 import { IdlDoc } from "../../target/types/idl_doc";
-const utf8 = anchor.utils.bytes.utf8;
-const { assert } = require("chai");
+const { expect } = require("chai");
 const idl_doc_idl = require("../../target/idl/idl_doc.json");
 
 describe("idl_doc", () => {
@@ -34,9 +16,8 @@ describe("idl_doc", () => {
         (i) => i.name === "testIdlDocParse"
     );
     it("includes instruction doc comment", async () => {
-        assert.equal(
-            instruction.doc,
-                "This instruction doc should appear in the IDL"
+        expect(instruction.doc).to.have.same.members(
+            ["This instruction doc should appear in the IDL"]
         );
     });
 
@@ -44,9 +25,9 @@ describe("idl_doc", () => {
         const act = instruction.accounts.find(
             (i) => i.name === 'act'
         );
-        assert.equal(
-            act.doc,
-                "This account doc comment should appear in the IDL"
+        expect(act.doc).to.have.same.members(
+            ["This account doc comment should appear in the IDL",
+                "This is a multi-line comment"]
         );
     });
 
@@ -55,9 +36,8 @@ describe("idl_doc", () => {
     );
 
     it("includes accounts doc comment", async () => {
-        assert.equal(
-            dataWithDoc.doc,
-                "Custom account doc comment should appear in the IDL"
+        expect(dataWithDoc.doc).to.have.same.members(
+            ["Custom account doc comment should appear in the IDL"]
         );
     });
 
@@ -65,9 +45,8 @@ describe("idl_doc", () => {
         const dataField = dataWithDoc.type.fields.find(
             (i) => i.name === 'data'
         );
-        assert.equal(
-            dataField.doc, 
-                "Account attribute doc comment should appear in the IDL"
+        expect(dataField.doc).to.have.same.members(
+            ["Account attribute doc comment should appear in the IDL"]
         );
     });
   });
