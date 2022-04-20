@@ -910,6 +910,7 @@ fn build_cwd(
 
 // Builds an anchor program in a docker image and copies the build artifacts
 // into the `target/` directory.
+#[allow(clippy::too_many_arguments)]
 fn build_cwd_verifiable(
     cfg: &WithPath<Config>,
     cargo_toml: PathBuf,

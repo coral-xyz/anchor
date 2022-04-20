@@ -15,7 +15,7 @@ pub fn parse(attrs: &[syn::Attribute]) -> Option<Vec<String>> {
                         return Some(val);
                     }
                 }
-                return None;
+                None
             }
             _ => None,
         })
