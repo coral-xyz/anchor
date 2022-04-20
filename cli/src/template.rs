@@ -16,6 +16,15 @@ pub fn virtual_manifest() -> &'static str {
 members = [
     "programs/*"
 ]
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1
+[profile.release.build-override]
+opt-level = 3
+incremental = false
+codegen-units = 1
 "#
 }
 
@@ -64,9 +73,6 @@ no-idl = []
 no-log-ix-name = []
 cpi = ["no-entrypoint"]
 default = []
-
-[profile.release]
-overflow-checks = true
 
 [dependencies]
 anchor-lang = "{2}"

@@ -292,6 +292,7 @@ impl Field {
         checked: bool,
     ) -> proc_macro2::TokenStream {
         let field = &self.ident;
+        let field_str = field.to_string();
         let container_ty = self.container_ty();
         let owner_addr = match &kind {
             None => quote! { program_id },
@@ -312,13 +313,13 @@ impl Field {
                     quote! {
                         #container_ty::try_from(
                             &#field,
-                        )?
+                        ).map_err(|e| e.with_account_name(#field_str))?
                     }
                 } else {
                     quote! {
                         #container_ty::try_from_unchecked(
                             &#field,
-                        )?
+                        ).map_err(|e| e.with_account_name(#field_str))?
                     }
                 };
                 if *boxed {
@@ -334,13 +335,13 @@ impl Field {
                     quote! {
                         #container_ty::try_from(
                             &#field,
-                        )?
+                        ).map_err(|e| e.with_account_name(#field_str))?
                     }
                 } else {
                     quote! {
                         #container_ty::try_from_unchecked(
                             &#field,
-                        )?
+                        ).map_err(|e| e.with_account_name(#field_str))?
                     }
                 }
             }
@@ -349,14 +350,14 @@ impl Field {
                     quote! {
                         #container_ty::try_from(
                             &#field,
-                        )?
+                        ).map_err(|e| e.with_account_name(#field_str))?
                     }
                 } else {
                     quote! {
                         #container_ty::try_from_unchecked(
                             #owner_addr,
                             &#field,
-                        )?
+                        ).map_err(|e| e.with_account_name(#field_str))?
                     }
                 }
             }
@@ -366,14 +367,14 @@ impl Field {
                         #container_ty::try_from(
                             #owner_addr,
                             &#field,
-                        )?
+                        ).map_err(|e| e.with_account_name(#field_str))?
                     }
                 } else {
                     quote! {
                         #container_ty::try_from_unchecked(
                             #owner_addr,
                             &#field,
-                        )?
+                        ).map_err(|e| e.with_account_name(#field_str))?
                     }
                 }
             }
