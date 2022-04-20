@@ -18,6 +18,7 @@ members = [
 ]
 
 [profile.release]
+overflow-checks = true
 lto = "fat"
 codegen-units = 1
 [profile.release.build-override]
@@ -72,9 +73,6 @@ no-idl = []
 no-log-ix-name = []
 cpi = ["no-entrypoint"]
 default = []
-
-[profile.release]
-overflow-checks = true
 
 [dependencies]
 anchor-lang = "{2}"
