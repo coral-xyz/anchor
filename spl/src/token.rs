@@ -6,6 +6,7 @@ use anchor_lang::{context::CpiContext, Accounts};
 use anchor_lang::{solana_program, Result};
 use std::ops::Deref;
 
+pub use spl_token;
 pub use spl_token::ID;
 
 pub fn transfer<'a, 'b, 'c, 'info>(
@@ -62,7 +63,7 @@ pub fn burn<'a, 'b, 'c, 'info>(
 ) -> Result<()> {
     let ix = spl_token::instruction::burn(
         &spl_token::ID,
-        ctx.accounts.to.key,
+        ctx.accounts.from.key,
         ctx.accounts.mint.key,
         ctx.accounts.authority.key,
         &[],
@@ -71,7 +72,7 @@ pub fn burn<'a, 'b, 'c, 'info>(
     solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.to.clone(),
+            ctx.accounts.from.clone(),
             ctx.accounts.mint.clone(),
             ctx.accounts.authority.clone(),
         ],
@@ -99,6 +100,21 @@ pub fn approve<'a, 'b, 'c, 'info>(
             ctx.accounts.delegate.clone(),
             ctx.accounts.authority.clone(),
         ],
+        ctx.signer_seeds,
+    )
+    .map_err(Into::into)
+}
+
+pub fn revoke<'a, 'b, 'c, 'info>(ctx: CpiContext<'a, 'b, 'c, 'info, Revoke<'info>>) -> Result<()> {
+    let ix = spl_token::instruction::revoke(
+        &spl_token::ID,
+        ctx.accounts.source.key,
+        ctx.accounts.authority.key,
+        &[],
+    )?;
+    solana_program::program::invoke_signed(
+        &ix,
+        &[ctx.accounts.source.clone(), ctx.accounts.authority.clone()],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -259,7 +275,7 @@ pub struct MintTo<'info> {
 #[derive(Accounts)]
 pub struct Burn<'info> {
     pub mint: AccountInfo<'info>,
-    pub to: AccountInfo<'info>,
+    pub from: AccountInfo<'info>,
     pub authority: AccountInfo<'info>,
 }
 
@@ -267,6 +283,12 @@ pub struct Burn<'info> {
 pub struct Approve<'info> {
     pub to: AccountInfo<'info>,
     pub delegate: AccountInfo<'info>,
+    pub authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct Revoke<'info> {
+    pub source: AccountInfo<'info>,
     pub authority: AccountInfo<'info>,
 }
 
@@ -311,7 +333,7 @@ pub struct SetAuthority<'info> {
     pub account_or_mint: AccountInfo<'info>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct TokenAccount(spl_token::state::Account);
 
 impl TokenAccount {
@@ -342,7 +364,7 @@ impl Deref for TokenAccount {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Mint(spl_token::state::Mint);
 
 impl Mint {

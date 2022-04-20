@@ -93,8 +93,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
 
         for field in init_fields {
             // Get payer for init-ed account
-            let associated_payer_name = match field.constraints.init.clone().unwrap().payer.unwrap()
-            {
+            let associated_payer_name = match field.constraints.init.clone().unwrap().payer {
                 // composite payer, check not supported
                 Expr::Field(_) => continue,
                 field_name => field_name.to_token_stream().to_string(),
@@ -120,6 +119,24 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                         "the payer specified does not exist.",
                     ));
                 }
+            }
+            match kind {
+                // This doesn't catch cases like account.key() or account.key.
+                // My guess is that doesn't happen often and we can revisit
+                // this if I'm wrong.
+                InitKind::Token { mint, .. } | InitKind::AssociatedToken { mint, .. } => {
+                    if !fields.iter().any(|f| {
+                        f.ident()
+                            .to_string()
+                            .starts_with(&mint.to_token_stream().to_string())
+                    }) {
+                        return Err(ParseError::new(
+                            field.ident.span(),
+                            "the mint constraint has to be an account field for token initializations (not a public key)",
+                        ));
+                    }
+                }
+                _ => (),
             }
         }
     }

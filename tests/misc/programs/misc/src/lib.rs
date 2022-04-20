@@ -1,6 +1,7 @@
 //! Misc example is a catchall program for testing unrelated features.
 //! It's not too instructive/coherent by itself, so please see other examples.
 
+use account::MAX_SIZE;
 use anchor_lang::prelude::*;
 use context::*;
 use event::*;
@@ -10,7 +11,7 @@ mod account;
 mod context;
 mod event;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("3TEqcc8xhrhdspwbvoamUJe2borm4Nr72JxL66k6rgrh");
 
 #[constant]
 pub const BASE: u128 = 1_000_000;
@@ -48,11 +49,11 @@ pub mod misc {
         Ok(())
     }
 
-    pub fn initialize_no_rent_exempt(ctx: Context<InitializeNoRentExempt>) -> Result<()> {
+    pub fn initialize_no_rent_exempt(_ctx: Context<InitializeNoRentExempt>) -> Result<()> {
         Ok(())
     }
 
-    pub fn initialize_skip_rent_exempt(ctx: Context<InitializeSkipRentExempt>) -> Result<()> {
+    pub fn initialize_skip_rent_exempt(_ctx: Context<InitializeSkipRentExempt>) -> Result<()> {
         Ok(())
     }
 
@@ -82,6 +83,12 @@ pub mod misc {
         emit!(E1 { data });
         emit!(E2 { data: 1234 });
         emit!(E3 { data: 9 });
+        emit!(E5 {
+            data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        });
+        emit!(E6 {
+            data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        });
         Ok(())
     }
 
@@ -97,6 +104,14 @@ pub mod misc {
 
     pub fn test_const_array_size(ctx: Context<TestConstArraySize>, data: u8) -> Result<()> {
         ctx.accounts.data.data[0] = data;
+        Ok(())
+    }
+
+    pub fn test_const_ix_data_size(
+        ctx: Context<TestConstIxDataSize>,
+        data: [u8; MAX_SIZE],
+    ) -> Result<()> {
+        ctx.accounts.data.data = data;
         Ok(())
     }
 
@@ -192,11 +207,11 @@ pub mod misc {
         Ok(())
     }
 
-    pub fn test_init_with_empty_seeds(ctx: Context<TestInitWithEmptySeeds>) -> Result<()> {
+    pub fn test_init_with_empty_seeds(_ctx: Context<TestInitWithEmptySeeds>) -> Result<()> {
         Ok(())
     }
 
-    pub fn test_empty_seeds_constraint(ctx: Context<TestEmptySeedsConstraint>) -> Result<()> {
+    pub fn test_empty_seeds_constraint(_ctx: Context<TestEmptySeedsConstraint>) -> Result<()> {
         Ok(())
     }
 
@@ -206,36 +221,36 @@ pub mod misc {
     }
 
     pub fn test_init_if_needed_checks_owner(
-        ctx: Context<TestInitIfNeededChecksOwner>,
+        _ctx: Context<TestInitIfNeededChecksOwner>,
     ) -> Result<()> {
         Ok(())
     }
 
     pub fn test_init_if_needed_checks_seeds(
-        ctx: Context<TestInitIfNeededChecksSeeds>,
-        seed_data: String,
+        _ctx: Context<TestInitIfNeededChecksSeeds>,
+        _seed_data: String,
     ) -> Result<()> {
         Ok(())
     }
 
     pub fn test_init_mint_if_needed(
-        ctx: Context<TestInitMintIfNeeded>,
-        decimals: u8,
+        _ctx: Context<TestInitMintIfNeeded>,
+        _decimals: u8,
     ) -> Result<()> {
         Ok(())
     }
 
-    pub fn test_init_token_if_needed(ctx: Context<TestInitTokenIfNeeded>) -> Result<()> {
+    pub fn test_init_token_if_needed(_ctx: Context<TestInitTokenIfNeeded>) -> Result<()> {
         Ok(())
     }
 
     pub fn test_init_associated_token_if_needed(
-        ctx: Context<TestInitAssociatedTokenIfNeeded>,
+        _ctx: Context<TestInitAssociatedTokenIfNeeded>,
     ) -> Result<()> {
         Ok(())
     }
 
-    pub fn init_with_space(ctx: Context<InitWithSpace>, data: u16) -> Result<()> {
+    pub fn init_with_space(_ctx: Context<InitWithSpace>, data: u16) -> Result<()> {
         Ok(())
     }
 
@@ -247,11 +262,19 @@ pub mod misc {
         Ok(())
     }
 
-    pub fn test_no_rent_exempt(ctx: Context<NoRentExempt>) -> Result<()> {
+    pub fn test_multidimensional_array_const_sizes(
+        ctx: Context<TestMultidimensionalArrayConstSizes>,
+        data: [[u8; 11]; 10],
+    ) -> Result<()> {
+        ctx.accounts.data.data = data;
         Ok(())
     }
 
-    pub fn test_enforce_rent_exempt(ctx: Context<EnforceRentExempt>) -> Result<()> {
+    pub fn test_no_rent_exempt(_ctx: Context<NoRentExempt>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn test_enforce_rent_exempt(_ctx: Context<EnforceRentExempt>) -> Result<()> {
         Ok(())
     }
 
@@ -278,6 +301,56 @@ pub mod misc {
     pub fn test_program_id_constraint_find_pda(
         _ctx: Context<TestProgramIdConstraintUsingFindPda>,
     ) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn test_token_constraint(_ctx: Context<TestConstraintToken>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn test_token_auth_constraint(_ctx: Context<TestAuthorityConstraint>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn test_only_auth_constraint(_ctx: Context<TestOnlyAuthorityConstraint>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn test_only_mint_constraint(_ctx: Context<TestOnlyMintConstraint>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn test_mint_constraint(_ctx: Context<TestMintConstraint>, _decimals: u8) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn test_mint_only_decimals_constraint(
+        _ctx: Context<TestMintOnlyDecimalsConstraint>,
+        _decimals: u8,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn test_mint_only_auth_constraint(
+        _ctx: Context<TestMintAuthorityConstraint>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn test_mint_only_one_auth_constraint(
+        _ctx: Context<TestMintOneAuthorityConstraint>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn test_mint_miss_mint_auth_constraint(
+        _ctx: Context<TestMintMissMintAuthConstraint>,
+        _decimals: u8,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn test_associated_constraint(_ctx: Context<TestAssociatedToken>) -> Result<()> {
         Ok(())
     }
 }

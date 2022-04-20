@@ -32,9 +32,12 @@ pub mod bpf_upgradeable_state {
 }
 
 #[account]
-#[derive(Default, Debug)]
 pub struct Settings {
     admin_data: u64,
+}
+
+impl Settings {
+    pub const LEN: usize = 8;
 }
 
 #[error_code]
@@ -49,7 +52,7 @@ pub struct SetAdminSettings<'info> {
     // In a real program, this should be a PDA,
     // so the authority cannot create multiple settings accounts.
     // Not done here for easier testing
-    #[account(init, payer = authority)]
+    #[account(init, payer = authority, space = Settings::LEN + 8)]
     pub settings: Account<'info, Settings>,
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -65,11 +68,11 @@ pub struct SetAdminSettingsUseProgramState<'info> {
     // In a real program, this should be a PDA,
     // so the authority cannot create multiple settings accounts.
     // Not done here for easier testing
-    #[account(init, payer = authority)]
+    #[account(init, payer = authority, space = Settings::LEN + 8)]
     pub settings: Account<'info, Settings>,
     #[account(mut)]
     pub authority: Signer<'info>,
-    #[account(constraint = program.programdata_address() == Some(program_data.key()))]
+    #[account(constraint = program.programdata_address()? == Some(program_data.key()))]
     pub program: Program<'info, crate::program::BpfUpgradeableState>,
     #[account(constraint = program_data.upgrade_authority_address == Some(authority.key()))]
     pub program_data: Account<'info, ProgramData>,

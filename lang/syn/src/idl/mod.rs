@@ -45,6 +45,8 @@ pub struct IdlInstruction {
     pub name: String,
     pub accounts: Vec<IdlAccountItem>,
     pub args: Vec<IdlField>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub returns: Option<IdlType>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
