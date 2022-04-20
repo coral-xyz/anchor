@@ -14,10 +14,12 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * cli: Add `--program-keypair` to `anchor deploy` ([#1786](https://github.com/project-serum/anchor/pull/1786)).
 * spl: Add more derived traits to `TokenAccount` to `Mint` ([#1818](https://github.com/project-serum/anchor/pull/1818)).
+* cli: Add compilation optimizations to cli template ([#1807](https://github.com/project-serum/anchor/pull/1807)).
 
 ### Fixes
 
 * cli: Move `overflow-checks` into workspace `Cargo.toml` so that it will not be ignored by compiler ([#1806](https://github.com/project-serum/anchor/pull/1806)).
+* lang: Fix missing account name information when deserialization fails when using `init` or `zero` ([#1800](https://github.com/project-serum/anchor/pull/1800)).
 
 ## [0.24.2] - 2022-04-13
 
