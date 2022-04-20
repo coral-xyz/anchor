@@ -82,7 +82,7 @@ pub fn parse_args(method: &syn::ItemFn) -> ParseResult<(IxArg, Vec<IxArg>)> {
                 };
                 Ok(IxArg {
                     name: ident.clone(),
-                    doc: doc,
+                    doc,
                     raw_arg: arg.clone(),
                 })
             }
