@@ -115,6 +115,9 @@ file in your program's crate.
 If you've developed on Ethereum, the IDL is analogous to the `abi.json`.
 :::
 
+The `build` command also generates a random new keypair in the `target/` directory (if there's not one already) whose public key will be the address of your program once deployed. You can obtain the address by running `anchor keys list`.
+Make sure that the public key inside your `lib.rs` (the argument to `declare_id!`) file and your `Anchor.toml` matches the one returned by `anchor keys list`. Then run `build` again to include the `lib.rs` changes in the build.
+
 ## Deploying
 
 Once built, we can deploy the program by running
@@ -122,10 +125,6 @@ Once built, we can deploy the program by running
 ```bash
 anchor deploy
 ```
-
-Take note of the program's deployed address. The address is the actual address of your program as opposed to the sample "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS" address that we have used above.
-
-You can also obtain the program address by running `anchor keys list`.
 
 ## Generating a Client
 
