@@ -252,9 +252,6 @@ pub enum Command {
             last = true
         )]
         cargo_args: Vec<String>,
-        /// Suppress doc strings in IDL output
-        #[clap(long)]
-        no_doc: bool,
     },
     /// Keypair commands.
     Keys {
@@ -464,8 +461,7 @@ pub fn entry(opts: Opts) -> Result<()> {
         Command::Publish {
             program,
             cargo_args,
-            no_doc,
-        } => publish(&opts.cfg_override, program, cargo_args, no_doc),
+        } => publish(&opts.cfg_override, program, cargo_args),
         Command::Keys { subcmd } => keys(&opts.cfg_override, subcmd),
         Command::Localnet {
             skip_build,
@@ -2819,7 +2815,6 @@ fn publish(
     cfg_override: &ConfigOverride,
     program_name: String,
     cargo_args: Vec<String>,
-    no_doc: bool,
 ) -> Result<()> {
     // Discover the various workspace configs.
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
@@ -2944,7 +2939,7 @@ fn publish(
         None,
         None,
         cargo_args,
-        no_doc,
+        true,
     )?;
 
     // Success. Now we can finally upload to the server without worrying
