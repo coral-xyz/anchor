@@ -13,41 +13,38 @@ describe("idl_doc", () => {
 
   describe("IDL doc strings", () => {
     const instruction = program.idl.instructions.find(
-        (i) => i.name === "testIdlDocParse"
+      (i) => i.name === "testIdlDocParse"
     );
     it("includes instruction doc comment", async () => {
-        expect(instruction.doc).to.have.same.members(
-            ["This instruction doc should appear in the IDL"]
-        );
+      expect(instruction.doc).to.have.same.members([
+        "This instruction doc should appear in the IDL",
+      ]);
     });
 
     it("includes account doc comment", async () => {
-        const act = instruction.accounts.find(
-            (i) => i.name === 'act'
-        );
-        expect(act.doc).to.have.same.members(
-            ["This account doc comment should appear in the IDL",
-                "This is a multi-line comment"]
-        );
+      const act = instruction.accounts.find((i) => i.name === "act");
+      expect(act.doc).to.have.same.members([
+        "This account doc comment should appear in the IDL",
+        "This is a multi-line comment",
+      ]);
     });
 
     const dataWithDoc = program.idl.accounts.find(
-        (i) => i.name === 'DataWithDoc'
+      // @ts-expect-error
+      (i) => i.name === "DataWithDoc"
     );
 
     it("includes accounts doc comment", async () => {
-        expect(dataWithDoc.doc).to.have.same.members(
-            ["Custom account doc comment should appear in the IDL"]
-        );
+      expect(dataWithDoc.doc).to.have.same.members([
+        "Custom account doc comment should appear in the IDL",
+      ]);
     });
 
     it("includes account attribute doc comment", async () => {
-        const dataField = dataWithDoc.type.fields.find(
-            (i) => i.name === 'data'
-        );
-        expect(dataField.doc).to.have.same.members(
-            ["Account attribute doc comment should appear in the IDL"]
-        );
+      const dataField = dataWithDoc.type.fields.find((i) => i.name === "data");
+      expect(dataField.doc).to.have.same.members([
+        "Account attribute doc comment should appear in the IDL",
+      ]);
     });
   });
 });
