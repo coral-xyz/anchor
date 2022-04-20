@@ -74,12 +74,13 @@ pub fn parse(
                                     .collect::<Vec<_>>();
                                 let accounts_strct =
                                     accs.get(&method.anchor_ident.to_string()).unwrap();
-                                let accounts =
-                                    idl_accounts(
-                                        &ctx,
-                                        accounts_strct,
-                                        &accs, seeds_feature,
-                                        no_doc);
+                                let accounts = idl_accounts(
+                                    &ctx,
+                                    accounts_strct,
+                                    &accs,
+                                    seeds_feature,
+                                    no_doc,
+                                );
                                 IdlInstruction {
                                     name,
                                     doc: None,
@@ -126,11 +127,7 @@ pub fn parse(
                         })
                         .collect();
                     let accounts_strct = accs.get(&anchor_ident.to_string()).unwrap();
-                    let accounts = idl_accounts(&ctx,
-                                                accounts_strct,
-                                                &accs,
-                                                seeds_feature,
-                                                no_doc);
+                    let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature, no_doc);
                     IdlInstruction {
                         name,
                         doc: None,
@@ -150,11 +147,7 @@ pub fn parse(
                             .map(|f: &syn::Field| {
                                 let mut tts = proc_macro2::TokenStream::new();
                                 f.ty.to_tokens(&mut tts);
-                                let doc = if !no_doc {
-                                    doc::parse(&f.attrs)
-                                } else {
-                                    None
-                                };
+                                let doc = if !no_doc { doc::parse(&f.attrs) } else { None };
                                 let ty = tts.to_string().parse().unwrap();
                                 IdlField {
                                     name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
@@ -204,7 +197,7 @@ pub fn parse(
                     IdlField {
                         name: arg.name.to_string().to_mixed_case(),
                         doc,
-                        ty: to_idl_type(&ctx, &arg.raw_arg.ty)
+                        ty: to_idl_type(&ctx, &arg.raw_arg.ty),
                     }
                 })
                 .collect::<Vec<_>>();
@@ -464,11 +457,7 @@ fn parse_ty_defs(ctx: &CrateContext, no_doc: bool) -> Result<Vec<IdlTypeDefiniti
                     .named
                     .iter()
                     .map(|f: &syn::Field| {
-                            let doc = if !no_doc {
-                            doc::parse(&f.attrs)
-                        } else {
-                               None
-                           };
+                        let doc = if !no_doc { doc::parse(&f.attrs) } else { None };
                         Ok(IdlField {
                             name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
                             doc,
@@ -514,11 +503,7 @@ fn parse_ty_defs(ctx: &CrateContext, no_doc: bool) -> Result<Vec<IdlTypeDefiniti
                                 .iter()
                                 .map(|f: &syn::Field| {
                                     let name = f.ident.as_ref().unwrap().to_string();
-                                    let doc = if !no_doc {
-                                        doc::parse(&f.attrs)
-                                    } else {
-                                        None
-                                    };
+                                    let doc = if !no_doc { doc::parse(&f.attrs) } else { None };
                                     let ty = to_idl_type(ctx, &f.ty);
                                     IdlField { name, doc, ty }
                                 })
@@ -621,13 +606,7 @@ fn idl_accounts(
                 let accs_strct = global_accs.get(&comp_f.symbol).unwrap_or_else(|| {
                     panic!("Could not resolve Accounts symbol {}", comp_f.symbol)
                 });
-                let accounts = idl_accounts(
-                    ctx,
-                    accs_strct,
-                    global_accs,
-                    seeds_feature,
-                    no_doc,
-                );
+                let accounts = idl_accounts(ctx, accs_strct, global_accs, seeds_feature, no_doc);
                 IdlAccountItem::IdlAccounts(IdlAccounts {
                     name: comp_f.ident.to_string().to_mixed_case(),
                     accounts,
@@ -640,11 +619,7 @@ fn idl_accounts(
                     Ty::Signer => true,
                     _ => acc.constraints.is_signer(),
                 },
-                doc: if !no_doc {
-                    acc.doc.clone()
-                } else {
-                    None
-                },
+                doc: if !no_doc { acc.doc.clone() } else { None },
                 pda: pda::parse(ctx, accounts, acc, seeds_feature),
             }),
         })

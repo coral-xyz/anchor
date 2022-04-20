@@ -1217,7 +1217,7 @@ fn _build_cwd(
     }
 
     // Always assume idl is located at src/lib.rs.
-    if let Some(idl) = extract_idl(cfg, "src/lib.rs", skip_lint ,false)? {
+    if let Some(idl) = extract_idl(cfg, "src/lib.rs", skip_lint, false)? {
         // JSON out path.
         let out = match idl_out {
             None => PathBuf::from(".").join(&idl.name).with_extension("json"),
@@ -1480,7 +1480,12 @@ fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
     serde_json::from_slice(&s[..]).map_err(Into::into)
 }
 
-fn extract_idl(cfg: &WithPath<Config>, file: &str, skip_lint: bool, no_doc: bool) -> Result<Option<Idl>> {
+fn extract_idl(
+    cfg: &WithPath<Config>,
+    file: &str,
+    skip_lint: bool,
+    no_doc: bool,
+) -> Result<Option<Idl>> {
     let file = shellexpand::tilde(file);
     let manifest_from_path = std::env::current_dir()?.join(PathBuf::from(&*file).parent().unwrap());
     let cargo = Manifest::discover_from_path(manifest_from_path)?
@@ -1518,7 +1523,12 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
         } => idl_set_authority(cfg_override, program_id, address, new_authority),
         IdlCommand::EraseAuthority { program_id } => idl_erase_authority(cfg_override, program_id),
         IdlCommand::Authority { program_id } => idl_authority(cfg_override, program_id),
-        IdlCommand::Parse { file, out, out_ts , no_doc} => idl_parse(cfg_override, file, out, out_ts, no_doc),
+        IdlCommand::Parse {
+            file,
+            out,
+            out_ts,
+            no_doc,
+        } => idl_parse(cfg_override, file, out, out_ts, no_doc),
         IdlCommand::Fetch { address, out } => idl_fetch(cfg_override, address, out),
     }
 }
