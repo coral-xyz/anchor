@@ -290,6 +290,8 @@ jobs:
             path: tests/multiple-suites
           - cmd: cd tests/pda-derivation && anchor test --skip-lint && npx tsc --noEmit
             path: tests/pda-derivation
+          - cmd: cd tests/anchor-cli-idl && ./test.sh
+            path: tests/anchor-cli-idl
     steps:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup/
