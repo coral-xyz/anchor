@@ -466,7 +466,7 @@ impl Display for AnchorError {
     }
 }
 
-// Two AnchorError are equal when they have the same error code
+/// Two `AnchorError`s are equal when they have the same error code
 impl PartialEq for AnchorError {
     fn eq(&self, other: &Self) -> bool {
         self.error_code_number == other.error_code_number
