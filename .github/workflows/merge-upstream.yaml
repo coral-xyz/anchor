@@ -1,7 +1,6 @@
 name: Merge Upstream
 
 on:
-  push:
   schedule:
     - cron: "*/30 * * * *"
 
