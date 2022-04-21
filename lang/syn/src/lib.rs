@@ -31,7 +31,7 @@ pub struct Program {
     pub state: Option<State>,
     pub ixs: Vec<Ix>,
     pub name: Ident,
-    pub doc: Option<Vec<String>>,
+    pub docs: Option<Vec<String>>,
     pub program_mod: ItemMod,
     pub fallback_fn: Option<FallbackFn>,
 }
@@ -85,7 +85,7 @@ pub struct StateInterface {
 pub struct Ix {
     pub raw_method: ItemFn,
     pub ident: Ident,
-    pub doc: Option<Vec<String>>,
+    pub docs: Option<Vec<String>>,
     pub args: Vec<IxArg>,
     pub returns: IxReturn,
     // The ident for the struct deriving Accounts.
@@ -95,7 +95,7 @@ pub struct Ix {
 #[derive(Debug)]
 pub struct IxArg {
     pub name: Ident,
-    pub doc: Option<Vec<String>>,
+    pub docs: Option<Vec<String>>,
     pub raw_arg: PatType,
 }
 
@@ -217,9 +217,7 @@ pub struct Field {
     pub instruction_constraints: ConstraintGroup,
     pub ty: Ty,
     /// IDL Doc comment
-    pub doc: Option<Vec<String>>,
-    /// Documentation string.
-    pub docs: String,
+    pub docs: Option<Vec<String>>,
 }
 
 impl Field {
@@ -500,9 +498,7 @@ pub struct CompositeField {
     pub symbol: String,
     pub raw_field: syn::Field,
     /// IDL Doc comment
-    pub doc: Option<Vec<String>>,
-    /// Documentation string.
-    pub docs: String,
+    pub docs: Option<Vec<String>>,
 }
 
 // A type of an account field.

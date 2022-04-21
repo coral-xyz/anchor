@@ -1,4 +1,4 @@
-use crate::parser::doc;
+use crate::parser::docs;
 use crate::*;
 use syn::parse::{Error as ParseError, Result as ParseResult};
 use syn::punctuated::Punctuated;
@@ -146,22 +146,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
 
 pub fn parse_account_field(f: &syn::Field, has_instruction_api: bool) -> ParseResult<AccountField> {
     let ident = f.ident.clone().unwrap();
-    let docs: String = f
-        .attrs
-        .iter()
-        .map(|a| {
-            let meta_result = a.parse_meta();
-            if let Ok(syn::Meta::NameValue(meta)) = meta_result {
-                if meta.path.is_ident("doc") {
-                    if let syn::Lit::Str(doc) = meta.lit {
-                        return format!(" {}\n", doc.value().trim());
-                    }
-                }
-            }
-            "".to_string()
-        })
-        .collect::<String>();
-    let doc = doc::parse(&f.attrs);
+    let docs = docs::parse(&f.attrs);
     let account_field = match is_field_primitive(f)? {
         true => {
             let ty = parse_ty(f)?;
@@ -172,7 +157,6 @@ pub fn parse_account_field(f: &syn::Field, has_instruction_api: bool) -> ParseRe
                 ty,
                 constraints: account_constraints,
                 instruction_constraints,
-                doc,
                 docs,
             })
         }
@@ -185,7 +169,6 @@ pub fn parse_account_field(f: &syn::Field, has_instruction_api: bool) -> ParseRe
                 instruction_constraints,
                 symbol: ident_string(f)?,
                 raw_field: f.clone(),
-                doc,
                 docs,
             })
         }

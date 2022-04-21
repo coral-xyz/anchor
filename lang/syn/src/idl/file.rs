@@ -1,6 +1,6 @@
 use crate::idl::*;
 use crate::parser::context::CrateContext;
-use crate::parser::{self, accounts, doc, error, program};
+use crate::parser::{self, accounts, docs, error, program};
 use crate::Ty;
 use crate::{AccountField, AccountsStruct, StateIx};
 use anyhow::Result;
@@ -10,7 +10,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 const DERIVE_NAME: &str = "Accounts";
-// TODO: sharee this with `anchor_lang` crate.
+// TODO: share this with `anchor_lang` crate.
 const ERROR_CODE_OFFSET: u32 = 6000;
 
 // Parse an entire interface file.
@@ -18,7 +18,7 @@ pub fn parse(
     filename: impl AsRef<Path>,
     version: String,
     seeds_feature: bool,
-    no_doc: bool,
+    no_docs: bool,
     safety_checks: bool,
 ) -> Result<Option<Idl>> {
     let ctx = CrateContext::parse(filename)?;
@@ -32,10 +32,10 @@ pub fn parse(
     };
     let mut p = program::parse(program_mod)?;
 
-    if no_doc {
-        p.doc = None;
+    if no_docs {
+        p.docs = None;
         for ix in &mut p.ixs {
-            ix.doc = None;
+            ix.docs = None;
         }
     }
 
@@ -59,15 +59,15 @@ pub fn parse(
                                     .map(|arg| {
                                         let mut tts = proc_macro2::TokenStream::new();
                                         arg.raw_arg.ty.to_tokens(&mut tts);
-                                        let doc = if !no_doc {
-                                            doc::parse(&arg.raw_arg.attrs)
+                                        let doc = if !no_docs {
+                                            docs::parse(&arg.raw_arg.attrs)
                                         } else {
                                             None
                                         };
                                         let ty = tts.to_string().parse().unwrap();
                                         IdlField {
                                             name: arg.name.to_string().to_mixed_case(),
-                                            doc,
+                                            docs: doc,
                                             ty,
                                         }
                                     })
@@ -79,11 +79,11 @@ pub fn parse(
                                     accounts_strct,
                                     &accs,
                                     seeds_feature,
-                                    no_doc,
+                                    no_docs,
                                 );
                                 IdlInstruction {
                                     name,
-                                    doc: None,
+                                    docs: None,
                                     accounts,
                                     args,
                                     returns: None,
@@ -111,15 +111,15 @@ pub fn parse(
                             syn::FnArg::Typed(arg_typed) => {
                                 let mut tts = proc_macro2::TokenStream::new();
                                 arg_typed.ty.to_tokens(&mut tts);
-                                let doc = if !no_doc {
-                                    doc::parse(&arg_typed.attrs)
+                                let doc = if !no_docs {
+                                    docs::parse(&arg_typed.attrs)
                                 } else {
                                     None
                                 };
                                 let ty = tts.to_string().parse().unwrap();
                                 IdlField {
                                     name: parser::tts_to_string(&arg_typed.pat).to_mixed_case(),
-                                    doc,
+                                    docs: doc,
                                     ty,
                                 }
                             }
@@ -127,10 +127,10 @@ pub fn parse(
                         })
                         .collect();
                     let accounts_strct = accs.get(&anchor_ident.to_string()).unwrap();
-                    let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature, no_doc);
+                    let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature, no_docs);
                     IdlInstruction {
                         name,
-                        doc: None,
+                        docs: None,
                         accounts,
                         args,
                         returns: None,
@@ -147,11 +147,11 @@ pub fn parse(
                             .map(|f: &syn::Field| {
                                 let mut tts = proc_macro2::TokenStream::new();
                                 f.ty.to_tokens(&mut tts);
-                                let doc = if !no_doc { doc::parse(&f.attrs) } else { None };
+                                let doc = if !no_docs { docs::parse(&f.attrs) } else { None };
                                 let ty = tts.to_string().parse().unwrap();
                                 IdlField {
                                     name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
-                                    doc,
+                                    docs: doc,
                                     ty,
                                 }
                             })
@@ -160,7 +160,7 @@ pub fn parse(
                     };
                     IdlTypeDefinition {
                         name: state.name,
-                        doc: None,
+                        docs: None,
                         ty: IdlTypeDefinitionTy::Struct { fields },
                     }
                 };
@@ -189,21 +189,21 @@ pub fn parse(
                 .args
                 .iter()
                 .map(|arg| {
-                    let doc = if !no_doc {
-                        doc::parse(&arg.raw_arg.attrs)
+                    let doc = if !no_docs {
+                        docs::parse(&arg.raw_arg.attrs)
                     } else {
                         None
                     };
                     IdlField {
                         name: arg.name.to_string().to_mixed_case(),
-                        doc,
+                        docs: doc,
                         ty: to_idl_type(&ctx, &arg.raw_arg.ty),
                     }
                 })
                 .collect::<Vec<_>>();
             // todo: don't unwrap
             let accounts_strct = accs.get(&ix.anchor_ident.to_string()).unwrap();
-            let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature, no_doc);
+            let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature, no_docs);
             let ret_type_str = ix.returns.ty.to_token_stream().to_string();
             let returns = match ret_type_str.as_str() {
                 "()" => None,
@@ -211,7 +211,7 @@ pub fn parse(
             };
             IdlInstruction {
                 name: ix.ident.to_string().to_mixed_case(),
-                doc: ix.doc.clone(),
+                docs: ix.docs.clone(),
                 accounts,
                 args,
                 returns,
@@ -252,7 +252,7 @@ pub fn parse(
     // All user defined types.
     let mut accounts = vec![];
     let mut types = vec![];
-    let ty_defs = parse_ty_defs(&ctx, no_doc)?;
+    let ty_defs = parse_ty_defs(&ctx, no_docs)?;
 
     let account_structs = parse_accounts(&ctx);
     let account_names: HashSet<String> = account_structs
@@ -286,7 +286,7 @@ pub fn parse(
     Ok(Some(Idl {
         version,
         name: p.name.to_string(),
-        doc: p.doc.clone(),
+        docs: p.docs.clone(),
         state,
         instructions,
         types,
@@ -420,7 +420,7 @@ fn parse_consts(ctx: &CrateContext) -> Vec<&syn::ItemConst> {
 }
 
 // Parse all user defined types in the file.
-fn parse_ty_defs(ctx: &CrateContext, no_doc: bool) -> Result<Vec<IdlTypeDefinition>> {
+fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinition>> {
     ctx.structs()
         .filter_map(|item_strct| {
             // Only take serializable types
@@ -447,8 +447,8 @@ fn parse_ty_defs(ctx: &CrateContext, no_doc: bool) -> Result<Vec<IdlTypeDefiniti
             }
 
             let name = item_strct.ident.to_string();
-            let doc = if !no_doc {
-                doc::parse(&item_strct.attrs)
+            let doc = if !no_docs {
+                docs::parse(&item_strct.attrs)
             } else {
                 None
             };
@@ -457,10 +457,10 @@ fn parse_ty_defs(ctx: &CrateContext, no_doc: bool) -> Result<Vec<IdlTypeDefiniti
                     .named
                     .iter()
                     .map(|f: &syn::Field| {
-                        let doc = if !no_doc { doc::parse(&f.attrs) } else { None };
+                        let doc = if !no_docs { docs::parse(&f.attrs) } else { None };
                         Ok(IdlField {
                             name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
-                            doc,
+                            docs: doc,
                             ty: to_idl_type(ctx, &f.ty),
                         })
                     })
@@ -471,14 +471,14 @@ fn parse_ty_defs(ctx: &CrateContext, no_doc: bool) -> Result<Vec<IdlTypeDefiniti
 
             Some(fields.map(|fields| IdlTypeDefinition {
                 name,
-                doc,
+                docs: doc,
                 ty: IdlTypeDefinitionTy::Struct { fields },
             }))
         })
         .chain(ctx.enums().map(|enm| {
             let name = enm.ident.to_string();
-            let doc = if !no_doc {
-                doc::parse(&enm.attrs)
+            let doc = if !no_docs {
+                docs::parse(&enm.attrs)
             } else {
                 None
             };
@@ -503,9 +503,9 @@ fn parse_ty_defs(ctx: &CrateContext, no_doc: bool) -> Result<Vec<IdlTypeDefiniti
                                 .iter()
                                 .map(|f: &syn::Field| {
                                     let name = f.ident.as_ref().unwrap().to_string();
-                                    let doc = if !no_doc { doc::parse(&f.attrs) } else { None };
+                                    let doc = if !no_docs { docs::parse(&f.attrs) } else { None };
                                     let ty = to_idl_type(ctx, &f.ty);
-                                    IdlField { name, doc, ty }
+                                    IdlField { name, docs: doc, ty }
                                 })
                                 .collect();
                             Some(EnumFields::Named(fields))
@@ -516,7 +516,7 @@ fn parse_ty_defs(ctx: &CrateContext, no_doc: bool) -> Result<Vec<IdlTypeDefiniti
                 .collect::<Vec<IdlEnumVariant>>();
             Ok(IdlTypeDefinition {
                 name,
-                doc,
+                docs: doc,
                 ty: IdlTypeDefinitionTy::Enum { variants },
             })
         }))
@@ -596,7 +596,7 @@ fn idl_accounts(
     accounts: &AccountsStruct,
     global_accs: &HashMap<String, AccountsStruct>,
     seeds_feature: bool,
-    no_doc: bool,
+    no_docs: bool,
 ) -> Vec<IdlAccountItem> {
     accounts
         .fields
@@ -606,7 +606,7 @@ fn idl_accounts(
                 let accs_strct = global_accs.get(&comp_f.symbol).unwrap_or_else(|| {
                     panic!("Could not resolve Accounts symbol {}", comp_f.symbol)
                 });
-                let accounts = idl_accounts(ctx, accs_strct, global_accs, seeds_feature, no_doc);
+                let accounts = idl_accounts(ctx, accs_strct, global_accs, seeds_feature, no_docs);
                 IdlAccountItem::IdlAccounts(IdlAccounts {
                     name: comp_f.ident.to_string().to_mixed_case(),
                     accounts,
@@ -619,7 +619,7 @@ fn idl_accounts(
                     Ty::Signer => true,
                     _ => acc.constraints.is_signer(),
                 },
-                doc: if !no_doc { acc.doc.clone() } else { None },
+                docs: if !no_docs { acc.docs.clone() } else { None },
                 pda: pda::parse(ctx, accounts, acc, seeds_feature),
             }),
         })

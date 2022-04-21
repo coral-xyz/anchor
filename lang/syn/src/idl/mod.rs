@@ -9,7 +9,7 @@ pub struct Idl {
     pub version: String,
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub doc: Option<Vec<String>>,
+    pub docs: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub constants: Vec<IdlConst>,
     pub instructions: Vec<IdlInstruction>,
@@ -46,7 +46,7 @@ pub struct IdlState {
 pub struct IdlInstruction {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub doc: Option<Vec<String>>,
+    pub docs: Option<Vec<String>>,
     pub accounts: Vec<IdlAccountItem>,
     pub args: Vec<IdlField>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -74,7 +74,7 @@ pub struct IdlAccount {
     pub is_mut: bool,
     pub is_signer: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub doc: Option<Vec<String>>,
+    pub docs: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub pda: Option<IdlPda>,
 }
@@ -127,7 +127,7 @@ pub struct IdlSeedConst {
 pub struct IdlField {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub doc: Option<Vec<String>>,
+    pub docs: Option<Vec<String>>,
     #[serde(rename = "type")]
     pub ty: IdlType,
 }
@@ -150,7 +150,7 @@ pub struct IdlEventField {
 pub struct IdlTypeDefinition {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub doc: Option<Vec<String>>,
+    pub docs: Option<Vec<String>>,
     #[serde(rename = "type")]
     pub ty: IdlTypeDefinitionTy,
 }
