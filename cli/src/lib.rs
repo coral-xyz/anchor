@@ -71,6 +71,7 @@ pub enum Command {
         no_git: bool,
     },
     /// Builds the workspace.
+    #[clap(name = "build", alias = "b")]
     Build {
         /// Output directory for the IDL.
         #[clap(short, long)]
@@ -154,6 +155,7 @@ pub enum Command {
         )]
         cargo_args: Vec<String>,
     },
+    #[clap(name = "test", alias = "t")]
     /// Runs integration tests against a localnetwork.
     Test {
         /// Use this flag if you want to run tests against previously deployed
