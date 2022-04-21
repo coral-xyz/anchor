@@ -1,6 +1,7 @@
 name: Merge Upstream
 
 on:
+  push:
   schedule:
     - cron: "*/30 * * * *"
 
@@ -35,7 +36,7 @@ jobs:
           jq --version
         shell: bash
       - name: Get Latest Tag
-        run: curl -sL https://api.github.com/repos/solana-labs/solana/releases | jq -r 'map(select(.name | startswith("Testnet"))) | first | .tag_name' > .github/releases/solana-latest.txt
+        run: curl -sL https://api.github.com/repos/solana-labs/solana/releases | jq -r 'map(select(.prerelease)) | first | .tag_name' > .github/releases/solana-latest.txt
         shell: bash
       - run: chmod u+x ./.github/scripts/update.sh
         shell: bash
