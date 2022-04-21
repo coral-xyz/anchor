@@ -1,6 +1,6 @@
 use syn::{Lit::Str, Meta::NameValue};
 
-// Returns space separated doc comments
+// returns vec of doc strings
 pub fn parse(attrs: &[syn::Attribute]) -> Option<Vec<String>> {
     let doc_strings: Vec<String> = attrs
         .iter()
