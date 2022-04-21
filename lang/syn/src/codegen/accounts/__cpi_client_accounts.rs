@@ -23,12 +23,14 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             AccountField::CompositeField(s) => {
                 let name = &s.ident;
                 let docs = if let Some(ref docs) = s.docs {
-                    docs
-                        .iter()
-                        .map(|docs_line| proc_macro2::TokenStream::from_str(
-                            &format!("#[doc = r#\"{}\"#]", docs_line))
+                    docs.iter()
+                        .map(|docs_line| {
+                            proc_macro2::TokenStream::from_str(&format!(
+                                "#[doc = r#\"{}\"#]",
+                                docs_line
+                            ))
                             .unwrap()
-                        )
+                        })
                         .collect()
                 } else {
                     quote!()
@@ -48,12 +50,14 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             AccountField::Field(f) => {
                 let name = &f.ident;
                 let docs = if let Some(ref docs) = f.docs {
-                    docs
-                        .iter()
-                        .map(|docs_line| proc_macro2::TokenStream::from_str(
-                            &format!("#[doc = r#\"{}\"#]", docs_line))
+                    docs.iter()
+                        .map(|docs_line| {
+                            proc_macro2::TokenStream::from_str(&format!(
+                                "#[doc = r#\"{}\"#]",
+                                docs_line
+                            ))
                             .unwrap()
-                        )
+                        })
                         .collect()
                 } else {
                     quote!()

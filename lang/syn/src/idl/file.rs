@@ -127,7 +127,8 @@ pub fn parse(
                         })
                         .collect();
                     let accounts_strct = accs.get(&anchor_ident.to_string()).unwrap();
-                    let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature, no_docs);
+                    let accounts =
+                        idl_accounts(&ctx, accounts_strct, &accs, seeds_feature, no_docs);
                     IdlInstruction {
                         name,
                         docs: None,
@@ -147,7 +148,11 @@ pub fn parse(
                             .map(|f: &syn::Field| {
                                 let mut tts = proc_macro2::TokenStream::new();
                                 f.ty.to_tokens(&mut tts);
-                                let doc = if !no_docs { docs::parse(&f.attrs) } else { None };
+                                let doc = if !no_docs {
+                                    docs::parse(&f.attrs)
+                                } else {
+                                    None
+                                };
                                 let ty = tts.to_string().parse().unwrap();
                                 IdlField {
                                     name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
@@ -457,7 +462,11 @@ fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinit
                     .named
                     .iter()
                     .map(|f: &syn::Field| {
-                        let doc = if !no_docs { docs::parse(&f.attrs) } else { None };
+                        let doc = if !no_docs {
+                            docs::parse(&f.attrs)
+                        } else {
+                            None
+                        };
                         Ok(IdlField {
                             name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
                             docs: doc,
@@ -503,9 +512,17 @@ fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinit
                                 .iter()
                                 .map(|f: &syn::Field| {
                                     let name = f.ident.as_ref().unwrap().to_string();
-                                    let doc = if !no_docs { docs::parse(&f.attrs) } else { None };
+                                    let doc = if !no_docs {
+                                        docs::parse(&f.attrs)
+                                    } else {
+                                        None
+                                    };
                                     let ty = to_idl_type(ctx, &f.ty);
-                                    IdlField { name, docs: doc, ty }
+                                    IdlField {
+                                        name,
+                                        docs: doc,
+                                        ty,
+                                    }
                                 })
                                 .collect();
                             Some(EnumFields::Named(fields))
