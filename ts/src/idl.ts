@@ -2,7 +2,6 @@ import camelCase from "camelcase";
 import { Buffer } from "buffer";
 import { PublicKey } from "@solana/web3.js";
 import * as borsh from "@project-serum/borsh";
-import camelcase from "camelcase";
 
 export type RawIdl = {
   version: string;
@@ -41,13 +40,13 @@ export type IdlEvent = {
   fields: IdlEventField[];
 };
 
+export type IdlMetadata = any;
+
 export type RawIdlConstant = {
   name: string;
   type: RawIdlType;
   value: string;
 };
-
-export type IdlMetadata = any;
 
 export type IdlConstant = {
   name: string;
@@ -313,7 +312,7 @@ export type IdlErrorCode = {
 
 function camelCaseAccount(acc: RawIdlAccount): IdlAccount {
   return {
-    name: camelcase(acc.name),
+    name: camelCase(acc.name),
     isMut: acc.is_mut,
     isSigner: acc.is_signer,
   };
@@ -406,7 +405,7 @@ function camelCaseIdlInstruction(
   rawInstruction: RawIdlInstruction
 ): IdlInstruction {
   return {
-    name: camelcase(rawInstruction.name),
+    name: camelCase(rawInstruction.name),
     accounts: camelCaseAccountItems(rawInstruction.accounts),
     args: camelCaseIdlFields(rawInstruction.args),
   };
