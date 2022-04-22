@@ -16,6 +16,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * spl: Add more derived traits to `TokenAccount` to `Mint` ([#1818](https://github.com/project-serum/anchor/pull/1818)).
 * cli: Add compilation optimizations to cli template ([#1807](https://github.com/project-serum/anchor/pull/1807)).
 * lang: Add `PartialEq` and `Eq` for `anchor_lang::Error` ([#1544](https://github.com/project-serum/anchor/pull/1544)).
+* cli: Add `b` and `t` aliases for `build` and `test` respectively ([#1823](https://github.com/project-serum/anchor/pull/1823)).
 
 ### Fixes
 
