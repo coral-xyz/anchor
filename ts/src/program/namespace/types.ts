@@ -106,6 +106,7 @@ type TypeMap = {
   publicKey: PublicKey;
   bool: boolean;
   string: string;
+  bytes: Buffer;
 } & {
   [K in "u8" | "i8" | "u16" | "i16" | "u32" | "i32" | "f32" | "f64"]: number;
 } & {
