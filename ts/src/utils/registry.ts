@@ -85,7 +85,7 @@ const UPGRADEABLE_LOADER_STATE_LAYOUT = borsh.rustEnum(
 );
 
 export function decodeUpgradeableLoaderState(data: Buffer): any {
-  return UPGRADEABLE_LOADER_STATE_LAYOUT.decode(data);
+  return UPGRADEABLE_LOADER_STATE_LAYOUT.decode(data, 8);
 }
 
 export type ProgramData = {
