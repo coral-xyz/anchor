@@ -24,7 +24,7 @@ describe("composite", () => {
         await program.account.dummyA.createInstruction(dummyA),
         await program.account.dummyB.createInstruction(dummyB),
       ],
-    });
+    }).rpc();
 
     await program.rpc.compositeUpdate(
       new anchor.BN(1234),
