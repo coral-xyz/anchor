@@ -13,18 +13,20 @@ describe("composite", () => {
     const dummyA = anchor.web3.Keypair.generate();
     const dummyB = anchor.web3.Keypair.generate();
 
-    const tx = await program.methods.initialize({
-      accounts: {
-        dummyA: dummyA.publicKey,
-        dummyB: dummyB.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      },
-      signers: [dummyA, dummyB],
-      instructions: [
-        await program.account.dummyA.createInstruction(dummyA),
-        await program.account.dummyB.createInstruction(dummyB),
-      ],
-    }).rpc();
+    const tx = await program.methods
+      .initialize({
+        accounts: {
+          dummyA: dummyA.publicKey,
+          dummyB: dummyB.publicKey,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        },
+        signers: [dummyA, dummyB],
+        instructions: [
+          await program.account.dummyA.createInstruction(dummyA),
+          await program.account.dummyB.createInstruction(dummyB),
+        ],
+      })
+      .rpc();
 
     await program.rpc.compositeUpdate(
       new anchor.BN(1234),
