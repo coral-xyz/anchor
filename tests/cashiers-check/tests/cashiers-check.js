@@ -72,7 +72,7 @@ describe("cashiers-check", () => {
       .createCheck(new anchor.BN(100), "Hello world", nonce)
       .accounts(accounts)
       .signers(signers)
-      .instructions(instructions)
+      .preInstructions(instructions)
       .rpc();
 
     const checkAccount = await program.account.check.fetch(check.publicKey);

@@ -19,7 +19,7 @@ describe("chat", () => {
         chatRoom: chatRoom.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       })
-      .instructions([
+      .preInstructions([
         await program.account.chatRoom.createInstruction(chatRoom),
       ])
       .signers([chatRoom])

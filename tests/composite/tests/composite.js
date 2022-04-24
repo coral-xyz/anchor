@@ -21,7 +21,7 @@ describe("composite", () => {
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       })
       .signers([dummyA, dummyB])
-      .instructions([
+      .preInstructions([
         await program.account.dummyA.createInstruction(dummyA),
         await program.account.dummyB.createInstruction(dummyB),
       ])

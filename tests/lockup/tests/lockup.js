@@ -178,7 +178,7 @@ describe("Lockup and Registry", () => {
         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
       })
       .signers([vesting, vault])
-      .instructions([
+      .preInstructions([
         await lockup.account.vesting.createInstruction(vesting),
         ...(await serumCmn.createTokenAccountInstrs(
           provider,
@@ -325,7 +325,7 @@ describe("Lockup and Registry", () => {
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       })
       .signers([registrar, rewardQ])
-      .instructions([
+      .preInstructions([
         await registry.account.registrar.createInstruction(registrar),
         await registry.account.rewardQueue.createInstruction(rewardQ, 8250),
       ])
@@ -512,7 +512,7 @@ describe("Lockup and Registry", () => {
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       })
       .signers([unlockedVendorVault, unlockedVendor])
-      .instructions([
+      .preInstructions([
         ...(await serumCmn.createTokenAccountInstrs(
           provider,
           unlockedVendorVault.publicKey,
@@ -632,7 +632,7 @@ describe("Lockup and Registry", () => {
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       })
       .signers([lockedVendorVault, lockedVendor])
-      .instructions([
+      .preInstructions([
         ...(await serumCmn.createTokenAccountInstrs(
           provider,
           lockedVendorVault.publicKey,
@@ -724,7 +724,7 @@ describe("Lockup and Registry", () => {
         },
       })
       .signers([vendoredVesting, vendoredVestingVault])
-      .instructions([
+      .preInstructions([
         await lockup.account.vesting.createInstruction(vendoredVesting),
         ...(await serumCmn.createTokenAccountInstrs(
           provider,
@@ -838,7 +838,7 @@ describe("Lockup and Registry", () => {
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       })
       .signers([pendingWithdrawal])
-      .instructions([
+      .preInstructions([
         await registry.account.pendingWithdrawal.createInstruction(
           pendingWithdrawal
         ),

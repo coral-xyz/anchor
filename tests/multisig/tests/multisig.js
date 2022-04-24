@@ -30,7 +30,7 @@ describe("multisig", () => {
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       })
       .signers([multisig])
-      .instructions([
+      .preInstructions([
         await program.account.multisig.createInstruction(
           multisig,
           multisigSize
@@ -75,7 +75,7 @@ describe("multisig", () => {
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       })
       .signers([transaction, ownerA])
-      .instructions([
+      .preInstructions([
         await program.account.transaction.createInstruction(
           transaction,
           txSize

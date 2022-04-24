@@ -78,7 +78,7 @@ async function setupStakePool(mint, god) {
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
     })
     .signers([registrar, rewardQ])
-    .instructions([
+    .preInstructions([
       await registry.account.registrar.createInstruction(registrar),
       await registry.account.rewardQueue.createInstruction(rewardQ, 8250),
     ])

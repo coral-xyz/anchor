@@ -16,7 +16,7 @@ describe("tictactoe", () => {
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       })
       .signers([dashboard])
-      .instructions([
+      .preInstructions([
         await program.account.dashboard.createInstruction(dashboard),
       ])
       .rpc();

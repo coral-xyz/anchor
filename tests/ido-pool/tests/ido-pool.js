@@ -212,7 +212,7 @@ describe("ido-pool", () => {
           poolUsdc,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
-        .instructions([
+        .preInstructions([
           program.instruction.initUserRedeemable({
             accounts: {
               userAuthority: provider.wallet.publicKey,
@@ -314,7 +314,7 @@ describe("ido-pool", () => {
         poolUsdc,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
-      .instructions([
+      .preInstructions([
         program.instruction.initUserRedeemable({
           accounts: {
             userAuthority: secondUserKeypair.publicKey,
@@ -390,7 +390,7 @@ describe("ido-pool", () => {
         poolUsdc,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
-      .instructions([
+      .preInstructions([
         program.instruction.initEscrowUsdc({
           accounts: {
             userAuthority: provider.wallet.publicKey,

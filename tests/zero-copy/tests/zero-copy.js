@@ -21,7 +21,7 @@ describe("zero-copy", () => {
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       })
       .signers([foo])
-      .instructions([await program.account.foo.createInstruction(foo)])
+      .preInstructions([await program.account.foo.createInstruction(foo)])
       .rpc();
     const account = await program.account.foo.fetch(foo.publicKey);
     assert.strictEqual(
@@ -168,7 +168,7 @@ describe("zero-copy", () => {
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       })
       .signers([eventQ])
-      .instructions([
+      .preInstructions([
         await program.account.eventQ.createInstruction(eventQ, size),
       ])
       .rpc();

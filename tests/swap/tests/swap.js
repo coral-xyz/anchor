@@ -101,7 +101,7 @@ describe("swap", () => {
           .swap(Side.Bid, swapAmount, new BN(1.0))
           .accounts(SWAP_USDC_A_ACCOUNTS)
           .signers([openOrdersA, openOrdersB])
-          .instructions([
+          .preInstructions([
             // First order to this market so one must create the open orders account.
             await OpenOrders.makeCreateAccountTransaction(
               program.provider.connection,
