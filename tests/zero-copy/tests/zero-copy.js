@@ -203,11 +203,13 @@ describe("zero-copy", () => {
     });
 
     // Set index 11111.
-    await program.methods.updateLargeAccount(11111, new BN(1234)),
-      accounts({
+    await program.methods
+      .updateLargeAccount(11111, new BN(1234))
+      .accounts({
         eventQ: eventQ.publicKey,
         from: program.provider.wallet.publicKey,
-      }).rpc();
+      })
+      .rpc();
     // Verify update.
     account = await program.account.eventQ.fetch(eventQ.publicKey);
     assert.strictEqual(account.events.length, 25000);
