@@ -10,13 +10,12 @@ describe("system_accounts", () => {
 
   it("Is initialized!", async () => {
     const tx = await program.methods
-      .initialize({
-        accounts: {
-          authority: authority.publicKey,
-          wallet: wallet.publicKey,
-        },
-        signers: [authority],
+      .initialize()
+      .accounts({
+        authority: authority.publicKey,
+        wallet: wallet.publicKey,
       })
+      .signers([authority])
       .rpc();
 
     console.log("Your transaction signature", tx);
@@ -45,13 +44,12 @@ describe("system_accounts", () => {
 
     try {
       await program.methods
-        .initialize({
-          accounts: {
-            authority: authority.publicKey,
-            wallet: tokenAccount,
-          },
-          signers: [authority],
+        .initialize()
+        .accounts({
+          authority: authority.publicKey,
+          wallet: tokenAccount,
         })
+        .signers([authority])
         .rpc();
       assert.ok(false);
     } catch (err) {
