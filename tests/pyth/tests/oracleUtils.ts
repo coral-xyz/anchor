@@ -29,21 +29,20 @@ export const createPriceFeed = async ({
   const conf = confidence || new BN((initPrice / 10) * 10 ** -expo);
   const collateralTokenFeed = new web3.Account();
   await oracleProgram.methods
-    .initialize(new BN(initPrice * 10 ** -expo), expo, conf, {
-      accounts: { price: collateralTokenFeed.publicKey },
-      signers: [collateralTokenFeed],
-      instructions: [
-        web3.SystemProgram.createAccount({
-          fromPubkey: provider.wallet.publicKey,
-          newAccountPubkey: collateralTokenFeed.publicKey,
-          space: 3312,
-          lamports: await provider.connection.getMinimumBalanceForRentExemption(
-            3312
-          ),
-          programId: oracleProgram.programId,
-        }),
-      ],
-    })
+    .initialize(new BN(initPrice * 10 ** -expo), expo, conf)
+    .accounts({ price: collateralTokenFeed.publicKey })
+    .signers([collateralTokenFeed])
+    .preInstructions([
+      web3.SystemProgram.createAccount({
+        fromPubkey: provider.wallet.publicKey,
+        newAccountPubkey: collateralTokenFeed.publicKey,
+        space: 3312,
+        lamports: await provider.connection.getMinimumBalanceForRentExemption(
+          3312
+        ),
+        programId: oracleProgram.programId,
+      }),
+    ])
     .rpc();
   return collateralTokenFeed.publicKey;
 };
@@ -56,9 +55,10 @@ export const setFeedPrice = async (
     priceFeed
   );
   const data = parsePriceData(info.data);
-  await oracleProgram.rpc.setPrice(new BN(newPrice * 10 ** -data.exponent), {
-    accounts: { price: priceFeed },
-  });
+  await oracleProgram.rpc
+    .setPrice(new BN(newPrice * 10 ** -data.exponent))
+    .accounts({ price: priceFeed })
+    .rpc();
 };
 export const getFeedData = async (
   oracleProgram: Program,
