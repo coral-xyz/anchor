@@ -107,27 +107,22 @@ describe("ido-pool", () => {
     idoTimes.endIdo = nowBn.add(new anchor.BN(15));
     idoTimes.endEscrow = nowBn.add(new anchor.BN(16));
 
-    await program.rpc.initializePool(
-      idoName,
-      bumps,
-      watermelonIdoAmount,
-      idoTimes,
-      {
-        accounts: {
-          idoAuthority: provider.wallet.publicKey,
-          idoAuthorityWatermelon,
-          idoAccount,
-          watermelonMint,
-          usdcMint,
-          redeemableMint,
-          poolWatermelon,
-          poolUsdc,
-          systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        },
-      }
-    );
+    await program.methods
+      .initializePool(idoName, bumps, watermelonIdoAmount, idoTimes)
+      .accounts({
+        idoAuthority: provider.wallet.publicKey,
+        idoAuthorityWatermelon,
+        idoAccount,
+        watermelonMint,
+        usdcMint,
+        redeemableMint,
+        poolWatermelon,
+        poolUsdc,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      })
+      .rpc();
 
     idoAuthorityWatermelonAccount = await getTokenAccount(
       provider,
@@ -204,8 +199,9 @@ describe("ido-pool", () => {
     );
 
     try {
-      const tx = await program.rpc.exchangeUsdcForRedeemable(firstDeposit, {
-        accounts: {
+      const tx = await program.methods
+        .exchangeUsdcForRedeemable(firstDeposit)
+        .accounts({
           userAuthority: provider.wallet.publicKey,
           userUsdc,
           userRedeemable,
@@ -215,8 +211,8 @@ describe("ido-pool", () => {
           watermelonMint,
           poolUsdc,
           tokenProgram: TOKEN_PROGRAM_ID,
-        },
-        instructions: [
+        })
+        .instructions([
           program.instruction.initUserRedeemable({
             accounts: {
               userAuthority: provider.wallet.publicKey,
@@ -228,8 +224,8 @@ describe("ido-pool", () => {
               rent: anchor.web3.SYSVAR_RENT_PUBKEY,
             },
           }),
-        ],
-      });
+        ])
+        .rpc();
     } catch (err) {
       console.log("This is the error message", err.toString());
     }
@@ -305,8 +301,9 @@ describe("ido-pool", () => {
         program.programId
       );
 
-    await program.rpc.exchangeUsdcForRedeemable(secondDeposit, {
-      accounts: {
+    await program.methods
+      .exchangeUsdcForRedeemable(secondDeposit)
+      .accounts({
         userAuthority: secondUserKeypair.publicKey,
         userUsdc: secondUserUsdc,
         userRedeemable: secondUserRedeemable,
@@ -316,8 +313,8 @@ describe("ido-pool", () => {
         watermelonMint,
         poolUsdc,
         tokenProgram: TOKEN_PROGRAM_ID,
-      },
-      instructions: [
+      })
+      .instructions([
         program.instruction.initUserRedeemable({
           accounts: {
             userAuthority: secondUserKeypair.publicKey,
@@ -329,9 +326,9 @@ describe("ido-pool", () => {
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
         }),
-      ],
-      signers: [secondUserKeypair],
-    });
+      ])
+      .signers([secondUserKeypair])
+      .rpc();
 
     secondUserRedeemableAccount = await getTokenAccount(
       provider,
@@ -380,8 +377,9 @@ describe("ido-pool", () => {
       program.programId
     );
 
-    await program.rpc.exchangeRedeemableForUsdc(firstWithdrawal, {
-      accounts: {
+    await program.methods
+      .exchangeRedeemableForUsdc(firstWithdrawal)
+      .accounts({
         userAuthority: provider.wallet.publicKey,
         escrowUsdc,
         userRedeemable,
@@ -391,8 +389,8 @@ describe("ido-pool", () => {
         watermelonMint,
         poolUsdc,
         tokenProgram: TOKEN_PROGRAM_ID,
-      },
-      instructions: [
+      })
+      .instructions([
         program.instruction.initEscrowUsdc({
           accounts: {
             userAuthority: provider.wallet.publicKey,
@@ -404,8 +402,8 @@ describe("ido-pool", () => {
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
         }),
-      ],
-    });
+      ])
+      .rpc();
 
     totalPoolUsdc = totalPoolUsdc.sub(firstWithdrawal);
     poolUsdcAccount = await getTokenAccount(provider, poolUsdc);
@@ -452,8 +450,9 @@ describe("ido-pool", () => {
       provider.wallet.publicKey
     );
 
-    await program.rpc.exchangeRedeemableForWatermelon(firstUserRedeemable, {
-      accounts: {
+    await program.methods
+      .exchangeRedeemableForWatermelon(firstUserRedeemable)
+      .accounts({
         payer: provider.wallet.publicKey,
         userAuthority: provider.wallet.publicKey,
         userWatermelon,
@@ -463,8 +462,8 @@ describe("ido-pool", () => {
         redeemableMint,
         poolWatermelon,
         tokenProgram: TOKEN_PROGRAM_ID,
-      },
-    });
+      })
+      .rpc();
 
     poolWatermelonAccount = await getTokenAccount(provider, poolWatermelon);
     let redeemedWatermelon = firstUserRedeemable
@@ -508,8 +507,9 @@ describe("ido-pool", () => {
       secondUserKeypair.publicKey
     );
 
-    await program.rpc.exchangeRedeemableForWatermelon(secondDeposit, {
-      accounts: {
+    await program.methods
+      .exchangeRedeemableForWatermelon(secondDeposit)
+      .accounts({
         payer: provider.wallet.publicKey,
         userAuthority: secondUserKeypair.publicKey,
         userWatermelon: secondUserWatermelon,
@@ -519,8 +519,8 @@ describe("ido-pool", () => {
         redeemableMint,
         poolWatermelon,
         tokenProgram: TOKEN_PROGRAM_ID,
-      },
-    });
+      })
+      .rpc();
 
     poolWatermelonAccount = await getTokenAccount(provider, poolWatermelon);
     assert.isTrue(poolWatermelonAccount.amount.eq(new anchor.BN(0)));
@@ -537,8 +537,9 @@ describe("ido-pool", () => {
       program.programId
     );
 
-    await program.rpc.withdrawPoolUsdc({
-      accounts: {
+    await program.methods
+      .withdrawPoolUsdc()
+      .accounts({
         idoAuthority: provider.wallet.publicKey,
         idoAuthorityUsdc,
         idoAccount,
@@ -546,8 +547,8 @@ describe("ido-pool", () => {
         watermelonMint,
         poolUsdc,
         tokenProgram: TOKEN_PROGRAM_ID,
-      },
-    });
+      })
+      .rpc();
 
     poolUsdcAccount = await getTokenAccount(provider, poolUsdc);
     assert.isTrue(poolUsdcAccount.amount.eq(new anchor.BN(0)));
@@ -575,8 +576,9 @@ describe("ido-pool", () => {
       program.programId
     );
 
-    await program.rpc.withdrawFromEscrow(firstWithdrawal, {
-      accounts: {
+    await program.methods
+      .withdrawFromEscrow(firstWithdrawal)
+      .accounts({
         payer: provider.wallet.publicKey,
         userAuthority: provider.wallet.publicKey,
         userUsdc,
@@ -584,8 +586,8 @@ describe("ido-pool", () => {
         idoAccount,
         usdcMint,
         tokenProgram: TOKEN_PROGRAM_ID,
-      },
-    });
+      })
+      .rpc();
 
     userUsdcAccount = await getTokenAccount(provider, userUsdc);
     assert.isTrue(userUsdcAccount.amount.eq(firstWithdrawal));

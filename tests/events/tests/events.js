@@ -40,7 +40,7 @@ describe("events", () => {
       listenerTwo = program.addEventListener("MyOtherEvent", (event, slot) => {
         resolve([event, slot]);
       });
-      program.rpc.testEvent();
+      program.methods.testEvent().rpc();
     });
 
     await program.removeEventListener(listenerOne);

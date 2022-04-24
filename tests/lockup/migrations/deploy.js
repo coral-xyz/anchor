@@ -152,26 +152,26 @@ async function registrarInit(
     registry.provider,
     registrarSigner
   );
-  await registry.rpc.initialize(
-    mint,
-    registry.provider.wallet.publicKey,
-    nonce,
-    withdrawalTimelock,
-    stakeRate,
-    rewardQLen,
-    {
-      accounts: {
-        registrar: registrar.publicKey,
-        poolMint,
-        rewardEventQ: rewardQ.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      },
-      signers: [registrar, rewardQ],
-      instructions: [
-        await registry.account.registrar.createInstruction(registrar),
-        await registry.account.rewardQueue.createInstruction(rewardQ, 8250),
-      ],
-    }
-  );
+  await registry.methods
+    .initialize(
+      mint,
+      registry.provider.wallet.publicKey,
+      nonce,
+      withdrawalTimelock,
+      stakeRate,
+      rewardQLen
+    )
+    .accounts({
+      registrar: registrar.publicKey,
+      poolMint,
+      rewardEventQ: rewardQ.publicKey,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+    })
+    .signers([registrar, rewardQ])
+    .instructions([
+      await registry.account.registrar.createInstruction(registrar),
+      await registry.account.rewardQueue.createInstruction(rewardQ, 8250),
+    ])
+    .rpc();
   return registrar.publicKey;
 }

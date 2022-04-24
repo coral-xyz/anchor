@@ -2,6 +2,7 @@ const anchor = require("@project-serum/anchor");
 const serumCmn = require("@project-serum/common");
 const { assert } = require("chai");
 const { TOKEN_PROGRAM_ID } = require("@solana/spl-token");
+const { sign } = require("crypto");
 
 describe("cashiers-check", () => {
   // Configure the client to use the local cluster.
@@ -44,28 +45,35 @@ describe("cashiers-check", () => {
     );
     checkSigner = _checkSigner;
 
-    await program.rpc.createCheck(new anchor.BN(100), "Hello world", nonce, {
-      accounts: {
-        check: check.publicKey,
-        vault: vault.publicKey,
-        checkSigner,
-        from: god,
-        to: receiver,
-        owner: program.provider.wallet.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      },
-      signers: [check, vault],
-      instructions: [
-        await program.account.check.createInstruction(check, 300),
-        ...(await serumCmn.createTokenAccountInstrs(
-          program.provider,
-          vault.publicKey,
-          mint,
-          checkSigner
-        )),
-      ],
-    });
+    const accounts = {
+      check: check.publicKey,
+      vault: vault.publicKey,
+      checkSigner,
+      from: god,
+      to: receiver,
+      owner: program.provider.wallet.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+    };
+
+    const signers = [check, vault];
+
+    const instructions = [
+      await program.account.check.createInstruction(check, 300),
+      ...(await serumCmn.createTokenAccountInstrs(
+        program.provider,
+        vault.publicKey,
+        mint,
+        checkSigner
+      )),
+    ];
+
+    await program.methods
+      .createCheck(new anchor.BN(100), "Hello world", nonce)
+      .accounts(accounts)
+      .signers(signers)
+      .instructions(instructions)
+      .rpc();
 
     const checkAccount = await program.account.check.fetch(check.publicKey);
     assert.isTrue(checkAccount.from.equals(god));
@@ -84,16 +92,15 @@ describe("cashiers-check", () => {
   });
 
   it("Cashes a check", async () => {
-    await program.rpc.cashCheck({
-      accounts: {
-        check: check.publicKey,
-        vault: vault.publicKey,
-        checkSigner: checkSigner,
-        to: receiver,
-        owner: program.provider.wallet.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      },
-    });
+    const accounts = {
+      check: check.publicKey,
+      vault: vault.publicKey,
+      checkSigner: checkSigner,
+      to: receiver,
+      owner: program.provider.wallet.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    };
+    await program.methods.cashCheck().accounts(accounts).rpc();
 
     const checkAccount = await program.account.check.fetch(check.publicKey);
     assert.isTrue(checkAccount.burned);

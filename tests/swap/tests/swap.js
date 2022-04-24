@@ -97,9 +97,11 @@ describe("swap", () => {
       program.provider,
       [ORDERBOOK_ENV.godA, ORDERBOOK_ENV.godUsdc],
       async () => {
-        await program.rpc.swap(Side.Bid, swapAmount, new BN(1.0), {
-          accounts: SWAP_USDC_A_ACCOUNTS,
-          instructions: [
+        await program.methods
+          .swap(Side.Bid, swapAmount, new BN(1.0))
+          .accounts(SWAP_USDC_A_ACCOUNTS)
+          .signers([openOrdersA, openOrdersB])
+          .instructions([
             // First order to this market so one must create the open orders account.
             await OpenOrders.makeCreateAccountTransaction(
               program.provider.connection,
@@ -118,9 +120,8 @@ describe("swap", () => {
               openOrdersB.publicKey,
               utils.DEX_PID
             ),
-          ],
-          signers: [openOrdersA, openOrdersB],
-        });
+          ])
+          .rpc();
       }
     );
 

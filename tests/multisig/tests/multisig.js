@@ -23,19 +23,20 @@ describe("multisig", () => {
     const owners = [ownerA.publicKey, ownerB.publicKey, ownerC.publicKey];
 
     const threshold = new anchor.BN(2);
-    await program.rpc.createMultisig(owners, threshold, nonce, {
-      accounts: {
+    await program.methods
+      .createMultisig(owners, threshold, nonce)
+      .accounts({
         multisig: multisig.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      },
-      instructions: [
+      })
+      .signers([multisig])
+      .instructions([
         await program.account.multisig.createInstruction(
           multisig,
           multisigSize
         ),
-      ],
-      signers: [multisig],
-    });
+      ])
+      .rpc();
 
     let multisigAccount = await program.account.multisig.fetch(
       multisig.publicKey
@@ -65,21 +66,22 @@ describe("multisig", () => {
 
     const transaction = anchor.web3.Keypair.generate();
     const txSize = 1000; // Big enough, cuz I'm lazy.
-    await program.rpc.createTransaction(pid, accounts, data, {
-      accounts: {
+    await program.methods
+      .createTransaction(pid, accounts, data)
+      .accounts({
         multisig: multisig.publicKey,
         transaction: transaction.publicKey,
         proposer: ownerA.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      },
-      instructions: [
+      })
+      .signers([transaction, ownerA])
+      .instructions([
         await program.account.transaction.createInstruction(
           transaction,
           txSize
         ),
-      ],
-      signers: [transaction, ownerA],
-    });
+      ])
+      .rpc();
 
     const txAccount = await program.account.transaction.fetch(
       transaction.publicKey
@@ -92,39 +94,43 @@ describe("multisig", () => {
     assert.strictEqual(txAccount.didExecute, false);
 
     // Other owner approves transaction.
-    await program.rpc.approve({
-      accounts: {
+    await program.methods
+      .approve()
+      .account({
         multisig: multisig.publicKey,
         transaction: transaction.publicKey,
         owner: ownerB.publicKey,
-      },
-      signers: [ownerB],
-    });
+      })
+      .signers([ownerB])
+      .rpc();
 
     // Now that we've reached the threshold, send the transaction.
-    await program.rpc.executeTransaction({
-      accounts: {
+    await program.methods
+      .executeTransaction()
+      .accounts({
         multisig: multisig.publicKey,
         multisigSigner,
         transaction: transaction.publicKey,
-      },
-      remainingAccounts: program.instruction.setOwners
-        .accounts({
-          multisig: multisig.publicKey,
-          multisigSigner,
-        })
-        // Change the signer status on the vendor signer since it's signed by the program, not the client.
-        .map((meta) =>
-          meta.pubkey.equals(multisigSigner)
-            ? { ...meta, isSigner: false }
-            : meta
-        )
-        .concat({
-          pubkey: program.programId,
-          isWritable: false,
-          isSigner: false,
-        }),
-    });
+      })
+      .remainingAccounts(
+        program.instruction.setOwners
+          .accounts({
+            multisig: multisig.publicKey,
+            multisigSigner,
+          })
+          // Change the signer status on the vendor signer since it's signed by the program, not the client.
+          .map((meta) =>
+            meta.pubkey.equals(multisigSigner)
+              ? { ...meta, isSigner: false }
+              : meta
+          )
+          .concat({
+            pubkey: program.programId,
+            isWritable: false,
+            isSigner: false,
+          })
+      )
+      .rpc();
 
     multisigAccount = await program.account.multisig.fetch(multisig.publicKey);
 

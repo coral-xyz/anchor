@@ -8,17 +8,18 @@ describe("tictactoe", () => {
   let player_o = anchor.web3.Keypair.generate();
 
   it("Initialize Dashboard", async () => {
-    const tx = await program.rpc.initializeDashboard({
-      accounts: {
+    const tx = await program.methods
+      .initializeDashboard()
+      .accounts({
         authority: program.provider.wallet.publicKey,
         dashboard: dashboard.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      },
-      signers: [dashboard],
-      instructions: [
+      })
+      .signers([dashboard])
+      .instructions([
         await program.account.dashboard.createInstruction(dashboard),
-      ],
-    });
+      ])
+      .rpc();
 
     console.log("transaction: ", tx);
   });
@@ -41,118 +42,129 @@ describe("tictactoe", () => {
   });
 
   it("Player O joins", async () => {
-    const tx = await program.rpc.playerJoin({
-      accounts: {
+    const tx = await program.methods
+      .playerJoin()
+      .accounts({
         playerO: player_o.publicKey,
         game: game.publicKey,
-      },
-      signers: [player_o],
-    });
+      })
+      .signers([player_o])
+      .rpc();
 
     console.log("transaction: ", tx);
   });
 
   it("Player x plays", async () => {
-    const tx = await program.rpc.playerMove(1, 0, {
-      accounts: {
+    const tx = await program.methods
+      .playerMove(1, 0)
+      .accounts({
         player: program.provider.wallet.publicKey,
         game: game.publicKey,
-      },
-    });
+      })
+      .rpc();
     console.log("transaction: ", tx);
   });
 
   it("Player o plays", async () => {
-    const tx = await program.rpc.playerMove(2, 1, {
-      accounts: {
+    const tx = await program.methods
+      .playerMove(2, 1)
+      .accounts({
         player: player_o.publicKey,
         game: game.publicKey,
-      },
-      signers: [player_o],
-    });
+      })
+      .signers([player_o])
+      .rpc();
     console.log("transaction: ", tx);
   });
 
   it("Player x plays", async () => {
-    const tx = await program.rpc.playerMove(1, 3, {
-      accounts: {
+    const tx = await program.methods
+      .playerMove(1, 3)
+      .accounts({
         player: program.provider.wallet.publicKey,
         game: game.publicKey,
-      },
-    });
+      })
+      .rpc();
     console.log("transaction: ", tx);
   });
 
   it("Player o plays", async () => {
-    const tx = await program.rpc.playerMove(2, 6, {
-      accounts: {
+    const tx = await program.methods
+      .playerMove(2, 6)
+      .accounts({
         player: player_o.publicKey,
         game: game.publicKey,
-      },
-      signers: [player_o],
-    });
+      })
+      .signers([player_o])
+      .rpc();
     console.log("transaction: ", tx);
   });
 
   it("Player x plays", async () => {
-    const tx = await program.rpc.playerMove(1, 2, {
-      accounts: {
+    const tx = await program.methods
+      .playerMove(1, 2)
+      .accounts({
         player: program.provider.wallet.publicKey,
         game: game.publicKey,
-      },
-    });
+      })
+      .rpc();
     console.log("transaction: ", tx);
   });
 
   it("Player o plays", async () => {
-    const tx = await program.rpc.playerMove(2, 4, {
-      accounts: {
+    const tx = await program.methods
+      .playerMove(2, 4)
+      .accounts({
         player: player_o.publicKey,
         game: game.publicKey,
-      },
-      signers: [player_o],
-    });
+      })
+      .signers([player_o])
+      .rpc();
     console.log("transaction: ", tx);
   });
 
   it("Player x plays", async () => {
-    const tx = await program.rpc.playerMove(1, 5, {
-      accounts: {
+    const tx = await program.methods
+      .playerMove(1, 5)
+      .accounts({
         player: program.provider.wallet.publicKey,
         game: game.publicKey,
-      },
-    });
+      })
+      .rpc();
     console.log("transaction: ", tx);
   });
 
   it("Player o plays", async () => {
-    const tx = await program.rpc.playerMove(2, 8, {
-      accounts: {
+    const tx = await program.methods
+      .playerMove(2, 8)
+      .accounts({
         player: player_o.publicKey,
         game: game.publicKey,
-      },
-      signers: [player_o],
-    });
+      })
+      .signers([player_o])
+      .rpc();
     console.log("transaction: ", tx);
   });
 
   it("Player x plays", async () => {
-    const tx = await program.rpc.playerMove(1, 7, {
-      accounts: {
+    const tx = await program.methods
+      .playerMove(1, 7)
+      .accounts({
         player: program.provider.wallet.publicKey,
         game: game.publicKey,
-      },
-    });
+      })
+      .rpc();
     console.log("transaction: ", tx);
   });
 
   it("Status", async () => {
-    const tx = await program.rpc.status({
-      accounts: {
+    const tx = await program.methods
+      .status()
+      .accounts({
         dashboard: dashboard.publicKey,
         game: game.publicKey,
-      },
-    });
+      })
+      .rpc();
 
     console.log("transaction: ", tx);
   });

@@ -292,8 +292,9 @@ describe("cfo", () => {
         market: ORDERBOOK_ENV.marketA.address,
       })
       .rpc();
-    await program.rpc.createOfficerOpenOrders(openOrdersBumpB, {
-      accounts: {
+    await program.methods
+      .createOfficerOpenOrders(openOrdersBumpB)
+      .accounts({
         officer,
         openOrders: openOrdersB,
         payer: program.provider.wallet.publicKey,
@@ -301,8 +302,8 @@ describe("cfo", () => {
         systemProgram: SystemProgram.programId,
         rent: SYSVAR_RENT_PUBKEY,
         market: ORDERBOOK_ENV.marketB.address,
-      },
-    });
+      })
+      .rpc();
   });
 
   it("Sweeps fees", async () => {
