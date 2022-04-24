@@ -143,14 +143,10 @@ describe("swap", () => {
       program.provider,
       [ORDERBOOK_ENV.godA, ORDERBOOK_ENV.godUsdc],
       async () => {
-        await program.rpc.swap(
-          Side.Ask,
-          new BN(swapAmount * 10 ** 6),
-          new BN(swapAmount),
-          {
-            accounts: SWAP_A_USDC_ACCOUNTS,
-          }
-        );
+        await program.methods
+          .swap(Side.Ask, new BN(swapAmount * 10 ** 6), new BN(swapAmount))
+          .accounts(SWAP_A_USDC_ACCOUNTS)
+          .rpc();
       }
     );
 
@@ -167,49 +163,46 @@ describe("swap", () => {
       [ORDERBOOK_ENV.godA, ORDERBOOK_ENV.godB, ORDERBOOK_ENV.godUsdc],
       async () => {
         // Perform the actual swap.
-        await program.rpc.swapTransitive(
-          new BN(swapAmount * 10 ** 6),
-          new BN(swapAmount - 1),
-          {
-            accounts: {
-              from: {
-                market: marketA._decoded.ownAddress,
-                requestQueue: marketA._decoded.requestQueue,
-                eventQueue: marketA._decoded.eventQueue,
-                bids: marketA._decoded.bids,
-                asks: marketA._decoded.asks,
-                coinVault: marketA._decoded.baseVault,
-                pcVault: marketA._decoded.quoteVault,
-                vaultSigner: marketAVaultSigner,
-                // User params.
-                openOrders: openOrdersA.publicKey,
-                // Swapping from A -> USDC.
-                orderPayerTokenAccount: ORDERBOOK_ENV.godA,
-                coinWallet: ORDERBOOK_ENV.godA,
-              },
-              to: {
-                market: marketB._decoded.ownAddress,
-                requestQueue: marketB._decoded.requestQueue,
-                eventQueue: marketB._decoded.eventQueue,
-                bids: marketB._decoded.bids,
-                asks: marketB._decoded.asks,
-                coinVault: marketB._decoded.baseVault,
-                pcVault: marketB._decoded.quoteVault,
-                vaultSigner: marketBVaultSigner,
-                // User params.
-                openOrders: openOrdersB.publicKey,
-                // Swapping from USDC -> B.
-                orderPayerTokenAccount: ORDERBOOK_ENV.godUsdc,
-                coinWallet: ORDERBOOK_ENV.godB,
-              },
-              pcWallet: ORDERBOOK_ENV.godUsdc,
-              authority: program.provider.wallet.publicKey,
-              dexProgram: utils.DEX_PID,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        await program.methods
+          .swapTransitive(new BN(swapAmount * 10 ** 6), new BN(swapAmount - 1))
+          .accounts({
+            from: {
+              market: marketA._decoded.ownAddress,
+              requestQueue: marketA._decoded.requestQueue,
+              eventQueue: marketA._decoded.eventQueue,
+              bids: marketA._decoded.bids,
+              asks: marketA._decoded.asks,
+              coinVault: marketA._decoded.baseVault,
+              pcVault: marketA._decoded.quoteVault,
+              vaultSigner: marketAVaultSigner,
+              // User params.
+              openOrders: openOrdersA.publicKey,
+              // Swapping from A -> USDC.
+              orderPayerTokenAccount: ORDERBOOK_ENV.godA,
+              coinWallet: ORDERBOOK_ENV.godA,
             },
-          }
-        );
+            to: {
+              market: marketB._decoded.ownAddress,
+              requestQueue: marketB._decoded.requestQueue,
+              eventQueue: marketB._decoded.eventQueue,
+              bids: marketB._decoded.bids,
+              asks: marketB._decoded.asks,
+              coinVault: marketB._decoded.baseVault,
+              pcVault: marketB._decoded.quoteVault,
+              vaultSigner: marketBVaultSigner,
+              // User params.
+              openOrders: openOrdersB.publicKey,
+              // Swapping from USDC -> B.
+              orderPayerTokenAccount: ORDERBOOK_ENV.godUsdc,
+              coinWallet: ORDERBOOK_ENV.godB,
+            },
+            pcWallet: ORDERBOOK_ENV.godUsdc,
+            authority: program.provider.wallet.publicKey,
+            dexProgram: utils.DEX_PID,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          })
+          .rpc();
       }
     );
 
@@ -228,49 +221,46 @@ describe("swap", () => {
       [ORDERBOOK_ENV.godA, ORDERBOOK_ENV.godB, ORDERBOOK_ENV.godUsdc],
       async () => {
         // Perform the actual swap.
-        await program.rpc.swapTransitive(
-          new BN(swapAmount * 10 ** 6),
-          new BN(swapAmount - 1),
-          {
-            accounts: {
-              from: {
-                market: marketB._decoded.ownAddress,
-                requestQueue: marketB._decoded.requestQueue,
-                eventQueue: marketB._decoded.eventQueue,
-                bids: marketB._decoded.bids,
-                asks: marketB._decoded.asks,
-                coinVault: marketB._decoded.baseVault,
-                pcVault: marketB._decoded.quoteVault,
-                vaultSigner: marketBVaultSigner,
-                // User params.
-                openOrders: openOrdersB.publicKey,
-                // Swapping from B -> USDC.
-                orderPayerTokenAccount: ORDERBOOK_ENV.godB,
-                coinWallet: ORDERBOOK_ENV.godB,
-              },
-              to: {
-                market: marketA._decoded.ownAddress,
-                requestQueue: marketA._decoded.requestQueue,
-                eventQueue: marketA._decoded.eventQueue,
-                bids: marketA._decoded.bids,
-                asks: marketA._decoded.asks,
-                coinVault: marketA._decoded.baseVault,
-                pcVault: marketA._decoded.quoteVault,
-                vaultSigner: marketAVaultSigner,
-                // User params.
-                openOrders: openOrdersA.publicKey,
-                // Swapping from USDC -> A.
-                orderPayerTokenAccount: ORDERBOOK_ENV.godUsdc,
-                coinWallet: ORDERBOOK_ENV.godA,
-              },
-              pcWallet: ORDERBOOK_ENV.godUsdc,
-              authority: program.provider.wallet.publicKey,
-              dexProgram: utils.DEX_PID,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        await program.methods
+          .swapTransitive(new BN(swapAmount * 10 ** 6), new BN(swapAmount - 1))
+          .accounts({
+            from: {
+              market: marketB._decoded.ownAddress,
+              requestQueue: marketB._decoded.requestQueue,
+              eventQueue: marketB._decoded.eventQueue,
+              bids: marketB._decoded.bids,
+              asks: marketB._decoded.asks,
+              coinVault: marketB._decoded.baseVault,
+              pcVault: marketB._decoded.quoteVault,
+              vaultSigner: marketBVaultSigner,
+              // User params.
+              openOrders: openOrdersB.publicKey,
+              // Swapping from B -> USDC.
+              orderPayerTokenAccount: ORDERBOOK_ENV.godB,
+              coinWallet: ORDERBOOK_ENV.godB,
             },
-          }
-        );
+            to: {
+              market: marketA._decoded.ownAddress,
+              requestQueue: marketA._decoded.requestQueue,
+              eventQueue: marketA._decoded.eventQueue,
+              bids: marketA._decoded.bids,
+              asks: marketA._decoded.asks,
+              coinVault: marketA._decoded.baseVault,
+              pcVault: marketA._decoded.quoteVault,
+              vaultSigner: marketAVaultSigner,
+              // User params.
+              openOrders: openOrdersA.publicKey,
+              // Swapping from USDC -> A.
+              orderPayerTokenAccount: ORDERBOOK_ENV.godUsdc,
+              coinWallet: ORDERBOOK_ENV.godA,
+            },
+            pcWallet: ORDERBOOK_ENV.godUsdc,
+            authority: program.provider.wallet.publicKey,
+            dexProgram: utils.DEX_PID,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          })
+          .rpc();
       }
     );
 

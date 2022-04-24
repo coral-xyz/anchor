@@ -75,11 +75,14 @@ describe("chat", () => {
     // Send each message.
     for (let k = 0; k < numMessages; k += 1) {
       console.log("Sending message " + k);
-      await program.methods.sendMessage(messages[k]).accounts({
-        user,
-        authority,
-        chatRoom: chatRoom.publicKey,
-      }).rpc();
+      await program.methods
+        .sendMessage(messages[k])
+        .accounts({
+          user,
+          authority,
+          chatRoom: chatRoom.publicKey,
+        })
+        .rpc();
     }
 
     // Check the chat room state is as expected.
