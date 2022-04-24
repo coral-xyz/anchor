@@ -34,7 +34,7 @@ describe("basic-3", () => {
     // Invoke the puppet master to perform a CPI to the puppet.
     await puppetMaster.methods
       .pullStrings(new anchor.BN(111))
-      .account({
+      .accounts({
         puppet: newPuppetAccount.publicKey,
         puppetProgram: puppet.programId,
       })

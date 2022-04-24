@@ -96,7 +96,7 @@ describe("multisig", () => {
     // Other owner approves transaction.
     await program.methods
       .approve()
-      .account({
+      .accounts({
         multisig: multisig.publicKey,
         transaction: transaction.publicKey,
         owner: ownerB.publicKey,
