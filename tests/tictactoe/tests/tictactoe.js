@@ -24,16 +24,18 @@ describe("tictactoe", () => {
   });
 
   it("Initialize Game", async () => {
-    const tx = await program.methods.initialize({
-      accounts: {
-        playerX: program.provider.wallet.publicKey,
-        dashboard: dashboard.publicKey,
-        game: game.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      },
-      signers: [game],
-      instructions: [await program.account.game.createInstruction(game)],
-    }).rpc();
+    const tx = await program.methods
+      .initialize({
+        accounts: {
+          playerX: program.provider.wallet.publicKey,
+          dashboard: dashboard.publicKey,
+          game: game.publicKey,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        },
+        signers: [game],
+        instructions: [await program.account.game.createInstruction(game)],
+      })
+      .rpc();
 
     console.log("transaction: ", tx);
   });

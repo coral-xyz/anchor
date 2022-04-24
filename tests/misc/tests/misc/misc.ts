@@ -54,17 +54,15 @@ describe("misc", () => {
   const data = anchor.web3.Keypair.generate();
 
   it("Can use u128 and i128", async () => {
-    const tx = await program.methods.initialize(
-      new anchor.BN(1234),
-      new anchor.BN(22),
-      {
+    const tx = await program.methods
+      .initialize(new anchor.BN(1234), new anchor.BN(22), {
         accounts: {
           data: data.publicKey,
         },
         signers: [data],
         instructions: [await program.account.data.createInstruction(data)],
-      }
-    ).rpc();
+      })
+      .rpc();
     const dataAccount = await program.account.data.fetch(data.publicKey);
     assert.isTrue(dataAccount.udata.eq(new anchor.BN(1234)));
     assert.isTrue(dataAccount.idata.eq(new anchor.BN(22)));

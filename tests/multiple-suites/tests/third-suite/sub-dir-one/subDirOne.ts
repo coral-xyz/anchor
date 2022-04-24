@@ -12,7 +12,9 @@ describe("multiple-suites", () => {
 
   it("Is initialized!", async () => {
     // Add your test here.
-    const tx = await program.methods.initialize(new anchor.BN(347234), {}).rpc();
+    const tx = await program.methods
+      .initialize(new anchor.BN(347234), {})
+      .rpc();
 
     // SOME_TOKEN.json should exist.
     const SOME_TOKEN = await program.provider.connection.getAccountInfo(
