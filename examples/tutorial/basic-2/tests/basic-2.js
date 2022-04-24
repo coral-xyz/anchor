@@ -25,7 +25,11 @@ describe("basic-2", () => {
   const signers = [counter];
 
   it("Creates a counter", async () => {
-    await program.methods.create(provider.wallet.publicKey).accounts(accounts).signers(signers).rpc();
+    await program.methods
+      .create(provider.wallet.publicKey)
+      .accounts(accounts)
+      .signers(signers)
+      .rpc();
 
     let counterAccount = await program.account.counter.fetch(counter.publicKey);
 

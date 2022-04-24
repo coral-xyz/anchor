@@ -29,7 +29,11 @@ describe("basic-1", () => {
 
     // Create the new account and initialize it with the program.
     // #region code-simplified
-    await program.methods.initialize(new anchor.BN(1234)).accounts(accounts).signers(signers).rpc();
+    await program.methods
+      .initialize(new anchor.BN(1234))
+      .accounts(accounts)
+      .signers(signers)
+      .rpc();
     // #endregion code-simplified
 
     // Fetch the newly created account from the cluster.
