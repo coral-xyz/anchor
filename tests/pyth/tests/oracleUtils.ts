@@ -55,7 +55,7 @@ export const setFeedPrice = async (
     priceFeed
   );
   const data = parsePriceData(info.data);
-  await oracleProgram.rpc
+  await oracleProgram.methods
     .setPrice(new BN(newPrice * 10 ** -data.exponent))
     .accounts({ price: priceFeed })
     .rpc();
