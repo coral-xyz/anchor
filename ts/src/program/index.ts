@@ -79,6 +79,7 @@ export class Program<IDL extends Idl = Idl> {
    * });
    * ```
    * @deprecated
+   * Use program.methods.<method>(...args) instead of the rpc call
    */
   readonly rpc: RpcNamespace<IDL>;
 
