@@ -585,13 +585,19 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
     }
 
     // Install node modules.
-    let yarn_result = std::process::Command::new("yarn")
+    let yarn_success = match std::process::Command::new("yarn")
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
-        .map_err(|e| anyhow::format_err!("yarn install failed: {}", e.to_string()))?;
-    if !yarn_result.status.success() {
-        println!("Failed yarn install will attempt to npm install");
+    {
+        Ok(yarn_result) => yarn_result.status.success(),
+        Err(e) => {
+            eprintln!("yarn install failed: {}", e);
+            false
+        }
+    };
+    if !yarn_success {
+        eprintln!("Failed yarn install will attempt to npm install");
         std::process::Command::new("npm")
             .arg("install")
             .stdout(Stdio::inherit())
