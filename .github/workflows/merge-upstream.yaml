@@ -3,6 +3,7 @@ name: Merge Upstream
 on:
   schedule:
     - cron: "*/30 * * * *"
+  workflow_dispatch:
 
 jobs:
   merge-upstream:
@@ -16,36 +17,7 @@ jobs:
           ref: master # set the branch to merge to
           fetch-depth: 0
           token: ${{ secrets.WORKFLOW_TOKEN }}
-      - run: ./.github/scripts/update.sh
+      - run: ./.github/scripts/merge_upstream.sh
         shell: bash
-      # - run: git config --global user.email "Elias.cmoreno17@gmail.com"
-      #   shell: bash
-      # - run: git config --global user.name "Eliascm17"
-      #   shell: bash
-      # - run: git remote add upstream https://github.com/project-serum/anchor.git
-      #   shell: bash
-      # - run: git pull upstream master --no-ff
-      #   shell: bash
-      # - run: git push origin master
-      #   shell: bash
-      # - run: git checkout -b latest
-      #   shell: bash
-      # - run: git merge master
-      #   shell: bash
-      # - name: Check jq
-      #   run: |
-      #     jq --version
-      #   shell: bash
-      # - name: Get Latest Tag
-      #   run: curl -sL https://api.github.com/repos/solana-labs/solana/releases | jq -r 'map(select(.name | startswith("Testnet"))) | first | .tag_name' > .github/releases/solana-latest.txt
-      #   shell: bash
-      # - run: chmod u+x ./.github/scripts/update.sh
-      #   shell: bash
-      # - run: ./.github/scripts/update.sh
-      #   shell: bash
-      # - run: git add .
-      #   shell: bash
-      # - run: git commit -m 'updating solana deps'
-      #   shell: bash
-      # - run: git push -f origin latest
-      #   shell: bash
+      - run: ./.github/scripts/update_deps.sh
+        shell: bash
