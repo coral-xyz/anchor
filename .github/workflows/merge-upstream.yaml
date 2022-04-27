@@ -17,6 +17,10 @@ jobs:
           ref: master # set the branch to merge to
           fetch-depth: 0
           token: ${{ secrets.WORKFLOW_TOKEN }}
+      - run: git config --global user.email "nick@cronos.so"
+        shell: bash
+      - run: git config --global user.name "nickgarfield"
+        shell: bash
       - run: ./.github/scripts/merge_upstream.sh
         shell: bash
       - run: ./.github/scripts/update_deps.sh
