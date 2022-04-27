@@ -1,4 +1,4 @@
-name: Merge Upstream
+name: Dev Branch
 
 on:
   schedule:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   merge-upstream:
-    name: Merge Upstream
+    name: Dev Branch
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
