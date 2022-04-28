@@ -8,7 +8,6 @@ git checkout tags/v$anchor_version
 
 # Checkout new branch
 git checkout -b $branch_name
-git merge master
 
 # Update Solana dependencies
 tomls=($(find "." -name Cargo.toml))
