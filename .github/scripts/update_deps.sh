@@ -3,6 +3,9 @@ anchor_version=$(cat VERSION)
 solana_version=$(curl -sL https://api.github.com/repos/solana-labs/solana/releases | jq -r 'map(select(.name | startswith("Testnet"))) | first | .tag_name' | cut -d'v' -f 2)
 branch_name=v$anchor_version-solana.$solana_version
 
+# Checkout last released version
+git checkout tags/v$anchor_version
+
 # Checkout new branch
 git checkout -b $branch_name
 git merge master
