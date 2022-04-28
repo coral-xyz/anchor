@@ -50,7 +50,7 @@ export default interface Provider {
  */
 export class AnchorProvider implements Provider {
   readonly publicKey: PublicKey;
-  
+
   /**
    * @param connection The cluster connection where the program is deployed.
    * @param wallet     The wallet used to pay for and sign all transactions.
