@@ -25,6 +25,7 @@ pub fn new_order_v3<'info>(
     order_type: OrderType,
     client_order_id: u64,
     limit: u16,
+    max_ts: i64,
 ) -> Result<()> {
     let referral = ctx.remaining_accounts.get(0);
     let ix = serum_dex::instruction::new_order(
@@ -50,6 +51,7 @@ pub fn new_order_v3<'info>(
         self_trade_behavior,
         limit,
         max_native_pc_qty_including_fees,
+        max_ts,
     )
     .map_err(|pe| ProgramError::from(pe))?;
     solana_program::program::invoke_signed(
@@ -175,6 +177,7 @@ pub fn initialize_market<'info>(
 ) -> Result<()> {
     let authority = ctx.remaining_accounts.get(0);
     let prune_authority = ctx.remaining_accounts.get(1);
+    let crank_authority = ctx.remaining_accounts.get(2);
     let ix = serum_dex::instruction::initialize_market(
         ctx.accounts.market.key,
         &ID,
@@ -184,6 +187,7 @@ pub fn initialize_market<'info>(
         ctx.accounts.pc_vault.key,
         authority.map(|r| r.key),
         prune_authority.map(|r| r.key),
+        crank_authority.map(|r| r.key),
         ctx.accounts.bids.key,
         ctx.accounts.asks.key,
         ctx.accounts.req_q.key,
@@ -192,6 +196,27 @@ pub fn initialize_market<'info>(
         pc_lot_size,
         vault_signer_nonce,
         pc_dust_threshold,
+    )
+    .map_err(|pe| ProgramError::from(pe))?;
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )?;
+    Ok(())
+}
+
+pub fn prune<'info>(ctx: CpiContext<'_, '_, '_, 'info, Prune<'info>>, limit: u16) -> Result<()> {
+    let ix = serum_dex::instruction::prune(
+        &ID,
+        ctx.accounts.market.key,
+        ctx.accounts.bids.key,
+        ctx.accounts.asks.key,
+        ctx.accounts.prune_authority.key,
+        ctx.accounts.open_orders.key,
+        ctx.accounts.open_orders_owner.key,
+        ctx.accounts.event_q.key,
+        limit,
     )
     .map_err(|pe| ProgramError::from(pe))?;
     solana_program::program::invoke_signed(
@@ -287,6 +312,17 @@ pub struct InitializeMarket<'info> {
     pub req_q: AccountInfo<'info>,
     pub event_q: AccountInfo<'info>,
     pub rent: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct Prune<'info> {
+    pub market: AccountInfo<'info>,
+    pub bids: AccountInfo<'info>,
+    pub asks: AccountInfo<'info>,
+    pub prune_authority: AccountInfo<'info>,
+    pub open_orders: AccountInfo<'info>,
+    pub open_orders_owner: AccountInfo<'info>,
+    pub event_q: AccountInfo<'info>,
 }
 
 #[derive(Clone)]

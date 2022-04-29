@@ -2257,7 +2257,8 @@ fn start_test_validator(
         .unwrap_or(solana_sdk::rpc_port::DEFAULT_RPC_PORT);
     if !portpicker::is_free(rpc_port) {
         return Err(anyhow!(
-            "Your configured rpc port: {rpc_port} is already in use"
+            "Your configured rpc port: {} is already in use",
+            rpc_port
         ));
     }
     let faucet_port = cfg
@@ -2267,7 +2268,8 @@ fn start_test_validator(
         .unwrap_or(solana_faucet::faucet::FAUCET_PORT);
     if !portpicker::is_free(faucet_port) {
         return Err(anyhow!(
-            "Your configured faucet port: {faucet_port} is already in use"
+            "Your configured faucet port: {} is already in use",
+            faucet_port
         ));
     }
 
