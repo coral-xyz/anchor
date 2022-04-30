@@ -1,5 +1,5 @@
 use crate::codegen::accounts::{constraints, generics, ParsedGenerics};
-use crate::{AccountField, AccountsStruct};
+use crate::{AccountField, AccountsStruct, Ty};
 use quote::quote;
 use syn::Expr;
 
@@ -29,7 +29,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     }
                 }
                 AccountField::Field(f) => {
-                    // `init` and `zero` acccounts are special cased as they are
+                    // `init` and `zero` accounts are special cased as they are
                     // deserialized by constraints. Here, we just take out the
                     // AccountInfo for later use at constraint validation time.
                     if is_init(af) || f.constraints.zeroed.is_some() {
@@ -40,6 +40,20 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                             }
                             let #name = &accounts[0];
                             *accounts = &accounts[1..];
+                        }
+                    } else if let (Ty::Account(_), Some(_)) = (&f.ty, &f.constraints.owner) {
+                        // The `owner` constraint on an account is redundant with the Owner trait
+                        // check done automatically in `try_accounts`. This special case calls
+                        // `try_accounts_unchecked_owner` instead.
+                        // TODO:
+                        //   Probably also want to support other Account types which deserialize data
+                        let name = f.ident.to_string();
+                        let typed_name = f.typed_ident();
+                        quote! {
+                            #[cfg(feature = "anchor-debug")]
+                            ::solana_program::log::sol_log(stringify!(#typed_name));
+                            let #typed_name = anchor_lang::Account::try_accounts_unchecked_owner(program_id, accounts, ix_data, __bumps)
+                                .map_err(|e| e.with_account_name(#name))?;
                         }
                     } else {
                         let name = f.ident.to_string();
