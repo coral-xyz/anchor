@@ -43,8 +43,8 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                         }
                     } else if let (Ty::Account(_), Some(_)) = (&f.ty, &f.constraints.owner) {
                         // The `owner` constraint on an account is redundant with the Owner trait
-                        // check done automatically in `try_accounts`. This special case calls
-                        // `try_accounts_unchecked_owner` instead.
+                        // check done automatically in `Accounts::try_accounts`. This special case calls
+                        // `UnsafeAccounts::try_accounts` instead.
                         // TODO:
                         //   Probably also want to support other Account types which deserialize data
                         let name = f.ident.to_string();
@@ -52,7 +52,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                         quote! {
                             #[cfg(feature = "anchor-debug")]
                             ::solana_program::log::sol_log(stringify!(#typed_name));
-                            let #typed_name = anchor_lang::accounts::account::Account::try_accounts_unchecked_owner(program_id, accounts, ix_data, __bumps)
+                            let #typed_name = anchor_lang::UnsafeAccounts::try_accounts(program_id, accounts, ix_data, __bumps)
                                 .map_err(|e| e.with_account_name(#name))?;
                         }
                     } else {

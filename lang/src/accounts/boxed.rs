@@ -13,7 +13,9 @@
 //! }
 //! ```
 
-use crate::{Accounts, AccountsClose, AccountsExit, Result, ToAccountInfos, ToAccountMetas};
+use crate::{
+    Accounts, AccountsClose, AccountsExit, Result, ToAccountInfos, ToAccountMetas, UnsafeAccounts,
+};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -21,6 +23,17 @@ use std::collections::BTreeMap;
 use std::ops::Deref;
 
 impl<'info, T: Accounts<'info>> Accounts<'info> for Box<T> {
+    fn try_accounts(
+        program_id: &Pubkey,
+        accounts: &mut &[AccountInfo<'info>],
+        ix_data: &[u8],
+        bumps: &mut BTreeMap<String, u8>,
+    ) -> Result<Self> {
+        T::try_accounts(program_id, accounts, ix_data, bumps).map(Box::new)
+    }
+}
+
+impl<'info, T: UnsafeAccounts<'info>> UnsafeAccounts<'info> for Box<T> {
     fn try_accounts(
         program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],

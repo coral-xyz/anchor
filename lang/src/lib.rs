@@ -85,6 +85,15 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
     ) -> Result<Self>;
 }
 
+pub trait UnsafeAccounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
+    fn try_accounts(
+        program_id: &Pubkey,
+        accounts: &mut &[AccountInfo<'info>],
+        ix_data: &[u8],
+        bumps: &mut BTreeMap<String, u8>,
+    ) -> Result<Self>;
+}
+
 /// The exit procedure for an account. Any cleanup or persistence to storage
 /// should be done here.
 pub trait AccountsExit<'info>: ToAccountMetas + ToAccountInfos<'info> {

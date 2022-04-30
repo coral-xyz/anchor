@@ -4,7 +4,7 @@ use crate::bpf_writer::BpfWriter;
 use crate::error::{Error, ErrorCode};
 use crate::{
     AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, Key, Owner,
-    Result, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+    Result, ToAccountInfo, ToAccountInfos, ToAccountMetas, UnsafeAccounts,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
@@ -283,21 +283,6 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Account<'a, T> {
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(Account::new(info.clone(), T::try_deserialize(&mut data)?))
     }
-
-    #[inline(never)]
-    pub fn try_accounts_unchecked_owner(
-        _program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'a>],
-        _ix_data: &[u8],
-        _bumps: &mut BTreeMap<String, u8>,
-    ) -> Result<Self> {
-        if accounts.is_empty() {
-            return Err(ErrorCode::AccountNotEnoughKeys.into());
-        }
-        let account = &accounts[0];
-        *accounts = &accounts[1..];
-        Account::try_from_unchecked_owner(account)
-    }
 }
 
 impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T> {
@@ -353,6 +338,27 @@ where
         let account = &accounts[0];
         *accounts = &accounts[1..];
         Account::try_from(account)
+    }
+}
+
+impl<'info, T: AccountSerialize + AccountDeserialize + Clone> UnsafeAccounts<'info>
+    for Account<'info, T>
+where
+    T: AccountSerialize + AccountDeserialize + Clone,
+{
+    #[inline(never)]
+    fn try_accounts(
+        _program_id: &Pubkey,
+        accounts: &mut &[AccountInfo<'info>],
+        _ix_data: &[u8],
+        _bumps: &mut BTreeMap<String, u8>,
+    ) -> Result<Self> {
+        if accounts.is_empty() {
+            return Err(ErrorCode::AccountNotEnoughKeys.into());
+        }
+        let account = &accounts[0];
+        *accounts = &accounts[1..];
+        Account::try_from_unchecked_owner(account)
     }
 }
 
