@@ -52,7 +52,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                         quote! {
                             #[cfg(feature = "anchor-debug")]
                             ::solana_program::log::sol_log(stringify!(#typed_name));
-                            let #typed_name = anchor_lang::Account::try_accounts_unchecked_owner(program_id, accounts, ix_data, __bumps)
+                            let #typed_name = anchor_lang::accounts::account::Account::try_accounts_unchecked_owner(program_id, accounts, ix_data, __bumps)
                                 .map_err(|e| e.with_account_name(#name))?;
                         }
                     } else {
