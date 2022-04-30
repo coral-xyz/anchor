@@ -292,7 +292,7 @@ pub fn generate_constraint_owner(f: &Field, c: &ConstraintOwner) -> proc_macro2:
     );
     quote! {
         {
-            let my_owner = AsRef::<AccountInfo>::as_ref(&#ident).owner;
+            let my_owner = #ident.to_account_info().owner;
             let owner_address = #owner_address;
             if my_owner != &owner_address {
                 return #error;
