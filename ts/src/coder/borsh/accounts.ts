@@ -25,7 +25,7 @@ export class BorshAccountsCoder<A extends string = string>
   private accountLayouts: Map<A, Layout>;
 
   /**
-   * IDL whose acconts will be coded.
+   * IDL whose accounts will be coded.
    */
   private idl: Idl;
 
