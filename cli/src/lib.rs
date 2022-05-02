@@ -176,6 +176,12 @@ pub enum Command {
         /// Flag to skip building the program in the workspace,
         /// use this to save time when running test and the program code is not altered.
         #[clap(long)]
+        new_localnet: bool,
+        ///flag to run new localnet even if test validator is running separately
+        #[clap(long, requires = "new_localnet")]
+        port: u64,
+        /// port for the new_localnet command
+        #[clap(long)]
         skip_build: bool,
         /// Flag to keep the local validator running after tests
         /// to be able to check the transactions.
@@ -447,6 +453,8 @@ pub fn entry(opts: Opts) -> Result<()> {
             skip_deploy,
             skip_local_validator,
             skip_build,
+            new_localnet,
+            port,
             detach,
             args,
             cargo_args,
@@ -456,6 +464,8 @@ pub fn entry(opts: Opts) -> Result<()> {
             skip_deploy,
             skip_local_validator,
             skip_build,
+            new_localnet,
+            port,
             skip_lint,
             detach,
             args,
@@ -1849,6 +1859,8 @@ fn test(
     skip_deploy: bool,
     skip_local_validator: bool,
     skip_build: bool,
+    new_localnet: bool,
+    port: u64,
     skip_lint: bool,
     detach: bool,
     extra_args: Vec<String>,
