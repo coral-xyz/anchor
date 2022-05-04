@@ -5,7 +5,7 @@ use basic_1::MyAccount;
 use solana_program_test::*;
 use solana_sdk::{signature::Keypair, signer::Signer, transaction::Transaction};
 
-/// Creates and initializes an account in a single atomic transaction (simplified)
+/// Creates and initializes an account in a single atomic transaction (simplified).
 #[tokio::test]
 async fn create_and_init() {
     let program_test = ProgramTest::new("basic_1", basic_1::id(), None);
