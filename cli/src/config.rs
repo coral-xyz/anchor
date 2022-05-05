@@ -909,6 +909,9 @@ pub struct _Validator {
     // Override the number of slots in an epoch.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub slots_per_epoch: Option<String>,
+    // The number of ticks in a slot
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ticks_per_slot: Option<u16>,
     // Warp the ledger to WARP_SLOT after starting the validator.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub warp_slot: Option<String>,
@@ -942,6 +945,8 @@ pub struct Validator {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub slots_per_epoch: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub ticks_per_slot: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub warp_slot: Option<String>,
 }
 
@@ -968,6 +973,7 @@ impl From<_Validator> for Validator {
                 .rpc_port
                 .unwrap_or(solana_sdk::rpc_port::DEFAULT_RPC_PORT),
             slots_per_epoch: _validator.slots_per_epoch,
+            ticks_per_slot: _validator.ticks_per_slot,
             warp_slot: _validator.warp_slot,
         }
     }
@@ -990,6 +996,7 @@ impl From<Validator> for _Validator {
             limit_ledger_size: validator.limit_ledger_size,
             rpc_port: Some(validator.rpc_port),
             slots_per_epoch: validator.slots_per_epoch,
+            ticks_per_slot: validator.ticks_per_slot,
             warp_slot: validator.warp_slot,
         }
     }
@@ -1060,6 +1067,9 @@ impl Merge for _Validator {
             slots_per_epoch: other
                 .slots_per_epoch
                 .or_else(|| self.slots_per_epoch.take()),
+            ticks_per_slot: other
+                .ticks_per_slot
+                .or_else(|| self.ticks_per_slot.take()),
             warp_slot: other.warp_slot.or_else(|| self.warp_slot.take()),
         };
     }
