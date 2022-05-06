@@ -2405,12 +2405,15 @@ fn deploy(
         println!("Deploying workspace: {}", url);
         println!("Upgrade authority: {}", keypair);
 
+        let mut found = false;
+
         for mut program in cfg.read_all_programs()? {
             if let Some(single_prog_str) = &program_str {
                 let program_name = program.path.file_name().unwrap().to_str().unwrap();
                 if single_prog_str.as_str() != program_name {
                     continue;
                 }
+                found = true;
             }
             let binary_path = program.binary_path().display().to_string();
 
@@ -2460,7 +2463,11 @@ fn deploy(
             }
         }
 
-        println!("Deploy success");
+        if found {
+            println!("Deploy success");
+        } else {
+            println!("Program not found!");
+        }
 
         Ok(())
     })
