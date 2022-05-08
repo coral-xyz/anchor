@@ -15,5 +15,8 @@
   },
   "scripts": {
     "test": "anchor test --skip-lint"
+  },
+  "dependencies": {
+    "@project-serum/anchor": "^0.24.2"
   }
 }
