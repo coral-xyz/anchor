@@ -362,7 +362,7 @@ export class Program<IDL extends Idl = Idl> {
    */
   public addEventListener(
     eventName: string,
-    callback: (event: any, slot: number, signature: string) => void
+    callback: (event: any, slot: number, txSignature: string) => void
   ): number {
     return this._events.addEventListener(eventName, callback);
   }
