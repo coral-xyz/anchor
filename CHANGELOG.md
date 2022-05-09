@@ -25,6 +25,10 @@ The minor version will be incremented upon a breaking change and the patch versi
 * cli: Move `overflow-checks` into workspace `Cargo.toml` so that it will not be ignored by compiler ([#1806](https://github.com/project-serum/anchor/pull/1806)).
 * lang: Fix missing account name information when deserialization fails when using `init` or `zero` ([#1800](https://github.com/project-serum/anchor/pull/1800)).
 
+### Breaking
+
+* ts: Add transaction signature to `EventCallback` parameters ([#1851](https://github.com/project-serum/anchor/pull/1851)).
+
 ## [0.24.2] - 2022-04-13
 
 ### Fixes
