@@ -21,9 +21,10 @@ async function main() {
   const program = new anchor.Program(idl, programId);
 
   // Execute the RPC.
-  await program.rpc.initialize();
+  await program.methods.initialize().rpc();
   // #endregion main
 }
 
 console.log("Running client.");
+
 main().then(() => console.log("Success"));
