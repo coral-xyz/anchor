@@ -31,6 +31,13 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Vec<T> {
         T::try_accounts(program_id, accounts, ix_data, bumps).map(|item| vec.push(item))?;
         Ok(vec)
     }
+    
+    fn handle_error(
+        &self,
+        _error: anchor_lang::Error
+    ) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[cfg(test)]

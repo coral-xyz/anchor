@@ -23,6 +23,12 @@ impl<'info> Accounts<'info> for AccountInfo<'info> {
         *accounts = &accounts[1..];
         Ok(account.clone())
     }
+    fn handle_error(
+        &self,
+        _error: anchor_lang::Error,
+    ) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl<'info> ToAccountMetas for AccountInfo<'info> {

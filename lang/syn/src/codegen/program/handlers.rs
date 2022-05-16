@@ -430,10 +430,12 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     // Execute user defined function.
                                     {
                                         let mut state = loader.load_mut()?;
-                                        state.#ix_method_name(
+                                        if let Error(err) = state.#ix_method_name(
                                             ctx,
                                             #(#ix_arg_names),*
-                                        )?;
+                                        ) {
+                                            accounts.handle_error(err)?;
+                                        }
                                     }
                                     // Serialize the state and save it to storage.
                                     accounts.exit(program_id)?;

@@ -34,6 +34,13 @@ impl<'info> Accounts<'info> for UncheckedAccount<'info> {
         *accounts = &accounts[1..];
         Ok(UncheckedAccount(account.clone()))
     }
+
+    fn handle_error(
+        &self,
+        _error: anchor_lang::Error
+    ) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl<'info> ToAccountMetas for UncheckedAccount<'info> {

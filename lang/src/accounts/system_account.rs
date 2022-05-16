@@ -48,6 +48,12 @@ impl<'info> Accounts<'info> for SystemAccount<'info> {
         *accounts = &accounts[1..];
         SystemAccount::try_from(account)
     }
+    fn handle_error(
+        &self,
+        _error: anchor_lang::Error
+    ) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl<'info> AccountsExit<'info> for SystemAccount<'info> {}

@@ -79,6 +79,13 @@ impl<'info, T: solana_program::sysvar::Sysvar> Accounts<'info> for Sysvar<'info,
         *accounts = &accounts[1..];
         Sysvar::from_account_info(account)
     }
+
+    fn handle_error(
+        &self,
+        _error: anchor_lang::Error
+    ) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl<'info, T: solana_program::sysvar::Sysvar> ToAccountMetas for Sysvar<'info, T> {

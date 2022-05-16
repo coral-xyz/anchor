@@ -63,6 +63,12 @@ where
         let pa = CpiAccount::try_from(account)?;
         Ok(pa)
     }
+    fn handle_error(
+        &self,
+        _error: anchor_lang::error::Error,
+    ) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[allow(deprecated)]

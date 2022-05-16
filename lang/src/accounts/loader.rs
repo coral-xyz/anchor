@@ -172,6 +172,12 @@ impl<'info, T: ZeroCopy> Accounts<'info> for Loader<'info, T> {
         let l = Loader::try_from(program_id, account)?;
         Ok(l)
     }
+    fn handle_error(
+        &self,
+        _error: anchor_lang::Error,
+    ) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[allow(deprecated)]

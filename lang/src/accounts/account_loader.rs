@@ -230,6 +230,12 @@ impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
         let l = AccountLoader::try_from(account)?;
         Ok(l)
     }
+    fn handle_error(
+        &self,
+        _error: anchor_lang::Error,
+    ) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl<'info, T: ZeroCopy + Owner> AccountsExit<'info> for AccountLoader<'info, T> {

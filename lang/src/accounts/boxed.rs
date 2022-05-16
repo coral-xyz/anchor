@@ -29,6 +29,12 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Box<T> {
     ) -> Result<Self> {
         T::try_accounts(program_id, accounts, ix_data, bumps).map(Box::new)
     }
+    fn handle_error(
+        &self,
+        _error: anchor_lang::error::Error,
+    ) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl<'info, T: AccountsExit<'info>> AccountsExit<'info> for Box<T> {

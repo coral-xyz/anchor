@@ -82,6 +82,12 @@ where
         *accounts = &accounts[1..];
         ProgramState::try_from(program_id, account)
     }
+    fn handle_error(
+        &self,
+        _error: anchor_lang::Error,
+    ) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[allow(deprecated)]

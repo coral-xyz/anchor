@@ -108,6 +108,14 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 // Success. Return the validated accounts.
                 Ok(#accounts_instance)
             }
+
+            #[inline(never)]
+            fn handle_error(
+                &self,
+                error: anchor_lang::error::Error,
+            ) -> anchor_lang::Result<()> {
+                Ok(())
+            }
         }
     }
 }

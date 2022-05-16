@@ -155,6 +155,13 @@ where
         *accounts = &accounts[1..];
         Program::try_from(account)
     }
+
+    fn handle_error(
+        &self,
+        _error: anchor_lang::Error,
+    ) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl<'info, T: Id + Clone> ToAccountMetas for Program<'info, T> {

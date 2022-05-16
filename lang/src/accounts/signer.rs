@@ -69,6 +69,12 @@ impl<'info> Accounts<'info> for Signer<'info> {
         *accounts = &accounts[1..];
         Signer::try_from(account)
     }
+    fn handle_error(
+        &self,
+        _error: anchor_lang::Error,
+    ) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl<'info> AccountsExit<'info> for Signer<'info> {}

@@ -329,6 +329,12 @@ where
         *accounts = &accounts[1..];
         Account::try_from(account)
     }
+    fn handle_error(
+        &self,
+        _error: anchor_lang::Error,
+    ) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsExit<'info>

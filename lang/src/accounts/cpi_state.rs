@@ -84,6 +84,12 @@ where
 
         CpiState::try_from(account)
     }
+    fn handle_error(
+        &self,
+        _error: anchor_lang::Error,
+    ) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[allow(deprecated)]
