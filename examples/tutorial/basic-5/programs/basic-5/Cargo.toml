@@ -1,5 +1,5 @@
 [package]
-name = "basic-4"
+name = "basic-5"
 version = "0.1.0"
 description = "Created with Anchor"
 rust-version = "1.56"
@@ -7,7 +7,7 @@ edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "basic_4"
+name = "basic_5"
 
 [features]
 no-entrypoint = []

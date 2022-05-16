@@ -19,6 +19,18 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
         })
         .map(|ix_attr| ix_attr.parse_args_with(Punctuated::<Expr, Comma>::parse_terminated))
         .transpose()?;
+
+    let bot_tax_api: Option<Punctuated<Expr, Comma>> = strct
+        .attrs
+        .iter()
+        .find(|a| {
+            a.path
+                .get_ident()
+                .map_or(false, |ident| ident == "bot_tax")
+        })
+        .map(|ix_attr| ix_attr.parse_args_with(Punctuated::<Expr, Comma>::parse_terminated))
+        .transpose()?;
+
     let fields = match &strct.fields {
         syn::Fields::Named(fields) => fields
             .named
@@ -33,12 +45,20 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
         }
     };
 
-    let _ = constraints_cross_checks(&fields)?;
+    let _ = constraints_cross_checks(&fields, &bot_tax_api)?;
 
     Ok(AccountsStruct::new(strct.clone(), fields, instruction_api))
 }
 
-fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
+fn constraints_cross_checks(fields: &[AccountField], bot_tax_api: &Option<Punctuated<Expr, Comma>>) -> ParseResult<()> {
+    init_constraints_cross_checks(fields)?;
+    if let Some(ref bot_tax) = bot_tax_api {
+        return bot_tax_constraints_cross_checks(fields, &bot_tax);
+    }
+    Ok(())
+}
+
+fn init_constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
     // INIT
     let init_fields: Vec<&Field> = fields
         .iter()
@@ -141,6 +161,97 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
             }
         }
     }
+    Ok(())
+}
+
+#[derive(Debug)]
+struct BotTaxApi {
+    error_codes: Vec<String>,
+    base_fee: String,
+    pay_to: String,
+}
+
+impl BotTaxApi {
+    fn parse(punctuated: &Punctuated<Expr, Comma>) -> ParseResult<Self> {
+        println!("Parsing the way I expected...");
+        let mut error_codes: Vec<String> = vec![];
+        let mut base_fee = "".to_string();
+        let mut pay_to = "".to_string();
+
+        for field in punctuated.iter() {
+            match &field {
+                Expr::Assign(assign) => {
+                    let left = (&*assign.left).to_token_stream().to_string();
+                    if left == "pay_to" {
+                        pay_to = (&*assign.right).to_token_stream().to_string();
+                    } else if left == "base_fee" {
+                        base_fee = (&*assign.right).to_token_stream().to_string();
+                    } else if left == "error_codes" {
+                        match &*assign.right {
+                            Expr::Array(ref right_array) => {
+                                for elem in (&right_array.elems).into_iter() {
+                                    error_codes.push(elem.to_token_stream().to_string());
+                                }
+                            }
+                            _ => {
+                                return Err(ParseError::new(
+                                    field.span(),
+                                format!(
+                                        "Error codes for bot_tax must be a valid array, but found {}", 
+                                        (&*assign.right).to_token_stream().to_string()
+                                    ),
+                                ));
+                            }
+                        }
+                    } else {
+                        return Err(ParseError::new(
+                            field.span(),
+                            format!("Unrecognized bot_tax_api field: {}", left),
+                        ));
+                    }
+                }
+                _ => {
+                    println!("Not an expr type ?...");
+                }
+            }
+        }
+
+        Ok(Self {
+            error_codes,
+            base_fee,
+            pay_to
+        })
+    }
+}
+
+/// Checks that 
+/// `system_program` exists
+/// `pay_to` is writable
+fn bot_tax_constraints_cross_checks(fields: &[AccountField], bot_tax_api: &Punctuated<Expr, Comma>) -> ParseResult<()> {
+    // BOT TAX
+    let api = BotTaxApi::parse(bot_tax_api)?;
+    println!("{:?}", api);
+    
+    if fields.iter().all(|f| f.ident() != &api.pay_to) {
+        return Err(ParseError::new(
+            fields[0].ident().span(),
+            "the bot_tax pay_to field does not have a matching \
+            recipient in this context"
+        ))
+    }
+
+    // We need system_program to execute a transfer
+    if fields.iter().all(|f| f.ident() != "system_program") {
+        // TODO(ngundotra): find a better span to record this error
+        return Err(ParseError::new(
+            fields[0].ident().span(),
+            "the bot_tax api requires \
+            the system_program field to exist in the account \
+            validation struct. Use the program type to add \
+            the system_program field to your validation struct.",
+        ));
+    }
+
     Ok(())
 }
 

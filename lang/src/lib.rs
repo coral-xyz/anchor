@@ -15,7 +15,8 @@
 //! level workflow of writing RPC request handlers, emitting an IDL, and
 //! generating clients from IDL is the same.
 //!
-//! For detailed tutorials and examples on how to use Anchor, see the guided
+//! For detailed tutorials and examples on how to use Anchor, see the guided:q
+//! 
 //! [tutorials](https://project-serum.github.io/anchor) or examples in the GitHub
 //! [repository](https://github.com/project-serum/anchor).
 //!
@@ -24,6 +25,7 @@
 extern crate self as anchor_lang;
 
 use bytemuck::{Pod, Zeroable};
+use prelude::error::Error;
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -83,6 +85,11 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
         ix_data: &[u8],
         bumps: &mut BTreeMap<String, u8>,
     ) -> Result<Self>;
+
+    fn handle_error(
+        &self,
+        error: anchor_lang::error::Error
+    ) -> Result<()>;
 }
 
 /// The exit procedure for an account. Any cleanup or persistence to storage
