@@ -1894,12 +1894,12 @@ fn test(
         }
         let mut is_first_suite = true;
         if cfg.scripts.get("test").is_some() {
-            is_first_suite = false;
             println!("\nFound a 'test' script in the Anchor.toml. Running it as a test suite!");
             run_test_suite(
                 cfg.path(),
                 cfg,
                 is_localnet,
+                is_first_suite,
                 skip_local_validator,
                 skip_deploy,
                 detach,
@@ -1907,6 +1907,7 @@ fn test(
                 &cfg.scripts,
                 &extra_args,
             )?;
+            is_first_suite = false;
         }
         if let Some(test_config) = &cfg.test_config {
             for test_suite in test_config.iter() {
@@ -1919,14 +1920,13 @@ fn test(
                             .map(|val| val.shutdown_wait)
                             .unwrap_or(SHUTDOWN_WAIT) as u64,
                     ));
-                } else {
-                    is_first_suite = false;
                 }
 
                 run_test_suite(
                     test_suite.0,
                     cfg,
                     is_localnet,
+                    is_first_suite,
                     skip_local_validator,
                     skip_deploy,
                     detach,
@@ -1934,6 +1934,8 @@ fn test(
                     &test_suite.1.scripts,
                     &extra_args,
                 )?;
+
+                is_first_suite = false;
             }
         }
         Ok(())
@@ -1945,6 +1947,7 @@ fn run_test_suite(
     test_suite_path: impl AsRef<Path>,
     cfg: &WithPath<Config>,
     is_localnet: bool,
+    is_first_suite: bool,
     skip_local_validator: bool,
     skip_deploy: bool,
     detach: bool,
@@ -1977,7 +1980,7 @@ fn run_test_suite(
     );
 
     // Setup log reader.
-    let log_streams = stream_logs(cfg, &url);
+    let log_streams = stream_logs(cfg, &url, is_first_suite);
 
     // Run the tests.
     let test_result: Result<_> = {
@@ -2171,12 +2174,22 @@ fn validator_flags(
     Ok(flags)
 }
 
-fn stream_logs(config: &WithPath<Config>, rpc_url: &str) -> Result<Vec<std::process::Child>> {
+fn stream_logs(
+    config: &WithPath<Config>,
+    rpc_url: &str,
+    is_first_suite: bool,
+) -> Result<Vec<std::process::Child>> {
     let program_logs_dir = ".anchor/program-logs";
-    if Path::new(program_logs_dir).exists() {
+    let mut file_index: usize = 0;
+    if !Path::new(program_logs_dir).exists() {
+        fs::create_dir_all(program_logs_dir)?;
+    } else if is_first_suite {
         fs::remove_dir_all(program_logs_dir)?;
+        fs::create_dir_all(program_logs_dir)?;
+    } else {
+        let files = fs::read_dir(program_logs_dir).unwrap();
+        file_index = files.count();
     }
-    fs::create_dir_all(program_logs_dir)?;
     let mut handles = vec![];
     for program in config.read_all_programs()? {
         let mut file = File::open(&format!("target/idl/{}.json", program.lib_name))?;
@@ -2192,8 +2205,8 @@ fn stream_logs(config: &WithPath<Config>, rpc_url: &str) -> Result<Vec<std::proc
         let metadata: IdlTestMetadata = serde_json::from_value(metadata)?;
 
         let log_file = File::create(format!(
-            "{}/{}.{}.log",
-            program_logs_dir, metadata.address, program.lib_name,
+            "{}/{}.{}-{}.log",
+            program_logs_dir, metadata.address, program.lib_name, file_index
         ))?;
         let stdio = std::process::Stdio::from(log_file);
         let child = std::process::Command::new("solana")
@@ -2208,7 +2221,10 @@ fn stream_logs(config: &WithPath<Config>, rpc_url: &str) -> Result<Vec<std::proc
     if let Some(test) = config.test_validator.as_ref() {
         if let Some(genesis) = &test.genesis {
             for entry in genesis {
-                let log_file = File::create(format!("{}/{}.log", program_logs_dir, entry.address))?;
+                let log_file = File::create(format!(
+                    "{}/{}-{}.log",
+                    program_logs_dir, entry.address, file_index
+                ))?;
                 let stdio = std::process::Stdio::from(log_file);
                 let child = std::process::Command::new("solana")
                     .arg("logs")
@@ -3087,7 +3103,7 @@ fn localnet(
 
         // Setup log reader.
         let url = test_validator_rpc_url(&cfg.test_validator);
-        let log_streams = stream_logs(cfg, &url);
+        let log_streams = stream_logs(cfg, &url, true);
 
         std::io::stdin().lock().lines().next().unwrap().unwrap();
 
