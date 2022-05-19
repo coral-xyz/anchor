@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use borsh::{BorshDeserialize, BorshSerialize};
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
@@ -11,24 +12,90 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 pub mod serum_dex {
     use super::*;
 
-    pub fn initialize_market(
-        ctx: Context<InitializeMarket>,
-        coin_lot_size: u64,
-        pc_lot_size: u64,
-        fee_rate_bps: u16,
-        vault_signer_nonce: u64,
-        pc_dust_threshold: u64,
+    pub fn create_market(
+        ctx: Context<CreateMarket>,
+        signer_nonce: u64,
+        min_base_order_size: u64,
+        tick_size: u64,
+        cranker_reward: u64,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn close_market(ctx: Context<CloseMarket>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn close_account(ctx: Context<CloseAccount>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn sweep_fees(ctx: Context<SweepFees>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn initialize_account(
+        ctx: Context<InitializeAccount>,
+        market: Pubkey,
+        max_orders: u64,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn settle(ctx: Context<Settle>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn consume_events(
+        ctx: Context<ConsumeEvents>,
+        max_iterations: u64,
+        no_op_err: u64,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn cancel_order(ctx: Context<CancelOrder>, order_index: u64, order_id: u128) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn swap(
+        ctx: Context<Swap>,
+        base_qty: u64,
+        quote_qty: u64,
+        match_limit: u64,
+        side: u8,
+        has_discount_token_account: u8,
+        _padding: [u8; 6],
     ) -> Result<()> {
         Ok(())
     }
 }
 
 #[derive(Accounts)]
-pub struct InitializeMarket<'info> {
+pub struct CreateMarket<'info> {
     #[account(mut)]
     market: AccountInfo<'info>,
     #[account(mut)]
-    request_queue: AccountInfo<'info>,
+    orderbook: AccountInfo<'info>,
+    base_vault: AccountInfo<'info>,
+    quote_vault: AccountInfo<'info>,
+    market_admin: AccountInfo<'info>,
+    #[account(mut)]
+    event_queue: AccountInfo<'info>,
+    #[account(mut)]
+    asks: AccountInfo<'info>,
+    #[account(mut)]
+    bids: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct NewOrder<'info> {
+    spl_token_program: AccountInfo<'info>,
+    system_program: AccountInfo<'info>,
+    #[account(mut)]
+    market: AccountInfo<'info>,
+    #[account(mut)]
+    orderbook: AccountInfo<'info>,
     #[account(mut)]
     event_queue: AccountInfo<'info>,
     #[account(mut)]
@@ -36,13 +103,144 @@ pub struct InitializeMarket<'info> {
     #[account(mut)]
     asks: AccountInfo<'info>,
     #[account(mut)]
-    coin_vault: AccountInfo<'info>,
+    base_vault: AccountInfo<'info>,
     #[account(mut)]
-    pc_vault: AccountInfo<'info>,
-    coin_mint: AccountInfo<'info>,
-    pc_mint: AccountInfo<'info>,
-    rent: AccountInfo<'info>,
-    market_authority: AccountInfo<'info>,
-    prune_authority: AccountInfo<'info>,
-    crank_authority: AccountInfo<'info>,
+    quote_vault: AccountInfo<'info>,
+    #[account(mut)]
+    user: AccountInfo<'info>,
+    #[account(mut)]
+    user_token_account: AccountInfo<'info>,
+    #[account(mut)]
+    user_owner: Signer<'info>,
+    // Remaining Accounts: discount_token_account, fee_referral_account
+}
+
+#[derive(Accounts)]
+pub struct Swap<'info> {
+    spl_token_program: AccountInfo<'info>,
+    system_program: AccountInfo<'info>,
+    #[account(mut)]
+    market: AccountInfo<'info>,
+    #[account(mut)]
+    orderbook: AccountInfo<'info>,
+    #[account(mut)]
+    event_queue: AccountInfo<'info>,
+    #[account(mut)]
+    bids: AccountInfo<'info>,
+    #[account(mut)]
+    asks: AccountInfo<'info>,
+    #[account(mut)]
+    base_vault: AccountInfo<'info>,
+    #[account(mut)]
+    quote_vault: AccountInfo<'info>,
+    market_signer: AccountInfo<'info>,
+    #[account(mut)]
+    user_base_account: AccountInfo<'info>,
+    #[account(mut)]
+    user_quote_account: AccountInfo<'info>,
+    #[account(mut)]
+    user_owner: Signer<'info>,
+    // Remaining Accounts: discount_token_account, fee_referral_account
+}
+
+#[derive(Accounts)]
+pub struct CancelOrder<'info> {
+    market: AccountInfo<'info>,
+    #[account(mut)]
+    orderbook: AccountInfo<'info>,
+    #[account(mut)]
+    event_queue: AccountInfo<'info>,
+    #[account(mut)]
+    bids: AccountInfo<'info>,
+    #[account(mut)]
+    asks: AccountInfo<'info>,
+    #[account(mut)]
+    user: AccountInfo<'info>,
+    user_owner: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ConsumeEvents<'info> {
+    #[account(mut)]
+    market: AccountInfo<'info>,
+    #[account(mut)]
+    orderbook: AccountInfo<'info>,
+    #[account(mut)]
+    event_queue: AccountInfo<'info>,
+    #[account(mut)]
+    reward_target: AccountInfo<'info>,
+    // Remaining Accounts: [...user_accounts]
+}
+
+#[derive(Accounts)]
+pub struct Settle<'info> {
+    spl_token_program: AccountInfo<'info>,
+    market: AccountInfo<'info>,
+    #[account(mut)]
+    base_vault: AccountInfo<'info>,
+    #[account(mut)]
+    quote_vault: AccountInfo<'info>,
+    market_signer: AccountInfo<'info>,
+    #[account(mut)]
+    user: AccountInfo<'info>,
+    user_owner: Signer<'info>,
+    #[account(mut)]
+    destination_base_account: AccountInfo<'info>,
+    #[account(mut)]
+    destination_quote_account: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct InitializeAccount<'info> {
+    system_program: AccountInfo<'info>,
+    #[account(mut)]
+    user: AccountInfo<'info>,
+    user_owner: Signer<'info>,
+    #[account(mut)]
+    fee_payer: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct SweepFees<'info> {
+    #[account(mut)]
+    market: AccountInfo<'info>,
+    market_signer: AccountInfo<'info>,
+    sweep_authority: Signer<'info>,
+    #[account(mut)]
+    quote_vault: AccountInfo<'info>,
+    #[account(mut)]
+    destination_token_account: AccountInfo<'info>,
+    spl_token_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct CloseAccount<'info> {
+    #[account(mut)]
+    user: AccountInfo<'info>,
+    user_owner: Signer<'info>,
+    #[account(mut)]
+    target_lamports_account: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct CloseMarket<'info> {
+    #[account(mut)]
+    market: AccountInfo<'info>,
+    #[account(mut)]
+    base_vault: AccountInfo<'info>,
+    #[account(mut)]
+    quote_vault: AccountInfo<'info>,
+    #[account(mut)]
+    orderbook: AccountInfo<'info>,
+    #[account(mut)]
+    event_queue: AccountInfo<'info>,
+    #[account(mut)]
+    bids: AccountInfo<'info>,
+    #[account(mut)]
+    asks: AccountInfo<'info>,
+    market_admin: Signer<'info>,
+    #[account(mut)]
+    target_lamports_account: AccountInfo<'info>,
+    market_signer: AccountInfo<'info>,
+    spl_token_program: AccountInfo<'info>,
 }
