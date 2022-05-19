@@ -12,8 +12,8 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Features
 
-* cli: Add `--skip-build` to `anchor publish` ([#1786](https://github.
-com/project-serum/anchor/pull/1841)).
+* cli: produces different log files when running multiple test suites ([#1903](https://github.com/project-serum/anchor/pull/1903)).
+* cli: Add `--skip-build` to `anchor publish` ([#1786](https://github.com/project-serum/anchor/pull/1841)).
 * cli: Add `--program-keypair` to `anchor deploy` ([#1786](https://github.com/project-serum/anchor/pull/1786)).
 * spl: Add more derived traits to `TokenAccount` to `Mint` ([#1818](https://github.com/project-serum/anchor/pull/1818)).
 * cli: Add compilation optimizations to cli template ([#1807](https://github.com/project-serum/anchor/pull/1807)).
