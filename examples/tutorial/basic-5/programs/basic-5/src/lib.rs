@@ -1,5 +1,6 @@
 // #region code
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program;
 
 declare_id!("671JxDuZAWcUMMiGbq5YUDUXGBcyAB3tuDDQu7RHUA6h");
 
@@ -29,10 +30,12 @@ pub mod basic_5 {
             Ok(())
         }
 
-        /// On this error
-        pub fn increment_out_of_bounds(&mut self, ctx: Context<Auth>) -> anchor_lang::Result<()> {
-            println!("{}", crate::id());
-            if &self.authority != ctx.accounts.authority.key {
+        /// On this error, charge bots a taxxx (triple x for flavxr)
+        pub fn increment_out_of_bounds(
+            &mut self,
+            ctx: Context<BotTaxAuth>,
+        ) -> anchor_lang::Result<()> {
+            if &self.authority != ctx.accounts.payer.key {
                 return Err(error!(ErrorCode::Unauthorized));
             }
             self.count += 1;
@@ -49,15 +52,17 @@ pub struct Auth<'info> {
 #[derive(Accounts)]
 #[bot_tax(
     error_codes = [
-        ErrorCode::Unauthorized
+        ErrorCode::Unauthorized,
     ],
     base_fee = 1,
-    pay_to = bot_tax
+    pay_to = bot_tax,
+    payer = payer
 )]
 pub struct BotTaxAuth<'info> {
-    authority: Signer<'info>,
+    payer: Signer<'info>,
     /// CHECK: This account is not read from
-    bot_tax: UncheckedAccount<'info>,
+    #[account(mut)]
+    bot_tax: AccountInfo<'info>,
     system_program: Program<'info, System>,
 }
 // #endregion code

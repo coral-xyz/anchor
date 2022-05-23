@@ -82,7 +82,7 @@ impl<'info, T: solana_program::sysvar::Sysvar> Accounts<'info> for Sysvar<'info,
 
     fn handle_error(
         &self,
-        _error: anchor_lang::Error
+        _result: anchor_lang::Result<()>,
     ) -> Result<()> {
         Ok(())
     }

@@ -430,11 +430,11 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     // Execute user defined function.
                                     {
                                         let mut state = loader.load_mut()?;
-                                        if let Error(err) = state.#ix_method_name(
+                                        if let Err(err) = state.#ix_method_name(
                                             ctx,
                                             #(#ix_arg_names),*
                                         ) {
-                                            accounts.handle_error(err)?;
+                                            accounts.handle_error(Err(err))?;
                                         }
                                     }
                                     // Serialize the state and save it to storage.
@@ -491,10 +491,12 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                         );
 
                                     // Execute user defined function.
-                                    state.#ix_method_name(
+                                    if let Err(err) = state.#ix_method_name(
                                         ctx,
                                         #(#ix_arg_names),*
-                                    )?;
+                                    ) {
+                                        accounts.handle_error(Err(err))?;
+                                    }
 
                                     // Serialize the state and save it to storage.
                                     accounts.exit(program_id)?;
@@ -619,10 +621,12 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                                 );
 
                                             // Execute user defined function.
-                                            state.#ix_method_name(
+                                            if let Err(err) = state.#ix_method_name(
                                                 ctx,
                                                 #(#ix_arg_names),*
-                                            )?;
+                                            ) {
+                                                accounts.handle_error(Err(err))?;
+                                            }
 
                                             // Exit procedures.
                                             accounts.exit(program_id)?;

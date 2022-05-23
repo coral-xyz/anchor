@@ -88,7 +88,7 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
 
     fn handle_error(
         &self,
-        error: anchor_lang::error::Error
+        result: anchor_lang::Result<()>
     ) -> Result<()>;
 }
 

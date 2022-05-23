@@ -110,6 +110,79 @@ pub struct FallbackFn {
 }
 
 #[derive(Debug)]
+pub struct BotTaxApi {
+    error_codes: Vec<syn::Type>,
+    base_fee: syn::LitInt,
+    pay_to: syn::Ident,
+    payer: syn::Ident,
+}
+
+impl BotTaxApi {
+    fn parse(punctuated: &Punctuated<Expr, Comma>) -> ParseResult<Self> {
+        println!("Parsing the way I expected...");
+        let mut error_codes: Vec<syn::Type> = vec![];
+        let mut base_fee: Option<syn::LitInt>= None;
+        let mut pay_to: Option<syn::Ident> = None; 
+        let mut payer: Option<syn::Ident> = None; 
+
+        for field in punctuated.iter() {
+            match &field {
+                Expr::Assign(assign) => {
+                    let left = (&*assign.left).to_token_stream().to_string();
+                    if left == "pay_to" {
+                        pay_to = Some(syn::parse2((&*assign.right).to_token_stream())?);
+                    } else if left == "base_fee" {
+                        base_fee = Some(syn::parse2((&*assign.right).to_token_stream())?);
+                    } else if left == "payer" {
+                        payer = Some(syn::parse2((&*assign.right).to_token_stream())?);
+                    } else if left == "error_codes" {
+                        match &*assign.right {
+                            Expr::Array(ref right_array) => {
+                                for elem in (&right_array.elems).into_iter() {
+                                    let error_type: syn::Type = syn::parse2(elem.to_token_stream())?;
+                                    error_codes.push(error_type);
+                                }
+                            }
+                            _ => {
+                                return Err(ParseError::new(
+                                    field.span(),
+                                format!(
+                                        "Error codes for bot_tax must be a valid array, but found {}", 
+                                        (&*assign.right).to_token_stream().to_string()
+                                    ),
+                                ));
+                            }
+                        }
+                    } else {
+                        return Err(ParseError::new(
+                            field.span(),
+                            format!("Unrecognized bot_tax_api field: {}", left),
+                        ));
+                    }
+                }
+                _ => {
+                    println!("Not an expr type ?...");
+                }
+            }
+        }
+
+        if error_codes.len() == 0 {
+            return Err(ParseError::new(
+                punctuated[0].span(),
+                "Unable to parse error codes for bot tax"
+            ))
+        }
+        
+        Ok(Self {
+            error_codes,
+            base_fee: base_fee.unwrap(),
+            pay_to: pay_to.unwrap(),
+            payer: payer.unwrap(),
+        })
+    }
+}
+
+#[derive(Debug)]
 pub struct AccountsStruct {
     // Name of the accounts struct.
     pub ident: Ident,
@@ -119,6 +192,8 @@ pub struct AccountsStruct {
     pub fields: Vec<AccountField>,
     // Instruction data api expression.
     instruction_api: Option<Punctuated<Expr, Comma>>,
+    // Bot tax api (parsed)
+    bot_tax_api: Option<BotTaxApi>
 }
 
 impl Parse for AccountsStruct {
@@ -145,6 +220,7 @@ impl AccountsStruct {
         strct: ItemStruct,
         fields: Vec<AccountField>,
         instruction_api: Option<Punctuated<Expr, Comma>>,
+        bot_tax_api: Option<BotTaxApi>
     ) -> Self {
         let ident = strct.ident.clone();
         let generics = strct.generics;
@@ -153,6 +229,7 @@ impl AccountsStruct {
             generics,
             fields,
             instruction_api,
+            bot_tax_api
         }
     }
 

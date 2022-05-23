@@ -86,7 +86,7 @@ where
     }
     fn handle_error(
         &self,
-        _error: anchor_lang::Error,
+        _result: anchor_lang::Result<()>,
     ) -> Result<()> {
         Ok(())
     }

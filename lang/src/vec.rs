@@ -34,7 +34,7 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Vec<T> {
     
     fn handle_error(
         &self,
-        _error: anchor_lang::Error
+        _result: anchor_lang::Result<()>
     ) -> Result<()> {
         Ok(())
     }

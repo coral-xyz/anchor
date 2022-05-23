@@ -15,5 +15,8 @@
   },
   "scripts": {
     "test": "anchor test --skip-lint"
+  },
+  "dependencies": {
+    "mocha": "^10.0.0"
   }
 }

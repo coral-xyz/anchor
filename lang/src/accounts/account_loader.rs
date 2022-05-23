@@ -232,7 +232,7 @@ impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
     }
     fn handle_error(
         &self,
-        _error: anchor_lang::Error,
+        _result: anchor_lang::Result<()>
     ) -> Result<()> {
         Ok(())
     }

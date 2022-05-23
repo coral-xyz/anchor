@@ -1,6 +1,6 @@
 use crate::codegen::accounts::{constraints, generics, ParsedGenerics};
 use crate::{AccountField, AccountsStruct};
-use quote::quote;
+use quote::quote; 
 use syn::Expr;
 
 // Generates the `Accounts` trait implementation.
@@ -89,6 +89,66 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         }
     };
 
+    let error_handling = match &accs.bot_tax_api {
+        None => quote! {},
+        Some(bot_tax_api) => {
+            let base_fee = &bot_tax_api.base_fee;
+            let payer = &bot_tax_api.payer;
+            let pay_to = &bot_tax_api.pay_to;
+            let errors: Vec<proc_macro2::TokenStream> = bot_tax_api.error_codes
+                .iter()
+                .map(|err| quote!{
+                   #err
+                }) 
+                .collect();
+
+            // I think issue is that Ok(()) is wrong return type for AnchorResult<()>!
+            quote! {
+                msg!("Hello!");
+                let taxable_errors = [#(#errors)*];
+                let taxable_anchor_errors: Vec<anchor_lang::error::Error> = taxable_errors.iter().map(|err| (*err).into()).collect();
+                let taxable_error_codes: Vec<u32> = taxable_anchor_errors
+                    .iter()
+                    .map(|err| {
+                        if let anchor_lang::error::Error::AnchorError(anchor_err) = err {
+                            return anchor_err.error_code_number;
+                        } else {
+                            return 0;
+                        }
+                    })
+                    .collect();
+
+                match result {
+                    Ok(()) => {
+                        msg!("definitely should not match Ok")
+                    },
+                    Err(err) => {
+                        match err {
+                            Error::AnchorError(anchor_err) => {
+                                msg!("caught anchor error");
+                                if taxable_error_codes.iter().any(|err_code| *err_code == anchor_err.error_code_number) {
+                                    let base_fee: u64 = #base_fee;
+                                    let lamports = base_fee.min(self.#payer.lamports());
+                                    solana_program::program::invoke(
+                                        &solana_program::system_instruction::transfer(
+                                            &self.#payer.key(),
+                                            &self.#pay_to.key(),
+                                            lamports
+                                        ),
+                                        &[self.#payer.to_account_info(), self.#pay_to.to_account_info(), self.system_program.to_account_info()]
+                                    )?;
+                                };
+                            }
+                            _ => {
+                                msg!("failed to match anchor error")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
+
     quote! {
         #[automatically_derived]
         impl<#combined_generics> anchor_lang::Accounts<#trait_generics> for #name<#struct_generics> #where_clause {
@@ -112,8 +172,9 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             #[inline(never)]
             fn handle_error(
                 &self,
-                error: anchor_lang::error::Error,
+                result: anchor_lang::Result<()>,
             ) -> anchor_lang::Result<()> {
+                #error_handling
                 Ok(())
             }
         }
