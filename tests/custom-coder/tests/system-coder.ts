@@ -3,6 +3,7 @@ import { Spl } from "@project-serum/anchor";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
   Keypair,
+  LAMPORTS_PER_SOL,
   NONCE_ACCOUNT_LENGTH,
   PublicKey,
   SystemProgram,
@@ -133,5 +134,25 @@ describe("system-coder", () => {
       nonceKeypair.publicKey
     );
     assert.notEqual(nonceAccount, null);
+  });
+
+  it("Transfers lamports", async () => {
+    // arrange
+    const receiverKeypair = Keypair.generate();
+    const lamports = 0.1* LAMPORTS_PER_SOL;
+    // act
+    await program.methods
+      .transfer(new BN(lamports))
+      .accounts({
+        from: provider.wallet.publicKey,
+        to: receiverKeypair.publicKey,
+      })
+      .rpc();
+    // assert
+    const receiverAccount = await program.provider.connection.getAccountInfo(
+      receiverKeypair.publicKey
+    );
+    assert.notEqual(receiverAccount, null);
+    assert.equal(lamports, receiverAccount.lamports);
   });
 });
