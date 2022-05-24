@@ -8,6 +8,7 @@ import {
   PublicKey,
   SystemProgram,
   SYSVAR_RECENT_BLOCKHASHES_PUBKEY,
+  SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
 import * as assert from "assert";
 import BN from "bn.js";
@@ -21,7 +22,7 @@ describe("system-coder", () => {
   const program = Spl.system();
 
   // Constants.
-  const aliceTokenKeypair = Keypair.generate();
+  const aliceKeypair = Keypair.generate();
 
   it("Creates an account", async () => {
     // arrange
@@ -36,13 +37,13 @@ describe("system-coder", () => {
       .createAccount(new BN(lamports), new BN(space), owner)
       .accounts({
         from: provider.wallet.publicKey,
-        to: aliceTokenKeypair.publicKey,
+        to: aliceKeypair.publicKey,
       })
-      .signers([aliceTokenKeypair])
+      .signers([aliceKeypair])
       .rpc();
     // assert
     const aliceAccount = await program.provider.connection.getAccountInfo(
-      aliceTokenKeypair.publicKey
+      aliceKeypair.publicKey
     );
     assert.notEqual(aliceAccount, null);
     assert.ok(owner.equals(aliceAccount.owner));
@@ -56,13 +57,13 @@ describe("system-coder", () => {
     await program.methods
       .assign(owner)
       .accounts({
-        pubkey: aliceTokenKeypair.publicKey,
+        pubkey: aliceKeypair.publicKey,
       })
-      .signers([aliceTokenKeypair])
+      .signers([aliceKeypair])
       .rpc();
     // assert
     const aliceAccount = await program.provider.connection.getAccountInfo(
-      aliceTokenKeypair.publicKey
+      aliceKeypair.publicKey
     );
     assert.notEqual(aliceAccount, null);
     assert.ok(owner.equals(aliceAccount.owner));
@@ -77,25 +78,25 @@ describe("system-coder", () => {
     const owner = SystemProgram.programId;
     const seed = "seeds";
     const bobPublicKey = await PublicKey.createWithSeed(
-      aliceTokenKeypair.publicKey,
+      aliceKeypair.publicKey,
       seed,
       owner
     );
     // act
     await program.methods
       .createAccountWithSeed(
-        aliceTokenKeypair.publicKey,
+        aliceKeypair.publicKey,
         seed,
         new BN(lamports),
         new BN(space),
         owner
       )
       .accounts({
-        base: aliceTokenKeypair.publicKey,
+        base: aliceKeypair.publicKey,
         from: provider.wallet.publicKey,
         to: bobPublicKey,
       })
-      .signers([aliceTokenKeypair])
+      .signers([aliceKeypair])
       .rpc();
     // assert
     const bobAccount = await program.provider.connection.getAccountInfo(
@@ -156,7 +157,7 @@ describe("system-coder", () => {
     assert.notEqual(nonceAccount, null);
   });
 
-  it("Advances a nonce", async () => {
+  it("Advances a nonce account", async () => {
     // arrange
     const nonceKeypair = Keypair.generate();
     const owner = SystemProgram.programId;
@@ -181,7 +182,7 @@ describe("system-coder", () => {
       ])
       .signers([nonceKeypair])
       .rpc();
-    await new Promise((r) => setTimeout(r, 500)); // Wait for next slot
+    // These have to be separate to make sure advance is in another slot.
     await program.methods
       .advanceNonceAccount(provider.wallet.publicKey)
       .accounts({
@@ -194,5 +195,113 @@ describe("system-coder", () => {
       nonceKeypair.publicKey
     );
     assert.notEqual(nonceAccount, null);
+  });
+
+  it("Authorizes a nonce account", async () => {
+    // arrange
+    const nonceKeypair = Keypair.generate();
+    const owner = SystemProgram.programId;
+    const space = NONCE_ACCOUNT_LENGTH;
+    const lamports =
+      await provider.connection.getMinimumBalanceForRentExemption(space);
+    // act
+    await program.methods
+      .initializeNonceAccount(provider.wallet.publicKey)
+      .accounts({
+        nonce: nonceKeypair.publicKey,
+        recentBlockhashes: SYSVAR_RECENT_BLOCKHASHES_PUBKEY,
+      })
+      .preInstructions([
+        await program.methods
+          .createAccount(new BN(lamports), new BN(space), owner)
+          .accounts({
+            from: provider.wallet.publicKey,
+            to: nonceKeypair.publicKey,
+          })
+          .instruction(),
+      ])
+      .signers([nonceKeypair])
+      .rpc();
+    await program.methods
+      .authorizeNonceAccount(aliceKeypair.publicKey)
+      .accounts({
+        nonce: nonceKeypair.publicKey,
+        authorized: provider.wallet.publicKey,
+      })
+      .rpc();
+    // assert
+    const nonceAccount = await program.provider.connection.getAccountInfo(
+      nonceKeypair.publicKey
+    );
+    assert.notEqual(nonceAccount, null);
+  });
+
+  it("Withdraws from nonce account", async () => {
+    // arrange
+    const nonceKeypair = Keypair.generate();
+    const owner = SystemProgram.programId;
+    const space = NONCE_ACCOUNT_LENGTH;
+    const lamports =
+      await provider.connection.getMinimumBalanceForRentExemption(space);
+    const amount = 0.1 * LAMPORTS_PER_SOL;
+    const aliceBalanceBefore = (
+      await program.provider.connection.getAccountInfo(aliceKeypair.publicKey)
+    ).lamports;
+    // act
+    await program.methods
+      .initializeNonceAccount(provider.wallet.publicKey)
+      .accounts({
+        nonce: nonceKeypair.publicKey,
+        recentBlockhashes: SYSVAR_RECENT_BLOCKHASHES_PUBKEY,
+      })
+      .preInstructions([
+        await program.methods
+          .createAccount(new BN(lamports), new BN(space), owner)
+          .accounts({
+            from: provider.wallet.publicKey,
+            to: nonceKeypair.publicKey,
+          })
+          .instruction(),
+      ])
+      .signers([nonceKeypair])
+      .rpc();
+    await program.methods
+      .advanceNonceAccount(provider.wallet.publicKey)
+      .accounts({
+        nonce: nonceKeypair.publicKey,
+        recentBlockhashes: SYSVAR_RECENT_BLOCKHASHES_PUBKEY,
+      })
+      .postInstructions([
+        await program.methods
+          .transfer(new BN(amount))
+          .accounts({
+            from: provider.wallet.publicKey,
+            to: nonceKeypair.publicKey,
+          })
+          .instruction(),
+      ])
+      .rpc();
+    await program.methods
+      .authorizeNonceAccount(aliceKeypair.publicKey)
+      .accounts({
+        nonce: nonceKeypair.publicKey,
+        authorized: provider.wallet.publicKey,
+      })
+      .rpc();
+    await program.methods
+      .withdrawNonceAccount(new BN(amount))
+      .accounts({
+        authorized: aliceKeypair.publicKey,
+        nonce: nonceKeypair.publicKey,
+        recentBlockhashes: SYSVAR_RECENT_BLOCKHASHES_PUBKEY,
+        to: aliceKeypair.publicKey,
+      })
+      .signers([aliceKeypair])
+      .rpc();
+    // assert
+    const aliceBalanceAfter = (
+      await program.provider.connection.getAccountInfo(aliceKeypair.publicKey)
+    ).lamports;
+    assert.equal(aliceBalanceAfter - aliceBalanceBefore, amount);
   });
 });
