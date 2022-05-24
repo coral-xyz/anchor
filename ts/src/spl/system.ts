@@ -3,10 +3,7 @@ import { Program } from "../program/index.js";
 import Provider from "../provider.js";
 import { SystemCoder } from "../coder/system/index.js";
 
-
-const SYSTEM_PROGRAM_ID = new PublicKey(
-  "11111111111111111111111111111111"
-);
+const SYSTEM_PROGRAM_ID = new PublicKey("11111111111111111111111111111111");
 
 export function program(provider?: Provider): Program<SystemProgram> {
   return new Program<SystemProgram>(IDL, SYSTEM_PROGRAM_ID, provider, coder());
@@ -19,562 +16,614 @@ export function coder(): SystemCoder {
 /**
  * System IDL.
  */
- export type SystemProgram = {
-  "version": "0.1.0",
-  "name": "system_program",
-  "instructions": [
+export type SystemProgram = {
+  version: "0.1.0";
+  name: "system_program";
+  instructions: [
     {
-      "name": "createAccount",
-      "accounts": [
+      name: "createAccount";
+      accounts: [
         {
-          "name": "from",
-          "isMut": true,
-          "isSigner": true
+          name: "from";
+          isMut: true;
+          isSigner: true;
         },
         {
-          "name": "to",
-          "isMut": true,
-          "isSigner": true
+          name: "to";
+          isMut: true;
+          isSigner: true;
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "lamports",
-          "type": "u64"
+          name: "lamports";
+          type: "u64";
         },
         {
-          "name": "space",
-          "type": "u64"
+          name: "space";
+          type: "u64";
         },
         {
-          "name": "owner",
-          "type": "publicKey"
+          name: "owner";
+          type: "publicKey";
         }
-      ]
+      ];
     },
     {
-      "name": "assign",
-      "accounts": [
+      name: "assign";
+      accounts: [
         {
-          "name": "pubkey",
-          "isMut": true,
-          "isSigner": true
+          name: "pubkey";
+          isMut: true;
+          isSigner: true;
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "owner",
-          "type": "publicKey"
+          name: "owner";
+          type: "publicKey";
         }
-      ]
+      ];
     },
     {
-      "name": "transfer",
-      "accounts": [
+      name: "transfer";
+      accounts: [
         {
-          "name": "from",
-          "isMut": true,
-          "isSigner": true
+          name: "from";
+          isMut: true;
+          isSigner: true;
         },
         {
-          "name": "to",
-          "isMut": true,
-          "isSigner": false
+          name: "to";
+          isMut: true;
+          isSigner: false;
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "lamports",
-          "type": "u64"
+          name: "lamports";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "createAccountWithSeed",
-      "accounts": [
+      name: "createAccountWithSeed";
+      accounts: [
         {
-          "name": "from",
-          "isMut": true,
-          "isSigner": true
+          name: "from";
+          isMut: true;
+          isSigner: true;
         },
         {
-          "name": "to",
-          "isMut": true,
-          "isSigner": false
+          name: "to";
+          isMut: true;
+          isSigner: false;
         },
         {
-          "name": "base",
-          "isMut": false,
-          "isSigner": true
+          name: "base";
+          isMut: false;
+          isSigner: true;
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "base",
-          "type": "publicKey"
+          name: "base";
+          type: "publicKey";
         },
         {
-          "name": "seed",
-          "type": "string"
+          name: "seed";
+          type: "string";
         },
         {
-          "name": "lamports",
-          "type": "u64"
+          name: "lamports";
+          type: "u64";
         },
         {
-          "name": "space",
-          "type": "u64"
+          name: "space";
+          type: "u64";
         },
         {
-          "name": "owner",
-          "type": "publicKey"
+          name: "owner";
+          type: "publicKey";
         }
-      ]
+      ];
     },
     {
-      "name": "advanceNonceAccount",
-      "accounts": [
+      name: "advanceNonceAccount";
+      accounts: [
         {
-          "name": "nonce",
-          "isMut": true,
-          "isSigner": false
+          name: "nonce";
+          isMut: true;
+          isSigner: false;
         }
-      ],
-      "args": []
+      ];
+      args: [];
     },
     {
-      "name": "withdrawNonceAccount",
-      "accounts": [
+      name: "withdrawNonceAccount";
+      accounts: [
         {
-          "name": "nonce",
-          "isMut": true,
-          "isSigner": false
+          name: "nonce";
+          isMut: true;
+          isSigner: false;
         },
         {
-          "name": "to",
-          "isMut": true,
-          "isSigner": false
+          name: "to";
+          isMut: true;
+          isSigner: false;
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "arg",
-          "type": "u64"
+          name: "arg";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "authorizeNonceAccount",
-      "accounts": [
+      name: "initializeNonceAccount";
+      accounts: [
         {
-          "name": "nonce",
-          "isMut": true,
-          "isSigner": false
+          name: "nonce";
+          isMut: true;
+          isSigner: false;
         },
         {
-          "name": "authorized",
-          "isMut": false,
-          "isSigner": true
-        }
-      ],
-      "args": [
+          name: "recentBlockhashes";
+          isMut: false;
+          isSigner: false;
+        },
         {
-          "name": "arg",
-          "type": "publicKey"
+          name: "rent";
+          isMut: false;
+          isSigner: false;
         }
-      ]
+      ];
+      args: [
+        {
+          name: "authorized";
+          type: "publicKey";
+        }
+      ];
     },
     {
-      "name": "allocate",
-      "accounts": [
+      name: "authorizeNonceAccount";
+      accounts: [
         {
-          "name": "pubkey",
-          "isMut": true,
-          "isSigner": true
-        }
-      ],
-      "args": [
+          name: "nonce";
+          isMut: true;
+          isSigner: false;
+        },
         {
-          "name": "space",
-          "type": "u64"
+          name: "authorized";
+          isMut: false;
+          isSigner: true;
         }
-      ]
+      ];
+      args: [
+        {
+          name: "arg";
+          type: "publicKey";
+        }
+      ];
     },
     {
-      "name": "allocateWithSeed",
-      "accounts": [
+      name: "allocate";
+      accounts: [
         {
-          "name": "address",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "base",
-          "isMut": false,
-          "isSigner": true
+          name: "pubkey";
+          isMut: true;
+          isSigner: true;
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "base",
-          "type": "publicKey"
-        },
-        {
-          "name": "seed",
-          "type": "string"
-        },
-        {
-          "name": "space",
-          "type": "u64"
-        },
-        {
-          "name": "owner",
-          "type": "publicKey"
+          name: "space";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "assignWithSeed",
-      "accounts": [
+      name: "allocateWithSeed";
+      accounts: [
         {
-          "name": "address",
-          "isMut": true,
-          "isSigner": false
+          name: "address";
+          isMut: true;
+          isSigner: false;
         },
         {
-          "name": "base",
-          "isMut": false,
-          "isSigner": true
+          name: "base";
+          isMut: false;
+          isSigner: true;
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "base",
-          "type": "publicKey"
+          name: "base";
+          type: "publicKey";
         },
         {
-          "name": "seed",
-          "type": "string"
+          name: "seed";
+          type: "string";
         },
         {
-          "name": "owner",
-          "type": "publicKey"
+          name: "space";
+          type: "u64";
+        },
+        {
+          name: "owner";
+          type: "publicKey";
         }
-      ]
+      ];
     },
     {
-      "name": "transferWithSeed",
-      "accounts": [
+      name: "assignWithSeed";
+      accounts: [
         {
-          "name": "from",
-          "isMut": true,
-          "isSigner": false
+          name: "address";
+          isMut: true;
+          isSigner: false;
         },
         {
-          "name": "fromBase",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "to",
-          "isMut": true,
-          "isSigner": false
+          name: "base";
+          isMut: false;
+          isSigner: true;
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "lamports",
-          "type": "u64"
+          name: "base";
+          type: "publicKey";
         },
         {
-          "name": "fromSeed",
-          "type": "string"
+          name: "seed";
+          type: "string";
         },
         {
-          "name": "fromOwner",
-          "type": "publicKey"
+          name: "owner";
+          type: "publicKey";
         }
-      ]
+      ];
+    },
+    {
+      name: "transferWithSeed";
+      accounts: [
+        {
+          name: "from";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "fromBase";
+          isMut: false;
+          isSigner: true;
+        },
+        {
+          name: "to";
+          isMut: true;
+          isSigner: false;
+        }
+      ];
+      args: [
+        {
+          name: "lamports";
+          type: "u64";
+        },
+        {
+          name: "fromSeed";
+          type: "string";
+        },
+        {
+          name: "fromOwner";
+          type: "publicKey";
+        }
+      ];
     }
-  ]
+  ];
 };
 
 export const IDL: SystemProgram = {
-  "version": "0.1.0",
-  "name": "system_program",
-  "instructions": [
+  version: "0.1.0",
+  name: "system_program",
+  instructions: [
     {
-      "name": "createAccount",
-      "accounts": [
+      name: "createAccount",
+      accounts: [
         {
-          "name": "from",
-          "isMut": true,
-          "isSigner": true
+          name: "from",
+          isMut: true,
+          isSigner: true,
         },
         {
-          "name": "to",
-          "isMut": true,
-          "isSigner": true
-        }
+          name: "to",
+          isMut: true,
+          isSigner: true,
+        },
       ],
-      "args": [
+      args: [
         {
-          "name": "lamports",
-          "type": "u64"
+          name: "lamports",
+          type: "u64",
         },
         {
-          "name": "space",
-          "type": "u64"
+          name: "space",
+          type: "u64",
         },
         {
-          "name": "owner",
-          "type": "publicKey"
-        }
-      ]
+          name: "owner",
+          type: "publicKey",
+        },
+      ],
     },
     {
-      "name": "assign",
-      "accounts": [
+      name: "assign",
+      accounts: [
         {
-          "name": "pubkey",
-          "isMut": true,
-          "isSigner": true
-        }
+          name: "pubkey",
+          isMut: true,
+          isSigner: true,
+        },
       ],
-      "args": [
+      args: [
         {
-          "name": "owner",
-          "type": "publicKey"
-        }
-      ]
+          name: "owner",
+          type: "publicKey",
+        },
+      ],
     },
     {
-      "name": "transfer",
-      "accounts": [
+      name: "transfer",
+      accounts: [
         {
-          "name": "from",
-          "isMut": true,
-          "isSigner": true
+          name: "from",
+          isMut: true,
+          isSigner: true,
         },
         {
-          "name": "to",
-          "isMut": true,
-          "isSigner": false
-        }
+          name: "to",
+          isMut: true,
+          isSigner: false,
+        },
       ],
-      "args": [
+      args: [
         {
-          "name": "lamports",
-          "type": "u64"
-        }
-      ]
+          name: "lamports",
+          type: "u64",
+        },
+      ],
     },
     {
-      "name": "createAccountWithSeed",
-      "accounts": [
+      name: "createAccountWithSeed",
+      accounts: [
         {
-          "name": "from",
-          "isMut": true,
-          "isSigner": true
+          name: "from",
+          isMut: true,
+          isSigner: true,
         },
         {
-          "name": "to",
-          "isMut": true,
-          "isSigner": false
+          name: "to",
+          isMut: true,
+          isSigner: false,
         },
         {
-          "name": "base",
-          "isMut": false,
-          "isSigner": true
-        }
+          name: "base",
+          isMut: false,
+          isSigner: true,
+        },
       ],
-      "args": [
+      args: [
         {
-          "name": "base",
-          "type": "publicKey"
+          name: "base",
+          type: "publicKey",
         },
         {
-          "name": "seed",
-          "type": "string"
+          name: "seed",
+          type: "string",
         },
         {
-          "name": "lamports",
-          "type": "u64"
+          name: "lamports",
+          type: "u64",
         },
         {
-          "name": "space",
-          "type": "u64"
+          name: "space",
+          type: "u64",
         },
         {
-          "name": "owner",
-          "type": "publicKey"
-        }
-      ]
+          name: "owner",
+          type: "publicKey",
+        },
+      ],
     },
     {
-      "name": "advanceNonceAccount",
-      "accounts": [
+      name: "advanceNonceAccount",
+      accounts: [
         {
-          "name": "nonce",
-          "isMut": true,
-          "isSigner": false
-        }
+          name: "nonce",
+          isMut: true,
+          isSigner: false,
+        },
       ],
-      "args": []
+      args: [],
     },
     {
-      "name": "withdrawNonceAccount",
-      "accounts": [
+      name: "withdrawNonceAccount",
+      accounts: [
         {
-          "name": "nonce",
-          "isMut": true,
-          "isSigner": false
+          name: "nonce",
+          isMut: true,
+          isSigner: false,
         },
         {
-          "name": "to",
-          "isMut": true,
-          "isSigner": false
-        }
+          name: "to",
+          isMut: true,
+          isSigner: false,
+        },
       ],
-      "args": [
+      args: [
         {
-          "name": "arg",
-          "type": "u64"
-        }
-      ]
+          name: "arg",
+          type: "u64",
+        },
+      ],
     },
     {
-      "name": "authorizeNonceAccount",
-      "accounts": [
+      name: "initializeNonceAccount",
+      accounts: [
         {
-          "name": "nonce",
-          "isMut": true,
-          "isSigner": false
+          name: "nonce",
+          isMut: true,
+          isSigner: false,
         },
         {
-          "name": "authorized",
-          "isMut": false,
-          "isSigner": true
-        }
-      ],
-      "args": [
+          name: "recentBlockhashes",
+          isMut: false,
+          isSigner: false,
+        },
         {
-          "name": "arg",
-          "type": "publicKey"
-        }
-      ]
+          name: "rent",
+          isMut: false,
+          isSigner: false,
+        },
+      ],
+      args: [
+        {
+          name: "authorized",
+          type: "publicKey",
+        },
+      ],
     },
     {
-      "name": "allocate",
-      "accounts": [
+      name: "authorizeNonceAccount",
+      accounts: [
         {
-          "name": "pubkey",
-          "isMut": true,
-          "isSigner": true
-        }
+          name: "nonce",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "authorized",
+          isMut: false,
+          isSigner: true,
+        },
       ],
-      "args": [
+      args: [
         {
-          "name": "space",
-          "type": "u64"
-        }
-      ]
+          name: "arg",
+          type: "publicKey",
+        },
+      ],
     },
     {
-      "name": "allocateWithSeed",
-      "accounts": [
+      name: "allocate",
+      accounts: [
         {
-          "name": "address",
-          "isMut": true,
-          "isSigner": false
+          name: "pubkey",
+          isMut: true,
+          isSigner: true,
         },
-        {
-          "name": "base",
-          "isMut": false,
-          "isSigner": true
-        }
       ],
-      "args": [
+      args: [
         {
-          "name": "base",
-          "type": "publicKey"
+          name: "space",
+          type: "u64",
         },
-        {
-          "name": "seed",
-          "type": "string"
-        },
-        {
-          "name": "space",
-          "type": "u64"
-        },
-        {
-          "name": "owner",
-          "type": "publicKey"
-        }
-      ]
+      ],
     },
     {
-      "name": "assignWithSeed",
-      "accounts": [
+      name: "allocateWithSeed",
+      accounts: [
         {
-          "name": "address",
-          "isMut": true,
-          "isSigner": false
+          name: "address",
+          isMut: true,
+          isSigner: false,
         },
         {
-          "name": "base",
-          "isMut": false,
-          "isSigner": true
-        }
+          name: "base",
+          isMut: false,
+          isSigner: true,
+        },
       ],
-      "args": [
+      args: [
         {
-          "name": "base",
-          "type": "publicKey"
+          name: "base",
+          type: "publicKey",
         },
         {
-          "name": "seed",
-          "type": "string"
+          name: "seed",
+          type: "string",
         },
         {
-          "name": "owner",
-          "type": "publicKey"
-        }
-      ]
+          name: "space",
+          type: "u64",
+        },
+        {
+          name: "owner",
+          type: "publicKey",
+        },
+      ],
     },
     {
-      "name": "transferWithSeed",
-      "accounts": [
+      name: "assignWithSeed",
+      accounts: [
         {
-          "name": "from",
-          "isMut": true,
-          "isSigner": false
+          name: "address",
+          isMut: true,
+          isSigner: false,
         },
         {
-          "name": "fromBase",
-          "isMut": false,
-          "isSigner": true
+          name: "base",
+          isMut: false,
+          isSigner: true,
         },
-        {
-          "name": "to",
-          "isMut": true,
-          "isSigner": false
-        }
       ],
-      "args": [
+      args: [
         {
-          "name": "lamports",
-          "type": "u64"
+          name: "base",
+          type: "publicKey",
         },
         {
-          "name": "fromSeed",
-          "type": "string"
+          name: "seed",
+          type: "string",
         },
         {
-          "name": "fromOwner",
-          "type": "publicKey"
-        }
-      ]
-    }
-  ]
+          name: "owner",
+          type: "publicKey",
+        },
+      ],
+    },
+    {
+      name: "transferWithSeed",
+      accounts: [
+        {
+          name: "from",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "fromBase",
+          isMut: false,
+          isSigner: true,
+        },
+        {
+          name: "to",
+          isMut: true,
+          isSigner: false,
+        },
+      ],
+      args: [
+        {
+          name: "lamports",
+          type: "u64",
+        },
+        {
+          name: "fromSeed",
+          type: "string",
+        },
+        {
+          name: "fromOwner",
+          type: "publicKey",
+        },
+      ],
+    },
+  ],
 };

@@ -44,6 +44,13 @@ pub mod system_program {
         Ok(())
     }
 
+    pub fn initialize_nonce_account(
+        ctx: Context<InitializeNonceAccount>,
+        authorized: Pubkey,
+    ) -> Result<()> {
+        Ok(())
+    }
+
     pub fn authorize_nonce_account(ctx: Context<AuthorizeNonceAccount>, arg: Pubkey) -> Result<()> {
         Ok(())
     }
@@ -134,6 +141,16 @@ pub struct WithdrawNonceAccount<'info> {
     //recent_blockhashes::id): AccountInfo<'info>,
     //rent: Sysvar<'info, Rent>,
     //authorized: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct InitializeNonceAccount<'info> {
+    #[account(mut)]
+    /// CHECK:
+    nonce: AccountInfo<'info>,
+    /// CHECK:
+    recent_blockhashes: AccountInfo<'info>,
+    rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]

@@ -2,8 +2,11 @@ import * as anchor from "@project-serum/anchor";
 import { Spl } from "@project-serum/anchor";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
-  Keypair, PublicKey,
-  SystemProgram
+  Keypair,
+  NONCE_ACCOUNT_LENGTH,
+  PublicKey,
+  SystemProgram,
+  SYSVAR_RECENT_BLOCKHASHES_PUBKEY
 } from "@solana/web3.js";
 import * as assert from "assert";
 import BN from "bn.js";
@@ -98,5 +101,37 @@ describe("system-coder", () => {
       bobPublicKey
     );
     assert.notEqual(bobAccount, null);
+  });
+
+  it("Initializes nonce account", async () => {
+    // arrange
+    const nonceKeypair = Keypair.generate();
+    const owner = SystemProgram.programId;
+    const space = NONCE_ACCOUNT_LENGTH;
+    const lamports =
+      await provider.connection.getMinimumBalanceForRentExemption(space);
+    // act
+    await program.methods
+      .initializeNonceAccount(provider.wallet.publicKey)
+      .accounts({
+        nonce: nonceKeypair.publicKey,
+        recentBlockhashes: SYSVAR_RECENT_BLOCKHASHES_PUBKEY,
+      })
+      .preInstructions([
+        await program.methods
+          .createAccount(new BN(lamports), new BN(space), owner)
+          .accounts({
+            from: provider.wallet.publicKey,
+            to: nonceKeypair.publicKey,
+          })
+          .instruction(),
+      ])
+      .signers([nonceKeypair])
+      .rpc();
+    // assert
+    const nonceAccount = await program.provider.connection.getAccountInfo(
+      nonceKeypair.publicKey
+    );
+    assert.notEqual(nonceAccount, null);
   });
 });

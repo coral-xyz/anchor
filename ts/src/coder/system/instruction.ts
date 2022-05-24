@@ -28,6 +28,9 @@ export class SystemInstructionCoder implements InstructionCoder {
       case "withdrawNonceAccount": {
         return encodeWithdrawNonceAccount(ix);
       }
+      case "initializeNonceAccount": {
+        return encodeInitializeNonceAccount(ix);
+      }
       case "authorizeNonceAccount": {
         return encodeAuthorizeNonceAccount(ix);
       }
@@ -91,6 +94,12 @@ function encodeCreateAccountWithSeed({
     },
     CREATE_ACCOUNT_WITH_SEED_LAYOUT.span + seed.length
   );
+}
+
+function encodeInitializeNonceAccount({ authorized }: any): Buffer {
+  return encodeData({
+    initializeNonceAccount: { authorized: authorized.toBuffer() },
+  });
 }
 
 function encodeAdvanceNonceAccount(_ix: any): Buffer {
@@ -187,16 +196,21 @@ LAYOUT.addVariant(
 );
 LAYOUT.addVariant(
   6,
+  BufferLayout.struct([publicKey("authorized")]),
+  "initializeNonceAccount"
+);
+LAYOUT.addVariant(
+  7,
   BufferLayout.struct([publicKey("arg")]),
   "authorizeNonceAccount"
 );
 LAYOUT.addVariant(
-  7,
+  8,
   BufferLayout.struct([BufferLayout.ns64("space")]),
   "allocate"
 );
 LAYOUT.addVariant(
-  8,
+  9,
   BufferLayout.struct([
     publicKey("base"),
     BufferLayout.cstr("seed"),
@@ -206,7 +220,7 @@ LAYOUT.addVariant(
   "allocateWithSeed"
 );
 LAYOUT.addVariant(
-  9,
+  10,
   BufferLayout.struct([
     publicKey("base"),
     BufferLayout.cstr("seed"),
@@ -215,7 +229,7 @@ LAYOUT.addVariant(
   "assignWithSeed"
 );
 LAYOUT.addVariant(
-  10,
+  11,
   BufferLayout.struct([
     BufferLayout.ns64("space"),
     BufferLayout.cstr("fromSeed"),
