@@ -2,7 +2,6 @@ import * as BufferLayout from "buffer-layout";
 import camelCase from "camelcase";
 import { InstructionCoder } from "../index.js";
 import { Idl } from "../../idl.js";
-import { PublicKey } from "@solana/web3.js";
 
 export class SystemInstructionCoder implements InstructionCoder {
   // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -10,37 +9,37 @@ export class SystemInstructionCoder implements InstructionCoder {
 
   encode(ixName: string, ix: any): Buffer {
     switch (camelCase(ixName)) {
-      case 'createAccount': {
+      case "createAccount": {
         return encodeCreateAccount(ix);
       }
-      case 'assign': {
+      case "assign": {
         return encodeAssign(ix);
       }
-      case 'transfer': {
+      case "transfer": {
         return encodeTransfer(ix);
       }
-      case 'createAccountWithSeed': {
+      case "createAccountWithSeed": {
         return encodeCreateAccountWithSeed(ix);
       }
-      case 'advanceNonceAccount': {
+      case "advanceNonceAccount": {
         return encodeAdvanceNonceAccount(ix);
       }
-      case 'withdrawNonceAccount': {
+      case "withdrawNonceAccount": {
         return encodeWithdrawNonceAccount(ix);
       }
-      case 'authorizeNonceAccount': {
+      case "authorizeNonceAccount": {
         return encodeAuthorizeNonceAccount(ix);
       }
-      case 'allocate': {
+      case "allocate": {
         return encodeAllocate(ix);
       }
-      case 'allocateWithSeed': {
+      case "allocateWithSeed": {
         return encodeAllocateWithSeed(ix);
       }
-      case 'assignWithSeed': {
+      case "assignWithSeed": {
         return encodeAssignWithSeed(ix);
       }
-      case 'transferWithSeed': {
+      case "transferWithSeed": {
         return encodeTransferWithSeed(ix);
       }
       default: {
@@ -50,19 +49,19 @@ export class SystemInstructionCoder implements InstructionCoder {
   }
 
   encodeState(_ixName: string, _ix: any): Buffer {
-    throw new Error('System does not have state');
+    throw new Error("System does not have state");
   }
 }
 
 function encodeCreateAccount({ lamports, space, owner }: any): Buffer {
   return encodeData({
-    createAccount: { lamports, space, owner },
+    createAccount: { lamports, space, owner: owner.toBuffer() },
   });
 }
 
 function encodeAssign({ owner }: any): Buffer {
   return encodeData({
-    assign: { owner },
+    assign: { owner: owner.toBuffer() },
   });
 }
 
@@ -80,7 +79,13 @@ function encodeCreateAccountWithSeed({
   owner,
 }: any): Buffer {
   return encodeData({
-    createAccountWithSeed: { base, seed, lamports, space, owner },
+    createAccountWithSeed: {
+      base: base.toBuffer(),
+      seed,
+      lamports,
+      space,
+      owner: owner.toBuffer(),
+    },
   });
 }
 
@@ -98,7 +103,7 @@ function encodeWithdrawNonceAccount({ arg }: any): Buffer {
 
 function encodeAuthorizeNonceAccount({ arg }: any): Buffer {
   return encodeData({
-    authorizeNonceAccount: { arg },
+    authorizeNonceAccount: { arg: arg.toBuffer() },
   });
 }
 
@@ -110,13 +115,22 @@ function encodeAllocate({ space }: any): Buffer {
 
 function encodeAllocateWithSeed({ base, seed, space, owner }: any): Buffer {
   return encodeData({
-    allocateWithSeed: { base, seed, space, owner },
+    allocateWithSeed: {
+      base: base.toBuffer(),
+      seed,
+      space,
+      owner: owner.toBuffer(),
+    },
   });
 }
 
 function encodeAssignWithSeed({ base, seed, owner }: any): Buffer {
   return encodeData({
-    assignWithSeed: { base, seed, owner },
+    assignWithSeed: {
+      base: base.toBuffer(),
+      seed,
+      owner: owner.toBuffer(),
+    },
   });
 }
 
@@ -126,140 +140,95 @@ function encodeTransferWithSeed({
   fromOwner,
 }: any): Buffer {
   return encodeData({
-    transferWithSeed: { lamports, fromSeed, fromOwner },
+    transferWithSeed: {
+      lamports,
+      fromSeed,
+      fromOwner: fromOwner.toBuffer(),
+    },
   });
 }
 
-
-class WrappedLayout<T, U> extends BufferLayout.Layout<U> {
-  layout: BufferLayout.Layout<T>;
-  decoder: (data: T) => U;
-  encoder: (src: U) => T;
-
-  constructor(
-    layout: BufferLayout.Layout<T>,
-    decoder: (data: T) => U,
-    encoder: (src: U) => T,
-    property?: string
-  ) {
-    super(layout.span, property);
-    this.layout = layout;
-    this.decoder = decoder;
-    this.encoder = encoder;
-  }
-
-  decode(b: Buffer, offset?: number): U {
-    return this.decoder(this.layout.decode(b, offset));
-  }
-
-  encode(src: U, b: Buffer, offset?: number): number {
-    return this.layout.encode(this.encoder(src), b, offset);
-  }
-
-  getSpan(b: Buffer, offset?: number): number {
-    return this.layout.getSpan(b, offset);
-  }
-}
-
-function publicKey(property?: string): BufferLayout.Layout<PublicKey> {
-  return new WrappedLayout(
-    BufferLayout.blob(32),
-    (b: Buffer) => new PublicKey(b),
-    (key: PublicKey) => key.toBuffer(),
-    property
-  );
-}
-
-const LAYOUT = BufferLayout.union(BufferLayout.u8('instruction'));
+const LAYOUT = BufferLayout.union(BufferLayout.u32("instruction"));
 LAYOUT.addVariant(
   0,
   BufferLayout.struct([
-    BufferLayout.nu64('lamports'),
-    BufferLayout.nu64('space'),
-    publicKey('owner'),
+    BufferLayout.nu64("lamports"),
+    BufferLayout.nu64("space"),
+    publicKey("owner"),
   ]),
-  'createAccount'
+  "createAccount"
 );
-LAYOUT.addVariant(
-  1, 
-  BufferLayout.struct([publicKey('owner')]), 
-  'assign'
-);
+LAYOUT.addVariant(1, BufferLayout.struct([publicKey("owner")]), "assign");
 LAYOUT.addVariant(
   2,
-  BufferLayout.struct([BufferLayout.nu64('lamports')]),
-  'transfer'
+  BufferLayout.struct([BufferLayout.nu64("lamports")]),
+  "transfer"
 );
 LAYOUT.addVariant(
   3,
   BufferLayout.struct([
-    publicKey('base'),
-    BufferLayout.cstr('seed'), // I'm not sure if this would work
-    BufferLayout.nu64('lamports'),
-    BufferLayout.nu64('space'),
-    publicKey('owner')
+    publicKey("base"),
+    BufferLayout.cstr("seed"), // I'm not sure if this would work
+    BufferLayout.nu64("lamports"),
+    BufferLayout.nu64("space"),
+    publicKey("owner"),
   ]),
-  'createAccountWithSeed'
+  "createAccountWithSeed"
 );
+LAYOUT.addVariant(4, BufferLayout.struct([]), "advanceNonceAccount");
 LAYOUT.addVariant(
-  4,
-  BufferLayout.struct([]),
-  'advanceNonceAccount'
-);
-LAYOUT.addVariant(
-  5, 
-  BufferLayout.struct([BufferLayout.nu64('arg')]), 
-  'withdrawNonceAccount'
+  5,
+  BufferLayout.struct([BufferLayout.nu64("arg")]),
+  "withdrawNonceAccount"
 );
 LAYOUT.addVariant(
   6,
-  BufferLayout.struct([
-    publicKey('arg'),
-  ]),
-  'authorizeNonceAccount'
+  BufferLayout.struct([publicKey("arg")]),
+  "authorizeNonceAccount"
 );
 LAYOUT.addVariant(
   7,
-  BufferLayout.struct([BufferLayout.nu64('space')]),
-  'allocate'
+  BufferLayout.struct([BufferLayout.nu64("space")]),
+  "allocate"
 );
 LAYOUT.addVariant(
   8,
   BufferLayout.struct([
-    publicKey('base'),
-    BufferLayout.cstr('seed'),
-    BufferLayout.nu64('space'),
-    publicKey('owner'),
+    publicKey("base"),
+    BufferLayout.cstr("seed"),
+    BufferLayout.nu64("space"),
+    publicKey("owner"),
   ]),
-  'allocateWithSeed'
+  "allocateWithSeed"
 );
 LAYOUT.addVariant(
-  9, 
+  9,
   BufferLayout.struct([
-    publicKey('base'),
-    BufferLayout.cstr('seed'),
-    publicKey('owner')
-  ]), 
-  'assignWithSeed'
+    publicKey("base"),
+    BufferLayout.cstr("seed"),
+    publicKey("owner"),
+  ]),
+  "assignWithSeed"
 );
 LAYOUT.addVariant(
-  10, 
+  10,
   BufferLayout.struct([
-    BufferLayout.nu64('space'),
-    BufferLayout.cstr('fromSeed'),
-    publicKey('fromOwner'),
-  ]), 
-  'transferWithSeed'
+    BufferLayout.nu64("space"),
+    BufferLayout.cstr("fromSeed"),
+    publicKey("fromOwner"),
+  ]),
+  "transferWithSeed"
 );
 
-/* function publicKey(property: string): any {
+function publicKey(property: string): any {
   return BufferLayout.blob(32, property);
 }
- */
 
 function encodeData(instruction: any): Buffer {
   const b = Buffer.alloc(instructionMaxSpan);
+
   const span = LAYOUT.encode(instruction, b);
+
   return b.slice(0, span);
 }
 
