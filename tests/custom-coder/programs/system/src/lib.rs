@@ -2,7 +2,7 @@
 
 use anchor_lang::prelude::*;
 
-declare_id!("9NxAd91hhJ3ZBTHytYP894y4ESRKG7n8VbLgdyYGJFLB");
+declare_id!("11111111111111111111111111111111");
 
 #[program]
 pub mod system_program {
@@ -36,11 +36,14 @@ pub mod system_program {
         Ok(())
     }
 
-    pub fn advance_nonce_account(ctx: Context<AdvanceNonceAccount>) -> Result<()> {
+    pub fn advance_nonce_account(
+        ctx: Context<AdvanceNonceAccount>,
+        authorized: Pubkey,
+    ) -> Result<()> {
         Ok(())
     }
 
-    pub fn withdraw_nonce_account(ctx: Context<WithdrawNonceAccount>, arg: u64) -> Result<()> {
+    pub fn withdraw_nonce_account(ctx: Context<WithdrawNonceAccount>, lamports: u64) -> Result<()> {
         Ok(())
     }
 
@@ -51,7 +54,10 @@ pub mod system_program {
         Ok(())
     }
 
-    pub fn authorize_nonce_account(ctx: Context<AuthorizeNonceAccount>, arg: Pubkey) -> Result<()> {
+    pub fn authorize_nonce_account(
+        ctx: Context<AuthorizeNonceAccount>,
+        authorized: Pubkey,
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -126,8 +132,9 @@ pub struct AdvanceNonceAccount<'info> {
     #[account(mut)]
     /// CHECK:
     nonce: AccountInfo<'info>,
-    //recent_blockhashes::id): AccountInfo<'info>,
-    //authorized: Signer<'info>,
+    /// CHECK:
+    recent_blockhashes: AccountInfo<'info>,
+    authorized: Signer<'info>,
 }
 
 #[derive(Accounts)]
@@ -138,16 +145,16 @@ pub struct WithdrawNonceAccount<'info> {
     #[account(mut)]
     /// CHECK:
     to: AccountInfo<'info>,
-    //recent_blockhashes::id): AccountInfo<'info>,
-    //rent: Sysvar<'info, Rent>,
-    //authorized: Signer<'info>,
+    /// CHECK:
+    recent_blockhashes: AccountInfo<'info>,
+    rent: Sysvar<'info, Rent>,
+    authorized: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct InitializeNonceAccount<'info> {
     #[account(mut)]
-    /// CHECK:
-    nonce: AccountInfo<'info>,
+    nonce: Signer<'info>,
     /// CHECK:
     recent_blockhashes: AccountInfo<'info>,
     rent: Sysvar<'info, Rent>,

@@ -135,9 +135,24 @@ export type SystemProgram = {
           name: "nonce";
           isMut: true;
           isSigner: false;
+        },
+        {
+          name: "recentBlockhashes";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "authorized";
+          isMut: false;
+          isSigner: true;
         }
       ];
-      args: [];
+      args: [
+        {
+          name: "authorized";
+          type: "publicKey";
+        }
+      ];
     },
     {
       name: "withdrawNonceAccount";
@@ -151,11 +166,26 @@ export type SystemProgram = {
           name: "to";
           isMut: true;
           isSigner: false;
+        },
+        {
+          name: "recentBlockhashes";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "rent";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "authorized";
+          isMut: false;
+          isSigner: true;
         }
       ];
       args: [
         {
-          name: "arg";
+          name: "lamports";
           type: "u64";
         }
       ];
@@ -166,7 +196,7 @@ export type SystemProgram = {
         {
           name: "nonce";
           isMut: true;
-          isSigner: false;
+          isSigner: true;
         },
         {
           name: "recentBlockhashes";
@@ -202,7 +232,7 @@ export type SystemProgram = {
       ];
       args: [
         {
-          name: "arg";
+          name: "authorized";
           type: "publicKey";
         }
       ];
@@ -442,8 +472,23 @@ export const IDL: SystemProgram = {
           isMut: true,
           isSigner: false,
         },
+        {
+          name: "recentBlockhashes",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "authorized",
+          isMut: false,
+          isSigner: true,
+        },
       ],
-      args: [],
+      args: [
+        {
+          name: "authorized",
+          type: "publicKey",
+        },
+      ],
     },
     {
       name: "withdrawNonceAccount",
@@ -458,10 +503,25 @@ export const IDL: SystemProgram = {
           isMut: true,
           isSigner: false,
         },
+        {
+          name: "recentBlockhashes",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "rent",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "authorized",
+          isMut: false,
+          isSigner: true,
+        },
       ],
       args: [
         {
-          name: "arg",
+          name: "lamports",
           type: "u64",
         },
       ],
@@ -472,7 +532,7 @@ export const IDL: SystemProgram = {
         {
           name: "nonce",
           isMut: true,
-          isSigner: false,
+          isSigner: true,
         },
         {
           name: "recentBlockhashes",
@@ -508,7 +568,7 @@ export const IDL: SystemProgram = {
       ],
       args: [
         {
-          name: "arg",
+          name: "authorized",
           type: "publicKey",
         },
       ],
