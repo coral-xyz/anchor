@@ -1,7 +1,8 @@
 import * as BufferLayout from "buffer-layout";
 import camelCase from "camelcase";
-import { InstructionCoder } from "../index.js";
 import { Idl } from "../../idl.js";
+import { InstructionCoder } from "../index.js";
+import { RustStringLayout } from "./layout.js";
 
 export class SystemInstructionCoder implements InstructionCoder {
   // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -78,15 +79,18 @@ function encodeCreateAccountWithSeed({
   space,
   owner,
 }: any): Buffer {
-  return encodeData({
-    createAccountWithSeed: {
-      base: base.toBuffer(),
-      seed,
-      lamports,
-      space,
-      owner: owner.toBuffer(),
+  return encodeData(
+    {
+      createAccountWithSeed: {
+        base: base.toBuffer(),
+        seed,
+        lamports,
+        space,
+        owner: owner.toBuffer(),
+      },
     },
-  });
+    CREATE_ACCOUNT_WITH_SEED_LAYOUT.span + seed.length
+  );
 }
 
 function encodeAdvanceNonceAccount(_ix: any): Buffer {
@@ -152,8 +156,8 @@ const LAYOUT = BufferLayout.union(BufferLayout.u32("instruction"));
 LAYOUT.addVariant(
   0,
   BufferLayout.struct([
-    BufferLayout.nu64("lamports"),
-    BufferLayout.nu64("space"),
+    BufferLayout.ns64("lamports"),
+    BufferLayout.ns64("space"),
     publicKey("owner"),
   ]),
   "createAccount"
@@ -161,16 +165,16 @@ LAYOUT.addVariant(
 LAYOUT.addVariant(1, BufferLayout.struct([publicKey("owner")]), "assign");
 LAYOUT.addVariant(
   2,
-  BufferLayout.struct([BufferLayout.nu64("lamports")]),
+  BufferLayout.struct([BufferLayout.ns64("lamports")]),
   "transfer"
 );
-LAYOUT.addVariant(
+const CREATE_ACCOUNT_WITH_SEED_LAYOUT = LAYOUT.addVariant(
   3,
   BufferLayout.struct([
     publicKey("base"),
-    BufferLayout.cstr("seed"), // I'm not sure if this would work
-    BufferLayout.nu64("lamports"),
-    BufferLayout.nu64("space"),
+    new RustStringLayout("seed"),
+    BufferLayout.ns64("lamports"),
+    BufferLayout.ns64("space"),
     publicKey("owner"),
   ]),
   "createAccountWithSeed"
@@ -178,7 +182,7 @@ LAYOUT.addVariant(
 LAYOUT.addVariant(4, BufferLayout.struct([]), "advanceNonceAccount");
 LAYOUT.addVariant(
   5,
-  BufferLayout.struct([BufferLayout.nu64("arg")]),
+  BufferLayout.struct([BufferLayout.ns64("arg")]),
   "withdrawNonceAccount"
 );
 LAYOUT.addVariant(
@@ -188,7 +192,7 @@ LAYOUT.addVariant(
 );
 LAYOUT.addVariant(
   7,
-  BufferLayout.struct([BufferLayout.nu64("space")]),
+  BufferLayout.struct([BufferLayout.ns64("space")]),
   "allocate"
 );
 LAYOUT.addVariant(
@@ -196,7 +200,7 @@ LAYOUT.addVariant(
   BufferLayout.struct([
     publicKey("base"),
     BufferLayout.cstr("seed"),
-    BufferLayout.nu64("space"),
+    BufferLayout.ns64("space"),
     publicKey("owner"),
   ]),
   "allocateWithSeed"
@@ -213,7 +217,7 @@ LAYOUT.addVariant(
 LAYOUT.addVariant(
   10,
   BufferLayout.struct([
-    BufferLayout.nu64("space"),
+    BufferLayout.ns64("space"),
     BufferLayout.cstr("fromSeed"),
     publicKey("fromOwner"),
   ]),
@@ -224,12 +228,15 @@ function publicKey(property: string): any {
   return BufferLayout.blob(32, property);
 }
 
-function encodeData(instruction: any): Buffer {
-  const b = Buffer.alloc(instructionMaxSpan);
-
+function encodeData(instruction: any, maxSpan?: number): Buffer {
+  const b = Buffer.alloc(maxSpan ?? instructionMaxSpan);
   const span = LAYOUT.encode(instruction, b);
 
-  return b.slice(0, span);
+  if (maxSpan === undefined) {
+    return b.slice(0, span);
+  }
+
+  return b;
 }
 
 const instructionMaxSpan = Math.max(

@@ -1,9 +1,12 @@
 import * as anchor from "@project-serum/anchor";
 import { Spl } from "@project-serum/anchor";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import {
+  Keypair, PublicKey,
+  SystemProgram
+} from "@solana/web3.js";
 import * as assert from "assert";
 import BN from "bn.js";
-import { Keypair, SystemProgram } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 describe("system-coder", () => {
   // Configure the client to use the local cluster.
@@ -42,7 +45,7 @@ describe("system-coder", () => {
     assert.equal(lamports, aliceAccount.lamports);
   });
 
-  it("Assign an account to a program", async () => {
+  it("Assigns an account to a program", async () => {
     // arrange
     const owner = TOKEN_PROGRAM_ID;
     // act
@@ -59,5 +62,41 @@ describe("system-coder", () => {
     );
     assert.notEqual(aliceAccount, null);
     assert.ok(owner.equals(aliceAccount.owner));
+  });
+
+  it("Creates an account with seed", async () => {
+    const space = 100;
+    const lamports =
+      await program.provider.connection.getMinimumBalanceForRentExemption(
+        space
+      );
+    const owner = SystemProgram.programId;
+    const seed = "seeds";
+    const bobPublicKey = await PublicKey.createWithSeed(
+      aliceTokenKeypair.publicKey,
+      seed,
+      owner
+    );
+    // act
+    await program.methods
+      .createAccountWithSeed(
+        aliceTokenKeypair.publicKey,
+        seed,
+        new BN(lamports),
+        new BN(space),
+        owner
+      )
+      .accounts({
+        base: aliceTokenKeypair.publicKey,
+        from: provider.wallet.publicKey,
+        to: bobPublicKey,
+      })
+      .signers([aliceTokenKeypair])
+      .rpc();
+    // assert
+    const bobAccount = await program.provider.connection.getAccountInfo(
+      bobPublicKey
+    );
+    assert.notEqual(bobAccount, null);
   });
 });
