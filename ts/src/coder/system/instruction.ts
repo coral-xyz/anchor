@@ -102,21 +102,21 @@ function encodeInitializeNonceAccount({ authorized }: any): Buffer {
   });
 }
 
-function encodeAdvanceNonceAccount(_ix: any): Buffer {
+function encodeAdvanceNonceAccount({ authorized }: any): Buffer {
   return encodeData({
-    advanceNonceAccount: {},
+    advanceNonceAccount: { authorized: authorized.toBuffer() },
   });
 }
 
-function encodeWithdrawNonceAccount({ arg }: any): Buffer {
+function encodeWithdrawNonceAccount({ lamports }: any): Buffer {
   return encodeData({
-    withdrawNonceAccount: { arg },
+    withdrawNonceAccount: { lamports },
   });
 }
 
-function encodeAuthorizeNonceAccount({ arg }: any): Buffer {
+function encodeAuthorizeNonceAccount({ authorized }: any): Buffer {
   return encodeData({
-    authorizeNonceAccount: { arg: arg.toBuffer() },
+    authorizeNonceAccount: { authorized: authorized.toBuffer() },
   });
 }
 
@@ -188,10 +188,14 @@ const CREATE_ACCOUNT_WITH_SEED_LAYOUT = LAYOUT.addVariant(
   ]),
   "createAccountWithSeed"
 );
-LAYOUT.addVariant(4, BufferLayout.struct([]), "advanceNonceAccount");
+LAYOUT.addVariant(
+  4, 
+  BufferLayout.struct([publicKey("authorized")]), 
+  "advanceNonceAccount"
+);
 LAYOUT.addVariant(
   5,
-  BufferLayout.struct([BufferLayout.ns64("arg")]),
+  BufferLayout.struct([BufferLayout.ns64("lamports")]),
   "withdrawNonceAccount"
 );
 LAYOUT.addVariant(
@@ -201,7 +205,7 @@ LAYOUT.addVariant(
 );
 LAYOUT.addVariant(
   7,
-  BufferLayout.struct([publicKey("arg")]),
+  BufferLayout.struct([publicKey("authorized")]),
   "authorizeNonceAccount"
 );
 LAYOUT.addVariant(
