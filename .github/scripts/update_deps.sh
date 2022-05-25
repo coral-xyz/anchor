@@ -9,22 +9,17 @@ git checkout tags/v$anchor_version
 # Checkout new branch
 git checkout -b $branch_name
 
-# Update Solana dependencies
-tomls=($(find "." -name Cargo.toml))
-sed -i -e "s#\(solana-program = \"\)[^\"]*\(\"\)#\1=$solana_version\2#g" "${tomls[@]}"
-sed -i -e "s#\(solana-program-test = \"\)[^\"]*\(\"\)#\1=$solana_version\2#g" "${tomls[@]}"
-sed -i -e "s#\(solana-sdk = \"\).*\(\"\)#\1=$solana_version\2#g" "${tomls[@]}"
-sed -i -e "s#\(solana-sdk = { version = \"\)[^\"]*\(\"\)#\1=$solana_version\2#g" "${tomls[@]}"
-sed -i -e "s#\(solana-client = \"\)[^\"]*\(\"\)#\1=$solana_version\2#g" "${tomls[@]}"
-sed -i -e "s#\(solana-client = { version = \"\)[^\"]*\(\"\)#\1=$solana_version\2#g" "${tomls[@]}"
-sed -i -e "s#\(solana-clap-utils = \"\)[^\"]*\(\"\)#\1=$solana_version\2#g" "${tomls[@]}"
-sed -i -e "s#\(solana-clap-utils = { version = \"\)[^\"]*\(\"\)#\1=$solana_version\2#g" "${tomls[@]}"
-sed -i -e "s#\(solana-cli-config = \"\)[^\"]*\(\"\)#\1=$solana_version\2#g" "${tomls[@]}"
-sed -i -e "s#\(solana-cli-config = { version = \"\)[^\"]*\(\"\)#\1=$solana_version\2#g" "${tomls[@]}"
-sed -i -e "s#\(solana-account-decoder = \"\)[^\"]*\(\"\)#\1=$solana_version\2#g" "${tomls[@]}"
-sed -i -e "s#\(solana-account-decoder = { version = \"\)[^\"]*\(\"\)#\1=$solana_version\2#g" "${tomls[@]}"
-sed -i -e "s#\(solana-faucet = \"\)[^\"]*\(\"\)#\1=$solana_version\2#g" "${tomls[@]}"
-sed -i -e "s#\(solana-faucet = { version = \"\)[^\"]*\(\"\)#\1=$solana_version\2#g" "${tomls[@]}"
+# Change Cargo.toml package names
+sed -i '' -e "/^name =/s/=.*/= \"cronos-anchor-lang\"/g" ./lang/Cargo.toml
+sed -i '' -e "/^name =/s/=.*/= \"cronos-anchor-spl\"/g" ./spl/Cargo.toml
+
+# Update Solana & Anchor dependencies
+cargo_tomls=($(find "." -name Cargo.toml))
+for cargo_toml in "${cargo_tomls[@]}"; do
+    sed -i '' -e "/^solana-/s/=.*/= \"$solana_version\"/g" $cargo_toml
+    sed -i '' -e "s/\anchor-spl = {/& package = \"cronos-anchor-spl\",/" $cargo_toml
+    sed -i '' -e "s/\anchor-lang = {/& package = \"cronos-anchor-lang\",/" $cargo_toml
+done
 
 # Commit changes
 git add .
