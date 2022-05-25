@@ -8,7 +8,6 @@ import {
   PublicKey,
   SystemProgram,
   SYSVAR_RECENT_BLOCKHASHES_PUBKEY,
-  SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
 import * as assert from "assert";
 import BN from "bn.js";
@@ -67,6 +66,38 @@ describe("system-coder", () => {
     );
     assert.notEqual(aliceAccount, null);
     assert.ok(owner.equals(aliceAccount.owner));
+  });
+
+  it("Allocates space to an account", async () => {
+    // arrange
+    const newKeypair = Keypair.generate();
+    const space = 100;
+    const lamports =
+      await program.provider.connection.getMinimumBalanceForRentExemption(
+        space
+      );
+    // act
+    await program.methods
+      .allocate(new BN(space))
+      .accounts({
+        pubkey: newKeypair.publicKey,
+      })
+      .postInstructions([
+        await program.methods
+          .transfer(new BN(lamports))
+          .accounts({
+            from: provider.wallet.publicKey,
+            to: newKeypair.publicKey,
+          })
+          .instruction(),
+      ])
+      .signers([newKeypair])
+      .rpc();
+    // assert
+    const newAccountAfter = await program.provider.connection.getAccountInfo(
+      newKeypair.publicKey
+    );
+    assert.equal(space, newAccountAfter.data.byteLength);
   });
 
   it("Creates an account with seed", async () => {
