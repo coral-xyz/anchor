@@ -1,5 +1,5 @@
 import * as anchor from "@project-serum/anchor";
-import { Spl } from "@project-serum/anchor";
+import { Native } from "@project-serum/anchor";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
   Keypair,
@@ -18,7 +18,7 @@ describe("system-coder", () => {
   anchor.setProvider(provider);
 
   // Client.
-  const program = Spl.system();
+  const program = Native.system();
 
   // Constants.
   const aliceKeypair = Keypair.generate();
