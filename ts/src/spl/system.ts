@@ -350,6 +350,52 @@ export type SystemProgram = {
       ];
     }
   ];
+  accounts: [
+    {
+      name: "nonce";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "version";
+            type: "u32";
+          },
+          {
+            name: "state";
+            type: "u32";
+          },
+          {
+            name: "authorizedPubkey";
+            type: "publicKey";
+          },
+          {
+            name: "nonce";
+            type: "publicKey";
+          },
+          {
+            name: "feeCalculator";
+            type: {
+              defined: "FeeCalculator";
+            };
+          }
+        ];
+      };
+    }
+  ];
+  types: [
+    {
+      name: "FeeCalculator";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "lamportsPerSignature";
+            type: "u64";
+          }
+        ];
+      };
+    }
+  ];
 };
 
 export const IDL: SystemProgram = {
@@ -684,6 +730,52 @@ export const IDL: SystemProgram = {
           type: "publicKey",
         },
       ],
+    },
+  ],
+  accounts: [
+    {
+      name: "nonce",
+      type: {
+        kind: "struct",
+        fields: [
+          {
+            name: "version",
+            type: "u32",
+          },
+          {
+            name: "state",
+            type: "u32",
+          },
+          {
+            name: "authorizedPubkey",
+            type: "publicKey",
+          },
+          {
+            name: "nonce",
+            type: "publicKey",
+          },
+          {
+            name: "feeCalculator",
+            type: {
+              defined: "FeeCalculator",
+            },
+          },
+        ],
+      },
+    },
+  ],
+  types: [
+    {
+      name: "FeeCalculator",
+      type: {
+        kind: "struct",
+        fields: [
+          {
+            name: "lamportsPerSignature",
+            type: "u64",
+          },
+        ],
+      },
     },
   ],
 };

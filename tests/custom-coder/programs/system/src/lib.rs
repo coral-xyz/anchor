@@ -200,3 +200,17 @@ pub struct TransferWithSeed<'info> {
     /// CHECK:
     to: AccountInfo<'info>,
 }
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct FeeCalculator {
+    pub lamports_per_signature: u64,
+}
+
+#[account]
+pub struct Nonce {
+    pub version: u32,
+    pub state: u32,
+    pub authorized_pubkey: Pubkey,
+    pub nonce: Pubkey,
+    pub fee_calculator: FeeCalculator,
+}

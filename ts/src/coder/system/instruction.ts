@@ -1,8 +1,8 @@
+import BN from "bn.js";
 import * as BufferLayout from "buffer-layout";
 import camelCase from "camelcase";
 import { Idl } from "../../idl.js";
 import { InstructionCoder } from "../index.js";
-import { RustStringLayout } from "./layout.js";
 
 export class SystemInstructionCoder implements InstructionCoder {
   // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -55,6 +55,61 @@ export class SystemInstructionCoder implements InstructionCoder {
   encodeState(_ixName: string, _ix: any): Buffer {
     throw new Error("System does not have state");
   }
+}
+
+
+class RustStringLayout extends BufferLayout.Layout<string | null> {
+  layout = BufferLayout.struct<
+    Readonly<{
+      length?: number;
+      lengthPadding?: number;
+      chars: Buffer;
+    }>
+  >(
+    [
+      BufferLayout.u32("length"),
+      BufferLayout.u32("lengthPadding"),
+      BufferLayout.blob(BufferLayout.offset(BufferLayout.u32(), -8), "chars"),
+    ],
+    this.property
+  );
+
+  constructor(public property?: string) {
+    super(-1, property);
+  }
+
+  encode(src: string | null, b: Buffer, offset = 0): number {
+    if (src === null || src === undefined) {
+      return this.layout.span;
+    }
+
+    const data = {
+      chars: Buffer.from(src, "utf8"),
+    };
+
+    return this.layout.encode(data, b, offset);
+  }
+
+  decode(b: Buffer, offset = 0): string | null {
+    const data = this.layout.decode(b, offset);
+    return data["chars"].toString();
+  }
+
+  getSpan(b: Buffer, offset = 0): number {
+    return (
+      BufferLayout.u32().span +
+      BufferLayout.u32().span +
+      new BN(new Uint8Array(b).slice(offset, offset + 4), 10, "le").toNumber()
+    );
+  }
+}
+
+function rustStringLayout(property: string) {
+  return new RustStringLayout(property)
+}
+
+function publicKey(property: string): any {
+  return BufferLayout.blob(32, property);
 }
 
 function encodeCreateAccount({ lamports, space, owner }: any): Buffer {
@@ -190,7 +245,7 @@ LAYOUT.addVariant(
   3,
   BufferLayout.struct([
     publicKey("base"),
-    new RustStringLayout("seed"),
+    rustStringLayout("seed"),
     BufferLayout.ns64("lamports"),
     BufferLayout.ns64("space"),
     publicKey("owner"),
@@ -226,7 +281,7 @@ LAYOUT.addVariant(
   9,
   BufferLayout.struct([
     publicKey("base"),
-    new RustStringLayout("seed"),
+    rustStringLayout("seed"),
     BufferLayout.ns64("space"),
     publicKey("owner"),
   ]),
@@ -236,7 +291,7 @@ LAYOUT.addVariant(
   10,
   BufferLayout.struct([
     publicKey("base"),
-    new RustStringLayout("seed"),
+    rustStringLayout("seed"),
     publicKey("owner"),
   ]),
   "assignWithSeed"
@@ -245,15 +300,11 @@ LAYOUT.addVariant(
   11,
   BufferLayout.struct([
     BufferLayout.ns64("lamports"),
-    new RustStringLayout("seed"),
+    rustStringLayout("seed"),
     publicKey("owner"),
   ]),
   "transferWithSeed"
 );
-
-function publicKey(property: string): any {
-  return BufferLayout.blob(32, property);
-}
 
 function encodeData(instruction: any, maxSpan?: number): Buffer {
   const b = Buffer.alloc(maxSpan ?? instructionMaxSpan);

@@ -136,7 +136,6 @@ describe("system-coder", () => {
     assert.notEqual(bobAccount, null);
   });
 
-
   it("Allocates and assigns an account with seed", async () => {
     const owner = TOKEN_PROGRAM_ID;
     const seed = "seeds2";
@@ -268,10 +267,11 @@ describe("system-coder", () => {
       .signers([nonceKeypair])
       .rpc();
     // assert
-    const nonceAccount = await program.provider.connection.getAccountInfo(
+    const nonceAccount = await program.account.nonce.fetch(
       nonceKeypair.publicKey
     );
     assert.notEqual(nonceAccount, null);
+    assert.ok(nonceAccount.authorizedPubkey.equals(provider.wallet.publicKey));
   });
 
   it("Advances a nonce account", async () => {
@@ -308,7 +308,7 @@ describe("system-coder", () => {
       })
       .rpc();
     // assert
-    const nonceAccount = await program.provider.connection.getAccountInfo(
+    const nonceAccount = await program.account.nonce.fetch(
       nonceKeypair.publicKey
     );
     assert.notEqual(nonceAccount, null);
@@ -347,10 +347,11 @@ describe("system-coder", () => {
       })
       .rpc();
     // assert
-    const nonceAccount = await program.provider.connection.getAccountInfo(
+    const nonceAccount = await program.account.nonce.fetch(
       nonceKeypair.publicKey
     );
     assert.notEqual(nonceAccount, null);
+    assert.ok(nonceAccount.authorizedPubkey.equals(aliceKeypair.publicKey));
   });
 
   it("Withdraws from nonce account", async () => {
