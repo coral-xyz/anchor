@@ -87,8 +87,8 @@ pub mod system_program {
     pub fn transfer_with_seed(
         ctx: Context<TransferWithSeed>,
         lamports: u64,
-        from_seed: String,
-        from_owner: Pubkey,
+        seed: String,
+        owner: Pubkey,
     ) -> Result<()> {
         Ok(())
     }
@@ -178,7 +178,7 @@ pub struct Allocate<'info> {
 pub struct AllocateWithSeed<'info> {
     #[account(mut)]
     /// CHECK:
-    address: AccountInfo<'info>,
+    account: AccountInfo<'info>,
     base: Signer<'info>,
 }
 
@@ -186,7 +186,7 @@ pub struct AllocateWithSeed<'info> {
 pub struct AssignWithSeed<'info> {
     #[account(mut)]
     /// CHECK:
-    address: AccountInfo<'info>,
+    account: AccountInfo<'info>,
     base: Signer<'info>,
 }
 
@@ -195,7 +195,7 @@ pub struct TransferWithSeed<'info> {
     #[account(mut)]
     /// CHECK:
     from: AccountInfo<'info>,
-    from_base: Signer<'info>,
+    base: Signer<'info>,
     #[account(mut)]
     /// CHECK:
     to: AccountInfo<'info>,

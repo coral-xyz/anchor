@@ -136,6 +136,92 @@ describe("system-coder", () => {
     assert.notEqual(bobAccount, null);
   });
 
+
+  it("Allocates and assigns an account with seed", async () => {
+    const owner = TOKEN_PROGRAM_ID;
+    const seed = "seeds2";
+    const space = 100;
+    const lamports =
+      await program.provider.connection.getMinimumBalanceForRentExemption(
+        space
+      );
+    const bobPublicKey = await PublicKey.createWithSeed(
+      aliceKeypair.publicKey,
+      seed,
+      owner
+    );
+    // act
+    await program.methods
+      .allocateWithSeed(aliceKeypair.publicKey, seed, new BN(space), owner)
+      .accounts({
+        base: aliceKeypair.publicKey,
+        account: bobPublicKey,
+      })
+      .postInstructions([
+        await program.methods
+          .transfer(new BN(lamports))
+          .accounts({
+            from: provider.wallet.publicKey,
+            to: bobPublicKey,
+          })
+          .instruction(),
+        await program.methods
+          .assignWithSeed(aliceKeypair.publicKey, seed, owner)
+          .accounts({
+            base: aliceKeypair.publicKey,
+            account: bobPublicKey,
+          })
+          .instruction(),
+      ])
+      .signers([aliceKeypair])
+      .rpc();
+    // assert
+    const bobAccount = await program.provider.connection.getAccountInfo(
+      bobPublicKey
+    );
+    assert.notEqual(bobAccount, null);
+    assert.ok(owner.equals(bobAccount.owner));
+  });
+
+  it("Transfers from account with seed", async () => {
+    const lamports = 1 * LAMPORTS_PER_SOL;
+    const owner = SystemProgram.programId;
+    const seed = "seeds3";
+    const bobPublicKey = await PublicKey.createWithSeed(
+      aliceKeypair.publicKey,
+      seed,
+      owner
+    );
+    const aliceAccountBefore = await program.provider.connection.getAccountInfo(
+      aliceKeypair.publicKey
+    );
+    // act
+    await program.methods
+      .transfer(new BN(lamports))
+      .accounts({
+        from: provider.wallet.publicKey,
+        to: bobPublicKey,
+      })
+      .rpc();
+    await program.methods
+      .transferWithSeed(new BN(lamports), seed, owner)
+      .accounts({
+        from: bobPublicKey,
+        base: aliceKeypair.publicKey,
+        to: aliceKeypair.publicKey,
+      })
+      .signers([aliceKeypair])
+      .rpc();
+    // assert
+    const aliceAccountAfter = await program.provider.connection.getAccountInfo(
+      aliceKeypair.publicKey
+    );
+    assert.equal(
+      aliceAccountBefore.lamports + lamports,
+      aliceAccountAfter.lamports
+    );
+  });
+
   it("Transfers lamports", async () => {
     // arrange
     const receiverKeypair = Keypair.generate();

@@ -92,7 +92,7 @@ function encodeCreateAccountWithSeed({
         owner: owner.toBuffer(),
       },
     },
-    CREATE_ACCOUNT_WITH_SEED_LAYOUT.span + seed.length
+    LAYOUT.getVariant(3).span + seed.length
   );
 }
 
@@ -127,38 +127,47 @@ function encodeAllocate({ space }: any): Buffer {
 }
 
 function encodeAllocateWithSeed({ base, seed, space, owner }: any): Buffer {
-  return encodeData({
-    allocateWithSeed: {
-      base: base.toBuffer(),
-      seed,
-      space,
-      owner: owner.toBuffer(),
+  return encodeData(
+    {
+      allocateWithSeed: {
+        base: base.toBuffer(),
+        seed,
+        space,
+        owner: owner.toBuffer(),
+      },
     },
-  });
+    LAYOUT.getVariant(9).span + seed.length
+  );
 }
 
 function encodeAssignWithSeed({ base, seed, owner }: any): Buffer {
-  return encodeData({
-    assignWithSeed: {
-      base: base.toBuffer(),
-      seed,
-      owner: owner.toBuffer(),
+  return encodeData(
+    {
+      assignWithSeed: {
+        base: base.toBuffer(),
+        seed,
+        owner: owner.toBuffer(),
+      },
     },
-  });
+    LAYOUT.getVariant(10).span + seed.length
+  );
 }
 
 function encodeTransferWithSeed({
   lamports,
-  fromSeed,
-  fromOwner,
+  seed,
+  owner,
 }: any): Buffer {
-  return encodeData({
-    transferWithSeed: {
-      lamports,
-      fromSeed,
-      fromOwner: fromOwner.toBuffer(),
+  return encodeData(
+    {
+      transferWithSeed: {
+        lamports,
+        seed,
+        owner: owner.toBuffer(),
+      },
     },
-  });
+    LAYOUT.getVariant(11).span + seed.length
+  );
 }
 
 const LAYOUT = BufferLayout.union(BufferLayout.u32("instruction"));
@@ -177,7 +186,7 @@ LAYOUT.addVariant(
   BufferLayout.struct([BufferLayout.ns64("lamports")]),
   "transfer"
 );
-const CREATE_ACCOUNT_WITH_SEED_LAYOUT = LAYOUT.addVariant(
+LAYOUT.addVariant(
   3,
   BufferLayout.struct([
     publicKey("base"),
@@ -189,8 +198,8 @@ const CREATE_ACCOUNT_WITH_SEED_LAYOUT = LAYOUT.addVariant(
   "createAccountWithSeed"
 );
 LAYOUT.addVariant(
-  4, 
-  BufferLayout.struct([publicKey("authorized")]), 
+  4,
+  BufferLayout.struct([publicKey("authorized")]),
   "advanceNonceAccount"
 );
 LAYOUT.addVariant(
@@ -217,7 +226,7 @@ LAYOUT.addVariant(
   9,
   BufferLayout.struct([
     publicKey("base"),
-    BufferLayout.cstr("seed"),
+    new RustStringLayout("seed"),
     BufferLayout.ns64("space"),
     publicKey("owner"),
   ]),
@@ -227,7 +236,7 @@ LAYOUT.addVariant(
   10,
   BufferLayout.struct([
     publicKey("base"),
-    BufferLayout.cstr("seed"),
+    new RustStringLayout("seed"),
     publicKey("owner"),
   ]),
   "assignWithSeed"
@@ -235,9 +244,9 @@ LAYOUT.addVariant(
 LAYOUT.addVariant(
   11,
   BufferLayout.struct([
-    BufferLayout.ns64("space"),
-    BufferLayout.cstr("fromSeed"),
-    publicKey("fromOwner"),
+    BufferLayout.ns64("lamports"),
+    new RustStringLayout("seed"),
+    publicKey("owner"),
   ]),
   "transferWithSeed"
 );

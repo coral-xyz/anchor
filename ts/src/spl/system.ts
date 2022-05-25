@@ -257,7 +257,7 @@ export type SystemProgram = {
       name: "allocateWithSeed";
       accounts: [
         {
-          name: "address";
+          name: "account";
           isMut: true;
           isSigner: false;
         },
@@ -290,7 +290,7 @@ export type SystemProgram = {
       name: "assignWithSeed";
       accounts: [
         {
-          name: "address";
+          name: "account";
           isMut: true;
           isSigner: false;
         },
@@ -324,7 +324,7 @@ export type SystemProgram = {
           isSigner: false;
         },
         {
-          name: "fromBase";
+          name: "base";
           isMut: false;
           isSigner: true;
         },
@@ -340,11 +340,11 @@ export type SystemProgram = {
           type: "u64";
         },
         {
-          name: "fromSeed";
+          name: "seed";
           type: "string";
         },
         {
-          name: "fromOwner";
+          name: "owner";
           type: "publicKey";
         }
       ];
@@ -593,7 +593,7 @@ export const IDL: SystemProgram = {
       name: "allocateWithSeed",
       accounts: [
         {
-          name: "address",
+          name: "account",
           isMut: true,
           isSigner: false,
         },
@@ -626,7 +626,7 @@ export const IDL: SystemProgram = {
       name: "assignWithSeed",
       accounts: [
         {
-          name: "address",
+          name: "account",
           isMut: true,
           isSigner: false,
         },
@@ -660,7 +660,7 @@ export const IDL: SystemProgram = {
           isSigner: false,
         },
         {
-          name: "fromBase",
+          name: "base",
           isMut: false,
           isSigner: true,
         },
@@ -676,11 +676,11 @@ export const IDL: SystemProgram = {
           type: "u64",
         },
         {
-          name: "fromSeed",
+          name: "seed",
           type: "string",
         },
         {
-          name: "fromOwner",
+          name: "owner",
           type: "publicKey",
         },
       ],
