@@ -57,7 +57,6 @@ export class SystemInstructionCoder implements InstructionCoder {
   }
 }
 
-
 class RustStringLayout extends BufferLayout.Layout<string | null> {
   layout = BufferLayout.struct<
     Readonly<{
@@ -105,7 +104,7 @@ class RustStringLayout extends BufferLayout.Layout<string | null> {
 }
 
 function rustStringLayout(property: string) {
-  return new RustStringLayout(property)
+  return new RustStringLayout(property);
 }
 
 function publicKey(property: string): any {
@@ -208,11 +207,7 @@ function encodeAssignWithSeed({ base, seed, owner }: any): Buffer {
   );
 }
 
-function encodeTransferWithSeed({
-  lamports,
-  seed,
-  owner,
-}: any): Buffer {
+function encodeTransferWithSeed({ lamports, seed, owner }: any): Buffer {
   return encodeData(
     {
       transferWithSeed: {

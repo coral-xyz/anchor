@@ -104,7 +104,8 @@ const NONCE_ACCOUNT_LAYOUT = BufferLayout.struct([
   BufferLayout.u32("state"),
   publicKey("authorizedPubkey"),
   publicKey("nonce"),
-  BufferLayout.struct([
-    BufferLayout.nu64("lamportsPerSignature")
-  ], "feeCalculator"),
+  BufferLayout.struct(
+    [BufferLayout.nu64("lamportsPerSignature")],
+    "feeCalculator"
+  ),
 ]);
