@@ -34,10 +34,10 @@
   },
   "dependencies": {
     "@project-serum/borsh": "^0.2.5",
-    "@project-serum/serum": "^0.13.65",
     "@solana/web3.js": "^1.36.0",
     "base64-js": "^1.5.1",
     "bn.js": "^5.1.2",
+    "borsh": "^0.7.0",
     "bs58": "^4.0.1",
     "buffer-layout": "^1.2.2",
     "camelcase": "^5.3.1",
