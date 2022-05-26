@@ -5,7 +5,7 @@ use crate::config::{
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction, ERASED_AUTHORITY};
 use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
-use anchor_syn::idl::Idl;
+use anchor_syn::idl::{Idl, IdlField, IdlType, IdlTypeDefinition, IdlTypeDefinitionTy};
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use flate2::read::GzDecoder;
@@ -299,6 +299,16 @@ pub enum Command {
         )]
         cargo_args: Vec<String>,
     },
+    /// Fetch an account using the IDL in the workspace.
+    Account {
+        /// Account struct to deserialize
+        account_type: String,
+        /// Address of the account to deserialize
+        address: Pubkey,
+        /// IDL to use (defaults to workspace IDL)
+        #[clap(long)]
+        idl: Option<String>,
+    },
 }
 
 #[derive(Debug, Parser)]
@@ -500,6 +510,11 @@ pub fn entry(opts: Opts) -> Result<()> {
             skip_lint,
             cargo_args,
         ),
+        Command::Account {
+            account_type,
+            address,
+            idl,
+        } => account(&opts.cfg_override, account_type, address, idl),
     }
 }
 
@@ -1844,6 +1859,129 @@ fn write_idl(idl: &Idl, out: OutFile) -> Result<()> {
     Ok(())
 }
 
+#[derive(Debug)]
+struct DeserializedAccount {
+    name: String,
+    fields: HashMap<String, String>,
+}
+
+impl DeserializedAccount {
+    fn new(name: String) -> Self {
+        Self {
+            name,
+            fields: HashMap::new(),
+        }
+    }
+}
+
+trait FromBytes {
+    fn from_bytes(&self, data: &[u8]) -> Result<String, anyhow::Error>;
+}
+
+impl FromBytes for IdlType {
+    fn from_bytes(&self, data: &[u8]) -> Result<String, anyhow::Error> {
+        match self {
+            IdlType::U8 => {
+                if data.is_empty() {
+                    return Err(anyhow!("Unable to parse u8 from empty bytes"));
+                }
+                Ok(data[0].to_string())
+            }
+            _ => todo!(),
+        }
+    }
+}
+
+trait FromAccount {
+    fn from_account(&self, account_data: Vec<u8>) -> Result<DeserializedAccount, anyhow::Error>;
+}
+
+impl FromAccount for IdlTypeDefinition {
+    fn from_account(&self, account_data: Vec<u8>) -> Result<DeserializedAccount, anyhow::Error> {
+        let mut deserialized_account = DeserializedAccount::new(self.name.clone());
+
+        if account_data.len() < 8 {
+            return Err(anyhow!("Account too small to be an Anchor account"));
+        }
+
+        let mut remaining_data = &account_data[8..];
+
+        match &self.ty {
+            IdlTypeDefinitionTy::Struct { fields } => {
+                for field in fields {
+                    deserialized_account
+                        .fields
+                        .insert(field.name.clone(), field.ty.from_bytes(remaining_data)?);
+                }
+            }
+            IdlTypeDefinitionTy::Enum { variants } => {
+                todo!();
+            }
+        }
+
+        Ok(deserialized_account)
+    }
+}
+
+// TODO: account sub command
+fn account(
+    cfg_override: &ConfigOverride,
+    account_type: String,
+    address: Pubkey,
+    idl_filepath: Option<String>,
+) -> Result<()> {
+    let (program_name, account_type_name) = account_type.split_once('.').ok_or(anyhow!(
+        "Please enter the account struct in the following format: <program_name>.<Account>",
+    ))?;
+
+    let idl = idl_filepath.map_or_else(
+        || {
+            Config::discover(cfg_override)
+                .expect("Not in workspace.")
+                .unwrap()
+                .read_all_programs()
+                .expect("Workspace must contain atleast one program.")
+                .iter()
+                .find(|&p| p.lib_name == program_name.to_string())
+                .expect(format!("Program {} not found in workspace.", program_name).as_str())
+                .idl
+                .as_ref()
+                .expect("IDL not found. Please build the program atleast once to generate the IDL.")
+                .clone()
+        },
+        |idl_path| {
+            let bytes = fs::read(idl_path).expect("Unable to read IDL.");
+            let idl: Idl = serde_json::from_reader(&*bytes).expect("Invalid IDL format.");
+
+            if idl.name != program_name {
+                panic!("IDL does not match program {}.", program_name);
+            }
+
+            idl
+        },
+    );
+
+    let account_idl = idl
+        .accounts
+        .iter()
+        .find(|account| account.name == account_type_name)
+        .expect(format!("Struct/Enum with name {} not found.", account_type_name).as_str())
+        .clone();
+
+    let data = RpcClient::new("http://localhost:8899")
+        .get_account_data(&address)
+        .expect(
+            format!(
+                "Error fetching account {}. Please verify that the account exists.",
+                address
+            )
+            .as_str(),
+        );
+
+    println!("{:#?}", account_idl.from_account(data)?);
+
+    Ok(())
+}
 enum OutFile {
     Stdout,
     File(PathBuf),
