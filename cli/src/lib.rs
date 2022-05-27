@@ -5,7 +5,7 @@ use crate::config::{
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction, ERASED_AUTHORITY};
 use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
-use anchor_syn::idl::{Idl, IdlField, IdlType, IdlTypeDefinition, IdlTypeDefinitionTy};
+use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use flate2::read::GzDecoder;
@@ -1859,71 +1859,6 @@ fn write_idl(idl: &Idl, out: OutFile) -> Result<()> {
     Ok(())
 }
 
-#[derive(Debug)]
-struct DeserializedAccount {
-    name: String,
-    fields: HashMap<String, String>,
-}
-
-impl DeserializedAccount {
-    fn new(name: String) -> Self {
-        Self {
-            name,
-            fields: HashMap::new(),
-        }
-    }
-}
-
-trait FromBytes {
-    fn from_bytes(&self, data: &[u8]) -> Result<String, anyhow::Error>;
-}
-
-impl FromBytes for IdlType {
-    fn from_bytes(&self, data: &[u8]) -> Result<String, anyhow::Error> {
-        match self {
-            IdlType::U8 => {
-                if data.is_empty() {
-                    return Err(anyhow!("Unable to parse u8 from empty bytes"));
-                }
-                Ok(data[0].to_string())
-            }
-            _ => todo!(),
-        }
-    }
-}
-
-trait FromAccount {
-    fn from_account(&self, account_data: Vec<u8>) -> Result<DeserializedAccount, anyhow::Error>;
-}
-
-impl FromAccount for IdlTypeDefinition {
-    fn from_account(&self, account_data: Vec<u8>) -> Result<DeserializedAccount, anyhow::Error> {
-        let mut deserialized_account = DeserializedAccount::new(self.name.clone());
-
-        if account_data.len() < 8 {
-            return Err(anyhow!("Account too small to be an Anchor account"));
-        }
-
-        let mut remaining_data = &account_data[8..];
-
-        match &self.ty {
-            IdlTypeDefinitionTy::Struct { fields } => {
-                for field in fields {
-                    deserialized_account
-                        .fields
-                        .insert(field.name.clone(), field.ty.from_bytes(remaining_data)?);
-                }
-            }
-            IdlTypeDefinitionTy::Enum { variants } => {
-                todo!();
-            }
-        }
-
-        Ok(deserialized_account)
-    }
-}
-
-// TODO: account sub command
 fn account(
     cfg_override: &ConfigOverride,
     account_type: String,
@@ -1961,24 +1896,24 @@ fn account(
         },
     );
 
-    let account_idl = idl
-        .accounts
-        .iter()
-        .find(|account| account.name == account_type_name)
-        .expect(format!("Struct/Enum with name {} not found.", account_type_name).as_str())
-        .clone();
+    let mut cluster = &Config::discover(cfg_override)
+        .map(|cfg| cfg.unwrap())
+        .map(|cfg| cfg.provider.cluster.clone())
+        .unwrap_or(Cluster::Localnet);
+    cluster = cfg_override.cluster.as_ref().unwrap_or(&cluster);
 
-    let data = RpcClient::new("http://localhost:8899")
-        .get_account_data(&address)
-        .expect(
-            format!(
-                "Error fetching account {}. Please verify that the account exists.",
-                address
-            )
-            .as_str(),
-        );
+    let data = RpcClient::new(cluster.url()).get_account_data(&address)?;
+    if data.len() < 8 {
+        return Err(anyhow!(
+            "The account has less than 8 bytes and is not an Anchor account."
+        ));
+    }
+    let mut data_view = &data[8..];
 
-    println!("{:#?}", account_idl.from_account(data)?);
+    println!(
+        "{}",
+        idl.deserialize_account_to_string(account_type_name, &mut data_view)?
+    );
 
     Ok(())
 }

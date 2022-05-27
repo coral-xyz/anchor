@@ -247,6 +247,7 @@ name = "anchor-syn"
 version = "0.24.2"
 dependencies = [
  "anyhow",
+ "borsh",
  "bs58 0.3.1",
  "heck 0.3.3",
  "proc-macro2 1.0.36",
@@ -255,6 +256,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "solana-sdk",
  "syn 1.0.88",
  "thiserror",
 ]
