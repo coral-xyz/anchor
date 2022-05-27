@@ -1910,9 +1910,12 @@ fn account(
     }
     let mut data_view = &data[8..];
 
+    let deserialized_json = idl.deserialize_account_to_json(account_type_name, &mut data_view)?;
+
     println!(
-        "{}",
-        idl.deserialize_account_to_string(account_type_name, &mut data_view)?
+        "{} {}",
+        account_type_name,
+        serde_json::to_string_pretty(&deserialized_json).unwrap()
     );
 
     Ok(())
