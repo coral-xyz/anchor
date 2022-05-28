@@ -9,7 +9,7 @@ export {
   getProvider,
   setProvider,
   AnchorProvider,
-  Wallet
+  Wallet,
 } from "./provider.js";
 export * from "./error.js";
 export { Instruction } from "./coder/borsh/instruction.js";
