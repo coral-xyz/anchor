@@ -21,6 +21,7 @@ com/project-serum/anchor/pull/1841)).
 * lang: Add `PartialEq` and `Eq` for `anchor_lang::Error` ([#1544](https://github.com/project-serum/anchor/pull/1544)).
 * cli: Add `b` and `t` aliases for `build` and `test` respectively ([#1823](https://github.com/project-serum/anchor/pull/1823)).
 * spl: Add `sync_native` token program CPI wrapper function ([#1833](https://github.com/project-serum/anchor/pull/1833)).
+* ts: Implement a coder for system program ([#1920](https://github.com/project-serum/anchor/pull/1920)).
 
 ### Fixes
 
@@ -31,6 +32,10 @@ com/project-serum/anchor/pull/1841)).
 ### Breaking
 
 ts: Change `BROWSER` env variable to `ANCHOR_BROWSER` ([#1233](https://github.com/project-serum/anchor/pull/1233)).
+
+### Breaking
+
+* ts: Add transaction signature to `EventCallback` parameters ([#1851](https://github.com/project-serum/anchor/pull/1851)).
 
 ## [0.24.2] - 2022-04-13
 
