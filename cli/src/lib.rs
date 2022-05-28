@@ -1543,7 +1543,7 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
             out,
             out_ts,
             no_docs,
-        } => idl_parse(cfg_override, file, out, out_ts, no_docs),
+        } => idl_compile(cfg_override, file, out, out_ts, no_docs),
         IdlCommand::Fetch { address, out } => idl_fetch(cfg_override, address, out),
     }
 }
@@ -1819,6 +1819,62 @@ fn idl_parse(
     if let Some(out) = out_ts {
         fs::write(out, template::idl_ts(&idl)?)?;
     }
+
+    Ok(())
+}
+
+fn idl_compile(
+    cfg_override: &ConfigOverride,
+    file: String,
+    out: Option<String>,
+    _out_ts: Option<String>,
+    no_docs: bool,
+) -> Result<()> {
+    let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
+
+    // extract the idl bin src
+    let file = PathBuf::from(&*shellexpand::tilde(&file));
+    let manifest_from_path = std::env::current_dir()?.join(file.parent().unwrap());
+    let cargo = Manifest::discover_from_path(manifest_from_path)?
+        .ok_or_else(|| anyhow!("Cargo.toml not found"))?;
+
+    let bin_src =
+        anchor_syn::idl::bin::gen_src(&*file, cargo.version(), cfg.features.seeds, no_docs, false)?
+            .ok_or_else(|| anyhow!("IDL not parsed"))?;
+
+    // TODO: make the command generate idl based on program name instead of referencing a file:
+    // `anchor idl compile <program-name>`
+    let program_name = file
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap();
+
+    let bin_dir = file.parent().unwrap().join("bin");
+    if !bin_dir.exists() {
+        fs::create_dir(bin_dir.clone())?;
+    }
+    let bin_path = bin_dir.join("idl.rs");
+    fs::write(bin_path.clone(), bin_src)?;
+
+    // this might not be necessary or at least don't panic if rustfmt is not installed
+    std::process::Command::new("rustfmt")
+        .arg(bin_path.to_str().unwrap())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .output()
+        .expect("error running rustfmt on the generated idl.rs");
+
+    std::process::Command::new("cargo")
+        .args(["run", "-p", program_name, "--bin", "idl"])
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .output()
+        .expect("error running running the generated idl.rs");
 
     Ok(())
 }

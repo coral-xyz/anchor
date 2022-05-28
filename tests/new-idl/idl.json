@@ -1,0 +1,55 @@
+{
+  "instructions": [
+    {
+      "name": "initialize",
+      "accounts": [
+        {
+          "name": "state",
+          "isMut": true,
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "type": "base58",
+                "value": "11111111111111111111111111111111"
+              },
+              {
+                "kind": "const",
+                "type": "base58",
+                "value": "3tMg6nFceRK19FX3WY1Cbtu6DboaabhdVfeYP5BKqkuH"
+              },
+              {
+                "kind": "const",
+                "type": "base58",
+                "value": "W723RTUpoZ"
+              },
+              {
+                "kind": "const",
+                "type": "base58",
+                "value": "2UDrs33K4gNG3"
+              },
+              {
+                "kind": "const",
+                "type": "base58",
+                "value": "cM"
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "system_program",
+          "isMut": false,
+          "isSigner": false,
+          "pubkey": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    }
+  ]
+}

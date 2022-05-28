@@ -14,6 +14,7 @@ tests/*/Cargo.lock
 tests/**/Cargo.lock
 tests/*/yarn.lock
 tests/**/yarn.lock
+!tests/new-idl/programs/new-idl/src/bin
 .DS_Store
 docs/yarn.lock
 ts/docs/

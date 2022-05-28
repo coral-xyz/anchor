@@ -3,6 +3,7 @@ use serde_json::Value as JsonValue;
 
 pub mod file;
 pub mod pda;
+pub mod bin;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Idl {
