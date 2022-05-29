@@ -541,6 +541,15 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                 let anchor_ident = &ix.anchor_ident;
                                 let ix_name = generate_ix_variant_name(ix.raw_method.sig.ident.to_string());
                                 let ix_name_log = format!("Instruction: {}", ix_name);
+                                let ret_type = &ix.returns.ty.to_token_stream();
+                                let maybe_set_return_data = match ret_type.to_string().as_str() {
+                                    "()" => quote! {},
+                                    _ => quote! {
+                                        anchor_lang::solana_program::program::set_return_data(
+                                            &result.try_to_vec().unwrap()
+                                        );
+                                    },
+                                };
 
                                 let raw_args: Vec<&syn::PatType> = ix
                                     .args
@@ -617,10 +626,13 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                                 );
 
                                             // Execute user defined function.
-                                            state.#ix_method_name(
+                                            let result = state.#ix_method_name(
                                                 ctx,
                                                 #(#ix_arg_names),*
                                             )?;
+
+                                            // Maybe set Solana return data.
+                                            #maybe_set_return_data
 
                                             // Exit procedures.
                                             accounts.exit(program_id)?;
@@ -661,7 +673,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             )?;
 
                                             // Execute user defined function.
-                                            #state_name::#ix_method_name(
+                                            let result = #state_name::#ix_method_name(
                                                 anchor_lang::context::Context::new(
                                                     program_id,
                                                     &mut accounts,
@@ -670,6 +682,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                                 ),
                                                 #(#ix_arg_names),*
                                             )?;
+
+                                            // Maybe set Solana return data.
+                                            #maybe_set_return_data
 
                                             // Exit procedure.
                                             accounts.exit(program_id)

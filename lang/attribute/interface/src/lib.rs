@@ -1,8 +1,9 @@
 extern crate proc_macro;
 
 use anchor_syn::parser;
+use anchor_syn::parser::program::parse_return;
 use heck::SnakeCase;
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::parse_macro_input;
 
 /// The `#[interface]` attribute allows one to define an external program
@@ -196,11 +197,24 @@ pub fn interface(
             let sighash_arr = anchor_syn::codegen::program::common::sighash(&trait_name, &method_name.to_string());
             let sighash_tts: proc_macro2::TokenStream =
                 format!("{:?}", sighash_arr).parse().unwrap();
+
+            let ret_type = parse_return(&method.sig.output).unwrap().ty.to_token_stream();
+            let (method_ret, maybe_return) = match ret_type.to_string().as_str() {
+                "()" => (quote! {anchor_lang::Result<()> }, quote! { Ok(()) }),
+                _ => (
+                    quote! { anchor_lang::Result<#ret_type> },
+                    quote! {
+                        let data = anchor_lang::solana_program::program::get_return_data().unwrap().1;
+                        Ok(#ret_type::try_from_slice(&data).unwrap())
+                    }
+                )
+            };
+
             quote! {
                 pub fn #method_name<'a,'b, 'c, 'info, T: anchor_lang::Accounts<'info> + anchor_lang::ToAccountMetas + anchor_lang::ToAccountInfos<'info>>(
                     ctx: anchor_lang::context::CpiContext<'a, 'b, 'c, 'info, T>,
                     #(#args),*
-                ) -> anchor_lang::Result<()> {
+                ) -> #method_ret {
                     #args_struct
 
                     let ix = {
@@ -224,7 +238,11 @@ pub fn interface(
                         &ix,
                         &acc_infos,
                         ctx.signer_seeds,
-                    ).map_err(Into::into)
+                    ).map_or_else(
+                        |e| Err(Into::into(e)),
+                        // Maybe handle Solana return data.
+                        |_| { #maybe_return }
+                    )
                 }
             }
         })

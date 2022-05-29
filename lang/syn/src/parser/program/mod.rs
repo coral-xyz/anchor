@@ -3,6 +3,8 @@ use crate::Program;
 use syn::parse::{Error as ParseError, Result as ParseResult};
 use syn::spanned::Spanned;
 
+pub use instructions::parse_return;
+
 mod instructions;
 mod state;
 

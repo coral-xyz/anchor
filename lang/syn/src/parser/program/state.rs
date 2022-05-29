@@ -1,6 +1,7 @@
 use crate::parser;
 use crate::parser::docs;
 use crate::parser::program::ctx_accounts_ident;
+use crate::parser::program::instructions::parse_return;
 use crate::{IxArg, State, StateInterface, StateIx};
 use syn::parse::{Error as ParseError, Result as ParseResult};
 use syn::spanned::Spanned;
@@ -167,42 +168,19 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<Option<State>> {
                     _ => None,
                 })
                 .map(|m: &syn::ImplItemMethod| {
-                    let mut args = m
-                        .sig
-                        .inputs
-                        .iter()
-                        .filter_map(|arg| match arg {
-                            syn::FnArg::Receiver(_) => None,
-                            syn::FnArg::Typed(arg) => Some(arg),
-                        })
-                        .map(|raw_arg| {
-                            let docs = docs::parse(&raw_arg.attrs);
-                            let ident = match &*raw_arg.pat {
-                                syn::Pat::Ident(ident) => &ident.ident,
-                                _ => {
-                                    return Err(ParseError::new(
-                                        raw_arg.pat.span(),
-                                        "unexpected type argument",
-                                    ))
-                                }
-                            };
-                            Ok(IxArg {
-                                name: ident.clone(),
-                                docs,
-                                raw_arg: raw_arg.clone(),
-                            })
-                        })
-                        .collect::<ParseResult<Vec<IxArg>>>()?;
+                    let (mut args, has_receiver) = parse_args(m)?;
                     // Remove the Anchor accounts argument
                     let anchor = args.remove(0);
                     let anchor_ident = ctx_accounts_ident(&anchor.raw_arg)?;
+                    let returns = parse_return(&m.sig.output)?;
 
                     Ok(StateIx {
                         raw_method: m.clone(),
                         ident: m.sig.ident.clone(),
                         args,
                         anchor_ident,
-                        has_receiver: true,
+                        returns,
+                        has_receiver,
                     })
                 })
                 .collect::<ParseResult<Vec<_>>>()
@@ -246,40 +224,18 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<Option<State>> {
                                     "state methods must have a self argument",
                                 )),
                                 Some(_arg) => {
-                                    let mut has_receiver = false;
-                                    let mut args = m
-                                        .sig
-                                        .inputs
-                                        .iter()
-                                        .filter_map(|arg| match arg {
-                                            syn::FnArg::Receiver(_) => {
-                                                has_receiver = true;
-                                                None
-                                            }
-                                            syn::FnArg::Typed(arg) => Some(arg),
-                                        })
-                                        .map(|raw_arg| {
-                                            let docs = docs::parse(&raw_arg.attrs);
-                                            let ident = match &*raw_arg.pat {
-                                                syn::Pat::Ident(ident) => &ident.ident,
-                                                _ => panic!("invalid syntax"),
-                                            };
-                                            IxArg {
-                                                name: ident.clone(),
-                                                docs,
-                                                raw_arg: raw_arg.clone(),
-                                            }
-                                        })
-                                        .collect::<Vec<IxArg>>();
+                                    let (mut args, has_receiver) = parse_args(m)?;
                                     // Remove the Anchor accounts argument
                                     let anchor = args.remove(0);
                                     let anchor_ident = ctx_accounts_ident(&anchor.raw_arg)?;
+                                    let returns = parse_return(&m.sig.output)?;
 
                                     Ok(StateIx {
                                         raw_method: m.clone(),
                                         ident: m.sig.ident.clone(),
                                         args,
                                         anchor_ident,
+                                        returns,
                                         has_receiver,
                                     })
                                 }
@@ -312,4 +268,38 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<Option<State>> {
             is_zero_copy,
         }
     }))
+}
+
+pub fn parse_args(method: &syn::ImplItemMethod) -> ParseResult<(Vec<IxArg>, bool)> {
+    let mut has_receiver = false;
+    let args = method
+        .sig
+        .inputs
+        .iter()
+        .filter_map(|arg| match arg {
+            syn::FnArg::Receiver(_) => {
+                has_receiver = true;
+                None
+            }
+            syn::FnArg::Typed(arg) => Some(arg),
+        })
+        .map(|raw_arg| {
+            let docs = docs::parse(&raw_arg.attrs);
+            let ident = match &*raw_arg.pat {
+                syn::Pat::Ident(ident) => &ident.ident,
+                _ => {
+                    return Err(ParseError::new(
+                        raw_arg.pat.span(),
+                        "unexpected type argument",
+                    ))
+                }
+            };
+            Ok(IxArg {
+                name: ident.clone(),
+                docs,
+                raw_arg: raw_arg.clone(),
+            })
+        })
+        .collect::<ParseResult<Vec<IxArg>>>()?;
+    Ok((args, has_receiver))
 }
