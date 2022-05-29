@@ -23,5 +23,4 @@ export declare const workspace: Record<string, Program>;
 
 if (!isBrowser) {
   exports.workspace = require("./workspace.js").default;
-  exports.Wallet = require("./nodewallet.js").default;
 }
