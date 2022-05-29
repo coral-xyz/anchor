@@ -16,17 +16,20 @@ pub mod counter_auth {
     pub struct CounterAuth;
 
     impl<'info> Auth<'info, Empty> for CounterAuth {
-        fn is_authorized(_ctx: Context<Empty>, current: u64, new: u64) -> Result<()> {
+        fn is_authorized(_ctx: Context<Empty>, current: u64, new: u64) -> Result<bool> {
             if current % 2 == 0 {
-                if new % 2 == 0 {
-                    return Err(ProgramError::Custom(15000).into()); // Arbitrary error code.
-                }
+                Ok(new % 2 == 1)
             } else {
-                if new % 2 == 1 {
-                    return Err(ProgramError::Custom(16000).into()); // Arbitrary error code.
-                }
+                Ok(new % 2 == 0)
             }
-            Ok(())
+        }
+
+        fn authorize(_ctx: Context<Empty>, force: bool) -> Result<()> {
+            if !force {
+                Err(ProgramError::Custom(15000).into())
+            } else {
+                Ok(())
+            }
         }
     }
 }

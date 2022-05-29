@@ -33,10 +33,20 @@ pub mod counter {
             // Ask the auth program if we should approve the transaction.
             let cpi_program = ctx.accounts.auth_program.clone();
             let cpi_ctx = CpiContext::new(cpi_program, Empty {});
-            auth::is_authorized(cpi_ctx, self.count, new_count)?;
+            let is_authorized = auth::is_authorized(cpi_ctx, self.count, new_count)?;
+            if is_authorized {
+                // Approved, so update.
+                self.count = new_count;
+            }
+            Ok(())
+        }
 
-            // Approved, so update.
-            self.count = new_count;
+        #[access_control(SetCount::accounts(&self, &ctx))]
+        pub fn reset_count(&mut self, ctx: Context<SetCount>, force: bool) -> Result<()> {
+            let cpi_program = ctx.accounts.auth_program.clone();
+            let cpi_ctx = CpiContext::new(cpi_program, Empty {});
+            auth::authorize(cpi_ctx, force)?;
+            self.count = 0;
             Ok(())
         }
     }
@@ -47,6 +57,7 @@ pub struct Empty {}
 
 #[derive(Accounts)]
 pub struct SetCount<'info> {
+    /// CHECK: Verified by `SetCount::accounts` method
     auth_program: AccountInfo<'info>,
 }
 
@@ -63,7 +74,8 @@ impl<'info> SetCount<'info> {
 
 #[interface]
 pub trait Auth<'info, T: Accounts<'info>> {
-    fn is_authorized(ctx: Context<T>, current: u64, new: u64) -> Result<()>;
+    fn is_authorized(ctx: Context<T>, current: u64, new: u64) -> Result<bool>;
+    fn authorize(ctx: Context<T>, force: bool) -> Result<()>;
 }
 
 #[error_code]

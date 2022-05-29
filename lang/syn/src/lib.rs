@@ -71,6 +71,7 @@ pub struct StateIx {
     pub ident: Ident,
     pub args: Vec<IxArg>,
     pub anchor_ident: Ident,
+    pub returns: IxReturn,
     // True if there exists a &self on the method.
     pub has_receiver: bool,
 }

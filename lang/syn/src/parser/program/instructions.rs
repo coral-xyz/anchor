@@ -25,7 +25,7 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<(Vec<Ix>, Option<Fallbac
         .map(|method: &syn::ItemFn| {
             let (ctx, args) = parse_args(method)?;
             let docs = docs::parse(&method.attrs);
-            let returns = parse_return(method)?;
+            let returns = parse_return(&method.sig.output)?;
             let anchor_ident = ctx_accounts_ident(&ctx.raw_arg)?;
             Ok(Ix {
                 raw_method: method.clone(),
@@ -99,8 +99,8 @@ pub fn parse_args(method: &syn::ItemFn) -> ParseResult<(IxArg, Vec<IxArg>)> {
     Ok((ctx, args))
 }
 
-pub fn parse_return(method: &syn::ItemFn) -> ParseResult<IxReturn> {
-    match method.sig.output {
+pub fn parse_return(output: &syn::ReturnType) -> ParseResult<IxReturn> {
+    match output {
         syn::ReturnType::Type(_, ref ty) => {
             let ty = match ty.as_ref() {
                 syn::Type::Path(ty) => ty,
@@ -123,9 +123,6 @@ pub fn parse_return(method: &syn::ItemFn) -> ParseResult<IxReturn> {
             };
             Ok(IxReturn { ty })
         }
-        _ => Err(ParseError::new(
-            method.sig.output.span(),
-            "expected a return type",
-        )),
+        _ => Err(ParseError::new(output.span(), "expected a return type")),
     }
 }
