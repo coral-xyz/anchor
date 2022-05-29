@@ -11,7 +11,10 @@ use solana_account_decoder::UiAccountEncoding;
 use solana_client::client_error::ClientError as SolanaClientError;
 use solana_client::pubsub_client::{PubsubClient, PubsubClientError, PubsubClientSubscription};
 use solana_client::rpc_client::RpcClient;
-use solana_client::rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig, RpcTransactionLogsConfig, RpcTransactionLogsFilter};
+use solana_client::rpc_config::{
+    RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig,
+    RpcTransactionLogsConfig, RpcTransactionLogsFilter,
+};
 use solana_client::rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType};
 use solana_client::rpc_response::{Response as RpcResponse, RpcLogsResponse};
 use solana_sdk::account::Account;
@@ -554,7 +557,10 @@ impl<'a> RequestBuilder<'a> {
             .map_err(Into::into)
     }
 
-    pub fn send_with_spinner_and_config(self, config: RpcSendTransactionConfig) -> Result<Signature, ClientError> {
+    pub fn send_with_spinner_and_config(
+        self,
+        config: RpcSendTransactionConfig,
+    ) -> Result<Signature, ClientError> {
         let instructions = self.instructions()?;
 
         let mut signers = self.signers;
@@ -573,7 +579,11 @@ impl<'a> RequestBuilder<'a> {
         };
 
         rpc_client
-            .send_and_confirm_transaction_with_spinner_and_config(&tx, rpc_client.commitment(), config)
+            .send_and_confirm_transaction_with_spinner_and_config(
+                &tx,
+                rpc_client.commitment(),
+                config,
+            )
             .map_err(Into::into)
     }
 }
