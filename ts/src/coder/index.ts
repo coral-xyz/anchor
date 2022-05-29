@@ -3,11 +3,12 @@ import { Event } from "../program/event.js";
 
 export * from "./borsh/index.js";
 export * from "./spl-token/index.js";
+export * from "./system/index.js";
 
 /**
  * Coder provides a facade for encoding and decoding all IDL related objects.
  */
-export interface Coder {
+export interface Coder<A extends string = string, T extends string = string> {
   /**
    * Instruction coder.
    */
@@ -16,7 +17,7 @@ export interface Coder {
   /**
    * Account coder.
    */
-  readonly accounts: AccountsCoder;
+  readonly accounts: AccountsCoder<A>;
 
   /**
    * Coder for state structs.
@@ -27,6 +28,11 @@ export interface Coder {
    * Coder for events.
    */
   readonly events: EventCoder;
+
+  /**
+   * Coder for user-defined types.
+   */
+  readonly types: TypesCoder<T>;
 }
 
 export interface StateCoder {
@@ -51,4 +57,9 @@ export interface EventCoder {
   decode<E extends IdlEvent = IdlEvent, T = Record<string, string>>(
     log: string
   ): Event<E, T> | null;
+}
+
+export interface TypesCoder<N extends string = string> {
+  encode<T = any>(typeName: N, type: T): Buffer;
+  decode<T = any>(typeName: N, typeData: Buffer): T;
 }
