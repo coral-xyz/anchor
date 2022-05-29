@@ -22,6 +22,7 @@ com/project-serum/anchor/pull/1841)).
 * cli: Add `b` and `t` aliases for `build` and `test` respectively ([#1823](https://github.com/project-serum/anchor/pull/1823)).
 * spl: Add `sync_native` token program CPI wrapper function ([#1833](https://github.com/project-serum/anchor/pull/1833)).
 * ts: Implement a coder for system program ([#1920](https://github.com/project-serum/anchor/pull/1920)).
+* ts: Add `program.coder.types` for encoding/decoding user-defined types ([#1931](https://github.com/project-serum/anchor/pull/1931))
 
 ### Fixes
 
