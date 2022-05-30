@@ -40,10 +40,7 @@ impl Idl {
             .iter()
             .chain(self.types.iter())
             .find(|account_type| account_type.name == account_name)
-            .ok_or(anyhow::anyhow!(
-                "Struct/Enum named {} not found in IDL.",
-                account_name.clone()
-            ))?
+            .ok_or_else(|| anyhow::anyhow!("Struct/Enum named {} not found in IDL.", account_name))?
             .ty;
 
         let mut deserialized_fields = Map::new();
@@ -53,7 +50,7 @@ impl Idl {
                 for field in fields {
                     deserialized_fields.insert(
                         field.name.clone(),
-                        field.ty.deserialize_to_json(data, &self)?,
+                        field.ty.deserialize_to_json(data, self)?,
                     );
                 }
             }
@@ -62,7 +59,7 @@ impl Idl {
 
                 let variant = variants
                     .get(repr as usize)
-                    .expect(format!("Error while deserializing enum variant {}", repr).as_str());
+                    .unwrap_or_else(|| panic!("Error while deserializing enum variant {}", repr));
 
                 deserialized_fields.insert(
                     "name".to_string(),
@@ -77,7 +74,7 @@ impl Idl {
                             for field in fields {
                                 values.insert(
                                     field.name.clone(),
-                                    field.ty.deserialize_to_json(data, &self)?,
+                                    field.ty.deserialize_to_json(data, self)?,
                                 );
                             }
 
@@ -88,7 +85,7 @@ impl Idl {
                             let mut values = Vec::new();
 
                             for field in fields {
-                                values.push(field.deserialize_to_json(data, &self)?);
+                                values.push(field.deserialize_to_json(data, self)?);
                             }
 
                             deserialized_fields
@@ -350,7 +347,7 @@ impl IdlType {
         data: &mut &[u8],
         parent_idl: &Idl,
     ) -> Result<JsonValue, anyhow::Error> {
-        if data.len() == 0 {
+        if data.is_empty() {
             return Err(anyhow::anyhow!("Unable to parse from empty bytes"));
         }
 
@@ -397,7 +394,7 @@ impl IdlType {
                 json!(<Pubkey as BorshDeserialize>::deserialize(data)?.to_string())
             }
             IdlType::Defined(type_name) => {
-                parent_idl.deserialize_account_to_json(&type_name, data)?
+                parent_idl.deserialize_account_to_json(type_name, data)?
             }
             IdlType::Option(ty) => {
                 let is_present = <u8 as BorshDeserialize>::deserialize(data)?;

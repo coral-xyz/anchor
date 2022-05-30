@@ -1865,9 +1865,12 @@ fn account(
     address: Pubkey,
     idl_filepath: Option<String>,
 ) -> Result<()> {
-    let (program_name, account_type_name) = account_type.split_once('.').ok_or(anyhow!(
-        "Please enter the account struct in the following format: <program_name>.<Account>",
-    ))?;
+    let (program_name, account_type_name) =
+        account_type.split_once('.').ok_or_else(|| {
+            anyhow!(
+                "Please enter the account struct in the following format: <program_name>.<Account>",
+            )
+        })?;
 
     let idl = idl_filepath.map_or_else(
         || {
@@ -1877,8 +1880,8 @@ fn account(
                 .read_all_programs()
                 .expect("Workspace must contain atleast one program.")
                 .iter()
-                .find(|&p| p.lib_name == program_name.to_string())
-                .expect(format!("Program {} not found in workspace.", program_name).as_str())
+                .find(|&p| p.lib_name == *program_name)
+                .unwrap_or_else(|| panic!("Program {} not found in workspace.", program_name))
                 .idl
                 .as_ref()
                 .expect("IDL not found. Please build the program atleast once to generate the IDL.")
@@ -1900,7 +1903,7 @@ fn account(
         .map(|cfg| cfg.unwrap())
         .map(|cfg| cfg.provider.cluster.clone())
         .unwrap_or(Cluster::Localnet);
-    cluster = cfg_override.cluster.as_ref().unwrap_or(&cluster);
+    cluster = cfg_override.cluster.as_ref().unwrap_or(cluster);
 
     let data = RpcClient::new(cluster.url()).get_account_data(&address)?;
     if data.len() < 8 {
