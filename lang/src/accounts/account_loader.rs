@@ -3,7 +3,7 @@
 use crate::bpf_writer::BpfWriter;
 use crate::error::{Error, ErrorCode};
 use crate::{
-    Accounts, AccountsClose, AccountsExit, Key, Owner, Result, ToAccountInfo, ToAccountInfos,
+    Accounts, AccountsClose, AccountsExit, Data, Key, Owner, Result, ToAccountInfo, ToAccountInfos,
     ToAccountMetas, ZeroCopy,
 };
 use arrayref::array_ref;
@@ -16,7 +16,7 @@ use std::fmt;
 use std::io::Write;
 use std::marker::PhantomData;
 use std::mem;
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 
 /// Type facilitating on demand zero copy deserialization.
 ///
@@ -282,5 +282,12 @@ impl<'info, T: ZeroCopy + Owner> ToAccountInfos<'info> for AccountLoader<'info, 
 impl<'info, T: ZeroCopy + Owner> Key for AccountLoader<'info, T> {
     fn key(&self) -> Pubkey {
         *self.acc_info.key
+    }
+}
+
+impl<'info, T: ZeroCopy + Owner> Data for AccountLoader<'info, T> {
+    type Target = T;
+    fn data<'a>(&'a self) -> Result<Box<dyn Deref<Target = Self::Target> + 'a>> {
+        Ok(Box::new(self.load()?))
     }
 }

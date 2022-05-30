@@ -3,7 +3,7 @@
 use crate::bpf_writer::BpfWriter;
 use crate::error::{Error, ErrorCode};
 use crate::{
-    AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, Key, Owner,
+    AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, Data, Key, Owner,
     Result, ToAccountInfo, ToAccountInfos, ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
@@ -421,5 +421,14 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> DerefMut for 
 impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> Key for Account<'info, T> {
     fn key(&self) -> Pubkey {
         *self.info.key
+    }
+}
+
+impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone + 'info> Data
+    for Account<'info, T>
+{
+    type Target = T;
+    fn data<'a>(&'a self) -> Result<Box<dyn Deref<Target = Self::Target> + 'a>> {
+        Ok(Box::new(&self.account))
     }
 }

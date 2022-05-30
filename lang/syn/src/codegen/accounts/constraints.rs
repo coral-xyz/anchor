@@ -47,6 +47,7 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
         mutable,
         signer,
         has_one,
+        is_in,
         literal,
         raw,
         owner,
@@ -82,6 +83,7 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
         constraints.push(Constraint::Signer(c));
     }
     constraints.append(&mut has_one.into_iter().map(Constraint::HasOne).collect());
+    constraints.append(&mut is_in.into_iter().map(Constraint::IsIn).collect());
     constraints.append(&mut literal.into_iter().map(Constraint::Literal).collect());
     constraints.append(&mut raw.into_iter().map(Constraint::Raw).collect());
     if let Some(c) = owner {
@@ -117,6 +119,7 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::Zeroed(c) => generate_constraint_zeroed(f, c),
         Constraint::Mut(c) => generate_constraint_mut(f, c),
         Constraint::HasOne(c) => generate_constraint_has_one(f, c),
+        Constraint::IsIn(c) => generate_constraint_is_in(f, c),
         Constraint::Signer(c) => generate_constraint_signer(f, c),
         Constraint::Literal(c) => generate_constraint_literal(&f.ident, c),
         Constraint::Raw(c) => generate_constraint_raw(&f.ident, c),
@@ -223,6 +226,26 @@ pub fn generate_constraint_has_one(f: &Field, c: &ConstraintHasOne) -> proc_macr
         {
             let my_key = #field.#target;
             let target_key = #target.key();
+            if my_key != target_key {
+                return #error;
+            }
+        }
+    }
+}
+
+pub fn generate_constraint_is_in(f: &Field, c: &ConstraintIsIn) -> proc_macro2::TokenStream {
+    let target = c.join_target.clone();
+    let ident = &f.ident;
+    let error = generate_custom_error(
+        ident,
+        &c.error,
+        quote! { ConstraintIsIn },
+        &Some(&(quote! { my_key }, quote! { target_key })),
+    );
+    quote! {
+        {
+            let my_key: Pubkey = #ident.key();
+            let target_key = anchor_lang::Data::data(&#target)?.#ident;
             if my_key != target_key {
                 return #error;
             }

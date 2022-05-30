@@ -105,6 +105,9 @@ pub enum ErrorCode {
     /// 2019 - A space constraint was violated
     #[msg("A space constraint was violated")]
     ConstraintSpace,
+    /// 2020 - An is in constraint was violated
+    #[msg("An is in constraint was violated")]
+    ConstraintIsIn,
 
     // Require
     /// 2500 - A require expression was violated

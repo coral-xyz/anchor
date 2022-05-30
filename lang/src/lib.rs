@@ -29,6 +29,7 @@ use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use std::collections::BTreeMap;
 use std::io::Write;
+use std::ops::Deref;
 
 mod account_meta;
 pub mod accounts;
@@ -226,6 +227,19 @@ pub trait Key {
 impl Key for Pubkey {
     fn key(&self) -> Pubkey {
         *self
+    }
+}
+
+pub trait Data {
+    type Target;
+    fn data<'a>(&'a self) -> Result<Box<dyn Deref<Target = Self::Target> + 'a>>;
+}
+
+impl<T: Data> Data for Box<T> {
+    type Target = T::Target;
+
+    fn data<'a>(&'a self) -> Result<Box<dyn Deref<Target = Self::Target> + 'a>> {
+        self.as_ref().data()
     }
 }
 

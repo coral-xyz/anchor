@@ -233,6 +233,13 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         error: parse_optional_custom_error(&stream)?,
                     },
                 )),
+                "is_in" => ConstraintToken::IsIn(Context::new(
+                    span,
+                    ConstraintIsIn {
+                        join_target: stream.parse()?,
+                        error: parse_optional_custom_error(&stream)?,
+                    },
+                )),
                 "owner" => ConstraintToken::Owner(Context::new(
                     span,
                     ConstraintOwner {
@@ -316,6 +323,7 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub mutable: Option<Context<ConstraintMut>>,
     pub signer: Option<Context<ConstraintSigner>>,
     pub has_one: Vec<Context<ConstraintHasOne>>,
+    pub is_in: Vec<Context<ConstraintIsIn>>,
     pub literal: Vec<Context<ConstraintLiteral>>,
     pub raw: Vec<Context<ConstraintRaw>>,
     pub owner: Option<Context<ConstraintOwner>>,
@@ -347,6 +355,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             mutable: None,
             signer: None,
             has_one: Vec::new(),
+            is_in: Vec::new(),
             literal: Vec::new(),
             raw: Vec::new(),
             owner: None,
@@ -529,6 +538,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             mutable,
             signer,
             has_one,
+            is_in,
             literal,
             raw,
             owner,
@@ -671,6 +681,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             mutable: into_inner!(mutable),
             signer: into_inner!(signer),
             has_one: into_inner_vec!(has_one),
+            is_in: into_inner_vec!(is_in),
             literal: into_inner_vec!(literal),
             raw: into_inner_vec!(raw),
             owner: into_inner!(owner),
@@ -693,6 +704,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::Mut(c) => self.add_mut(c),
             ConstraintToken::Signer(c) => self.add_signer(c),
             ConstraintToken::HasOne(c) => self.add_has_one(c),
+            ConstraintToken::IsIn(c) => self.add_is_in(c),
             ConstraintToken::Literal(c) => self.add_literal(c),
             ConstraintToken::Raw(c) => self.add_raw(c),
             ConstraintToken::Owner(c) => self.add_owner(c),
@@ -969,6 +981,20 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             return Err(ParseError::new(c.span(), "has_one target already provided"));
         }
         self.has_one.push(c);
+        Ok(())
+    }
+
+    fn add_is_in(&mut self, c: Context<ConstraintIsIn>) -> ParseResult<()> {
+        if self
+            .is_in
+            .iter()
+            .filter(|item| item.join_target == c.join_target)
+            .count()
+            > 0
+        {
+            return Err(ParseError::new(c.span(), "is_in target already provided"));
+        }
+        self.is_in.push(c);
         Ok(())
     }
 
