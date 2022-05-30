@@ -299,7 +299,7 @@ pub enum Command {
         )]
         cargo_args: Vec<String>,
     },
-    /// Fetch an account using the IDL in the workspace.
+    /// Fetch and deserialize an account using the IDL provided.
     Account {
         /// Account struct to deserialize
         account_type: String,
