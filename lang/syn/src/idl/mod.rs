@@ -35,8 +35,6 @@ impl Idl {
         account_name: &str,
         data: &mut &[u8],
     ) -> Result<JsonValue, anyhow::Error> {
-        let mut deserialized_fields = Map::new();
-
         let account_type = &self
             .accounts
             .iter()
@@ -48,6 +46,8 @@ impl Idl {
             ))?
             .ty;
 
+        let mut deserialized_fields = Map::new();
+
         match account_type {
             IdlTypeDefinitionTy::Struct { fields } => {
                 for field in fields {
@@ -58,7 +58,44 @@ impl Idl {
                 }
             }
             IdlTypeDefinitionTy::Enum { variants } => {
-                todo!("{:?}", variants);
+                let repr = <u8 as BorshDeserialize>::deserialize(data)?;
+
+                let variant = variants
+                    .get(repr as usize)
+                    .expect(format!("Error while deserializing enum variant {}", repr).as_str());
+
+                deserialized_fields.insert(
+                    "name".to_string(),
+                    JsonValue::String(format!("{}::{}", account_name, variant.name)),
+                );
+
+                for enum_field in variant.fields.iter() {
+                    match enum_field {
+                        EnumFields::Named(fields) => {
+                            let mut values = Map::new();
+
+                            for field in fields {
+                                values.insert(
+                                    field.name.clone(),
+                                    field.ty.deserialize_to_json(data, &self)?,
+                                );
+                            }
+
+                            deserialized_fields
+                                .insert("value".to_string(), JsonValue::Object(values));
+                        }
+                        EnumFields::Tuple(fields) => {
+                            let mut values = Vec::new();
+
+                            for field in fields {
+                                values.push(field.deserialize_to_json(data, &self)?);
+                            }
+
+                            deserialized_fields
+                                .insert("value".to_string(), JsonValue::Array(values));
+                        }
+                    }
+                }
             }
         }
 
