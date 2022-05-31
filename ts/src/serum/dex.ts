@@ -66,6 +66,11 @@ export type SerumDex = {
           name: "bids";
           isMut: true;
           isSigner: false;
+        },
+        {
+          name: "tokenMetadata";
+          isMut: false;
+          isSigner: false;
         }
       ];
       args: [
@@ -183,11 +188,6 @@ export type SerumDex = {
           isSigner: false;
         },
         {
-          name: "sweepAuthority";
-          isMut: false;
-          isSigner: true;
-        },
-        {
           name: "quoteVault";
           isMut: true;
           isSigner: false;
@@ -199,6 +199,11 @@ export type SerumDex = {
         },
         {
           name: "splTokenProgram";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "tokenMetadata";
           isMut: false;
           isSigner: false;
         }
@@ -473,6 +478,32 @@ export type SerumDex = {
           };
         }
       ];
+    },
+    {
+      name: "updateRoyalties";
+      accounts: [
+        {
+          name: "market";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "eventQueue";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "orderbook";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "tokenMetadata";
+          isMut: false;
+          isSigner: false;
+        }
+      ];
+      args: [];
     }
   ];
   accounts: [
@@ -527,6 +558,14 @@ export type SerumDex = {
           },
           {
             name: "minBaseOrderSize";
+            type: "u64";
+          },
+          {
+            name: "royaltiesBps";
+            type: "u64";
+          },
+          {
+            name: "accumulatedRoyalties";
             type: "u64";
           },
           {
@@ -594,6 +633,11 @@ export const IDL: SerumDex = {
         {
           name: "bids",
           isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "tokenMetadata",
+          isMut: false,
           isSigner: false,
         },
       ],
@@ -712,11 +756,6 @@ export const IDL: SerumDex = {
           isSigner: false,
         },
         {
-          name: "sweepAuthority",
-          isMut: false,
-          isSigner: true,
-        },
-        {
           name: "quoteVault",
           isMut: true,
           isSigner: false,
@@ -728,6 +767,11 @@ export const IDL: SerumDex = {
         },
         {
           name: "splTokenProgram",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "tokenMetadata",
           isMut: false,
           isSigner: false,
         },
@@ -1003,6 +1047,32 @@ export const IDL: SerumDex = {
         },
       ],
     },
+    {
+      name: "updateRoyalties",
+      accounts: [
+        {
+          name: "market",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "eventQueue",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "orderbook",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "tokenMetadata",
+          isMut: false,
+          isSigner: false,
+        },
+      ],
+      args: [],
+    },
   ],
   accounts: [
     {
@@ -1056,6 +1126,14 @@ export const IDL: SerumDex = {
           },
           {
             name: "minBaseOrderSize",
+            type: "u64",
+          },
+          {
+            name: "royaltiesBps",
+            type: "u64",
+          },
+          {
+            name: "accumulatedRoyalties",
             type: "u64",
           },
           {

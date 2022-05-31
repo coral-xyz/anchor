@@ -69,6 +69,10 @@ pub mod serum_dex {
     ) -> Result<()> {
         Ok(())
     }
+
+    pub fn update_royalties(ctx: Context<UpdateRoyalties>) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -86,6 +90,7 @@ pub struct CreateMarket<'info> {
     asks: AccountInfo<'info>,
     #[account(mut)]
     bids: AccountInfo<'info>,
+    token_metadata: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -205,12 +210,14 @@ pub struct SweepFees<'info> {
     #[account(mut)]
     market: AccountInfo<'info>,
     market_signer: AccountInfo<'info>,
-    sweep_authority: Signer<'info>,
+    // sweep_authority: Signer<'info>,
     #[account(mut)]
     quote_vault: AccountInfo<'info>,
     #[account(mut)]
     destination_token_account: AccountInfo<'info>,
     spl_token_program: AccountInfo<'info>,
+    token_metadata: AccountInfo<'info>,
+    // Remaining Accounts: [...creators_token_accounts]
 }
 
 #[derive(Accounts)]
@@ -245,6 +252,15 @@ pub struct CloseMarket<'info> {
     spl_token_program: AccountInfo<'info>,
 }
 
+#[derive(Accounts)]
+pub struct UpdateRoyalties<'info> {
+    #[account(mut)]
+    market: AccountInfo<'info>,
+    event_queue: AccountInfo<'info>,
+    orderbook: AccountInfo<'info>,
+    token_metadata: AccountInfo<'info>,
+}
+
 #[account]
 pub struct MarketState {
     pub tag: u64,
@@ -259,6 +275,8 @@ pub struct MarketState {
     pub quote_volume: u64,
     pub accumulated_fees: u64,
     pub min_base_order_size: u64,
+    pub royalties_bps: u64,
+    pub accumulated_royalties: u64,
     pub signer_nonce: u8,
     pub fee_type: u8,
     pub _padding: [u8; 6],
