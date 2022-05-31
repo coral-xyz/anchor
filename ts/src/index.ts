@@ -17,6 +17,7 @@ export * as utils from "./utils/index.js";
 export * from "./program/index.js";
 export * from "./spl/index.js";
 export * from "./native/index.js";
+export * from "./serum/index.js";
 
 export declare const workspace: any;
 export declare class Wallet extends NodeWallet {}

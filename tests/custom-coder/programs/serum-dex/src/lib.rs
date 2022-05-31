@@ -244,3 +244,22 @@ pub struct CloseMarket<'info> {
     market_signer: AccountInfo<'info>,
     spl_token_program: AccountInfo<'info>,
 }
+
+#[account]
+pub struct MarketState {
+    pub tag: u64,
+    pub base_mint: Pubkey,
+    pub quote_mint: Pubkey,
+    pub base_vault: Pubkey,
+    pub quote_vault: Pubkey,
+    pub orderbook: Pubkey,
+    pub admin: Pubkey,
+    pub creation_timestamp: i64,
+    pub base_volume: u64,
+    pub quote_volume: u64,
+    pub accumulated_fees: u64,
+    pub min_base_order_size: u64,
+    pub signer_nonce: u8,
+    pub fee_type: u8,
+    pub _padding: [u8; 6],
+}
