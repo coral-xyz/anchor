@@ -17,11 +17,15 @@ import {
 } from "@solana/web3.js";
 import * as assert from "assert";
 
-const DEX_STATE_LEN = 248; // dex-v4's Dex State
+const DEX_STATE_LEN = 264; // dex-v4's Dex State
 const MARKET_STATE_LEN = 8 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 8 + 8; // Central AAOB Market State
 const EVENT_QUEUE_HEADER_LEN = 33;
 const REGISTER_SIZE = 41 + 1; // ORDER_SUMMARY_SIZE + 1
 const ORDERBOOK_LEN = 1_000_00;
+
+const METAPLEX_METADATA_PROGRAM_ID = new PublicKey(
+  "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+);
 
 async function getAssociatedTokenAddress(
   mint: PublicKey,
@@ -64,6 +68,18 @@ function createAssociatedTokenAccountInstruction(
     programId: associatedTokenProgramId,
     data: Buffer.alloc(0),
   });
+}
+
+async function getMPLMetadataAccount(mint: PublicKey) {
+  const [metadataAccount] = await PublicKey.findProgramAddress(
+    [
+      Buffer.from("metadata"),
+      METAPLEX_METADATA_PROGRAM_ID.toBuffer(),
+      mint.toBuffer(),
+    ],
+    METAPLEX_METADATA_PROGRAM_ID
+  );
+  return metadataAccount;
 }
 
 describe("serum-coder", () => {
@@ -121,25 +137,25 @@ describe("serum-coder", () => {
 
     const baseVault = await getAssociatedTokenAddress(
       baseMint,
-      baseMintAuthKP.publicKey,
-      false
+      marketSigner,
+      true
     );
     const quoteVault = await getAssociatedTokenAddress(
       quoteMint,
-      quoteMintAuthKP.publicKey,
-      false
+      marketSigner,
+      true
     );
 
     const baseVaultIx = createAssociatedTokenAccountInstruction(
       wallet.publicKey,
       baseVault,
-      baseMintAuthKP.publicKey,
+      marketSigner,
       baseMint
     );
     const quoteVaultIx = createAssociatedTokenAccountInstruction(
       wallet.publicKey,
       quoteVault,
-      quoteMintAuthKP.publicKey,
+      marketSigner,
       quoteMint
     );
 
@@ -237,6 +253,8 @@ describe("serum-coder", () => {
     const dexAccounts = await createDexAccounts();
     const aaobAccounts = await createAaobAccounts();
 
+    const metadataAccount = await getMPLMetadataAccount(dexAccounts.baseMint);
+
     const sig = await program.methods
       .createMarket(
         new anchor.BN(dexAccounts.marketSignerNonce),
@@ -253,6 +271,7 @@ describe("serum-coder", () => {
         bids: aaobAccounts.bids.publicKey,
         asks: aaobAccounts.asks.publicKey,
         marketAdmin: dexAccounts.marketAdmin.publicKey,
+        tokenMetadata: metadataAccount,
       })
       .rpc();
 

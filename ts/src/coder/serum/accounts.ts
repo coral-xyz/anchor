@@ -77,7 +77,7 @@ export class MarketState {
   signerNonce: number;
   feeType: number;
 
-  static SIZE = 248;
+  static SIZE = 264;
 
   static schema: Schema = new Map([
     [
