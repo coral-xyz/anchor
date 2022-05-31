@@ -675,6 +675,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 if_needed: i.if_needed,
                 seeds: seeds.clone(),
                 payer: into_inner!(payer.clone()).unwrap().target,
+                payer_seeds: None,
                 space: space.clone().map(|s| s.space.clone()),
                 kind: if let Some(tm) = &token_mint {
                     InitKind::Token {

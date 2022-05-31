@@ -389,6 +389,47 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
     };
     let space = &c.space;
 
+    // Payer PDA bump seeds.
+    let (find_payer_pda, payer_seeds_with_bump) = match c.payer_seeds.as_ref() {
+        None => (quote! {}, None),
+        Some(c) => {
+            let seeds = &mut c.seeds.clone();
+
+            // If the seeds came with a trailing comma, we need to chop it off
+            // before we interpolate them below.
+            if let Some(pair) = seeds.pop() {
+                seeds.push_value(pair.into_value());
+            }
+
+            let maybe_seeds_plus_comma = (!seeds.is_empty()).then(|| {
+                quote! { #seeds, }
+            });
+
+            let find_payer_pda = match c.bump.as_ref() {
+                // Bump target not given. Find it.
+                None => quote! {
+                    let (_, __payer_bump) = Pubkey::find_program_address(
+                        &[#maybe_seeds_plus_comma],
+                        &program_id,
+                    );
+                },
+                // Bump target given. Use it.
+                Some(b) => quote! {
+                    let __payer_bump = #b;
+                },
+            };
+
+            let payer_seeds_with_bump = quote! {
+                &[
+                    #maybe_seeds_plus_comma
+                    &[__payer_bump][..]
+                ][..]
+            };
+
+            (find_payer_pda, Some(payer_seeds_with_bump))
+        }
+    };
+
     // Payer for rent exemption.
     let payer = {
         let p = &c.payer;
@@ -403,7 +444,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
 
     // PDA bump seeds.
     let (find_pda, seeds_with_bump) = match &c.seeds {
-        None => (quote! {}, quote! {}),
+        None => (quote! {}, None),
         Some(c) => {
             let seeds = &mut c.seeds.clone();
 
@@ -425,12 +466,12 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                     );
                     __bumps.insert(#name_str.to_string(), __bump);
                 },
-                quote! {
+                Some(quote! {
                     &[
                         #maybe_seeds_plus_comma
                         &[__bump][..]
                     ][..]
-                },
+                }),
             )
         }
     };
@@ -442,10 +483,14 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                 quote! {anchor_spl::token::TokenAccount::LEN},
                 quote! {&token_program.key()},
                 seeds_with_bump,
+                payer_seeds_with_bump,
             );
             quote! {
                 // Define the bump and pda variable.
                 #find_pda
+
+                // Defind the payer bump.
+                #find_payer_pda
 
                 let #field: #ty_decl = {
                     if !#if_needed || AsRef::<AccountInfo>::as_ref(&#field).owner == &anchor_lang::solana_program::system_program::ID {
@@ -484,6 +529,9 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
             quote! {
                 // Define the bump and pda variable.
                 #find_pda
+
+                // Defind the payer bump.
+                #find_payer_pda
 
                 let #field: #ty_decl = {
                     if !#if_needed || AsRef::<AccountInfo>::as_ref(&#field).owner == &anchor_lang::solana_program::system_program::ID {
@@ -529,6 +577,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                 quote! {anchor_spl::token::Mint::LEN},
                 quote! {&token_program.key()},
                 seeds_with_bump,
+                payer_seeds_with_bump,
             );
             let freeze_authority = match freeze_authority {
                 Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key()) },
@@ -537,6 +586,9 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
             quote! {
                 // Define the bump and pda variable.
                 #find_pda
+
+                // Defind the payer bump.
+                #find_payer_pda
 
                 let #field: #ty_decl = {
                     if !#if_needed || AsRef::<AccountInfo>::as_ref(&#field).owner == &anchor_lang::solana_program::system_program::ID {
@@ -590,13 +642,21 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
             };
 
             // CPI to the system program to create the account.
-            let create_account =
-                generate_create_account(field, quote! {space}, owner.clone(), seeds_with_bump);
+            let create_account = generate_create_account(
+                field,
+                quote! {space},
+                owner.clone(),
+                seeds_with_bump,
+                payer_seeds_with_bump,
+            );
 
             // Put it all together.
             quote! {
                 // Define the bump variable.
                 #find_pda
+
+                // Defind the payer bump.
+                #find_payer_pda
 
                 let #field = {
                     let actual_field = #field.to_account_info();
@@ -820,8 +880,12 @@ pub fn generate_create_account(
     field: &Ident,
     space: proc_macro2::TokenStream,
     owner: proc_macro2::TokenStream,
-    seeds_with_nonce: proc_macro2::TokenStream,
+    seeds_with_nonce: Option<proc_macro2::TokenStream>,
+    payer_seeds_with_nonce: Option<proc_macro2::TokenStream>,
 ) -> proc_macro2::TokenStream {
+    let mut seeds = syn::punctuated::Punctuated::<_, syn::token::Comma>::new();
+    seeds.extend(seeds_with_nonce.as_ref());
+    seeds.extend(payer_seeds_with_nonce.as_ref());
     quote! {
         // If the account being initialized already has lamports, then
         // return them all back to the payer so that the account has
@@ -836,7 +900,7 @@ pub fn generate_create_account(
                 to: #field.to_account_info()
             };
             let cpi_context = anchor_lang::context::CpiContext::new(system_program.to_account_info(), cpi_accounts);
-            anchor_lang::system_program::create_account(cpi_context.with_signer(&[#seeds_with_nonce]), lamports, #space as u64, #owner)?;
+            anchor_lang::system_program::create_account(cpi_context.with_signer(&[#seeds]), lamports, #space as u64, #owner)?;
         } else {
             // Fund the account for rent exemption.
             let required_lamports = __anchor_rent
@@ -849,7 +913,7 @@ pub fn generate_create_account(
                     to: #field.to_account_info(),
                 };
                 let cpi_context = anchor_lang::context::CpiContext::new(system_program.to_account_info(), cpi_accounts);
-                anchor_lang::system_program::transfer(cpi_context, required_lamports)?;
+                anchor_lang::system_program::transfer(cpi_context.with_signer(&[#payer_seeds_with_nonce]), required_lamports)?;
             }
             // Allocate space.
             let cpi_accounts = anchor_lang::system_program::Allocate {

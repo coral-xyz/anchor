@@ -23,6 +23,7 @@
     "multisig",
     "permissioned-markets",
     "pda-derivation",
+    "pda-payer",
     "relations-derivation",
     "pyth",
     "realloc",

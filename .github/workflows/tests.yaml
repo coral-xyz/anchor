@@ -402,6 +402,8 @@ jobs:
             path: tests/relations-derivation
           - cmd: cd tests/anchor-cli-idl && ./test.sh
             path: tests/anchor-cli-idl
+          - cmd: cd tests/pda-payer && anchor test --skip-lint
+            path: tests/pda-payer
     steps:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup/

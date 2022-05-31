@@ -805,6 +805,7 @@ pub struct ConstraintInitGroup {
     pub if_needed: bool,
     pub seeds: Option<ConstraintSeedsGroup>,
     pub payer: Expr,
+    pub payer_seeds: Option<ConstraintSeedsGroup>,
     pub space: Option<Expr>,
     pub kind: InitKind,
 }
