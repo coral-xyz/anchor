@@ -59,6 +59,11 @@ export type SplAssociatedToken = {
           name: "tokenProgram";
           isMut: false;
           isSigner: false;
+        },
+        {
+          name: "rent";
+          isMut: false;
+          isSigner: false;
         }
       ];
       args: [];
@@ -100,6 +105,11 @@ export const IDL: SplAssociatedToken = {
         },
         {
           name: "tokenProgram",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "rent",
           isMut: false,
           isSigner: false,
         },

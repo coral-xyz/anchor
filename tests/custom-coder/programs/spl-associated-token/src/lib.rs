@@ -28,4 +28,6 @@ pub struct Create<'info> {
     system_program: AccountInfo<'info>,
     /// CHECK:
     token_program: AccountInfo<'info>,
+    /// CHECK:
+    rent: AccountInfo<'info>,
 }
