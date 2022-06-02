@@ -12,7 +12,6 @@ describe("realloc", () => {
     .payer as anchor.web3.Keypair;
 
   let sample: anchor.web3.PublicKey;
-  let postAllocBalance: number;
 
   before(async () => {
     [sample] = await anchor.web3.PublicKey.findProgramAddress(
@@ -22,9 +21,6 @@ describe("realloc", () => {
   });
 
   it("Is initialized!", async () => {
-    const b = await program.provider.connection.getBalance(authority.publicKey);
-    console.log(b);
-
     await program.methods
       .initialize()
       .accounts({ authority: authority.publicKey, sample })
@@ -32,11 +28,6 @@ describe("realloc", () => {
 
     const s = await program.account.sample.fetch(sample);
     assert.lengthOf(s.data, 1);
-
-    postAllocBalance = await program.provider.connection.getBalance(
-      authority.publicKey
-    );
-    console.log(postAllocBalance);
   });
 
   it("realloc additive", async () => {
@@ -47,9 +38,6 @@ describe("realloc", () => {
 
     const s = await program.account.sample.fetch(sample);
     assert.lengthOf(s.data, 5);
-
-    const b = await program.provider.connection.getBalance(authority.publicKey);
-    console.log(b);
   });
 
   it("realloc substractive", async () => {
@@ -60,9 +48,5 @@ describe("realloc", () => {
 
     const s = await program.account.sample.fetch(sample);
     assert.lengthOf(s.data, 1);
-
-    const b = await program.provider.connection.getBalance(authority.publicKey);
-    console.log(b);
-    assert.strictEqual(b, postAllocBalance);
   });
 });
