@@ -291,6 +291,18 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         error: parse_optional_custom_error(&stream)?,
                     },
                 )),
+                "realloc" => ConstraintToken::Realloc(Context::new(
+                    span,
+                    ConstraintRealloc {
+                        space: stream.parse()?,
+                    },
+                )),
+                "allocator" => ConstraintToken::Allocator(Context::new(
+                    span,
+                    ConstraintAllocator {
+                        target: stream.parse()?,
+                    },
+                )),
                 _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
             }
         }
@@ -336,6 +348,8 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub mint_decimals: Option<Context<ConstraintMintDecimals>>,
     pub bump: Option<Context<ConstraintTokenBump>>,
     pub program_seed: Option<Context<ConstraintProgramSeed>>,
+    pub realloc: Option<Context<ConstraintRealloc>>,
+    pub allocator: Option<Context<ConstraintAllocator>>,
 }
 
 impl<'ty> ConstraintGroupBuilder<'ty> {
@@ -367,6 +381,8 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             mint_decimals: None,
             bump: None,
             program_seed: None,
+            realloc: None,
+            allocator: None,
         }
     }
 
@@ -462,6 +478,23 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             }
         }
 
+        // Realloc.
+        if let Some(r) = &self.realloc {
+            if self.init.is_some() {
+                return Err(ParseError::new(
+                    r.span(),
+                    "init cannot be provided with realloc",
+                ));
+            }
+
+            if self.allocator.is_none() {
+                return Err(ParseError::new(
+                    r.span(),
+                    "allocator must be provided when using realloc",
+                ));
+            }
+        }
+
         // Zero.
         if let Some(z) = &self.zeroed {
             match self.mutable {
@@ -549,6 +582,8 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             mint_decimals,
             bump,
             program_seed,
+            realloc,
+            allocator,
         } = self;
 
         // Converts Option<Context<T>> -> Option<T>.
@@ -667,6 +702,10 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                     }
                 },
             })).transpose()?,
+            realloc: realloc.as_ref().map(|r| ConstraintReallocGroup {
+                allocator: into_inner!(allocator).unwrap().target,
+                space: r.space.clone(),
+            }),
             zeroed: into_inner!(zeroed),
             mutable: into_inner!(mutable),
             signer: into_inner!(signer),
@@ -713,6 +752,8 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::MintDecimals(c) => self.add_mint_decimals(c),
             ConstraintToken::Bump(c) => self.add_bump(c),
             ConstraintToken::ProgramSeed(c) => self.add_program_seed(c),
+            ConstraintToken::Realloc(c) => self.add_realloc(c),
+            ConstraintToken::Allocator(c) => self.add_allocator(c),
         }
     }
 
@@ -777,6 +818,44 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             return Err(ParseError::new(c.span(), "init already provided"));
         }
         self.zeroed.replace(c);
+        Ok(())
+    }
+
+    fn add_realloc(&mut self, c: Context<ConstraintRealloc>) -> ParseResult<()> {
+        if !matches!(self.f_ty, Some(Ty::ProgramAccount(_)))
+            && !matches!(self.f_ty, Some(Ty::Account(_)))
+            && !matches!(self.f_ty, Some(Ty::Loader(_)))
+            && !matches!(self.f_ty, Some(Ty::AccountLoader(_)))
+        {
+            return Err(ParseError::new(
+                c.span(),
+                "close must be on an Account, ProgramAccount, or Loader",
+            ));
+        }
+        if self.mutable.is_none() {
+            return Err(ParseError::new(
+                c.span(),
+                "mut must be provided before realloc",
+            ));
+        }
+        if self.realloc.is_some() {
+            return Err(ParseError::new(c.span(), "realloc already provided"));
+        }
+        self.realloc.replace(c);
+        Ok(())
+    }
+
+    fn add_allocator(&mut self, c: Context<ConstraintAllocator>) -> ParseResult<()> {
+        if self.realloc.is_none() {
+            return Err(ParseError::new(
+                c.span(),
+                "realloc must be provided before allocator",
+            ));
+        }
+        if self.allocator.is_some() {
+            return Err(ParseError::new(c.span(), "allocator already provided"));
+        }
+        self.allocator.replace(c);
         Ok(())
     }
 

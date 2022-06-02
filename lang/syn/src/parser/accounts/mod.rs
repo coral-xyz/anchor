@@ -141,6 +141,53 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
             }
         }
     }
+
+    // REALLOC
+    let realloc_fields: Vec<&Field> = fields
+        .iter()
+        .filter_map(|f| match f {
+            AccountField::Field(field) if field.constraints.realloc.is_some() => Some(field),
+            _ => None,
+        })
+        .collect();
+
+    if !realloc_fields.is_empty() {
+        for field in realloc_fields {
+            // Get allocator for realloc-ed account
+            let associated_allocator_name =
+                match field.constraints.realloc.clone().unwrap().allocator {
+                    // composite allocator, check not supported
+                    Expr::Field(_) => continue,
+                    field_name => field_name.to_token_stream().to_string(),
+                };
+
+            // Check allocator is mutable
+            let associated_allocator_field = fields.iter().find_map(|f| match f {
+                AccountField::Field(field) if *f.ident() == associated_allocator_name => {
+                    Some(field)
+                }
+                _ => None,
+            });
+
+            match associated_allocator_field {
+                Some(associated_allocator_field) => {
+                    if !associated_allocator_field.constraints.is_mutable() {
+                        return Err(ParseError::new(
+                            field.ident.span(),
+                            "the allocator specified for an realloc constraint must be mutable.",
+                        ));
+                    }
+                }
+                _ => {
+                    return Err(ParseError::new(
+                        field.ident.span(),
+                        "the allocator specified does not exist.",
+                    ));
+                }
+            }
+        }
+    }
+
     Ok(())
 }
 

@@ -59,6 +59,7 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
         associated_token,
         token_account,
         mint,
+        realloc,
     } = c_group.clone();
 
     let mut constraints = Vec::new();
@@ -68,6 +69,9 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
     }
     if let Some(c) = init {
         constraints.push(Constraint::Init(c));
+    }
+    if let Some(c) = realloc {
+        constraints.push(Constraint::Realloc(c));
     }
     if let Some(c) = seeds {
         constraints.push(Constraint::Seeds(c));
@@ -130,6 +134,7 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::AssociatedToken(c) => generate_constraint_associated_token(f, c),
         Constraint::TokenAccount(c) => generate_constraint_token_account(f, c),
         Constraint::Mint(c) => generate_constraint_mint(f, c),
+        Constraint::Realloc(c) => generate_constraint_realloc(f, c),
     }
 }
 
@@ -317,6 +322,33 @@ pub fn generate_constraint_rent_exempt(
                 return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintRentExempt).with_account_name(#name_str));
             }
         },
+    }
+}
+
+fn generate_constraint_realloc(f: &Field, c: &ConstraintReallocGroup) -> proc_macro2::TokenStream {
+    let field = &f.ident;
+    let new_space = &c.space;
+    let allocator = &c.allocator;
+
+    quote! {
+        let __anchor_rent = Rent::get()?;
+
+        let (__delta_space, __additive) = match #new_space.checked_sub(#field.to_account_info().data_len()) {
+            Some(d) => (d, true),
+            None => (#field.to_account_info().data_len().checked_sub(#new_space).unwrap(), false),
+        };
+
+        let (__from_info, __to_info) = if __additive {
+            (#allocator.to_account_info(), #field.to_account_info())
+        } else {
+            (#field.to_account_info(), #allocator.to_account_info())
+        };
+
+        let __lamport_amt = __anchor_rent.minimum_balance(__delta_space);
+        **__to_info.lamports.borrow_mut() = __to_info.lamports().checked_add(__lamport_amt).unwrap();
+        **__from_info.lamports.borrow_mut() = __from_info.lamports().checked_sub(__lamport_amt).unwrap();
+
+        #field.to_account_info().realloc(#new_space, false)?;
     }
 }
 

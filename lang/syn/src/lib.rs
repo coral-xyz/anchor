@@ -637,6 +637,7 @@ pub struct ConstraintGroup {
     associated_token: Option<ConstraintAssociatedToken>,
     token_account: Option<ConstraintTokenAccountGroup>,
     mint: Option<ConstraintTokenMintGroup>,
+    realloc: Option<ConstraintReallocGroup>,
 }
 
 impl ConstraintGroup {
@@ -680,6 +681,7 @@ pub enum Constraint {
     Address(ConstraintAddress),
     TokenAccount(ConstraintTokenAccountGroup),
     Mint(ConstraintTokenMintGroup),
+    Realloc(ConstraintReallocGroup),
 }
 
 // Constraint token is a single keyword in a `#[account(<TOKEN>)]` attribute.
@@ -711,6 +713,8 @@ pub enum ConstraintToken {
     MintDecimals(Context<ConstraintMintDecimals>),
     Bump(Context<ConstraintTokenBump>),
     ProgramSeed(Context<ConstraintProgramSeed>),
+    Realloc(Context<ConstraintRealloc>),
+    Allocator(Context<ConstraintAllocator>),
 }
 
 impl Parse for ConstraintToken {
@@ -733,6 +737,22 @@ pub struct ConstraintZeroed {}
 #[derive(Debug, Clone)]
 pub struct ConstraintMut {
     pub error: Option<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintReallocGroup {
+    pub allocator: Expr,
+    pub space: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintRealloc {
+    pub space: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintAllocator {
+    pub target: Expr,
 }
 
 #[derive(Debug, Clone)]
