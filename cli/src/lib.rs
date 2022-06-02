@@ -1865,8 +1865,10 @@ fn account(
     address: Pubkey,
     idl_filepath: Option<String>,
 ) -> Result<()> {
-    let (program_name, account_type_name) =
-        account_type.split_once('.').ok_or_else(|| {
+    let (program_name, account_type_name) = account_type
+        .split_once('.') // Split at first occurance of dot
+        .and_then(|(x, y)| y.find('.').map_or_else(|| Some((x, y)), |_| None)) // ensures no dots in second substring
+        .ok_or_else(|| {
             anyhow!(
                 "Please enter the account struct in the following format: <program_name>.<Account>",
             )
@@ -1875,8 +1877,8 @@ fn account(
     let idl = idl_filepath.map_or_else(
         || {
             Config::discover(cfg_override)
+                .expect("Error when detecting workspace.")
                 .expect("Not in workspace.")
-                .unwrap()
                 .read_all_programs()
                 .expect("Workspace must contain atleast one program.")
                 .iter()
