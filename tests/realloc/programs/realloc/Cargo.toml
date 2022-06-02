@@ -19,4 +19,4 @@ default = []
 overflow-checks = true
 
 [dependencies]
-anchor-lang = { path = "/users/matt/workspace/callensm/anchor/lang" }
+anchor-lang = { path = "../../../../lang" }
