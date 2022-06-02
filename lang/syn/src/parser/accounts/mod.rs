@@ -152,6 +152,17 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
         .collect();
 
     if !realloc_fields.is_empty() {
+        // realloc needs system program.
+        if fields.iter().all(|f| f.ident() != "system_program") {
+            return Err(ParseError::new(
+                realloc_fields[0].ident.span(),
+                "the realloc constraint requires \
+                the system_program field to exist in the account \
+                validation struct. Use the program type to add \
+                the system_program field to your validation struct.",
+            ));
+        }
+
         for field in realloc_fields {
             // Get allocator for realloc-ed account
             let associated_allocator_name =

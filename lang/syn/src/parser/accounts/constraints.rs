@@ -480,13 +480,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
 
         // Realloc.
         if let Some(r) = &self.realloc {
-            if self.init.is_some() {
-                return Err(ParseError::new(
-                    r.span(),
-                    "init cannot be provided with realloc",
-                ));
-            }
-
             if self.allocator.is_none() {
                 return Err(ParseError::new(
                     r.span(),
@@ -829,7 +822,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         {
             return Err(ParseError::new(
                 c.span(),
-                "close must be on an Account, ProgramAccount, or Loader",
+                "realloc must be on an Account, ProgramAccount, or Loader",
             ));
         }
         if self.mutable.is_none() {

@@ -338,15 +338,23 @@ fn generate_constraint_realloc(f: &Field, c: &ConstraintReallocGroup) -> proc_ma
             None => (#field.to_account_info().data_len().checked_sub(#new_space).unwrap(), false),
         };
 
-        let (__from_info, __to_info) = if __additive {
-            (#allocator.to_account_info(), #field.to_account_info())
-        } else {
-            (#field.to_account_info(), #allocator.to_account_info())
-        };
-
         let __lamport_amt = __anchor_rent.minimum_balance(__delta_space);
-        **__to_info.lamports.borrow_mut() = __to_info.lamports().checked_add(__lamport_amt).unwrap();
-        **__from_info.lamports.borrow_mut() = __from_info.lamports().checked_sub(__lamport_amt).unwrap();
+
+        if __additive {
+            anchor_lang::system_program::transfer(
+                anchor_lang::context::CpiContext::new(
+                    system_program.to_account_info(),
+                    anchor_lang::system_program::Transfer {
+                        from: #allocator.to_account_info(),
+                        to: #field.to_account_info(),
+                    },
+                ),
+                __lamport_amt,
+            )?;
+        } else {
+            **#allocator.to_account_info().lamports.borrow_mut() = #allocator.to_account_info().lamports().checked_add(__lamport_amt).unwrap();
+            **#field.to_account_info().lamports.borrow_mut() = #field.to_account_info().lamports().checked_sub(__lamport_amt).unwrap();
+        };
 
         #field.to_account_info().realloc(#new_space, false)?;
     }
