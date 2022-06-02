@@ -11,12 +11,15 @@ describe("realloc", () => {
   const authority = (program.provider as any).wallet
     .payer as anchor.web3.Keypair;
 
-  const [sample] = anchor.web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("sample")],
-    program.programId
-  );
-
+  let sample: anchor.web3.PublicKey;
   let postAllocBalance: number;
+
+  before(async () => {
+    [sample] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from("sample")],
+      program.programId
+    );
+  });
 
   it("Is initialized!", async () => {
     const b = await program.provider.connection.getBalance(authority.publicKey);
