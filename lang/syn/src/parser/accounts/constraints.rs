@@ -219,6 +219,47 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                 ))
             }
         }
+        "realloc" => {
+            if stream.peek(Token![=]) {
+                stream.parse::<Token![=]>()?;
+                let span = ident
+                    .span()
+                    .join(stream.span())
+                    .unwrap_or_else(|| ident.span());
+                ConstraintToken::Realloc(Context::new(
+                    span,
+                    ConstraintRealloc {
+                        space: stream.parse()?,
+                    },
+                ))
+            } else {
+                stream.parse::<Token![:]>()?;
+                stream.parse::<Token![:]>()?;
+                let kw = stream.call(Ident::parse_any)?.to_string();
+                stream.parse::<Token![=]>()?;
+
+                let span = ident
+                    .span()
+                    .join(stream.span())
+                    .unwrap_or_else(|| ident.span());
+
+                match kw.as_str() {
+                    "payer" => ConstraintToken::ReallocPayer(Context::new(
+                        span,
+                        ConstraintReallocPayer {
+                            target: stream.parse()?,
+                        },
+                    )),
+                    "zero" => ConstraintToken::ReallocZero(Context::new(
+                        span,
+                        ConstraintReallocZero {
+                            zero: stream.parse()?,
+                        },
+                    )),
+                    _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
+                }
+            }
+        }
         _ => {
             stream.parse::<Token![=]>()?;
             let span = ident
@@ -291,18 +332,6 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         error: parse_optional_custom_error(&stream)?,
                     },
                 )),
-                "realloc" => ConstraintToken::Realloc(Context::new(
-                    span,
-                    ConstraintRealloc {
-                        space: stream.parse()?,
-                    },
-                )),
-                "allocator" => ConstraintToken::Allocator(Context::new(
-                    span,
-                    ConstraintAllocator {
-                        target: stream.parse()?,
-                    },
-                )),
                 _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
             }
         }
@@ -349,7 +378,8 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub bump: Option<Context<ConstraintTokenBump>>,
     pub program_seed: Option<Context<ConstraintProgramSeed>>,
     pub realloc: Option<Context<ConstraintRealloc>>,
-    pub allocator: Option<Context<ConstraintAllocator>>,
+    pub realloc_payer: Option<Context<ConstraintReallocPayer>>,
+    pub realloc_zero: Option<Context<ConstraintReallocZero>>,
 }
 
 impl<'ty> ConstraintGroupBuilder<'ty> {
@@ -382,7 +412,8 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             bump: None,
             program_seed: None,
             realloc: None,
-            allocator: None,
+            realloc_payer: None,
+            realloc_zero: None,
         }
     }
 
@@ -480,10 +511,16 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
 
         // Realloc.
         if let Some(r) = &self.realloc {
-            if self.allocator.is_none() {
+            if self.realloc_payer.is_none() {
                 return Err(ParseError::new(
                     r.span(),
-                    "allocator must be provided when using realloc",
+                    "realloc::payer must be provided when using realloc",
+                ));
+            }
+            if self.realloc_zero.is_none() {
+                return Err(ParseError::new(
+                    r.span(),
+                    "realloc::zero must be provided when using realloc",
                 ));
             }
         }
@@ -576,7 +613,8 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             bump,
             program_seed,
             realloc,
-            allocator,
+            realloc_payer,
+            realloc_zero,
         } = self;
 
         // Converts Option<Context<T>> -> Option<T>.
@@ -696,8 +734,9 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 },
             })).transpose()?,
             realloc: realloc.as_ref().map(|r| ConstraintReallocGroup {
-                allocator: into_inner!(allocator).unwrap().target,
+                payer: into_inner!(realloc_payer).unwrap().target,
                 space: r.space.clone(),
+                zero: into_inner!(realloc_zero).unwrap().zero,
             }),
             zeroed: into_inner!(zeroed),
             mutable: into_inner!(mutable),
@@ -746,7 +785,8 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::Bump(c) => self.add_bump(c),
             ConstraintToken::ProgramSeed(c) => self.add_program_seed(c),
             ConstraintToken::Realloc(c) => self.add_realloc(c),
-            ConstraintToken::Allocator(c) => self.add_allocator(c),
+            ConstraintToken::ReallocPayer(c) => self.add_realloc_payer(c),
+            ConstraintToken::ReallocZero(c) => self.add_realloc_zero(c),
         }
     }
 
@@ -815,14 +855,12 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
     }
 
     fn add_realloc(&mut self, c: Context<ConstraintRealloc>) -> ParseResult<()> {
-        if !matches!(self.f_ty, Some(Ty::ProgramAccount(_)))
-            && !matches!(self.f_ty, Some(Ty::Account(_)))
-            && !matches!(self.f_ty, Some(Ty::Loader(_)))
+        if !matches!(self.f_ty, Some(Ty::Account(_)))
             && !matches!(self.f_ty, Some(Ty::AccountLoader(_)))
         {
             return Err(ParseError::new(
                 c.span(),
-                "realloc must be on an Account, ProgramAccount, or Loader",
+                "realloc must be on an Account or AccountLoader",
             ));
         }
         if self.mutable.is_none() {
@@ -838,17 +876,31 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         Ok(())
     }
 
-    fn add_allocator(&mut self, c: Context<ConstraintAllocator>) -> ParseResult<()> {
+    fn add_realloc_payer(&mut self, c: Context<ConstraintReallocPayer>) -> ParseResult<()> {
         if self.realloc.is_none() {
             return Err(ParseError::new(
                 c.span(),
-                "realloc must be provided before allocator",
+                "realloc must be provided before realloc::payer",
             ));
         }
-        if self.allocator.is_some() {
-            return Err(ParseError::new(c.span(), "allocator already provided"));
+        if self.realloc_payer.is_some() {
+            return Err(ParseError::new(c.span(), "realloc::payer already provided"));
         }
-        self.allocator.replace(c);
+        self.realloc_payer.replace(c);
+        Ok(())
+    }
+
+    fn add_realloc_zero(&mut self, c: Context<ConstraintReallocZero>) -> ParseResult<()> {
+        if self.realloc.is_none() {
+            return Err(ParseError::new(
+                c.span(),
+                "realloc must be provided before realloc::zero",
+            ));
+        }
+        if self.realloc_zero.is_some() {
+            return Err(ParseError::new(c.span(), "realloc::zero already provided"));
+        }
+        self.realloc_zero.replace(c);
         Ok(())
     }
 

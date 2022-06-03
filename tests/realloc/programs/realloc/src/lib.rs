@@ -49,7 +49,8 @@ pub struct Realloc<'info> {
         seeds = [b"sample"],
         bump = sample.bump,
         realloc = Sample::space(len as usize),
-        allocator = authority,
+        realloc::payer = authority,
+        realloc::zero = false,
     )]
     pub sample: Account<'info, Sample>,
 

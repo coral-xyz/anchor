@@ -328,7 +328,8 @@ pub fn generate_constraint_rent_exempt(
 fn generate_constraint_realloc(f: &Field, c: &ConstraintReallocGroup) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let new_space = &c.space;
-    let allocator = &c.allocator;
+    let payer = &c.payer;
+    let zero = &c.zero;
 
     quote! {
         let __anchor_rent = Rent::get()?;
@@ -347,7 +348,7 @@ fn generate_constraint_realloc(f: &Field, c: &ConstraintReallocGroup) -> proc_ma
                     anchor_lang::context::CpiContext::new(
                         system_program.to_account_info(),
                         anchor_lang::system_program::Transfer {
-                            from: #allocator.to_account_info(),
+                            from: #payer.to_account_info(),
                             to: __field_info.clone(),
                         },
                     ),
@@ -355,11 +356,11 @@ fn generate_constraint_realloc(f: &Field, c: &ConstraintReallocGroup) -> proc_ma
                 )?;
             } else {
                 let __lamport_amt = __field_info.lamports().checked_sub(__anchor_rent.minimum_balance(#new_space)).unwrap();
-                **#allocator.to_account_info().lamports.borrow_mut() = #allocator.to_account_info().lamports().checked_add(__lamport_amt).unwrap();
+                **#payer.to_account_info().lamports.borrow_mut() = #payer.to_account_info().lamports().checked_add(__lamport_amt).unwrap();
                 **__field_info.lamports.borrow_mut() = __field_info.lamports().checked_sub(__lamport_amt).unwrap();
             }
 
-            #field.to_account_info().realloc(#new_space, false)?;
+            #field.to_account_info().realloc(#new_space, #zero)?;
         }
     }
 }

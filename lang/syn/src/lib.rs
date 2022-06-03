@@ -714,7 +714,8 @@ pub enum ConstraintToken {
     Bump(Context<ConstraintTokenBump>),
     ProgramSeed(Context<ConstraintProgramSeed>),
     Realloc(Context<ConstraintRealloc>),
-    Allocator(Context<ConstraintAllocator>),
+    ReallocPayer(Context<ConstraintReallocPayer>),
+    ReallocZero(Context<ConstraintReallocZero>),
 }
 
 impl Parse for ConstraintToken {
@@ -741,8 +742,9 @@ pub struct ConstraintMut {
 
 #[derive(Debug, Clone)]
 pub struct ConstraintReallocGroup {
-    pub allocator: Expr,
+    pub payer: Expr,
     pub space: Expr,
+    pub zero: Expr,
 }
 
 #[derive(Debug, Clone)]
@@ -751,8 +753,13 @@ pub struct ConstraintRealloc {
 }
 
 #[derive(Debug, Clone)]
-pub struct ConstraintAllocator {
+pub struct ConstraintReallocPayer {
     pub target: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintReallocZero {
+    pub zero: Expr,
 }
 
 #[derive(Debug, Clone)]

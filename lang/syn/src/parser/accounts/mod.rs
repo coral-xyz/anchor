@@ -55,7 +55,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                 init_fields[0].ident.span(),
                 "the init constraint requires \
                 the system_program field to exist in the account \
-                validation struct. Use the program type to add \
+                validation struct. Use the Program type to add \
                 the system_program field to your validation struct.",
             ));
         }
@@ -70,7 +70,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                         init_fields[0].ident.span(),
                         "the init constraint requires \
                             the token_program field to exist in the account \
-                            validation struct. Use the program type to add \
+                            validation struct. Use the Program type to add \
                             the token_program field to your validation struct.",
                     ));
                 }
@@ -86,7 +86,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                     init_fields[0].ident.span(),
                     "the init constraint requires \
                     the associated_token_program field to exist in the account \
-                    validation struct. Use the program type to add \
+                    validation struct. Use the Program type to add \
                     the associated_token_program field to your validation struct.",
                 ));
             }
@@ -165,34 +165,31 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
 
         for field in realloc_fields {
             // Get allocator for realloc-ed account
-            let associated_allocator_name =
-                match field.constraints.realloc.clone().unwrap().allocator {
-                    // composite allocator, check not supported
-                    Expr::Field(_) => continue,
-                    field_name => field_name.to_token_stream().to_string(),
-                };
+            let associated_payer_name = match field.constraints.realloc.clone().unwrap().payer {
+                // composite allocator, check not supported
+                Expr::Field(_) => continue,
+                field_name => field_name.to_token_stream().to_string(),
+            };
 
             // Check allocator is mutable
-            let associated_allocator_field = fields.iter().find_map(|f| match f {
-                AccountField::Field(field) if *f.ident() == associated_allocator_name => {
-                    Some(field)
-                }
+            let associated_payer_field = fields.iter().find_map(|f| match f {
+                AccountField::Field(field) if *f.ident() == associated_payer_name => Some(field),
                 _ => None,
             });
 
-            match associated_allocator_field {
-                Some(associated_allocator_field) => {
-                    if !associated_allocator_field.constraints.is_mutable() {
+            match associated_payer_field {
+                Some(associated_payer_field) => {
+                    if !associated_payer_field.constraints.is_mutable() {
                         return Err(ParseError::new(
                             field.ident.span(),
-                            "the allocator specified for an realloc constraint must be mutable.",
+                            "the realloc::payer specified for an realloc constraint must be mutable.",
                         ));
                     }
                 }
                 _ => {
                     return Err(ParseError::new(
                         field.ident.span(),
-                        "the allocator specified does not exist.",
+                        "the realloc::payer specified does not exist.",
                     ));
                 }
             }
