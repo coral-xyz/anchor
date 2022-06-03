@@ -3161,8 +3161,9 @@ fn get_node_dns_option() -> Result<&'static str> {
 }
 
 // Remove the current workspace directory if it prefixes a string.
-// This is used as a workaround for the Solana CLI not handling directories with
-// spaces.
+// This is used as a workaround for the Solana CLI using the uriparse crate to
+// parse args but not handling percent encoding/decoding. Removing the workspace
+// prefix handles most/all cases of spaces in keypair/binary paths.
 fn strip_workspace_prefix(absolute_path: String) -> String {
     let workspace_prefix = std::env::current_dir().unwrap().display().to_string() + "/";
     absolute_path
