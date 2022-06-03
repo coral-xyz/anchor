@@ -2413,6 +2413,7 @@ fn deploy(
                 "Deploying program {:?}...",
                 program.path.file_name().unwrap().to_str().unwrap()
             );
+
             println!("Program path: {}...", binary_path);
 
             let program_keypair_filepath = match &program_keypair {
@@ -2429,8 +2430,8 @@ fn deploy(
                 .arg("--keypair")
                 .arg(&keypair)
                 .arg("--program-id")
-                .arg(program_keypair_filepath)
-                .arg(&binary_path)
+                .arg(strip_workspace_prefix(program_keypair_filepath))
+                .arg(strip_workspace_prefix(binary_path))
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .output()
@@ -2479,8 +2480,8 @@ fn upgrade(
             .arg("--keypair")
             .arg(&cfg.provider.wallet.to_string())
             .arg("--program-id")
-            .arg(program_id.to_string())
-            .arg(&program_filepath)
+            .arg(strip_workspace_prefix(program_id.to_string()))
+            .arg(strip_workspace_prefix(program_filepath))
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .output()
@@ -3157,4 +3158,15 @@ fn get_node_dns_option() -> Result<&'static str> {
         false => "",
     };
     Ok(option)
+}
+
+// Remove the current workspace directory if it prefixes a string.
+// This is used as a workaround for the Solana CLI not handling directories with
+// spaces.
+fn strip_workspace_prefix(absolute_path: String) -> String {
+    let workspace_prefix = std::env::current_dir().unwrap().display().to_string() + "/";
+    absolute_path
+        .strip_prefix(&workspace_prefix)
+        .unwrap_or(&absolute_path)
+        .into()
 }
