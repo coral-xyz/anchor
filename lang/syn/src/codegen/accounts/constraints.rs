@@ -332,30 +332,32 @@ fn generate_constraint_realloc(f: &Field, c: &ConstraintReallocGroup) -> proc_ma
 
     quote! {
         let __anchor_rent = Rent::get()?;
+        let __field_info = #field.to_account_info();
+        let __additive = #new_space > __field_info.data_len();
 
-        let (__delta_space, __additive) = match #new_space.checked_sub(#field.to_account_info().data_len()) {
-            Some(d) => (d, true),
-            None => (#field.to_account_info().data_len().checked_sub(#new_space).unwrap(), false),
+        let __delta_space = if __additive {
+            #new_space.checked_sub(__field_info.data_len()).unwrap()
+        } else {
+            __field_info.data_len().checked_sub(#new_space).unwrap()
         };
 
         if __delta_space > 0 {
-            let __lamport_amt = __anchor_rent.minimum_balance(__delta_space);
-
             if __additive {
                 anchor_lang::system_program::transfer(
                     anchor_lang::context::CpiContext::new(
                         system_program.to_account_info(),
                         anchor_lang::system_program::Transfer {
                             from: #allocator.to_account_info(),
-                            to: #field.to_account_info(),
+                            to: __field_info.clone(),
                         },
                     ),
-                    __lamport_amt,
+                    __anchor_rent.minimum_balance(#new_space).checked_sub(__field_info.lamports()).unwrap(),
                 )?;
             } else {
+                let __lamport_amt = __field_info.lamports().checked_sub(__anchor_rent.minimum_balance(#new_space)).unwrap();
                 **#allocator.to_account_info().lamports.borrow_mut() = #allocator.to_account_info().lamports().checked_add(__lamport_amt).unwrap();
-                **#field.to_account_info().lamports.borrow_mut() = #field.to_account_info().lamports().checked_sub(__lamport_amt).unwrap();
-            };
+                **__field_info.lamports.borrow_mut() = __field_info.lamports().checked_sub(__lamport_amt).unwrap();
+            }
 
             #field.to_account_info().realloc(#new_space, false)?;
         }
