@@ -23,7 +23,7 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
         syn::Fields::Named(fields) => fields
             .named
             .iter()
-            .map(|f| parse_account_field(f))
+            .map(parse_account_field)
             .collect::<ParseResult<Vec<AccountField>>>()?,
         _ => {
             return Err(ParseError::new_spanned(
