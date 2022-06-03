@@ -158,7 +158,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                 realloc_fields[0].ident.span(),
                 "the realloc constraint requires \
                 the system_program field to exist in the account \
-                validation struct. Use the program type to add \
+                validation struct. Use the Program type to add \
                 the system_program field to your validation struct.",
             ));
         }
