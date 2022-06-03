@@ -497,11 +497,8 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
     let keywords = ["async", "await", "try"];
     if syn::parse_str::<syn::Ident>(&name).is_err() || keywords.contains(&name.as_str()) {
         return Err(anyhow!(
-            "{} is a reserved word in Rust, name your project something else.",
-            name
+            "Anchor workspace name must be a valid Rust identifier. It may not be a Rust reserved word, start with a digit, or include certain disallowed characters. See https://doc.rust-lang.org/reference/identifiers.html for more detail.",
         ));
-    } else if name.chars().next().unwrap().is_numeric() {
-        return Err(anyhow!("Project name cannot begin with numbers."));
     }
 
     fs::create_dir(name.clone())?;
