@@ -230,6 +230,7 @@ impl Key for Pubkey {
     }
 }
 
+/// Access data of wrapped accounts.
 pub trait Data {
     type Target;
     fn data<'a>(&'a self) -> Result<Box<dyn Deref<Target = Self::Target> + 'a>>;

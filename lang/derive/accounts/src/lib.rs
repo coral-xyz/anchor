@@ -293,6 +293,25 @@ use syn::parse_macro_input;
 ///         </tr>
 ///         <tr>
 ///             <td>
+///                 <code>#[account(is_in = &lt;target_account&gt;)]</code><br><br>
+///                 <code>#[account(is_in = &lt;target_account&gt; @ &lt;custom_error&gt;)]</code>
+///             </td>
+///             <td>
+///                 Checks that the <code>target_account</code> has a field with a name and key matching that of the account.
+///                 Acts as inverse of <code>has_one</code><br>
+///                 Custom errors are supported via <code>@</code>.<br><br>
+///                 Example:
+///                 <pre><code>
+/// #[account(mut)]
+/// pub data: AccountLoader<'info, MyData>,
+/// #[account(is_in = data)]
+/// pub authority: Signer<'info>
+///                 </code></pre>
+///                 In this example <code>is_in</code> checks that <code>data.authority = authority.key()</code>
+///             </td>
+///         </tr>
+///         <tr>
+///             <td>
 ///                 <code>#[account(address = &lt;expr&gt;)]</code><br><br>
 ///                 <code>#[account(address = &lt;expr&gt; @ &lt;custom_error&gt;)]</code>
 ///             </td>
