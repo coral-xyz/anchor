@@ -6,10 +6,7 @@ use syn::spanned::Spanned;
 use syn::token::Comma;
 use syn::{bracketed, Expr, Ident, LitStr, Token};
 
-pub fn parse(
-    f: &syn::Field,
-    f_ty: Option<&Ty>,
-) -> ParseResult<ConstraintGroup> {
+pub fn parse(f: &syn::Field, f_ty: Option<&Ty>) -> ParseResult<ConstraintGroup> {
     let mut constraints = ConstraintGroupBuilder::new(f_ty);
     for attr in f.attrs.iter().filter(is_account) {
         for c in attr.parse_args_with(Punctuated::<ConstraintToken, Comma>::parse_terminated)? {

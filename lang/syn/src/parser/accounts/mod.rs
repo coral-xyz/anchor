@@ -150,8 +150,7 @@ pub fn parse_account_field(f: &syn::Field) -> ParseResult<AccountField> {
     let account_field = match is_field_primitive(f)? {
         true => {
             let ty = parse_ty(f)?;
-            let account_constraints =
-                constraints::parse(f, Some(&ty))?;
+            let account_constraints = constraints::parse(f, Some(&ty))?;
             AccountField::Field(Field {
                 ident,
                 ty,
@@ -160,8 +159,7 @@ pub fn parse_account_field(f: &syn::Field) -> ParseResult<AccountField> {
             })
         }
         false => {
-            let account_constraints =
-                constraints::parse(f, None)?;
+            let account_constraints = constraints::parse(f, None)?;
             AccountField::CompositeField(CompositeField {
                 ident,
                 constraints: account_constraints,
