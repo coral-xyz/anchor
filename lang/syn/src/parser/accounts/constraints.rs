@@ -256,7 +256,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                             zero: stream.parse()?,
                         },
                     )),
-                    _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
+                    _ => return Err(ParseError::new(ident.span(), "Invalid attribute. realloc::payer and realloc::zero are the only valid attributes")),
                 }
             }
         }
