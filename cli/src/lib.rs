@@ -495,7 +495,10 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
     // Additional keywords that have not been added to the `syn` crate as reserved words
     // https://github.com/dtolnay/syn/pull/1098
     let keywords = ["async", "await", "try"];
-    if syn::parse_str::<syn::Ident>(&name).is_err() || keywords.contains(&name.as_str()) {
+    // Anchor converts to snake case before writing the program name
+    if syn::parse_str::<syn::Ident>(&name.to_snake_case()).is_err()
+        || keywords.contains(&name.to_snake_case().as_str())
+    {
         return Err(anyhow!(
             "Anchor workspace name must be a valid Rust identifier. It may not be a Rust reserved word, start with a digit, or include certain disallowed characters. See https://doc.rust-lang.org/reference/identifiers.html for more detail.",
         ));
