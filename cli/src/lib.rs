@@ -2849,18 +2849,16 @@ pub enum HookType {
 }
 
 fn try_run_hook(cfg: &WithPath<Config>, hook_type: HookType) -> Result<()> {
-    if let Some(hooks) = &cfg.hooks {
-        let cmd = match hook_type {
-            HookType::PreBuild => &hooks.pre_build,
-            HookType::PostBuild => &hooks.post_build,
-            HookType::PreTest => &hooks.pre_test,
-            HookType::PostTest => &hooks.post_test,
-            HookType::PreDeploy => &hooks.pre_deploy,
-            HookType::PostDeploy => &hooks.post_deploy,
-        };
-        if let Some(cmd) = &cmd {
-            run_bash_cmd(cfg, cmd)?;
-        };
+    let cmd = match hook_type {
+        HookType::PreBuild => &cfg.hooks.pre_build,
+        HookType::PostBuild => &cfg.hooks.post_build,
+        HookType::PreTest => &cfg.hooks.pre_test,
+        HookType::PostTest => &cfg.hooks.post_test,
+        HookType::PreDeploy => &cfg.hooks.pre_deploy,
+        HookType::PostDeploy => &cfg.hooks.post_deploy,
+    };
+    if let Some(cmd) = &cmd {
+        run_bash_cmd(cfg, cmd)?;
     };
     Ok(())
 }

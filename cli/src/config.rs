@@ -274,7 +274,7 @@ pub struct Config {
     pub provider: ProviderConfig,
     pub programs: ProgramsConfig,
     pub scripts: ScriptsConfig,
-    pub hooks: Option<HooksConfig>,
+    pub hooks: HooksConfig,
     pub workspace: WorkspaceConfig,
     // Separate entry next to test_config because
     // "anchor localnet" only has access to the Anchor.toml,
@@ -318,6 +318,62 @@ pub struct HooksConfig {
     pub post_test: Option<String>,
     pub pre_deploy: Option<String>,
     pub post_deploy: Option<String>,
+}
+
+const VALID_HOOKS: [&str; 6] = [
+    "pre_build",
+    "post_build",
+    "pre_test",
+    "post_test",
+    "pre_deploy",
+    "post_deploy",
+];
+
+impl From<_HooksConfig> for HooksConfig {
+    fn from(s: _HooksConfig) -> Self {
+        let mut invalid_hooks = s.clone();
+        invalid_hooks.retain(|k, _| !VALID_HOOKS.contains(&k.as_str()));
+        if !invalid_hooks.is_empty() {
+            panic!(
+                "Error reading hooks. Hooks {:?} are not part of valid hooks: {:?}.",
+                invalid_hooks.keys(),
+                VALID_HOOKS
+            )
+        }
+        HooksConfig {
+            pre_build: s.get("pre_build").map(Clone::clone),
+            post_build: s.get("post_build").map(Clone::clone),
+            pre_test: s.get("pre_test").map(Clone::clone),
+            post_test: s.get("post_test").map(Clone::clone),
+            pre_deploy: s.get("pre_deploy").map(Clone::clone),
+            post_deploy: s.get("post_deploy").map(Clone::clone),
+        }
+    }
+}
+
+impl From<HooksConfig> for _HooksConfig {
+    fn from(s: HooksConfig) -> Self {
+        let mut hooks = _HooksConfig::default();
+        if let Some(pre_build) = s.pre_build {
+            hooks.insert("pre_build".to_string(), pre_build);
+        }
+        if let Some(post_build) = s.post_build {
+            hooks.insert("post_build".to_string(), post_build);
+        }
+        if let Some(pre_test) = s.pre_test {
+            hooks.insert("pre_test".to_string(), pre_test);
+        }
+        if let Some(post_test) = s.post_test {
+            hooks.insert("post_test".to_string(), post_test);
+        }
+        if let Some(pre_deploy) = s.pre_deploy {
+            hooks.insert("pre_deploy".to_string(), pre_deploy);
+        }
+        if let Some(post_deploy) = s.post_deploy {
+            hooks.insert("post_deploy".to_string(), post_deploy);
+        }
+        hooks
+    }
 }
 
 pub type ProgramsConfig = BTreeMap<Cluster, BTreeMap<String, ProgramDeployment>>;
@@ -414,6 +470,8 @@ impl Config {
     }
 }
 
+pub type _HooksConfig = BTreeMap<String, String>;
+
 #[derive(Debug, Serialize, Deserialize)]
 struct _Config {
     anchor_version: Option<String>,
@@ -424,7 +482,7 @@ struct _Config {
     provider: Provider,
     workspace: Option<WorkspaceConfig>,
     scripts: Option<ScriptsConfig>,
-    hooks: Option<HooksConfig>,
+    hooks: Option<_HooksConfig>,
     test: Option<_TestValidator>,
 }
 
@@ -458,7 +516,7 @@ impl ToString for Config {
                 true => None,
                 false => Some(self.scripts.clone()),
             },
-            hooks: self.hooks.clone(),
+            hooks: Some(self.hooks.clone().into()),
             programs,
             workspace: (!self.workspace.members.is_empty() || !self.workspace.exclude.is_empty())
                 .then(|| self.workspace.clone()),
@@ -484,7 +542,7 @@ impl FromStr for Config {
                 wallet: shellexpand::tilde(&cfg.provider.wallet).parse()?,
             },
             scripts: cfg.scripts.unwrap_or_default(),
-            hooks: cfg.hooks,
+            hooks: cfg.hooks.unwrap_or_default().into(),
             test_validator: cfg.test.map(Into::into),
             test_config: None,
             programs: cfg.programs.map_or(Ok(BTreeMap::new()), deser_programs)?,
