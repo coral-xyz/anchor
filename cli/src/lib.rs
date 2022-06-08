@@ -209,6 +209,9 @@ pub enum Command {
         /// Keypair of the program (filepath) (requires program-name)
         #[clap(long, requires = "program-name")]
         program_keypair: Option<String>,
+        /// Maximum length of the upgradeable program [default: twice the length of the original deployed program]
+        #[clap(short, long)]
+        max_len: Option<usize>,
     },
     /// Runs the deploy migration script.
     Migrate,
@@ -444,7 +447,8 @@ pub fn entry(opts: Opts) -> Result<()> {
         Command::Deploy {
             program_name,
             program_keypair,
-        } => deploy(&opts.cfg_override, program_name, program_keypair),
+            max_len,
+        } => deploy(&opts.cfg_override, program_name, program_keypair, max_len),
         Command::Expand {
             program_name,
             cargo_args,
@@ -1892,7 +1896,7 @@ fn test(
         // In either case, skip the deploy if the user specifies.
         let is_localnet = cfg.provider.cluster == Cluster::Localnet;
         if (!is_localnet || skip_local_validator) && !skip_deploy {
-            deploy(cfg_override, None, None)?;
+            deploy(cfg_override, None, None, None)?;
         }
         let mut is_first_suite = true;
         if cfg.scripts.get("test").is_some() {
@@ -2398,6 +2402,7 @@ fn deploy(
     cfg_override: &ConfigOverride,
     program_str: Option<String>,
     program_keypair: Option<String>,
+    max_len: Option<usize>,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         let url = cluster_url(cfg, &cfg.test_validator);
@@ -2438,6 +2443,8 @@ fn deploy(
                 .arg("--program-id")
                 .arg(program_keypair_filepath)
                 .arg(&binary_path)
+                .arg("--max-len")
+                .arg(&max_len.unwrap().to_string())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .output()
