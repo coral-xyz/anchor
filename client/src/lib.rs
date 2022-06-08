@@ -340,14 +340,12 @@ impl Execution {
         let re = Regex::new(r"^Program (.*) invoke.*$").unwrap();
         let programs: Vec<String> = logs
             .iter()
-            .map(|l| re.captures(l))
-            .flatten()
-            .map(|str| str.get(1))
-            .flatten()
+            .filter_map(|l| re.captures(l))
+            .filter_map(|str| str.get(1))
             .map(|matched_item| matched_item.as_str().to_string())
             .collect();
 
-        if programs.len() < 1 {
+        if programs.is_empty() {
             return Err(ClientError::MissingInvokeLogError());
         }
 
