@@ -1,7 +1,7 @@
 import * as anchor from "@project-serum/anchor";
-import { parseTokenAccount, token } from "@project-serum/common";
+import { parseTokenAccount } from "@project-serum/common";
 import { Token } from "@solana/spl-token";
-import { Keypair, PublicKey, sendAndConfirmTransaction, Transaction } from "@solana/web3.js";
+import { Keypair, PublicKey } from "@solana/web3.js";
 import { Program } from "@project-serum/anchor";
 import { PdaPayer } from "../target/types/pda_payer";
 import { expect } from "chai";
@@ -20,6 +20,8 @@ describe("typescript", () => {
     const tokenOwner = Keypair.generate().publicKey;
     const myAccount = Keypair.generate();
     const myAnotherAccount = Keypair.generate();
+    const myProgramAccount = Keypair.generate();
+    const [myPdaAccount] = await PublicKey.findProgramAddress([Buffer.from("PdaAccountSeeds")], program.programId);
     await program.methods
       .initWithPayer()
       .accounts({
@@ -28,8 +30,10 @@ describe("typescript", () => {
         tokenOwner,
         myAccount: myAccount.publicKey,
         myAnotherAccount: myAnotherAccount.publicKey,
+        myProgramAccount: myProgramAccount.publicKey,
+        myPdaAccount,
       })
-      .signers([myAccount, myAnotherAccount])
+      .signers([myAccount, myAnotherAccount, myProgramAccount])
       .rpc();
     
     const _myAccount = parseTokenAccount((await provider.connection.getAccountInfo(myAccount.publicKey)).data);
@@ -39,6 +43,12 @@ describe("typescript", () => {
     const _myAnotherAccount = parseTokenAccount((await provider.connection.getAccountInfo(myAccount.publicKey)).data);
     expect(_myAnotherAccount.mint.equals(mint)).is.true;
     expect(_myAnotherAccount.owner.equals(tokenOwner)).is.true;
+
+    const _myProgramAccount = await program.account.programAccount.fetch(myProgramAccount.publicKey);
+    expect(_myProgramAccount.foo.eq(new anchor.BN(42))).is.true;
+
+    const _myPdaAccount = await program.account.programAccount.fetch(myPdaAccount);
+    expect(_myPdaAccount.foo.eq(new anchor.BN(42))).is.true;
   });
 
   it('initIfNeededWithPayer', async () => {
@@ -46,6 +56,8 @@ describe("typescript", () => {
     const tokenOwner = Keypair.generate().publicKey;
     const myAccount = Keypair.generate();
     const myAnotherAccount = Keypair.generate();
+    const myProgramAccount = Keypair.generate();
+    const [myPdaAccount] = await PublicKey.findProgramAddress([Buffer.from("PdaAccountSeeds")], program.programId);
     const numAttemps = 2;
     for (let i = 0; i < numAttemps; i += 1) {
       await program.methods
@@ -56,8 +68,10 @@ describe("typescript", () => {
           tokenOwner,
           myAccount: myAccount.publicKey,
           myAnotherAccount: myAnotherAccount.publicKey,
+          myProgramAccount: myProgramAccount.publicKey,
+          myPdaAccount,
         })
-        .signers([myAccount, myAnotherAccount])
+        .signers([myAccount, myAnotherAccount, myProgramAccount])
         .rpc();
       
       const _myAccount = parseTokenAccount((await provider.connection.getAccountInfo(myAccount.publicKey)).data);
@@ -67,6 +81,12 @@ describe("typescript", () => {
       const _myAnotherAccount = parseTokenAccount((await provider.connection.getAccountInfo(myAccount.publicKey)).data);
       expect(_myAnotherAccount.mint.equals(mint)).is.true;
       expect(_myAnotherAccount.owner.equals(tokenOwner)).is.true;
+
+      const _myProgramAccount = await program.account.programAccount.fetch(myProgramAccount.publicKey);
+      expect(_myProgramAccount.foo.eq(new anchor.BN(42))).is.true;
+
+      const _myPdaAccount = await program.account.programAccount.fetch(myPdaAccount);
+      expect(_myPdaAccount.foo.eq(new anchor.BN(42))).is.true;
 
       if (i < numAttemps - 1) await sleep(2000);
     }
@@ -85,10 +105,15 @@ describe("typescript", () => {
     const mint = new PublicKey('So11111111111111111111111111111111111111112');
     const tokenOwner = Keypair.generate().publicKey;
     const normalPayerAccount = Keypair.generate();
+    const normalPayerProgramAccount = Keypair.generate();
+    const [normalPayerPdaAccount] = await PublicKey.findProgramAddress([Buffer.from("NormalPayerPdaAccountSeeds")], program.programId);
     const pdaPayerAccount = Keypair.generate();
+    const pdaPayerProgramAccount = Keypair.generate();
+    const [pdaPayerPdaAccount] = await PublicKey.findProgramAddress([Buffer.from("PdaPayerPdaAccountSeeds")], program.programId);
 
     // fund the pda payer
-    const rentExemptAmount = await Token.getMinBalanceRentForExemptAccount(provider.connection);
+    let rentExemptAmount = await Token.getMinBalanceRentForExemptAccount(provider.connection);
+    rentExemptAmount += 2 * (await provider.connection.getMinimumBalanceForRentExemption(8 + 8));
     const tx = await provider.connection.requestAirdrop(pdaPayer, rentExemptAmount);
     await provider.connection.confirmTransaction(tx);
 
@@ -103,10 +128,14 @@ describe("typescript", () => {
         mint,
         tokenOwner,
         normalPayerAccount: normalPayerAccount.publicKey,
+        normalPayerProgramAccount: normalPayerProgramAccount.publicKey,
+        normalPayerPdaAccount,
         pdaPayerAccount: pdaPayerAccount.publicKey,
+        pdaPayerProgramAccount: pdaPayerProgramAccount.publicKey,
+        pdaPayerPdaAccount,
         otherProgram,
       })
-      .signers([normalPayerAccount, pdaPayerAccount])
+      .signers([normalPayerAccount, normalPayerProgramAccount, pdaPayerAccount, pdaPayerProgramAccount])
       .rpc();
 
     const pdaPayerBalanceAfter = await provider.connection.getBalance(pdaPayer);
@@ -118,9 +147,21 @@ describe("typescript", () => {
     expect(_normalPayerAccount.mint.equals(mint)).is.true;
     expect(_normalPayerAccount.owner.equals(tokenOwner)).is.true;
 
+    const _normalPayerProgramAccount = await program.account.programAccount.fetch(normalPayerProgramAccount.publicKey);
+    expect(_normalPayerProgramAccount.foo.eq(new anchor.BN(42))).is.true;
+
+    const _normalPayerPdaAccount = await program.account.programAccount.fetch(normalPayerPdaAccount);
+    expect(_normalPayerPdaAccount.foo.eq(new anchor.BN(42))).is.true;
+
     const _pdaPayerAccount = parseTokenAccount((await provider.connection.getAccountInfo(pdaPayerAccount.publicKey)).data);
     expect(_pdaPayerAccount.mint.equals(mint)).is.true;
     expect(_pdaPayerAccount.owner.equals(tokenOwner)).is.true;
+
+    const _pdaPayerProgramAccount = await program.account.programAccount.fetch(pdaPayerProgramAccount.publicKey);
+    expect(_pdaPayerProgramAccount.foo.eq(new anchor.BN(42))).is.true;
+
+    const _pdaPayerPdaAccount = await program.account.programAccount.fetch(pdaPayerPdaAccount);
+    expect(_pdaPayerPdaAccount.foo.eq(new anchor.BN(42))).is.true;
   });
 
   it('initIfNeededWithPdaAsPayer', async () => {
@@ -136,12 +177,15 @@ describe("typescript", () => {
     const mint = new PublicKey('So11111111111111111111111111111111111111112');
     const tokenOwner = Keypair.generate().publicKey;
     const normalPayerAccount = Keypair.generate();
+    const normalPayerProgramAccount = Keypair.generate();
     const pdaPayerAccount = Keypair.generate();
+    const pdaPayerProgramAccount = Keypair.generate();
 
     const numAttemps = 2;
 
     // fund the pda payer
-    const rentExemptAmount = await Token.getMinBalanceRentForExemptAccount(provider.connection);
+    let rentExemptAmount = await Token.getMinBalanceRentForExemptAccount(provider.connection);
+    rentExemptAmount += await provider.connection.getMinimumBalanceForRentExemption(8 + 8);
     const tx = await provider.connection.requestAirdrop(pdaPayer, numAttemps * rentExemptAmount);
     await provider.connection.confirmTransaction(tx);
 
@@ -157,10 +201,12 @@ describe("typescript", () => {
           mint,
           tokenOwner,
           normalPayerAccount: normalPayerAccount.publicKey,
+          normalPayerProgramAccount: normalPayerProgramAccount.publicKey,
           pdaPayerAccount: pdaPayerAccount.publicKey,
+          pdaPayerProgramAccount: pdaPayerProgramAccount.publicKey,
           otherProgram,
         })
-        .signers([normalPayerAccount, pdaPayerAccount])
+        .signers([normalPayerAccount, normalPayerProgramAccount, pdaPayerAccount, pdaPayerProgramAccount])
         .rpc();
 
       const pdaPayerBalanceAfter = await provider.connection.getBalance(pdaPayer);
@@ -177,9 +223,15 @@ describe("typescript", () => {
       expect(_normalPayerAccount.mint.equals(mint)).is.true;
       expect(_normalPayerAccount.owner.equals(tokenOwner)).is.true;
 
+      const _normalPayerProgramAccount = await program.account.programAccount.fetch(normalPayerProgramAccount.publicKey);
+      expect(_normalPayerProgramAccount.foo.eq(new anchor.BN(42))).is.true;
+
       const _pdaPayerAccount = parseTokenAccount((await provider.connection.getAccountInfo(pdaPayerAccount.publicKey)).data);
       expect(_pdaPayerAccount.mint.equals(mint)).is.true;
       expect(_pdaPayerAccount.owner.equals(tokenOwner)).is.true;
+
+      const _pdaPayerProgramAccount = await program.account.programAccount.fetch(pdaPayerProgramAccount.publicKey);
+      expect(_pdaPayerProgramAccount.foo.eq(new anchor.BN(42))).is.true;
 
       if (i < numAttemps - 1) await sleep(2000);
     }
