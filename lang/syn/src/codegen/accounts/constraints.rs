@@ -381,6 +381,7 @@ fn generate_constraint_realloc(f: &Field, c: &ConstraintReallocGroup) -> proc_ma
 fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let name_str = f.ident.to_string();
+    let payer_name_str = c.payer.to_token_stream().to_string();
     let ty_decl = f.ty_decl();
     let if_needed = if c.if_needed {
         quote! {true}
@@ -412,6 +413,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                         &[#maybe_seeds_plus_comma],
                         &program_id,
                     );
+                    __bumps.insert(#payer_name_str.to_string(), __payer_bump);
                 },
                 // Bump target given. Use it.
                 Some(b) => quote! {
@@ -764,11 +766,25 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
         let define_pda = match c.bump.as_ref() {
             // Bump target not given. Find it.
             None => quote! {
-                let (__pda_address, __bump) = Pubkey::find_program_address(
-                    &[#maybe_seeds_plus_comma],
-                    &#deriving_program_id,
-                );
-                __bumps.insert(#name_str.to_string(), __bump);
+                let (__pda_address, __bump) = match __bumps.get(&#name_str.to_string()) {
+                    // use cached bump
+                    Some(&b) => {
+                        let __pda_address = Pubkey::create_program_address(
+                            &[#maybe_seeds_plus_comma &[b][..]],
+                            &#deriving_program_id,
+                        ).map_err(|_| anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintSeeds).with_account_name(#name_str))?;
+                        (__pda_address, b)
+                    }
+                    // find bump then insert it to cache
+                    None => {
+                        let (__pda_address, __bump) = Pubkey::find_program_address(
+                            &[#maybe_seeds_plus_comma],
+                            &#deriving_program_id,
+                        );
+                        __bumps.insert(#name_str.to_string(), __bump);
+                        (__pda_address, __bump)
+                    }
+                };
             },
             // Bump target given. Use it.
             Some(b) => quote! {
