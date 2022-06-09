@@ -773,6 +773,9 @@ pub fn build(
     }
 
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
+
+    try_run_hook(&cfg, HookType::PreBuild)?;
+
     let build_config = BuildConfig {
         verifiable,
         solana_version: solana_version.or_else(|| cfg.solana_version.clone()),
@@ -842,6 +845,8 @@ pub fn build(
     }
 
     set_workspace_dir_or_exit();
+
+    try_run_hook(&cfg, HookType::PostBuild)?;
 
     Ok(())
 }
@@ -1894,6 +1899,9 @@ fn test(
         if (!is_localnet || skip_local_validator) && !skip_deploy {
             deploy(cfg_override, None, None)?;
         }
+
+        try_run_hook(cfg, HookType::PreTest)?;
+
         let mut is_first_suite = true;
         if cfg.scripts.get("test").is_some() {
             is_first_suite = false;
@@ -1938,6 +1946,9 @@ fn test(
                 )?;
             }
         }
+
+        try_run_hook(cfg, HookType::PostTest)?;
+
         Ok(())
     })
 }
@@ -2403,6 +2414,8 @@ fn deploy(
         let url = cluster_url(cfg, &cfg.test_validator);
         let keypair = cfg.provider.wallet.to_string();
 
+        try_run_hook(cfg, HookType::PreDeploy)?;
+
         // Deploy the programs.
         println!("Deploying workspace: {}", url);
         println!("Upgrade authority: {}", keypair);
@@ -2463,6 +2476,8 @@ fn deploy(
         }
 
         println!("Deploy success");
+
+        try_run_hook(cfg, HookType::PostDeploy)?;
 
         Ok(())
     })
@@ -2813,26 +2828,56 @@ fn shell(cfg_override: &ConfigOverride) -> Result<()> {
 
 fn run(cfg_override: &ConfigOverride, script: String, script_args: Vec<String>) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
-        let url = cluster_url(cfg, &cfg.test_validator);
         let script = cfg
             .scripts
             .get(&script)
             .ok_or_else(|| anyhow!("Unable to find script"))?;
         let script_with_args = format!("{script} {}", script_args.join(" "));
-        let exit = std::process::Command::new("bash")
-            .arg("-c")
-            .arg(&script_with_args)
-            .env("ANCHOR_PROVIDER_URL", url)
-            .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .output()
-            .unwrap();
-        if !exit.status.success() {
-            std::process::exit(exit.status.code().unwrap_or(1));
-        }
+        run_bash_cmd(cfg, &script_with_args)?;
         Ok(())
     })
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum HookType {
+    PreBuild,
+    PostBuild,
+    PreTest,
+    PostTest,
+    PreDeploy,
+    PostDeploy,
+}
+
+fn try_run_hook(cfg: &WithPath<Config>, hook_type: HookType) -> Result<()> {
+    let cmd = match hook_type {
+        HookType::PreBuild => &cfg.hooks.pre_build,
+        HookType::PostBuild => &cfg.hooks.post_build,
+        HookType::PreTest => &cfg.hooks.pre_test,
+        HookType::PostTest => &cfg.hooks.post_test,
+        HookType::PreDeploy => &cfg.hooks.pre_deploy,
+        HookType::PostDeploy => &cfg.hooks.post_deploy,
+    };
+    if let Some(cmd) = &cmd {
+        run_bash_cmd(cfg, cmd)?;
+    };
+    Ok(())
+}
+
+fn run_bash_cmd(cfg: &Config, cmd: &String) -> Result<()> {
+    let url = cluster_url(cfg, &cfg.test_validator);
+    let exit = std::process::Command::new("bash")
+        .arg("-c")
+        .arg(cmd)
+        .env("ANCHOR_PROVIDER_URL", url)
+        .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .output()
+        .unwrap();
+    if !exit.status.success() {
+        std::process::exit(exit.status.code().unwrap_or(1));
+    }
+    Ok(())
 }
 
 fn login(_cfg_override: &ConfigOverride, token: String) -> Result<()> {

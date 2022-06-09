@@ -14,8 +14,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * lang: Add `realloc`, `realloc::payer`, and `realloc::zero` as a new constraint group for program accounts ([#1943](https://github.com/project-serum/anchor/pull/1943)).
 * lang: Add `PartialEq` and `Eq` for `anchor_lang::Error` ([#1544](https://github.com/project-serum/anchor/pull/1544)).
-* cli: Add `--skip-build` to `anchor publish` ([#1786](https://github.
-com/project-serum/anchor/pull/1841)).
+* cli: Add `--skip-build` to `anchor publish` ([#1841](https://github.com/project-serum/anchor/pull/1841)).
 * cli: Add `--program-keypair` to `anchor deploy` ([#1786](https://github.com/project-serum/anchor/pull/1786)).
 * cli: Add compilation optimizations to cli template ([#1807](https://github.com/project-serum/anchor/pull/1807)).
 * cli: `build` now adds docs to idl. This can be turned off with `--no-docs` ([#1561](https://github.com/project-serum/anchor/pull/1561)).
@@ -27,6 +26,7 @@ com/project-serum/anchor/pull/1841)).
 * ts: Add `program.coder.types` for encoding/decoding user-defined types ([#1931](https://github.com/project-serum/anchor/pull/1931)).
 * client: Add send_with_spinner_and_config function to RequestBuilder ([#1926](https://github.com/project-serum/anchor/pull/1926)).
 * ts: Implement a coder for SPL associated token program ([#1939](https://github.com/project-serum/anchor/pull/1939)).
+* cli: Add support for CLI hooks (build/test/deploy) ([#1796](https://github.com/project-serum/anchor/pull/1796)).
 
 ### Fixes
 
