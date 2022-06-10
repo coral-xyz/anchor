@@ -1,6 +1,7 @@
 // This program demonstrates homomorphic addition/subraction of ElGamalCiphertexts 
 // which are generated and fed to the program from the client side, the ciphertext operations would 
-// work when Curve25519 syscalls are activated on devnet so this is an experimental program.
+// work when Curve25519 syscalls are activated on devnet so this is an experimental program. It uses 
+// features from the solana-zk-token-sdk.
 
 
 use anchor_lang::prelude::*;
