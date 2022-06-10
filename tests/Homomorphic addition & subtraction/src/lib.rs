@@ -1,5 +1,9 @@
+// This program demonstrates homomorphic addition/subraction of ElGamalCiphertexts 
+// which are generated and fed to the program from the client side, the ciphertext operations would 
+// work when Curve25519 syscalls are activated on devnet so this is an experimental program.
+
+
 use anchor_lang::prelude::*;
-//use spl_token_2022::solana_zk_token_sdk::encryption::{elgamal, pedersen};
 use spl_token_2022::solana_zk_token_sdk::zk_token_elgamal::{ops::{add, subtract, add_to, subtract_from},pod::{ ElGamalPubkey, ElGamalCiphertext}};
 use std::io::{self, Write};
 use std::ops::Deref;
