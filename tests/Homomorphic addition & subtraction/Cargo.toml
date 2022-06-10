@@ -1,0 +1,24 @@
+[package]
+name = "encrypt"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "encrypt"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[profile.release]
+overflow-checks = true
+
+[dependencies]
+anchor-lang = "0.24.2"
+spl-token-2022 = {version = "0.2.0",  features = ["no-entrypoint"]}
+bytemuck = "1.9.1"
