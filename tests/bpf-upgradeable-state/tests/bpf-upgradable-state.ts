@@ -1,12 +1,12 @@
 import * as anchor from "@project-serum/anchor";
-import { Program } from "@project-serum/anchor";
+import { AnchorError, Program } from "@project-serum/anchor";
 import { findProgramAddressSync } from "@project-serum/anchor/dist/cjs/utils/pubkey";
 import { PublicKey } from "@solana/web3.js";
-import assert from "assert";
+import { assert } from "chai";
 import { BpfUpgradeableState } from "../target/types/bpf_upgradeable_state";
 
 describe("bpf_upgradeable_state", () => {
-  const provider = anchor.Provider.env();
+  const provider = anchor.AnchorProvider.env();
   // Configure the client to use the local cluster.
   anchor.setProvider(provider);
 
@@ -21,7 +21,7 @@ describe("bpf_upgradeable_state", () => {
     const settings = anchor.web3.Keypair.generate();
     const tx = await program.rpc.setAdminSettings(new anchor.BN(500), {
       accounts: {
-        authority: program.provider.wallet.publicKey,
+        authority: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         programData: programDataAddress,
         program: program.programId,
@@ -29,8 +29,10 @@ describe("bpf_upgradeable_state", () => {
       },
       signers: [settings],
     });
-    assert.equal(
-      (await program.account.settings.fetch(settings.publicKey)).adminData,
+    assert.strictEqual(
+      (
+        await program.account.settings.fetch(settings.publicKey)
+      ).adminData.toNumber(),
       500
     );
   });
@@ -41,7 +43,7 @@ describe("bpf_upgradeable_state", () => {
       new anchor.BN(500),
       {
         accounts: {
-          authority: program.provider.wallet.publicKey,
+          authority: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           programData: programDataAddress,
           program: program.programId,
@@ -50,8 +52,10 @@ describe("bpf_upgradeable_state", () => {
         signers: [settings],
       }
     );
-    assert.equal(
-      (await program.account.settings.fetch(settings.publicKey)).adminData,
+    assert.strictEqual(
+      (
+        await program.account.settings.fetch(settings.publicKey)
+      ).adminData.toNumber(),
       500
     );
   });
@@ -78,9 +82,14 @@ describe("bpf_upgradeable_state", () => {
         signers: [settings, authority],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2003);
-      assert.equal(err.msg, "A raw constraint was violated");
+    } catch (_err) {
+      assert.isTrue(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.strictEqual(err.error.errorCode.number, 2003);
+      assert.strictEqual(
+        err.error.errorMessage,
+        "A raw constraint was violated"
+      );
     }
   });
 
@@ -89,7 +98,7 @@ describe("bpf_upgradeable_state", () => {
     try {
       await program.rpc.setAdminSettings(new anchor.BN(500), {
         accounts: {
-          authority: program.provider.wallet.publicKey,
+          authority: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           programData: program.programId,
           settings: settings.publicKey,
@@ -98,9 +107,14 @@ describe("bpf_upgradeable_state", () => {
         signers: [settings],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 3013);
-      assert.equal(err.msg, "The given account is not a program data account");
+    } catch (_err) {
+      assert.isTrue(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.strictEqual(err.error.errorCode.number, 3013);
+      assert.strictEqual(
+        err.error.errorMessage,
+        "The given account is not a program data account"
+      );
     }
   });
 
@@ -109,19 +123,21 @@ describe("bpf_upgradeable_state", () => {
     try {
       await program.rpc.setAdminSettings(new anchor.BN(500), {
         accounts: {
-          authority: program.provider.wallet.publicKey,
+          authority: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-          programData: program.provider.wallet.publicKey,
+          programData: provider.wallet.publicKey,
           settings: settings.publicKey,
           program: program.programId,
         },
         signers: [settings],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 3007);
-      assert.equal(
-        err.msg,
+    } catch (_err) {
+      assert.isTrue(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.strictEqual(err.error.errorCode.number, 3007);
+      assert.strictEqual(
+        err.error.errorMessage,
         "The given account is owned by a different program than expected"
       );
     }
@@ -140,7 +156,7 @@ describe("bpf_upgradeable_state", () => {
     try {
       await program.rpc.setAdminSettings(new anchor.BN(500), {
         accounts: {
-          authority: program.provider.wallet.publicKey,
+          authority: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           programData: secondProgramProgramDataAddress,
           settings: settings.publicKey,
@@ -149,8 +165,10 @@ describe("bpf_upgradeable_state", () => {
         signers: [settings],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 6000);
+    } catch (_err) {
+      assert.isTrue(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.strictEqual(err.error.errorCode.number, 6000);
     }
   });
 
@@ -167,7 +185,7 @@ describe("bpf_upgradeable_state", () => {
     try {
       await program.rpc.setAdminSettingsUseProgramState(new anchor.BN(500), {
         accounts: {
-          authority: program.provider.wallet.publicKey,
+          authority: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           programData: secondProgramProgramDataAddress,
           settings: settings.publicKey,
@@ -176,8 +194,10 @@ describe("bpf_upgradeable_state", () => {
         signers: [settings],
       });
       assert.ok(false);
-    } catch (err) {
-      assert.equal(err.code, 2003);
+    } catch (_err) {
+      assert.isTrue(_err instanceof AnchorError);
+      const err: AnchorError = _err;
+      assert.strictEqual(err.error.errorCode.number, 2003);
     }
   });
 });

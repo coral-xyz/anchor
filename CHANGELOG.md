@@ -6,19 +6,183 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 **Note:** Version 0 of Semantic Versioning is handled differently from version 1 and above.
-The minor version will be incremented upon a breaking change and the patch version will be
-incremented for features.
+The minor version will be incremented upon a breaking change and the patch version will be incremented for features.
 
 ## [Unreleased]
 
 ### Features
 
-* lang: Add `seeds::program` constraint for specifying which program_id to use when deriving PDAs.([#1197](https://github.com/project-serum/anchor/pull/1197))
+* lang: Add `realloc`, `realloc::payer`, and `realloc::zero` as a new constraint group for program accounts ([#1943](https://github.com/project-serum/anchor/pull/1943)).
+* lang: Add `PartialEq` and `Eq` for `anchor_lang::Error` ([#1544](https://github.com/project-serum/anchor/pull/1544)).
+* cli: Add `--skip-build` to `anchor publish` ([#1786](https://github.
+com/project-serum/anchor/pull/1841)).
+* cli: Add `--program-keypair` to `anchor deploy` ([#1786](https://github.com/project-serum/anchor/pull/1786)).
+* cli: Add compilation optimizations to cli template ([#1807](https://github.com/project-serum/anchor/pull/1807)).
+* cli: `build` now adds docs to idl. This can be turned off with `--no-docs` ([#1561](https://github.com/project-serum/anchor/pull/1561)).
+* cli: Add `b` and `t` aliases for `build` and `test` respectively ([#1823](https://github.com/project-serum/anchor/pull/1823)).
+* spl: Add more derived traits to `TokenAccount` to `Mint` ([#1818](https://github.com/project-serum/anchor/pull/1818)).
+* spl: Add `sync_native` token program CPI wrapper function ([#1833](https://github.com/project-serum/anchor/pull/1833)).
+* cli: Allow passing arguments to an underlying script with `anchor run` ([#1914](https://github.com/project-serum/anchor/pull/1914)).
+* ts: Implement a coder for system program ([#1920](https://github.com/project-serum/anchor/pull/1920)).
+* ts: Add `program.coder.types` for encoding/decoding user-defined types ([#1931](https://github.com/project-serum/anchor/pull/1931)).
+* client: Add send_with_spinner_and_config function to RequestBuilder ([#1926](https://github.com/project-serum/anchor/pull/1926)).
+* ts: Implement a coder for SPL associated token program ([#1939](https://github.com/project-serum/anchor/pull/1939)).
+* ts: verbose error for missing `ANCHOR_WALLET` variable when using `NodeWallet.local()` ([#1958](https://github.com/project-serum/anchor/pull/1958)).
+
+### Fixes
+
+* cli: Move `overflow-checks` into workspace `Cargo.toml` so that it will not be ignored by compiler ([#1806](https://github.com/project-serum/anchor/pull/1806)).
+* lang: Fix missing account name information when deserialization fails when using `init` or `zero` ([#1800](https://github.com/project-serum/anchor/pull/1800)).
+* ts: Expose the wallet's publickey on the Provider ([#1845](https://github.com/project-serum/anchor/pull/1845)).
 
 ### Breaking
 
+ts: Change `BROWSER` env variable to `ANCHOR_BROWSER` ([#1233](https://github.com/project-serum/anchor/pull/1233)).
+
+### Breaking
+
+* ts: Add transaction signature to `EventCallback` parameters ([#1851](https://github.com/project-serum/anchor/pull/1851)).
+
+## [0.24.2] - 2022-04-13
+
+### Fixes
+
+* lang: Fix `returns` being serialized as `null` instead of `undefined` in IDL ([#1782](https://github.com/project-serum/anchor/pull/1782)).
+
+## [0.24.1] - 2022-04-12
+
+### Fixes
+
+* lang: Fix `anchor build` failing if `Test.toml` included a relative path that didn't exist yet because it's created by `anchor build` ([#1772](https://github.com/project-serum/anchor/pull/1772)).
+* cli: Update js/ts template to use new `AnchorProvider` class ([#1770](https://github.com/project-serum/anchor/pull/1770)).
+
+## [0.24.0] - 2022-04-12
+
+### Features
+
+* lang: Add support for multiple test suites with separate local validators ([#1681](https://github.com/project-serum/anchor/pull/1681)).
+* lang: Add return values to CPI client ([#1598](https://github.com/project-serum/anchor/pull/1598)).
+* ts: Add view functions ([#1695](https://github.com/project-serum/anchor/pull/1695)).
+* avm: New `avm update` command to update the Anchor CLI to the latest version ([#1670](https://github.com/project-serum/anchor/pull/1670)).
+* cli: Update js/ts templates to use new `program.methods` syntax ([#1732](https://github.com/project-serum/anchor/pull/1732)).
+* cli: Workspaces created with `anchor init` now come with the `prettier` formatter and scripts included ([#1741](https://github.com/project-serum/anchor/pull/1741)).
+* ts: Add `pubkeys` function to methods builder to get all instruction account addresses ([#1733](https://github.com/project-serum/anchor/pull/1733)).
+* ts: Export `LangErrorCode` and `LangErrorMessage` from `error.ts` ([#1756](https://github.com/project-serum/anchor/pull/1756)).
+
+### Fixes
+
+* avm: `avm install` no longer downloads the version if already installed in the machine ([#1670](https://github.com/project-serum/anchor/pull/1670)).
+* cli: make `anchor test` fail when used with `--skip-deploy` option and without `--skip-local-validator` option but there already is a running validator ([#1675](https://github.com/project-serum/anchor/pull/1675)).
+* lang: Return proper error instead of panicking if account length is smaller than discriminator in functions of `(Account)Loader` ([#1678](https://github.com/project-serum/anchor/pull/1678)).
+* cli: Add `@types/bn.js` to `devDependencies` in cli template ([#1712](https://github.com/project-serum/anchor/pull/1712)).
+* ts: Event listener no longer crashes on Program Upgrade or any other unexpected log ([#1757](https://github.com/project-serum/anchor/pull/1757)).
+
+### Breaking
+
+* avm: `avm install` switches to the newly installed version after installation finishes ([#1670](https://github.com/project-serum/anchor/pull/1670)).
+* spl: Re-export the `spl_token` crate ([#1665](https://github.com/project-serum/anchor/pull/1665)).
+* lang, cli, spl: Update solana toolchain to v1.9.13 ([#1653](https://github.com/project-serum/anchor/pull/1653) and [#1751](https://github.com/project-serum/anchor/pull/1751)).
+* lang: `Program` type now deserializes `programdata_address` only on demand ([#1723](https://github.com/project-serum/anchor/pull/1723)).
+* ts: Make `Provider` an interface and adjust its signatures and add `AnchorProvider` implementor class ([#1707](https://github.com/project-serum/anchor/pull/1707)).
+* spl: Change "to" to "from" in `token::burn` ([#1080](https://github.com/project-serum/anchor/pull/1080)).
+
+## [0.23.0] - 2022-03-20
+
+### Features
+
+* cli: Add `anchor clean` command that's the same as `cargo clean` but preserves keypairs inside `target/deploy` ([#1470](https://github.com/project-serum/anchor/issues/1470)).
+* cli: Running `anchor init` now initializes a new git repository for the workspace. This can be disabled with the `--no-git` flag ([#1605](https://github.com/project-serum/anchor/pull/1605)).
+* cli: Add support for `anchor idl fetch` to work outside anchor workspace ([#1509](https://github.com/project-serum/anchor/pull/1509)).
+* cli: [[test.validator.clone]] also clones the program data account of programs owned by the bpf upgradeable loader ([#1481](https://github.com/project-serum/anchor/issues/1481)).
+* lang: Add new `AccountSysvarMismatch` error code and test cases for sysvars ([#1535](https://github.com/project-serum/anchor/pull/1535)).
+* lang: Replace `std::io::Cursor` with a custom `Write` impl that uses the Solana mem syscalls ([#1589](https://github.com/project-serum/anchor/pull/1589)).
+* lang: Add `require_neq`, `require_keys_neq`, `require_gt`, and `require_gte` comparison macros ([#1622](https://github.com/project-serum/anchor/pull/1622)).
+* lang: Handle arrays with const as size in instruction data ([#1623](https://github.com/project-serum/anchor/issues/1623).
+* spl: Add support for revoke instruction ([#1493](https://github.com/project-serum/anchor/pull/1493)).
+* ts: Add provider parameter to `Spl.token` factory method ([#1597](https://github.com/project-serum/anchor/pull/1597)).
+
+### Fixes
+
+* ts: Fix the loss of strict typing using the `methods` namespace on builder functions ([#1539](https://github.com/project-serum/anchor/pull/1539)).
+* spl: Update `spl/governance` to use new errors ([#1582](https://github.com/project-serum/anchor/pull/1582)).
+* client: Fix `Cluster`'s `FromStr` implementation ([#1362](https://github.com/project-serum/anchor/pull/1362)).
+* lang: Implement `Key` for `Pubkey` again, so `associated_token::*` constraints can use pubkey targets again ([#1601](https://github.com/project-serum/anchor/pull/1601)).
+* lang: Adjust error code so `#[error_code]` works with just importing `anchor_lang::error_code` ([#1610](https://github.com/project-serum/anchor/pull/1610)).
+* ts: Fix `spl-token` coder account parsing ([#1604](https://github.com/project-serum/anchor/pull/1604)).
+* cli: Fix `npm install` fallback if `yarn` install doesn't work ([#1643](https://github.com/project-serum/anchor/pull/1643)).
+* lang: Fix bug where `owner = <target>` would not compile because of missing type annotation ([#1648](https://github.com/project-serum/anchor/pull/1648)).
+* ts: Adjust `send` and `simulate` functions in `provider.ts`, so they use the return value of `Wallet.signTransaction`([#1527](https://github.com/project-serum/anchor/pull/1527)).
+
+### Breaking
+
+* ts: Mark `transaction`, `instruction`, `simulate` and `rpc` program namespaces as deprecated in favor of `methods` ([#1539](https://github.com/project-serum/anchor/pull/1539)).
+* ts: No longer allow manual setting of globally resolvable program public keys in `methods#accounts()`. ([#1548][https://github.com/project-serum/anchor/pull/1548])
+* lang/ts: Events are now emitted using the `sol_log_data` syscall ([#1608](https://github.com/project-serum/anchor/pull/1608)).
+* lang: Remove space calculation using `#[derive(Default)]` ([#1519](https://github.com/project-serum/anchor/pull/1519)).
+* lang: Add support for logging expected and actual values and pubkeys. Add `require_eq` and `require_keys_eq` macros. Add default error code to `require` macro ([#1572](https://github.com/project-serum/anchor/pull/1572)).
+* lang: Add `system_program` CPI wrapper functions. Make `system_program` module public instead of re-exporting `system_program::System`([#1629](https://github.com/project-serum/anchor/pull/1629)).
+* cli: `avm use` no long prompts [y/n] if an install is needed first - it just tells the user to `avm install` ([#1565](https://github.com/project-serum/anchor/pull/1565))
+* ts: Add `AnchorError` with program stack and also a program stack for non-`AnchorError` errors ([#1640](https://github.com/project-serum/anchor/pull/1640)). `AnchorError` is not returned for `processed` tx that have `skipPreflight` set to `true` (it falls back to `ProgramError` or the raw solana library error).
+
+## [0.22.1] - 2022-02-28
+
+### Fixes
+
+* cli: Fix rust template ([#1488](https://github.com/project-serum/anchor/pull/1488)).
+* lang: Handle array sizes with variable sizes in events and array size casting in IDL parsing ([#1485](https://github.com/project-serum/anchor/pull/1485))
+
+
+## [0.22.0] - 2022-02-20
+
+### Features
+
+* lang: Add check that declared id == program id ([#1451](https://github.com/project-serum/anchor/pull/1451)).
+* ts: Added float types support ([#1425](https://github.com/project-serum/anchor/pull/1425)).
+* cli: Add `--skip-lint` option to disable check linting introduced in ([#1452](https://github.com/project-serum/anchor/pull/1452)) for rapid prototyping ([#1482](https://github.com/project-serum/anchor/pull/1482)).
+
+### Fixes
+
+* ts: Allow nullable types for `Option<T>` mapped types ([#1428](https://github.com/project-serum/anchor/pull/1428)).
+
+### Breaking
+
+* lang: Enforce that the payer for an init-ed account be marked `mut` ([#1271](https://github.com/project-serum/anchor/pull/1271)).
+* lang: All error-related code is now in the error module ([#1426](https://github.com/project-serum/anchor/pull/1426)).
+* lang: Require doc comments when using AccountInfo or UncheckedAccount types ([#1452](https://github.com/project-serum/anchor/pull/1452)).
+* lang: add [`error!`](https://docs.rs/anchor-lang/latest/anchor_lang/prelude/macro.error.html) and [`err!`](https://docs.rs/anchor-lang/latest/anchor_lang/prelude/macro.err.html) macro and `Result` type ([#1462](https://github.com/project-serum/anchor/pull/1462)).
+This change will break most programs. Do the following to upgrade:
+     * change all `ProgramResult`'s to `Result<()>`
+     * change `#[error]` to `#[error_code]`
+     * change all `Err(MyError::SomeError.into())` to `Err(error!(MyError::SomeError))` and all `Err(ProgramError::SomeProgramError)` to `Err(ProgramError::SomeProgramError.into())` or `Err(Error::from(ProgramError::SomeProgramError).with_source(source!()))` to provide file and line source of the error (`with_source` is most useful with `ProgramError`s. `error!` already adds source information for custom and anchor internal errors).
+     * change all `solana_program::program::invoke()` to `solana_program::program::invoke().map_err(Into::into)` and `solana_program::program::invoke_signed()` to `solana_program::program::invoke_signed().map_err(Into::into)`
+
+## [0.21.0] - 2022-02-07
+
+### Fixes
+
+* ts: Fix the root type declaration of the `Wallet` / `NodeWallet` class ([#1363](https://github.com/project-serum/anchor/pull/1363)).
+* ts: Improve type mapping of Account fields into Typescript with additional support for `Option<T>` and `Vec<String>` types ([#1393](https://github.com/project-serum/anchor/pull/1393)).
+
+### Features
+
+* lang: Add `seeds::program` constraint for specifying which program_id to use when deriving PDAs ([#1197](https://github.com/project-serum/anchor/pull/1197)).
+* lang: `Context` now has a new `bumps: BTree<String, u8>` argument, mapping account name to bump seed "found" by the accounts context. This allows one to access bump seeds without having to pass them in from the client or recalculate them in the handler ([#1367](https://github.com/project-serum/anchor/pull/1367)).
+* lang, ts: Automatically infer PDA addresses ([#1331](https://github.com/project-serum/anchor/pull/1331)).
+* ts: Remove error logging in the event parser when log websocket encounters a program error ([#1313](https://github.com/project-serum/anchor/pull/1313)).
+* ts: Add new `methods` namespace to the program client, introducing a more ergonomic builder API ([#1324](https://github.com/project-serum/anchor/pull/1324)).
+* ts: Add registry utility for fetching the latest verified build ([#1371](https://github.com/project-serum/anchor/pull/1371)).
+* cli: Expose the solana-test-validator --account flag in Anchor.toml via [[test.validator.account]] ([#1366](https://github.com/project-serum/anchor/pull/1366)).
+* cli: Add avm, a tool for managing anchor-cli versions ([#1385](https://github.com/project-serum/anchor/pull/1385)).
+
+### Breaking
+
+* lang: Put `init_if_needed` behind a feature flag to decrease wrong usage ([#1258](https://github.com/project-serum/anchor/pull/1258)).
 * lang: rename `loader_account` module to `account_loader` module ([#1279](https://github.com/project-serum/anchor/pull/1279))
+* lang: The `Accounts` trait's `try_accounts` method now has an additional `bumps: &mut BTreeMap<String, u8>` argument, which accumulates bump seeds ([#1367](https://github.com/project-serum/anchor/pull/1367)).
+* lang: Providing `bump = <target>` targets with `init` will now error. On `init` only, it is required to use `bump` without a target and access the seed inside function handlers via `ctx.bumps.get("<pda-account-name")`. For subsequent seeds constraints (without init), it is recommended to store the bump on your account and use it as a `bump = <target>` target to minimize compute units used ([#1380](https://github.com/project-serum/anchor/pull/1380)).
 * ts: `Coder` is now an interface and the existing class has been renamed to `BorshCoder`. This change allows the generation of Anchor clients for non anchor programs  ([#1259](https://github.com/project-serum/anchor/pull/1259/files)).
+* cli: [[test.clone]] key in Anchor.toml is renamed to [[test.validator.clone]] ([#1366](https://github.com/project-serum/anchor/pull/1366)).
+
 
 ## [0.20.1] - 2022-01-09
 

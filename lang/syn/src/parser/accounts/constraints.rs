@@ -6,11 +6,7 @@ use syn::spanned::Spanned;
 use syn::token::Comma;
 use syn::{bracketed, Expr, Ident, LitStr, Token};
 
-pub fn parse(
-    f: &syn::Field,
-    f_ty: Option<&Ty>,
-    has_instruction_api: bool,
-) -> ParseResult<(ConstraintGroup, ConstraintGroup)> {
+pub fn parse(f: &syn::Field, f_ty: Option<&Ty>) -> ParseResult<ConstraintGroup> {
     let mut constraints = ConstraintGroupBuilder::new(f_ty);
     for attr in f.attrs.iter().filter(is_account) {
         for c in attr.parse_args_with(Punctuated::<ConstraintToken, Comma>::parse_terminated)? {
@@ -18,33 +14,14 @@ pub fn parse(
         }
     }
     let account_constraints = constraints.build()?;
-    let mut constraints = ConstraintGroupBuilder::new(f_ty);
-    for attr in f.attrs.iter().filter(is_instruction) {
-        if !has_instruction_api {
-            return Err(ParseError::new(
-                attr.span(),
-                "an instruction api must be declared",
-            ));
-        }
-        for c in attr.parse_args_with(Punctuated::<ConstraintToken, Comma>::parse_terminated)? {
-            constraints.add(c)?;
-        }
-    }
-    let instruction_constraints = constraints.build()?;
 
-    Ok((account_constraints, instruction_constraints))
+    Ok(account_constraints)
 }
 
 pub fn is_account(attr: &&syn::Attribute) -> bool {
     attr.path
         .get_ident()
         .map_or(false, |ident| ident == "account")
-}
-
-pub fn is_instruction(attr: &&syn::Attribute) -> bool {
-    attr.path
-        .get_ident()
-        .map_or(false, |ident| ident == "instruction")
 }
 
 // Parses a single constraint from a parse stream for `#[account(<STREAM>)]`.
@@ -219,6 +196,47 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                 ))
             }
         }
+        "realloc" => {
+            if stream.peek(Token![=]) {
+                stream.parse::<Token![=]>()?;
+                let span = ident
+                    .span()
+                    .join(stream.span())
+                    .unwrap_or_else(|| ident.span());
+                ConstraintToken::Realloc(Context::new(
+                    span,
+                    ConstraintRealloc {
+                        space: stream.parse()?,
+                    },
+                ))
+            } else {
+                stream.parse::<Token![:]>()?;
+                stream.parse::<Token![:]>()?;
+                let kw = stream.call(Ident::parse_any)?.to_string();
+                stream.parse::<Token![=]>()?;
+
+                let span = ident
+                    .span()
+                    .join(stream.span())
+                    .unwrap_or_else(|| ident.span());
+
+                match kw.as_str() {
+                    "payer" => ConstraintToken::ReallocPayer(Context::new(
+                        span,
+                        ConstraintReallocPayer {
+                            target: stream.parse()?,
+                        },
+                    )),
+                    "zero" => ConstraintToken::ReallocZero(Context::new(
+                        span,
+                        ConstraintReallocZero {
+                            zero: stream.parse()?,
+                        },
+                    )),
+                    _ => return Err(ParseError::new(ident.span(), "Invalid attribute. realloc::payer and realloc::zero are the only valid attributes")),
+                }
+            }
+        }
         _ => {
             stream.parse::<Token![=]>()?;
             let span = ident
@@ -336,6 +354,9 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub mint_decimals: Option<Context<ConstraintMintDecimals>>,
     pub bump: Option<Context<ConstraintTokenBump>>,
     pub program_seed: Option<Context<ConstraintProgramSeed>>,
+    pub realloc: Option<Context<ConstraintRealloc>>,
+    pub realloc_payer: Option<Context<ConstraintReallocPayer>>,
+    pub realloc_zero: Option<Context<ConstraintReallocZero>>,
 }
 
 impl<'ty> ConstraintGroupBuilder<'ty> {
@@ -367,12 +388,26 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             mint_decimals: None,
             bump: None,
             program_seed: None,
+            realloc: None,
+            realloc_payer: None,
+            realloc_zero: None,
         }
     }
 
     pub fn build(mut self) -> ParseResult<ConstraintGroup> {
         // Init.
         if let Some(i) = &self.init {
+            if cfg!(not(feature = "init-if-needed")) && i.if_needed {
+                return Err(ParseError::new(
+                    i.span(),
+                    "init_if_needed requires that anchor-lang be imported \
+                    with the init-if-needed cargo feature enabled. \
+                    Carefully read the init_if_needed docs before using this feature \
+                    to make sure you know how to protect yourself against \
+                    re-initialization attacks.",
+                ));
+            }
+
             match self.mutable {
                 Some(m) => {
                     return Err(ParseError::new(
@@ -402,6 +437,68 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             {
                 self.signer
                     .replace(Context::new(i.span(), ConstraintSigner { error: None }));
+            }
+
+            // Assert a bump target is not given on init.
+            if let Some(b) = &self.bump {
+                if b.bump.is_some() {
+                    return Err(ParseError::new(
+                        b.span(),
+                        "bump targets should not be provided with init. Please use bump without a target."
+                    ));
+                }
+            }
+
+            // TokenAccount.
+            if let Some(token_mint) = &self.token_mint {
+                if self.token_authority.is_none() {
+                    return Err(ParseError::new(
+                        token_mint.span(),
+                        "when initializing, token authority must be provided if token mint is",
+                    ));
+                }
+            }
+            if let Some(token_authority) = &self.token_authority {
+                if self.token_mint.is_none() {
+                    return Err(ParseError::new(
+                        token_authority.span(),
+                        "when initializing, token mint must be provided if token authority is",
+                    ));
+                }
+            }
+
+            // Mint.
+            if let Some(mint_decimals) = &self.mint_decimals {
+                if self.mint_authority.is_none() {
+                    return Err(ParseError::new(
+                        mint_decimals.span(),
+                        "when initializing, mint authority must be provided if mint decimals is",
+                    ));
+                }
+            }
+            if let Some(mint_authority) = &self.mint_authority {
+                if self.mint_decimals.is_none() {
+                    return Err(ParseError::new(
+                        mint_authority.span(),
+                        "when initializing, mint decimals must be provided if mint authority is",
+                    ));
+                }
+            }
+        }
+
+        // Realloc.
+        if let Some(r) = &self.realloc {
+            if self.realloc_payer.is_none() {
+                return Err(ParseError::new(
+                    r.span(),
+                    "realloc::payer must be provided when using realloc",
+                ));
+            }
+            if self.realloc_zero.is_none() {
+                return Err(ParseError::new(
+                    r.span(),
+                    "realloc::zero must be provided when using realloc",
+                ));
             }
         }
 
@@ -441,60 +538,28 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             }
         }
 
-        // Token.
-        if let Some(token_mint) = &self.token_mint {
-            if self.token_authority.is_none() {
-                return Err(ParseError::new(
-                    token_mint.span(),
-                    "token authority must be provided if token mint is",
-                ));
-            }
+        // Space.
+        if let Some(i) = &self.init {
+            let initializing_token_program_acc = self.token_mint.is_some()
+                || self.mint_authority.is_some()
+                || self.token_authority.is_some()
+                || self.associated_token_authority.is_some();
 
-            if self.init.is_none() {
-                return Err(ParseError::new(
-                    token_mint.span(),
-                    "init is required for a pda token",
-                ));
+            match (self.space.is_some(), initializing_token_program_acc) {
+                (true, true) => {
+                    return Err(ParseError::new(
+                        self.space.as_ref().unwrap().span(),
+                        "space is not required for initializing an spl account",
+                    ));
+                }
+                (false, false) => {
+                    return Err(ParseError::new(
+                        i.span(),
+                        "space must be provided with init",
+                    ));
+                }
+                _ => (),
             }
-        }
-        if let Some(token_authority) = &self.token_authority {
-            if self.token_mint.is_none() {
-                return Err(ParseError::new(
-                    token_authority.span(),
-                    "token mint must be provided if token authority is",
-                ));
-            }
-        }
-
-        // Mint.
-        if let Some(mint_decimals) = &self.mint_decimals {
-            if self.mint_authority.is_none() {
-                return Err(ParseError::new(
-                    mint_decimals.span(),
-                    "mint authority must be provided if mint decimals is",
-                ));
-            }
-        }
-        if let Some(mint_authority) = &self.mint_authority {
-            if self.mint_decimals.is_none() {
-                return Err(ParseError::new(
-                    mint_authority.span(),
-                    "mint decimals must be provided if mint authority is",
-                ));
-            }
-        }
-
-        // SPL Space.
-        if self.init.is_some()
-            && self.seeds.is_some()
-            && self.token_mint.is_some()
-            && (self.mint_authority.is_some() || self.token_authority.is_some())
-            && self.space.is_some()
-        {
-            return Err(ParseError::new(
-                self.space.as_ref().unwrap().span(),
-                "space is not required for initializing an spl account",
-            ));
         }
 
         let ConstraintGroupBuilder {
@@ -524,6 +589,9 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             mint_decimals,
             bump,
             program_seed,
+            realloc,
+            realloc_payer,
+            realloc_zero,
         } = self;
 
         // Converts Option<Context<T>> -> Option<T>.
@@ -568,11 +636,45 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             }
             _ => None,
         };
+        if let Some(associated_token) = &associated_token {
+            if seeds.is_some() {
+                return Err(ParseError::new(
+                    associated_token.mint.span(),
+                    "'associated_token' constraints cannot be used with the 'seeds' constraint",
+                ));
+            }
+        }
+
+        let token_account = match (&token_mint, &token_authority) {
+            (None, None) => None,
+            _ => Some(ConstraintTokenAccountGroup {
+                mint: token_mint.as_ref().map(|a| a.clone().into_inner().mint),
+                authority: token_authority
+                    .as_ref()
+                    .map(|a| a.clone().into_inner().auth),
+            }),
+        };
+
+        let mint = match (&mint_decimals, &mint_authority, &mint_freeze_authority) {
+            (None, None, None) => None,
+            _ => Some(ConstraintTokenMintGroup {
+                decimals: mint_decimals
+                    .as_ref()
+                    .map(|a| a.clone().into_inner().decimals),
+                mint_authority: mint_authority
+                    .as_ref()
+                    .map(|a| a.clone().into_inner().mint_auth),
+                freeze_authority: mint_freeze_authority
+                    .as_ref()
+                    .map(|a| a.clone().into_inner().mint_freeze_auth),
+            }),
+        };
+
         Ok(ConstraintGroup {
             init: init.as_ref().map(|i| Ok(ConstraintInitGroup {
-            if_needed: i.if_needed,
+                if_needed: i.if_needed,
                 seeds: seeds.clone(),
-                payer: into_inner!(payer.clone()).map(|a| a.target),
+                payer: into_inner!(payer.clone()).unwrap().target,
                 space: space.clone().map(|s| s.space.clone()),
                 kind: if let Some(tm) = &token_mint {
                     InitKind::Token {
@@ -608,6 +710,11 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                     }
                 },
             })).transpose()?,
+            realloc: realloc.as_ref().map(|r| ConstraintReallocGroup {
+                payer: into_inner!(realloc_payer).unwrap().target,
+                space: r.space.clone(),
+                zero: into_inner!(realloc_zero).unwrap().zero,
+            }),
             zeroed: into_inner!(zeroed),
             mutable: into_inner!(mutable),
             signer: into_inner!(signer),
@@ -622,6 +729,8 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             address: into_inner!(address),
             associated_token: if !is_init { associated_token } else { None },
             seeds,
+            token_account: if !is_init {token_account} else {None},
+            mint: if !is_init {mint} else {None},
         })
     }
 
@@ -652,6 +761,9 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::MintDecimals(c) => self.add_mint_decimals(c),
             ConstraintToken::Bump(c) => self.add_bump(c),
             ConstraintToken::ProgramSeed(c) => self.add_program_seed(c),
+            ConstraintToken::Realloc(c) => self.add_realloc(c),
+            ConstraintToken::ReallocPayer(c) => self.add_realloc_payer(c),
+            ConstraintToken::ReallocZero(c) => self.add_realloc_zero(c),
         }
     }
 
@@ -661,6 +773,48 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         }
         if self.zeroed.is_some() {
             return Err(ParseError::new(c.span(), "zeroed already provided"));
+        }
+        if self.token_mint.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before token mint",
+            ));
+        }
+        if self.token_authority.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before token authority",
+            ));
+        }
+        if self.mint_authority.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before mint authority",
+            ));
+        }
+        if self.mint_freeze_authority.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before mint freeze authority",
+            ));
+        }
+        if self.mint_decimals.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before mint decimals",
+            ));
+        }
+        if self.associated_token_mint.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before associated token mint",
+            ));
+        }
+        if self.associated_token_authority.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before associated token authority",
+            ));
         }
         self.init.replace(c);
         Ok(())
@@ -674,6 +828,56 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             return Err(ParseError::new(c.span(), "init already provided"));
         }
         self.zeroed.replace(c);
+        Ok(())
+    }
+
+    fn add_realloc(&mut self, c: Context<ConstraintRealloc>) -> ParseResult<()> {
+        if !matches!(self.f_ty, Some(Ty::Account(_)))
+            && !matches!(self.f_ty, Some(Ty::AccountLoader(_)))
+        {
+            return Err(ParseError::new(
+                c.span(),
+                "realloc must be on an Account or AccountLoader",
+            ));
+        }
+        if self.mutable.is_none() {
+            return Err(ParseError::new(
+                c.span(),
+                "mut must be provided before realloc",
+            ));
+        }
+        if self.realloc.is_some() {
+            return Err(ParseError::new(c.span(), "realloc already provided"));
+        }
+        self.realloc.replace(c);
+        Ok(())
+    }
+
+    fn add_realloc_payer(&mut self, c: Context<ConstraintReallocPayer>) -> ParseResult<()> {
+        if self.realloc.is_none() {
+            return Err(ParseError::new(
+                c.span(),
+                "realloc must be provided before realloc::payer",
+            ));
+        }
+        if self.realloc_payer.is_some() {
+            return Err(ParseError::new(c.span(), "realloc::payer already provided"));
+        }
+        self.realloc_payer.replace(c);
+        Ok(())
+    }
+
+    fn add_realloc_zero(&mut self, c: Context<ConstraintReallocZero>) -> ParseResult<()> {
+        if self.realloc.is_none() {
+            return Err(ParseError::new(
+                c.span(),
+                "realloc must be provided before realloc::zero",
+            ));
+        }
+        if self.realloc_zero.is_some() {
+            return Err(ParseError::new(c.span(), "realloc::zero already provided"));
+        }
+        self.realloc_zero.replace(c);
         Ok(())
     }
 
@@ -717,12 +921,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             return Err(ParseError::new(
                 c.span(),
                 "associated token mint already provided",
-            ));
-        }
-        if self.init.is_none() {
-            return Err(ParseError::new(
-                c.span(),
-                "init must be provided before token",
             ));
         }
         self.token_mint.replace(c);
@@ -791,12 +989,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 "token authority already provided",
             ));
         }
-        if self.init.is_none() {
-            return Err(ParseError::new(
-                c.span(),
-                "init must be provided before token authority",
-            ));
-        }
         self.token_authority.replace(c);
         Ok(())
     }
@@ -825,12 +1017,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         if self.mint_authority.is_some() {
             return Err(ParseError::new(c.span(), "mint authority already provided"));
         }
-        if self.init.is_none() {
-            return Err(ParseError::new(
-                c.span(),
-                "init must be provided before mint authority",
-            ));
-        }
         self.mint_authority.replace(c);
         Ok(())
     }
@@ -845,12 +1031,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 "mint freeze_authority already provided",
             ));
         }
-        if self.init.is_none() {
-            return Err(ParseError::new(
-                c.span(),
-                "init must be provided before mint freeze_authority",
-            ));
-        }
         self.mint_freeze_authority.replace(c);
         Ok(())
     }
@@ -858,12 +1038,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
     fn add_mint_decimals(&mut self, c: Context<ConstraintMintDecimals>) -> ParseResult<()> {
         if self.mint_decimals.is_some() {
             return Err(ParseError::new(c.span(), "mint decimals already provided"));
-        }
-        if self.init.is_none() {
-            return Err(ParseError::new(
-                c.span(),
-                "init must be provided before mint decimals",
-            ));
         }
         self.mint_decimals.replace(c);
         Ok(())

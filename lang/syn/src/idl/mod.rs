@@ -2,11 +2,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
 pub mod file;
+pub mod pda;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Idl {
     pub version: String,
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub docs: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub constants: Vec<IdlConst>,
     pub instructions: Vec<IdlInstruction>,
@@ -42,8 +45,12 @@ pub struct IdlState {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IdlInstruction {
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub docs: Option<Vec<String>>,
     pub accounts: Vec<IdlAccountItem>,
     pub args: Vec<IdlField>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub returns: Option<IdlType>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -66,11 +73,61 @@ pub struct IdlAccount {
     pub name: String,
     pub is_mut: bool,
     pub is_signer: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub docs: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub pda: Option<IdlPda>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct IdlPda {
+    pub seeds: Vec<IdlSeed>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub program_id: Option<IdlSeed>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", tag = "kind")]
+pub enum IdlSeed {
+    Const(IdlSeedConst),
+    Arg(IdlSeedArg),
+    Account(IdlSeedAccount),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct IdlSeedAccount {
+    #[serde(rename = "type")]
+    pub ty: IdlType,
+    // account_ty points to the entry in the "accounts" section.
+    // Some only if the `Account<T>` type is used.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account: Option<String>,
+    pub path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct IdlSeedArg {
+    #[serde(rename = "type")]
+    pub ty: IdlType,
+    pub path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct IdlSeedConst {
+    #[serde(rename = "type")]
+    pub ty: IdlType,
+    pub value: serde_json::Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IdlField {
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub docs: Option<Vec<String>>,
     #[serde(rename = "type")]
     pub ty: IdlType,
 }
@@ -92,6 +149,8 @@ pub struct IdlEventField {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IdlTypeDefinition {
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub docs: Option<Vec<String>>,
     #[serde(rename = "type")]
     pub ty: IdlTypeDefinitionTy,
 }
@@ -127,8 +186,10 @@ pub enum IdlType {
     I16,
     U32,
     I32,
+    F32,
     U64,
     I64,
+    F64,
     U128,
     I128,
     Bytes,
@@ -157,6 +218,7 @@ impl std::str::FromStr for IdlType {
             }
         }
         s.retain(|c| !c.is_whitespace());
+
         let r = match s.as_str() {
             "bool" => IdlType::Bool,
             "u8" => IdlType::U8,
@@ -165,12 +227,14 @@ impl std::str::FromStr for IdlType {
             "i16" => IdlType::I16,
             "u32" => IdlType::U32,
             "i32" => IdlType::I32,
+            "f32" => IdlType::F32,
             "u64" => IdlType::U64,
             "i64" => IdlType::I64,
+            "f64" => IdlType::F64,
             "u128" => IdlType::U128,
             "i128" => IdlType::I128,
             "Vec<u8>" => IdlType::Bytes,
-            "String" => IdlType::String,
+            "String" | "&str" => IdlType::String,
             "Pubkey" => IdlType::PublicKey,
             _ => match s.to_string().strip_prefix("Option<") {
                 None => match s.to_string().strip_prefix("Vec<") {

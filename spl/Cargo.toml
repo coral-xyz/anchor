@@ -1,24 +1,27 @@
 [package]
 name = "anchor-spl"
-version = "0.20.1"
+version = "0.24.2"
 authors = ["Serum Foundation <foundation@projectserum.com>"]
-edition = "2018"
+rust-version = "1.56"
+edition = "2021"
 license = "Apache-2.0"
 description = "CPI clients for SPL programs"
 
 [features]
 default = ["mint", "token", "associated_token"]
 mint = []
-token = []
-associated_token = []
+token = ["spl-token"]
+associated_token = ["spl-associated-token-account"]
 governance = []
 shmem = []
 devnet = []
+metadata = ["mpl-token-metadata"]
 dex = ["serum_dex"]
 
 [dependencies]
-anchor-lang = { path = "../lang", version = "0.20.1", features = ["derive"] }
+anchor-lang = { path = "../lang", version = "0.24.2", features = ["derive"] }
 serum_dex = { git = "https://github.com/project-serum/serum-dex", rev = "1be91f2", version = "0.4.0", features = ["no-entrypoint"], optional = true }
-solana-program = "1.8.5"
-spl-token = { version = "3.1.1", features = ["no-entrypoint"] }
-spl-associated-token-account = { version = "1.0.3", features = ["no-entrypoint"] }
+solana-program = "~1.9.13"
+spl-token = { version = "~3.2.0", features = ["no-entrypoint"], optional = true }
+spl-associated-token-account = { version = "~1.0.3", features = ["no-entrypoint"], optional = true }
+mpl-token-metadata = { version = "1.2.7", optional = true, features = ["no-entrypoint"] }

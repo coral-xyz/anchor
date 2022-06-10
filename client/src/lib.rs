@@ -12,8 +12,8 @@ use solana_client::client_error::ClientError as SolanaClientError;
 use solana_client::pubsub_client::{PubsubClient, PubsubClientError, PubsubClientSubscription};
 use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::{
-    RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcTransactionLogsConfig,
-    RpcTransactionLogsFilter,
+    RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig,
+    RpcTransactionLogsConfig, RpcTransactionLogsFilter,
 };
 use solana_client::rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType};
 use solana_client::rpc_response::{Response as RpcResponse, RpcLogsResponse};
@@ -35,11 +35,14 @@ pub use solana_sdk;
 
 mod cluster;
 
+const PROGRAM_LOG: &str = "Program log: ";
+const PROGRAM_DATA: &str = "Program data: ";
+
 /// EventHandle unsubscribes from a program event stream on drop.
 pub type EventHandle = PubsubClientSubscription<RpcResponse<RpcLogsResponse>>;
 
 /// Client defines the base configuration for building RPC clients to
-/// communitcate with Anchor programs running on a Solana cluster. It's
+/// communicate with Anchor programs running on a Solana cluster. It's
 /// primary use is to build a `Program` client via the `program` method.
 pub struct Client {
     cfg: Config,
@@ -161,10 +164,9 @@ impl Program {
             filters: Some([vec![account_type_filter], filters].concat()),
             account_config: RpcAccountInfoConfig {
                 encoding: Some(UiAccountEncoding::Base64),
-                data_slice: None,
-                commitment: None,
+                ..RpcAccountInfoConfig::default()
             },
-            with_context: None,
+            ..RpcProgramAccountsConfig::default()
         };
         Ok(ProgramAccountsIterator {
             inner: self
@@ -279,8 +281,10 @@ fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
     l: &str,
 ) -> Result<(Option<T>, Option<String>, bool), ClientError> {
     // Log emitted from the current program.
-    if l.starts_with("Program log:") {
-        let log = l.to_string().split_off("Program log: ".len());
+    if let Some(log) = l
+        .strip_prefix(PROGRAM_LOG)
+        .or_else(|| l.strip_prefix(PROGRAM_DATA))
+    {
         let borsh_bytes = match anchor_lang::__private::base64::decode(&log) {
             Ok(borsh_bytes) => borsh_bytes,
             _ => {
@@ -375,6 +379,8 @@ pub struct EventContext {
 pub enum ClientError {
     #[error("Account not found")]
     AccountNotFound,
+    #[error("{0}")]
+    AnchorError(#[from] anchor_lang::error::Error),
     #[error("{0}")]
     ProgramError(#[from] ProgramError),
     #[error("{0}")]
@@ -537,17 +543,47 @@ impl<'a> RequestBuilder<'a> {
         let rpc_client = RpcClient::new_with_commitment(self.cluster, self.options);
 
         let tx = {
-            let (recent_hash, _fee_calc) = rpc_client.get_recent_blockhash()?;
+            let latest_hash = rpc_client.get_latest_blockhash()?;
             Transaction::new_signed_with_payer(
                 &instructions,
                 Some(&self.payer.pubkey()),
                 &signers,
-                recent_hash,
+                latest_hash,
             )
         };
 
         rpc_client
             .send_and_confirm_transaction(&tx)
+            .map_err(Into::into)
+    }
+
+    pub fn send_with_spinner_and_config(
+        self,
+        config: RpcSendTransactionConfig,
+    ) -> Result<Signature, ClientError> {
+        let instructions = self.instructions()?;
+
+        let mut signers = self.signers;
+        signers.push(&*self.payer);
+
+        let rpc_client = RpcClient::new_with_commitment(self.cluster, self.options);
+
+        let tx = {
+            let latest_hash = rpc_client.get_latest_blockhash()?;
+            Transaction::new_signed_with_payer(
+                &instructions,
+                Some(&self.payer.pubkey()),
+                &signers,
+                latest_hash,
+            )
+        };
+
+        rpc_client
+            .send_and_confirm_transaction_with_spinner_and_config(
+                &tx,
+                rpc_client.commitment(),
+                config,
+            )
             .map_err(Into::into)
     }
 }

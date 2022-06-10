@@ -114,7 +114,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         })
         .collect();
     let fallback_fn = gen_fallback(program).unwrap_or(quote! {
-        Err(anchor_lang::__private::ErrorCode::InstructionFallbackNotFound.into())
+        Err(anchor_lang::error::ErrorCode::InstructionFallbackNotFound.into())
     });
     quote! {
         /// Performs method dispatch.
@@ -139,7 +139,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             program_id: &Pubkey,
             accounts: &[AccountInfo],
             data: &[u8],
-        ) -> ProgramResult {
+        ) -> anchor_lang::Result<()> {
             // Split the instruction data into the first 8 byte method
             // identifier (sighash) and the serialized instruction data.
             let mut ix_data: &[u8] = data;

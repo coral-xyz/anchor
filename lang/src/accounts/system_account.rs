@@ -4,9 +4,9 @@ use crate::error::ErrorCode;
 use crate::*;
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
-use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;
+use std::collections::BTreeMap;
 use std::ops::Deref;
 
 /// Type validating that the account is owned by the system program
@@ -25,7 +25,7 @@ impl<'info> SystemAccount<'info> {
     }
 
     #[inline(never)]
-    pub fn try_from(info: &AccountInfo<'info>) -> Result<SystemAccount<'info>, ProgramError> {
+    pub fn try_from(info: &AccountInfo<'info>) -> Result<SystemAccount<'info>> {
         if *info.owner != system_program::ID {
             return Err(ErrorCode::AccountNotSystemOwned.into());
         }
@@ -39,7 +39,8 @@ impl<'info> Accounts<'info> for SystemAccount<'info> {
         _program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
-    ) -> Result<Self, ProgramError> {
+        _bumps: &mut BTreeMap<String, u8>,
+    ) -> Result<Self> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
         }
@@ -79,5 +80,11 @@ impl<'info> Deref for SystemAccount<'info> {
 
     fn deref(&self) -> &Self::Target {
         &self.info
+    }
+}
+
+impl<'info> Key for SystemAccount<'info> {
+    fn key(&self) -> Pubkey {
+        *self.info.key
     }
 }

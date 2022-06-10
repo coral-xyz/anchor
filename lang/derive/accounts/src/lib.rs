@@ -22,7 +22,7 @@ use syn::parse_macro_input;
 ///
 /// ```ignore
 /// ...
-/// pub fn initialize(ctx: Context<Create>, bump: u8, authority: Pubkey, data: u64) -> ProgramResult {
+/// pub fn initialize(ctx: Context<Create>, bump: u8, authority: Pubkey, data: u64) -> anchor_lang::Result<()> {
 ///     ...
 ///     Ok(())
 /// }
@@ -44,6 +44,7 @@ use syn::parse_macro_input;
 ///
 /// - [Normal Constraints](#normal-constraints)
 /// - [SPL Constraints](#spl-constraints)
+///
 /// # Normal Constraints
 /// <table>
 ///     <thead>
@@ -89,14 +90,15 @@ use syn::parse_macro_input;
 ///         </tr>
 ///         <tr>
 ///             <td>
-///                 <code>#[account(init, payer = &lt;target_account&gt;)]</code><br><br>
 ///                 <code>#[account(init, payer = &lt;target_account&gt;, space = &lt;num_bytes&gt;)]</code>
 ///             </td>
 ///             <td>
 ///                 Creates the account via a CPI to the system program and
 ///                 initializes it (sets its account discriminator).<br>
 ///                 Marks the account as mutable and is mutually exclusive with <code>mut</code>.<br>
-///                 Makes the account rent exempt unless skipped with `rent_exempt = skip`.<br>
+///                 Makes the account rent exempt unless skipped with <code>rent_exempt = skip</code>.<br><br>
+///                 Use <code>#[account(zero)]</code> for accounts larger than 10 Kibibyte.<br><br>
+///                 <code>init</code> has to be used with additional constraints:
 ///                 <ul>
 ///                     <li>
 ///                         Requires the <code>payer</code> constraint to also be on the account.
@@ -108,15 +110,15 @@ use syn::parse_macro_input;
 ///                         and be called <code>system_program</code>.
 ///                     </li>
 ///                     <li>
-///                         Requires that the <code>space</code> constraint is specified
-///                         or, if creating an <code>Account</code> type, the <code>T</code> of <code>Account</code>
-///                         to implement the rust std <code>Default</code> trait.<br>
+///                         Requires that the <code>space</code> constraint is specified.
 ///                         When using the <code>space</code> constraint, one must remember to add 8 to it
-///                         which is the size of the account discriminator.<br>
-///                         The given number is the size of the account in bytes, so accounts that hold
-///                         a variable number of items such as a <code>Vec</code> should use the <code>space</code>
-///                         constraint instead of using the <code>Default</code> trait and allocate sufficient space for all items that may
-///                         be added to the data structure because account size is fixed. Check out the <a href = "https://borsh.io/" target = "_blank" rel = "noopener noreferrer">borsh library</a>
+///                         which is the size of the account discriminator. This only has to be done
+///                         for accounts owned by anchor programs.<br>
+///                         The given space number is the size of the account in bytes, so accounts that hold
+///                         a variable number of items such as a <code>Vec</code> should allocate sufficient space for all items that may
+///                         be added to the data structure because account size is fixed.
+///                         Check out the <a href = "https://book.anchor-lang.com/anchor_references/space.html" target = "_blank" rel = "noopener noreferrer">space reference</a>
+///                         and the <a href = "https://borsh.io/" target = "_blank" rel = "noopener noreferrer">borsh library</a>
 ///                         (which anchor uses under the hood for serialization) specification to learn how much
 ///                         space different data structures require.
 ///                     </li>
@@ -124,20 +126,13 @@ use syn::parse_macro_input;
 ///                 Example:
 ///                 <pre>
 /// #[account]
-/// #[derive(Default)]
 /// pub struct MyData {
-/// &nbsp;&nbsp;&nbsp;&nbsp;pub data: u64
-/// }&#10;
-/// #[account]
-/// pub struct OtherData {
 /// &nbsp;&nbsp;&nbsp;&nbsp;pub data: u64
 /// }&#10;
 /// #[derive(Accounts)]
 /// pub struct Initialize<'info> {
-/// &nbsp;&nbsp;&nbsp;&nbsp;#[account(init, payer = payer)]
-/// &nbsp;&nbsp;&nbsp;&nbsp;pub data_account: Account<'info, MyData>,
 /// &nbsp;&nbsp;&nbsp;&nbsp;#[account(init, payer = payer, space = 8 + 8)]
-/// &nbsp;&nbsp;&nbsp;&nbsp;pub data_account_two: Account<'info, OtherData>,
+/// &nbsp;&nbsp;&nbsp;&nbsp;pub data_account_two: Account<'info, MyData>,
 /// &nbsp;&nbsp;&nbsp;&nbsp;#[account(mut)]
 /// &nbsp;&nbsp;&nbsp;&nbsp;pub payer: Signer<'info>,
 /// &nbsp;&nbsp;&nbsp;&nbsp;pub system_program: Program<'info, System>,
@@ -170,8 +165,8 @@ use syn::parse_macro_input;
 /// #[instruction(bump: u8)]
 /// pub struct Initialize<'info> {
 /// &nbsp;&nbsp;&nbsp;&nbsp;#[account(
-/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;init, payer = payer,
-/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;seeds = [b"example_seed".as_ref()], bump = bump
+/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;init, payer = payer, space = 8 + 8
+/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;seeds = [b"example_seed"], bump = bump
 /// &nbsp;&nbsp;&nbsp;&nbsp;)]
 /// &nbsp;&nbsp;&nbsp;&nbsp;pub pda_data_account: Account<'info, MyData>,
 /// &nbsp;&nbsp;&nbsp;&nbsp;#[account(
@@ -180,9 +175,9 @@ use syn::parse_macro_input;
 /// &nbsp;&nbsp;&nbsp;&nbsp;)]
 /// &nbsp;&nbsp;&nbsp;&nbsp;pub account_for_other_program: AccountInfo<'info>,
 /// &nbsp;&nbsp;&nbsp;&nbsp;#[account(
-/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;init,payer = payer, space = 8 + 8,
+/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;init, payer = payer, space = 8 + 8,
 /// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;owner = other_program.key(),
-/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;seeds = [b"other_seed".as_ref()], bump
+/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;seeds = [b"other_seed"], bump
 /// &nbsp;&nbsp;&nbsp;&nbsp;)]
 /// &nbsp;&nbsp;&nbsp;&nbsp;pub pda_for_other_program: AccountInfo<'info>,
 /// &nbsp;&nbsp;&nbsp;&nbsp;#[account(mut)]
@@ -200,8 +195,18 @@ use syn::parse_macro_input;
 ///             </td>
 ///             <td>
 ///                 Exact same functionality as the <code>init</code> constraint but only runs if the account does not exist yet.<br>
-///                 If it does exist, it still checks whether the given init constraints are correct,
-///                 e.g. that the account has the expected amount of space and, if it's a PDA, the correct seeds etc.
+///                 If the account does exist, it still checks whether the given init constraints are correct,
+///                 e.g. that the account has the expected amount of space and, if it's a PDA, the correct seeds etc.<br><br>
+///                 This feature should be used with care and is therefore behind a feature flag.
+///                 You can enable it by importing <code>anchor-lang</code> with the <code>init-if-needed</code> cargo feature.<br>
+///                 When using <code>init_if_needed</code>, you need to make sure you properly protect yourself
+///                 against re-initialization attacks. You need to include checks in your code that check
+///                 that the initialized account cannot be reset to its initial settings after the first time it was
+///                 initialized (unless that it what you want).<br>
+///                 Because of the possibility of re-initialization attacks and the general guideline that instructions
+///                 should avoid having multiple execution flows (which is important so they remain easy to understand),
+///                 consider breaking up your instruction into two instructions - one for initializing and one for using
+///                 the account - unless you have a good reason not to do so.
 ///                 <br><br>
 ///                 Example:
 ///                 <pre>
@@ -248,18 +253,18 @@ use syn::parse_macro_input;
 /// #[derive(Accounts)]
 /// #[instruction(first_bump: u8, second_bump: u8)]
 /// pub struct Example {
-///     #[account(seeds = [b"example_seed], bump)]
+///     #[account(seeds = [b"example_seed"], bump)]
 ///     pub canonical_pda: AccountInfo<'info>,
 ///     #[account(
-///         seeds = [b"example_seed],
+///         seeds = [b"example_seed"],
 ///         bump,
 ///         seeds::program = other_program.key()
 ///     )]
 ///     pub canonical_pda_two: AccountInfo<'info>,
-///     #[account(seeds = [b"other_seed], bump = first_bump)]
+///     #[account(seeds = [b"other_seed"], bump = first_bump)]
 ///     pub arbitrary_pda: AccountInfo<'info>
 ///     #[account(
-///         seeds = [b"other_seed],
+///         seeds = [b"other_seed"],
 ///         bump = second_bump,
 ///         seeds::program = other_program.key()
 ///     )]
@@ -361,7 +366,14 @@ use syn::parse_macro_input;
 ///             </td>
 ///             <td>
 ///                 Checks the account discriminator is zero.<br>
-///                 Enforces rent exemption unless skipped with <code>rent_exempt = skip</code><br><br>
+///                 Enforces rent exemption unless skipped with <code>rent_exempt = skip</code>.<br><br>
+///                 Use this constraint if you want to create an account in a previous instruction
+///                 and then initialize it in your instruction instead of using <code>init</code>.
+///                 This is necessary for accounts that are larger than 10 Kibibyte because those
+///                 accounts cannot be created via a CPI (which is what <code>init</code> would do).<br><br>
+///                 Anchor adds internal data to the account when using <code>zero</code> just like it
+///                 does with <code>init</code> which is why <code>zero</code> implies <code>mut</code>.
+///                 <br><br>
 ///                 Example:
 ///                 <pre><code>
 /// #[account(zero)]
@@ -407,6 +419,44 @@ use syn::parse_macro_input;
 ///                 </code></pre>
 ///             </td>
 ///         </tr>
+///         <tr>
+///             <td>
+///                 <code>#[account(realloc = &lt;space&gt;, realloc::payer = &lt;target&gt;, realloc::zero = &lt;bool&gt;)]</code>
+///             </td>
+///             <td>
+///                 Used to <a href="https://docs.rs/solana-program/latest/solana_program/account_info/struct.AccountInfo.html#method.realloc" target = "_blank" rel = "noopener noreferrer">realloc</a>
+///                 program account space at the beginning of an instruction.
+///                 <br><br>
+///                 The account must be marked as <code>mut</code> and applied to either <code>Account</code> or <code>AccountLoader</code> types.
+///                 <br><br>
+///                 If the change in account data length is additive, lamports will be transferred from the <code>realloc::payer</code> into the
+///                 program account in order to maintain rent exemption. Likewise, if the change is subtractive, lamports will be transferred from
+///                 the program account back into the <code>realloc::payer</code>.
+///                 <br><br>
+///                 The <code>realloc::zero</code> constraint is required in order to determine whether the new memory should be zero initialized after
+///                 reallocation. Please read the documentation on the <code>AccountInfo::realloc</code> function linked above to understand the
+///                 caveats regarding compute units when providing <code>true</code or <code>false</code> to this flag.
+///                 <br><br>
+///                 Example:
+///                 <pre>
+/// #[derive(Accounts)]
+/// pub struct Example {
+///     #[account(mut)]
+///     pub payer: Signer<'info>,
+///     #[account(
+///         mut,
+///         seeds = [b"example"],
+///         bump,
+///         realloc = 8 + std::mem::size_of::<MyType>() + 100,
+///         realloc::payer = payer,
+///         realloc::zero = false,
+///     )]
+///     pub acc: Account<'info, MyType>,
+///     pub system_program: Program<'info, System>,
+/// }
+///                 </pre>
+///             </td>
+///         </tr>
 ///     </tbody>
 /// </table>
 ///
@@ -427,8 +477,9 @@ use syn::parse_macro_input;
 ///                 <code>#[account(token::mint = &lt;target_account&gt;, token::authority = &lt;target_account&gt;)]</code>
 ///             </td>
 ///             <td>
-///                 Can currently only be used with <code>init</code> to create a token
-///                 account with the given mint address and authority.
+///                 Can be used as a check or with <code>init</code> to create a token
+///                 account with the given mint address and authority.<br>
+///                  When used as a check, it's possible to only specify a subset of the constraints.
 ///                 <br><br>
 ///                 Example:
 ///                 <pre>
@@ -457,9 +508,10 @@ use syn::parse_macro_input;
 ///                 <code>#[account(mint::authority = &lt;target_account&gt;, mint::decimals = &lt;expr&gt;, mint::freeze_authority = &lt;target_account&gt;)]</code>
 ///             </td>
 ///             <td>
-///                 Can currently only be used with <code>init</code> to create a mint
+///                 Can be used as a check or with <code>init</code> to create a mint
 ///                 account with the given mint decimals and mint authority.<br>
-///                 The freeze authority is optional.
+///                 The freeze authority is optional when used with <code>init</code>.<br>
+///                 When used as a check, it's possible to only specify a subset of the constraints.
 ///                 <br><br>
 ///                 Example:
 ///                 <pre>

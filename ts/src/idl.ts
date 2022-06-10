@@ -5,14 +5,18 @@ import * as borsh from "@project-serum/borsh";
 export type Idl = {
   version: string;
   name: string;
+  docs?: string[];
   instructions: IdlInstruction[];
   state?: IdlState;
-  accounts?: IdlTypeDef[];
+  accounts?: IdlAccountDef[];
   types?: IdlTypeDef[];
   events?: IdlEvent[];
   errors?: IdlErrorCode[];
   constants?: IdlConstant[];
+  metadata?: IdlMetadata;
 };
+
+export type IdlMetadata = any;
 
 export type IdlConstant = {
   name: string;
@@ -33,8 +37,10 @@ export type IdlEventField = {
 
 export type IdlInstruction = {
   name: string;
+  docs?: string[];
   accounts: IdlAccountItem[];
   args: IdlField[];
+  returns?: IdlType;
 };
 
 export type IdlState = {
@@ -50,22 +56,40 @@ export type IdlAccount = {
   name: string;
   isMut: boolean;
   isSigner: boolean;
+  docs?: string[];
+  pda?: IdlPda;
 };
+
+export type IdlPda = {
+  seeds: IdlSeed[];
+  programId?: IdlSeed;
+};
+
+export type IdlSeed = any; // TODO
 
 // A nested/recursive version of IdlAccount.
 export type IdlAccounts = {
   name: string;
+  docs?: string[];
   accounts: IdlAccountItem[];
 };
 
 export type IdlField = {
   name: string;
+  docs?: string[];
   type: IdlType;
 };
 
 export type IdlTypeDef = {
   name: string;
+  docs?: string[];
   type: IdlTypeDefTy;
+};
+
+export type IdlAccountDef = {
+  name: string;
+  docs?: string[];
+  type: IdlTypeDefTyStruct;
 };
 
 export type IdlTypeDefTyStruct = {
@@ -78,9 +102,9 @@ export type IdlTypeDefTyEnum = {
   variants: IdlEnumVariant[];
 };
 
-type IdlTypeDefTy = IdlTypeDefTyEnum | IdlTypeDefTyStruct;
+export type IdlTypeDefTy = IdlTypeDefTyEnum | IdlTypeDefTyStruct;
 
-type IdlTypeDefStruct = Array<IdlField>;
+export type IdlTypeDefStruct = Array<IdlField>;
 
 export type IdlType =
   | "bool"
@@ -90,8 +114,10 @@ export type IdlType =
   | "i16"
   | "u32"
   | "i32"
+  | "f32"
   | "u64"
   | "i64"
+  | "f64"
   | "u128"
   | "i128"
   | "bytes"
@@ -129,11 +155,11 @@ export type IdlEnumVariant = {
   fields?: IdlEnumFields;
 };
 
-type IdlEnumFields = IdlEnumFieldsNamed | IdlEnumFieldsTuple;
+export type IdlEnumFields = IdlEnumFieldsNamed | IdlEnumFieldsTuple;
 
-type IdlEnumFieldsNamed = IdlField[];
+export type IdlEnumFieldsNamed = IdlField[];
 
-type IdlEnumFieldsTuple = IdlType[];
+export type IdlEnumFieldsTuple = IdlType[];
 
 export type IdlErrorCode = {
   code: number;

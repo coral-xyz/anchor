@@ -124,7 +124,7 @@ export class BorshInstructionCoder implements InstructionCoder {
   }
 
   /**
-   * Dewcodes a program instruction.
+   * Decodes a program instruction.
    */
   public decode(
     ix: Buffer | string,
@@ -269,7 +269,8 @@ class InstructionFormatter {
         ? "null"
         : this.formatIdlData(
             { name: "", type: (<IdlTypeOption>idlField.type).option },
-            data
+            data,
+            types
           );
     }
     if (idlField.type.hasOwnProperty("defined")) {

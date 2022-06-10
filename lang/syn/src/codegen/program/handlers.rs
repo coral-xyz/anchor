@@ -1,7 +1,7 @@
 use crate::codegen::program::common::*;
 use crate::{Program, State};
 use heck::CamelCase;
-use quote::quote;
+use quote::{quote, ToTokens};
 
 // Generate non-inlined wrappers for each instruction handler, since Solana's
 // BPF max stack size can't handle reasonable sized dispatch trees without doing
@@ -16,41 +16,46 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             // on chain.
             #[inline(never)]
             #[cfg(not(feature = "no-idl"))]
-            pub fn __idl_dispatch(program_id: &Pubkey, accounts: &[AccountInfo], idl_ix_data: &[u8]) -> ProgramResult {
+            pub fn __idl_dispatch(program_id: &Pubkey, accounts: &[AccountInfo], idl_ix_data: &[u8]) -> anchor_lang::Result<()> {
                 let mut accounts = accounts;
                 let mut data: &[u8] = idl_ix_data;
 
                 let ix = anchor_lang::idl::IdlInstruction::deserialize(&mut data)
-                    .map_err(|_| anchor_lang::__private::ErrorCode::InstructionDidNotDeserialize)?;
+                    .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
 
                 match ix {
                     anchor_lang::idl::IdlInstruction::Create { data_len } => {
+                        let mut bumps = std::collections::BTreeMap::new();
                         let mut accounts =
-                            anchor_lang::idl::IdlCreateAccounts::try_accounts(program_id, &mut accounts, &[])?;
+                            anchor_lang::idl::IdlCreateAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps)?;
                         __idl_create_account(program_id, &mut accounts, data_len)?;
                         accounts.exit(program_id)?;
                     },
                     anchor_lang::idl::IdlInstruction::CreateBuffer => {
+                        let mut bumps = std::collections::BTreeMap::new();
                         let mut accounts =
-                            anchor_lang::idl::IdlCreateBuffer::try_accounts(program_id, &mut accounts, &[])?;
+                            anchor_lang::idl::IdlCreateBuffer::try_accounts(program_id, &mut accounts, &[], &mut bumps)?;
                         __idl_create_buffer(program_id, &mut accounts)?;
                         accounts.exit(program_id)?;
                     },
                     anchor_lang::idl::IdlInstruction::Write { data } => {
+                        let mut bumps = std::collections::BTreeMap::new();
                         let mut accounts =
-                            anchor_lang::idl::IdlAccounts::try_accounts(program_id, &mut accounts, &[])?;
+                            anchor_lang::idl::IdlAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps)?;
                         __idl_write(program_id, &mut accounts, data)?;
                         accounts.exit(program_id)?;
                     },
                     anchor_lang::idl::IdlInstruction::SetAuthority { new_authority } => {
+                        let mut bumps = std::collections::BTreeMap::new();
                         let mut accounts =
-                            anchor_lang::idl::IdlAccounts::try_accounts(program_id, &mut accounts, &[])?;
+                            anchor_lang::idl::IdlAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps)?;
                         __idl_set_authority(program_id, &mut accounts, new_authority)?;
                         accounts.exit(program_id)?;
                     },
                     anchor_lang::idl::IdlInstruction::SetBuffer => {
+                        let mut bumps = std::collections::BTreeMap::new();
                         let mut accounts =
-                            anchor_lang::idl::IdlSetBuffer::try_accounts(program_id, &mut accounts, &[])?;
+                            anchor_lang::idl::IdlSetBuffer::try_accounts(program_id, &mut accounts, &[], &mut bumps)?;
                         __idl_set_buffer(program_id, &mut accounts)?;
                         accounts.exit(program_id)?;
                     },
@@ -60,8 +65,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
             #[inline(never)]
             #[cfg(feature = "no-idl")]
-            pub fn __idl_dispatch(program_id: &Pubkey, accounts: &[AccountInfo], idl_ix_data: &[u8]) -> ProgramResult {
-                Err(anchor_lang::__private::ErrorCode::IdlInstructionStub.into())
+            pub fn __idl_dispatch(program_id: &Pubkey, accounts: &[AccountInfo], idl_ix_data: &[u8]) -> anchor_lang::Result<()> {
+                Err(anchor_lang::error::ErrorCode::IdlInstructionStub.into())
             }
 
             // One time IDL account initializer. Will faill on subsequent
@@ -71,12 +76,12 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 program_id: &Pubkey,
                 accounts: &mut anchor_lang::idl::IdlCreateAccounts,
                 data_len: u64,
-            ) -> ProgramResult {
+            ) -> anchor_lang::Result<()> {
                 #[cfg(not(feature = "no-log-ix-name"))]
                 anchor_lang::prelude::msg!("Instruction: IdlCreateAccount");
 
                 if program_id != accounts.program.key {
-                    return Err(anchor_lang::__private::ErrorCode::IdlInstructionInvalidProgram.into());
+                    return Err(anchor_lang::error::ErrorCode::IdlInstructionInvalidProgram.into());
                 }
                 // Create the IDL's account.
                 let from = accounts.from.key;
@@ -134,7 +139,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             pub fn __idl_create_buffer(
                 program_id: &Pubkey,
                 accounts: &mut anchor_lang::idl::IdlCreateBuffer,
-            ) -> ProgramResult {
+            ) -> anchor_lang::Result<()> {
                 #[cfg(not(feature = "no-log-ix-name"))]
                 anchor_lang::prelude::msg!("Instruction: IdlCreateBuffer");
 
@@ -148,7 +153,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 program_id: &Pubkey,
                 accounts: &mut anchor_lang::idl::IdlAccounts,
                 idl_data: Vec<u8>,
-            ) -> ProgramResult {
+            ) -> anchor_lang::Result<()> {
                 #[cfg(not(feature = "no-log-ix-name"))]
                 anchor_lang::prelude::msg!("Instruction: IdlWrite");
 
@@ -162,7 +167,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 program_id: &Pubkey,
                 accounts: &mut anchor_lang::idl::IdlAccounts,
                 new_authority: Pubkey,
-            ) -> ProgramResult {
+            ) -> anchor_lang::Result<()> {
                 #[cfg(not(feature = "no-log-ix-name"))]
                 anchor_lang::prelude::msg!("Instruction: IdlSetAuthority");
 
@@ -174,7 +179,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             pub fn __idl_set_buffer(
                 program_id: &Pubkey,
                 accounts: &mut anchor_lang::idl::IdlSetBuffer,
-            ) -> ProgramResult {
+            ) -> anchor_lang::Result<()> {
                 #[cfg(not(feature = "no-log-ix-name"))]
                 anchor_lang::prelude::msg!("Instruction: IdlSetBuffer");
 
@@ -201,19 +206,23 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         // One time state account initializer. Will faill on subsequent
                         // invocations.
                         #[inline(never)]
-                        pub fn __ctor(program_id: &Pubkey, accounts: &[AccountInfo], ix_data: &[u8]) -> ProgramResult {
+                        pub fn __ctor(program_id: &Pubkey, accounts: &[AccountInfo], ix_data: &[u8]) -> anchor_lang::Result<()> {
                             #[cfg(not(feature = "no-log-ix-name"))]
                             anchor_lang::prelude::msg!(#ix_name_log);
 
                             // Deserialize instruction data.
                             let ix = instruction::state::#ix_name::deserialize(&mut &ix_data[..])
-                                .map_err(|_| anchor_lang::__private::ErrorCode::InstructionDidNotDeserialize)?;
+                                .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                             let instruction::state::#variant_arm = ix;
+
+                            let mut __bumps = std::collections::BTreeMap::new();
 
                             // Deserialize accounts.
                             let mut remaining_accounts: &[AccountInfo] = accounts;
-                            let ctor_accounts = anchor_lang::__private::Ctor::try_accounts(program_id, &mut remaining_accounts, &[])?;
-                            let mut ctor_user_def_accounts = #anchor_ident::try_accounts(program_id, &mut remaining_accounts, ix_data)?;
+                            let ctor_accounts =
+                            anchor_lang::__private::Ctor::try_accounts(program_id, &mut remaining_accounts, &[], &mut __bumps)?;
+                            let mut ctor_user_def_accounts =
+                            #anchor_ident::try_accounts(program_id, &mut remaining_accounts, ix_data, &mut __bumps)?;
 
                             // Create the solana account for the ctor data.
                             let from = ctor_accounts.from.key;
@@ -258,6 +267,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                         program_id,
                                         &mut ctor_user_def_accounts,
                                         remaining_accounts,
+                                        __bumps,
                                     ),
                                     #(#ctor_untyped_args),*
                                 )?;
@@ -275,19 +285,23 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         // One time state account initializer. Will faill on subsequent
                         // invocations.
                         #[inline(never)]
-                        pub fn __ctor(program_id: &Pubkey, accounts: &[AccountInfo], ix_data: &[u8]) -> ProgramResult {
+                        pub fn __ctor(program_id: &Pubkey, accounts: &[AccountInfo], ix_data: &[u8]) -> anchor_lang::Result<()> {
                             #[cfg(not(feature = "no-log-ix-name"))]
                             anchor_lang::prelude::msg!(#ix_name_log);
 
                             // Deserialize instruction data.
                             let ix = instruction::state::#ix_name::deserialize(&mut &ix_data[..])
-                                .map_err(|_| anchor_lang::__private::ErrorCode::InstructionDidNotDeserialize)?;
+                                .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                             let instruction::state::#variant_arm = ix;
+
+                            let mut __bumps = std::collections::BTreeMap::new();
 
                             // Deserialize accounts.
                             let mut remaining_accounts: &[AccountInfo] = accounts;
-                            let ctor_accounts = anchor_lang::__private::Ctor::try_accounts(program_id, &mut remaining_accounts, &[])?;
-                            let mut ctor_user_def_accounts = #anchor_ident::try_accounts(program_id, &mut remaining_accounts, ix_data)?;
+                            let ctor_accounts =
+                            anchor_lang::__private::Ctor::try_accounts(program_id, &mut remaining_accounts, &[], &mut __bumps)?;
+                            let mut ctor_user_def_accounts =
+                            #anchor_ident::try_accounts(program_id, &mut remaining_accounts, ix_data, &mut __bumps)?;
 
                             // Invoke the ctor.
                             let instance = #mod_name::#name::new(
@@ -295,6 +309,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     program_id,
                                     &mut ctor_user_def_accounts,
                                     remaining_accounts,
+                                    __bumps,
                                 ),
                                 #(#ctor_untyped_args),*
                             )?;
@@ -378,29 +393,39 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     program_id: &Pubkey,
                                     accounts: &[AccountInfo],
                                     ix_data: &[u8],
-                                ) -> ProgramResult {
+                                ) -> anchor_lang::Result<()> {
                                     #[cfg(not(feature = "no-log-ix-name"))]
                                     anchor_lang::prelude::msg!(#ix_name_log);
 
                                     // Deserialize instruction.
                                     let ix = instruction::state::#ix_name::deserialize(&mut &ix_data[..])
-                                        .map_err(|_| anchor_lang::__private::ErrorCode::InstructionDidNotDeserialize)?;
+                                        .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                                     let instruction::state::#variant_arm = ix;
+
+                                    // Bump collector.
+                                    let mut __bumps = std::collections::BTreeMap::new();
 
                                     // Load state.
                                     let mut remaining_accounts: &[AccountInfo] = accounts;
                                     if remaining_accounts.is_empty() {
-                                        return Err(anchor_lang::__private::ErrorCode::AccountNotEnoughKeys.into());
+                                        return Err(anchor_lang::error::ErrorCode::AccountNotEnoughKeys.into());
                                     }
-                                    let loader: anchor_lang::accounts::loader::Loader<#mod_name::#name> = anchor_lang::accounts::loader::Loader::try_accounts(program_id, &mut remaining_accounts, &[])?;
+                                    let loader: anchor_lang::accounts::loader::Loader<#mod_name::#name> = anchor_lang::accounts::loader::Loader::try_accounts(program_id, &mut remaining_accounts, &[], &mut __bumps)?;
 
                                     // Deserialize accounts.
                                     let mut accounts = #anchor_ident::try_accounts(
                                         program_id,
                                         &mut remaining_accounts,
                                         ix_data,
+                                        &mut __bumps,
                                     )?;
-                                    let ctx = anchor_lang::context::Context::new(program_id, &mut accounts, remaining_accounts);
+                                    let ctx =
+                                        anchor_lang::context::Context::new(
+                                            program_id,
+                                            &mut accounts,
+                                            remaining_accounts,
+                                            __bumps,
+                                        );
 
                                     // Execute user defined function.
                                     {
@@ -424,29 +449,44 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     program_id: &Pubkey,
                                     accounts: &[AccountInfo],
                                     ix_data: &[u8],
-                                ) -> ProgramResult {
+                                ) -> anchor_lang::Result<()> {
                                     #[cfg(not(feature = "no-log-ix-name"))]
                                     anchor_lang::prelude::msg!(#ix_name_log);
 
                                     // Deserialize instruction.
                                     let ix = instruction::state::#ix_name::deserialize(&mut &ix_data[..])
-                                        .map_err(|_| anchor_lang::__private::ErrorCode::InstructionDidNotDeserialize)?;
+                                        .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                                     let instruction::state::#variant_arm = ix;
+
+                                    // Bump collector.
+                                    let mut __bumps = std::collections::BTreeMap::new();
 
                                     // Load state.
                                     let mut remaining_accounts: &[AccountInfo] = accounts;
                                     if remaining_accounts.is_empty() {
-                                        return Err(anchor_lang::__private::ErrorCode::AccountNotEnoughKeys.into());
+                                        return Err(anchor_lang::error::ErrorCode::AccountNotEnoughKeys.into());
                                     }
-                                    let mut state: anchor_lang::accounts::state::ProgramState<#state_ty> = anchor_lang::accounts::state::ProgramState::try_accounts(program_id, &mut remaining_accounts, &[])?;
+                                    let mut state: anchor_lang::accounts::state::ProgramState<#state_ty> = anchor_lang::accounts::state::ProgramState::try_accounts(
+                                        program_id,
+                                        &mut remaining_accounts,
+                                        &[],
+                                        &mut __bumps,
+                                    )?;
 
                                     // Deserialize accounts.
                                     let mut accounts = #anchor_ident::try_accounts(
                                         program_id,
                                         &mut remaining_accounts,
                                         ix_data,
+                                        &mut __bumps,
                                     )?;
-                                    let ctx = anchor_lang::context::Context::new(program_id, &mut accounts, remaining_accounts);
+                                    let ctx =
+                                        anchor_lang::context::Context::new(
+                                            program_id,
+                                            &mut accounts,
+                                            remaining_accounts,
+                                            __bumps
+                                        );
 
                                     // Execute user defined function.
                                     state.#ix_method_name(
@@ -488,7 +528,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             .map(|ix| {
                                 // Easy to implement. Just need to write a test.
                                 // Feel free to open a PR.
-                                assert!(!state.is_zero_copy, "Trait implementations not yet implemented for zero copy state structs. Please file an issue.");                                
+                                assert!(!state.is_zero_copy, "Trait implementations not yet implemented for zero copy state structs. Please file an issue.");
 
                                 let ix_arg_names: Vec<&syn::Ident> =
                                     ix.args.iter().map(|arg| &arg.name).collect();
@@ -526,7 +566,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                 let deserialize_instruction = quote! {
                                     #args_struct
                                     let ix = Args::deserialize(&mut &ix_data[..])
-                                        .map_err(|_| anchor_lang::__private::ErrorCode::InstructionDidNotDeserialize)?;
+                                        .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                                     let Args {
                                         #(#ix_arg_names),*
                                     } = ix;
@@ -539,27 +579,42 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             program_id: &Pubkey,
                                             accounts: &[AccountInfo],
                                             ix_data: &[u8],
-                                        ) -> ProgramResult {
+                                        ) -> anchor_lang::Result<()> {
                                             #[cfg(not(feature = "no-log-ix-name"))]
                                             anchor_lang::prelude::msg!(#ix_name_log);
 
                                             // Deserialize instruction.
                                             #deserialize_instruction
 
+                                            // Bump collector.
+                                            let mut __bumps = std::collections::BTreeMap::new();
+
                                             // Deserialize the program state account.
                                             let mut remaining_accounts: &[AccountInfo] = accounts;
                                             if remaining_accounts.is_empty() {
-                                                return Err(anchor_lang::__private::ErrorCode::AccountNotEnoughKeys.into());
+                                                return Err(anchor_lang::error::ErrorCode::AccountNotEnoughKeys.into());
                                             }
-                                            let mut state: anchor_lang::accounts::state::ProgramState<#state_ty> = anchor_lang::accounts::state::ProgramState::try_accounts(program_id, &mut remaining_accounts, &[])?;
+                                            let mut state: anchor_lang::accounts::state::ProgramState<#state_ty> = anchor_lang::accounts::state::ProgramState::try_accounts(
+                                                program_id,
+                                                &mut remaining_accounts,
+                                                &[],
+                                                &mut __bumps,
+                                            )?;
 
                                             // Deserialize accounts.
                                             let mut accounts = #anchor_ident::try_accounts(
                                                 program_id,
                                                 &mut remaining_accounts,
                                                 ix_data,
+                                                &mut __bumps,
                                             )?;
-                                            let ctx = anchor_lang::context::Context::new(program_id, &mut accounts, remaining_accounts);
+                                            let ctx =
+                                                anchor_lang::context::Context::new(
+                                                    program_id,
+                                                    &mut accounts,
+                                                    remaining_accounts,
+                                                    __bumps,
+                                                );
 
                                             // Execute user defined function.
                                             state.#ix_method_name(
@@ -586,12 +641,15 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             program_id: &Pubkey,
                                             accounts: &[AccountInfo],
                                             ix_data: &[u8],
-                                        ) -> ProgramResult {
+                                        ) -> anchor_lang::Result<()> {
                                             #[cfg(not(feature = "no-log-ix-name"))]
                                             anchor_lang::prelude::msg!(#ix_name_log);
 
                                             // Deserialize instruction.
                                             #deserialize_instruction
+
+                                            // Bump collector.
+                                            let mut __bumps = std::collections::BTreeMap::new();
 
                                             // Deserialize accounts.
                                             let mut remaining_accounts: &[AccountInfo] = accounts;
@@ -599,11 +657,17 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                                 program_id,
                                                 &mut remaining_accounts,
                                                 ix_data,
+                                                &mut __bumps,
                                             )?;
 
                                             // Execute user defined function.
                                             #state_name::#ix_method_name(
-                                                anchor_lang::context::Context::new(program_id, &mut accounts, remaining_accounts),
+                                                anchor_lang::context::Context::new(
+                                                    program_id,
+                                                    &mut accounts,
+                                                    remaining_accounts,
+                                                    __bumps
+                                                ),
                                                 #(#ix_arg_names),*
                                             )?;
 
@@ -619,6 +683,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             })
             .unwrap_or_default(),
     };
+
     let non_inlined_handlers: Vec<proc_macro2::TokenStream> = program
         .ixs
         .iter()
@@ -629,20 +694,30 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             let anchor = &ix.anchor_ident;
             let variant_arm = generate_ix_variant(ix.raw_method.sig.ident.to_string(), &ix.args);
             let ix_name_log = format!("Instruction: {}", ix_name);
+            let ret_type = &ix.returns.ty.to_token_stream();
+            let maybe_set_return_data = match ret_type.to_string().as_str() {
+                "()" => quote! {},
+                _ => quote! {
+                    anchor_lang::solana_program::program::set_return_data(&result.try_to_vec().unwrap());
+                },
+            };
             quote! {
                 #[inline(never)]
                 pub fn #ix_method_name(
                     program_id: &Pubkey,
                     accounts: &[AccountInfo],
                     ix_data: &[u8],
-                ) -> ProgramResult {
+                ) -> anchor_lang::Result<()> {
                     #[cfg(not(feature = "no-log-ix-name"))]
                     anchor_lang::prelude::msg!(#ix_name_log);
 
                     // Deserialize data.
                     let ix = instruction::#ix_name::deserialize(&mut &ix_data[..])
-                        .map_err(|_| anchor_lang::__private::ErrorCode::InstructionDidNotDeserialize)?;
+                        .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                     let instruction::#variant_arm = ix;
+
+                    // Bump collector.
+                    let mut __bumps = std::collections::BTreeMap::new();
 
                     // Deserialize accounts.
                     let mut remaining_accounts: &[AccountInfo] = accounts;
@@ -650,13 +725,22 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         program_id,
                         &mut remaining_accounts,
                         ix_data,
+                        &mut __bumps,
                     )?;
 
                     // Invoke user defined handler.
-                    #program_name::#ix_method_name(
-                        anchor_lang::context::Context::new(program_id, &mut accounts, remaining_accounts),
+                    let result = #program_name::#ix_method_name(
+                        anchor_lang::context::Context::new(
+                            program_id,
+                            &mut accounts,
+                            remaining_accounts,
+                            __bumps,
+                        ),
                         #(#ix_arg_names),*
                     )?;
+
+                    // Maybe set Solana return data.
+                    #maybe_set_return_data
 
                     // Exit routine.
                     accounts.exit(program_id)

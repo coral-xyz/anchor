@@ -8,12 +8,11 @@ const TOKEN_PROGRAM_ID = new PublicKey(
 );
 
 export function program(provider?: Provider): Program<SplToken> {
-  return new Program<SplToken>(
-    IDL,
-    TOKEN_PROGRAM_ID,
-    provider,
-    new SplTokenCoder(IDL)
-  );
+  return new Program<SplToken>(IDL, TOKEN_PROGRAM_ID, provider, coder());
+}
+
+export function coder(): SplTokenCoder {
+  return new SplTokenCoder(IDL);
 }
 
 /**
@@ -544,7 +543,7 @@ export type SplToken = {
   ];
   accounts: [
     {
-      name: "Mint";
+      name: "mint";
       type: {
         kind: "struct";
         fields: [
@@ -576,7 +575,7 @@ export type SplToken = {
       };
     },
     {
-      name: "Token";
+      name: "token";
       type: {
         kind: "struct";
         fields: [
@@ -1149,7 +1148,7 @@ export const IDL: SplToken = {
   ],
   accounts: [
     {
-      name: "Mint",
+      name: "mint",
       type: {
         kind: "struct",
         fields: [
@@ -1181,7 +1180,7 @@ export const IDL: SplToken = {
       },
     },
     {
-      name: "Token",
+      name: "token",
       type: {
         kind: "struct",
         fields: [

@@ -10,6 +10,8 @@ import NamespaceFactory, {
   AccountNamespace,
   StateClient,
   SimulateNamespace,
+  MethodsNamespace,
+  ViewNamespace,
 } from "./namespace/index.js";
 import { utf8 } from "../utils/bytes/index.js";
 import { EventManager } from "./event.js";
@@ -76,6 +78,8 @@ export class Program<IDL extends Idl = Idl> {
    *   },
    * });
    * ```
+   * @deprecated
+   * Use program.methods.<method>(...args).rpc() instead
    */
   readonly rpc: RpcNamespace<IDL>;
 
@@ -129,6 +133,7 @@ export class Program<IDL extends Idl = Idl> {
    *   },
    * });
    * ```
+   * @deprecated
    */
   readonly instruction: InstructionNamespace<IDL>;
 
@@ -160,6 +165,7 @@ export class Program<IDL extends Idl = Idl> {
    *   },
    * });
    * ```
+   * @deprecated
    */
   readonly transaction: TransactionNamespace<IDL>;
 
@@ -196,6 +202,7 @@ export class Program<IDL extends Idl = Idl> {
    *   },
    * });
    * ```
+   * @deprecated
    */
   readonly simulate: SimulateNamespace<IDL>;
 
@@ -205,6 +212,14 @@ export class Program<IDL extends Idl = Idl> {
    * abstraction.
    */
   readonly state?: StateClient<IDL>;
+
+  /**
+   * The namespace provides a builder API for all APIs on the program.
+   * This is an alternative to using namespace the other namespaces..
+   */
+  readonly methods: MethodsNamespace<IDL>;
+
+  readonly views?: ViewNamespace<IDL>;
 
   /**
    * Address of the program.
@@ -275,14 +290,18 @@ export class Program<IDL extends Idl = Idl> {
       transaction,
       account,
       simulate,
+      methods,
       state,
+      views,
     ] = NamespaceFactory.build(idl, this._coder, programId, provider);
     this.rpc = rpc;
     this.instruction = instruction;
     this.transaction = transaction;
     this.account = account;
     this.simulate = simulate;
+    this.methods = methods;
     this.state = state;
+    this.views = views;
   }
 
   /**
@@ -344,7 +363,7 @@ export class Program<IDL extends Idl = Idl> {
    */
   public addEventListener(
     eventName: string,
-    callback: (event: any, slot: number) => void
+    callback: (event: any, slot: number, signature: string) => void
   ): number {
     return this._events.addEventListener(eventName, callback);
   }

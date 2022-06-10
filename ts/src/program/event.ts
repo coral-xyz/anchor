@@ -5,7 +5,10 @@ import { Coder } from "../coder/index.js";
 import { DecodeType } from "./namespace/types.js";
 import Provider from "../provider.js";
 
-const LOG_START_INDEX = "Program log: ".length;
+const PROGRAM_LOG = "Program log: ";
+const PROGRAM_DATA = "Program data: ";
+const PROGRAM_LOG_START_INDEX = PROGRAM_LOG.length;
+const PROGRAM_DATA_START_INDEX = PROGRAM_DATA.length;
 
 // Deserialized event.
 export type Event<
@@ -20,7 +23,7 @@ export type EventData<T extends IdlEventField, Defined> = {
   [N in T["name"]]: DecodeType<(T & { name: N })["type"], Defined>;
 };
 
-type EventCallback = (event: any, slot: number) => void;
+type EventCallback = (event: any, slot: number, signature: string) => void;
 
 export class EventManager {
   /**
@@ -69,7 +72,7 @@ export class EventManager {
 
   public addEventListener(
     eventName: string,
-    callback: (event: any, slot: number) => void
+    callback: (event: any, slot: number, signature: string) => void
   ): number {
     let listener = this._listenerIdCount;
     this._listenerIdCount += 1;
@@ -95,7 +98,6 @@ export class EventManager {
       this._programId,
       (logs, ctx) => {
         if (logs.err) {
-          console.error(logs);
           return;
         }
         this._eventParser.parseLogs(logs.logs, (event) => {
@@ -105,7 +107,7 @@ export class EventManager {
               const listenerCb = this._eventCallbacks.get(listener);
               if (listenerCb) {
                 const [, callback] = listenerCb;
-                callback(event.data, ctx.slot);
+                callback(event.data, ctx.slot, logs.signature);
               }
             });
           }
@@ -172,7 +174,7 @@ export class EventParser {
   // emit the event if the string matches the event being subscribed to.
   public parseLogs(logs: string[], callback: (log: Event) => void) {
     const logScanner = new LogScanner(logs);
-    const execution = new ExecutionContext(logScanner.next() as string);
+    const execution = new ExecutionContext();
     let log = logScanner.next();
     while (log !== null) {
       let [event, newProgram, didPop] = this.handleLog(execution, log);
@@ -214,9 +216,11 @@ export class EventParser {
   private handleProgramLog(
     log: string
   ): [Event | null, string | null, boolean] {
-    // This is a `msg!` log.
-    if (log.startsWith("Program log:")) {
-      const logStr = log.slice(LOG_START_INDEX);
+    // This is a `msg!` log or a `sol_log_data` log.
+    if (log.startsWith(PROGRAM_LOG) || log.startsWith(PROGRAM_DATA)) {
+      const logStr = log.startsWith(PROGRAM_LOG)
+        ? log.slice(PROGRAM_LOG_START_INDEX)
+        : log.slice(PROGRAM_DATA_START_INDEX);
       const event = this.coder.events.decode(logStr);
       return [event, null, false];
     }
@@ -252,17 +256,7 @@ export class EventParser {
 // Stack frame execution context, allowing one to track what program is
 // executing for a given log.
 class ExecutionContext {
-  stack: string[];
-
-  constructor(log: string) {
-    // Assumes the first log in every transaction is an `invoke` log from the
-    // runtime.
-    const program = /^Program (.*) invoke.*$/g.exec(log)?.[1];
-    if (!program) {
-      throw new Error(`Could not find program invocation log line`);
-    }
-    this.stack = [program];
-  }
+  stack: string[] = [];
 
   program(): string {
     assert.ok(this.stack.length > 0);

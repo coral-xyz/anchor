@@ -4,13 +4,14 @@ use crate::{Accounts, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
+use std::collections::BTreeMap;
 use std::fmt;
 
 /// Provides non-argument inputs to the program.
 ///
 /// # Example
 /// ```ignore
-/// pub fn set_data(ctx: Context<SetData>, age: u64, other_data: u32) -> ProgramResult {
+/// pub fn set_data(ctx: Context<SetData>, age: u64, other_data: u32) -> Result<()> {
 ///     // Set account data like this
 ///     (*ctx.accounts.my_account).age = age;
 ///     (*ctx.accounts.my_account).other_data = other_data;
@@ -29,6 +30,10 @@ pub struct Context<'a, 'b, 'c, 'info, T> {
     /// Remaining accounts given but not deserialized or validated.
     /// Be very careful when using this directly.
     pub remaining_accounts: &'c [AccountInfo<'info>],
+    /// Bump seeds found during constraint validation. This is provided as a
+    /// convenience so that handlers don't have to recalculate bump seeds or
+    /// pass them in as arguments.
+    pub bumps: BTreeMap<String, u8>,
 }
 
 impl<'a, 'b, 'c, 'info, T: fmt::Debug> fmt::Debug for Context<'a, 'b, 'c, 'info, T> {
@@ -37,6 +42,7 @@ impl<'a, 'b, 'c, 'info, T: fmt::Debug> fmt::Debug for Context<'a, 'b, 'c, 'info,
             .field("program_id", &self.program_id)
             .field("accounts", &self.accounts)
             .field("remaining_accounts", &self.remaining_accounts)
+            .field("bumps", &self.bumps)
             .finish()
     }
 }
@@ -46,11 +52,13 @@ impl<'a, 'b, 'c, 'info, T: Accounts<'info>> Context<'a, 'b, 'c, 'info, T> {
         program_id: &'a Pubkey,
         accounts: &'b mut T,
         remaining_accounts: &'c [AccountInfo<'info>],
+        bumps: BTreeMap<String, u8>,
     ) -> Self {
         Self {
             program_id,
             accounts,
             remaining_accounts,
+            bumps,
         }
     }
 }
@@ -68,12 +76,12 @@ impl<'a, 'b, 'c, 'info, T: Accounts<'info>> Context<'a, 'b, 'c, 'info, T> {
 /// #[program]
 /// pub mod callee {
 ///     use super::*;
-///     pub fn init(ctx: Context<Init>) -> ProgramResult {
+///     pub fn init(ctx: Context<Init>) -> Result<()> {
 ///         (*ctx.accounts.data).authority = ctx.accounts.authority.key();
 ///         Ok(())
 ///     }
 ///
-///     pub fn set_data(ctx: Context<SetData>, data: u64) -> ProgramResult {
+///     pub fn set_data(ctx: Context<SetData>, data: u64) -> Result<()> {
 ///         (*ctx.accounts.data_acc).data = data;
 ///         Ok(())
 ///     }
@@ -112,7 +120,7 @@ impl<'a, 'b, 'c, 'info, T: Accounts<'info>> Context<'a, 'b, 'c, 'info, T> {
 /// #[program]
 /// pub mod caller {
 ///     use super::*;
-///     pub fn do_cpi(ctx: Context<DoCpi>, data: u64) -> ProgramResult {
+///     pub fn do_cpi(ctx: Context<DoCpi>, data: u64) -> Result<()> {
 ///         let callee_id = ctx.accounts.callee.to_account_info();
 ///         let callee_accounts = callee::cpi::accounts::SetData {
 ///             data_acc: ctx.accounts.data_acc.to_account_info(),
@@ -122,7 +130,7 @@ impl<'a, 'b, 'c, 'info, T: Accounts<'info>> Context<'a, 'b, 'c, 'info, T> {
 ///         callee::cpi::set_data(cpi_ctx, data)
 ///     }
 ///
-///     pub fn do_cpi_with_pda_authority(ctx: Context<DoCpiWithPDAAuthority>, bump: u8, data: u64) -> ProgramResult {
+///     pub fn do_cpi_with_pda_authority(ctx: Context<DoCpiWithPDAAuthority>, bump: u8, data: u64) -> Result<()> {
 ///         let seeds = &[&[b"example_seed", bytemuck::bytes_of(&bump)][..]];
 ///         let callee_id = ctx.accounts.callee.to_account_info();
 ///         let callee_accounts = callee::cpi::accounts::SetData {
