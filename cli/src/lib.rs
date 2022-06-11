@@ -592,21 +592,39 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
     }
 
     // Install node modules.
-    let yarn_result = std::process::Command::new("yarn")
+    if cfg!(target_os = "windows") {
+        let yarn_result = std::process::Command::new("cmd")
+            .arg("/C yarn")
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .map_err(|e| anyhow::format_err!("yarn install failed: {}", e.to_string()))?;
+        if !yarn_result.status.success(){
+            println!("Failed yarn install will attempt to npm install");
+            std::process::Command::new("cmd")
+                .arg("/C npm install")
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit())
+                .output()
+                .map_err(|e| anyhow::format_err!("npm install failed: {}", e.to_string()))?;
+            }
+    } else {
+        let yarn_result = std::process::Command::new("yarn")
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
         .map_err(|e| anyhow::format_err!("yarn install failed: {}", e.to_string()))?;
-    if !yarn_result.status.success() {
-        println!("Failed yarn install will attempt to npm install");
-        std::process::Command::new("npm")
-            .arg("install")
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .output()
-            .map_err(|e| anyhow::format_err!("npm install failed: {}", e.to_string()))?;
-        println!("Failed to install node dependencies")
-    }
+        if !yarn_result.status.success() {
+            println!("Failed yarn install will attempt to npm install");
+            std::process::Command::new("npm")
+                .arg("install")
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit())
+                .output()
+                .map_err(|e| anyhow::format_err!("npm install failed: {}", e.to_string()))?;
+            println!("Failed to install node dependencies")
+        }
+    }  
 
     if !no_git {
         let git_result = std::process::Command::new("git")
