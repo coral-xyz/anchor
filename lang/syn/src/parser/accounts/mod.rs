@@ -36,10 +36,11 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
     let payers_for_init = fields
         .iter()
         .filter_map(|af| match af {
-            AccountField::Field(f) => match f.constraints.init.as_ref() {
-                Some(init) => Some(init.payer.to_token_stream().to_string()),
-                None => None,
-            },
+            AccountField::Field(f) => f
+                .constraints
+                .init
+                .as_ref()
+                .map(|init| init.payer.to_token_stream().to_string()),
             _ => None,
         })
         .collect::<HashSet<_>>();
@@ -47,18 +48,19 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
         .iter()
         .filter(|af| payers_for_init.contains(&af.ident().to_string()))
         .filter_map(|af| match af {
-            AccountField::Field(f) => match f.constraints.seeds.as_ref() {
-                Some(seeds) => Some((af.ident().to_string(), seeds.clone())),
-                _ => None,
-            },
+            AccountField::Field(f) => f
+                .constraints
+                .seeds
+                .as_ref()
+                .map(|seeds| (af.ident().to_string(), seeds.clone())),
             _ => None,
         })
         .collect::<HashMap<_, _>>();
     // put payer seeds group to init group
     let mut fields = fields;
     for af in fields.iter_mut() {
-        match af {
-            AccountField::Field(f) => match f.constraints.init.as_mut() {
+        if let AccountField::Field(f) = af {
+            match f.constraints.init.as_mut() {
                 Some(init) => {
                     match payer_for_init_seeds_groups.get(&init.payer.to_token_stream().to_string())
                     {
@@ -69,8 +71,7 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
                     }
                 }
                 None => {}
-            },
-            _ => {}
+            }
         }
     }
 
