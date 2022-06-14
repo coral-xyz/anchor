@@ -12,8 +12,8 @@ use solana_client::client_error::ClientError as SolanaClientError;
 use solana_client::pubsub_client::{PubsubClient, PubsubClientError, PubsubClientSubscription};
 use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::{
-    RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcTransactionLogsConfig,
-    RpcTransactionLogsFilter,
+    RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig,
+    RpcTransactionLogsConfig, RpcTransactionLogsFilter,
 };
 use solana_client::rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType};
 use solana_client::rpc_response::{Response as RpcResponse, RpcLogsResponse};
@@ -164,10 +164,9 @@ impl Program {
             filters: Some([vec![account_type_filter], filters].concat()),
             account_config: RpcAccountInfoConfig {
                 encoding: Some(UiAccountEncoding::Base64),
-                data_slice: None,
-                commitment: None,
+                ..RpcAccountInfoConfig::default()
             },
-            with_context: None,
+            ..RpcProgramAccountsConfig::default()
         };
         Ok(ProgramAccountsIterator {
             inner: self
@@ -555,6 +554,36 @@ impl<'a> RequestBuilder<'a> {
 
         rpc_client
             .send_and_confirm_transaction(&tx)
+            .map_err(Into::into)
+    }
+
+    pub fn send_with_spinner_and_config(
+        self,
+        config: RpcSendTransactionConfig,
+    ) -> Result<Signature, ClientError> {
+        let instructions = self.instructions()?;
+
+        let mut signers = self.signers;
+        signers.push(&*self.payer);
+
+        let rpc_client = RpcClient::new_with_commitment(self.cluster, self.options);
+
+        let tx = {
+            let latest_hash = rpc_client.get_latest_blockhash()?;
+            Transaction::new_signed_with_payer(
+                &instructions,
+                Some(&self.payer.pubkey()),
+                &signers,
+                latest_hash,
+            )
+        };
+
+        rpc_client
+            .send_and_confirm_transaction_with_spinner_and_config(
+                &tx,
+                rpc_client.commitment(),
+                config,
+            )
             .map_err(Into::into)
     }
 }

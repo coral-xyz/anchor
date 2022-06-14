@@ -13,21 +13,36 @@ The minor version will be incremented upon a breaking change and the patch versi
 ### Features
 
 * cli: Add `--run` to `anchor test` for running a subset of test suites ([#1828](https://github.com/project-serum/anchor/issues/1828)).
+* lang: Add `realloc`, `realloc::payer`, and `realloc::zero` as a new constraint group for program accounts ([#1943](https://github.com/project-serum/anchor/pull/1943)).
+* lang: Add `PartialEq` and `Eq` for `anchor_lang::Error` ([#1544](https://github.com/project-serum/anchor/pull/1544)).
 * cli: Add `--skip-build` to `anchor publish` ([#1786](https://github.
 com/project-serum/anchor/pull/1841)).
 * cli: Add `--program-keypair` to `anchor deploy` ([#1786](https://github.com/project-serum/anchor/pull/1786)).
-* spl: Add more derived traits to `TokenAccount` to `Mint` ([#1818](https://github.com/project-serum/anchor/pull/1818)).
 * cli: Add compilation optimizations to cli template ([#1807](https://github.com/project-serum/anchor/pull/1807)).
 * cli: `build` now adds docs to idl. This can be turned off with `--no-docs` ([#1561](https://github.com/project-serum/anchor/pull/1561)).
-* lang: Add `PartialEq` and `Eq` for `anchor_lang::Error` ([#1544](https://github.com/project-serum/anchor/pull/1544)).
 * cli: Add `b` and `t` aliases for `build` and `test` respectively ([#1823](https://github.com/project-serum/anchor/pull/1823)).
+* spl: Add more derived traits to `TokenAccount` to `Mint` ([#1818](https://github.com/project-serum/anchor/pull/1818)).
 * spl: Add `sync_native` token program CPI wrapper function ([#1833](https://github.com/project-serum/anchor/pull/1833)).
+* cli: Allow passing arguments to an underlying script with `anchor run` ([#1914](https://github.com/project-serum/anchor/pull/1914)).
+* ts: Implement a coder for system program ([#1920](https://github.com/project-serum/anchor/pull/1920)).
+* ts: Add `program.coder.types` for encoding/decoding user-defined types ([#1931](https://github.com/project-serum/anchor/pull/1931)).
+* client: Add send_with_spinner_and_config function to RequestBuilder ([#1926](https://github.com/project-serum/anchor/pull/1926)).
+* ts: Implement a coder for SPL associated token program ([#1939](https://github.com/project-serum/anchor/pull/1939)).
+* ts: verbose error for missing `ANCHOR_WALLET` variable when using `NodeWallet.local()` ([#1958](https://github.com/project-serum/anchor/pull/1958)).
 
 ### Fixes
 
 * cli: Move `overflow-checks` into workspace `Cargo.toml` so that it will not be ignored by compiler ([#1806](https://github.com/project-serum/anchor/pull/1806)).
 * lang: Fix missing account name information when deserialization fails when using `init` or `zero` ([#1800](https://github.com/project-serum/anchor/pull/1800)).
 * ts: Expose the wallet's publickey on the Provider ([#1845](https://github.com/project-serum/anchor/pull/1845)).
+
+### Breaking
+
+ts: Change `BROWSER` env variable to `ANCHOR_BROWSER` ([#1233](https://github.com/project-serum/anchor/pull/1233)).
+
+### Breaking
+
+* ts: Add transaction signature to `EventCallback` parameters ([#1851](https://github.com/project-serum/anchor/pull/1851)).
 
 ## [0.24.2] - 2022-04-13
 
