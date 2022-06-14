@@ -272,7 +272,8 @@ pub fn parse(
         // Don't add the error type to the types or accounts sections.
         if ty_def.name != error_name {
             if account_names.contains(&ty_def.name) {
-                accounts.push(ty_def);
+                accounts.push(IdlField { name: ty_def.name.clone(), docs: ty_def.docs.clone(), ty: IdlType::Defined(ty_def.name.to_string().clone())});
+                types.push(ty_def);
             } else if !events.iter().any(|e| e.name == ty_def.name) {
                 types.push(ty_def);
             }

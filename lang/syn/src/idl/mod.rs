@@ -16,7 +16,7 @@ pub struct Idl {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub state: Option<IdlState>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub accounts: Vec<IdlTypeDefinition>,
+    pub accounts: Vec<IdlField>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub types: Vec<IdlTypeDefinition>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
