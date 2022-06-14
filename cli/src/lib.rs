@@ -591,40 +591,11 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
         mocha.write_all(template::ts_mocha(&name).as_bytes())?;
     }
 
-    // Install node modules.
-    if cfg!(target_os = "windows") {
-        let yarn_result = std::process::Command::new("cmd")
-            .arg("/C yarn")
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .output()
-            .map_err(|e| anyhow::format_err!("yarn install failed: {}", e.to_string()))?;
-        if !yarn_result.status.success(){
-            println!("Failed yarn install will attempt to npm install");
-            std::process::Command::new("cmd")
-                .arg("/C npm install")
-                .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit())
-                .output()
-                .map_err(|e| anyhow::format_err!("npm install failed: {}", e.to_string()))?;
-            }
-    } else {
-        let yarn_result = std::process::Command::new("yarn")
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .output()
-        .map_err(|e| anyhow::format_err!("yarn install failed: {}", e.to_string()))?;
-        if !yarn_result.status.success() {
-            println!("Failed yarn install will attempt to npm install");
-            std::process::Command::new("npm")
-                .arg("install")
-                .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit())
-                .output()
-                .map_err(|e| anyhow::format_err!("npm install failed: {}", e.to_string()))?;
-            println!("Failed to install node dependencies")
-        }
-    }  
+    let yarn_result = install_node_modules("yarn")?;
+    if !yarn_result.status.success() {
+        println!("Failed yarn install will attempt to npm install");
+        install_node_modules("npm")?;
+    }
 
     if !no_git {
         let git_result = std::process::Command::new("git")
@@ -641,6 +612,24 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
     println!("{} initialized", name);
 
     Ok(())
+}
+
+fn install_node_modules(cmd: &str) -> Result<std::process::Output> {
+    if cfg!(target_os = "windows") {
+        std::process::Command::new("cmd")
+            .arg(format!("/C {} install", cmd))
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .map_err(|e| anyhow::format_err!("{} install failed: {}", cmd, e.to_string()))
+    } else {
+        std::process::Command::new(cmd)
+            .arg("install")
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .map_err(|e| anyhow::format_err!("{} install failed: {}", cmd, e.to_string()))
+    }
 }
 
 // Creates a new program crate in the `programs/<name>` directory.
