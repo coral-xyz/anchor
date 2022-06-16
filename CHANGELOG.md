@@ -28,7 +28,8 @@ com/project-serum/anchor/pull/1841)).
 * client: Add send_with_spinner_and_config function to RequestBuilder ([#1926](https://github.com/project-serum/anchor/pull/1926)).
 * ts: Implement a coder for SPL associated token program ([#1939](https://github.com/project-serum/anchor/pull/1939)).
 * ts: verbose error for missing `ANCHOR_WALLET` variable when using `NodeWallet.local()` ([#1958](https://github.com/project-serum/anchor/pull/1958)).
-
+* lang, cli, spl: Update solana toolchain to v1.10.25 ([#1974](https://github.com/project-serum/anchor/pull/1974).
+  
 ### Fixes
 
 * cli: Move `overflow-checks` into workspace `Cargo.toml` so that it will not be ignored by compiler ([#1806](https://github.com/project-serum/anchor/pull/1806)).
