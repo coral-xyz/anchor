@@ -21,6 +21,7 @@ members = [
 overflow-checks = true
 lto = "fat"
 codegen-units = 1
+
 [profile.release.build-override]
 opt-level = 3
 incremental = false
@@ -231,9 +232,9 @@ pub fn package_json() -> String {
         "@project-serum/anchor": "^{0}"
     }},
     "devDependencies": {{
-        "chai": "^4.3.4",
-        "mocha": "^9.0.3",
-        "prettier": "^2.6.2"
+        "chai": "^4.3.6",
+        "mocha": "^10.0.0",
+        "prettier": "^2.7.1"
     }}
 }}
 "#,
@@ -252,14 +253,14 @@ pub fn ts_package_json() -> String {
         "@project-serum/anchor": "^{0}"
     }},
     "devDependencies": {{
-        "chai": "^4.3.4",
-        "mocha": "^9.0.3",
-        "ts-mocha": "^8.0.0",
+        "chai": "^4.3.6",
+        "mocha": "^10.0.0",
+        "ts-mocha": "^10.0.0",
         "@types/bn.js": "^5.1.0",
-        "@types/chai": "^4.3.0",
-        "@types/mocha": "^9.0.0",
-        "typescript": "^4.3.5",
-        "prettier": "^2.6.2"
+        "@types/chai": "^4.3.1",
+        "@types/mocha": "^9.1.1",
+        "typescript": "^4.7.3",
+        "prettier": "^2.7.1"
     }}
 }}
 "#,
