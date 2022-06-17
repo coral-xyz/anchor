@@ -76,6 +76,14 @@ module.exports = {
       },
       {
         collapsable: false,
+        title: "Cookbook",
+        children: [
+          "/cookbook/transferring-lamports",
+          "/cookbook/building-packages",
+        ],
+      },
+      {
+        collapsable: false,
         title: "Source Verification",
         children: [
           "/getting-started/verification",
