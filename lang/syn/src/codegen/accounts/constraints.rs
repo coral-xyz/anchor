@@ -59,6 +59,7 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
         associated_token,
         token_account,
         mint,
+        realloc,
     } = c_group.clone();
 
     let mut constraints = Vec::new();
@@ -68,6 +69,9 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
     }
     if let Some(c) = init {
         constraints.push(Constraint::Init(c));
+    }
+    if let Some(c) = realloc {
+        constraints.push(Constraint::Realloc(c));
     }
     if let Some(c) = seeds {
         constraints.push(Constraint::Seeds(c));
@@ -130,6 +134,7 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::AssociatedToken(c) => generate_constraint_associated_token(f, c),
         Constraint::TokenAccount(c) => generate_constraint_token_account(f, c),
         Constraint::Mint(c) => generate_constraint_mint(f, c),
+        Constraint::Realloc(c) => generate_constraint_realloc(f, c),
     }
 }
 
