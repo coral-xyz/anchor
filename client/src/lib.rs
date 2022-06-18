@@ -534,23 +534,26 @@ impl<'a> RequestBuilder<'a> {
         Ok(instructions)
     }
 
-    pub fn send(self) -> Result<Signature, ClientError> {
+    pub fn transaction(&self) -> Result<Transaction, ClientError> {
         let instructions = self.instructions()?;
-
-        let mut signers = self.signers;
+        let mut signers = self.signers.clone();
         signers.push(&*self.payer);
 
-        let rpc_client = RpcClient::new_with_commitment(self.cluster, self.options);
+        let latest_hash = RpcClient::new_with_commitment(&self.cluster, self.options).get_latest_blockhash()?;
 
-        let tx = {
-            let latest_hash = rpc_client.get_latest_blockhash()?;
-            Transaction::new_signed_with_payer(
-                &instructions,
-                Some(&self.payer.pubkey()),
-                &signers,
-                latest_hash,
-            )
-        };
+        let tx = Transaction::new_signed_with_payer(
+            &instructions,
+            Some(&self.payer.pubkey()),
+            &signers,
+            latest_hash,
+        );
+
+        Ok(tx)
+    }
+
+    pub fn send(self) -> Result<Signature, ClientError> {
+        let rpc_client = RpcClient::new_with_commitment(&self.cluster, self.options);
+        let tx = self.transaction()?;
 
         rpc_client
             .send_and_confirm_transaction(&tx)
@@ -561,22 +564,8 @@ impl<'a> RequestBuilder<'a> {
         self,
         config: RpcSendTransactionConfig,
     ) -> Result<Signature, ClientError> {
-        let instructions = self.instructions()?;
-
-        let mut signers = self.signers;
-        signers.push(&*self.payer);
-
-        let rpc_client = RpcClient::new_with_commitment(self.cluster, self.options);
-
-        let tx = {
-            let latest_hash = rpc_client.get_latest_blockhash()?;
-            Transaction::new_signed_with_payer(
-                &instructions,
-                Some(&self.payer.pubkey()),
-                &signers,
-                latest_hash,
-            )
-        };
+        let rpc_client = RpcClient::new_with_commitment(&self.cluster, self.options);
+        let tx = self.transaction()?;
 
         rpc_client
             .send_and_confirm_transaction_with_spinner_and_config(
