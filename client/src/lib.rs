@@ -539,7 +539,8 @@ impl<'a> RequestBuilder<'a> {
         let mut signers = self.signers.clone();
         signers.push(&*self.payer);
 
-        let latest_hash = RpcClient::new_with_commitment(&self.cluster, self.options).get_latest_blockhash()?;
+        let latest_hash =
+            RpcClient::new_with_commitment(&self.cluster, self.options).get_latest_blockhash()?;
 
         let tx = Transaction::new_signed_with_payer(
             &instructions,
