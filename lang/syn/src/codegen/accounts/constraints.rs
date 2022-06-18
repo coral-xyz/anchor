@@ -333,6 +333,10 @@ fn generate_constraint_realloc(f: &Field, c: &ConstraintReallocGroup) -> proc_ma
     let zero = &c.zero;
 
     quote! {
+        if __reallocs.contains(&#field.key().to_string()) {
+            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountDuplicateReallocs).with_account_name(#account_name));
+        }
+
         let __anchor_rent = anchor_lang::prelude::Rent::get()?;
         let __field_info = #field.to_account_info();
         let __additive = #new_space > __field_info.data_len();
@@ -366,6 +370,7 @@ fn generate_constraint_realloc(f: &Field, c: &ConstraintReallocGroup) -> proc_ma
             }
 
             #field.to_account_info().realloc(#new_space, #zero)?;
+            __reallocs.insert(#field.key().to_string());
         }
     }
 }

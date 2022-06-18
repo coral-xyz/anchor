@@ -68,21 +68,23 @@ describe("realloc", () => {
     assert.lengthOf(s.data, 1);
   });
 
-  it("is idempotent with duplicate accounts", async () => {
-    await program.methods
-      .realloc2(1000)
-      .accounts({
-        authority: authority.publicKey,
-        sample1: sample,
-        sample2: sample,
-      })
-      .rpc();
-
-    const s = await program.provider.connection.getAccountInfo(
-      sample,
-      "processed"
-    );
-
-    assert.strictEqual(s.data.length, 1013);
+  it("fails with duplicate account reallocations", async () => {
+    try {
+      await program.methods
+        .realloc2(1000)
+        .accounts({
+          authority: authority.publicKey,
+          sample1: sample,
+          sample2: sample,
+        })
+        .rpc();
+    } catch (e) {
+      assert.isTrue(e instanceof AnchorError);
+      const err: AnchorError = e;
+      const errMsg =
+        "The account was duplicated for more than one reallocation";
+      assert.strictEqual(err.error.errorMessage, errMsg);
+      assert.strictEqual(err.error.errorCode.number, 3017);
+    }
   });
 });

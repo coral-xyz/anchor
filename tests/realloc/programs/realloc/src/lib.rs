@@ -90,7 +90,7 @@ pub struct Realloc2<'info> {
         mut,
         seeds = [b"sample"],
         bump = sample2.bump,
-        realloc = Sample::space(len as usize),
+        realloc = Sample::space((len + 10) as usize),
         realloc::payer = authority,
         realloc::zero = false,
     )]

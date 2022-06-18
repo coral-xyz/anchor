@@ -365,6 +365,7 @@ export const LangErrorCode = {
   AccountNotAssociatedTokenAccount: 3014,
   AccountSysvarMismatch: 3015,
   AccountReallocExceedsLimit: 3016,
+  AccountDuplicateReallocs: 3017,
 
   // State.
   StateInvalidAddress: 4000,
@@ -507,6 +508,10 @@ export const LangErrorMessage = new Map([
   [
     LangErrorCode.AccountReallocExceedsLimit,
     "The account reallocation exceeds the MAX_PERMITTED_DATA_INCREASE limit",
+  ],
+  [
+    LangErrorCode.AccountDuplicateReallocs,
+    "The account was duplicated for more than one reallocation",
   ],
 
   // State.
