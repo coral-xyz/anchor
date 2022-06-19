@@ -2,6 +2,7 @@
 custom_coder = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
 spl_token = "FmpfPa1LHEYRbueNMnwNVd2JvyQ89GXGWdyZEXNNKV8w"
 native_system = "9NxAd91hhJ3ZBTHytYP894y4ESRKG7n8VbLgdyYGJFLB"
+serum_dex = "Faw9uL9RuUc6TxrZJiARffkhLwCzwnirtkrsTVDbeyFu"
 
 [registry]
 url = "https://anchor.projectserum.com"
@@ -11,6 +12,14 @@ cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
+build = "anchor run build-dex && anchor build --skip-lint"
+build-dex = "pushd deps/dex-v4/program/ && cargo build-bpf && popd"
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+test-with-build = "anchor run build && anchor test --skip-build --skip-lint"
+
+[[test.genesis]]
+address = "3ZtxesyANRTpf7wWp7Upp1ZM4HEZjn7FzNjTyGM3AXnM"
+program = "./deps/dex-v4/program/target/deploy/dex_v4.so"
 
 [features]
+

@@ -2,3 +2,6 @@
 members = [
     "programs/*"
 ]
+exclude = [
+    "deps/dex-v4/program"
+]

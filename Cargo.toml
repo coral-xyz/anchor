@@ -18,4 +18,5 @@ exclude = [
     "tests/swap/deps/serum-dex",
     "tests/cfo/deps/serum-dex",
     "tests/permissioned-markets/deps/serum-dex",
+    "tests/custom-coder/deps/dex-v4/program",
 ]
