@@ -39,6 +39,9 @@ export class SerumInstructionCoder implements InstructionCoder {
       case "closeMarket": {
         return Buffer.from(new closeMarketInstruction().serialize());
       }
+      case "updateRoyalties": {
+        return Buffer.from(new updateRoyaltiesInstruction().serialize());
+      }
       default: {
         throw new Error(`Invalid instruction: ${ixName}`);
       }
@@ -354,5 +357,24 @@ export class closeMarketInstruction {
   }
   serialize(): Uint8Array {
     return serialize(closeMarketInstruction.schema, this);
+  }
+}
+
+export class updateRoyaltiesInstruction {
+  tag: BN;
+  static schema: Schema = new Map([
+    [
+      updateRoyaltiesInstruction,
+      {
+        kind: "struct",
+        fields: [["tag", "u64"]],
+      },
+    ],
+  ]);
+  constructor() {
+    this.tag = new BN(10);
+  }
+  serialize(): Uint8Array {
+    return serialize(updateRoyaltiesInstruction.schema, this);
   }
 }
