@@ -19,3 +19,6 @@
 	path = tests/auction-house
 	url = https://github.com/armaniferrante/auction-house
 	branch = armani/pda
+[submodule "tests/custom-coder/deps/dex-v4"]
+	path = tests/custom-coder/deps/dex-v4
+	url = https://github.com/Bonfida/dex-v4
