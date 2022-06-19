@@ -413,7 +413,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     let mut __bumps = std::collections::BTreeMap::new();
 
                                     // Realloc tracker
-                                    let mut __realloc = std::collections::BTreeSet::new();
+                                    let mut __reallocs= std::collections::BTreeSet::new();
 
                                     // Load state.
                                     let mut remaining_accounts: &[AccountInfo] = accounts;
@@ -606,7 +606,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             let mut __bumps = std::collections::BTreeMap::new();
 
                                             // Realloc tracker.
-                                            let mut __realloc = std::collections::BTreeSet::new();
+                                            let mut __reallocs= std::collections::BTreeSet::new();
 
                                             // Deserialize the program state account.
                                             let mut remaining_accounts: &[AccountInfo] = accounts;

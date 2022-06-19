@@ -333,6 +333,9 @@ fn generate_constraint_realloc(f: &Field, c: &ConstraintReallocGroup) -> proc_ma
     let zero = &c.zero;
 
     quote! {
+        // Blocks duplicate account reallocs in a single instruction to prevent accidental account overwrites
+        // and to ensure the calculation of the change in bytes is based on account size at program entry
+        // which inheritantly guarantee idempotency.
         if __reallocs.contains(&#field.key().to_string()) {
             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountDuplicateReallocs).with_account_name(#account_name));
         }
