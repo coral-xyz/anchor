@@ -3,8 +3,9 @@ import { Program } from "../program/index.js";
 import Provider from "../provider.js";
 import { SerumCoder } from "../coder/serum";
 
+// Could possibly change, might wanna import from @bonfida/dex-v4
 const DEX_V4_PROGRAM_ID_DEVNET = new PublicKey(
-  "GGKAzVAfJqtNPHhA8tGzz6RFnbinejaTdJZkVimSenM1"
+  "3ZtxesyANRTpf7wWp7Upp1ZM4HEZjn7FzNjTyGM3AXnM"
 );
 
 export function program(provider?: Provider): Program<SerumDex> {
@@ -88,6 +89,14 @@ export type SerumDex = {
         },
         {
           name: "crankerReward";
+          type: "u64";
+        },
+        {
+          name: "baseCurrencyMultiplier";
+          type: "u64";
+        },
+        {
+          name: "quoteCurrencyMultiplier";
           type: "u64";
         }
       ];
@@ -759,6 +768,14 @@ export const IDL: SerumDex = {
         },
         {
           name: "crankerReward",
+          type: "u64",
+        },
+        {
+          name: "baseCurrencyMultiplier",
+          type: "u64",
+        },
+        {
+          name: "quoteCurrencyMultiplier",
           type: "u64",
         },
       ],

@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use borsh::{BorshDeserialize, BorshSerialize};
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("Faw9uL9RuUc6TxrZJiARffkhLwCzwnirtkrsTVDbeyFu");
 
 // This program is simply used to generate the IDL for the token program.
 //
@@ -18,6 +18,8 @@ pub mod serum_dex {
         min_base_order_size: u64,
         tick_size: u64,
         cranker_reward: u64,
+        base_currency_multiplier: u64,
+        quote_currency_multiplier: u64,
     ) -> Result<()> {
         Ok(())
     }

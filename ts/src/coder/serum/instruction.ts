@@ -59,6 +59,8 @@ export class createMarketInstruction {
   minBaseOrderSize: BN;
   tickSize: BN;
   crankerReward: BN;
+  baseCurrencyMultiplier: BN;
+  quoteCurrencyMultiplier: BN;
   static schema: Schema = new Map([
     [
       createMarketInstruction,
@@ -70,6 +72,8 @@ export class createMarketInstruction {
           ["minBaseOrderSize", "u64"],
           ["tickSize", "u64"],
           ["crankerReward", "u64"],
+          ["baseCurrencyMultiplier", "u64"],
+          ["quoteCurrencyMultiplier", "u64"],
         ],
       },
     ],
@@ -79,12 +83,16 @@ export class createMarketInstruction {
     minBaseOrderSize: BN;
     tickSize: BN;
     crankerReward: BN;
+    baseCurrencyMultiplier: BN;
+    quoteCurrencyMultiplier: BN;
   }) {
     this.tag = new BN(0);
     this.signerNonce = obj.signerNonce;
     this.minBaseOrderSize = obj.minBaseOrderSize;
     this.tickSize = obj.tickSize;
     this.crankerReward = obj.crankerReward;
+    this.baseCurrencyMultiplier = obj.baseCurrencyMultiplier;
+    this.quoteCurrencyMultiplier = obj.quoteCurrencyMultiplier;
   }
   serialize(): Uint8Array {
     return serialize(createMarketInstruction.schema, this);
