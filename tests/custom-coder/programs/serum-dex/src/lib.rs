@@ -22,39 +22,18 @@ pub mod serum_dex {
         Ok(())
     }
 
-    pub fn close_market(ctx: Context<CloseMarket>) -> Result<()> {
-        Ok(())
-    }
-
-    pub fn close_account(ctx: Context<CloseAccount>) -> Result<()> {
-        Ok(())
-    }
-
-    pub fn sweep_fees(ctx: Context<SweepFees>) -> Result<()> {
-        Ok(())
-    }
-
-    pub fn initialize_account(
-        ctx: Context<InitializeAccount>,
-        market: Pubkey,
-        max_orders: u64,
+    pub fn new_order(
+        ctx: Context<NewOrder>,
+        client_order_id: u128,
+        limit_price: u64,
+        max_base_qty: u64,
+        max_quote_qty: u64,
+        match_limit: u64,
+        side: u8,
+        order_type: u8,
+        self_trade_behaviour: u8,
+        has_discount_token_account: u8,
     ) -> Result<()> {
-        Ok(())
-    }
-
-    pub fn settle(ctx: Context<Settle>) -> Result<()> {
-        Ok(())
-    }
-
-    pub fn consume_events(
-        ctx: Context<ConsumeEvents>,
-        max_iterations: u64,
-        no_op_err: u64,
-    ) -> Result<()> {
-        Ok(())
-    }
-
-    pub fn cancel_order(ctx: Context<CancelOrder>, order_index: u64, order_id: u128) -> Result<()> {
         Ok(())
     }
 
@@ -67,6 +46,42 @@ pub mod serum_dex {
         has_discount_token_account: u8,
         _padding: [u8; 6],
     ) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn cancel_order(ctx: Context<CancelOrder>, order_index: u64, order_id: u128) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn consume_events(
+        ctx: Context<ConsumeEvents>,
+        max_iterations: u64,
+        no_op_err: u64,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn settle(ctx: Context<Settle>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn initialize_account(
+        ctx: Context<InitializeAccount>,
+        market: Pubkey,
+        max_orders: u64,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn sweep_fees(ctx: Context<SweepFees>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn close_account(ctx: Context<CloseAccount>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn close_market(ctx: Context<CloseMarket>) -> Result<()> {
         Ok(())
     }
 

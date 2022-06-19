@@ -93,250 +93,21 @@ export type SerumDex = {
       ];
     },
     {
-      name: "closeMarket";
+      name: "newOrder";
       accounts: [
-        {
-          name: "market";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "baseVault";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "quoteVault";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "orderbook";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "eventQueue";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "bids";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "asks";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "marketAdmin";
-          isMut: false;
-          isSigner: true;
-        },
-        {
-          name: "targetLamportsAccount";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "marketSigner";
-          isMut: false;
-          isSigner: false;
-        },
-        {
-          name: "splTokenProgram";
-          isMut: false;
-          isSigner: false;
-        }
-      ];
-      args: [];
-    },
-    {
-      name: "closeAccount";
-      accounts: [
-        {
-          name: "user";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "userOwner";
-          isMut: false;
-          isSigner: true;
-        },
-        {
-          name: "targetLamportsAccount";
-          isMut: true;
-          isSigner: false;
-        }
-      ];
-      args: [];
-    },
-    {
-      name: "sweepFees";
-      accounts: [
-        {
-          name: "market";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "marketSigner";
-          isMut: false;
-          isSigner: false;
-        },
-        {
-          name: "quoteVault";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "destinationTokenAccount";
-          isMut: true;
-          isSigner: false;
-        },
         {
           name: "splTokenProgram";
           isMut: false;
           isSigner: false;
         },
-        {
-          name: "tokenMetadata";
-          isMut: false;
-          isSigner: false;
-        }
-      ];
-      args: [];
-    },
-    {
-      name: "initializeAccount";
-      accounts: [
         {
           name: "systemProgram";
           isMut: false;
           isSigner: false;
         },
         {
-          name: "user";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "userOwner";
-          isMut: false;
-          isSigner: true;
-        },
-        {
-          name: "feePayer";
-          isMut: true;
-          isSigner: true;
-        }
-      ];
-      args: [
-        {
-          name: "market";
-          type: "publicKey";
-        },
-        {
-          name: "maxOrders";
-          type: "u64";
-        }
-      ];
-    },
-    {
-      name: "settle";
-      accounts: [
-        {
-          name: "splTokenProgram";
-          isMut: false;
-          isSigner: false;
-        },
-        {
-          name: "market";
-          isMut: false;
-          isSigner: false;
-        },
-        {
-          name: "baseVault";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "quoteVault";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "marketSigner";
-          isMut: false;
-          isSigner: false;
-        },
-        {
-          name: "user";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "userOwner";
-          isMut: false;
-          isSigner: true;
-        },
-        {
-          name: "destinationBaseAccount";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "destinationQuoteAccount";
-          isMut: true;
-          isSigner: false;
-        }
-      ];
-      args: [];
-    },
-    {
-      name: "consumeEvents";
-      accounts: [
-        {
           name: "market";
           isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "orderbook";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "eventQueue";
-          isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "rewardTarget";
-          isMut: true;
-          isSigner: false;
-        }
-      ];
-      args: [
-        {
-          name: "maxIterations";
-          type: "u64";
-        },
-        {
-          name: "noOpErr";
-          type: "u64";
-        }
-      ];
-    },
-    {
-      name: "cancelOrder";
-      accounts: [
-        {
-          name: "market";
-          isMut: false;
           isSigner: false;
         },
         {
@@ -360,24 +131,67 @@ export type SerumDex = {
           isSigner: false;
         },
         {
+          name: "baseVault";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "quoteVault";
+          isMut: true;
+          isSigner: false;
+        },
+        {
           name: "user";
           isMut: true;
           isSigner: false;
         },
         {
+          name: "userTokenAccount";
+          isMut: true;
+          isSigner: false;
+        },
+        {
           name: "userOwner";
-          isMut: false;
+          isMut: true;
           isSigner: true;
         }
       ];
       args: [
         {
-          name: "orderIndex";
+          name: "clientOrderId";
+          type: "u128";
+        },
+        {
+          name: "limitPrice";
           type: "u64";
         },
         {
-          name: "orderId";
-          type: "u128";
+          name: "maxBaseQty";
+          type: "u64";
+        },
+        {
+          name: "maxQuoteQty";
+          type: "u64";
+        },
+        {
+          name: "matchLimit";
+          type: "u64";
+        },
+        {
+          name: "side";
+          type: "u8";
+        },
+        {
+          name: "orderType";
+          type: "u8";
+        },
+        {
+          name: "selfTradeBehaviour";
+          type: "u8";
+        },
+        {
+          name: "hasDiscountTokenAccount";
+          type: "u8";
         }
       ];
     },
@@ -478,6 +292,295 @@ export type SerumDex = {
           };
         }
       ];
+    },
+    {
+      name: "cancelOrder";
+      accounts: [
+        {
+          name: "market";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "orderbook";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "eventQueue";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "bids";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "asks";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "user";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "userOwner";
+          isMut: false;
+          isSigner: true;
+        }
+      ];
+      args: [
+        {
+          name: "orderIndex";
+          type: "u64";
+        },
+        {
+          name: "orderId";
+          type: "u128";
+        }
+      ];
+    },
+    {
+      name: "consumeEvents";
+      accounts: [
+        {
+          name: "market";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "orderbook";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "eventQueue";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "rewardTarget";
+          isMut: true;
+          isSigner: false;
+        }
+      ];
+      args: [
+        {
+          name: "maxIterations";
+          type: "u64";
+        },
+        {
+          name: "noOpErr";
+          type: "u64";
+        }
+      ];
+    },
+    {
+      name: "settle";
+      accounts: [
+        {
+          name: "splTokenProgram";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "market";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "baseVault";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "quoteVault";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "marketSigner";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "user";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "userOwner";
+          isMut: false;
+          isSigner: true;
+        },
+        {
+          name: "destinationBaseAccount";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "destinationQuoteAccount";
+          isMut: true;
+          isSigner: false;
+        }
+      ];
+      args: [];
+    },
+    {
+      name: "initializeAccount";
+      accounts: [
+        {
+          name: "systemProgram";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "user";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "userOwner";
+          isMut: false;
+          isSigner: true;
+        },
+        {
+          name: "feePayer";
+          isMut: true;
+          isSigner: true;
+        }
+      ];
+      args: [
+        {
+          name: "market";
+          type: "publicKey";
+        },
+        {
+          name: "maxOrders";
+          type: "u64";
+        }
+      ];
+    },
+    {
+      name: "sweepFees";
+      accounts: [
+        {
+          name: "market";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "marketSigner";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "quoteVault";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "destinationTokenAccount";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "splTokenProgram";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "tokenMetadata";
+          isMut: false;
+          isSigner: false;
+        }
+      ];
+      args: [];
+    },
+    {
+      name: "closeAccount";
+      accounts: [
+        {
+          name: "user";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "userOwner";
+          isMut: false;
+          isSigner: true;
+        },
+        {
+          name: "targetLamportsAccount";
+          isMut: true;
+          isSigner: false;
+        }
+      ];
+      args: [];
+    },
+    {
+      name: "closeMarket";
+      accounts: [
+        {
+          name: "market";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "baseVault";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "quoteVault";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "orderbook";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "eventQueue";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "bids";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "asks";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "marketAdmin";
+          isMut: false;
+          isSigner: true;
+        },
+        {
+          name: "targetLamportsAccount";
+          isMut: true;
+          isSigner: false;
+        },
+        {
+          name: "marketSigner";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "splTokenProgram";
+          isMut: false;
+          isSigner: false;
+        }
+      ];
+      args: [];
     },
     {
       name: "updateRoyalties";
@@ -661,250 +764,21 @@ export const IDL: SerumDex = {
       ],
     },
     {
-      name: "closeMarket",
+      name: "newOrder",
       accounts: [
-        {
-          name: "market",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "baseVault",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "quoteVault",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "orderbook",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "eventQueue",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "bids",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "asks",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "marketAdmin",
-          isMut: false,
-          isSigner: true,
-        },
-        {
-          name: "targetLamportsAccount",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "marketSigner",
-          isMut: false,
-          isSigner: false,
-        },
         {
           name: "splTokenProgram",
           isMut: false,
           isSigner: false,
         },
-      ],
-      args: [],
-    },
-    {
-      name: "closeAccount",
-      accounts: [
-        {
-          name: "user",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "userOwner",
-          isMut: false,
-          isSigner: true,
-        },
-        {
-          name: "targetLamportsAccount",
-          isMut: true,
-          isSigner: false,
-        },
-      ],
-      args: [],
-    },
-    {
-      name: "sweepFees",
-      accounts: [
-        {
-          name: "market",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "marketSigner",
-          isMut: false,
-          isSigner: false,
-        },
-        {
-          name: "quoteVault",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "destinationTokenAccount",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "splTokenProgram",
-          isMut: false,
-          isSigner: false,
-        },
-        {
-          name: "tokenMetadata",
-          isMut: false,
-          isSigner: false,
-        },
-      ],
-      args: [],
-    },
-    {
-      name: "initializeAccount",
-      accounts: [
         {
           name: "systemProgram",
           isMut: false,
           isSigner: false,
         },
         {
-          name: "user",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "userOwner",
-          isMut: false,
-          isSigner: true,
-        },
-        {
-          name: "feePayer",
-          isMut: true,
-          isSigner: true,
-        },
-      ],
-      args: [
-        {
-          name: "market",
-          type: "publicKey",
-        },
-        {
-          name: "maxOrders",
-          type: "u64",
-        },
-      ],
-    },
-    {
-      name: "settle",
-      accounts: [
-        {
-          name: "splTokenProgram",
-          isMut: false,
-          isSigner: false,
-        },
-        {
-          name: "market",
-          isMut: false,
-          isSigner: false,
-        },
-        {
-          name: "baseVault",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "quoteVault",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "marketSigner",
-          isMut: false,
-          isSigner: false,
-        },
-        {
-          name: "user",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "userOwner",
-          isMut: false,
-          isSigner: true,
-        },
-        {
-          name: "destinationBaseAccount",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "destinationQuoteAccount",
-          isMut: true,
-          isSigner: false,
-        },
-      ],
-      args: [],
-    },
-    {
-      name: "consumeEvents",
-      accounts: [
-        {
           name: "market",
           isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "orderbook",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "eventQueue",
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "rewardTarget",
-          isMut: true,
-          isSigner: false,
-        },
-      ],
-      args: [
-        {
-          name: "maxIterations",
-          type: "u64",
-        },
-        {
-          name: "noOpErr",
-          type: "u64",
-        },
-      ],
-    },
-    {
-      name: "cancelOrder",
-      accounts: [
-        {
-          name: "market",
-          isMut: false,
           isSigner: false,
         },
         {
@@ -928,24 +802,67 @@ export const IDL: SerumDex = {
           isSigner: false,
         },
         {
+          name: "baseVault",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "quoteVault",
+          isMut: true,
+          isSigner: false,
+        },
+        {
           name: "user",
           isMut: true,
           isSigner: false,
         },
         {
+          name: "userTokenAccount",
+          isMut: true,
+          isSigner: false,
+        },
+        {
           name: "userOwner",
-          isMut: false,
+          isMut: true,
           isSigner: true,
         },
       ],
       args: [
         {
-          name: "orderIndex",
+          name: "clientOrderId",
+          type: "u128",
+        },
+        {
+          name: "limitPrice",
           type: "u64",
         },
         {
-          name: "orderId",
-          type: "u128",
+          name: "maxBaseQty",
+          type: "u64",
+        },
+        {
+          name: "maxQuoteQty",
+          type: "u64",
+        },
+        {
+          name: "matchLimit",
+          type: "u64",
+        },
+        {
+          name: "side",
+          type: "u8",
+        },
+        {
+          name: "orderType",
+          type: "u8",
+        },
+        {
+          name: "selfTradeBehaviour",
+          type: "u8",
+        },
+        {
+          name: "hasDiscountTokenAccount",
+          type: "u8",
         },
       ],
     },
@@ -1046,6 +963,295 @@ export const IDL: SerumDex = {
           },
         },
       ],
+    },
+    {
+      name: "cancelOrder",
+      accounts: [
+        {
+          name: "market",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "orderbook",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "eventQueue",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "bids",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "asks",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "user",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "userOwner",
+          isMut: false,
+          isSigner: true,
+        },
+      ],
+      args: [
+        {
+          name: "orderIndex",
+          type: "u64",
+        },
+        {
+          name: "orderId",
+          type: "u128",
+        },
+      ],
+    },
+    {
+      name: "consumeEvents",
+      accounts: [
+        {
+          name: "market",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "orderbook",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "eventQueue",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "rewardTarget",
+          isMut: true,
+          isSigner: false,
+        },
+      ],
+      args: [
+        {
+          name: "maxIterations",
+          type: "u64",
+        },
+        {
+          name: "noOpErr",
+          type: "u64",
+        },
+      ],
+    },
+    {
+      name: "settle",
+      accounts: [
+        {
+          name: "splTokenProgram",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "market",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "baseVault",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "quoteVault",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "marketSigner",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "user",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "userOwner",
+          isMut: false,
+          isSigner: true,
+        },
+        {
+          name: "destinationBaseAccount",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "destinationQuoteAccount",
+          isMut: true,
+          isSigner: false,
+        },
+      ],
+      args: [],
+    },
+    {
+      name: "initializeAccount",
+      accounts: [
+        {
+          name: "systemProgram",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "user",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "userOwner",
+          isMut: false,
+          isSigner: true,
+        },
+        {
+          name: "feePayer",
+          isMut: true,
+          isSigner: true,
+        },
+      ],
+      args: [
+        {
+          name: "market",
+          type: "publicKey",
+        },
+        {
+          name: "maxOrders",
+          type: "u64",
+        },
+      ],
+    },
+    {
+      name: "sweepFees",
+      accounts: [
+        {
+          name: "market",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "marketSigner",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "quoteVault",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "destinationTokenAccount",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "splTokenProgram",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "tokenMetadata",
+          isMut: false,
+          isSigner: false,
+        },
+      ],
+      args: [],
+    },
+    {
+      name: "closeAccount",
+      accounts: [
+        {
+          name: "user",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "userOwner",
+          isMut: false,
+          isSigner: true,
+        },
+        {
+          name: "targetLamportsAccount",
+          isMut: true,
+          isSigner: false,
+        },
+      ],
+      args: [],
+    },
+    {
+      name: "closeMarket",
+      accounts: [
+        {
+          name: "market",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "baseVault",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "quoteVault",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "orderbook",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "eventQueue",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "bids",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "asks",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "marketAdmin",
+          isMut: false,
+          isSigner: true,
+        },
+        {
+          name: "targetLamportsAccount",
+          isMut: true,
+          isSigner: false,
+        },
+        {
+          name: "marketSigner",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "splTokenProgram",
+          isMut: false,
+          isSigner: false,
+        },
+      ],
+      args: [],
     },
     {
       name: "updateRoyalties",
