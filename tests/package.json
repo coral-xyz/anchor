@@ -38,7 +38,7 @@
     "bpf-upgradeable-state"
   ],
   "dependencies": {
-    "@project-serum/anchor": "file:../ts",
+    "@coral-xyz/anchor": "file:../ts",
     "@project-serum/common": "^0.0.1-beta.3",
     "@project-serum/serum": "^0.13.60",
     "@solana/spl-token": "^0.1.8"

@@ -1,5 +1,5 @@
-import * as anchor from "@project-serum/anchor";
-import { Native, Spl } from "@project-serum/anchor";
+import * as anchor from "@coral-xyz/anchor";
+import { Native, Spl } from "@coral-xyz/anchor";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import * as assert from "assert";
 import BN from "bn.js";

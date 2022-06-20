@@ -14,7 +14,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * lang: Add `PartialEq` and `Eq` for `anchor_lang::Error` ([#1544](https://github.com/coral-xyz/anchor/pull/1544)).
 * cli: Add `--skip-build` to `anchor publish` ([#1786](https://github.
-com/project-serum/anchor/pull/1841)).
+com/coral-xyz/anchor/pull/1841)).
 * cli: Add `--program-keypair` to `anchor deploy` ([#1786](https://github.com/coral-xyz/anchor/pull/1786)).
 * cli: Add compilation optimizations to cli template ([#1807](https://github.com/coral-xyz/anchor/pull/1807)).
 * cli: `build` now adds docs to idl. This can be turned off with `--no-docs` ([#1561](https://github.com/coral-xyz/anchor/pull/1561)).
@@ -254,7 +254,7 @@ Deprecated account types are no longer imported by the prelude ([#1208](https://
 
 * cli: fix dns in NODE_OPTIONS ([#928](https://github.com/coral-xyz/anchor/pull/928)).
 * cli: output TypeScript IDL in `idl parse` subcommand ([#941](https://github.com/coral-xyz/anchor/pull/941)).
-* cli: Add fields `os` and `cpu` to npm package `@project-serum/anchor-cli` ([#976](https://github.com/coral-xyz/anchor/pull/976)).
+* cli: Add fields `os` and `cpu` to npm package `@coral-xyz/anchor-cli` ([#976](https://github.com/coral-xyz/anchor/pull/976)).
 * cli: Allow specify output directory for TypeScript IDL ([#940](https://github.com/coral-xyz/anchor/pull/940)).
 
 ### Breaking
@@ -633,5 +633,5 @@ Initial release.
 * lang/syn: Internal crate for parsing the Anchor eDSL, generating code, and an IDL.
 * spl: `anchor-spl` crate providing CPI clients for Anchor programs.
 * client: `anchor-client` crate providing Rust clients for Anchor programs.
-* ts: `@project-serum/anchor` package for generating TypeScript clients.
+* ts: `@coral-xyz/anchor` package for generating TypeScript clients.
 * cli: Command line interface for managing Anchor programs.

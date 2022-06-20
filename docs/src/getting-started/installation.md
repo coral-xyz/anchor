@@ -33,10 +33,10 @@ npm install -g yarn
 
 ### Install using pre-build binary on x86_64 Linux
 
-Anchor binaries are available via an NPM package [`@project-serum/anchor-cli`](https://www.npmjs.com/package/@project-serum/anchor-cli). Only x86_64 Linux is supported currently, you must build from source for other OS'.
+Anchor binaries are available via an NPM package [`@coral-xyz/anchor-cli`](https://www.npmjs.com/package/@coral-xyz/anchor-cli). Only x86_64 Linux is supported currently, you must build from source for other OS'.
 
 ```bash
-npm i -g @project-serum/anchor-cli
+npm i -g @coral-xyz/anchor-cli
 ```
 
 ### Build from source for other operating systems
