@@ -71,7 +71,7 @@ impl<'info, T: solana_program::sysvar::Sysvar> Accounts<'info> for Sysvar<'info,
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
-        _reallocs: &mut BTreeSet<String>,
+        _reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
