@@ -32,6 +32,7 @@ pub use anchor_lang;
 pub use cluster::Cluster;
 pub use solana_client;
 pub use solana_sdk;
+use anchor_lang::solana_program::hash::Hash;
 
 mod cluster;
 
@@ -534,13 +535,10 @@ impl<'a> RequestBuilder<'a> {
         Ok(instructions)
     }
 
-    pub fn transaction(&self) -> Result<Transaction, ClientError> {
+    fn signed_transaction_with_blockhash(&self, latest_hash: Hash) -> Result<Transaction, ClientError> {
         let instructions = self.instructions()?;
         let mut signers = self.signers.clone();
         signers.push(&*self.payer);
-
-        let latest_hash =
-            RpcClient::new_with_commitment(&self.cluster, self.options).get_latest_blockhash()?;
 
         let tx = Transaction::new_signed_with_payer(
             &instructions,
@@ -552,9 +550,24 @@ impl<'a> RequestBuilder<'a> {
         Ok(tx)
     }
 
+    pub fn signed_transaction(&self) -> Result<Transaction, ClientError> {
+        let latest_hash =
+            RpcClient::new_with_commitment(&self.cluster, self.options).get_latest_blockhash()?;
+        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
+
+        Ok(tx)
+    }
+
+    pub fn transaction(&self) -> Result<Transaction, ClientError> {
+        let instructions = &self.instructions;
+        let tx = Transaction::new_with_payer(instructions, Some(&self.payer.pubkey()));
+        Ok(tx)
+    }
+
     pub fn send(self) -> Result<Signature, ClientError> {
         let rpc_client = RpcClient::new_with_commitment(&self.cluster, self.options);
-        let tx = self.transaction()?;
+        let latest_hash = rpc_client.get_latest_blockhash()?;
+        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
 
         rpc_client
             .send_and_confirm_transaction(&tx)
@@ -566,7 +579,8 @@ impl<'a> RequestBuilder<'a> {
         config: RpcSendTransactionConfig,
     ) -> Result<Signature, ClientError> {
         let rpc_client = RpcClient::new_with_commitment(&self.cluster, self.options);
-        let tx = self.transaction()?;
+        let latest_hash = rpc_client.get_latest_blockhash()?;
+        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
 
         rpc_client
             .send_and_confirm_transaction_with_spinner_and_config(
