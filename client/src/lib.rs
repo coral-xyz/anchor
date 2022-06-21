@@ -5,6 +5,7 @@ use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::solana_program::system_program;
+use anchor_lang::solana_program::hash::Hash;
 use anchor_lang::{AccountDeserialize, Discriminator, InstructionData, ToAccountMetas};
 use regex::Regex;
 use solana_account_decoder::UiAccountEncoding;
@@ -32,7 +33,6 @@ pub use anchor_lang;
 pub use cluster::Cluster;
 pub use solana_client;
 pub use solana_sdk;
-use anchor_lang::solana_program::hash::Hash;
 
 mod cluster;
 
