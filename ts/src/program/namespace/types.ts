@@ -159,7 +159,7 @@ type TypeDefDictionary<T extends IdlTypeDef[], Defined> = {
 
 export type IdlTypes<T extends Idl> = TypeDefDictionary<
   NonNullable<T["types"]>,
-  Record<string, never>
+  { [K in T["types"] extends IdlTypeDef[] ? T["types"][number]["name"] : never]: IdlTypes<T> }
 >;
 
 export type IdlAccounts<T extends Idl> = TypeDefDictionary<
