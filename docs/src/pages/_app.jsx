@@ -15,9 +15,16 @@ import '@/styles/tailwind.css'
 
 const navigation = [
   {
-    title: 'Introduction',
+    title: 'Prologue',
     links: [
-      { title: 'Getting started', href: '/' },
+      { title: 'Release Notes', href: '/docs/release-notes' },
+      { title: 'Contribution Guide', href: '/docs/contribution-guide' },
+    ],
+  },
+  {
+    title: 'Getting Started',
+    links: [
+      { title: 'Introduction', href: '/' },
       { title: 'Installation', href: '/docs/installation' },
       { title: 'Hello World', href: '/docs/hello-world' },
       { title: 'Intro to Solana', href: '/docs/intro-to-solana' },
