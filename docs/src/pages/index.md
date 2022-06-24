@@ -1,6 +1,6 @@
 ---
-title: Getting started
-pageTitle: Anchor - Solana Sealevel Framework
+title: Introduction
+pageTitle: Anchor - Introduction
 description: Anchor is a framework for Solana's Sealevel runtime providing several convenient developer tools for writing smart contracts.
 ---
 
