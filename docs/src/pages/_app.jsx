@@ -71,6 +71,10 @@ const navigation = [
         title: 'Important Links',
         href: '/docs/important-links',
       },
+      {
+        title: 'Changelog',
+        href: '/docs/changelog',
+      },
     ],
   },
   {
