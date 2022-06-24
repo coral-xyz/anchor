@@ -336,44 +336,44 @@ fn generate_constraint_realloc(f: &Field, c: &ConstraintReallocGroup) -> proc_ma
         // Blocks duplicate account reallocs in a single instruction to prevent accidental account overwrites
         // and to ensure the calculation of the change in bytes is based on account size at program entry
         // which inheritantly guarantee idempotency.
-        if __reallocs.contains(&#field.key().to_string()) {
+        if __reallocs.contains(&#field.key()) {
             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountDuplicateReallocs).with_account_name(#account_name));
         }
 
         let __anchor_rent = anchor_lang::prelude::Rent::get()?;
         let __field_info = #field.to_account_info();
-        let __additive = #new_space > __field_info.data_len();
+        let __new_rent_minimum = __anchor_rent.minimum_balance(#new_space);
 
-        let __delta_space = if __additive {
-            #new_space.checked_sub(__field_info.data_len()).unwrap()
-        } else {
-            __field_info.data_len().checked_sub(#new_space).unwrap()
-        };
+        let __delta_space = (::std::convert::TryInto::<isize>::try_into(#new_space).unwrap())
+            .checked_sub(::std::convert::TryInto::try_into(__field_info.data_len()).unwrap())
+            .unwrap();
 
-        if __delta_space > 0 {
-            if __delta_space > anchor_lang::solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE {
-                return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountReallocExceedsLimit).with_account_name(#account_name));
-            }
+        if __delta_space != 0 {
+            if __delta_space > 0 {
+                if ::std::convert::TryInto::<usize>::try_into(__delta_space).unwrap() > anchor_lang::solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE {
+                    return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountReallocExceedsLimit).with_account_name(#account_name));
+                }
 
-            if __additive {
-                anchor_lang::system_program::transfer(
-                    anchor_lang::context::CpiContext::new(
-                        system_program.to_account_info(),
-                        anchor_lang::system_program::Transfer {
-                            from: #payer.to_account_info(),
-                            to: __field_info.clone(),
-                        },
-                    ),
-                    __anchor_rent.minimum_balance(#new_space).checked_sub(__field_info.lamports()).unwrap(),
-                )?;
+                if __new_rent_minimum > __field_info.lamports() {
+                    anchor_lang::system_program::transfer(
+                        anchor_lang::context::CpiContext::new(
+                            system_program.to_account_info(),
+                            anchor_lang::system_program::Transfer {
+                                from: #payer.to_account_info(),
+                                to: __field_info.clone(),
+                            },
+                        ),
+                        __new_rent_minimum.checked_sub(__field_info.lamports()).unwrap(),
+                    )?;
+                }
             } else {
-                let __lamport_amt = __field_info.lamports().checked_sub(__anchor_rent.minimum_balance(#new_space)).unwrap();
+                let __lamport_amt = __field_info.lamports().checked_sub(__new_rent_minimum).unwrap();
                 **#payer.to_account_info().lamports.borrow_mut() = #payer.to_account_info().lamports().checked_add(__lamport_amt).unwrap();
                 **__field_info.lamports.borrow_mut() = __field_info.lamports().checked_sub(__lamport_amt).unwrap();
             }
 
             #field.to_account_info().realloc(#new_space, #zero)?;
-            __reallocs.insert(#field.key().to_string());
+            __reallocs.insert(#field.key());
         }
     }
 }
