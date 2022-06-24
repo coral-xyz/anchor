@@ -1,11 +1,11 @@
 //! `anchor_client` provides an RPC client to send transactions and fetch
 //! deserialized accounts from Solana programs written in `anchor_lang`.
 
+use anchor_lang::solana_program::hash::Hash;
 use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::solana_program::system_program;
-use anchor_lang::solana_program::hash::Hash;
 use anchor_lang::{AccountDeserialize, Discriminator, InstructionData, ToAccountMetas};
 use regex::Regex;
 use solana_account_decoder::UiAccountEncoding;
@@ -535,7 +535,10 @@ impl<'a> RequestBuilder<'a> {
         Ok(instructions)
     }
 
-    fn signed_transaction_with_blockhash(&self, latest_hash: Hash) -> Result<Transaction, ClientError> {
+    fn signed_transaction_with_blockhash(
+        &self,
+        latest_hash: Hash,
+    ) -> Result<Transaction, ClientError> {
         let instructions = self.instructions()?;
         let mut signers = self.signers.clone();
         signers.push(&*self.payer);
