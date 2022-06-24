@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "next-plausible": "^3.2.0"
+  }
+}

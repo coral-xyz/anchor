@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import { slugifyWithCounter } from '@sindresorhus/slugify'
+import PlausibleProvider from 'next-plausible'
 
 import Prism from 'prism-react-renderer/prism'
 ;(typeof global !== 'undefined' ? global : window).Prism = Prism
@@ -130,17 +131,19 @@ export default function App({ Component, pageProps }) {
 
   return (
     <>
-      <Head>
-        <title>{pageTitle}</title>
-        {description && <meta name="description" content={description} />}
-      </Head>
-      <Layout
-        navigation={navigation}
-        title={title}
-        tableOfContents={tableOfContents}
-      >
-        <Component {...pageProps} />
-      </Layout>
+      <PlausibleProvider domain="anchor-lang.com" trackOutboundLinks={true}>
+        <Head>
+          <title>{pageTitle}</title>
+          {description && <meta name="description" content={description} />}
+        </Head>
+        <Layout
+          navigation={navigation}
+          title={title}
+          tableOfContents={tableOfContents}
+        >
+          <Component {...pageProps} />
+        </Layout>
+      </PlausibleProvider>
     </>
   )
 }
