@@ -1,6 +1,6 @@
 ---
 title: Hello World
-description: Helle World
+description: Anchor - Helle World
 ---
 
 To initialize a new project, simply run:
