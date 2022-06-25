@@ -2271,7 +2271,7 @@ fn idl_build(no_docs: bool) -> Result<()> {
     let mut events: Vec<IdlEvent> = vec![];
     let mut error_codes: Option<Vec<IdlErrorCode>> = None;
     let mut constants: Vec<IdlConst> = vec![];
-    let mut defined_types: HashMap<String, IdlTypeDefinition> = HashMap::new();
+    let mut defined_types: BTreeMap<String, IdlTypeDefinition> = BTreeMap::new();
     let mut curr_idl: Option<Idl> = None;
 
     let mut idls: Vec<Idl> = vec![];
@@ -2299,7 +2299,11 @@ fn idl_build(no_docs: bool) -> Result<()> {
                     let mut defined_types = std::mem::take(&mut defined_types);
                     let curr_idl = curr_idl.take();
 
-                    let events = if !events.is_empty() { Some(events) } else { None };
+                    let events = if !events.is_empty() {
+                        Some(events)
+                    } else {
+                        None
+                    };
 
                     let mut idl = match curr_idl {
                         Some(idl) => idl,
@@ -2309,6 +2313,12 @@ fn idl_build(no_docs: bool) -> Result<()> {
                     idl.events = events;
                     idl.errors = error_codes;
                     idl.constants = constants;
+
+                    idl.constants.sort_by(|a, b| a.name.cmp(&b.name));
+                    idl.accounts.sort_by(|a, b| a.name.cmp(&b.name));
+                    if let Some(e) = idl.events.as_mut() {
+                        e.sort_by(|a, b| a.name.cmp(&b.name))
+                    }
 
                     let prog_ty = std::mem::take(&mut idl.types);
                     defined_types.extend(

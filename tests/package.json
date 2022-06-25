@@ -18,6 +18,7 @@
     "escrow",
     "events",
     "floats",
+    "idl-generation",
     "ido-pool",
     "interface",
     "lockup",
