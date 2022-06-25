@@ -55,8 +55,10 @@ pub use anchor_attribute_event::{emit_cpi, event_cpi};
 pub use anchor_attribute_program::program;
 pub use anchor_derive_accounts::Accounts;
 pub use anchor_derive_space::InitSpace;
+pub use anchor_derive_serde::{AnchorDeserialize, AnchorSerialize};
 /// Borsh is the default serialization format for instructions and accounts.
-pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorSerialize};
+pub use borsh::de::BorshDeserialize as AnchorDeserialize;
+pub use borsh::ser::BorshSerialize as AnchorSerialize;
 pub use solana_program;
 
 pub type Result<T> = std::result::Result<T, error::Error>;

@@ -239,6 +239,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "anchor-derive-serde"
+version = "0.26.0"
+dependencies = [
+ "borsh-derive-internal",
+ "proc-macro2 1.0.47",
+ "syn 1.0.103",
+]
+
+[[package]]
 name = "anchor-derive-space"
 version = "0.28.0"
 dependencies = [
@@ -258,6 +267,7 @@ dependencies = [
  "anchor-attribute-event",
  "anchor-attribute-program",
  "anchor-derive-accounts",
+ "anchor-derive-serde",
  "anchor-derive-space",
  "arrayref",
  "base64 0.13.1",
