@@ -70,17 +70,17 @@ const navigation = [
       { title: 'CLI', href: '/docs/cli' },
       { title: 'AVM', href: '/docs/avm' },
       {
-        title: 'Accounts',
-        href: 'https://docs.rs/anchor-lang/latest/anchor_lang/accounts/index.html',
+        title: 'Core Library',
+        href: 'https://docs.rs/anchor-lang/latest/anchor_lang/',
       },
       {
-        title: 'Constraints',
-        href: 'https://docs.rs/anchor-lang/latest/anchor_lang/derive.Accounts.html',
+        title: 'Rust Client Library',
+        href: 'https://docs.rs/anchor-client/latest/anchor_client/',
       },
-      {
-        title: 'Errors',
-        href: 'https://docs.rs/anchor-lang/latest/anchor_lang/error/enum.ErrorCode.html',
-      },
+      // {
+      //   title: 'TypeScript Client Library',
+      //   href: 'https://docs.rs/anchor-lang/latest/anchor_lang/error/enum.ErrorCode.html',
+      // },
       {
         title: 'JavaScript Anchor Types',
         href: '/docs/javascript-anchor-types',
