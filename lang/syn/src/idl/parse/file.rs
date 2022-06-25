@@ -1,4 +1,4 @@
-use crate::idl::*;
+use crate::idl::types::*;
 use crate::parser::context::CrateContext;
 use crate::parser::{self, accounts, docs, error, program};
 use crate::Ty;
@@ -12,6 +12,8 @@ use syn::{
     Expr, ExprLit, ItemConst,
     Lit::{Byte, ByteStr},
 };
+
+use super::relations;
 
 const DERIVE_NAME: &str = "Accounts";
 // TODO: share this with `anchor_lang` crate.
@@ -547,7 +549,7 @@ fn idl_accounts(
                 },
                 is_optional: if acc.is_optional { Some(true) } else { None },
                 docs: if !no_docs { acc.docs.clone() } else { None },
-                pda: pda::parse(ctx, accounts, acc, seeds_feature),
+                pda: super::pda::parse(ctx, accounts, acc, seeds_feature),
                 relations: relations::parse(acc, seeds_feature),
             }),
         })
