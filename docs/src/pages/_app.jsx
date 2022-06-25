@@ -66,22 +66,26 @@ const navigation = [
   {
     title: 'References',
     links: [
-      { title: 'Space', href: '/docs/space' },
+      { title: 'Anchor.toml', href: '/docs/manifest' },
+      { title: 'CLI', href: '/docs/cli' },
+      { title: 'AVM', href: '/docs/avm' },
+      {
+        title: 'Accounts',
+        href: 'https://docs.rs/anchor-lang/latest/anchor_lang/accounts/index.html',
+      },
+      {
+        title: 'Constraints',
+        href: 'https://docs.rs/anchor-lang/latest/anchor_lang/derive.Accounts.html',
+      },
+      {
+        title: 'Errors',
+        href: 'https://docs.rs/anchor-lang/latest/anchor_lang/error/enum.ErrorCode.html',
+      },
       {
         title: 'JavaScript Anchor Types',
         href: '/docs/javascript-anchor-types',
       },
-      { title: 'CLI', href: '/docs/cli' },
-      { title: 'AVM', href: '/docs/avm' },
-      { title: 'Anchor.toml', href: '/docs/manifest' },
-      {
-        title: 'Important Links',
-        href: '/docs/important-links',
-      },
-      {
-        title: 'Changelog',
-        href: '/docs/changelog',
-      },
+      { title: 'Space', href: '/docs/space' },
     ],
   },
   {
