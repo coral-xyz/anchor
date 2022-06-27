@@ -15,6 +15,12 @@ export class IdlCoder {
       case "bool": {
         return borsh.bool(fieldName);
       }
+      case "usize": {
+        return borsh.u64(fieldName);
+      }
+      case "isize": {
+        return borsh.i64(fieldName);
+      }
       case "u8": {
         return borsh.u8(fieldName);
       }

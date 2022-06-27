@@ -34,6 +34,10 @@ function typeSize(idl: Idl, ty: IdlType): number {
   switch (ty) {
     case "bool":
       return 1;
+    case "usize":
+      return 8;
+    case "isize":
+      return 8;
     case "u8":
       return 1;
     case "i8":

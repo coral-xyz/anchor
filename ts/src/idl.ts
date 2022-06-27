@@ -108,6 +108,8 @@ export type IdlTypeDefStruct = Array<IdlField>;
 
 export type IdlType =
   | "bool"
+  | "usize"
+  | "isize"
   | "u8"
   | "i8"
   | "u16"
