@@ -180,6 +180,8 @@ pub enum EnumFields {
 #[serde(rename_all = "camelCase")]
 pub enum IdlType {
     Bool,
+    USize,
+    ISize,
     U8,
     I8,
     U16,
@@ -221,6 +223,8 @@ impl std::str::FromStr for IdlType {
 
         let r = match s.as_str() {
             "bool" => IdlType::Bool,
+            "usize" => IdlType::USize,
+            "isize" => IdlType::ISize,
             "u8" => IdlType::U8,
             "i8" => IdlType::I8,
             "u16" => IdlType::U16,
