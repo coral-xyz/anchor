@@ -404,7 +404,7 @@ pub fn zero_copy(
 
     #[cfg(feature = "idl-gen")]
     {
-        let no_docs = false;
+        let no_docs = get_no_docs();
         let idl_gen_impl = gen_idl_gen_impl_for_struct(&account_strct, no_docs);
         return proc_macro::TokenStream::from(quote! {
             #ret

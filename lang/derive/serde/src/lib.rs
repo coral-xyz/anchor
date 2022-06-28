@@ -35,7 +35,7 @@ pub fn anchor_serialize(input: TokenStream) -> TokenStream {
 
     #[cfg(feature = "idl-gen")]
     {
-        let no_docs = false; // TODO
+        let no_docs = get_no_docs();
 
         let idl_gen_impl = match syn::parse(input).unwrap() {
             Item::Struct(item) => gen_idl_gen_impl_for_struct(&item, no_docs),

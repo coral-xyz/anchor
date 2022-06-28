@@ -39,7 +39,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
     #[cfg(feature = "idl-gen")]
     {
-        let no_docs = false; // TODO
+        let no_docs = crate::idl::gen::get_no_docs();
         let idl_gen = crate::idl::gen::gen_idl_print_function_for_program(program, no_docs);
 
         return quote! {

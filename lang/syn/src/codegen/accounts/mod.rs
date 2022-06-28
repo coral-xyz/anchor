@@ -35,7 +35,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     #[cfg(feature = "idl-gen")]
     {
         #![allow(warnings)]
-        let no_docs = false;
+        let no_docs = crate::idl::gen::get_no_docs();
         let idl_gen_impl = crate::idl::gen::gen_idl_gen_impl_for_accounts_strct(&accs, no_docs);
         return quote! {
             #ret

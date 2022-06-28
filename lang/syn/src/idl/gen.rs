@@ -13,10 +13,17 @@ fn get_module_paths() -> (TokenStream, TokenStream) {
     )
 }
 
-#[allow(clippy::result_unit_err)]
+#[inline(always)]
+pub fn get_no_docs() -> bool {
+    std::option_env!("ANCHOR_IDL_GEN_NO_DOCS")
+        .map(|val| val == "TRUE")
+        .unwrap_or(false)
+}
+
 // Returns TokenStream for IdlType enum and the syn::TypePath for the defined
 // type if any.
 // Returns Err when the type wasn't parsed successfully.
+#[allow(clippy::result_unit_err)]
 pub fn idl_type_ts_from_syn_type(
     ty: &syn::Type,
 ) -> Result<(TokenStream, Option<&syn::TypePath>), ()> {

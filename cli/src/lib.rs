@@ -418,7 +418,10 @@ pub enum IdlCommand {
         no_docs: bool,
     },
     /// Generates the IDL for the program using the compilation method.
-    Build,
+    Build {
+        #[clap(long)]
+        no_docs: bool,
+    },
     /// Fetches an IDL for the given address from a cluster.
     /// The address can be a program, IDL account, or IDL buffer.
     Fetch {
@@ -1882,7 +1885,7 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
             out_ts,
             no_docs,
         } => idl_parse(cfg_override, file, out, out_ts, no_docs),
-        IdlCommand::Build => idl_build(),
+        IdlCommand::Build { no_docs } => idl_build(no_docs),
         IdlCommand::Fetch { address, out } => idl_fetch(cfg_override, address, out),
     }
 }
@@ -2228,7 +2231,9 @@ fn idl_parse(
     Ok(())
 }
 
-fn idl_build() -> Result<()> {
+fn idl_build(no_docs: bool) -> Result<()> {
+    let no_docs = if no_docs { "TRUE" } else { "FALSE" };
+
     let exit = std::process::Command::new("cargo")
         .args([
             "test",
@@ -2239,6 +2244,7 @@ fn idl_build() -> Result<()> {
             "--show-output",
             "--quiet",
         ])
+        .env("ANCHOR_IDL_GEN_NO_DOCS", no_docs)
         .stderr(Stdio::inherit())
         .output()
         .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
