@@ -1,11 +1,12 @@
 extern crate proc_macro;
 
-use anchor_syn::idl::gen::*;
 use borsh_derive_internal::*;
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
-use quote::quote;
 use syn::{Ident, Item};
+
+#[cfg(feature = "idl-gen")]
+use {anchor_syn::idl::gen::*, quote::quote};
 
 fn gen_borsh_serialize(input: TokenStream) -> TokenStream2 {
     let cratename = Ident::new("borsh", Span::call_site());
@@ -27,25 +28,34 @@ fn gen_borsh_serialize(input: TokenStream) -> TokenStream2 {
 
 #[proc_macro_derive(AnchorSerialize, attributes(borsh_skip))]
 pub fn anchor_serialize(input: TokenStream) -> TokenStream {
-    let borsh = gen_borsh_serialize(input.clone());
+    #[cfg(not(feature = "idl-gen"))]
+    let ret = gen_borsh_serialize(input);
+    #[cfg(feature = "idl-gen")]
+    let ret = gen_borsh_serialize(input.clone());
 
-    let no_docs = false; // TODO
+    #[cfg(feature = "idl-gen")]
+    {
+        let no_docs = false; // TODO
 
-    let idl_gen_impl = match syn::parse(input).unwrap() {
-        Item::Struct(item) => gen_idl_gen_impl_for_struct(&item, no_docs),
-        Item::Enum(item) => gen_idl_gen_impl_for_enum(item, no_docs),
-        Item::Union(item) => {
-            // unions are not included in the IDL - TODO print a warning
-            idl_gen_impl_skeleton(quote! {None}, quote! {}, &item.ident, &item.generics)
-        }
-        // Derive macros can only be defined on structs, enums, and unions.
-        _ => unreachable!(),
+        let idl_gen_impl = match syn::parse(input).unwrap() {
+            Item::Struct(item) => gen_idl_gen_impl_for_struct(&item, no_docs),
+            Item::Enum(item) => gen_idl_gen_impl_for_enum(item, no_docs),
+            Item::Union(item) => {
+                // unions are not included in the IDL - TODO print a warning
+                idl_gen_impl_skeleton(quote! {None}, quote! {}, &item.ident, &item.generics)
+            }
+            // Derive macros can only be defined on structs, enums, and unions.
+            _ => unreachable!(),
+        };
+
+        return TokenStream::from(quote! {
+            #ret
+            #idl_gen_impl
+        });
     };
 
-    TokenStream::from(quote! {
-        #borsh
-        #idl_gen_impl
-    })
+    #[allow(unreachable_code)]
+    TokenStream::from(ret)
 }
 
 fn gen_borsh_deserialize(input: TokenStream) -> TokenStream2 {

@@ -623,7 +623,7 @@ pub fn gen_idl_print_function_for_program(program: &Program, no_docs: bool) -> T
                 .collect::<Result<Vec<_>, ()>>()?
                 .into_iter()
                 .unzip::<TokenStream, Option<&syn::TypePath>, Vec<TokenStream>, Vec<Option<&syn::TypePath>>>();
-            
+
             let returns = match idl_type_ts_from_syn_type(&ix.returns.ty) {
                 Ok((ty, def)) => {
                     defined.push(def);

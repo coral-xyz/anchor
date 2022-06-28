@@ -61,7 +61,7 @@ pub use borsh::de::BorshDeserialize as AnchorDeserialize;
 pub use borsh::ser::BorshSerialize as AnchorSerialize;
 pub use solana_program;
 
-// TODO - add this behind feature gate
+#[cfg(feature = "idl-gen")]
 pub use anchor_syn;
 
 pub type Result<T> = std::result::Result<T, error::Error>;

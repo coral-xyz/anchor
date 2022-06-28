@@ -2233,6 +2233,8 @@ fn idl_build() -> Result<()> {
         .args([
             "test",
             "__anchor_private_print_idl",
+            "--features",
+            "idl-gen",
             "--",
             "--show-output",
             "--quiet",

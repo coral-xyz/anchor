@@ -1,5 +1,8 @@
-use crate::{idl::gen::gen_idl_print_function_for_error, Error};
+use crate::Error;
 use quote::quote;
+
+#[cfg(feature = "idl-gen")]
+use crate::idl::gen::gen_idl_print_function_for_error;
 
 pub fn generate(error: Error) -> proc_macro2::TokenStream {
     let error_enum = &error.raw_enum;
@@ -47,9 +50,7 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
         })
         .collect();
 
-    let idl_gen = gen_idl_print_function_for_error(&error);
-
-    let offset = match error.args {
+    let offset = match &error.args {
         None => quote! { anchor_lang::error::ERROR_CODE_OFFSET},
         Some(args) => {
             let offset = &args.offset;
@@ -57,7 +58,7 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
         }
     };
 
-    quote! {
+    let ret = quote! {
         #[derive(std::fmt::Debug, Clone, Copy)]
         #[repr(u32)]
         #error_enum
@@ -98,7 +99,17 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
                 }
             }
         }
+    };
 
-        #idl_gen
-    }
+    #[cfg(feature = "idl-gen")]
+    {
+        let idl_gen = gen_idl_print_function_for_error(&error);
+        return quote! {
+            #ret
+            #idl_gen
+        };
+    };
+
+    #[allow(unreachable_code)]
+    ret
 }

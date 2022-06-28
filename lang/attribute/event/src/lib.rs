@@ -29,9 +29,7 @@ pub fn event(
         format!("{discriminator:?}").parse().unwrap()
     };
 
-    let idl_gen = anchor_syn::idl::gen::gen_idl_print_function_for_event(&event_strct);
-
-    proc_macro::TokenStream::from(quote! {
+    let ret = quote! {
         #[derive(anchor_lang::__private::EventIndex, AnchorSerialize, AnchorDeserialize)]
         #event_strct
 
@@ -46,9 +44,19 @@ pub fn event(
         impl anchor_lang::Discriminator for #event_name {
             const DISCRIMINATOR: [u8; 8] = #discriminator;
         }
+    };
 
-        #idl_gen
-    })
+    #[cfg(feature = "idl-gen")]
+    {
+        let idl_gen = anchor_syn::idl::gen::gen_idl_print_function_for_event(&event_strct);
+        return proc_macro::TokenStream::from(quote! {
+            #ret
+            #idl_gen
+        });
+    }
+
+    #[allow(unreachable_code)]
+    proc_macro::TokenStream::from(ret)
 }
 
 // EventIndex is a marker macro. It functionally does nothing other than
