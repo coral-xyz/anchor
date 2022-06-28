@@ -52,21 +52,31 @@ export async function fetchData(
     throw new Error("program account not found");
   }
   const { program } = decodeUpgradeableLoaderState(accountInfo.data);
-  const programdataAccountInfo = await connection.getAccountInfo(program.programdataAddress);
+  const programdataAccountInfo = await connection.getAccountInfo(
+    program.programdataAddress
+  );
   if (programdataAccountInfo === null) {
     throw new Error("program data account not found");
   }
-  const { programData } = decodeUpgradeableLoaderState(programdataAccountInfo.data);
+  const { programData } = decodeUpgradeableLoaderState(
+    programdataAccountInfo.data
+  );
   return programData;
 }
 
 const UPGRADEABLE_LOADER_STATE_LAYOUT = borsh.rustEnum(
   [
     borsh.struct([], "uninitialized"),
-    borsh.struct([borsh.option(borsh.publicKey(), "authorityAddress")], "buffer"),
+    borsh.struct(
+      [borsh.option(borsh.publicKey(), "authorityAddress")],
+      "buffer"
+    ),
     borsh.struct([borsh.publicKey("programdataAddress")], "program"),
     borsh.struct(
-      [borsh.u64("slot"), borsh.option(borsh.publicKey(), "upgradeAuthorityAddress")],
+      [
+        borsh.u64("slot"),
+        borsh.option(borsh.publicKey(), "upgradeAuthorityAddress"),
+      ],
       "programData"
     ),
   ],
