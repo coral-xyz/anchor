@@ -348,6 +348,7 @@ fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinit
 
             Some(fields.map(|fields| IdlTypeDefinition {
                 name,
+                full_path: None,
                 docs: doc,
                 ty: IdlTypeDefinitionTy::Struct { fields },
             }))
@@ -406,6 +407,7 @@ fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinit
                 .collect::<Vec<IdlEnumVariant>>();
             Some(Ok(IdlTypeDefinition {
                 name,
+                full_path: None,
                 docs: doc,
                 ty: IdlTypeDefinitionTy::Enum { variants },
             }))

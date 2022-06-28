@@ -1,4 +1,4 @@
-use crate::Error;
+use crate::{idl::gen::gen_idl_print_function_for_error, Error};
 use quote::quote;
 
 pub fn generate(error: Error) -> proc_macro2::TokenStream {
@@ -46,6 +46,8 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
             }
         })
         .collect();
+
+    let idl_gen = gen_idl_print_function_for_error(&error);
 
     let offset = match error.args {
         None => quote! { anchor_lang::error::ERROR_CODE_OFFSET},
@@ -96,5 +98,7 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
                 }
             }
         }
+
+        #idl_gen
     }
 }

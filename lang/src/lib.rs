@@ -61,6 +61,9 @@ pub use borsh::de::BorshDeserialize as AnchorDeserialize;
 pub use borsh::ser::BorshSerialize as AnchorSerialize;
 pub use solana_program;
 
+// TODO - add this behind feature gate
+pub use anchor_syn;
+
 pub type Result<T> = std::result::Result<T, error::Error>;
 
 /// A data structure of validated accounts that can be deserialized from the

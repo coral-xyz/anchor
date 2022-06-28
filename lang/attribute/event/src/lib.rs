@@ -29,6 +29,8 @@ pub fn event(
         format!("{discriminator:?}").parse().unwrap()
     };
 
+    let idl_gen = anchor_syn::idl::gen::gen_idl_print_function_for_event(&event_strct);
+
     proc_macro::TokenStream::from(quote! {
         #[derive(anchor_lang::__private::EventIndex, AnchorSerialize, AnchorDeserialize)]
         #event_strct
@@ -44,6 +46,8 @@ pub fn event(
         impl anchor_lang::Discriminator for #event_name {
             const DISCRIMINATOR: [u8; 8] = #discriminator;
         }
+
+        #idl_gen
     })
 }
 

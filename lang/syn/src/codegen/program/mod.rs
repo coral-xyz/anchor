@@ -21,6 +21,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
     let cpi = cpi::generate(program);
     let accounts = accounts::generate(program);
 
+    let no_docs = false; // TODO
+    let idl_gen = crate::idl::gen::gen_idl_print_function_for_program(program, no_docs);
+
     quote! {
         // TODO: remove once we allow segmented paths in `Accounts` structs.
         use self::#mod_name::*;
@@ -32,5 +35,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         #instruction
         #cpi
         #accounts
+
+        #idl_gen
     }
 }

@@ -22,6 +22,9 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     let __client_accounts_mod = __client_accounts::generate(accs);
     let __cpi_client_accounts_mod = __cpi_client_accounts::generate(accs);
 
+    let no_docs = false;
+    let idl_gen_impl = crate::idl::gen::gen_idl_gen_impl_for_accounts_strct(accs, no_docs);
+
     quote! {
         #impl_try_accounts
         #impl_to_account_infos
@@ -30,6 +33,8 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
 
         #__client_accounts_mod
         #__cpi_client_accounts_mod
+
+        #idl_gen_impl
     }
 }
 

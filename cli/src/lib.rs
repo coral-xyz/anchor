@@ -6,7 +6,7 @@ use crate::config::{
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction, ERASED_AUTHORITY};
 use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
-use anchor_syn::idl::types::{EnumFields, Idl, IdlType, IdlTypeDefinitionTy};
+use anchor_syn::idl::types::{EnumFields, Idl, IdlConst, IdlErrorCode, IdlEvent, IdlType, IdlTypeDefinitionTy, IdlTypeDefinition};
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use flate2::read::GzDecoder;
@@ -417,6 +417,8 @@ pub enum IdlCommand {
         #[clap(long)]
         no_docs: bool,
     },
+    /// Generates the IDL for the program using the compilation method.
+    Build,
     /// Fetches an IDL for the given address from a cluster.
     /// The address can be a program, IDL account, or IDL buffer.
     Fetch {
@@ -1880,6 +1882,7 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
             out_ts,
             no_docs,
         } => idl_parse(cfg_override, file, out, out_ts, no_docs),
+        IdlCommand::Build => idl_build(),
         IdlCommand::Fetch { address, out } => idl_fetch(cfg_override, address, out),
     }
 }
@@ -2221,6 +2224,149 @@ fn idl_parse(
     if let Some(out) = out_ts {
         fs::write(out, rust_template::idl_ts(&idl)?)?;
     }
+
+    Ok(())
+}
+
+fn idl_build() -> Result<()> {
+    let exit = std::process::Command::new("cargo")
+        .args([
+            "test",
+            "__anchor_private_print_idl",
+            "--",
+            "--show-output",
+            "--quiet",
+        ])
+        .stderr(Stdio::inherit())
+        .output()
+        .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
+    if !exit.status.success() {
+        std::process::exit(exit.status.code().unwrap_or(1));
+    }
+
+    enum State {
+        Pass,
+        ConstLines(Vec<String>),
+        EventLines(Vec<String>),
+        ErrorsLines(Vec<String>),
+        ProgramLines(Vec<String>),
+    }
+
+    #[derive(Serialize, Deserialize)]
+    struct IdlGenEventPrint {
+        event: IdlEvent,
+        defined_types: Vec<IdlTypeDefinition>,
+    }
+
+    let mut state = State::Pass;
+
+    let mut events: Vec<IdlEvent> = vec![];
+    let mut error_codes: Option<Vec<IdlErrorCode>> = None;
+    let mut constants: Vec<IdlConst> = vec![];
+    let mut defined_types: HashMap<String, IdlTypeDefinition> = HashMap::new();
+    let mut curr_idl: Option<Idl> = None;
+
+    let mut idls: Vec<Idl> = vec![];
+
+    let out = String::from_utf8_lossy(&exit.stdout);
+    for line in out.lines() {
+        match &mut state {
+            State::Pass => {
+                if line == "---- IDL begin const ----" {
+                    state = State::ConstLines(vec![]);
+                    continue;
+                } else if line == "---- IDL begin event ----" {
+                    state = State::EventLines(vec![]);
+                    continue;
+                } else if line == "---- IDL begin errors ----" {
+                    state = State::ErrorsLines(vec![]);
+                    continue;
+                } else if line == "---- IDL begin program ----" {
+                    state = State::ProgramLines(vec![]);
+                    continue;
+                } else if line.starts_with("test result: ok") {
+                    let events = std::mem::take(&mut events);
+                    let error_codes = error_codes.take();
+                    let constants = std::mem::take(&mut constants);
+                    let mut defined_types = std::mem::take(&mut defined_types);
+                    let curr_idl = curr_idl.take();
+
+                    let events = if !events.is_empty() { Some(events) } else { None };
+
+                    let mut idl = match curr_idl {
+                        Some(idl) => idl,
+                        None => continue,
+                    };
+
+                    idl.events = events;
+                    idl.errors = error_codes;
+                    idl.constants = constants;
+
+                    let prog_ty = std::mem::take(&mut idl.types);
+                    defined_types.extend(
+                        prog_ty
+                            .into_iter()
+                            .map(|ty| (ty.full_path.clone().unwrap(), ty)),
+                    );
+                    idl.types = defined_types.into_values().collect::<Vec<_>>();
+
+                    idls.push(idl);
+                    continue;
+                }
+            }
+            State::ConstLines(lines) => {
+                if line == "---- IDL end const ----" {
+                    let constant: IdlConst = serde_json::from_str(&lines.join("\n"))?;
+                    constants.push(constant);
+                    state = State::Pass;
+                    continue;
+                }
+                lines.push(line.to_string());
+            }
+            State::EventLines(lines) => {
+                if line == "---- IDL end event ----" {
+                    let event: IdlGenEventPrint = serde_json::from_str(&lines.join("\n"))?;
+                    events.push(event.event);
+                    defined_types.extend(
+                        event
+                            .defined_types
+                            .into_iter()
+                            .map(|ty| (ty.full_path.clone().unwrap(), ty)),
+                    );
+                    state = State::Pass;
+                    continue;
+                }
+                lines.push(line.to_string());
+            }
+            State::ErrorsLines(lines) => {
+                if line == "---- IDL end errors ----" {
+                    let errs: Vec<IdlErrorCode> = serde_json::from_str(&lines.join("\n"))?;
+                    error_codes = Some(errs);
+                    state = State::Pass;
+                    continue;
+                }
+                lines.push(line.to_string());
+            }
+            State::ProgramLines(lines) => {
+                if line == "---- IDL end program ----" {
+                    let idl: Idl = serde_json::from_str(&lines.join("\n"))?;
+                    curr_idl = Some(idl);
+                    state = State::Pass;
+                    continue;
+                }
+                lines.push(line.to_string());
+            }
+        }
+    }
+
+    if idls.len() == 1 {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&idls.first().unwrap()).unwrap()
+        );
+    } else if idls.len() >= 2 {
+        println!("{}", serde_json::to_string_pretty(&idls).unwrap());
+    };
 
     Ok(())
 }
