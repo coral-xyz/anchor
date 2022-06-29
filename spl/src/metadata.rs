@@ -1,8 +1,8 @@
 use anchor_lang::context::CpiContext;
 use anchor_lang::{Accounts, Result, ToAccountInfos};
+use mpl_token_metadata::deser::meta_deser;
 use mpl_token_metadata::state::DataV2;
 use mpl_token_metadata::ID;
-use mpl_token_metadata::deser::meta_deser;
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
 
