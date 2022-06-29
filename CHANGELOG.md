@@ -12,6 +12,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Features
 
+* spl: Add `MetadataAccount` account deserialization. ([#2014](https://github.com/coral-xyz/anchor/pull/2014)).
 * lang: Add `PartialEq` and `Eq` for `anchor_lang::Error` ([#1544](https://github.com/coral-xyz/anchor/pull/1544)).
 * cli: Add `--skip-build` to `anchor publish` ([#1786](https://github.
 com/project-serum/anchor/pull/1841)).
