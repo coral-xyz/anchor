@@ -31,6 +31,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * ts: verbose error for missing `ANCHOR_WALLET` variable when using `NodeWallet.local()` ([#1958](https://github.com/coral-xyz/anchor/pull/1958)).
 * ts: Add `MethodsBuilder#accountsStrict` for strict typing on ix account input ([#2019](https://github.com/coral-xyz/anchor/pull/2019)).
 * Update solana dependencies to 1.10.29  ([#2027](https://github.com/coral-xyz/anchor/pull/2027)).
+* cli: Add `test.validator.geyser_plugin_config` support ([#2016](https://github.com/coral-xyz/anchor/pull/2016)).
 
 ### Fixes
 
