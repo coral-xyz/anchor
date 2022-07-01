@@ -92,7 +92,9 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   public async pubkeys(): Promise<
     Partial<InstructionAccountAddresses<IDL, I>>
   > {
-    await this._accountsResolver.resolve();
+    if (this._autoResolveAccounts) {
+      await this._accountsResolver.resolve();
+    }
     return this._accounts as Partial<InstructionAccountAddresses<IDL, I>>;
   }
 
