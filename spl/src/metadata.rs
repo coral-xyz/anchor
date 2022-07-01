@@ -194,7 +194,8 @@ impl MetadataAccount {
 
 impl anchor_lang::AccountDeserialize for MetadataAccount {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
-        meta_deser(buf).map(MetadataAccount).map_err(Into::into)
+        let result = mpl_token_metadata::state::Metadata::deserialize(buf)?;
+        return Ok(MetadataAccount(result));
     }
 }
 
