@@ -305,6 +305,7 @@ impl Default for RegistryConfig {
 pub struct ProviderConfig {
     pub cluster: Cluster,
     pub wallet: WalletPath,
+    pub skip_lint: Option<bool>,
 }
 
 pub type ScriptsConfig = BTreeMap<String, String>;
@@ -420,6 +421,8 @@ struct _Config {
 struct Provider {
     cluster: String,
     wallet: String,
+    #[serde(alias = "skip-lint")]
+    skip_lint: Option<bool>,
 }
 
 impl ToString for Config {
@@ -440,6 +443,7 @@ impl ToString for Config {
             provider: Provider {
                 cluster: format!("{}", self.provider.cluster),
                 wallet: self.provider.wallet.to_string(),
+                skip_lint: self.provider.skip_lint,
             },
             test: self.test_validator.clone().map(Into::into),
             scripts: match self.scripts.is_empty() {
@@ -469,6 +473,7 @@ impl FromStr for Config {
             provider: ProviderConfig {
                 cluster: cfg.provider.cluster.parse()?,
                 wallet: shellexpand::tilde(&cfg.provider.wallet).parse()?,
+                skip_lint: cfg.provider.skip_lint,
             },
             scripts: cfg.scripts.unwrap_or_default(),
             test_validator: cfg.test.map(Into::into),
@@ -1116,3 +1121,49 @@ impl AnchorPackage {
 }
 
 crate::home_path!(WalletPath, ".config/solana/id.json");
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const BASE_CONFIG: &str = "
+        [provider]
+        cluster = \"localnet\"
+        wallet = \"id.json\"
+    ";
+
+    #[test]
+    fn parse_skip_lint_none() {
+        let config = Config::from_str(&BASE_CONFIG).unwrap();
+        assert_eq!(config.provider.skip_lint, None);
+    }
+    
+    #[test]
+    fn parse_skip_lint_hyphen_true() {
+        let string = BASE_CONFIG.to_owned() + "skip-lint = true";
+        let config = Config::from_str(&string).unwrap();
+        assert_eq!(config.provider.skip_lint, Some(true));
+    }
+
+    #[test]
+    fn parse_skip_lint_hyphen_false() {
+        let string = BASE_CONFIG.to_owned() + "skip-lint = false";
+        let config = Config::from_str(&string).unwrap();
+        assert_eq!(config.provider.skip_lint, Some(false));
+    }
+    
+    #[test]
+    fn parse_skip_lint_underscore_true() {
+        let string = BASE_CONFIG.to_owned() + "skip_lint = true";
+        let config = Config::from_str(&string).unwrap();
+        assert_eq!(config.provider.skip_lint, Some(true));
+    }
+
+    #[test]
+    fn parse_skip_lint_underscore_false() {
+        let string = BASE_CONFIG.to_owned() + "skip_lint = false";
+        let config = Config::from_str(&string).unwrap();
+        assert_eq!(config.provider.skip_lint, Some(false));
+    }
+}
