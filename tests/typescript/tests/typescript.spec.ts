@@ -7,7 +7,7 @@ describe("typescript", () => {
   it("Is initialized!", async () => {
     // Add your test here.
     const program = anchor.workspace.Typescript;
-    const tx = await program.rpc.initialize();
+    const tx = await program.methods.initialize().rpc();
     console.log("Your transaction signature", tx);
   });
 });

@@ -13,33 +13,31 @@ describe("composite", () => {
     const dummyA = anchor.web3.Keypair.generate();
     const dummyB = anchor.web3.Keypair.generate();
 
-    const tx = await program.rpc.initialize({
-      accounts: {
+    const tx = await program.methods
+      .initialize()
+      .accounts({
         dummyA: dummyA.publicKey,
         dummyB: dummyB.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      },
-      signers: [dummyA, dummyB],
-      instructions: [
+      })
+      .signers([dummyA, dummyB])
+      .preInstructions([
         await program.account.dummyA.createInstruction(dummyA),
         await program.account.dummyB.createInstruction(dummyB),
-      ],
-    });
+      ])
+      .rpc();
 
-    await program.rpc.compositeUpdate(
-      new anchor.BN(1234),
-      new anchor.BN(4321),
-      {
-        accounts: {
-          foo: {
-            dummyA: dummyA.publicKey,
-          },
-          bar: {
-            dummyB: dummyB.publicKey,
-          },
+    await program.methods
+      .compositeUpdate(new anchor.BN(1234), new anchor.BN(4321))
+      .accounts({
+        foo: {
+          dummyA: dummyA.publicKey,
         },
-      }
-    );
+        bar: {
+          dummyB: dummyB.publicKey,
+        },
+      })
+      .rpc();
 
     const dummyAAccount = await program.account.dummyA.fetch(dummyA.publicKey);
     const dummyBAccount = await program.account.dummyB.fetch(dummyB.publicKey);

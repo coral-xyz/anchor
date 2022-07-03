@@ -62,27 +62,27 @@ async function setupStakePool(mint, god) {
   }
 
   // Initialize stake pool.
-  await registry.rpc.initialize(
-    mint,
-    provider.wallet.publicKey,
-    nonce,
-    withdrawalTimelock,
-    stakeRate,
-    rewardQLen,
-    {
-      accounts: {
-        registrar: registrar.publicKey,
-        poolMint,
-        rewardEventQ: rewardQ.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      },
-      signers: [registrar, rewardQ],
-      instructions: [
-        await registry.account.registrar.createInstruction(registrar),
-        await registry.account.rewardQueue.createInstruction(rewardQ, 8250),
-      ],
-    }
-  );
+  await registry.methods
+    .initialize(
+      mint,
+      provider.wallet.publicKey,
+      nonce,
+      withdrawalTimelock,
+      stakeRate,
+      rewardQLen
+    )
+    .accounts({
+      registrar: registrar.publicKey,
+      poolMint,
+      rewardEventQ: rewardQ.publicKey,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+    })
+    .signers([registrar, rewardQ])
+    .preInstructions([
+      await registry.account.registrar.createInstruction(registrar),
+      await registry.account.rewardQueue.createInstruction(rewardQ, 8250),
+    ])
+    .rpc();
   registrarAccount = await registry.account.registrar.fetch(
     registrar.publicKey
   );

@@ -9,13 +9,14 @@ describe("system_accounts", () => {
   const wallet = anchor.web3.Keypair.generate();
 
   it("Is initialized!", async () => {
-    const tx = await program.rpc.initialize({
-      accounts: {
+    const tx = await program.methods
+      .initialize()
+      .accounts({
         authority: authority.publicKey,
         wallet: wallet.publicKey,
-      },
-      signers: [authority],
-    });
+      })
+      .signers([authority])
+      .rpc();
 
     console.log("Your transaction signature", tx);
   });
@@ -42,13 +43,14 @@ describe("system_accounts", () => {
     );
 
     try {
-      await program.rpc.initialize({
-        accounts: {
+      await program.methods
+        .initialize()
+        .accounts({
           authority: authority.publicKey,
           wallet: tokenAccount,
-        },
-        signers: [authority],
-      });
+        })
+        .signers([authority])
+        .rpc();
       assert.ok(false);
     } catch (err) {
       const errMsg = "The given account is not owned by the system program";

@@ -158,36 +158,36 @@ describe("Lockup and Registry", () => {
       );
     vestingSigner = _vestingSigner;
 
-    await lockup.rpc.createVesting(
-      beneficiary,
-      depositAmount,
-      nonce,
-      startTs,
-      endTs,
-      periodCount,
-      null, // Lock realizor is None.
-      {
-        accounts: {
-          vesting: vesting.publicKey,
-          vault: vault.publicKey,
-          depositor: god,
-          depositorAuthority: provider.wallet.publicKey,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
-        },
-        signers: [vesting, vault],
-        instructions: [
-          await lockup.account.vesting.createInstruction(vesting),
-          ...(await serumCmn.createTokenAccountInstrs(
-            provider,
-            vault.publicKey,
-            mint,
-            vestingSigner
-          )),
-        ],
-      }
-    );
+    await lockup.methods
+      .createVesting(
+        beneficiary,
+        depositAmount,
+        nonce,
+        startTs,
+        endTs,
+        periodCount,
+        null // Lock realizor is None.
+      )
+      .accounts({
+        vesting: vesting.publicKey,
+        vault: vault.publicKey,
+        depositor: god,
+        depositorAuthority: provider.wallet.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+      })
+      .signers([vesting, vault])
+      .preInstructions([
+        await lockup.account.vesting.createInstruction(vesting),
+        ...(await serumCmn.createTokenAccountInstrs(
+          provider,
+          vault.publicKey,
+          mint,
+          vestingSigner
+        )),
+      ])
+      .rpc();
 
     vestingAccount = await lockup.account.vesting.fetch(vesting.publicKey);
 
@@ -207,8 +207,9 @@ describe("Lockup and Registry", () => {
   it("Fails to withdraw from a vesting account before vesting", async () => {
     await nativeAssert.rejects(
       async () => {
-        await lockup.rpc.withdraw(new anchor.BN(100), {
-          accounts: {
+        await lockup.methods
+          .withdraw(new anchor.BN(100))
+          .accounts({
             vesting: vesting.publicKey,
             beneficiary: provider.wallet.publicKey,
             token: god,
@@ -216,8 +217,8 @@ describe("Lockup and Registry", () => {
             vestingSigner: vestingSigner,
             tokenProgram: TOKEN_PROGRAM_ID,
             clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
-          },
-        });
+          })
+          .rpc();
       },
       (err) => {
         assert.strictEqual(err.error.errorCode.number, 6007);
@@ -241,8 +242,9 @@ describe("Lockup and Registry", () => {
       provider.wallet.publicKey
     );
 
-    await lockup.rpc.withdraw(new anchor.BN(100), {
-      accounts: {
+    await lockup.methods
+      .withdraw(new anchor.BN(100))
+      .accounts({
         vesting: vesting.publicKey,
         beneficiary: provider.wallet.publicKey,
         token,
@@ -250,8 +252,8 @@ describe("Lockup and Registry", () => {
         vestingSigner,
         tokenProgram: TOKEN_PROGRAM_ID,
         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
-      },
-    });
+      })
+      .rpc();
 
     vestingAccount = await lockup.account.vesting.fetch(vesting.publicKey);
     assert.isTrue(vestingAccount.outstanding.eq(new anchor.BN(0)));
@@ -307,27 +309,27 @@ describe("Lockup and Registry", () => {
   });
 
   it("Initializes the registrar", async () => {
-    await registry.rpc.initialize(
-      mint,
-      provider.wallet.publicKey,
-      nonce,
-      withdrawalTimelock,
-      stakeRate,
-      rewardQLen,
-      {
-        accounts: {
-          registrar: registrar.publicKey,
-          poolMint,
-          rewardEventQ: rewardQ.publicKey,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        },
-        signers: [registrar, rewardQ],
-        instructions: [
-          await registry.account.registrar.createInstruction(registrar),
-          await registry.account.rewardQueue.createInstruction(rewardQ, 8250),
-        ],
-      }
-    );
+    await registry.methods
+      .initialize(
+        mint,
+        provider.wallet.publicKey,
+        nonce,
+        withdrawalTimelock,
+        stakeRate,
+        rewardQLen
+      )
+      .accounts({
+        registrar: registrar.publicKey,
+        poolMint,
+        rewardEventQ: rewardQ.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      })
+      .signers([registrar, rewardQ])
+      .preInstructions([
+        await registry.account.registrar.createInstruction(registrar),
+        await registry.account.rewardQueue.createInstruction(rewardQ, 8250),
+      ])
+      .rpc();
 
     registrarAccount = await registry.account.registrar.fetch(
       registrar.publicKey
@@ -409,16 +411,17 @@ describe("Lockup and Registry", () => {
 
   it("Deposits (unlocked) to a member", async () => {
     const depositAmount = new anchor.BN(120);
-    await registry.rpc.deposit(depositAmount, {
-      accounts: {
+    await registry.methods
+      .deposit(depositAmount)
+      .accounts({
         depositor: god,
         depositorAuthority: provider.wallet.publicKey,
         tokenProgram: TOKEN_PROGRAM_ID,
         vault: memberAccount.balances.vault,
         beneficiary: provider.wallet.publicKey,
         member: member.publicKey,
-      },
-    });
+      })
+      .rpc();
 
     const memberVault = await serumCmn.getTokenAccount(
       provider,
@@ -429,8 +432,9 @@ describe("Lockup and Registry", () => {
 
   it("Stakes to a member (unlocked)", async () => {
     const stakeAmount = new anchor.BN(10);
-    await registry.rpc.stake(stakeAmount, false, {
-      accounts: {
+    await registry.methods
+      .stake(stakeAmount, false)
+      .accounts({
         // Stake instance.
         registrar: registrar.publicKey,
         rewardEventQ: rewardQ.publicKey,
@@ -446,8 +450,8 @@ describe("Lockup and Registry", () => {
         // Misc.
         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
-      },
-    });
+      })
+      .rpc();
 
     const vault = await serumCmn.getTokenAccount(
       provider,
@@ -484,40 +488,40 @@ describe("Lockup and Registry", () => {
       );
     unlockedVendorSigner = _vendorSigner;
 
-    await registry.rpc.dropReward(
-      rewardKind,
-      rewardAmount,
-      expiry,
-      provider.wallet.publicKey,
-      nonce,
-      {
-        accounts: {
-          registrar: registrar.publicKey,
-          rewardEventQ: rewardQ.publicKey,
-          poolMint,
+    await registry.methods
+      .dropReward(
+        rewardKind,
+        rewardAmount,
+        expiry,
+        provider.wallet.publicKey,
+        nonce
+      )
+      .accounts({
+        registrar: registrar.publicKey,
+        rewardEventQ: rewardQ.publicKey,
+        poolMint,
 
-          vendor: unlockedVendor.publicKey,
-          vendorVault: unlockedVendorVault.publicKey,
+        vendor: unlockedVendor.publicKey,
+        vendorVault: unlockedVendorVault.publicKey,
 
-          depositor: god,
-          depositorAuthority: provider.wallet.publicKey,
+        depositor: god,
+        depositorAuthority: provider.wallet.publicKey,
 
-          tokenProgram: TOKEN_PROGRAM_ID,
-          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        },
-        signers: [unlockedVendorVault, unlockedVendor],
-        instructions: [
-          ...(await serumCmn.createTokenAccountInstrs(
-            provider,
-            unlockedVendorVault.publicKey,
-            mint,
-            unlockedVendorSigner
-          )),
-          await registry.account.rewardVendor.createInstruction(unlockedVendor),
-        ],
-      }
-    );
+        tokenProgram: TOKEN_PROGRAM_ID,
+        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      })
+      .signers([unlockedVendorVault, unlockedVendor])
+      .preInstructions([
+        ...(await serumCmn.createTokenAccountInstrs(
+          provider,
+          unlockedVendorVault.publicKey,
+          mint,
+          unlockedVendorSigner
+        )),
+        await registry.account.rewardVendor.createInstruction(unlockedVendor),
+      ])
+      .rpc();
 
     const vendorAccount = await registry.account.rewardVendor.fetch(
       unlockedVendor.publicKey
@@ -552,8 +556,9 @@ describe("Lockup and Registry", () => {
       mint,
       provider.wallet.publicKey
     );
-    await registry.rpc.claimReward({
-      accounts: {
+    await registry.methods
+      .claimReward()
+      .accounts({
         to: token,
         cmn: {
           registrar: registrar.publicKey,
@@ -570,8 +575,8 @@ describe("Lockup and Registry", () => {
           tokenProgram: TOKEN_PROGRAM_ID,
           clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
         },
-      },
-    });
+      })
+      .rpc();
 
     let tokenAccount = await serumCmn.getTokenAccount(provider, token);
     assert.isTrue(tokenAccount.amount.eq(new anchor.BN(200)));
@@ -603,40 +608,40 @@ describe("Lockup and Registry", () => {
       );
     lockedVendorSigner = _vendorSigner;
 
-    await registry.rpc.dropReward(
-      lockedRewardKind,
-      lockedRewardAmount,
-      expiry,
-      provider.wallet.publicKey,
-      nonce,
-      {
-        accounts: {
-          registrar: registrar.publicKey,
-          rewardEventQ: rewardQ.publicKey,
-          poolMint,
+    await registry.methods
+      .dropReward(
+        lockedRewardKind,
+        lockedRewardAmount,
+        expiry,
+        provider.wallet.publicKey,
+        nonce
+      )
+      .accounts({
+        registrar: registrar.publicKey,
+        rewardEventQ: rewardQ.publicKey,
+        poolMint,
 
-          vendor: lockedVendor.publicKey,
-          vendorVault: lockedVendorVault.publicKey,
+        vendor: lockedVendor.publicKey,
+        vendorVault: lockedVendorVault.publicKey,
 
-          depositor: god,
-          depositorAuthority: provider.wallet.publicKey,
+        depositor: god,
+        depositorAuthority: provider.wallet.publicKey,
 
-          tokenProgram: TOKEN_PROGRAM_ID,
-          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        },
-        signers: [lockedVendorVault, lockedVendor],
-        instructions: [
-          ...(await serumCmn.createTokenAccountInstrs(
-            provider,
-            lockedVendorVault.publicKey,
-            mint,
-            lockedVendorSigner
-          )),
-          await registry.account.rewardVendor.createInstruction(lockedVendor),
-        ],
-      }
-    );
+        tokenProgram: TOKEN_PROGRAM_ID,
+        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      })
+      .signers([lockedVendorVault, lockedVendor])
+      .preInstructions([
+        ...(await serumCmn.createTokenAccountInstrs(
+          provider,
+          lockedVendorVault.publicKey,
+          mint,
+          lockedVendorSigner
+        )),
+        await registry.account.rewardVendor.createInstruction(lockedVendor),
+      ])
+      .rpc();
 
     const vendorAccount = await registry.account.rewardVendor.fetch(
       lockedVendor.publicKey
@@ -697,8 +702,9 @@ describe("Lockup and Registry", () => {
         meta.pubkey === lockedVendorSigner ? { ...meta, isSigner: false } : meta
       );
 
-    await registry.rpc.claimRewardLocked(nonce, {
-      accounts: {
+    await registry.methods
+      .claimRewardLocked(nonce)
+      .accounts({
         registry: await registry.state.address(),
         lockupProgram: lockup.programId,
         cmn: {
@@ -716,10 +722,9 @@ describe("Lockup and Registry", () => {
           tokenProgram: TOKEN_PROGRAM_ID,
           clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
         },
-      },
-      remainingAccounts,
-      signers: [vendoredVesting, vendoredVestingVault],
-      instructions: [
+      })
+      .signers([vendoredVesting, vendoredVestingVault])
+      .preInstructions([
         await lockup.account.vesting.createInstruction(vendoredVesting),
         ...(await serumCmn.createTokenAccountInstrs(
           provider,
@@ -727,8 +732,8 @@ describe("Lockup and Registry", () => {
           mint,
           vendoredVestingSigner
         )),
-      ],
-    });
+      ])
+      .rpc();
 
     const lockupAccount = await lockup.account.vesting.fetch(
       vendoredVesting.publicKey
@@ -761,8 +766,9 @@ describe("Lockup and Registry", () => {
     await nativeAssert.rejects(
       async () => {
         const withdrawAmount = new anchor.BN(10);
-        await lockup.rpc.withdraw(withdrawAmount, {
-          accounts: {
+        await lockup.methods
+          .withdraw(withdrawAmount)
+          .accounts({
             vesting: vendoredVesting.publicKey,
             beneficiary: provider.wallet.publicKey,
             token,
@@ -770,16 +776,16 @@ describe("Lockup and Registry", () => {
             vestingSigner: vendoredVestingSigner,
             tokenProgram: TOKEN_PROGRAM_ID,
             clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
-          },
-          // TODO: trait methods generated on the client. Until then, we need to manually
-          //       specify the account metas here.
-          remainingAccounts: [
+          })
+          .remainingAccounts([
+            // TODO: trait methods generated on the client. Until then, we need to manually
+            //       specify the account metas here.
             { pubkey: registry.programId, isWritable: false, isSigner: false },
             { pubkey: member.publicKey, isWritable: false, isSigner: false },
             { pubkey: balances.spt, isWritable: false, isSigner: false },
             { pubkey: balancesLocked.spt, isWritable: false, isSigner: false },
-          ],
-        });
+          ])
+          .rpc();
       },
       (err) => {
         // Solana doesn't propagate errors across CPI. So we receive the registry's error code,
@@ -812,8 +818,9 @@ describe("Lockup and Registry", () => {
   it("Unstakes (unlocked)", async () => {
     const unstakeAmount = new anchor.BN(10);
 
-    await registry.rpc.startUnstake(unstakeAmount, false, {
-      accounts: {
+    await registry.methods
+      .startUnstake(unstakeAmount, false)
+      .accounts({
         registrar: registrar.publicKey,
         rewardEventQ: rewardQ.publicKey,
         poolMint,
@@ -829,14 +836,14 @@ describe("Lockup and Registry", () => {
         tokenProgram: TOKEN_PROGRAM_ID,
         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      },
-      signers: [pendingWithdrawal],
-      instructions: [
+      })
+      .signers([pendingWithdrawal])
+      .preInstructions([
         await registry.account.pendingWithdrawal.createInstruction(
           pendingWithdrawal
         ),
-      ],
-    });
+      ])
+      .rpc();
 
     const vaultPw = await serumCmn.getTokenAccount(
       provider,
@@ -857,8 +864,9 @@ describe("Lockup and Registry", () => {
   });
 
   const tryEndUnstake = async () => {
-    await registry.rpc.endUnstake({
-      accounts: {
+    await registry.methods
+      .endUnstake()
+      .accounts({
         registrar: registrar.publicKey,
 
         member: member.publicKey,
@@ -872,97 +880,99 @@ describe("Lockup and Registry", () => {
 
         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
-      },
+      })
+      .rpc();
+
+    it("Fails to end unstaking before timelock", async () => {
+      await nativeAssert.rejects(
+        async () => {
+          await tryEndUnstake();
+        },
+        (err) => {
+          assert.strictEqual(err.error.errorCode.number, 6009);
+          assert.strictEqual(
+            err.error.errorMessage,
+            "The unstake timelock has not yet expired."
+          );
+          return true;
+        }
+      );
+    });
+
+    it("Waits for the unstake period to end", async () => {
+      await serumCmn.sleep(5000);
+    });
+
+    it("Unstake finalizes (unlocked)", async () => {
+      await tryEndUnstake();
+
+      const vault = await serumCmn.getTokenAccount(
+        provider,
+        memberAccount.balances.vault
+      );
+      const vaultPw = await serumCmn.getTokenAccount(
+        provider,
+        memberAccount.balances.vaultPw
+      );
+
+      assert.isTrue(vault.amount.eq(new anchor.BN(120)));
+      assert.isTrue(vaultPw.amount.eq(new anchor.BN(0)));
+    });
+
+    it("Withdraws deposits (unlocked)", async () => {
+      const token = await serumCmn.createTokenAccount(
+        provider,
+        mint,
+        provider.wallet.publicKey
+      );
+      const withdrawAmount = new anchor.BN(100);
+      await registry.methods
+        .withdraw(withdrawAmount)
+        .accounts({
+          registrar: registrar.publicKey,
+          member: member.publicKey,
+          beneficiary: provider.wallet.publicKey,
+          vault: memberAccount.balances.vault,
+          memberSigner,
+          depositor: token,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+
+      const tokenAccount = await serumCmn.getTokenAccount(provider, token);
+      assert.isTrue(tokenAccount.amount.eq(withdrawAmount));
+    });
+
+    it("Should succesfully unlock a locked reward after unstaking", async () => {
+      const token = await serumCmn.createTokenAccount(
+        provider,
+        mint,
+        provider.wallet.publicKey
+      );
+
+      const withdrawAmount = new anchor.BN(7);
+      await lockup.methods
+        .withdraw(withdrawAmount)
+        .accounts({
+          vesting: vendoredVesting.publicKey,
+          beneficiary: provider.wallet.publicKey,
+          token,
+          vault: vendoredVestingVault.publicKey,
+          vestingSigner: vendoredVestingSigner,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+        })
+        .remainingAccounts([
+          // TODO: trait methods generated on the client. Until then, we need to manually
+          //       specify the account metas here.
+          { pubkey: registry.programId, isWritable: false, isSigner: false },
+          { pubkey: member.publicKey, isWritable: false, isSigner: false },
+          { pubkey: balances.spt, isWritable: false, isSigner: false },
+          { pubkey: balancesLocked.spt, isWritable: false, isSigner: false },
+        ])
+        .rpc();
+      const tokenAccount = await serumCmn.getTokenAccount(provider, token);
+      assert.isTrue(tokenAccount.amount.eq(withdrawAmount));
     });
   };
-
-  it("Fails to end unstaking before timelock", async () => {
-    await nativeAssert.rejects(
-      async () => {
-        await tryEndUnstake();
-      },
-      (err) => {
-        assert.strictEqual(err.error.errorCode.number, 6009);
-        assert.strictEqual(
-          err.error.errorMessage,
-          "The unstake timelock has not yet expired."
-        );
-        return true;
-      }
-    );
-  });
-
-  it("Waits for the unstake period to end", async () => {
-    await serumCmn.sleep(5000);
-  });
-
-  it("Unstake finalizes (unlocked)", async () => {
-    await tryEndUnstake();
-
-    const vault = await serumCmn.getTokenAccount(
-      provider,
-      memberAccount.balances.vault
-    );
-    const vaultPw = await serumCmn.getTokenAccount(
-      provider,
-      memberAccount.balances.vaultPw
-    );
-
-    assert.isTrue(vault.amount.eq(new anchor.BN(120)));
-    assert.isTrue(vaultPw.amount.eq(new anchor.BN(0)));
-  });
-
-  it("Withdraws deposits (unlocked)", async () => {
-    const token = await serumCmn.createTokenAccount(
-      provider,
-      mint,
-      provider.wallet.publicKey
-    );
-    const withdrawAmount = new anchor.BN(100);
-    await registry.rpc.withdraw(withdrawAmount, {
-      accounts: {
-        registrar: registrar.publicKey,
-        member: member.publicKey,
-        beneficiary: provider.wallet.publicKey,
-        vault: memberAccount.balances.vault,
-        memberSigner,
-        depositor: token,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      },
-    });
-
-    const tokenAccount = await serumCmn.getTokenAccount(provider, token);
-    assert.isTrue(tokenAccount.amount.eq(withdrawAmount));
-  });
-
-  it("Should succesfully unlock a locked reward after unstaking", async () => {
-    const token = await serumCmn.createTokenAccount(
-      provider,
-      mint,
-      provider.wallet.publicKey
-    );
-
-    const withdrawAmount = new anchor.BN(7);
-    await lockup.rpc.withdraw(withdrawAmount, {
-      accounts: {
-        vesting: vendoredVesting.publicKey,
-        beneficiary: provider.wallet.publicKey,
-        token,
-        vault: vendoredVestingVault.publicKey,
-        vestingSigner: vendoredVestingSigner,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
-      },
-      // TODO: trait methods generated on the client. Until then, we need to manually
-      //       specify the account metas here.
-      remainingAccounts: [
-        { pubkey: registry.programId, isWritable: false, isSigner: false },
-        { pubkey: member.publicKey, isWritable: false, isSigner: false },
-        { pubkey: balances.spt, isWritable: false, isSigner: false },
-        { pubkey: balancesLocked.spt, isWritable: false, isSigner: false },
-      ],
-    });
-    const tokenAccount = await serumCmn.getTokenAccount(provider, token);
-    assert.isTrue(tokenAccount.amount.eq(withdrawAmount));
-  });
 });

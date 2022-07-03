@@ -17,16 +17,23 @@ describe("basic-1", () => {
     // The Account to create.
     const myAccount = anchor.web3.Keypair.generate();
 
+    // the accounts to pass in the rpc
+    const accounts = {
+      myAccount: myAccount.publicKey,
+      user: provider.wallet.publicKey,
+      systemProgram: SystemProgram.programId,
+    };
+
+    // the signers to pass in the rpc
+    const signers = [myAccount];
+
     // Create the new account and initialize it with the program.
     // #region code-simplified
-    await program.rpc.initialize(new anchor.BN(1234), {
-      accounts: {
-        myAccount: myAccount.publicKey,
-        user: provider.wallet.publicKey,
-        systemProgram: SystemProgram.programId,
-      },
-      signers: [myAccount],
-    });
+    await program.methods
+      .initialize(new anchor.BN(1234))
+      .accounts(accounts)
+      .signers(signers)
+      .rpc();
     // #endregion code-simplified
 
     // Fetch the newly created account from the cluster.
@@ -47,12 +54,12 @@ describe("basic-1", () => {
     // The program to execute.
     const program = anchor.workspace.Basic1;
 
+    // The accounts to pass in the rpc
+    const accounts = {
+      myAccount: myAccount.publicKey,
+    };
     // Invoke the update rpc.
-    await program.rpc.update(new anchor.BN(4321), {
-      accounts: {
-        myAccount: myAccount.publicKey,
-      },
-    });
+    await program.methods.update(new anchor.BN(4321)).accounts(accounts).rpc();
 
     // Fetch the newly updated account.
     const account = await program.account.myAccount.fetch(myAccount.publicKey);

@@ -13,7 +13,7 @@ describe("events", () => {
       listener = program.addEventListener("MyEvent", (event, slot) => {
         resolve([event, slot]);
       });
-      program.rpc.initialize();
+      program.methods.initialize().rpc();
     });
     await program.removeEventListener(listener);
 
@@ -33,14 +33,14 @@ describe("events", () => {
       listenerOne = program.addEventListener("MyEvent", (event, slot) => {
         resolve([event, slot]);
       });
-      program.rpc.initialize();
+      program.methods.initialize().rpc();
     });
 
     let [eventTwo, slotTwo] = await new Promise((resolve, _reject) => {
       listenerTwo = program.addEventListener("MyOtherEvent", (event, slot) => {
         resolve([event, slot]);
       });
-      program.rpc.testEvent();
+      program.methods.testEvent().rpc();
     });
 
     await program.removeEventListener(listenerOne);

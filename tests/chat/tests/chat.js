@@ -13,16 +13,17 @@ describe("chat", () => {
   const chatRoom = anchor.web3.Keypair.generate();
 
   it("Creates a chat room", async () => {
-    await program.rpc.createChatRoom("Test Chat", {
-      accounts: {
+    await program.methods
+      .createChatRoom("Test Chat")
+      .accounts({
         chatRoom: chatRoom.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      },
-      instructions: [
+      })
+      .preInstructions([
         await program.account.chatRoom.createInstruction(chatRoom),
-      ],
-      signers: [chatRoom],
-    });
+      ])
+      .signers([chatRoom])
+      .rpc();
 
     const chat = await program.account.chatRoom.fetch(chatRoom.publicKey);
     const name = new TextDecoder("utf-8").decode(new Uint8Array(chat.name));
@@ -38,13 +39,14 @@ describe("chat", () => {
       [authority.toBuffer()],
       program.programId
     );
-    await program.rpc.createUser("My User", {
-      accounts: {
+    await program.methods
+      .createUser("My User")
+      .accounts({
         user,
         authority,
         systemProgram: anchor.web3.SystemProgram.programId,
-      },
-    });
+      })
+      .rpc();
     const account = await program.account.user.fetch(user);
     assert.strictEqual(account.name, "My User");
     assert.isTrue(account.authority.equals(authority));
@@ -73,13 +75,14 @@ describe("chat", () => {
     // Send each message.
     for (let k = 0; k < numMessages; k += 1) {
       console.log("Sending message " + k);
-      await program.rpc.sendMessage(messages[k], {
-        accounts: {
+      await program.methods
+        .sendMessage(messages[k])
+        .accounts({
           user,
           authority,
           chatRoom: chatRoom.publicKey,
-        },
-      });
+        })
+        .rpc();
     }
 
     // Check the chat room state is as expected.

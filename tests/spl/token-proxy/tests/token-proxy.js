@@ -20,14 +20,15 @@ describe("token", () => {
   });
 
   it("Mints a token", async () => {
-    await program.rpc.proxyMintTo(new anchor.BN(1000), {
-      accounts: {
+    await program.methods
+      .proxyMintTo(new anchor.BN(1000))
+      .accounts({
         authority: provider.wallet.publicKey,
         mint,
         to: from,
         tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
-      },
-    });
+      })
+      .rpc();
 
     const fromAccount = await getTokenAccount(provider, from);
 
@@ -35,14 +36,15 @@ describe("token", () => {
   });
 
   it("Transfers a token", async () => {
-    await program.rpc.proxyTransfer(new anchor.BN(400), {
-      accounts: {
+    await program.methods
+      .proxyTransfer(new anchor.BN(400))
+      .accounts({
         authority: provider.wallet.publicKey,
         to,
         from,
         tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
-      },
-    });
+      })
+      .rpc();
 
     const fromAccount = await getTokenAccount(provider, from);
     const toAccount = await getTokenAccount(provider, to);
@@ -52,14 +54,15 @@ describe("token", () => {
   });
 
   it("Burns a token", async () => {
-    await program.rpc.proxyBurn(new anchor.BN(399), {
-      accounts: {
+    await program.methods
+      .proxyBurn(new anchor.BN(399))
+      .accounts({
         authority: provider.wallet.publicKey,
         mint,
         from: to,
         tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
-      },
-    });
+      })
+      .rpc();
 
     const toAccount = await getTokenAccount(provider, to);
     assert.isTrue(toAccount.amount.eq(new anchor.BN(1)));
@@ -67,17 +70,14 @@ describe("token", () => {
 
   it("Set new mint authority", async () => {
     const newMintAuthority = anchor.web3.Keypair.generate();
-    await program.rpc.proxySetAuthority(
-      { mintTokens: {} },
-      newMintAuthority.publicKey,
-      {
-        accounts: {
-          accountOrMint: mint,
-          currentAuthority: provider.wallet.publicKey,
-          tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
-        },
-      }
-    );
+    await program.methods
+      .proxySetAuthority({ mintTokens: {} }, newMintAuthority.publicKey)
+      .accounts({
+        accountOrMint: mint,
+        currentAuthority: provider.wallet.publicKey,
+        tokenProgram: TokenInstructions.TOKEN_PROGRAM_ID,
+      })
+      .rpc();
 
     const mintInfo = await getMintInfo(provider, mint);
     assert.isTrue(mintInfo.mintAuthority.equals(newMintAuthority.publicKey));

@@ -18,24 +18,26 @@ describe("miscNonRentExempt", () => {
 
   it("init_if_needed checks rent_exemption if init is not needed", async () => {
     const data = Keypair.generate();
-    await program.rpc.initDecreaseLamports({
-      accounts: {
+    await program.methods
+      .initDecreaseLamports()
+      .accounts({
         data: data.publicKey,
         user: provider.wallet.publicKey,
         systemProgram: SystemProgram.programId,
-      },
-      signers: [data],
-    });
+      })
+      .signers([data])
+      .rpc();
 
     try {
-      await program.rpc.initIfNeededChecksRentExemption({
-        accounts: {
+      await program.methods
+        .initIfNeededChecksRentExemption()
+        .accounts({
           data: data.publicKey,
           user: provider.wallet.publicKey,
           systemProgram: SystemProgram.programId,
-        },
-        signers: [data],
-      });
+        })
+        .signers([data])
+        .rpc();
       assert.ok(false);
     } catch (_err) {
       assert.isTrue(_err instanceof AnchorError);
@@ -46,13 +48,14 @@ describe("miscNonRentExempt", () => {
 
   it("allows non-rent exempt accounts", async () => {
     const data = Keypair.generate();
-    await program.rpc.initializeNoRentExempt({
-      accounts: {
+    await program.methods
+      .initializeNoRentExempt()
+      .accounts({
         data: data.publicKey,
         rent: SYSVAR_RENT_PUBKEY,
-      },
-      signers: [data],
-      instructions: [
+      })
+      .signers([data])
+      .preInstructions([
         SystemProgram.createAccount({
           programId: program.programId,
           space: 8 + 16 + 16,
@@ -63,24 +66,26 @@ describe("miscNonRentExempt", () => {
           fromPubkey: provider.wallet.publicKey,
           newAccountPubkey: data.publicKey,
         }),
-      ],
-    });
-    await program.rpc.testNoRentExempt({
-      accounts: {
+      ])
+      .rpc();
+    await program.methods
+      .testNoRentExempt()
+      .accounts({
         data: data.publicKey,
-      },
-    });
+      })
+      .rpc();
   });
 
   it("allows rent exemption to be skipped", async () => {
     const data = anchor.web3.Keypair.generate();
-    await program.rpc.initializeSkipRentExempt({
-      accounts: {
+    await program.methods
+      .initializeSkipRentExempt()
+      .accounts({
         data: data.publicKey,
         rent: SYSVAR_RENT_PUBKEY,
-      },
-      signers: [data],
-      instructions: [
+      })
+      .signers([data])
+      .preInstructions([
         SystemProgram.createAccount({
           programId: program.programId,
           space: 8 + 16 + 16,
@@ -91,19 +96,20 @@ describe("miscNonRentExempt", () => {
           fromPubkey: provider.wallet.publicKey,
           newAccountPubkey: data.publicKey,
         }),
-      ],
-    });
+      ])
+      .rpc();
   });
 
   it("can use rent_exempt to enforce rent exemption", async () => {
     const data = Keypair.generate();
-    await program.rpc.initializeSkipRentExempt({
-      accounts: {
+    await program.methods
+      .initializeSkipRentExempt()
+      .accounts({
         data: data.publicKey,
         rent: SYSVAR_RENT_PUBKEY,
-      },
-      signers: [data],
-      instructions: [
+      })
+      .signers([data])
+      .preInstructions([
         SystemProgram.createAccount({
           programId: program.programId,
           space: 8 + 16 + 16,
@@ -114,15 +120,16 @@ describe("miscNonRentExempt", () => {
           fromPubkey: provider.wallet.publicKey,
           newAccountPubkey: data.publicKey,
         }),
-      ],
-    });
+      ])
+      .rpc();
 
     try {
-      await program.rpc.testEnforceRentExempt({
-        accounts: {
+      await program.methods
+        .testEnforceRentExempt()
+        .accounts({
           data: data.publicKey,
-        },
-      });
+        })
+        .rpc();
       assert.ok(false);
     } catch (_err) {
       assert.isTrue(_err instanceof AnchorError);
