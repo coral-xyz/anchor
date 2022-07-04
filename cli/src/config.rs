@@ -1134,7 +1134,7 @@ mod tests {
 
     #[test]
     fn parse_skip_lint_none() {
-        let config = Config::from_str(&BASE_CONFIG).unwrap();
+        let config = Config::from_str(BASE_CONFIG).unwrap();
         assert_eq!(config.provider.skip_lint, None);
     }
 
