@@ -1122,7 +1122,6 @@ impl AnchorPackage {
 
 crate::home_path!(WalletPath, ".config/solana/id.json");
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1138,7 +1137,7 @@ mod tests {
         let config = Config::from_str(&BASE_CONFIG).unwrap();
         assert_eq!(config.provider.skip_lint, None);
     }
-    
+
     #[test]
     fn parse_skip_lint_true() {
         let string = BASE_CONFIG.to_owned() + "skip-lint = true";
