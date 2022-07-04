@@ -1152,18 +1152,4 @@ mod tests {
         let config = Config::from_str(&string).unwrap();
         assert_eq!(config.provider.skip_lint, Some(false));
     }
-    
-    #[test]
-    fn parse_skip_lint_underscore_true() {
-        let string = BASE_CONFIG.to_owned() + "skip_lint = true";
-        let config = Config::from_str(&string).unwrap();
-        assert_eq!(config.provider.skip_lint, Some(true));
-    }
-
-    #[test]
-    fn parse_skip_lint_underscore_false() {
-        let string = BASE_CONFIG.to_owned() + "skip_lint = false";
-        let config = Config::from_str(&string).unwrap();
-        assert_eq!(config.provider.skip_lint, Some(false));
-    }
 }
