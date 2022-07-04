@@ -421,7 +421,7 @@ struct _Config {
 struct Provider {
     cluster: String,
     wallet: String,
-    #[serde(alias = "skip-lint")]
+    #[serde(rename = "skip-lint")]
     skip_lint: Option<bool>,
 }
 

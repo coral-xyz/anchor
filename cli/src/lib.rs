@@ -1512,7 +1512,7 @@ fn extract_idl(
         cargo.version(),
         cfg.features.seeds,
         no_docs,
-        !cfg.provider.skip_lint.unwrap_or(skip_lint),
+        !(cfg.provider.skip_lint.unwrap_or(false) || skip_lint),
     )
 }
 
