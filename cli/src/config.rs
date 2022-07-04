@@ -1140,14 +1140,14 @@ mod tests {
     }
     
     #[test]
-    fn parse_skip_lint_hyphen_true() {
+    fn parse_skip_lint_true() {
         let string = BASE_CONFIG.to_owned() + "skip-lint = true";
         let config = Config::from_str(&string).unwrap();
         assert_eq!(config.provider.skip_lint, Some(true));
     }
 
     #[test]
-    fn parse_skip_lint_hyphen_false() {
+    fn parse_skip_lint_false() {
         let string = BASE_CONFIG.to_owned() + "skip-lint = false";
         let config = Config::from_str(&string).unwrap();
         assert_eq!(config.provider.skip_lint, Some(false));
