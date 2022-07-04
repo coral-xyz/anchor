@@ -1132,27 +1132,27 @@ mod tests {
     #[test]
     fn parse_skip_lint_no_section() {
         let config = Config::from_str(BASE_CONFIG).unwrap();
-        assert_eq!(config.features.skip_lint, false);
+        assert!(!config.features.skip_lint);
     }
 
     #[test]
     fn parse_skip_lint_no_value() {
         let string = BASE_CONFIG.to_owned() + "[features]";
         let config = Config::from_str(&string).unwrap();
-        assert_eq!(config.features.skip_lint, false);
+        assert!(!config.features.skip_lint);
     }
 
     #[test]
     fn parse_skip_lint_true() {
         let string = BASE_CONFIG.to_owned() + "[features]\nskip-lint = true";
         let config = Config::from_str(&string).unwrap();
-        assert_eq!(config.features.skip_lint, true);
+        assert!(config.features.skip_lint);
     }
 
     #[test]
     fn parse_skip_lint_false() {
         let string = BASE_CONFIG.to_owned() + "[features]\nskip-lint = false";
         let config = Config::from_str(&string).unwrap();
-        assert_eq!(config.features.skip_lint, false);
+        assert!(!config.features.skip_lint);
     }
 }
