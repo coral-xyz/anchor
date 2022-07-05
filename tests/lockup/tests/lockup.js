@@ -427,7 +427,7 @@ describe("Lockup and Registry", () => {
     assert.isTrue(memberVault.amount.eq(depositAmount));
   });
 
-		/*
+  /*
   it("Stakes to a member (unlocked)", async () => {
     const stakeAmount = new anchor.BN(10);
     await registry.rpc.stake(stakeAmount, false, {
