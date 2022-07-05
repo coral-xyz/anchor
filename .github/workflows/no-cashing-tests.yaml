@@ -185,7 +185,7 @@ jobs:
       # using an outdated validator but that
       # is ok as long as the test doesn't
       # include newer incompatible features
-      - run: sh -c "$(curl -sSfL https://release.solana.com/v1.10.29/install)"
+      - run: sh -c "$(curl -sSfL https://release.solana.com/v1.8.14/install)"
         shell: bash
       - run: echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
         shell: bash
