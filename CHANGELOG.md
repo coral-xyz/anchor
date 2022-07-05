@@ -41,6 +41,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * ts: Change `BROWSER` env variable to `ANCHOR_BROWSER` ([#1233](https://github.com/coral-xyz/anchor/pull/1233)).
 * ts: Add transaction signature to `EventCallback` parameters ([#1851](https://github.com/coral-xyz/anchor/pull/1851)).
 * ts: Change `EventParser#parseLogs` implementation to be a generator instead of callback function ([#2018](https://github.com/coral-xyz/anchor/pull/2018)).
+* lang: Adds a new `&mut reallocs: BTreeSet<Pubkey>` argument to `Accounts::try_accounts` ([#1986](https://github.com/coral-xyz/anchor/pull/1986)).
 
 ## [0.24.2] - 2022-04-13
 
