@@ -94,7 +94,52 @@ const navigation = [
   },
   {
     title: 'Common Security Exploits',
-    links: [{ title: 'Sealevel Attacks', href: '/docs/security-exploits' }]
+    links: [
+        {
+          title: 'Sealevel Attacks',
+          href: '/docs/security-exploits'
+        },
+        {
+          title: 'Signer Authorization',
+          href: '/docs/signer-authorization-exploit'
+        },
+        {
+          title: 'Account Data Matching',
+          href: '/docs/aacount-data-matching-exploit'
+        },
+        {
+          title: 'Owner Checks',
+          href: '/docs/owner-checks-exploit'
+        },
+        {
+          title: 'Type Cosplay',
+          href: '/docs/type-cosplay-exploit'
+        },
+        {
+          title: 'Initialization',
+          href: '/docs/initialization-exploit'
+        },
+        {
+          title: 'Arbitrary CPI',
+          href: '/docs/arbitrary-cpi-exploit'
+        },
+        {
+          title: 'Duplicate Mutable Accounts',
+          href: '/docs/duplicate-mutable-accounts-exploit'
+        },
+        {
+          title: 'Bump Seed Canonicalization',
+          href: '/docs/bump-seed-canonicalization-exploit'
+        },
+        {
+          title: 'PDA Sharing',
+          href: '/docs/pda-sharing-exploit'
+        },
+        {
+          title: 'Closing Accounts',
+          href: '/docs/closing-accounts-exploit'
+        },
+    ]
   },
 ]
 
