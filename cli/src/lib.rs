@@ -530,7 +530,7 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
         if javascript {
             "yarn run mocha -t 1000000 tests/"
         } else {
-            "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+            "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts --exit"
         }
         .to_owned(),
     );
