@@ -484,7 +484,30 @@ fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinit
                 ty: IdlTypeDefinitionTy::Struct { fields },
             }))
         })
-        .chain(ctx.enums().map(|enm| {
+        .chain(ctx.enums().filter_map(|enm| {
+            // Only take serializable types
+            let serializable = enm.attrs.iter().any(|attr| {
+                let attr_string = attr.tokens.to_string();
+                let attr_name = attr.path.segments.last().unwrap().ident.to_string();
+                let attr_serializable = ["account", "associated", "event", "zero_copy"];
+
+                let derived_serializable = attr_name == "derive"
+                    && attr_string.contains("AnchorSerialize")
+                    && attr_string.contains("AnchorDeserialize");
+
+                attr_serializable.iter().any(|a| *a == attr_name) || derived_serializable
+            });
+
+            if !serializable {
+                return None;
+            }
+
+            // Only take public types
+            match &enm.vis {
+                syn::Visibility::Public(_) => (),
+                _ => return None,
+            }
+
             let name = enm.ident.to_string();
             let doc = if !no_docs {
                 docs::parse(&enm.attrs)
@@ -531,11 +554,11 @@ fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinit
                     IdlEnumVariant { name, fields }
                 })
                 .collect::<Vec<IdlEnumVariant>>();
-            Ok(IdlTypeDefinition {
+            Some(Ok(IdlTypeDefinition {
                 name,
                 docs: doc,
                 ty: IdlTypeDefinitionTy::Enum { variants },
-            })
+            }))
         }))
         .collect()
 }
