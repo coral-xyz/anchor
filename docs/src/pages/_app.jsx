@@ -105,7 +105,7 @@ const navigation = [
         },
         {
           title: 'Account Data Matching',
-          href: '/docs/acount-data-matching-exploit'
+          href: '/docs/account-data-matching-exploit'
         },
         {
           title: 'Owner Checks',
