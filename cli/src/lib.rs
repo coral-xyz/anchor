@@ -240,6 +240,14 @@ pub enum Command {
     Run {
         /// The name of the script to run.
         script: String,
+        /// Argument to pass to the underlying script.
+        #[clap(
+            required = false,
+            takes_value = true,
+            multiple_values = true,
+            last = true
+        )]
+        script_args: Vec<String>,
     },
     /// Saves an api token from the registry locally.
     Login {
@@ -258,6 +266,10 @@ pub enum Command {
             last = true
         )]
         cargo_args: Vec<String>,
+        /// Flag to skip building the program in the workspace,
+        /// use this to save time when publishing the program
+        #[clap(long)]
+        skip_build: bool,
     },
     /// Keypair commands.
     Keys {
@@ -465,12 +477,16 @@ pub fn entry(opts: Opts) -> Result<()> {
         Command::Airdrop { .. } => airdrop(&opts.cfg_override),
         Command::Cluster { subcmd } => cluster(subcmd),
         Command::Shell => shell(&opts.cfg_override),
-        Command::Run { script } => run(&opts.cfg_override, script),
+        Command::Run {
+            script,
+            script_args,
+        } => run(&opts.cfg_override, script, script_args),
         Command::Login { token } => login(&opts.cfg_override, token),
         Command::Publish {
             program,
             cargo_args,
-        } => publish(&opts.cfg_override, program, cargo_args),
+            skip_build,
+        } => publish(&opts.cfg_override, program, cargo_args, skip_build),
         Command::Keys { subcmd } => keys(&opts.cfg_override, subcmd),
         Command::Localnet {
             skip_build,
@@ -492,24 +508,15 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
         return Err(anyhow!("Workspace already initialized"));
     }
 
-    // The list is taken from https://doc.rust-lang.org/reference/keywords.html.
-    let key_words = [
-        "as", "break", "const", "continue", "crate", "else", "enum", "extern", "false", "fn",
-        "for", "if", "impl", "in", "let", "loop", "match", "mod", "move", "mut", "pub", "ref",
-        "return", "self", "Self", "static", "struct", "super", "trait", "true", "type", "unsafe",
-        "use", "where", "while", "async", "await", "dyn", "abstract", "become", "box", "do",
-        "final", "macro", "override", "priv", "typeof", "unsized", "virtual", "yield", "try",
-        "unique",
-    ];
-
-    if key_words.contains(&name[..].into()) {
+    // Additional keywords that have not been added to the `syn` crate as reserved words
+    // https://github.com/dtolnay/syn/pull/1098
+    let extra_keywords = ["async", "await", "try"];
+    // Anchor converts to snake case before writing the program name
+    if syn::parse_str::<syn::Ident>(&name.to_snake_case()).is_err()
+        || extra_keywords.contains(&name.to_snake_case().as_str())
+    {
         return Err(anyhow!(
-            "{} is a reserved word in rust, name your project something else!",
-            name
-        ));
-    } else if name.chars().next().unwrap().is_numeric() {
-        return Err(anyhow!(
-            "Cannot start project name with numbers, name your project something else!"
+            "Anchor workspace name must be a valid Rust identifier. It may not be a Rust reserved word, start with a digit, or include certain disallowed characters. See https://doc.rust-lang.org/reference/identifiers.html for more detail.",
         ));
     }
 
@@ -1505,7 +1512,7 @@ fn extract_idl(
         cargo.version(),
         cfg.features.seeds,
         no_docs,
-        !skip_lint,
+        !(cfg.features.skip_lint || skip_lint),
     )
 }
 
@@ -2805,16 +2812,17 @@ fn shell(cfg_override: &ConfigOverride) -> Result<()> {
     })
 }
 
-fn run(cfg_override: &ConfigOverride, script: String) -> Result<()> {
+fn run(cfg_override: &ConfigOverride, script: String, script_args: Vec<String>) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         let url = cluster_url(cfg, &cfg.test_validator);
         let script = cfg
             .scripts
             .get(&script)
             .ok_or_else(|| anyhow!("Unable to find script"))?;
+        let script_with_args = format!("{script} {}", script_args.join(" "));
         let exit = std::process::Command::new("bash")
             .arg("-c")
-            .arg(&script)
+            .arg(&script_with_args)
             .env("ANCHOR_PROVIDER_URL", url)
             .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
             .stdout(Stdio::inherit())
@@ -2846,6 +2854,7 @@ fn publish(
     cfg_override: &ConfigOverride,
     program_name: String,
     cargo_args: Vec<String>,
+    skip_build: bool,
 ) -> Result<()> {
     // Discover the various workspace configs.
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
@@ -2957,24 +2966,23 @@ fn publish(
     unpack_archive(&tarball_filename)?;
 
     // Build the program before sending it to the server.
-    build(
-        cfg_override,
-        None,
-        None,
-        true,
-        false,
-        Some(program_name),
-        None,
-        None,
-        BootstrapMode::None,
-        None,
-        None,
-        cargo_args,
-        true,
-    )?;
-
-    // Success. Now we can finally upload to the server without worrying
-    // about a build failure.
+    if !skip_build {
+        build(
+            cfg_override,
+            None,
+            None,
+            true,
+            false,
+            Some(program_name),
+            None,
+            None,
+            BootstrapMode::None,
+            None,
+            None,
+            cargo_args,
+            true,
+        )?;
+    }
 
     // Upload the tarball to the server.
     let token = registry_api_token(cfg_override)?;
@@ -3172,4 +3180,69 @@ fn strip_workspace_prefix(absolute_path: String) -> String {
         .strip_prefix(&workspace_prefix)
         .unwrap_or(&absolute_path)
         .into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "Anchor workspace name must be a valid Rust identifier.")]
+    fn test_init_reserved_word() {
+        init(
+            &ConfigOverride {
+                cluster: None,
+                wallet: None,
+            },
+            "await".to_string(),
+            true,
+            false,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Anchor workspace name must be a valid Rust identifier.")]
+    fn test_init_reserved_word_from_syn() {
+        init(
+            &ConfigOverride {
+                cluster: None,
+                wallet: None,
+            },
+            "fn".to_string(),
+            true,
+            false,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Anchor workspace name must be a valid Rust identifier.")]
+    fn test_init_invalid_ident_chars() {
+        init(
+            &ConfigOverride {
+                cluster: None,
+                wallet: None,
+            },
+            "project.name".to_string(),
+            true,
+            false,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Anchor workspace name must be a valid Rust identifier.")]
+    fn test_init_starting_with_digit() {
+        init(
+            &ConfigOverride {
+                cluster: None,
+                wallet: None,
+            },
+            "1project".to_string(),
+            true,
+            false,
+        )
+        .unwrap();
+    }
 }

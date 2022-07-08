@@ -16,8 +16,8 @@
 //! generating clients from IDL is the same.
 //!
 //! For detailed tutorials and examples on how to use Anchor, see the guided
-//! [tutorials](https://project-serum.github.io/anchor) or examples in the GitHub
-//! [repository](https://github.com/project-serum/anchor).
+//! [tutorials](https://coral-xyz.github.io/anchor) or examples in the GitHub
+//! [repository](https://github.com/coral-xyz/anchor).
 //!
 //! Presented here are the Rust primitives for building on Solana.
 
@@ -27,7 +27,7 @@ use bytemuck::{Pod, Zeroable};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
 
 mod account_meta;
@@ -82,6 +82,7 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
         accounts: &mut &[AccountInfo<'info>],
         ix_data: &[u8],
         bumps: &mut BTreeMap<String, u8>,
+        reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self>;
 }
 
@@ -178,7 +179,7 @@ pub trait AccountDeserialize: Sized {
 pub trait ZeroCopy: Discriminator + Copy + Clone + Zeroable + Pod {}
 
 /// Calculates the data for an instruction invocation, where the data is
-/// `Sha256(<namespace>::<method_name>)[..8] || BorshSerialize(args)`.
+/// `Sha256(<namespace>:<method_name>)[..8] || BorshSerialize(args)`.
 /// `args` is a borsh serialized struct of named fields for each argument given
 /// to an instruction.
 pub trait InstructionData: AnchorSerialize {

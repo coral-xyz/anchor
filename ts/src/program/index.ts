@@ -46,7 +46,7 @@ export * from "./namespace/index.js";
  *
  * API specifics are namespace dependent. The examples used in the documentation
  * below will refer to the two counter examples found
- * [here](https://github.com/project-serum/anchor#examples).
+ * [here](https://github.com/coral-xyz/anchor#examples).
  */
 export class Program<IDL extends Idl = Idl> {
   /**
@@ -79,6 +79,7 @@ export class Program<IDL extends Idl = Idl> {
    * });
    * ```
    * @deprecated
+   * Use program.methods.<method>(...args).rpc() instead
    */
   readonly rpc: RpcNamespace<IDL>;
 
@@ -362,7 +363,7 @@ export class Program<IDL extends Idl = Idl> {
    */
   public addEventListener(
     eventName: string,
-    callback: (event: any, slot: number) => void
+    callback: (event: any, slot: number, signature: string) => void
   ): number {
     return this._events.addEventListener(eventName, callback);
   }
