@@ -8,18 +8,19 @@ The main downside to events are that they are base64 encoded, and therefore not 
 Despite this tradeoff, the UI can easily decode them, and the user benefits from this 
 compact mode of logging.
 
-There are a couple of ways to use events, which vary somewhat:
-- to provide a return value
-- as a callback or interrupt for event-driven programming
-- as a compact and efficient means of data logging
 
-*Return values*: Here we use an event to immediately provide a return value, such as details related
+## Event Use Cases
+
+### Return Values
+We can use an event to immediately provide a return value, such as details related
 to a transaction. Since calls to certain programs only return a tx hash, this may not provide sufficient detail to your UI. An event here can provide a richer experience, by returning values about how a particular transaction was executed, for example.
 
-*As a callback*: you may want to monitor an event and be notified only once a transaction is confirmed.
+### Callbacks
+ You may want to monitor an event and be notified only once a transaction is confirmed.
 Instead of polling / querying the blockchain and looking for an account's values to update, we can build our client to only act when the program has emitted an event, saving on compute resources and fees.
 
-*Cheap storage*: since events are stored in base64, they can be an economical way to store data
+### Compact Storage 
+Since events are stored in base64, they can be an economical way to store data
 without the trouble of account creation and provisioning for rent-exemption, for example.
 
 ## Example
