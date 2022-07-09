@@ -437,6 +437,10 @@ use syn::parse_macro_input;
 ///                 reallocation. Please read the documentation on the <code>AccountInfo::realloc</code> function linked above to understand the
 ///                 caveats regarding compute units when providing <code>true</code or <code>false</code> to this flag.
 ///                 <br><br>
+///                 The manual use of `AccountInfo::realloc` is discouraged in favor of the `realloc` constraint group due to the lack of native runtime checks
+///                 to prevent reallocation over the `MAX_PERMITTED_DATA_INCREASE` limit (which can unintentionally cause account data overwrite other accounts).
+///                 The constraint group also ensure account reallocation idempotency but checking and restricting duplicate account reallocation within a single ix.
+///                 <br><br>
 ///                 Example:
 ///                 <pre>
 /// #[derive(Accounts)]

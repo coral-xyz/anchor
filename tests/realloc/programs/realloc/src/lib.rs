@@ -12,9 +12,22 @@ pub mod realloc {
         Ok(())
     }
 
-    pub fn realloc(ctx: Context<Realloc>, len: u8) -> Result<()> {
+    pub fn realloc(ctx: Context<Realloc>, len: u16) -> Result<()> {
         ctx.accounts
             .sample
+            .data
+            .resize_with(len as usize, Default::default);
+        Ok(())
+    }
+
+    pub fn realloc2(ctx: Context<Realloc2>, len: u16) -> Result<()> {
+        ctx.accounts
+            .sample1
+            .data
+            .resize_with(len as usize, Default::default);
+
+        ctx.accounts
+            .sample2
             .data
             .resize_with(len as usize, Default::default);
         Ok(())
@@ -39,7 +52,7 @@ pub struct Initialize<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(len: u8)]
+#[instruction(len: u16)]
 pub struct Realloc<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -53,6 +66,35 @@ pub struct Realloc<'info> {
         realloc::zero = false,
     )]
     pub sample: Account<'info, Sample>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(len: u16)]
+pub struct Realloc2<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"sample"],
+        bump = sample1.bump,
+        realloc = Sample::space(len as usize),
+        realloc::payer = authority,
+        realloc::zero = false,
+    )]
+    pub sample1: Account<'info, Sample>,
+
+    #[account(
+        mut,
+        seeds = [b"sample"],
+        bump = sample2.bump,
+        realloc = Sample::space((len + 10) as usize),
+        realloc::payer = authority,
+        realloc::zero = false,
+    )]
+    pub sample2: Account<'info, Sample>,
 
     pub system_program: Program<'info, System>,
 }
