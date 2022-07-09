@@ -45,6 +45,7 @@ function.
         Ok(())
     }
 
+// location: src/lib.rs
 // ...
 #[event]
 pub struct MyEvent {
