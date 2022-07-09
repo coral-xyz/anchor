@@ -33,7 +33,7 @@ Start by creating a new anchor project:
 $ anchor init Events
 ```
 
-Next, we'll merely modify the program in `src/lib.rs` to add an event, and the accompanying data to the `initialize`
+Next, we will modify the program in `src/lib.rs` to add an event, and the accompanying data to the `initialize`
 function.
 ```rust
 // ...
