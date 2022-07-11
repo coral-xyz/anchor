@@ -1,13 +1,15 @@
-# Events
+---
+title: Events
+description: Anchor - Events
+---
 
 Events are an incredibly powerful feature in Anchor. Rather than polling or refreshing to
 find out if an account's state has changed, events are like callbacks that save space, compute,
 and enable asynchronous programming.
 
-The main downside to events are that they are base64 encoded, and therefore not human readable.
+The main downside to events is that they are base64 encoded, and therefore not human readable.
 Despite this tradeoff, the UI can easily decode them, and the user benefits from this 
-compact mode of logging.
-
+compact mode of logging. There are many use cases for events, ranging from simple return values, to compact storage storage solutions for data logging.
 
 ## Event Use Cases
 
@@ -57,7 +59,7 @@ pub struct MyEvent {
 ```
 
 Observe that we are using the event to provide a return value to a successful call to `initialize`.
-The data returned is fairly trivial, a `u64` integer and a short `String`. Without the event, we would have no specific information about the outcome of the initialize function, besides that it was successful.
+The data returned is fairly trivial, a `u64` integer and a short `String`. In the example we have only provided static values, but when enriched with dynamic data--such as an operating code and a description of it--the user gets output that can be actionable. Without the event, we would have no specific information about the outcome of the initialize function, besides that it was successful.
 
 Note that the event is declared with the `#[event]` macro, and defined using a `struct`. To supply the values,
 the pattern `emit!(MyEvent {...});` is used. The code above is a basic stamp that can be used for creating and consuming events within your program.
@@ -130,7 +132,7 @@ To test our program, we'll build a test client that will be able to consume the 
 
 We set up a `listener` that will catch when the event is emitted by the program. Since it's an asynchronous activity, we must include `await` to receive our return values. We call the first function using `program.rpc.initialize()` and when the event happens, we destructure the output into variables `event` and `slot`. Finally, when it's done, we close the listener. We can access our output values as follows: `event.data.toNumber()` or `event.label`.
 
-With the explanation out of the way, edit the file in `tests/events.ts`. Copy-paste the test code into the file as follows, then run `$ anchor test` from the command line to verify that it's working as intended:
+With the explanation out of the way, edit the file in `tests/events.ts`. Copy-paste the test code into the file as follows, then run `$ anchor test` from the command line to verify that it's working as intended.
 
 ```javascript
 import * as anchor from "@project-serum/anchor";
@@ -199,4 +201,8 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 ```
+
+If the event(s) are working correctly, you should have the return values of `5` and `hello` at `EventOne.data` and `EventOne.label`, respectively. The test client verifies the values returned are what is expected using the `assert.strictEqual(...)` expression(s). The same goes for the data in `eventTwo`.   
+
+
 This is the simplest example for creating and consuming events, but the pattern can be duplicated using dynamic data to provide asynchronous, actionable output for your UI or dApps.
