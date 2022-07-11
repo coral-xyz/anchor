@@ -62,7 +62,7 @@ The data returned is fairly trivial, a `u64` integer and a short `String`. Witho
 Note that the event is declared with the `#[event]` macro, and defined using a `struct`. To supply the values,
 the pattern `emit!(MyEvent {...});` is used. The code above is a basic stamp that can be used for creating and consuming events within your program.
 
-Next, nothing fancy but we'll add a new function called `test_event` with a new event that emits some other values. Complete code for `src/lib.rs` is shown below:
+Next, we will add a new function called `test_event` with a new event that emits some other values. Complete code for `src/lib.rs` is shown below:
 
 ```rust
 use anchor_lang::prelude::*;
