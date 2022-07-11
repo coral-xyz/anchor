@@ -1,6 +1,6 @@
 ---
 title: Events
-description: Anchor - Events
+description: Anchor - In this chapter we cover how to emit events. Events are an important concept as they allow you to log various types of information about on-chain activity.
 ---
 
 Events are an incredibly powerful feature in Anchor. Rather than polling or refreshing to
