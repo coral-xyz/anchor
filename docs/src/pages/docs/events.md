@@ -32,7 +32,7 @@ structured data when the function completes without error.
 
 Start by creating a new anchor project:
 ```bash
-$ anchor init Events
+anchor init Events
 ```
 
 Next, we will modify the program in `src/lib.rs` to add an event, and the accompanying data to the `initialize`
