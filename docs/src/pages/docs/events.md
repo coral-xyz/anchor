@@ -132,7 +132,7 @@ To test our program, we will build a test client that will be able to consume th
 
 We set up a `listener` that will catch when the event is emitted by the program. Since it's an asynchronous activity, we must include `await` to receive our return values. We call the first function using `program.rpc.initialize()` and when the event happens, we destructure the output into variables `event` and `slot`. Finally, when it's done, we close the listener. We can access our output values as follows: `event.data.toNumber()` or `event.label`.
 
-With the explanation out of the way, edit the file in `tests/events.ts`. Copy-paste the test code into the file as follows, then run `$ anchor test` from the command line to verify that it's working as intended.
+With the explanation out of the way, edit the file in `tests/events.ts`. Add the test code into the file as follows, then run `anchor test` from the command line to verify that it's working as intended.
 
 ```javascript
 import * as anchor from "@project-serum/anchor";
