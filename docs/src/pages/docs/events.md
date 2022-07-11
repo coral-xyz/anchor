@@ -115,7 +115,7 @@ pub struct MyOtherEvent {
 
 ## Consuming Events
 
-To test our program, we'll build a test client that will be able to consume the events. The structure for doing this is essentially:
+To test our program, we will build a test client that will be able to consume the events. The structure for doing this is essentially:
 ```javascript
     // ...
     let listener = null;
