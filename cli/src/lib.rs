@@ -181,6 +181,8 @@ pub enum Command {
         /// to be able to check the transactions.
         #[clap(long)]
         detach: bool,
+        #[clap(short, long)]
+        suite: Option<String>,
         #[clap(multiple_values = true)]
         args: Vec<String>,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
@@ -460,6 +462,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             skip_local_validator,
             skip_build,
             detach,
+            suite,
             args,
             cargo_args,
             skip_lint,
@@ -470,6 +473,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             skip_build,
             skip_lint,
             detach,
+            suite,
             args,
             cargo_args,
         ),
@@ -1858,6 +1862,7 @@ fn test(
     skip_build: bool,
     skip_lint: bool,
     detach: bool,
+    suite: Option<String>,
     extra_args: Vec<String>,
     cargo_args: Vec<String>,
 ) -> Result<()> {
@@ -1910,8 +1915,12 @@ fn test(
                 &extra_args,
             )?;
         }
+
         if let Some(test_config) = &cfg.test_config {
-            for test_suite in test_config.iter() {
+            for test_suite in test_config.iter().filter(|i| match &suite {
+                Some(s) => i.0.ends_with(s),
+                _ => true,
+            }) {
                 if !is_first_suite {
                     std::thread::sleep(std::time::Duration::from_millis(
                         test_suite
