@@ -8,7 +8,7 @@ on:
     branches:
       - master
 env:
-  SOLANA_CLI_VERSION: 1.9.13
+  SOLANA_CLI_VERSION: 1.10.29
   NODE_VERSION: 17.0.1
 
 jobs:
@@ -360,6 +360,8 @@ jobs:
             path: tests/escrow
           - cmd: cd tests/pyth && anchor test --skip-lint && npx tsc --noEmit
             path: tests/pyth
+          - cmd: cd tests/realloc && anchor test --skip-lint && npx tsc --noEmit
+            path: tests/realloc
           - cmd: cd tests/system-accounts && anchor test --skip-lint
             path: tests/system-accounts
           - cmd: cd tests/misc && anchor test --skip-lint && npx tsc --noEmit
