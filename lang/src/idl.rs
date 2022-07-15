@@ -22,6 +22,9 @@ use crate::accounts::program_account::ProgramAccount;
 use crate::prelude::*;
 use solana_program::pubkey::Pubkey;
 
+// re-export CtorBumps
+pub use crate::ctor::CtorBumps;
+
 // The first 8 bytes of an instruction to create or modify the IDL account. This
 // instruction is defined outside the main program's instruction enum, so that
 // the enum variant tags can align with function source order.
