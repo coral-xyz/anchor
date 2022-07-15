@@ -1,4 +1,4 @@
-use crate::codegen::accounts::{constraints, generics, ParsedGenerics};
+use crate::codegen::accounts::{bumps, constraints, generics, ParsedGenerics};
 use crate::{AccountField, AccountsStruct};
 use quote::quote;
 use syn::Expr;
@@ -89,15 +89,21 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         }
     };
 
+    let bumps_stuct_name = bumps::generate_bumps_name(accs);
+    let bumps_struct = bumps::generate(accs);
+
     quote! {
+        #[derive(Default)]
+        #bumps_struct
+
         #[automatically_derived]
-        impl<#combined_generics> anchor_lang::Accounts<#trait_generics> for #name<#struct_generics> #where_clause {
+        impl<#combined_generics> anchor_lang::Accounts<#trait_generics, #bumps_stuct_name> for #name<#struct_generics> #where_clause {
             #[inline(never)]
             fn try_accounts(
                 program_id: &anchor_lang::solana_program::pubkey::Pubkey,
                 accounts: &mut &[anchor_lang::solana_program::account_info::AccountInfo<'info>],
                 ix_data: &[u8],
-                __bumps: &mut std::collections::BTreeMap<String, u8>,
+                __bumps: &mut #bumps_stuct_name,
                 __reallocs: &mut std::collections::BTreeSet<anchor_lang::solana_program::pubkey::Pubkey>,
             ) -> anchor_lang::Result<Self> {
                 // Deserialize instruction, if declared.

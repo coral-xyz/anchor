@@ -27,7 +27,7 @@ use bytemuck::{Pod, Zeroable};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::io::Write;
 
 mod account_meta;
@@ -65,7 +65,7 @@ pub type Result<T> = std::result::Result<T, error::Error>;
 /// maintain any invariants required for the program to run securely. In most
 /// cases, it's recommended to use the [`Accounts`](./derive.Accounts.html)
 /// derive macro to implement this trait.
-pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
+pub trait Accounts<'info, B = ()>: ToAccountMetas + ToAccountInfos<'info> + Sized {
     /// Returns the validated accounts struct. What constitutes "valid" is
     /// program dependent. However, users of these types should never have to
     /// worry about account substitution attacks. For example, if a program
@@ -81,7 +81,7 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
         program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         ix_data: &[u8],
-        bumps: &mut BTreeMap<String, u8>,
+        bumps: &mut B,
         reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self>;
 }

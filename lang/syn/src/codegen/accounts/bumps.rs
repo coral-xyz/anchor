@@ -1,0 +1,36 @@
+use crate::*;
+
+use super::*;
+
+pub fn generate_bumps_name(accs: &AccountsStruct) -> Ident {
+    Ident::new(&format!("{}Bumps", accs.ident), Span::call_site())
+}
+
+pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
+    let bumps_name = generate_bumps_name(accs);
+
+    let bump_fields: Vec<proc_macro2::TokenStream>  = accs.fields
+        .iter()
+        .map(|af| {
+            let constraints = match af {
+                AccountField::Field(f) => constraints::linearize(&f.constraints),
+                AccountField::CompositeField(s) => constraints::linearize(&s.constraints),
+            };
+            for c in constraints.iter() {
+                if let Constraint::Seeds(..) = c {
+                    let ident = af.ident();
+                    return quote! {
+                        pub #ident: Option<u8>,
+                    };
+                }
+            }
+            quote! {}
+        })
+        .collect();
+
+    quote! {
+        pub struct #bumps_name {
+            #(#bump_fields)*
+        }
+    }
+}

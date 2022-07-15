@@ -8,7 +8,7 @@ use crate::{
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::ops::{Deref, DerefMut};
 
 /// Boxed container for the program state singleton, used when the state
@@ -62,7 +62,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> CpiState<'info, T>
 }
 
 #[allow(deprecated)]
-impl<'info, T> Accounts<'info> for CpiState<'info, T>
+impl<'info, B, T> Accounts<'info, B> for CpiState<'info, T>
 where
     T: AccountSerialize + AccountDeserialize + Clone,
 {
@@ -71,7 +71,7 @@ where
         _program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
-        _bumps: &mut BTreeMap<String, u8>,
+        _bumps: &mut B,
         _reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self> {
         if accounts.is_empty() {

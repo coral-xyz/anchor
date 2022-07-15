@@ -8,7 +8,7 @@ use solana_program::account_info::AccountInfo;
 use solana_program::bpf_loader_upgradeable::{self, UpgradeableLoaderState};
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::fmt;
 use std::marker::PhantomData;
 use std::ops::Deref;
@@ -137,7 +137,7 @@ impl<'a, T: Id + Clone> Program<'a, T> {
     }
 }
 
-impl<'info, T> Accounts<'info> for Program<'info, T>
+impl<'info, B, T> Accounts<'info, B> for Program<'info, T>
 where
     T: Id + Clone,
 {
@@ -146,7 +146,7 @@ where
         _program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
-        _bumps: &mut BTreeMap<String, u8>,
+        _bumps: &mut B,
         _reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self> {
         if accounts.is_empty() {
