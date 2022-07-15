@@ -25,7 +25,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
                 match ix {
                     anchor_lang::idl::IdlInstruction::Create { data_len } => {
-                        let mut bumps = anchor_lang::idl::IdlCreateAccountsBumps::default();
+                        let mut bumps = anchor_lang::ctor::CtorBumps;
                         let mut reallocs = std::collections::BTreeSet::new();
                         let mut accounts =
                             anchor_lang::idl::IdlCreateAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
