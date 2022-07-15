@@ -189,7 +189,7 @@ pub fn parse(
     let instructions = p
         .ixs
         .iter()
-        .map(|ix| {
+        .filter_map(|ix| {
             let args = ix
                 .args
                 .iter()
@@ -206,21 +206,25 @@ pub fn parse(
                     }
                 })
                 .collect::<Vec<_>>();
-            // todo: don't unwrap
-            let accounts_strct = accs.get(&ix.anchor_ident.to_string()).unwrap();
+            let anchor_ident_str = ix.anchor_ident.to_string();
+            let accounts_strct = accs.get(&anchor_ident_str)
+                .or_else(|| {
+                    eprintln!("failed to get account metadata for {}", anchor_ident_str);
+                    None
+                })?;
             let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature, no_docs);
             let ret_type_str = ix.returns.ty.to_token_stream().to_string();
             let returns = match ret_type_str.as_str() {
                 "()" => None,
                 _ => Some(ret_type_str.parse().unwrap()),
             };
-            IdlInstruction {
+            Some(IdlInstruction {
                 name: ix.ident.to_string().to_mixed_case(),
                 docs: ix.docs.clone(),
                 accounts,
                 args,
                 returns,
-            }
+            })
         })
         .collect::<Vec<_>>();
 
