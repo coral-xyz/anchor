@@ -2,12 +2,12 @@ use crate::*;
 
 use super::*;
 
-pub fn generate_bumps_name(accs: &AccountsStruct) -> Ident {
-    Ident::new(&format!("{}Bumps", accs.ident), Span::call_site())
+pub fn generate_bumps_name(anchor_ident: &Ident) -> Ident {
+    Ident::new(&format!("{}Bumps", anchor_ident), Span::call_site())
 }
 
 pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
-    let bumps_name = generate_bumps_name(accs);
+    let bumps_name = generate_bumps_name(&accs.ident);
 
     let bump_fields: Vec<proc_macro2::TokenStream>  = accs.fields
         .iter()

@@ -1,4 +1,4 @@
-use crate::codegen::program::common::*;
+use crate::codegen::{accounts::bumps, program::common::*};
 use crate::{Program, State};
 use heck::CamelCase;
 use quote::{quote, ToTokens};
@@ -206,6 +206,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let ix_name: proc_macro2::TokenStream =
                     generate_ctor_variant_name().parse().unwrap();
                 let ix_name_log = format!("Instruction: {}", ix_name);
+                let bumps_struct = bumps::generate_bumps_name(anchor_ident);
                 if state.is_zero_copy {
                     quote! {
                         // One time state account initializer. Will faill on subsequent
@@ -220,7 +221,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                 .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                             let instruction::state::#variant_arm = ix;
 
-                            let mut __bumps = std::collections::BTreeMap::new();
+                            let mut __bumps = #bumps_struct::default();
                             let mut __reallocs = std::collections::BTreeSet::new();
 
                             // Deserialize accounts.
@@ -300,7 +301,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                 .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                             let instruction::state::#variant_arm = ix;
 
-                            let mut __bumps = std::collections::BTreeMap::new();
+                            let mut __bumps = #bumps_struct::default();
                             let mut __reallocs = std::collections::BTreeSet::new();
 
                             // Deserialize accounts.
@@ -385,6 +386,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         let ix_method_name = &ix.raw_method.sig.ident;
                         let state_ty: proc_macro2::TokenStream = state.name.parse().unwrap();
                         let anchor_ident = &ix.anchor_ident;
+                        let bumps_struct = bumps::generate_bumps_name(anchor_ident);
+                        
                         let name = &state.strct.ident;
                         let mod_name = &program.name;
 
@@ -410,7 +413,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     let instruction::state::#variant_arm = ix;
 
                                     // Bump collector.
-                                    let mut __bumps = std::collections::BTreeMap::new();
+                                    let mut __bumps = #bumps_struct::default();
 
                                     // Realloc tracker
                                     let mut __reallocs= std::collections::BTreeSet::new();
@@ -470,7 +473,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     let instruction::state::#variant_arm = ix;
 
                                     // Bump collector.
-                                    let mut __bumps = std::collections::BTreeMap::new();
+                                    let mut __bumps = #bumps_struct::default();
 
                                     // Realloc tracker.
                                     let mut __reallocs = std::collections::BTreeSet::new();
@@ -555,6 +558,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                 let ix_method_name = &ix.raw_method.sig.ident;
                                 let state_ty: proc_macro2::TokenStream = state.name.parse().unwrap();
                                 let anchor_ident = &ix.anchor_ident;
+                                let bumps_struct = bumps::generate_bumps_name(anchor_ident);
                                 let ix_name = generate_ix_variant_name(ix.raw_method.sig.ident.to_string());
                                 let ix_name_log = format!("Instruction: {}", ix_name);
 
@@ -603,7 +607,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             #deserialize_instruction
 
                                             // Bump collector.
-                                            let mut __bumps = std::collections::BTreeMap::new();
+                                            let mut __bumps = #bumps_struct::default();
 
                                             // Realloc tracker.
                                             let mut __reallocs= std::collections::BTreeSet::new();
@@ -670,7 +674,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             #deserialize_instruction
 
                                             // Bump collector.
-                                            let mut __bumps = std::collections::BTreeMap::new();
+                                            let mut __bumps = #bumps_struct::default();
 
                                             let mut __reallocs = std::collections::BTreeSet::new();
 
@@ -716,6 +720,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             let ix_name = generate_ix_variant_name(ix.raw_method.sig.ident.to_string());
             let ix_method_name = &ix.raw_method.sig.ident;
             let anchor = &ix.anchor_ident;
+            let bumps_struct = bumps::generate_bumps_name(anchor);
+            
             let variant_arm = generate_ix_variant(ix.raw_method.sig.ident.to_string(), &ix.args);
             let ix_name_log = format!("Instruction: {}", ix_name);
             let ret_type = &ix.returns.ty.to_token_stream();
@@ -741,7 +747,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     let instruction::#variant_arm = ix;
 
                     // Bump collector.
-                    let mut __bumps = std::collections::BTreeMap::new();
+                    let mut __bumps = #bumps_struct::default();
 
                     let mut __reallocs = std::collections::BTreeSet::new();
 

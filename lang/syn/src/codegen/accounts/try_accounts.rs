@@ -89,7 +89,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         }
     };
 
-    let bumps_stuct_name = bumps::generate_bumps_name(accs);
+    let bumps_stuct_name = bumps::generate_bumps_name(&accs.ident);
     let bumps_struct = bumps::generate(accs);
 
     quote! {

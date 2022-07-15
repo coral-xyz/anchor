@@ -7,7 +7,7 @@ use syn::{GenericParam, PredicateLifetime, WhereClause, WherePredicate};
 
 mod __client_accounts;
 mod __cpi_client_accounts;
-mod bumps;
+pub mod bumps;
 mod constraints;
 mod exit;
 mod to_account_infos;
