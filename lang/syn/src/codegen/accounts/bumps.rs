@@ -9,9 +9,9 @@ pub fn generate_bumps_name(anchor_ident: &Ident) -> Ident {
 pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     let bumps_name = generate_bumps_name(&accs.ident);
 
-    let bump_fields: Vec<proc_macro2::TokenStream>  = accs.fields
+    let bump_fields: Vec<proc_macro2::TokenStream> = accs.fields
         .iter()
-        .map(|af| {
+        .filter_map(|af| {
             let constraints = match af {
                 AccountField::Field(f) => constraints::linearize(&f.constraints),
                 AccountField::CompositeField(s) => constraints::linearize(&s.constraints),
@@ -19,18 +19,19 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             for c in constraints.iter() {
                 if let Constraint::Seeds(..) = c {
                     let ident = af.ident();
-                    return quote! {
-                        pub #ident: Option<u8>,
-                    };
+                    return Some(quote! {
+                        pub #ident: Option<u8>
+                    });
                 }
             }
-            quote! {}
+            None
         })
         .collect();
 
     quote! {
+        #[derive(Default, Debug)]
         pub struct #bumps_name {
-            #(#bump_fields)*
+            #(#bump_fields),*
         }
     }
 }

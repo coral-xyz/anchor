@@ -90,12 +90,8 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     };
 
     let bumps_stuct_name = bumps::generate_bumps_name(&accs.ident);
-    let bumps_struct = bumps::generate(accs);
 
     quote! {
-        #[derive(Default, Debug)]
-        #bumps_struct
-
         #[automatically_derived]
         impl<#combined_generics> anchor_lang::Accounts<#trait_generics, #bumps_stuct_name> for #name<#struct_generics> #where_clause {
             #[inline(never)]
