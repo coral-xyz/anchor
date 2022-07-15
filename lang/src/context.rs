@@ -37,7 +37,9 @@ pub struct Context<'a, 'b, 'c, 'info, B, T> {
     pub bumps: B,
 }
 
-impl<'a, 'b, 'c, 'info, B: fmt::Debug, T: fmt::Debug> fmt::Debug for Context<'a, 'b, 'c, 'info, B, T> {
+impl<'a, 'b, 'c, 'info, B: fmt::Debug, T: fmt::Debug> fmt::Debug
+    for Context<'a, 'b, 'c, 'info, B, T>
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Context")
             .field("program_id", &self.program_id)
