@@ -52,11 +52,11 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> CpiState<'info, T>
     }
 
     /// Convenience api for creating a `CpiStateContext`.
-    pub fn context<'a, 'b, 'c, A: Accounts<'info>>(
+    pub fn context<'a, 'b, 'c, B, A: Accounts<'info, B>>(
         &self,
         program: AccountInfo<'info>,
         accounts: A,
-    ) -> CpiStateContext<'a, 'b, 'c, 'info, A> {
+    ) -> CpiStateContext<'a, 'b, 'c, 'info, B, A> {
         CpiStateContext::new(program, self.inner.info.clone(), accounts)
     }
 }

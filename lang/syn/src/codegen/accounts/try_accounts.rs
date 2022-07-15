@@ -93,7 +93,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     let bumps_struct = bumps::generate(accs);
 
     quote! {
-        #[derive(Default)]
+        #[derive(Default, Debug)]
         #bumps_struct
 
         #[automatically_derived]
