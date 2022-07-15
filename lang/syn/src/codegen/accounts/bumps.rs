@@ -9,7 +9,8 @@ pub fn generate_bumps_name(anchor_ident: &Ident) -> Ident {
 pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     let bumps_name = generate_bumps_name(&accs.ident);
 
-    let bump_fields: Vec<proc_macro2::TokenStream> = accs.fields
+    let bump_fields: Vec<proc_macro2::TokenStream> = accs
+        .fields
         .iter()
         .filter_map(|af| {
             let constraints = match af {
@@ -27,7 +28,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             None
         })
         .collect();
-
+    
     quote! {
         #[derive(Default, Debug)]
         pub struct #bumps_name {

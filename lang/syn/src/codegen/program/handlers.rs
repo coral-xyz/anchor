@@ -387,7 +387,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         let state_ty: proc_macro2::TokenStream = state.name.parse().unwrap();
                         let anchor_ident = &ix.anchor_ident;
                         let bumps_struct = bumps::generate_bumps_name(anchor_ident);
-                        
+
                         let name = &state.strct.ident;
                         let mod_name = &program.name;
 
@@ -721,7 +721,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             let ix_method_name = &ix.raw_method.sig.ident;
             let anchor = &ix.anchor_ident;
             let bumps_struct = bumps::generate_bumps_name(anchor);
-            
+
             let variant_arm = generate_ix_variant(ix.raw_method.sig.ident.to_string(), &ix.args);
             let ix_name_log = format!("Instruction: {}", ix_name);
             let ret_type = &ix.returns.ty.to_token_stream();
