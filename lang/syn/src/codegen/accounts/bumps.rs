@@ -28,7 +28,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             None
         })
         .collect();
-    
+
     quote! {
         #[derive(Default, Debug)]
         pub struct #bumps_name {
