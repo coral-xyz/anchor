@@ -34,13 +34,20 @@ fn ctx_accounts_ident(path_ty: &syn::PatType) -> ParseResult<proc_macro2::Ident>
         syn::PathArguments::AngleBracketed(args) => args,
         _ => return Err(ParseError::new(path_ty.span(), "missing accounts context")),
     };
-    let generic_ty = generic_args
+
+    let mut generic_args_iter = generic_args
         .args
         .iter()
         .filter_map(|arg| match arg {
             syn::GenericArgument::Type(ty) => Some(ty),
             _ => None,
-        })
+        });
+
+    let _generic_bumps_ty = generic_args_iter
+        .next()
+        .ok_or_else(|| ParseError::new(generic_args.span(), "expected AccountsBumps type"))?;
+
+    let generic_ty = generic_args_iter
         .next()
         .ok_or_else(|| ParseError::new(generic_args.span(), "expected Accounts type"))?;
 
