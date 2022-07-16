@@ -1,7 +1,5 @@
 use anchor_lang::context::CpiContext;
 use anchor_lang::{Accounts, Result, ToAccountInfos};
-use mpl_token_metadata::deser::meta_deser;
-use mpl_token_metadata::state::DataV2;
 use mpl_token_metadata::ID;
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
@@ -194,8 +192,13 @@ impl MetadataAccount {
 
 impl anchor_lang::AccountDeserialize for MetadataAccount {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
-        let result = mpl_token_metadata::state::Metadata::deserialize(buf)?;
-        return Ok(MetadataAccount(result));
+        let result: mpl_token_metadata::state::Metadata =
+            mpl_token_metadata::utils::try_from_slice_checked(
+                buf,
+                mpl_token_metadata::state::Key::MetadataV1,
+                mpl_token_metadata::state::MAX_METADATA_LEN,
+            )?;
+        Ok(MetadataAccount(result))
     }
 }
 
