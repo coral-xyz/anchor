@@ -13,11 +13,13 @@
 //! }
 //! ```
 
-use crate::{Accounts, AccountsClose, AccountsExit, Result, ToAccountInfos, ToAccountMetas};
+use crate::{
+    Accounts, AccountsClose, AccountsExit, Result, ToAccountInfos, ToAccountMetas,
+    TryAccountsContext,
+};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use std::collections::{BTreeMap, BTreeSet};
 use std::ops::Deref;
 
 impl<'info, T: Accounts<'info>> Accounts<'info> for Box<T> {
@@ -25,10 +27,9 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Box<T> {
         program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         ix_data: &[u8],
-        bumps: &mut BTreeMap<String, u8>,
-        reallocs: &mut BTreeSet<Pubkey>,
+        ctx: &mut TryAccountsContext,
     ) -> Result<Self> {
-        T::try_accounts(program_id, accounts, ix_data, bumps, reallocs).map(Box::new)
+        T::try_accounts(program_id, accounts, ix_data, ctx).map(Box::new)
     }
 }
 

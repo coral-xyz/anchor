@@ -366,6 +366,7 @@ export const LangErrorCode = {
   AccountSysvarMismatch: 3015,
   AccountReallocExceedsLimit: 3016,
   AccountDuplicateReallocs: 3017,
+  AccountDuplicateMutables: 3018,
 
   // State.
   StateInvalidAddress: 4000,
@@ -512,6 +513,10 @@ export const LangErrorMessage = new Map([
   [
     LangErrorCode.AccountDuplicateReallocs,
     "The account was duplicated for more than one reallocation",
+  ],
+  [
+    LangErrorCode.AccountDuplicateMutables,
+    "The account was duplicated in more than one mutable account info.",
   ],
 
   // State.

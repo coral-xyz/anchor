@@ -25,7 +25,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     quote! {
                         #[cfg(feature = "anchor-debug")]
                         ::solana_program::log::sol_log(stringify!(#name));
-                        let #name: #ty = anchor_lang::Accounts::try_accounts(program_id, accounts, ix_data, __bumps, __reallocs)?;
+                        let #name: #ty = anchor_lang::Accounts::try_accounts(program_id, accounts, ix_data, __ctx)?;
                     }
                 }
                 AccountField::Field(f) => {
@@ -47,7 +47,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                         quote! {
                             #[cfg(feature = "anchor-debug")]
                             ::solana_program::log::sol_log(stringify!(#typed_name));
-                            let #typed_name = anchor_lang::Accounts::try_accounts(program_id, accounts, ix_data, __bumps, __reallocs)
+                            let #typed_name = anchor_lang::Accounts::try_accounts(program_id, accounts, ix_data, __ctx)
                                 .map_err(|e| e.with_account_name(#name))?;
                         }
                     }
@@ -97,8 +97,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 program_id: &anchor_lang::solana_program::pubkey::Pubkey,
                 accounts: &mut &[anchor_lang::solana_program::account_info::AccountInfo<'info>],
                 ix_data: &[u8],
-                __bumps: &mut std::collections::BTreeMap<String, u8>,
-                __reallocs: &mut std::collections::BTreeSet<anchor_lang::solana_program::pubkey::Pubkey>,
+                __ctx: &mut anchor_lang::TryAccountsContext,
             ) -> anchor_lang::Result<Self> {
                 // Deserialize instruction, if declared.
                 #ix_de

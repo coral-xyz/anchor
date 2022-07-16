@@ -3,7 +3,6 @@ use crate::{error::ErrorCode, prelude::Account};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use std::collections::BTreeMap;
 use std::ops::{Deref, DerefMut};
 
 /// Container for any account *not* owned by the current program.
@@ -52,8 +51,7 @@ where
         _program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
-        _bumps: &mut BTreeMap<String, u8>,
-        _reallocs: &mut BTreeSet<Pubkey>,
+        _ctx: &mut TryAccountsContext,
     ) -> Result<Self> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());

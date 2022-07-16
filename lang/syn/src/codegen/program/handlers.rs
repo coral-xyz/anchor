@@ -25,42 +25,37 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
                 match ix {
                     anchor_lang::idl::IdlInstruction::Create { data_len } => {
-                        let mut bumps = std::collections::BTreeMap::new();
-                        let mut reallocs = std::collections::BTreeSet::new();
+                        let mut ctx = anchor_lang::TryAccountsContext::default();
                         let mut accounts =
-                            anchor_lang::idl::IdlCreateAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                            anchor_lang::idl::IdlCreateAccounts::try_accounts(program_id, &mut accounts, &[], &mut ctx)?;
                         __idl_create_account(program_id, &mut accounts, data_len)?;
                         accounts.exit(program_id)?;
                     },
                     anchor_lang::idl::IdlInstruction::CreateBuffer => {
-                        let mut bumps = std::collections::BTreeMap::new();
-                        let mut reallocs = std::collections::BTreeSet::new();
+                        let mut ctx = anchor_lang::TryAccountsContext::default();
                         let mut accounts =
-                            anchor_lang::idl::IdlCreateBuffer::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                            anchor_lang::idl::IdlCreateBuffer::try_accounts(program_id, &mut accounts, &[], &mut ctx)?;
                         __idl_create_buffer(program_id, &mut accounts)?;
                         accounts.exit(program_id)?;
                     },
                     anchor_lang::idl::IdlInstruction::Write { data } => {
-                        let mut bumps = std::collections::BTreeMap::new();
-                        let mut reallocs = std::collections::BTreeSet::new();
+                        let mut ctx = anchor_lang::TryAccountsContext::default();
                         let mut accounts =
-                            anchor_lang::idl::IdlAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                            anchor_lang::idl::IdlAccounts::try_accounts(program_id, &mut accounts, &[], &mut ctx)?;
                         __idl_write(program_id, &mut accounts, data)?;
                         accounts.exit(program_id)?;
                     },
                     anchor_lang::idl::IdlInstruction::SetAuthority { new_authority } => {
-                        let mut bumps = std::collections::BTreeMap::new();
-                        let mut reallocs = std::collections::BTreeSet::new();
+                        let mut ctx = anchor_lang::TryAccountsContext::default();
                         let mut accounts =
-                            anchor_lang::idl::IdlAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                            anchor_lang::idl::IdlAccounts::try_accounts(program_id, &mut accounts, &[], &mut ctx)?;
                         __idl_set_authority(program_id, &mut accounts, new_authority)?;
                         accounts.exit(program_id)?;
                     },
                     anchor_lang::idl::IdlInstruction::SetBuffer => {
-                        let mut bumps = std::collections::BTreeMap::new();
-                        let mut reallocs = std::collections::BTreeSet::new();
+                        let mut ctx = anchor_lang::TryAccountsContext::default();
                         let mut accounts =
-                            anchor_lang::idl::IdlSetBuffer::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                            anchor_lang::idl::IdlSetBuffer::try_accounts(program_id, &mut accounts, &[], &mut ctx)?;
                         __idl_set_buffer(program_id, &mut accounts)?;
                         accounts.exit(program_id)?;
                     },
@@ -220,15 +215,14 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                 .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                             let instruction::state::#variant_arm = ix;
 
-                            let mut __bumps = std::collections::BTreeMap::new();
-                            let mut __reallocs = std::collections::BTreeSet::new();
+                            let mut __ctx = anchor_lang::TryAccountsContext::default();
 
                             // Deserialize accounts.
                             let mut remaining_accounts: &[AccountInfo] = accounts;
                             let ctor_accounts =
-                            anchor_lang::__private::Ctor::try_accounts(program_id, &mut remaining_accounts, &[], &mut __bumps, &mut __reallocs)?;
+                            anchor_lang::__private::Ctor::try_accounts(program_id, &mut remaining_accounts, &[], &mut __ctx)?;
                             let mut ctor_user_def_accounts =
-                            #anchor_ident::try_accounts(program_id, &mut remaining_accounts, ix_data, &mut __bumps, &mut __reallocs)?;
+                            #anchor_ident::try_accounts(program_id, &mut remaining_accounts, ix_data, &mut __ctx)?;
 
                             // Create the solana account for the ctor data.
                             let from = ctor_accounts.from.key;
@@ -300,15 +294,14 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                 .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                             let instruction::state::#variant_arm = ix;
 
-                            let mut __bumps = std::collections::BTreeMap::new();
-                            let mut __reallocs = std::collections::BTreeSet::new();
+                            let mut __ctx = anchor_lang::TryAccountsContext::default();
 
                             // Deserialize accounts.
                             let mut remaining_accounts: &[AccountInfo] = accounts;
                             let ctor_accounts =
-                            anchor_lang::__private::Ctor::try_accounts(program_id, &mut remaining_accounts, &[], &mut __bumps, &mut __reallocs)?;
+                            anchor_lang::__private::Ctor::try_accounts(program_id, &mut remaining_accounts, &[], &mut __ctx)?;
                             let mut ctor_user_def_accounts =
-                            #anchor_ident::try_accounts(program_id, &mut remaining_accounts, ix_data, &mut __bumps, &mut __reallocs)?;
+                            #anchor_ident::try_accounts(program_id, &mut remaining_accounts, ix_data, &mut __ctx)?;
 
                             // Invoke the ctor.
                             let instance = #mod_name::#name::new(
@@ -409,26 +402,21 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                         .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                                     let instruction::state::#variant_arm = ix;
 
-                                    // Bump collector.
-                                    let mut __bumps = std::collections::BTreeMap::new();
-
-                                    // Realloc tracker
-                                    let mut __reallocs= std::collections::BTreeSet::new();
+                                    let mut __ctx = anchor_lang::TryAccountsContext::default();
 
                                     // Load state.
                                     let mut remaining_accounts: &[AccountInfo] = accounts;
                                     if remaining_accounts.is_empty() {
                                         return Err(anchor_lang::error::ErrorCode::AccountNotEnoughKeys.into());
                                     }
-                                    let loader: anchor_lang::accounts::loader::Loader<#mod_name::#name> = anchor_lang::accounts::loader::Loader::try_accounts(program_id, &mut remaining_accounts, &[], &mut __bumps, &mut __reallocs)?;
+                                    let loader: anchor_lang::accounts::loader::Loader<#mod_name::#name> = anchor_lang::accounts::loader::Loader::try_accounts(program_id, &mut remaining_accounts, &[], &mut __ctx)?;
 
                                     // Deserialize accounts.
                                     let mut accounts = #anchor_ident::try_accounts(
                                         program_id,
                                         &mut remaining_accounts,
                                         ix_data,
-                                        &mut __bumps,
-                                        &mut __reallocs,
+                                        &mut __ctx
                                     )?;
                                     let ctx =
                                         anchor_lang::context::Context::new(
@@ -469,11 +457,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                         .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                                     let instruction::state::#variant_arm = ix;
 
-                                    // Bump collector.
-                                    let mut __bumps = std::collections::BTreeMap::new();
-
-                                    // Realloc tracker.
-                                    let mut __reallocs = std::collections::BTreeSet::new();
+                                    let mut __ctx = anchor_lang::TryAccountsContext::default();
 
                                     // Load state.
                                     let mut remaining_accounts: &[AccountInfo] = accounts;
@@ -484,8 +468,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                         program_id,
                                         &mut remaining_accounts,
                                         &[],
-                                        &mut __bumps,
-                                        &mut __reallocs,
+                                        &mut __ctx,
                                     )?;
 
                                     // Deserialize accounts.
@@ -493,8 +476,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                         program_id,
                                         &mut remaining_accounts,
                                         ix_data,
-                                        &mut __bumps,
-                                        &mut __reallocs,
+                                        &mut __ctx,
                                     )?;
                                     let ctx =
                                         anchor_lang::context::Context::new(
@@ -602,11 +584,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             // Deserialize instruction.
                                             #deserialize_instruction
 
-                                            // Bump collector.
-                                            let mut __bumps = std::collections::BTreeMap::new();
-
-                                            // Realloc tracker.
-                                            let mut __reallocs= std::collections::BTreeSet::new();
+                                            let mut __ctx = anchor_lang::TryAccountsContext::default();
 
                                             // Deserialize the program state account.
                                             let mut remaining_accounts: &[AccountInfo] = accounts;
@@ -617,8 +595,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                                 program_id,
                                                 &mut remaining_accounts,
                                                 &[],
-                                                &mut __bumps,
-                                                &mut __reallocs,
+                                                &mut __ctx,
                                             )?;
 
                                             // Deserialize accounts.
@@ -626,8 +603,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                                 program_id,
                                                 &mut remaining_accounts,
                                                 ix_data,
-                                                &mut __bumps,
-                                                &mut __reallocs,
+                                                &mut __ctx,
                                             )?;
                                             let ctx =
                                                 anchor_lang::context::Context::new(
@@ -669,10 +645,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             // Deserialize instruction.
                                             #deserialize_instruction
 
-                                            // Bump collector.
-                                            let mut __bumps = std::collections::BTreeMap::new();
-
-                                            let mut __reallocs = std::collections::BTreeSet::new();
+                                            let mut __ctx = anchor_lang::TryAccountsContext::default();
 
                                             // Deserialize accounts.
                                             let mut remaining_accounts: &[AccountInfo] = accounts;
@@ -680,8 +653,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                                 program_id,
                                                 &mut remaining_accounts,
                                                 ix_data,
-                                                &mut __bumps,
-                                                &mut __reallocs,
+                                                &mut __ctx,
                                             )?;
 
                                             // Execute user defined function.
@@ -740,10 +712,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                     let instruction::#variant_arm = ix;
 
-                    // Bump collector.
-                    let mut __bumps = std::collections::BTreeMap::new();
-
-                    let mut __reallocs = std::collections::BTreeSet::new();
+                    let mut __ctx = anchor_lang::TryAccountsContext::default();
 
                     // Deserialize accounts.
                     let mut remaining_accounts: &[AccountInfo] = accounts;
@@ -751,8 +720,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         program_id,
                         &mut remaining_accounts,
                         ix_data,
-                        &mut __bumps,
-                        &mut __reallocs,
+                        &mut __ctx,
                     )?;
 
                     // Invoke user defined handler.

@@ -81,9 +81,15 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
         program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         ix_data: &[u8],
-        bumps: &mut BTreeMap<String, u8>,
-        reallocs: &mut BTreeSet<Pubkey>,
+        ctx: &mut TryAccountsContext,
     ) -> Result<Self>;
+}
+
+#[derive(Default)]
+pub struct TryAccountsContext {
+    pub bumps: BTreeMap<String, u8>,
+    pub mutables: BTreeSet<Pubkey>,
+    pub reallocs: BTreeSet<Pubkey>,
 }
 
 /// The exit procedure for an account. Any cleanup or persistence to storage
