@@ -267,7 +267,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                         program_id,
                                         &mut ctor_user_def_accounts,
                                         remaining_accounts,
-                                        __bumps,
+                                        __ctx.bumps,
                                     ),
                                     #(#ctor_untyped_args),*
                                 )?;
@@ -309,7 +309,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                     program_id,
                                     &mut ctor_user_def_accounts,
                                     remaining_accounts,
-                                    __bumps,
+                                    __ctx.bumps,
                                 ),
                                 #(#ctor_untyped_args),*
                             )?;
@@ -423,7 +423,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             program_id,
                                             &mut accounts,
                                             remaining_accounts,
-                                            __bumps,
+                                            __ctx.bumps,
                                         );
 
                                     // Execute user defined function.
@@ -483,7 +483,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             program_id,
                                             &mut accounts,
                                             remaining_accounts,
-                                            __bumps
+                                            __ctx.bumps
                                         );
 
                                     // Execute user defined function.
@@ -610,7 +610,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                                     program_id,
                                                     &mut accounts,
                                                     remaining_accounts,
-                                                    __bumps,
+                                                    __ctx.bumps,
                                                 );
 
                                             // Execute user defined function.
@@ -662,7 +662,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                                     program_id,
                                                     &mut accounts,
                                                     remaining_accounts,
-                                                    __bumps
+                                                    __ctx.bumps
                                                 ),
                                                 #(#ix_arg_names),*
                                             )?;
@@ -729,7 +729,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             program_id,
                             &mut accounts,
                             remaining_accounts,
-                            __bumps,
+                            __ctx.bumps,
                         ),
                         #(#ix_arg_names),*
                     )?;
