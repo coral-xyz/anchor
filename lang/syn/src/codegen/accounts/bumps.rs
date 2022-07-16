@@ -18,11 +18,28 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 AccountField::CompositeField(s) => constraints::linearize(&s.constraints),
             };
             for c in constraints.iter() {
-                if let Constraint::Seeds(..) = c {
-                    let ident = af.ident();
-                    return Some(quote! {
-                        pub #ident: Option<u8>
-                    });
+                let ident = af.ident();
+                let bump_field = quote! {
+                    pub #ident: u8
+                };
+
+                // Verify this in super::constraints
+                // The bump is only cached if
+                // - PDA is marked as init
+                // - PDA is not init, but marked with bump without a target
+
+                match c {
+                    Constraint::Seeds(c) => {
+                        if !c.is_init && c.bump.is_none() {
+                            return Some(bump_field);
+                        }
+                    }
+                    Constraint::Init(c) => {
+                        if c.seeds.is_some() {
+                            return Some(bump_field);
+                        }
+                    }
+                    _ => (),
                 }
             }
             None

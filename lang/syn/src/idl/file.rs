@@ -207,11 +207,10 @@ pub fn parse(
                 })
                 .collect::<Vec<_>>();
             let anchor_ident_str = ix.anchor_ident.to_string();
-            let accounts_strct = accs.get(&anchor_ident_str)
-                .or_else(|| {
-                    eprintln!("failed to get account metadata for {}", anchor_ident_str);
-                    None
-                })?;
+            let accounts_strct = accs.get(&anchor_ident_str).or_else(|| {
+                eprintln!("failed to get account metadata for {}", anchor_ident_str);
+                None
+            })?;
             let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature, no_docs);
             let ret_type_str = ix.returns.ty.to_token_stream().to_string();
             let returns = match ret_type_str.as_str() {
