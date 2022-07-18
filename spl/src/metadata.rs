@@ -193,12 +193,7 @@ impl MetadataAccount {
 
 impl anchor_lang::AccountDeserialize for MetadataAccount {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
-        let result: mpl_token_metadata::state::Metadata =
-            mpl_token_metadata::utils::try_from_slice_checked(
-                buf,
-                mpl_token_metadata::state::Key::MetadataV1,
-                mpl_token_metadata::state::MAX_METADATA_LEN,
-            )?;
+        let result = mpl_token_metadata::state::Metadata::safe_deserialize(buf)?;
         Ok(MetadataAccount(result))
     }
 }
