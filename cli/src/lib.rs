@@ -43,6 +43,8 @@ use std::str::FromStr;
 use std::string::ToString;
 use tar::Archive;
 
+use std::os::unix::io::{FromRawFd, IntoRawFd};
+
 pub mod config;
 mod path;
 pub mod template;
@@ -161,6 +163,40 @@ pub enum Command {
     #[clap(name = "test", alias = "t")]
     /// Runs integration tests against a localnetwork.
     Test {
+        /// Use this flag if you want to run tests against previously deployed
+        /// programs.
+        #[clap(long)]
+        skip_deploy: bool,
+        /// True if the build should not fail even if there are
+        /// no "CHECK" comments where normally required
+        #[clap(long)]
+        skip_lint: bool,
+        /// Flag to skip starting a local validator, if the configured cluster
+        /// url is a localnet.
+        #[clap(long)]
+        skip_local_validator: bool,
+        /// Flag to skip building the program in the workspace,
+        /// use this to save time when running test and the program code is not altered.
+        #[clap(long)]
+        skip_build: bool,
+        /// Flag to keep the local validator running after tests
+        /// to be able to check the transactions.
+        #[clap(long)]
+        detach: bool,
+        #[clap(multiple_values = true)]
+        args: Vec<String>,
+        /// Arguments to pass to the underlying `cargo build-bpf` command.
+        #[clap(
+            required = false,
+            takes_value = true,
+            multiple_values = true,
+            last = true
+        )]
+        cargo_args: Vec<String>,
+    },
+    #[clap(name = "mp_test")]
+    /// Runs integration tests against a localnetwork.
+    MultiProcessTest {
         /// Use this flag if you want to run tests against previously deployed
         /// programs.
         #[clap(long)]
@@ -472,6 +508,26 @@ pub fn entry(opts: Opts) -> Result<()> {
             detach,
             args,
             cargo_args,
+            false,
+        ),
+        Command::MultiProcessTest {
+            skip_deploy,
+            skip_local_validator,
+            skip_build,
+            detach,
+            args,
+            cargo_args,
+            skip_lint,
+        } => test(
+            &opts.cfg_override,
+            skip_deploy,
+            skip_local_validator,
+            skip_build,
+            skip_lint,
+            detach,
+            args,
+            cargo_args,
+            true,
         ),
         #[cfg(feature = "dev")]
         Command::Airdrop { .. } => airdrop(&opts.cfg_override),
@@ -543,6 +599,10 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
             idl: None,
         },
     );
+    cfg.mptest = Some(config::MultiProcessTestConfig{
+        cmd: "yarn run ts-mocha -p ./tsconfig.json -t 1000000".to_string(),
+        tests: "./tests/".to_string()
+    });
     cfg.programs.insert(Cluster::Localnet, localnet);
     let toml = cfg.to_string();
     fs::write("Anchor.toml", toml)?;
@@ -1860,6 +1920,7 @@ fn test(
     detach: bool,
     extra_args: Vec<String>,
     cargo_args: Vec<String>,
+    multi_process: bool,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         // Build if needed.
@@ -1894,6 +1955,11 @@ fn test(
         if (!is_localnet || skip_local_validator) && !skip_deploy {
             deploy(cfg_override, None, None)?;
         }
+
+        if multi_process {
+            return run_test_multiprocess(&cfg, skip_deploy, &extra_args);
+        }
+
         let mut is_first_suite = true;
         if cfg.scripts.get("test").is_some() {
             is_first_suite = false;
@@ -1940,6 +2006,113 @@ fn test(
         }
         Ok(())
     })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn run_test_multiprocess(
+    cfg: &WithPath<Config>,
+    skip_deploy: bool,
+    extra_args: &[String],
+) -> Result<()> {
+    if let Some(mpt) = &cfg.mptest {
+        // Multi-process test always run agains local validator
+        let flags = match skip_deploy {
+            true => None,
+            false => Some(validator_flags(cfg, &cfg.test_validator)?),
+        };
+        let validator_handle = Some(start_test_validator(cfg, &cfg.test_validator, flags, true)?);
+
+        let test_files = fs::read_dir(mpt.tests.clone())?
+            .map(|res| res.map(|e| e.path()))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        println!("Running multi-process test");
+        println!("    {}", mpt.cmd);
+        test_files.iter().for_each(|v| {
+            println!("    {}", v.to_str().unwrap());
+        });
+
+        let node_options = format!(
+            "{} {}",
+            match std::env::var_os("NODE_OPTIONS") {
+                Some(value) => value
+                    .into_string()
+                    .map_err(std::env::VarError::NotUnicode)?,
+                None => "".to_owned(),
+            },
+            get_node_dns_option()?,
+        );
+
+        let url = cluster_url(cfg, &cfg.test_validator);
+
+        // Setup log reader.
+        let log_streams = stream_logs(cfg, &url);
+
+        let mut args: Vec<&str> = mpt
+            .cmd
+            .split(' ')
+            .chain(extra_args.iter().map(|arg| arg.as_str()))
+            .collect();
+        let program = args.remove(0);
+
+        let mut task_handles = Vec::<(Child, String)>::new();
+        for f in test_files.iter() {
+            // We start one process for each test source file (.ts)
+            // and pipe stdout to a file. After a process terminates,
+            // the content of its corresponding file is read and the
+            // content is shown on the console. After that, the stdout
+            // file is deleted.
+            // We do this to keep stdout of the same test case together.
+            // A cleaner way is to direct the stdout to a buf in memory,
+            // but didn't find an easy way to do it.
+            let output_fname = f.to_str().unwrap().to_owned() + ".txt";
+            let output_file = File::create(output_fname.clone())?;
+            let file_out = unsafe { Stdio::from_raw_fd(output_file.into_raw_fd()) };
+
+            let handle = std::process::Command::new(program)
+                .args(&args)
+                .args(vec![f.to_str().unwrap()])
+                .env("ANCHOR_PROVIDER_URL", &url)
+                .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
+                .env("NODE_OPTIONS", &node_options)
+                .stdout(file_out)
+                .stderr(Stdio::inherit())
+                .spawn()
+                .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
+            task_handles.push((handle, output_fname));
+        }
+
+        // Wait for all tests to complete
+        for handle in task_handles.iter_mut() {
+            handle.0.wait()?;
+
+            let mut contents = String::new();
+            {
+                let mut output_file = File::open(&handle.1)?;
+                output_file.read_to_string(&mut contents)?;
+            }
+            fs::remove_file(&handle.1)?;
+            println!("{}", contents);
+        }
+
+        // Shutdown test validator and log stream
+        if let Some(mut child) = validator_handle {
+            if let Err(err) = child.kill() {
+                println!("Failed to kill subprocess {}: {}", child.id(), err);
+            }
+        }
+        for mut child in log_streams? {
+            if let Err(err) = child.kill() {
+                println!("Failed to kill subprocess {}: {}", child.id(), err);
+            }
+        }
+
+        println!("Multi-process test done");
+        return Ok(());
+    } else {
+        println!("\nMissing multi-process test config");
+    }
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
