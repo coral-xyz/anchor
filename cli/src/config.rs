@@ -153,12 +153,15 @@ impl WithPath<Config> {
         let program_paths: Vec<PathBuf> = {
             if members.is_empty() {
                 let path = self.path().parent().unwrap().join("programs");
-                fs::read_dir(path)?
-                    .filter(|entry| entry.as_ref().map(|e| e.path().is_dir()).unwrap_or(false))
-                    .map(|dir| dir.map(|d| d.path().canonicalize().unwrap()))
-                    .collect::<Vec<Result<PathBuf, std::io::Error>>>()
-                    .into_iter()
-                    .collect::<Result<Vec<PathBuf>, std::io::Error>>()?
+                match fs::read_dir(path) {
+                    Err(e) if e.kind() == io::ErrorKind::NotFound => vec![],
+                    entries => entries?
+                        .filter(|entry| entry.as_ref().map(|e| e.path().is_dir()).unwrap_or(false))
+                        .map(|dir| dir.map(|d| d.path().canonicalize().unwrap()))
+                        .collect::<Vec<Result<PathBuf, std::io::Error>>>()
+                        .into_iter()
+                        .collect::<Result<Vec<PathBuf>, std::io::Error>>()?,
+                }
             } else {
                 members
             }
