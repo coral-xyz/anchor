@@ -120,7 +120,7 @@ impl<'a> PdaParser<'a> {
             }
             // Unknown type. Please file an issue.
             _ => {
-                println!("WARNING: unexpected seed: {:?}", seed);
+                // println!("WARNING: unexpected seed: {:?}", seed);
                 None
             }
         }
