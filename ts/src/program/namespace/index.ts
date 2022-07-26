@@ -15,14 +15,18 @@ import ViewFactory, { ViewNamespace } from "./views";
 
 // Re-exports.
 export { StateClient } from "./state.js";
-export { InstructionNamespace, InstructionFn } from "./instruction.js";
-export { TransactionNamespace, TransactionFn } from "./transaction.js";
-export { RpcNamespace, RpcFn } from "./rpc.js";
-export { AccountNamespace, AccountClient, ProgramAccount } from "./account.js";
-export { SimulateNamespace, SimulateFn } from "./simulate.js";
-export { IdlAccounts, IdlTypes } from "./types.js";
-export { MethodsBuilderFactory, MethodsNamespace } from "./methods";
-export { ViewNamespace, ViewFn } from "./views";
+export type { InstructionNamespace, InstructionFn } from "./instruction.js";
+export type { TransactionNamespace, TransactionFn } from "./transaction.js";
+export type { RpcNamespace, RpcFn } from "./rpc.js";
+export {
+  type AccountNamespace,
+  AccountClient,
+  type ProgramAccount,
+} from "./account.js";
+export type { SimulateNamespace, SimulateFn } from "./simulate.js";
+export type { IdlAccounts, IdlTypes } from "./types.js";
+export { MethodsBuilderFactory, type MethodsNamespace } from "./methods";
+export type { ViewNamespace, ViewFn } from "./views";
 
 export default class NamespaceFactory {
   /**
