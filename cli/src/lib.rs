@@ -599,9 +599,9 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
             idl: None,
         },
     );
-    cfg.mptest = Some(config::MultiProcessTestConfig{
+    cfg.mptest = Some(config::MultiProcessTestConfig {
         cmd: "yarn run ts-mocha -p ./tsconfig.json -t 1000000".to_string(),
-        tests: "./tests/".to_string()
+        tests: "./tests/".to_string(),
     });
     cfg.programs.insert(Cluster::Localnet, localnet);
     let toml = cfg.to_string();
