@@ -133,9 +133,12 @@ export class AnchorProvider implements Provider {
     }
 
     tx.feePayer = this.wallet.publicKey;
-    tx.recentBlockhash = (
-      await this.connection.getLatestBlockhash(opts.preflightCommitment)
-    ).blockhash;
+
+    if (!tx.recentBlockhash) {
+      tx.recentBlockhash = (
+        await this.connection.getLatestBlockhash(opts.preflightCommitment)
+      ).blockhash;
+    }
 
     tx = await this.wallet.signTransaction(tx);
     (signers ?? []).forEach((kp) => {
@@ -189,7 +192,7 @@ export class AnchorProvider implements Provider {
       let signers = r.signers ?? [];
 
       tx.feePayer = this.wallet.publicKey;
-      tx.recentBlockhash = blockhash.blockhash;
+      if (!tx.recentBlockhash) tx.recentBlockhash = blockhash.blockhash;
 
       signers.forEach((kp) => {
         tx.partialSign(kp);
