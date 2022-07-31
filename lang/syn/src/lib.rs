@@ -215,6 +215,7 @@ pub struct Field {
     pub ident: Ident,
     pub constraints: ConstraintGroup,
     pub ty: Ty,
+    pub optional: bool,
     /// IDL Doc comment
     pub docs: Option<Vec<String>>,
 }
@@ -231,7 +232,7 @@ impl Field {
     pub fn ty_decl(&self) -> proc_macro2::TokenStream {
         let account_ty = self.account_ty();
         let container_ty = self.container_ty();
-        match &self.ty {
+        let inner_ty = match &self.ty {
             Ty::AccountInfo => quote! {
                 AccountInfo
             },
@@ -278,6 +279,15 @@ impl Field {
             _ => quote! {
                 #container_ty<#account_ty>
             },
+        };
+        if self.optional {
+            quote! {
+                Option<#inner_ty>
+            }
+        } else {
+            quote! {
+                #inner_ty
+            }
         }
     }
 
