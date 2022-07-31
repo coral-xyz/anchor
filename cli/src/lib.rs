@@ -1324,7 +1324,7 @@ fn verify(
         if bin_ver.state != BinVerificationState::Buffer {
             let deployed_idl = fetch_idl(cfg_override, program_id)?;
             if local_idl != deployed_idl {
-                println!("Error: IDLs don't match");
+                println!("Error: IDL account is not currently deployed");
                 std::process::exit(1);
             }
         }
