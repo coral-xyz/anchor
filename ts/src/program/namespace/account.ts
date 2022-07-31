@@ -184,6 +184,21 @@ export class AccountClient<
     });
   }
 
+  createFiltersWithAccountDiscriminator = (
+    accountName: string,
+    filters?: Buffer | GetProgramAccountsFilter[],
+  ) => {
+    return [
+      {
+        memcmp: this._coder.accounts.memcmp(
+          accountName,
+          filters instanceof Buffer ? filters : undefined,
+        ),
+      },
+      ...(Array.isArray(filters) ? filters : []),
+    ];
+  };
+
   /**
    * Returns all instances of this account type for the program.
    *
@@ -205,15 +220,7 @@ export class AccountClient<
       this._programId,
       {
         commitment: this._provider.connection.commitment,
-        filters: [
-          {
-            memcmp: this.coder.accounts.memcmp(
-              this._idlAccount.name,
-              filters instanceof Buffer ? filters : undefined
-            ),
-          },
-          ...(Array.isArray(filters) ? filters : []),
-        ],
+        filters: this.createFiltersWithAccountDiscriminator(this._idlAccount.name, filters),
       }
     );
     return resp.map(({ pubkey, account }) => {
