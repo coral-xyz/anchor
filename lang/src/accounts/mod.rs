@@ -4,7 +4,6 @@ pub mod account;
 pub mod account_info;
 pub mod account_loader;
 pub mod boxed;
-pub mod option;
 #[doc(hidden)]
 #[allow(deprecated)]
 pub mod cpi_account;
@@ -14,6 +13,7 @@ pub mod cpi_state;
 #[doc(hidden)]
 #[allow(deprecated)]
 pub mod loader;
+pub mod option;
 pub mod program;
 #[doc(hidden)]
 #[allow(deprecated)]
