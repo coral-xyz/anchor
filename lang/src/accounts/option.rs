@@ -41,26 +41,32 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Option<T> {
 
 impl<'info, T: AccountsExit<'info>> AccountsExit<'info> for Option<T> {
     fn exit(&self, program_id: &Pubkey) -> Result<()> {
-        self.as_ref().map_or(Ok(()), |t| T::exit(t, program_id))
+        self.as_ref()
+            .expect("Cannot run `exit` on None")
+            .exit(program_id)
     }
 }
 
 impl<'info, T: ToAccountInfos<'info>> ToAccountInfos<'info> for Option<T> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        self.as_ref().map_or(vec![], |t| T::to_account_infos(t))
+        self.as_ref()
+            .expect("Cannot run `to_account_infos` on None")
+            .to_account_infos()
     }
 }
 
 impl<T: ToAccountMetas> ToAccountMetas for Option<T> {
     fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
         self.as_ref()
-            .map_or(vec![], |t| T::to_account_metas(t, is_signer))
+            .expect("Cannot run `to_account_metas` on None")
+            .to_account_metas(is_signer)
     }
 }
 
 impl<'info, T: AccountsClose<'info>> AccountsClose<'info> for Option<T> {
     fn close(&self, sol_destination: AccountInfo<'info>) -> Result<()> {
         self.as_ref()
-            .map_or(Ok(()), |t| T::close(t, sol_destination))
+            .expect("Cannot run `close` on None")
+            .close(sol_destination)
     }
 }
