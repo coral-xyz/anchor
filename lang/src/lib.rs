@@ -262,7 +262,7 @@ pub mod prelude {
         require_neq, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source, state,
         system_program::System, zero_copy, AccountDeserialize, AccountSerialize, Accounts,
         AccountsExit, AnchorDeserialize, AnchorSerialize, Id, Key, Owner, ProgramData, Result,
-        ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        ToAccountInfo, ToAccountInfos, ToAccountMetas, ToOptionalAccountInfos, TryKey,
     };
     pub use anchor_attribute_error::*;
     pub use borsh;
