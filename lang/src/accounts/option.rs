@@ -14,8 +14,6 @@ use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
-use anchor_lang::error::ErrorCode;
-
 use crate::{Accounts, AccountsClose, AccountsExit, Result, ToAccountInfos, ToAccountMetas};
 
 impl<'info, T: Accounts<'info>> Accounts<'info> for Option<T> {
@@ -27,7 +25,7 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Option<T> {
         reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self> {
         if accounts.is_empty() {
-            return Err(ErrorCode::AccountNotEnoughKeys.into());
+            return Ok(None);
         }
         let account = &accounts[0];
         if account.key == program_id {
@@ -36,14 +34,6 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Option<T> {
         } else {
             T::try_accounts(program_id, accounts, ix_data, bumps, reallocs).map(Some)
         }
-    }
-}
-
-impl<'info, T: AccountsExit<'info>> AccountsExit<'info> for Option<T> {
-    fn exit(&self, program_id: &Pubkey) -> Result<()> {
-        self.as_ref()
-            .expect("Cannot run `exit` on None")
-            .exit(program_id)
     }
 }
 
@@ -66,7 +56,12 @@ impl<T: ToAccountMetas> ToAccountMetas for Option<T> {
 impl<'info, T: AccountsClose<'info>> AccountsClose<'info> for Option<T> {
     fn close(&self, sol_destination: AccountInfo<'info>) -> Result<()> {
         self.as_ref()
-            .expect("Cannot run `close` on None")
-            .close(sol_destination)
+            .map_or(Ok(()), |t| T::close(t, sol_destination))
+    }
+}
+
+impl<'info, T: AccountsExit<'info>> AccountsExit<'info> for Option<T> {
+    fn exit(&self, program_id: &Pubkey) -> Result<()> {
+        self.as_ref().map_or(Ok(()), |t| T::exit(t, program_id))
     }
 }
