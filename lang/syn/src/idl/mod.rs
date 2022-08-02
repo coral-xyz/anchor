@@ -74,7 +74,7 @@ pub struct IdlAccount {
     pub is_mut: bool,
     pub is_signer: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub optional: Option<bool>,
+    pub is_optional: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub docs: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none", default)]

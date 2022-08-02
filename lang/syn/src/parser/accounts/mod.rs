@@ -205,12 +205,12 @@ pub fn parse_account_field(f: &syn::Field) -> ParseResult<AccountField> {
     let docs = docs::parse(&f.attrs);
     let account_field = match is_field_primitive(f)? {
         true => {
-            let (ty, optional) = parse_ty(f)?;
+            let (ty, is_optional) = parse_ty(f)?;
             let account_constraints = constraints::parse(f, Some(&ty))?;
             AccountField::Field(Field {
                 ident,
                 ty,
-                optional,
+                is_optional,
                 constraints: account_constraints,
                 docs,
             })

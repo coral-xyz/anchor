@@ -34,7 +34,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     // AccountInfo for later use at constraint validation time.
                     if is_init(af) || f.constraints.zeroed.is_some()  {
                         let name = &f.ident;
-                        if f.optional {
+                        if f.is_optional {
                             quote! {
                                 let #name = if accounts.is_empty() || accounts[0].key == program_id {
                                     None

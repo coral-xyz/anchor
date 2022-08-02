@@ -183,7 +183,7 @@ impl AccountsStruct {
     pub fn has_optional(&self) -> bool {
         for field in &self.fields {
             if let AccountField::Field(field) = field {
-                if field.optional {
+                if field.is_optional {
                     return true;
                 }
             }
@@ -226,7 +226,7 @@ pub struct Field {
     pub ident: Ident,
     pub constraints: ConstraintGroup,
     pub ty: Ty,
-    pub optional: bool,
+    pub is_optional: bool,
     /// IDL Doc comment
     pub docs: Option<Vec<String>>,
 }
@@ -240,7 +240,7 @@ impl Field {
         }
     }
 
-    pub fn ty_decl(&self, ignore_option: bool) -> proc_macro2::TokenStream {
+    pub fn ty_decl(&self, option_inner_ty: bool) -> proc_macro2::TokenStream {
         let account_ty = self.account_ty();
         let container_ty = self.container_ty();
         let inner_ty = match &self.ty {
@@ -291,7 +291,7 @@ impl Field {
                 #container_ty<#account_ty>
             },
         };
-        if self.optional && !ignore_option {
+        if self.is_optional && !option_inner_ty {
             quote! {
                 Option<#inner_ty>
             }
