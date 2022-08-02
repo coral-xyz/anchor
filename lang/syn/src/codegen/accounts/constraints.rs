@@ -136,7 +136,7 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::Mint(c) => generate_constraint_mint(f, c),
         Constraint::Realloc(c) => generate_constraint_realloc(f, c),
     };
-    if f.optional {
+    if f.is_optional {
         let ident = &f.ident;
         match c {
             Constraint::Init(_) | Constraint::Zeroed(_) => {

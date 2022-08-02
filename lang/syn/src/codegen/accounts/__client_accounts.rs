@@ -61,7 +61,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 } else {
                     quote!()
                 };
-                if f.optional {
+                if f.is_optional {
                     quote! {
                         #docs
                         pub #name: Option<anchor_lang::solana_program::pubkey::Pubkey>
@@ -100,7 +100,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     true => quote! { anchor_lang::solana_program::instruction::AccountMeta::new },
                 };
                 let name = &f.ident;
-                if f.optional {
+                if f.is_optional {
                     quote! {
                         if let Some(#name) = &self.#name {
                             account_metas.push(#meta(*#name, #is_signer));
