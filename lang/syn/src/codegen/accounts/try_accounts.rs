@@ -131,6 +131,7 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
 
     // Deserialization for each pda init field. This must be after
     // the inital extraction from the accounts slice and before access_checks.
+    let has_optional = accs.has_optional();
     let init_fields: Vec<proc_macro2::TokenStream> = accs
         .fields
         .iter()
@@ -141,14 +142,14 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 true => Some(f),
             },
         })
-        .map(constraints::generate)
+        .map(|f| constraints::generate(f, has_optional))
         .collect();
 
     // Constraint checks for each account fields.
     let access_checks: Vec<proc_macro2::TokenStream> = non_init_fields
         .iter()
         .map(|af: &&AccountField| match af {
-            AccountField::Field(f) => constraints::generate(f),
+            AccountField::Field(f) => constraints::generate(f, has_optional),
             AccountField::CompositeField(s) => constraints::generate_composite(s),
         })
         .collect();

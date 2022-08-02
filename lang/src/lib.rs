@@ -238,7 +238,7 @@ impl Key for Pubkey {
     }
 }
 
-/// Defines the Pubkey of an account
+/// Defines the Pubkey of an account in an operation that may fail
 pub trait TryKey {
     fn try_key(&self) -> Result<Pubkey>;
 }
