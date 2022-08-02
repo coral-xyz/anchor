@@ -179,6 +179,17 @@ impl AccountsStruct {
             .map(|field| field.ident().to_string())
             .collect()
     }
+
+    pub fn has_optional(&self) -> bool {
+        for field in &self.fields {
+            if let AccountField::Field(field) = field {
+                if field.optional {
+                    return true;
+                }
+            }
+        }
+        false
+    }
 }
 
 #[allow(clippy::large_enum_variant)]
