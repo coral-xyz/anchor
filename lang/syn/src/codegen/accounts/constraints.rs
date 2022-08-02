@@ -116,7 +116,7 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
 }
 
 fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
-    match c {
+    let stream = match c {
         Constraint::Init(c) => generate_constraint_init(f, c),
         Constraint::Zeroed(c) => generate_constraint_zeroed(f, c),
         Constraint::Mut(c) => generate_constraint_mut(f, c),
@@ -135,6 +135,30 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::TokenAccount(c) => generate_constraint_token_account(f, c),
         Constraint::Mint(c) => generate_constraint_mint(f, c),
         Constraint::Realloc(c) => generate_constraint_realloc(f, c),
+    };
+    if f.optional {
+        let ident = &f.ident;
+        match c {
+            Constraint::Init(_) | Constraint::Zeroed(_) => {
+                quote! {
+                    let #ident = if let Some(#ident) = #ident {
+                        #stream
+                        Some(#ident)
+                    } else {
+                        None
+                    };
+                }
+            }
+            _ => {
+                quote! {
+                    if let Some(#ident) = &#ident {
+                        #stream
+                    }
+                }
+            }
+        }
+    } else {
+        stream
     }
 }
 
@@ -173,7 +197,7 @@ pub fn generate_constraint_init(f: &Field, c: &ConstraintInitGroup) -> proc_macr
 pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let name_str = field.to_string();
-    let ty_decl = f.ty_decl();
+    let ty_decl = f.ty_decl(true);
     let from_account_info = f.from_account_info(None, false);
     quote! {
         let #field: #ty_decl = {
@@ -381,7 +405,7 @@ fn generate_constraint_realloc(f: &Field, c: &ConstraintReallocGroup) -> proc_ma
 fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let name_str = f.ident.to_string();
-    let ty_decl = f.ty_decl();
+    let ty_decl = f.ty_decl(true);
     let if_needed = if c.if_needed {
         quote! {true}
     } else {

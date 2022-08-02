@@ -223,13 +223,13 @@ pub struct Field {
 impl Field {
     pub fn typed_ident(&self) -> proc_macro2::TokenStream {
         let name = &self.ident;
-        let ty_decl = self.ty_decl();
+        let ty_decl = self.ty_decl(false);
         quote! {
             #name: #ty_decl
         }
     }
 
-    pub fn ty_decl(&self) -> proc_macro2::TokenStream {
+    pub fn ty_decl(&self, ignore_option: bool) -> proc_macro2::TokenStream {
         let account_ty = self.account_ty();
         let container_ty = self.container_ty();
         let inner_ty = match &self.ty {
@@ -280,7 +280,7 @@ impl Field {
                 #container_ty<#account_ty>
             },
         };
-        if self.optional {
+        if self.optional && !ignore_option {
             quote! {
                 Option<#inner_ty>
             }

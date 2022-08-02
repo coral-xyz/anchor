@@ -32,14 +32,26 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     // `init` and `zero` acccounts are special cased as they are
                     // deserialized by constraints. Here, we just take out the
                     // AccountInfo for later use at constraint validation time.
-                    if is_init(af) || f.constraints.zeroed.is_some() {
+                    if is_init(af) || f.constraints.zeroed.is_some()  {
                         let name = &f.ident;
-                        quote!{
-                            if accounts.is_empty() {
-                                return Err(anchor_lang::error::ErrorCode::AccountNotEnoughKeys.into());
+                        if f.optional {
+                            quote! {
+                                let #name = if accounts.is_empty() || accounts[0].key == program_id {
+                                    None
+                                } else {
+                                    let account = &accounts[0];
+                                    *accounts = &accounts[1..];
+                                    Some(account)
+                                };
                             }
-                            let #name = &accounts[0];
-                            *accounts = &accounts[1..];
+                        } else {
+                            quote!{
+                                if accounts.is_empty() {
+                                    return Err(anchor_lang::error::ErrorCode::AccountNotEnoughKeys.into());
+                                }
+                                let #name = &accounts[0];
+                                *accounts = &accounts[1..];
+                            }
                         }
                     } else {
                         let name = f.ident.to_string();
