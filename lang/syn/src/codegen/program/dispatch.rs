@@ -162,6 +162,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 }
             }
 
+            #[cfg(feature = "custom_dispatch")] if let Some(result) = custom_dispatch(sighash, program_id, accounts, &ix_data) {return result};
+
+
             match sighash {
                 #ctor_state_dispatch_arm
                 #(#state_dispatch_arms)*
