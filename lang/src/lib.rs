@@ -121,6 +121,14 @@ pub trait ToAccountInfos<'info> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>>;
 }
 
+/// Transformation to
+/// [`AccountInfo`](../solana_program/account_info/struct.AccountInfo.html)
+/// structs. Indended for use for `Accounts` structs with optional accounts in order to
+/// pass in the program `AccountInfo`.
+pub trait ToOptionalAccountInfos<'info> {
+    fn to_optional_account_infos(&self, program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>>;
+}
+
 /// Transformation to an `AccountInfo` struct.
 pub trait ToAccountInfo<'info> {
     fn to_account_info(&self) -> AccountInfo<'info>;
@@ -227,6 +235,17 @@ pub trait Key {
 impl Key for Pubkey {
     fn key(&self) -> Pubkey {
         *self
+    }
+}
+
+/// Defines the Pubkey of an account
+pub trait TryKey {
+    fn try_key(&self) -> Result<Pubkey>;
+}
+
+impl<T: Key> TryKey for T {
+    fn try_key(&self) -> Result<Pubkey> {
+        Ok(self.key())
     }
 }
 
