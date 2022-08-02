@@ -207,6 +207,13 @@ impl AccountField {
         }
     }
 
+    fn is_optional(&self) -> bool {
+        match self {
+            AccountField::Field(field) => field.is_optional,
+            AccountField::CompositeField(_) => false,
+        }
+    }
+
     pub fn ty_name(&self) -> Option<String> {
         match self {
             AccountField::Field(field) => match &field.ty {
