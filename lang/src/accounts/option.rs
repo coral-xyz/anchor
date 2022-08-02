@@ -14,7 +14,10 @@ use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
-use crate::{Accounts, AccountsClose, AccountsExit, Result, ToAccountInfos, ToAccountMetas};
+use crate::{
+    Accounts, AccountsClose, AccountsExit, Key, Result, ToAccountInfos, ToAccountMetas,
+    ToOptionalAccountInfos, TryKey,
+};
 
 impl<'info, T: Accounts<'info>> Accounts<'info> for Option<T> {
     fn try_accounts(
@@ -45,6 +48,15 @@ impl<'info, T: ToAccountInfos<'info>> ToAccountInfos<'info> for Option<T> {
     }
 }
 
+impl<'info, T: ToAccountInfos<'info>> ToOptionalAccountInfos<'info> for Option<T> {
+    fn to_optional_account_infos(&self, program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
+        match self.as_ref() {
+            None => program.to_account_infos(),
+            Some(account) => account.to_account_infos(),
+        }
+    }
+}
+
 impl<T: ToAccountMetas> ToAccountMetas for Option<T> {
     fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
         self.as_ref()
@@ -62,6 +74,12 @@ impl<'info, T: AccountsClose<'info>> AccountsClose<'info> for Option<T> {
 
 impl<'info, T: AccountsExit<'info>> AccountsExit<'info> for Option<T> {
     fn exit(&self, program_id: &Pubkey) -> Result<()> {
-        self.as_ref().map_or(Ok(()), |t| T::exit(t, program_id))
+        self.as_ref().map_or(Ok(()), |t| t.exit(program_id))
+    }
+}
+
+impl<T: TryKey> TryKey for Option<T> {
+    fn try_key(&self) -> Result<Pubkey> {
+        self.as_ref().map_or(err!(""), |t| t.try_key())
     }
 }
