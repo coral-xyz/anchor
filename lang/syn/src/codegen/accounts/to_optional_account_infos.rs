@@ -18,7 +18,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         .map(|f: &AccountField| {
             let (name, optional) = match f {
                 AccountField::CompositeField(s) => (&s.ident, false),
-                AccountField::Field(f) => (&f.ident, f.optional),
+                AccountField::Field(f) => (&f.ident, f.is_optional),
             };
             if optional {
                 quote! {
