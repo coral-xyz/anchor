@@ -40,17 +40,38 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
 }
 
 fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
+    let mut required_init = false;
     // INIT
     let init_fields: Vec<&Field> = fields
         .iter()
         .filter_map(|f| match f {
-            AccountField::Field(field) if field.constraints.init.is_some() => Some(field),
+            AccountField::Field(field) if field.constraints.init.is_some() => {
+                if !field.is_optional {
+                    required_init = true
+                }
+                Some(field)
+            }
             _ => None,
         })
         .collect();
 
     if !init_fields.is_empty() {
         // init needs system program.
+        //TODO: WIP
+        if !fields
+            .iter()
+            // ensures that a non optional `system_program` is present with non optional `init`
+            .any(|f| f.ident() == "system_program" && !(required_init && f.is_optional()))
+        {
+            return Err(ParseError::new(
+                init_fields[0].ident.span(),
+                "the init constraint requires \
+                the system_program field to exist in the account \
+                validation struct. Use the Program type to add \
+                the system_program field to your validation struct.",
+            ));
+        }
+
         if fields.iter().all(|f| f.ident() != "system_program") {
             return Err(ParseError::new(
                 init_fields[0].ident.span(),
@@ -251,11 +272,7 @@ fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
 }
 
 fn parse_ty(f: &syn::Field) -> ParseResult<(Ty, bool)> {
-    let path = match &f.ty {
-        syn::Type::Path(ty_path) => ty_path.path.clone(),
-        _ => return Err(ParseError::new(f.ty.span(), "invalid account type given")),
-    };
-    let (ident, optional) = ident_string(f)?;
+    let (ident, optional, path) = ident_string(f)?;
     let ty = match ident.as_str() {
         "ProgramState" => Ty::ProgramState(parse_program_state(&path)?),
         "CpiState" => Ty::CpiState(parse_cpi_state(&path)?),
@@ -302,10 +319,10 @@ fn option_to_inner_path(path: &Path) -> ParseResult<Path> {
     }
 }
 
-fn ident_string(f: &syn::Field) -> ParseResult<(String, bool)> {
+fn ident_string(f: &syn::Field) -> ParseResult<(String, bool, Path)> {
     let mut path = match &f.ty {
         syn::Type::Path(ty_path) => ty_path.path.clone(),
-        _ => return Err(ParseError::new(f.ty.span(), "invalid type")),
+        _ => return Err(ParseError::new(f.ty.span(), "invalid account type given")),
     };
     let mut optional = false;
     if parser::tts_to_string(&path)
@@ -319,7 +336,7 @@ fn ident_string(f: &syn::Field) -> ParseResult<(String, bool)> {
         .replace(' ', "")
         .starts_with("Box<Account<")
     {
-        return Ok(("Account".to_string(), optional));
+        return Ok(("Account".to_string(), optional, path));
     }
     // TODO: allow segmented paths.
     if path.segments.len() != 1 {
@@ -330,7 +347,7 @@ fn ident_string(f: &syn::Field) -> ParseResult<(String, bool)> {
     }
 
     let segments = &path.segments[0];
-    Ok((segments.ident.to_string(), optional))
+    Ok((segments.ident.to_string(), optional, path))
 }
 
 fn parse_program_state(path: &syn::Path) -> ParseResult<ProgramStateTy> {
@@ -425,13 +442,6 @@ fn parse_account(mut path: &syn::Path) -> ParseResult<syn::TypePath> {
                 ))
             }
         }
-    }
-    if parser::tts_to_string(path)
-        .replace(' ', "")
-        .starts_with("Option<")
-    {
-        let inner_path = option_to_inner_path(path)?;
-        return parse_account(&inner_path);
     }
 
     let segments = &path.segments[0];
