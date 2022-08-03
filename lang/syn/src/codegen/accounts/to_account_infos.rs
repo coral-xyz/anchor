@@ -16,12 +16,17 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         .fields
         .iter()
         .map(|f: &AccountField| {
-            let name = match f {
-                AccountField::CompositeField(s) => &s.ident,
-                AccountField::Field(f) => &f.ident,
+            let (name, is_optional) = match f {
+                AccountField::CompositeField(s) => (&s.ident, false),
+                AccountField::Field(f) => (&f.ident, f.is_optional),
             };
-            quote! {
-                account_infos.extend(self.#name.to_account_infos());
+            //TODO: figure out how to handle None
+            if !is_optional {
+                quote! {
+                    account_infos.extend(self.#name.to_account_infos());
+                }
+            } else {
+                quote! {}
             }
         })
         .collect();

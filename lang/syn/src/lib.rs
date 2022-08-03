@@ -179,6 +179,17 @@ impl AccountsStruct {
             .map(|field| field.ident().to_string())
             .collect()
     }
+
+    pub fn has_optional(&self) -> bool {
+        for field in &self.fields {
+            if let AccountField::Field(field) = field {
+                if field.is_optional {
+                    return true;
+                }
+            }
+        }
+        false
+    }
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -193,6 +204,13 @@ impl AccountField {
         match self {
             AccountField::Field(field) => &field.ident,
             AccountField::CompositeField(c_field) => &c_field.ident,
+        }
+    }
+
+    fn is_optional(&self) -> bool {
+        match self {
+            AccountField::Field(field) => field.is_optional,
+            AccountField::CompositeField(_) => false,
         }
     }
 
@@ -215,6 +233,7 @@ pub struct Field {
     pub ident: Ident,
     pub constraints: ConstraintGroup,
     pub ty: Ty,
+    pub is_optional: bool,
     /// IDL Doc comment
     pub docs: Option<Vec<String>>,
 }
@@ -222,16 +241,16 @@ pub struct Field {
 impl Field {
     pub fn typed_ident(&self) -> proc_macro2::TokenStream {
         let name = &self.ident;
-        let ty_decl = self.ty_decl();
+        let ty_decl = self.ty_decl(false);
         quote! {
             #name: #ty_decl
         }
     }
 
-    pub fn ty_decl(&self) -> proc_macro2::TokenStream {
+    pub fn ty_decl(&self, option_inner_ty: bool) -> proc_macro2::TokenStream {
         let account_ty = self.account_ty();
         let container_ty = self.container_ty();
-        match &self.ty {
+        let inner_ty = match &self.ty {
             Ty::AccountInfo => quote! {
                 AccountInfo
             },
@@ -278,6 +297,15 @@ impl Field {
             _ => quote! {
                 #container_ty<#account_ty>
             },
+        };
+        if self.is_optional && !option_inner_ty {
+            quote! {
+                Option<#inner_ty>
+            }
+        } else {
+            quote! {
+                #inner_ty
+            }
         }
     }
 

@@ -32,14 +32,26 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     // `init` and `zero` acccounts are special cased as they are
                     // deserialized by constraints. Here, we just take out the
                     // AccountInfo for later use at constraint validation time.
-                    if is_init(af) || f.constraints.zeroed.is_some() {
+                    if is_init(af) || f.constraints.zeroed.is_some()  {
                         let name = &f.ident;
-                        quote!{
-                            if accounts.is_empty() {
-                                return Err(anchor_lang::error::ErrorCode::AccountNotEnoughKeys.into());
+                        if f.is_optional {
+                            quote! {
+                                let #name = if accounts.is_empty() || accounts[0].key == program_id {
+                                    None
+                                } else {
+                                    let account = &accounts[0];
+                                    *accounts = &accounts[1..];
+                                    Some(account)
+                                };
                             }
-                            let #name = &accounts[0];
-                            *accounts = &accounts[1..];
+                        } else {
+                            quote!{
+                                if accounts.is_empty() {
+                                    return Err(anchor_lang::error::ErrorCode::AccountNotEnoughKeys.into());
+                                }
+                                let #name = &accounts[0];
+                                *accounts = &accounts[1..];
+                            }
                         }
                     } else {
                         let name = f.ident.to_string();
@@ -119,6 +131,7 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
 
     // Deserialization for each pda init field. This must be after
     // the inital extraction from the accounts slice and before access_checks.
+    let has_optional = accs.has_optional();
     let init_fields: Vec<proc_macro2::TokenStream> = accs
         .fields
         .iter()
@@ -129,14 +142,14 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 true => Some(f),
             },
         })
-        .map(constraints::generate)
+        .map(|f| constraints::generate(f, has_optional))
         .collect();
 
     // Constraint checks for each account fields.
     let access_checks: Vec<proc_macro2::TokenStream> = non_init_fields
         .iter()
         .map(|af: &&AccountField| match af {
-            AccountField::Field(f) => constraints::generate(f),
+            AccountField::Field(f) => constraints::generate(f, has_optional),
             AccountField::CompositeField(s) => constraints::generate_composite(s),
         })
         .collect();

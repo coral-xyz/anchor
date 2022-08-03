@@ -62,9 +62,16 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 } else {
                     quote!()
                 };
-                quote! {
-                    #docs
-                    pub #name: anchor_lang::solana_program::account_info::AccountInfo<'info>
+                if f.is_optional {
+                    quote! {
+                        #docs
+                        pub #name: Option<anchor_lang::solana_program::account_info::AccountInfo<'info>>
+                    }
+                } else {
+                    quote! {
+                        #docs
+                        pub #name: anchor_lang::solana_program::account_info::AccountInfo<'info>
+                    }
                 }
             }
         })
@@ -94,8 +101,18 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     true => quote! { anchor_lang::solana_program::instruction::AccountMeta::new },
                 };
                 let name = &f.ident;
-                quote! {
-                    account_metas.push(#meta(anchor_lang::Key::key(&self.#name), #is_signer));
+                if f.is_optional {
+                    quote! {
+                        if let Some(#name) = &self.#name {
+                            account_metas.push(#meta(anchor_lang::Key::key(#name), #is_signer));
+                        } else {
+                            account_metas.push(#meta(ID, #is_signer));
+                        }
+                    }
+                } else {
+                    quote! {
+                        account_metas.push(#meta(anchor_lang::Key::key(&self.#name), #is_signer));
+                    }
                 }
             }
         })
@@ -113,8 +130,17 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             }
             AccountField::Field(f) => {
                 let name = &f.ident;
-                quote! {
-                    account_infos.push(anchor_lang::ToAccountInfo::to_account_info(&self.#name));
+                //TODO: figure out how to handle None gen
+                if f.is_optional {
+                    quote! {
+                        if let Some(account) = &self.#name {
+                            account_infos.push(anchor_lang::ToAccountInfo::to_account_info(account));
+                        }
+                    }
+                } else {
+                    quote! {
+                        account_infos.push(anchor_lang::ToAccountInfo::to_account_info(&self.#name));
+                    }
                 }
             }
         })

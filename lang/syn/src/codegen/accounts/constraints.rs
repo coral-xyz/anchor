@@ -3,7 +3,7 @@ use proc_macro2_diagnostics::SpanDiagnosticExt;
 use quote::quote;
 use syn::Expr;
 
-pub fn generate(f: &Field) -> proc_macro2::TokenStream {
+pub fn generate(f: &Field, has_optional: bool) -> proc_macro2::TokenStream {
     let constraints = linearize(&f.constraints);
 
     let rent = constraints
@@ -14,7 +14,7 @@ pub fn generate(f: &Field) -> proc_macro2::TokenStream {
 
     let checks: Vec<proc_macro2::TokenStream> = constraints
         .iter()
-        .map(|c| generate_constraint(f, c))
+        .map(|c| generate_constraint(f, c, has_optional))
         .collect();
 
     quote! {
@@ -115,12 +115,12 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
     constraints
 }
 
-fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
-    match c {
+fn generate_constraint(f: &Field, c: &Constraint, has_optional: bool) -> proc_macro2::TokenStream {
+    let stream = match c {
         Constraint::Init(c) => generate_constraint_init(f, c),
         Constraint::Zeroed(c) => generate_constraint_zeroed(f, c),
         Constraint::Mut(c) => generate_constraint_mut(f, c),
-        Constraint::HasOne(c) => generate_constraint_has_one(f, c),
+        Constraint::HasOne(c) => generate_constraint_has_one(f, c, has_optional),
         Constraint::Signer(c) => generate_constraint_signer(f, c),
         Constraint::Literal(c) => generate_constraint_literal(&f.ident, c),
         Constraint::Raw(c) => generate_constraint_raw(&f.ident, c),
@@ -135,6 +135,30 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::TokenAccount(c) => generate_constraint_token_account(f, c),
         Constraint::Mint(c) => generate_constraint_mint(f, c),
         Constraint::Realloc(c) => generate_constraint_realloc(f, c),
+    };
+    if f.is_optional {
+        let ident = &f.ident;
+        match c {
+            Constraint::Init(_) | Constraint::Zeroed(_) => {
+                quote! {
+                    let #ident = if let Some(#ident) = #ident {
+                        #stream
+                        Some(#ident)
+                    } else {
+                        None
+                    };
+                }
+            }
+            _ => {
+                quote! {
+                    if let Some(#ident) = &#ident {
+                        #stream
+                    }
+                }
+            }
+        }
+    } else {
+        stream
     }
 }
 
@@ -154,6 +178,7 @@ fn generate_constraint_address(f: &Field, c: &ConstraintAddress) -> proc_macro2:
         &c.error,
         quote! { ConstraintAddress },
         &Some(&(quote! { actual }, quote! { expected })),
+        true,
     );
     quote! {
         {
@@ -173,7 +198,7 @@ pub fn generate_constraint_init(f: &Field, c: &ConstraintInitGroup) -> proc_macr
 pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let name_str = field.to_string();
-    let ty_decl = f.ty_decl();
+    let ty_decl = f.ty_decl(true);
     let from_account_info = f.from_account_info(None, false);
     quote! {
         let #field: #ty_decl = {
@@ -202,7 +227,7 @@ pub fn generate_constraint_close(f: &Field, c: &ConstraintClose) -> proc_macro2:
 
 pub fn generate_constraint_mut(f: &Field, c: &ConstraintMut) -> proc_macro2::TokenStream {
     let ident = &f.ident;
-    let error = generate_custom_error(ident, &c.error, quote! { ConstraintMut }, &None);
+    let error = generate_custom_error(ident, &c.error, quote! { ConstraintMut }, &None, true);
     quote! {
         if !#ident.to_account_info().is_writable {
             return #error;
@@ -210,7 +235,11 @@ pub fn generate_constraint_mut(f: &Field, c: &ConstraintMut) -> proc_macro2::Tok
     }
 }
 
-pub fn generate_constraint_has_one(f: &Field, c: &ConstraintHasOne) -> proc_macro2::TokenStream {
+pub fn generate_constraint_has_one(
+    f: &Field,
+    c: &ConstraintHasOne,
+    has_optional: bool,
+) -> proc_macro2::TokenStream {
     let target = c.join_target.clone();
     let ident = &f.ident;
     let field = match &f.ty {
@@ -218,18 +247,45 @@ pub fn generate_constraint_has_one(f: &Field, c: &ConstraintHasOne) -> proc_macr
         Ty::AccountLoader(_) => quote! {#ident.load()?},
         _ => quote! {#ident},
     };
+
     let error = generate_custom_error(
         ident,
         &c.error,
         quote! { ConstraintHasOne },
         &Some(&(quote! { my_key }, quote! { target_key })),
+        true,
     );
-    quote! {
-        {
-            let my_key = #field.#target;
-            let target_key = #target.key();
-            if my_key != target_key {
-                return #error;
+
+    let none_error = generate_custom_error(
+        ident,
+        &c.error,
+        quote! { ConstraintHasOne },
+        &Some(&(quote! { my_key }, quote! { "None" })),
+        false,
+    );
+
+    if has_optional {
+        quote! {
+            {
+                let my_key = #field.#target;
+                let target_key = #target.try_key();
+                if let Ok(target_key) = target_key {
+                    if my_key != target_key {
+                        return #error;
+                    }
+                } else {
+                    return #none_error;
+                }
+            }
+        }
+    } else {
+        quote! {
+            {
+                let my_key = #field.#target;
+                let target_key = #target.try_key()?;
+                if my_key != target_key {
+                    return #error;
+                }
             }
         }
     }
@@ -246,7 +302,7 @@ pub fn generate_constraint_signer(f: &Field, c: &ConstraintSigner) -> proc_macro
         Ty::CpiAccount(_) => quote! { #ident.to_account_info() },
         _ => panic!("Invalid syntax: signer cannot be specified."),
     };
-    let error = generate_custom_error(ident, &c.error, quote! { ConstraintSigner }, &None);
+    let error = generate_custom_error(ident, &c.error, quote! { ConstraintSigner }, &None, true);
     quote! {
         if !#info.is_signer {
             return #error;
@@ -278,7 +334,7 @@ pub fn generate_constraint_literal(
 
 pub fn generate_constraint_raw(ident: &Ident, c: &ConstraintRaw) -> proc_macro2::TokenStream {
     let raw = &c.raw;
-    let error = generate_custom_error(ident, &c.error, quote! { ConstraintRaw }, &None);
+    let error = generate_custom_error(ident, &c.error, quote! { ConstraintRaw }, &None, true);
     quote! {
         if !(#raw) {
             return #error;
@@ -294,6 +350,7 @@ pub fn generate_constraint_owner(f: &Field, c: &ConstraintOwner) -> proc_macro2:
         &c.error,
         quote! { ConstraintOwner },
         &Some(&(quote! { *my_owner }, quote! { owner_address })),
+        true,
     );
     quote! {
         {
@@ -381,7 +438,7 @@ fn generate_constraint_realloc(f: &Field, c: &ConstraintReallocGroup) -> proc_ma
 fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_macro2::TokenStream {
     let field = &f.ident;
     let name_str = f.ident.to_string();
-    let ty_decl = f.ty_decl();
+    let ty_decl = f.ty_decl(true);
     let if_needed = if c.if_needed {
         quote! {true}
     } else {
@@ -905,6 +962,7 @@ fn generate_custom_error(
     custom_error: &Option<Expr>,
     error: proc_macro2::TokenStream,
     compared_values: &Option<&(proc_macro2::TokenStream, proc_macro2::TokenStream)>,
+    with_pubkeys: bool,
 ) -> proc_macro2::TokenStream {
     let account_name = account_name.to_string();
     let mut error = match custom_error {
@@ -917,7 +975,13 @@ fn generate_custom_error(
     };
 
     let compared_values = match compared_values {
-        Some((left, right)) => quote! { .with_pubkeys((#left, #right)) },
+        Some((left, right)) => {
+            if with_pubkeys {
+                quote! { .with_pubkeys((#left, #right)) }
+            } else {
+                quote! { .with_values((#left, #right)) }
+            }
+        }
         None => quote! {},
     };
 

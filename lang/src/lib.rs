@@ -121,6 +121,14 @@ pub trait ToAccountInfos<'info> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>>;
 }
 
+/// Transformation to
+/// [`AccountInfo`](../solana_program/account_info/struct.AccountInfo.html)
+/// structs. Indended for use for `Accounts` structs with optional accounts in order to
+/// pass in the program `AccountInfo`.
+pub trait ToOptionalAccountInfos<'info> {
+    fn to_optional_account_infos(&self, program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>>;
+}
+
 /// Transformation to an `AccountInfo` struct.
 pub trait ToAccountInfo<'info> {
     fn to_account_info(&self) -> AccountInfo<'info>;
@@ -133,6 +141,10 @@ where
     fn to_account_info(&self) -> AccountInfo<'info> {
         self.as_ref().clone()
     }
+}
+
+pub trait TryToAccountInfo<'info> {
+    fn try_to_account_info(&self) -> Result<AccountInfo<'info>>;
 }
 
 /// A data structure that can be serialized and stored into account storage,
@@ -230,6 +242,17 @@ impl Key for Pubkey {
     }
 }
 
+/// Defines the Pubkey of an account in an operation that may fail
+pub trait TryKey {
+    fn try_key(&self) -> Result<Pubkey>;
+}
+
+impl<T: Key> TryKey for T {
+    fn try_key(&self) -> Result<Pubkey> {
+        Ok(self.key())
+    }
+}
+
 /// The prelude contains all commonly used components of the crate.
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
@@ -243,7 +266,8 @@ pub mod prelude {
         require_neq, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source, state,
         system_program::System, zero_copy, AccountDeserialize, AccountSerialize, Accounts,
         AccountsExit, AnchorDeserialize, AnchorSerialize, Id, Key, Owner, ProgramData, Result,
-        ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        ToAccountInfo, ToAccountInfos, ToAccountMetas, ToOptionalAccountInfos, TryKey,
+        TryToAccountInfo,
     };
     pub use anchor_attribute_error::*;
     pub use borsh;
