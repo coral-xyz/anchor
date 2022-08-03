@@ -143,6 +143,10 @@ where
     }
 }
 
+pub trait TryToAccountInfo<'info> {
+    fn try_to_account_info(&self) -> Result<AccountInfo<'info>>;
+}
+
 /// A data structure that can be serialized and stored into account storage,
 /// i.e. an
 /// [`AccountInfo`](../solana_program/account_info/struct.AccountInfo.html#structfield.data)'s
@@ -263,6 +267,7 @@ pub mod prelude {
         system_program::System, zero_copy, AccountDeserialize, AccountSerialize, Accounts,
         AccountsExit, AnchorDeserialize, AnchorSerialize, Id, Key, Owner, ProgramData, Result,
         ToAccountInfo, ToAccountInfos, ToAccountMetas, ToOptionalAccountInfos, TryKey,
+        TryToAccountInfo,
     };
     pub use anchor_attribute_error::*;
     pub use borsh;

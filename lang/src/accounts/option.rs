@@ -15,8 +15,8 @@ use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
 use crate::{
-    error::ErrorCode, Accounts, AccountsClose, AccountsExit, Result, ToAccountInfos,
-    ToAccountMetas, ToOptionalAccountInfos, TryKey,
+    error::ErrorCode, Accounts, AccountsClose, AccountsExit, Result, ToAccountInfo, ToAccountInfos,
+    ToAccountMetas, ToOptionalAccountInfos, TryKey, TryToAccountInfo,
 };
 
 impl<'info, T: Accounts<'info>> Accounts<'info> for Option<T> {
@@ -82,5 +82,14 @@ impl<T: TryKey> TryKey for Option<T> {
     fn try_key(&self) -> Result<Pubkey> {
         self.as_ref()
             .map_or(Err(ErrorCode::TryKeyOnNone.into()), |t| t.try_key())
+    }
+}
+
+impl<'info, T: ToAccountInfo<'info>> TryToAccountInfo<'info> for Option<T> {
+    fn try_to_account_info(&self) -> Result<AccountInfo<'info>> {
+        self.as_ref()
+            .map_or(Err(ErrorCode::TryKeyOnNone.into()), |t| {
+                Ok(t.to_account_info())
+            })
     }
 }
