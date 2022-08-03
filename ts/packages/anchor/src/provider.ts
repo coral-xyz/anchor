@@ -117,6 +117,29 @@ export class AnchorProvider implements Provider {
   }
 
   /**
+   * Get the latest blockhash using getLatestBlockhash if available, otherwise fall back to getRecentBlockhash
+   * This is required to support validators before v1.9
+   * In particular the `miscNonRentExempt` test-suite runs on a validator before v1.9
+   * @param commitment Specify the commitment level
+   * @returns The latest blockhash available from the cluster
+   */
+  private async getLatestBlockhash(
+    commitment?: Commitment | undefined
+  ): Promise<string> {
+    try {
+      const { blockhash } = await this.connection.getLatestBlockhash(
+        commitment
+      );
+      return blockhash;
+    } catch {
+      const { blockhash } = await this.connection.getRecentBlockhash(
+        commitment
+      );
+      return blockhash;
+    }
+  }
+
+  /**
    * Sends the given transaction, paid for and signed by the provider's wallet.
    *
    * @param tx      The transaction to send.
@@ -135,9 +158,9 @@ export class AnchorProvider implements Provider {
     tx.feePayer = this.wallet.publicKey;
 
     if (!tx.recentBlockhash) {
-      tx.recentBlockhash = (
-        await this.connection.getLatestBlockhash(opts.preflightCommitment)
-      ).blockhash;
+      tx.recentBlockhash = await this.getLatestBlockhash(
+        opts.preflightCommitment
+      );
     }
 
     tx = await this.wallet.signTransaction(tx);
@@ -183,16 +206,14 @@ export class AnchorProvider implements Provider {
     if (opts === undefined) {
       opts = this.opts;
     }
-    const blockhash = await this.connection.getLatestBlockhash(
-      opts.preflightCommitment
-    );
+    const blockhash = await this.getLatestBlockhash(opts.preflightCommitment);
 
     let txs = txWithSigners.map((r) => {
       let tx = r.tx;
       let signers = r.signers ?? [];
 
       tx.feePayer = this.wallet.publicKey;
-      if (!tx.recentBlockhash) tx.recentBlockhash = blockhash.blockhash;
+      if (!tx.recentBlockhash) tx.recentBlockhash = blockhash;
 
       signers.forEach((kp) => {
         tx.partialSign(kp);
