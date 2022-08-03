@@ -16,7 +16,7 @@ use solana_program::pubkey::Pubkey;
 
 use crate::{
     Accounts, AccountsClose, AccountsExit, Key, Result, ToAccountInfos, ToAccountMetas,
-    ToOptionalAccountInfos, TryKey,
+    TryAccountInfos, TryKey,
 };
 
 impl<'info, T: Accounts<'info>> Accounts<'info> for Option<T> {
@@ -42,17 +42,18 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Option<T> {
 
 impl<'info, T: ToAccountInfos<'info>> ToAccountInfos<'info> for Option<T> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        self.as_ref()
-            .expect("Cannot run `to_account_infos` on None")
-            .to_account_infos()
+        match self {
+            Some(account) => account.to_account_infos(),
+            None => panic!("Cannot run `to_account_infos` on None"),
+        }
     }
 }
 
-impl<'info, T: ToAccountInfos<'info>> ToOptionalAccountInfos<'info> for Option<T> {
-    fn to_optional_account_infos(&self, program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
-        match self.as_ref() {
-            None => program.to_account_infos(),
-            Some(account) => account.to_account_infos(),
+impl<'info, T: ToAccountInfos<'info>> TryAccountInfos<'info> for Option<T> {
+    fn try_account_infos(&self, program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
+        match self {
+            Some(_) => self.to_account_infos(),
+            None => vec![program.clone()],
         }
     }
 }
@@ -80,6 +81,7 @@ impl<'info, T: AccountsExit<'info>> AccountsExit<'info> for Option<T> {
 
 impl<T: TryKey> TryKey for Option<T> {
     fn try_key(&self) -> Result<Pubkey> {
-        self.as_ref().map_or(err!(""), |t| t.try_key())
+        //self.as_ref().map_or(err!(""), |t| t.try_key())
+        unimplemented!();
     }
 }

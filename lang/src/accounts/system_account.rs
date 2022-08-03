@@ -70,6 +70,12 @@ impl<'info> ToAccountInfos<'info> for SystemAccount<'info> {
     }
 }
 
+impl<'info> TryAccountInfos<'info> for SystemAccount<'info> {
+    fn try_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
+        self.to_account_infos()
+    }
+}
+
 impl<'info> AsRef<AccountInfo<'info>> for SystemAccount<'info> {
     fn as_ref(&self) -> &AccountInfo<'info> {
         &self.info

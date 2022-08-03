@@ -121,27 +121,21 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     let account_struct_infos: Vec<proc_macro2::TokenStream> = accs
         .fields
         .iter()
-        .map(|f: &AccountField| match f {
-            AccountField::CompositeField(s) => {
-                let name = &s.ident;
-                quote! {
-                    account_infos.extend(anchor_lang::ToAccountInfos::to_account_infos(&self.#name));
-                }
+        .map(|f: &AccountField| {
+            let name = &f.ident();
+            quote! {
+                account_infos.extend(anchor_lang::ToAccountInfos::to_account_infos(&self.#name));
             }
-            AccountField::Field(f) => {
-                let name = &f.ident;
-                //TODO: figure out how to handle None gen
-                if f.is_optional {
-                    quote! {
-                        if let Some(account) = &self.#name {
-                            account_infos.push(anchor_lang::ToAccountInfo::to_account_info(account));
-                        }
-                    }
-                } else {
-                    quote! {
-                        account_infos.push(anchor_lang::ToAccountInfo::to_account_info(&self.#name));
-                    }
-                }
+        })
+        .collect();
+
+    let account_struct_try_infos: Vec<proc_macro2::TokenStream> = accs
+        .fields
+        .iter()
+        .map(|f: &AccountField| {
+            let name = &f.ident();
+            quote! {
+                try_account_infos.extend(anchor_lang::TryAccountInfos::try_account_infos(&self.#name, program));
             }
         })
         .collect();
@@ -218,6 +212,15 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     let mut account_infos = vec![];
                     #(#account_struct_infos)*
                     account_infos
+                }
+            }
+
+            #[automatically_derived]
+            impl<'info> anchor_lang::TryAccountInfos<'info> for #name #generics {
+                fn try_account_infos(&self, program: &anchor_lang::solana_program::account_info::AccountInfo<'info>) -> Vec<anchor_lang::solana_program::account_info::AccountInfo<'info>> {
+                    let mut try_account_infos = vec![];
+                    #(#account_struct_try_infos)*
+                    try_account_infos
                 }
             }
         }

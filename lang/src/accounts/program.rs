@@ -3,6 +3,7 @@
 use crate::error::{Error, ErrorCode};
 use crate::{
     AccountDeserialize, Accounts, AccountsExit, Id, Key, Result, ToAccountInfos, ToAccountMetas,
+    TryAccountInfos,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::bpf_loader_upgradeable::{self, UpgradeableLoaderState};
@@ -172,6 +173,12 @@ impl<'info, T: Id + Clone> ToAccountMetas for Program<'info, T> {
 impl<'info, T: Id + Clone> ToAccountInfos<'info> for Program<'info, T> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         vec![self.info.clone()]
+    }
+}
+
+impl<'info, T: Id + Clone> TryAccountInfos<'info> for Program<'info, T> {
+    fn try_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
+        self.to_account_infos()
     }
 }
 

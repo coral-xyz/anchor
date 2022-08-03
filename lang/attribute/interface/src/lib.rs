@@ -218,7 +218,7 @@ pub fn interface(
                             data,
                         }
                     };
-                    let mut acc_infos = ctx.to_account_infos();
+                    let mut acc_infos = ctx.to_account_infos(&ctx.program);
                     acc_infos.push(ctx.program.clone());
                     anchor_lang::solana_program::program::invoke_signed(
                         &ix,
