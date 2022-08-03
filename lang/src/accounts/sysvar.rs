@@ -1,7 +1,9 @@
 //! Type validating that the account is a sysvar and deserializing it
 
 use crate::error::ErrorCode;
-use crate::{Accounts, AccountsExit, Key, Result, ToAccountInfos, ToAccountMetas, TryAccountInfos};
+use crate::{
+    Accounts, AccountsExit, Key, Result, ToAccountInfos, ToAccountMetas, TryToAccountInfos,
+};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -94,8 +96,8 @@ impl<'info, T: solana_program::sysvar::Sysvar> ToAccountInfos<'info> for Sysvar<
     }
 }
 
-impl<'info, T: solana_program::sysvar::Sysvar> TryAccountInfos<'info> for Sysvar<'info, T> {
-    fn try_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
+impl<'info, T: solana_program::sysvar::Sysvar> TryToAccountInfos<'info> for Sysvar<'info, T> {
+    fn try_to_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
         self.to_account_infos()
     }
 }

@@ -11,13 +11,13 @@ mod constraints;
 mod exit;
 mod to_account_infos;
 mod to_account_metas;
-mod try_account_infos;
 mod try_accounts;
+mod try_to_account_infos;
 
 pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     let impl_try_accounts = try_accounts::generate(accs);
     let impl_to_account_infos = to_account_infos::generate(accs);
-    let impl_try_account_infos = try_account_infos::generate(accs);
+    let impl_try_to_account_infos = try_to_account_infos::generate(accs);
     let impl_to_account_metas = to_account_metas::generate(accs);
     let impl_exit = exit::generate(accs);
 
@@ -27,7 +27,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     quote! {
         #impl_try_accounts
         #impl_to_account_infos
-        #impl_try_account_infos
+        #impl_try_to_account_infos
         #impl_to_account_metas
         #impl_exit
 

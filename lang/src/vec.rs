@@ -1,4 +1,4 @@
-use crate::{Accounts, Result, ToAccountInfos, ToAccountMetas, TryAccountInfos};
+use crate::{Accounts, Result, ToAccountInfos, ToAccountMetas, TryToAccountInfos};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -12,10 +12,10 @@ impl<'info, T: ToAccountInfos<'info>> ToAccountInfos<'info> for Vec<T> {
     }
 }
 
-impl<'info, T: TryAccountInfos<'info>> TryAccountInfos<'info> for Vec<T> {
-    fn try_account_infos(&self, program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
+impl<'info, T: TryToAccountInfos<'info>> TryToAccountInfos<'info> for Vec<T> {
+    fn try_to_account_infos(&self, program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
         self.iter()
-            .flat_map(|item| item.try_account_infos(program))
+            .flat_map(|item| item.try_to_account_infos(program))
             .collect()
     }
 }

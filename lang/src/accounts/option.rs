@@ -15,8 +15,8 @@ use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
 use crate::{
-    Accounts, AccountsClose, AccountsExit, Key, Result, ToAccountInfos, ToAccountMetas,
-    TryToAccountInfo, TryAccountInfos, TryKey,
+    error::ErrorCode, Accounts, AccountsClose, AccountsExit, Result, ToAccountInfo, ToAccountInfos,
+    ToAccountMetas, TryKey, TryToAccountInfo, TryToAccountInfos,
 };
 
 impl<'info, T: Accounts<'info>> Accounts<'info> for Option<T> {
@@ -49,8 +49,8 @@ impl<'info, T: ToAccountInfos<'info>> ToAccountInfos<'info> for Option<T> {
     }
 }
 
-impl<'info, T: ToAccountInfos<'info>> TryAccountInfos<'info> for Option<T> {
-    fn try_account_infos(&self, program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
+impl<'info, T: ToAccountInfos<'info>> TryToAccountInfos<'info> for Option<T> {
+    fn try_to_account_infos(&self, program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
         match self {
             Some(_) => self.to_account_infos(),
             None => vec![program.clone()],

@@ -66,7 +66,7 @@ pub type Result<T> = std::result::Result<T, error::Error>;
 /// cases, it's recommended to use the [`Accounts`](./derive.Accounts.html)
 /// derive macro to implement this trait.
 pub trait Accounts<'info>:
-    ToAccountMetas + ToAccountInfos<'info> + TryAccountInfos<'info> + Sized
+    ToAccountMetas + ToAccountInfos<'info> + TryToAccountInfos<'info> + Sized
 {
     /// Returns the validated accounts struct. What constitutes "valid" is
     /// program dependent. However, users of these types should never have to
@@ -128,8 +128,8 @@ pub trait ToAccountInfos<'info> {
 /// structs. Intended for `Accounts` structs with optional accounts in order to
 /// pass in the program `AccountInfo` as a sentinel value. When the account
 /// is not present, it returns a copy of the program's `AccountInfo` instead.
-pub trait TryAccountInfos<'info> {
-    fn try_account_infos(&self, program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>>;
+pub trait TryToAccountInfos<'info> {
+    fn try_to_account_infos(&self, program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>>;
 }
 
 /// Transformation to an `AccountInfo` struct.
@@ -269,8 +269,7 @@ pub mod prelude {
         require_neq, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source, state,
         system_program::System, zero_copy, AccountDeserialize, AccountSerialize, Accounts,
         AccountsExit, AnchorDeserialize, AnchorSerialize, Id, Key, Owner, ProgramData, Result,
-        ToAccountInfo, ToAccountInfos, ToAccountMetas, ToOptionalAccountInfos, TryKey,
-        TryToAccountInfo,
+        ToAccountInfo, ToAccountInfos, ToAccountMetas, TryKey, TryToAccountInfo, TryToAccountInfos,
     };
     pub use anchor_attribute_error::*;
     pub use borsh;

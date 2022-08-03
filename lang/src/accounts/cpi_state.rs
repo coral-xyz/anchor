@@ -3,7 +3,7 @@ use crate::error::ErrorCode;
 use crate::{accounts::state::ProgramState, context::CpiStateContext};
 use crate::{
     AccountDeserialize, AccountSerialize, Accounts, AccountsExit, Key, Result, ToAccountInfos,
-    ToAccountMetas, TryAccountInfos,
+    ToAccountMetas, TryToAccountInfos,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
@@ -111,10 +111,10 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfos<'in
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> TryAccountInfos<'info>
+impl<'info, T: AccountSerialize + AccountDeserialize + Clone> TryToAccountInfos<'info>
     for CpiState<'info, T>
 {
-    fn try_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
+    fn try_to_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
         self.to_account_infos()
     }
 }

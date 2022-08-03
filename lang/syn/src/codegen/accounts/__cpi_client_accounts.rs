@@ -135,7 +135,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         .map(|f: &AccountField| {
             let name = &f.ident();
             quote! {
-                try_account_infos.extend(anchor_lang::TryAccountInfos::try_account_infos(&self.#name, program));
+                try_account_infos.extend(anchor_lang::TryToAccountInfos::try_to_account_infos(&self.#name, program));
             }
         })
         .collect();
@@ -216,8 +216,8 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             }
 
             #[automatically_derived]
-            impl<'info> anchor_lang::TryAccountInfos<'info> for #name #generics {
-                fn try_account_infos(&self, program: &anchor_lang::solana_program::account_info::AccountInfo<'info>) -> Vec<anchor_lang::solana_program::account_info::AccountInfo<'info>> {
+            impl<'info> anchor_lang::TryToAccountInfos<'info> for #name #generics {
+                fn try_to_account_infos(&self, program: &anchor_lang::solana_program::account_info::AccountInfo<'info>) -> Vec<anchor_lang::solana_program::account_info::AccountInfo<'info>> {
                     let mut try_account_infos = vec![];
                     #(#account_struct_try_infos)*
                     try_account_infos

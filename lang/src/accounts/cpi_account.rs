@@ -86,8 +86,8 @@ impl<'info, T: AccountDeserialize + Clone> ToAccountInfos<'info> for CpiAccount<
 }
 
 #[allow(deprecated)]
-impl<'info, T: AccountDeserialize + Clone> TryAccountInfos<'info> for CpiAccount<'info, T> {
-    fn try_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
+impl<'info, T: AccountDeserialize + Clone> TryToAccountInfos<'info> for CpiAccount<'info, T> {
+    fn try_to_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
         self.to_account_infos()
     }
 }
