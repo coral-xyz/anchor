@@ -146,6 +146,10 @@ where
     }
 }
 
+pub trait TryToAccountInfo<'info> {
+    fn try_to_account_info(&self) -> Result<AccountInfo<'info>>;
+}
+
 /// A data structure that can be serialized and stored into account storage,
 /// i.e. an
 /// [`AccountInfo`](../solana_program/account_info/struct.AccountInfo.html#structfield.data)'s
@@ -241,7 +245,7 @@ impl Key for Pubkey {
     }
 }
 
-/// Defines the Pubkey of an account
+/// Defines the Pubkey of an account in an operation that may fail
 pub trait TryKey {
     fn try_key(&self) -> Result<Pubkey>;
 }
@@ -265,7 +269,8 @@ pub mod prelude {
         require_neq, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source, state,
         system_program::System, zero_copy, AccountDeserialize, AccountSerialize, Accounts,
         AccountsExit, AnchorDeserialize, AnchorSerialize, Id, Key, Owner, ProgramData, Result,
-        ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        ToAccountInfo, ToAccountInfos, ToAccountMetas, ToOptionalAccountInfos, TryKey,
+        TryToAccountInfo,
     };
     pub use anchor_attribute_error::*;
     pub use borsh;

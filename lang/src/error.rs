@@ -184,6 +184,9 @@ pub enum ErrorCode {
     /// 3017 - The account was duplicated for more than one reallocation
     #[msg("The account was duplicated for more than one reallocation")]
     AccountDuplicateReallocs,
+    /// 3018 - Tried to get the key from None
+    #[msg("Tried to get the key from None")]
+    TryKeyOnNone,
 
     // State.
     /// 4000 - The given state account does not have the correct address
