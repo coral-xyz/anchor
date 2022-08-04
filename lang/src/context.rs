@@ -326,10 +326,7 @@ impl<'a, 'b, 'c, 'info, T: Accounts<'info>> ToAccountInfos<'info>
     for CpiStateContext<'a, 'b, 'c, 'info, T>
 {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        let mut infos = self
-            .cpi_ctx
-            .accounts
-            .try_to_account_infos(self.program());
+        let mut infos = self.cpi_ctx.accounts.try_to_account_infos(self.program());
         infos.push(self.state.clone());
         infos.push(self.cpi_ctx.program.clone());
         infos
@@ -341,10 +338,7 @@ impl<'a, 'b, 'c, 'info, T: Accounts<'info>> TryToAccountInfos<'info>
     for CpiStateContext<'a, 'b, 'c, 'info, T>
 {
     fn try_to_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
-        let mut infos = self
-            .cpi_ctx
-            .accounts
-            .try_to_account_infos(self.program());
+        let mut infos = self.cpi_ctx.accounts.try_to_account_infos(self.program());
         infos.push(self.state.clone());
         infos.push(self.cpi_ctx.program.clone());
         infos
