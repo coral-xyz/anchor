@@ -32,7 +32,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     quote! {
                         anchor_lang::AccountsClose::close(
                             &self.#ident,
-                            self.#close_target.to_account_info(),
+                            self.#close_target.try_to_account_info()?,
                         ).map_err(|e| e.with_account_name(#name_str))?;
                     }
                 } else {
