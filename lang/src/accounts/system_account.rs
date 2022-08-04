@@ -76,6 +76,12 @@ impl<'info> TryToAccountInfos<'info> for SystemAccount<'info> {
     }
 }
 
+impl<'info> TryToAccountInfo<'info> for SystemAccount<'info> {
+    fn try_to_account_info(&self) -> Result<AccountInfo<'info>> {
+        Ok(self.to_account_info())
+    }
+}
+
 impl<'info> AsRef<AccountInfo<'info>> for SystemAccount<'info> {
     fn as_ref(&self) -> &AccountInfo<'info> {
         &self.info

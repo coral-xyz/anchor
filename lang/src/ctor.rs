@@ -1,4 +1,4 @@
-use crate::{Accounts, ToAccountInfo};
+use crate::{Accounts, TryToAccountInfo};
 use solana_program::account_info::AccountInfo;
 
 /// The Ctor accounts that can be used to create any account within the program

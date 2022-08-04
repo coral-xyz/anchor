@@ -89,7 +89,7 @@ impl<T: TryKey> TryKey for Option<T> {
 impl<'info, T: ToAccountInfo<'info>> TryToAccountInfo<'info> for Option<T> {
     fn try_to_account_info(&self) -> Result<AccountInfo<'info>> {
         self.as_ref()
-            .map_or(Err(ErrorCode::TryKeyOnNone.into()), |t| {
+            .map_or(Err(ErrorCode::TryToAccountInfoOnNone.into()), |t| {
                 Ok(t.to_account_info())
             })
     }

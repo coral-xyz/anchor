@@ -1,7 +1,8 @@
 //! Type validating that the account signed the transaction
 use crate::error::ErrorCode;
 use crate::{
-    Accounts, AccountsExit, Key, Result, ToAccountInfos, ToAccountMetas, TryToAccountInfos,
+    Accounts, AccountsExit, Key, Result, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+    TryToAccountInfo, TryToAccountInfos,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
@@ -96,6 +97,12 @@ impl<'info> ToAccountInfos<'info> for Signer<'info> {
 impl<'info> TryToAccountInfos<'info> for Signer<'info> {
     fn try_to_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
         self.to_account_infos()
+    }
+}
+
+impl<'info> TryToAccountInfo<'info> for Signer<'info> {
+    fn try_to_account_info(&self) -> Result<AccountInfo<'info>> {
+        Ok(self.to_account_info())
     }
 }
 

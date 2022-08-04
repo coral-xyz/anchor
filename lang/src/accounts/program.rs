@@ -2,8 +2,8 @@
 
 use crate::error::{Error, ErrorCode};
 use crate::{
-    AccountDeserialize, Accounts, AccountsExit, Id, Key, Result, ToAccountInfos, ToAccountMetas,
-    TryToAccountInfos,
+    AccountDeserialize, Accounts, AccountsExit, Id, Key, Result, ToAccountInfo, ToAccountInfos,
+    ToAccountMetas, TryToAccountInfo, TryToAccountInfos,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::bpf_loader_upgradeable::{self, UpgradeableLoaderState};
@@ -179,6 +179,12 @@ impl<'info, T: Id + Clone> ToAccountInfos<'info> for Program<'info, T> {
 impl<'info, T: Id + Clone> TryToAccountInfos<'info> for Program<'info, T> {
     fn try_to_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
         self.to_account_infos()
+    }
+}
+
+impl<'info, T: Id + Clone> TryToAccountInfo<'info> for Program<'info, T> {
+    fn try_to_account_info(&self) -> Result<AccountInfo<'info>> {
+        Ok(self.to_account_info())
     }
 }
 
