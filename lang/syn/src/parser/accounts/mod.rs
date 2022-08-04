@@ -40,8 +40,27 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
 }
 
 fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
-    let mut required_init = false;
+    // COMMON ERROR MESSAGE
+    let message = |constraint: &str, field: &str, required: bool| {
+        if required {
+            format! {
+                "the {} constraint requires \
+                the {} field to exist in the account \
+                validation struct. Use the Program type to add \
+                the {} field to your validation struct.", constraint, field, field
+            }
+        } else {
+            format! {
+                "an optional {} constraint requires \
+                an optional or required {} field to exist \
+                in the account validation struct. Use the Program type \
+                to add the {} field to your validation struct.", constraint, field, field
+            }
+        }
+    };
+
     // INIT
+    let mut required_init = false;
     let init_fields: Vec<&Field> = fields
         .iter()
         .filter_map(|f| match f {
@@ -57,7 +76,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
 
     if !init_fields.is_empty() {
         // init needs system program.
-        //TODO: WIP
+
         if !fields
             .iter()
             // ensures that a non optional `system_program` is present with non optional `init`
@@ -65,20 +84,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
         {
             return Err(ParseError::new(
                 init_fields[0].ident.span(),
-                "the init constraint requires \
-                the system_program field to exist in the account \
-                validation struct. Use the Program type to add \
-                the system_program field to your validation struct.",
-            ));
-        }
-
-        if fields.iter().all(|f| f.ident() != "system_program") {
-            return Err(ParseError::new(
-                init_fields[0].ident.span(),
-                "the init constraint requires \
-                the system_program field to exist in the account \
-                validation struct. Use the Program type to add \
-                the system_program field to your validation struct.",
+                message("init", "system_program", required_init),
             ));
         }
 
@@ -87,29 +93,26 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
         match kind {
             InitKind::Program { .. } => (),
             InitKind::Token { .. } | InitKind::AssociatedToken { .. } | InitKind::Mint { .. } => {
-                if fields.iter().all(|f| f.ident() != "token_program") {
+                if !fields
+                    .iter()
+                    .any(|f| f.ident() == "token_program" && !(required_init && f.is_optional()))
+                {
                     return Err(ParseError::new(
                         init_fields[0].ident.span(),
-                        "the init constraint requires \
-                            the token_program field to exist in the account \
-                            validation struct. Use the Program type to add \
-                            the token_program field to your validation struct.",
+                        message("init", "token_program", required_init),
                     ));
                 }
             }
         }
+
         // a_token needs associated token program.
         if let InitKind::AssociatedToken { .. } = kind {
-            if fields
-                .iter()
-                .all(|f| f.ident() != "associated_token_program")
-            {
+            if !fields.iter().any(|f| {
+                f.ident() == "associated_token_program" && !(required_init && f.is_optional())
+            }) {
                 return Err(ParseError::new(
                     init_fields[0].ident.span(),
-                    "the init constraint requires \
-                    the associated_token_program field to exist in the account \
-                    validation struct. Use the Program type to add \
-                    the associated_token_program field to your validation struct.",
+                    message("init", "associated_token_program", required_init),
                 ));
             }
         }
@@ -133,6 +136,11 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                         return Err(ParseError::new(
                             field.ident.span(),
                             "the payer specified for an init constraint must be mutable.",
+                        ));
+                    } else if associated_payer_field.is_optional && required_init {
+                        return Err(ParseError::new(
+                            field.ident.span(),
+                            "the payer specified for a required init constraint must be required.",
                         ));
                     }
                 }
@@ -165,23 +173,29 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
     }
 
     // REALLOC
+    let mut required_realloc = false;
     let realloc_fields: Vec<&Field> = fields
         .iter()
         .filter_map(|f| match f {
-            AccountField::Field(field) if field.constraints.realloc.is_some() => Some(field),
+            AccountField::Field(field) if field.constraints.realloc.is_some() => {
+                if !field.is_optional {
+                    required_realloc = true
+                }
+                Some(field)
+            }
             _ => None,
         })
         .collect();
 
     if !realloc_fields.is_empty() {
         // realloc needs system program.
-        if fields.iter().all(|f| f.ident() != "system_program") {
+        if !fields
+            .iter()
+            .any(|f| f.ident() == "system_program" && !(required_realloc && f.is_optional()))
+        {
             return Err(ParseError::new(
                 realloc_fields[0].ident.span(),
-                "the realloc constraint requires \
-                the system_program field to exist in the account \
-                validation struct. Use the Program type to add \
-                the system_program field to your validation struct.",
+                message("realloc", "system_program", required_realloc),
             ));
         }
 
@@ -205,6 +219,11 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                         return Err(ParseError::new(
                             field.ident.span(),
                             "the realloc::payer specified for an realloc constraint must be mutable.",
+                        ));
+                    } else if associated_payer_field.is_optional && required_realloc {
+                        return Err(ParseError::new(
+                            field.ident.span(),
+                            "the realloc::payer specified for a required realloc constraint must be required.",
                         ));
                     }
                 }
