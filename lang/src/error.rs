@@ -187,6 +187,9 @@ pub enum ErrorCode {
     /// 3018 - Tried to get the key from None
     #[msg("Tried to get the key from None")]
     TryKeyOnNone,
+    /// 3019 - Tried to get `to_account_info` from None
+    #[msg("Tried to get the account info from None")]
+    TryToAccountInfoOnNone,
 
     // State.
     /// 4000 - The given state account does not have the correct address
