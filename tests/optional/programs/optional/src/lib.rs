@@ -18,7 +18,7 @@ mod optional {
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(mut)]
-    pub payer: Signer<'info>,
+    pub payer: Option<Signer<'info>>,
     #[account(init, payer=payer, space=16)]
     pub dummy: Option<Account<'info, Dummy>>,
     #[account()]

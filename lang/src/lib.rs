@@ -143,6 +143,8 @@ where
     }
 }
 
+/// Transformation to an AccountInfo struct. This operation may fail. Intended for use with
+/// Optional accounts in order to bubble up Errors more easily
 pub trait TryToAccountInfo<'info> {
     fn try_to_account_info(&self) -> Result<AccountInfo<'info>>;
 }
