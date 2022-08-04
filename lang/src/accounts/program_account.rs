@@ -4,7 +4,7 @@ use crate::bpf_writer::BpfWriter;
 use crate::error::{Error, ErrorCode};
 use crate::{
     AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, Key, Result,
-    ToAccountInfo, ToAccountInfos, ToAccountMetas, TryToAccountInfo,
+    ToAccountInfo, ToAccountInfos, ToAccountMetas, TryToAccountInfo, TryToAccountInfos,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
@@ -144,6 +144,15 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfos<'in
 {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         vec![self.inner.info.clone()]
+    }
+}
+
+#[allow(deprecated)]
+impl<'info, T: AccountSerialize + AccountDeserialize + Clone> TryToAccountInfos<'info>
+    for ProgramAccount<'info, T>
+{
+    fn try_to_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
+        self.to_account_infos()
     }
 }
 

@@ -2,7 +2,7 @@ use crate::codegen::accounts::{generics, ParsedGenerics};
 use crate::{AccountField, AccountsStruct};
 use quote::quote;
 
-// Generates the `ToAccountInfos` trait implementation.
+// Generates the `TryToAccountInfos` trait implementation.
 pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     let name = &accs.ident;
     let ParsedGenerics {
@@ -12,21 +12,21 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         where_clause,
     } = generics(accs);
 
-    let to_acc_infos: Vec<proc_macro2::TokenStream> = accs
+    let try_acc_infos: Vec<proc_macro2::TokenStream> = accs
         .fields
         .iter()
         .map(|f: &AccountField| {
             let name = &f.ident();
-            quote! { account_infos.extend(self.#name.to_account_infos()); }
+            quote! { account_infos.extend(self.#name.try_to_account_infos(program)); }
         })
         .collect();
     quote! {
         #[automatically_derived]
-        impl<#combined_generics> anchor_lang::ToAccountInfos<#trait_generics> for #name <#struct_generics> #where_clause{
-            fn to_account_infos(&self) -> Vec<anchor_lang::solana_program::account_info::AccountInfo<'info>> {
+        impl<#combined_generics> anchor_lang::TryToAccountInfos<#trait_generics> for #name <#struct_generics> #where_clause{
+            fn try_to_account_infos(&self, program: &anchor_lang::solana_program::account_info::AccountInfo<'info>) -> Vec<anchor_lang::solana_program::account_info::AccountInfo<'info>> {
                 let mut account_infos = vec![];
 
-                #(#to_acc_infos)*
+                #(#try_acc_infos)*
 
                 account_infos
             }

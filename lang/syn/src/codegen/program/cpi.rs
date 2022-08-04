@@ -42,7 +42,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                             data,
                                         }
                                     };
-                                    let mut acc_infos = ctx.to_account_infos();
+                                    // always use try_account_info in case there are optional accounts
+                                    let mut acc_infos = ctx.try_to_account_infos(ctx.program());
                                     anchor_lang::solana_program::program::invoke_signed(
                                         &ix,
                                         &acc_infos,
@@ -97,7 +98,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                                 data,
                             }
                         };
-                        let mut acc_infos = ctx.to_account_infos();
+                        // always use try_account_info in case there are optional accounts
+                        let mut acc_infos = ctx.try_to_account_infos(&ctx.program);
                         anchor_lang::solana_program::program::invoke_signed(
                             &ix,
                             &acc_infos,

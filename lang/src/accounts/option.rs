@@ -16,7 +16,7 @@ use solana_program::pubkey::Pubkey;
 
 use crate::{
     error::ErrorCode, Accounts, AccountsClose, AccountsExit, Result, ToAccountInfo, ToAccountInfos,
-    ToAccountMetas, ToOptionalAccountInfos, TryKey, TryToAccountInfo,
+    ToAccountMetas, TryKey, TryToAccountInfo, TryToAccountInfos,
 };
 
 impl<'info, T: Accounts<'info>> Accounts<'info> for Option<T> {
@@ -42,17 +42,18 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Option<T> {
 
 impl<'info, T: ToAccountInfos<'info>> ToAccountInfos<'info> for Option<T> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        self.as_ref()
-            .expect("Cannot run `to_account_infos` on None")
-            .to_account_infos()
+        match self {
+            Some(account) => account.to_account_infos(),
+            None => panic!("Cannot run `to_account_infos` on None"),
+        }
     }
 }
 
-impl<'info, T: ToAccountInfos<'info>> ToOptionalAccountInfos<'info> for Option<T> {
-    fn to_optional_account_infos(&self, program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
-        match self.as_ref() {
-            None => program.to_account_infos(),
-            Some(account) => account.to_account_infos(),
+impl<'info, T: ToAccountInfos<'info>> TryToAccountInfos<'info> for Option<T> {
+    fn try_to_account_infos(&self, program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
+        match self {
+            Some(_) => self.to_account_infos(),
+            None => vec![program.clone()],
         }
     }
 }

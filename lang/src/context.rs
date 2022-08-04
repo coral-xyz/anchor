@@ -1,6 +1,6 @@
 //! Data structures that are used to provide non-argument inputs to program endpoints
 
-use crate::{Accounts, ToAccountInfos, ToAccountMetas};
+use crate::{Accounts, ToAccountInfos, ToAccountMetas, TryToAccountInfos};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -164,7 +164,7 @@ impl<'a, 'b, 'c, 'info, T: Accounts<'info>> Context<'a, 'b, 'c, 'info, T> {
 /// ```
 pub struct CpiContext<'a, 'b, 'c, 'info, T>
 where
-    T: ToAccountMetas + ToAccountInfos<'info>,
+    T: ToAccountMetas + ToAccountInfos<'info> + TryToAccountInfos<'info>,
 {
     pub accounts: T,
     pub remaining_accounts: Vec<AccountInfo<'info>>,
@@ -174,7 +174,7 @@ where
 
 impl<'a, 'b, 'c, 'info, T> CpiContext<'a, 'b, 'c, 'info, T>
 where
-    T: ToAccountMetas + ToAccountInfos<'info>,
+    T: ToAccountMetas + ToAccountInfos<'info> + TryToAccountInfos<'info>,
 {
     pub fn new(program: AccountInfo<'info>, accounts: T) -> Self {
         Self {
@@ -212,18 +212,27 @@ where
     }
 }
 
-impl<'info, T: ToAccountInfos<'info> + ToAccountMetas> ToAccountInfos<'info>
-    for CpiContext<'_, '_, '_, 'info, T>
+impl<'info, T: ToAccountInfos<'info> + ToAccountMetas + TryToAccountInfos<'info>>
+    ToAccountInfos<'info> for CpiContext<'_, '_, '_, 'info, T>
 {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        let mut infos = self.accounts.to_account_infos();
+        // always uses try_account_infos in case there are optional accounts
+        let mut infos = self.accounts.try_to_account_infos(&self.program);
         infos.extend_from_slice(&self.remaining_accounts);
         infos.push(self.program.clone());
         infos
     }
 }
 
-impl<'info, T: ToAccountInfos<'info> + ToAccountMetas> ToAccountMetas
+impl<'info, T: ToAccountInfos<'info> + ToAccountMetas + TryToAccountInfos<'info>>
+    TryToAccountInfos<'info> for CpiContext<'_, '_, '_, 'info, T>
+{
+    fn try_to_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
+        self.to_account_infos()
+    }
+}
+
+impl<'info, T: ToAccountInfos<'info> + ToAccountMetas + TryToAccountInfos<'info>> ToAccountMetas
     for CpiContext<'_, '_, '_, 'info, T>
 {
     fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
@@ -317,7 +326,19 @@ impl<'a, 'b, 'c, 'info, T: Accounts<'info>> ToAccountInfos<'info>
     for CpiStateContext<'a, 'b, 'c, 'info, T>
 {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        let mut infos = self.cpi_ctx.accounts.to_account_infos();
+        let mut infos = self.cpi_ctx.accounts.try_to_account_infos(self.program());
+        infos.push(self.state.clone());
+        infos.push(self.cpi_ctx.program.clone());
+        infos
+    }
+}
+
+#[allow(deprecated)]
+impl<'a, 'b, 'c, 'info, T: Accounts<'info>> TryToAccountInfos<'info>
+    for CpiStateContext<'a, 'b, 'c, 'info, T>
+{
+    fn try_to_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
+        let mut infos = self.cpi_ctx.accounts.try_to_account_infos(self.program());
         infos.push(self.state.clone());
         infos.push(self.cpi_ctx.program.clone());
         infos
