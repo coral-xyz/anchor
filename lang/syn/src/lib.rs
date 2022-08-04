@@ -329,9 +329,9 @@ impl Field {
             },
         };
         match &self.ty {
-            Ty::AccountInfo => quote! { #field.to_account_info() },
+            Ty::AccountInfo => quote! { #field.try_to_account_info()? },
             Ty::UncheckedAccount => {
-                quote! { UncheckedAccount::try_from(#field.to_account_info()) }
+                quote! { UncheckedAccount::try_from(#field.try_to_account_info()?) }
             }
             Ty::Account(AccountTy { boxed, .. }) => {
                 let stream = if checked {
