@@ -329,7 +329,7 @@ impl<'a, 'b, 'c, 'info, T: Accounts<'info>> ToAccountInfos<'info>
         let mut infos = self
             .cpi_ctx
             .accounts
-            .try_to_account_infos(&self.cpi_ctx.program);
+            .try_to_account_infos(self.program());
         infos.push(self.state.clone());
         infos.push(self.cpi_ctx.program.clone());
         infos
@@ -344,7 +344,7 @@ impl<'a, 'b, 'c, 'info, T: Accounts<'info>> TryToAccountInfos<'info>
         let mut infos = self
             .cpi_ctx
             .accounts
-            .try_to_account_infos(&self.cpi_ctx.program);
+            .try_to_account_infos(self.program());
         infos.push(self.state.clone());
         infos.push(self.cpi_ctx.program.clone());
         infos
