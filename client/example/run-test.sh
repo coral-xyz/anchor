@@ -36,7 +36,7 @@ main() {
 				--bpf-program $basic_2_pid ../../examples/tutorial/basic-2/target/deploy/basic_2.so \
 				--bpf-program $basic_4_pid ../../examples/tutorial/basic-4/target/deploy/basic_4.so \
 				--bpf-program $events_pid ../../tests/events/target/deploy/events.so \
-				--bpf-program $optional_pid ../../tests/optional/target/deploy/optioal.so \
+				--bpf-program $optional_pid ../../tests/optional/target/deploy/optional.so \
 
 				> test-validator.log &
     sleep 5
