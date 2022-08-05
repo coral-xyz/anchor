@@ -21,6 +21,7 @@
     "lockup",
     "misc",
     "multisig",
+    "optional",
     "permissioned-markets",
     "pda-derivation",
     "pyth",

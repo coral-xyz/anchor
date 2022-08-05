@@ -396,6 +396,8 @@ jobs:
             path: tests/cpi-returns
           - cmd: cd tests/multiple-suites && anchor test --skip-lint && npx tsc --noEmit
             path: tests/multiple-suites
+          - cmd: cd tests/optional && anchor test --skip-lint && npx tsc --noEmit
+            path: tests/optional
           - cmd: cd tests/pda-derivation && anchor test --skip-lint && npx tsc --noEmit
             path: tests/pda-derivation
           - cmd: cd tests/anchor-cli-idl && ./test.sh

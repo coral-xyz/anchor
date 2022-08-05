@@ -5,5 +5,8 @@ wallet = "~/.config/solana/id.json"
 [programs.localnet]
 optional = "EHthziFziNoac9LBGxEaVN47Y3uUiRoXvqAiR6oes4iU"
 
+[workspace]
+members = ["programs/optional"]
+
 [scripts]
-test = "yarn run mocha -t 1000000 tests/"
+test = "yarn run ts-mocha -t 1000000 -p ./tsconfig.json -t 1000000 tests/**/*.ts"
