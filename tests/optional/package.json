@@ -15,5 +15,8 @@
   },
   "scripts": {
     "test": "anchor test"
+  },
+  "devDependencies": {
+    "@types/node": "^18.6.4"
   }
 }

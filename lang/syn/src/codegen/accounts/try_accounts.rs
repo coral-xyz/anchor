@@ -36,7 +36,10 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                         let name = &f.ident;
                         if f.is_optional {
                             quote! {
-                                let #name = if accounts.is_empty() || accounts[0].key == program_id {
+                                let #name = if accounts.is_empty() {
+                                    None
+                                } else if accounts[0].key == program_id {
+                                    *accounts = &accounts[1..];
                                     None
                                 } else {
                                     let account = &accounts[0];
