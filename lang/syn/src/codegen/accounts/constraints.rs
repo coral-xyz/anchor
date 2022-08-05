@@ -219,7 +219,7 @@ pub fn generate_constraint_close(f: &Field, c: &ConstraintClose) -> proc_macro2:
     let name_str = field.to_string();
     let target = &c.sol_dest;
     quote! {
-        if #field.key() == #target.key() {
+        if #field.key() == #target.try_key()? {
             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintClose).with_account_name(#name_str));
         }
     }
