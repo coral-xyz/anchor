@@ -62,10 +62,10 @@ fn main() -> Result<()> {
     let client = Client::new_with_options(url, Rc::new(payer), CommitmentConfig::processed());
 
     // Run tests.
-    // composite(&client, opts.composite_pid)?;
-    // basic_2(&client, opts.basic_2_pid)?;
-    // basic_4(&client, opts.basic_4_pid)?;
-    // events(&client, opts.events_pid)?;
+    composite(&client, opts.composite_pid)?;
+    basic_2(&client, opts.basic_2_pid)?;
+    basic_4(&client, opts.basic_4_pid)?;
+    events(&client, opts.events_pid)?;
     optional(&client, opts.optional_pid, payer_clone)?;
 
     // Success.
@@ -253,11 +253,9 @@ fn optional(client: &Client, pid: Pubkey, signer: Keypair) -> Result<()> {
         optional2: None,
         system_program: Some(system_program::ID),
     };
-    let metas = initialize.to_account_metas(None);
-    println!("{metas:#?}");
 
     // Build and send a transaction.
-    let builder = program
+    program
         .request()
         .signer(&optional1)
         .signer(&signer)
@@ -271,17 +269,11 @@ fn optional(client: &Client, pid: Pubkey, signer: Keypair) -> Result<()> {
         .args(optional_instruction::Initialize {
             value: 10,
             key: optional1.pubkey(),
-        });
-
-    let txn = builder.transaction()?;
-    println!("{txn:#?}");
-
-    let sent = builder.send()?;
+        })
+        .send()?;
 
     // Assert the transaction worked.
     let optional1_account: Data1 = program.account(optional1.pubkey())?;
-    // let optional2_account: Result<Data2, ClientError> = program.account(optional2.pubkey());
-
     assert_eq!(optional1_account.data, 10);
 
     println!("Optional success!");
