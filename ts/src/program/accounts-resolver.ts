@@ -46,6 +46,10 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
       const accountDesc = this._idlIx.accounts[k] as IdlAccount;
       const accountDescName = camelCase(accountDesc.name);
 
+      if (accountDesc.isOptional && !this._accounts[accountDescName]) {
+        this._accounts[accountDescName] = this._programId;
+        continue;
+      }
       // Signers default to the provider.
       if (accountDesc.isSigner && !this._accounts[accountDescName]) {
         // @ts-expect-error

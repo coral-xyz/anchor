@@ -3,7 +3,7 @@ cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [programs.localnet]
-optional = "EHthziFziNoac9LBGxEaVN47Y3uUiRoXvqAiR6oes4iU"
+optional = "FNqz6pqLAwvMSds2FYjR4nKV3moVpPNtvkfGFrqLKrgG"
 
 [workspace]
 members = ["programs/optional"]
