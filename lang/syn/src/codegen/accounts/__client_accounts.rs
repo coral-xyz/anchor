@@ -105,7 +105,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                         if let Some(#name) = &self.#name {
                             account_metas.push(#meta(*#name, #is_signer));
                         } else {
-                            account_metas.push(#meta(crate::ID, #is_signer));
+                            account_metas.push(anchor_lang::solana_program::instruction::AccountMeta::new_readonly(crate::ID, false));
                         }
                     }
                 } else {
