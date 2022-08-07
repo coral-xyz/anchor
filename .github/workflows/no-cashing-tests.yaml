@@ -79,6 +79,8 @@ jobs:
       fail-fast: false
       matrix:
         node:
+          - path: tests/optional/
+            name: optional.so
           - path: tests/events/
             name: events.so
           - path: examples/tutorial/basic-4/
@@ -121,6 +123,10 @@ jobs:
           path: ~/.cargo/bin/
       - run: chmod +x ~/.cargo/bin/anchor
 
+      - uses: actions/download-artifact@v2
+        with:
+          name: optional.so
+          path: tests/optional/target/deploy/
       - uses: actions/download-artifact@v2
         with:
           name: events.so
