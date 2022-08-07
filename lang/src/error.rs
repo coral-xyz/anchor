@@ -184,6 +184,9 @@ pub enum ErrorCode {
     /// 3017 - The account was duplicated for more than one reallocation
     #[msg("The account was duplicated for more than one reallocation")]
     AccountDuplicateReallocs,
+    /// 3018 - The account was duplicated in more than one mutable account info.
+    #[msg("The account was duplicated in more than one mutable account info.")]
+    AccountDuplicateMutables,
 
     // State.
     /// 4000 - The given state account does not have the correct address

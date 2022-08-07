@@ -202,11 +202,19 @@ pub fn generate_constraint_close(f: &Field, c: &ConstraintClose) -> proc_macro2:
 
 pub fn generate_constraint_mut(f: &Field, c: &ConstraintMut) -> proc_macro2::TokenStream {
     let ident = &f.ident;
+    let account_name = ident.to_string();
     let error = generate_custom_error(ident, &c.error, quote! { ConstraintMut }, &None);
     quote! {
-        if !#ident.to_account_info().is_writable {
+        let __field_info = #ident.to_account_info();
+        if __ctx.mutables.contains(__field_info.key) {
+            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountDuplicateMutables).with_account_name(#account_name));
+        }
+
+        if !__field_info.is_writable {
             return #error;
         }
+
+        __ctx.mutables.insert(__field_info.key.clone());
     }
 }
 
@@ -336,7 +344,7 @@ fn generate_constraint_realloc(f: &Field, c: &ConstraintReallocGroup) -> proc_ma
         // Blocks duplicate account reallocs in a single instruction to prevent accidental account overwrites
         // and to ensure the calculation of the change in bytes is based on account size at program entry
         // which inheritantly guarantee idempotency.
-        if __reallocs.contains(&#field.key()) {
+        if __ctx.reallocs.contains(&#field.key()) {
             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountDuplicateReallocs).with_account_name(#account_name));
         }
 
@@ -373,7 +381,7 @@ fn generate_constraint_realloc(f: &Field, c: &ConstraintReallocGroup) -> proc_ma
             }
 
             #field.to_account_info().realloc(#new_space, #zero)?;
-            __reallocs.insert(#field.key());
+            __ctx.reallocs.insert(#field.key());
         }
     }
 }
@@ -423,7 +431,7 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                         &[#maybe_seeds_plus_comma],
                         program_id,
                     );
-                    __bumps.insert(#name_str.to_string(), __bump);
+                    __ctx.bumps.insert(#name_str.to_string(), __bump);
                 },
                 quote! {
                     &[
@@ -708,7 +716,7 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
                     &[#maybe_seeds_plus_comma],
                     &#deriving_program_id,
                 );
-                __bumps.insert(#name_str.to_string(), __bump);
+                __ctx.bumps.insert(#name_str.to_string(), __bump);
             },
             // Bump target given. Use it.
             Some(b) => quote! {

@@ -3,19 +3,19 @@
 //! should be used instead.
 
 use crate::error::ErrorCode;
-use crate::{Accounts, AccountsExit, Key, Result, ToAccountInfos, ToAccountMetas};
+use crate::{
+    Accounts, AccountsExit, Key, Result, ToAccountInfos, ToAccountMetas, TryAccountsContext,
+};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use std::collections::{BTreeMap, BTreeSet};
 
 impl<'info> Accounts<'info> for AccountInfo<'info> {
     fn try_accounts(
         _program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
-        _bumps: &mut BTreeMap<String, u8>,
-        _reallocs: &mut BTreeSet<Pubkey>,
+        _ctx: &mut TryAccountsContext,
     ) -> Result<Self> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
