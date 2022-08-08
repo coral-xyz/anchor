@@ -916,7 +916,7 @@ impl From<_Validator> for Validator {
                 .unwrap_or(solana_sdk::rpc_port::DEFAULT_RPC_PORT),
             slots_per_epoch: _validator.slots_per_epoch,
             warp_slot: _validator.warp_slot,
-            geyser_plugin_config: _validator.geyser_plugin_config
+            geyser_plugin_config: _validator.geyser_plugin_config,
         }
     }
 }
@@ -938,7 +938,7 @@ impl From<Validator> for _Validator {
             rpc_port: Some(validator.rpc_port),
             slots_per_epoch: validator.slots_per_epoch,
             warp_slot: validator.warp_slot,
-            geyser_plugin_config: validator.geyser_plugin_config
+            geyser_plugin_config: validator.geyser_plugin_config,
         }
     }
 }
@@ -1006,7 +1006,9 @@ impl Merge for _Validator {
                 .slots_per_epoch
                 .or_else(|| self.slots_per_epoch.take()),
             warp_slot: other.warp_slot.or_else(|| self.warp_slot.take()),
-            geyser_plugin_config: other.geyser_plugin_config.or_else(|| self.geyser_plugin_config.take())
+            geyser_plugin_config: other
+                .geyser_plugin_config
+                .or_else(|| self.geyser_plugin_config.take()),
         };
     }
 }
