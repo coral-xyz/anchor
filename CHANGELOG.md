@@ -13,6 +13,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 ### Features
 
 * client: Add `transaction` functions to RequestBuilder ([#1958](https://github.com/coral-xyz/anchor/pull/1958)).
+* spl: Add `MetadataAccount` wrapper for Metaplex metadata program accounts ([#2110](https://github.com/coral-xyz/anchor/pull/2110)).
 
 ## [0.25.0] - 2022-07-05
 
