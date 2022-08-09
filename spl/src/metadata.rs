@@ -1,9 +1,10 @@
 use anchor_lang::context::CpiContext;
-use anchor_lang::{Accounts, Result, ToAccountInfos};
+use anchor_lang::{Accounts, AnchorDeserialize, Result, ToAccountInfos};
 use mpl_token_metadata::state::DataV2;
 use mpl_token_metadata::ID;
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
+use std::ops::Deref;
 
 #[derive(Clone)]
 pub struct Metadata;
@@ -182,4 +183,35 @@ pub struct MintNewEditionFromMasterEditionViaToken<'info> {
     // helper pass in the `edition_mark_pda` directly.
     //
     pub metadata_mint: AccountInfo<'info>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct MetadataAccount(mpl_token_metadata::state::Metadata);
+
+impl MetadataAccount {
+    pub const LEN: usize = mpl_token_metadata::state::MAX_METADATA_LEN;
+}
+
+impl anchor_lang::AccountDeserialize for MetadataAccount {
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+        mpl_token_metadata::state::Metadata::deserialize(buf)
+            .map(MetadataAccount)
+            .map_err(Into::into)
+    }
+}
+
+impl anchor_lang::AccountSerialize for MetadataAccount {}
+
+impl anchor_lang::Owner for MetadataAccount {
+    fn owner() -> Pubkey {
+        ID
+    }
+}
+
+impl Deref for MetadataAccount {
+    type Target = mpl_token_metadata::state::Metadata;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
