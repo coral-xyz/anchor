@@ -4,9 +4,7 @@ import {
   PublicKey,
   Keypair,
   SystemProgram,
-  Connection,
-  clusterApiUrl,
-} from "@solana/web3.js";
+  } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import { assert } from "chai";
 import { Escrow } from "../target/types/escrow";
