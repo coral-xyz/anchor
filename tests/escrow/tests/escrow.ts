@@ -1,6 +1,12 @@
 import * as anchor from "@project-serum/anchor";
 import { Program, BN, IdlAccounts } from "@project-serum/anchor";
-import { PublicKey, Keypair, SystemProgram } from "@solana/web3.js";
+import {
+  PublicKey,
+  Keypair,
+  SystemProgram,
+  Connection,
+  clusterApiUrl,
+} from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import { assert } from "chai";
 import { Escrow } from "../target/types/escrow";
@@ -9,7 +15,6 @@ type EscrowAccount = IdlAccounts<Escrow>["escrowAccount"];
 
 describe("escrow", () => {
   const provider = anchor.AnchorProvider.env();
-  anchor.setProvider(provider);
 
   const program = anchor.workspace.Escrow as Program<Escrow>;
 
@@ -24,16 +29,21 @@ describe("escrow", () => {
   const takerAmount = 1000;
   const initializerAmount = 500;
 
-  const escrowAccount = Keypair.generate();
   const payer = Keypair.generate();
   const mintAuthority = Keypair.generate();
 
-  it("Initialise escrow state", async () => {
-    // Airdropping tokens to a payer.
-    await provider.connection.confirmTransaction(
-      await provider.connection.requestAirdrop(payer.publicKey, 10000000000),
-      "confirmed"
+  beforeEach(async () => {
+    const airdropSignature = await provider.connection.requestAirdrop(
+      payer.publicKey,
+      10000000000
     );
+    const latestBlockHash = await provider.connection.getLatestBlockhash();
+    // Airdropping tokens to a payer.
+    await provider.connection.confirmTransaction({
+      blockhash: latestBlockHash.blockhash,
+      lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+      signature: airdropSignature,
+    });
 
     mintA = await Token.createMint(
       provider.connection,
@@ -76,12 +86,13 @@ describe("escrow", () => {
       [mintAuthority],
       takerAmount
     );
+  });
 
+  it("Initialise escrow state", async () => {
     let _initializerTokenAccountA = await mintA.getAccountInfo(
       initializerTokenAccountA
     );
     let _takerTokenAccountB = await mintB.getAccountInfo(takerTokenAccountB);
-
     assert.strictEqual(
       _initializerTokenAccountA.amount.toNumber(),
       initializerAmount
@@ -90,21 +101,20 @@ describe("escrow", () => {
   });
 
   it("Initialize escrow", async () => {
-    await program.rpc.initializeEscrow(
-      new BN(initializerAmount),
-      new BN(takerAmount),
-      {
-        accounts: {
-          initializer: provider.wallet.publicKey,
-          initializerDepositTokenAccount: initializerTokenAccountA,
-          initializerReceiveTokenAccount: initializerTokenAccountB,
-          escrowAccount: escrowAccount.publicKey,
-          systemProgram: SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        },
-        signers: [escrowAccount],
-      }
-    );
+    const escrowAccount = Keypair.generate();
+
+    await program.methods
+      .initializeEscrow(new BN(initializerAmount), new BN(takerAmount))
+      .accounts({
+        initializer: provider.wallet.publicKey,
+        initializerDepositTokenAccount: initializerTokenAccountA,
+        initializerReceiveTokenAccount: initializerTokenAccountB,
+        escrowAccount: escrowAccount.publicKey,
+        systemProgram: SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([escrowAccount])
+      .rpc();
 
     // Get the PDA that is assigned authority to token account.
     const [_pda, _nonce] = await PublicKey.findProgramAddress(
@@ -146,8 +156,23 @@ describe("escrow", () => {
   });
 
   it("Exchange escrow", async () => {
-    await program.rpc.exchange({
-      accounts: {
+    const escrowAccount = Keypair.generate();
+
+    await program.methods
+      .initializeEscrow(new BN(initializerAmount), new BN(takerAmount))
+      .accounts({
+        initializer: provider.wallet.publicKey,
+        initializerDepositTokenAccount: initializerTokenAccountA,
+        initializerReceiveTokenAccount: initializerTokenAccountB,
+        escrowAccount: escrowAccount.publicKey,
+        systemProgram: SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([escrowAccount])
+      .rpc();
+    await program.methods
+      .exchange()
+      .accounts({
         taker: provider.wallet.publicKey,
         takerDepositTokenAccount: takerTokenAccountB,
         takerReceiveTokenAccount: takerTokenAccountA,
@@ -157,8 +182,8 @@ describe("escrow", () => {
         escrowAccount: escrowAccount.publicKey,
         pdaAccount: pda,
         tokenProgram: TOKEN_PROGRAM_ID,
-      },
-    });
+      })
+      .rpc();
 
     let _takerTokenAccountA = await mintA.getAccountInfo(takerTokenAccountA);
     let _takerTokenAccountB = await mintB.getAccountInfo(takerTokenAccountB);
@@ -184,55 +209,54 @@ describe("escrow", () => {
     assert.strictEqual(_takerTokenAccountB.amount.toNumber(), 0);
   });
 
-  let newEscrow = Keypair.generate();
-
   it("Initialize escrow and cancel escrow", async () => {
-    // Put back tokens into initializer token A account.
-    await mintA.mintTo(
-      initializerTokenAccountA,
-      mintAuthority.publicKey,
-      [mintAuthority],
-      initializerAmount
-    );
+    const escrowAccount = Keypair.generate();
 
-    await program.rpc.initializeEscrow(
-      new BN(initializerAmount),
-      new BN(takerAmount),
-      {
-        accounts: {
-          initializer: provider.wallet.publicKey,
-          initializerDepositTokenAccount: initializerTokenAccountA,
-          initializerReceiveTokenAccount: initializerTokenAccountB,
-          escrowAccount: newEscrow.publicKey,
-          systemProgram: SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        },
-        signers: [newEscrow],
-      }
-    );
+    await program.methods
+      .initializeEscrow(new BN(initializerAmount), new BN(takerAmount))
+      .accounts({
+        initializer: provider.wallet.publicKey,
+        initializerDepositTokenAccount: initializerTokenAccountA,
+        initializerReceiveTokenAccount: initializerTokenAccountB,
+        escrowAccount: escrowAccount.publicKey,
+        systemProgram: SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([escrowAccount])
+      .rpc();
 
     let _initializerTokenAccountA = await mintA.getAccountInfo(
       initializerTokenAccountA
     );
 
+    // Get the PDA that is assigned authority to token account.
+    const [_pda, _nonce] = await PublicKey.findProgramAddress(
+      [Buffer.from(anchor.utils.bytes.utf8.encode("escrow"))],
+      program.programId
+    );
+
+    pda = _pda;
+
     // Check that the new owner is the PDA.
     assert.isTrue(_initializerTokenAccountA.owner.equals(pda));
 
     // Cancel the escrow.
-    await program.rpc.cancelEscrow({
-      accounts: {
+    await program.methods
+      .cancelEscrow()
+      .accounts({
         initializer: provider.wallet.publicKey,
         pdaDepositTokenAccount: initializerTokenAccountA,
         pdaAccount: pda,
-        escrowAccount: newEscrow.publicKey,
+        escrowAccount: escrowAccount.publicKey,
         tokenProgram: TOKEN_PROGRAM_ID,
-      },
-    });
+      })
+      .rpc();
 
     // Check the final owner should be the provider public key.
     _initializerTokenAccountA = await mintA.getAccountInfo(
       initializerTokenAccountA
     );
+
     assert.isTrue(
       _initializerTokenAccountA.owner.equals(provider.wallet.publicKey)
     );
@@ -244,3 +268,4 @@ describe("escrow", () => {
     );
   });
 });
+
