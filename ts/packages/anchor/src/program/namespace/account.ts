@@ -346,16 +346,8 @@ export class AccountClient<
   ): Promise<TransactionInstruction> {
     const size = this.size;
 
-    // @ts-expect-error
-    if (this._provider.wallet === undefined) {
-      throw new Error(
-        "This function requires the Provider interface implementor to have a 'wallet' field."
-      );
-    }
-
     return SystemProgram.createAccount({
-      // @ts-expect-error
-      fromPubkey: this._provider.wallet.publicKey,
+      fromPubkey: this._provider.publicKey,
       newAccountPubkey: signer.publicKey,
       space: sizeOverride ?? size,
       lamports:
