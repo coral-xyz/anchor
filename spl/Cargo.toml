@@ -8,7 +8,7 @@ license = "Apache-2.0"
 description = "CPI clients for SPL programs"
 
 [features]
-default = ["mint", "token", "associated_token", "metadata"]
+default = ["mint", "token", "associated_token"]
 mint = []
 token = ["spl-token"]
 associated_token = ["spl-associated-token-account"]

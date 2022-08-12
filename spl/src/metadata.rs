@@ -172,6 +172,7 @@ pub fn mint_new_edition_from_master_edition_via_token<'info>(
 
 pub fn set_collection_size<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, SetCollectionSize<'info>>,
+    collection_authority_record: Option<Pubkey>,
     size: u64,
 ) -> Result<()> {
     let ix = mpl_token_metadata::instruction::set_collection_size(
@@ -179,7 +180,7 @@ pub fn set_collection_size<'info>(
         *ctx.accounts.metadata.key,
         *ctx.accounts.update_authority.key,
         *ctx.accounts.mint.key,
-        None,
+        collection_authority_record,
         size,
     );
 
