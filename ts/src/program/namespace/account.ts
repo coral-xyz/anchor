@@ -1,3 +1,4 @@
+import { Buffer } from "buffer";
 import camelCase from "camelcase";
 import EventEmitter from "eventemitter3";
 import {
@@ -157,6 +158,26 @@ export class AccountClient<
   }
 
   /**
+   * Returns a deserialized program derived account and its PublicKey.
+   *
+   * @param seeds The seeds of the program derived account to fetch.
+   */
+  async fetchPda(
+    seeds: (Buffer | Uint8Array)[],
+    commitment?: Commitment
+  ): Promise<[T, PublicKey]> {
+    const [address] = await PublicKey.findProgramAddress(
+      seeds,
+      this._programId
+    );
+    const data = await this.fetchNullable(address, commitment);
+    if (data === null) {
+      throw new Error(`Account does not exist ${address.toString()}`);
+    }
+    return [data, address];
+  }
+
+  /**
    * Returns multiple deserialized accounts.
    * Accounts not found or with wrong discriminator are returned as null.
    *
@@ -182,6 +203,45 @@ export class AccountClient<
         account?.account.data
       );
     });
+  }
+
+  /**
+   * Returns multiple deserialized program derived accounts and their PublicKeys.
+   * Accounts not found or with wrong discriminator are returned as null.
+   *
+   * @param seedsArray The array of seeds of the accounts to fetch.
+   */
+  async fetchMultiplePda(
+    seedsArray: Array<Buffer | Uint8Array>[],
+    commitment?: Commitment
+  ): Promise<[(Object | null)[], PublicKey[]]> {
+    const addresses = (
+      await Promise.all(
+        seedsArray.map((seeds) =>
+          PublicKey.findProgramAddress(seeds, this._programId)
+        )
+      )
+    ).map(([address]) => address);
+
+    const accounts = await rpcUtil.getMultipleAccounts(
+      this._provider.connection,
+      addresses.map(translateAddress),
+      commitment
+    );
+
+    // Decode accounts where discriminator is correct, null otherwise
+    return [
+      accounts.map((account) => {
+        if (account == null) {
+          return null;
+        }
+        return this._coder.accounts.decode(
+          this._idlAccount.name,
+          account?.account.data
+        );
+      }),
+      addresses,
+    ];
   }
 
   /**
