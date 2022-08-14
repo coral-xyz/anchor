@@ -23,6 +23,7 @@ pub mod interest_bearing_wrapper {
             &[
                 ctx.accounts.mint.clone(),
                 ctx.accounts.token_program.clone(),
+                ctx.accounts.rent.clone(),
             ], 
             &ctx.signer_seeds
         ).map_err(Into::into)
@@ -56,6 +57,8 @@ pub mod interest_bearing_wrapper {
 pub struct Initialize<'info>{
     pub mint: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
+    pub rent: AccountInfo<'info>,
+
 
 }
 #[derive(Accounts)]
