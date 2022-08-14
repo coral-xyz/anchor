@@ -58,8 +58,6 @@ pub struct Initialize<'info>{
     pub mint: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
     pub rent: AccountInfo<'info>,
-
-
 }
 #[derive(Accounts)]
 pub struct Update<'info>{
