@@ -5,6 +5,7 @@ export { default as BN } from "bn.js";
 export * as web3 from "@solana/web3.js";
 export {
   default as Provider,
+  Wallet as WalletAdaptor,
   getProvider,
   setProvider,
   AnchorProvider,

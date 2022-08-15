@@ -121,12 +121,19 @@ async function getMultipleAccountsCore(
 export async function simulateTransaction(
   connection: Connection,
   transaction: Transaction,
-  signers?: Array<Signer>,
+  signers?: Array<Signer|Wallet>,
   commitment?: Commitment,
   includeAccounts?: boolean | Array<PublicKey>
 ): Promise<RpcResponseAndContext<SimulatedTransactionResponse>> {
   if (signers && signers.length > 0) {
-    transaction.sign(...signers);
+    (signers ?? []).forEach(async (signer) => {
+      if (signer["publicKey"] != null && signer["secretKey"] != null) {
+        transaction.partialSign(signer as Signer);
+      } else {
+        transaction = await (signer as Wallet).signTransaction(transaction);
+      }
+    });
+
   }
 
   // @ts-expect-error
