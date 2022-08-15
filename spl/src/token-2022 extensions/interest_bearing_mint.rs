@@ -1,14 +1,15 @@
-use anchor_lang::prelude::*;
+use anchor_lang::solana_program::account_info::AccountInfo;
+use anchor_lang::solana_program::pubkey::Pubkey;
+use anchor_lang::{context::CpiContext, Accounts};
+use anchor_lang::{solana_program::program::invoke_signed, Result};
 use spl_token_2022::extension::interest_bearing_mint::{self};
-use anchor_lang::solana_program::program::invoke_signed;
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 
-#[program]
-pub mod interest_bearing_wrapper {
+
+pub mod interest_bearing {
     use super::*;
     pub fn initialize<'a, 'b, 'c, 'info>(
-        ctx: CpiContext<'a, 'b, 'c, 'info, Initialize<'info>>,
+        ctx: CpiContext<'a,'b,'c,'info, Initialize<'info>>,
         rate_authority: Option<Pubkey>,
         rate: i16,
     ) -> Result<()> {
@@ -23,7 +24,6 @@ pub mod interest_bearing_wrapper {
             &[
                 ctx.accounts.mint.clone(),
                 ctx.accounts.token_program.clone(),
-                ctx.accounts.rent.clone(),
             ], 
             &ctx.signer_seeds
         ).map_err(Into::into)
@@ -51,13 +51,14 @@ pub mod interest_bearing_wrapper {
             &ctx.signer_seeds,
         ).map_err(Into::into)
     }
+    
 }
 
 #[derive(Accounts)]
 pub struct Initialize<'info>{
     pub mint: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
-    pub rent: AccountInfo<'info>,
+
 }
 #[derive(Accounts)]
 pub struct Update<'info>{
