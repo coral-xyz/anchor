@@ -3,6 +3,7 @@ use crate::parser::program::ctx_accounts_ident;
 use crate::{FallbackFn, Ix, IxArg, IxReturn};
 use syn::parse::{Error as ParseError, Result as ParseResult};
 use syn::spanned::Spanned;
+use syn::Lit;
 
 // Parse all non-state ix handlers from the program mod definition.
 pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<(Vec<Ix>, Option<FallbackFn>)> {
@@ -25,11 +26,13 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<(Vec<Ix>, Option<Fallbac
         .map(|method: &syn::ItemFn| {
             let (ctx, args) = parse_args(method)?;
             let docs = docs::parse(&method.attrs);
+            let discriminator = parse_discriminator(&method.attrs)?;
             let returns = parse_return(method)?;
             let anchor_ident = ctx_accounts_ident(&ctx.raw_arg)?;
             Ok(Ix {
                 raw_method: method.clone(),
                 ident: method.sig.ident.clone(),
+                discriminator,
                 docs,
                 args,
                 anchor_ident,
@@ -126,6 +129,35 @@ pub fn parse_return(method: &syn::ItemFn) -> ParseResult<IxReturn> {
         _ => Err(ParseError::new(
             method.sig.output.span(),
             "expected a return type",
+        )),
+    }
+}
+
+pub fn parse_discriminator(attrs: &[syn::Attribute]) -> ParseResult<Option<Vec<u8>>> {
+    let mut discriminators = Vec::new();
+
+    for attr in attrs {
+        if attr.path.segments.last().unwrap().ident == "discriminator" {
+            if let Ok(Lit::Int(dis)) = attr.parse_args::<Lit>() {
+                if let Ok(value) = dis.base10_parse::<u64>() {
+                    discriminators.push((attr.span(), value));
+                    continue;
+                }
+            }
+
+            return Err(ParseError::new(
+                attr.span(),
+                "Discriminator value like `#[discriminator(0xdeadbeeffeedcafe)]` expected",
+            ));
+        }
+    }
+
+    match discriminators.len() {
+        0 => Ok(None),
+        1 => Ok(Some(discriminators[0].1.to_be_bytes().to_vec())),
+        _ => Err(ParseError::new(
+            discriminators[1].0,
+            "More than one discriminator function found",
         )),
     }
 }
