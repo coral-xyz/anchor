@@ -121,7 +121,7 @@ async function getMultipleAccountsCore(
 export async function simulateTransaction(
   connection: Connection,
   transaction: Transaction,
-  signers?: Array<Signer|Wallet>,
+  signers?: Array<Signer | Wallet>,
   commitment?: Commitment,
   includeAccounts?: boolean | Array<PublicKey>
 ): Promise<RpcResponseAndContext<SimulatedTransactionResponse>> {
@@ -133,7 +133,6 @@ export async function simulateTransaction(
         transaction = await (signer as Wallet).signTransaction(transaction);
       }
     });
-
   }
 
   // @ts-expect-error
