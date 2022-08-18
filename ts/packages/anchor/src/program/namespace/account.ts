@@ -41,15 +41,6 @@ export default class AccountFactory {
   }
 }
 
-type NullableIdlAccount<
-  IDL extends Idl,
-  K extends keyof AllAccountsMap<IDL> | undefined = undefined
-> = IDL["accounts"] extends undefined
-  ? IdlAccountDef
-  : K extends undefined
-  ? NonNullable<IDL["accounts"]>[number]
-  : NonNullable<IDL["accounts"]>[number] & { name: K };
-
 /**
  * The namespace provides handles to an [[AccountClient]] object for each
  * account in a program.
@@ -73,13 +64,13 @@ type NullableIdlAccount<
 export type AccountNamespace<IDL extends Idl = Idl> = {
   [K in keyof AllAccountsMap<IDL>]: AccountClient<
     IDL,
-    NullableIdlAccount<IDL, K>
+    NonNullable<IDL["accounts"]>[number] & { name: K }
   >;
 };
 
 export class AccountClient<
   IDL extends Idl = Idl,
-  A extends IdlAccountDef = IdlAccountDef,
+  A extends IdlAccountDef = NonNullable<IDL["accounts"]>[number],
   T = TypeDef<A, IdlTypes<IDL>>
 > {
   /**
