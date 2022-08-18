@@ -157,14 +157,27 @@ type TypeDefDictionary<T extends IdlTypeDef[], Defined> = {
   [K in T[number]["name"]]: TypeDef<T[number] & { name: K }, Defined>;
 };
 
-export type IdlTypes<T extends Idl> = TypeDefDictionary<
-  NonNullable<T["types"]>,
-  Record<string, never>
+/**
+ * TypeDefDictionary allowing IdlTypes which reference each other
+ */
+type BootstrapIdlTypes<T extends IdlTypeDef[]> = {
+  [K in T[number]["name"]]: TypeDef<
+    T[number] & { name: K },
+    {
+      [D in T[number]["name"]]: D extends K
+        ? never
+        : TypeDef<T[number] & { name: D }, Record<string, never>>;
+    }
+  >;
+};
+
+export type IdlTypes<T extends Idl> = BootstrapIdlTypes<
+  NonNullable<T["types"]>
 >;
 
 export type IdlAccounts<T extends Idl> = TypeDefDictionary<
   NonNullable<T["accounts"]>,
-  Record<string, never>
+  IdlTypes<T>
 >;
 
 export type IdlErrorInfo<IDL extends Idl> = NonNullable<IDL["errors"]>[number];
