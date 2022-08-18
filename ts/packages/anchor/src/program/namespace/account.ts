@@ -10,10 +10,10 @@ import {
   AccountInfo,
 } from "@solana/web3.js";
 import Provider, { getProvider } from "../../provider.js";
-import { Idl, IdlAccountDef } from "../../idl.js";
+import { Idl, IdlAccountDef, IdlTypeDef } from "../../idl.js";
 import { Coder, BorshCoder } from "../../coder/index.js";
 import { Subscription, Address, translateAddress } from "../common.js";
-import { AllAccountsMap, IdlTypes, TypeDef } from "./types.js";
+import { AllAccountsMap, IdlAccounts, IdlTypes, TypeDef } from "./types.js";
 import * as pubkeyUtil from "../../utils/pubkey.js";
 import * as rpcUtil from "../../utils/rpc.js";
 
@@ -28,7 +28,7 @@ export default class AccountFactory {
 
     idl.accounts?.forEach((idlAccount) => {
       const name = camelCase(idlAccount.name);
-      accountFns[name] = new AccountClient<IDL>(
+      accountFns[name] = new AccountClient<IDL, typeof idlAccount>(
         idl,
         idlAccount,
         programId,
@@ -41,9 +41,14 @@ export default class AccountFactory {
   }
 }
 
-type NullableIdlAccount<IDL extends Idl> = IDL["accounts"] extends undefined
+type NullableIdlAccount<
+  IDL extends Idl,
+  K extends keyof AllAccountsMap<IDL> | undefined = undefined
+> = IDL["accounts"] extends undefined
   ? IdlAccountDef
-  : NonNullable<IDL["accounts"]>[number];
+  : K extends undefined
+  ? NonNullable<IDL["accounts"]>[number]
+  : NonNullable<IDL["accounts"]>[number] & { name: K };
 
 /**
  * The namespace provides handles to an [[AccountClient]] object for each
@@ -66,14 +71,15 @@ type NullableIdlAccount<IDL extends Idl> = IDL["accounts"] extends undefined
  * For the full API, see the [[AccountClient]] reference.
  */
 export type AccountNamespace<IDL extends Idl = Idl> = {
-  [M in keyof AllAccountsMap<IDL>]: AccountClient<IDL>;
+  [K in keyof AllAccountsMap<IDL>]: AccountClient<
+    IDL,
+    NullableIdlAccount<IDL, K>
+  >;
 };
 
 export class AccountClient<
   IDL extends Idl = Idl,
-  A extends NullableIdlAccount<IDL> = IDL["accounts"] extends undefined
-    ? IdlAccountDef
-    : NonNullable<IDL["accounts"]>[number],
+  A extends IdlAccountDef = IdlAccountDef,
   T = TypeDef<A, IdlTypes<IDL>>
 > {
   /**
