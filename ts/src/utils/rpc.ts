@@ -126,13 +126,13 @@ export async function simulateTransaction(
   includeAccounts?: boolean | Array<PublicKey>
 ): Promise<RpcResponseAndContext<SimulatedTransactionResponse>> {
   if (signers && signers.length > 0) {
-    (signers ?? []).forEach(async (signer) => {
+    for (const signer of signers) {
       if (signer["publicKey"] != null && signer["secretKey"] != null) {
         transaction.partialSign(signer as Signer);
       } else {
         transaction = await (signer as Wallet).signTransaction(transaction);
       }
-    });
+    }
   }
 
   // @ts-expect-error

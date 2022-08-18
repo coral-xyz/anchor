@@ -117,13 +117,13 @@ export class AnchorProvider implements Provider {
   }
 
   async addSignatures(tx: Transaction, signers: (Signer | Wallet)[]) {
-    (signers ?? []).forEach(async (signer) => {
+    for (const signer of signers) {
       if (signer["publicKey"] != null && signer["secretKey"] != null) {
         tx.partialSign(signer as Signer);
       } else {
         tx = await (signer as Wallet).signTransaction(tx);
       }
-    });
+    }
   }
 
   /**
