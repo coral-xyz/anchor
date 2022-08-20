@@ -294,7 +294,6 @@ export class AccountClient<
   ): Promise<TransactionInstruction> {
     const size = this.size;
 
-    // @ts-expect-error
     if (this._provider.publicKey === undefined) {
       throw new Error(
         "This function requires the Provider interface implementor to have a 'publicKey' field."
@@ -302,7 +301,6 @@ export class AccountClient<
     }
 
     return SystemProgram.createAccount({
-      // @ts-expect-error
       fromPubkey: this._provider.publicKey,
       newAccountPubkey: signer.publicKey,
       space: sizeOverride ?? size,
