@@ -114,9 +114,6 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfos<'in
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> TryToAccountInfos<'info>
     for CpiState<'info, T>
 {
-    fn try_to_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
-        self.to_account_infos()
-    }
 }
 
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> TryToAccountInfo<'info>

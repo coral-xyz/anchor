@@ -387,9 +387,6 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> ToAccountI
 impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> TryToAccountInfos<'info>
     for Account<'info, T>
 {
-    fn try_to_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
-        self.to_account_infos()
-    }
 }
 
 impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AsRef<AccountInfo<'info>>

@@ -228,11 +228,7 @@ impl<'info, T: ZeroCopy> ToAccountInfos<'info> for Loader<'info, T> {
 }
 
 #[allow(deprecated)]
-impl<'info, T: ZeroCopy> TryToAccountInfos<'info> for Loader<'info, T> {
-    fn try_to_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
-        self.to_account_infos()
-    }
-}
+impl<'info, T: ZeroCopy> TryToAccountInfos<'info> for Loader<'info, T> {}
 
 impl<'info, T: ZeroCopy> TryToAccountInfo<'info> for Loader<'info, T> {
     fn try_to_account_info(&self) -> Result<AccountInfo<'info>> {

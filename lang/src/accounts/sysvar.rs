@@ -97,11 +97,7 @@ impl<'info, T: solana_program::sysvar::Sysvar> ToAccountInfos<'info> for Sysvar<
     }
 }
 
-impl<'info, T: solana_program::sysvar::Sysvar> TryToAccountInfos<'info> for Sysvar<'info, T> {
-    fn try_to_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
-        self.to_account_infos()
-    }
-}
+impl<'info, T: solana_program::sysvar::Sysvar> TryToAccountInfos<'info> for Sysvar<'info, T> {}
 
 impl<'info, T: solana_program::sysvar::Sysvar> TryToAccountInfo<'info> for Sysvar<'info, T> {
     fn try_to_account_info(&self) -> Result<AccountInfo<'info>> {

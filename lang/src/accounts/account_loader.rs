@@ -280,11 +280,7 @@ impl<'info, T: ZeroCopy + Owner> ToAccountInfos<'info> for AccountLoader<'info, 
     }
 }
 
-impl<'info, T: ZeroCopy + Owner> TryToAccountInfos<'info> for AccountLoader<'info, T> {
-    fn try_to_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
-        self.to_account_infos()
-    }
-}
+impl<'info, T: ZeroCopy + Owner> TryToAccountInfos<'info> for AccountLoader<'info, T> {}
 
 impl<'info, T: ZeroCopy + Owner> TryToAccountInfo<'info> for AccountLoader<'info, T> {
     fn try_to_account_info(&self) -> Result<AccountInfo<'info>> {
