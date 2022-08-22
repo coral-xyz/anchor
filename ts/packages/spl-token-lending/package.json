@@ -1,12 +1,12 @@
 {
   "name": "@project-serum/spl-token-lending",
-  "description": "Solana Program Library Token Lending",
+  "description": "Anchor client for Solana Program Library Token Lending",
   "version": "0.2.0",
-  "author": "Solana Maintainers <maintainers@solana.foundation>",
+  "author": "acheron <acheroncrypto@gmail.com>",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/solana-labs/solana-program-library.git"
+    "url": "https://github.com/coral-xyz/anchor.git"
   },
   "files": [
     "dist"

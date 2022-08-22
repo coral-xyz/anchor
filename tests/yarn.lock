@@ -50,7 +50,7 @@
     snake-case "^3.0.4"
     toml "^3.0.0"
 
-"@project-serum/anchor@file:../ts/anchor":
+"@project-serum/anchor@file:../ts/packages/anchor":
   version "0.25.0"
   dependencies:
     "@project-serum/borsh" "^0.2.5"
