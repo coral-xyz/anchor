@@ -2,7 +2,7 @@
 use crate::error::ErrorCode;
 use crate::{
     Accounts, AccountsExit, Key, Result, ToAccountInfo, ToAccountInfos, ToAccountMetas,
-    TryToAccountInfo, TryToAccountInfos,
+    TryToAccountInfo,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
@@ -93,8 +93,6 @@ impl<'info> ToAccountInfos<'info> for Signer<'info> {
         vec![self.info.clone()]
     }
 }
-
-impl<'info> TryToAccountInfos<'info> for Signer<'info> {}
 
 impl<'info> TryToAccountInfo<'info> for Signer<'info> {
     fn try_to_account_info(&self) -> Result<AccountInfo<'info>> {

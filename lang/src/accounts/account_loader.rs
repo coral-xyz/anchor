@@ -4,7 +4,7 @@ use crate::bpf_writer::BpfWriter;
 use crate::error::{Error, ErrorCode};
 use crate::{
     Accounts, AccountsClose, AccountsExit, Key, Owner, Result, ToAccountInfo, ToAccountInfos,
-    ToAccountMetas, TryToAccountInfo, TryToAccountInfos, ZeroCopy,
+    ToAccountMetas, TryToAccountInfo, ZeroCopy,
 };
 use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;
@@ -279,8 +279,6 @@ impl<'info, T: ZeroCopy + Owner> ToAccountInfos<'info> for AccountLoader<'info, 
         vec![self.acc_info.clone()]
     }
 }
-
-impl<'info, T: ZeroCopy + Owner> TryToAccountInfos<'info> for AccountLoader<'info, T> {}
 
 impl<'info, T: ZeroCopy + Owner> TryToAccountInfo<'info> for AccountLoader<'info, T> {
     fn try_to_account_info(&self) -> Result<AccountInfo<'info>> {
