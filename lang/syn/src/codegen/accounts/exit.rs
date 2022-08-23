@@ -1,4 +1,3 @@
-use crate::accounts_codegen::constraints::generate_optional_check;
 use crate::codegen::accounts::{generics, ParsedGenerics};
 use crate::{AccountField, AccountsStruct};
 use quote::quote;
