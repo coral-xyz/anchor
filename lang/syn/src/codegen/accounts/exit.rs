@@ -30,18 +30,27 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 let name_str = ident.to_string();
                 if f.constraints.is_close() {
                     let close_target = &f.constraints.close.as_ref().unwrap().sol_dest;
-                    let close_target_optional_check = generate_optional_check(
-                        accs,
-                        quote! {#close_target},
-                        close_target.to_string(),
-                    );
+                    let close_target_optional_info = if accs.is_field_optional(close_target) {
+                        let close_target_name = close_target.to_string();
+                        quote! {
+                            let close_target_info = if let Some(close_target) = &self.#close_target {
+                                close_target.to_account_info()
+                            } else {
+                                return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintAccountIsNone).with_account_name(#close_target_name));
+                            };
+                        }
+                    } else {
+                        quote! {
+                            let close_target_info = self.#close_target.to_account_info();
+                        }
+                    };
 
                     quote! {
                         {
-                            #close_target_optional_check
+                            #close_target_optional_info
                             anchor_lang::AccountsClose::close(
                                 &self.#ident,
-                                self.#close_target.to_account_info(),
+                                close_target_info,
                             ).map_err(|e| e.with_account_name(#name_str))?;
                         }
                     }
