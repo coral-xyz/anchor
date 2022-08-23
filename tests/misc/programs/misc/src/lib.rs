@@ -1,6 +1,8 @@
 //! Misc example is a catchall program for testing unrelated features.
 //! It's not too instructive/coherent by itself, so please see other examples.
 
+#![feature(destructuring_assignment)]
+
 use account::MAX_SIZE;
 use anchor_lang::prelude::*;
 use context::*;

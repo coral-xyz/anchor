@@ -1,3 +1,5 @@
+#![feature(destructuring_assignment)]
+
 use anchor_lang::prelude::*;
 
 declare_id!("BZoppwWi6jMnydnUBEJzotgEXHwLr3b3NramJgZtWeF2");
