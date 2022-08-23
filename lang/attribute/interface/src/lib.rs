@@ -197,7 +197,7 @@ pub fn interface(
             let sighash_tts: proc_macro2::TokenStream =
                 format!("{:?}", sighash_arr).parse().unwrap();
             quote! {
-                pub fn #method_name<'a,'b, 'c, 'info, T: anchor_lang::Accounts<'info> + anchor_lang::ToAccountMetas + anchor_lang::ToAccountInfos<'info> + anchor_lang::TryToAccountInfos<'info>>(
+                pub fn #method_name<'a,'b, 'c, 'info, T: anchor_lang::Accounts<'info> + anchor_lang::ToAccountMetas + anchor_lang::ToAccountInfos<'info>>(
                     ctx: anchor_lang::context::CpiContext<'a, 'b, 'c, 'info, T>,
                     #(#args),*
                 ) -> anchor_lang::Result<()> {

@@ -16,7 +16,7 @@ use solana_program::pubkey::Pubkey;
 
 use crate::{
     error::ErrorCode, Accounts, AccountsClose, AccountsExit, Result, ToAccountInfo, ToAccountInfos,
-    ToAccountMetas, TryKey, TryToAccountInfo, TryToAccountInfos,
+    ToAccountMetas, TryKey, TryToAccountInfo,
 };
 
 impl<'info, T: Accounts<'info>> Accounts<'info> for Option<T> {
@@ -47,9 +47,7 @@ impl<'info, T: ToAccountInfos<'info>> ToAccountInfos<'info> for Option<T> {
             None => panic!("Cannot run `to_account_infos` on None"),
         }
     }
-}
 
-impl<'info, T: ToAccountInfos<'info>> TryToAccountInfos<'info> for Option<T> {
     fn try_to_account_infos(&self, program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
         match self {
             Some(_) => self.to_account_infos(),
