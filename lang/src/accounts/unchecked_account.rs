@@ -2,10 +2,7 @@
 //! that no checks are performed
 
 use crate::error::ErrorCode;
-use crate::{
-    Accounts, AccountsExit, Key, Result, ToAccountInfo, ToAccountInfos, ToAccountMetas,
-    TryToAccountInfo,
-};
+use crate::{Accounts, AccountsExit, Key, Result, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -54,12 +51,6 @@ impl<'info> ToAccountMetas for UncheckedAccount<'info> {
 impl<'info> ToAccountInfos<'info> for UncheckedAccount<'info> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         vec![self.0.clone()]
-    }
-}
-
-impl<'info> TryToAccountInfo<'info> for UncheckedAccount<'info> {
-    fn try_to_account_info(&self) -> Result<AccountInfo<'info>> {
-        Ok(self.to_account_info())
     }
 }
 

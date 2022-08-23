@@ -17,8 +17,8 @@ mod optional {
             data.data = value;
         }
         if let Some(data2) = optional2 {
-            if let Ok(optional_key) = optional.try_key() {
-                data2.optional1 = optional_key;
+            if let Some(optional) = optional {
+                data2.optional1 = optional.key();
             } else {
                 data2.optional1 = key;
             }
@@ -79,7 +79,7 @@ pub struct Realloc<'info> {
     pub optional1: Option<Account<'info, Data1>>,
     #[account(has_one = optional1)]
     pub optional2: Option<Account<'info, Data2>>,
-    pub system_program: Program<'info, System>,
+    pub system_program: Option<Program<'info, System>>,
 }
 
 #[derive(Accounts)]

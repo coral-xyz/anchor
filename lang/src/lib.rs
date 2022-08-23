@@ -142,12 +142,6 @@ where
     }
 }
 
-/// Transformation to an AccountInfo struct. This operation may fail. Intended for use with
-/// Optional accounts in order to bubble up Errors more easily
-pub trait TryToAccountInfo<'info> {
-    fn try_to_account_info(&self) -> Result<AccountInfo<'info>>;
-}
-
 /// A data structure that can be serialized and stored into account storage,
 /// i.e. an
 /// [`AccountInfo`](../solana_program/account_info/struct.AccountInfo.html#structfield.data)'s
@@ -243,17 +237,6 @@ impl Key for Pubkey {
     }
 }
 
-/// Defines the Pubkey of an account in an operation that may fail
-pub trait TryKey {
-    fn try_key(&self) -> Result<Pubkey>;
-}
-
-impl<T: Key> TryKey for T {
-    fn try_key(&self) -> Result<Pubkey> {
-        Ok(self.key())
-    }
-}
-
 /// The prelude contains all commonly used components of the crate.
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
@@ -267,7 +250,7 @@ pub mod prelude {
         require_neq, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source, state,
         system_program::System, zero_copy, AccountDeserialize, AccountSerialize, Accounts,
         AccountsExit, AnchorDeserialize, AnchorSerialize, Id, Key, Owner, ProgramData, Result,
-        ToAccountInfo, ToAccountInfos, ToAccountMetas, TryKey, TryToAccountInfo,
+        ToAccountInfo, ToAccountInfos, ToAccountMetas,
     };
     pub use anchor_attribute_error::*;
     pub use borsh;

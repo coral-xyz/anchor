@@ -1,3 +1,4 @@
+use crate::parser::tts_to_string;
 use codegen::accounts as accounts_codegen;
 use codegen::program as program_codegen;
 use parser::accounts as accounts_parser;
@@ -190,6 +191,18 @@ impl AccountsStruct {
         }
         false
     }
+
+    pub fn is_field_optional<T: quote::ToTokens>(&self, field: &T) -> bool {
+        let matching_field = self
+            .fields
+            .iter()
+            .find(|f| *f.ident() == tts_to_string(field));
+        if let Some(matching_field) = matching_field {
+            matching_field.is_optional()
+        } else {
+            false
+        }
+    }
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -247,7 +260,7 @@ impl Field {
         }
     }
 
-    pub fn ty_decl(&self, option_inner_ty: bool) -> proc_macro2::TokenStream {
+    pub fn ty_decl(&self, ignore_option: bool) -> proc_macro2::TokenStream {
         let account_ty = self.account_ty();
         let container_ty = self.container_ty();
         let inner_ty = match &self.ty {
@@ -298,7 +311,7 @@ impl Field {
                 #container_ty<#account_ty>
             },
         };
-        if self.is_optional && !option_inner_ty {
+        if self.is_optional && !ignore_option {
             quote! {
                 Option<#inner_ty>
             }
@@ -311,6 +324,8 @@ impl Field {
 
     // TODO: remove the option once `CpiAccount` is completely removed (not
     //       just deprecated).
+    // Ignores optional accounts. Optional account checks and handing should be done prior to this
+    // function being called.
     pub fn from_account_info(
         &self,
         kind: Option<&InitKind>,
@@ -329,9 +344,9 @@ impl Field {
             },
         };
         match &self.ty {
-            Ty::AccountInfo => quote! { #field.try_to_account_info()? },
+            Ty::AccountInfo => quote! { #field.to_account_info() },
             Ty::UncheckedAccount => {
-                quote! { UncheckedAccount::try_from(#field.try_to_account_info()?) }
+                quote! { UncheckedAccount::try_from(#field.to_account_info()) }
             }
             Ty::Account(AccountTy { boxed, .. }) => {
                 let stream = if checked {

@@ -105,6 +105,9 @@ pub enum ErrorCode {
     /// 2019 - A space constraint was violated
     #[msg("A space constraint was violated")]
     ConstraintSpace,
+    /// 2020 - A required account for the constraint is None
+    #[msg("A required account for the constraint is None")]
+    ConstraintAccountIsNone,
 
     // Require
     /// 2500 - A require expression was violated
@@ -184,12 +187,6 @@ pub enum ErrorCode {
     /// 3017 - The account was duplicated for more than one reallocation
     #[msg("The account was duplicated for more than one reallocation")]
     AccountDuplicateReallocs,
-    /// 3018 - Tried to get the key from None
-    #[msg("Tried to get the key from None")]
-    TryKeyOnNone,
-    /// 3019 - Tried to get `to_account_info` from None
-    #[msg("Tried to get the account info from None")]
-    TryToAccountInfoOnNone,
 
     // State.
     /// 4000 - The given state account does not have the correct address

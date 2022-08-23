@@ -1,3 +1,4 @@
+use crate::accounts_codegen::constraints::generate_optional_check;
 use crate::codegen::accounts::{generics, ParsedGenerics};
 use crate::{AccountField, AccountsStruct};
 use quote::quote;
@@ -29,11 +30,20 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 let name_str = ident.to_string();
                 if f.constraints.is_close() {
                     let close_target = &f.constraints.close.as_ref().unwrap().sol_dest;
+                    let close_target_optional_check = generate_optional_check(
+                        accs,
+                        quote! {#close_target},
+                        close_target.to_string(),
+                    );
+
                     quote! {
-                        anchor_lang::AccountsClose::close(
-                            &self.#ident,
-                            self.#close_target.try_to_account_info()?,
-                        ).map_err(|e| e.with_account_name(#name_str))?;
+                        {
+                            #close_target_optional_check
+                            anchor_lang::AccountsClose::close(
+                                &self.#ident,
+                                self.#close_target.to_account_info(),
+                            ).map_err(|e| e.with_account_name(#name_str))?;
+                        }
                     }
                 } else {
                     match f.constraints.is_mutable() {
