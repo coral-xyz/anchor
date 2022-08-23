@@ -65,9 +65,7 @@ pub type Result<T> = std::result::Result<T, error::Error>;
 /// maintain any invariants required for the program to run securely. In most
 /// cases, it's recommended to use the [`Accounts`](./derive.Accounts.html)
 /// derive macro to implement this trait.
-pub trait Accounts<'info>:
-    ToAccountMetas + ToAccountInfos<'info> + Sized
-{
+pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
     /// Returns the validated accounts struct. What constitutes "valid" is
     /// program dependent. However, users of these types should never have to
     /// worry about account substitution attacks. For example, if a program

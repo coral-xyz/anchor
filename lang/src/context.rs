@@ -212,8 +212,8 @@ where
     }
 }
 
-impl<'info, T: ToAccountInfos<'info> + ToAccountMetas>
-    ToAccountInfos<'info> for CpiContext<'_, '_, '_, 'info, T>
+impl<'info, T: ToAccountInfos<'info> + ToAccountMetas> ToAccountInfos<'info>
+    for CpiContext<'_, '_, '_, 'info, T>
 {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         // always uses try_account_infos in case there are optional accounts
