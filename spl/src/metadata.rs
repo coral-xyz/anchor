@@ -51,8 +51,8 @@ pub fn create_metadata_accounts_v2<'info>(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
         ctx.signer_seeds,
-    )?;
-    Ok(())
+    )
+    .map_err(Into::into)
 }
 
 pub fn create_metadata_accounts_v3<'info>(
@@ -93,8 +93,8 @@ pub fn create_metadata_accounts_v3<'info>(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
         ctx.signer_seeds,
-    )?;
-    Ok(())
+    )
+    .map_err(Into::into)
 }
 
 pub fn update_metadata_accounts_v2<'info>(
@@ -117,8 +117,8 @@ pub fn update_metadata_accounts_v2<'info>(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
         ctx.signer_seeds,
-    )?;
-    Ok(())
+    )
+    .map_err(Into::into)
 }
 
 pub fn create_master_edition_v3<'info>(
@@ -139,8 +139,8 @@ pub fn create_master_edition_v3<'info>(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
         ctx.signer_seeds,
-    )?;
-    Ok(())
+    )
+    .map_err(Into::into)
 }
 
 pub fn mint_new_edition_from_master_edition_via_token<'info>(
@@ -162,13 +162,12 @@ pub fn mint_new_edition_from_master_edition_via_token<'info>(
         *ctx.accounts.metadata_mint.key,
         edition,
     );
-
     solana_program::program::invoke_signed(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
         ctx.signer_seeds,
-    )?;
-    Ok(())
+    )
+    .map_err(Into::into)
 }
 
 pub fn set_collection_size<'info>(
@@ -184,13 +183,34 @@ pub fn set_collection_size<'info>(
         collection_authority_record,
         size,
     );
-
     solana_program::program::invoke_signed(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
         ctx.signer_seeds,
-    )?;
-    Ok(())
+    )
+    .map_err(Into::into)
+}
+
+pub fn verify_collection<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, VerifyCollection<'info>>,
+    collection_authority_record: Option<Pubkey>,
+) -> Result<()> {
+    let ix = mpl_token_metadata::instruction::verify_collection(
+        ID,
+        *ctx.accounts.metadata.key,
+        *ctx.accounts.collection_authority.key,
+        *ctx.accounts.payer.key,
+        *ctx.accounts.collection_mint.key,
+        *ctx.accounts.collection_metadata.key,
+        *ctx.accounts.collection_edition.key,
+        collection_authority_record,
+    );
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )
+    .map_err(Into::into)
 }
 
 #[derive(Accounts)]
@@ -266,6 +286,16 @@ pub struct SetCollectionSize<'info> {
     pub mint: AccountInfo<'info>,
     pub update_authority: AccountInfo<'info>,
     pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct VerifyCollection<'info> {
+    pub payer: AccountInfo<'info>,
+    pub metadata: AccountInfo<'info>,
+    pub collection_authority: AccountInfo<'info>,
+    pub collection_mint: AccountInfo<'info>,
+    pub collection_metadata: AccountInfo<'info>,
+    pub collection_edition: AccountInfo<'info>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
