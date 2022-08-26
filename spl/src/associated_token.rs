@@ -20,7 +20,27 @@ pub fn create<'info>(ctx: CpiContext<'_, '_, '_, 'info, Create<'info>>) -> Resul
             ctx.accounts.mint,
             ctx.accounts.system_program,
             ctx.accounts.token_program,
-            ctx.accounts.rent,
+        ],
+        ctx.signer_seeds,
+    )
+    .map_err(Into::into)
+}
+
+pub fn create_idempotent<'info>(ctx: CpiContext<'_, '_, '_, 'info, CreateIdemptotent<'info>>) -> Result<()> {
+    let ix = spl_associated_token_account::instruction::create_associated_token_account_idempotent(
+        ctx.accounts.payer.key,
+        ctx.accounts.authority.key,
+        ctx.accounts.mint.key,
+    );
+    solana_program::program::invoke_signed(
+        &ix,
+        &[
+            ctx.accounts.payer,
+            ctx.accounts.associated_token,
+            ctx.accounts.authority,
+            ctx.accounts.mint,
+            ctx.accounts.system_program,
+            ctx.accounts.token_program,
         ],
         ctx.signer_seeds,
     )
@@ -35,8 +55,9 @@ pub struct Create<'info> {
     pub mint: AccountInfo<'info>,
     pub system_program: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
-    pub rent: AccountInfo<'info>,
 }
+
+type CreateIdemptotent<'info> = Create<'info>;
 
 #[derive(Clone)]
 pub struct AssociatedToken;

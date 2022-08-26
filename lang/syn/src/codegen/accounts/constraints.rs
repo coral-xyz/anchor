@@ -497,7 +497,6 @@ fn generate_constraint_init_group(f: &Field, c: &ConstraintInitGroup) -> proc_ma
                             mint: #mint.to_account_info(),
                             system_program: system_program.to_account_info(),
                             token_program: token_program.to_account_info(),
-                            rent: rent.to_account_info(),
                         };
                         let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, cpi_accounts);
                         anchor_spl::associated_token::create(cpi_ctx)?;
