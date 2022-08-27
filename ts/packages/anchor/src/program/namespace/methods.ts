@@ -64,7 +64,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   private _signers: Array<Signer> = [];
   private _preInstructions: Array<TransactionInstruction> = [];
   private _postInstructions: Array<TransactionInstruction> = [];
-  private _accountsResolver: AccountsResolver<IDL, I>;
+  private _accountsResolver: AccountsResolver<IDL>;
   private _autoResolveAccounts: boolean = true;
 
   constructor(

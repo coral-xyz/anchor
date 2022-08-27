@@ -6,10 +6,9 @@ import { TOKEN_PROGRAM_ID, ASSOCIATED_PROGRAM_ID } from "../utils/token.js";
 import { AllInstructions } from "./namespace/types.js";
 import Provider from "../provider.js";
 import { AccountNamespace } from "./namespace/account.js";
-import { coder } from "../spl/token";
 
 // Populates a given accounts context with PDAs and common missing accounts.
-export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
+export class AccountsResolver<IDL extends Idl> {
   static readonly CONST_ACCOUNTS = {
     associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
     rent: SYSVAR_RENT_PUBKEY,
@@ -27,7 +26,7 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     private _idlIx: AllInstructions<IDL>,
     _accountNamespace: AccountNamespace<IDL>
   ) {
-    this._accountStore = new AccountStore(_provider, _accountNamespace);
+    this._accountStore = new AccountStore(_accountNamespace);
   }
 
   // Note: We serially resolve PDAs one by one rather than doing them
@@ -71,7 +70,7 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
 
     for (let k = 0; k < this._idlIx.accounts.length; k += 1) {
       // Cast is ok because only a non-nested IdlAccount can have a seeds
-      // cosntraint.
+      // constraint.
       const accountDesc = this._idlIx.accounts[k] as IdlAccount;
       const accountDescName = camelCase(accountDesc.name);
 
@@ -82,7 +81,6 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
         !this._accounts[accountDescName]
       ) {
         await this.autoPopulatePda(accountDesc);
-        continue;
       }
     }
   }
@@ -232,11 +230,8 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
 export class AccountStore<IDL extends Idl> {
   private _cache = new Map<string, any>();
 
-  // todo: don't use the progrma use the account namespace.
-  constructor(
-    private _provider: Provider,
-    private _accounts: AccountNamespace<IDL>
-  ) {}
+  // TODO: don't use the program use the account namespace.
+  constructor(private _accounts: AccountNamespace<IDL>) {}
 
   public async fetchAccount<T = any>(
     name: string,
@@ -244,19 +239,8 @@ export class AccountStore<IDL extends Idl> {
   ): Promise<T> {
     const address = publicKey.toString();
     if (!this._cache.has(address)) {
-      if (name === "TokenAccount") {
-        const accountInfo = await this._provider.connection.getAccountInfo(
-          publicKey
-        );
-        if (accountInfo === null) {
-          throw new Error(`invalid account info for ${address}`);
-        }
-        const data = coder().accounts.decode("token", accountInfo.data);
-        this._cache.set(address, data);
-      } else {
-        const account = this._accounts[camelCase(name)].fetch(publicKey);
-        this._cache.set(address, account);
-      }
+      const account = this._accounts[camelCase(name)].fetch(publicKey);
+      this._cache.set(address, account);
     }
     return this._cache.get(address);
   }
