@@ -18,9 +18,38 @@ pub fn generate(f: &Field, accs: &AccountsStruct) -> proc_macro2::TokenStream {
         .map(|c| generate_constraint(f, c, accs))
         .collect();
 
+    let mut all_checks = quote! {#(#checks)*};
+
+    // If the field is optional we do all the inner checks as if the account
+    // wasn't optional. If the account is init we also need to return an Option
+    // by wrapping the resulting value with Some or returning None if it doesn't exist.
+    if f.is_optional && !constraints.is_empty() {
+        let ident = &f.ident;
+        let ty_decl = f.ty_decl(false);
+        all_checks = match &constraints[0] {
+            Constraint::Init(_) | Constraint::Zeroed(_) => {
+                quote! {
+                    let #ident: #ty_decl = if let Some(#ident) = #ident {
+                        #all_checks
+                        Some(#ident)
+                    } else {
+                        None
+                    };
+                }
+            }
+            _ => {
+                quote! {
+                    if let Some(#ident) = &#ident {
+                        #all_checks
+                    }
+                }
+            }
+        };
+    }
+
     quote! {
         #rent
-        #(#checks)*
+        #all_checks
     }
 }
 
@@ -121,7 +150,7 @@ fn generate_constraint(
     c: &Constraint,
     accs: &AccountsStruct,
 ) -> proc_macro2::TokenStream {
-    let stream = match c {
+    match c {
         Constraint::Init(c) => generate_constraint_init(f, c, accs),
         Constraint::Zeroed(c) => generate_constraint_zeroed(f, c),
         Constraint::Mut(c) => generate_constraint_mut(f, c),
@@ -140,34 +169,6 @@ fn generate_constraint(
         Constraint::TokenAccount(c) => generate_constraint_token_account(f, c, accs),
         Constraint::Mint(c) => generate_constraint_mint(f, c, accs),
         Constraint::Realloc(c) => generate_constraint_realloc(f, c, accs),
-    };
-    // This adds a wrapper on optional accounts that prevents constraints from being run on
-    // optional accounts that are `None` as well as conveniently unwrapping the option on optional
-    // accounts that are present for use in constraint gen.
-    if f.is_optional {
-        let ident = &f.ident;
-        let ty_decl = f.ty_decl(false);
-        match c {
-            Constraint::Init(_) | Constraint::Zeroed(_) => {
-                quote! {
-                    let #ident: #ty_decl = if let Some(#ident) = #ident {
-                        #stream
-                        Some(#ident)
-                    } else {
-                        None
-                    };
-                }
-            }
-            _ => {
-                quote! {
-                    if let Some(#ident) = &#ident {
-                        #stream
-                    }
-                }
-            }
-        }
-    } else {
-        stream
     }
 }
 
@@ -487,6 +488,36 @@ fn generate_constraint_init_group(
                 quote! { #seeds, }
             });
 
+            let validate_pda = {
+                // If the bump is provided with init *and target*, then force it to be the
+                // canonical bump.
+                //
+                // Note that for `#[account(init, seeds)]`, find_program_address has already
+                // been run in the init constraint find_pda variable.
+                if c.bump.is_some() {
+                    let b = c.bump.as_ref().unwrap();
+                    quote! {
+                        if #field.key() != __pda_address {
+                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintSeeds).with_account_name(#name_str).with_pubkeys((#field.key(), __pda_address)));
+                        }
+                        if __bump != #b {
+                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintSeeds).with_account_name(#name_str).with_values((__bump, #b)));
+                        }
+                    }
+                } else {
+                    // Init seeds but no bump. We already used the canonical to create bump so
+                    // just check the address.
+                    //
+                    // Note that for `#[account(init, seeds)]`, find_program_address has already
+                    // been run in the init constraint find_pda variable.
+                    quote! {
+                        if #field.key() != __pda_address {
+                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintSeeds).with_account_name(#name_str).with_pubkeys((#field.key(), __pda_address)));
+                        }
+                    }
+                }
+            };
+
             (
                 quote! {
                     let (__pda_address, __bump) = Pubkey::find_program_address(
@@ -494,6 +525,7 @@ fn generate_constraint_init_group(
                         program_id,
                     );
                     __bumps.insert(#name_str.to_string(), __bump);
+                    #validate_pda
                 },
                 quote! {
                     &[
@@ -792,59 +824,36 @@ fn generate_constraint_init_group(
 }
 
 fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2::TokenStream {
-    let name = &f.ident;
-    let name_str = name.to_string();
+    if c.is_init {
+        // Note that for `#[account(init, seeds)]`, the seed generation and checks is checked in
+        // the init constraint find_pda/validate_pda block, so we don't do anything here and
+        // return nothing!
+        quote! {}
+    } else {
+        let name = &f.ident;
+        let name_str = name.to_string();
 
-    let s = &mut c.seeds.clone();
+        let s = &mut c.seeds.clone();
 
-    let deriving_program_id = c
-        .program_seed
-        .clone()
-        // If they specified a seeds::program to use when deriving the PDA, use it.
-        .map(|program_id| quote! { #program_id.key() })
-        // Otherwise fall back to the current program's program_id.
-        .unwrap_or(quote! { program_id });
+        let deriving_program_id = c
+            .program_seed
+            .clone()
+            // If they specified a seeds::program to use when deriving the PDA, use it.
+            .map(|program_id| quote! { #program_id.key() })
+            // Otherwise fall back to the current program's program_id.
+            .unwrap_or(quote! { program_id });
 
-    // If the seeds came with a trailing comma, we need to chop it off
-    // before we interpolate them below.
-    if let Some(pair) = s.pop() {
-        s.push_value(pair.into_value());
-    }
-
-    // If the bump is provided with init *and target*, then force it to be the
-    // canonical bump.
-    //
-    // Note that for `#[account(init, seeds)]`, find_program_address has already
-    // been run in the init constraint.
-    if c.is_init && c.bump.is_some() {
-        let b = c.bump.as_ref().unwrap();
-        quote! {
-            if #name.key() != __pda_address {
-                return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintSeeds).with_account_name(#name_str).with_pubkeys((#name.key(), __pda_address)));
-            }
-            if __bump != #b {
-                return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintSeeds).with_account_name(#name_str).with_values((__bump, #b)));
-            }
+        // If the seeds came with a trailing comma, we need to chop it off
+        // before we interpolate them below.
+        if let Some(pair) = s.pop() {
+            s.push_value(pair.into_value());
         }
-    }
-    // Init seeds but no bump. We already used the canonical to create bump so
-    // just check the address.
-    //
-    // Note that for `#[account(init, seeds)]`, find_program_address has already
-    // been run in the init constraint.
-    else if c.is_init {
-        quote! {
-            if #name.key() != __pda_address {
-                return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintSeeds).with_account_name(#name_str).with_pubkeys((#name.key(), __pda_address)));
-            }
-        }
-    }
-    // No init. So we just check the address.
-    else {
+
         let maybe_seeds_plus_comma = (!s.is_empty()).then(|| {
             quote! { #s, }
         });
 
+        // Not init here, so do all the checks.
         let define_pda = match c.bump.as_ref() {
             // Bump target not given. Find it.
             None => quote! {
