@@ -24,14 +24,25 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Option<T> {
         bumps: &mut BTreeMap<String, u8>,
         reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self> {
+        // There are three cases we have to handle. We don't care if
+        // accounts is empty, so if that's the case we return None. This
+        // allows adding optional accounts at the end of the Accounts
+        // struct without causing a breaking change. This is safe and will error
+        // out if a required account is then added after the optional account and
+        // the accounts aren't passed in.
         if accounts.is_empty() {
             return Ok(None);
         }
-        let account = &accounts[0];
-        if account.key == program_id {
+
+        // If there are enough accounts, it will check the program_id and return
+        // None if it matches, popping the first account off the accounts vec.
+        if accounts[0].key == program_id {
             *accounts = &accounts[1..];
             Ok(None)
         } else {
+            // If the program_id doesn't equal the account key, we default to
+            // the try_accounts implementation for the inner type and then wrap that with
+            // Some. This should handle all possible valid cases.
             T::try_accounts(program_id, accounts, ix_data, bumps, reallocs).map(Some)
         }
     }
