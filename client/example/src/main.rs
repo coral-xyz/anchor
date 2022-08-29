@@ -240,43 +240,46 @@ pub fn basic_4(client: &Client, pid: Pubkey) -> Result<()> {
 //
 // Make sure to run a localnet with the program deploy to run this example.
 fn optional(client: &Client, pid: Pubkey, signer: Keypair) -> Result<()> {
-    // Program client.
-    let program = client.program(pid);
-
-    // `Initialize` parameters.
-    let optional1 = Keypair::generate(&mut OsRng);
-    let optional2 = Keypair::generate(&mut OsRng);
-
-    let initialize = OptionalInitialize {
-        payer: Some(program.payer()),
-        optional1: Some(optional1.pubkey()),
-        optional2: None,
-        system_program: Some(system_program::ID),
-    };
-
-    // Build and send a transaction.
-    program
-        .request()
-        .signer(&optional1)
-        .signer(&signer)
-        // .signer(&optional2)
-        .accounts(OptionalInitialize {
-            payer: Some(program.payer()),
-            optional1: Some(optional1.pubkey()),
-            optional2: None,
-            system_program: Some(system_program::ID),
-        })
-        .args(optional_instruction::Initialize {
-            value: 10,
-            key: optional1.pubkey(),
-        })
-        .send()?;
-
-    // Assert the transaction worked.
-    let optional1_account: Data1 = program.account(optional1.pubkey())?;
-    assert_eq!(optional1_account.data, 10);
-
-    println!("Optional success!");
+    // // Program client.
+    // let program = client.program(pid);
+    //
+    // // `Initialize` parameters.
+    // let optional1 = Keypair::generate(&mut OsRng);
+    // let optional2 = Keypair::generate(&mut OsRng);
+    //
+    // let initialize = OptionalInitialize {
+    //     payer: Some(program.payer()),
+    //     optional_2: None,
+    //     required: Default::default(),
+    //     system_program: Some(system_program::ID),
+    //     optional_1: None
+    // };
+    //
+    // // Build and send a transaction.
+    // program
+    //     .request()
+    //     .instruction()
+    //     .signer(&optional1)
+    //     .signer(&signer)
+    //     // .signer(&optional2)
+    //     .accounts(OptionalInitialize {
+    //         payer: Some(program.payer()),
+    //         optional_2: None,
+    //         required: Default::default(),
+    //         optional_1: None,
+    //         system_program: Some(system_program::ID),
+    //     })
+    //     .args(optional_instruction::Initialize {
+    //         value: 10,
+    //         key: optional1.pubkey(),
+    //     })
+    //     .send()?;
+    //
+    // // Assert the transaction worked.
+    // let optional1_account: Data1 = program.account(optional1.pubkey())?;
+    // assert_eq!(optional1_account.data, 10);
+    //
+    // println!("Optional success!");
 
     Ok(())
 }
