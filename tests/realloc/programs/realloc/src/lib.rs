@@ -33,7 +33,7 @@ pub mod realloc {
         Ok(())
     }
 
-    pub fn destroy(ctx: Context<Destroy>) -> Result<()> {
+    pub fn test_destroy(_ctx: Context<Destroy>) -> Result<()> {
         Ok(())
     }
 }
