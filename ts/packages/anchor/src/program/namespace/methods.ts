@@ -9,7 +9,7 @@ import {
 } from "@solana/web3.js";
 import { SimulateResponse } from "./simulate.js";
 import { TransactionFn } from "./transaction.js";
-import { Idl } from "../../idl.js";
+import { Idl, IdlAccount, idlAddress } from "../../idl.js";
 import {
   AllInstructions,
   MethodsFn,
@@ -59,7 +59,7 @@ export class MethodsBuilderFactory {
 }
 
 export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
-  private readonly _accounts: { [name: string]: PublicKey } = {};
+  private readonly _accounts: { [name: string]: PublicKey | null } = {};
   private _remainingAccounts: Array<AccountMeta> = [];
   private _signers: Array<Signer> = [];
   private _preInstructions: Array<TransactionInstruction> = [];
@@ -102,7 +102,16 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     accounts: Partial<Accounts<I["accounts"][number]>>
   ): MethodsBuilder<IDL, I> {
     this._autoResolveAccounts = true;
-    Object.assign(this._accounts, accounts);
+    for (const accountName in accounts) {
+      if (accounts[accountName]) {
+        this._accounts[accountName] = accounts[accountName];
+      } else if (
+        accounts[accountName] === null &&
+        this._accountsResolver.isOptional(accountName)
+      ) {
+        this._accounts[accountName] = null;
+      }
+    }
     return this;
   }
 
@@ -110,7 +119,16 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     accounts: Accounts<I["accounts"][number]>
   ): MethodsBuilder<IDL, I> {
     this._autoResolveAccounts = false;
-    Object.assign(this._accounts, accounts);
+    for (const accountName in accounts) {
+      if (accounts[accountName]) {
+        this._accounts[accountName] = accounts[accountName];
+      } else if (
+        accounts[accountName] === null &&
+        this._accountsResolver.isOptional(accountName)
+      ) {
+        this._accounts[accountName] = null;
+      }
+    }
     return this;
   }
 

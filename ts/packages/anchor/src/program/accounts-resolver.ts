@@ -21,7 +21,7 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
 
   constructor(
     private _args: Array<any>,
-    private _accounts: { [name: string]: PublicKey },
+    private _accounts: { [name: string]: PublicKey | null },
     private _provider: Provider,
     private _programId: PublicKey,
     private _idlIx: AllInstructions<IDL>,
@@ -46,7 +46,7 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
       const accountDesc = this._idlIx.accounts[k] as IdlAccount;
       const accountDescName = camelCase(accountDesc.name);
 
-      if (accountDesc.isOptional && !this._accounts[accountDescName]) {
+      if (accountDesc.isOptional && this._accounts[accountDescName] === null) {
         this._accounts[accountDescName] = this._programId;
         continue;
       }
@@ -88,6 +88,15 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
         await this.autoPopulatePda(accountDesc);
         continue;
       }
+    }
+  }
+
+  public isOptional(name: string): boolean {
+    const accountDesc = this._idlIx.accounts.find((acc) => acc.name === name);
+    if (accountDesc !== undefined && "isOptional" in accountDesc) {
+      return accountDesc.isOptional ?? false;
+    } else {
+      return false;
     }
   }
 
@@ -170,6 +179,9 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
 
     const fieldName = pathComponents[0];
     const fieldPubkey = this._accounts[camelCase(fieldName)];
+    if (fieldPubkey === null) {
+      throw new Error(`fieldPubkey is null`);
+    }
 
     // The seed is a pubkey of the account.
     if (pathComponents.length === 1) {

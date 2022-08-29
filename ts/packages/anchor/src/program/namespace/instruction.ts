@@ -100,20 +100,26 @@ export default class InstructionNamespaceFactory {
         } else {
           const account: IdlAccount = acc as IdlAccount;
           let pubkey;
-          try {
-            pubkey = translateAddress(ctx[acc.name] as Address);
-          } catch (err) {
-            throw new Error(
-              `Wrong input type for account "${
-                acc.name
-              }" in the instruction accounts object${
-                ixName !== undefined ? ' for instruction "' + ixName + '"' : ""
-              }. Expected PublicKey or string.`
-            );
+          if (ctx[acc.name] === null && account.isOptional) {
+            pubkey = programId;
+          } else {
+            try {
+              pubkey = translateAddress(ctx[acc.name] as Address);
+            } catch (err) {
+              throw new Error(
+                `Wrong input type for account "${
+                  acc.name
+                }" in the instruction accounts object${
+                  ixName !== undefined
+                    ? ' for instruction "' + ixName + '"'
+                    : ""
+                }. Expected PublicKey or string.`
+              );
+            }
           }
-          const optionalFalse = account.isOptional && pubkey === programId;
-          const isWritable = account.isMut && !optionalFalse;
-          const isSigner = account.isSigner && !optionalFalse;
+          const optional = account.isOptional && pubkey === programId;
+          const isWritable = account.isMut && !optional;
+          const isSigner = account.isSigner && !optional;
           return {
             pubkey,
             isWritable,
