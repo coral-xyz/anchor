@@ -386,17 +386,41 @@ use syn::parse_macro_input;
 ///                 <code>#[account(close = &lt;target_account&gt;)]</code>
 ///             </td>
 ///             <td>
-///                 Marks the account as closed at the end of the instruction’s execution
-///                 (sets its discriminator to the <code>CLOSED_ACCOUNT_DISCRIMINATOR</code>)
-///                 and sends its lamports to the specified account.<br>
-///                 Setting the discriminator to a special variant
-///                 makes account revival attacks (where a subsequent instruction
+///                 Reallocates the space in the account to 0 bytes and assigns the account's
+///                 owner to the system program.<br>
+///                 This makes account revival attacks (where a subsequent instruction
 ///                 adds the rent exemption lamports again) impossible.<br>
 ///                 Requires <code>mut</code> to exist on the account.
 ///                 <br><br>
 ///                 Example:
 ///                 <pre><code>
 /// #[account(mut, close = receiver)]
+/// pub data_account: Account<'info, MyData>,
+/// #[account(mut)]
+/// pub receiver: SystemAccount<'info>
+///                 </code></pre>
+///             </td>
+///         </tr>
+///         <tr>
+///             <td>
+///                 <code>#[account(destroy = &lt;target_account&gt;)]</code>
+///             </td>
+///             <td>
+///                 Reallocates the space in the account to 8 bytes and marks the account as closed
+///                 at the end of the instruction’s execution (sets its discriminator to the
+///                 <code>CLOSED_ACCOUNT_DISCRIMINATOR</code>)
+///                 and sends all of its lamports to the specified account, minus 8 bytes worth
+///                 of lamports to keep the discriminator permanently in the account. Storing the
+///                 <code>CLOSED_ACCOUNT_DISCRIMINATOR</code> permanently in the account data prevents
+///                 the account from ever being re-initialized, even in future transactions, hence _destroying_ the account.<br>
+///                 Reallocating the space to 8 bytes also
+///                 makes account revival attacks (where a subsequent instruction in the same transaction
+///                 adds the rent exemption lamports again) impossible.<br>
+///                 Requires <code>mut</code> to exist on the account.
+///                 <br><br>
+///                 Example:
+///                 <pre><code>
+/// #[account(mut, destroy = receiver)]
 /// pub data_account: Account<'info, MyData>,
 /// #[account(mut)]
 /// pub receiver: SystemAccount<'info>
