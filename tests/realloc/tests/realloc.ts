@@ -1,6 +1,6 @@
 import * as anchor from "@project-serum/anchor";
 import { AnchorError, Program } from "@project-serum/anchor";
-import { assert } from "chai";
+import { assert, expect } from "chai";
 import { Realloc } from "../target/types/realloc";
 
 describe("realloc", () => {
@@ -86,5 +86,42 @@ describe("realloc", () => {
       assert.strictEqual(err.error.errorMessage, errMsg);
       assert.strictEqual(err.error.errorCode.number, 3017);
     }
+  });
+
+  it("Can destroy an account", async () => {
+    const openAccount = await program.provider.connection.getAccountInfo(
+      sample
+    );
+    assert.isNotNull(openAccount);
+
+    let beforeBalance = (
+      await program.provider.connection.getAccountInfo(
+        program.provider.wallet.publicKey
+      )
+    ).lamports;
+
+    await program.rpc.testDestroy({
+      accounts: {
+        data: sample,
+        solDest: program.provider.wallet.publicKey,
+      },
+    });
+
+    let afterBalance = (
+      await program.provider.connection.getAccountInfo(
+        program.provider.wallet.publicKey
+      )
+    ).lamports;
+
+    // Retrieved rent exemption sol.
+    expect(afterBalance > beforeBalance).to.be.true;
+
+    const destroyedAccount = await program.provider.connection.getAccountInfo(
+      sample
+    );
+    expect(
+      destroyedAccount.lamports ==
+        (await program.provider.connection.getMinimumBalanceForRentExemption(8))
+    ).to.be.true;
   });
 });

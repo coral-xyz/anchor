@@ -309,7 +309,10 @@ describe("misc", () => {
     const destroyedAccount = await program.provider.connection.getAccountInfo(
       dataI8.publicKey
     );
-    expect(destroyedAccount.lamports == await program.provider.connection.getMinimumBalanceForRentExemption(8)).to.be.true;
+    expect(
+      destroyedAccount.lamports ==
+        (await program.provider.connection.getMinimumBalanceForRentExemption(8))
+    ).to.be.true;
   });
 
   it("Can use instruction data in accounts constraints", async () => {
