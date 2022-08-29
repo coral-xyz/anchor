@@ -257,6 +257,12 @@ impl<'info, T: ZeroCopy + Owner> AccountsClose<'info> for AccountLoader<'info, T
     }
 }
 
+impl<'info, T: ZeroCopy + Owner> AccountsDestroy<'info> for AccountLoader<'info, T> {
+    fn destroy(&self, sol_destination: AccountInfo<'info>) -> Result<()> {
+        crate::common::destroy(self.to_account_info(), sol_destination)
+    }
+}
+
 impl<'info, T: ZeroCopy + Owner> ToAccountMetas for AccountLoader<'info, T> {
     fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
         let is_signer = is_signer.unwrap_or(self.acc_info.is_signer);

@@ -55,6 +55,7 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
         executable,
         state,
         close,
+        destroy,
         address,
         associated_token,
         token_account,
@@ -103,6 +104,9 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
     if let Some(c) = close {
         constraints.push(Constraint::Close(c));
     }
+    if let Some(c) = destroy {
+        constraints.push(Constraint::Destroy(c));
+    }
     if let Some(c) = address {
         constraints.push(Constraint::Address(c));
     }
@@ -130,6 +134,7 @@ fn generate_constraint(f: &Field, c: &Constraint) -> proc_macro2::TokenStream {
         Constraint::Executable(c) => generate_constraint_executable(f, c),
         Constraint::State(c) => generate_constraint_state(f, c),
         Constraint::Close(c) => generate_constraint_close(f, c),
+        Constraint::Destroy(c) => generate_constraint_destroy(f, c),
         Constraint::Address(c) => generate_constraint_address(f, c),
         Constraint::AssociatedToken(c) => generate_constraint_associated_token(f, c),
         Constraint::TokenAccount(c) => generate_constraint_token_account(f, c),
@@ -197,6 +202,27 @@ pub fn generate_constraint_close(f: &Field, c: &ConstraintClose) -> proc_macro2:
         if #field.key() == #target.key() {
             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintClose).with_account_name(#name_str));
         }
+    }
+}
+
+pub fn generate_constraint_destroy(f: &Field, c: &ConstraintDestroy) -> proc_macro2::TokenStream {
+    let field = &f.ident;
+    let name_str = field.to_string();
+    let target = &c.sol_dest;
+    quote! {
+        if #field.key() == #target.key() {
+            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintDestroy).with_account_name(#name_str));
+        }
+        // TODO: move all of this stuff to the other function that runs at the end of the transaction
+        // let __anchor_rent = Rent::get()?;
+        // let __field_info = #field.to_account_info();
+        // // This assumes that any anchor account that been initialized already has at least 8 bytes in it for the discriminator
+        // let __lamport_amt = __field_info.lamports().checked_sub(__anchor_rent.minimum_balance(8)).unwrap();
+        // **#target.to_account_info().lamports.borrow_mut() = #target.to_account_info.lamports().checked_add(__lamport_amt).unwrap();
+        // **__field_info.lamports.borrow_mut() = __anchor_rent.minimum_balance(8);
+        // #field.to_account_info().realloc(8, false);
+        // // TODO: add the closed account discriminator
+        // todo!();
     }
 }
 

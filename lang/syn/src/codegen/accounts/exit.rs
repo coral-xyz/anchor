@@ -35,6 +35,14 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                             self.#close_target.to_account_info(),
                         ).map_err(|e| e.with_account_name(#name_str))?;
                     }
+                } else if f.constraints.is_destroy() {
+                    let destroy_target = &f.constraints.destroy.as_ref().unwrap().sol_dest;
+                    quote! {
+                        anchor_lang::AccountsDestroy::destroy(
+                            &self.#ident,
+                            self.#destroy_target.to_account_info(),
+                        ).map_err(|e| e.with_account_name(#name_str))?;
+                    }
                 } else {
                     match f.constraints.is_mutable() {
                         false => quote! {},

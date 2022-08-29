@@ -102,6 +102,13 @@ pub trait AccountsClose<'info>: ToAccountInfos<'info> {
     fn close(&self, sol_destination: AccountInfo<'info>) -> Result<()>;
 }
 
+/// The destroy procedure to initiate garabage collection of an account, allowing
+/// one to retrieve the rent exemption, minus 8 bytes worth of rent so that the
+/// account is permanently closed
+pub trait AccountsDestroy<'info>: ToAccountInfos<'info> {
+    fn destroy(&self, sol_destination: AccountInfo<'info>) -> Result<()>;
+}
+
 /// Transformation to
 /// [`AccountMeta`](../solana_program/instruction/struct.AccountMeta.html)
 /// structs.

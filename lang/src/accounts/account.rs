@@ -363,6 +363,14 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsCl
     }
 }
 
+impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsDestroy<'info>
+    for Account<'info, T>
+{
+    fn destroy(&self, sol_destination: AccountInfo<'info>) -> Result<()> {
+        crate::common::destroy(self.to_account_info(), sol_destination)
+    }
+}
+
 impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> ToAccountMetas
     for Account<'info, T>
 {

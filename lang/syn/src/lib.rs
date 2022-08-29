@@ -631,6 +631,7 @@ pub struct ConstraintGroup {
     literal: Vec<ConstraintLiteral>,
     raw: Vec<ConstraintRaw>,
     close: Option<ConstraintClose>,
+    destroy: Option<ConstraintDestroy>,
     address: Option<ConstraintAddress>,
     associated_token: Option<ConstraintAssociatedToken>,
     token_account: Option<ConstraintTokenAccountGroup>,
@@ -654,6 +655,10 @@ impl ConstraintGroup {
     pub fn is_close(&self) -> bool {
         self.close.is_some()
     }
+
+    pub fn is_destroy(&self) -> bool {
+        self.destroy.is_some()
+    }
 }
 
 // A single account constraint *after* merging all tokens into a well formed
@@ -676,6 +681,7 @@ pub enum Constraint {
     Executable(ConstraintExecutable),
     State(ConstraintState),
     Close(ConstraintClose),
+    Destroy(ConstraintDestroy),
     Address(ConstraintAddress),
     TokenAccount(ConstraintTokenAccountGroup),
     Mint(ConstraintTokenMintGroup),
@@ -699,6 +705,7 @@ pub enum ConstraintToken {
     Executable(Context<ConstraintExecutable>),
     State(Context<ConstraintState>),
     Close(Context<ConstraintClose>),
+    Destroy(Context<ConstraintDestroy>),
     Payer(Context<ConstraintPayer>),
     Space(Context<ConstraintSpace>),
     Address(Context<ConstraintAddress>),
@@ -865,6 +872,11 @@ pub enum InitKind {
 
 #[derive(Debug, Clone)]
 pub struct ConstraintClose {
+    pub sol_dest: Ident,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintDestroy {
     pub sol_dest: Ident,
 }
 

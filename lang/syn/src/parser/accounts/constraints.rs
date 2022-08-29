@@ -302,6 +302,12 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         sol_dest: stream.parse()?,
                     },
                 )),
+                "destroy" => ConstraintToken::Destroy(Context::new(
+                    span,
+                    ConstraintDestroy {
+                        sol_dest: stream.parse()?,
+                    },
+                )),
                 "address" => ConstraintToken::Address(Context::new(
                     span,
                     ConstraintAddress {
@@ -344,6 +350,7 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub payer: Option<Context<ConstraintPayer>>,
     pub space: Option<Context<ConstraintSpace>>,
     pub close: Option<Context<ConstraintClose>>,
+    pub destroy: Option<Context<ConstraintDestroy>>,
     pub address: Option<Context<ConstraintAddress>>,
     pub token_mint: Option<Context<ConstraintTokenMint>>,
     pub token_authority: Option<Context<ConstraintTokenAuthority>>,
@@ -378,6 +385,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             payer: None,
             space: None,
             close: None,
+            destroy: None,
             address: None,
             token_mint: None,
             token_authority: None,
@@ -579,6 +587,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             payer,
             space,
             close,
+            destroy,
             address,
             token_mint,
             token_authority,
@@ -726,6 +735,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             executable: into_inner!(executable),
             state: into_inner!(state),
             close: into_inner!(close),
+            destroy: into_inner!(destroy),
             address: into_inner!(address),
             associated_token: if !is_init { associated_token } else { None },
             seeds,
@@ -751,6 +761,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::Payer(c) => self.add_payer(c),
             ConstraintToken::Space(c) => self.add_space(c),
             ConstraintToken::Close(c) => self.add_close(c),
+            ConstraintToken::Destroy(c) => self.add_destroy(c),
             ConstraintToken::Address(c) => self.add_address(c),
             ConstraintToken::TokenAuthority(c) => self.add_token_authority(c),
             ConstraintToken::TokenMint(c) => self.add_token_mint(c),
@@ -902,6 +913,30 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             return Err(ParseError::new(c.span(), "close already provided"));
         }
         self.close.replace(c);
+        Ok(())
+    }
+
+    fn add_destroy(&mut self, c: Context<ConstraintDestroy>) -> ParseResult<()> {
+        if !matches!(self.f_ty, Some(Ty::ProgramAccount(_)))
+            && !matches!(self.f_ty, Some(Ty::Account(_)))
+            && !matches!(self.f_ty, Some(Ty::Loader(_)))
+            && !matches!(self.f_ty, Some(Ty::AccountLoader(_)))
+        {
+            return Err(ParseError::new(
+                c.span(),
+                "destroy must be on an Account, ProgramAccount, or Loader",
+            ));
+        }
+        if self.mutable.is_none() {
+            return Err(ParseError::new(
+                c.span(),
+                "mut must be provided before destroy",
+            ));
+        }
+        if self.destroy.is_some() {
+            return Err(ParseError::new(c.span(), "destroy already provided"));
+        }
+        self.destroy.replace(c);
         Ok(())
     }
 
