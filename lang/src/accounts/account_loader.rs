@@ -3,8 +3,8 @@
 use crate::bpf_writer::BpfWriter;
 use crate::error::{Error, ErrorCode};
 use crate::{
-    Accounts, AccountsClose, AccountsExit, Key, Owner, Result, ToAccountInfo, ToAccountInfos,
-    ToAccountMetas, ZeroCopy,
+    Accounts, AccountsClose, AccountsDestroy, AccountsExit, Key, Owner, Result, ToAccountInfo,
+    ToAccountInfos, ToAccountMetas, ZeroCopy,
 };
 use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;
