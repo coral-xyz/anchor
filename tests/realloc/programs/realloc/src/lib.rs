@@ -32,10 +32,6 @@ pub mod realloc {
             .resize_with(len as usize, Default::default);
         Ok(())
     }
-
-    pub fn test_destroy(_ctx: Context<Destroy>) -> Result<()> {
-        Ok(())
-    }
 }
 
 #[derive(Accounts)]
@@ -101,16 +97,6 @@ pub struct Realloc2<'info> {
     pub sample2: Account<'info, Sample>,
 
     pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct Destroy<'info> {
-    #[account(mut)]
-    pub authority: Signer<'info>,
-    #[account(
-        mut, destroy = authority
-    )]
-    pub sample1: Account<'info, Sample>,
 }
 
 #[account]
