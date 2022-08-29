@@ -119,6 +119,10 @@ pub mod misc {
         Ok(())
     }
 
+    pub fn test_destroy(_ctx: Context<TestDestroy>) -> Result<()> {
+        Ok(())
+    }
+
     pub fn test_instruction_constraint(
         _ctx: Context<TestInstructionConstraint>,
         _nonce: u8,

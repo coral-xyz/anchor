@@ -278,6 +278,40 @@ describe("misc", () => {
     assert.isNull(closedAccount);
   });
 
+  it("Can destroy an account", async () => {
+    const openAccount = await program.provider.connection.getAccountInfo(
+      dataI8.publicKey
+    );
+    assert.isNotNull(openAccount);
+
+    let beforeBalance = (
+      await program.provider.connection.getAccountInfo(
+        provider.wallet.publicKey
+      )
+    ).lamports;
+
+    await program.rpc.testDestroy({
+      accounts: {
+        data: dataI8.publicKey,
+        solDest: provider.wallet.publicKey,
+      },
+    });
+
+    let afterBalance = (
+      await program.provider.connection.getAccountInfo(
+        provider.wallet.publicKey
+      )
+    ).lamports;
+
+    // Retrieved rent exemption sol.
+    expect(afterBalance > beforeBalance).to.be.true;
+
+    const destroyedAccount = await program.provider.connection.getAccountInfo(
+      dataI8.publicKey
+    );
+    expect(destroyedAccount.lamports == await program.provider.connection.getMinimumBalanceForRentExemption(8)).to.be.true;
+  });
+
   it("Can use instruction data in accounts constraints", async () => {
     // b"my-seed"
     const seed = Buffer.from([109, 121, 45, 115, 101, 101, 100]);

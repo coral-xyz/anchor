@@ -183,6 +183,14 @@ pub struct TestClose<'info> {
 }
 
 #[derive(Accounts)]
+pub struct TestDestroy<'info> {
+    #[account(mut, destroy = sol_dest)]
+    pub data: Account<'info, DataI8>,
+    /// CHECK:
+    sol_dest: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
 pub struct TestU16<'info> {
     #[account(zero)]
     pub my_account: Account<'info, DataU16>,
