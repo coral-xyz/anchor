@@ -4,6 +4,8 @@
 use anchor_lang::prelude::*;
 use processor::*;
 
+pub mod errors;
+pub use errors::OptionalErrors;
 pub mod processor;
 pub mod state;
 declare_id!("FNqz6pqLAwvMSds2FYjR4nKV3moVpPNtvkfGFrqLKrgG");

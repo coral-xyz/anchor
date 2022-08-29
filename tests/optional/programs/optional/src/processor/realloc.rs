@@ -1,6 +1,7 @@
+use anchor_lang::prelude::*;
+
 use crate::state::*;
 use crate::OptionalErrors;
-use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct Realloc<'info> {
