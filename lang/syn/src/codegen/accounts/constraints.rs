@@ -213,16 +213,6 @@ pub fn generate_constraint_destroy(f: &Field, c: &ConstraintDestroy) -> proc_mac
         if #field.key() == #target.key() {
             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintDestroy).with_account_name(#name_str));
         }
-        // TODO: move all of this stuff to the other function that runs at the end of the transaction
-        // let __anchor_rent = Rent::get()?;
-        // let __field_info = #field.to_account_info();
-        // // This assumes that any anchor account that been initialized already has at least 8 bytes in it for the discriminator
-        // let __lamport_amt = __field_info.lamports().checked_sub(__anchor_rent.minimum_balance(8)).unwrap();
-        // **#target.to_account_info().lamports.borrow_mut() = #target.to_account_info.lamports().checked_add(__lamport_amt).unwrap();
-        // **__field_info.lamports.borrow_mut() = __anchor_rent.minimum_balance(8);
-        // #field.to_account_info().realloc(8, false);
-        // // TODO: add the closed account discriminator
-        // todo!();
     }
 }
 

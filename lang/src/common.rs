@@ -7,6 +7,7 @@ use solana_program::rent::Rent;
 use solana_program::sysvar::Sysvar;
 use std::io::Write;
 
+/// This should now be safe to use anywhere
 pub fn close<'info>(info: AccountInfo<'info>, sol_destination: AccountInfo<'info>) -> Result<()> {
     // Transfer tokens from the account to the sol_destination.
     let dest_starting_lamports = sol_destination.lamports();
@@ -16,16 +17,10 @@ pub fn close<'info>(info: AccountInfo<'info>, sol_destination: AccountInfo<'info
     info.realloc(0, false)?;
     info.assign(&solana_program::system_program::ID);
     Ok(())
-
-    // Mark the account discriminator as closed.
-    // let mut data = info.try_borrow_mut_data()?;
-    // let dst: &mut [u8] = &mut data;
-    // let mut writer = BpfWriter::new(dst);
-    // writer
-    //     .write_all(&crate::__private::CLOSED_ACCOUNT_DISCRIMINATOR)
-    //     .map_err(|_| error!(ErrorCode::AccountDidNotSerialize))
 }
 
+/// Not safe to use manually in an instruction's main function logic because at `exit` the discriminator will
+/// be overwritten.
 pub fn destroy<'info>(info: AccountInfo<'info>, sol_destination: AccountInfo<'info>) -> Result<()> {
     let anchor_rent = Rent::get()?;
     // Leave 8 bytes in the account to store the closed account discriminator permanently
