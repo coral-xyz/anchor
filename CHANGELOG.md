@@ -17,6 +17,9 @@ The minor version will be incremented upon a breaking change and the patch versi
 * spl: Add `MetadataAccount` account deserialization. ([#2014](https://github.com/coral-xyz/anchor/pull/2014)).
 * lang: Add parsing for consts from impl blocks for IDL PDA seeds generation ([#2128](https://github.com/coral-xyz/anchor/pull/2014))
 * ts: Add coders for SPL programs ([#2143](https://github.com/coral-xyz/anchor/pull/2143)).
+* ts: Add `has_one` relations inference so accounts mapped via has_one relationships no longer need to be provided
+* ts: Add ability to set args after setting accounts and retriving pubkyes
+* ts: Add `.prepare()` to builder pattern
 
 ### Fixes
 

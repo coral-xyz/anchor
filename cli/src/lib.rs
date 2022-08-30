@@ -1511,6 +1511,7 @@ fn extract_idl(
         &*file,
         cargo.version(),
         cfg.features.seeds,
+        cfg.features.relations,
         no_docs,
         !(cfg.features.skip_lint || skip_lint),
     )
