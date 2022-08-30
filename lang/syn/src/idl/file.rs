@@ -129,8 +129,14 @@ pub fn parse(
                         })
                         .collect();
                     let accounts_strct = accs.get(&anchor_ident.to_string()).unwrap();
-                    let accounts =
-                        idl_accounts(&ctx, accounts_strct, &accs, seeds_feature, relations_feature, no_docs);
+                    let accounts = idl_accounts(
+                        &ctx,
+                        accounts_strct,
+                        &accs,
+                        seeds_feature,
+                        relations_feature,
+                        no_docs,
+                    );
                     IdlInstruction {
                         name,
                         docs: None,
@@ -210,7 +216,14 @@ pub fn parse(
                 .collect::<Vec<_>>();
             // todo: don't unwrap
             let accounts_strct = accs.get(&ix.anchor_ident.to_string()).unwrap();
-            let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature, relations_feature, no_docs);
+            let accounts = idl_accounts(
+                &ctx,
+                accounts_strct,
+                &accs,
+                seeds_feature,
+                relations_feature,
+                no_docs,
+            );
             let ret_type_str = ix.returns.ty.to_token_stream().to_string();
             let returns = match ret_type_str.as_str() {
                 "()" => None,
@@ -633,7 +646,14 @@ fn idl_accounts(
                 let accs_strct = global_accs.get(&comp_f.symbol).unwrap_or_else(|| {
                     panic!("Could not resolve Accounts symbol {}", comp_f.symbol)
                 });
-                let accounts = idl_accounts(ctx, accs_strct, global_accs, seeds_feature, relations_feature, no_docs);
+                let accounts = idl_accounts(
+                    ctx,
+                    accs_strct,
+                    global_accs,
+                    seeds_feature,
+                    relations_feature,
+                    no_docs,
+                );
                 IdlAccountItem::IdlAccounts(IdlAccounts {
                     name: comp_f.ident.to_string().to_mixed_case(),
                     accounts,
@@ -648,7 +668,7 @@ fn idl_accounts(
                 },
                 docs: if !no_docs { acc.docs.clone() } else { None },
                 pda: pda::parse(ctx, accounts, acc, seeds_feature),
-                relations: relations::parse(acc, relations_feature)
+                relations: relations::parse(acc, relations_feature),
             }),
         })
         .collect::<Vec<_>>()

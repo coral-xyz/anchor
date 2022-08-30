@@ -1,10 +1,7 @@
-use crate::{Field};
-use syn::{Expr};
+use crate::Field;
+use syn::Expr;
 
-pub fn parse(
-    acc: &Field,
-    relations_feature: bool,
-) -> Vec<String> {
+pub fn parse(acc: &Field, relations_feature: bool) -> Vec<String> {
     if !relations_feature {
         return vec![];
     }
