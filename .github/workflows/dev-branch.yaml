@@ -1,0 +1,27 @@
+name: Dev Branch
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  merge-upstream:
+    name: Dev Branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout
+        with:
+          ref: master # set the branch to merge to
+          fetch-depth: 0
+          token: ${{ secrets.WORKFLOW_TOKEN }}
+      - run: git config --global user.email "bot@cronos.so"
+        shell: bash
+      - run: git config --global user.name "cronos-bot"
+        shell: bash
+      - run: ./.github/scripts/merge_upstream.sh
+        shell: bash
+      - run: ./.github/scripts/update_deps.sh
+        shell: bash
