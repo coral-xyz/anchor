@@ -6,6 +6,7 @@ import { TOKEN_PROGRAM_ID, ASSOCIATED_PROGRAM_ID } from "../utils/token.js";
 import { AllInstructions } from "./namespace/types.js";
 import Provider from "../provider.js";
 import { AccountNamespace } from "./namespace/account.js";
+import { decodeTokenAccount } from "./token-account-layout.js";
 
 // Populates a given accounts context with PDAs and common missing accounts.
 export class AccountsResolver<IDL extends Idl> {
@@ -26,7 +27,7 @@ export class AccountsResolver<IDL extends Idl> {
     private _idlIx: AllInstructions<IDL>,
     _accountNamespace: AccountNamespace<IDL>
   ) {
-    this._accountStore = new AccountStore(_accountNamespace);
+    this._accountStore = new AccountStore(_provider, _accountNamespace);
   }
 
   // Note: We serially resolve PDAs one by one rather than doing them
@@ -230,7 +231,10 @@ export class AccountsResolver<IDL extends Idl> {
 export class AccountStore<IDL extends Idl> {
   private _cache = new Map<string, any>();
 
-  constructor(private _accounts: AccountNamespace<IDL>) {}
+  constructor(
+    private _provider: Provider,
+    private _accounts: AccountNamespace<IDL>
+  ) {}
 
   public async fetchAccount<T = any>(
     name: string,
@@ -238,9 +242,19 @@ export class AccountStore<IDL extends Idl> {
   ): Promise<T> {
     const address = publicKey.toString();
     if (!this._cache.has(address)) {
-      if (name === "TokenAccount") name = "Account";
-      const account = this._accounts[camelCase(name)].fetch(publicKey);
-      this._cache.set(address, account);
+      if (name === "TokenAccount") {
+        const accountInfo = await this._provider.connection.getAccountInfo(
+          publicKey
+        );
+        if (accountInfo === null) {
+          throw new Error(`invalid account info for ${address}`);
+        }
+        const decodedAccount = decodeTokenAccount(accountInfo.data);
+        this._cache.set(address, decodedAccount);
+      } else {
+        const account = this._accounts[camelCase(name)].fetch(publicKey);
+        this._cache.set(address, account);
+      }
     }
     return this._cache.get(address);
   }
