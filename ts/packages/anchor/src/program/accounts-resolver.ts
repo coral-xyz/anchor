@@ -230,7 +230,6 @@ export class AccountsResolver<IDL extends Idl> {
 export class AccountStore<IDL extends Idl> {
   private _cache = new Map<string, any>();
 
-  // TODO: don't use the program use the account namespace.
   constructor(private _accounts: AccountNamespace<IDL>) {}
 
   public async fetchAccount<T = any>(
@@ -239,6 +238,7 @@ export class AccountStore<IDL extends Idl> {
   ): Promise<T> {
     const address = publicKey.toString();
     if (!this._cache.has(address)) {
+      if (name === "TokenAccount") name = "Account";
       const account = this._accounts[camelCase(name)].fetch(publicKey);
       this._cache.set(address, account);
     }
