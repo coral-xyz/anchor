@@ -95,10 +95,10 @@ class u64 extends BN {
   toBuffer(): Buffer {
     const a = super.toArray().reverse();
     const b = Buffer.from(a);
-    if (length === 8) {
+    if (b.length === 8) {
       return b;
     }
-    if (length >= 8) {
+    if (b.length >= 8) {
       throw new Error("u64 too large");
     }
 
