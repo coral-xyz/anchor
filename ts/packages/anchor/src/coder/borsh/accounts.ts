@@ -65,11 +65,11 @@ export class BorshAccountsCoder<A extends string = string>
 
   public decodeAny<T = any>(data: Buffer): T {
     const accountDescriminator = data.slice(0, 8);
-    const accountName = Array.from(this.accountLayouts.keys()).find(key => (
+    const accountName = Array.from(this.accountLayouts.keys()).find((key) =>
       BorshAccountsCoder.accountDiscriminator(key).equals(accountDescriminator)
-    ))
+    );
     if (!accountName) {
-      throw new Error("Account descriminator not found")
+      throw new Error("Account descriminator not found");
     }
 
     return this.decodeUnchecked<T>(accountName as any, data);

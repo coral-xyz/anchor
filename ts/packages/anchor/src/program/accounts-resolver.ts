@@ -353,8 +353,9 @@ export class AccountStore<IDL extends Idl> {
         if (!firstAccountLayout) {
           throw new Error("No accounts for this program");
         }
-        const result = (firstAccountLayout.coder
-          .accounts as BorshAccountsCoder).decodeAny(data);
+        const result = (
+          firstAccountLayout.coder.accounts as BorshAccountsCoder
+        ).decodeAny(data);
         this._cache.set(address, result);
       }
     }

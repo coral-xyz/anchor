@@ -93,7 +93,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
 
   public args(_args: Array<any>): void {
     this._args = _args;
-    this._accountsResolver.args(_args)
+    this._accountsResolver.args(_args);
   }
 
   public async pubkeys(): Promise<
