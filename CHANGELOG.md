@@ -21,6 +21,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 ### Fixes
 
 * lang: Fix IDL `seed` generation for byte string literals. ([#2125](https://github.com/coral-xyz/anchor/pull/2125))
+* event: Fix multiple event listeners with the same name. ([#2165](https://github.com/coral-xyz/anchor/pull/2165))
 
 ## [0.25.0] - 2022-07-05
 
