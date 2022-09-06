@@ -11,7 +11,7 @@ pub fn create<'info>(ctx: CpiContext<'_, '_, '_, 'info, Create<'info>>) -> Resul
         ctx.accounts.payer.key,
         ctx.accounts.authority.key,
         ctx.accounts.mint.key,
-        &spl_token::ID
+        &spl_token::ID,
     );
     solana_program::program::invoke_signed(
         &ix,
@@ -28,7 +28,9 @@ pub fn create<'info>(ctx: CpiContext<'_, '_, '_, 'info, Create<'info>>) -> Resul
     .map_err(Into::into)
 }
 
-pub fn create_idempotent<'info>(ctx: CpiContext<'_, '_, '_, 'info, CreateIdemptotent<'info>>) -> Result<()> {
+pub fn create_idempotent<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, CreateIdemptotent<'info>>,
+) -> Result<()> {
     let ix = spl_associated_token_account::instruction::create_associated_token_account_idempotent(
         ctx.accounts.payer.key,
         ctx.accounts.authority.key,
