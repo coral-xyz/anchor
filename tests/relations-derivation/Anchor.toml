@@ -1,5 +1,4 @@
 [features]
-relations = true
 seeds = true
 
 [provider]

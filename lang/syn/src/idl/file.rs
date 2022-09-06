@@ -18,7 +18,6 @@ pub fn parse(
     filename: impl AsRef<Path>,
     version: String,
     seeds_feature: bool,
-    relations_feature: bool,
     no_docs: bool,
     safety_checks: bool,
 ) -> Result<Option<Idl>> {
@@ -80,7 +79,6 @@ pub fn parse(
                                     accounts_strct,
                                     &accs,
                                     seeds_feature,
-                                    relations_feature,
                                     no_docs,
                                 );
                                 IdlInstruction {
@@ -134,7 +132,6 @@ pub fn parse(
                         accounts_strct,
                         &accs,
                         seeds_feature,
-                        relations_feature,
                         no_docs,
                     );
                     IdlInstruction {
@@ -221,7 +218,6 @@ pub fn parse(
                 accounts_strct,
                 &accs,
                 seeds_feature,
-                relations_feature,
                 no_docs,
             );
             let ret_type_str = ix.returns.ty.to_token_stream().to_string();
@@ -635,7 +631,6 @@ fn idl_accounts(
     accounts: &AccountsStruct,
     global_accs: &HashMap<String, AccountsStruct>,
     seeds_feature: bool,
-    relations_feature: bool,
     no_docs: bool,
 ) -> Vec<IdlAccountItem> {
     accounts
@@ -651,7 +646,6 @@ fn idl_accounts(
                     accs_strct,
                     global_accs,
                     seeds_feature,
-                    relations_feature,
                     no_docs,
                 );
                 IdlAccountItem::IdlAccounts(IdlAccounts {
@@ -668,7 +662,7 @@ fn idl_accounts(
                 },
                 docs: if !no_docs { acc.docs.clone() } else { None },
                 pda: pda::parse(ctx, accounts, acc, seeds_feature),
-                relations: relations::parse(acc, relations_feature),
+                relations: relations::parse(acc, seeds_feature),
             }),
         })
         .collect::<Vec<_>>()

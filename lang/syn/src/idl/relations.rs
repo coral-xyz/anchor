@@ -1,8 +1,8 @@
 use crate::Field;
 use syn::Expr;
 
-pub fn parse(acc: &Field, relations_feature: bool) -> Vec<String> {
-    if !relations_feature {
+pub fn parse(acc: &Field, seeds_feature: bool) -> Vec<String> {
+    if !seeds_feature {
         return vec![];
     }
     acc.constraints
