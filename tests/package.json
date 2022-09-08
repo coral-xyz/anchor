@@ -45,8 +45,10 @@
     "@project-serum/serum": "^0.13.60",
     "@solana/spl-token": "^0.1.8"
   },
+  "peerDependencies": {
+    "@types/node": "^14.14.37"
+  },
   "devDependencies": {
-    "@types/node": "^14.14.37",
     "chai": "^4.3.4",
     "@types/chai": "^4.3.0",
     "@types/mocha": "^9.1.0",
