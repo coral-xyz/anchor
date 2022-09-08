@@ -182,7 +182,6 @@ impl WithPath<Config> {
                 path.join("src/lib.rs"),
                 version,
                 self.features.seeds,
-                self.features.relations,
                 false,
                 false,
             )?;
@@ -287,8 +286,6 @@ pub struct Config {
 pub struct FeaturesConfig {
     #[serde(default)]
     pub seeds: bool,
-    #[serde(default)]
-    pub relations: bool,
     #[serde(default, rename = "skip-lint")]
     pub skip_lint: bool,
 }
