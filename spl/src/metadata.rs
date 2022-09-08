@@ -213,6 +213,46 @@ pub fn verify_collection<'info>(
     .map_err(Into::into)
 }
 
+pub fn freeze_delegated_account<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, FreezeDelegatedAccount<'info>>,
+) -> Result<()> {
+    let ix = mpl_token_metadata::instruction::freeze_delegated_account(
+        ID,
+        *ctx.accounts.delegate.key,
+        *ctx.accounts.token_account.key,
+        *ctx.accounts.edition.key,
+        *ctx.accounts.mint.key,
+    );
+
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )?;
+
+    Ok(())
+}
+
+pub fn thaw_delegated_account<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, ThawDelegatedAccount<'info>>,
+) -> Result<()> {
+    let ix = mpl_token_metadata::instruction::thaw_delegated_account(
+        ID,
+        *ctx.accounts.delegate.key,
+        *ctx.accounts.token_account.key,
+        *ctx.accounts.edition.key,
+        *ctx.accounts.mint.key,
+    );
+
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )?;
+
+    Ok(())
+}
+
 #[derive(Accounts)]
 pub struct CreateMetadataAccountsV2<'info> {
     pub metadata: AccountInfo<'info>,
@@ -296,6 +336,26 @@ pub struct VerifyCollection<'info> {
     pub collection_mint: AccountInfo<'info>,
     pub collection_metadata: AccountInfo<'info>,
     pub collection_edition: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct FreezeDelegatedAccount<'info> {
+    pub metadata: AccountInfo<'info>,
+    pub delegate: AccountInfo<'info>,
+    pub token_account: AccountInfo<'info>,
+    pub edition: AccountInfo<'info>,
+    pub mint: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ThawDelegatedAccount<'info> {
+    pub metadata: AccountInfo<'info>,
+    pub delegate: AccountInfo<'info>,
+    pub token_account: AccountInfo<'info>,
+    pub edition: AccountInfo<'info>,
+    pub mint: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
