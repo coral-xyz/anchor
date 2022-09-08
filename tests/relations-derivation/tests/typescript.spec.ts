@@ -2,7 +2,7 @@ import * as anchor from "@project-serum/anchor";
 import { AnchorProvider, Program } from "@project-serum/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { expect } from "chai";
-import { RelationsDerivation } from "../target/types/pda_derivation";
+import { RelationsDerivation } from "../target/types/relations_derivation";
 
 describe("typescript", () => {
   // Configure the client to use the local cluster.
