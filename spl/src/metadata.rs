@@ -6,15 +6,6 @@ use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
 use std::ops::Deref;
 
-#[derive(Clone)]
-pub struct Metadata;
-
-impl anchor_lang::Id for Metadata {
-    fn id() -> Pubkey {
-        ID
-    }
-}
-
 pub fn create_metadata_accounts_v2<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, CreateMetadataAccountsV2<'info>>,
     data: DataV2,
@@ -202,7 +193,7 @@ pub fn verify_collection<'info>(
         *ctx.accounts.payer.key,
         *ctx.accounts.collection_mint.key,
         *ctx.accounts.collection_metadata.key,
-        *ctx.accounts.collection_edition.key,
+        *ctx.accounts.collection_master_edition.key,
         collection_authority_record,
     );
     solana_program::program::invoke_signed(
@@ -223,14 +214,12 @@ pub fn freeze_delegated_account<'info>(
         *ctx.accounts.edition.key,
         *ctx.accounts.mint.key,
     );
-
     solana_program::program::invoke_signed(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
         ctx.signer_seeds,
-    )?;
-
-    Ok(())
+    )
+    .map_err(Into::into)
 }
 
 pub fn thaw_delegated_account<'info>(
@@ -243,14 +232,12 @@ pub fn thaw_delegated_account<'info>(
         *ctx.accounts.edition.key,
         *ctx.accounts.mint.key,
     );
-
     solana_program::program::invoke_signed(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
         ctx.signer_seeds,
-    )?;
-
-    Ok(())
+    )
+    .map_err(Into::into)
 }
 
 #[derive(Accounts)]
@@ -335,7 +322,7 @@ pub struct VerifyCollection<'info> {
     pub collection_authority: AccountInfo<'info>,
     pub collection_mint: AccountInfo<'info>,
     pub collection_metadata: AccountInfo<'info>,
-    pub collection_edition: AccountInfo<'info>,
+    pub collection_master_edition: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -384,5 +371,14 @@ impl Deref for MetadataAccount {
     type Target = mpl_token_metadata::state::Metadata;
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+#[derive(Clone)]
+pub struct Metadata;
+
+impl anchor_lang::Id for Metadata {
+    fn id() -> Pubkey {
+        ID
     }
 }
