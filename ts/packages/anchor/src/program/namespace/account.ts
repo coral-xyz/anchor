@@ -134,7 +134,7 @@ export class AccountClient<
     commitment?: Commitment
   ): Promise<T | null> {
     const accountInfo = await this.getAccountInfo(address, commitment);
-    if (accountInfo === null) {
+    if (accountInfo === null || accountInfo.data.length === 0) {
       return null;
     }
     return this._coder.accounts.decode<T>(
@@ -151,7 +151,7 @@ export class AccountClient<
   async fetch(address: Address, commitment?: Commitment): Promise<T> {
     const data = await this.fetchNullable(address, commitment);
     if (data === null) {
-      throw new Error(`Account does not exist ${address.toString()}`);
+      throw new Error(`Account does not exist or has no data ${address.toString()}`);
     }
     return data;
   }

@@ -21,6 +21,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * ts: Add `has_one` relations inference so accounts mapped via has_one relationships no longer need to be provided
 * ts: Add ability to set args after setting accounts and retriving pubkyes
 * ts: Add `.prepare()` to builder pattern
+* ts: Fixed `.fetchNullable()` to be robust towards accounts only holding a balance ([#2172](https://github.com/coral-xyz/anchor/pull/2172)).
 * spl: Add `freeze_delegated_account` and `thaw_delegated_account` wrappers ([#2164](https://github.com/coral-xyz/anchor/pull/2164))
 
 ### Fixes
