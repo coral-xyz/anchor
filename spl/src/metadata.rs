@@ -249,6 +249,29 @@ pub fn set_and_verify_collection<'info>(
     .map_err(Into::into)
 }
 
+pub fn set_and_verify_sized_collection_item<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, SetAndVerifySizedCollectionItem<'info>>,
+    collection_authority_record: Option<Pubkey>,
+) -> Result<()> {
+    let ix = mpl_token_metadata::instruction::set_and_verify_sized_collection_item(
+        ID,
+        *ctx.accounts.metadata.key,
+        *ctx.accounts.collection_authority.key,
+        *ctx.accounts.payer.key,
+        *ctx.accounts.update_authority.key,
+        *ctx.accounts.collection_mint.key,
+        *ctx.accounts.collection_metadata.key,
+        *ctx.accounts.collection_master_edition.key,
+        collection_authority_record,
+    );
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )
+    .map_err(Into::into)
+}
+
 pub fn freeze_delegated_account<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, FreezeDelegatedAccount<'info>>,
 ) -> Result<()> {
@@ -432,6 +455,17 @@ pub struct VerifySizedCollectionItem<'info> {
 
 #[derive(Accounts)]
 pub struct SetAndVerifyCollection<'info> {
+    pub metadata: AccountInfo<'info>,
+    pub collection_authority: AccountInfo<'info>,
+    pub payer: AccountInfo<'info>,
+    pub update_authority: AccountInfo<'info>,
+    pub collection_mint: AccountInfo<'info>,
+    pub collection_metadata: AccountInfo<'info>,
+    pub collection_master_edition: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct SetAndVerifySizedCollectionItem<'info> {
     pub metadata: AccountInfo<'info>,
     pub collection_authority: AccountInfo<'info>,
     pub payer: AccountInfo<'info>,
