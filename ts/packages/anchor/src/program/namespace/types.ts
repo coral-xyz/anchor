@@ -4,6 +4,7 @@ import { Idl } from "../../";
 import {
   IdlEnumFields,
   IdlEnumFieldsNamed,
+  IdlEnumFieldsTuple,
   IdlField,
   IdlInstruction,
   IdlType,
@@ -156,10 +157,9 @@ type UnboxToUnion<T> = T extends (infer U)[]
 /**
  * decode single enum.field
  */
-declare type DecodeEnumField<
-  F extends IdlType | IdlField,
-  Defined
-> = F extends IdlType ? DecodeType<F, Defined> : never;
+declare type DecodeEnumField<F, Defined> = F extends IdlType
+  ? DecodeType<F, Defined>
+  : never;
 
 /**
  * decode enum variant: named or tuple
@@ -171,12 +171,14 @@ declare type DecodeEnumFields<
   ? {
       [F2 in F[number] as F2["name"]]: DecodeEnumField<F2["type"], Defined>;
     }
-  : {
-      [F2 in keyof F as Exclude<F2, keyof unknown[]>]: DecodeEnumField<
-        F[F2],
+  : F extends IdlEnumFieldsTuple
+  ? {
+      [F3 in keyof F as Exclude<F3, keyof unknown[]>]: DecodeEnumField<
+        F[F3],
         Defined
       >;
-    };
+    }
+  : Record<string, never>;
 
 /**
  * Since TypeScript do not provide OneOf helper we can
@@ -184,11 +186,10 @@ declare type DecodeEnumFields<
  */
 declare type DecodeEnum<K extends IdlTypeDefTyEnum, Defined> = {
   // X = IdlEnumVariant
-  [X in K["variants"][number] as Uncapitalize<
-    X["name"]
-  >]+?: X["fields"] extends undefined
-    ? Record<string, never>
-    : DecodeEnumFields<NonNullable<X["fields"]>, Defined>;
+  [X in K["variants"][number] as Uncapitalize<X["name"]>]+?: DecodeEnumFields<
+    NonNullable<X["fields"]>,
+    Defined
+  >;
 };
 
 type DecodeStruct<I extends IdlTypeDefTyStruct, Defined> = {
