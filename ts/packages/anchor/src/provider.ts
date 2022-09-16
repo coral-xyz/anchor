@@ -29,17 +29,20 @@ export default interface Provider {
   sendAndConfirm?(
     tx: Transaction,
     signers?: Signer[],
-    opts?: ConfirmOptions
+    opts?: ConfirmOptions,
+    feePayer?: PublicKey
   ): Promise<TransactionSignature>;
   sendAll?(
     txWithSigners: { tx: Transaction; signers?: Signer[] }[],
-    opts?: ConfirmOptions
+    opts?: ConfirmOptions,
+    feePayer?: PublicKey
   ): Promise<Array<TransactionSignature>>;
   simulate?(
     tx: Transaction,
     signers?: Signer[],
     commitment?: Commitment,
-    includeAccounts?: boolean | PublicKey[]
+    includeAccounts?: boolean | PublicKey[],
+    feePayer?: PublicKey
   ): Promise<SuccessfulTxSimulationResponse>;
 }
 
@@ -122,17 +125,19 @@ export class AnchorProvider implements Provider {
    * @param tx      The transaction to send.
    * @param signers The signers of the transaction.
    * @param opts    Transaction confirmation options.
+   * @param feePayer Specifies who is paying for the transaction.
    */
   async sendAndConfirm(
     tx: Transaction,
     signers?: Signer[],
-    opts?: ConfirmOptions
+    opts?: ConfirmOptions,
+    feePayer?: PublicKey
   ): Promise<TransactionSignature> {
     if (opts === undefined) {
       opts = this.opts;
     }
 
-    tx.feePayer = this.wallet.publicKey;
+    tx.feePayer = feePayer ?? this.wallet.publicKey;
     tx.recentBlockhash = (
       await this.connection.getRecentBlockhash(opts.preflightCommitment)
     ).blockhash;
@@ -172,10 +177,15 @@ export class AnchorProvider implements Provider {
 
   /**
    * Similar to `send`, but for an array of transactions and signers.
+   * 
+   * @param txWithSigners Array of transactions and signers.
+   * @param opts    Transaction confirmation options.
+   * @param feePayer Specifies who is paying for the transaction.
    */
   async sendAll(
     txWithSigners: { tx: Transaction; signers?: Signer[] }[],
-    opts?: ConfirmOptions
+    opts?: ConfirmOptions,
+    feePayer?: PublicKey
   ): Promise<Array<TransactionSignature>> {
     if (opts === undefined) {
       opts = this.opts;
@@ -188,7 +198,7 @@ export class AnchorProvider implements Provider {
       let tx = r.tx;
       let signers = r.signers ?? [];
 
-      tx.feePayer = this.wallet.publicKey;
+      tx.feePayer = feePayer ?? this.wallet.publicKey;
       tx.recentBlockhash = blockhash.blockhash;
 
       signers.forEach((kp) => {
@@ -219,14 +229,16 @@ export class AnchorProvider implements Provider {
    * @param tx      The transaction to send.
    * @param signers The signers of the transaction.
    * @param opts    Transaction confirmation options.
+   * @param feePayer Specifies who is paying for the transaction.
    */
   async simulate(
     tx: Transaction,
     signers?: Signer[],
     commitment?: Commitment,
-    includeAccounts?: boolean | PublicKey[]
+    includeAccounts?: boolean | PublicKey[],
+    feePayer?: PublicKey
   ): Promise<SuccessfulTxSimulationResponse> {
-    tx.feePayer = this.wallet.publicKey;
+    tx.feePayer = feePayer ?? this.wallet.publicKey;
     tx.recentBlockhash = (
       await this.connection.getLatestBlockhash(
         commitment ?? this.connection.commitment
