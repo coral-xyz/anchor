@@ -122,9 +122,9 @@ export class AnchorProvider implements Provider {
   /**
    * Sends the given transaction, paid for and signed by the provider's wallet.
    *
-   * @param tx      The transaction to send.
-   * @param signers The signers of the transaction.
-   * @param opts    Transaction confirmation options.
+   * @param tx       The transaction to send.
+   * @param signers  The signers of the transaction.
+   * @param opts     Transaction confirmation options.
    * @param feePayer Specifies who is paying for the transaction.
    */
   async sendAndConfirm(
@@ -179,8 +179,8 @@ export class AnchorProvider implements Provider {
    * Similar to `send`, but for an array of transactions and signers.
    * 
    * @param txWithSigners Array of transactions and signers.
-   * @param opts    Transaction confirmation options.
-   * @param feePayer Specifies who is paying for the transaction.
+   * @param opts          Transaction confirmation options.
+   * @param feePayer      Specifies who is paying for the transaction.
    */
   async sendAll(
     txWithSigners: { tx: Transaction; signers?: Signer[] }[],
@@ -226,9 +226,9 @@ export class AnchorProvider implements Provider {
   /**
    * Simulates the given transaction, returning emitted logs from execution.
    *
-   * @param tx      The transaction to send.
-   * @param signers The signers of the transaction.
-   * @param opts    Transaction confirmation options.
+   * @param tx       The transaction to send.
+   * @param signers  The signers of the transaction.
+   * @param opts     Transaction confirmation options.
    * @param feePayer Specifies who is paying for the transaction.
    */
   async simulate(
