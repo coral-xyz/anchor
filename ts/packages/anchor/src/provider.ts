@@ -177,7 +177,7 @@ export class AnchorProvider implements Provider {
 
   /**
    * Similar to `send`, but for an array of transactions and signers.
-   * 
+   *
    * @param txWithSigners Array of transactions and signers.
    * @param opts          Transaction confirmation options.
    * @param feePayer      Specifies who is paying for the transaction.
