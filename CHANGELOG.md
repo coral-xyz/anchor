@@ -24,6 +24,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * ts: Add ability to set args after setting accounts and retriving pubkyes
 * ts: Add `.prepare()` to builder pattern
 * spl: Add `freeze_delegated_account` and `thaw_delegated_account` wrappers ([#2164](https://github.com/coral-xyz/anchor/pull/2164))
+* ts: Add `feePayer` check to `AnchorProvider` methods, so that anchor writes the provider's wallet as fee payer if fee payer isn't already set ([#2186](https://github.com/coral-xyz/anchor/pull/2186))
 
 ### Fixes
 
