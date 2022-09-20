@@ -67,9 +67,32 @@ pub struct InitMyAccount<'info> {
         bump,
     )]
     account: Account<'info, MyAccount>,
+    nested: Nested<'info>,
     #[account(mut)]
     payer: Signer<'info>,
     system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(seed_a: u8)]
+pub struct Nested<'info> {
+    #[account(
+        init,
+        payer = payer,
+        space = 8+8,
+        seeds = [
+            &seed_a.to_le_bytes(),
+            "nested-seed".as_bytes(),
+            b"test".as_ref(),
+            MY_SEED.as_ref(),
+            MY_SEED_STR.as_bytes(),
+            MY_SEED_U8.to_le_bytes().as_ref(),
+            &MY_SEED_U32.to_le_bytes(),
+            &MY_SEED_U64.to_le_bytes(),
+        ],
+        bump,
+    )]
+    account_nested: Account<'info, MyAccount>,
 }
 
 #[account]
