@@ -77,9 +77,6 @@ pub struct InitMyAccount<'info> {
 #[instruction(seed_a: u8)]
 pub struct Nested<'info> {
     #[account(
-        init,
-        payer = payer,
-        space = 8+8,
         seeds = [
             &seed_a.to_le_bytes(),
             "nested-seed".as_bytes(),
@@ -92,7 +89,8 @@ pub struct Nested<'info> {
         ],
         bump,
     )]
-    account_nested: Account<'info, MyAccount>,
+    /// CHECK: Not needed
+    account_nested: AccountInfo<'info>,
 }
 
 #[account]
