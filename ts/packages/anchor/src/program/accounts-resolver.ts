@@ -120,13 +120,6 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     accounts: IdlAccountItem[],
     path: string[] = []
   ): Promise<number> {
-    for (let k = 0; k < this._idlIx.accounts.length; k += 1) {
-      // Cast is ok because only a non-nested IdlAccount can have a seeds
-      // cosntraint.
-      const accountDesc = this._idlIx.accounts[k] as IdlAccount;
-      const accountDescName = camelCase(accountDesc.name);
-    }
-
     let found = 0;
     for (let k = 0; k < accounts.length; k += 1) {
       const accountDesc = accounts[k];
@@ -144,7 +137,7 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
       if (
         accountDescCasted.pda &&
         accountDescCasted.pda.seeds.length > 0 &&
-        !this._accounts[accountDescName]
+        !this.get([...path, accountDescName])
       ) {
         await this.autoPopulatePda(accountDescCasted, path);
         found += 1;

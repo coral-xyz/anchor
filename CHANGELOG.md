@@ -24,7 +24,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * ts: Add ability to set args after setting accounts and retriving pubkyes ([#2160](https://github.com/coral-xyz/anchor/pull/2160))
 * ts: Add `.prepare()` to builder pattern ([#2160](https://github.com/coral-xyz/anchor/pull/2160))
 * spl: Add `freeze_delegated_account` and `thaw_delegated_account` wrappers ([#2164](https://github.com/coral-xyz/anchor/pull/2164))
-* ts: Add nested PDA inference
+* ts: Add nested PDA inference ([#2194](https://github.com/coral-xyz/anchor/pull/2194))
 
 ### Fixes
 
