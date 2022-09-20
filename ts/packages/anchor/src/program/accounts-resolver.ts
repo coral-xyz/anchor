@@ -84,22 +84,8 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
       }
     }
 
-    for (let k = 0; k < this._idlIx.accounts.length; k += 1) {
-      // Cast is ok because only a non-nested IdlAccount can have a seeds
-      // cosntraint.
-      const accountDesc = this._idlIx.accounts[k] as IdlAccount;
-      const accountDescName = camelCase(accountDesc.name);
-
-      // PDA derived from IDL seeds.
-      if (
-        accountDesc.pda &&
-        accountDesc.pda.seeds.length > 0 &&
-        !this._accounts[accountDescName]
-      ) {
-        await this.autoPopulatePda(accountDesc);
-        continue;
-      }
-    }
+    // Auto populate pdas until we stop finding new accounts
+    while ((await this.resolvePdas(this._idlIx.accounts)) > 0) {}
 
     // Auto populate has_one relationships until we stop finding new accounts
     while ((await this.resolveRelations(this._idlIx.accounts)) > 0) {}
@@ -128,6 +114,43 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
       curr[p] = curr[p] || {};
       curr = curr[p] as Accounts;
     });
+  }
+
+  private async resolvePdas(
+    accounts: IdlAccountItem[],
+    path: string[] = []
+  ): Promise<number> {
+    for (let k = 0; k < this._idlIx.accounts.length; k += 1) {
+      // Cast is ok because only a non-nested IdlAccount can have a seeds
+      // cosntraint.
+      const accountDesc = this._idlIx.accounts[k] as IdlAccount;
+      const accountDescName = camelCase(accountDesc.name);
+    }
+
+    let found = 0;
+    for (let k = 0; k < accounts.length; k += 1) {
+      const accountDesc = accounts[k];
+      const subAccounts = (accountDesc as IdlAccounts).accounts;
+      if (subAccounts) {
+        found += await this.resolveRelations(subAccounts, [
+          ...path,
+          accountDesc.name,
+        ]);
+      }
+
+      const accountDescCasted: IdlAccount = accountDesc as IdlAccount;
+      const accountDescName = camelCase(accountDesc.name);
+      // PDA derived from IDL seeds.
+      if (
+        accountDescCasted.pda &&
+        accountDescCasted.pda.seeds.length > 0 &&
+        !this._accounts[accountDescName]
+      ) {
+        await this.autoPopulatePda(accountDescCasted, path);
+        found += 1;
+      }
+    }
+    return found;
   }
 
   private async resolveRelations(
@@ -172,7 +195,7 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     return found;
   }
 
-  private async autoPopulatePda(accountDesc: IdlAccount) {
+  private async autoPopulatePda(accountDesc: IdlAccount, path: string[] = []) {
     if (!accountDesc.pda || !accountDesc.pda.seeds)
       throw new Error("Must have seeds");
 
@@ -183,7 +206,7 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     const programId = await this.parseProgramId(accountDesc);
     const [pubkey] = await PublicKey.findProgramAddress(seeds, programId);
 
-    this._accounts[camelCase(accountDesc.name)] = pubkey;
+    this.set([...path, camelCase(accountDesc.name)], pubkey);
   }
 
   private async parseProgramId(accountDesc: IdlAccount): Promise<PublicKey> {
