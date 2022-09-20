@@ -125,7 +125,7 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
       const accountDesc = accounts[k];
       const subAccounts = (accountDesc as IdlAccounts).accounts;
       if (subAccounts) {
-        found += await this.resolveRelations(subAccounts, [
+        found += await this.resolvePdas(subAccounts, [
           ...path,
           accountDesc.name,
         ]);
