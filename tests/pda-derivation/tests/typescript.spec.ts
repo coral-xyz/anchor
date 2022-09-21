@@ -78,15 +78,18 @@ describe("typescript", () => {
           return async ({ accounts }) => {
             called = true;
             return accounts;
-          }
+          };
         }
       }
-    )
-    await customProgram.methods.initMyAccount(seedA).accounts({
-      base: base.publicKey,
-      base2: base.publicKey,
-    }).pubkeys();
+    );
+    await customProgram.methods
+      .initMyAccount(seedA)
+      .accounts({
+        base: base.publicKey,
+        base2: base.publicKey,
+      })
+      .pubkeys();
 
     expect(called).is.true;
-  })
+  });
 });
