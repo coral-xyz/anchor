@@ -17,6 +17,14 @@ import { BorshAccountsCoder } from "src/coder/index.js";
 
 type Accounts = { [name: string]: PublicKey | Accounts };
 
+export type CustomAccountResolver<IDL extends Idl> = (params: {
+    args: Array<any>,
+    accounts: Accounts,
+    provider: Provider,
+    programId: PublicKey,
+    idlIx: AllInstructions<IDL>,
+}) => Promise<Accounts>;
+
 // Populates a given accounts context with PDAs and common missing accounts.
 export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
   _args: Array<any>;
@@ -35,7 +43,8 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     private _provider: Provider,
     private _programId: PublicKey,
     private _idlIx: AllInstructions<IDL>,
-    _accountNamespace: AccountNamespace<IDL>
+    _accountNamespace: AccountNamespace<IDL>,
+    private _customResolver?: CustomAccountResolver<IDL>
   ) {
     this._args = _args;
     this._accountStore = new AccountStore(_provider, _accountNamespace);
@@ -84,11 +93,23 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
       }
     }
 
-    // Auto populate pdas until we stop finding new accounts
-    while ((await this.resolvePdas(this._idlIx.accounts)) > 0) {}
 
-    // Auto populate has_one relationships until we stop finding new accounts
-    while ((await this.resolveRelations(this._idlIx.accounts)) > 0) {}
+    // Auto populate pdas and relations until we stop finding new accounts
+    while (
+      (await this.resolvePdas(this._idlIx.accounts)) +
+        (await this.resolveRelations(this._idlIx.accounts)) >
+      0
+    ) {}
+
+    if (this._customResolver) {
+      this._accounts = await this._customResolver({
+        args: this._args,
+        accounts: this._accounts,
+        provider: this._provider,
+        programId: this._programId,
+        idlIx: this._idlIx,
+      });
+    }
   }
 
   private get(path: string[]): PublicKey | undefined {
