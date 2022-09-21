@@ -116,7 +116,6 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
   ): Promise<void> {
     for (let k = 0; k < accounts.length; k += 1) {
       const accountDescOrAccounts = accounts[k];
-      console.log(accountDescOrAccounts);
       const subAccounts = (accountDescOrAccounts as IdlAccounts).accounts;
       if (subAccounts) {
         await this.resolveConst(subAccounts, [
@@ -145,7 +144,6 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
         Reflect.has(AccountsResolver.CONST_ACCOUNTS, accountDescName) &&
         !this.get([...path, accountDescName])
       ) {
-        console.log("RESOOOLVE", accountDescName)
         this.set(
           [...path, accountDescName],
           AccountsResolver.CONST_ACCOUNTS[accountDescName]
