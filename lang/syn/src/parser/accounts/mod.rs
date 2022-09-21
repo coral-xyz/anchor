@@ -1,5 +1,6 @@
 use crate::parser::docs;
 use crate::*;
+use std::collections::HashSet;
 use syn::parse::{Error as ParseError, Result as ParseResult};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
@@ -32,6 +33,47 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
             ))
         }
     };
+    let payers_for_init = fields
+        .iter()
+        .filter_map(|af| match af {
+            AccountField::Field(f) => f
+                .constraints
+                .init
+                .as_ref()
+                .map(|init| init.payer.to_token_stream().to_string()),
+            _ => None,
+        })
+        .collect::<HashSet<_>>();
+    let payer_for_init_seeds_groups = fields
+        .iter()
+        .filter(|af| payers_for_init.contains(&af.ident().to_string()))
+        .filter_map(|af| match af {
+            AccountField::Field(f) => f
+                .constraints
+                .seeds
+                .as_ref()
+                .map(|seeds| (af.ident().to_string(), seeds.clone())),
+            _ => None,
+        })
+        .collect::<HashMap<_, _>>();
+    // put payer seeds group to init group
+    let mut fields = fields;
+    for af in fields.iter_mut() {
+        if let AccountField::Field(f) = af {
+            match f.constraints.init.as_mut() {
+                Some(init) => {
+                    match payer_for_init_seeds_groups.get(&init.payer.to_token_stream().to_string())
+                    {
+                        Some(seeds) => {
+                            init.payer_seeds = Some(seeds.clone());
+                        }
+                        None => {}
+                    }
+                }
+                None => {}
+            }
+        }
+    }
 
     constraints_cross_checks(&fields)?;
 
@@ -120,6 +162,22 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                         "the payer specified does not exist.",
                     ));
                 }
+            }
+            // Check payer seeds doesn't contain program_id
+            match field.constraints.init.as_ref() {
+                Some(init) => match init.payer_seeds.as_ref() {
+                    Some(seeds) => match seeds.program_seed.as_ref() {
+                        Some(_) => {
+                            return Err(ParseError::new(
+                                field.ident.span(),
+                                "seeds of payer must be derived from the program itself",
+                            ));
+                        }
+                        None => {}
+                    },
+                    None => {}
+                },
+                None => {}
             }
             match kind {
                 // This doesn't catch cases like account.key() or account.key.

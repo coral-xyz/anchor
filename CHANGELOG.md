@@ -24,6 +24,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * ts: Add ability to set args after setting accounts and retriving pubkyes
 * ts: Add `.prepare()` to builder pattern
 * spl: Add `freeze_delegated_account` and `thaw_delegated_account` wrappers ([#2164](https://github.com/coral-xyz/anchor/pull/2164))
+* lang: Allow payers in `#[account(init)]` and `#[account(init_if_needed)]` to be PDAs ([#1938](https://github.com/coral-xyz/anchor/pull/1938)).
 
 ### Fixes
 
