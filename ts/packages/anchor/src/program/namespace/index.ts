@@ -34,7 +34,9 @@ export default class NamespaceFactory {
     coder: Coder,
     programId: PublicKey,
     provider: Provider,
-    getCustomResolver?: (instruction: IdlInstruction) => (CustomAccountResolver<IDL> | undefined)
+    getCustomResolver?: (
+      instruction: IdlInstruction
+    ) => CustomAccountResolver<IDL> | undefined
   ): [
     RpcNamespace<IDL>,
     InstructionNamespace<IDL>,

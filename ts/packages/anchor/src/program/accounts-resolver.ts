@@ -18,11 +18,11 @@ import { BorshAccountsCoder } from "src/coder/index.js";
 type Accounts = { [name: string]: PublicKey | Accounts };
 
 export type CustomAccountResolver<IDL extends Idl> = (params: {
-    args: Array<any>,
-    accounts: Accounts,
-    provider: Provider,
-    programId: PublicKey,
-    idlIx: AllInstructions<IDL>,
+  args: Array<any>;
+  accounts: Accounts;
+  provider: Provider;
+  programId: PublicKey;
+  idlIx: AllInstructions<IDL>;
 }) => Promise<Accounts>;
 
 // Populates a given accounts context with PDAs and common missing accounts.
@@ -92,7 +92,6 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
           AccountsResolver.CONST_ACCOUNTS[accountDescName];
       }
     }
-
 
     // Auto populate pdas and relations until we stop finding new accounts
     while (

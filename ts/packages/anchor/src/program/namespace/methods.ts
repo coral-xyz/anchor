@@ -22,7 +22,10 @@ import { SimulateFn } from "./simulate.js";
 import { ViewFn } from "./views.js";
 import Provider from "../../provider.js";
 import { AccountNamespace } from "./account.js";
-import { AccountsResolver, CustomAccountResolver } from "../accounts-resolver.js";
+import {
+  AccountsResolver,
+  CustomAccountResolver,
+} from "../accounts-resolver.js";
 import { Accounts } from "../context.js";
 
 export type MethodsNamespace<
