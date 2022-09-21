@@ -3,7 +3,7 @@
 
 use anchor_lang::prelude::*;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("ATD5DsyrGhh6bV5PigQ5qQ48uYAChk68YBTkUvdqyJZj");
 
 pub const MY_SEED: [u8; 2] = *b"hi";
 pub const MY_SEED_STR: &str = "hi";
@@ -74,11 +74,9 @@ pub struct InitMyAccount<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(seed_a: u8)]
 pub struct Nested<'info> {
     #[account(
         seeds = [
-            &seed_a.to_le_bytes(),
             "nested-seed".as_bytes(),
             b"test".as_ref(),
             MY_SEED.as_ref(),
