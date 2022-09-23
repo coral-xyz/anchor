@@ -19,6 +19,7 @@ import {
 } from "@solana/spl-token";
 import { Misc } from "../../target/types/misc";
 import { Misc2 } from "../../target/types/misc2";
+import { open } from "fs";
 const utf8 = anchor.utils.bytes.utf8;
 const { assert, expect } = require("chai");
 const nativeAssert = require("assert");
@@ -277,6 +278,28 @@ describe("misc", () => {
     assert.isNull(closedAccount);
   });
 
+  it("It should fail to destroy an account", async () => {
+    const openAccount = await program.provider.connection.getAccountInfo(
+      dataI8.publicKey
+    );
+    assert.isNotNull(openAccount);
+
+    await nativeAssert.rejects(
+      async () => {
+        await program.rpc.testUnsafeDestroy({
+          accounts: {
+            data: dataI8.publicKey,
+            solDest: provider.wallet.publicKey,
+          },
+        });
+      },
+      (err) => {
+        return true;
+      }
+    );
+
+  });
+
   it("Can destroy an account", async () => {
     const openAccount = await program.provider.connection.getAccountInfo(
       dataI8.publicKey
@@ -312,7 +335,71 @@ describe("misc", () => {
       destroyedAccount.lamports ==
         (await program.provider.connection.getMinimumBalanceForRentExemption(8))
     ).to.be.true;
+    expect(destroyedAccount.owner.toString()).to.equal(program.programId.toString());
   });
+
+  it("A destroyed account cannot be used again", async () => {
+    const destroyedAccount = await program.provider.connection.getAccountInfo(
+      dataI8.publicKey
+    );
+    assert.isNotNull(destroyedAccount);
+    
+    // Three test cases expected to fail:
+    // - account is already initialized
+    // - account is to be init
+    // - account is zeroed
+
+    await nativeAssert.rejects(
+      async () => {
+        // Just using testUnsafeDestroy because it expects `data` to be already
+        // initialized.
+        await program.rpc.testUnsafeDestroy({
+          accounts: {
+            data: dataI8.publicKey,
+            solDest: provider.wallet.publicKey,
+          },
+        });
+      },
+      (err) => {
+        return true;
+      }
+    );
+
+    await nativeAssert.rejects(
+      async () => {
+        // Shouldn't be able to reinitialize the account.
+        await program.rpc.testInit({
+          accounts: {
+            data: dataI8.publicKey,
+            payer: provider.wallet.publicKey,
+            systemProgram: SystemProgram.programId
+          },
+          signers: [dataI8]
+        });
+      },
+      (err) => {
+        return true;
+      }
+    );
+
+    await nativeAssert.rejects(
+      async () => {
+        // Shouldn't be a zeroed account.
+        await program.rpc.testI8(-3, {
+          accounts: {
+            data: dataI8.publicKey,
+          },
+        });
+      },
+      (err) => {
+        return true;
+      }
+    );
+
+  });
+
+
+
 
   it("Can use instruction data in accounts constraints", async () => {
     // b"my-seed"

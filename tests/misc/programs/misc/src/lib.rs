@@ -3,6 +3,7 @@
 
 use account::MAX_SIZE;
 use anchor_lang::prelude::*;
+use anchor_lang::AccountsDestroy;
 use context::*;
 use event::*;
 use misc2::Auth;
@@ -116,6 +117,13 @@ pub mod misc {
     }
 
     pub fn test_close(_ctx: Context<TestClose>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn test_unsafe_destroy(ctx: Context<TestUnsafeDestroy>) -> Result<()> {
+        ctx.accounts
+            .data
+            .destroy(ctx.accounts.sol_dest.to_account_info())?;
         Ok(())
     }
 
