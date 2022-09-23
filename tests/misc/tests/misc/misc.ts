@@ -297,7 +297,6 @@ describe("misc", () => {
         return true;
       }
     );
-
   });
 
   it("Can destroy an account", async () => {
@@ -335,7 +334,9 @@ describe("misc", () => {
       destroyedAccount.lamports ==
         (await program.provider.connection.getMinimumBalanceForRentExemption(8))
     ).to.be.true;
-    expect(destroyedAccount.owner.toString()).to.equal(program.programId.toString());
+    expect(destroyedAccount.owner.toString()).to.equal(
+      program.programId.toString()
+    );
   });
 
   it("A destroyed account cannot be used again", async () => {
@@ -343,7 +344,7 @@ describe("misc", () => {
       dataI8.publicKey
     );
     assert.isNotNull(destroyedAccount);
-    
+
     // Three test cases expected to fail:
     // - account is already initialized
     // - account is to be init
@@ -372,9 +373,9 @@ describe("misc", () => {
           accounts: {
             data: dataI8.publicKey,
             payer: provider.wallet.publicKey,
-            systemProgram: SystemProgram.programId
+            systemProgram: SystemProgram.programId,
           },
-          signers: [dataI8]
+          signers: [dataI8],
         });
       },
       (err) => {
@@ -395,11 +396,7 @@ describe("misc", () => {
         return true;
       }
     );
-
   });
-
-
-
 
   it("Can use instruction data in accounts constraints", async () => {
     // b"my-seed"
