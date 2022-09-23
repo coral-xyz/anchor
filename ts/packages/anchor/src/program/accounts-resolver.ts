@@ -185,8 +185,9 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
         accountDescCasted.pda.seeds.length > 0 &&
         !this.get([...path, accountDescName])
       ) {
-        await this.autoPopulatePda(accountDescCasted, path);
-        found += 1;
+        if (Boolean(await this.autoPopulatePda(accountDescCasted, path))) {
+          found += 1;
+        }
       }
     }
     return found;
