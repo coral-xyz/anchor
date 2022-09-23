@@ -1,32 +1,25 @@
 import {
-  ConfirmOptions,
-  AccountMeta,
-  Signer,
+  AccountMeta, ConfirmOptions, PublicKey, Signer,
   Transaction,
   TransactionInstruction,
-  TransactionSignature,
-  PublicKey,
+  TransactionSignature
 } from "@solana/web3.js";
-import { SimulateResponse } from "./simulate.js";
-import { TransactionFn } from "./transaction.js";
-import { Idl } from "../../idl.js";
-import {
-  AllInstructions,
-  MethodsFn,
-  MakeMethodsNamespace,
-  InstructionAccountAddresses,
-} from "./types.js";
-import { InstructionFn } from "./instruction.js";
-import { RpcFn } from "./rpc.js";
-import { SimulateFn } from "./simulate.js";
-import { ViewFn } from "./views.js";
+import { Idl, IdlTypeDef } from "../../idl.js";
 import Provider from "../../provider.js";
-import { AccountNamespace } from "./account.js";
 import {
   AccountsResolver,
-  CustomAccountResolver,
+  CustomAccountResolver
 } from "../accounts-resolver.js";
 import { Accounts } from "../context.js";
+import { AccountNamespace } from "./account.js";
+import { InstructionFn } from "./instruction.js";
+import { RpcFn } from "./rpc.js";
+import { SimulateFn, SimulateResponse } from "./simulate.js";
+import { TransactionFn } from "./transaction.js";
+import {
+  AllInstructions, InstructionAccountAddresses, MakeMethodsNamespace, MethodsFn
+} from "./types.js";
+import { ViewFn } from "./views.js";
 
 export type MethodsNamespace<
   IDL extends Idl = Idl,
@@ -44,6 +37,7 @@ export class MethodsBuilderFactory {
     simulateFn: SimulateFn<IDL>,
     viewFn: ViewFn<IDL> | undefined,
     accountNamespace: AccountNamespace<IDL>,
+    idlTypes: IdlTypeDef[],
     customResolver?: CustomAccountResolver<IDL>
   ): MethodsFn<IDL, I, MethodsBuilder<IDL, I>> {
     return (...args) =>
@@ -58,6 +52,7 @@ export class MethodsBuilderFactory {
         programId,
         idlIx,
         accountNamespace,
+        idlTypes,
         customResolver
       );
   }
@@ -84,6 +79,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     _programId: PublicKey,
     _idlIx: AllInstructions<IDL>,
     _accountNamespace: AccountNamespace<IDL>,
+    _idlTypes: IdlTypeDef[],
     _customResolver?: CustomAccountResolver<IDL>
   ) {
     this._args = _args;
@@ -94,6 +90,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
       _programId,
       _idlIx,
       _accountNamespace,
+      _idlTypes,
       _customResolver
     );
   }
