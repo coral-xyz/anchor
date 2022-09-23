@@ -22,7 +22,10 @@ import { SimulateFn } from "./simulate.js";
 import { ViewFn } from "./views.js";
 import Provider from "../../provider.js";
 import { AccountNamespace } from "./account.js";
-import { AccountsResolver } from "../accounts-resolver.js";
+import {
+  AccountsResolver,
+  CustomAccountResolver,
+} from "../accounts-resolver.js";
 import { Accounts } from "../context.js";
 
 export type MethodsNamespace<
@@ -40,7 +43,8 @@ export class MethodsBuilderFactory {
     rpcFn: RpcFn<IDL>,
     simulateFn: SimulateFn<IDL>,
     viewFn: ViewFn<IDL> | undefined,
-    accountNamespace: AccountNamespace<IDL>
+    accountNamespace: AccountNamespace<IDL>,
+    customResolver?: CustomAccountResolver<IDL>
   ): MethodsFn<IDL, I, MethodsBuilder<IDL, I>> {
     return (...args) =>
       new MethodsBuilder(
@@ -53,7 +57,8 @@ export class MethodsBuilderFactory {
         provider,
         programId,
         idlIx,
-        accountNamespace
+        accountNamespace,
+        customResolver
       );
   }
 }
@@ -66,9 +71,10 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   private _postInstructions: Array<TransactionInstruction> = [];
   private _accountsResolver: AccountsResolver<IDL, I>;
   private _autoResolveAccounts: boolean = true;
+  private _args: Array<any>;
 
   constructor(
-    private _args: Array<any>,
+    _args: Array<any>,
     private _ixFn: InstructionFn<IDL>,
     private _txFn: TransactionFn<IDL>,
     private _rpcFn: RpcFn<IDL>,
@@ -77,16 +83,24 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     _provider: Provider,
     _programId: PublicKey,
     _idlIx: AllInstructions<IDL>,
-    _accountNamespace: AccountNamespace<IDL>
+    _accountNamespace: AccountNamespace<IDL>,
+    _customResolver?: CustomAccountResolver<IDL>
   ) {
+    this._args = _args;
     this._accountsResolver = new AccountsResolver(
       _args,
       this._accounts,
       _provider,
       _programId,
       _idlIx,
-      _accountNamespace
+      _accountNamespace,
+      _customResolver
     );
+  }
+
+  public args(_args: Array<any>): void {
+    this._args = _args;
+    this._accountsResolver.args(_args);
   }
 
   public async pubkeys(): Promise<
@@ -207,6 +221,22 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
       preInstructions: this._preInstructions,
       postInstructions: this._postInstructions,
     });
+  }
+
+  /**
+   * Convenient shortcut to get instructions and pubkeys via
+   * const { pubkeys, instructions } = await prepare();
+   */
+  public async prepare(): Promise<{
+    pubkeys: Partial<InstructionAccountAddresses<IDL, I>>;
+    instruction: TransactionInstruction;
+    signers: Signer[];
+  }> {
+    return {
+      instruction: await this.instruction(),
+      pubkeys: await this.pubkeys(),
+      signers: await this._signers,
+    };
   }
 
   public async transaction(): Promise<Transaction> {
