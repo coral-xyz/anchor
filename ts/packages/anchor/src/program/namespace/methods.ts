@@ -1,14 +1,17 @@
 import {
-  AccountMeta, ConfirmOptions, PublicKey, Signer,
+  AccountMeta,
+  ConfirmOptions,
+  PublicKey,
+  Signer,
   Transaction,
   TransactionInstruction,
-  TransactionSignature
+  TransactionSignature,
 } from "@solana/web3.js";
 import { Idl, IdlTypeDef } from "../../idl.js";
 import Provider from "../../provider.js";
 import {
   AccountsResolver,
-  CustomAccountResolver
+  CustomAccountResolver,
 } from "../accounts-resolver.js";
 import { Accounts } from "../context.js";
 import { AccountNamespace } from "./account.js";
@@ -17,7 +20,10 @@ import { RpcFn } from "./rpc.js";
 import { SimulateFn, SimulateResponse } from "./simulate.js";
 import { TransactionFn } from "./transaction.js";
 import {
-  AllInstructions, InstructionAccountAddresses, MakeMethodsNamespace, MethodsFn
+  AllInstructions,
+  InstructionAccountAddresses,
+  MakeMethodsNamespace,
+  MethodsFn,
 } from "./types.js";
 import { ViewFn } from "./views.js";
 

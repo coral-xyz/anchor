@@ -247,7 +247,10 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     }
 
     const programId = await this.parseProgramId(accountDesc);
-    const [pubkey] = await PublicKey.findProgramAddress(seeds as Buffer[], programId);
+    const [pubkey] = await PublicKey.findProgramAddress(
+      seeds as Buffer[],
+      programId
+    );
 
     this.set([...path, camelCase(accountDesc.name)], pubkey);
   }
@@ -290,13 +293,15 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
    */
   private getType(type: IdlType, path: string[] = []): string {
     if (path.length > 0 && (type as any).defined) {
-      const subType = this._idlTypes.find(t => t.name === (type as any).defined);
+      const subType = this._idlTypes.find(
+        (t) => t.name === (type as any).defined
+      );
       if (!subType) {
         throw new Error(`Cannot find type ${(type as any).defined}`);
       }
 
       const structType = subType.type as IdlTypeDefTyStruct; // enum not supported yet
-      const field = structType.fields.find(field => field.name === path[0]);
+      const field = structType.fields.find((field) => field.name === path[0]);
 
       return this.getType(field!.type, path.slice(1));
     }
@@ -305,13 +310,16 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
   }
 
   private toBufferConst(seedDesc: IdlSeed): Buffer {
-    return this.toBufferValue(this.getType(seedDesc.type, (seedDesc.path || "").split(".").slice(1)), seedDesc.value);
+    return this.toBufferValue(
+      this.getType(seedDesc.type, (seedDesc.path || "").split(".").slice(1)),
+      seedDesc.value
+    );
   }
 
   private async toBufferArg(seedDesc: IdlSeed): Promise<Buffer | undefined> {
     const argValue = this.argValue(seedDesc);
     if (!argValue) {
-      return
+      return;
     }
     return this.toBufferValue(
       this.getType(seedDesc.type, (seedDesc.path || "").split(".").slice(1)),
@@ -329,16 +337,18 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     if (idlArgPosition === -1) {
       throw new Error(`Unable to find argument for seed: ${seedArgName}`);
     }
- 
+
     return split
       .slice(1)
       .reduce((curr, path) => (curr || {})[path], this._args[idlArgPosition]);
   }
 
-  private async toBufferAccount(seedDesc: IdlSeed): Promise<Buffer | undefined> {
+  private async toBufferAccount(
+    seedDesc: IdlSeed
+  ): Promise<Buffer | undefined> {
     const accountValue = await this.accountValue(seedDesc);
     if (!accountValue) {
-      return
+      return;
     }
     return this.toBufferValue(seedDesc.type, accountValue);
   }
