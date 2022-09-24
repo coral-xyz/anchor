@@ -646,6 +646,7 @@ fn idl_accounts(
                 is_optional: if acc.is_optional { Some(true) } else { None },
                 docs: if !no_docs { acc.docs.clone() } else { None },
                 pda: pda::parse(ctx, accounts, acc, seeds_feature),
+                relations: relations::parse(acc, seeds_feature),
             }),
         })
         .collect::<Vec<_>>()
