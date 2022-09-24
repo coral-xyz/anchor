@@ -24,7 +24,7 @@ import { AccountNamespace } from "./namespace/account.js";
 import { coder } from "../spl/token";
 import { BorshAccountsCoder } from "src/coder/index.js";
 
-type Accounts = { [name: string]: PublicKey | Accounts };
+type Accounts = { [name: string]: PublicKey | null | Accounts };
 
 export type CustomAccountResolver<IDL extends Idl> = (params: {
   args: Array<any>;
@@ -95,6 +95,15 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     }
   }
 
+  public isOptional(name: string): boolean {
+    const accountDesc = this._idlIx.accounts.find((acc) => acc.name === name);
+    if (accountDesc !== undefined && "isOptional" in accountDesc) {
+      return accountDesc.isOptional ?? false;
+    } else {
+      return false;
+    }
+  }
+
   private get(path: string[]): PublicKey | undefined {
     // Only return if pubkey
     const ret = path.reduce(
@@ -136,6 +145,11 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
 
       const accountDesc = accountDescOrAccounts as IdlAccount;
       const accountDescName = camelCase(accountDescOrAccounts.name);
+
+      if (accountDesc.isOptional && this._accounts[accountDescName] === null) {
+        this._accounts[accountDescName] = this._programId;
+        continue;
+      }
 
       // Signers default to the provider.
       if (accountDesc.isSigner && !this.get([...path, accountDescName])) {
@@ -179,6 +193,7 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
 
       const accountDescCasted: IdlAccount = accountDesc as IdlAccount;
       const accountDescName = camelCase(accountDesc.name);
+
       // PDA derived from IDL seeds.
       if (
         accountDescCasted.pda &&
@@ -238,6 +253,11 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
   private async autoPopulatePda(accountDesc: IdlAccount, path: string[] = []) {
     if (!accountDesc.pda || !accountDesc.pda.seeds)
       throw new Error("Must have seeds");
+
+    if (accountDesc.isOptional && this._accounts[accountDesc.name] === null) {
+      this._accounts[accountDesc.name] = this._programId;
+      return;
+    }
 
     const seeds: (Buffer | undefined)[] = await Promise.all(
       accountDesc.pda.seeds.map((seedDesc: IdlSeed) => this.toBuffer(seedDesc))
@@ -359,6 +379,10 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
 
     const fieldName = pathComponents[0];
     const fieldPubkey = this._accounts[camelCase(fieldName)];
+
+    if (fieldPubkey === null) {
+      throw new Error(`fieldPubkey is null`);
+    }
 
     // The seed is a pubkey of the account.
     if (pathComponents.length === 1) {
