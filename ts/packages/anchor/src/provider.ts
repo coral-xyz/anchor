@@ -132,7 +132,7 @@ export class AnchorProvider implements Provider {
       opts = this.opts;
     }
 
-    if (tx.feePayer === undefined) {
+    if (tx.feePayer == null) {
       tx.feePayer = this.wallet.publicKey;
     }
 
@@ -194,7 +194,7 @@ export class AnchorProvider implements Provider {
       let tx = r.tx;
       let signers = r.signers ?? [];
 
-      if (tx.feePayer === undefined) {
+      if (tx.feePayer == null) {
         tx.feePayer = this.wallet.publicKey;
       }
 
@@ -235,7 +235,7 @@ export class AnchorProvider implements Provider {
     commitment?: Commitment,
     includeAccounts?: boolean | PublicKey[]
   ): Promise<SuccessfulTxSimulationResponse> {
-    if (tx.feePayer === undefined) {
+    if (tx.feePayer == null) {
       tx.feePayer = this.wallet.publicKey;
     }
 
