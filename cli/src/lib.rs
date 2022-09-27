@@ -69,6 +69,8 @@ pub enum Command {
         javascript: bool,
         #[clap(long)]
         no_git: bool,
+        #[clap(long)]
+        jest: bool,
     },
     /// Builds the workspace.
     #[clap(name = "build", alias = "b")]
@@ -396,7 +398,8 @@ pub fn entry(opts: Opts) -> Result<()> {
             name,
             javascript,
             no_git,
-        } => init(&opts.cfg_override, name, javascript, no_git),
+            jest,
+        } => init(&opts.cfg_override, name, javascript, no_git, jest),
         Command::New { name } => new(&opts.cfg_override, name),
         Command::Build {
             idl,
@@ -503,7 +506,13 @@ pub fn entry(opts: Opts) -> Result<()> {
     }
 }
 
-fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: bool) -> Result<()> {
+fn init(
+    cfg_override: &ConfigOverride,
+    name: String,
+    javascript: bool,
+    no_git: bool,
+    jest: bool,
+) -> Result<()> {
     if Config::discover(cfg_override)?.is_some() {
         return Err(anyhow!("Workspace already initialized"));
     }
@@ -525,15 +534,28 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
     fs::create_dir("app")?;
 
     let mut cfg = Config::default();
-    cfg.scripts.insert(
-        "test".to_owned(),
-        if javascript {
-            "yarn run mocha -t 1000000 tests/"
-        } else {
-            "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-        }
-        .to_owned(),
-    );
+    if jest {
+        cfg.scripts.insert(
+            "test".to_owned(),
+            if javascript {
+                "yarn run jest"
+            } else {
+                "yarn run jest --preset ts-jest"
+            }
+            .to_owned(),
+        );
+    } else {
+        cfg.scripts.insert(
+            "test".to_owned(),
+            if javascript {
+                "yarn run mocha -t 1000000 tests/"
+            } else {
+                "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+            }
+            .to_owned(),
+        );
+    }
+
     let mut localnet = BTreeMap::new();
     localnet.insert(
         name.to_snake_case(),
@@ -569,26 +591,36 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
     if javascript {
         // Build javascript config
         let mut package_json = File::create("package.json")?;
-        package_json.write_all(template::package_json().as_bytes())?;
+        package_json.write_all(template::package_json(jest).as_bytes())?;
 
-        let mut mocha = File::create(&format!("tests/{}.js", name))?;
-        mocha.write_all(template::mocha(&name).as_bytes())?;
+        if jest {
+            let mut test = File::create(&format!("tests/{}.test.js", name))?;
+            test.write_all(template::jest(&name).as_bytes())?;
+        } else {
+            let mut test = File::create(&format!("tests/{}.js", name))?;
+            test.write_all(template::mocha(&name).as_bytes())?;
+        }
 
         let mut deploy = File::create("migrations/deploy.js")?;
         deploy.write_all(template::deploy_script().as_bytes())?;
     } else {
         // Build typescript config
         let mut ts_config = File::create("tsconfig.json")?;
-        ts_config.write_all(template::ts_config().as_bytes())?;
+        ts_config.write_all(template::ts_config(jest).as_bytes())?;
 
         let mut ts_package_json = File::create("package.json")?;
-        ts_package_json.write_all(template::ts_package_json().as_bytes())?;
+        ts_package_json.write_all(template::ts_package_json(jest).as_bytes())?;
 
         let mut deploy = File::create("migrations/deploy.ts")?;
         deploy.write_all(template::ts_deploy_script().as_bytes())?;
 
-        let mut mocha = File::create(&format!("tests/{}.ts", name))?;
-        mocha.write_all(template::ts_mocha(&name).as_bytes())?;
+        if jest {
+            let mut test = File::create(&format!("tests/{}.test.ts", name))?;
+            test.write_all(template::ts_jest(&name).as_bytes())?;
+        } else {
+            let mut test = File::create(&format!("tests/{}.ts", name))?;
+            test.write_all(template::ts_mocha(&name).as_bytes())?;
+        }
     }
 
     // Install node modules.
@@ -3198,6 +3230,7 @@ mod tests {
             "await".to_string(),
             true,
             false,
+            false,
         )
         .unwrap();
     }
@@ -3212,6 +3245,7 @@ mod tests {
             },
             "fn".to_string(),
             true,
+            false,
             false,
         )
         .unwrap();
@@ -3228,6 +3262,7 @@ mod tests {
             "project.name".to_string(),
             true,
             false,
+            false,
         )
         .unwrap();
     }
@@ -3242,6 +3277,7 @@ mod tests {
             },
             "1project".to_string(),
             true,
+            false,
             false,
         )
         .unwrap();
