@@ -3282,4 +3282,36 @@ mod tests {
         )
         .unwrap();
     }
+
+    #[test]
+    #[should_panic(expected = "Anchor init should create tests with jest using Javascript.")]
+    fn test_init_using_jest_with_js() {
+        init(
+            &ConfigOverride {
+                cluster: None,
+                wallet: None,
+            },
+            "project".to_string(),
+            true,
+            false,
+            true,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Anchor init should create tests with jest using Typescript.")]
+    fn test_init_using_jest_with_ts() {
+        init(
+            &ConfigOverride {
+                cluster: None,
+                wallet: None,
+            },
+            "project".to_string(),
+            false,
+            false,
+            true,
+        )
+        .unwrap();
+    }
 }
