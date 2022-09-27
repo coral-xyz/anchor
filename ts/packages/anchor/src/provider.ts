@@ -231,9 +231,8 @@ export class AnchorProvider implements Provider {
     commitment?: Commitment,
     includeAccounts?: boolean | PublicKey[]
   ): Promise<SuccessfulTxSimulationResponse> {
-    
     tx.feePayer = tx.feePayer || this.wallet.publicKey;
-    
+
     tx.recentBlockhash = (
       await this.connection.getLatestBlockhash(
         commitment ?? this.connection.commitment
