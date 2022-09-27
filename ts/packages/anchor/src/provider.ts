@@ -132,9 +132,7 @@ export class AnchorProvider implements Provider {
       opts = this.opts;
     }
 
-    if (tx.feePayer == null) {
-      tx.feePayer = this.wallet.publicKey;
-    }
+    tx.feePayer = tx.feePayer || this.wallet.publicKey;
 
     tx.recentBlockhash = (
       await this.connection.getRecentBlockhash(opts.preflightCommitment)
@@ -194,9 +192,7 @@ export class AnchorProvider implements Provider {
       let tx = r.tx;
       let signers = r.signers ?? [];
 
-      if (tx.feePayer == null) {
-        tx.feePayer = this.wallet.publicKey;
-      }
+      tx.feePayer = tx.feePayer || this.wallet.publicKey;
 
       tx.recentBlockhash = blockhash.blockhash;
 
@@ -235,10 +231,9 @@ export class AnchorProvider implements Provider {
     commitment?: Commitment,
     includeAccounts?: boolean | PublicKey[]
   ): Promise<SuccessfulTxSimulationResponse> {
-    if (tx.feePayer == null) {
-      tx.feePayer = this.wallet.publicKey;
-    }
-
+    
+    tx.feePayer = tx.feePayer || this.wallet.publicKey;
+    
     tx.recentBlockhash = (
       await this.connection.getLatestBlockhash(
         commitment ?? this.connection.commitment
