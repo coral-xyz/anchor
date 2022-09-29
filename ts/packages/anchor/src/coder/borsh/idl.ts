@@ -129,9 +129,14 @@ export class IdlCoder {
         if (variant.fields === undefined) {
           return borsh.struct([], name);
         }
-        const fieldLayouts = variant.fields.map((f: IdlField | IdlType) => {
+        const fieldLayouts = variant.fields.map((f: IdlField | IdlType, index: number) => {
           if (!f.hasOwnProperty("name")) {
-            throw new Error("Tuple enum variants not yet implemented.");
+            // Name tuple variants by the argument index
+            // e.g. arg0, arg1, arg2, etc
+            return IdlCoder.fieldLayout({
+              name: `arg${index}`,
+              type: f as IdlType
+            }, types);
           }
           // this typescript conversion is ok
           // because if f were of type IdlType
