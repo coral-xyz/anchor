@@ -24,4 +24,15 @@ if ! [[ $output =~ "Struct field \"unchecked\" is unsafe" ]]; then
 fi
 popd
 
-echo "Success. As expected, all builds failed."
+#
+# Build the control variant.
+#
+pushd programs/ignore-non-accounts/
+output=$(anchor build 2>&1 > /dev/null)
+if [[ $output =~ "\" is unsafe, but is not documented" ]]; then
+   echo "Error: safety check triggered when it shouldn't have"
+   exit 1
+fi
+popd
+
+echo "Success. As expected, all builds failed that were supposed to fail."
