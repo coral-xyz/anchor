@@ -119,7 +119,6 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     accounts: Partial<Accounts<I["accounts"][number]>>
   ): MethodsBuilder<IDL, I> {
     this._autoResolveAccounts = true;
-    // Object.assign(this._accounts, accounts);
     for (const accountName in accounts) {
       if (accounts[accountName]) {
         this._accounts[accountName] = accounts[accountName];
@@ -137,7 +136,6 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     accounts: Accounts<I["accounts"][number]>
   ): MethodsBuilder<IDL, I> {
     this._autoResolveAccounts = false;
-    // Object.assign(this._accounts, accounts);
     for (const accountName in accounts) {
       if (accounts[accountName]) {
         this._accounts[accountName] = accounts[accountName];
