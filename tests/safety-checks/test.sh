@@ -28,9 +28,8 @@ popd
 # Build the control variant.
 #
 pushd programs/ignore-non-accounts/
-output=$(anchor build 2>&1 > /dev/null)
-if [[ $output =~ "\" is unsafe, but is not documented" ]]; then
-   echo "Error: safety check triggered when it shouldn't have"
+if ! anchor build ; then
+   echo "Error: anchor build failed when it shouldn't have"
    exit 1
 fi
 popd
