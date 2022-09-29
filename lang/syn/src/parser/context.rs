@@ -68,7 +68,7 @@ impl CrateContext {
         {}:{}:{}
         Struct field "{}" is unsafe, but is not documented.
         Please add a `/// CHECK:` doc comment explaining why no checks through types are necessary.
-        See https://book.anchor-lang.com/anchor_in_depth/the_accounts_struct.html#safety-checks for more information.
+        See https://www.anchor-lang.com/docs/the-accounts-struct#safety-checks for more information.
                     "#,
                         ctx.file.canonicalize().unwrap().display(),
                         span.start().line,
