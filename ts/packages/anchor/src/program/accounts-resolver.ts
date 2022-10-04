@@ -1,11 +1,20 @@
 import camelCase from "camelcase";
-import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
+import {
+  PublicKey,
+  SystemProgram,
+  SYSVAR_CLOCK_PUBKEY,
+  SYSVAR_RENT_PUBKEY,
+} from "@solana/web3.js";
 import {
   Idl,
   IdlSeed,
   IdlAccount,
   IdlAccountItem,
   IdlAccounts,
+  IdlTypeDef,
+  IdlTypeDefStruct,
+  IdlTypeDefTyStruct,
+  IdlType,
 } from "../idl.js";
 import * as utf8 from "../utils/bytes/utf8.js";
 import { TOKEN_PROGRAM_ID, ASSOCIATED_PROGRAM_ID } from "../utils/token.js";
@@ -17,6 +26,14 @@ import { BorshAccountsCoder } from "src/coder/index.js";
 
 type Accounts = { [name: string]: PublicKey | Accounts };
 
+export type CustomAccountResolver<IDL extends Idl> = (params: {
+  args: Array<any>;
+  accounts: Accounts;
+  provider: Provider;
+  programId: PublicKey;
+  idlIx: AllInstructions<IDL>;
+}) => Promise<Accounts>;
+
 // Populates a given accounts context with PDAs and common missing accounts.
 export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
   _args: Array<any>;
@@ -25,6 +42,7 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     rent: SYSVAR_RENT_PUBKEY,
     systemProgram: SystemProgram.programId,
     tokenProgram: TOKEN_PROGRAM_ID,
+    clock: SYSVAR_CLOCK_PUBKEY,
   };
 
   private _accountStore: AccountStore<IDL>;
@@ -35,7 +53,9 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     private _provider: Provider,
     private _programId: PublicKey,
     private _idlIx: AllInstructions<IDL>,
-    _accountNamespace: AccountNamespace<IDL>
+    _accountNamespace: AccountNamespace<IDL>,
+    private _idlTypes: IdlTypeDef[],
+    private _customResolver?: CustomAccountResolver<IDL>
   ) {
     this._args = _args;
     this._accountStore = new AccountStore(_provider, _accountNamespace);
@@ -55,54 +75,24 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
   //       dependency graph and resolve automatically.
   //
   public async resolve() {
-    for (let k = 0; k < this._idlIx.accounts.length; k += 1) {
-      // Cast is ok because only a non-nested IdlAccount can have a seeds
-      // cosntraint.
-      const accountDesc = this._idlIx.accounts[k] as IdlAccount;
-      const accountDescName = camelCase(accountDesc.name);
+    await this.resolveConst(this._idlIx.accounts);
 
-      // Signers default to the provider.
-      if (accountDesc.isSigner && !this._accounts[accountDescName]) {
-        // @ts-expect-error
-        if (this._provider.wallet === undefined) {
-          throw new Error(
-            "This function requires the Provider interface implementor to have a 'wallet' field."
-          );
-        }
-        // @ts-expect-error
-        this._accounts[accountDescName] = this._provider.wallet.publicKey;
-        continue;
-      }
+    // Auto populate pdas and relations until we stop finding new accounts
+    while (
+      (await this.resolvePdas(this._idlIx.accounts)) +
+        (await this.resolveRelations(this._idlIx.accounts)) >
+      0
+    ) {}
 
-      // Common accounts are auto populated with magic names by convention.
-      if (
-        Reflect.has(AccountsResolver.CONST_ACCOUNTS, accountDescName) &&
-        !this._accounts[accountDescName]
-      ) {
-        this._accounts[accountDescName] =
-          AccountsResolver.CONST_ACCOUNTS[accountDescName];
-      }
+    if (this._customResolver) {
+      this._accounts = await this._customResolver({
+        args: this._args,
+        accounts: this._accounts,
+        provider: this._provider,
+        programId: this._programId,
+        idlIx: this._idlIx,
+      });
     }
-
-    for (let k = 0; k < this._idlIx.accounts.length; k += 1) {
-      // Cast is ok because only a non-nested IdlAccount can have a seeds
-      // cosntraint.
-      const accountDesc = this._idlIx.accounts[k] as IdlAccount;
-      const accountDescName = camelCase(accountDesc.name);
-
-      // PDA derived from IDL seeds.
-      if (
-        accountDesc.pda &&
-        accountDesc.pda.seeds.length > 0 &&
-        !this._accounts[accountDescName]
-      ) {
-        await this.autoPopulatePda(accountDesc);
-        continue;
-      }
-    }
-
-    // Auto populate has_one relationships until we stop finding new accounts
-    while ((await this.resolveRelations(this._idlIx.accounts)) > 0) {}
   }
 
   private get(path: string[]): PublicKey | undefined {
@@ -130,6 +120,79 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     });
   }
 
+  private async resolveConst(
+    accounts: IdlAccountItem[],
+    path: string[] = []
+  ): Promise<void> {
+    for (let k = 0; k < accounts.length; k += 1) {
+      const accountDescOrAccounts = accounts[k];
+      const subAccounts = (accountDescOrAccounts as IdlAccounts).accounts;
+      if (subAccounts) {
+        await this.resolveConst(subAccounts, [
+          ...path,
+          camelCase(accountDescOrAccounts.name),
+        ]);
+      }
+
+      const accountDesc = accountDescOrAccounts as IdlAccount;
+      const accountDescName = camelCase(accountDescOrAccounts.name);
+
+      // Signers default to the provider.
+      if (accountDesc.isSigner && !this.get([...path, accountDescName])) {
+        // @ts-expect-error
+        if (this._provider.wallet === undefined) {
+          throw new Error(
+            "This function requires the Provider interface implementor to have a 'wallet' field."
+          );
+        }
+        // @ts-expect-error
+        this.set([...path, accountDescName], this._provider.wallet.publicKey);
+      }
+
+      // Common accounts are auto populated with magic names by convention.
+      if (
+        Reflect.has(AccountsResolver.CONST_ACCOUNTS, accountDescName) &&
+        !this.get([...path, accountDescName])
+      ) {
+        this.set(
+          [...path, accountDescName],
+          AccountsResolver.CONST_ACCOUNTS[accountDescName]
+        );
+      }
+    }
+  }
+
+  private async resolvePdas(
+    accounts: IdlAccountItem[],
+    path: string[] = []
+  ): Promise<number> {
+    let found = 0;
+    for (let k = 0; k < accounts.length; k += 1) {
+      const accountDesc = accounts[k];
+      const subAccounts = (accountDesc as IdlAccounts).accounts;
+      if (subAccounts) {
+        found += await this.resolvePdas(subAccounts, [
+          ...path,
+          camelCase(accountDesc.name),
+        ]);
+      }
+
+      const accountDescCasted: IdlAccount = accountDesc as IdlAccount;
+      const accountDescName = camelCase(accountDesc.name);
+      // PDA derived from IDL seeds.
+      if (
+        accountDescCasted.pda &&
+        accountDescCasted.pda.seeds.length > 0 &&
+        !this.get([...path, accountDescName])
+      ) {
+        if (Boolean(await this.autoPopulatePda(accountDescCasted, path))) {
+          found += 1;
+        }
+      }
+    }
+    return found;
+  }
+
   private async resolveRelations(
     accounts: IdlAccountItem[],
     path: string[] = []
@@ -141,7 +204,7 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
       if (subAccounts) {
         found += await this.resolveRelations(subAccounts, [
           ...path,
-          accountDesc.name,
+          camelCase(accountDesc.name),
         ]);
       }
       const relations = (accountDesc as IdlAccount).relations || [];
@@ -172,18 +235,25 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     return found;
   }
 
-  private async autoPopulatePda(accountDesc: IdlAccount) {
+  private async autoPopulatePda(accountDesc: IdlAccount, path: string[] = []) {
     if (!accountDesc.pda || !accountDesc.pda.seeds)
       throw new Error("Must have seeds");
 
-    const seeds: Buffer[] = await Promise.all(
+    const seeds: (Buffer | undefined)[] = await Promise.all(
       accountDesc.pda.seeds.map((seedDesc: IdlSeed) => this.toBuffer(seedDesc))
     );
 
-    const programId = await this.parseProgramId(accountDesc);
-    const [pubkey] = await PublicKey.findProgramAddress(seeds, programId);
+    if (seeds.some((seed) => typeof seed == "undefined")) {
+      return;
+    }
 
-    this._accounts[camelCase(accountDesc.name)] = pubkey;
+    const programId = await this.parseProgramId(accountDesc);
+    const [pubkey] = await PublicKey.findProgramAddress(
+      seeds as Buffer[],
+      programId
+    );
+
+    this.set([...path, camelCase(accountDesc.name)], pubkey);
   }
 
   private async parseProgramId(accountDesc: IdlAccount): Promise<PublicKey> {
@@ -206,7 +276,7 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     }
   }
 
-  private async toBuffer(seedDesc: IdlSeed): Promise<Buffer> {
+  private async toBuffer(seedDesc: IdlSeed): Promise<Buffer | undefined> {
     switch (seedDesc.kind) {
       case "const":
         return this.toBufferConst(seedDesc);
@@ -219,17 +289,48 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     }
   }
 
-  private toBufferConst(seedDesc: IdlSeed): Buffer {
-    return this.toBufferValue(seedDesc.type, seedDesc.value);
+  /**
+   * Recursively get the type at some path of either a primitive or a user defined struct.
+   */
+  private getType(type: IdlType, path: string[] = []): string {
+    if (path.length > 0 && (type as any).defined) {
+      const subType = this._idlTypes.find(
+        (t) => t.name === (type as any).defined
+      );
+      if (!subType) {
+        throw new Error(`Cannot find type ${(type as any).defined}`);
+      }
+
+      const structType = subType.type as IdlTypeDefTyStruct; // enum not supported yet
+      const field = structType.fields.find((field) => field.name === path[0]);
+
+      return this.getType(field!.type, path.slice(1));
+    }
+
+    return type as string;
   }
 
-  private async toBufferArg(seedDesc: IdlSeed): Promise<Buffer> {
+  private toBufferConst(seedDesc: IdlSeed): Buffer {
+    return this.toBufferValue(
+      this.getType(seedDesc.type, (seedDesc.path || "").split(".").slice(1)),
+      seedDesc.value
+    );
+  }
+
+  private async toBufferArg(seedDesc: IdlSeed): Promise<Buffer | undefined> {
     const argValue = this.argValue(seedDesc);
-    return this.toBufferValue(seedDesc.type, argValue);
+    if (!argValue) {
+      return;
+    }
+    return this.toBufferValue(
+      this.getType(seedDesc.type, (seedDesc.path || "").split(".").slice(1)),
+      argValue
+    );
   }
 
   private argValue(seedDesc: IdlSeed): any {
-    const seedArgName = camelCase(seedDesc.path.split(".")[0]);
+    const split = seedDesc.path.split(".");
+    const seedArgName = camelCase(split[0]);
 
     const idlArgPosition = this._idlIx.args.findIndex(
       (argDesc: any) => argDesc.name === seedArgName
@@ -238,11 +339,18 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
       throw new Error(`Unable to find argument for seed: ${seedArgName}`);
     }
 
-    return this._args[idlArgPosition];
+    return split
+      .slice(1)
+      .reduce((curr, path) => (curr || {})[path], this._args[idlArgPosition]);
   }
 
-  private async toBufferAccount(seedDesc: IdlSeed): Promise<Buffer> {
+  private async toBufferAccount(
+    seedDesc: IdlSeed
+  ): Promise<Buffer | undefined> {
     const accountValue = await this.accountValue(seedDesc);
+    if (!accountValue) {
+      return;
+    }
     return this.toBufferValue(seedDesc.type, accountValue);
   }
 
