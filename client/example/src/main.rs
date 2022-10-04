@@ -247,13 +247,13 @@ fn optional(client: &Client, pid: Pubkey, signer: Keypair) -> Result<()> {
     let program = client.program(pid);
 
     // `Initialize` parameters.
-    let data_account = Keypair::new();
+    let data_account_keypair = Keypair::new();
 
-    let data_account_key = data_account.pubkey();
+    let data_account_key = data_account_keypair.pubkey();
 
     let data_pda_seeds = &[DataPda::PREFIX.as_ref(), data_account_key.as_ref()];
-    let data_pda = Pubkey::find_program_address(data_pda_seeds, &pid).0;
-    let required = Keypair::new();
+    let data_pda_key = Pubkey::find_program_address(data_pda_seeds, &pid).0;
+    let required_keypair = Keypair::new();
     let value: u64 = 10;
 
     // Build and send a transaction.
@@ -262,7 +262,7 @@ fn optional(client: &Client, pid: Pubkey, signer: Keypair) -> Result<()> {
         .request()
         .instruction(system_instruction::create_account(
             &program.payer(),
-            &required.pubkey(),
+            &required_keypair.pubkey(),
             program
                 .rpc()
                 .get_minimum_balance_for_rent_exemption(DataAccount::LEN)?,
@@ -271,36 +271,36 @@ fn optional(client: &Client, pid: Pubkey, signer: Keypair) -> Result<()> {
         ))
         .instruction(system_instruction::create_account(
             &program.payer(),
-            &data_account.pubkey(),
+            &data_account_keypair.pubkey(),
             program
                 .rpc()
                 .get_minimum_balance_for_rent_exemption(DataAccount::LEN)?,
             DataAccount::LEN as u64,
             &program.id(),
         ))
-        .signer(&data_account)
-        .signer(&required)
+        .signer(&data_account_keypair)
+        .signer(&required_keypair)
         .signer(&signer)
         .accounts(OptionalInitialize {
             payer: Some(program.payer()),
-            required: required.pubkey(),
+            required: required_keypair.pubkey(),
             system_program: Some(system_program::id()),
-            optional_account: Some(data_pda),
-            optional_pda: Some(data_account.pubkey()),
+            optional_account: Some(data_account_keypair.pubkey()),
+            optional_pda: None,
         })
         .args(optional_instruction::Initialize { value, key: pid })
         .send()
         .unwrap_err();
 
     // Assert the transaction worked.
-    let optional1_account: DataPda = program.account(data_pda)?;
-    assert_eq!(optional1_account.data, value);
+    let required: DataAccount = program.account(required_keypair.pubkey())?;
+    assert_eq!(required.data, 0);
 
-    let optional2_account: DataAccount = program.account(data_account.pubkey())?;
-    assert_eq!(optional2_account.data_pda, data_pda);
+    let optional_pda = program.account::<DataPda>(data_pda_key);
+    assert!(optional_pda.is_err());
 
-    let required: DataAccount = program.account(required.pubkey())?;
-    assert_eq!(required.data_pda, Pubkey::default());
+    let optional_account: DataAccount = program.account(data_account_keypair.pubkey())?;
+    assert_eq!(optional_account.data, value);
 
     println!("Optional success!");
 

@@ -5,12 +5,12 @@ use anchor_lang::prelude::*;
 pub struct Initialize<'info> {
     #[account(mut)]
     pub payer: Option<Signer<'info>>,
-    #[account(init, payer = payer, space = DataAccount::LEN)]
+    #[account(init, payer = payer, space = DataAccount::LEN, constraint = payer.is_some())]
     pub optional_account: Option<Account<'info, DataAccount>>,
     pub system_program: Option<Program<'info, System>>,
     #[account(zero)]
     pub required: Account<'info, DataAccount>,
-    #[account(init, seeds=[DataPda::PREFIX.as_ref(), optional_account.as_ref().unwrap().key().as_ref()], bump, payer=payer, space=DataPda::LEN, constraint = payer.is_some())]
+    #[account(init, seeds=[DataPda::PREFIX.as_ref(), optional_account.as_ref().unwrap().key().as_ref()], bump, payer=payer, space=DataPda::LEN)]
     pub optional_pda: Option<Account<'info, DataPda>>,
 }
 
@@ -41,9 +41,9 @@ pub struct Realloc<'info> {
 pub struct Close<'info> {
     #[account(mut)]
     pub payer: Option<Signer<'info>>,
-    #[account(mut, close = payer, constraint = system_program.is_some())]
-    pub data_pda: Option<Account<'info, DataPda>>,
-    #[account(mut, close = payer, has_one = data_pda, constraint = payer.is_some())]
-    pub optional_account: Option<Account<'info, DataAccount>>,
+    #[account(mut, close = payer, has_one = data_account)]
+    pub optional_pda: Option<Account<'info, DataPda>>,
+    #[account(mut, close = payer, constraint = payer.is_some())]
+    pub data_account: Option<Account<'info, DataAccount>>,
     pub system_program: Option<Program<'info, System>>,
 }

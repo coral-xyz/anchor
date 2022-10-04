@@ -18,17 +18,17 @@ mod optional {
         let optional_account = &mut ctx.accounts.optional_account;
         let required = &mut ctx.accounts.required;
 
-        required.data_pda = Pubkey::default();
+        required.data = 0;
 
-        if let Some(data) = optional_pda {
-            data.data = value;
+        if let Some(data_account) = optional_account {
+            data_account.data = value;
         }
 
-        if let Some(data2) = optional_account {
-            if let Some(optional) = optional_pda {
-                data2.data_pda = optional.key();
+        if let Some(data_pda) = optional_pda {
+            if let Some(data_account) = optional_account {
+                data_pda.data_account = data_account.key();
             } else {
-                data2.data_pda = key;
+                data_pda.data_account = key;
             }
         }
 
@@ -36,11 +36,11 @@ mod optional {
     }
 
     pub fn update(ctx: Context<Update>, value: u64, key: Pubkey, _pda_bump: u8) -> Result<()> {
-        if let Some(data_pda) = &mut ctx.accounts.optional_pda {
-            data_pda.data = value;
-        }
         if let Some(data_account) = &mut ctx.accounts.optional_account {
-            data_account.data_pda = key;
+            data_account.data = value;
+        }
+        if let Some(data_account) = &mut ctx.accounts.optional_pda {
+            data_account.data_account = key;
         }
         Ok(())
     }
@@ -57,8 +57,8 @@ mod optional {
     }
 
     pub fn close(ctx: Context<Close>) -> Result<()> {
-        if let Some(data_account) = &ctx.accounts.data_pda {
-            data_account.close(ctx.accounts.payer.as_ref().unwrap().to_account_info())?;
+        if let Some(data_pda) = &ctx.accounts.optional_pda {
+            data_pda.close(ctx.accounts.payer.as_ref().unwrap().to_account_info())?;
         }
         Ok(())
     }
