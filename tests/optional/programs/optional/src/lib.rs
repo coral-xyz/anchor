@@ -21,14 +21,11 @@ mod optional {
         required.data = 0;
 
         if let Some(data_account) = optional_account {
-            data_account.data = value;
-        }
-
-        if let Some(data_pda) = optional_pda {
-            if let Some(data_account) = optional_account {
-                data_pda.data_account = data_account.key();
-            } else {
+            if let Some(data_pda) = optional_pda {
                 data_pda.data_account = key;
+                data_account.data = value;
+            } else {
+                data_account.data = value * 2;
             }
         }
 

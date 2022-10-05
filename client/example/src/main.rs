@@ -300,7 +300,7 @@ fn optional(client: &Client, pid: Pubkey, signer: Keypair) -> Result<()> {
     assert!(optional_pda.is_err());
 
     let optional_account: DataAccount = program.account(data_account_keypair.pubkey())?;
-    assert_eq!(optional_account.data, value);
+    assert_eq!(optional_account.data, value * 2);
 
     println!("Optional success!");
 
