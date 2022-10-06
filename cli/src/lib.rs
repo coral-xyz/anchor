@@ -1353,7 +1353,7 @@ fn cd_member(cfg_override: &ConfigOverride, program_name: &str) -> Result<()> {
             return Ok(());
         }
     }
-    return Err(anyhow!("{} is not part of the workspace", program_name,));
+    Err(anyhow!("{} is not part of the workspace", program_name,))
 }
 
 pub fn verify_bin(program_id: Pubkey, bin_path: &Path, cluster: &str) -> Result<BinVerification> {
@@ -1446,7 +1446,7 @@ pub struct BinVerification {
     pub is_verified: bool,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub enum BinVerificationState {
     Buffer,
     ProgramData {
