@@ -53,10 +53,7 @@ mod optional {
         Ok(())
     }
 
-    pub fn close(ctx: Context<Close>) -> Result<()> {
-        if let Some(data_pda) = &ctx.accounts.optional_pda {
-            data_pda.close(ctx.accounts.payer.as_ref().unwrap().to_account_info())?;
-        }
+    pub fn close(_ctx: Context<Close>) -> Result<()> {
         Ok(())
     }
 }

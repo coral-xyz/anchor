@@ -78,8 +78,10 @@ describe("Optional", () => {
             optionalAccount: null,
           })
           .signers([requiredKeypair])
-          .rpc({ skipPreflight: true });
-        assert.ok(false);
+          .rpc();
+        assert.fail(
+          "Unexpected success in creating a transaction that should have failed at the client level"
+        );
       } catch (e) {
         const errMsg = "Invalid arguments: required not provided";
         // @ts-ignore
@@ -101,7 +103,7 @@ describe("Optional", () => {
           optionalAccount: null,
         })
         .signers([requiredKeypair])
-        .rpc({ skipPreflight: true });
+        .rpc();
 
       let required = await program.account.dataAccount.fetch(
         requiredKeypair.publicKey
@@ -122,7 +124,7 @@ describe("Optional", () => {
           optionalAccount: null,
         })
         .signers([requiredKeypair])
-        .rpc({ skipPreflight: true });
+        .rpc();
 
       let required = await program.account.dataAccount.fetch(
         requiredKeypair.publicKey
@@ -145,8 +147,10 @@ describe("Optional", () => {
             optionalAccount: dataAccount.publicKey,
           })
           .signers([requiredKeypair, dataAccount])
-          .rpc({ skipPreflight: true });
-        assert.ok(false);
+          .rpc();
+        assert.fail(
+          "Unexpected success in creating a transaction that should have failed with `ConstraintAccountIsNone` error"
+        );
       } catch (e) {
         assert.isTrue(e instanceof AnchorError);
         const err: AnchorError = <AnchorError>e;
@@ -175,10 +179,12 @@ describe("Optional", () => {
             optionalAccount: null,
           })
           .signers([requiredKeypair])
-          .rpc({ skipPreflight: true });
-        assert.ok(false);
+          .rpc();
+        assert.fail(
+          "Unexpected success in creating a transaction that should have failed with `ProgramFailedToComplete` error"
+        );
       } catch (e) {
-        const errMsg = "ProgramFailedToComplete";
+        const errMsg = "Program failed to complete";
         // @ts-ignore
         let error: string = e.toString();
         assert(error.includes(errMsg), `Unexpected error: ${e}`);
@@ -197,7 +203,7 @@ describe("Optional", () => {
           optionalAccount: dataAccountKeypair1.publicKey,
         })
         .signers([requiredKeypair1, dataAccountKeypair1])
-        .rpc({ skipPreflight: true });
+        .rpc();
 
       const requiredDataAccount = await program.account.dataAccount.fetch(
         requiredKeypair1.publicKey
@@ -225,8 +231,10 @@ describe("Optional", () => {
             optionalAccount: dataAccountKeypair2.publicKey,
           })
           .signers([requiredKeypair2, dataAccountKeypair2])
-          .rpc({ skipPreflight: true });
-        assert.ok(false);
+          .rpc();
+        assert.fail(
+          "Unexpected success in creating a transaction that should have failed with `ConstraintSeeds` error"
+        );
       } catch (e) {
         assert.isTrue(e instanceof AnchorError);
         const err: AnchorError = <AnchorError>e;
@@ -251,7 +259,7 @@ describe("Optional", () => {
           optionalAccount: dataAccountKeypair2.publicKey,
         })
         .signers([requiredKeypair2, dataAccountKeypair2])
-        .rpc({ skipPreflight: true });
+        .rpc();
 
       const requiredDataAccount = await program.account.dataAccount.fetch(
         requiredKeypair2.publicKey
@@ -288,7 +296,7 @@ describe("Optional", () => {
   //           optionalAccount: null,
   //         })
   //         .signers([requiredKeypair])
-  //         .rpc({ skipPreflight: true });
+  //         .rpc();
   //       assert.ok(false);
   //     } catch (e) {
   //       const errMsg = "Invalid arguments: required not provided";
@@ -297,7 +305,6 @@ describe("Optional", () => {
   //       assert(error.includes(errMsg), `Unexpected error: ${e}`);
   //     }
   //   });
-  //
   //   it("Can initialize with no payer and no optionals", async () => {
   //     const [requiredKeypair, createRequiredIx] = await createRequired();
   //     await program.methods
@@ -311,7 +318,7 @@ describe("Optional", () => {
   //         optionalAccount: null,
   //       })
   //       .signers([requiredKeypair])
-  //       .rpc({ skipPreflight: true });
+  //       .rpc();
   //
   //     let required = await program.account.dataAccount.fetch(
   //       requiredKeypair.publicKey
