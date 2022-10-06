@@ -268,7 +268,8 @@ describe("misc", () => {
         data: data.publicKey,
         solDest: provider.wallet.publicKey,
       })
-      .postInstructions([transferIx]);
+      .postInstructions([transferIx])
+      .rpc();
 
     let afterBalance = (
       await connection.getAccountInfo(provider.wallet.publicKey)
@@ -316,7 +317,8 @@ describe("misc", () => {
         data: data.publicKey,
         solDest: provider.wallet.publicKey,
       })
-      .postInstructions([transferIx]);
+      .postInstructions([transferIx])
+      .rpc();
 
     let afterBalance = (
       await connection.getAccountInfo(provider.wallet.publicKey)
@@ -363,7 +365,8 @@ describe("misc", () => {
         data: data.publicKey,
         solDest: provider.wallet.publicKey,
       })
-      .postInstructions([transferIx]);
+      .postInstructions([transferIx])
+      .rpc();
 
     let afterBalance = (
       await connection.getAccountInfo(provider.wallet.publicKey)
