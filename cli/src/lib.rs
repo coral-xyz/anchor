@@ -1440,7 +1440,7 @@ pub fn verify_bin(program_id: Pubkey, bin_path: &Path, cluster: &str) -> Result<
     Ok(BinVerification { state, is_verified })
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub struct BinVerification {
     pub state: BinVerificationState,
     pub is_verified: bool,
