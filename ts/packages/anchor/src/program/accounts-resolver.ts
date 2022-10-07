@@ -33,7 +33,7 @@ export type CustomAccountResolver<IDL extends Idl> = (params: {
   provider: Provider;
   programId: PublicKey;
   idlIx: AllInstructions<IDL>;
-}) => Promise<{ accounts: Accounts, resolved: number }>;
+}) => Promise<{ accounts: Accounts; resolved: number }>;
 
 // Populates a given accounts context with PDAs and common missing accounts.
 export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
@@ -59,7 +59,11 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     private _customResolver?: CustomAccountResolver<IDL>
   ) {
     this._args = _args;
-    this._accountStore = new AccountStore(_provider, _accountNamespace, this._programId);
+    this._accountStore = new AccountStore(
+      _provider,
+      _accountNamespace,
+      this._programId
+    );
   }
 
   public args(_args: Array<any>): void {
@@ -227,8 +231,13 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
 
         found += matching.length;
         if (matching.length > 0) {
-          const programId = await this.parseProgramId(accountDesc as IdlAccount);
-          const account = await this._accountStore.fetchAccount({ publicKey: accountKey, programId });
+          const programId = await this.parseProgramId(
+            accountDesc as IdlAccount
+          );
+          const account = await this._accountStore.fetchAccount({
+            publicKey: accountKey,
+            programId,
+          });
           await Promise.all(
             matching.map(async (rel) => {
               const relName = camelCase(rel);
@@ -446,26 +455,28 @@ export class AccountStore<IDL extends Idl> {
     this._idls[_programId.toBase58()] = _accounts;
   }
 
-  private async ensureIdl(programId: PublicKey): Promise<AccountNamespace<any> | undefined> {
+  private async ensureIdl(
+    programId: PublicKey
+  ): Promise<AccountNamespace<any> | undefined> {
     if (!this._idls[programId.toBase58()]) {
-        const idl = (await Program.fetchIdl(programId, this._provider));
-        if (idl) {
-          const program = new Program(idl, programId, this._provider);
-          this._idls[programId.toBase58()] = program.account
-        }
+      const idl = await Program.fetchIdl(programId, this._provider);
+      if (idl) {
+        const program = new Program(idl, programId, this._provider);
+        this._idls[programId.toBase58()] = program.account;
+      }
     }
 
-    return this._idls[programId.toBase58()]
+    return this._idls[programId.toBase58()];
   }
 
   public async fetchAccount<T = any>({
     publicKey,
     name,
-    programId = this._programId
+    programId = this._programId,
   }: {
-    publicKey: PublicKey,
-    name?: string,
-    programId?: PublicKey
+    publicKey: PublicKey;
+    name?: string;
+    programId?: PublicKey;
   }): Promise<T> {
     const address = publicKey.toString();
     if (!this._cache.has(address)) {
