@@ -236,10 +236,12 @@ impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
 impl<'info, T: ZeroCopy + Owner> AccountsExit<'info> for AccountLoader<'info, T> {
     // The account *cannot* be loaded when this is called.
     fn exit(&self, _program_id: &Pubkey) -> Result<()> {
-        let mut data = self.acc_info.try_borrow_mut_data()?;
-        let dst: &mut [u8] = &mut data;
-        let mut writer = BpfWriter::new(dst);
-        writer.write_all(&T::discriminator()).unwrap();
+        if !crate::common::is_closed(&self.acc_info) {
+            let mut data = self.acc_info.try_borrow_mut_data()?;
+            let dst: &mut [u8] = &mut data;
+            let mut writer = BpfWriter::new(dst);
+            writer.write_all(&T::discriminator()).unwrap();
+        }
         Ok(())
     }
 }
