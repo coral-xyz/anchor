@@ -73,7 +73,7 @@ describe("typescript", () => {
       program.programId,
       program.provider,
       program.coder,
-      (instruction) => {
+      async (instruction) => {
         if (instruction.name === "initMyAccount") {
           return async ({ accounts }) => {
             called = true;
