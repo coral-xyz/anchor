@@ -256,6 +256,9 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     }
 
     const programId = await this.parseProgramId(accountDesc);
+    if (!programId) {
+      return;
+    }
     const [pubkey] = await PublicKey.findProgramAddress(
       seeds as Buffer[],
       programId
