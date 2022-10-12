@@ -33,7 +33,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * lang: Fix IDL `seed` generation for byte string literals. ([#2125](https://github.com/coral-xyz/anchor/pull/2125))
 * ts: Update seeds inference to allow nested user defined structs within the seeds ([#2198](https://github.com/coral-xyz/anchor/pull/2198))
 
-## [0.25.0] \* 2022-07-05
+## [0.25.0] - 2022-07-05
 
 ### Features
 
@@ -53,7 +53,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * ts: Implement a coder for SPL associated token program ([#1939](https://github.com/coral-xyz/anchor/pull/1939)).
 * ts: verbose error for missing `ANCHOR_WALLET` variable when using `NodeWallet.local()` ([#1958](https://github.com/coral-xyz/anchor/pull/1958)).
 * ts: Add `MethodsBuilder#accountsStrict` for strict typing on ix account input ([#2019](https://github.com/coral-xyz/anchor/pull/2019)).
-* Update solana dependencies to 1.10.29 ([#2027](https://github.com/coral-xyz/anchor/pull/2027)).
+* Update solana dependencies to 1.10.29  ([#2027](https://github.com/coral-xyz/anchor/pull/2027)).
 
 ### Fixes
 
@@ -68,20 +68,20 @@ The minor version will be incremented upon a breaking change and the patch versi
 * ts: Change `EventParser#parseLogs` implementation to be a generator instead of callback function ([#2018](https://github.com/coral-xyz/anchor/pull/2018)).
 * lang: Adds a new `&mut reallocs: BTreeSet<Pubkey>` argument to `Accounts::try_accounts` ([#1986](https://github.com/coral-xyz/anchor/pull/1986)).
 
-## [0.24.2] \* 2022-04-13
+## [0.24.2] - 2022-04-13
 
 ### Fixes
 
 * lang: Fix `returns` being serialized as `null` instead of `undefined` in IDL ([#1782](https://github.com/coral-xyz/anchor/pull/1782)).
 
-## [0.24.1] \* 2022-04-12
+## [0.24.1] - 2022-04-12
 
 ### Fixes
 
 * lang: Fix `anchor build` failing if `Test.toml` included a relative path that didn't exist yet because it's created by `anchor build` ([#1772](https://github.com/coral-xyz/anchor/pull/1772)).
 * cli: Update js/ts template to use new `AnchorProvider` class ([#1770](https://github.com/coral-xyz/anchor/pull/1770)).
 
-## [0.24.0] \* 2022-04-12
+## [0.24.0] - 2022-04-12
 
 ### Features
 
@@ -111,7 +111,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * ts: Make `Provider` an interface and adjust its signatures and add `AnchorProvider` implementor class ([#1707](https://github.com/coral-xyz/anchor/pull/1707)).
 * spl: Change "to" to "from" in `token::burn` ([#1080](https://github.com/coral-xyz/anchor/pull/1080)).
 
-## [0.23.0] \* 2022-03-20
+## [0.23.0] - 2022-03-20
 
 ### Features
 
@@ -146,17 +146,18 @@ The minor version will be incremented upon a breaking change and the patch versi
 * lang: Remove space calculation using `#[derive(Default)]` ([#1519](https://github.com/coral-xyz/anchor/pull/1519)).
 * lang: Add support for logging expected and actual values and pubkeys. Add `require_eq` and `require_keys_eq` macros. Add default error code to `require` macro ([#1572](https://github.com/coral-xyz/anchor/pull/1572)).
 * lang: Add `system_program` CPI wrapper functions. Make `system_program` module public instead of re-exporting `system_program::System`([#1629](https://github.com/coral-xyz/anchor/pull/1629)).
-* cli: `avm use` no long prompts [y/n] if an install is needed first \* it just tells the user to `avm install` ([#1565](https://github.com/coral-xyz/anchor/pull/1565))
+* cli: `avm use` no long prompts [y/n] if an install is needed first - it just tells the user to `avm install` ([#1565](https://github.com/coral-xyz/anchor/pull/1565))
 * ts: Add `AnchorError` with program stack and also a program stack for non-`AnchorError` errors ([#1640](https://github.com/coral-xyz/anchor/pull/1640)). `AnchorError` is not returned for `processed` tx that have `skipPreflight` set to `true` (it falls back to `ProgramError` or the raw solana library error).
 
-## [0.22.1] \* 2022-02-28
+## [0.22.1] - 2022-02-28
 
 ### Fixes
 
 * cli: Fix rust template ([#1488](https://github.com/coral-xyz/anchor/pull/1488)).
 * lang: Handle array sizes with variable sizes in events and array size casting in IDL parsing ([#1485](https://github.com/coral-xyz/anchor/pull/1485))
 
-## [0.22.0] \* 2022-02-20
+
+## [0.22.0] - 2022-02-20
 
 ### Features
 
@@ -174,13 +175,13 @@ The minor version will be incremented upon a breaking change and the patch versi
 * lang: All error-related code is now in the error module ([#1426](https://github.com/coral-xyz/anchor/pull/1426)).
 * lang: Require doc comments when using AccountInfo or UncheckedAccount types ([#1452](https://github.com/coral-xyz/anchor/pull/1452)).
 * lang: add [`error!`](https://docs.rs/anchor-lang/latest/anchor_lang/prelude/macro.error.html) and [`err!`](https://docs.rs/anchor-lang/latest/anchor_lang/prelude/macro.err.html) macro and `Result` type ([#1462](https://github.com/coral-xyz/anchor/pull/1462)).
-  This change will break most programs. Do the following to upgrade:
-  _ change all `ProgramResult`'s to `Result<()>`
-  _ change `#[error]` to `#[error_code]`
-  _ change all `Err(MyError::SomeError.into())` to `Err(error!(MyError::SomeError))` and all `Err(ProgramError::SomeProgramError)` to `Err(ProgramError::SomeProgramError.into())` or `Err(Error::from(ProgramError::SomeProgramError).with_source(source!()))` to provide file and line source of the error (`with_source` is most useful with `ProgramError`s. `error!` already adds source information for custom and anchor internal errors).
-  _ change all `solana_program::program::invoke()` to `solana_program::program::invoke().map_err(Into::into)` and `solana_program::program::invoke_signed()` to `solana_program::program::invoke_signed().map_err(Into::into)`
+This change will break most programs. Do the following to upgrade:
+     * change all `ProgramResult`'s to `Result<()>`
+     * change `#[error]` to `#[error_code]`
+     * change all `Err(MyError::SomeError.into())` to `Err(error!(MyError::SomeError))` and all `Err(ProgramError::SomeProgramError)` to `Err(ProgramError::SomeProgramError.into())` or `Err(Error::from(ProgramError::SomeProgramError).with_source(source!()))` to provide file and line source of the error (`with_source` is most useful with `ProgramError`s. `error!` already adds source information for custom and anchor internal errors).
+     * change all `solana_program::program::invoke()` to `solana_program::program::invoke().map_err(Into::into)` and `solana_program::program::invoke_signed()` to `solana_program::program::invoke_signed().map_err(Into::into)`
 
-## [0.21.0] \* 2022-02-07
+## [0.21.0] - 2022-02-07
 
 ### Fixes
 
@@ -204,10 +205,11 @@ The minor version will be incremented upon a breaking change and the patch versi
 * lang: rename `loader_account` module to `account_loader` module ([#1279](https://github.com/coral-xyz/anchor/pull/1279))
 * lang: The `Accounts` trait's `try_accounts` method now has an additional `bumps: &mut BTreeMap<String, u8>` argument, which accumulates bump seeds ([#1367](https://github.com/coral-xyz/anchor/pull/1367)).
 * lang: Providing `bump = <target>` targets with `init` will now error. On `init` only, it is required to use `bump` without a target and access the seed inside function handlers via `ctx.bumps.get("<pda-account-name")`. For subsequent seeds constraints (without init), it is recommended to store the bump on your account and use it as a `bump = <target>` target to minimize compute units used ([#1380](https://github.com/coral-xyz/anchor/pull/1380)).
-* ts: `Coder` is now an interface and the existing class has been renamed to `BorshCoder`. This change allows the generation of Anchor clients for non anchor programs ([#1259](https://github.com/coral-xyz/anchor/pull/1259/files)).
+* ts: `Coder` is now an interface and the existing class has been renamed to `BorshCoder`. This change allows the generation of Anchor clients for non anchor programs  ([#1259](https://github.com/coral-xyz/anchor/pull/1259/files)).
 * cli: [[test.clone]] key in Anchor.toml is renamed to [[test.validator.clone]] ([#1366](https://github.com/coral-xyz/anchor/pull/1366)).
 
-## [0.20.1] \* 2022-01-09
+
+## [0.20.1] - 2022-01-09
 
 ### Fixes
 
@@ -217,7 +219,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * lang: Allow repr overrides for zero copy accounts ([#1273](https://github.com/coral-xyz/anchor/pull/1273)).
 
-## [0.20.0] \* 2022-01-06
+## [0.20.0] - 2022-01-06
 
 ### Fixes
 
@@ -245,9 +247,9 @@ The minor version will be incremented upon a breaking change and the patch versi
 * lang, ts: Change error enum name and message for 'wrong program ownership' account validation ([#1154](https://github.com/coral-xyz/anchor/pull/1154)).
 * lang: Change from `#[repr(packed)]` to `#[repr(C)]` for zero copy accounts ([#1106](https://github.com/coral-xyz/anchor/pull/1106)).
 * lang: Account types can now be found either in the `prelude` module or the `accounts` module but not longer directly under the root.
-  Deprecated account types are no longer imported by the prelude ([#1208](https://github.com/coral-xyz/anchor/pull/1208)).
+Deprecated account types are no longer imported by the prelude ([#1208](https://github.com/coral-xyz/anchor/pull/1208)).
 
-## [0.19.0] \* 2021-12-08
+## [0.19.0] - 2021-12-08
 
 ### Fixes
 
@@ -260,7 +262,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * lang: Add `ErrorCode::AccountNotInitialized` error to separate the situation when the account has the wrong owner from when it does not exist (#[1024](https://github.com/coral-xyz/anchor/pull/1024)).
 * lang: Called instructions now log their name by default. This can be turned off with the `no-log-ix-name` flag ([#1057](https://github.com/coral-xyz/anchor/pull/1057)).
-* lang: `ProgramData` and `UpgradableLoaderState` can now be passed into `Account` as generics. see [UpgradeableLoaderState](https://docs.rs/solana-program/latest/solana_program/bpf_loader_upgradeable/enum.UpgradeableLoaderState.html). `UpgradableLoaderState` can also be matched on to get `ProgramData`, but when `ProgramData` is used instead, anchor does the serialization and checking that it is actually program data for you ([#1095](https://github.com/coral-xyz/anchor/pull/1095)).
+* lang: `ProgramData` and `UpgradableLoaderState` can now be passed into `Account` as generics. see [UpgradeableLoaderState](https://docs.rs/solana-program/latest/solana_program/bpf_loader_upgradeable/enum.UpgradeableLoaderState.html). `UpgradableLoaderState` can also be matched on to get `ProgramData`, but when `ProgramData` is used instead, anchor does the serialization and checking that it is actually program data for you  ([#1095](https://github.com/coral-xyz/anchor/pull/1095)).
 * ts: Add better error msgs in the ts client if something wrong (i.e. not a pubkey or a string) is passed in as an account in an instruction accounts object ([#1098](https://github.com/coral-xyz/anchor/pull/1098)).
 * ts: Add inputs `postInstructions` and `preInstructions` as a replacement for (the now deprecated) `instructions` ([#1007](https://github.com/coral-xyz/anchor/pull/1007)).
 * ts: Add `getAccountInfo` helper method to account namespace/client ([#1084](https://github.com/coral-xyz/anchor/pull/1084)).
@@ -269,7 +271,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * lang, ts: Error codes have been mapped to new numbers to allow for more errors per namespace ([#1096](https://github.com/coral-xyz/anchor/pull/1096)).
 
-## [0.18.2] \* 2021-11-14
+## [0.18.2] - 2021-11-14
 
 * cli: Replace global JavaScript dependency installs with local.
 
@@ -288,7 +290,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * spl: Move permissioned markets into dex repository ([#962](https://github.com/coral-xyz/anchor/pull/962)).
 
-## [0.18.0] \* 2021-10-24
+## [0.18.0] - 2021-10-24
 
 ### Features
 
@@ -306,7 +308,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * lang: Accounts marked with the `#[account(signer)]` constraint now enforce signer when the `"cpi"` feature is enabled ([#849](https://github.com/coral-xyz/anchor/pull/849)).
 
-## [0.17.0] \* 2021-10-03
+## [0.17.0] - 2021-10-03
 
 ### Features
 
@@ -316,7 +318,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * `CpiContext` accounts must now be used with the accounts struct generated in the `crate::cpi::accounts::*` module. These structs correspond to the accounts context for each instruction, except that each field is of type `AccountInfo` ([#824](https://github.com/coral-xyz/anchor/pull/824)).
 
-## [0.16.2] \* 2021-09-27
+## [0.16.2] - 2021-09-27
 
 ### Features
 
@@ -329,13 +331,13 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * lang: Generated `AccountMeta`s for Rust clients now properly set the `isSigner` field ([#762](https://github.com/coral-xyz/anchor/pull/762)).
 
-## [0.16.1] \* 2021-09-17
+## [0.16.1] - 2021-09-17
 
 ### Fixes
 
 * lang: `Signer` type now sets isSigner to true in the IDL ([#750](https://github.com/coral-xyz/anchor/pull/750)).
 
-## [0.16.0] \* 2021-09-16
+## [0.16.0] - 2021-09-16
 
 ### Features
 
@@ -347,7 +349,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * lang: `#[account(owner = <pubkey>)]` now requires a `Pubkey` instead of an account ([#691](https://github.com/coral-xyz/anchor/pull/691)).
 
-## [0.15.0] \* 2021-09-07
+## [0.15.0] - 2021-09-07
 
 ### Features
 
@@ -360,7 +362,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * lang: All programs must now define their program id in source via `declare_id!` ([#686](https://github.com/coral-xyz/anchor/pull/686)).
 
-## [0.14.0] \* 2021-09-02
+## [0.14.0] - 2021-09-02
 
 ### Features
 
@@ -377,17 +379,17 @@ The minor version will be incremented upon a breaking change and the patch versi
 * cli: Removed `anchor launch` command ([#634](https://github.com/coral-xyz/anchor/pull/634)).
 * lang: `#[account(init)]` now creates the account inside the same instruction to be consistent with initializing PDAs. To maintain the old behavior of `init`, replace it with `#[account(zero)]` ([#641](https://github.com/coral-xyz/anchor/pull/641)).
 * lang: `bump` must be provided when using the `seeds` constraint. This has been added as an extra safety constraint to ensure that whenever a PDA is initialized via a constraint the bump used is the one created by `Pubkey::find_program_address` ([#641](https://github.com/coral-xyz/anchor/pull/641)).
-* lang: `try_from_init` has been removed from `Loader`, `ProgramAccount`, and `CpiAccount` and replaced with `try_from_unchecked` ([#641](https://github.com/coral-xyz/anchor/pull/641)).
+* lang: `try_from_init` has been removed from `Loader`, `ProgramAccount`, and `CpiAccount`  and replaced with `try_from_unchecked` ([#641](https://github.com/coral-xyz/anchor/pull/641)).
 * lang: Remove `AccountsInit` trait ([#641](https://github.com/coral-xyz/anchor/pull/641)).
 * lang: `try_from` methods for `ProgramAccount`, `Loader`, and `ProgramState` now take in an additional `program_id: &Pubkey` parameter ([#660](https://github.com/coral-xyz/anchor/pull/660)).
 
-## [0.13.2] \* 2021-08-11
+## [0.13.2] - 2021-08-11
 
 ### Fixes
 
 * cli: Fix `anchor init` command "Workspace not found" regression ([#598](https://github.com/coral-xyz/anchor/pull/598)).
 
-## [0.13.1] \* 2021-08-10
+## [0.13.1] - 2021-08-10
 
 ### Features
 
@@ -397,7 +399,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * cli: Allows Cargo.lock to exist in workspace subdirectories when publishing ([#593](https://github.com/coral-xyz/anchor/pull/593)).
 
-## [0.13.0] \* 2021-08-08
+## [0.13.0] - 2021-08-08
 
 ### Features
 
@@ -413,7 +415,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * cli: `[clusters.<network>]` Anchor.toml section has been renamed to `[programs.<network>]` ([#570](https://github.com/coral-xyz/anchor/pull/570)).
 * cli: `[workspace]` member and exclude arrays must now be filepaths relative to the workpsace root ([#570](https://github.com/coral-xyz/anchor/pull/570)).
 
-## [0.12.0] \* 2021-08-03
+## [0.12.0] - 2021-08-03
 
 ### Features
 
@@ -428,20 +430,20 @@ The minor version will be incremented upon a breaking change and the patch versi
 * lang: `CpiAccount::reload` mutates the existing struct instead of returning a new one ([#526](https://github.com/coral-xyz/anchor/pull/526)).
 * cli: Anchor.toml now requires an explicit `[scripts]` test command ([#550](https://github.com/coral-xyz/anchor/pull/550)).
 
-## [0.11.1] \* 2021-07-09
+## [0.11.1] - 2021-07-09
 
 ### Features
 
 * lang: Adds `require` macro for specifying assertions that return error codes on failure ([#483](https://github.com/coral-xyz/anchor/pull/483)).
 * lang: Allow one to specify arbitrary programs as the owner when creating PDA ([#483](https://github.com/coral-xyz/anchor/pull/483)).
-* lang: A new `bump` keyword is added to the accounts constraints, which is used to add an optional bump seed to the end of a `seeds` array. When used in conjunction with _both_ `init` and `seeds`, then the program executes `find_program_address` to assert that the given bump is the canonical bump ([#483](https://github.com/coral-xyz/anchor/pull/483)).
+* lang: A new `bump` keyword is added to the accounts constraints, which is used to add an optional bump seed to the end of a `seeds` array. When used in conjunction with *both* `init` and `seeds`, then the program executes `find_program_address` to assert that the given bump is the canonical bump ([#483](https://github.com/coral-xyz/anchor/pull/483)).
 
 ### Fixes
 
 * lang: Preserve all instruction data for fallback functions ([#483](https://github.com/coral-xyz/anchor/pull/483)).
 * ts: Event listener not firing when creating associated accounts ([#356](https://github.com/coral-xyz/anchor/issues/356)).
 
-## [0.11.0] \* 2021-07-03
+## [0.11.0] - 2021-07-03
 
 ### Features
 
@@ -454,7 +456,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * cli: Remove `.spec` suffix on TypeScript tests files ([#441](https://github.com/coral-xyz/anchor/pull/441)).
 * lang: Remove `belongs_to` constraint ([#459](https://github.com/coral-xyz/anchor/pull/459)).
 
-## [0.10.0] \* 2021-06-27
+## [0.10.0] - 2021-06-27
 
 ### Features
 
@@ -468,7 +470,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * cli: Remove `--yarn` flag in favor of using `npx` ([#432](https://github.com/coral-xyz/anchor/pull/432)).
 
-## [0.9.0] \* 2021-06-15
+## [0.9.0] - 2021-06-15
 
 ### Features
 
@@ -480,7 +482,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * lang: Event field names in IDLs are now mixed case. ([#379](https://github.com/coral-xyz/anchor/pull/379)).
 * lang: Accounts trait now accepts an additional `&[u8]` parameter ([#386](https://github.com/coral-xyz/anchor/pull/386)).
 
-## [0.8.0] \* 2021-06-10
+## [0.8.0] - 2021-06-10
 
 ### Features
 
@@ -498,7 +500,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * lang, ts: Framework defined error codes are introduced, reserving error codes 0-300 for Anchor, and 300 and up for user defined error codes ([#354](https://github.com/coral-xyz/anchor/pull/354)).
 
-## [0.7.0] \* 2021-05-31
+## [0.7.0] - 2021-05-31
 
 ### Features
 
@@ -518,7 +520,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * lang: Associated constraints no longer automatically implement `mut` ([#341](https://github.com/coral-xyz/anchor/pull/341)).
 * lang: Associated `space` constraints must now be literal integers instead of literal strings ([#341](https://github.com/coral-xyz/anchor/pull/341)).
 
-## [0.6.0] \* 2021-05-23
+## [0.6.0] - 2021-05-23
 
 ### Features
 
@@ -536,7 +538,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * ts: Event coder `decode` API changed to decode strings directly instead of buffers ([#292](https://github.com/coral-xyz/anchor/pull/292)).
 * ts: Event coder `encode` API removed ([#292](https://github.com/coral-xyz/anchor/pull/292)).
 
-## [0.5.0] \* 2021-05-07
+## [0.5.0] - 2021-05-07
 
 ### Features
 
@@ -549,11 +551,11 @@ The minor version will be incremented upon a breaking change and the patch versi
 * client: Renames `RequestBuilder::new` to `RequestBuilder::from` ([#248](https://github.com/coral-xyz/anchor/pull/248)).
 * lang: Renames the generated `instruction::state::Ctor` struct to `instruction::state::New` ([#248](https://github.com/coral-xyz/anchor/pull/248)).
 
-## [0.4.5] \* 2021-04-29
+## [0.4.5] - 2021-04-29
 
 * spl: Add serum DEX CPI client ([#224](https://github.com/coral-xyz/anchor/pull/224)).
 
-## [0.4.4] \* 2021-04-18
+## [0.4.4] - 2021-04-18
 
 ### Features
 
@@ -562,7 +564,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * lang: Zero copy deserialization for accounts ([#202](https://github.com/coral-xyz/anchor/pull/202), [#206](https://github.com/coral-xyz/anchor/pull/206)).
 * lang, spl, cli, client: Upgrade solana toolchain to 1.6.6 ([#210](https://github.com/coral-xyz/anchor/pull/210)).
 
-## [0.4.3] \* 2021-04-13
+## [0.4.3] - 2021-04-13
 
 ### Features
 
@@ -574,18 +576,18 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * lang: Unused `#[account]`s are now parsed into the IDL correctly ([#177](https://github.com/coral-xyz/anchor/pull/177)).
 
-## [0.4.2] \* 2021-04-10
+## [0.4.2] - 2021-04-10
 
 ### Features
 
 * cli: Fund Anchor.toml configured wallet when testing ([#164](https://github.com/coral-xyz/anchor/pull/164)).
 * spl: Add initialize_account instruction for spl tokens ([#166](https://github.com/coral-xyz/anchor/pull/166)).
 
-## [0.4.1] \* 2021-04-06
+## [0.4.1] - 2021-04-06
 
 * cli: Version verifiable docker builder ([#145](https://github.com/coral-xyz/anchor/pull/145)).
 
-## [0.4.0] \* 2021-04-04
+## [0.4.0] - 2021-04-04
 
 ### Features
 
@@ -602,7 +604,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * lang: Changes the account discriminator of `IdlAccount` to be namespaced by `"internal"` ([#128](https://github.com/coral-xyz/anchor/pull/128)).
 * lang, spl, cli: Upgrade solana toolchain to 1.6.3, a major version upgrade even though only the minor version is incremented. This allows for the removal of `-#![feature(proc_macro_hygiene)]`. ([#139](https://github.com/coral-xyz/anchor/pull/139)).
 
-## [0.3.0] \* 2021-03-12
+## [0.3.0] - 2021-03-12
 
 ### Features
 
@@ -622,7 +624,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * cli: Propagates mocha test exit status on error ([79b791](https://github.com/coral-xyz/anchor/commit/79b791ffa85ffae5b6163fa853562aa568650f21)).
 
-## [0.2.1] \* 2021-02-11
+## [0.2.1] - 2021-02-11
 
 ### Features
 
@@ -634,7 +636,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 * ts: Add instruction method to state namespace ([627c27](https://github.com/coral-xyz/anchor/commit/627c275e9cdf3dafafcf44473ba8146cc7979d44)).
 * lang/syn, ts: Add support for u128 and i128 ([#83](https://github.com/coral-xyz/anchor/pull/83)).
 
-## [0.2.0] \* 2021-02-08
+## [0.2.0] - 2021-02-08
 
 ### Features
 
@@ -644,7 +646,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 * lang, client, ts: Migrate from rust enum based method dispatch to a variant of sighash ([#64](https://github.com/coral-xyz/anchor/pull/64)).
 
-## [0.1.0] \* 2021-01-31
+## [0.1.0] - 2021-01-31
 
 Initial release.
 
