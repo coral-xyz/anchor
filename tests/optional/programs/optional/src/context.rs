@@ -21,7 +21,7 @@ pub struct Update<'info> {
     pub payer: Option<Signer<'info>>,
     #[account(mut, seeds=[DataPda::PREFIX.as_ref(), optional_account.as_ref().unwrap().key().as_ref()], bump = pda_bump)]
     pub optional_pda: Option<Account<'info, DataPda>>,
-    #[account(mut, constraint = payer.is_some())]
+    #[account(mut, signer, constraint = payer.is_some())]
     pub optional_account: Option<Account<'info, DataAccount>>,
 }
 
@@ -33,7 +33,7 @@ pub struct Realloc<'info> {
     pub optional_pda: Option<Account<'info, DataPda>>,
     pub required: Account<'info, DataAccount>,
     pub system_program: Option<Program<'info, System>>,
-    #[account(mut, realloc = 50, realloc::payer = payer, realloc::zero = false)]
+    #[account(mut, signer, realloc = 50, realloc::payer = payer, realloc::zero = false)]
     pub optional_account: Option<Account<'info, DataAccount>>,
 }
 
@@ -43,7 +43,7 @@ pub struct Close<'info> {
     pub payer: Option<Signer<'info>>,
     #[account(mut, close = payer, has_one = data_account)]
     pub optional_pda: Option<Account<'info, DataPda>>,
-    #[account(mut, close = payer, constraint = payer.is_some())]
+    #[account(mut, signer, close = payer, constraint = payer.is_some())]
     pub data_account: Option<Account<'info, DataAccount>>,
     pub system_program: Option<Program<'info, System>>,
 }

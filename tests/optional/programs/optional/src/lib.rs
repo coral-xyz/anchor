@@ -2,7 +2,6 @@
 //! structs deriving `Accounts`.
 
 use anchor_lang::prelude::*;
-use anchor_lang::AccountsClose;
 pub use context::*;
 
 pub mod account;
