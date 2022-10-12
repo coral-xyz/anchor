@@ -127,6 +127,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "anchor-attribute-account-move"
+version = "0.25.0"
+dependencies = [
+ "anchor-syn",
+ "anyhow",
+ "bs58 0.4.0",
+ "proc-macro2 1.0.40",
+ "quote 1.0.15",
+ "rustversion",
+ "syn 1.0.98",
+]
+
+[[package]]
 name = "anchor-attribute-constant"
 version = "0.25.0"
 dependencies = [
