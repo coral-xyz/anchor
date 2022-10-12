@@ -932,7 +932,6 @@
     superstruct "^0.14.2"
     tweetnacl "^1.0.3"
 
-
 "@tootallnate/once@1":
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/@tootallnate/once/-/once-1.1.2.tgz#ccb91445360179a04e7fe6aff78c00ffc1eeaf82"
