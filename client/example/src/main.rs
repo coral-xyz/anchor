@@ -54,8 +54,6 @@ fn main() -> Result<()> {
     // Wallet and cluster params.
     let payer = read_keypair_file(&*shellexpand::tilde("~/.config/solana/id.json"))
         .expect("Example requires a keypair file");
-    let payer_clone = read_keypair_file(&*shellexpand::tilde("~/.config/solana/id.json"))
-        .expect("Example requires a keypair file");
     let url = Cluster::Custom(
         "http://localhost:8899".to_string(),
         "ws://127.0.0.1:8900".to_string(),
@@ -69,7 +67,7 @@ fn main() -> Result<()> {
     basic_2(&client, opts.basic_2_pid)?;
     basic_4(&client, opts.basic_4_pid)?;
     events(&client, opts.events_pid)?;
-    optional(&client, opts.optional_pid, payer_clone)?;
+    optional(&client, opts.optional_pid)?;
 
     // Success.
     Ok(())
@@ -242,7 +240,7 @@ pub fn basic_4(client: &Client, pid: Pubkey) -> Result<()> {
 // Runs a client for tests/optional.
 //
 // Make sure to run a localnet with the program deploy to run this example.
-fn optional(client: &Client, pid: Pubkey, signer: Keypair) -> Result<()> {
+fn optional(client: &Client, pid: Pubkey) -> Result<()> {
     // Program client.
     let program = client.program(pid);
 
@@ -269,18 +267,8 @@ fn optional(client: &Client, pid: Pubkey, signer: Keypair) -> Result<()> {
             DataAccount::LEN as u64,
             &program.id(),
         ))
-        .instruction(system_instruction::create_account(
-            &program.payer(),
-            &data_account_keypair.pubkey(),
-            program
-                .rpc()
-                .get_minimum_balance_for_rent_exemption(DataAccount::LEN)?,
-            DataAccount::LEN as u64,
-            &program.id(),
-        ))
         .signer(&data_account_keypair)
         .signer(&required_keypair)
-        .signer(&signer)
         .accounts(OptionalInitialize {
             payer: Some(program.payer()),
             required: required_keypair.pubkey(),
@@ -290,7 +278,7 @@ fn optional(client: &Client, pid: Pubkey, signer: Keypair) -> Result<()> {
         })
         .args(optional_instruction::Initialize { value, key: pid })
         .send()
-        .unwrap_err();
+        .unwrap();
 
     // Assert the transaction worked.
     let required: DataAccount = program.account(required_keypair.pubkey())?;

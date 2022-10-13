@@ -37,14 +37,13 @@ main() {
 				--bpf-program $basic_4_pid ../../examples/tutorial/basic-4/target/deploy/basic_4.so \
 				--bpf-program $events_pid ../../tests/events/target/deploy/events.so \
 				--bpf-program $optional_pid ../../tests/optional/target/deploy/optional.so \
-
 				> test-validator.log &
     sleep 5
 
     #
     # Run Test.
     #
-    cargo run -- --composite-pid $composite_pid --basic-2-pid $basic_2_pid --basic-4-pid $basic_4_pid --events-pid $events_pid --optional_pid $optional_pid
+    cargo run -- --composite-pid $composite_pid --basic-2-pid $basic_2_pid --basic-4-pid $basic_4_pid --events-pid $events_pid --optional-pid $optional_pid
 }
 
 cleanup() {
