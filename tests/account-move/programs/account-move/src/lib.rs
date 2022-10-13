@@ -23,4 +23,6 @@ pub struct Initialize<'info> {
 #[account(zero_copy)]
 pub struct TestAccount {
     random_number: u64,
+    another_thing: u8,
+    what_about_this: Pubkey,
 }
