@@ -15,7 +15,7 @@ pub struct Initialize<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(pda_bump: u8)]
+#[instruction(value: u64, key: Pubkey, pda_bump: u8)]
 pub struct Update<'info> {
     #[account(mut)]
     pub payer: Option<Signer<'info>>,
@@ -26,14 +26,15 @@ pub struct Update<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(new_size: usize)]
 pub struct Realloc<'info> {
     #[account(mut)]
     pub payer: Option<Signer<'info>>,
-    #[account(mut, realloc = 50, realloc::payer = payer, realloc::zero = false)]
+    #[account(mut, realloc = new_size, realloc::payer = payer, realloc::zero = false)]
     pub optional_pda: Option<Account<'info, DataPda>>,
     pub required: Account<'info, DataAccount>,
     pub system_program: Option<Program<'info, System>>,
-    #[account(mut, signer, realloc = 50, realloc::payer = payer, realloc::zero = false)]
+    #[account(mut, signer, realloc = new_size, realloc::payer = payer, realloc::zero = true)]
     pub optional_account: Option<Account<'info, DataAccount>>,
 }
 
@@ -43,7 +44,7 @@ pub struct Close<'info> {
     pub payer: Option<Signer<'info>>,
     #[account(mut, close = payer, has_one = data_account)]
     pub optional_pda: Option<Account<'info, DataPda>>,
-    #[account(mut, signer, close = payer, constraint = payer.is_some())]
+    #[account(mut, signer, close = payer)]
     pub data_account: Option<Account<'info, DataAccount>>,
     pub system_program: Option<Program<'info, System>>,
 }

@@ -41,11 +41,18 @@ mod optional {
         Ok(())
     }
 
-    pub fn realloc(ctx: Context<Realloc>) -> Result<()> {
+    pub fn realloc(ctx: Context<Realloc>, new_size: u64) -> Result<()> {
         let optional_pda = &ctx.accounts.optional_pda;
-        if let Some(acc) = optional_pda {
-            let len = acc.to_account_info().data_len();
-            if len != 50 {
+        let optional_account = &ctx.accounts.optional_account;
+        if let Some(data_pda) = optional_pda {
+            let len = data_pda.to_account_info().data_len();
+            if len != new_size as usize {
+                return err!(OptionalErrors::ReallocFailed);
+            }
+        }
+        if let Some(data_account) = optional_account {
+            let len = data_account.to_account_info().data_len();
+            if len != new_size as usize {
                 return err!(OptionalErrors::ReallocFailed);
             }
         }
