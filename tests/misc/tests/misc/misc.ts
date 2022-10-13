@@ -2139,20 +2139,20 @@ describe("misc", () => {
         mintAccount.freezeAuthority.equals(provider.wallet.publicKey)
       );
     });
-    // it("check versioned transaction is now available", async () => {
-    //   let thisTx = new VersionedTransaction(
-    //     new Message({
-    //       header: {
-    //         numReadonlySignedAccounts: 0,
-    //         numReadonlyUnsignedAccounts: 0,
-    //         numRequiredSignatures: 0,
-    //       },
-    //       accountKeys: [new PublicKey([0])],
-    //       instructions: [{ accounts: [0], data: "", programIdIndex: 0 }],
-    //       recentBlockhash: "",
-    //     })
-    //   );
-    // assert.isDefined(thisTx);
-    // });
+    it("check versioned transaction is now available", async () => {
+      let thisTx = new VersionedTransaction(
+        new Message({
+          header: {
+            numReadonlySignedAccounts: 0,
+            numReadonlyUnsignedAccounts: 0,
+            numRequiredSignatures: 0,
+          },
+          accountKeys: [new PublicKey([0]).toString()],
+          instructions: [{ accounts: [0], data: "", programIdIndex: 0 }],
+          recentBlockhash: "",
+        })
+      );
+      assert.isDefined(thisTx);
+    });
   });
 });
