@@ -227,7 +227,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             ./target/
-          key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-${{ runner.os }}-${{ env.CARGO_PROFILE }}-anchor-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: actions/download-artifact@v2
         with:
@@ -324,7 +324,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             ./target/
-          key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-${{ runner.os }}-${{ env.CARGO_PROFILE }}-anchor-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: actions/download-artifact@v2
         with:
@@ -422,7 +422,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             ./target/
-          key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-${{ runner.os }}-${{ env.CARGO_PROFILE }}-anchor-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: actions/download-artifact@v2
         with:
