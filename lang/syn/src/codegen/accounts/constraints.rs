@@ -1021,8 +1021,8 @@ pub fn generate_optional_check(
     let field_name = field_name.to_string();
     if accs.is_field_optional(&field) {
         quote! {
-            let #field = if let Some(#field) = &#field {
-                #field
+            let #field = if let Some(account) = &#field {
+                account
             } else {
                 return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintAccountIsNone).with_account_name(#field_name));
             };
