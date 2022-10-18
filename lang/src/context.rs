@@ -216,8 +216,7 @@ impl<'info, T: ToAccountInfos<'info> + ToAccountMetas> ToAccountInfos<'info>
     for CpiContext<'_, '_, '_, 'info, T>
 {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        // always uses try_account_infos in case there are optional accounts
-        let mut infos = self.accounts.try_to_account_infos(&self.program);
+        let mut infos = self.accounts.to_account_infos();
         infos.extend_from_slice(&self.remaining_accounts);
         infos.push(self.program.clone());
         infos
@@ -318,14 +317,7 @@ impl<'a, 'b, 'c, 'info, T: Accounts<'info>> ToAccountInfos<'info>
     for CpiStateContext<'a, 'b, 'c, 'info, T>
 {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        let mut infos = self.cpi_ctx.accounts.try_to_account_infos(self.program());
-        infos.push(self.state.clone());
-        infos.push(self.cpi_ctx.program.clone());
-        infos
-    }
-
-    fn try_to_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
-        let mut infos = self.cpi_ctx.accounts.try_to_account_infos(self.program());
+        let mut infos = self.cpi_ctx.accounts.to_account_infos();
         infos.push(self.state.clone());
         infos.push(self.cpi_ctx.program.clone());
         infos

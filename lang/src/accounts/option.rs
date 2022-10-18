@@ -50,17 +50,8 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Option<T> {
 
 impl<'info, T: ToAccountInfos<'info>> ToAccountInfos<'info> for Option<T> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        match self {
-            Some(account) => account.to_account_infos(),
-            None => panic!("Cannot run `to_account_infos` on None"),
-        }
-    }
-
-    fn try_to_account_infos(&self, program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
-        match self {
-            Some(_) => self.to_account_infos(),
-            None => vec![program.clone()],
-        }
+        self.as_ref()
+            .map_or_else(Vec::new, |account| account.to_account_infos())
     }
 }
 

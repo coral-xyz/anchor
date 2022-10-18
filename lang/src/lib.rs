@@ -119,13 +119,6 @@ pub trait ToAccountMetas {
 /// structs.
 pub trait ToAccountInfos<'info> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>>;
-
-    /// Intended for `Accounts` structs with optional accounts in order to
-    /// pass in the program `AccountInfo` as a sentinel value. When the account
-    /// is not present, it returns a copy of the program's `AccountInfo` instead.
-    fn try_to_account_infos(&self, _program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
-        self.to_account_infos()
-    }
 }
 
 /// Transformation to an `AccountInfo` struct.

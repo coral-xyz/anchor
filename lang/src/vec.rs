@@ -10,12 +10,6 @@ impl<'info, T: ToAccountInfos<'info>> ToAccountInfos<'info> for Vec<T> {
             .flat_map(|item| item.to_account_infos())
             .collect()
     }
-
-    fn try_to_account_infos(&self, program: &AccountInfo<'info>) -> Vec<AccountInfo<'info>> {
-        self.iter()
-            .flat_map(|item| item.try_to_account_infos(program))
-            .collect()
-    }
 }
 
 impl<T: ToAccountMetas> ToAccountMetas for Vec<T> {

@@ -129,17 +129,6 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         })
         .collect();
 
-    let account_struct_try_infos: Vec<proc_macro2::TokenStream> = accs
-        .fields
-        .iter()
-        .map(|f: &AccountField| {
-            let name = &f.ident();
-            quote! {
-                try_account_infos.extend(anchor_lang::ToAccountInfos::try_to_account_infos(&self.#name, program));
-            }
-        })
-        .collect();
-
     // Re-export all composite account structs (i.e. other structs deriving
     // accounts embedded into this struct. Required because, these embedded
     // structs are *not* visible from the #[program] macro, which is responsible
@@ -212,12 +201,6 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     let mut account_infos = vec![];
                     #(#account_struct_infos)*
                     account_infos
-                }
-
-                fn try_to_account_infos(&self, program: &anchor_lang::solana_program::account_info::AccountInfo<'info>) -> Vec<anchor_lang::solana_program::account_info::AccountInfo<'info>> {
-                    let mut try_account_infos = vec![];
-                    #(#account_struct_try_infos)*
-                    try_account_infos
                 }
             }
         }
