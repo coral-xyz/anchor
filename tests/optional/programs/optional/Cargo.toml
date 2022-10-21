@@ -11,6 +11,7 @@ name = "optional"
 [features]
 no-entrypoint = []
 cpi = ["no-entrypoint"]
+default = ["cpi"]
 
 [dependencies]
 anchor-lang = { path = "../../../../lang" }
