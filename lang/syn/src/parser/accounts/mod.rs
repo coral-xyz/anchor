@@ -122,6 +122,8 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
             let associated_payer_name = match field.constraints.init.clone().unwrap().payer {
                 // composite payer, check not supported
                 Expr::Field(_) => continue,
+                // method call, check not supported
+                Expr::MethodCall(_) => continue,
                 field_name => field_name.to_token_stream().to_string(),
             };
 
@@ -204,6 +206,8 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
             let associated_payer_name = match field.constraints.realloc.clone().unwrap().payer {
                 // composite allocator, check not supported
                 Expr::Field(_) => continue,
+                // method call, check not supported
+                Expr::MethodCall(_) => continue,
                 field_name => field_name.to_token_stream().to_string(),
             };
 
