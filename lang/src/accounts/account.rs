@@ -336,7 +336,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsEx
     for Account<'info, T>
 {
     fn exit(&self, program_id: &Pubkey) -> Result<()> {
-        // Only persist if the owner is the current program.
+        // Only persist if the owner is the current program and the account is not closed.
         if &T::owner() == program_id && !crate::common::is_closed(&self.info) {
             let info = self.to_account_info();
             let mut data = info.try_borrow_mut_data()?;

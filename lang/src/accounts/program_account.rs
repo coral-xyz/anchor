@@ -99,6 +99,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info
     for ProgramAccount<'info, T>
 {
     fn exit(&self, _program_id: &Pubkey) -> Result<()> {
+        // Only persist if the account is not closed.
         if !crate::common::is_closed(&self.inner.info) {
             let info = self.to_account_info();
             let mut data = info.try_borrow_mut_data()?;
