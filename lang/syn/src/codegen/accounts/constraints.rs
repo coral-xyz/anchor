@@ -1,5 +1,6 @@
 use proc_macro2_diagnostics::SpanDiagnosticExt;
 use quote::quote;
+use std::collections::HashSet;
 use syn::Expr;
 
 use crate::*;
@@ -236,7 +237,7 @@ pub fn generate_constraint_close(
     let name_str = field.to_string();
     let target = &c.sol_dest;
     let target_optional_check =
-        generate_optional_check(accs, quote! {#target}, &target.to_string());
+        OptionalCheckScope::new_with_field(accs, field).generate_check(target);
     quote! {
         {
             #target_optional_check
@@ -262,7 +263,7 @@ pub fn generate_constraint_has_one(
     c: &ConstraintHasOne,
     accs: &AccountsStruct,
 ) -> proc_macro2::TokenStream {
-    let target = c.join_target.clone();
+    let target = &c.join_target;
     let ident = &f.ident;
     let field = match &f.ty {
         Ty::Loader(_) => quote! {#ident.load()?},
@@ -276,7 +277,8 @@ pub fn generate_constraint_has_one(
         &Some(&(quote! { my_key }, quote! { target_key })),
     );
     let target_optional_check =
-        generate_optional_check(accs, quote! {#target}, tts_to_string(&target));
+        OptionalCheckScope::new_with_field(accs, &field).generate_check(target);
+
     quote! {
         {
             #target_optional_check
@@ -390,10 +392,10 @@ fn generate_constraint_realloc(
     let payer = &c.payer;
     let zero = &c.zero;
 
-    let payer_optional_check =
-        generate_optional_check(accs, quote! {#payer}, &tts_to_string(payer));
+    let mut optional_check_scope = OptionalCheckScope::new_with_field(accs, field);
+    let payer_optional_check = optional_check_scope.generate_check(payer);
     let system_program_optional_check =
-        generate_optional_check(accs, quote! {system_program}, "system_program");
+        optional_check_scope.generate_check(quote! {system_program});
 
     quote! {
         // Blocks duplicate account reallocs in a single instruction to prevent accidental account overwrites
@@ -458,15 +460,7 @@ fn generate_constraint_init_group(
     };
     let space = &c.space;
 
-    // Payer for rent exemption.
-    let payer = {
-        let p = &c.payer;
-        let payer_optional_check = generate_optional_check(accs, quote! {#p}, tts_to_string(p));
-        quote! {
-            #payer_optional_check
-            let payer = #p.to_account_info();
-        }
-    };
+    let payer = &c.payer;
 
     // Convert from account info to account context wrapper type.
     let from_account_info = f.from_account_info(Some(&c.kind), true);
@@ -537,23 +531,22 @@ fn generate_constraint_init_group(
         }
     };
 
-    let system_program_optional_check =
-        generate_optional_check(accs, quote! {system_program}, "system_program");
-    let token_program_optional_check =
-        generate_optional_check(accs, quote! {token_program}, "token_program");
-    let associated_token_program_optional_check = generate_optional_check(
-        accs,
-        quote! {associated_token_program},
-        "associated_token_program",
-    );
-    let rent_optional_check = generate_optional_check(accs, quote! {rent}, "rent");
+    // Optional check idents
+    let system_program = &quote! {system_program};
+    let token_program = &quote! {token_program};
+    let associated_token_program = &quote! {associated_token_program};
+    let rent = &quote! {rent};
 
+    let mut check_scope = OptionalCheckScope::new_with_field(accs, field);
     match &c.kind {
         InitKind::Token { owner, mint } => {
-            let owner_optional_check =
-                generate_optional_check(accs, quote! {#owner}, &tts_to_string(owner));
-            let mint_optional_check =
-                generate_optional_check(accs, quote! {#mint}, &tts_to_string(mint));
+            let owner_optional_check = check_scope.generate_check(owner);
+            let mint_optional_check = check_scope.generate_check(mint);
+
+            let system_program_optional_check = check_scope.generate_check(system_program);
+            let token_program_optional_check = check_scope.generate_check(token_program);
+            let rent_optional_check = check_scope.generate_check(rent);
+
             let optional_checks = quote! {
                 #system_program_optional_check
                 #token_program_optional_check
@@ -562,10 +555,13 @@ fn generate_constraint_init_group(
                 #mint_optional_check
             };
 
+            let payer_optional_check = check_scope.generate_check(payer);
+
             let create_account = generate_create_account(
                 field,
                 quote! {anchor_spl::token::TokenAccount::LEN},
                 quote! {&token_program.key()},
+                quote! {#payer},
                 seeds_with_bump,
             );
 
@@ -578,8 +574,7 @@ fn generate_constraint_init_group(
                     #optional_checks
 
                     if !#if_needed || AsRef::<AccountInfo>::as_ref(&#field).owner == &anchor_lang::solana_program::system_program::ID {
-                        // Define payer variable.
-                        #payer
+                        #payer_optional_check
 
                         // Create the account with the system program.
                         #create_account
@@ -610,18 +605,25 @@ fn generate_constraint_init_group(
             }
         }
         InitKind::AssociatedToken { owner, mint } => {
-            let owner_optional_check =
-                generate_optional_check(accs, quote! {#owner}, &tts_to_string(owner));
-            let mint_optional_check =
-                generate_optional_check(accs, quote! {#mint}, &tts_to_string(mint));
+            let owner_optional_check = check_scope.generate_check(owner);
+            let mint_optional_check = check_scope.generate_check(mint);
+
+            let system_program_optional_check = check_scope.generate_check(system_program);
+            let token_program_optional_check = check_scope.generate_check(token_program);
+            let associated_token_program_optional_check =
+                check_scope.generate_check(associated_token_program);
+            let rent_optional_check = check_scope.generate_check(rent);
+
             let optional_checks = quote! {
                 #system_program_optional_check
-                #associated_token_program_optional_check
                 #token_program_optional_check
+                #associated_token_program_optional_check
                 #rent_optional_check
                 #owner_optional_check
                 #mint_optional_check
             };
+
+            let payer_optional_check = check_scope.generate_check(payer);
 
             quote! {
                 // Define the bump and pda variable.
@@ -632,11 +634,11 @@ fn generate_constraint_init_group(
                     #optional_checks
 
                     if !#if_needed || AsRef::<AccountInfo>::as_ref(&#field).owner == &anchor_lang::solana_program::system_program::ID {
-                        #payer
+                        #payer_optional_check
 
                         let cpi_program = associated_token_program.to_account_info();
                         let cpi_accounts = anchor_spl::associated_token::Create {
-                            payer: payer.to_account_info(),
+                            payer: #payer.to_account_info(),
                             associated_token: #field.to_account_info(),
                             authority: #owner.to_account_info(),
                             mint: #mint.to_account_info(),
@@ -669,32 +671,39 @@ fn generate_constraint_init_group(
             decimals,
             freeze_authority,
         } => {
-            let owner_optional_check =
-                generate_optional_check(accs, quote! {#owner}, &tts_to_string(owner));
+            let owner_optional_check = check_scope.generate_check(owner);
+            let freeze_authority_optional_check = match freeze_authority {
+                Some(fa) => check_scope.generate_check(fa),
+                None => quote! {},
+            };
+
+            let system_program_optional_check = check_scope.generate_check(system_program);
+            let token_program_optional_check = check_scope.generate_check(token_program);
+            let rent_optional_check = check_scope.generate_check(rent);
+
             let optional_checks = quote! {
                 #system_program_optional_check
                 #token_program_optional_check
                 #rent_optional_check
                 #owner_optional_check
+                #freeze_authority_optional_check
             };
+
+            let payer_optional_check = check_scope.generate_check(payer);
 
             let create_account = generate_create_account(
                 field,
                 quote! {anchor_spl::token::Mint::LEN},
                 quote! {&token_program.key()},
+                quote! {#payer},
                 seeds_with_bump,
             );
+
             let freeze_authority = match freeze_authority {
-                Some(fa) => {
-                    let freeze_authority_optional_check =
-                        generate_optional_check(accs, quote! {#fa}, &tts_to_string(fa));
-                    quote! {
-                        #freeze_authority_optional_check
-                        Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key())
-                    }
-                }
+                Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key()) },
                 None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
             };
+
             quote! {
                 // Define the bump and pda variable.
                 #find_pda
@@ -705,7 +714,7 @@ fn generate_constraint_init_group(
 
                     if !#if_needed || AsRef::<AccountInfo>::as_ref(&#field).owner == &anchor_lang::solana_program::system_program::ID {
                         // Define payer variable.
-                        #payer
+                        #payer_optional_check
 
                         // Create the account with the system program.
                         #create_account
@@ -742,29 +751,45 @@ fn generate_constraint_init_group(
             // Define the space variable.
             let space = quote! {let space = #space;};
 
+            let system_program_optional_check = check_scope.generate_check(system_program);
+
             // Define the owner of the account being created. If not specified,
             // default to the currently executing program.
-            let owner = match owner {
-                None => quote! {
-                    program_id
-                },
-                Some(o) => {
-                    let owner_optional_check =
-                        generate_optional_check(accs, quote! {#o}, &tts_to_string(o));
+            let (owner, owner_optional_check) = match owner {
+                None => (
                     quote! {
-                        #owner_optional_check
-                        &#o
-                    }
+                        program_id
+                    },
+                    quote! {},
+                ),
+
+                Some(o) => {
+                    // We clone the `check_scope` here to avoid collisions with the
+                    // `payer_optional_check`, which is in a separate scope
+                    let owner_optional_check = check_scope.clone().generate_check(o);
+                    (
+                        quote! {
+                            &#o
+                        },
+                        owner_optional_check,
+                    )
                 }
             };
+
+            let payer_optional_check = check_scope.generate_check(payer);
 
             let optional_checks = quote! {
                 #system_program_optional_check
             };
 
             // CPI to the system program to create the account.
-            let create_account =
-                generate_create_account(field, quote! {space}, owner.clone(), seeds_with_bump);
+            let create_account = generate_create_account(
+                field,
+                quote! {space},
+                owner.clone(),
+                quote! {#payer},
+                seeds_with_bump,
+            );
 
             // Put it all together.
             quote! {
@@ -784,8 +809,7 @@ fn generate_constraint_init_group(
                     // Create the account. Always do this in the event
                     // if needed is not specified or the system program is the owner.
                     let pa: #ty_decl = if !#if_needed || actual_owner == &anchor_lang::solana_program::system_program::ID {
-                        // Define the payer variable.
-                        #payer
+                        #payer_optional_check
 
                         // CPI to the system program to create.
                         #create_account
@@ -799,6 +823,7 @@ fn generate_constraint_init_group(
 
                     // Assert the account was created correctly.
                     if #if_needed {
+                        #owner_optional_check
                         if space != actual_field.data_len() {
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintSpace).with_account_name(#name_str).with_values((space, actual_field.data_len())));
                         }
@@ -892,20 +917,18 @@ fn generate_constraint_associated_token(
     let name_str = name.to_string();
     let wallet_address = &c.wallet;
     let spl_token_mint_address = &c.mint;
-    let wallet_address_optional_check = generate_optional_check(
-        accs,
-        quote! {#wallet_address},
-        tts_to_string(wallet_address),
-    );
-    let spl_token_mint_address_optional_check = generate_optional_check(
-        accs,
-        quote! {#spl_token_mint_address},
-        tts_to_string(spl_token_mint_address),
-    );
+    let mut optional_check_scope = OptionalCheckScope::new_with_field(accs, name);
+    let wallet_address_optional_check = optional_check_scope.generate_check(wallet_address);
+    let spl_token_mint_address_optional_check =
+        optional_check_scope.generate_check(spl_token_mint_address);
+    let optional_checks = quote! {
+        #wallet_address_optional_check
+        #spl_token_mint_address_optional_check
+    };
+
     quote! {
         {
-            #wallet_address_optional_check
-            #spl_token_mint_address_optional_check
+            #optional_checks
 
             let my_owner = #name.owner;
             let wallet_address = #wallet_address.key();
@@ -927,10 +950,10 @@ fn generate_constraint_token_account(
     accs: &AccountsStruct,
 ) -> proc_macro2::TokenStream {
     let name = &f.ident;
+    let mut optional_check_scope = OptionalCheckScope::new_with_field(accs, name);
     let authority_check = match &c.authority {
         Some(authority) => {
-            let authority_optional_check =
-                generate_optional_check(accs, quote! {#authority}, tts_to_string(authority));
+            let authority_optional_check = optional_check_scope.generate_check(authority);
             quote! {
                 #authority_optional_check
                 if #name.owner != #authority.key() { return Err(anchor_lang::error::ErrorCode::ConstraintTokenOwner.into()); }
@@ -940,8 +963,7 @@ fn generate_constraint_token_account(
     };
     let mint_check = match &c.mint {
         Some(mint) => {
-            let mint_optional_check =
-                generate_optional_check(accs, quote! {#mint}, tts_to_string(mint));
+            let mint_optional_check = optional_check_scope.generate_check(mint);
             quote! {
                 #mint_optional_check
                 if #name.mint != #mint.key() { return Err(anchor_lang::error::ErrorCode::ConstraintTokenMint.into()); }
@@ -972,16 +994,13 @@ fn generate_constraint_mint(
         },
         None => quote! {},
     };
+    let mut optional_check_scope = OptionalCheckScope::new_with_field(accs, name);
     let mint_authority_check = match &c.mint_authority {
         Some(mint_authority) => {
-            let mint_authority_optional_check = generate_optional_check(
-                accs,
-                quote! {#mint_authority},
-                tts_to_string(mint_authority),
-            );
+            let mint_authority_optional_check = optional_check_scope.generate_check(mint_authority);
             quote! {
                 #mint_authority_optional_check
-                if #name.mint_authority != anchor_lang::solana_program::program_option::COption::Some(anchor_lang::Key::key(&#mint_authority)) {
+                if #name.mint_authority != anchor_lang::solana_program::program_option::COption::Some(#mint_authority.key()) {
                     return Err(anchor_lang::error::ErrorCode::ConstraintMintMintAuthority.into());
                 }
             }
@@ -990,14 +1009,11 @@ fn generate_constraint_mint(
     };
     let freeze_authority_check = match &c.freeze_authority {
         Some(freeze_authority) => {
-            let freeze_authority_optional_check = generate_optional_check(
-                accs,
-                quote! {#freeze_authority},
-                tts_to_string(freeze_authority),
-            );
+            let freeze_authority_optional_check =
+                optional_check_scope.generate_check(freeze_authority);
             quote! {
                 #freeze_authority_optional_check
-                if #name.freeze_authority != anchor_lang::solana_program::program_option::COption::Some(anchor_lang::Key::key(&#freeze_authority)) {
+                if #name.freeze_authority != anchor_lang::solana_program::program_option::COption::Some(#freeze_authority.key()) {
                     return Err(anchor_lang::error::ErrorCode::ConstraintMintFreezeAuthority.into());
                 }
             }
@@ -1013,22 +1029,42 @@ fn generate_constraint_mint(
     }
 }
 
-pub fn generate_optional_check(
-    accs: &AccountsStruct,
-    field: TokenStream,
-    field_name: impl ToString,
-) -> TokenStream {
-    let field_name = field_name.to_string();
-    if accs.is_field_optional(&field) {
-        quote! {
-            let #field = if let Some(account) = &#field {
-                account
-            } else {
-                return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintAccountIsNone).with_account_name(#field_name));
-            };
+#[derive(Clone, Debug)]
+pub struct OptionalCheckScope<'a> {
+    seen: HashSet<String>,
+    accounts: &'a AccountsStruct,
+}
+
+impl<'a> OptionalCheckScope<'a> {
+    pub fn new(accounts: &'a AccountsStruct) -> Self {
+        Self {
+            seen: HashSet::new(),
+            accounts,
         }
-    } else {
-        quote! {}
+    }
+    pub fn new_with_field(accounts: &'a AccountsStruct, field: impl ToString) -> Self {
+        let mut check_scope = Self::new(accounts);
+        check_scope.seen.insert(field.to_string());
+        check_scope
+    }
+    pub fn generate_check(&mut self, field: impl ToTokens) -> TokenStream {
+        let field_name = tts_to_string(&field);
+        if self.seen.contains(&field_name) {
+            quote! {}
+        } else {
+            self.seen.insert(field_name.clone());
+            if self.accounts.is_field_optional(&field) {
+                quote! {
+                    let #field = if let Some(ref account) = #field {
+                        account
+                    } else {
+                        return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintAccountIsNone).with_account_name(#field_name));
+                    };
+                }
+            } else {
+                quote! {}
+            }
+        }
     }
 }
 
@@ -1043,6 +1079,7 @@ fn generate_create_account(
     field: &Ident,
     space: proc_macro2::TokenStream,
     owner: proc_macro2::TokenStream,
+    payer: proc_macro2::TokenStream,
     seeds_with_nonce: proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
     // Field, payer, and system program are already validated to not be an Option at this point
@@ -1056,7 +1093,7 @@ fn generate_create_account(
             // Create the token account with right amount of lamports and space, and the correct owner.
             let lamports = __anchor_rent.minimum_balance(#space);
             let cpi_accounts = anchor_lang::system_program::CreateAccount {
-                from: payer.to_account_info(),
+                from: #payer.to_account_info(),
                 to: #field.to_account_info()
             };
             let cpi_context = anchor_lang::context::CpiContext::new(system_program.to_account_info(), cpi_accounts);
@@ -1069,7 +1106,7 @@ fn generate_create_account(
                 .saturating_sub(__current_lamports);
             if required_lamports > 0 {
                 let cpi_accounts = anchor_lang::system_program::Transfer {
-                    from: payer.to_account_info(),
+                    from: #payer.to_account_info(),
                     to: #field.to_account_info(),
                 };
                 let cpi_context = anchor_lang::context::CpiContext::new(system_program.to_account_info(), cpi_accounts);
@@ -1119,11 +1156,8 @@ pub fn generate_constraint_state(
         Ty::CpiState(ty) => &ty.account_type_path,
         _ => panic!("Invalid state constraint"),
     };
-    let program_target_optional_check = generate_optional_check(
-        accs,
-        quote! {#program_target},
-        tts_to_string(&program_target),
-    );
+    let program_target_optional_check =
+        OptionalCheckScope::new_with_field(accs, ident).generate_check(quote! {#program_target});
     quote! {
         {
             #program_target_optional_check
