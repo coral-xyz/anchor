@@ -1,4 +1,4 @@
-//! Misc example is a catchall program for testing unrelated features.
+//! Misc optional example is a catchall program for testing unrelated features.
 //! It's not too instructive/coherent by itself, so please see other examples.
 
 use account::MAX_SIZE;
@@ -126,6 +126,24 @@ pub mod misc_optional {
     }
 
     pub fn test_close(_ctx: Context<TestClose>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn test_close_twice(ctx: Context<TestCloseTwice>) -> Result<()> {
+        let data_account = &ctx.accounts.data.as_ref().unwrap();
+        let sol_dest_info = ctx.accounts.sol_dest.as_ref().unwrap().to_account_info();
+        data_account.close(sol_dest_info)?;
+        let data_account_info: &AccountInfo = data_account.as_ref();
+        require_keys_eq!(*data_account_info.owner, System::id());
+        Ok(())
+    }
+
+    pub fn test_close_mut(ctx: Context<TestCloseMut>) -> Result<()> {
+        let data_account = &ctx.accounts.data.as_ref().unwrap();
+        let sol_dest_info = ctx.accounts.sol_dest.as_ref().unwrap().to_account_info();
+        data_account.close(sol_dest_info)?;
+        let data_account_info: &AccountInfo = data_account.as_ref();
+        require_keys_eq!(*data_account_info.owner, System::id());
         Ok(())
     }
 
