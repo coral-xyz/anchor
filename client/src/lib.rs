@@ -156,11 +156,7 @@ impl Program {
         &self,
         filters: Vec<RpcFilterType>,
     ) -> Result<ProgramAccountsIterator<T>, ClientError> {
-        let account_type_filter = RpcFilterType::Memcmp(Memcmp {
-            offset: 0,
-            bytes: MemcmpEncodedBytes::Base58(bs58::encode(T::discriminator()).into_string()),
-            encoding: None,
-        });
+        let account_type_filter = RpcFilterType::Memcmp(Memcmp::new_base58_encoded(0, &T::discriminator()));
         let config = RpcProgramAccountsConfig {
             filters: Some([vec![account_type_filter], filters].concat()),
             account_config: RpcAccountInfoConfig {
