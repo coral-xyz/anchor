@@ -72,6 +72,7 @@
     snake-case "^3.0.4"
     toml "^3.0.0"
 
+<<<<<<< HEAD
 "@project-serum/anchor@file:../ts/packages/anchor":
   version "0.25.0"
   dependencies:
@@ -91,6 +92,8 @@
     superstruct "^0.15.4"
     toml "^3.0.0"
 
+=======
+>>>>>>> 1fd2a07ea7531d2f244f5b1ccc99dac1a587b301
 "@project-serum/borsh@^0.2.2":
   version "0.2.2"
   resolved "https://registry.yarnpkg.com/@project-serum/borsh/-/borsh-0.2.2.tgz#63e558f2d6eb6ab79086bf499dea94da3182498f"
@@ -1359,6 +1362,18 @@ ts-mocha@^10.0.0:
   version "10.0.0"
   resolved "https://registry.yarnpkg.com/ts-mocha/-/ts-mocha-10.0.0.tgz#41a8d099ac90dbbc64b06976c5025ffaebc53cb9"
   integrity sha512-VRfgDO+iiuJFlNB18tzOfypJ21xn2xbuZyDvJvqpTbWgkAgD17ONGr8t+Tl8rcBtOBdjXp5e/Rk+d39f7XBHRw==
+<<<<<<< HEAD
+=======
+  dependencies:
+    ts-node "7.0.1"
+  optionalDependencies:
+    tsconfig-paths "^3.5.0"
+
+ts-mocha@^8.0.0:
+  version "8.0.0"
+  resolved "https://registry.yarnpkg.com/ts-mocha/-/ts-mocha-8.0.0.tgz#962d0fa12eeb6468aa1a6b594bb3bbc818da3ef0"
+  integrity sha512-Kou1yxTlubLnD5C3unlCVO7nh0HERTezjoVhVw/M5S1SqoUec0WgllQvPk3vzPMc6by8m6xD1uR1yRf8lnVUbA==
+>>>>>>> 1fd2a07ea7531d2f244f5b1ccc99dac1a587b301
   dependencies:
     ts-node "7.0.1"
   optionalDependencies:

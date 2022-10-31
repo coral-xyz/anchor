@@ -1,5 +1,5 @@
-import * as anchor from "@project-serum/anchor";
-import { Spl } from "@project-serum/anchor";
+import * as anchor from "@coral-xyz/anchor";
+import { Spl } from "@coral-xyz/anchor";
 import { assert } from "chai";
 import BN from "bn.js";
 import { Keypair, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
