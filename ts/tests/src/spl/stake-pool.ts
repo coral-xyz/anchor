@@ -1,7 +1,7 @@
 import assert from "assert";
 import { splStakePoolProgram } from "@project-serum/spl-stake-pool";
 import { splTokenProgram } from "@project-serum/spl-token";
-import { BN } from "@project-serum/anchor";
+import { BN } from "@coral-xyz/anchor";
 import {
   Keypair,
   LAMPORTS_PER_SOL,

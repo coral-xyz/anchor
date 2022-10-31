@@ -1,5 +1,5 @@
-import * as anchor from '@project-serum/anchor';
-import { AnchorError, Program } from '@project-serum/anchor';
+import * as anchor from '@coral-xyz/anchor';
+import { AnchorError, Program } from '@coral-xyz/anchor';
 import { TicTacToe } from '../target/types/tic_tac_toe';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';

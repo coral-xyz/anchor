@@ -30,9 +30,9 @@
     "@ethersproject/logger" "^5.5.0"
     hash.js "1.1.7"
 
-"@project-serum/anchor@0.24.1":
+"@coral-xyz/anchor@0.24.1":
   version "0.24.1"
-  resolved "https://registry.yarnpkg.com/@project-serum/anchor/-/anchor-0.24.1.tgz#521c3d610d3db7e24f143736e9c945b54fb8ef85"
+  resolved "https://registry.yarnpkg.com/@coral-xyz/anchor/-/anchor-0.24.1.tgz#521c3d610d3db7e24f143736e9c945b54fb8ef85"
   integrity sha512-Oab6rPKsoBKf7/m/AyZcx3ahzcRiOFbqYRoDX6Gnxiqeu2zLKS+LyV6v/2XEVnwhIhOtwETtsgSZAwbqjM5Ywg==
   dependencies:
     "@project-serum/borsh" "^0.2.5"

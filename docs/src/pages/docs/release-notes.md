@@ -256,7 +256,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 - cli: fix dns in NODE_OPTIONS ([#928](https://github.com/coral-xyz/anchor/pull/928)).
 - cli: output TypeScript IDL in `idl parse` subcommand ([#941](https://github.com/coral-xyz/anchor/pull/941)).
-- cli: Add fields `os` and `cpu` to npm package `@project-serum/anchor-cli` ([#976](https://github.com/coral-xyz/anchor/pull/976)).
+- cli: Add fields `os` and `cpu` to npm package `@coral-xyz/anchor-cli` ([#976](https://github.com/coral-xyz/anchor/pull/976)).
 - cli: Allow specify output directory for TypeScript IDL ([#940](https://github.com/coral-xyz/anchor/pull/940)).
 
 ### Breaking
@@ -635,5 +635,5 @@ Initial release.
 - lang/syn: Internal crate for parsing the Anchor eDSL, generating code, and an IDL.
 - spl: `anchor-spl` crate providing CPI clients for Anchor programs.
 - client: `anchor-client` crate providing Rust clients for Anchor programs.
-- ts: `@project-serum/anchor` package for generating TypeScript clients.
+- ts: `@coral-xyz/anchor` package for generating TypeScript clients.
 - cli: Command line interface for managing Anchor programs.

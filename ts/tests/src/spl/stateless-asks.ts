@@ -1,6 +1,6 @@
 import { splStatelessAsksProgram } from "@project-serum/spl-stateless-asks";
 import { splTokenProgram } from "@project-serum/spl-token";
-import { BN } from "@project-serum/anchor";
+import { BN } from "@coral-xyz/anchor";
 import { Keypair, PublicKey } from "@solana/web3.js";
 
 import {

@@ -1,6 +1,6 @@
 {
     "dependencies": {
-        "@project-serum/anchor": "0.24.1"
+        "@coral-xyz/anchor": "0.24.1"
     },
     "devDependencies": {
         "@types/mocha": "^9.0.0",

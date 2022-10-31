@@ -12,7 +12,7 @@ import {
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { AnchorProvider, Wallet } from "@project-serum/anchor";
+import { AnchorProvider, Wallet } from "@coral-xyz/anchor";
 
 import { SPL_ATA_PROGRAM_ID, SPL_TOKEN_PROGRAM_ID } from "./constants";
 
