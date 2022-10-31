@@ -87,7 +87,7 @@ anchor-lang = "{2}"
 pub fn deploy_js_script_host(cluster_url: &str, script_path: &str) -> String {
     format!(
         r#"
-const anchor = require('@project-serum/anchor');
+const anchor = require('@coral-xyz/anchor');
 
 // Deploy script defined by the user.
 const userScript = require("{0}");
@@ -114,7 +114,7 @@ main();
 
 pub fn deploy_ts_script_host(cluster_url: &str, script_path: &str) -> String {
     format!(
-        r#"import * as anchor from '@project-serum/anchor';
+        r#"import * as anchor from '@coral-xyz/anchor';
 
 // Deploy script defined by the user.
 const userScript = require("{0}");
@@ -144,7 +144,7 @@ pub fn deploy_script() -> &'static str {
 // single deploy script that's invoked from the CLI, injecting a provider
 // configured from the workspace's Anchor.toml.
 
-const anchor = require("@project-serum/anchor");
+const anchor = require("@coral-xyz/anchor");
 
 module.exports = async function (provider) {
   // Configure client to use the provider.
@@ -160,7 +160,7 @@ pub fn ts_deploy_script() -> &'static str {
 // single deploy script that's invoked from the CLI, injecting a provider
 // configured from the workspace's Anchor.toml.
 
-const anchor = require("@project-serum/anchor");
+const anchor = require("@coral-xyz/anchor");
 
 module.exports = async function (provider) {
   // Configure client to use the provider.
@@ -202,7 +202,7 @@ pub struct Initialize {{}}
 
 pub fn mocha(name: &str) -> String {
     format!(
-        r#"const anchor = require("@project-serum/anchor");
+        r#"const anchor = require("@coral-xyz/anchor");
 
 describe("{}", () => {{
   // Configure the client to use the local cluster.
@@ -229,7 +229,7 @@ pub fn package_json() -> String {
         "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
     }},
     "dependencies": {{
-        "@project-serum/anchor": "^{0}"
+        "@coral-xyz/anchor": "^{0}"
     }},
     "devDependencies": {{
         "chai": "^4.3.4",
@@ -250,7 +250,7 @@ pub fn ts_package_json() -> String {
         "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
     }},
     "dependencies": {{
-        "@project-serum/anchor": "^{0}"
+        "@coral-xyz/anchor": "^{0}"
     }},
     "devDependencies": {{
         "chai": "^4.3.4",
@@ -270,8 +270,8 @@ pub fn ts_package_json() -> String {
 
 pub fn ts_mocha(name: &str) -> String {
     format!(
-        r#"import * as anchor from "@project-serum/anchor";
-import {{ Program }} from "@project-serum/anchor";
+        r#"import * as anchor from "@coral-xyz/anchor";
+import {{ Program }} from "@coral-xyz/anchor";
 import {{ {} }} from "../target/types/{}";
 
 describe("{}", () => {{
@@ -339,7 +339,7 @@ pub fn node_shell(
 ) -> Result<String> {
     let mut eval_string = format!(
         r#"
-const anchor = require('@project-serum/anchor');
+const anchor = require('@coral-xyz/anchor');
 const web3 = anchor.web3;
 const PublicKey = anchor.web3.PublicKey;
 const Keypair = anchor.web3.Keypair;
