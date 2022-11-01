@@ -32,7 +32,8 @@ The minor version will be incremented upon a breaking change and the patch versi
 ### Fixes
 
 - lang: Fix IDL `seed` generation for byte string literals. ([#2125](https://github.com/coral-xyz/anchor/pull/2125))
-- ts: Update seeds inference to allow nested user defined structs within the seeds ([#2198](https://github.com/coral-xyz/anchor/pull/2198))
+- ts: Update seeds inference to allow nested user defined structs within the seeds ([#2198](https://github.com/coral-xyz/anchor/pull/2198)).
+- ts: Use npm packages for anchor from `coral-xyz` instead of `project-serum` across the repo ([#2244](https://github.com/coral-xyz/anchor/pull/2244)).
 
 ## [0.25.0] - 2022-07-05
 
@@ -282,7 +283,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 - cli: fix dns in NODE_OPTIONS ([#928](https://github.com/coral-xyz/anchor/pull/928)).
 - cli: output TypeScript IDL in `idl parse` subcommand ([#941](https://github.com/coral-xyz/anchor/pull/941)).
-- cli: Add fields `os` and `cpu` to npm package `@coral-xyz/anchor-cli` ([#976](https://github.com/coral-xyz/anchor/pull/976)).
+- cli: Add fields `os` and `cpu` to npm package `@project-serum/anchor-cli` ([#976](https://github.com/coral-xyz/anchor/pull/976)).
 - cli: Allow specify output directory for TypeScript IDL ([#940](https://github.com/coral-xyz/anchor/pull/940)).
 
 ### Breaking
@@ -661,5 +662,5 @@ Initial release.
 - lang/syn: Internal crate for parsing the Anchor eDSL, generating code, and an IDL.
 - spl: `anchor-spl` crate providing CPI clients for Anchor programs.
 - client: `anchor-client` crate providing Rust clients for Anchor programs.
-- ts: `@coral-xyz/anchor` package for generating TypeScript clients.
+- ts: `@project-serum/anchor` package for generating TypeScript clients.
 - cli: Command line interface for managing Anchor programs.
