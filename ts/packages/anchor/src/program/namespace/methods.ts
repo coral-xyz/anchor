@@ -173,9 +173,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     });
   }
 
-  public async rpcAndKeys(
-    options?: ConfirmOptions
-  ): Promise<{
+  public async rpcAndKeys(options?: ConfirmOptions): Promise<{
     pubkeys: Partial<InstructionAccountAddresses<IDL, I>>;
     signature: TransactionSignature;
   }> {
@@ -183,7 +181,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     return {
       pubkeys,
       signature: await this.rpc(options),
-    }
+    };
   }
 
   public async view(options?: ConfirmOptions): Promise<any> {
