@@ -73,12 +73,6 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
   // Note: We serially resolve PDAs one by one rather than doing them
   //       in parallel because there can be dependencies between
   //       addresses. That is, one PDA can be used as a seed in another.
-  //
-  // TODO: PDAs need to be resolved in topological order. For now, we
-  //       require the developer to simply list the accounts in the
-  //       correct order. But in future work, we should create the
-  //       dependency graph and resolve automatically.
-  //
   public async resolve() {
     await this.resolveConst(this._idlIx.accounts);
 
