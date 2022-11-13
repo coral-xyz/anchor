@@ -124,9 +124,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     return this._accounts as Partial<InstructionAccountAddresses<IDL, I>>;
   }
 
-  public accounts(
-    accounts: PartialAccounts
-  ): MethodsBuilder<IDL, I> {
+  public accounts(accounts: PartialAccounts): MethodsBuilder<IDL, I> {
     this._autoResolveAccounts = true;
     Object.assign(this._accounts, accounts);
     return this;

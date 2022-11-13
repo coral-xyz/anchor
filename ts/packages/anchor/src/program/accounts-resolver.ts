@@ -247,7 +247,9 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
       throw new Error("Must have seeds");
 
     const seeds: (Buffer | undefined)[] = await Promise.all(
-      accountDesc.pda.seeds.map((seedDesc: IdlSeed) => this.toBuffer(seedDesc, path))
+      accountDesc.pda.seeds.map((seedDesc: IdlSeed) =>
+        this.toBuffer(seedDesc, path)
+      )
     );
 
     if (seeds.some((seed) => typeof seed == "undefined")) {
@@ -266,7 +268,10 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     this.set([...path, camelCase(accountDesc.name)], pubkey);
   }
 
-  private async parseProgramId(accountDesc: IdlAccount, path: string[] = []): Promise<PublicKey> {
+  private async parseProgramId(
+    accountDesc: IdlAccount,
+    path: string[] = []
+  ): Promise<PublicKey> {
     if (!accountDesc.pda?.programId) {
       return this._programId;
     }
@@ -286,7 +291,10 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     }
   }
 
-  private async toBuffer(seedDesc: IdlSeed, path: string[] = []): Promise<Buffer | undefined> {
+  private async toBuffer(
+    seedDesc: IdlSeed,
+    path: string[] = []
+  ): Promise<Buffer | undefined> {
     switch (seedDesc.kind) {
       case "const":
         return this.toBufferConst(seedDesc);
@@ -365,7 +373,10 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     return this.toBufferValue(seedDesc.type, accountValue);
   }
 
-  private async accountValue(seedDesc: IdlSeed, path: string[] = []): Promise<any> {
+  private async accountValue(
+    seedDesc: IdlSeed,
+    path: string[] = []
+  ): Promise<any> {
     const pathComponents = seedDesc.path.split(".");
 
     const fieldName = pathComponents[0];
