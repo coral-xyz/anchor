@@ -121,7 +121,9 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     if (this._autoResolveAccounts) {
       await this._accountsResolver.resolve();
     }
-    return (this._accounts as unknown) as Partial<InstructionAccountAddresses<IDL, I>>;
+    return this._accounts as unknown as Partial<
+      InstructionAccountAddresses<IDL, I>
+    >;
   }
 
   public accounts(accounts: PartialAccounts): MethodsBuilder<IDL, I> {
