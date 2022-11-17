@@ -17,6 +17,10 @@ declare_id!("3TEqcc8xhrhdspwbvoamUJe2borm4Nr72JxL66k6rgrh");
 pub const BASE: u128 = 1_000_000;
 #[constant]
 pub const DECIMALS: u8 = 6;
+#[constant]
+pub const BYTES_STR: &[u8] = b"test";
+#[constant]
+pub const BYTE_STR: u8 = b't';
 pub const NO_IDL: u16 = 55;
 
 #[program]
@@ -92,6 +96,11 @@ pub mod misc {
         Ok(())
     }
 
+    pub fn test_input_enum(ctx: Context<TestSimulate>, data: TestEnum) -> Result<()> {
+        emit!(E7 { data: data });
+        Ok(())
+    }
+
     pub fn test_i8(ctx: Context<TestI8>, data: i8) -> Result<()> {
         ctx.accounts.data.data = data;
         Ok(())
@@ -116,6 +125,24 @@ pub mod misc {
     }
 
     pub fn test_close(_ctx: Context<TestClose>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn test_close_twice(ctx: Context<TestCloseTwice>) -> Result<()> {
+        let data_account = &ctx.accounts.data;
+        let sol_dest_info = ctx.accounts.sol_dest.to_account_info();
+        data_account.close(sol_dest_info)?;
+        let data_account_info: &AccountInfo = data_account.as_ref();
+        require_keys_eq!(*data_account_info.owner, System::id());
+        Ok(())
+    }
+
+    pub fn test_close_mut(ctx: Context<TestCloseMut>) -> Result<()> {
+        let data_account = &ctx.accounts.data;
+        let sol_dest_info = ctx.accounts.sol_dest.to_account_info();
+        data_account.close(sol_dest_info)?;
+        let data_account_info: &AccountInfo = data_account.as_ref();
+        require_keys_eq!(*data_account_info.owner, System::id());
         Ok(())
     }
 

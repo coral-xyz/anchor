@@ -3,6 +3,7 @@ use serde_json::Value as JsonValue;
 
 pub mod file;
 pub mod pda;
+pub mod relations;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Idl {
@@ -77,6 +78,8 @@ pub struct IdlAccount {
     pub docs: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub pda: Option<IdlPda>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub relations: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -268,7 +271,7 @@ impl std::str::FromStr for IdlType {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct IdlErrorCode {
     pub code: u32,
     pub name: String,
