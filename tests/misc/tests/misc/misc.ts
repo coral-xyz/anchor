@@ -1422,7 +1422,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
