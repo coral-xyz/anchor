@@ -247,7 +247,7 @@ pub fn initialize_mint<'a, 'b, 'c, 'info>(
 }
 
 pub fn initialize_mint2<'a, 'b, 'c, 'info>(
-    ctx: CpiContext<'a, 'b, 'c, 'info, InitializeMint<'info>>,
+    ctx: CpiContext<'a, 'b, 'c, 'info, InitializeMint2<'info>>,
     decimals: u8,
     authority: &Pubkey,
     freeze_authority: Option<&Pubkey>,
