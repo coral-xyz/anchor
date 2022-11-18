@@ -512,7 +512,6 @@ describe("misc", () => {
         mint,
         authority: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
     });
@@ -606,7 +605,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -632,7 +630,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
       instructions: [
@@ -663,7 +660,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [token],
     });
@@ -691,7 +687,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [token],
       instructions: [
@@ -726,7 +721,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [token],
       instructions: [
@@ -803,7 +797,6 @@ describe("misc", () => {
           token: associatedToken,
           mint: localClient.publicKey,
           payer: provider.wallet.publicKey,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -1234,7 +1227,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -1246,7 +1238,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           mintAuthority: anchor.web3.Keypair.generate().publicKey,
           freezeAuthority: provider.wallet.publicKey,
         },
@@ -1268,7 +1259,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -1280,7 +1270,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           mintAuthority: provider.wallet.publicKey,
           freezeAuthority: anchor.web3.Keypair.generate().publicKey,
         },
@@ -1302,7 +1291,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -1314,7 +1302,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           mintAuthority: provider.wallet.publicKey,
           freezeAuthority: provider.wallet.publicKey,
         },
@@ -1336,7 +1323,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -1349,7 +1335,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [token],
     });
@@ -1362,7 +1347,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           authority: anchor.web3.Keypair.generate().publicKey,
         },
         signers: [token],
@@ -1383,7 +1367,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -1395,7 +1378,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint2],
     });
@@ -1408,7 +1390,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [token],
     });
@@ -1421,7 +1402,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           authority: provider.wallet.publicKey,
         },
         signers: [token],
@@ -1459,7 +1439,6 @@ describe("misc", () => {
         token: associatedToken,
         mint: mint.publicKey,
         payer: provider.wallet.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
         associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -1472,7 +1451,6 @@ describe("misc", () => {
           token: associatedToken,
           mint: mint.publicKey,
           payer: provider.wallet.publicKey,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -1495,7 +1473,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -1507,7 +1484,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint2],
     });
@@ -1524,7 +1500,6 @@ describe("misc", () => {
         token: associatedToken,
         mint: mint.publicKey,
         payer: provider.wallet.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
         associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -1537,7 +1512,6 @@ describe("misc", () => {
           token: associatedToken,
           mint: mint2.publicKey,
           payer: provider.wallet.publicKey,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -1560,7 +1534,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -1577,7 +1550,6 @@ describe("misc", () => {
         token: associatedToken,
         mint: mint.publicKey,
         payer: provider.wallet.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
         associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -1592,7 +1564,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [token],
     });
@@ -1603,7 +1574,6 @@ describe("misc", () => {
           token: token.publicKey,
           mint: mint.publicKey,
           payer: provider.wallet.publicKey,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -1773,7 +1743,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -1786,7 +1755,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [token],
       });
@@ -1816,7 +1784,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -1829,7 +1796,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [token],
       });
@@ -1858,7 +1824,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -1871,7 +1836,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [token],
       });
@@ -1899,7 +1863,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -1911,7 +1874,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint1],
       });
@@ -1924,7 +1886,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [token],
       });
@@ -1953,7 +1914,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -1965,7 +1925,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [token],
       });
@@ -1995,7 +1954,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -2006,7 +1964,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint1],
       });
@@ -2018,7 +1975,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [token],
       });
@@ -2048,7 +2004,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -2083,7 +2038,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -2113,7 +2067,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -2147,7 +2100,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -2181,7 +2133,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -2209,7 +2160,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -2244,7 +2194,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -2275,7 +2224,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
