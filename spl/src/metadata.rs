@@ -6,15 +6,6 @@ use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
 use std::ops::Deref;
 
-#[derive(Clone)]
-pub struct Metadata;
-
-impl anchor_lang::Id for Metadata {
-    fn id() -> Pubkey {
-        ID
-    }
-}
-
 pub fn create_metadata_accounts_v2<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, CreateMetadataAccountsV2<'info>>,
     data: DataV2,
@@ -51,8 +42,8 @@ pub fn create_metadata_accounts_v2<'info>(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
         ctx.signer_seeds,
-    )?;
-    Ok(())
+    )
+    .map_err(Into::into)
 }
 
 pub fn create_metadata_accounts_v3<'info>(
@@ -93,8 +84,8 @@ pub fn create_metadata_accounts_v3<'info>(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
         ctx.signer_seeds,
-    )?;
-    Ok(())
+    )
+    .map_err(Into::into)
 }
 
 pub fn update_metadata_accounts_v2<'info>(
@@ -117,8 +108,8 @@ pub fn update_metadata_accounts_v2<'info>(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
         ctx.signer_seeds,
-    )?;
-    Ok(())
+    )
+    .map_err(Into::into)
 }
 
 pub fn create_master_edition_v3<'info>(
@@ -139,8 +130,8 @@ pub fn create_master_edition_v3<'info>(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
         ctx.signer_seeds,
-    )?;
-    Ok(())
+    )
+    .map_err(Into::into)
 }
 
 pub fn mint_new_edition_from_master_edition_via_token<'info>(
@@ -162,13 +153,12 @@ pub fn mint_new_edition_from_master_edition_via_token<'info>(
         *ctx.accounts.metadata_mint.key,
         edition,
     );
-
     solana_program::program::invoke_signed(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
         ctx.signer_seeds,
-    )?;
-    Ok(())
+    )
+    .map_err(Into::into)
 }
 
 pub fn set_collection_size<'info>(
@@ -183,6 +173,181 @@ pub fn set_collection_size<'info>(
         *ctx.accounts.mint.key,
         collection_authority_record,
         size,
+    );
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )
+    .map_err(Into::into)
+}
+
+pub fn verify_collection<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, VerifyCollection<'info>>,
+    collection_authority_record: Option<Pubkey>,
+) -> Result<()> {
+    let ix = mpl_token_metadata::instruction::verify_collection(
+        ID,
+        *ctx.accounts.metadata.key,
+        *ctx.accounts.collection_authority.key,
+        *ctx.accounts.payer.key,
+        *ctx.accounts.collection_mint.key,
+        *ctx.accounts.collection_metadata.key,
+        *ctx.accounts.collection_master_edition.key,
+        collection_authority_record,
+    );
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )
+    .map_err(Into::into)
+}
+
+pub fn verify_sized_collection_item<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, VerifySizedCollectionItem<'info>>,
+    collection_authority_record: Option<Pubkey>,
+) -> Result<()> {
+    let ix = mpl_token_metadata::instruction::verify_sized_collection_item(
+        ID,
+        *ctx.accounts.metadata.key,
+        *ctx.accounts.collection_authority.key,
+        *ctx.accounts.payer.key,
+        *ctx.accounts.collection_mint.key,
+        *ctx.accounts.collection_metadata.key,
+        *ctx.accounts.collection_master_edition.key,
+        collection_authority_record,
+    );
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )
+    .map_err(Into::into)
+}
+
+pub fn set_and_verify_collection<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, SetAndVerifyCollection<'info>>,
+    collection_authority_record: Option<Pubkey>,
+) -> Result<()> {
+    let ix = mpl_token_metadata::instruction::set_and_verify_collection(
+        ID,
+        *ctx.accounts.metadata.key,
+        *ctx.accounts.collection_authority.key,
+        *ctx.accounts.payer.key,
+        *ctx.accounts.update_authority.key,
+        *ctx.accounts.collection_mint.key,
+        *ctx.accounts.collection_metadata.key,
+        *ctx.accounts.collection_master_edition.key,
+        collection_authority_record,
+    );
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )
+    .map_err(Into::into)
+}
+
+pub fn set_and_verify_sized_collection_item<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, SetAndVerifySizedCollectionItem<'info>>,
+    collection_authority_record: Option<Pubkey>,
+) -> Result<()> {
+    let ix = mpl_token_metadata::instruction::set_and_verify_sized_collection_item(
+        ID,
+        *ctx.accounts.metadata.key,
+        *ctx.accounts.collection_authority.key,
+        *ctx.accounts.payer.key,
+        *ctx.accounts.update_authority.key,
+        *ctx.accounts.collection_mint.key,
+        *ctx.accounts.collection_metadata.key,
+        *ctx.accounts.collection_master_edition.key,
+        collection_authority_record,
+    );
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )
+    .map_err(Into::into)
+}
+
+pub fn freeze_delegated_account<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, FreezeDelegatedAccount<'info>>,
+) -> Result<()> {
+    let ix = mpl_token_metadata::instruction::freeze_delegated_account(
+        ID,
+        *ctx.accounts.delegate.key,
+        *ctx.accounts.token_account.key,
+        *ctx.accounts.edition.key,
+        *ctx.accounts.mint.key,
+    );
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )
+    .map_err(Into::into)
+}
+
+pub fn thaw_delegated_account<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, ThawDelegatedAccount<'info>>,
+) -> Result<()> {
+    let ix = mpl_token_metadata::instruction::thaw_delegated_account(
+        ID,
+        *ctx.accounts.delegate.key,
+        *ctx.accounts.token_account.key,
+        *ctx.accounts.edition.key,
+        *ctx.accounts.mint.key,
+    );
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )
+    .map_err(Into::into)
+}
+
+pub fn update_primary_sale_happened_via_token<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, UpdatePrimarySaleHappenedViaToken<'info>>,
+) -> Result<()> {
+    let ix = mpl_token_metadata::instruction::update_primary_sale_happened_via_token(
+        ID,
+        *ctx.accounts.metadata.key,
+        *ctx.accounts.owner.key,
+        *ctx.accounts.token.key,
+    );
+
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )?;
+    Ok(())
+}
+
+pub fn sign_metadata<'info>(ctx: CpiContext<'_, '_, '_, 'info, SignMetadata<'info>>) -> Result<()> {
+    let ix = mpl_token_metadata::instruction::sign_metadata(
+        ID,
+        *ctx.accounts.metadata.key,
+        *ctx.accounts.creator.key,
+    );
+
+    solana_program::program::invoke_signed(
+        &ix,
+        &ToAccountInfos::to_account_infos(&ctx),
+        ctx.signer_seeds,
+    )?;
+    Ok(())
+}
+
+pub fn remove_creator_verification<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, RemoveCreatorVerification<'info>>,
+) -> Result<()> {
+    let ix = mpl_token_metadata::instruction::remove_creator_verification(
+        ID,
+        *ctx.accounts.metadata.key,
+        *ctx.accounts.creator.key,
     );
 
     solana_program::program::invoke_signed(
@@ -268,6 +433,87 @@ pub struct SetCollectionSize<'info> {
     pub system_program: AccountInfo<'info>,
 }
 
+#[derive(Accounts)]
+pub struct VerifyCollection<'info> {
+    pub payer: AccountInfo<'info>,
+    pub metadata: AccountInfo<'info>,
+    pub collection_authority: AccountInfo<'info>,
+    pub collection_mint: AccountInfo<'info>,
+    pub collection_metadata: AccountInfo<'info>,
+    pub collection_master_edition: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct VerifySizedCollectionItem<'info> {
+    pub payer: AccountInfo<'info>,
+    pub metadata: AccountInfo<'info>,
+    pub collection_authority: AccountInfo<'info>,
+    pub collection_mint: AccountInfo<'info>,
+    pub collection_metadata: AccountInfo<'info>,
+    pub collection_master_edition: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct SetAndVerifyCollection<'info> {
+    pub metadata: AccountInfo<'info>,
+    pub collection_authority: AccountInfo<'info>,
+    pub payer: AccountInfo<'info>,
+    pub update_authority: AccountInfo<'info>,
+    pub collection_mint: AccountInfo<'info>,
+    pub collection_metadata: AccountInfo<'info>,
+    pub collection_master_edition: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct SetAndVerifySizedCollectionItem<'info> {
+    pub metadata: AccountInfo<'info>,
+    pub collection_authority: AccountInfo<'info>,
+    pub payer: AccountInfo<'info>,
+    pub update_authority: AccountInfo<'info>,
+    pub collection_mint: AccountInfo<'info>,
+    pub collection_metadata: AccountInfo<'info>,
+    pub collection_master_edition: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct FreezeDelegatedAccount<'info> {
+    pub metadata: AccountInfo<'info>,
+    pub delegate: AccountInfo<'info>,
+    pub token_account: AccountInfo<'info>,
+    pub edition: AccountInfo<'info>,
+    pub mint: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ThawDelegatedAccount<'info> {
+    pub metadata: AccountInfo<'info>,
+    pub delegate: AccountInfo<'info>,
+    pub token_account: AccountInfo<'info>,
+    pub edition: AccountInfo<'info>,
+    pub mint: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct UpdatePrimarySaleHappenedViaToken<'info> {
+    pub metadata: AccountInfo<'info>,
+    pub owner: AccountInfo<'info>,
+    pub token: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct SignMetadata<'info> {
+    pub creator: AccountInfo<'info>,
+    pub metadata: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct RemoveCreatorVerification<'info> {
+    pub creator: AccountInfo<'info>,
+    pub metadata: AccountInfo<'info>,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct MetadataAccount(mpl_token_metadata::state::Metadata);
 
@@ -294,5 +540,14 @@ impl Deref for MetadataAccount {
     type Target = mpl_token_metadata::state::Metadata;
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+#[derive(Clone)]
+pub struct Metadata;
+
+impl anchor_lang::Id for Metadata {
+    fn id() -> Pubkey {
+        ID
     }
 }

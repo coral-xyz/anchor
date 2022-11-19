@@ -1353,7 +1353,7 @@ fn cd_member(cfg_override: &ConfigOverride, program_name: &str) -> Result<()> {
             return Ok(());
         }
     }
-    return Err(anyhow!("{} is not part of the workspace", program_name,));
+    Err(anyhow!("{} is not part of the workspace", program_name,))
 }
 
 pub fn verify_bin(program_id: Pubkey, bin_path: &Path, cluster: &str) -> Result<BinVerification> {
@@ -1364,7 +1364,7 @@ pub fn verify_bin(program_id: Pubkey, bin_path: &Path, cluster: &str) -> Result<
         let account = client
             .get_account_with_commitment(&program_id, CommitmentConfig::default())?
             .value
-            .map_or(Err(anyhow!("Account not found")), Ok)?;
+            .map_or(Err(anyhow!("Program account not found")), Ok)?;
         if account.owner == bpf_loader::id() || account.owner == bpf_loader_deprecated::id() {
             let bin = account.data.to_vec();
             let state = BinVerificationState::ProgramData {
@@ -1383,9 +1383,9 @@ pub fn verify_bin(program_id: Pubkey, bin_path: &Path, cluster: &str) -> Result<
                             CommitmentConfig::default(),
                         )?
                         .value
-                        .map_or(Err(anyhow!("Account not found")), Ok)?;
+                        .map_or(Err(anyhow!("Program data account not found")), Ok)?;
                     let bin = account.data
-                        [UpgradeableLoaderState::programdata_data_offset().unwrap_or(0)..]
+                        [UpgradeableLoaderState::size_of_programdata_metadata()..]
                         .to_vec();
 
                     if let UpgradeableLoaderState::ProgramData {
@@ -1403,7 +1403,7 @@ pub fn verify_bin(program_id: Pubkey, bin_path: &Path, cluster: &str) -> Result<
                     }
                 }
                 UpgradeableLoaderState::Buffer { .. } => {
-                    let offset = UpgradeableLoaderState::buffer_data_offset().unwrap_or(0);
+                    let offset = UpgradeableLoaderState::size_of_buffer_metadata();
                     (
                         account.data[offset..].to_vec(),
                         BinVerificationState::Buffer,
@@ -1440,13 +1440,13 @@ pub fn verify_bin(program_id: Pubkey, bin_path: &Path, cluster: &str) -> Result<
     Ok(BinVerification { state, is_verified })
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub struct BinVerification {
     pub state: BinVerificationState,
     pub is_verified: bool,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub enum BinVerificationState {
     Buffer,
     ProgramData {
@@ -1477,14 +1477,14 @@ fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
     let mut account = client
         .get_account_with_commitment(&idl_addr, CommitmentConfig::processed())?
         .value
-        .map_or(Err(anyhow!("Account not found")), Ok)?;
+        .map_or(Err(anyhow!("IDL account not found")), Ok)?;
 
     if account.executable {
         let idl_addr = IdlAccount::address(&idl_addr);
         account = client
             .get_account_with_commitment(&idl_addr, CommitmentConfig::processed())?
             .value
-            .map_or(Err(anyhow!("Account not found")), Ok)?;
+            .map_or(Err(anyhow!("IDL account not found")), Ok)?;
     }
 
     // Cut off account discriminator.

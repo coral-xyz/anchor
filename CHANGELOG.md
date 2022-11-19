@@ -15,11 +15,33 @@ The minor version will be incremented upon a breaking change and the patch versi
 * client: Add `transaction` functions to RequestBuilder ([#1958](https://github.com/coral-xyz/anchor/pull/1958)).
 * spl: Add `create_metadata_accounts_v3` and `set_collection_size` wrappers ([#2119](https://github.com/coral-xyz/anchor/pull/2119))
 * spl: Add `MetadataAccount` account deserialization. ([#2014](https://github.com/coral-xyz/anchor/pull/2014)).
+* spl: Add `update_primary_sale_happened_via_token` wrapper ([#2173](https://github.com/coral-xyz/anchor/pull/2173)).
+* spl: Add `sign_metadata` and `remove_creator_verification` wrappers ([#2175](https://github.com/coral-xyz/anchor/pull/2175)).
+* spl: Add `initialize_account3` and `initialize_mint2` ([#2265](https://github.com/coral-xyz/anchor/pull/2265)).
 * lang: Add parsing for consts from impl blocks for IDL PDA seeds generation ([#2128](https://github.com/coral-xyz/anchor/pull/2014))
+* lang: Account closing reassigns to system program and reallocates ([#2169](https://github.com/coral-xyz/anchor/pull/2169)).
+* ts: Add coders for SPL programs ([#2143](https://github.com/coral-xyz/anchor/pull/2143)).
+* ts: Add `has_one` relations inference so accounts mapped via has_one relationships no longer need to be provided ([#2160](https://github.com/coral-xyz/anchor/pull/2160))
+* ts: Add ability to set args after setting accounts and retrieving pubkyes ([#2160](https://github.com/coral-xyz/anchor/pull/2160))
+* ts: Add `.prepare()` to builder pattern ([#2160](https://github.com/coral-xyz/anchor/pull/2160))
+* spl: Add `freeze_delegated_account` and `thaw_delegated_account` wrappers ([#2164](https://github.com/coral-xyz/anchor/pull/2164))
+* ts: Add nested PDA inference ([#2194](https://github.com/coral-xyz/anchor/pull/2194))
+* ts: Add ability to resolve missing accounts with a custom resolver ([#2194](https://github.com/coral-xyz/anchor/pull/2194))
+* ts: Update the Solana web3 library used by anchor ts to version 1.64.0 ([#2220](https://github.com/coral-xyz/anchor/issues/2220))
+* lang: Updates `AccountsClose` to make it safe to call manually ([#2209](https://github.com/coral-xyz/anchor/pull/2209))
 
 ### Fixes
 
+* lang: Fix parsing for bytes literals in the IDL. ([#2261](https://github.com/coral-xyz/anchor/pull/2261))
 * lang: Fix IDL `seed` generation for byte string literals. ([#2125](https://github.com/coral-xyz/anchor/pull/2125))
+* ts: Update seeds inference to allow nested user defined structs within the seeds ([#2198](https://github.com/coral-xyz/anchor/pull/2198))
+* event: Fix multiple event listeners with the same name. ([#2165](https://github.com/coral-xyz/anchor/pull/2165))
+
+### Breaking
+
+* ts: SPL coders have been removed from the main Anchor package. ([#2155](https://github.com/coral-xyz/anchor/pull/2155))
+* lang: Remove `rent` from constraints ([#2265](https://github.com/coral-xyz/anchor/pull/2265)).
+* spl: Remove `rent` from `associated_token::Create` ([#2265](https://github.com/coral-xyz/anchor/pull/2265)).
 
 ## [0.25.0] - 2022-07-05
 
