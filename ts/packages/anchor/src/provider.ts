@@ -11,7 +11,7 @@ import {
   SendOptions,
 } from "@solana/web3.js";
 import { bs58 } from "./utils/bytes/index.js";
-import { isBrowser } from "./utils/common.js";
+import { isBrowser, isReactNative } from "./utils/common.js";
 import {
   simulateTransaction,
   SuccessfulTxSimulationResponse,
@@ -79,7 +79,7 @@ export class AnchorProvider implements Provider {
    * (This api is for Node only.)
    */
   static local(url?: string, opts?: ConfirmOptions): AnchorProvider {
-    if (isBrowser) {
+    if (isBrowser && !isReactNative) {
       throw new Error(`Provider local is not available on browser.`);
     }
     opts = opts ?? AnchorProvider.defaultOptions();
@@ -99,7 +99,7 @@ export class AnchorProvider implements Provider {
    * (This api is for Node only.)
    */
   static env(): AnchorProvider {
-    if (isBrowser) {
+    if (isBrowser && !isReactNative) {
       throw new Error(`Provider env is not available on browser.`);
     }
 

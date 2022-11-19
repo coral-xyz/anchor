@@ -5,6 +5,7 @@ import commonjs from "@rollup/plugin-commonjs";
 import { terser } from "rollup-plugin-terser";
 
 const env = process.env.NODE_ENV;
+const isReactNative = typeof navigator !== 'undefined' && navigator.product === 'ReactNative'
 
 export default {
   input: "src/index.ts",
@@ -30,8 +31,9 @@ export default {
         "process.env.ANCHOR_BROWSER": JSON.stringify(true),
       },
     }),
-    terser(),
-  ],
+  ].concat(
+    isReactNative ? [] : [terser()]
+  ),
   external: [
     "@project-serum/borsh",
     "@solana/web3.js",

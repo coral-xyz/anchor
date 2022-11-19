@@ -3,7 +3,7 @@ import * as toml from "toml";
 import { PublicKey } from "@solana/web3.js";
 import { Program } from "./program/index.js";
 import { Idl } from "./idl.js";
-import { isBrowser } from "./utils/common.js";
+import { isBrowser, isReactNative } from "./utils/common.js";
 
 let _populatedWorkspace = false;
 
@@ -16,7 +16,7 @@ let _populatedWorkspace = false;
  */
 const workspace = new Proxy({} as any, {
   get(workspaceCache: { [key: string]: Program }, programName: string) {
-    if (isBrowser) {
+    if (isBrowser && !isReactNative) {
       throw new Error("Workspaces aren't available in the browser");
     }
 

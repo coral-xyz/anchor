@@ -7,6 +7,12 @@ export const isBrowser =
   (typeof window !== "undefined" && !window.process?.hasOwnProperty("type"));
 
 /**
+ * Returns true if it is a react-native app,
+ * false if it not a react-native app.
+ */
+export const isReactNative = typeof navigator !== 'undefined' && navigator.product === 'ReactNative'
+
+/**
  * Splits an array into chunks
  *
  * @param array Array of objects to chunk.
