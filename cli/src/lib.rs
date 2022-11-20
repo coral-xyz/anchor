@@ -12,7 +12,7 @@ use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
 use flate2::write::{GzEncoder, ZlibEncoder};
 use flate2::Compression;
-use heck::ToSnakeCase;
+use heck::{ToKebabCase, ToSnakeCase};
 use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
 use semver::{Version, VersionReq};
@@ -471,20 +471,24 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
         return Err(anyhow!("Workspace already initialized"));
     }
 
+    // We need to format different cases for the dir and the name
+    let rust_name = name.to_snake_case();
+    let project_name = name.to_kebab_case();
+
     // Additional keywords that have not been added to the `syn` crate as reserved words
     // https://github.com/dtolnay/syn/pull/1098
     let extra_keywords = ["async", "await", "try"];
     // Anchor converts to snake case before writing the program name
-    if syn::parse_str::<syn::Ident>(&name.to_snake_case()).is_err()
-        || extra_keywords.contains(&name.to_snake_case().as_str())
+    if syn::parse_str::<syn::Ident>(&rust_name).is_err()
+        || extra_keywords.contains(&rust_name.as_str())
     {
         return Err(anyhow!(
             "Anchor workspace name must be a valid Rust identifier. It may not be a Rust reserved word, start with a digit, or include certain disallowed characters. See https://doc.rust-lang.org/reference/identifiers.html for more detail.",
         ));
     }
 
-    fs::create_dir(name.clone())?;
-    std::env::set_current_dir(&name)?;
+    fs::create_dir(&project_name)?;
+    std::env::set_current_dir(&project_name)?;
     fs::create_dir("app")?;
 
     let mut cfg = Config::default();
@@ -499,7 +503,7 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
     );
     let mut localnet = BTreeMap::new();
     localnet.insert(
-        name.to_snake_case(),
+        rust_name,
         ProgramDeployment {
             address: template::default_program_id(),
             path: None,
@@ -522,7 +526,7 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
     // Build the program.
     fs::create_dir("programs")?;
 
-    new_program(&name)?;
+    new_program(&project_name)?;
 
     // Build the test suite.
     fs::create_dir("tests")?;
@@ -534,8 +538,8 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
         let mut package_json = File::create("package.json")?;
         package_json.write_all(template::package_json().as_bytes())?;
 
-        let mut mocha = File::create(&format!("tests/{}.js", name))?;
-        mocha.write_all(template::mocha(&name).as_bytes())?;
+        let mut mocha = File::create(&format!("tests/{}.js", &project_name))?;
+        mocha.write_all(template::mocha(&project_name).as_bytes())?;
 
         let mut deploy = File::create("migrations/deploy.js")?;
         deploy.write_all(template::deploy_script().as_bytes())?;
@@ -550,8 +554,8 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
         let mut deploy = File::create("migrations/deploy.ts")?;
         deploy.write_all(template::ts_deploy_script().as_bytes())?;
 
-        let mut mocha = File::create(&format!("tests/{}.ts", name))?;
-        mocha.write_all(template::ts_mocha(&name).as_bytes())?;
+        let mut mocha = File::create(&format!("tests/{}.ts", &project_name))?;
+        mocha.write_all(template::ts_mocha(&project_name).as_bytes())?;
     }
 
     // Install node modules.
@@ -583,7 +587,7 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
         }
     }
 
-    println!("{} initialized", name);
+    println!("{} initialized", project_name);
 
     Ok(())
 }
@@ -3174,21 +3178,6 @@ mod tests {
                 wallet: None,
             },
             "fn".to_string(),
-            true,
-            false,
-        )
-        .unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "Anchor workspace name must be a valid Rust identifier.")]
-    fn test_init_invalid_ident_chars() {
-        init(
-            &ConfigOverride {
-                cluster: None,
-                wallet: None,
-            },
-            "project.name".to_string(),
             true,
             false,
         )
