@@ -12,8 +12,7 @@ use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
 use flate2::write::{GzEncoder, ZlibEncoder};
 use flate2::Compression;
-use heck::SnakeCase;
-use rand::rngs::OsRng;
+use heck::ToSnakeCase;
 use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
 use semver::{Version, VersionReq};
@@ -97,15 +96,10 @@ pub enum Command {
         docker_image: Option<String>,
         /// Bootstrap docker image from scratch, installing all requirements for
         /// verifiable builds. Only works for debian-based images.
-        #[clap(arg_enum, short, long, default_value = "none")]
+        #[clap(value_enum, short, long, default_value = "none")]
         bootstrap: BootstrapMode,
         /// Arguments to pass to the underlying `cargo build-bpf` command
-        #[clap(
-            required = false,
-            takes_value = true,
-            multiple_values = true,
-            last = true
-        )]
+        #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
         /// Suppress doc strings in IDL output
         #[clap(long)]
@@ -122,12 +116,7 @@ pub enum Command {
         #[clap(short, long)]
         program_name: Option<String>,
         /// Arguments to pass to the underlying `cargo expand` command
-        #[clap(
-            required = false,
-            takes_value = true,
-            multiple_values = true,
-            last = true
-        )]
+        #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
     },
     /// Verifies the on-chain bytecode matches the locally compiled artifact.
@@ -147,15 +136,10 @@ pub enum Command {
         docker_image: Option<String>,
         /// Bootstrap docker image from scratch, installing all requirements for
         /// verifiable builds. Only works for debian-based images.
-        #[clap(arg_enum, short, long, default_value = "none")]
+        #[clap(value_enum, short, long, default_value = "none")]
         bootstrap: BootstrapMode,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
-        #[clap(
-            required = false,
-            takes_value = true,
-            multiple_values = true,
-            last = true
-        )]
+        #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
     },
     #[clap(name = "test", alias = "t")]
@@ -181,15 +165,9 @@ pub enum Command {
         /// to be able to check the transactions.
         #[clap(long)]
         detach: bool,
-        #[clap(multiple_values = true)]
         args: Vec<String>,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
-        #[clap(
-            required = false,
-            takes_value = true,
-            multiple_values = true,
-            last = true
-        )]
+        #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
     },
     /// Creates a new program.
@@ -241,12 +219,7 @@ pub enum Command {
         /// The name of the script to run.
         script: String,
         /// Argument to pass to the underlying script.
-        #[clap(
-            required = false,
-            takes_value = true,
-            multiple_values = true,
-            last = true
-        )]
+        #[clap(required = false, last = true)]
         script_args: Vec<String>,
     },
     /// Saves an api token from the registry locally.
@@ -259,12 +232,7 @@ pub enum Command {
         /// The name of the program to publish.
         program: String,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
-        #[clap(
-            required = false,
-            takes_value = true,
-            multiple_values = true,
-            last = true
-        )]
+        #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
         /// Flag to skip building the program in the workspace,
         /// use this to save time when publishing the program
@@ -291,12 +259,7 @@ pub enum Command {
         #[clap(long)]
         skip_lint: bool,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
-        #[clap(
-            required = false,
-            takes_value = true,
-            multiple_values = true,
-            last = true
-        )]
+        #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
     },
 }
@@ -2569,7 +2532,7 @@ fn create_idl_buffer(
     let url = cluster_url(cfg, &cfg.test_validator);
     let client = RpcClient::new(url);
 
-    let buffer = Keypair::generate(&mut OsRng);
+    let buffer = Keypair::new();
 
     // Creates the new buffer account with the system program.
     let create_account_ix = {
