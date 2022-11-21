@@ -473,7 +473,11 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
 
     // We need to format different cases for the dir and the name
     let rust_name = name.to_snake_case();
-    let project_name = name.to_kebab_case();
+    let project_name = if name == rust_name {
+        name
+    } else {
+        name.to_kebab_case()
+    };
 
     // Additional keywords that have not been added to the `syn` crate as reserved words
     // https://github.com/dtolnay/syn/pull/1098
