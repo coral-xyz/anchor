@@ -24,8 +24,8 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
 
     quote! {
         #impl_try_accounts
-        #impl_to_account_infos
-        #impl_to_account_metas
+        // #impl_to_account_infos
+        // #impl_to_account_metas
         #impl_exit
 
         #__client_accounts_mod
