@@ -453,22 +453,23 @@ where
             M: MapAccess<'de>,
         {
             // Gets keys
-            let (Some((http_key, http_value)), Some((ws_key, ws_value))) =
-                (map.next_entry::<String, String>()?, map.next_entry::<String, String>()?) else
-            {
-                return Err(de::Error::custom("Invalid entry"));
-            };
+            if let (Some((http_key, http_value)), Some((ws_key, ws_value))) = (
+                map.next_entry::<String, String>()?,
+                map.next_entry::<String, String>()?,
+            ) {
+                // Checks keys
+                if http_key != "http" || ws_key != "ws" {
+                    return Err(de::Error::custom("Invalid key"));
+                }
 
-            // Checks keys
-            if http_key != "http" || ws_key != "ws" {
-                return Err(de::Error::custom("Invalid key"));
+                // Checks urls
+                Url::parse(&http_value).map_err(de::Error::custom)?;
+                Url::parse(&ws_value).map_err(de::Error::custom)?;
+
+                Ok(Cluster::Custom(http_value, ws_value))
+            } else {
+                Err(de::Error::custom("Invalid entry"))
             }
-
-            // Checks urls
-            Url::parse(&http_value).map_err(de::Error::custom)?;
-            Url::parse(&ws_value).map_err(de::Error::custom)?;
-
-            Ok(Cluster::Custom(http_value, ws_value))
         }
     }
     deserializer.deserialize_any(StringOrCustomCluster(PhantomData))
