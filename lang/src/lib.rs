@@ -88,7 +88,7 @@ pub trait Accounts<'info>: Sized {
 
 /// The exit procedure for an account. Any cleanup or persistence to storage
 /// should be done here.
-pub trait AccountsExit<'info>: {
+pub trait AccountsExit<'info> {
     /// `program_id` is the currently executing program.
     fn exit(&self, _program_id: &Pubkey) -> Result<()> {
         // no-op

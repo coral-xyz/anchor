@@ -162,16 +162,14 @@ impl<'a, 'b, 'c, 'info, T: Accounts<'info>> Context<'a, 'b, 'c, 'info, T> {
 ///     pub callee: Program<'info, Callee>,
 /// }
 /// ```
-pub struct CpiContext<'a, 'b, 'c, 'info, T>
-{
+pub struct CpiContext<'a, 'b, 'c, 'info, T> {
     pub accounts: T,
     pub remaining_accounts: Vec<AccountInfo<'info>>,
     pub program: AccountInfo<'info>,
     pub signer_seeds: &'a [&'b [&'c [u8]]],
 }
 
-impl<'a, 'b, 'c, 'info, T> CpiContext<'a, 'b, 'c, 'info, T>
-{
+impl<'a, 'b, 'c, 'info, T> CpiContext<'a, 'b, 'c, 'info, T> {
     pub fn new(program: AccountInfo<'info>, accounts: T) -> Self {
         Self {
             accounts,
