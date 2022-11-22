@@ -65,7 +65,7 @@ pub type Result<T> = std::result::Result<T, error::Error>;
 /// maintain any invariants required for the program to run securely. In most
 /// cases, it's recommended to use the [`Accounts`](./derive.Accounts.html)
 /// derive macro to implement this trait.
-pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
+pub trait Accounts<'info>: Sized {
     /// Returns the validated accounts struct. What constitutes "valid" is
     /// program dependent. However, users of these types should never have to
     /// worry about account substitution attacks. For example, if a program
@@ -88,7 +88,7 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
 
 /// The exit procedure for an account. Any cleanup or persistence to storage
 /// should be done here.
-pub trait AccountsExit<'info>: ToAccountMetas + ToAccountInfos<'info> {
+pub trait AccountsExit<'info>: {
     /// `program_id` is the currently executing program.
     fn exit(&self, _program_id: &Pubkey) -> Result<()> {
         // no-op

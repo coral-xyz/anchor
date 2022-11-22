@@ -15,8 +15,8 @@ mod try_accounts;
 
 pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     let impl_try_accounts = try_accounts::generate(accs);
-    let impl_to_account_infos = to_account_infos::generate(accs);
-    let impl_to_account_metas = to_account_metas::generate(accs);
+    let _impl_to_account_infos = to_account_infos::generate(accs);
+    let _impl_to_account_metas = to_account_metas::generate(accs);
     let impl_exit = exit::generate(accs);
 
     let __client_accounts_mod = __client_accounts::generate(accs);
