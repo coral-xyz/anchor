@@ -1,29 +1,32 @@
 import {
-  ConfirmOptions,
   AccountMeta,
+  ConfirmOptions,
+  PublicKey,
   Signer,
   Transaction,
   TransactionInstruction,
   TransactionSignature,
-  PublicKey,
 } from "@solana/web3.js";
-import { SimulateResponse } from "./simulate.js";
-import { TransactionFn } from "./transaction.js";
-import { Idl } from "../../idl.js";
+import { Idl, IdlAccountItem, IdlAccounts, IdlTypeDef } from "../../idl.js";
+import Provider from "../../provider.js";
 import {
-  AllInstructions,
-  MethodsFn,
-  MakeMethodsNamespace,
-  InstructionAccountAddresses,
-} from "./types.js";
+  AccountsResolver,
+  CustomAccountResolver,
+} from "../accounts-resolver.js";
+import { Address } from "../common.js";
+import { Accounts } from "../context.js";
+import { AccountNamespace } from "./account.js";
 import { InstructionFn } from "./instruction.js";
 import { RpcFn } from "./rpc.js";
-import { SimulateFn } from "./simulate.js";
+import { SimulateFn, SimulateResponse } from "./simulate.js";
+import { TransactionFn } from "./transaction.js";
+import {
+  AllInstructions,
+  InstructionAccountAddresses,
+  MakeMethodsNamespace,
+  MethodsFn,
+} from "./types.js";
 import { ViewFn } from "./views.js";
-import Provider from "../../provider.js";
-import { AccountNamespace } from "./account.js";
-import { AccountsResolver } from "../accounts-resolver.js";
-import { Accounts } from "../context.js";
 
 export type MethodsNamespace<
   IDL extends Idl = Idl,
@@ -40,7 +43,9 @@ export class MethodsBuilderFactory {
     rpcFn: RpcFn<IDL>,
     simulateFn: SimulateFn<IDL>,
     viewFn: ViewFn<IDL> | undefined,
-    accountNamespace: AccountNamespace<IDL>
+    accountNamespace: AccountNamespace<IDL>,
+    idlTypes: IdlTypeDef[],
+    customResolver?: CustomAccountResolver<IDL>
   ): MethodsFn<IDL, I, MethodsBuilder<IDL, I>> {
     return (...args) =>
       new MethodsBuilder(
@@ -53,10 +58,20 @@ export class MethodsBuilderFactory {
         provider,
         programId,
         idlIx,
-        accountNamespace
+        accountNamespace,
+        idlTypes,
+        customResolver
       );
   }
 }
+
+type PartialAccounts<A extends IdlAccountItem = IdlAccountItem> = Partial<{
+  [N in A["name"]]: PartialAccount<A & { name: N }>;
+}>;
+
+type PartialAccount<A extends IdlAccountItem> = A extends IdlAccounts
+  ? Partial<Accounts<A["accounts"][number]>>
+  : Address;
 
 export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   private readonly _accounts: { [name: string]: PublicKey } = {};
@@ -64,7 +79,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   private _signers: Array<Signer> = [];
   private _preInstructions: Array<TransactionInstruction> = [];
   private _postInstructions: Array<TransactionInstruction> = [];
-  private _accountsResolver: AccountsResolver<IDL, I>;
+  private _accountsResolver: AccountsResolver<IDL>;
   private _autoResolveAccounts: boolean = true;
   private _args: Array<any>;
 
@@ -78,7 +93,9 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     _provider: Provider,
     _programId: PublicKey,
     _idlIx: AllInstructions<IDL>,
-    _accountNamespace: AccountNamespace<IDL>
+    _accountNamespace: AccountNamespace<IDL>,
+    _idlTypes: IdlTypeDef[],
+    _customResolver?: CustomAccountResolver<IDL>
   ) {
     this._args = _args;
     this._accountsResolver = new AccountsResolver(
@@ -87,7 +104,9 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
       _provider,
       _programId,
       _idlIx,
-      _accountNamespace
+      _accountNamespace,
+      _idlTypes,
+      _customResolver
     );
   }
 
@@ -102,12 +121,12 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     if (this._autoResolveAccounts) {
       await this._accountsResolver.resolve();
     }
-    return this._accounts as Partial<InstructionAccountAddresses<IDL, I>>;
+    return this._accounts as unknown as Partial<
+      InstructionAccountAddresses<IDL, I>
+    >;
   }
 
-  public accounts(
-    accounts: Partial<Accounts<I["accounts"][number]>>
-  ): MethodsBuilder<IDL, I> {
+  public accounts(accounts: PartialAccounts): MethodsBuilder<IDL, I> {
     this._autoResolveAccounts = true;
     Object.assign(this._accounts, accounts);
     return this;
@@ -161,6 +180,17 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
       postInstructions: this._postInstructions,
       options: options,
     });
+  }
+
+  public async rpcAndKeys(options?: ConfirmOptions): Promise<{
+    pubkeys: Partial<InstructionAccountAddresses<IDL, I>>;
+    signature: TransactionSignature;
+  }> {
+    const pubkeys = await this.pubkeys();
+    return {
+      pubkeys,
+      signature: await this.rpc(options),
+    };
   }
 
   public async view(options?: ConfirmOptions): Promise<any> {

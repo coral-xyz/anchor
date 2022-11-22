@@ -8,13 +8,14 @@ on:
     branches:
       - master
 env:
-  SOLANA_CLI_VERSION: 1.10.29
+  SOLANA_CLI_VERSION: 1.13.3
   NODE_VERSION: 17.0.1
+  CARGO_PROFILE: debug
 
 jobs:
   test-core:
     name: Core Tests
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v2
@@ -50,7 +51,7 @@ jobs:
 
   setup-anchor-cli:
     name: Setup Anchor cli
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v2
@@ -66,8 +67,11 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             ./target/
-          key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-${{ runner.os }}-${{ env.CARGO_PROFILE }}-anchor-${{ hashFiles('**/Cargo.lock') }}
+      - run: cargo install --path cli anchor-cli --locked --force --debug
+        if: env.CARGO_PROFILE == 'debug'
       - run: cargo install --path cli anchor-cli --locked --force
+        if: env.CARGO_PROFILE != 'debug'
       - run: chmod +x ~/.cargo/bin/anchor
       - uses: actions/upload-artifact@v2
         with:
@@ -79,7 +83,7 @@ jobs:
   test-examples:
     needs: setup-anchor-cli
     name: Examples Test
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v2
@@ -128,7 +132,7 @@ jobs:
   setup-client-example:
     needs: setup-anchor-cli
     name: Setup Client Example Test
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -163,7 +167,7 @@ jobs:
   test-client-example:
     needs: setup-client-example
     name: Client Example Test
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v2
@@ -205,7 +209,7 @@ jobs:
   test-bpf-upgradeable-state:
     needs: setup-anchor-cli
     name: Test tests/bpf-upgradeable-state
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v2
@@ -223,7 +227,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             ./target/
-          key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-${{ runner.os }}-${{ env.CARGO_PROFILE }}-anchor-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: actions/download-artifact@v2
         with:
@@ -256,7 +260,7 @@ jobs:
   #   # but that's fine since it's just the cli
   #   needs: setup-anchor-cli
   #   name: Test tests/misc/nonRentExempt
-  #   runs-on: ubuntu-18.04
+  #   runs-on: ubuntu-latest
   #   timeout-minutes: 30
   #   steps:
   #     - uses: actions/checkout@v2
@@ -302,7 +306,7 @@ jobs:
   test-anchor-init:
     needs: setup-anchor-cli
     name: Test Anchor Init
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v2
@@ -320,7 +324,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             ./target/
-          key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-${{ runner.os }}-${{ env.CARGO_PROFILE }}-anchor-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: actions/download-artifact@v2
         with:
@@ -334,7 +338,7 @@ jobs:
   test-programs:
     needs: setup-anchor-cli
     name: Test ${{ matrix.node.path }}
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -418,7 +422,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             ./target/
-          key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-${{ runner.os }}-${{ env.CARGO_PROFILE }}-anchor-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: actions/download-artifact@v2
         with:
