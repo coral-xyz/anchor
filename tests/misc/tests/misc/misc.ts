@@ -36,23 +36,23 @@ describe("misc", () => {
   const program = anchor.workspace.Misc as Program<Misc>;
   const misc2Program = anchor.workspace.Misc2 as Program<Misc2>;
 
-  it("Can allocate extra space for a state constructor", async () => {
-    // @ts-expect-error
-    const tx = await program.state.rpc.new();
-    const addr = await program.state.address();
-    const state = await program.state.fetch();
-    const accountInfo = await program.provider.connection.getAccountInfo(addr);
-    assert.isTrue(state.v.equals(Buffer.from([])));
-    assert.lengthOf(accountInfo.data, 99);
-  });
+  // it("Can allocate extra space for a state constructor", async () => {
+  //   // @ts-expect-error
+  //   const tx = await program.state.rpc.new();
+  //   const addr = await program.state.address();
+  //   const state = await program.state.fetch();
+  //   const accountInfo = await program.provider.connection.getAccountInfo(addr);
+  //   assert.isTrue(state.v.equals(Buffer.from([])));
+  //   assert.lengthOf(accountInfo.data, 99);
+  // });
 
-  it("Can use remaining accounts for a state instruction", async () => {
-    await program.state.rpc.remainingAccounts({
-      remainingAccounts: [
-        { pubkey: misc2Program.programId, isWritable: false, isSigner: false },
-      ],
-    });
-  });
+  // it("Can use remaining accounts for a state instruction", async () => {
+  //   await program.state.rpc.remainingAccounts({
+  //     remainingAccounts: [
+  //       { pubkey: misc2Program.programId, isWritable: false, isSigner: false },
+  //     ],
+  //   });
+  // });
 
   const data = anchor.web3.Keypair.generate();
 
@@ -138,28 +138,28 @@ describe("misc", () => {
     );
   });
 
-  it("Can CPI to state instructions", async () => {
-    const oldData = new anchor.BN(0);
-    await misc2Program.state.rpc.new({
-      accounts: {
-        authority: provider.wallet.publicKey,
-      },
-    });
-    let stateAccount = await misc2Program.state.fetch();
-    assert.isTrue(stateAccount.data.eq(oldData));
-    assert.isTrue(stateAccount.auth.equals(provider.wallet.publicKey));
-    const newData = new anchor.BN(2134);
-    await program.rpc.testStateCpi(newData, {
-      accounts: {
-        authority: provider.wallet.publicKey,
-        cpiState: await misc2Program.state.address(),
-        misc2Program: misc2Program.programId,
-      },
-    });
-    stateAccount = await misc2Program.state.fetch();
-    assert.isTrue(stateAccount.data.eq(newData));
-    assert.isTrue(stateAccount.auth.equals(provider.wallet.publicKey));
-  });
+  // it("Can CPI to state instructions", async () => {
+  //   const oldData = new anchor.BN(0);
+  //   await misc2Program.state.rpc.new({
+  //     accounts: {
+  //       authority: provider.wallet.publicKey,
+  //     },
+  //   });
+  //   let stateAccount = await misc2Program.state.fetch();
+  //   assert.isTrue(stateAccount.data.eq(oldData));
+  //   assert.isTrue(stateAccount.auth.equals(provider.wallet.publicKey));
+  //   const newData = new anchor.BN(2134);
+  //   await program.rpc.testStateCpi(newData, {
+  //     accounts: {
+  //       authority: provider.wallet.publicKey,
+  //       cpiState: await misc2Program.state.address(),
+  //       misc2Program: misc2Program.programId,
+  //     },
+  //   });
+  //   stateAccount = await misc2Program.state.fetch();
+  //   assert.isTrue(stateAccount.data.eq(newData));
+  //   assert.isTrue(stateAccount.auth.equals(provider.wallet.publicKey));
+  // });
 
   it("Can retrieve events when simulating a transaction", async () => {
     const resp = await program.methods.testSimulate(44).simulate();
@@ -1098,24 +1098,24 @@ describe("misc", () => {
     );
   });
 
-  it("Should include BYTES_STR const in IDL", async () => {
-    assert.isDefined(
-      miscIdl.constants.find(
-        (c) =>
-          c.name === "BYTES_STR" &&
-          c.type === "bytes" &&
-          c.value === "[116, 101, 115, 116]"
-      )
-    );
-  });
+  // it("Should include BYTES_STR const in IDL", async () => {
+  //   assert.isDefined(
+  //     miscIdl.constants.find(
+  //       (c) =>
+  //         c.name === "BYTES_STR" &&
+  //         c.type === "bytes" &&
+  //         c.value === "[116, 101, 115, 116]"
+  //     )
+  //   );
+  // });
 
-  it("Should include BYTE_STR const in IDL", async () => {
-    assert.isDefined(
-      miscIdl.constants.find(
-        (c) => c.name === "BYTE_STR" && c.type === "u8" && c.value === "116"
-      )
-    );
-  });
+  // it("Should include BYTE_STR const in IDL", async () => {
+  //   assert.isDefined(
+  //     miscIdl.constants.find(
+  //       (c) => c.name === "BYTE_STR" && c.type === "u8" && c.value === "116"
+  //     )
+  //   );
+  // });
 
   it("Should not include NO_IDL const in IDL", async () => {
     assert.isUndefined(miscIdl.constants.find((c) => c.name === "NO_IDL"));
