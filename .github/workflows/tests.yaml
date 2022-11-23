@@ -36,10 +36,10 @@ jobs:
           key: cargo-${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
       - run: cargo build
       - run: cargo fmt -- --check
-      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo clippy --all-targets -- -D warnings -- -A clippy::result-large-err
       - run: cargo test
       # using singlethreaded testing for avm so that tests that change files do not conflict with each other
-      - run: cd avm && cargo fmt -- --check && cargo clippy --all-targets -- -D warnings -A clippy::result-large-err && cargo test -- --test-threads=1
+      - run: cd avm && cargo fmt -- --check && cargo clippy --all-targets -- -D warnings -- -A clippy::result-large-err && cargo test -- --test-threads=1
       - run: cd ts/packages/anchor && yarn --frozen-lockfile
       - run: cd ts/packages/anchor && yarn test
       - run: cd ts/packages/anchor && yarn lint
