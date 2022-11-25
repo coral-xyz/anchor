@@ -575,6 +575,9 @@ describe("misc", () => {
         }),
       ],
     });
+
+    const account = await program.account.dataI8.fetch(data.publicKey);
+    assert.strictEqual(account.data, 3);
   });
 
   it("Should fail when trying to init the payer as a program account", async () => {
@@ -591,9 +594,6 @@ describe("misc", () => {
       // "Error Code: TryingToInitPayerAsProgramAccount. Error Number: 4101. Error Message: You cannot/should not initialize the payer account as a program account."
       assert.strictEqual(e.error.errorCode.number, 4101);
     }
-
-    // const account = await program.account.dataI8.fetch(data.publicKey);
-    // assert.strictEqual(account.data, 3);
   });
 
   it("Can init a random zero copy account", async () => {
