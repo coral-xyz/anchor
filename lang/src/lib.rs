@@ -51,7 +51,6 @@ pub use anchor_attribute_error::*;
 pub use anchor_attribute_event::{emit, event};
 pub use anchor_attribute_interface::interface;
 pub use anchor_attribute_program::program;
-pub use anchor_attribute_state::state;
 pub use anchor_derive_accounts::Accounts;
 /// Borsh is the default serialization format for instructions and accounts.
 pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorSerialize};
@@ -247,7 +246,7 @@ pub mod prelude {
         accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, constant,
         context::Context, context::CpiContext, declare_id, emit, err, error, event, interface,
         program, require, require_eq, require_gt, require_gte, require_keys_eq, require_keys_neq,
-        require_neq, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source, state,
+        require_neq, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source,
         system_program::System, zero_copy, AccountDeserialize, AccountSerialize, Accounts,
         AccountsClose, AccountsExit, AnchorDeserialize, AnchorSerialize, Id, Key, Owner,
         ProgramData, Result, ToAccountInfo, ToAccountInfos, ToAccountMetas,
@@ -291,10 +290,6 @@ pub mod __private {
 
     use solana_program::pubkey::Pubkey;
 
-    pub mod state {
-        pub use crate::accounts::state::*;
-    }
-
     // Calculates the size of an account, which may be larger than the deserialized
     // data in it. This trait is currently only used for `#[state]` accounts.
     #[doc(hidden)]
@@ -318,9 +313,6 @@ pub mod __private {
             input.to_bytes()
         }
     }
-
-    #[doc(hidden)]
-    pub use crate::accounts::state::PROGRAM_STATE_SEED;
 }
 
 /// Ensures a condition is true, otherwise returns with the given error.

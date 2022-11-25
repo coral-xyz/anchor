@@ -13,8 +13,8 @@ use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::token::Comma;
 use syn::{
-    Expr, Generics, Ident, ImplItemMethod, ItemEnum, ItemFn, ItemImpl, ItemMod, ItemStruct, LitInt,
-    LitStr, PatType, Token, Type, TypePath,
+    Expr, Generics, Ident, ItemEnum, ItemFn, ItemMod, ItemStruct, LitInt, LitStr, PatType, Token,
+    Type, TypePath,
 };
 
 pub mod codegen;
@@ -28,7 +28,7 @@ pub mod parser;
 
 #[derive(Debug)]
 pub struct Program {
-    pub state: Option<State>,
+    // pub state: Option<State>,
     pub ixs: Vec<Ix>,
     pub name: Ident,
     pub docs: Option<Vec<String>>,
@@ -53,32 +53,6 @@ impl ToTokens for Program {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         tokens.extend::<TokenStream>(self.into());
     }
-}
-
-#[derive(Debug)]
-pub struct State {
-    pub name: String,
-    pub strct: ItemStruct,
-    pub ctor_and_anchor: Option<(ImplItemMethod, Ident)>,
-    pub impl_block_and_methods: Option<(ItemImpl, Vec<StateIx>)>,
-    pub interfaces: Option<Vec<StateInterface>>,
-    pub is_zero_copy: bool,
-}
-
-#[derive(Debug)]
-pub struct StateIx {
-    pub raw_method: ImplItemMethod,
-    pub ident: Ident,
-    pub args: Vec<IxArg>,
-    pub anchor_ident: Ident,
-    // True if there exists a &self on the method.
-    pub has_receiver: bool,
-}
-
-#[derive(Debug)]
-pub struct StateInterface {
-    pub trait_name: String,
-    pub methods: Vec<StateIx>,
 }
 
 #[derive(Debug)]

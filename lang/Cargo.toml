@@ -21,7 +21,6 @@ anchor-debug = [
     "anchor-attribute-interface/anchor-debug",
     "anchor-attribute-program/anchor-debug",
     "anchor-attribute-program/anchor-debug",
-    "anchor-attribute-state/anchor-debug",
     "anchor-derive-accounts/anchor-debug"
 ]
 
@@ -31,7 +30,6 @@ anchor-attribute-account = { path = "./attribute/account", version = "0.25.0" }
 anchor-attribute-constant = { path = "./attribute/constant", version = "0.25.0" }
 anchor-attribute-error = { path = "./attribute/error", version = "0.25.0" }
 anchor-attribute-program = { path = "./attribute/program", version = "0.25.0" }
-anchor-attribute-state = { path = "./attribute/state", version = "0.25.0" }
 anchor-attribute-interface = { path = "./attribute/interface", version = "0.25.0" }
 anchor-attribute-event = { path = "./attribute/event", version = "0.25.0" }
 anchor-derive-accounts = { path = "./derive/accounts", version = "0.25.0" }

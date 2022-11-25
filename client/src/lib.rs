@@ -5,7 +5,6 @@ use anchor_lang::solana_program::hash::Hash;
 use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::pubkey::Pubkey;
-use anchor_lang::solana_program::system_program;
 use anchor_lang::{AccountDeserialize, Discriminator, InstructionData, ToAccountMetas};
 use regex::Regex;
 use solana_account_decoder::UiAccountEncoding;
@@ -174,10 +173,6 @@ impl Program {
                     Ok((key, T::try_deserialize(&mut (&account.data as &[u8]))?))
                 }),
         })
-    }
-
-    pub fn state<T: AccountDeserialize>(&self) -> Result<T, ClientError> {
-        self.account(anchor_lang::__private::state::address(&self.program_id))
     }
 
     pub fn rpc(&self) -> RpcClient {
@@ -496,25 +491,25 @@ impl<'a> RequestBuilder<'a> {
 
     pub fn instructions(&self) -> Result<Vec<Instruction>, ClientError> {
         let mut accounts = match self.namespace {
-            RequestNamespace::State { new } => match new {
-                false => vec![AccountMeta::new(
-                    anchor_lang::__private::state::address(&self.program_id),
-                    false,
-                )],
-                true => vec![
-                    AccountMeta::new_readonly(self.payer.pubkey(), true),
-                    AccountMeta::new(
-                        anchor_lang::__private::state::address(&self.program_id),
-                        false,
-                    ),
-                    AccountMeta::new_readonly(
-                        Pubkey::find_program_address(&[], &self.program_id).0,
-                        false,
-                    ),
-                    AccountMeta::new_readonly(system_program::ID, false),
-                    AccountMeta::new_readonly(self.program_id, false),
-                ],
-            },
+            // RequestNamespace::State { new } => match new {
+            //     // false => vec![AccountMeta::new(
+            //     //     anchor_lang::__private::state::address(&self.program_id),
+            //     //     false,
+            //     // )],
+            //     true => vec![
+            //         AccountMeta::new_readonly(self.payer.pubkey(), true),
+            //         // AccountMeta::new(
+            //         //     anchor_lang::__private::state::address(&self.program_id),
+            //         //     false,
+            //         // ),
+            //         AccountMeta::new_readonly(
+            //             Pubkey::find_program_address(&[], &self.program_id).0,
+            //             false,
+            //         ),
+            //         AccountMeta::new_readonly(system_program::ID, false),
+            //         AccountMeta::new_readonly(self.program_id, false),
+            //     ],
+            // },
             _ => Vec::new(),
         };
         accounts.extend_from_slice(&self.accounts);

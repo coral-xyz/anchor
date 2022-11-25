@@ -174,17 +174,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "anchor-attribute-state"
-version = "0.25.0"
-dependencies = [
- "anchor-syn",
- "anyhow",
- "proc-macro2 1.0.47",
- "quote 1.0.21",
- "syn 1.0.103",
-]
-
-[[package]]
 name = "anchor-cli"
 version = "0.25.0"
 dependencies = [
@@ -254,7 +243,6 @@ dependencies = [
  "anchor-attribute-event",
  "anchor-attribute-interface",
  "anchor-attribute-program",
- "anchor-attribute-state",
  "anchor-derive-accounts",
  "arrayref",
  "base64 0.13.1",
