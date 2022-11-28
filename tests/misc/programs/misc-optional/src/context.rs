@@ -30,7 +30,6 @@ pub struct TestTokenSeedsInit<'info> {
     /// CHECK:
     pub authority: Option<AccountInfo<'info>>,
     pub system_program: Option<Program<'info, System>>,
-    pub rent: Option<Sysvar<'info, Rent>>,
     pub token_program: Option<Program<'info, Token>>,
 }
 
@@ -46,7 +45,6 @@ pub struct TestInitAssociatedToken<'info> {
     pub mint: Option<Account<'info, Mint>>,
     #[account(mut)]
     pub payer: Option<Signer<'info>>,
-    pub rent: Option<Sysvar<'info, Rent>>,
     pub system_program: Option<Program<'info, System>>,
     pub token_program: Option<Program<'info, Token>>,
     pub associated_token_program: Option<Program<'info, AssociatedToken>>,
@@ -252,7 +250,6 @@ pub struct TestInitMint<'info> {
     pub mint: Option<Account<'info, Mint>>,
     #[account(mut)]
     pub payer: Option<Signer<'info>>,
-    pub rent: Option<Sysvar<'info, Rent>>,
     pub system_program: Option<Program<'info, System>>,
     pub token_program: Option<Program<'info, Token>>,
 }
@@ -264,7 +261,6 @@ pub struct TestInitToken<'info> {
     pub mint: Option<Account<'info, Mint>>,
     #[account(mut)]
     pub payer: Option<Signer<'info>>,
-    pub rent: Option<Sysvar<'info, Rent>>,
     pub system_program: Option<Program<'info, System>>,
     pub token_program: Option<Program<'info, Token>>,
 }
@@ -343,7 +339,6 @@ pub struct TestInitMintIfNeeded<'info> {
     pub mint: Option<Account<'info, Mint>>,
     #[account(mut)]
     pub payer: Option<Signer<'info>>,
-    pub rent: Option<Sysvar<'info, Rent>>,
     pub system_program: Option<Program<'info, System>>,
     pub token_program: Option<Program<'info, Token>>,
     /// CHECK:
@@ -359,7 +354,6 @@ pub struct TestInitTokenIfNeeded<'info> {
     pub mint: Option<Account<'info, Mint>>,
     #[account(mut)]
     pub payer: Option<Signer<'info>>,
-    pub rent: Option<Sysvar<'info, Rent>>,
     pub system_program: Option<Program<'info, System>>,
     pub token_program: Option<Program<'info, Token>>,
     /// CHECK:
@@ -378,7 +372,6 @@ pub struct TestInitAssociatedTokenIfNeeded<'info> {
     pub mint: Option<Account<'info, Mint>>,
     #[account(mut)]
     pub payer: Option<Signer<'info>>,
-    pub rent: Option<Sysvar<'info, Rent>>,
     pub system_program: Option<Program<'info, System>>,
     pub token_program: Option<Program<'info, Token>>,
     pub associated_token_program: Option<Program<'info, AssociatedToken>>,
