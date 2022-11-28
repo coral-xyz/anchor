@@ -12,8 +12,7 @@ use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
 use flate2::write::{GzEncoder, ZlibEncoder};
 use flate2::Compression;
-use heck::SnakeCase;
-use rand::rngs::OsRng;
+use heck::{ToKebabCase, ToSnakeCase};
 use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
 use semver::{Version, VersionReq};
@@ -97,15 +96,10 @@ pub enum Command {
         docker_image: Option<String>,
         /// Bootstrap docker image from scratch, installing all requirements for
         /// verifiable builds. Only works for debian-based images.
-        #[clap(arg_enum, short, long, default_value = "none")]
+        #[clap(value_enum, short, long, default_value = "none")]
         bootstrap: BootstrapMode,
         /// Arguments to pass to the underlying `cargo build-bpf` command
-        #[clap(
-            required = false,
-            takes_value = true,
-            multiple_values = true,
-            last = true
-        )]
+        #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
         /// Suppress doc strings in IDL output
         #[clap(long)]
@@ -122,12 +116,7 @@ pub enum Command {
         #[clap(short, long)]
         program_name: Option<String>,
         /// Arguments to pass to the underlying `cargo expand` command
-        #[clap(
-            required = false,
-            takes_value = true,
-            multiple_values = true,
-            last = true
-        )]
+        #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
     },
     /// Verifies the on-chain bytecode matches the locally compiled artifact.
@@ -147,15 +136,10 @@ pub enum Command {
         docker_image: Option<String>,
         /// Bootstrap docker image from scratch, installing all requirements for
         /// verifiable builds. Only works for debian-based images.
-        #[clap(arg_enum, short, long, default_value = "none")]
+        #[clap(value_enum, short, long, default_value = "none")]
         bootstrap: BootstrapMode,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
-        #[clap(
-            required = false,
-            takes_value = true,
-            multiple_values = true,
-            last = true
-        )]
+        #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
     },
     #[clap(name = "test", alias = "t")]
@@ -181,15 +165,9 @@ pub enum Command {
         /// to be able to check the transactions.
         #[clap(long)]
         detach: bool,
-        #[clap(multiple_values = true)]
         args: Vec<String>,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
-        #[clap(
-            required = false,
-            takes_value = true,
-            multiple_values = true,
-            last = true
-        )]
+        #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
     },
     /// Creates a new program.
@@ -241,12 +219,7 @@ pub enum Command {
         /// The name of the script to run.
         script: String,
         /// Argument to pass to the underlying script.
-        #[clap(
-            required = false,
-            takes_value = true,
-            multiple_values = true,
-            last = true
-        )]
+        #[clap(required = false, last = true)]
         script_args: Vec<String>,
     },
     /// Saves an api token from the registry locally.
@@ -259,12 +232,7 @@ pub enum Command {
         /// The name of the program to publish.
         program: String,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
-        #[clap(
-            required = false,
-            takes_value = true,
-            multiple_values = true,
-            last = true
-        )]
+        #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
         /// Flag to skip building the program in the workspace,
         /// use this to save time when publishing the program
@@ -291,12 +259,7 @@ pub enum Command {
         #[clap(long)]
         skip_lint: bool,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
-        #[clap(
-            required = false,
-            takes_value = true,
-            multiple_values = true,
-            last = true
-        )]
+        #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
     },
 }
@@ -508,20 +471,28 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
         return Err(anyhow!("Workspace already initialized"));
     }
 
+    // We need to format different cases for the dir and the name
+    let rust_name = name.to_snake_case();
+    let project_name = if name == rust_name {
+        name
+    } else {
+        name.to_kebab_case()
+    };
+
     // Additional keywords that have not been added to the `syn` crate as reserved words
     // https://github.com/dtolnay/syn/pull/1098
     let extra_keywords = ["async", "await", "try"];
     // Anchor converts to snake case before writing the program name
-    if syn::parse_str::<syn::Ident>(&name.to_snake_case()).is_err()
-        || extra_keywords.contains(&name.to_snake_case().as_str())
+    if syn::parse_str::<syn::Ident>(&rust_name).is_err()
+        || extra_keywords.contains(&rust_name.as_str())
     {
         return Err(anyhow!(
             "Anchor workspace name must be a valid Rust identifier. It may not be a Rust reserved word, start with a digit, or include certain disallowed characters. See https://doc.rust-lang.org/reference/identifiers.html for more detail.",
         ));
     }
 
-    fs::create_dir(name.clone())?;
-    std::env::set_current_dir(&name)?;
+    fs::create_dir(&project_name)?;
+    std::env::set_current_dir(&project_name)?;
     fs::create_dir("app")?;
 
     let mut cfg = Config::default();
@@ -536,7 +507,7 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
     );
     let mut localnet = BTreeMap::new();
     localnet.insert(
-        name.to_snake_case(),
+        rust_name,
         ProgramDeployment {
             address: template::default_program_id(),
             path: None,
@@ -559,7 +530,7 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
     // Build the program.
     fs::create_dir("programs")?;
 
-    new_program(&name)?;
+    new_program(&project_name)?;
 
     // Build the test suite.
     fs::create_dir("tests")?;
@@ -571,8 +542,8 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
         let mut package_json = File::create("package.json")?;
         package_json.write_all(template::package_json().as_bytes())?;
 
-        let mut mocha = File::create(&format!("tests/{}.js", name))?;
-        mocha.write_all(template::mocha(&name).as_bytes())?;
+        let mut mocha = File::create(&format!("tests/{}.js", &project_name))?;
+        mocha.write_all(template::mocha(&project_name).as_bytes())?;
 
         let mut deploy = File::create("migrations/deploy.js")?;
         deploy.write_all(template::deploy_script().as_bytes())?;
@@ -587,8 +558,8 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
         let mut deploy = File::create("migrations/deploy.ts")?;
         deploy.write_all(template::ts_deploy_script().as_bytes())?;
 
-        let mut mocha = File::create(&format!("tests/{}.ts", name))?;
-        mocha.write_all(template::ts_mocha(&name).as_bytes())?;
+        let mut mocha = File::create(&format!("tests/{}.ts", &project_name))?;
+        mocha.write_all(template::ts_mocha(&project_name).as_bytes())?;
     }
 
     // Install node modules.
@@ -620,7 +591,7 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
         }
     }
 
-    println!("{} initialized", name);
+    println!("{} initialized", project_name);
 
     Ok(())
 }
@@ -633,7 +604,7 @@ fn new(cfg_override: &ConfigOverride, name: String) -> Result<()> {
                 println!("Unable to make new program");
             }
             Some(parent) => {
-                std::env::set_current_dir(&parent)?;
+                std::env::set_current_dir(parent)?;
                 new_program(&name)?;
                 println!("Created new program.");
             }
@@ -900,7 +871,7 @@ fn build_cwd(
 ) -> Result<()> {
     match cargo_toml.parent() {
         None => return Err(anyhow!("Unable to find parent")),
-        Some(p) => std::env::set_current_dir(&p)?,
+        Some(p) => std::env::set_current_dir(p)?,
     };
     match build_config.verifiable {
         false => _build_cwd(cfg, idl_out, idl_ts_out, skip_lint, cargo_args),
@@ -1012,7 +983,7 @@ fn docker_build(
     let target_dir = workdir.join("docker-target");
     println!("Run docker image");
     let exit = std::process::Command::new("docker")
-        .args(&[
+        .args([
             "run",
             "-it",
             "-d",
@@ -1124,7 +1095,7 @@ fn docker_build_bpf(
 
     // Execute the build.
     let exit = std::process::Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             "--env",
             "PATH=/root/.local/share/solana/install/active_release/bin:/root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
@@ -1167,7 +1138,7 @@ fn docker_build_bpf(
         bin_path.as_path().to_str().unwrap()
     );
     let exit = std::process::Command::new("docker")
-        .args(&["cp", &bin_artifact, &out_file])
+        .args(["cp", &bin_artifact, &out_file])
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
@@ -1189,7 +1160,7 @@ fn docker_cleanup(container_name: &str, target_dir: &Path) -> Result<()> {
     // Remove the docker image.
     println!("Removing the docker container");
     let exit = std::process::Command::new("docker")
-        .args(&["rm", "-f", container_name])
+        .args(["rm", "-f", container_name])
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
@@ -2346,10 +2317,10 @@ fn test_validator_file_paths(test_validator: &Option<TestValidator>) -> (String,
         std::process::exit(1);
     }
     if Path::new(&ledger_directory).exists() {
-        fs::remove_dir_all(&ledger_directory).unwrap();
+        fs::remove_dir_all(ledger_directory).unwrap();
     }
 
-    fs::create_dir_all(&ledger_directory).unwrap();
+    fs::create_dir_all(ledger_directory).unwrap();
 
     (
         ledger_directory.to_string(),
@@ -2569,7 +2540,7 @@ fn create_idl_buffer(
     let url = cluster_url(cfg, &cfg.test_validator);
     let client = RpcClient::new(url);
 
-    let buffer = Keypair::generate(&mut OsRng);
+    let buffer = Keypair::new();
 
     // Creates the new buffer account with the system program.
     let create_account_ix = {
@@ -2704,7 +2675,7 @@ fn set_workspace_dir_or_exit() {
                     println!("Unable to make new program");
                 }
                 Some(parent) => {
-                    if std::env::set_current_dir(&parent).is_err() {
+                    if std::env::set_current_dir(parent).is_err() {
                         println!("Not in anchor workspace.");
                         std::process::exit(1);
                     }
@@ -2799,7 +2770,7 @@ fn shell(cfg_override: &ConfigOverride) -> Result<()> {
         let url = cluster_url(cfg, &cfg.test_validator);
         let js_code = template::node_shell(&url, &cfg.provider.wallet.to_string(), programs)?;
         let mut child = std::process::Command::new("node")
-            .args(&["-e", &js_code, "-i", "--experimental-repl-await"])
+            .args(["-e", &js_code, "-i", "--experimental-repl-await"])
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .spawn()
@@ -3211,21 +3182,6 @@ mod tests {
                 wallet: None,
             },
             "fn".to_string(),
-            true,
-            false,
-        )
-        .unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "Anchor workspace name must be a valid Rust identifier.")]
-    fn test_init_invalid_ident_chars() {
-        init(
-            &ConfigOverride {
-                cluster: None,
-                wallet: None,
-            },
-            "project.name".to_string(),
             true,
             false,
         )

@@ -12,7 +12,6 @@ import {
   IdlAccountItem,
   IdlAccounts,
   IdlTypeDef,
-  IdlTypeDefStruct,
   IdlTypeDefTyStruct,
   IdlType,
 } from "../idl.js";
@@ -21,8 +20,8 @@ import { TOKEN_PROGRAM_ID, ASSOCIATED_PROGRAM_ID } from "../utils/token.js";
 import { AllInstructions } from "./namespace/types.js";
 import Provider from "../provider.js";
 import { AccountNamespace } from "./namespace/account.js";
-import { coder } from "../spl/token";
 import { BorshAccountsCoder } from "src/coder/index.js";
+import { decodeTokenAccount } from "./token-account-layout";
 import { Program } from "./index.js";
 
 type Accounts = { [name: string]: PublicKey | null | Accounts };
@@ -36,7 +35,7 @@ export type CustomAccountResolver<IDL extends Idl> = (params: {
 }) => Promise<{ accounts: Accounts; resolved: number }>;
 
 // Populates a given accounts context with PDAs and common missing accounts.
-export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
+export class AccountsResolver<IDL extends Idl> {
   _args: Array<any>;
   static readonly CONST_ACCOUNTS = {
     associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
@@ -73,12 +72,6 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
   // Note: We serially resolve PDAs one by one rather than doing them
   //       in parallel because there can be dependencies between
   //       addresses. That is, one PDA can be used as a seed in another.
-  //
-  // TODO: PDAs need to be resolved in topological order. For now, we
-  //       require the developer to simply list the accounts in the
-  //       correct order. But in future work, we should create the
-  //       dependency graph and resolve automatically.
-  //
   public async resolve() {
     await this.resolveConst(this._idlIx.accounts);
 
@@ -273,14 +266,16 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     }
 
     const seeds: (Buffer | undefined)[] = await Promise.all(
-      accountDesc.pda.seeds.map((seedDesc: IdlSeed) => this.toBuffer(seedDesc))
+      accountDesc.pda.seeds.map((seedDesc: IdlSeed) =>
+        this.toBuffer(seedDesc, path)
+      )
     );
 
     if (seeds.some((seed) => typeof seed == "undefined")) {
       return;
     }
 
-    const programId = await this.parseProgramId(accountDesc);
+    const programId = await this.parseProgramId(accountDesc, path);
     if (!programId) {
       return;
     }
@@ -292,7 +287,10 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     this.set([...path, camelCase(accountDesc.name)], pubkey);
   }
 
-  private async parseProgramId(accountDesc: IdlAccount): Promise<PublicKey> {
+  private async parseProgramId(
+    accountDesc: IdlAccount,
+    path: string[] = []
+  ): Promise<PublicKey> {
     if (!accountDesc.pda?.programId) {
       return this._programId;
     }
@@ -304,7 +302,7 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
       case "arg":
         return this.argValue(accountDesc.pda.programId);
       case "account":
-        return await this.accountValue(accountDesc.pda.programId);
+        return await this.accountValue(accountDesc.pda.programId, path);
       default:
         throw new Error(
           `Unexpected program seed kind: ${accountDesc.pda.programId.kind}`
@@ -312,14 +310,17 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
     }
   }
 
-  private async toBuffer(seedDesc: IdlSeed): Promise<Buffer | undefined> {
+  private async toBuffer(
+    seedDesc: IdlSeed,
+    path: string[] = []
+  ): Promise<Buffer | undefined> {
     switch (seedDesc.kind) {
       case "const":
         return this.toBufferConst(seedDesc);
       case "arg":
         return await this.toBufferArg(seedDesc);
       case "account":
-        return await this.toBufferAccount(seedDesc);
+        return await this.toBufferAccount(seedDesc, path);
       default:
         throw new Error(`Unexpected seed kind: ${seedDesc.kind}`);
     }
@@ -355,7 +356,7 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
 
   private async toBufferArg(seedDesc: IdlSeed): Promise<Buffer | undefined> {
     const argValue = this.argValue(seedDesc);
-    if (!argValue) {
+    if (typeof argValue === "undefined") {
       return;
     }
     return this.toBufferValue(
@@ -381,20 +382,24 @@ export class AccountsResolver<IDL extends Idl, I extends AllInstructions<IDL>> {
   }
 
   private async toBufferAccount(
-    seedDesc: IdlSeed
+    seedDesc: IdlSeed,
+    path: string[] = []
   ): Promise<Buffer | undefined> {
-    const accountValue = await this.accountValue(seedDesc);
+    const accountValue = await this.accountValue(seedDesc, path);
     if (!accountValue) {
       return;
     }
     return this.toBufferValue(seedDesc.type, accountValue);
   }
 
-  private async accountValue(seedDesc: IdlSeed): Promise<any> {
+  private async accountValue(
+    seedDesc: IdlSeed,
+    path: string[] = []
+  ): Promise<any> {
     const pathComponents = seedDesc.path.split(".");
 
     const fieldName = pathComponents[0];
-    const fieldPubkey = this._accounts[camelCase(fieldName)];
+    const fieldPubkey = this.get([...path, camelCase(fieldName)]);
 
     if (fieldPubkey === null) {
       throw new Error(`fieldPubkey is null`);
@@ -507,7 +512,7 @@ export class AccountStore<IDL extends Idl> {
         if (accountInfo === null) {
           throw new Error(`invalid account info for ${address}`);
         }
-        const data = coder().accounts.decode("token", accountInfo.data);
+        const data = decodeTokenAccount(accountInfo.data);
         this._cache.set(address, data);
       } else if (name) {
         const accounts = await this.ensureIdl(programId);
