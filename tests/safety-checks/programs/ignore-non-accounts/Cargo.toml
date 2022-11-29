@@ -1,13 +1,12 @@
 [package]
-name = "custom-coder"
+name = "ignore-non-accounts"
 version = "0.1.0"
 description = "Created with Anchor"
-rust-version = "1.56"
-edition = "2021"
+edition = "2018"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "custom_coder"
+name = "ignore_non_accounts"
 
 [features]
 no-entrypoint = []
