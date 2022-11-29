@@ -483,7 +483,7 @@ fn init(
     // We need to format different cases for the dir and the name
     let rust_name = name.to_snake_case();
     let project_name = if name == rust_name {
-        name
+        rust_name.clone()
     } else {
         name.to_kebab_case()
     };

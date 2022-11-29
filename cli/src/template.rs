@@ -238,7 +238,7 @@ describe("{}", () => {{
 }});
 "#,
         name,
-        name.to_camel_case(),
+        name.to_upper_camel_case(),
     )
 }
 
@@ -379,11 +379,11 @@ describe("{}", () => {{
   }});
 }});
 "#,
-        name.to_camel_case(),
+        name.to_upper_camel_case(),
         name.to_snake_case(),
         name,
-        name.to_camel_case(),
-        name.to_camel_case(),
+        name.to_upper_camel_case(),
+        name.to_upper_camel_case(),
     )
 }
 
