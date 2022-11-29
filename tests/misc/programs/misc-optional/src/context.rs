@@ -219,7 +219,7 @@ pub struct TestI8<'info> {
 
 #[derive(Accounts)]
 pub struct TestCompositePayer<'info> {
-    pub composite: Option<TestInit<'info>>,
+    pub composite: TestInit<'info>,
     #[account(init, payer = payer.as_ref().unwrap(), space = Data::LEN + 8)]
     pub data: Option<Account<'info, Data>>,
     pub payer: Option<Signer<'info>>,

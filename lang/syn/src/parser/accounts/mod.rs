@@ -260,6 +260,13 @@ pub fn parse_account_field(f: &syn::Field) -> ParseResult<AccountField> {
             })
         }
         false => {
+            let (_, optional, _) = ident_string(f)?;
+            if optional {
+                return Err(ParseError::new(
+                    f.ty.span(),
+                    "Cannot have Optional composite accounts",
+                ));
+            }
             let account_constraints = constraints::parse(f, None)?;
             AccountField::CompositeField(CompositeField {
                 ident,
