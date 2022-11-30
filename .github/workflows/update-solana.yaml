@@ -12,7 +12,14 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v2
-      - uses: clockwork-xyz/update-solana@v1.0.1
-        with: 
-          reviewers: nickgarfield
+      - uses: clockwork-xyz/update-solana@v1.2.0
+      - uses: peter-evans/create-pull-request@v4
+        with:
+          title: Update Solana to v${{ env.SOLANA_VERSION }}
+          base: master
+          branch: update-solana/stable
+          commit-message: Update "solana-" dependencies to v${{ env.SOLANA_VERSION }}
+          draft: false
+          delete-branch: true
           labels: dependencies
+          reviewers: nickgarfield
