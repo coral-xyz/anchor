@@ -6,6 +6,7 @@
     "tests"
   ],
   "dependencies": {
-    "@coral-xyz/borsh": "0.2.6"
+    "@coral-xyz/borsh": "0.2.6",
+    "@solana/web3.js": "^1.67.0"
   }
 }
