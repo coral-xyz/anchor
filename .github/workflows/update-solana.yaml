@@ -2,7 +2,7 @@ name: Update Solana
 
 on:
   schedule: 
-    - cron: "00 00 * * *" # Run this worflow daily
+    - cron: "00 00 * * *" # Run this workflow daily
   workflow_dispatch:
 
 jobs:
