@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: clockwork-xyz/update-solana@v1.2.0
       - uses: peter-evans/create-pull-request@v4
         with:
