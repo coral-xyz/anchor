@@ -3219,22 +3219,6 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "Anchor workspace name must be a valid Rust identifier.")]
-    fn test_init_invalid_ident_chars() {
-        init(
-            &ConfigOverride {
-                cluster: None,
-                wallet: None,
-            },
-            "project.name".to_string(),
-            true,
-            false,
-            false,
-        )
-        .unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "Anchor workspace name must be a valid Rust identifier.")]
     fn test_init_starting_with_digit() {
         init(
             &ConfigOverride {
@@ -3245,38 +3229,6 @@ mod tests {
             true,
             false,
             false,
-        )
-        .unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "Anchor init should create tests with jest using Javascript.")]
-    fn test_init_using_jest_with_js() {
-        init(
-            &ConfigOverride {
-                cluster: None,
-                wallet: None,
-            },
-            "project".to_string(),
-            true,
-            false,
-            true,
-        )
-        .unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "Anchor init should create tests with jest using Typescript.")]
-    fn test_init_using_jest_with_ts() {
-        init(
-            &ConfigOverride {
-                cluster: None,
-                wallet: None,
-            },
-            "project".to_string(),
-            false,
-            false,
-            true,
         )
         .unwrap();
     }
