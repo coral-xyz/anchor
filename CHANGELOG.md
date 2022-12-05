@@ -32,6 +32,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Update rust used in the repo version 1.64 ([#2272](https://github.com/coral-xyz/anchor/pull/2272)).
 - cli: Allow custom cluster config ([#2271](https://github.com/coral-xyz/anchor/pull/2271)).
 - cli: Add `test.validator.geyser_plugin_config` support ([#2016](https://github.com/coral-xyz/anchor/pull/2016)).
+- ts: Add optional flag to parseLogs to throw an error on decoding failure ([#2043](https://github.com/coral-xyz/anchor/pull/2043))
 
 ### Fixes
 
