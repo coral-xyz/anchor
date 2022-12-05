@@ -35,18 +35,11 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Fixes
 
-<<<<<<< HEAD
-- lang: Fix parsing for bytes literals in the IDL. ([#2261](https://github.com/coral-xyz/anchor/pull/2261)).
-- lang: Fix IDL `seed` generation for byte string literals. ([#2125](https://github.com/coral-xyz/anchor/pull/2125)).
-- ts: Update seeds inference to allow nested user defined structs within the seeds ([#2198](https://github.com/coral-xyz/anchor/pull/2198)).
-- event: Fix multiple event listeners with the same name. ([#2165](https://github.com/coral-xyz/anchor/pull/2165)).
-=======
 - lang: Fix parsing for bytes literals in the IDL. ([#2261](https://github.com/coral-xyz/anchor/pull/2261))
 - lang: Fix IDL `seed` generation for byte string literals. ([#2125](https://github.com/coral-xyz/anchor/pull/2125))
 - ts: Update seeds inference to allow nested user defined structs within the seeds ([#2198](https://github.com/coral-xyz/anchor/pull/2198))
 - event: Fix multiple event listeners with the same name. ([#2165](https://github.com/coral-xyz/anchor/pull/2165))
 - lang: Prevent the payer account from being initialized as a program account. ([#2284](https://github.com/coral-xyz/anchor/pull/2284))
->>>>>>> Don't allow the payer to be initialized as a program account (#2284)
 
 ### Breaking
 
