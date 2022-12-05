@@ -44,7 +44,7 @@ describe("coder.types", () => {
     assert.deepEqual(coder.types.decode("MintInfo", encoded), mintInfo);
   });
 
-  test('Can encode and decode 256-bit integers', () => {
+  test("Can encode and decode 256-bit integers", () => {
     const idl = {
       version: "0.0.0",
       name: "basic_0",
@@ -82,6 +82,9 @@ describe("coder.types", () => {
 
     const coder = new BorshCoder(idl);
     const encoded = coder.types.encode("IntegerTest", testing);
-    assert.strictEqual(coder.types.decode("IntegerTest", encoded).toString(), testing.toString());
+    assert.strictEqual(
+      coder.types.decode("IntegerTest", encoded).toString(),
+      testing.toString()
+    );
   });
 });
