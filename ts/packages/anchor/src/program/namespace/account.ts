@@ -154,7 +154,7 @@ export class AccountClient<
     );
     const { value, context } = accountInfo;
     return {
-      data: value
+      data: value && value.data.length !== 0 
         ? this._coder.accounts.decode<T>(this._idlAccount.name, value.data)
         : null,
       context,
@@ -169,7 +169,7 @@ export class AccountClient<
   async fetch(address: Address, commitment?: Commitment): Promise<T> {
     const { data } = await this.fetchNullableAndContext(address, commitment);
     if (data === null) {
-      throw new Error(`Account does not exist ${address.toString()}`);
+      throw new Error(`Account does not exist or has no data ${address.toString()}`);
     }
     return data;
   }
