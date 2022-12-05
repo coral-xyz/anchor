@@ -197,6 +197,8 @@ pub enum IdlType {
     F64,
     U128,
     I128,
+    U256,
+    I256,
     Bytes,
     String,
     PublicKey,
