@@ -81,8 +81,31 @@ export function isPartialAccounts(
   partialAccount: PartialAccount<IdlAccountItem>
 ): partialAccount is PartialAccounts {
   return (
-    !(partialAccount instanceof PublicKey) && typeof partialAccount === "object"
+    !(partialAccount instanceof PublicKey) &&
+    partialAccount !== null &&
+    typeof partialAccount === "object"
   );
+}
+
+export function flattenPartialAccounts<A extends IdlAccountItem>(
+  partialAccounts: PartialAccounts<A>,
+  throwOnNull: boolean
+): AccountsGeneric {
+  const toReturn: AccountsGeneric = {};
+  for (const accountName in partialAccounts) {
+    const account = partialAccounts[accountName];
+    if (account === null) {
+      if (throwOnNull)
+        throw new Error(
+          "Failed to resolve optionals due to IDL type mismatch with input accounts!"
+        );
+      continue;
+    }
+    toReturn[accountName] = isPartialAccounts(account)
+      ? flattenPartialAccounts(account, true)
+      : translateAddress(account);
+  }
+  return toReturn;
 }
 
 export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {

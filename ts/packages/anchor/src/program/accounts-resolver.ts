@@ -24,7 +24,11 @@ import { AccountNamespace } from "./namespace/account.js";
 import { BorshAccountsCoder } from "src/coder/index.js";
 import { decodeTokenAccount } from "./token-account-layout";
 import { Program, translateAddress } from "./index.js";
-import { isPartialAccounts, PartialAccounts } from "./namespace/methods";
+import {
+  flattenPartialAccounts,
+  isPartialAccounts,
+  PartialAccounts,
+} from "./namespace/methods";
 
 export type AccountsGeneric = {
   [name: string]: PublicKey | AccountsGeneric;
@@ -137,13 +141,14 @@ export class AccountsResolver<IDL extends Idl> {
               accountItem["accounts"] as IdlAccountItem[]
             );
           } else {
-            console.error(`Partial Account: ${JSON.stringify(partialAccount)}`);
             console.error(
-              `\t isPartialAccounts: ${isPartialAccounts(partialAccount)}`
+              `Type mismatch between IDL and Input accounts. Optional resolver might fail.`
             );
-            console.error(`accountItem: ${JSON.stringify(accountItem)}`);
-            // @ts-ignore
-            nestedAccountsGeneric[accountName] = partialAccount;
+            // Here we try our best to recover gracefully. If there are optionals we can't check, we will fail then.
+            nestedAccountsGeneric[accountName] = flattenPartialAccounts(
+              partialAccount,
+              true
+            );
           }
         }
       }
