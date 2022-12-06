@@ -113,7 +113,7 @@ export class AccountsResolver<IDL extends Idl> {
     partialAccounts: PartialAccounts,
     accountItems: IdlAccountItem[]
   ): AccountsGeneric {
-    const nestedAccountsGeneric = {};
+    const nestedAccountsGeneric: AccountsGeneric = {};
     // Looping through accountItem array instead of on partialAccounts, so
     // we only traverse array once
     for (const accountItem of accountItems) {
@@ -142,9 +142,8 @@ export class AccountsResolver<IDL extends Idl> {
               `\t isPartialAccounts: ${isPartialAccounts(partialAccount)}`
             );
             console.error(`accountItem: ${JSON.stringify(accountItem)}`);
-            throw new Error(
-              "Type mismatch somehow. This shouldn't be possible!"
-            );
+            // @ts-ignore
+            nestedAccountsGeneric[accountName] = partialAccount;
           }
         }
       }
