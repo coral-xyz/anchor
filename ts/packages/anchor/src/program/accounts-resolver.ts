@@ -22,17 +22,26 @@ import Provider from "../provider.js";
 import { AccountNamespace } from "./namespace/account.js";
 import { BorshAccountsCoder } from "src/coder/index.js";
 import { decodeTokenAccount } from "./token-account-layout";
-import { Program } from "./index.js";
+import { Program, translateAddress } from "./index.js";
+import { isPartialAccounts, PartialAccounts } from "./namespace/methods";
 
-type Accounts = { [name: string]: PublicKey | null | Accounts };
+export type AccountsGeneric = {
+  [name: string]: PublicKey | AccountsGeneric;
+};
+
+export function isAccountsGeneric(
+  accounts: PublicKey | AccountsGeneric
+): accounts is AccountsGeneric {
+  return !(accounts instanceof PublicKey);
+}
 
 export type CustomAccountResolver<IDL extends Idl> = (params: {
   args: Array<any>;
-  accounts: Accounts;
+  accounts: AccountsGeneric;
   provider: Provider;
   programId: PublicKey;
   idlIx: AllInstructions<IDL>;
-}) => Promise<{ accounts: Accounts; resolved: number }>;
+}) => Promise<{ accounts: AccountsGeneric; resolved: number }>;
 
 // Populates a given accounts context with PDAs and common missing accounts.
 export class AccountsResolver<IDL extends Idl> {
@@ -49,7 +58,7 @@ export class AccountsResolver<IDL extends Idl> {
 
   constructor(
     _args: Array<any>,
-    private _accounts: Accounts,
+    private _accounts: AccountsGeneric,
     private _provider: Provider,
     private _programId: PublicKey,
     private _idlIx: AllInstructions<IDL>,
@@ -99,13 +108,40 @@ export class AccountsResolver<IDL extends Idl> {
     return 0;
   }
 
-  public isOptional(name: string): boolean {
-    const accountDesc = this._idlIx.accounts.find((acc) => acc.name === name);
-    if (accountDesc !== undefined && "isOptional" in accountDesc) {
-      return accountDesc.isOptional ?? false;
-    } else {
-      return false;
+  private resolveOptionalsHelper(
+    partialAccounts: PartialAccounts,
+    accountItems: IdlAccountItem[]
+  ): AccountsGeneric {
+    const nestedAccountsGeneric = {};
+    // Looping through accountItem array instead of on partialAccounts, so
+    // we only traverse array once
+    for (const accountItem of accountItems) {
+      const accountName = accountItem.name;
+      const partialAccount = partialAccounts[accountName];
+      // Only continue if this account is included in the partialAccounts param
+      if (partialAccount !== undefined) {
+        if (!isPartialAccounts(partialAccount)) {
+          // if not compound accounts, do null/optional check and proceed
+          if (partialAccount !== null) {
+            nestedAccountsGeneric[accountName] =
+              translateAddress(partialAccount);
+          } else if (accountItem["isOptional"]) {
+            nestedAccountsGeneric[accountName] = this._programId;
+          }
+        } else {
+          // is compound accounts, recurse one level deeper
+          nestedAccountsGeneric[accountName] = this.resolveOptionalsHelper(
+            partialAccount,
+            accountItem["accounts"] as IdlAccountItem[]
+          );
+        }
+      }
     }
+    return nestedAccountsGeneric;
+  }
+
+  public resolveOptionals(accounts: PartialAccounts) {
+    this.resolveOptionalsHelper(accounts, this._idlIx.accounts);
   }
 
   private get(path: string[]): PublicKey | undefined {
@@ -129,7 +165,7 @@ export class AccountsResolver<IDL extends Idl> {
       }
 
       curr[p] = curr[p] || {};
-      curr = curr[p] as Accounts;
+      curr = curr[p] as AccountsGeneric;
     });
   }
 
@@ -149,11 +185,6 @@ export class AccountsResolver<IDL extends Idl> {
 
       const accountDesc = accountDescOrAccounts as IdlAccount;
       const accountDescName = camelCase(accountDescOrAccounts.name);
-
-      if (accountDesc.isOptional && this._accounts[accountDescName] === null) {
-        this._accounts[accountDescName] = this._programId;
-        continue;
-      }
 
       // Signers default to the provider.
       if (accountDesc.isSigner && !this.get([...path, accountDescName])) {
@@ -259,11 +290,6 @@ export class AccountsResolver<IDL extends Idl> {
   private async autoPopulatePda(accountDesc: IdlAccount, path: string[] = []) {
     if (!accountDesc.pda || !accountDesc.pda.seeds)
       throw new Error("Must have seeds");
-
-    if (accountDesc.isOptional && this._accounts[accountDesc.name] === null) {
-      this._accounts[accountDesc.name] = this._programId;
-      return;
-    }
 
     const seeds: (Buffer | undefined)[] = await Promise.all(
       accountDesc.pda.seeds.map((seedDesc: IdlSeed) =>

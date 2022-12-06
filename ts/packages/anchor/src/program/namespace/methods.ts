@@ -10,10 +10,11 @@ import {
 import { Idl, IdlAccountItem, IdlAccounts, IdlTypeDef } from "../../idl.js";
 import Provider from "../../provider.js";
 import {
+  AccountsGeneric,
   AccountsResolver,
   CustomAccountResolver,
 } from "../accounts-resolver.js";
-import { Address } from "../common.js";
+import { Address, translateAddress } from "../common.js";
 import { Accounts } from "../context.js";
 import { AccountNamespace } from "./account.js";
 import { InstructionFn } from "./instruction.js";
@@ -65,16 +66,27 @@ export class MethodsBuilderFactory {
   }
 }
 
-type PartialAccounts<A extends IdlAccountItem = IdlAccountItem> = Partial<{
-  [N in A["name"]]: PartialAccount<A & { name: N }>;
-}>;
+export type PartialAccounts<A extends IdlAccountItem = IdlAccountItem> =
+  Partial<{
+    [N in A["name"]]: PartialAccount<A & { name: N }>;
+  }>;
 
 type PartialAccount<A extends IdlAccountItem> = A extends IdlAccounts
-  ? Partial<Accounts<A["accounts"][number]>>
+  ? PartialAccounts<A["accounts"][number]>
+  : A extends { isOptional: true }
+  ? Address | null
   : Address;
 
+export function isPartialAccounts(
+  partialAccount: PartialAccount<IdlAccountItem>
+): partialAccount is PartialAccounts {
+  return (
+    !(partialAccount instanceof PublicKey) && typeof partialAccount === "object"
+  );
+}
+
 export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
-  private readonly _accounts: { [name: string]: PublicKey | null } = {};
+  private readonly _accounts: AccountsGeneric = {};
   private _remainingAccounts: Array<AccountMeta> = [];
   private _signers: Array<Signer> = [];
   private _preInstructions: Array<TransactionInstruction> = [];
@@ -91,7 +103,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     private _simulateFn: SimulateFn<IDL>,
     private _viewFn: ViewFn<IDL> | undefined,
     _provider: Provider,
-    _programId: PublicKey,
+    private _programId: PublicKey,
     _idlIx: AllInstructions<IDL>,
     _accountNamespace: AccountNamespace<IDL>,
     _idlTypes: IdlTypeDef[],
@@ -128,16 +140,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
 
   public accounts(accounts: PartialAccounts): MethodsBuilder<IDL, I> {
     this._autoResolveAccounts = true;
-    for (const accountName in accounts) {
-      if (accounts[accountName]) {
-        this._accounts[accountName] = accounts[accountName];
-      } else if (
-        accounts[accountName] === null &&
-        this._accountsResolver.isOptional(accountName)
-      ) {
-        this._accounts[accountName] = null;
-      }
-    }
+    this._accountsResolver.resolveOptionals(accounts);
     return this;
   }
 
@@ -145,16 +148,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     accounts: Accounts<I["accounts"][number]>
   ): MethodsBuilder<IDL, I> {
     this._autoResolveAccounts = false;
-    for (const accountName in accounts) {
-      if (accounts[accountName]) {
-        this._accounts[accountName] = accounts[accountName];
-      } else if (
-        accounts[accountName] === null &&
-        this._accountsResolver.isOptional(accountName)
-      ) {
-        this._accounts[accountName] = null;
-      }
-    }
+    this._accountsResolver.resolveOptionals(accounts);
     return this;
   }
 
