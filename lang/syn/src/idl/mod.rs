@@ -67,7 +67,7 @@ impl Idl {
                     JsonValue::String(format!("{}::{}", account_name, variant.name)),
                 );
 
-                for enum_field in variant.fields.iter() {
+                if let Some(enum_field) = &variant.fields {
                     match enum_field {
                         EnumFields::Named(fields) => {
                             let mut values = Map::new();
