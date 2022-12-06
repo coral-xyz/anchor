@@ -8,6 +8,10 @@ use heck::MixedCase;
 use quote::ToTokens;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use syn::{
+    Expr, ExprLit, ItemConst,
+    Lit::{Byte, ByteStr},
+};
 
 const DERIVE_NAME: &str = "Accounts";
 // TODO: share this with `anchor_lang` crate.
@@ -281,11 +285,7 @@ pub fn parse(
 
     let constants = parse_consts(&ctx)
         .iter()
-        .map(|c: &&syn::ItemConst| IdlConst {
-            name: c.ident.to_string(),
-            ty: c.ty.to_token_stream().to_string().parse().unwrap(),
-            value: c.expr.to_token_stream().to_string().parse().unwrap(),
-        })
+        .map(|c: &&syn::ItemConst| to_idl_const(c))
         .collect::<Vec<IdlConst>>();
 
     Ok(Some(Idl {
@@ -601,7 +601,7 @@ fn resolve_variable_array_lengths(ctx: &CrateContext, mut tts_string: String) ->
 }
 
 fn to_idl_type(ctx: &CrateContext, ty: &syn::Type) -> IdlType {
-    let mut tts_string = parser::tts_to_string(&ty);
+    let mut tts_string = parser::tts_to_string(ty);
     if tts_string.starts_with('[') {
         tts_string = resolve_variable_array_lengths(ctx, tts_string);
     }
@@ -613,6 +613,37 @@ fn to_idl_type(ctx: &CrateContext, ty: &syn::Type) -> IdlType {
         .into();
 
     tts_string.parse().unwrap()
+}
+
+// TODO parse other issues
+fn to_idl_const(item: &ItemConst) -> IdlConst {
+    let name = item.ident.to_string();
+
+    if let Expr::Lit(ExprLit { lit, .. }) = &*item.expr {
+        match lit {
+            ByteStr(lit_byte_str) => {
+                return IdlConst {
+                    name,
+                    ty: IdlType::Bytes,
+                    value: format!("{:?}", lit_byte_str.value()),
+                }
+            }
+            Byte(lit_byte) => {
+                return IdlConst {
+                    name,
+                    ty: IdlType::U8,
+                    value: lit_byte.value().to_string(),
+                }
+            }
+            _ => (),
+        }
+    }
+
+    IdlConst {
+        name,
+        ty: item.ty.to_token_stream().to_string().parse().unwrap(),
+        value: item.expr.to_token_stream().to_string().parse().unwrap(),
+    }
 }
 
 fn idl_accounts(
@@ -645,6 +676,7 @@ fn idl_accounts(
                 },
                 docs: if !no_docs { acc.docs.clone() } else { None },
                 pda: pda::parse(ctx, accounts, acc, seeds_feature),
+                relations: relations::parse(acc, seeds_feature),
             }),
         })
         .collect::<Vec<_>>()

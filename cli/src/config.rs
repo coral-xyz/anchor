@@ -2,21 +2,24 @@ use crate::is_hidden;
 use anchor_client::Cluster;
 use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Context, Error, Result};
-use clap::{ArgEnum, Parser};
-use heck::SnakeCase;
-use serde::{Deserialize, Serialize};
+use clap::{Parser, ValueEnum};
+use heck::ToSnakeCase;
+use reqwest::Url;
+use serde::de::{self, MapAccess, Visitor};
+use serde::{Deserialize, Deserializer, Serialize};
 use solana_cli_config::{Config as SolanaConfig, CONFIG_FILE};
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{Keypair, Signer};
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
 use std::fs::{self, File};
-use std::io;
 use std::io::prelude::*;
+use std::marker::PhantomData;
 use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::{fmt, io};
 use walkdir::WalkDir;
 
 pub trait Merge: Sized {
@@ -94,7 +97,7 @@ impl Manifest {
 
     pub fn version(&self) -> String {
         match &self.package {
-            Some(package) => package.version.to_string(),
+            Some(package) => package.version().to_string(),
             _ => "0.0.0".to_string(),
         }
     }
@@ -323,7 +326,7 @@ pub struct WorkspaceConfig {
     pub types: String,
 }
 
-#[derive(ArgEnum, Parser, Clone, PartialEq, Debug)]
+#[derive(ValueEnum, Parser, Clone, PartialEq, Eq, Debug)]
 pub enum BootstrapMode {
     None,
     Debian,
@@ -420,8 +423,56 @@ struct _Config {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Provider {
-    cluster: String,
+    #[serde(deserialize_with = "des_cluster")]
+    cluster: Cluster,
     wallet: String,
+}
+
+fn des_cluster<'de, D>(deserializer: D) -> Result<Cluster, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct StringOrCustomCluster(PhantomData<fn() -> Cluster>);
+
+    impl<'de> Visitor<'de> for StringOrCustomCluster {
+        type Value = Cluster;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("string or map")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Cluster, E>
+        where
+            E: de::Error,
+        {
+            value.parse().map_err(de::Error::custom)
+        }
+
+        fn visit_map<M>(self, mut map: M) -> Result<Cluster, M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            // Gets keys
+            if let (Some((http_key, http_value)), Some((ws_key, ws_value))) = (
+                map.next_entry::<String, String>()?,
+                map.next_entry::<String, String>()?,
+            ) {
+                // Checks keys
+                if http_key != "http" || ws_key != "ws" {
+                    return Err(de::Error::custom("Invalid key"));
+                }
+
+                // Checks urls
+                Url::parse(&http_value).map_err(de::Error::custom)?;
+                Url::parse(&ws_value).map_err(de::Error::custom)?;
+
+                Ok(Cluster::Custom(http_value, ws_value))
+            } else {
+                Err(de::Error::custom("Invalid entry"))
+            }
+        }
+    }
+    deserializer.deserialize_any(StringOrCustomCluster(PhantomData))
 }
 
 impl ToString for Config {
@@ -440,7 +491,7 @@ impl ToString for Config {
             features: Some(self.features.clone()),
             registry: Some(self.registry.clone()),
             provider: Provider {
-                cluster: format!("{}", self.provider.cluster),
+                cluster: self.provider.cluster.clone(),
                 wallet: self.provider.wallet.to_string(),
             },
             test: self.test_validator.clone().map(Into::into),
@@ -469,7 +520,7 @@ impl FromStr for Config {
             features: cfg.features.unwrap_or_default(),
             registry: cfg.registry.unwrap_or_default(),
             provider: ProviderConfig {
-                cluster: cfg.provider.cluster.parse()?,
+                cluster: cfg.provider.cluster,
                 wallet: shellexpand::tilde(&cfg.provider.wallet).parse()?,
             },
             scripts: cfg.scripts.unwrap_or_default(),
@@ -537,6 +588,7 @@ fn deser_programs(
                                 path: None,
                                 idl: None,
                             },
+
                             serde_json::Value::Object(_) => {
                                 serde_json::from_value(program_id.clone())
                                     .map_err(|_| anyhow!("Unable to read toml"))?
@@ -833,6 +885,9 @@ pub struct _Validator {
     // Give the faucet address this much SOL in genesis. [default: 1000000]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub faucet_sol: Option<String>,
+    // Geyser plugin config location
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub geyser_plugin_config: Option<String>,
     // Gossip DNS name or IP address for the validator to advertise in gossip. [default: 127.0.0.1]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gossip_host: Option<String>,
@@ -873,6 +928,8 @@ pub struct Validator {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub faucet_sol: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub geyser_plugin_config: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub gossip_host: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gossip_port: Option<u16>,
@@ -899,6 +956,7 @@ impl From<_Validator> for Validator {
             dynamic_port_range: _validator.dynamic_port_range,
             faucet_port: _validator.faucet_port,
             faucet_sol: _validator.faucet_sol,
+            geyser_plugin_config: _validator.geyser_plugin_config,
             gossip_host: _validator.gossip_host,
             gossip_port: _validator.gossip_port,
             url: _validator.url,
@@ -924,6 +982,7 @@ impl From<Validator> for _Validator {
             dynamic_port_range: validator.dynamic_port_range,
             faucet_port: validator.faucet_port,
             faucet_sol: validator.faucet_sol,
+            geyser_plugin_config: validator.geyser_plugin_config,
             gossip_host: validator.gossip_host,
             gossip_port: validator.gossip_port,
             url: validator.url,
@@ -987,6 +1046,9 @@ impl Merge for _Validator {
                 .or_else(|| self.dynamic_port_range.take()),
             faucet_port: other.faucet_port.or_else(|| self.faucet_port.take()),
             faucet_sol: other.faucet_sol.or_else(|| self.faucet_sol.take()),
+            geyser_plugin_config: other
+                .geyser_plugin_config
+                .or_else(|| self.geyser_plugin_config.take()),
             gossip_host: other.gossip_host.or_else(|| self.gossip_host.take()),
             gossip_port: other.gossip_port.or_else(|| self.gossip_port.take()),
             url: other.url.or_else(|| self.url.take()),
@@ -1037,7 +1099,7 @@ impl Program {
                 path,
             ));
         }
-        let program_kp = Keypair::generate(&mut rand::rngs::OsRng);
+        let program_kp = Keypair::new();
         let mut file = File::create(&path)
             .with_context(|| format!("Error creating file with path: {}", path.display()))?;
         file.write_all(format!("{:?}", &program_kp.to_bytes()).as_bytes())?;
@@ -1128,6 +1190,18 @@ mod tests {
         cluster = \"localnet\"
         wallet = \"id.json\"
     ";
+
+    const CUSTOM_CONFIG: &str = "
+        [provider]
+        cluster = { http = \"http://my-url.com\", ws = \"ws://my-url.com\" }
+        wallet = \"id.json\"
+    ";
+
+    #[test]
+    fn parse_custom_cluster() {
+        let config = Config::from_str(CUSTOM_CONFIG).unwrap();
+        assert!(!config.features.skip_lint);
+    }
 
     #[test]
     fn parse_skip_lint_no_section() {

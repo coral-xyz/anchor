@@ -38,7 +38,7 @@ cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
 On Linux systems you may need to install additional dependencies if cargo install fails. E.g. on Ubuntu:
 
 ```shell
-sudo apt-get update && sudo apt-get upgrade && sudo apt-get install -y pkg-config build-essential libudev-dev
+sudo apt-get update && sudo apt-get upgrade && sudo apt-get install -y pkg-config build-essential libudev-dev libssl-dev
 ```
 
 Install the latest version of the CLI using `avm`, and then set it to be the version to use.
@@ -63,7 +63,7 @@ Anchor binaries are available via an NPM package [`@project-serum/anchor-cli`](h
 We can also use Cargo to install the CLI directly. Make sure that the `--tag` argument uses the version you want (the version here is just an example).
 
 ```shell
-cargo install --git https://github.com/coral-xyz/anchor --tag v0.24.1 anchor-cli --locked
+cargo install --git https://github.com/coral-xyz/anchor --tag v0.25.0 anchor-cli --locked
 ```
 
 On Linux systems you may need to install additional dependencies if cargo install fails. On Ubuntu,

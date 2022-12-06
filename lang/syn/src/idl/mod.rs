@@ -5,6 +5,7 @@ use solana_sdk::pubkey::Pubkey;
 
 pub mod file;
 pub mod pda;
+pub mod relations;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Idl {
@@ -150,6 +151,8 @@ pub struct IdlAccount {
     pub docs: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub pda: Option<IdlPda>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub relations: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -265,6 +268,8 @@ pub enum IdlType {
     F64,
     U128,
     I128,
+    U256,
+    I256,
     Bytes,
     String,
     PublicKey,
@@ -306,8 +311,10 @@ impl std::str::FromStr for IdlType {
             "f64" => IdlType::F64,
             "u128" => IdlType::U128,
             "i128" => IdlType::I128,
+            "u256" => IdlType::U256,
+            "i256" => IdlType::I256,
             "Vec<u8>" => IdlType::Bytes,
-            "String" | "&str" => IdlType::String,
+            "String" | "&str" | "&'staticstr" => IdlType::String,
             "Pubkey" => IdlType::PublicKey,
             _ => match s.to_string().strip_prefix("Option<") {
                 None => match s.to_string().strip_prefix("Vec<") {
@@ -382,7 +389,9 @@ impl IdlType {
             IdlType::U128 => {
                 json!(<u128 as BorshDeserialize>::deserialize(data)?)
             }
-            IdlType::I128 => json!(<i128 as BorshDeserialize>::deserialize(data)?.to_string()),
+            IdlType::I128 => todo!(),
+            IdlType::U256 => todo!(),
+            IdlType::I256 => json!(<i128 as BorshDeserialize>::deserialize(data)?.to_string()),
             IdlType::Bytes => JsonValue::Array(
                 <Vec<u8> as BorshDeserialize>::deserialize(data)?
                     .iter()
@@ -431,7 +440,7 @@ impl IdlType {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct IdlErrorCode {
     pub code: u32,
     pub name: String,
