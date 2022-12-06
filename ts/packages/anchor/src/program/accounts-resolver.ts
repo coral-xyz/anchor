@@ -14,6 +14,7 @@ import {
   IdlTypeDef,
   IdlTypeDefTyStruct,
   IdlType,
+  isIdlAccounts,
 } from "../idl.js";
 import * as utf8 from "../utils/bytes/utf8.js";
 import { TOKEN_PROGRAM_ID, ASSOCIATED_PROGRAM_ID } from "../utils/token.js";
@@ -130,10 +131,21 @@ export class AccountsResolver<IDL extends Idl> {
           }
         } else {
           // is compound accounts, recurse one level deeper
-          nestedAccountsGeneric[accountName] = this.resolveOptionalsHelper(
-            partialAccount,
-            accountItem["accounts"] as IdlAccountItem[]
-          );
+          if (isIdlAccounts(accountItem)) {
+            nestedAccountsGeneric[accountName] = this.resolveOptionalsHelper(
+              partialAccount,
+              accountItem["accounts"] as IdlAccountItem[]
+            );
+          } else {
+            console.error(`Partial Account: ${JSON.stringify(partialAccount)}`);
+            console.error(
+              `\t isPartialAccounts: ${isPartialAccounts(partialAccount)}`
+            );
+            console.error(`accountItem: ${JSON.stringify(accountItem)}`);
+            throw new Error(
+              "Type mismatch somehow. This shouldn't be possible!"
+            );
+          }
         }
       }
     }
