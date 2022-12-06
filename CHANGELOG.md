@@ -33,6 +33,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Update rust used in the repo version 1.62 ([#2272](https://github.com/coral-xyz/anchor/pull/2272))
 - cli: Allow custom cluster config ([#2271](https://github.com/coral-xyz/anchor/pull/2271)).
 - ts: Add optional flag to parseLogs to throw an error on decoding failure ([#2043](https://github.com/coral-xyz/anchor/pull/2043))
+- cli: Add `test.validator.geyser_plugin_config` support ([#2016](https://github.com/coral-xyz/anchor/pull/2016)).
 
 ### Fixes
 
@@ -42,6 +43,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - event: Fix multiple event listeners with the same name. ([#2165](https://github.com/coral-xyz/anchor/pull/2165))
 - lang: Prevent the payer account from being initialized as a program account. ([#2284](https://github.com/coral-xyz/anchor/pull/2284))
 - ts: Fixed `.fetchNullable()` to be robust towards accounts only holding a balance ([#2301](https://github.com/coral-xyz/anchor/pull/2301)).
+- ts: Fixing breaking change where null or undefined wallet throws an error. ([#2303](https://github.com/coral-xyz/anchor/pull/2303))
 
 ### Breaking
 
