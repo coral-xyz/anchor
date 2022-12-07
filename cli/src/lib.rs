@@ -167,6 +167,9 @@ pub enum Command {
         /// to be able to check the transactions.
         #[clap(long)]
         detach: bool,
+        /// Run the test suites under the specified path
+        #[clap(long)]
+        run: Vec<String>,
         args: Vec<String>,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
         #[clap(required = false, last = true)]
@@ -426,6 +429,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             skip_local_validator,
             skip_build,
             detach,
+            run,
             args,
             cargo_args,
             skip_lint,
@@ -436,6 +440,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             skip_build,
             skip_lint,
             detach,
+            run,
             args,
             cargo_args,
         ),
@@ -589,21 +594,10 @@ fn init(
         mocha.write_all(template::ts_mocha(&project_name).as_bytes())?;
     }
 
-    // Install node modules.
-    let yarn_result = std::process::Command::new("yarn")
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .output()
-        .map_err(|e| anyhow::format_err!("yarn install failed: {}", e.to_string()))?;
+    let yarn_result = install_node_modules("yarn")?;
     if !yarn_result.status.success() {
         println!("Failed yarn install will attempt to npm install");
-        std::process::Command::new("npm")
-            .arg("install")
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .output()
-            .map_err(|e| anyhow::format_err!("npm install failed: {}", e.to_string()))?;
-        println!("Failed to install node dependencies")
+        install_node_modules("npm")?;
     }
 
     if !no_git {
@@ -621,6 +615,24 @@ fn init(
     println!("{} initialized", project_name);
 
     Ok(())
+}
+
+fn install_node_modules(cmd: &str) -> Result<std::process::Output> {
+    if cfg!(target_os = "windows") {
+        std::process::Command::new("cmd")
+            .arg(format!("/C {} install", cmd))
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .map_err(|e| anyhow::format_err!("{} install failed: {}", cmd, e.to_string()))
+    } else {
+        std::process::Command::new(cmd)
+            .arg("install")
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .map_err(|e| anyhow::format_err!("{} install failed: {}", cmd, e.to_string()))
+    }
 }
 
 // Creates a new program crate in the `programs/<name>` directory.
@@ -1856,9 +1868,19 @@ fn test(
     skip_build: bool,
     skip_lint: bool,
     detach: bool,
+    tests_to_run: Vec<String>,
     extra_args: Vec<String>,
     cargo_args: Vec<String>,
 ) -> Result<()> {
+    let test_paths = tests_to_run
+        .iter()
+        .map(|path| {
+            PathBuf::from(path)
+                .canonicalize()
+                .map_err(|_| anyhow!("Wrong path {}", path))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
     with_workspace(cfg_override, |cfg| {
         // Build if needed.
         if !skip_build {
@@ -1880,7 +1902,7 @@ fn test(
         }
 
         let root = cfg.path().parent().unwrap().to_owned();
-        cfg.add_test_config(root)?;
+        cfg.add_test_config(root, test_paths)?;
 
         // Run the deploy against the cluster in two cases:
         //

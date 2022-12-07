@@ -154,9 +154,10 @@ export class AccountClient<
     );
     const { value, context } = accountInfo;
     return {
-      data: value
-        ? this._coder.accounts.decode<T>(this._idlAccount.name, value.data)
-        : null,
+      data:
+        value && value.data.length !== 0
+          ? this._coder.accounts.decode<T>(this._idlAccount.name, value.data)
+          : null,
       context,
     };
   }
@@ -169,7 +170,9 @@ export class AccountClient<
   async fetch(address: Address, commitment?: Commitment): Promise<T> {
     const { data } = await this.fetchNullableAndContext(address, commitment);
     if (data === null) {
-      throw new Error(`Account does not exist ${address.toString()}`);
+      throw new Error(
+        `Account does not exist or has no data ${address.toString()}`
+      );
     }
     return data;
   }
@@ -346,16 +349,14 @@ export class AccountClient<
   ): Promise<TransactionInstruction> {
     const size = this.size;
 
-    // @ts-expect-error
-    if (this._provider.wallet === undefined) {
+    if (this._provider.publicKey === undefined) {
       throw new Error(
-        "This function requires the Provider interface implementor to have a 'wallet' field."
+        "This function requires the Provider interface implementor to have a 'publicKey' field."
       );
     }
 
     return SystemProgram.createAccount({
-      // @ts-expect-error
-      fromPubkey: this._provider.wallet.publicKey,
+      fromPubkey: this._provider.publicKey,
       newAccountPubkey: signer.publicKey,
       space: sizeOverride ?? size,
       lamports:
