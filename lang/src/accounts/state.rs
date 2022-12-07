@@ -9,7 +9,7 @@ use crate::{
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::ops::{Deref, DerefMut};
 
 pub const PROGRAM_STATE_SEED: &str = "unversioned";
@@ -74,6 +74,7 @@ where
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
+        _reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
@@ -121,7 +122,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Deref for ProgramStat
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &(*self.inner).account
+        &(self.inner).account
     }
 }
 

@@ -5,12 +5,16 @@ import {
   IdlAccounts,
   AnchorError,
   Wallet,
+  IdlTypes,
+  IdlEvents,
 } from "@project-serum/anchor";
 import {
   PublicKey,
   Keypair,
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
+  Message,
+  VersionedTransaction,
 } from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
@@ -38,7 +42,6 @@ describe("misc", () => {
     const addr = await program.state.address();
     const state = await program.state.fetch();
     const accountInfo = await program.provider.connection.getAccountInfo(addr);
-    // @ts-expect-error
     assert.isTrue(state.v.equals(Buffer.from([])));
     assert.lengthOf(accountInfo.data, 99);
   });
@@ -189,6 +192,41 @@ describe("misc", () => {
     );
   });
 
+  it("Can use enum in idl", async () => {
+    const resp1 = await program.methods.testInputEnum({ first: {} }).simulate();
+    const event1 = resp1.events[0].data as IdlEvents<Misc>["E7"];
+    assert.deepEqual(event1.data.first, {});
+
+    const resp2 = await program.methods
+      .testInputEnum({ second: { x: new BN(1), y: new BN(2) } })
+      .simulate();
+    const event2 = resp2.events[0].data as IdlEvents<Misc>["E7"];
+    assert.isTrue(new BN(1).eq(event2.data.second.x));
+    assert.isTrue(new BN(2).eq(event2.data.second.y));
+
+    const resp3 = await program.methods
+      .testInputEnum({
+        tupleStructTest: [
+          { data1: 1, data2: 11, data3: 111, data4: new BN(1111) },
+        ],
+      })
+      .simulate();
+    const event3 = resp3.events[0].data as IdlEvents<Misc>["E7"];
+    assert.strictEqual(event3.data.tupleStructTest[0].data1, 1);
+    assert.strictEqual(event3.data.tupleStructTest[0].data2, 11);
+    assert.strictEqual(event3.data.tupleStructTest[0].data3, 111);
+    assert.isTrue(event3.data.tupleStructTest[0].data4.eq(new BN(1111)));
+
+    const resp4 = await program.methods
+      .testInputEnum({ tupleTest: [1, 2, 3, 4] })
+      .simulate();
+    const event4 = resp4.events[0].data as IdlEvents<Misc>["E7"];
+    assert.strictEqual(event4.data.tupleTest[0], 1);
+    assert.strictEqual(event4.data.tupleTest[1], 2);
+    assert.strictEqual(event4.data.tupleTest[2], 3);
+    assert.strictEqual(event4.data.tupleTest[3], 4);
+  });
+
   let dataI8;
 
   it("Can use i8 in the idl", async () => {
@@ -245,37 +283,140 @@ describe("misc", () => {
   });
 
   it("Can close an account", async () => {
-    const openAccount = await program.provider.connection.getAccountInfo(
-      data.publicKey
-    );
+    const connection = program.provider.connection;
+    const openAccount = await connection.getAccountInfo(data.publicKey);
+
     assert.isNotNull(openAccount);
+    const openAccountBalance = openAccount.lamports;
+    // double balance to calculate closed balance correctly
+    const transferIx = anchor.web3.SystemProgram.transfer({
+      fromPubkey: provider.wallet.publicKey,
+      toPubkey: data.publicKey,
+      lamports: openAccountBalance,
+    });
+    const transferTransaction = new anchor.web3.Transaction().add(transferIx);
+    await provider.sendAndConfirm(transferTransaction);
 
     let beforeBalance = (
-      await program.provider.connection.getAccountInfo(
-        provider.wallet.publicKey
-      )
+      await connection.getAccountInfo(provider.wallet.publicKey)
     ).lamports;
 
-    await program.rpc.testClose({
-      accounts: {
+    await program.methods
+      .testClose()
+      .accounts({
         data: data.publicKey,
         solDest: provider.wallet.publicKey,
-      },
-    });
+      })
+      .postInstructions([transferIx])
+      .rpc();
 
     let afterBalance = (
-      await program.provider.connection.getAccountInfo(
-        provider.wallet.publicKey
-      )
+      await connection.getAccountInfo(provider.wallet.publicKey)
     ).lamports;
 
     // Retrieved rent exemption sol.
     expect(afterBalance > beforeBalance).to.be.true;
 
-    const closedAccount = await program.provider.connection.getAccountInfo(
-      data.publicKey
-    );
-    assert.isNull(closedAccount);
+    const closedAccount = await connection.getAccountInfo(data.publicKey);
+
+    assert.isTrue(closedAccount.data.length === 0);
+    assert.isTrue(closedAccount.owner.equals(SystemProgram.programId));
+  });
+
+  it("Can close an account twice", async () => {
+    const data = anchor.web3.Keypair.generate();
+    await program.methods
+      .initialize(new anchor.BN(10), new anchor.BN(10))
+      .accounts({ data: data.publicKey })
+      .preInstructions([await program.account.data.createInstruction(data)])
+      .signers([data])
+      .rpc();
+
+    const connection = program.provider.connection;
+    const openAccount = await connection.getAccountInfo(data.publicKey);
+    assert.isNotNull(openAccount);
+
+    const openAccountBalance = openAccount.lamports;
+    // double balance to calculate closed balance correctly
+    const transferIx = anchor.web3.SystemProgram.transfer({
+      fromPubkey: provider.wallet.publicKey,
+      toPubkey: data.publicKey,
+      lamports: openAccountBalance,
+    });
+    const transferTransaction = new anchor.web3.Transaction().add(transferIx);
+    await provider.sendAndConfirm(transferTransaction);
+
+    let beforeBalance = (
+      await connection.getAccountInfo(provider.wallet.publicKey)
+    ).lamports;
+
+    await program.methods
+      .testCloseTwice()
+      .accounts({
+        data: data.publicKey,
+        solDest: provider.wallet.publicKey,
+      })
+      .postInstructions([transferIx])
+      .rpc();
+
+    let afterBalance = (
+      await connection.getAccountInfo(provider.wallet.publicKey)
+    ).lamports;
+
+    // Retrieved rent exemption sol.
+    expect(afterBalance > beforeBalance).to.be.true;
+
+    const closedAccount = await connection.getAccountInfo(data.publicKey);
+    assert.isTrue(closedAccount.data.length === 0);
+    assert.isTrue(closedAccount.owner.equals(SystemProgram.programId));
+  });
+
+  it("Can close a mut account manually", async () => {
+    const data = anchor.web3.Keypair.generate();
+    await program.methods
+      .initialize(new anchor.BN(10), new anchor.BN(10))
+      .accounts({ data: data.publicKey })
+      .preInstructions([await program.account.data.createInstruction(data)])
+      .signers([data])
+      .rpc();
+
+    const connection = program.provider.connection;
+    const openAccount = await connection.getAccountInfo(data.publicKey);
+
+    assert.isNotNull(openAccount);
+    const openAccountBalance = openAccount.lamports;
+    // double balance to calculate closed balance correctly
+    const transferIx = anchor.web3.SystemProgram.transfer({
+      fromPubkey: provider.wallet.publicKey,
+      toPubkey: data.publicKey,
+      lamports: openAccountBalance,
+    });
+    const transferTransaction = new anchor.web3.Transaction().add(transferIx);
+    await provider.sendAndConfirm(transferTransaction);
+
+    let beforeBalance = (
+      await connection.getAccountInfo(provider.wallet.publicKey)
+    ).lamports;
+
+    await program.methods
+      .testCloseMut()
+      .accounts({
+        data: data.publicKey,
+        solDest: provider.wallet.publicKey,
+      })
+      .postInstructions([transferIx])
+      .rpc();
+
+    let afterBalance = (
+      await connection.getAccountInfo(provider.wallet.publicKey)
+    ).lamports;
+
+    // Retrieved rent exemption sol.
+    expect(afterBalance > beforeBalance).to.be.true;
+
+    const closedAccount = await connection.getAccountInfo(data.publicKey);
+    assert.isTrue(closedAccount.data.length === 0);
+    assert.isTrue(closedAccount.owner.equals(SystemProgram.programId));
   });
 
   it("Can use instruction data in accounts constraints", async () => {
@@ -371,7 +512,6 @@ describe("misc", () => {
         mint,
         authority: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
     });
@@ -440,6 +580,22 @@ describe("misc", () => {
     assert.strictEqual(account.data, 3);
   });
 
+  it("Should fail when trying to init the payer as a program account", async () => {
+    try {
+      await program.rpc.testInit({
+        accounts: {
+          data: provider.wallet.publicKey,
+          payer: provider.wallet.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        },
+      });
+      assert.fail("Transaction should fail");
+    } catch (e) {
+      // "Error Code: TryingToInitPayerAsProgramAccount. Error Number: 4101. Error Message: You cannot/should not initialize the payer account as a program account."
+      assert.strictEqual(e.error.errorCode.number, 4101);
+    }
+  });
+
   it("Can init a random zero copy account", async () => {
     const data = anchor.web3.Keypair.generate();
     await program.rpc.testInitZeroCopy({
@@ -465,7 +621,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -491,7 +646,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
       instructions: [
@@ -522,7 +676,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [token],
     });
@@ -550,7 +703,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [token],
       instructions: [
@@ -585,7 +737,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [token],
       instructions: [
@@ -636,6 +787,20 @@ describe("misc", () => {
     assert.strictEqual(account2.idata.toNumber(), 3);
   });
 
+  it("Can use fetchNullable() on accounts with only a balance", async () => {
+    const account = anchor.web3.Keypair.generate();
+
+    // Airdrop 1 SOL to the account.
+    const signature = await program.provider.connection.requestAirdrop(
+      account.publicKey,
+      anchor.web3.LAMPORTS_PER_SOL
+    );
+    await program.provider.connection.confirmTransaction(signature);
+
+    const data = await program.account.data.fetchNullable(account.publicKey);
+    assert.isNull(data);
+  });
+
   describe("associated_token constraints", () => {
     let associatedToken = null;
     // apparently cannot await here so doing it in the 'it' statements
@@ -662,7 +827,6 @@ describe("misc", () => {
           token: associatedToken,
           mint: localClient.publicKey,
           payer: provider.wallet.publicKey,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -964,6 +1128,25 @@ describe("misc", () => {
     );
   });
 
+  it("Should include BYTES_STR const in IDL", async () => {
+    assert.isDefined(
+      miscIdl.constants.find(
+        (c) =>
+          c.name === "BYTES_STR" &&
+          c.type === "bytes" &&
+          c.value === "[116, 101, 115, 116]"
+      )
+    );
+  });
+
+  it("Should include BYTE_STR const in IDL", async () => {
+    assert.isDefined(
+      miscIdl.constants.find(
+        (c) => c.name === "BYTE_STR" && c.type === "u8" && c.value === "116"
+      )
+    );
+  });
+
   it("Should not include NO_IDL const in IDL", async () => {
     assert.isUndefined(miscIdl.constants.find((c) => c.name === "NO_IDL"));
   });
@@ -1074,7 +1257,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -1086,7 +1268,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           mintAuthority: anchor.web3.Keypair.generate().publicKey,
           freezeAuthority: provider.wallet.publicKey,
         },
@@ -1108,7 +1289,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -1120,7 +1300,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           mintAuthority: provider.wallet.publicKey,
           freezeAuthority: anchor.web3.Keypair.generate().publicKey,
         },
@@ -1142,7 +1321,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -1154,7 +1332,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           mintAuthority: provider.wallet.publicKey,
           freezeAuthority: provider.wallet.publicKey,
         },
@@ -1176,7 +1353,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -1189,7 +1365,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [token],
     });
@@ -1202,7 +1377,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           authority: anchor.web3.Keypair.generate().publicKey,
         },
         signers: [token],
@@ -1223,7 +1397,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -1235,7 +1408,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint2],
     });
@@ -1248,7 +1420,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [token],
     });
@@ -1261,7 +1432,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           authority: provider.wallet.publicKey,
         },
         signers: [token],
@@ -1282,7 +1452,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -1299,7 +1468,6 @@ describe("misc", () => {
         token: associatedToken,
         mint: mint.publicKey,
         payer: provider.wallet.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
         associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -1312,7 +1480,6 @@ describe("misc", () => {
           token: associatedToken,
           mint: mint.publicKey,
           payer: provider.wallet.publicKey,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -1335,7 +1502,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -1347,7 +1513,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint2],
     });
@@ -1364,7 +1529,6 @@ describe("misc", () => {
         token: associatedToken,
         mint: mint.publicKey,
         payer: provider.wallet.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
         associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -1377,7 +1541,6 @@ describe("misc", () => {
           token: associatedToken,
           mint: mint2.publicKey,
           payer: provider.wallet.publicKey,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -1400,7 +1563,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [mint],
     });
@@ -1417,7 +1579,6 @@ describe("misc", () => {
         token: associatedToken,
         mint: mint.publicKey,
         payer: provider.wallet.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
         associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -1432,7 +1593,6 @@ describe("misc", () => {
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [token],
     });
@@ -1443,7 +1603,6 @@ describe("misc", () => {
           token: token.publicKey,
           mint: mint.publicKey,
           payer: provider.wallet.publicKey,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -1613,7 +1772,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -1626,7 +1784,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [token],
       });
@@ -1656,7 +1813,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -1669,7 +1825,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [token],
       });
@@ -1698,7 +1853,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -1711,7 +1865,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [token],
       });
@@ -1739,7 +1892,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -1751,7 +1903,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint1],
       });
@@ -1764,7 +1915,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [token],
       });
@@ -1793,7 +1943,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -1805,7 +1954,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [token],
       });
@@ -1835,7 +1983,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -1846,7 +1993,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint1],
       });
@@ -1858,7 +2004,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [token],
       });
@@ -1888,7 +2033,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -1923,7 +2067,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -1953,7 +2096,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -1987,7 +2129,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -2021,7 +2162,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -2049,7 +2189,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -2084,7 +2223,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -2115,7 +2253,6 @@ describe("misc", () => {
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [mint],
       });
@@ -2137,6 +2274,21 @@ describe("misc", () => {
       assert.isTrue(
         mintAccount.freezeAuthority.equals(provider.wallet.publicKey)
       );
+    });
+    it("check versioned transaction is now available", async () => {
+      let thisTx = new VersionedTransaction(
+        new Message({
+          header: {
+            numReadonlySignedAccounts: 0,
+            numReadonlyUnsignedAccounts: 0,
+            numRequiredSignatures: 0,
+          },
+          accountKeys: [new PublicKey([0]).toString()],
+          instructions: [{ accounts: [0], data: "", programIdIndex: 0 }],
+          recentBlockhash: "",
+        })
+      );
+      assert.isDefined(thisTx);
     });
   });
 });

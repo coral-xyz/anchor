@@ -31,6 +31,7 @@ pub struct Program {
     pub state: Option<State>,
     pub ixs: Vec<Ix>,
     pub name: Ident,
+    pub docs: Option<Vec<String>>,
     pub program_mod: ItemMod,
     pub fallback_fn: Option<FallbackFn>,
 }
@@ -84,6 +85,7 @@ pub struct StateInterface {
 pub struct Ix {
     pub raw_method: ItemFn,
     pub ident: Ident,
+    pub docs: Option<Vec<String>>,
     pub args: Vec<IxArg>,
     pub returns: IxReturn,
     // The ident for the struct deriving Accounts.
@@ -93,6 +95,7 @@ pub struct Ix {
 #[derive(Debug)]
 pub struct IxArg {
     pub name: Ident,
+    pub docs: Option<Vec<String>>,
     pub raw_arg: PatType,
 }
 
@@ -161,7 +164,7 @@ impl AccountsStruct {
             instruction_api
                 .iter()
                 .map(|expr| {
-                    let arg = parser::tts_to_string(&expr);
+                    let arg = parser::tts_to_string(expr);
                     let components: Vec<&str> = arg.split(" : ").collect();
                     assert!(components.len() == 2);
                     (components[0].to_string(), components[1].to_string())
@@ -194,7 +197,7 @@ impl AccountField {
     }
 
     pub fn ty_name(&self) -> Option<String> {
-        match self {
+        let qualified_ty_name = match self {
             AccountField::Field(field) => match &field.ty {
                 Ty::Account(account) => Some(parser::tts_to_string(&account.account_type_path)),
                 Ty::ProgramAccount(account) => {
@@ -203,7 +206,12 @@ impl AccountField {
                 _ => None,
             },
             AccountField::CompositeField(field) => Some(field.symbol.clone()),
-        }
+        };
+
+        qualified_ty_name.map(|name| match name.rsplit_once(" :: ") {
+            Some((_prefix, suffix)) => suffix.to_string(),
+            None => name,
+        })
     }
 }
 
@@ -211,10 +219,9 @@ impl AccountField {
 pub struct Field {
     pub ident: Ident,
     pub constraints: ConstraintGroup,
-    pub instruction_constraints: ConstraintGroup,
     pub ty: Ty,
-    /// Documentation string.
-    pub docs: String,
+    /// IDL Doc comment
+    pub docs: Option<Vec<String>>,
 }
 
 impl Field {
@@ -287,6 +294,7 @@ impl Field {
         checked: bool,
     ) -> proc_macro2::TokenStream {
         let field = &self.ident;
+        let field_str = field.to_string();
         let container_ty = self.container_ty();
         let owner_addr = match &kind {
             None => quote! { program_id },
@@ -307,13 +315,13 @@ impl Field {
                     quote! {
                         #container_ty::try_from(
                             &#field,
-                        )?
+                        ).map_err(|e| e.with_account_name(#field_str))?
                     }
                 } else {
                     quote! {
                         #container_ty::try_from_unchecked(
                             &#field,
-                        )?
+                        ).map_err(|e| e.with_account_name(#field_str))?
                     }
                 };
                 if *boxed {
@@ -329,13 +337,13 @@ impl Field {
                     quote! {
                         #container_ty::try_from(
                             &#field,
-                        )?
+                        ).map_err(|e| e.with_account_name(#field_str))?
                     }
                 } else {
                     quote! {
                         #container_ty::try_from_unchecked(
                             &#field,
-                        )?
+                        ).map_err(|e| e.with_account_name(#field_str))?
                     }
                 }
             }
@@ -344,14 +352,14 @@ impl Field {
                     quote! {
                         #container_ty::try_from(
                             &#field,
-                        )?
+                        ).map_err(|e| e.with_account_name(#field_str))?
                     }
                 } else {
                     quote! {
                         #container_ty::try_from_unchecked(
                             #owner_addr,
                             &#field,
-                        )?
+                        ).map_err(|e| e.with_account_name(#field_str))?
                     }
                 }
             }
@@ -361,14 +369,14 @@ impl Field {
                         #container_ty::try_from(
                             #owner_addr,
                             &#field,
-                        )?
+                        ).map_err(|e| e.with_account_name(#field_str))?
                     }
                 } else {
                     quote! {
                         #container_ty::try_from_unchecked(
                             #owner_addr,
                             &#field,
-                        )?
+                        ).map_err(|e| e.with_account_name(#field_str))?
                     }
                 }
             }
@@ -490,15 +498,14 @@ impl Field {
 pub struct CompositeField {
     pub ident: Ident,
     pub constraints: ConstraintGroup,
-    pub instruction_constraints: ConstraintGroup,
     pub symbol: String,
     pub raw_field: syn::Field,
-    /// Documentation string.
-    pub docs: String,
+    /// IDL Doc comment
+    pub docs: Option<Vec<String>>,
 }
 
 // A type of an account field.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Ty {
     AccountInfo,
     UncheckedAccount,
@@ -516,7 +523,7 @@ pub enum Ty {
     ProgramData,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum SysvarTy {
     Clock,
     Rent,
@@ -530,41 +537,41 @@ pub enum SysvarTy {
     Rewards,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct ProgramStateTy {
     pub account_type_path: TypePath,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct CpiStateTy {
     pub account_type_path: TypePath,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct ProgramAccountTy {
     // The struct type of the account.
     pub account_type_path: TypePath,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct CpiAccountTy {
     // The struct type of the account.
     pub account_type_path: TypePath,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct AccountLoaderTy {
     // The struct type of the account.
     pub account_type_path: TypePath,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct LoaderTy {
     // The struct type of the account.
     pub account_type_path: TypePath,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct AccountTy {
     // The struct type of the account.
     pub account_type_path: TypePath,
@@ -572,7 +579,7 @@ pub struct AccountTy {
     pub boxed: bool,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct ProgramTy {
     // The struct type of the account.
     pub account_type_path: TypePath,
@@ -633,6 +640,7 @@ pub struct ConstraintGroup {
     associated_token: Option<ConstraintAssociatedToken>,
     token_account: Option<ConstraintTokenAccountGroup>,
     mint: Option<ConstraintTokenMintGroup>,
+    realloc: Option<ConstraintReallocGroup>,
 }
 
 impl ConstraintGroup {
@@ -676,6 +684,7 @@ pub enum Constraint {
     Address(ConstraintAddress),
     TokenAccount(ConstraintTokenAccountGroup),
     Mint(ConstraintTokenMintGroup),
+    Realloc(ConstraintReallocGroup),
 }
 
 // Constraint token is a single keyword in a `#[account(<TOKEN>)]` attribute.
@@ -707,6 +716,9 @@ pub enum ConstraintToken {
     MintDecimals(Context<ConstraintMintDecimals>),
     Bump(Context<ConstraintTokenBump>),
     ProgramSeed(Context<ConstraintProgramSeed>),
+    Realloc(Context<ConstraintRealloc>),
+    ReallocPayer(Context<ConstraintReallocPayer>),
+    ReallocZero(Context<ConstraintReallocZero>),
 }
 
 impl Parse for ConstraintToken {
@@ -729,6 +741,28 @@ pub struct ConstraintZeroed {}
 #[derive(Debug, Clone)]
 pub struct ConstraintMut {
     pub error: Option<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintReallocGroup {
+    pub payer: Expr,
+    pub space: Expr,
+    pub zero: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintRealloc {
+    pub space: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintReallocPayer {
+    pub target: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintReallocZero {
+    pub zero: Expr,
 }
 
 #[derive(Debug, Clone)]

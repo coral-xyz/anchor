@@ -178,6 +178,12 @@ pub enum ErrorCode {
     /// 3015 - The given public key does not match the required sysvar
     #[msg("The given public key does not match the required sysvar")]
     AccountSysvarMismatch,
+    /// 3016 - The account reallocation exceeds the MAX_PERMITTED_DATA_INCREASE limit
+    #[msg("The account reallocation exceeds the MAX_PERMITTED_DATA_INCREASE limit")]
+    AccountReallocExceedsLimit,
+    /// 3017 - The account was duplicated for more than one reallocation
+    #[msg("The account was duplicated for more than one reallocation")]
+    AccountDuplicateReallocs,
 
     // State.
     /// 4000 - The given state account does not have the correct address
@@ -188,6 +194,9 @@ pub enum ErrorCode {
     /// 4100 - The declared program id does not match actual program id
     #[msg("The declared program id does not match the actual program id")]
     DeclaredProgramIdMismatch = 4100,
+    /// 4101 - You cannot/should not initialize the payer account as a program account
+    #[msg("You cannot/should not initialize the payer account as a program account")]
+    TryingToInitPayerAsProgramAccount = 4101,
 
     // Deprecated
     /// 5000 - The API being used is deprecated and should no longer be used
@@ -195,7 +204,7 @@ pub enum ErrorCode {
     Deprecated = 5000,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Error {
     AnchorError(AnchorError),
     ProgramError(ProgramErrorWithOrigin),
@@ -301,6 +310,14 @@ pub struct ProgramErrorWithOrigin {
     pub error_origin: Option<ErrorOrigin>,
     pub compared_values: Option<ComparedValues>,
 }
+
+// Two ProgramErrors are equal when they have the same error code
+impl PartialEq for ProgramErrorWithOrigin {
+    fn eq(&self, other: &Self) -> bool {
+        self.program_error == other.program_error
+    }
+}
+impl Eq for ProgramErrorWithOrigin {}
 
 impl Display for ProgramErrorWithOrigin {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -457,6 +474,15 @@ impl Display for AnchorError {
         Debug::fmt(&self, f)
     }
 }
+
+/// Two `AnchorError`s are equal when they have the same error code
+impl PartialEq for AnchorError {
+    fn eq(&self, other: &Self) -> bool {
+        self.error_code_number == other.error_code_number
+    }
+}
+
+impl Eq for AnchorError {}
 
 impl std::convert::From<Error> for anchor_lang::solana_program::program_error::ProgramError {
     fn from(e: Error) -> anchor_lang::solana_program::program_error::ProgramError {

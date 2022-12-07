@@ -1,6 +1,7 @@
 //! `anchor_client` provides an RPC client to send transactions and fetch
 //! deserialized accounts from Solana programs written in `anchor_lang`.
 
+use anchor_lang::solana_program::hash::Hash;
 use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::pubkey::Pubkey;
@@ -12,13 +13,12 @@ use solana_client::client_error::ClientError as SolanaClientError;
 use solana_client::pubsub_client::{PubsubClient, PubsubClientError, PubsubClientSubscription};
 use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::{
-    RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcTransactionLogsConfig,
-    RpcTransactionLogsFilter,
+    RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig,
+    RpcTransactionLogsConfig, RpcTransactionLogsFilter,
 };
-use solana_client::rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType};
+use solana_client::rpc_filter::{Memcmp, RpcFilterType};
 use solana_client::rpc_response::{Response as RpcResponse, RpcLogsResponse};
 use solana_sdk::account::Account;
-use solana_sdk::bs58;
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::signature::{Signature, Signer};
 use solana_sdk::transaction::Transaction;
@@ -155,19 +155,15 @@ impl Program {
         &self,
         filters: Vec<RpcFilterType>,
     ) -> Result<ProgramAccountsIterator<T>, ClientError> {
-        let account_type_filter = RpcFilterType::Memcmp(Memcmp {
-            offset: 0,
-            bytes: MemcmpEncodedBytes::Base58(bs58::encode(T::discriminator()).into_string()),
-            encoding: None,
-        });
+        let account_type_filter =
+            RpcFilterType::Memcmp(Memcmp::new_base58_encoded(0, &T::discriminator()));
         let config = RpcProgramAccountsConfig {
             filters: Some([vec![account_type_filter], filters].concat()),
             account_config: RpcAccountInfoConfig {
                 encoding: Some(UiAccountEncoding::Base64),
-                data_slice: None,
-                commitment: None,
+                ..RpcAccountInfoConfig::default()
             },
-            with_context: None,
+            ..RpcProgramAccountsConfig::default()
         };
         Ok(ProgramAccountsIterator {
             inner: self
@@ -286,7 +282,7 @@ fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
         .strip_prefix(PROGRAM_LOG)
         .or_else(|| l.strip_prefix(PROGRAM_DATA))
     {
-        let borsh_bytes = match anchor_lang::__private::base64::decode(&log) {
+        let borsh_bytes = match anchor_lang::__private::base64::decode(log) {
             Ok(borsh_bytes) => borsh_bytes,
             _ => {
                 #[cfg(feature = "debug")]
@@ -408,7 +404,7 @@ pub struct RequestBuilder<'a> {
     namespace: RequestNamespace,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub enum RequestNamespace {
     Global,
     State {
@@ -535,26 +531,62 @@ impl<'a> RequestBuilder<'a> {
         Ok(instructions)
     }
 
-    pub fn send(self) -> Result<Signature, ClientError> {
+    fn signed_transaction_with_blockhash(
+        &self,
+        latest_hash: Hash,
+    ) -> Result<Transaction, ClientError> {
         let instructions = self.instructions()?;
-
-        let mut signers = self.signers;
+        let mut signers = self.signers.clone();
         signers.push(&*self.payer);
 
-        let rpc_client = RpcClient::new_with_commitment(self.cluster, self.options);
+        let tx = Transaction::new_signed_with_payer(
+            &instructions,
+            Some(&self.payer.pubkey()),
+            &signers,
+            latest_hash,
+        );
 
-        let tx = {
-            let latest_hash = rpc_client.get_latest_blockhash()?;
-            Transaction::new_signed_with_payer(
-                &instructions,
-                Some(&self.payer.pubkey()),
-                &signers,
-                latest_hash,
-            )
-        };
+        Ok(tx)
+    }
+
+    pub fn signed_transaction(&self) -> Result<Transaction, ClientError> {
+        let latest_hash =
+            RpcClient::new_with_commitment(&self.cluster, self.options).get_latest_blockhash()?;
+        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
+
+        Ok(tx)
+    }
+
+    pub fn transaction(&self) -> Result<Transaction, ClientError> {
+        let instructions = &self.instructions;
+        let tx = Transaction::new_with_payer(instructions, Some(&self.payer.pubkey()));
+        Ok(tx)
+    }
+
+    pub fn send(self) -> Result<Signature, ClientError> {
+        let rpc_client = RpcClient::new_with_commitment(&self.cluster, self.options);
+        let latest_hash = rpc_client.get_latest_blockhash()?;
+        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
 
         rpc_client
             .send_and_confirm_transaction(&tx)
+            .map_err(Into::into)
+    }
+
+    pub fn send_with_spinner_and_config(
+        self,
+        config: RpcSendTransactionConfig,
+    ) -> Result<Signature, ClientError> {
+        let rpc_client = RpcClient::new_with_commitment(&self.cluster, self.options);
+        let latest_hash = rpc_client.get_latest_blockhash()?;
+        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
+
+        rpc_client
+            .send_and_confirm_transaction_with_spinner_and_config(
+                &tx,
+                rpc_client.commitment(),
+                config,
+            )
             .map_err(Into::into)
     }
 }

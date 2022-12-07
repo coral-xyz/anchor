@@ -16,8 +16,8 @@
 //! generating clients from IDL is the same.
 //!
 //! For detailed tutorials and examples on how to use Anchor, see the guided
-//! [tutorials](https://project-serum.github.io/anchor) or examples in the GitHub
-//! [repository](https://github.com/project-serum/anchor).
+//! [tutorials](https://anchor-lang.com) or examples in the GitHub
+//! [repository](https://github.com/coral-xyz/anchor).
 //!
 //! Presented here are the Rust primitives for building on Solana.
 
@@ -27,7 +27,7 @@ use bytemuck::{Pod, Zeroable};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
 
 mod account_meta;
@@ -82,6 +82,7 @@ pub trait Accounts<'info>: ToAccountMetas + ToAccountInfos<'info> + Sized {
         accounts: &mut &[AccountInfo<'info>],
         ix_data: &[u8],
         bumps: &mut BTreeMap<String, u8>,
+        reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self>;
 }
 
@@ -178,11 +179,15 @@ pub trait AccountDeserialize: Sized {
 pub trait ZeroCopy: Discriminator + Copy + Clone + Zeroable + Pod {}
 
 /// Calculates the data for an instruction invocation, where the data is
-/// `Sha256(<namespace>::<method_name>)[..8] || BorshSerialize(args)`.
+/// `Sha256(<namespace>:<method_name>)[..8] || BorshSerialize(args)`.
 /// `args` is a borsh serialized struct of named fields for each argument given
 /// to an instruction.
-pub trait InstructionData: AnchorSerialize {
-    fn data(&self) -> Vec<u8>;
+pub trait InstructionData: Discriminator + AnchorSerialize {
+    fn data(&self) -> Vec<u8> {
+        let mut d = Self::discriminator().to_vec();
+        d.append(&mut self.try_to_vec().expect("Should always serialize"));
+        d
+    }
 }
 
 /// An event that can be emitted via a Solana log. See [`emit!`](crate::prelude::emit) for an example.
@@ -200,7 +205,10 @@ pub trait EventData: AnchorSerialize + Discriminator {
 
 /// 8 byte unique identifier for a type.
 pub trait Discriminator {
-    fn discriminator() -> [u8; 8];
+    const DISCRIMINATOR: [u8; 8];
+    fn discriminator() -> [u8; 8] {
+        Self::DISCRIMINATOR
+    }
 }
 
 /// Bump seed for program derived addresses.
@@ -241,8 +249,8 @@ pub mod prelude {
         program, require, require_eq, require_gt, require_gte, require_keys_eq, require_keys_neq,
         require_neq, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source, state,
         system_program::System, zero_copy, AccountDeserialize, AccountSerialize, Accounts,
-        AccountsExit, AnchorDeserialize, AnchorSerialize, Id, Key, Owner, ProgramData, Result,
-        ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        AccountsClose, AccountsExit, AnchorDeserialize, AnchorSerialize, Id, Key, Owner,
+        ProgramData, Result, ToAccountInfo, ToAccountInfos, ToAccountMetas,
     };
     pub use anchor_attribute_error::*;
     pub use borsh;
@@ -352,7 +360,7 @@ pub mod __private {
 macro_rules! require {
     ($invariant:expr, $error:tt $(,)?) => {
         if !($invariant) {
-            return Err(anchor_lang::error!(crate::ErrorCode::$error));
+            return Err(anchor_lang::error!($crate::ErrorCode::$error));
         }
     };
     ($invariant:expr, $error:expr $(,)?) => {
@@ -561,7 +569,7 @@ macro_rules! require_gte {
 #[macro_export]
 macro_rules! err {
     ($error:tt $(,)?) => {
-        Err(anchor_lang::error!(crate::ErrorCode::$error))
+        Err(anchor_lang::error!($crate::ErrorCode::$error))
     };
     ($error:expr $(,)?) => {
         Err(anchor_lang::error!($error))

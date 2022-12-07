@@ -44,6 +44,7 @@ use syn::parse_macro_input;
 ///
 /// - [Normal Constraints](#normal-constraints)
 /// - [SPL Constraints](#spl-constraints)
+///
 /// # Normal Constraints
 /// <table>
 ///     <thead>
@@ -116,7 +117,7 @@ use syn::parse_macro_input;
 ///                         The given space number is the size of the account in bytes, so accounts that hold
 ///                         a variable number of items such as a <code>Vec</code> should allocate sufficient space for all items that may
 ///                         be added to the data structure because account size is fixed.
-///                         Check out the <a href = "https://book.anchor-lang.com/chapter_5/space.html" target = "_blank" rel = "noopener noreferrer">space reference</a>
+///                         Check out the <a href = "https://book.anchor-lang.com/anchor_references/space.html" target = "_blank" rel = "noopener noreferrer">space reference</a>
 ///                         and the <a href = "https://borsh.io/" target = "_blank" rel = "noopener noreferrer">borsh library</a>
 ///                         (which anchor uses under the hood for serialization) specification to learn how much
 ///                         space different data structures require.
@@ -416,6 +417,48 @@ use syn::parse_macro_input;
 /// pub one: Account<'info, MyData>,
 /// pub two: Account<'info, OtherData>
 ///                 </code></pre>
+///             </td>
+///         </tr>
+///         <tr>
+///             <td>
+///                 <code>#[account(realloc = &lt;space&gt;, realloc::payer = &lt;target&gt;, realloc::zero = &lt;bool&gt;)]</code>
+///             </td>
+///             <td>
+///                 Used to <a href="https://docs.rs/solana-program/latest/solana_program/account_info/struct.AccountInfo.html#method.realloc" target = "_blank" rel = "noopener noreferrer">realloc</a>
+///                 program account space at the beginning of an instruction.
+///                 <br><br>
+///                 The account must be marked as <code>mut</code> and applied to either <code>Account</code> or <code>AccountLoader</code> types.
+///                 <br><br>
+///                 If the change in account data length is additive, lamports will be transferred from the <code>realloc::payer</code> into the
+///                 program account in order to maintain rent exemption. Likewise, if the change is subtractive, lamports will be transferred from
+///                 the program account back into the <code>realloc::payer</code>.
+///                 <br><br>
+///                 The <code>realloc::zero</code> constraint is required in order to determine whether the new memory should be zero initialized after
+///                 reallocation. Please read the documentation on the <code>AccountInfo::realloc</code> function linked above to understand the
+///                 caveats regarding compute units when providing <code>true</code or <code>false</code> to this flag.
+///                 <br><br>
+///                 The manual use of `AccountInfo::realloc` is discouraged in favor of the `realloc` constraint group due to the lack of native runtime checks
+///                 to prevent reallocation over the `MAX_PERMITTED_DATA_INCREASE` limit (which can unintentionally cause account data overwrite other accounts).
+///                 The constraint group also ensure account reallocation idempotency but checking and restricting duplicate account reallocation within a single ix.
+///                 <br><br>
+///                 Example:
+///                 <pre>
+/// #[derive(Accounts)]
+/// pub struct Example {
+///     #[account(mut)]
+///     pub payer: Signer<'info>,
+///     #[account(
+///         mut,
+///         seeds = [b"example"],
+///         bump,
+///         realloc = 8 + std::mem::size_of::<MyType>() + 100,
+///         realloc::payer = payer,
+///         realloc::zero = false,
+///     )]
+///     pub acc: Account<'info, MyType>,
+///     pub system_program: Program<'info, System>,
+/// }
+///                 </pre>
 ///             </td>
 ///         </tr>
 ///     </tbody>

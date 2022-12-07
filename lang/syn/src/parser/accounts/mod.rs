@@ -1,3 +1,4 @@
+use crate::parser::docs;
 use crate::*;
 use syn::parse::{Error as ParseError, Result as ParseResult};
 use syn::punctuated::Punctuated;
@@ -22,7 +23,7 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
         syn::Fields::Named(fields) => fields
             .named
             .iter()
-            .map(|f| parse_account_field(f, instruction_api.is_some()))
+            .map(parse_account_field)
             .collect::<ParseResult<Vec<AccountField>>>()?,
         _ => {
             return Err(ParseError::new_spanned(
@@ -32,7 +33,7 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
         }
     };
 
-    let _ = constraints_cross_checks(&fields)?;
+    constraints_cross_checks(&fields)?;
 
     Ok(AccountsStruct::new(strct.clone(), fields, instruction_api))
 }
@@ -54,7 +55,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                 init_fields[0].ident.span(),
                 "the init constraint requires \
                 the system_program field to exist in the account \
-                validation struct. Use the program type to add \
+                validation struct. Use the Program type to add \
                 the system_program field to your validation struct.",
             ));
         }
@@ -69,7 +70,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                         init_fields[0].ident.span(),
                         "the init constraint requires \
                             the token_program field to exist in the account \
-                            validation struct. Use the program type to add \
+                            validation struct. Use the Program type to add \
                             the token_program field to your validation struct.",
                     ));
                 }
@@ -85,7 +86,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                     init_fields[0].ident.span(),
                     "the init constraint requires \
                     the associated_token_program field to exist in the account \
-                    validation struct. Use the program type to add \
+                    validation struct. Use the Program type to add \
                     the associated_token_program field to your validation struct.",
                 ));
             }
@@ -120,48 +121,103 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                     ));
                 }
             }
+            match kind {
+                // This doesn't catch cases like account.key() or account.key.
+                // My guess is that doesn't happen often and we can revisit
+                // this if I'm wrong.
+                InitKind::Token { mint, .. } | InitKind::AssociatedToken { mint, .. } => {
+                    if !fields.iter().any(|f| {
+                        f.ident()
+                            .to_string()
+                            .starts_with(&mint.to_token_stream().to_string())
+                    }) {
+                        return Err(ParseError::new(
+                            field.ident.span(),
+                            "the mint constraint has to be an account field for token initializations (not a public key)",
+                        ));
+                    }
+                }
+                _ => (),
+            }
         }
     }
+
+    // REALLOC
+    let realloc_fields: Vec<&Field> = fields
+        .iter()
+        .filter_map(|f| match f {
+            AccountField::Field(field) if field.constraints.realloc.is_some() => Some(field),
+            _ => None,
+        })
+        .collect();
+
+    if !realloc_fields.is_empty() {
+        // realloc needs system program.
+        if fields.iter().all(|f| f.ident() != "system_program") {
+            return Err(ParseError::new(
+                realloc_fields[0].ident.span(),
+                "the realloc constraint requires \
+                the system_program field to exist in the account \
+                validation struct. Use the Program type to add \
+                the system_program field to your validation struct.",
+            ));
+        }
+
+        for field in realloc_fields {
+            // Get allocator for realloc-ed account
+            let associated_payer_name = match field.constraints.realloc.clone().unwrap().payer {
+                // composite allocator, check not supported
+                Expr::Field(_) => continue,
+                field_name => field_name.to_token_stream().to_string(),
+            };
+
+            // Check allocator is mutable
+            let associated_payer_field = fields.iter().find_map(|f| match f {
+                AccountField::Field(field) if *f.ident() == associated_payer_name => Some(field),
+                _ => None,
+            });
+
+            match associated_payer_field {
+                Some(associated_payer_field) => {
+                    if !associated_payer_field.constraints.is_mutable() {
+                        return Err(ParseError::new(
+                            field.ident.span(),
+                            "the realloc::payer specified for an realloc constraint must be mutable.",
+                        ));
+                    }
+                }
+                _ => {
+                    return Err(ParseError::new(
+                        field.ident.span(),
+                        "the realloc::payer specified does not exist.",
+                    ));
+                }
+            }
+        }
+    }
+
     Ok(())
 }
 
-pub fn parse_account_field(f: &syn::Field, has_instruction_api: bool) -> ParseResult<AccountField> {
+pub fn parse_account_field(f: &syn::Field) -> ParseResult<AccountField> {
     let ident = f.ident.clone().unwrap();
-    let docs: String = f
-        .attrs
-        .iter()
-        .map(|a| {
-            let meta_result = a.parse_meta();
-            if let Ok(syn::Meta::NameValue(meta)) = meta_result {
-                if meta.path.is_ident("doc") {
-                    if let syn::Lit::Str(doc) = meta.lit {
-                        return format!(" {}\n", doc.value().trim());
-                    }
-                }
-            }
-            "".to_string()
-        })
-        .collect::<String>();
+    let docs = docs::parse(&f.attrs);
     let account_field = match is_field_primitive(f)? {
         true => {
             let ty = parse_ty(f)?;
-            let (account_constraints, instruction_constraints) =
-                constraints::parse(f, Some(&ty), has_instruction_api)?;
+            let account_constraints = constraints::parse(f, Some(&ty))?;
             AccountField::Field(Field {
                 ident,
                 ty,
                 constraints: account_constraints,
-                instruction_constraints,
                 docs,
             })
         }
         false => {
-            let (account_constraints, instruction_constraints) =
-                constraints::parse(f, None, has_instruction_api)?;
+            let account_constraints = constraints::parse(f, None)?;
             AccountField::CompositeField(CompositeField {
                 ident,
                 constraints: account_constraints,
-                instruction_constraints,
                 symbol: ident_string(f)?,
                 raw_field: f.clone(),
                 docs,
@@ -284,7 +340,7 @@ fn parse_program_account_loader(path: &syn::Path) -> ParseResult<AccountLoaderTy
 
 fn parse_account_ty(path: &syn::Path) -> ParseResult<AccountTy> {
     let account_type_path = parse_account(path)?;
-    let boxed = parser::tts_to_string(&path)
+    let boxed = parser::tts_to_string(path)
         .replace(' ', "")
         .starts_with("Box<Account<");
     Ok(AccountTy {

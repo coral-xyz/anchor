@@ -30,7 +30,6 @@ pub struct TestTokenSeedsInit<'info> {
     /// CHECK:
     pub authority: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
 }
 
@@ -46,7 +45,6 @@ pub struct TestInitAssociatedToken<'info> {
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -183,6 +181,22 @@ pub struct TestClose<'info> {
 }
 
 #[derive(Accounts)]
+pub struct TestCloseTwice<'info> {
+    #[account(mut, close = sol_dest)]
+    pub data: Account<'info, Data>,
+    /// CHECK:
+    pub sol_dest: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestCloseMut<'info> {
+    #[account(mut)]
+    pub data: Account<'info, Data>,
+    /// CHECK:
+    pub sol_dest: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
 pub struct TestU16<'info> {
     #[account(zero)]
     pub my_account: Account<'info, DataU16>,
@@ -227,7 +241,6 @@ pub struct TestInitMint<'info> {
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
 }
@@ -239,7 +252,6 @@ pub struct TestInitToken<'info> {
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
 }
@@ -326,7 +338,6 @@ pub struct TestInitMintIfNeeded<'info> {
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     /// CHECK:
@@ -342,7 +353,6 @@ pub struct TestInitTokenIfNeeded<'info> {
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     /// CHECK:
@@ -361,7 +371,6 @@ pub struct TestInitAssociatedTokenIfNeeded<'info> {
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,

@@ -11,7 +11,7 @@ use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use std::cell::{Ref, RefMut};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::io::Write;
 use std::marker::PhantomData;
@@ -221,6 +221,7 @@ impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
+        _reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
@@ -234,22 +235,18 @@ impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
 
 impl<'info, T: ZeroCopy + Owner> AccountsExit<'info> for AccountLoader<'info, T> {
     // The account *cannot* be loaded when this is called.
-    fn exit(&self, _program_id: &Pubkey) -> Result<()> {
-        let mut data = self.acc_info.try_borrow_mut_data()?;
-        let dst: &mut [u8] = &mut data;
-        let mut writer = BpfWriter::new(dst);
-        writer.write_all(&T::discriminator()).unwrap();
+    fn exit(&self, program_id: &Pubkey) -> Result<()> {
+        // Only persist if the owner is the current program and the account is not closed.
+        if &T::owner() == program_id && !crate::common::is_closed(&self.acc_info) {
+            let mut data = self.acc_info.try_borrow_mut_data()?;
+            let dst: &mut [u8] = &mut data;
+            let mut writer = BpfWriter::new(dst);
+            writer.write_all(&T::discriminator()).unwrap();
+        }
         Ok(())
     }
 }
 
-/// This function is for INTERNAL USE ONLY.
-/// Do NOT use this function in a program.
-/// Manual closing of `AccountLoader<'info, T>` types is NOT supported.
-///
-/// Details: Using `close` with `AccountLoader<'info, T>` is not safe because
-/// it requires the `mut` constraint but for that type the constraint
-/// overwrites the "closed account" discriminator at the end of the instruction.
 impl<'info, T: ZeroCopy + Owner> AccountsClose<'info> for AccountLoader<'info, T> {
     fn close(&self, sol_destination: AccountInfo<'info>) -> Result<()> {
         crate::common::close(self.to_account_info(), sol_destination)

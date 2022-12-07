@@ -9,7 +9,7 @@ use crate::{
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::ops::{Deref, DerefMut};
 
 /// Boxed container for a deserialized `account`. Use this to reference any
@@ -83,6 +83,7 @@ where
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
+        _reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
@@ -98,22 +99,18 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info
     for ProgramAccount<'info, T>
 {
     fn exit(&self, _program_id: &Pubkey) -> Result<()> {
-        let info = self.to_account_info();
-        let mut data = info.try_borrow_mut_data()?;
-        let dst: &mut [u8] = &mut data;
-        let mut writer = BpfWriter::new(dst);
-        self.inner.account.try_serialize(&mut writer)?;
+        // Only persist if the account is not closed.
+        if !crate::common::is_closed(&self.inner.info) {
+            let info = self.to_account_info();
+            let mut data = info.try_borrow_mut_data()?;
+            let dst: &mut [u8] = &mut data;
+            let mut writer = BpfWriter::new(dst);
+            self.inner.account.try_serialize(&mut writer)?;
+        }
         Ok(())
     }
 }
 
-/// This function is for INTERNAL USE ONLY.
-/// Do NOT use this function in a program.
-/// Manual closing of `ProgramAccount<'info, T>` types is NOT supported.
-///
-/// Details: Using `close` with `ProgramAccount<'info, T>` is not safe because
-/// it requires the `mut` constraint but for that type the constraint
-/// overwrites the "closed account" discriminator at the end of the instruction.
 #[allow(deprecated)]
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsClose<'info>
     for ProgramAccount<'info, T>
@@ -160,7 +157,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Deref for ProgramAcco
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &(*self.inner).account
+        &(self.inner).account
     }
 }
 

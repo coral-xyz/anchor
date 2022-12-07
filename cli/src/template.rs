@@ -2,8 +2,9 @@ use crate::config::ProgramWorkspace;
 use crate::VERSION;
 use anchor_syn::idl::Idl;
 use anyhow::Result;
-use heck::{CamelCase, MixedCase, SnakeCase};
+use heck::{ToLowerCamelCase, ToSnakeCase, ToUpperCamelCase};
 use solana_sdk::pubkey::Pubkey;
+use std::fmt::Write;
 
 pub fn default_program_id() -> Pubkey {
     "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
@@ -16,6 +17,15 @@ pub fn virtual_manifest() -> &'static str {
 members = [
     "programs/*"
 ]
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1
+[profile.release.build-override]
+opt-level = 3
+incremental = false
+codegen-units = 1
 "#
 }
 
@@ -31,7 +41,7 @@ token = "{}"
 pub fn idl_ts(idl: &Idl) -> Result<String> {
     let mut idl = idl.clone();
     for acc in idl.accounts.iter_mut() {
-        acc.name = acc.name.to_mixed_case();
+        acc.name = acc.name.to_lower_camel_case();
     }
     let idl_json = serde_json::to_string_pretty(&idl)?;
     Ok(format!(
@@ -39,9 +49,9 @@ pub fn idl_ts(idl: &Idl) -> Result<String> {
 
 export const IDL: {} = {};
 "#,
-        idl.name.to_camel_case(),
+        idl.name.to_upper_camel_case(),
         idl_json,
-        idl.name.to_camel_case(),
+        idl.name.to_upper_camel_case(),
         idl_json
     ))
 }
@@ -64,9 +74,6 @@ no-idl = []
 no-log-ix-name = []
 cpi = ["no-entrypoint"]
 default = []
-
-[profile.release]
-overflow-checks = true
 
 [dependencies]
 anchor-lang = "{2}"
@@ -210,13 +217,53 @@ describe("{}", () => {{
 }});
 "#,
         name,
-        name.to_camel_case(),
+        name.to_upper_camel_case(),
     )
 }
 
-pub fn package_json() -> String {
+pub fn jest(name: &str) -> String {
     format!(
-        r#"{{
+        r#"const anchor = require("@project-serum/anchor");
+
+describe("{}", () => {{
+  // Configure the client to use the local cluster.
+  anchor.setProvider(anchor.AnchorProvider.env());
+
+  it("Is initialized!", async () => {{
+    // Add your test here.
+    const program = anchor.workspace.{};
+    const tx = await program.methods.initialize().rpc();
+    console.log("Your transaction signature", tx);
+  }});
+}});
+"#,
+        name,
+        name.to_upper_camel_case(),
+    )
+}
+
+pub fn package_json(jest: bool) -> String {
+    if jest {
+        format!(
+            r#"{{
+        "scripts": {{
+            "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
+            "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
+        }},
+        "dependencies": {{
+            "@project-serum/anchor": "^{0}"
+        }},
+        "devDependencies": {{
+            "jest": "^29.0.3",
+            "prettier": "^2.6.2"
+        }}
+    }}
+    "#,
+            VERSION
+        )
+    } else {
+        format!(
+            r#"{{
     "scripts": {{
         "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
         "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
@@ -231,13 +278,37 @@ pub fn package_json() -> String {
     }}
 }}
 "#,
-        VERSION
-    )
+            VERSION
+        )
+    }
 }
 
-pub fn ts_package_json() -> String {
-    format!(
-        r#"{{
+pub fn ts_package_json(jest: bool) -> String {
+    if jest {
+        format!(
+            r#"{{
+        "scripts": {{
+            "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
+            "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
+        }},
+        "dependencies": {{
+            "@project-serum/anchor": "^{0}"
+        }},
+        "devDependencies": {{
+            "@types/bn.js": "^5.1.0",
+            "@types/jest": "^29.0.3",
+            "jest": "^29.0.3",
+            "prettier": "^2.6.2",
+            "ts-jest": "^29.0.2",
+            "typescript": "^4.3.5"
+        }}
+    }}
+    "#,
+            VERSION
+        )
+    } else {
+        format!(
+            r#"{{
     "scripts": {{
         "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
         "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
@@ -248,7 +319,7 @@ pub fn ts_package_json() -> String {
     "devDependencies": {{
         "chai": "^4.3.4",
         "mocha": "^9.0.3",
-        "ts-mocha": "^8.0.0",
+        "ts-mocha": "^10.0.0",
         "@types/bn.js": "^5.1.0",
         "@types/chai": "^4.3.0",
         "@types/mocha": "^9.0.0",
@@ -257,8 +328,9 @@ pub fn ts_package_json() -> String {
     }}
 }}
 "#,
-        VERSION
-    )
+            VERSION
+        )
+    }
 }
 
 pub fn ts_mocha(name: &str) -> String {
@@ -280,26 +352,67 @@ describe("{}", () => {{
   }});
 }});
 "#,
-        name.to_camel_case(),
+        name.to_upper_camel_case(),
         name.to_snake_case(),
         name,
-        name.to_camel_case(),
-        name.to_camel_case(),
+        name.to_upper_camel_case(),
+        name.to_upper_camel_case(),
     )
 }
 
-pub fn ts_config() -> &'static str {
-    r#"{
-  "compilerOptions": {
-    "types": ["mocha", "chai"],
-    "typeRoots": ["./node_modules/@types"],
-    "lib": ["es2015"],
-    "module": "commonjs",
-    "target": "es6",
-    "esModuleInterop": true
-  }
+pub fn ts_jest(name: &str) -> String {
+    format!(
+        r#"import * as anchor from "@project-serum/anchor";
+import {{ Program }} from "@project-serum/anchor";
+import {{ {} }} from "../target/types/{}";
+
+describe("{}", () => {{
+  // Configure the client to use the local cluster.
+  anchor.setProvider(anchor.AnchorProvider.env());
+
+  const program = anchor.workspace.{} as Program<{}>;
+
+  it("Is initialized!", async () => {{
+    // Add your test here.
+    const tx = await program.methods.initialize().rpc();
+    console.log("Your transaction signature", tx);
+  }});
+}});
+"#,
+        name.to_upper_camel_case(),
+        name.to_snake_case(),
+        name,
+        name.to_upper_camel_case(),
+        name.to_upper_camel_case(),
+    )
 }
-"#
+
+pub fn ts_config(jest: bool) -> &'static str {
+    if jest {
+        r#"{
+            "compilerOptions": {
+              "types": ["jest"],
+              "typeRoots": ["./node_modules/@types"],
+              "lib": ["es2015"],
+              "module": "commonjs",
+              "target": "es6",
+              "esModuleInterop": true
+            }
+          }
+          "#
+    } else {
+        r#"{
+            "compilerOptions": {
+              "types": ["mocha", "chai"],
+              "typeRoots": ["./node_modules/@types"],
+              "lib": ["es2015"],
+              "module": "commonjs",
+              "target": "es6",
+              "esModuleInterop": true
+            }
+          }
+          "#
+    }
 }
 
 pub fn git_ignore() -> &'static str {
@@ -362,14 +475,15 @@ anchor.setProvider(provider);
     );
 
     for program in programs {
-        eval_string.push_str(&format!(
+        write!(
+            &mut eval_string,
             r#"
 anchor.workspace.{} = new anchor.Program({}, new PublicKey("{}"), provider);
 "#,
-            program.name.to_camel_case(),
+            program.name.to_upper_camel_case(),
             serde_json::to_string(&program.idl)?,
             program.program_id
-        ));
+        )?;
     }
 
     Ok(eval_string)

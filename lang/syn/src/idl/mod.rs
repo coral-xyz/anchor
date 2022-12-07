@@ -3,11 +3,14 @@ use serde_json::Value as JsonValue;
 
 pub mod file;
 pub mod pda;
+pub mod relations;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Idl {
     pub version: String,
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub docs: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub constants: Vec<IdlConst>,
     pub instructions: Vec<IdlInstruction>,
@@ -43,6 +46,8 @@ pub struct IdlState {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IdlInstruction {
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub docs: Option<Vec<String>>,
     pub accounts: Vec<IdlAccountItem>,
     pub args: Vec<IdlField>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -69,8 +74,12 @@ pub struct IdlAccount {
     pub name: String,
     pub is_mut: bool,
     pub is_signer: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub docs: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub pda: Option<IdlPda>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub relations: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -120,6 +129,8 @@ pub struct IdlSeedConst {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IdlField {
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub docs: Option<Vec<String>>,
     #[serde(rename = "type")]
     pub ty: IdlType,
 }
@@ -141,6 +152,8 @@ pub struct IdlEventField {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IdlTypeDefinition {
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub docs: Option<Vec<String>>,
     #[serde(rename = "type")]
     pub ty: IdlTypeDefinitionTy,
 }
@@ -182,6 +195,8 @@ pub enum IdlType {
     F64,
     U128,
     I128,
+    U256,
+    I256,
     Bytes,
     String,
     PublicKey,
@@ -224,7 +239,7 @@ impl std::str::FromStr for IdlType {
             "u128" => IdlType::U128,
             "i128" => IdlType::I128,
             "Vec<u8>" => IdlType::Bytes,
-            "String" | "&str" => IdlType::String,
+            "String" | "&str" | "&'staticstr" => IdlType::String,
             "Pubkey" => IdlType::PublicKey,
             _ => match s.to_string().strip_prefix("Option<") {
                 None => match s.to_string().strip_prefix("Vec<") {
@@ -258,7 +273,7 @@ impl std::str::FromStr for IdlType {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct IdlErrorCode {
     pub code: u32,
     pub name: String,

@@ -10,7 +10,7 @@ use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 
@@ -90,7 +90,7 @@ use std::ops::{Deref, DerefMut};
 /// functions `#[account]` generates. See the example below for the code you have
 /// to write.
 ///
-/// The mint wrapper type that Anchor provides out of the box for the token program ([source](https://github.com/project-serum/anchor/blob/master/spl/src/token.rs))
+/// The mint wrapper type that Anchor provides out of the box for the token program ([source](https://github.com/coral-xyz/anchor/blob/master/spl/src/token.rs))
 /// ```ignore
 /// #[derive(Clone)]
 /// pub struct Mint(spl_token::state::Mint);
@@ -321,6 +321,7 @@ where
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
+        _reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
@@ -335,8 +336,8 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsEx
     for Account<'info, T>
 {
     fn exit(&self, program_id: &Pubkey) -> Result<()> {
-        // Only persist if the owner is the current program.
-        if &T::owner() == program_id {
+        // Only persist if the owner is the current program and the account is not closed.
+        if &T::owner() == program_id && !crate::common::is_closed(&self.info) {
             let info = self.to_account_info();
             let mut data = info.try_borrow_mut_data()?;
             let dst: &mut [u8] = &mut data;
@@ -347,13 +348,6 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsEx
     }
 }
 
-/// This function is for INTERNAL USE ONLY.
-/// Do NOT use this function in a program.
-/// Manual closing of `Account<'info, T>` types is NOT supported.
-///
-/// Details: Using `close` with `Account<'info, T>` is not safe because
-/// it requires the `mut` constraint but for that type the constraint
-/// overwrites the "closed account" discriminator at the end of the instruction.
 impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsClose<'info>
     for Account<'info, T>
 {
@@ -403,7 +397,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Deref for Acc
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &(*self).account
+        &(self).account
     }
 }
 

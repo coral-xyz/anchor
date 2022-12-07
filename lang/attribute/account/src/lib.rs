@@ -87,6 +87,7 @@ pub fn account(
 
     let account_strct = parse_macro_input!(input as syn::ItemStruct);
     let account_name = &account_strct.ident;
+    let account_name_str = account_name.to_string();
     let (impl_gen, type_gen, where_clause) = account_strct.generics.split_for_impl();
 
     let discriminator: proc_macro2::TokenStream = {
@@ -138,9 +139,7 @@ pub fn account(
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::Discriminator for #account_name #type_gen #where_clause {
-                    fn discriminator() -> [u8; 8] {
-                        #discriminator
-                    }
+                    const DISCRIMINATOR: [u8; 8] = #discriminator;
                 }
 
                 // This trait is useful for clients deserializing accounts.
@@ -153,7 +152,7 @@ pub fn account(
                         }
                         let given_disc = &buf[..8];
                         if &#discriminator != given_disc {
-                            return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch.into());
+                            return Err(anchor_lang::error!(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch).with_account_name(#account_name_str));
                         }
                         Self::try_deserialize_unchecked(buf)
                     }
@@ -196,7 +195,7 @@ pub fn account(
                         }
                         let given_disc = &buf[..8];
                         if &#discriminator != given_disc {
-                            return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch.into());
+                            return Err(anchor_lang::error!(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch).with_account_name(#account_name_str));
                         }
                         Self::try_deserialize_unchecked(buf)
                     }
@@ -210,9 +209,7 @@ pub fn account(
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::Discriminator for #account_name #type_gen #where_clause {
-                    fn discriminator() -> [u8; 8] {
-                        #discriminator
-                    }
+                    const DISCRIMINATOR: [u8; 8] = #discriminator;
                 }
 
                 #owner_impl
