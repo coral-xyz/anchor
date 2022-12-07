@@ -5,7 +5,7 @@ use crate::config::{
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction, ERASED_AUTHORITY};
 use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
-use anchor_syn::idl::Idl;
+use anchor_syn::idl::{EnumFields, Idl, IdlType, IdlTypeDefinitionTy};
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use flate2::read::GzDecoder;
@@ -17,6 +17,7 @@ use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Map, Value as JsonValue};
 use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::RpcSendTransactionConfig;
 use solana_program::instruction::{AccountMeta, Instruction};
@@ -1920,16 +1921,176 @@ fn account(
     }
     let mut data_view = &data[8..];
 
-    let deserialized_json = idl.deserialize_account_to_json(account_type_name, &mut data_view)?;
+    let deserialized_json =
+        deserialize_idl_struct_to_json(&idl, account_type_name, &mut data_view)?;
 
     println!(
-        "{} {}",
-        account_type_name,
+        "{}",
         serde_json::to_string_pretty(&deserialized_json).unwrap()
     );
 
     Ok(())
 }
+
+// Deserializes a user defined IDL struct/enum by munching the account data.
+// Recursively deserializes elements one by one
+fn deserialize_idl_struct_to_json(
+    idl: &Idl,
+    account_type_name: &str,
+    data: &mut &[u8],
+) -> Result<JsonValue, anyhow::Error> {
+    let account_type = &idl
+        .accounts
+        .iter()
+        .chain(idl.types.iter())
+        .find(|account_type| account_type.name == account_type_name)
+        .ok_or_else(|| {
+            anyhow::anyhow!("Struct/Enum named {} not found in IDL.", account_type_name)
+        })?
+        .ty;
+
+    let mut deserialized_fields = Map::new();
+
+    match account_type {
+        IdlTypeDefinitionTy::Struct { fields } => {
+            for field in fields {
+                deserialized_fields.insert(
+                    field.name.clone(),
+                    deserialize_idl_type_to_json(&field.ty, data, idl)?,
+                );
+            }
+        }
+        IdlTypeDefinitionTy::Enum { variants } => {
+            let repr = <u8 as AnchorDeserialize>::deserialize(data)?;
+
+            let variant = variants
+                .get(repr as usize)
+                .unwrap_or_else(|| panic!("Error while deserializing enum variant {}", repr));
+
+            let mut value = json!({});
+
+            if let Some(enum_field) = &variant.fields {
+                match enum_field {
+                    EnumFields::Named(fields) => {
+                        let mut values = Map::new();
+
+                        for field in fields {
+                            values.insert(
+                                field.name.clone(),
+                                deserialize_idl_type_to_json(&field.ty, data, idl)?,
+                            );
+                        }
+
+                        value = JsonValue::Object(values);
+                    }
+                    EnumFields::Tuple(fields) => {
+                        let mut values = Vec::new();
+
+                        for field in fields {
+                            values.push(deserialize_idl_type_to_json(&field, data, idl)?);
+                        }
+
+                        value = JsonValue::Array(values);
+                    }
+                }
+            }
+
+            deserialized_fields.insert(variant.name.clone(), value);
+        }
+    }
+
+    Ok(JsonValue::Object(deserialized_fields))
+}
+
+// Deserializes a primitive type using AnchorDeserialize
+fn deserialize_idl_type_to_json(
+    idl_type: &IdlType,
+    data: &mut &[u8],
+    parent_idl: &Idl,
+) -> Result<JsonValue, anyhow::Error> {
+    if data.is_empty() {
+        return Err(anyhow::anyhow!("Unable to parse from empty bytes"));
+    }
+
+    Ok(match idl_type {
+        IdlType::Bool => json!(<bool as AnchorDeserialize>::deserialize(data)?),
+        IdlType::U8 => {
+            json!(<u8 as AnchorDeserialize>::deserialize(data)?)
+        }
+        IdlType::I8 => {
+            json!(<i8 as AnchorDeserialize>::deserialize(data)?)
+        }
+        IdlType::U16 => {
+            json!(<u16 as AnchorDeserialize>::deserialize(data)?)
+        }
+        IdlType::I16 => {
+            json!(<i16 as AnchorDeserialize>::deserialize(data)?)
+        }
+        IdlType::U32 => {
+            json!(<u32 as AnchorDeserialize>::deserialize(data)?)
+        }
+        IdlType::I32 => {
+            json!(<i32 as AnchorDeserialize>::deserialize(data)?)
+        }
+        IdlType::F32 => json!(<f32 as AnchorDeserialize>::deserialize(data)?),
+        IdlType::U64 => {
+            json!(<u64 as AnchorDeserialize>::deserialize(data)?)
+        }
+        IdlType::I64 => {
+            json!(<i64 as AnchorDeserialize>::deserialize(data)?)
+        }
+        IdlType::F64 => json!(<f64 as AnchorDeserialize>::deserialize(data)?),
+        IdlType::U128 => {
+            json!(<u128 as AnchorDeserialize>::deserialize(data)?)
+        }
+        IdlType::I128 => todo!(),
+        IdlType::U256 => todo!(),
+        IdlType::I256 => json!(<i128 as AnchorDeserialize>::deserialize(data)?.to_string()),
+        IdlType::Bytes => JsonValue::Array(
+            <Vec<u8> as AnchorDeserialize>::deserialize(data)?
+                .iter()
+                .map(|i| json!(*i))
+                .collect(),
+        ),
+        IdlType::String => json!(<String as AnchorDeserialize>::deserialize(data)?),
+        IdlType::PublicKey => {
+            json!(<Pubkey as AnchorDeserialize>::deserialize(data)?.to_string())
+        }
+        IdlType::Defined(type_name) => deserialize_idl_struct_to_json(parent_idl, type_name, data)?,
+        IdlType::Option(ty) => {
+            let is_present = <u8 as AnchorDeserialize>::deserialize(data)?;
+
+            if is_present == 0 {
+                JsonValue::String("None".to_string())
+            } else {
+                deserialize_idl_type_to_json(&ty, data, parent_idl)?
+            }
+        }
+        IdlType::Vec(ty) => {
+            let size: usize = <u32 as AnchorDeserialize>::deserialize(data)?
+                .try_into()
+                .unwrap();
+
+            let mut vec_data: Vec<JsonValue> = Vec::with_capacity(size);
+
+            for _ in 0..size {
+                vec_data.push(deserialize_idl_type_to_json(&ty, data, parent_idl)?);
+            }
+
+            JsonValue::Array(vec_data)
+        }
+        IdlType::Array(ty, size) => {
+            let mut array_data: Vec<JsonValue> = Vec::with_capacity(*size);
+
+            for _ in 0..*size {
+                array_data.push(deserialize_idl_type_to_json(&ty, data, parent_idl)?);
+            }
+
+            JsonValue::Array(array_data)
+        }
+    })
+}
+
 enum OutFile {
     Stdout,
     File(PathBuf),

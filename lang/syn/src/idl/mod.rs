@@ -1,7 +1,5 @@
-use borsh::BorshDeserialize;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, value::Map, Value as JsonValue};
-use solana_sdk::pubkey::Pubkey;
+use serde_json::Value as JsonValue;
 
 pub mod file;
 pub mod pda;
@@ -28,77 +26,6 @@ pub struct Idl {
     pub errors: Option<Vec<IdlErrorCode>>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub metadata: Option<JsonValue>,
-}
-
-impl Idl {
-    pub fn deserialize_account_to_json(
-        &self,
-        account_name: &str,
-        data: &mut &[u8],
-    ) -> Result<JsonValue, anyhow::Error> {
-        let account_type = &self
-            .accounts
-            .iter()
-            .chain(self.types.iter())
-            .find(|account_type| account_type.name == account_name)
-            .ok_or_else(|| anyhow::anyhow!("Struct/Enum named {} not found in IDL.", account_name))?
-            .ty;
-
-        let mut deserialized_fields = Map::new();
-
-        match account_type {
-            IdlTypeDefinitionTy::Struct { fields } => {
-                for field in fields {
-                    deserialized_fields.insert(
-                        field.name.clone(),
-                        field.ty.deserialize_to_json(data, self)?,
-                    );
-                }
-            }
-            IdlTypeDefinitionTy::Enum { variants } => {
-                let repr = <u8 as BorshDeserialize>::deserialize(data)?;
-
-                let variant = variants
-                    .get(repr as usize)
-                    .unwrap_or_else(|| panic!("Error while deserializing enum variant {}", repr));
-
-                deserialized_fields.insert(
-                    "name".to_string(),
-                    JsonValue::String(format!("{}::{}", account_name, variant.name)),
-                );
-
-                if let Some(enum_field) = &variant.fields {
-                    match enum_field {
-                        EnumFields::Named(fields) => {
-                            let mut values = Map::new();
-
-                            for field in fields {
-                                values.insert(
-                                    field.name.clone(),
-                                    field.ty.deserialize_to_json(data, self)?,
-                                );
-                            }
-
-                            deserialized_fields
-                                .insert("value".to_string(), JsonValue::Object(values));
-                        }
-                        EnumFields::Tuple(fields) => {
-                            let mut values = Vec::new();
-
-                            for field in fields {
-                                values.push(field.deserialize_to_json(data, self)?);
-                            }
-
-                            deserialized_fields
-                                .insert("value".to_string(), JsonValue::Array(values));
-                        }
-                    }
-                }
-            }
-        }
-
-        Ok(JsonValue::Object(deserialized_fields))
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -345,98 +272,6 @@ impl std::str::FromStr for IdlType {
             },
         };
         Ok(r)
-    }
-}
-
-impl IdlType {
-    pub fn deserialize_to_json(
-        &self,
-        data: &mut &[u8],
-        parent_idl: &Idl,
-    ) -> Result<JsonValue, anyhow::Error> {
-        if data.is_empty() {
-            return Err(anyhow::anyhow!("Unable to parse from empty bytes"));
-        }
-
-        Ok(match self {
-            IdlType::Bool => json!(<bool as BorshDeserialize>::deserialize(data)?),
-            IdlType::U8 => {
-                json!(<u8 as BorshDeserialize>::deserialize(data)?)
-            }
-            IdlType::I8 => {
-                json!(<i8 as BorshDeserialize>::deserialize(data)?)
-            }
-            IdlType::U16 => {
-                json!(<u16 as BorshDeserialize>::deserialize(data)?)
-            }
-            IdlType::I16 => {
-                json!(<i16 as BorshDeserialize>::deserialize(data)?)
-            }
-            IdlType::U32 => {
-                json!(<u32 as BorshDeserialize>::deserialize(data)?)
-            }
-            IdlType::I32 => {
-                json!(<i32 as BorshDeserialize>::deserialize(data)?)
-            }
-            IdlType::F32 => json!(<f32 as BorshDeserialize>::deserialize(data)?),
-            IdlType::U64 => {
-                json!(<u64 as BorshDeserialize>::deserialize(data)?)
-            }
-            IdlType::I64 => {
-                json!(<i64 as BorshDeserialize>::deserialize(data)?)
-            }
-            IdlType::F64 => json!(<f64 as BorshDeserialize>::deserialize(data)?),
-            IdlType::U128 => {
-                json!(<u128 as BorshDeserialize>::deserialize(data)?)
-            }
-            IdlType::I128 => todo!(),
-            IdlType::U256 => todo!(),
-            IdlType::I256 => json!(<i128 as BorshDeserialize>::deserialize(data)?.to_string()),
-            IdlType::Bytes => JsonValue::Array(
-                <Vec<u8> as BorshDeserialize>::deserialize(data)?
-                    .iter()
-                    .map(|i| json!(*i))
-                    .collect(),
-            ),
-            IdlType::String => json!(<String as BorshDeserialize>::deserialize(data)?),
-            IdlType::PublicKey => {
-                json!(<Pubkey as BorshDeserialize>::deserialize(data)?.to_string())
-            }
-            IdlType::Defined(type_name) => {
-                parent_idl.deserialize_account_to_json(type_name, data)?
-            }
-            IdlType::Option(ty) => {
-                let is_present = <u8 as BorshDeserialize>::deserialize(data)?;
-
-                if is_present == 0 {
-                    JsonValue::String("None".to_string())
-                } else {
-                    ty.deserialize_to_json(data, parent_idl)?
-                }
-            }
-            IdlType::Vec(ty) => {
-                let size: usize = <u32 as BorshDeserialize>::deserialize(data)?
-                    .try_into()
-                    .unwrap();
-
-                let mut vec_data: Vec<JsonValue> = Vec::with_capacity(size);
-
-                for _ in 0..size {
-                    vec_data.push(ty.deserialize_to_json(data, parent_idl)?);
-                }
-
-                JsonValue::Array(vec_data)
-            }
-            IdlType::Array(ty, size) => {
-                let mut array_data: Vec<JsonValue> = Vec::with_capacity(*size);
-
-                for _ in 0..*size {
-                    array_data.push(ty.deserialize_to_json(data, parent_idl)?);
-                }
-
-                JsonValue::Array(array_data)
-            }
-        })
     }
 }
 
