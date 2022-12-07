@@ -43,7 +43,6 @@ The minor version will be incremented upon a breaking change and the patch versi
 - event: Fix multiple event listeners with the same name ([#2165](https://github.com/coral-xyz/anchor/pull/2165)).
 - lang: Prevent the payer account from being initialized as a program account ([#2284](https://github.com/coral-xyz/anchor/pull/2284)).
 - ts: Fixing breaking change where null or undefined wallet throws an error ([#2303](https://github.com/coral-xyz/anchor/pull/2303)).
-- ts: '@coral-xyz/borsh' package is now part of the yarn monorepo ([#2290](https://github.com/coral-xyz/anchor/pull/2290)). The borsh package needs to be built before the anchor package, see [#2299](https://github.com/coral-xyz/anchor/pull/2299) and [#2306](https://github.com/coral-xyz/anchor/pull/2306).
 
 ### Breaking
 
@@ -51,6 +50,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Remove `rent` from constraints ([#2265](https://github.com/coral-xyz/anchor/pull/2265)).
 - spl: Remove `rent` from `associated_token::Create` ([#2265](https://github.com/coral-xyz/anchor/pull/2265)).
 - lang: Add `Discriminator` and `Owner` trait implementation for structures representing instructions ([#1997](https://github.com/coral-xyz/anchor/pull/1997))
+- ts: '@coral-xyz/borsh' package is now part of the yarn monorepo ([#2290](https://github.com/coral-xyz/anchor/pull/2290)). The borsh package needs to be built before the anchor package can be built but this should happen automatically when running `yarn build` in packages/anchor, see [#2299](https://github.com/coral-xyz/anchor/pull/2299) and [#2306](https://github.com/coral-xyz/anchor/pull/2306).
 
 ## [0.25.0] - 2022-07-05
 
