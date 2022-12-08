@@ -23,7 +23,7 @@
   },
   "scripts": {
     "build": "rimraf dist/ && yarn build:node && yarn build:browser",
-    "build:node": "tsc && tsc -p tsconfig.cjs.json",
+    "build:node": "cd ../borsh && yarn build && cd ../anchor && tsc && tsc -p tsconfig.cjs.json",
     "build:browser": "rollup --config",
     "lint:fix": "prettier src/** tests/** -w",
     "lint": "prettier src/** tests/** --check",
@@ -33,8 +33,8 @@
     "test": "jest tests --detectOpenHandles"
   },
   "dependencies": {
-    "@project-serum/borsh": "^0.2.5",
-    "@solana/web3.js": "^1.64.0",
+    "@coral-xyz/borsh": "^0.2.6",
+    "@solana/web3.js": "^1.68.0",
     "base64-js": "^1.5.1",
     "bn.js": "^5.1.2",
     "bs58": "^4.0.1",

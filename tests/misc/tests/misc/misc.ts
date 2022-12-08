@@ -580,6 +580,22 @@ describe("misc", () => {
     assert.strictEqual(account.data, 3);
   });
 
+  it("Should fail when trying to init the payer as a program account", async () => {
+    try {
+      await program.rpc.testInit({
+        accounts: {
+          data: provider.wallet.publicKey,
+          payer: provider.wallet.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        },
+      });
+      assert.fail("Transaction should fail");
+    } catch (e) {
+      // "Error Code: TryingToInitPayerAsProgramAccount. Error Number: 4101. Error Message: You cannot/should not initialize the payer account as a program account."
+      assert.strictEqual(e.error.errorCode.number, 4101);
+    }
+  });
+
   it("Can init a random zero copy account", async () => {
     const data = anchor.web3.Keypair.generate();
     await program.rpc.testInitZeroCopy({
@@ -769,6 +785,20 @@ describe("misc", () => {
     const account2 = await program.account.data.fetch(data2.publicKey);
     assert.strictEqual(account2.udata.toNumber(), 2);
     assert.strictEqual(account2.idata.toNumber(), 3);
+  });
+
+  it("Can use fetchNullable() on accounts with only a balance", async () => {
+    const account = anchor.web3.Keypair.generate();
+
+    // Airdrop 1 SOL to the account.
+    const signature = await program.provider.connection.requestAirdrop(
+      account.publicKey,
+      anchor.web3.LAMPORTS_PER_SOL
+    );
+    await program.provider.connection.confirmTransaction(signature);
+
+    const data = await program.account.data.fetchNullable(account.publicKey);
+    assert.isNull(data);
   });
 
   describe("associated_token constraints", () => {

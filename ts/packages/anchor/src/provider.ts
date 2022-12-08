@@ -60,7 +60,7 @@ export class AnchorProvider implements Provider {
     readonly wallet: Wallet,
     readonly opts: ConfirmOptions
   ) {
-    this.publicKey = wallet.publicKey;
+    this.publicKey = wallet?.publicKey;
   }
 
   static defaultOptions(): ConfirmOptions {
@@ -132,7 +132,8 @@ export class AnchorProvider implements Provider {
       opts = this.opts;
     }
 
-    tx.feePayer = this.wallet.publicKey;
+    tx.feePayer = tx.feePayer || this.wallet.publicKey;
+
     tx.recentBlockhash = (
       await this.connection.getLatestBlockhash(opts.preflightCommitment)
     ).blockhash;
@@ -172,6 +173,9 @@ export class AnchorProvider implements Provider {
 
   /**
    * Similar to `send`, but for an array of transactions and signers.
+   *
+   * @param txWithSigners Array of transactions and signers.
+   * @param opts          Transaction confirmation options.
    */
   async sendAll(
     txWithSigners: { tx: Transaction; signers?: Signer[] }[],
@@ -188,7 +192,8 @@ export class AnchorProvider implements Provider {
       let tx = r.tx;
       let signers = r.signers ?? [];
 
-      tx.feePayer = this.wallet.publicKey;
+      tx.feePayer = tx.feePayer || this.wallet.publicKey;
+
       tx.recentBlockhash = blockhash.blockhash;
 
       signers.forEach((kp) => {
@@ -205,9 +210,33 @@ export class AnchorProvider implements Provider {
     for (let k = 0; k < txs.length; k += 1) {
       const tx = signedTxs[k];
       const rawTx = tx.serialize();
-      sigs.push(
-        await sendAndConfirmRawTransaction(this.connection, rawTx, opts)
-      );
+
+      try {
+        sigs.push(
+          await sendAndConfirmRawTransaction(this.connection, rawTx, opts)
+        );
+      } catch (err) {
+        // thrown if the underlying 'confirmTransaction' encounters a failed tx
+        // the 'confirmTransaction' error does not return logs so we make another rpc call to get them
+        if (err instanceof ConfirmError) {
+          // choose the shortest available commitment for 'getTransaction'
+          // (the json RPC does not support any shorter than "confirmed" for 'getTransaction')
+          // because that will see the tx sent with `sendAndConfirmRawTransaction` no matter which
+          // commitment `sendAndConfirmRawTransaction` used
+          const failedTx = await this.connection.getTransaction(
+            bs58.encode(tx.signature!),
+            { commitment: "confirmed" }
+          );
+          if (!failedTx) {
+            throw err;
+          } else {
+            const logs = failedTx.meta?.logMessages;
+            throw !logs ? err : new SendTransactionError(err.message, logs);
+          }
+        } else {
+          throw err;
+        }
+      }
     }
 
     return sigs;
@@ -226,7 +255,8 @@ export class AnchorProvider implements Provider {
     commitment?: Commitment,
     includeAccounts?: boolean | PublicKey[]
   ): Promise<SuccessfulTxSimulationResponse> {
-    tx.feePayer = this.wallet.publicKey;
+    tx.feePayer = tx.feePayer || this.wallet.publicKey;
+
     tx.recentBlockhash = (
       await this.connection.getLatestBlockhash(
         commitment ?? this.connection.commitment
