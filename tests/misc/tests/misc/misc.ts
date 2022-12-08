@@ -866,6 +866,22 @@ const miscTest = (
         assert.isTrue(account.mint.equals(localClient.publicKey));
       });
 
+      it("Can use fetchNullable() on accounts with only a balance", async () => {
+        const account = anchor.web3.Keypair.generate();
+
+        // Airdrop 1 SOL to the account.
+        const signature = await program.provider.connection.requestAirdrop(
+          account.publicKey,
+          anchor.web3.LAMPORTS_PER_SOL
+        );
+        await program.provider.connection.confirmTransaction(signature);
+
+        const data = await program.account.data.fetchNullable(
+          account.publicKey
+        );
+        assert.isNull(data);
+      });
+
       it("Can validate associated_token constraints", async () => {
         const localClient = await client;
         await program.rpc.testValidateAssociatedToken({
