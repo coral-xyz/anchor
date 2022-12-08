@@ -1987,7 +1987,7 @@ fn deserialize_idl_struct_to_json(
                         let mut values = Vec::new();
 
                         for field in fields {
-                            values.push(deserialize_idl_type_to_json(&field, data, idl)?);
+                            values.push(deserialize_idl_type_to_json(field, data, idl)?);
                         }
 
                         value = JsonValue::Array(values);
@@ -2067,7 +2067,7 @@ fn deserialize_idl_type_to_json(
             if is_present == 0 {
                 JsonValue::String("None".to_string())
             } else {
-                deserialize_idl_type_to_json(&ty, data, parent_idl)?
+                deserialize_idl_type_to_json(ty, data, parent_idl)?
             }
         }
         IdlType::Vec(ty) => {
@@ -2078,7 +2078,7 @@ fn deserialize_idl_type_to_json(
             let mut vec_data: Vec<JsonValue> = Vec::with_capacity(size);
 
             for _ in 0..size {
-                vec_data.push(deserialize_idl_type_to_json(&ty, data, parent_idl)?);
+                vec_data.push(deserialize_idl_type_to_json(ty, data, parent_idl)?);
             }
 
             JsonValue::Array(vec_data)
@@ -2087,7 +2087,7 @@ fn deserialize_idl_type_to_json(
             let mut array_data: Vec<JsonValue> = Vec::with_capacity(*size);
 
             for _ in 0..*size {
-                array_data.push(deserialize_idl_type_to_json(&ty, data, parent_idl)?);
+                array_data.push(deserialize_idl_type_to_json(ty, data, parent_idl)?);
             }
 
             JsonValue::Array(array_data)
