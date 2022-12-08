@@ -214,14 +214,7 @@ pub mod misc_optional {
     }
 
     pub fn test_composite_payer(ctx: Context<TestCompositePayer>) -> Result<()> {
-        ctx.accounts
-            .composite
-            .as_mut()
-            .unwrap()
-            .data
-            .as_mut()
-            .unwrap()
-            .data = 1;
+        ctx.accounts.composite.data.as_mut().unwrap().data = 1;
         ctx.accounts.data.as_mut().unwrap().udata = 2;
         ctx.accounts.data.as_mut().unwrap().idata = 3;
         Ok(())
