@@ -28,7 +28,6 @@ pub mod parser;
 
 #[derive(Debug)]
 pub struct Program {
-    // pub state: Option<State>,
     pub ixs: Vec<Ix>,
     pub name: Ident,
     pub docs: Option<Vec<String>>,

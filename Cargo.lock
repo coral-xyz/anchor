@@ -151,18 +151,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "anchor-attribute-interface"
-version = "0.25.0"
-dependencies = [
- "anchor-syn",
- "anyhow",
- "heck 0.3.3",
- "proc-macro2 1.0.47",
- "quote 1.0.21",
- "syn 1.0.103",
-]
-
-[[package]]
 name = "anchor-attribute-program"
 version = "0.25.0"
 dependencies = [
@@ -241,7 +229,6 @@ dependencies = [
  "anchor-attribute-constant",
  "anchor-attribute-error",
  "anchor-attribute-event",
- "anchor-attribute-interface",
  "anchor-attribute-program",
  "anchor-derive-accounts",
  "arrayref",
