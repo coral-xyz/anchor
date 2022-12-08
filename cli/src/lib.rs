@@ -2041,11 +2041,15 @@ fn deserialize_idl_type_to_json(
         }
         IdlType::F64 => json!(<f64 as AnchorDeserialize>::deserialize(data)?),
         IdlType::U128 => {
-            json!(<u128 as AnchorDeserialize>::deserialize(data)?)
+            // TODO: Remove to_string once serde_json supports u128 deserialization
+            json!(<u128 as AnchorDeserialize>::deserialize(data)?.to_string())
         }
-        IdlType::I128 => todo!(),
+        IdlType::I128 => {
+            // TODO: Remove to_string once serde_json supports i128 deserialization
+            json!(<i128 as AnchorDeserialize>::deserialize(data)?.to_string())
+        }
         IdlType::U256 => todo!(),
-        IdlType::I256 => json!(<i128 as AnchorDeserialize>::deserialize(data)?.to_string()),
+        IdlType::I256 => todo!(),
         IdlType::Bytes => JsonValue::Array(
             <Vec<u8> as AnchorDeserialize>::deserialize(data)?
                 .iter()
