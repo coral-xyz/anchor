@@ -2048,8 +2048,8 @@ fn deserialize_idl_type_to_json(
             // TODO: Remove to_string once serde_json supports i128 deserialization
             json!(<i128 as AnchorDeserialize>::deserialize(data)?.to_string())
         }
-        IdlType::U256 => todo!(),
-        IdlType::I256 => todo!(),
+        IdlType::U256 => todo!("Upon completion of u256 IDL standard"),
+        IdlType::I256 => todo!("Upon completion of i256 IDL standard"),
         IdlType::Bytes => JsonValue::Array(
             <Vec<u8> as AnchorDeserialize>::deserialize(data)?
                 .iter()
