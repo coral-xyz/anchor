@@ -21,7 +21,6 @@
     "lockup",
     "misc",
     "multisig",
-    "permissioned-markets",
     "pda-derivation",
     "relations-derivation",
     "pyth",

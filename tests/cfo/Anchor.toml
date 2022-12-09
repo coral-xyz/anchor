@@ -28,7 +28,7 @@ localnet = "./scripts/localnet.sh"
 
 [[test.genesis]]
 address = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"
-program = "./deps/serum-dex/dex/target/deploy/serum_dex.so"
+program = "./deps/openbook-dex/dex/target/deploy/serum_dex.so"
 
 [[test.genesis]]
 address = "22Y43yTVxuUkoRKdm9thyRhQ3SdgQS7c7kB6UNCiaczD"
