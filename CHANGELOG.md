@@ -33,8 +33,6 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Updates `AccountsClose` to make it safe to call manually ([#2209](https://github.com/coral-xyz/anchor/pull/2209)).
 - lang: Update rust used in the repo version 1.62 ([#2272](https://github.com/coral-xyz/anchor/pull/2272)).
 - cli: Allow custom cluster config ([#2271](https://github.com/coral-xyz/anchor/pull/2271)).
-  <<<<<<< HEAD
-- ts: Add optional flag to parseLogs to throw an error on decoding failure ([#2043](https://github.com/coral-xyz/anchor/pull/2043))
 - ts: Add optional flag to parseLogs to throw an error on decoding failure ([#2043](https://github.com/coral-xyz/anchor/pull/2043)).
 - cli: Add `test.validator.geyser_plugin_config` support ([#2016](https://github.com/coral-xyz/anchor/pull/2016)).
 - cli: Add `account` subcommand to cli ([#1923](https://github.com/project-serum/anchor/pull/1923))
