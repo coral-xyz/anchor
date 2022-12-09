@@ -47,9 +47,6 @@ pub enum IdlInstruction {
     SetAuthority { new_authority: Pubkey },
 }
 
-// Accounts for the Create instruction.
-pub type IdlCreateAccounts<'info> = crate::ctor::Ctor<'info>;
-
 // Accounts for Idl instructions.
 #[derive(Accounts)]
 pub struct IdlAccounts<'info> {
