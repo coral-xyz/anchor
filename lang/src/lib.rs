@@ -290,7 +290,8 @@ pub mod __private {
     use solana_program::pubkey::Pubkey;
 
     // Calculates the size of an account, which may be larger than the deserialized
-    // data in it. This trait is currently only used for `#[state]` accounts.
+    // data in it. This trait is currently unused.
+    // TODO: Uses it maybe to calculate the size of an account.
     #[doc(hidden)]
     pub trait AccountSize {
         fn size(&self) -> Result<u64>;

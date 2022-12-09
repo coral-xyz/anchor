@@ -40,11 +40,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         ///
         /// Sha256("<namespace>:<rust-identifier>")[..8],
         ///
-        /// where the namespace can be one of three types. 1) "global" for a
-        /// regular instruction, 2) "state" for a state struct instruction
-        /// handler and 3) a trait namespace (used in combination with the
-        /// `#[interface]` attribute), which is defined by the trait name, e..
-        /// `MyTrait`.
+        /// where the namespace can be one type. "global" for a
+        /// regular instruction.
         ///
         /// With this 8 byte identifier, Anchor performs method dispatch,
         /// matching the given 8 byte identifier to the associated method
