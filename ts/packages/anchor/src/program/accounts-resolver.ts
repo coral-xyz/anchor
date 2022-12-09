@@ -123,33 +123,28 @@ export class AccountsResolver<IDL extends Idl> {
     for (const accountItem of accountItems) {
       const accountName = accountItem.name;
       const partialAccount = partialAccounts[accountName];
-      // Only continue if this account is included in the partialAccounts param
-      if (partialAccount !== undefined) {
-        if (!isPartialAccounts(partialAccount)) {
-          // if not compound accounts, do null/optional check and proceed
-          if (partialAccount !== null) {
-            nestedAccountsGeneric[accountName] =
-              translateAddress(partialAccount);
-          } else if (accountItem["isOptional"]) {
-            nestedAccountsGeneric[accountName] = this._programId;
-          }
+      // Skip if the account isn't included (thus would be undefined)
+      if (partialAccount === undefined) continue;
+      if (isPartialAccounts(partialAccount)) {
+        // is compound accounts, recurse one level deeper
+        if (isIdlAccounts(accountItem)) {
+          nestedAccountsGeneric[accountName] = this.resolveOptionalsHelper(
+            partialAccount,
+            accountItem["accounts"] as IdlAccountItem[]
+          );
         } else {
-          // is compound accounts, recurse one level deeper
-          if (isIdlAccounts(accountItem)) {
-            nestedAccountsGeneric[accountName] = this.resolveOptionalsHelper(
-              partialAccount,
-              accountItem["accounts"] as IdlAccountItem[]
-            );
-          } else {
-            console.error(
-              `Type mismatch between IDL and Input accounts. Optional resolver might fail.`
-            );
-            // Here we try our best to recover gracefully. If there are optionals we can't check, we will fail then.
-            nestedAccountsGeneric[accountName] = flattenPartialAccounts(
-              partialAccount,
-              true
-            );
-          }
+          // Here we try our best to recover gracefully. If there are optionals we can't check, we will fail then.
+          nestedAccountsGeneric[accountName] = flattenPartialAccounts(
+            partialAccount,
+            true
+          );
+        }
+      } else {
+        // if not compound accounts, do null/optional check and proceed
+        if (partialAccount !== null) {
+          nestedAccountsGeneric[accountName] = translateAddress(partialAccount);
+        } else if (accountItem["isOptional"]) {
+          nestedAccountsGeneric[accountName] = this._programId;
         }
       }
     }
@@ -157,7 +152,10 @@ export class AccountsResolver<IDL extends Idl> {
   }
 
   public resolveOptionals(accounts: PartialAccounts) {
-    this.resolveOptionalsHelper(accounts, this._idlIx.accounts);
+    Object.assign(
+      this._accounts,
+      this.resolveOptionalsHelper(accounts, this._idlIx.accounts)
+    );
   }
 
   private get(path: string[]): PublicKey | undefined {

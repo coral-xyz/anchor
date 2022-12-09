@@ -81,9 +81,9 @@ export function isPartialAccounts(
   partialAccount: PartialAccount<IdlAccountItem>
 ): partialAccount is PartialAccounts {
   return (
-    !(partialAccount instanceof PublicKey) &&
+    typeof partialAccount === "object" &&
     partialAccount !== null &&
-    typeof partialAccount === "object"
+    !("_bn" in partialAccount) // Ensures not a pubkey
   );
 }
 
