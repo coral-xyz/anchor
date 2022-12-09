@@ -22,7 +22,12 @@ describe("Test CLI account commands", () => {
     const values = [1, 2, 3, 1000];
 
     await program.methods
-      .initialize(balance, new anchor.BN(amount), memo, values.map(x => new anchor.BN(x)))
+      .initialize(
+        balance,
+        new anchor.BN(amount),
+        memo,
+        values.map((x) => new anchor.BN(x))
+      )
       .accounts({
         myAccount: myAccount.publicKey,
         user: provider.wallet.publicKey,
@@ -51,11 +56,23 @@ describe("Test CLI account commands", () => {
     }
 
     assert(output.balance == balance, "Balance deserialized incorrectly");
-    assert(output.delegatePubkey == provider.wallet.publicKey, "delegatePubkey deserialized incorrectly");
-    assert(output.sub.state.Confirmed.amount === amount, "Amount deserialized incorrectly");
-    assert(output.sub.state.Confirmed.memo === memo, "Memo deserialized incorrectly");
+    assert(
+      output.delegatePubkey == provider.wallet.publicKey,
+      "delegatePubkey deserialized incorrectly"
+    );
+    assert(
+      output.sub.state.Confirmed.amount === amount,
+      "Amount deserialized incorrectly"
+    );
+    assert(
+      output.sub.state.Confirmed.memo === memo,
+      "Memo deserialized incorrectly"
+    );
     for (let i = 0; i < values.length; i++) {
-      assert(output.sub.values[i] == values[i], "Values deserialized incorrectly");
+      assert(
+        output.sub.values[i] == values[i],
+        "Values deserialized incorrectly"
+      );
     }
   });
 });
