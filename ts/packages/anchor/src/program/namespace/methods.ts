@@ -161,7 +161,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     >;
   }
 
-  public accounts(accounts: PartialAccounts): MethodsBuilder<IDL, I> {
+  public accounts(accounts: PartialAccounts<I["accounts"][number]>): MethodsBuilder<IDL, I> {
     this._autoResolveAccounts = true;
     this._accountsResolver.resolveOptionals(accounts);
     return this;
