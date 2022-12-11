@@ -14,7 +14,9 @@ use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
-use crate::{Accounts, AccountsClose, AccountsExit, Result, ToAccountInfos, ToAccountMetas};
+use crate::{
+    error::ErrorCode, Accounts, AccountsClose, AccountsExit, Result, ToAccountInfos, ToAccountMetas,
+};
 
 impl<'info, T: Accounts<'info>> Accounts<'info> for Option<T> {
     fn try_accounts(
@@ -24,14 +26,19 @@ impl<'info, T: Accounts<'info>> Accounts<'info> for Option<T> {
         bumps: &mut BTreeMap<String, u8>,
         reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self> {
-        // There are three cases we have to handle. We don't care if
-        // accounts is empty, so if that's the case we return None. This
-        // allows adding optional accounts at the end of the Accounts
-        // struct without causing a breaking change. This is safe and will error
-        // out if a required account is then added after the optional account and
-        // the accounts aren't passed in.
         if accounts.is_empty() {
-            return Ok(None);
+            return if cfg!(feature = "allow-missing-optionals") {
+                // We don't care if accounts is empty (when this feature is active),
+                // so if that's the case we return None. This allows adding optional
+                // accounts at the end of the Accounts struct without causing a breaking
+                // change. This is safe and will error out if a required account is then
+                // added after the optional account and the accounts aren't passed in.
+                Ok(None)
+            } else {
+                // If the feature is inactive (it is off by default), then we error out
+                // like every other Account.
+                Err(ErrorCode::AccountNotEnoughKeys.into())
+            };
         }
 
         // If there are enough accounts, it will check the program_id and return

@@ -39,9 +39,14 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                         if f.is_optional {
                             // Thus, this block essentially reimplements the try_accounts 
                             // behavior with optional accounts minus the deserialziation.
+                            let empty_behavior = if cfg!(feature = "allow-missing-optionals") {
+                                quote!{ None }
+                            } else {
+                                quote!{ return Err(anchor_lang::error::ErrorCode::AccountNotEnoughKeys.into()); }
+                            };
                             quote! {
                                 let #name = if accounts.is_empty() {
-                                    None
+                                    #empty_behavior
                                 } else if accounts[0].key == program_id {
                                     *accounts = &accounts[1..];
                                     None

@@ -6,8 +6,11 @@ import {
   AnchorError,
   LangErrorCode,
   LangErrorMessage,
+  translateError,
+  parseIdlErrors,
 } from "@project-serum/anchor";
 import { Optional } from "../target/types/optional";
+import { AllowMissingOptionals } from "../target/types/allow_missing_optionals";
 import { assert, expect } from "chai";
 
 describe("Optional", () => {
@@ -65,6 +68,64 @@ describe("Optional", () => {
   before("Setup async stuff", async () => {
     createRequiredIx1 = (await createRequired(requiredKeypair1))[1];
     createRequiredIx2 = (await createRequired(requiredKeypair2))[1];
+  });
+
+  describe("Missing optionals feature tests", async () => {
+    it("Fails with missing optional accounts at the end by default", async () => {
+      const [requiredKeypair, createRequiredIx] = await createRequired();
+      const initializeIx = await program.methods
+        .initialize(initializeValue1, initializeKey)
+        .accounts({
+          payer: null,
+          optionalAccount: null,
+          systemProgram,
+          required: requiredKeypair.publicKey,
+          optionalPda: null,
+        })
+        .signers([requiredKeypair])
+        .instruction();
+      initializeIx.keys.pop();
+      const initializeTxn = new web3.Transaction()
+        .add(createRequiredIx)
+        .add(initializeIx);
+      try {
+        await anchorProvider
+          .sendAndConfirm(initializeTxn, [requiredKeypair])
+          .catch((e) => {
+            throw translateError(e, parseIdlErrors(program.idl));
+          });
+        assert.fail(
+          "Unexpected success in creating a transaction that should have failed with `AccountNotEnoughKeys` error"
+        );
+      } catch (e) {
+        // @ts-ignore
+        assert.isTrue(e instanceof AnchorError, e.toString());
+        const err: AnchorError = <AnchorError>e;
+        const errorCode = LangErrorCode.AccountNotEnoughKeys;
+        assert.strictEqual(
+          err.error.errorMessage,
+          LangErrorMessage.get(errorCode)
+        );
+        assert.strictEqual(err.error.errorCode.number, errorCode);
+      }
+    });
+
+    it("Succeeds with missing optional accounts at the end with the feature on", async () => {
+      const allowMissingOptionals = anchor.workspace
+        .AllowMissingOptionals as Program<AllowMissingOptionals>;
+      const doStuffIx = await allowMissingOptionals.methods
+        .doStuff()
+        .accounts({
+          payer,
+          systemProgram,
+          optional2: null,
+        })
+        .instruction();
+      doStuffIx.keys.pop();
+      doStuffIx.keys.pop();
+      const doStuffTxn = new web3.Transaction().add(doStuffIx);
+      await anchorProvider.sendAndConfirm(doStuffTxn);
+    });
   });
 
   describe("Initialize tests", async () => {
