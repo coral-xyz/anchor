@@ -57,6 +57,7 @@
     "@types/chai": "^4.3.0",
     "@types/mocha": "^9.1.0",
     "@types/node": "^14.14.37",
+    "@types/bn.js": "^5.1.1",
     "chai": "^4.3.4",
     "mocha": "^10.0.0",
     "prettier": "^2.5.1",
