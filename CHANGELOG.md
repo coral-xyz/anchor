@@ -36,6 +36,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - ts: Add optional flag to parseLogs to throw an error on decoding failure ([#2043](https://github.com/coral-xyz/anchor/pull/2043)).
 - cli: Add `test.validator.geyser_plugin_config` support ([#2016](https://github.com/coral-xyz/anchor/pull/2016)).
 - cli: Add `account` subcommand to cli ([#1923](https://github.com/project-serum/anchor/pull/1923))
+- cli: Add `ticks_per_slot` option to Validator args ([#1875](https://github.com/coral-xyz/anchor/pull/1875)).
 
 ### Fixes
 
@@ -46,6 +47,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Prevent the payer account from being initialized as a program account ([#2284](https://github.com/coral-xyz/anchor/pull/2284)).
 - ts: Fixing breaking change where null or undefined wallet throws an error ([#2303](https://github.com/coral-xyz/anchor/pull/2303)).
 - ts: Fixed `.fetchNullable()` to be robust towards accounts only holding a balance ([#2301](https://github.com/coral-xyz/anchor/pull/2301)).
+- lang: Only add public enums to the IDL ([#2309](https://github.com/coral-xyz/anchor/pull/2309)).
 
 ### Breaking
 
