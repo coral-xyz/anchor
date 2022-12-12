@@ -130,6 +130,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "anchor-attribute-discriminator"
+version = "0.25.0"
+dependencies = [
+ "anchor-syn",
+ "proc-macro2 1.0.40",
+ "syn 1.0.98",
+]
+
+[[package]]
 name = "anchor-attribute-error"
 version = "0.25.0"
 dependencies = [
@@ -250,6 +259,7 @@ dependencies = [
  "anchor-attribute-access-control",
  "anchor-attribute-account",
  "anchor-attribute-constant",
+ "anchor-attribute-discriminator",
  "anchor-attribute-error",
  "anchor-attribute-event",
  "anchor-attribute-interface",

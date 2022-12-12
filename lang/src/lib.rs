@@ -47,6 +47,7 @@ pub use crate::bpf_upgradeable_state::*;
 pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::{account, declare_id, zero_copy};
 pub use anchor_attribute_constant::constant;
+pub use anchor_attribute_discriminator::discriminator;
 pub use anchor_attribute_error::*;
 pub use anchor_attribute_event::{emit, event};
 pub use anchor_attribute_interface::interface;
@@ -245,9 +246,10 @@ pub mod prelude {
         accounts::account_loader::AccountLoader, accounts::program::Program,
         accounts::signer::Signer, accounts::system_account::SystemAccount,
         accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, constant,
-        context::Context, context::CpiContext, declare_id, emit, err, error, event, interface,
-        program, require, require_eq, require_gt, require_gte, require_keys_eq, require_keys_neq,
-        require_neq, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source, state,
+        context::Context, context::CpiContext, declare_id, discriminator, emit, err, error, event,
+        interface, program, require, require_eq, require_gt, require_gte, require_keys_eq,
+        require_keys_neq, require_neq,
+        solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source, state,
         system_program::System, zero_copy, AccountDeserialize, AccountSerialize, Accounts,
         AccountsClose, AccountsExit, AnchorDeserialize, AnchorSerialize, Id, Key, Owner,
         ProgramData, Result, ToAccountInfo, ToAccountInfos, ToAccountMetas,

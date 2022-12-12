@@ -86,6 +86,7 @@ pub struct StateInterface {
 pub struct Ix {
     pub raw_method: ItemFn,
     pub ident: Ident,
+    pub discriminator: Option<Vec<u8>>,
     pub docs: Option<Vec<String>>,
     pub args: Vec<IxArg>,
     pub returns: IxReturn,

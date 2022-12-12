@@ -17,6 +17,7 @@ anchor-debug = [
     "anchor-attribute-access-control/anchor-debug",
     "anchor-attribute-account/anchor-debug",
     "anchor-attribute-constant/anchor-debug",
+    "anchor-attribute-discriminator/anchor-debug",
     "anchor-attribute-error/anchor-debug",
     "anchor-attribute-event/anchor-debug",
     "anchor-attribute-interface/anchor-debug",
@@ -30,6 +31,7 @@ anchor-debug = [
 anchor-attribute-access-control = { path = "./attribute/access-control", version = "0.25.0" }
 anchor-attribute-account = { path = "./attribute/account", version = "0.25.0" }
 anchor-attribute-constant = { path = "./attribute/constant", version = "0.25.0" }
+anchor-attribute-discriminator = { path = "./attribute/discriminator", version = "0.25.0" }
 anchor-attribute-error = { path = "./attribute/error", version = "0.25.0" }
 anchor-attribute-program = { path = "./attribute/program", version = "0.25.0" }
 anchor-attribute-state = { path = "./attribute/state", version = "0.25.0" }

@@ -87,6 +87,7 @@ pub fn parse(
                                 );
                                 IdlInstruction {
                                     name,
+                                    discriminator: None,
                                     docs: None,
                                     accounts,
                                     args,
@@ -135,6 +136,7 @@ pub fn parse(
                         idl_accounts(&ctx, accounts_strct, &accs, seeds_feature, no_docs);
                     IdlInstruction {
                         name,
+                        discriminator: None,
                         docs: None,
                         accounts,
                         args,
@@ -220,6 +222,7 @@ pub fn parse(
             };
             IdlInstruction {
                 name: ix.ident.to_string().to_mixed_case(),
+                discriminator: ix.discriminator.clone(),
                 docs: ix.docs.clone(),
                 accounts,
                 args,
