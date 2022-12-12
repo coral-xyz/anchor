@@ -4,8 +4,5 @@
   "workspaces": [
     "packages/*",
     "tests"
-  ],
-  "dependencies": {
-    "@solana/web3.js": "^1.70.0"
-  }
+  ]
 }
