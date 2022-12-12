@@ -20,6 +20,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@solana/web3.js": "1.70.0",
     "bn.js": "^5.1.2",
     "buffer-layout": "^1.2.0"
   },
