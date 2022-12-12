@@ -3,7 +3,6 @@ use crate::{error::ErrorCode, prelude::Account};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use std::collections::BTreeMap;
 use std::ops::{Deref, DerefMut};
 
 /// Container for any account *not* owned by the current program.
@@ -43,7 +42,7 @@ impl<'a, T: AccountDeserialize + Clone> CpiAccount<'a, T> {
 }
 
 #[allow(deprecated)]
-impl<'info, T> Accounts<'info> for CpiAccount<'info, T>
+impl<'info, B, T> Accounts<'info, B> for CpiAccount<'info, T>
 where
     T: AccountDeserialize + Clone,
 {
@@ -52,7 +51,7 @@ where
         _program_id: &Pubkey,
         accounts: &mut &[AccountInfo<'info>],
         _ix_data: &[u8],
-        _bumps: &mut BTreeMap<String, u8>,
+        _bumps: &mut B,
         _reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self> {
         if accounts.is_empty() {
