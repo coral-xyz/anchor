@@ -1074,9 +1074,7 @@ impl Merge for _Validator {
             slots_per_epoch: other
                 .slots_per_epoch
                 .or_else(|| self.slots_per_epoch.take()),
-            ticks_per_slot: other
-                .ticks_per_slot
-                .or_else(|| self.ticks_per_slot.take()),
+            ticks_per_slot: other.ticks_per_slot.or_else(|| self.ticks_per_slot.take()),
             warp_slot: other.warp_slot.or_else(|| self.warp_slot.take()),
         };
     }
