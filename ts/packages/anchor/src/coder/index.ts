@@ -19,11 +19,6 @@ export interface Coder<A extends string = string, T extends string = string> {
   readonly accounts: AccountsCoder<A>;
 
   /**
-   * Coder for state structs.
-   */
-  readonly state: StateCoder;
-
-  /**
    * Coder for events.
    */
   readonly events: EventCoder;

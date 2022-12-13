@@ -8,7 +8,6 @@ import NamespaceFactory, {
   InstructionNamespace,
   TransactionNamespace,
   AccountNamespace,
-  StateClient,
   SimulateNamespace,
   MethodsNamespace,
   ViewNamespace,
@@ -291,7 +290,6 @@ export class Program<IDL extends Idl = Idl> {
       account,
       simulate,
       methods,
-      state,
       views,
     ] = NamespaceFactory.build(
       idl,
@@ -306,7 +304,6 @@ export class Program<IDL extends Idl = Idl> {
     this.account = account;
     this.simulate = simulate;
     this.methods = methods;
-    this.state = state;
     this.views = views;
   }
 
