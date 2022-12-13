@@ -44,7 +44,6 @@ export interface AccountsCoder<A extends string = string> {
 
 export interface InstructionCoder {
   encode(ixName: string, ix: any): Buffer;
-  encodeState(ixName: string, ix: any): Buffer;
 }
 
 export interface EventCoder {

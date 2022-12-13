@@ -283,21 +283,14 @@ export class Program<IDL extends Idl = Idl> {
     this._events = new EventManager(this._programId, provider, this._coder);
 
     // Dynamic namespaces.
-    const [
-      rpc,
-      instruction,
-      transaction,
-      account,
-      simulate,
-      methods,
-      views,
-    ] = NamespaceFactory.build(
-      idl,
-      this._coder,
-      programId,
-      provider,
-      getCustomResolver ?? (() => undefined)
-    );
+    const [rpc, instruction, transaction, account, simulate, methods, views] =
+      NamespaceFactory.build(
+        idl,
+        this._coder,
+        programId,
+        provider,
+        getCustomResolver ?? (() => undefined)
+      );
     this.rpc = rpc;
     this.instruction = instruction;
     this.transaction = transaction;

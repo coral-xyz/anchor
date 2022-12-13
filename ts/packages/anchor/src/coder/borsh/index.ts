@@ -14,7 +14,8 @@ export { BorshEventCoder, eventDiscriminator } from "./event.js";
  * borsh based serialization interface.
  */
 export class BorshCoder<A extends string = string, T extends string = string>
-  implements Coder {
+  implements Coder
+{
   /**
    * Instruction coder.
    */
