@@ -19,6 +19,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - spl: Add `update_primary_sale_happened_via_token` wrapper ([#2173](https://github.com/coral-xyz/anchor/pull/2173)).
 - spl: Add `sign_metadata` and `remove_creator_verification` wrappers ([#2175](https://github.com/coral-xyz/anchor/pull/2175)).
 - spl: Add `initialize_account3` and `initialize_mint2` ([#2265](https://github.com/coral-xyz/anchor/pull/2265)).
+- spl: Change `serum-dex` to `openbook-dex` ([#2308](https://github.com/coral-xyz/anchor/pull/2308)).
 - lang: Add parsing for consts from impl blocks for IDL PDA seeds generation ([#2128](https://github.com/coral-xyz/anchor/pull/2014)).
 - lang: Account closing reassigns to system program and reallocates ([#2169](https://github.com/coral-xyz/anchor/pull/2169)).
 - ts: Add coders for SPL programs ([#2143](https://github.com/coral-xyz/anchor/pull/2143)).
@@ -35,6 +36,8 @@ The minor version will be incremented upon a breaking change and the patch versi
 - cli: Allow custom cluster config ([#2271](https://github.com/coral-xyz/anchor/pull/2271)).
 - ts: Add optional flag to parseLogs to throw an error on decoding failure ([#2043](https://github.com/coral-xyz/anchor/pull/2043)).
 - cli: Add `test.validator.geyser_plugin_config` support ([#2016](https://github.com/coral-xyz/anchor/pull/2016)).
+- cli: Add `account` subcommand to cli ([#1923](https://github.com/project-serum/anchor/pull/1923))
+- cli: Add `ticks_per_slot` option to Validator args ([#1875](https://github.com/coral-xyz/anchor/pull/1875)).
 
 ### Fixes
 
@@ -45,6 +48,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Prevent the payer account from being initialized as a program account ([#2284](https://github.com/coral-xyz/anchor/pull/2284)).
 - ts: Fixing breaking change where null or undefined wallet throws an error ([#2303](https://github.com/coral-xyz/anchor/pull/2303)).
 - ts: Fixed `.fetchNullable()` to be robust towards accounts only holding a balance ([#2301](https://github.com/coral-xyz/anchor/pull/2301)).
+- lang: Only add public enums to the IDL ([#2309](https://github.com/coral-xyz/anchor/pull/2309)).
 
 ### Breaking
 
