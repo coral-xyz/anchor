@@ -102,8 +102,8 @@ pub enum Command {
         #[clap(value_enum, short, long, default_value = "none")]
         bootstrap: BootstrapMode,
         /// Environment variables to pass into the docker container
-        #[clap(required = false)]
-        env_vars: Vec<String>,
+        #[clap(short, long, required = false)]
+        env: Vec<String>,
         /// Arguments to pass to the underlying `cargo build-bpf` command
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
@@ -145,8 +145,8 @@ pub enum Command {
         #[clap(value_enum, short, long, default_value = "none")]
         bootstrap: BootstrapMode,
         /// Environment variables to pass into the docker container
-        #[clap(required = false)]
-        env_vars: Vec<String>,
+        #[clap(short, long, required = false)]
+        env: Vec<String>,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
@@ -179,8 +179,8 @@ pub enum Command {
         run: Vec<String>,
         args: Vec<String>,
         /// Environment variables to pass into the docker container
-        #[clap(required = false)]
-        env_vars: Vec<String>,
+        #[clap(short, long, required = false)]
+        env: Vec<String>,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
@@ -247,8 +247,8 @@ pub enum Command {
         /// The name of the program to publish.
         program: String,
         /// Environment variables to pass into the docker container
-        #[clap(required = false)]
-        env_vars: Vec<String>,
+        #[clap(short, long, required = false)]
+        env: Vec<String>,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
@@ -277,8 +277,8 @@ pub enum Command {
         #[clap(long)]
         skip_lint: bool,
         /// Environment variables to pass into the docker container
-        #[clap(required = false)]
-        env_vars: Vec<String>,
+        #[clap(short, long, required = false)]
+        env: Vec<String>,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
@@ -402,7 +402,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             docker_image,
             bootstrap,
             cargo_args,
-            env_vars,
+            env,
             skip_lint,
             no_docs,
         } => build(
@@ -417,7 +417,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             bootstrap,
             None,
             None,
-            env_vars,
+            env,
             cargo_args,
             no_docs,
         ),
@@ -427,7 +427,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             solana_version,
             docker_image,
             bootstrap,
-            env_vars,
+            env,
             cargo_args,
         } => verify(
             &opts.cfg_override,
@@ -436,7 +436,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             solana_version,
             docker_image,
             bootstrap,
-            env_vars,
+            env,
             cargo_args,
         ),
         Command::Clean => clean(&opts.cfg_override),
@@ -461,7 +461,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             detach,
             run,
             args,
-            env_vars,
+            env,
             cargo_args,
             skip_lint,
         } => test(
@@ -473,7 +473,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             detach,
             run,
             args,
-            env_vars,
+            env,
             cargo_args,
         ),
         #[cfg(feature = "dev")]
@@ -487,13 +487,13 @@ pub fn entry(opts: Opts) -> Result<()> {
         Command::Login { token } => login(&opts.cfg_override, token),
         Command::Publish {
             program,
-            env_vars,
+            env,
             cargo_args,
             skip_build,
         } => publish(
             &opts.cfg_override,
             program,
-            env_vars,
+            env,
             cargo_args,
             skip_build,
         ),
@@ -502,14 +502,14 @@ pub fn entry(opts: Opts) -> Result<()> {
             skip_build,
             skip_deploy,
             skip_lint,
-            env_vars,
+            env,
             cargo_args,
         } => localnet(
             &opts.cfg_override,
             skip_build,
             skip_deploy,
             skip_lint,
-            env_vars,
+            env,
             cargo_args,
         ),
         Command::Account {
