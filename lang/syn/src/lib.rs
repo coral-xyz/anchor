@@ -358,13 +358,13 @@ impl Field {
                     quote! {
                         #container_ty::try_from(
                             &#field,
-                        ).unwrap_or_else(|e| e.with_account_name(#field_str))
+                        ).unwrap_or_else(|e| return Err(e.with_account_name(#field_str)))
                     }
                 } else {
                     quote! {
                         #container_ty::try_from_unchecked(
                             &#field,
-                        ).unwrap_or_else(|e| e.with_account_name(#field_str))
+                        ).unwrap_or_else(|e| return Err(e.with_account_name(#field_str)))
                     }
                 };
                 if *boxed {
@@ -380,13 +380,13 @@ impl Field {
                     quote! {
                         #container_ty::try_from(
                             &#field,
-                        ).unwrap_or_else(|e| e.with_account_name(#field_str))
+                        ).unwrap_or_else(|e| return Err(e.with_account_name(#field_str)))
                     }
                 } else {
                     quote! {
                         #container_ty::try_from_unchecked(
                             &#field,
-                        ).unwrap_or_else(|e| e.with_account_name(#field_str))
+                        ).unwrap_or_else(|e| return Err(e.with_account_name(#field_str)))
                     }
                 }
             }
@@ -395,14 +395,14 @@ impl Field {
                     quote! {
                         #container_ty::try_from(
                             &#field,
-                        ).unwrap_or_else(|e| e.with_account_name(#field_str))
+                        ).unwrap_or_else(|e| return Err(e.with_account_name(#field_str)))
                     }
                 } else {
                     quote! {
                         #container_ty::try_from_unchecked(
                             #owner_addr,
                             &#field,
-                        ).unwrap_or_else(|e| e.with_account_name(#field_str))
+                        ).unwrap_or_else(|e| return Err(e.with_account_name(#field_str)))
                     }
                 }
             }
@@ -412,14 +412,14 @@ impl Field {
                         #container_ty::try_from(
                             #owner_addr,
                             &#field,
-                        ).unwrap_or_else(|e| e.with_account_name(#field_str))
+                        ).unwrap_or_else(|e| return Err(e.with_account_name(#field_str)))
                     }
                 } else {
                     quote! {
                         #container_ty::try_from_unchecked(
                             #owner_addr,
                             &#field,
-                        ).unwrap_or_else(|e| e.with_account_name(#field_str))
+                        ).unwrap_or_else(|e| return Err(e.with_account_name(#field_str)))
                     }
                 }
             }
