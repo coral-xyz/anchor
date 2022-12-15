@@ -8,7 +8,7 @@ use solana_sdk::{signature::Keypair, signer::Signer, transaction::Transaction};
 /// Creates and initializes an account in a single atomic transaction (simplified).
 #[tokio::test]
 async fn create_and_init() {
-    let program_test = ProgramTest::new("basic_1", basic_1::id(), None);
+    let program_test = ProgramTest::new("basic-1", basic_1::id(), processor!(basic_1::entry));
     let mut test_context = program_test.start_with_context().await;
 
     let my_account_key = Keypair::new();
@@ -54,7 +54,7 @@ async fn create_and_init() {
 /// Updates a previously created account
 #[tokio::test]
 async fn update() {
-    let program_test = ProgramTest::new("basic_1", basic_1::id(), None);
+    let program_test = ProgramTest::new("basic-1", basic_1::id(), processor!(basic_1::entry));
     let mut test_context = program_test.start_with_context().await;
 
     let my_account_pk = {
