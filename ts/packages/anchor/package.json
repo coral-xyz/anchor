@@ -33,7 +33,7 @@
     "test": "jest tests --detectOpenHandles"
   },
   "dependencies": {
-    "@coral-xyz/borsh": "^0.2.6",
+    "@coral-xyz/borsh": "^0.26.0",
     "@solana/web3.js": "^1.68.0",
     "base64-js": "^1.5.1",
     "bn.js": "^5.1.2",

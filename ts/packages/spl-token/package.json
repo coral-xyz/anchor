@@ -1,7 +1,7 @@
 {
-  "name": "@project-serum/spl-token",
+  "name": "@coral-xyz/spl-token",
   "description": "Anchor client for Solana Program Library Token",
-  "version": "3.3.0",
+  "version": "0.26.0",
   "author": "acheron <acheroncrypto@gmail.com>",
   "license": "Apache-2.0",
   "repository": {
