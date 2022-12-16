@@ -1,6 +1,7 @@
 use crate::parser::docs;
 use crate::*;
 use syn::parse::{Error as ParseError, Result as ParseResult};
+use syn::parse_quote;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::token::Comma;
@@ -437,65 +438,73 @@ fn parse_program_ty(path: &syn::Path) -> ParseResult<ProgramTy> {
     Ok(ProgramTy { account_type_path })
 }
 
-// TODO: this whole method is a hack. Do something more idiomatic.
-fn parse_account(mut path: &syn::Path) -> ParseResult<syn::TypePath> {
-    if parser::tts_to_string(path)
-        .replace(' ', "")
-        .starts_with("Box<Account<")
-    {
-        let segments = &path.segments[0];
-        match &segments.arguments {
+// Extract the type path '_' from Box<Account<'info, _>> or Account<'info, _>
+fn parse_account(path: &syn::Path) -> ParseResult<syn::TypePath> {
+    let segment = &path.segments[0];
+    match segment.ident.to_string().as_str() {
+        "Box" => match &segment.arguments {
             syn::PathArguments::AngleBracketed(args) => {
-                // Expected: <'info, MyType>.
                 if args.args.len() != 1 {
                     return Err(ParseError::new(
                         args.args.span(),
-                        "bracket arguments must be the lifetime and type",
+                        "Expected a single `Account<'info, _>` argument",
                     ));
                 }
                 match &args.args[0] {
                     syn::GenericArgument::Type(syn::Type::Path(ty_path)) => {
-                        path = &ty_path.path;
+                        parse_account(&ty_path.path)
                     }
                     _ => {
-                        return Err(ParseError::new(
+                        Err(ParseError::new(
                             args.args[1].span(),
-                            "first bracket argument must be a lifetime",
+                            "Expected a path containing `Account<'info, _>`",
                         ))
                     }
                 }
             }
             _ => {
-                return Err(ParseError::new(
-                    segments.arguments.span(),
-                    "expected angle brackets with a lifetime and type",
+                Err(ParseError::new(
+                    segment.arguments.span(),
+                    "expected angle brackets with a type",
                 ))
             }
-        }
-    }
-
-    let segments = &path.segments[0];
-    match &segments.arguments {
-        syn::PathArguments::AngleBracketed(args) => {
-            // Expected: <'info, MyType>.
-            if args.args.len() != 2 {
-                return Err(ParseError::new(
-                    args.args.span(),
-                    "bracket arguments must be the lifetime and type",
-                ));
+        },
+        "Account" => match &segment.arguments {
+            syn::PathArguments::AngleBracketed(args) => {
+                if args.args.len() != 2 {
+                    return Err(ParseError::new(
+                        args.args.span(),
+                        "Expected only two arguments, a lifetime and a type",
+                    ));
+                }
+                match (&args.args[0], &args.args[1]) {
+                    (
+                        syn::GenericArgument::Lifetime(_),
+                        syn::GenericArgument::Type(syn::Type::Path(ty_path)),
+                    ) => {
+                        Ok(ty_path.clone())
+                    }
+                    _ => {
+                        Err(ParseError::new(
+                            args.args.span(),
+                            "Expected the two arguments to be a lifetime and a type",
+                        ))
+                    }
+                }
             }
-            match &args.args[1] {
-                syn::GenericArgument::Type(syn::Type::Path(ty_path)) => Ok(ty_path.clone()),
-                _ => Err(ParseError::new(
-                    args.args[1].span(),
-                    "first bracket argument must be a lifetime",
-                )),
+            _ => {
+                Err(ParseError::new(
+                    segment.arguments.span(),
+                    "expected angle brackets with a type",
+                ))
             }
+        },
+        _ => {
+            Err(ParseError::new(
+                segment.ident.span(),
+                "unexpected ident, expected 'Box<Account>' or 'Account'",
+            ))
         }
-        _ => Err(ParseError::new(
-            segments.arguments.span(),
-            "expected angle brackets with a lifetime and type",
-        )),
     }
 }
 
@@ -556,4 +565,48 @@ fn parse_sysvar(path: &syn::Path) -> ParseResult<SysvarTy> {
         }
     };
     Ok(ty)
+}
+
+#[test]
+fn test_parse_account() {
+    let expected_ty_path: syn::TypePath = parse_quote!(u32);
+    let path = parse_quote! { Box<Account<'info, u32>> };
+    let ty = parse_account(&path).unwrap();
+    assert_eq!(ty, expected_ty_path);
+
+    let path = parse_quote! { Account<'info, u32> };
+    let ty = parse_account(&path).unwrap();
+    assert_eq!(ty, expected_ty_path);
+
+    let path = parse_quote! { OtherType<'info, u32> };
+    let err = parse_account(&path).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "unexpected ident, expected 'Box<Account>' or 'Account'"
+    );
+
+    let path = parse_quote! { Box<Account<'info, u32, u64>> };
+    let err = parse_account(&path).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "Expected only two arguments, a lifetime and a type"
+    );
+
+    let path = parse_quote! { Box<Account<'info>> };
+    let err = parse_account(&path).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "Expected only two arguments, a lifetime and a type"
+    );
+
+    let path = parse_quote! { Box<Account> };
+    let err = parse_account(&path).unwrap_err();
+    assert_eq!(err.to_string(), "expected angle brackets with a type");
+
+    let path = parse_quote! { Box<OtherType<'info, u32>> };
+    let err = parse_account(&path).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "unexpected ident, expected 'Box<Account>' or 'Account'"
+    );
 }
