@@ -1,5 +1,5 @@
 {
-  "name": "@project-serum/spl-governance",
+  "name": "@coral-xyz/spl-governance",
   "description": "Anchor client for Solana Program Library Governance Program",
   "version": "3.0.0",
   "author": "acheron <acheroncrypto@gmail.com>",

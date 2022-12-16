@@ -1,5 +1,5 @@
 {
-  "name": "@project-serum/spl-memo",
+  "name": "@coral-xyz/spl-memo",
   "description": "Anchor client for Solana Program Library Memo",
   "version": "3.0.1",
   "author": "acheron <acheroncrypto@gmail.com>",

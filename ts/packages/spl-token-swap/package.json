@@ -1,5 +1,5 @@
 {
-  "name": "@project-serum/spl-token-swap",
+  "name": "@coral-xyz/spl-token-swap",
   "description": "Anchor client for Solana Program Library Token Swap",
   "version": "3.0.0",
   "author": "acheron <acheroncrypto@gmail.com>",

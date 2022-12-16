@@ -1,5 +1,5 @@
 {
-  "name": "@project-serum/spl-feature-proposal",
+  "name": "@coral-xyz/spl-feature-proposal",
   "description": "Anchor client for Solana Program Library Feature Proposal Program",
   "version": "1.0.0",
   "author": "acheron <acheroncrypto@gmail.com>",

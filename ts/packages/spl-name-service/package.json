@@ -1,5 +1,5 @@
 {
-  "name": "@project-serum/spl-name-service",
+  "name": "@coral-xyz/spl-name-service",
   "description": "Anchor client for Solana Program Library Name Service",
   "version": "0.2.0",
   "author": "acheron <acheroncrypto@gmail.com>",

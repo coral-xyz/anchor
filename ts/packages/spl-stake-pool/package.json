@@ -1,5 +1,5 @@
 {
-  "name": "@project-serum/spl-stake-pool",
+  "name": "@coral-xyz/spl-stake-pool",
   "description": "Anchor client for Solana Program Library Stake Pool",
   "version": "0.7.0",
   "author": "acheron <acheroncrypto@gmail.com>",
