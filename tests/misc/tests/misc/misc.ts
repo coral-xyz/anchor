@@ -1,11 +1,11 @@
-import * as anchor from "@project-serum/anchor";
+import * as anchor from "@coral-xyz/anchor";
 import {
   Program,
   BN,
   AnchorError,
   Wallet,
   IdlEvents,
-} from "@project-serum/anchor";
+} from "@coral-xyz/anchor";
 import {
   PublicKey,
   Keypair,
