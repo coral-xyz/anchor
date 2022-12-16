@@ -453,20 +453,16 @@ fn parse_account(path: &syn::Path) -> ParseResult<syn::TypePath> {
                     syn::GenericArgument::Type(syn::Type::Path(ty_path)) => {
                         parse_account(&ty_path.path)
                     }
-                    _ => {
-                        Err(ParseError::new(
-                            args.args[1].span(),
-                            "Expected a path containing: [AccountType]<'info, T>",
-                        ))
-                    }
+                    _ => Err(ParseError::new(
+                        args.args[1].span(),
+                        "Expected a path containing: [AccountType]<'info, T>",
+                    )),
                 }
             }
-            _ => {
-                Err(ParseError::new(
-                    segment.arguments.span(),
-                    "Expected angle brackets with a type: Box<[AccountType]<'info, T>",
-                ))
-            }
+            _ => Err(ParseError::new(
+                segment.arguments.span(),
+                "Expected angle brackets with a type: Box<[AccountType]<'info, T>",
+            )),
         },
         _ => match &segment.arguments {
             syn::PathArguments::AngleBracketed(args) => {
@@ -491,12 +487,10 @@ fn parse_account(path: &syn::Path) -> ParseResult<syn::TypePath> {
                     }
                 }
             }
-            _ => {
-                Err(ParseError::new(
-                    segment.arguments.span(),
-                    "Expected angle brackets with a type: [AccountType]<'info, T>",
-                ))
-            }
+            _ => Err(ParseError::new(
+                segment.arguments.span(),
+                "Expected angle brackets with a type: [AccountType]<'info, T>",
+            )),
         },
     }
 }
@@ -587,5 +581,8 @@ fn test_parse_account() {
 
     let path = syn::parse_quote! { Box<Account> };
     let err = parse_account(&path).unwrap_err();
-    assert_eq!(err.to_string(), "Expected angle brackets with a type: [AccountType]<'info, T>");
+    assert_eq!(
+        err.to_string(),
+        "Expected angle brackets with a type: [AccountType]<'info, T>"
+    );
 }
