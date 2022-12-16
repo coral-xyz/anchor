@@ -43,7 +43,7 @@
     "bpf-upgradeable-state"
   ],
   "dependencies": {
-    "@project-serum/anchor": "file:../ts/packages/anchor",
+    "@coral-xyz/anchor": "file:../ts/packages/anchor",
     "@project-serum/common": "^0.0.1-beta.3",
     "@project-serum/serum": "^0.13.60",
     "@project-serum/spl-associated-token-account": "file:../ts/packages/spl-associated-token-account",
@@ -52,7 +52,7 @@
     "@solana/web3.js": "^1.68.0"
   },
   "resolutions": {
-    "@project-serum/anchor/@solana/web3.js": "^1.68.0"
+    "@coral-xyz/anchor/@solana/web3.js": "^1.68.0"
   },
   "devDependencies": {
     "@types/chai": "^4.3.0",
