@@ -43,6 +43,18 @@
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
 
+"@coral-xyz/spl-associated-token-account@file:../ts/packages/spl-associated-token-account":
+  version "1.1.1"
+  dependencies:
+    "@coral-xyz/anchor" "=0.26.0"
+    "@native-to-anchor/buffer-layout" "=0.1.0"
+
+"@coral-xyz/spl-token@file:../ts/packages/spl-token":
+  version "0.26.0"
+  dependencies:
+    "@coral-xyz/anchor" "=0.26.0"
+    "@native-to-anchor/buffer-layout" "=0.1.0"
+
 "@native-to-anchor/buffer-layout@=0.1.0":
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/@native-to-anchor/buffer-layout/-/buffer-layout-0.1.0.tgz#ff0cb66341bc820b8ee73bb1d1d43bae7e3554b0"
@@ -113,18 +125,6 @@
     "@solana/web3.js" "^1.21.0"
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
-
-"@project-serum/spl-associated-token-account@file:../ts/packages/spl-associated-token-account":
-  version "1.1.1"
-  dependencies:
-    "@coral-xyz/anchor" "=0.26.0"
-    "@native-to-anchor/buffer-layout" "=0.1.0"
-
-"@project-serum/spl-token@file:../ts/packages/spl-token":
-  version "0.26.0"
-  dependencies:
-    "@coral-xyz/anchor" "=0.26.0"
-    "@native-to-anchor/buffer-layout" "=0.1.0"
 
 "@solana/buffer-layout-utils@=0.2.0":
   version "0.2.0"
