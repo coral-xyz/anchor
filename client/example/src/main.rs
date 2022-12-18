@@ -24,7 +24,7 @@ use composite::accounts::{Bar, CompositeUpdate, Foo, Initialize};
 use composite::instruction as composite_instruction;
 use composite::{DummyA, DummyB};
 use optional::account::{DataAccount, DataPda};
-use std::rc::Rc;
+use std::sync::Arc;
 use std::time::Duration;
 
 #[derive(Parser, Debug)]
@@ -39,12 +39,15 @@ pub struct Opts {
     events_pid: Pubkey,
     #[clap(long)]
     optional_pid: Pubkey,
+    #[clap(long, default_value = "false")]
+    multithreaded: bool,
 }
+
+type TestFn = &'static (dyn Fn(&Client<Keypair>, Pubkey) -> Result<()> + Send + Sync);
 
 // This example assumes a local validator is running with the programs
 // deployed at the addresses given by the CLI args.
 fn main() -> Result<()> {
-    println!("Starting test...");
     let opts = Opts::parse();
 
     // Wallet and cluster params.
@@ -56,14 +59,36 @@ fn main() -> Result<()> {
     );
 
     // Client.
-    let client = Client::new_with_options(url, Rc::new(payer), CommitmentConfig::processed());
+    let client = Client::new_with_options(url, Arc::new(payer), CommitmentConfig::processed());
 
-    // Run tests.
-    composite(&client, opts.composite_pid)?;
-    basic_2(&client, opts.basic_2_pid)?;
-    basic_4(&client, opts.basic_4_pid)?;
-    events(&client, opts.events_pid)?;
-    optional(&client, opts.optional_pid)?;
+    if !opts.multithreaded {
+        // Run tests on single thread with a single client
+        println!("\nStarting single thread test...");
+        composite(&client, opts.composite_pid)?;
+        basic_2(&client, opts.basic_2_pid)?;
+        basic_4(&client, opts.basic_4_pid)?;
+        events(&client, opts.events_pid)?;
+        optional(&client, opts.optional_pid)?;
+    } else {
+        // Run tests multithreaded, sharing a client
+        println!("\nStarting multithread test...");
+        let client = Arc::new(client);
+        let tests: Vec<(TestFn, Pubkey)> = vec![
+            (&composite, opts.composite_pid),
+            (&basic_2, opts.basic_2_pid),
+            (&basic_4, opts.basic_4_pid),
+            (&events, opts.events_pid),
+            (&optional, opts.optional_pid),
+        ];
+        let mut handles = vec![];
+        for (test, arg) in tests {
+            let local_client = Arc::clone(&client);
+            handles.push(std::thread::spawn(move || test(&local_client, arg)));
+        }
+        for handle in handles {
+            assert!(handle.join().unwrap().is_ok());
+        }
+    }
 
     // Success.
     Ok(())
@@ -72,7 +97,7 @@ fn main() -> Result<()> {
 // Runs a client for examples/tutorial/composite.
 //
 // Make sure to run a localnet with the program deploy to run this example.
-fn composite(client: &Client, pid: Pubkey) -> Result<()> {
+fn composite<S: Signer + Send + Sync>(client: &Client<S>, pid: Pubkey) -> Result<()> {
     // Program client.
     let program = client.program(pid);
 
@@ -143,7 +168,7 @@ fn composite(client: &Client, pid: Pubkey) -> Result<()> {
 // Runs a client for examples/tutorial/basic-2.
 //
 // Make sure to run a localnet with the program deploy to run this example.
-fn basic_2(client: &Client, pid: Pubkey) -> Result<()> {
+fn basic_2<S: Signer + Send + Sync>(client: &Client<S>, pid: Pubkey) -> Result<()> {
     let program = client.program(pid);
 
     // `Create` parameters.
@@ -172,7 +197,7 @@ fn basic_2(client: &Client, pid: Pubkey) -> Result<()> {
     Ok(())
 }
 
-fn events(client: &Client, pid: Pubkey) -> Result<()> {
+fn events<S: Signer + Send + Sync>(client: &Client<S>, pid: Pubkey) -> Result<()> {
     let program = client.program(pid);
 
     let (sender, receiver) = std::sync::mpsc::channel();
@@ -204,7 +229,7 @@ fn events(client: &Client, pid: Pubkey) -> Result<()> {
     Ok(())
 }
 
-pub fn basic_4(client: &Client, pid: Pubkey) -> Result<()> {
+pub fn basic_4<S: Signer + Send + Sync>(client: &Client<S>, pid: Pubkey) -> Result<()> {
     let program = client.program(pid);
     let authority = program.payer();
 
@@ -236,7 +261,7 @@ pub fn basic_4(client: &Client, pid: Pubkey) -> Result<()> {
 // Runs a client for tests/optional.
 //
 // Make sure to run a localnet with the program deploy to run this example.
-fn optional(client: &Client, pid: Pubkey) -> Result<()> {
+fn optional<S: Signer + Send + Sync>(client: &Client<S>, pid: Pubkey) -> Result<()> {
     // Program client.
     let program = client.program(pid);
 
