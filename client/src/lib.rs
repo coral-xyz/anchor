@@ -24,7 +24,7 @@ use solana_sdk::signature::{Signature, Signer};
 use solana_sdk::transaction::Transaction;
 use std::convert::Into;
 use std::iter::Map;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::vec::IntoIter;
 use thiserror::Error;
 
@@ -44,12 +44,12 @@ pub type EventHandle = PubsubClientSubscription<RpcResponse<RpcLogsResponse>>;
 /// Client defines the base configuration for building RPC clients to
 /// communicate with Anchor programs running on a Solana cluster. It's
 /// primary use is to build a `Program` client via the `program` method.
-pub struct Client {
-    cfg: Config,
+pub struct Client<S: Signer + Send + Sync> {
+    cfg: Config<S>,
 }
 
-impl Client {
-    pub fn new(cluster: Cluster, payer: Rc<dyn Signer>) -> Self {
+impl<S: Signer + Send + Sync> Client<S> {
+    pub fn new(cluster: Cluster, payer: Arc<S>) -> Self {
         Self {
             cfg: Config {
                 cluster,
@@ -59,11 +59,7 @@ impl Client {
         }
     }
 
-    pub fn new_with_options(
-        cluster: Cluster,
-        payer: Rc<dyn Signer>,
-        options: CommitmentConfig,
-    ) -> Self {
+    pub fn new_with_options(cluster: Cluster, payer: Arc<S>, options: CommitmentConfig) -> Self {
         Self {
             cfg: Config {
                 cluster,
@@ -73,7 +69,7 @@ impl Client {
         }
     }
 
-    pub fn program(&self, program_id: Pubkey) -> Program {
+    pub fn program(&self, program_id: Pubkey) -> Program<S> {
         Program {
             program_id,
             cfg: Config {
@@ -87,26 +83,26 @@ impl Client {
 
 // Internal configuration for a client.
 #[derive(Debug)]
-struct Config {
+struct Config<S: Signer + Send + Sync> {
     cluster: Cluster,
-    payer: Rc<dyn Signer>,
+    payer: Arc<S>,
     options: Option<CommitmentConfig>,
 }
 
 /// Program is the primary client handle to be used to build and send requests.
 #[derive(Debug)]
-pub struct Program {
+pub struct Program<S: Signer + Send + Sync> {
     program_id: Pubkey,
-    cfg: Config,
+    cfg: Config<S>,
 }
 
-impl Program {
+impl<S: Signer + Send + Sync> Program<S> {
     pub fn payer(&self) -> Pubkey {
         self.cfg.payer.pubkey()
     }
 
     /// Returns a request builder.
-    pub fn request(&self) -> RequestBuilder {
+    pub fn request(&self) -> RequestBuilder<S> {
         RequestBuilder::from(
             self.program_id,
             self.cfg.cluster.url(),
@@ -117,7 +113,7 @@ impl Program {
     }
 
     /// Returns a request builder for program state.
-    pub fn state_request(&self) -> RequestBuilder {
+    pub fn state_request(&self) -> RequestBuilder<S> {
         RequestBuilder::from(
             self.program_id,
             self.cfg.cluster.url(),
@@ -390,13 +386,13 @@ pub enum ClientError {
 
 /// `RequestBuilder` provides a builder interface to create and send
 /// transactions to a cluster.
-pub struct RequestBuilder<'a> {
+pub struct RequestBuilder<'a, S: Signer + Send + Sync> {
     cluster: String,
     program_id: Pubkey,
     accounts: Vec<AccountMeta>,
     options: CommitmentConfig,
     instructions: Vec<Instruction>,
-    payer: Rc<dyn Signer>,
+    payer: Arc<S>,
     // Serialized instruction data for the target RPC.
     instruction_data: Option<Vec<u8>>,
     signers: Vec<&'a dyn Signer>,
@@ -414,11 +410,11 @@ pub enum RequestNamespace {
     Interface,
 }
 
-impl<'a> RequestBuilder<'a> {
+impl<'a, S: Signer + Send + Sync> RequestBuilder<'a, S> {
     pub fn from(
         program_id: Pubkey,
         cluster: &str,
-        payer: Rc<dyn Signer>,
+        payer: Arc<S>,
         options: Option<CommitmentConfig>,
         namespace: RequestNamespace,
     ) -> Self {
@@ -436,7 +432,7 @@ impl<'a> RequestBuilder<'a> {
     }
 
     #[must_use]
-    pub fn payer(mut self, payer: Rc<dyn Signer>) -> Self {
+    pub fn payer(mut self, payer: Arc<S>) -> Self {
         self.payer = payer;
         self
     }
