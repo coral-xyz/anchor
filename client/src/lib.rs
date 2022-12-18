@@ -10,6 +10,7 @@ use anchor_lang::{AccountDeserialize, Discriminator, InstructionData, ToAccountM
 use regex::Regex;
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::client_error::ClientError as SolanaClientError;
+use solana_client::nonblocking::rpc_client::RpcClient as AsyncRpcClient;
 use solana_client::pubsub_client::{PubsubClient, PubsubClientError, PubsubClientSubscription};
 use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::{
@@ -182,6 +183,13 @@ impl Program {
 
     pub fn rpc(&self) -> RpcClient {
         RpcClient::new_with_commitment(
+            self.cfg.cluster.url().to_string(),
+            self.cfg.options.unwrap_or_default(),
+        )
+    }
+
+    pub fn async_rpc(&self) -> AsyncRpcClient {
+        AsyncRpcClient::new_with_commitment(
             self.cfg.cluster.url().to_string(),
             self.cfg.options.unwrap_or_default(),
         )
