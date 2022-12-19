@@ -44,14 +44,14 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
     let message = |constraint: &str, field: &str, required: bool| {
         if required {
             format! {
-                "a non-optional {} constraint requires \
-                a non-optional {} field to exist in the account \
+                "The {} constraint requires \
+                a {} field to exist in the account \
                 validation struct. Use the Program type to add \
                 the {} field to your validation struct.", constraint, field, field
             }
         } else {
             format! {
-                "an optional {} constraint requires \
+                "An optional {} constraint requires \
                 an optional or required {} field to exist \
                 in the account validation struct. Use the Program type \
                 to add the {} field to your validation struct.", constraint, field, field
@@ -301,6 +301,7 @@ fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
     Ok(r)
 }
 
+// TODO call `account_parse` a single time at the start of this function and then init each of the types
 fn parse_ty(f: &syn::Field) -> ParseResult<(Ty, bool)> {
     let (ident, optional, path) = ident_string(f)?;
     let ty = match ident.as_str() {
