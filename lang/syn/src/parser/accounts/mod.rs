@@ -350,10 +350,21 @@ fn option_to_inner_path(path: &Path) -> ParseResult<Path> {
 }
 
 fn ident_string(f: &syn::Field) -> ParseResult<(String, bool, Path)> {
+    // TODO support parsing references to account infos
     let mut path = match &f.ty {
         syn::Type::Path(ty_path) => ty_path.path.clone(),
-        _ => return Err(ParseError::new(f.ty.span(), "invalid account type given")),
+        _ => {
+            return Err(ParseError::new_spanned(
+                f,
+                format!(
+                    "Field {} has a non-path type",
+                    f.ident.as_ref().expect("named fields only")
+                ),
+            ))
+        }
     };
+
+    // TODO replace string matching with helper functions using syn type match statments
     let mut optional = false;
     if parser::tts_to_string(&path)
         .replace(' ', "")
