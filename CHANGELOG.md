@@ -10,9 +10,11 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ## [Unreleased]
 
+## [0.26.0] - 2022-12-15
+
 ### Features
 
-- cli: Add `--run` to `anchor test` for running a subset of test suites ([#1828](https://github.com/project-serum/anchor/issues/1828)).
+- cli: Add `--run` to `anchor test` for running a subset of test suites ([#1828](https://github.com/coral-xyz/anchor/issues/1828)).
 - client: Add `transaction` functions to RequestBuilder ([#1958](https://github.com/coral-xyz/anchor/pull/1958)).
 - spl: Add `create_metadata_accounts_v3` and `set_collection_size` wrappers ([#2119](https://github.com/coral-xyz/anchor/pull/2119)).
 - spl: Add `MetadataAccount` account deserialization. ([#2014](https://github.com/coral-xyz/anchor/pull/2014)).
@@ -20,7 +22,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - spl: Add `sign_metadata` and `remove_creator_verification` wrappers ([#2175](https://github.com/coral-xyz/anchor/pull/2175)).
 - spl: Add `initialize_account3` and `initialize_mint2` ([#2265](https://github.com/coral-xyz/anchor/pull/2265)).
 - spl: Change `serum-dex` to `openbook-dex` ([#2308](https://github.com/coral-xyz/anchor/pull/2308)).
-- lang: Add parsing for consts from impl blocks for IDL PDA seeds generation ([#2128](https://github.com/coral-xyz/anchor/pull/2014)).
+- lang: Add parsing for consts from impl blocks for IDL PDA seeds generation ([#2128](https://github.com/coral-xyz/anchor/pull/2128)).
 - lang: Account closing reassigns to system program and reallocates ([#2169](https://github.com/coral-xyz/anchor/pull/2169)).
 - ts: Add coders for SPL programs ([#2143](https://github.com/coral-xyz/anchor/pull/2143)).
 - ts: Add `has_one` relations inference so accounts mapped via has_one relationships no longer need to be provided ([#2160](https://github.com/coral-xyz/anchor/pull/2160)).
@@ -36,7 +38,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - cli: Allow custom cluster config ([#2271](https://github.com/coral-xyz/anchor/pull/2271)).
 - ts: Add optional flag to parseLogs to throw an error on decoding failure ([#2043](https://github.com/coral-xyz/anchor/pull/2043)).
 - cli: Add `test.validator.geyser_plugin_config` support ([#2016](https://github.com/coral-xyz/anchor/pull/2016)).
-- cli: Add `account` subcommand to cli ([#1923](https://github.com/project-serum/anchor/pull/1923))
+- cli: Add `account` subcommand to cli ([#1923](https://github.com/coral-xyz/anchor/pull/1923))
 - cli: Add `ticks_per_slot` option to Validator args ([#1875](https://github.com/coral-xyz/anchor/pull/1875)).
 - cli: Add `env` option to verifiable builds ([#2325](https://github.com/coral-xyz/anchor/pull/2325)).
 
@@ -50,6 +52,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - ts: Fixing breaking change where null or undefined wallet throws an error ([#2303](https://github.com/coral-xyz/anchor/pull/2303)).
 - ts: Fixed `.fetchNullable()` to be robust towards accounts only holding a balance ([#2301](https://github.com/coral-xyz/anchor/pull/2301)).
 - lang: Only add public enums to the IDL ([#2309](https://github.com/coral-xyz/anchor/pull/2309)).
+- lang: Fix heap intensive error mapping ([#2313](https://github.com/coral-xyz/anchor/pull/2313)).
 
 ### Breaking
 
@@ -58,6 +61,8 @@ The minor version will be incremented upon a breaking change and the patch versi
 - spl: Remove `rent` from `associated_token::Create` ([#2265](https://github.com/coral-xyz/anchor/pull/2265)).
 - lang: Add `Discriminator` and `Owner` trait implementation for structures representing instructions ([#1997](https://github.com/coral-xyz/anchor/pull/1997)).
 - ts: '@coral-xyz/borsh' package is now part of the yarn monorepo ([#2290](https://github.com/coral-xyz/anchor/pull/2290)). The borsh package needs to be built before the anchor package can be built but this should happen automatically when running `yarn build` in packages/anchor, see [#2299](https://github.com/coral-xyz/anchor/pull/2299) and [#2306](https://github.com/coral-xyz/anchor/pull/2306).
+- lang: Add support for optionally passing in accounts using the syntax `Optional<Account<'info, T>>`. Shouldn't affect existing programs but may be a breaking change to tools that use the anchor generated IDL. [#2101](https://github.com/coral-xyz/anchor/pull/2101).
+- ts: Switch from `@project-serum/anchor` to the `@coral-xyz/anchor` package [#2318](https://github.com/coral-xyz/anchor/pull/2318).
 
 ## [0.25.0] - 2022-07-05
 

@@ -56,14 +56,14 @@ anchor --version
 
 ### Install using pre-build binary on x86_64 Linux
 
-Anchor binaries are available via an NPM package [`@project-serum/anchor-cli`](https://www.npmjs.com/package/@project-serum/anchor-cli). Only `x86_64` Linux is supported currently, you must build from source for other OS'.
+Anchor binaries are available via an NPM package [`@coral-xyz/anchor-cli`](https://www.npmjs.com/package/@coral-xyz/anchor-cli). Only `x86_64` Linux is supported currently, you must build from source for other OS'.
 
 ### Build from source for other operating systems without avm
 
 We can also use Cargo to install the CLI directly. Make sure that the `--tag` argument uses the version you want (the version here is just an example).
 
 ```shell
-cargo install --git https://github.com/coral-xyz/anchor --tag v0.25.0 anchor-cli --locked
+cargo install --git https://github.com/coral-xyz/anchor --tag v0.26.0 anchor-cli --locked
 ```
 
 On Linux systems you may need to install additional dependencies if cargo install fails. On Ubuntu,
