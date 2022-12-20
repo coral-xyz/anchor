@@ -490,13 +490,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             env,
             cargo_args,
             skip_build,
-        } => publish(
-            &opts.cfg_override,
-            program,
-            env,
-            cargo_args,
-            skip_build,
-        ),
+        } => publish(&opts.cfg_override, program, env, cargo_args, skip_build),
         Command::Keys { subcmd } => keys(&opts.cfg_override, subcmd),
         Command::Localnet {
             skip_build,
