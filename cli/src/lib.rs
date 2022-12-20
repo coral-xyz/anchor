@@ -1048,6 +1048,7 @@ fn build_cwd_verifiable(
     result
 }
 
+#[allow(clippy::too_many_arguments)]
 fn docker_build(
     cfg: &WithPath<Config>,
     container_name: &str,
@@ -1336,6 +1337,7 @@ fn _build_cwd(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn verify(
     cfg_override: &ConfigOverride,
     program_id: Pubkey,
