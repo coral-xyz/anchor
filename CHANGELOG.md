@@ -38,6 +38,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - cli: Add `test.validator.geyser_plugin_config` support ([#2016](https://github.com/coral-xyz/anchor/pull/2016)).
 - cli: Add `account` subcommand to cli ([#1923](https://github.com/project-serum/anchor/pull/1923))
 - cli: Add `ticks_per_slot` option to Validator args ([#1875](https://github.com/coral-xyz/anchor/pull/1875)).
+- cli: Add `env` option to verifiable builds ([#2325](https://github.com/coral-xyz/anchor/pull/2325)).
 
 ### Fixes
 
