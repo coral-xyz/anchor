@@ -45,6 +45,7 @@ pub enum IdlInstruction {
     SetBuffer,
     // Sets a new authority on the IdlAccount.
     SetAuthority { new_authority: Pubkey },
+    Close,
 }
 
 // Accounts for the Create instruction.
@@ -83,6 +84,18 @@ pub struct IdlSetBuffer<'info> {
     pub idl: ProgramAccount<'info, IdlAccount>,
     #[account(constraint = authority.key != &ERASED_AUTHORITY)]
     pub authority: Signer<'info>,
+}
+
+// Accounts for closing the canonical Idl buffer.
+#[derive(Accounts)]
+pub struct IdlCloseAccount<'info> {
+    #[account(mut, has_one = authority, close = sol_destination)]
+    #[allow(deprecated)]
+    pub account: ProgramAccount<'info, IdlAccount>,
+    #[account(constraint = authority.key != &ERASED_AUTHORITY)]
+    pub authority: Signer<'info>,
+    #[account(mut)]
+    pub sol_destination: AccountInfo<'info>,
 }
 
 // The account holding a program's IDL. This is stored on chain so that clients
