@@ -2784,8 +2784,11 @@ fn create_idl_account(
 
     // Run `Create instruction.
     {
+        let pda_max_growth = 10240;
+        let idl_header_size = 44;
         let data = serialize_idl_ix(anchor_lang::idl::IdlInstruction::Create {
-            data_len: (idl_data.len() as u64) * 2, // Double for future growth.
+            // Double for future growth.
+            data_len: (idl_data.len() as u64 * 2).min(pda_max_growth - idl_header_size),
         })?;
         let program_signer = Pubkey::find_program_address(&[], program_id).0;
         let accounts = vec![
