@@ -293,6 +293,9 @@ pub enum IdlCommand {
         #[clap(short, long)]
         filepath: String,
     },
+    Close {
+        program_id: Pubkey,
+    },
     /// Writes an IDL into a buffer account. This can be used with SetBuffer
     /// to perform an upgrade.
     WriteBuffer {
@@ -1548,6 +1551,7 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
             program_id,
             filepath,
         } => idl_init(cfg_override, program_id, filepath),
+        IdlCommand::Close { program_id } => idl_close(cfg_override, program_id),
         IdlCommand::WriteBuffer {
             program_id,
             filepath,
@@ -1586,6 +1590,17 @@ fn idl_init(cfg_override: &ConfigOverride, program_id: Pubkey, idl_filepath: Str
         let idl_address = create_idl_account(cfg, &keypair, &program_id, &idl)?;
 
         println!("Idl account created: {:?}", idl_address);
+        Ok(())
+    })
+}
+
+fn idl_close(cfg_override: &ConfigOverride, program_id: Pubkey) -> Result<()> {
+    with_workspace(cfg_override, |cfg| {
+        let idl_address = IdlAccount::address(&program_id);
+        idl_close_account(&cfg, &program_id, idl_address)?;
+
+        println!("Idl account closed: {:?}", idl_address);
+
         Ok(())
     })
 }
@@ -1759,6 +1774,44 @@ fn idl_erase_authority(cfg_override: &ConfigOverride, program_id: Pubkey) -> Res
     }
 
     idl_set_authority(cfg_override, program_id, None, ERASED_AUTHORITY)?;
+
+    Ok(())
+}
+
+fn idl_close_account(cfg: &Config, program_id: &Pubkey, idl_address: Pubkey) -> Result<()> {
+    let keypair = solana_sdk::signature::read_keypair_file(&cfg.provider.wallet.to_string())
+        .map_err(|_| anyhow!("Unable to read keypair file"))?;
+    let url = cluster_url(cfg, &cfg.test_validator);
+    let client = RpcClient::new(url);
+
+    // Instruction accounts.
+    let accounts = vec![
+        AccountMeta::new(idl_address, false),
+        AccountMeta::new_readonly(keypair.pubkey(), true),
+        AccountMeta::new(keypair.pubkey(), true),
+    ];
+    // Instruction.
+    let ix = Instruction {
+        program_id: *program_id,
+        accounts,
+        data: { serialize_idl_ix(anchor_lang::idl::IdlInstruction::Close {})? },
+    };
+    // Send transaction.
+    let latest_hash = client.get_latest_blockhash()?;
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&keypair.pubkey()),
+        &[&keypair],
+        latest_hash,
+    );
+    client.send_and_confirm_transaction_with_spinner_and_config(
+        &tx,
+        CommitmentConfig::confirmed(),
+        RpcSendTransactionConfig {
+            skip_preflight: true,
+            ..RpcSendTransactionConfig::default()
+        },
+    )?;
 
     Ok(())
 }

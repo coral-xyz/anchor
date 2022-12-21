@@ -32,6 +32,14 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         __idl_create_account(program_id, &mut accounts, data_len)?;
                         accounts.exit(program_id)?;
                     },
+                    anchor_lang::idl::IdlInstruction::Close => {
+                        let mut bumps = std::collections::BTreeMap::new();
+                        let mut reallocs = std::collections::BTreeSet::new();
+                        let mut accounts =
+                            anchor_lang::idl::IdlCloseAccount::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                        __idl_close_account(program_id, &mut accounts)?;
+                        accounts.exit(program_id)?;
+                    },
                     anchor_lang::idl::IdlInstruction::CreateBuffer => {
                         let mut bumps = std::collections::BTreeMap::new();
                         let mut reallocs = std::collections::BTreeSet::new();
@@ -136,6 +144,17 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let dst: &mut [u8] = &mut data;
                 let mut cursor = std::io::Cursor::new(dst);
                 idl_account.try_serialize(&mut cursor)?;
+
+                Ok(())
+            }
+
+            #[inline(never)]
+            pub fn __idl_close_account(
+                program_id: &Pubkey,
+                accounts: &mut anchor_lang::idl::IdlCloseAccount,
+            ) -> anchor_lang::Result<()> {
+                #[cfg(not(feature = "no-log-ix-name"))]
+                anchor_lang::prelude::msg!("Instruction: IdlCloseAccount");
 
                 Ok(())
             }
