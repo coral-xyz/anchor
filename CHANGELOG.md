@@ -10,6 +10,10 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ## [Unreleased]
 
+### Breaking
+
+- lang: Remove `state` and `interface` attributes ([#2285](https://github.com/coral-xyz/anchor/pull/2285)).
+
 ## [0.26.0] - 2022-12-15
 
 ### Features

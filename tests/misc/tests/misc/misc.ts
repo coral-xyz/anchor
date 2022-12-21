@@ -1,11 +1,5 @@
 import * as anchor from "@coral-xyz/anchor";
-import {
-  Program,
-  BN,
-  AnchorError,
-  Wallet,
-  IdlEvents,
-} from "@coral-xyz/anchor";
+import { Program, BN, AnchorError, Wallet, IdlEvents } from "@coral-xyz/anchor";
 import {
   PublicKey,
   Keypair,
