@@ -273,7 +273,6 @@ pub mod prelude {
 /// Internal module used by macros and unstable apis.
 #[doc(hidden)]
 pub mod __private {
-    use super::Result;
     /// The discriminator anchor uses to mark an account as closed.
     pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
 
@@ -288,14 +287,6 @@ pub mod __private {
     pub use bytemuck;
 
     use solana_program::pubkey::Pubkey;
-
-    // Calculates the size of an account, which may be larger than the deserialized
-    // data in it. This trait is currently unused.
-    // TODO: Uses it maybe to calculate the size of an account.
-    #[doc(hidden)]
-    pub trait AccountSize {
-        fn size(&self) -> Result<u64>;
-    }
 
     // Very experimental trait.
     #[doc(hidden)]

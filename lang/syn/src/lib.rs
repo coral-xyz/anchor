@@ -422,8 +422,6 @@ impl Field {
                 anchor_lang::accounts::cpi_account::CpiAccount
             },
             Ty::Sysvar(_) => quote! { anchor_lang::accounts::sysvar::Sysvar },
-            Ty::CpiState(_) => quote! { anchor_lang::accounts::cpi_state::CpiState },
-            Ty::ProgramState(_) => quote! { anchor_lang::accounts::state::ProgramState },
             Ty::Program(_) => quote! { anchor_lang::accounts::program::Program },
             Ty::AccountInfo => quote! {},
             Ty::UncheckedAccount => quote! {},
@@ -481,18 +479,6 @@ impl Field {
                     #ident
                 }
             }
-            Ty::ProgramState(ty) => {
-                let account = &ty.account_type_path;
-                quote! {
-                    #account
-                }
-            }
-            Ty::CpiState(ty) => {
-                let account = &ty.account_type_path;
-                quote! {
-                    #account
-                }
-            }
             Ty::Sysvar(ty) => match ty {
                 SysvarTy::Clock => quote! {Clock},
                 SysvarTy::Rent => quote! {Rent},
@@ -530,8 +516,6 @@ pub struct CompositeField {
 pub enum Ty {
     AccountInfo,
     UncheckedAccount,
-    ProgramState(ProgramStateTy),
-    CpiState(CpiStateTy),
     ProgramAccount(ProgramAccountTy),
     Loader(LoaderTy),
     AccountLoader(AccountLoaderTy),
@@ -556,16 +540,6 @@ pub enum SysvarTy {
     StakeHistory,
     Instructions,
     Rewards,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct ProgramStateTy {
-    pub account_type_path: TypePath,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct CpiStateTy {
-    pub account_type_path: TypePath,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -652,7 +626,6 @@ pub struct ConstraintGroup {
     rent_exempt: Option<ConstraintRentExempt>,
     seeds: Option<ConstraintSeedsGroup>,
     executable: Option<ConstraintExecutable>,
-    state: Option<ConstraintState>,
     has_one: Vec<ConstraintHasOne>,
     literal: Vec<ConstraintLiteral>,
     raw: Vec<ConstraintRaw>,
@@ -700,7 +673,6 @@ pub enum Constraint {
     Seeds(ConstraintSeedsGroup),
     AssociatedToken(ConstraintAssociatedToken),
     Executable(ConstraintExecutable),
-    State(ConstraintState),
     Close(ConstraintClose),
     Address(ConstraintAddress),
     TokenAccount(ConstraintTokenAccountGroup),
@@ -723,7 +695,6 @@ pub enum ConstraintToken {
     RentExempt(Context<ConstraintRentExempt>),
     Seeds(Context<ConstraintSeeds>),
     Executable(Context<ConstraintExecutable>),
-    State(Context<ConstraintState>),
     Close(Context<ConstraintClose>),
     Payer(Context<ConstraintPayer>),
     Space(Context<ConstraintSpace>),
@@ -850,11 +821,6 @@ pub struct ConstraintSeeds {
 
 #[derive(Debug, Clone)]
 pub struct ConstraintExecutable {}
-
-#[derive(Debug, Clone)]
-pub struct ConstraintState {
-    pub program_target: Ident,
-}
 
 #[derive(Debug, Clone)]
 pub struct ConstraintPayer {
