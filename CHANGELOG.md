@@ -16,6 +16,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 ### Fixes
 
 ### Breaking
+- create an intentional merge conflict
 
 ## [0.26.0] - 2022-12-15
 

@@ -44,14 +44,14 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
     let message = |constraint: &str, field: &str, required: bool| {
         if required {
             format! {
-                "a non-optional {} constraint requires \
-                a non-optional {} field to exist in the account \
+                "The {} constraint requires \
+                a {} field to exist in the account \
                 validation struct. Use the Program type to add \
                 the {} field to your validation struct.", constraint, field, field
             }
         } else {
             format! {
-                "an optional {} constraint requires \
+                "An optional {} constraint requires \
                 an optional or required {} field to exist \
                 in the account validation struct. Use the Program type \
                 to add the {} field to your validation struct.", constraint, field, field
@@ -301,6 +301,7 @@ fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
     Ok(r)
 }
 
+// TODO call `account_parse` a single time at the start of this function and then init each of the types
 fn parse_ty(f: &syn::Field) -> ParseResult<(Ty, bool)> {
     let (ident, optional, path) = ident_string(f)?;
     let ty = match ident.as_str() {
@@ -350,10 +351,21 @@ fn option_to_inner_path(path: &Path) -> ParseResult<Path> {
 }
 
 fn ident_string(f: &syn::Field) -> ParseResult<(String, bool, Path)> {
+    // TODO support parsing references to account infos
     let mut path = match &f.ty {
         syn::Type::Path(ty_path) => ty_path.path.clone(),
-        _ => return Err(ParseError::new(f.ty.span(), "invalid account type given")),
+        _ => {
+            return Err(ParseError::new_spanned(
+                f,
+                format!(
+                    "Field {} has a non-path type",
+                    f.ident.as_ref().expect("named fields only")
+                ),
+            ))
+        }
     };
+
+    // TODO replace string matching with helper functions using syn type match statments
     let mut optional = false;
     if parser::tts_to_string(&path)
         .replace(' ', "")
@@ -437,65 +449,61 @@ fn parse_program_ty(path: &syn::Path) -> ParseResult<ProgramTy> {
     Ok(ProgramTy { account_type_path })
 }
 
-// TODO: this whole method is a hack. Do something more idiomatic.
-fn parse_account(mut path: &syn::Path) -> ParseResult<syn::TypePath> {
-    if parser::tts_to_string(path)
-        .replace(' ', "")
-        .starts_with("Box<Account<")
-    {
-        let segments = &path.segments[0];
-        match &segments.arguments {
+// Extract the type path T from Box<[AccountType]<'info, T>> or [AccountType]<'info, T>
+fn parse_account(path: &syn::Path) -> ParseResult<syn::TypePath> {
+    let segment = &path.segments[0];
+    match segment.ident.to_string().as_str() {
+        "Box" => match &segment.arguments {
             syn::PathArguments::AngleBracketed(args) => {
-                // Expected: <'info, MyType>.
                 if args.args.len() != 1 {
                     return Err(ParseError::new(
                         args.args.span(),
-                        "bracket arguments must be the lifetime and type",
+                        "Expected a single argument: [AccountType]<'info, T>",
                     ));
                 }
                 match &args.args[0] {
                     syn::GenericArgument::Type(syn::Type::Path(ty_path)) => {
-                        path = &ty_path.path;
+                        parse_account(&ty_path.path)
+                    }
+                    _ => Err(ParseError::new(
+                        args.args[1].span(),
+                        "Expected a path containing: [AccountType]<'info, T>",
+                    )),
+                }
+            }
+            _ => Err(ParseError::new(
+                segment.arguments.span(),
+                "Expected angle brackets with a type: Box<[AccountType]<'info, T>",
+            )),
+        },
+        _ => match &segment.arguments {
+            syn::PathArguments::AngleBracketed(args) => {
+                if args.args.len() != 2 {
+                    return Err(ParseError::new(
+                        args.args.span(),
+                        "Expected only two arguments, a lifetime and a type: [AccountType]<'info, T>",
+                    ));
+                }
+                match (&args.args[0], &args.args[1]) {
+                    (
+                        syn::GenericArgument::Lifetime(_),
+                        syn::GenericArgument::Type(syn::Type::Path(ty_path)),
+                    ) => {
+                        Ok(ty_path.clone())
                     }
                     _ => {
-                        return Err(ParseError::new(
-                            args.args[1].span(),
-                            "first bracket argument must be a lifetime",
+                        Err(ParseError::new(
+                            args.args.span(),
+                            "Expected the two arguments to be a lifetime and a type: [AccountType]<'info, T>",
                         ))
                     }
                 }
             }
-            _ => {
-                return Err(ParseError::new(
-                    segments.arguments.span(),
-                    "expected angle brackets with a lifetime and type",
-                ))
-            }
-        }
-    }
-
-    let segments = &path.segments[0];
-    match &segments.arguments {
-        syn::PathArguments::AngleBracketed(args) => {
-            // Expected: <'info, MyType>.
-            if args.args.len() != 2 {
-                return Err(ParseError::new(
-                    args.args.span(),
-                    "bracket arguments must be the lifetime and type",
-                ));
-            }
-            match &args.args[1] {
-                syn::GenericArgument::Type(syn::Type::Path(ty_path)) => Ok(ty_path.clone()),
-                _ => Err(ParseError::new(
-                    args.args[1].span(),
-                    "first bracket argument must be a lifetime",
-                )),
-            }
-        }
-        _ => Err(ParseError::new(
-            segments.arguments.span(),
-            "expected angle brackets with a lifetime and type",
-        )),
+            _ => Err(ParseError::new(
+                segment.arguments.span(),
+                "Expected angle brackets with a type: [AccountType]<'info, T>",
+            )),
+        },
     }
 }
 
@@ -556,4 +564,37 @@ fn parse_sysvar(path: &syn::Path) -> ParseResult<SysvarTy> {
         }
     };
     Ok(ty)
+}
+
+#[test]
+fn test_parse_account() {
+    let expected_ty_path: syn::TypePath = syn::parse_quote!(u32);
+    let path = syn::parse_quote! { Box<Account<'info, u32>> };
+    let ty = parse_account(&path).unwrap();
+    assert_eq!(ty, expected_ty_path);
+
+    let path = syn::parse_quote! { Account<'info, u32> };
+    let ty = parse_account(&path).unwrap();
+    assert_eq!(ty, expected_ty_path);
+
+    let path = syn::parse_quote! { Box<Account<'info, u32, u64>> };
+    let err = parse_account(&path).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "Expected only two arguments, a lifetime and a type: [AccountType]<'info, T>"
+    );
+
+    let path = syn::parse_quote! { Box<Account<'info>> };
+    let err = parse_account(&path).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "Expected only two arguments, a lifetime and a type: [AccountType]<'info, T>"
+    );
+
+    let path = syn::parse_quote! { Box<Account> };
+    let err = parse_account(&path).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "Expected angle brackets with a type: [AccountType]<'info, T>"
+    );
 }
