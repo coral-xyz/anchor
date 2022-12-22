@@ -13,8 +13,8 @@ runs:
         key: solana-${{ runner.os }}-v0000-${{ env.SOLANA_CLI_VERSION }}
     - uses: nick-fields/retry@v2
       with:
-        timeout_seconds: 15
-        max_attempts: 3
+        retry_wait_seconds: 60
+        max_attempts: 5
         retry_on: error
         shell: bash
         command: sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_CLI_VERSION }}/install)"
