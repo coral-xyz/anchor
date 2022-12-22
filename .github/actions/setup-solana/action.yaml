@@ -13,7 +13,7 @@ runs:
         key: solana-${{ runner.os }}-v0000-${{ env.SOLANA_CLI_VERSION }}
     - uses: nick-fields/retry@v2
       with:
-        retry_wait_seconds: 60
+        retry_wait_seconds: 120
         timeout_minutes: 2
         max_attempts: 5
         retry_on: error
