@@ -18,7 +18,7 @@ runs:
         retry_on: error
         command: sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_CLI_VERSION }}/install)"
       shell: bash
-    - run: sh -c "$(curl --retry 3 --retry-all-errors -sSfL https://release.solana.com/v${{ env.SOLANA_CLI_VERSION }}/install)"
+    - run: sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_CLI_VERSION }}/install)"
       shell: bash
     - run: echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
       shell: bash
