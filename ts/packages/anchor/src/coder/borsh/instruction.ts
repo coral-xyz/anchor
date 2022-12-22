@@ -23,10 +23,6 @@ import { IdlCoder } from "./idl.js";
 import { InstructionCoder } from "../index.js";
 
 /**
- * Namespace for state method function signatures.
- */
-export const SIGHASH_STATE_NAMESPACE = "state";
-/**
  * Namespace for global instruction function signatures (i.e. functions
  * that aren't namespaced by the state or any of its trait implementations).
  */
