@@ -16,8 +16,8 @@ runs:
         timeout_seconds: 15
         max_attempts: 3
         retry_on: error
+        shell: bash
         command: sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_CLI_VERSION }}/install)"
-      shell: bash
     - run: sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_CLI_VERSION }}/install)"
       shell: bash
     - run: echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
