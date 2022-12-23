@@ -15,6 +15,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let method_name = &ix.ident;
                 let args: Vec<&syn::PatType> = ix.args.iter().map(|arg| &arg.raw_arg).collect();
                 let name = &ix.raw_method.sig.ident.to_string();
+                let ix_cfgs = &ix.cfgs;
                 let sighash_arr = sighash(SIGHASH_GLOBAL_NAMESPACE, name);
                 let sighash_tts: proc_macro2::TokenStream =
                     format!("{:?}", sighash_arr).parse().unwrap();
@@ -28,6 +29,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 };
 
                 quote! {
+                    #(#ix_cfgs)*
                     pub fn #method_name<'a, 'b, 'c, 'info>(
                         ctx: anchor_lang::context::CpiContext<'a, 'b, 'c, 'info, #accounts_ident<'info>>,
                         #(#args),*
@@ -91,25 +93,27 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 }
 
 pub fn generate_accounts(program: &Program) -> proc_macro2::TokenStream {
-    let mut accounts = std::collections::HashSet::new();
+    let mut accounts = std::collections::BTreeMap::new();
 
     // Go through instruction accounts.
     for ix in &program.ixs {
         let anchor_ident = &ix.anchor_ident;
+        let cfgs = &ix.cfgs;
         // TODO: move to fn and share with accounts.rs.
         let macro_name = format!(
             "__cpi_client_accounts_{}",
             anchor_ident.to_string().to_snake_case()
         );
-        accounts.insert(macro_name);
+        accounts.insert(macro_name, cfgs.as_slice());
     }
 
     // Build the tokens from all accounts
     let account_structs: Vec<proc_macro2::TokenStream> = accounts
         .iter()
-        .map(|macro_name: &String| {
+        .map(|(macro_name, cfgs)| {
             let macro_name: proc_macro2::TokenStream = macro_name.parse().unwrap();
             quote! {
+                #(#cfgs)*
                 pub use crate::#macro_name::*;
             }
         })
