@@ -350,4 +350,9 @@ pub mod misc {
     pub fn test_associated_constraint(_ctx: Context<TestAssociatedToken>) -> Result<()> {
         Ok(())
     }
+
+    #[cfg(feature = "my-feature")]
+    pub fn only_my_feature(_ctx: Context<Empty>) -> Result<()> {
+        Ok(())
+    }
 }

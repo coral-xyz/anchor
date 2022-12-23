@@ -570,3 +570,6 @@ pub struct TestAssociatedToken<'info> {
     pub mint: Account<'info, Mint>,
     pub authority: AccountInfo<'info>,
 }
+
+#[derive(Accounts)]
+pub struct Empty {}
