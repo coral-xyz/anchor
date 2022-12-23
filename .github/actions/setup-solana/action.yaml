@@ -15,7 +15,7 @@ runs:
       with:
         retry_wait_seconds: 300
         timeout_minutes: 2
-        max_attempts: 5
+        max_attempts: 10
         retry_on: error
         shell: bash
         command: sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_CLI_VERSION }}/install)"
