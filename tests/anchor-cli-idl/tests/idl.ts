@@ -62,4 +62,18 @@ describe("Test CLI IDL commands", () => {
 
     assert.equal(authority, provider.wallet.publicKey.toString());
   });
+
+  it("Can close IDL account", async () => {
+    execSync(`anchor idl close ${programOne.programId}`);
+
+    try {
+      execSync(`anchor idl authority ${programOne.programId}`);
+      throw new Error("Command didn't error");
+    } catch (err) {
+      assert.include(
+        err.message,
+        "AccountNotFound: pubkey=2zu1ju6TZuXph7ddZiuLR47yo99gxx69m63z1KpEHqoP"
+      );
+    }
+  });
 });
