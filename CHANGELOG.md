@@ -17,6 +17,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 ### Fixes
 
 - lang: Allow the `cfg` attribute above the instructions ([#2339](https://github.com/coral-xyz/anchor/pull/2339)).
+- cli: Don't regenerate idl in read_all_programs(). ([#2332](https://github.com/coral-xyz/anchor/pull/2332))
 
 ### Breaking
 
