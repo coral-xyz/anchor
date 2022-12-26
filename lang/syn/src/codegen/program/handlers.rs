@@ -32,6 +32,14 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         __idl_create_account(program_id, &mut accounts, data_len)?;
                         accounts.exit(program_id)?;
                     },
+                    anchor_lang::idl::IdlInstruction::Resize { data_len } => {
+                        let mut bumps = std::collections::BTreeMap::new();
+                        let mut reallocs = std::collections::BTreeSet::new();
+                        let mut accounts =
+                            anchor_lang::idl::IdlResizeAccount::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                        __idl_resize_account(program_id, &mut accounts, data_len)?;
+                        accounts.exit(program_id)?;
+                    },
                     anchor_lang::idl::IdlInstruction::Close => {
                         let mut bumps = std::collections::BTreeMap::new();
                         let mut reallocs = std::collections::BTreeSet::new();
@@ -103,7 +111,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let owner = accounts.program.key;
                 let to = Pubkey::create_with_seed(&base, seed, owner).unwrap();
                 // Space: account discriminator || authority pubkey || vec len || vec data
-                let space = 8 + 32 + 4 + data_len as usize;
+                let space = std::cmp::min(8 + 32 + 4 + data_len as usize, 10_000);
                 let rent = Rent::get()?;
                 let lamports = rent.minimum_balance(space);
                 let seeds = &[&[nonce][..]];
@@ -146,6 +154,53 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 idl_account.try_serialize(&mut cursor)?;
 
                 Ok(())
+            }
+
+            #[inline(never)]
+            pub fn __idl_resize_account(
+                program_id: &Pubkey,
+                accounts: &mut anchor_lang::idl::IdlResizeAccount,
+                data_len: u64,
+            ) -> anchor_lang::Result<()> {
+                #[cfg(not(feature = "no-log-ix-name"))]
+                anchor_lang::prelude::msg!("Instruction: IdlResizeAccount");
+
+                let data_len: usize = data_len as usize;
+
+                // We're not going to support increasing the size of accounts that already contain data
+                // because that would be messy and possibly dangerous
+                if !accounts.idl.data.is_empty() {
+                    return Err(anchor_lang::error::ErrorCode::IdlAccountNotEmpty.into());
+                }
+
+                let new_account_space = accounts.idl.to_account_info().data_len().checked_add(std::cmp::min(
+                    data_len
+                        .checked_sub(accounts.idl.to_account_info().data_len())
+                        .expect("data_len should always be >= the current account space"),
+                    10_000,
+                ))
+                .unwrap();
+
+                if new_account_space > accounts.idl.to_account_info().data_len() {
+                    let sysvar_rent = Rent::get()?;
+                    let new_rent_minimum = sysvar_rent.minimum_balance(new_account_space);
+                    anchor_lang::system_program::transfer(
+                        anchor_lang::context::CpiContext::new(
+                            accounts.system_program.to_account_info(),
+                            anchor_lang::system_program::Transfer {
+                                from: accounts.authority.to_account_info(),
+                                to: accounts.idl.to_account_info().clone(),
+                            },
+                        ),
+                        new_rent_minimum
+                            .checked_sub(accounts.idl.to_account_info().lamports())
+                            .unwrap(),
+                    )?;
+                    accounts.idl.to_account_info().realloc(new_account_space, false)?;
+                }
+
+                Ok(())
+
             }
 
             #[inline(never)]

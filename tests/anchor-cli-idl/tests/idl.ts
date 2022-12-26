@@ -16,7 +16,7 @@ describe("Test CLI IDL commands", () => {
 
   it("Can initialize IDL account", async () => {
     execSync(
-      `anchor idl init --filepath target/idl/idl_commands_one.json ${programOne.programId}`,
+      `/root/forked-anchors/ckamm-anchor/target/debug/anchor idl init --filepath target/idl/idl_commands_one.json ${programOne.programId}`,
       { stdio: "inherit" }
     );
   });
@@ -56,6 +56,10 @@ describe("Test CLI IDL commands", () => {
   });
 
   it("Can fetch an IDL authority via the CLI", async () => {
+    console.log("Starting...");
+    await new Promise((resolve) => setTimeout(resolve, 10000)); // pause for 10 second
+    console.log("Done!");
+
     const authority = execSync(`anchor idl authority ${programOne.programId}`)
       .toString()
       .trim();
@@ -64,10 +68,19 @@ describe("Test CLI IDL commands", () => {
   });
 
   it("Can close IDL account", async () => {
-    execSync(`anchor idl close ${programOne.programId}`);
+    execSync(
+      `/root/forked-anchors/ckamm-anchor/target/debug/anchor idl close ${programOne.programId}`,
+      { stdio: "inherit" }
+    );
+
+    console.log("Starting...");
+    await new Promise((resolve) => setTimeout(resolve, 15000)); // pause for 10 second
+    console.log("Done!");
 
     try {
-      execSync(`anchor idl authority ${programOne.programId}`);
+      execSync(`anchor idl authority ${programOne.programId}`, {
+        stdio: "inherit",
+      });
       throw new Error("Command didn't error");
     } catch (err) {
       assert.include(
@@ -75,5 +88,12 @@ describe("Test CLI IDL commands", () => {
         "AccountNotFound: pubkey=2zu1ju6TZuXph7ddZiuLR47yo99gxx69m63z1KpEHqoP"
       );
     }
+  });
+
+  it("Can initialize super massive IDL account", async () => {
+    execSync(
+      `/root/forked-anchors/ckamm-anchor/target/debug/anchor idl init --filepath testLargeIdl.json ${programOne.programId}`,
+      { stdio: "inherit" }
+    );
   });
 });

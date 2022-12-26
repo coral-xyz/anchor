@@ -46,6 +46,8 @@ pub enum IdlInstruction {
     // Sets a new authority on the IdlAccount.
     SetAuthority { new_authority: Pubkey },
     Close,
+    // Increases account size for accounts that need over 10kb.
+    Resize { data_len: u64 },
 }
 
 // Accounts for the Create instruction.
@@ -59,6 +61,17 @@ pub struct IdlAccounts<'info> {
     pub idl: ProgramAccount<'info, IdlAccount>,
     #[account(constraint = authority.key != &ERASED_AUTHORITY)]
     pub authority: Signer<'info>,
+}
+
+// Accounts for resize account instruction
+#[derive(Accounts)]
+pub struct IdlResizeAccount<'info> {
+    #[account(mut, has_one = authority)]
+    #[allow(deprecated)]
+    pub idl: ProgramAccount<'info, IdlAccount>,
+    #[account(mut, constraint = authority.key != &ERASED_AUTHORITY)]
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 // Accounts for creating an idl buffer.

@@ -2837,11 +2837,20 @@ fn create_idl_account(
 
     // Run `Create instruction.
     {
-        let pda_max_growth = 10240;
         let idl_header_size = 44;
+        // Double for future growth.
+        let data_len = ((idl_data.len() as u64) * 2) + idl_header_size;
+        // We're only going to support up to 6 instructions in one transaction
+        // because will anyone really have a >60kb IDL?
+        if data_len > 60_000 {
+            return Err(anyhow!("Your IDL is over 60kb and this isn't supported right now"));
+        }
+        println!("{} num bytes", data_len);
+
+        let num_additional_instructions = data_len / 10000;
+        let mut instructions = Vec::new();
         let data = serialize_idl_ix(anchor_lang::idl::IdlInstruction::Create {
-            // Double for future growth.
-            data_len: (idl_data.len() as u64 * 2).min(pda_max_growth - idl_header_size),
+            data_len,
         })?;
         let program_signer = Pubkey::find_program_address(&[], program_id).0;
         let accounts = vec![
@@ -2852,14 +2861,27 @@ fn create_idl_account(
             AccountMeta::new_readonly(*program_id, false),
             AccountMeta::new_readonly(solana_program::sysvar::rent::ID, false),
         ];
-        let ix = Instruction {
+        instructions.push(Instruction {
             program_id: *program_id,
             accounts,
             data,
-        };
+        });
+
+        for _ in 0 ..num_additional_instructions {
+            let data = serialize_idl_ix(anchor_lang::idl::IdlInstruction::Resize { data_len })?;
+            instructions.push(Instruction {
+                program_id: *program_id,
+                accounts: vec![
+                    AccountMeta::new(idl_address, false),
+                    AccountMeta::new_readonly(keypair.pubkey(), true),
+                    AccountMeta::new_readonly(solana_program::system_program::ID, false),
+                ],
+                data,
+            });
+        }
         let latest_hash = client.get_latest_blockhash()?;
         let tx = Transaction::new_signed_with_payer(
-            &[ix],
+            &instructions,
             Some(&keypair.pubkey()),
             &[&keypair],
             latest_hash,
