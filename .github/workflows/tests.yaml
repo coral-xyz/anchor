@@ -10,7 +10,6 @@ on:
 
 jobs:
   tests:
-    name: Tests
     uses: ./.github/workflows/tests-reusable.yaml
     with:
       cache: true

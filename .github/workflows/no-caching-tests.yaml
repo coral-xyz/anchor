@@ -1,4 +1,4 @@
-name: No Cashing Tests
+name: No Caching Tests
 
 on:
   push:
@@ -7,7 +7,6 @@ on:
 
 jobs:
   no-caching-tests:
-    name: No Caching Tests
     uses: ./.github/workflows/tests-reusable.yaml
     with:
       cache: false
