@@ -66,7 +66,7 @@ pub fn account(
 ) -> proc_macro::TokenStream {
     let mut namespace = "".to_string();
     let mut is_zero_copy = false;
-    let mut safe_bytemuck = false;
+    let mut unsafe_bytemuck = false;
     let args_str = args.to_string();
     let args: Vec<&str> = args_str.split(',').collect();
     if args.len() > 2 {
@@ -81,10 +81,10 @@ pub fn account(
             .collect();
         if ns == "zero_copy" {
             is_zero_copy = true;
-            safe_bytemuck = false;
-        } else if ns == "zero_copy(safe_bytemuck_derives)" {
+            unsafe_bytemuck = false;
+        } else if ns == "zero_copy(unsafe_bytemuck_impls)" {
             is_zero_copy = true;
-            safe_bytemuck = true;
+            unsafe_bytemuck = true;
         } else {
             namespace = ns;
         }
@@ -129,7 +129,7 @@ pub fn account(
     };
 
     let unsafe_bytemuck_impl = {
-        if !safe_bytemuck {
+        if unsafe_bytemuck {
             quote! {
                 #[automatically_derived]
                 unsafe impl #impl_gen anchor_lang::__private::bytemuck::Pod for #account_name #type_gen #where_clause {}
@@ -142,7 +142,7 @@ pub fn account(
     };
 
     let safe_bytemuck_derives = {
-        if safe_bytemuck {
+        if !unsafe_bytemuck {
             quote! {
                 #[derive(bytemuck::Pod, bytemuck::Zeroable)]
             }
