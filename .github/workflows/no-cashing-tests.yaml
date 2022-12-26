@@ -13,13 +13,10 @@ env:
 jobs:
   no-caching-tests:
     name: No Caching Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: ./.github/workflows/tests-reusable.yaml
-        with:
-          cache: false
-          solana_cli_version: ${{ env.SOLANA_CLI_VERSION }}
-          node_version: ${{ env.NODE_VERSION }}
-          cargo_profile: ${{ env.CARGO_PROFILE }}
-          anchor_binary_name: ${{ env.ANCHOR_BINARY_NAME }}
+    uses: ./.github/workflows/tests-reusable.yaml
+    with:
+      cache: false
+      solana_cli_version: ${{ env.SOLANA_CLI_VERSION }}
+      node_version: ${{ env.NODE_VERSION }}
+      cargo_profile: ${{ env.CARGO_PROFILE }}
+      anchor_binary_name: ${{ env.ANCHOR_BINARY_NAME }}
