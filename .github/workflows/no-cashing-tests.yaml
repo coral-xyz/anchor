@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: ./.github/workflows/tests-reusable.yml
+      - uses: ./.github/workflows/tests-reusable.yaml
         with:
           cache: false
           solana_cli_version: ${{ env.SOLANA_CLI_VERSION }}
