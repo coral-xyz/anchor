@@ -1645,7 +1645,7 @@ fn idl_init(cfg_override: &ConfigOverride, program_id: Pubkey, idl_filepath: Str
 fn idl_close(cfg_override: &ConfigOverride, program_id: Pubkey) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         let idl_address = IdlAccount::address(&program_id);
-        idl_close_account(&cfg, &program_id, idl_address)?;
+        idl_close_account(cfg, &program_id, idl_address)?;
 
         println!("Idl account closed: {:?}", idl_address);
 
