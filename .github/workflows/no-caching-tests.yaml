@@ -7,7 +7,7 @@ on:
 
 jobs:
   no-caching-tests:
-    uses: ./.github/workflows/tests-reusable.yaml
+    uses: ./.github/workflows/reusable-tests.yaml
     with:
       cache: false
       solana_cli_version: 1.14.11

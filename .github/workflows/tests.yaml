@@ -10,7 +10,7 @@ on:
 
 jobs:
   tests:
-    uses: ./.github/workflows/tests-reusable.yaml
+    uses: ./.github/workflows/reusable-tests.yaml
     with:
       cache: true
       solana_cli_version: 1.14.11
