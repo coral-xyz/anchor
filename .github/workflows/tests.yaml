@@ -7,11 +7,6 @@ on:
   pull_request:
     branches:
       - master
-env:
-  SOLANA_CLI_VERSION: 1.14.11
-  NODE_VERSION: 17.0.1
-  CARGO_PROFILE: debug
-  ANCHOR_BINARY_NAME: anchor-binary
 
 jobs:
   tests:
@@ -19,7 +14,7 @@ jobs:
     uses: ./.github/workflows/tests-reusable.yaml
     with:
       cache: true
-      solana_cli_version: ${{ env.SOLANA_CLI_VERSION }}
-      node_version: ${{ env.NODE_VERSION }}
-      cargo_profile: ${{ env.CARGO_PROFILE }}
-      anchor_binary_name: ${{ env.ANCHOR_BINARY_NAME }}
+      solana_cli_version: 1.14.11
+      node_version: 17.0.1
+      cargo_profile: debug
+      anchor_binary_name: anchor-binary
