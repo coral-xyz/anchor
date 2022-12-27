@@ -66,6 +66,12 @@ pub struct TestNestedStruct {
     pub test_enum: TestBasicEnum,
 }
 
+#[derive(InitSpace)]
+pub struct TestMatrixStruct {
+    #[max_len(2, 4)]
+    pub test_matrix: Vec<Vec<u8>>,
+}
+
 #[test]
 fn test_empty_struct() {
     assert_eq!(TestEmptyAccount::INIT_SPACE, 0);
@@ -78,15 +84,12 @@ fn test_basic_struct() {
 
 #[test]
 fn test_complexe_struct() {
-    assert_eq!(
-        TestComplexeVarAccount::INIT_SPACE,
-        32 + (4 + (1 * 10)) + (4 + 10)
-    )
+    assert_eq!(TestComplexeVarAccount::INIT_SPACE, 32 + 4 + 10 + (4 + 10))
 }
 
 #[test]
 fn test_zero_copy_struct() {
-    assert_eq!(TestZeroCopyStruct::INIT_SPACE, (1 * 10) + 4)
+    assert_eq!(TestZeroCopyStruct::INIT_SPACE, 10 + 4)
 }
 
 #[test]
@@ -98,6 +101,11 @@ fn test_basic_enum() {
 fn test_nested_struct() {
     assert_eq!(
         TestNestedStruct::INIT_SPACE,
-        (4 + 10) + TestBasicEnum::INIT_SPACE
+        ChildStruct::INIT_SPACE + TestBasicEnum::INIT_SPACE
     )
+}
+
+#[test]
+fn test_matrix_struct() {
+    assert_eq!(TestMatrixStruct::INIT_SPACE, 4 + (2 * (4 + 4)))
 }

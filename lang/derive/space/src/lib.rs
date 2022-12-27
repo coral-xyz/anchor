@@ -1,9 +1,10 @@
 use proc_macro::TokenStream;
-use proc_macro2::TokenStream as TokenStream2;
-use quote::{quote, ToTokens};
+use proc_macro2::{Ident, TokenStream as TokenStream2};
+use quote::{quote, quote_spanned, ToTokens};
 use syn::{
-    parse_macro_input, Attribute, DeriveInput, Fields, GenericArgument, LitInt, PathArguments,
-    Type, TypeArray,
+    parse_macro_input,
+    punctuated::{IntoIter, Punctuated},
+    Attribute, DeriveInput, Fields, GenericArgument, LitInt, PathArguments, Token, Type, TypeArray,
 };
 
 #[proc_macro_derive(InitSpace, attributes(max_len))]
@@ -14,10 +15,10 @@ pub fn derive_anchor_deserialize(item: TokenStream) -> TokenStream {
     let expanded: TokenStream2 = match input.data {
         syn::Data::Struct(strct) => match strct.fields {
             Fields::Named(named) => {
-                let recurse = named
-                    .named
-                    .into_iter()
-                    .map(|f| len_from_type(f.ty, &f.attrs));
+                let recurse = named.named.into_iter().map(|f| {
+                    let mut max_len_args = get_max_len_args(&f.attrs);
+                    len_from_type(f.ty, &mut max_len_args)
+                });
 
                 quote! {
                     #[automatically_derived]
@@ -30,7 +31,10 @@ pub fn derive_anchor_deserialize(item: TokenStream) -> TokenStream {
         },
         syn::Data::Enum(enm) => {
             let variants = enm.variants.into_iter().map(|v| {
-                let len = v.fields.into_iter().map(|f| len_from_type(f.ty, &f.attrs));
+                let len = v.fields.into_iter().map(|f| {
+                    let mut max_len_args = get_max_len_args(&f.attrs);
+                    len_from_type(f.ty, &mut max_len_args)
+                });
 
                 quote! {
                     0 #(+ #len)*
@@ -61,16 +65,17 @@ fn gen_max<T: Iterator<Item = TokenStream2>>(mut iter: T) -> TokenStream2 {
     }
 }
 
-fn len_from_type(ty: Type, attrs: &[Attribute]) -> TokenStream2 {
+fn len_from_type(ty: Type, attrs: &mut Option<IntoIter<LitInt>>) -> TokenStream2 {
     match ty {
         Type::Array(TypeArray { elem, len, .. }) => {
             let array_len = len.to_token_stream();
             let type_len = len_from_type(*elem, attrs);
-            quote!(#array_len * #type_len)
+            quote!((#array_len * #type_len))
         }
         Type::Path(path) => {
             let path_segment = path.path.segments.last().unwrap();
-            let type_name = path_segment.ident.to_string();
+            let ident = &path_segment.ident;
+            let type_name = ident.to_string();
 
             match type_name.as_str() {
                 "i8" | "u8" | "bool" => quote!(1),
@@ -79,8 +84,8 @@ fn len_from_type(ty: Type, attrs: &[Attribute]) -> TokenStream2 {
                 "i64" | "u64" | "f64" => quote!(8),
                 "i128" | "u128" => quote!(16),
                 "String" => {
-                    let max_len = get_max_len(attrs);
-                    quote!(4 + #max_len )
+                    let max_len = get_next_arg(ident, attrs);
+                    quote!((4 + #max_len))
                 }
                 "Pubkey" => quote!(32),
                 "Vec" => match &path_segment.arguments {
@@ -93,10 +98,11 @@ fn len_from_type(ty: Type, attrs: &[Attribute]) -> TokenStream2 {
                                 _ => None,
                             })
                             .unwrap();
-                        let max_len = get_max_len(attrs);
+
+                        let max_len = get_next_arg(ident, attrs);
                         let type_len = len_from_type(ty, attrs);
 
-                        quote!(4 + (#type_len * #max_len))
+                        quote!((4 + #type_len * #max_len))
                     }
                     _ => panic!("Invalid argument in Vec"),
                 },
@@ -110,13 +116,25 @@ fn len_from_type(ty: Type, attrs: &[Attribute]) -> TokenStream2 {
     }
 }
 
-fn get_max_len(attributes: &[Attribute]) -> u64 {
-    let attr = attributes
+fn get_max_len_args(attributes: &[Attribute]) -> Option<IntoIter<LitInt>> {
+    attributes
         .iter()
         .find(|a| a.path.is_ident("max_len"))
-        .expect("Expected max_len attribute");
+        .and_then(|a| {
+            a.parse_args_with(Punctuated::<LitInt, Token![,]>::parse_terminated)
+                .ok()
+        })
+        .map(|p| p.into_iter())
+}
 
-    attr.parse_args::<LitInt>()
-        .and_then(|l| l.base10_parse())
-        .expect("Can't parse the max_len value")
+fn get_next_arg(ident: &Ident, args: &mut Option<IntoIter<LitInt>>) -> TokenStream2 {
+    if let Some(arg_list) = args {
+        if let Some(arg) = arg_list.next() {
+            quote!(#arg)
+        } else {
+            quote_spanned!(ident.span() => compile_error!("The number of lengths are invalid."))
+        }
+    } else {
+        quote_spanned!(ident.span() => compile_error!("Expected max_len attribute."))
+    }
 }
