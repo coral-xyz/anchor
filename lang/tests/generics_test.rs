@@ -11,8 +11,8 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 #[derive(Accounts)]
 pub struct GenericsTest<'info, T, U, const N: usize>
 where
-    T: AccountSerialize + AccountDeserialize + Owner + Clone,
-    U: BorshSerialize + BorshDeserialize + Default + Clone,
+    T: AccountSerialize + AccountDeserialize + Space + Owner + Clone,
+    U: BorshSerialize + BorshDeserialize + Space + Default + Clone,
 {
     pub non_generic: AccountInfo<'info>,
     pub generic: Account<'info, T>,
@@ -31,7 +31,7 @@ pub struct FooAccount<const N: usize> {
 #[derive(Default)]
 pub struct Associated<T>
 where
-    T: BorshDeserialize + BorshSerialize + Default,
+    T: BorshDeserialize + BorshSerialize + Space + Default,
 {
     pub data: T,
 }

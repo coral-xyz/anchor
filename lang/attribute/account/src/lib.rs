@@ -16,6 +16,7 @@ mod id;
 /// - [`Clone`](https://doc.rust-lang.org/std/clone/trait.Clone.html)
 /// - [`Discriminator`](./trait.Discriminator.html)
 /// - [`Owner`](./trait.Owner.html)
+/// - [`InitSpace`](./trait.InitSpace.html)
 ///
 /// When implementing account serialization traits the first 8 bytes are
 /// reserved for a unique account discriminator, self described by the first 8
@@ -89,6 +90,11 @@ pub fn account(
     let account_name = &account_strct.ident;
     let account_name_str = account_name.to_string();
     let (impl_gen, type_gen, where_clause) = account_strct.generics.split_for_impl();
+    let init_space = if namespace == "internal" {
+        quote!()
+    } else {
+        quote!(#[derive(InitSpace)])
+    };
 
     let discriminator: proc_macro2::TokenStream = {
         // Namespace the discriminator to prevent collisions.
@@ -170,6 +176,7 @@ pub fn account(
             }
         } else {
             quote! {
+                #init_space
                 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
                 #account_strct
 

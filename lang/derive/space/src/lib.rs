@@ -7,9 +7,29 @@ use syn::{
     Attribute, DeriveInput, Fields, GenericArgument, LitInt, PathArguments, Token, Type, TypeArray,
 };
 
+/// Implements a [`Space`](./trait.Space.html) trait on the given
+/// struct or enum.
+///
+/// # Example
+/// ```rust
+/// #[account]
+/// pub struct ExampleAccount {
+///     pub data: u64,
+/// }
+///
+/// #[derive(Accounts)]
+/// pub struct Initialize<'info> {
+///    #[account(mut)]
+///    pub payer: Signer<'info>,
+///    pub system_program: Program<'info, System>,
+///    #[account(init, payer = payer, space = 8 + ExampleAccount::INIT_SPACE)]
+///    pub data: Account<'info, ExampleAccount>,
+/// }
+/// ```
 #[proc_macro_derive(InitSpace, attributes(max_len))]
 pub fn derive_anchor_deserialize(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let name = input.ident;
 
     let expanded: TokenStream2 = match input.data {
@@ -22,7 +42,7 @@ pub fn derive_anchor_deserialize(item: TokenStream) -> TokenStream {
 
                 quote! {
                     #[automatically_derived]
-                    impl anchor_lang::Space for #name {
+                    impl #impl_generics anchor_lang::Space for #name #ty_generics #where_clause {
                         const INIT_SPACE: u64 = 0 #(+ #recurse)*;
                     }
                 }
@@ -88,24 +108,16 @@ fn len_from_type(ty: Type, attrs: &mut Option<IntoIter<LitInt>>) -> TokenStream2
                     quote!((4 + #max_len))
                 }
                 "Pubkey" => quote!(32),
-                "Vec" => match &path_segment.arguments {
-                    PathArguments::AngleBracketed(args) => {
-                        let ty = args
-                            .args
-                            .iter()
-                            .find_map(|el| match el {
-                                GenericArgument::Type(ty) => Some(ty.to_owned()),
-                                _ => None,
-                            })
-                            .unwrap();
-
+                "Vec" => {
+                    if let Some(ty) = get_first_ty_arg(&path_segment.arguments) {
                         let max_len = get_next_arg(ident, attrs);
                         let type_len = len_from_type(ty, attrs);
 
                         quote!((4 + #type_len * #max_len))
+                    } else {
+                        quote_spanned!(ident.span() => compile_error!("Invalid argument in Vec"))
                     }
-                    _ => panic!("Invalid argument in Vec"),
-                },
+                }
                 _ => {
                     let ty = &path_segment.ident;
                     quote!(<#ty as anchor_lang::Space>::INIT_SPACE)
@@ -113,6 +125,16 @@ fn len_from_type(ty: Type, attrs: &mut Option<IntoIter<LitInt>>) -> TokenStream2
             }
         }
         _ => panic!("Type {:?} is not supported", ty),
+    }
+}
+
+fn get_first_ty_arg(args: &PathArguments) -> Option<Type> {
+    match args {
+        PathArguments::AngleBracketed(bracket) => bracket.args.iter().find_map(|el| match el {
+            GenericArgument::Type(ty) => Some(ty.to_owned()),
+            _ => None,
+        }),
+        _ => None,
     }
 }
 
