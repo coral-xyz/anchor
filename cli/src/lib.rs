@@ -1520,7 +1520,9 @@ fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
     let mut d: &[u8] = &account.data[8..];
     let idl_account: IdlAccount = AnchorDeserialize::deserialize(&mut d)?;
 
-    let mut z = ZlibDecoder::new(&idl_account.data[..]);
+    let compressed_len: usize = idl_account.data_len.try_into().unwrap();
+    let compressed_bytes = &account.data[44..44 + compressed_len];
+    let mut z = ZlibDecoder::new(compressed_bytes);
     let mut s = Vec::new();
     z.read_to_end(&mut s)?;
     serde_json::from_slice(&s[..]).map_err(Into::into)
@@ -2843,15 +2845,15 @@ fn create_idl_account(
         // We're only going to support up to 6 instructions in one transaction
         // because will anyone really have a >60kb IDL?
         if data_len > 60_000 {
-            return Err(anyhow!("Your IDL is over 60kb and this isn't supported right now"));
+            return Err(anyhow!(
+                "Your IDL is over 60kb and this isn't supported right now"
+            ));
         }
         println!("{} num bytes", data_len);
 
         let num_additional_instructions = data_len / 10000;
         let mut instructions = Vec::new();
-        let data = serialize_idl_ix(anchor_lang::idl::IdlInstruction::Create {
-            data_len,
-        })?;
+        let data = serialize_idl_ix(anchor_lang::idl::IdlInstruction::Create { data_len })?;
         let program_signer = Pubkey::find_program_address(&[], program_id).0;
         let accounts = vec![
             AccountMeta::new_readonly(keypair.pubkey(), true),
@@ -2867,7 +2869,7 @@ fn create_idl_account(
             data,
         });
 
-        for _ in 0 ..num_additional_instructions {
+        for _ in 0..num_additional_instructions {
             let data = serialize_idl_ix(anchor_lang::idl::IdlInstruction::Resize { data_len })?;
             instructions.push(Instruction {
                 program_id: *program_id,

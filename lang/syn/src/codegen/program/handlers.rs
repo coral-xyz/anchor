@@ -169,7 +169,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
                 // We're not going to support increasing the size of accounts that already contain data
                 // because that would be messy and possibly dangerous
-                if !accounts.idl.data.is_empty() {
+                if accounts.idl.data_len != 0 {
                     return Err(anchor_lang::error::ErrorCode::IdlAccountNotEmpty.into());
                 }
 
@@ -236,8 +236,16 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 #[cfg(not(feature = "no-log-ix-name"))]
                 anchor_lang::prelude::msg!("Instruction: IdlWrite");
 
-                let mut idl = &mut accounts.idl;
-                idl.data.extend(idl_data);
+                let prev_len: usize = (accounts.idl.data_len).try_into().unwrap();
+                let new_len: usize = prev_len + idl_data.len();
+                accounts.idl.data_len = accounts.idl.data_len.checked_add(idl_data.len().try_into().unwrap()).unwrap();
+
+                use anchor_lang::idl::IdlTrailingData;
+                let mut idl_bytes = accounts.idl.trailing_data_mut();
+                let idl_expansion = &mut idl_bytes[prev_len..new_len];
+                require_eq!(idl_expansion.len(), idl_data.len());
+                idl_expansion.copy_from_slice(&idl_data[..]);
+
                 Ok(())
             }
 
@@ -262,7 +270,16 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 #[cfg(not(feature = "no-log-ix-name"))]
                 anchor_lang::prelude::msg!("Instruction: IdlSetBuffer");
 
-                accounts.idl.data = accounts.buffer.data.clone();
+                accounts.idl.data_len = accounts.buffer.data_len;
+
+                use anchor_lang::idl::IdlTrailingData;
+                let buffer_len = accounts.buffer.data_len.try_into().unwrap();
+                let mut target = accounts.idl.trailing_data_mut();
+                let source = &accounts.buffer.trailing_data()[..buffer_len];
+                require_gte!(target.len(), buffer_len);
+                target[..buffer_len].copy_from_slice(source);
+                // zero the remainder of target?
+
                 Ok(())
             }
         }

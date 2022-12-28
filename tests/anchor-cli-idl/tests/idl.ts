@@ -4,6 +4,7 @@ import { IdlCommandsOne } from "../target/types/idl_commands_one";
 import { IdlCommandsTwo } from "../target/types/idl_commands_two";
 import { assert } from "chai";
 import { execSync } from "child_process";
+import * as fs from 'fs';
 
 describe("Test CLI IDL commands", () => {
   // Configure the client to use the local cluster.
@@ -16,7 +17,7 @@ describe("Test CLI IDL commands", () => {
 
   it("Can initialize IDL account", async () => {
     execSync(
-      `/root/forked-anchors/ckamm-anchor/target/debug/anchor idl init --filepath target/idl/idl_commands_one.json ${programOne.programId}`,
+      `anchor idl init --filepath target/idl/idl_commands_one.json ${programOne.programId}`,
       { stdio: "inherit" }
     );
   });
@@ -69,7 +70,7 @@ describe("Test CLI IDL commands", () => {
 
   it("Can close IDL account", async () => {
     execSync(
-      `/root/forked-anchors/ckamm-anchor/target/debug/anchor idl close ${programOne.programId}`,
+      `anchor idl close ${programOne.programId}`,
       { stdio: "inherit" }
     );
 
@@ -92,8 +93,11 @@ describe("Test CLI IDL commands", () => {
 
   it("Can initialize super massive IDL account", async () => {
     execSync(
-      `/root/forked-anchors/ckamm-anchor/target/debug/anchor idl init --filepath testLargeIdl.json ${programOne.programId}`,
+      `anchor idl init --filepath testLargeIdl.json ${programOne.programId}`,
       { stdio: "inherit" }
     );
+    const idlActual = await anchor.Program.fetchIdl(programOne.programId, provider);
+    const idlExpected = JSON.parse(fs.readFileSync('testLargeIdl.json', 'utf8'));
+    assert.deepEqual(idlActual, idlExpected);
   });
 });

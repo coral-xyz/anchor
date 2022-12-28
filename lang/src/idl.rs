@@ -121,8 +121,9 @@ pub struct IdlCloseAccount<'info> {
 pub struct IdlAccount {
     // Address that can modify the IDL.
     pub authority: Pubkey,
-    // Compressed idl bytes.
-    pub data: Vec<u8>,
+    // Length of compressed idl bytes.
+    pub data_len: u32,
+    // Followed by compressed idl bytes.
 }
 
 impl IdlAccount {
@@ -133,5 +134,24 @@ impl IdlAccount {
     }
     pub fn seed() -> &'static str {
         "anchor:idl"
+    }
+}
+
+use std::cell::{Ref, RefMut};
+
+pub trait IdlTrailingData<'info> {
+    fn trailing_data(self) -> Ref<'info, [u8]>;
+    fn trailing_data_mut(self) -> RefMut<'info, [u8]>;
+}
+
+#[allow(deprecated)]
+impl<'a, 'info: 'a> IdlTrailingData<'a> for &'a ProgramAccount<'info, IdlAccount> {
+    fn trailing_data(self) -> Ref<'a, [u8]> {
+        let info = self.as_ref();
+        Ref::map(info.try_borrow_data().unwrap(), |d| &d[44..])
+    }
+    fn trailing_data_mut(self) -> RefMut<'a, [u8]> {
+        let info = self.as_ref();
+        RefMut::map(info.try_borrow_mut_data().unwrap(), |d| &mut d[44..])
     }
 }
