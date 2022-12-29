@@ -212,7 +212,7 @@ pub trait Discriminator {
 
 /// Defines the space of an account for initialization.
 pub trait Space {
-    const INIT_SPACE: u64;
+    const INIT_SPACE: usize;
 }
 
 /// Bump seed for program derived addresses.
@@ -297,7 +297,7 @@ pub mod __private {
     // Used to calculate the maximum between two expressions.
     // It is necessary for the calculation of the enum space.
     #[doc(hidden)]
-    pub const fn max(a: u64, b: u64) -> u64 {
+    pub const fn max(a: usize, b: usize) -> usize {
         [a, b][(a < b) as usize]
     }
 

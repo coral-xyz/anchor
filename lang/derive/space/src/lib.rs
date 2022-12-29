@@ -11,7 +11,7 @@ use syn::{
 /// struct or enum.
 ///
 /// # Example
-/// ```rust
+/// ```ignore
 /// #[account]
 /// pub struct ExampleAccount {
 ///     pub data: u64,
@@ -43,7 +43,7 @@ pub fn derive_anchor_deserialize(item: TokenStream) -> TokenStream {
                 quote! {
                     #[automatically_derived]
                     impl #impl_generics anchor_lang::Space for #name #ty_generics #where_clause {
-                        const INIT_SPACE: u64 = 0 #(+ #recurse)*;
+                        const INIT_SPACE: usize = 0 #(+ #recurse)*;
                     }
                 }
             }
@@ -66,7 +66,7 @@ pub fn derive_anchor_deserialize(item: TokenStream) -> TokenStream {
             quote! {
                 #[automatically_derived]
                 impl anchor_lang::Space for #name {
-                    const INIT_SPACE: u64 = 1 + #max;
+                    const INIT_SPACE: usize = 1 + #max;
                 }
             }
         }
@@ -96,6 +96,7 @@ fn len_from_type(ty: Type, attrs: &mut Option<IntoIter<LitInt>>) -> TokenStream2
             let path_segment = path.path.segments.last().unwrap();
             let ident = &path_segment.ident;
             let type_name = ident.to_string();
+            let first_ty = get_first_ty_arg(&path_segment.arguments);
 
             match type_name.as_str() {
                 "i8" | "u8" | "bool" => quote!(1),
@@ -108,8 +109,17 @@ fn len_from_type(ty: Type, attrs: &mut Option<IntoIter<LitInt>>) -> TokenStream2
                     quote!((4 + #max_len))
                 }
                 "Pubkey" => quote!(32),
+                "Option" => {
+                    if let Some(ty) = first_ty {
+                        let type_len = len_from_type(ty, attrs);
+
+                        quote!((1 + #type_len))
+                    } else {
+                        quote_spanned!(ident.span() => compile_error!("Invalid argument in Vec"))
+                    }
+                }
                 "Vec" => {
-                    if let Some(ty) = get_first_ty_arg(&path_segment.arguments) {
+                    if let Some(ty) = first_ty {
                         let max_len = get_next_arg(ident, attrs);
                         let type_len = len_from_type(ty, attrs);
 

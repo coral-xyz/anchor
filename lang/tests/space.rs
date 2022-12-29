@@ -1,4 +1,4 @@
-use anchor_lang::{prelude::*, Space};
+use anchor_lang::prelude::*;
 
 // Needed to declare accounts.
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
@@ -37,6 +37,7 @@ pub struct TestComplexeVarAccount {
     pub test_vec: Vec<u8>,
     #[max_len(10)]
     pub test_string: String,
+    pub test_option: Option<u16>,
 }
 
 #[derive(InitSpace)]
@@ -81,7 +82,10 @@ fn test_basic_struct() {
 
 #[test]
 fn test_complexe_struct() {
-    assert_eq!(TestComplexeVarAccount::INIT_SPACE, 32 + 4 + 10 + (4 + 10))
+    assert_eq!(
+        TestComplexeVarAccount::INIT_SPACE,
+        32 + 4 + 10 + (4 + 10) + 3
+    )
 }
 
 #[test]

@@ -151,7 +151,7 @@ pub struct CancelCheck<'info> {
     token_program: AccountInfo<'info>,
 }
 
-#[account]
+#[account(skip_space)]
 pub struct Check {
     from: Pubkey,
     to: Pubkey,
