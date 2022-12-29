@@ -5,12 +5,12 @@ describe("multisig", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.getProvider());
 
-  const program = anchor.workspace.CoralMultisig;
+  const program = anchor.workspace.Multisig;
 
   it("Tests the multisig program", async () => {
     const multisig = anchor.web3.Keypair.generate();
     const [multisigSigner, nonce] =
-      await anchor.web3.PublicKey.findProgramAddress(
+      anchor.web3.PublicKey.findProgramAddressSync(
         [multisig.publicKey.toBuffer()],
         program.programId
       );
@@ -136,7 +136,7 @@ describe("multisig", () => {
   it("Assert Unique Owners", async () => {
     const multisig = anchor.web3.Keypair.generate();
     const [_multisigSigner, nonce] =
-      await anchor.web3.PublicKey.findProgramAddress(
+      anchor.web3.PublicKey.findProgramAddressSync(
         [multisig.publicKey.toBuffer()],
         program.programId
       );
