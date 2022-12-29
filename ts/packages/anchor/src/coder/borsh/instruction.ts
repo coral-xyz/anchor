@@ -38,7 +38,7 @@ export class BorshInstructionCoder implements InstructionCoder {
   // Base58 encoded sighash to instruction layout.
   private discriminatorLayouts: Map<string, { layout: Layout; name: string }>;
   private ixDiscriminator: Map<string, Buffer>;
-  private discriminatorLength: number = 8;
+  private discriminatorLength: number;
 
   public constructor(private idl: Idl) {
     this.ixLayout = BorshInstructionCoder.parseIxLayout(idl);
@@ -46,6 +46,7 @@ export class BorshInstructionCoder implements InstructionCoder {
     const discriminatorLayouts = new Map();
     const ixDiscriminator = new Map();
     idl.instructions.forEach((ix) => {
+      let discriminatorLength: number;
       if (ix.discriminant) {
         discriminatorLayouts.set(
           bs58.encode(Buffer.from(ix.discriminant.value)),
@@ -55,7 +56,7 @@ export class BorshInstructionCoder implements InstructionCoder {
           }
         );
         ixDiscriminator.set(ix.name, Buffer.from(ix.discriminant.value));
-        this.discriminatorLength = ix.discriminant.value.length;
+        discriminatorLength = ix.discriminant.value.length;
       } else {
         const sh = sighash(SIGHASH_GLOBAL_NAMESPACE, ix.name);
         discriminatorLayouts.set(bs58.encode(sh), {
@@ -63,6 +64,18 @@ export class BorshInstructionCoder implements InstructionCoder {
           name: ix.name,
         });
         ixDiscriminator.set(ix.name, sh);
+        discriminatorLength = 8;
+      }
+      console.log(ix.name, this.discriminatorLength);
+      if (
+        this.discriminatorLength &&
+        this.discriminatorLength != discriminatorLength
+      ) {
+        throw new Error(
+          `All instructions must have the same discriminator length`
+        );
+      } else {
+        this.discriminatorLength = discriminatorLength;
       }
     });
 

@@ -19,7 +19,7 @@ describe("coder.accounts", () => {
         {
           name: "initMapping",
           discriminant: {
-            value: [2, 0, 0, 0, 0, 0, 0, 1],
+            value: [2, 0, 0, 0, 0, 0],
             type: { array: ["u8", 8] as [IdlType, number] },
           },
           accounts: [

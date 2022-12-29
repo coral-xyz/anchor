@@ -45,7 +45,6 @@ export type IdlInstruction = {
 
 export type IdlDiscriminant = {
   value: number[];
-  type: IdlType;
 };
 
 export type IdlStateMethod = IdlInstruction;
