@@ -36,21 +36,38 @@ export class BorshInstructionCoder implements InstructionCoder {
   private ixLayout: Map<string, Layout>;
 
   // Base58 encoded sighash to instruction layout.
-  private sighashLayouts: Map<string, { layout: Layout; name: string }>;
+  private discriminatorLayouts: Map<string, { layout: Layout; name: string }>;
+  private ixDiscriminator: Map<string, Buffer>;
+  private discriminatorLength: number = 8;
 
   public constructor(private idl: Idl) {
     this.ixLayout = BorshInstructionCoder.parseIxLayout(idl);
 
-    const sighashLayouts = new Map();
+    const discriminatorLayouts = new Map();
+    const ixDiscriminator = new Map();
     idl.instructions.forEach((ix) => {
-      const sh = sighash(SIGHASH_GLOBAL_NAMESPACE, ix.name);
-      sighashLayouts.set(bs58.encode(sh), {
-        layout: this.ixLayout.get(ix.name),
-        name: ix.name,
-      });
+      if (ix.discriminant) {
+        discriminatorLayouts.set(
+          bs58.encode(Buffer.from(ix.discriminant.value)),
+          {
+            layout: this.ixLayout.get(ix.name),
+            name: ix.name,
+          }
+        );
+        ixDiscriminator.set(ix.name, Buffer.from(ix.discriminant.value));
+        this.discriminatorLength = ix.discriminant.value.length;
+      } else {
+        const sh = sighash(SIGHASH_GLOBAL_NAMESPACE, ix.name);
+        discriminatorLayouts.set(bs58.encode(sh), {
+          layout: this.ixLayout.get(ix.name),
+          name: ix.name,
+        });
+        ixDiscriminator.set(ix.name, sh);
+      }
     });
 
-    this.sighashLayouts = sighashLayouts;
+    this.discriminatorLayouts = discriminatorLayouts;
+    this.ixDiscriminator = ixDiscriminator;
   }
 
   /**
@@ -64,12 +81,13 @@ export class BorshInstructionCoder implements InstructionCoder {
     const buffer = Buffer.alloc(1000); // TODO: use a tighter buffer.
     const methodName = camelCase(ixName);
     const layout = this.ixLayout.get(methodName);
-    if (!layout) {
+    const discriminator = this.ixDiscriminator.get(methodName);
+    if (!layout || !discriminator) {
       throw new Error(`Unknown method: ${methodName}`);
     }
     const len = layout.encode(ix, buffer);
-    const data = buffer.slice(0, len);
-    return Buffer.concat([sighash(nameSpace, ixName), data]);
+    const data = buffer.subarray(0, len);
+    return Buffer.concat([discriminator, data]);
   }
 
   private static parseIxLayout(idl: Idl): Map<string, Layout> {
@@ -97,9 +115,9 @@ export class BorshInstructionCoder implements InstructionCoder {
     if (typeof ix === "string") {
       ix = encoding === "hex" ? Buffer.from(ix, "hex") : bs58.decode(ix);
     }
-    let sighash = bs58.encode(ix.slice(0, 8));
-    let data = ix.slice(8);
-    const decoder = this.sighashLayouts.get(sighash);
+    let sighash = bs58.encode(ix.subarray(0, this.discriminatorLength));
+    let data = ix.subarray(8);
+    const decoder = this.discriminatorLayouts.get(sighash);
     if (!decoder) {
       return null;
     }
@@ -352,5 +370,5 @@ function sentenceCase(field: string): string {
 function sighash(nameSpace: string, ixName: string): Buffer {
   let name = snakeCase(ixName);
   let preimage = `${nameSpace}:${name}`;
-  return Buffer.from(sha256.digest(preimage)).slice(0, 8);
+  return Buffer.from(sha256.digest(preimage)).subarray(0, 8);
 }

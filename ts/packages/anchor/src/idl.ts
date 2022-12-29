@@ -40,6 +40,12 @@ export type IdlInstruction = {
   accounts: IdlAccountItem[];
   args: IdlField[];
   returns?: IdlType;
+  discriminant?: IdlDiscriminant;
+};
+
+export type IdlDiscriminant = {
+  value: number[];
+  type: IdlType;
 };
 
 export type IdlStateMethod = IdlInstruction;
