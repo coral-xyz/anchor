@@ -5,8 +5,8 @@ import { sha256 } from "js-sha256";
 import { ACCOUNT_DISCRIMINATOR_SIZE } from "../src/coder/borsh/accounts";
 import { IdlType } from "../src/idl";
 
-describe("coder.accounts", () => {
-  test("Can encode and decode user-defined accounts, including those with consecutive capital letters", () => {
+describe("coder.instructions", () => {
+  test("Can encode and decode user-defined instructions, with or without custom discriminators", () => {
     const idl = {
       version: "0.0.0",
       name: "basic_0",
@@ -19,7 +19,7 @@ describe("coder.accounts", () => {
         {
           name: "initMapping",
           discriminant: {
-            value: [2, 0, 0, 0, 0, 0],
+            value: [2, 0, 0, 0, 0, 0, 0, 1],
             type: { array: ["u8", 8] as [IdlType, number] },
           },
           accounts: [

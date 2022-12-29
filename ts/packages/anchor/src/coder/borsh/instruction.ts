@@ -66,7 +66,6 @@ export class BorshInstructionCoder implements InstructionCoder {
         ixDiscriminator.set(ix.name, sh);
         discriminatorLength = 8;
       }
-      console.log(ix.name, this.discriminatorLength);
       if (
         this.discriminatorLength &&
         this.discriminatorLength != discriminatorLength
