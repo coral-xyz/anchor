@@ -128,7 +128,7 @@ export class BorshInstructionCoder implements InstructionCoder {
       ix = encoding === "hex" ? Buffer.from(ix, "hex") : bs58.decode(ix);
     }
     let sighash = bs58.encode(ix.subarray(0, this.discriminatorLength));
-    let data = ix.subarray(8);
+    let data = ix.subarray(this.discriminatorLength);
     const decoder = this.discriminatorLayouts.get(sighash);
     if (!decoder) {
       return null;
