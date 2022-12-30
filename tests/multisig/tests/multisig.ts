@@ -1,5 +1,4 @@
 import * as anchor from "@coral-xyz/anchor";
-import { AnchorError } from "@coral-xyz/anchor";
 import { assert } from "chai";
 import { Multisig } from "../target/types/multisig";
 
