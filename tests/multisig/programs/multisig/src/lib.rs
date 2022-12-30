@@ -169,7 +169,7 @@ pub mod coral_multisig {
         }
 
         // Execute the transaction signed by the multisig.
-        let mut ix: Instruction = (*ctx.accounts.transaction).deref().into();
+        let mut ix: Instruction = ctx.accounts.transaction.deref().into();
         ix.accounts = ix
             .accounts
             .iter()
@@ -196,25 +196,39 @@ pub mod coral_multisig {
 
 #[derive(Accounts)]
 pub struct CreateMultisig<'info> {
-    #[account(zero, signer)]
-    multisig: Box<Account<'info, Multisig>>,
+    #[account(mut)]
+    payer: Signer<'info>,
+    #[account(
+        init,
+        payer = payer,
+        space = 8 + Multisig::INIT_SPACE
+    )]
+    multisig: Account<'info, Multisig>,
+    system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct CreateTransaction<'info> {
-    multisig: Box<Account<'info, Multisig>>,
-    #[account(zero, signer)]
-    transaction: Box<Account<'info, Transaction>>,
+    #[account(mut)]
+    payer: Signer<'info>,
+    multisig: Account<'info, Multisig>,
+    #[account(
+        init,
+        payer = payer,
+        space = 8 + Transaction::INIT_SPACE
+    )]
+    transaction: Account<'info, Transaction>,
     // One of the owners. Checked in the handler.
     proposer: Signer<'info>,
+    system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct Approve<'info> {
     #[account(constraint = multisig.owner_set_seqno == transaction.owner_set_seqno)]
-    multisig: Box<Account<'info, Multisig>>,
+    multisig: Account<'info, Multisig>,
     #[account(mut, has_one = multisig)]
-    transaction: Box<Account<'info, Transaction>>,
+    transaction: Account<'info, Transaction>,
     // One of the multisig owners. Checked in the handler.
     owner: Signer<'info>,
 }
@@ -222,7 +236,7 @@ pub struct Approve<'info> {
 #[derive(Accounts)]
 pub struct Auth<'info> {
     #[account(mut)]
-    multisig: Box<Account<'info, Multisig>>,
+    multisig: Account<'info, Multisig>,
     #[account(
         seeds = [multisig.key().as_ref()],
         bump = multisig.nonce,
@@ -233,7 +247,7 @@ pub struct Auth<'info> {
 #[derive(Accounts)]
 pub struct ExecuteTransaction<'info> {
     #[account(constraint = multisig.owner_set_seqno == transaction.owner_set_seqno)]
-    multisig: Box<Account<'info, Multisig>>,
+    multisig: Account<'info, Multisig>,
     /// CHECK: multisig_signer is a PDA program signer. Data is never read or written to
     #[account(
         seeds = [multisig.key().as_ref()],
@@ -241,28 +255,32 @@ pub struct ExecuteTransaction<'info> {
     )]
     multisig_signer: UncheckedAccount<'info>,
     #[account(mut, has_one = multisig)]
-    transaction: Box<Account<'info, Transaction>>,
+    transaction: Account<'info, Transaction>,
 }
 
-#[account(skip_space)]
+#[account]
 pub struct Multisig {
+    #[max_len(5)]
     pub owners: Vec<Pubkey>,
     pub threshold: u64,
     pub nonce: u8,
     pub owner_set_seqno: u32,
 }
 
-#[account(skip_space)]
+#[account]
 pub struct Transaction {
     // The multisig account this transaction belongs to.
     pub multisig: Pubkey,
     // Target program to execute against.
     pub program_id: Pubkey,
     // Accounts requried for the transaction.
+    #[max_len(20)]
     pub accounts: Vec<TransactionAccount>,
     // Instruction data for the transaction.
+    #[max_len(256)]
     pub data: Vec<u8>,
     // signers[index] is true iff multisig.owners[index] signed the transaction.
+    #[max_len(5)]
     pub signers: Vec<bool>,
     // Boolean ensuring one time execution.
     pub did_execute: bool,
@@ -280,7 +298,7 @@ impl From<&Transaction> for Instruction {
     }
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+#[derive(AnchorSerialize, AnchorDeserialize, InitSpace, Clone)]
 pub struct TransactionAccount {
     pub pubkey: Pubkey,
     pub is_signer: bool,
