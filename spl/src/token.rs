@@ -46,16 +46,17 @@ pub fn transfer_checked<'a, 'b, 'c, 'info>(
         ctx.accounts.authority.key,
         &[],
         amount,
-        decimals
+        decimals,
     )?;
     solana_program::program::invoke_signed(
-        &ix, &[
-        ctx.accounts.from.clone(),
-        ctx.accounts.mint.clone(),
-        ctx.accounts.to.clone(),
-        ctx.accounts.authority.clone(),
-        ], 
-        ctx.signer_seeds
+        &ix,
+        &[
+            ctx.accounts.from.clone(),
+            ctx.accounts.mint.clone(),
+            ctx.accounts.to.clone(),
+            ctx.accounts.authority.clone(),
+        ],
+        ctx.signer_seeds,
     )
     .map_err(Into::into)
 }
