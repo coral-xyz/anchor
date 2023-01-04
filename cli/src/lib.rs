@@ -101,6 +101,9 @@ pub enum Command {
         /// verifiable builds. Only works for debian-based images.
         #[clap(value_enum, short, long, default_value = "none")]
         bootstrap: BootstrapMode,
+        /// Environment variables to pass into the docker container
+        #[clap(short, long, required = false)]
+        env: Vec<String>,
         /// Arguments to pass to the underlying `cargo build-bpf` command
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
@@ -141,6 +144,9 @@ pub enum Command {
         /// verifiable builds. Only works for debian-based images.
         #[clap(value_enum, short, long, default_value = "none")]
         bootstrap: BootstrapMode,
+        /// Environment variables to pass into the docker container
+        #[clap(short, long, required = false)]
+        env: Vec<String>,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
@@ -172,6 +178,9 @@ pub enum Command {
         #[clap(long)]
         run: Vec<String>,
         args: Vec<String>,
+        /// Environment variables to pass into the docker container
+        #[clap(short, long, required = false)]
+        env: Vec<String>,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
@@ -237,6 +246,9 @@ pub enum Command {
     Publish {
         /// The name of the program to publish.
         program: String,
+        /// Environment variables to pass into the docker container
+        #[clap(short, long, required = false)]
+        env: Vec<String>,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
@@ -264,6 +276,9 @@ pub enum Command {
         /// no "CHECK" comments where normally required
         #[clap(long)]
         skip_lint: bool,
+        /// Environment variables to pass into the docker container
+        #[clap(short, long, required = false)]
+        env: Vec<String>,
         /// Arguments to pass to the underlying `cargo build-bpf` command.
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
@@ -390,6 +405,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             docker_image,
             bootstrap,
             cargo_args,
+            env,
             skip_lint,
             no_docs,
         } => build(
@@ -404,6 +420,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             bootstrap,
             None,
             None,
+            env,
             cargo_args,
             no_docs,
         ),
@@ -413,6 +430,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             solana_version,
             docker_image,
             bootstrap,
+            env,
             cargo_args,
         } => verify(
             &opts.cfg_override,
@@ -421,6 +439,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             solana_version,
             docker_image,
             bootstrap,
+            env,
             cargo_args,
         ),
         Command::Clean => clean(&opts.cfg_override),
@@ -445,6 +464,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             detach,
             run,
             args,
+            env,
             cargo_args,
             skip_lint,
         } => test(
@@ -456,6 +476,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             detach,
             run,
             args,
+            env,
             cargo_args,
         ),
         #[cfg(feature = "dev")]
@@ -469,20 +490,23 @@ pub fn entry(opts: Opts) -> Result<()> {
         Command::Login { token } => login(&opts.cfg_override, token),
         Command::Publish {
             program,
+            env,
             cargo_args,
             skip_build,
-        } => publish(&opts.cfg_override, program, cargo_args, skip_build),
+        } => publish(&opts.cfg_override, program, env, cargo_args, skip_build),
         Command::Keys { subcmd } => keys(&opts.cfg_override, subcmd),
         Command::Localnet {
             skip_build,
             skip_deploy,
             skip_lint,
+            env,
             cargo_args,
         } => localnet(
             &opts.cfg_override,
             skip_build,
             skip_deploy,
             skip_lint,
+            env,
             cargo_args,
         ),
         Command::Account {
@@ -793,6 +817,7 @@ pub fn build(
     bootstrap: BootstrapMode,
     stdout: Option<File>, // Used for the package registry server.
     stderr: Option<File>, // Used for the package registry server.
+    env_vars: Vec<String>,
     cargo_args: Vec<String>,
     no_docs: bool,
 ) -> Result<()> {
@@ -838,6 +863,7 @@ pub fn build(
             &build_config,
             stdout,
             stderr,
+            env_vars,
             cargo_args,
             skip_lint,
             no_docs,
@@ -851,6 +877,7 @@ pub fn build(
             &build_config,
             stdout,
             stderr,
+            env_vars,
             cargo_args,
             skip_lint,
             no_docs,
@@ -864,6 +891,7 @@ pub fn build(
             &build_config,
             stdout,
             stderr,
+            env_vars,
             cargo_args,
             skip_lint,
             no_docs,
@@ -884,6 +912,7 @@ fn build_all(
     build_config: &BuildConfig,
     stdout: Option<File>, // Used for the package registry server.
     stderr: Option<File>, // Used for the package registry server.
+    env_vars: Vec<String>,
     cargo_args: Vec<String>,
     skip_lint: bool,
     no_docs: bool,
@@ -901,6 +930,7 @@ fn build_all(
                     build_config,
                     stdout.as_ref().map(|f| f.try_clone()).transpose()?,
                     stderr.as_ref().map(|f| f.try_clone()).transpose()?,
+                    env_vars.clone(),
                     cargo_args.clone(),
                     skip_lint,
                     no_docs,
@@ -923,6 +953,7 @@ fn build_cwd(
     build_config: &BuildConfig,
     stdout: Option<File>,
     stderr: Option<File>,
+    env_vars: Vec<String>,
     cargo_args: Vec<String>,
     skip_lint: bool,
     no_docs: bool,
@@ -940,6 +971,7 @@ fn build_cwd(
             stdout,
             stderr,
             skip_lint,
+            env_vars,
             cargo_args,
             no_docs,
         ),
@@ -956,6 +988,7 @@ fn build_cwd_verifiable(
     stdout: Option<File>,
     stderr: Option<File>,
     skip_lint: bool,
+    env_vars: Vec<String>,
     cargo_args: Vec<String>,
     no_docs: bool,
 ) -> Result<()> {
@@ -978,6 +1011,7 @@ fn build_cwd_verifiable(
         build_config,
         stdout,
         stderr,
+        env_vars,
         cargo_args,
     );
 
@@ -1017,6 +1051,7 @@ fn build_cwd_verifiable(
     result
 }
 
+#[allow(clippy::too_many_arguments)]
 fn docker_build(
     cfg: &WithPath<Config>,
     container_name: &str,
@@ -1024,6 +1059,7 @@ fn docker_build(
     build_config: &BuildConfig,
     stdout: Option<File>,
     stderr: Option<File>,
+    env_vars: Vec<String>,
     cargo_args: Vec<String>,
 ) -> Result<()> {
     let binary_name = Manifest::from_path(&cargo_toml)?.lib_name()?;
@@ -1077,6 +1113,7 @@ fn docker_build(
             binary_name,
             stdout,
             stderr,
+            env_vars,
             cargo_args,
         )
     });
@@ -1140,6 +1177,7 @@ fn docker_build_bpf(
     binary_name: String,
     stdout: Option<File>,
     stderr: Option<File>,
+    env_vars: Vec<String>,
     cargo_args: Vec<String>,
 ) -> Result<()> {
     let manifest_path =
@@ -1157,6 +1195,13 @@ fn docker_build_bpf(
             "exec",
             "--env",
             "PATH=/root/.local/share/solana/install/active_release/bin:/root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        ])
+        .args(env_vars
+            .iter()
+            .map(|x| ["--env", x.as_str()])
+            .collect::<Vec<[&str; 2]>>()
+            .concat())
+        .args([
             container_name,
             "cargo",
             "build-bpf",
@@ -1295,6 +1340,7 @@ fn _build_cwd(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn verify(
     cfg_override: &ConfigOverride,
     program_id: Pubkey,
@@ -1302,6 +1348,7 @@ fn verify(
     solana_version: Option<String>,
     docker_image: Option<String>,
     bootstrap: BootstrapMode,
+    env_vars: Vec<String>,
     cargo_args: Vec<String>,
 ) -> Result<()> {
     // Change to the workspace member directory, if needed.
@@ -1327,6 +1374,7 @@ fn verify(
         bootstrap,                                             // bootstrap docker image
         None,                                                  // stdout
         None,                                                  // stderr
+        env_vars,
         cargo_args,
         false,
     )?;
@@ -1599,7 +1647,7 @@ fn idl_init(cfg_override: &ConfigOverride, program_id: Pubkey, idl_filepath: Str
 fn idl_close(cfg_override: &ConfigOverride, program_id: Pubkey) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         let idl_address = IdlAccount::address(&program_id);
-        idl_close_account(&cfg, &program_id, idl_address)?;
+        idl_close_account(cfg, &program_id, idl_address)?;
 
         println!("Idl account closed: {:?}", idl_address);
 
@@ -2171,6 +2219,7 @@ fn test(
     detach: bool,
     tests_to_run: Vec<String>,
     extra_args: Vec<String>,
+    env_vars: Vec<String>,
     cargo_args: Vec<String>,
 ) -> Result<()> {
     let test_paths = tests_to_run
@@ -2197,6 +2246,7 @@ fn test(
                 BootstrapMode::None,
                 None,
                 None,
+                env_vars,
                 cargo_args,
                 false,
             )?;
@@ -3200,6 +3250,7 @@ fn login(_cfg_override: &ConfigOverride, token: String) -> Result<()> {
 fn publish(
     cfg_override: &ConfigOverride,
     program_name: String,
+    env_vars: Vec<String>,
     cargo_args: Vec<String>,
     skip_build: bool,
 ) -> Result<()> {
@@ -3330,6 +3381,7 @@ fn publish(
             BootstrapMode::None,
             None,
             None,
+            env_vars,
             cargo_args,
             true,
         )?;
@@ -3412,6 +3464,7 @@ fn localnet(
     skip_build: bool,
     skip_deploy: bool,
     skip_lint: bool,
+    env_vars: Vec<String>,
     cargo_args: Vec<String>,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
@@ -3429,6 +3482,7 @@ fn localnet(
                 BootstrapMode::None,
                 None,
                 None,
+                env_vars,
                 cargo_args,
                 false,
             )?;

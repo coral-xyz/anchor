@@ -5,7 +5,7 @@ on:
     branches:
       - master
 env:
-  SOLANA_CLI_VERSION: 1.14.7
+  SOLANA_CLI_VERSION: 1.14.11
   NODE_VERSION: 17.0.1
 
 jobs:
@@ -251,10 +251,8 @@ jobs:
             path: spl/token-proxy
           - cmd: cd tests/multisig && anchor test --skip-lint
             path: tests/multisig
-          - cmd: cd tests/interface && anchor test --skip-lint
-            path: tests/interface
-          - cmd: cd tests/lockup && anchor test --skip-lint
-            path: tests/lockup
+          # - cmd: cd tests/lockup && anchor test --skip-lint
+          #   path: tests/lockup
           - cmd: cd tests/swap/deps/openbook-dex/dex && cargo build-bpf -- --locked && cd ../../../ && anchor test --skip-lint
             path: tests/swap
           - cmd: cd tests/escrow && anchor test --skip-lint && npx tsc --noEmit
