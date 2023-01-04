@@ -4,7 +4,7 @@ import { IdlCommandsOne } from "../target/types/idl_commands_one";
 import { IdlCommandsTwo } from "../target/types/idl_commands_two";
 import { assert } from "chai";
 import { execSync } from "child_process";
-import * as fs from 'fs';
+import * as fs from "fs";
 
 describe("Test CLI IDL commands", () => {
   // Configure the client to use the local cluster.
@@ -57,10 +57,6 @@ describe("Test CLI IDL commands", () => {
   });
 
   it("Can fetch an IDL authority via the CLI", async () => {
-    console.log("Starting...");
-    await new Promise((resolve) => setTimeout(resolve, 10000)); // pause for 10 second
-    console.log("Done!");
-
     const authority = execSync(`anchor idl authority ${programOne.programId}`)
       .toString()
       .trim();
@@ -69,26 +65,9 @@ describe("Test CLI IDL commands", () => {
   });
 
   it("Can close IDL account", async () => {
-    execSync(
-      `anchor idl close ${programOne.programId}`,
-      { stdio: "inherit" }
-    );
-
-    console.log("Starting...");
-    await new Promise((resolve) => setTimeout(resolve, 15000)); // pause for 10 second
-    console.log("Done!");
-
-    try {
-      execSync(`anchor idl authority ${programOne.programId}`, {
-        stdio: "inherit",
-      });
-      throw new Error("Command didn't error");
-    } catch (err) {
-      assert.include(
-        err.message,
-        "AccountNotFound: pubkey=2zu1ju6TZuXph7ddZiuLR47yo99gxx69m63z1KpEHqoP"
-      );
-    }
+    execSync(`anchor idl close ${programOne.programId}`, { stdio: "inherit" });
+    const idl = await anchor.Program.fetchIdl(programOne.programId, provider);
+    assert.isNull(idl);
   });
 
   it("Can initialize super massive IDL account", async () => {
@@ -96,8 +75,13 @@ describe("Test CLI IDL commands", () => {
       `anchor idl init --filepath testLargeIdl.json ${programOne.programId}`,
       { stdio: "inherit" }
     );
-    const idlActual = await anchor.Program.fetchIdl(programOne.programId, provider);
-    const idlExpected = JSON.parse(fs.readFileSync('testLargeIdl.json', 'utf8'));
+    const idlActual = await anchor.Program.fetchIdl(
+      programOne.programId,
+      provider
+    );
+    const idlExpected = JSON.parse(
+      fs.readFileSync("testLargeIdl.json", "utf8")
+    );
     assert.deepEqual(idlActual, idlExpected);
   });
 });
