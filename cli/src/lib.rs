@@ -2889,17 +2889,18 @@ fn create_idl_account(
 
     // Run `Create instruction.
     {
+        let pda_max_growth = 60_000;
         let idl_header_size = 44;
-        // Double for future growth.
-        let data_len = ((idl_data.len() as u64) * 2) + idl_header_size;
+        let idl_data_len = idl_data.len() as u64;
         // We're only going to support up to 6 instructions in one transaction
         // because will anyone really have a >60kb IDL?
-        if data_len > 60_000 {
+        if idl_data_len > pda_max_growth {
             return Err(anyhow!(
                 "Your IDL is over 60kb and this isn't supported right now"
             ));
         }
-        println!("{} num bytes", data_len);
+        // Double for future growth.
+        let data_len = (idl_data_len * 2).min(pda_max_growth - idl_header_size);
 
         let num_additional_instructions = data_len / 10000;
         let mut instructions = Vec::new();
