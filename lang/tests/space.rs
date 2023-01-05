@@ -19,9 +19,11 @@ pub enum TestBasicEnum {
 }
 
 #[account]
+#[derive(InitSpace)]
 pub struct TestEmptyAccount {}
 
 #[account]
+#[derive(InitSpace)]
 pub struct TestBasicVarAccount {
     pub test_u8: u8,
     pub test_u16: u16,
@@ -31,6 +33,7 @@ pub struct TestBasicVarAccount {
 }
 
 #[account]
+#[derive(InitSpace)]
 pub struct TestComplexeVarAccount {
     pub test_key: Pubkey,
     #[max_len(10)]

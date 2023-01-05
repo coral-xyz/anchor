@@ -67,36 +67,29 @@ pub fn account(
 ) -> proc_macro::TokenStream {
     let mut namespace = "".to_string();
     let mut is_zero_copy = false;
-    let mut skip_init_space = false;
     let args_str = args.to_string();
     let args: Vec<&str> = args_str.split(',').collect();
     if args.len() > 2 {
         panic!("Only two args are allowed to the account attribute.")
     }
     for arg in args {
-        let ns: String = arg
+        let ns = arg
             .to_string()
             .replace('\"', "")
             .chars()
             .filter(|c| !c.is_whitespace())
             .collect();
-
-        match ns.as_str() {
-            "zero_copy" => is_zero_copy = true,
-            "skip_space" => skip_init_space = true,
-            _ => namespace = ns,
-        };
+        if ns == "zero_copy" {
+            is_zero_copy = true;
+        } else {
+            namespace = ns;
+        }
     }
 
     let account_strct = parse_macro_input!(input as syn::ItemStruct);
     let account_name = &account_strct.ident;
     let account_name_str = account_name.to_string();
     let (impl_gen, type_gen, where_clause) = account_strct.generics.split_for_impl();
-    let init_space = if skip_init_space {
-        quote!()
-    } else {
-        quote!(#[derive(InitSpace)])
-    };
 
     let discriminator: proc_macro2::TokenStream = {
         // Namespace the discriminator to prevent collisions.
@@ -178,7 +171,6 @@ pub fn account(
             }
         } else {
             quote! {
-                #init_space
                 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
                 #account_strct
 

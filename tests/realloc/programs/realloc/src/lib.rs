@@ -99,7 +99,7 @@ pub struct Realloc2<'info> {
     pub system_program: Program<'info, System>,
 }
 
-#[account(skip_space)]
+#[account]
 pub struct Sample {
     pub data: Vec<u8>,
     pub bump: u8,
