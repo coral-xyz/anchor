@@ -236,9 +236,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 #[cfg(not(feature = "no-log-ix-name"))]
                 anchor_lang::prelude::msg!("Instruction: IdlWrite");
 
-                let prev_len: usize = (accounts.idl.data_len).try_into().unwrap();
+                let prev_len: usize = ::std::convert::TryInto::<usize>::try_into(accounts.idl.data_len).unwrap();
                 let new_len: usize = prev_len + idl_data.len();
-                accounts.idl.data_len = accounts.idl.data_len.checked_add(idl_data.len().try_into().unwrap()).unwrap();
+                accounts.idl.data_len = accounts.idl.data_len.checked_add(::std::convert::TryInto::<u32>::try_into(idl_data.len()).unwrap()).unwrap();
 
                 use anchor_lang::idl::IdlTrailingData;
                 let mut idl_bytes = accounts.idl.trailing_data_mut();
@@ -273,7 +273,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 accounts.idl.data_len = accounts.buffer.data_len;
 
                 use anchor_lang::idl::IdlTrailingData;
-                let buffer_len = accounts.buffer.data_len.try_into().unwrap();
+                let buffer_len = ::std::convert::TryInto::<usize>::try_into(accounts.buffer.data_len).unwrap();
                 let mut target = accounts.idl.trailing_data_mut();
                 let source = &accounts.buffer.trailing_data()[..buffer_len];
                 require_gte!(target.len(), buffer_len);
