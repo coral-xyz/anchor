@@ -13,6 +13,7 @@ use syn::{
 /// # Example
 /// ```ignore
 /// #[account]
+/// #[derive(InitSpace)]
 /// pub struct ExampleAccount {
 ///     pub data: u64,
 /// }
