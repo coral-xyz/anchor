@@ -74,6 +74,7 @@ pub struct SendMessage<'info> {
 }
 
 #[account]
+#[derive(InitSpace)]
 pub struct User {
     #[max_len(200)]
     name: String,
