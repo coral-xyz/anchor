@@ -219,6 +219,14 @@ pub trait Owner {
     fn owner() -> Pubkey;
 }
 
+pub trait CompatibleOwners {
+    fn compatible_owners() -> Vec<Pubkey>;
+
+    fn is_compatible_owner(owner: &Pubkey) -> bool {
+        Self::compatible_owners().contains(owner)
+    }
+}
+
 /// Defines the id of a program.
 pub trait Id {
     fn id() -> Pubkey;

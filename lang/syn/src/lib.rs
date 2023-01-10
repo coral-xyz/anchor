@@ -384,6 +384,30 @@ impl Field {
                     }
                 }
             }
+            Ty::MultiProgramCompatibleAccount(MultiProgramCompatibleAccountTy { boxed, .. }) => {
+                let stream = if checked {
+                    quote! {
+                        match #container_ty::try_from(&#field) {
+                            Ok(val) => val,
+                            Err(e) => return Err(e.with_account_name(#field_str))
+                        }
+                    }
+                } else {
+                    quote! {
+                        match #container_ty::try_from_unchecked(&#field) {
+                            Ok(val) => val,
+                            Err(e) => return Err(e.with_account_name(#field_str))
+                        }
+                    }
+                };
+                if *boxed {
+                    quote! {
+                        Box::new(#stream)
+                    }
+                } else {
+                    stream
+                }
+            }
             _ => {
                 if checked {
                     quote! {
@@ -417,6 +441,9 @@ impl Field {
             },
             Ty::Loader(_) => quote! {
                 anchor_lang::accounts::loader::Loader
+            },
+            Ty::MultiProgramCompatibleAccount(_) => quote! {
+                anchor_lang::accounts::multi_program_compatible_account::MultiProgramCompatibleAccount
             },
             Ty::CpiAccount(_) => quote! {
                 anchor_lang::accounts::cpi_account::CpiAccount
@@ -468,6 +495,12 @@ impl Field {
                 }
             }
             Ty::Loader(ty) => {
+                let ident = &ty.account_type_path;
+                quote! {
+                    #ident
+                }
+            }
+            Ty::MultiProgramCompatibleAccount(ty) => {
                 let ident = &ty.account_type_path;
                 quote! {
                     #ident
@@ -526,6 +559,7 @@ pub enum Ty {
     Signer,
     SystemAccount,
     ProgramData,
+    MultiProgramCompatibleAccount(MultiProgramCompatibleAccountTy),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -568,6 +602,14 @@ pub struct LoaderTy {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct AccountTy {
+    // The struct type of the account.
+    pub account_type_path: TypePath,
+    // True if the account has been boxed via `Box<T>`.
+    pub boxed: bool,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct MultiProgramCompatibleAccountTy {
     // The struct type of the account.
     pub account_type_path: TypePath,
     // True if the account has been boxed via `Box<T>`.

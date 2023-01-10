@@ -295,6 +295,7 @@ fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
             | "Signer"
             | "SystemAccount"
             | "ProgramData"
+            | "MultiProgramCompatibleAccount"
     );
     Ok(r)
 }
@@ -314,6 +315,7 @@ fn parse_ty(f: &syn::Field) -> ParseResult<(Ty, bool)> {
         "Signer" => Ty::Signer,
         "SystemAccount" => Ty::SystemAccount,
         "ProgramData" => Ty::ProgramData,
+        "MultiProgramCompatibleAccount" => Ty::MultiProgramCompatibleAccount(parse_multi_program_compatible_account_ty(&path)?),
         _ => return Err(ParseError::new(f.ty.span(), "invalid account type given")),
     };
 
@@ -409,6 +411,17 @@ fn parse_account_ty(path: &syn::Path) -> ParseResult<AccountTy> {
         .replace(' ', "")
         .starts_with("Box<Account<");
     Ok(AccountTy {
+        account_type_path,
+        boxed,
+    })
+}
+
+fn parse_multi_program_compatible_account_ty(path: &syn::Path) -> ParseResult<MultiProgramCompatibleAccountTy> {
+    let account_type_path = parse_account(path)?;
+    let boxed = parser::tts_to_string(path)
+        .replace(' ', "")
+        .starts_with("Box<MultiProgramCompatibleAccount<");
+    Ok(MultiProgramCompatibleAccountTy {
         account_type_path,
         boxed,
     })
