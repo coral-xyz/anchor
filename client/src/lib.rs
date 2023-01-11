@@ -44,11 +44,11 @@ pub type EventHandle = PubsubClientSubscription<RpcResponse<RpcLogsResponse>>;
 /// Client defines the base configuration for building RPC clients to
 /// communicate with Anchor programs running on a Solana cluster. It's
 /// primary use is to build a `Program` client via the `program` method.
-pub struct Client<C: Deref<Target = S> + Clone, S: Signer> {
-    cfg: Config<C, S>,
+pub struct Client<C> {
+    cfg: Config<C>,
 }
 
-impl<C: Deref<Target = S> + Clone, S: Signer> Client<C, S> {
+impl<C: Clone + Deref<Target = impl Signer>> Client<C> {
     pub fn new(cluster: Cluster, payer: C) -> Self {
         Self {
             cfg: Config {
@@ -69,7 +69,7 @@ impl<C: Deref<Target = S> + Clone, S: Signer> Client<C, S> {
         }
     }
 
-    pub fn program(&self, program_id: Pubkey) -> Program<C, S> {
+    pub fn program(&self, program_id: Pubkey) -> Program<C> {
         Program {
             program_id,
             cfg: Config {
@@ -83,7 +83,7 @@ impl<C: Deref<Target = S> + Clone, S: Signer> Client<C, S> {
 
 // Internal configuration for a client.
 #[derive(Debug)]
-struct Config<C: Deref<Target = S> + Clone, S: Signer> {
+struct Config<C> {
     cluster: Cluster,
     payer: C,
     options: Option<CommitmentConfig>,
@@ -91,18 +91,18 @@ struct Config<C: Deref<Target = S> + Clone, S: Signer> {
 
 /// Program is the primary client handle to be used to build and send requests.
 #[derive(Debug)]
-pub struct Program<C: Deref<Target = S> + Clone, S: Signer> {
+pub struct Program<C> {
     program_id: Pubkey,
-    cfg: Config<C, S>,
+    cfg: Config<C>,
 }
 
-impl<C: Deref<Target = S> + Clone, S: Signer> Program<C, S> {
+impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
     pub fn payer(&self) -> Pubkey {
         self.cfg.payer.pubkey()
     }
 
     /// Returns a request builder.
-    pub fn request(&self) -> RequestBuilder<C, S> {
+    pub fn request(&self) -> RequestBuilder<C> {
         RequestBuilder::from(
             self.program_id,
             self.cfg.cluster.url(),
@@ -113,7 +113,7 @@ impl<C: Deref<Target = S> + Clone, S: Signer> Program<C, S> {
     }
 
     /// Returns a request builder for program state.
-    pub fn state_request(&self) -> RequestBuilder<C, S> {
+    pub fn state_request(&self) -> RequestBuilder<C> {
         RequestBuilder::from(
             self.program_id,
             self.cfg.cluster.url(),
@@ -386,7 +386,7 @@ pub enum ClientError {
 
 /// `RequestBuilder` provides a builder interface to create and send
 /// transactions to a cluster.
-pub struct RequestBuilder<'a, C: Deref<Target = S> + Clone, S: Signer> {
+pub struct RequestBuilder<'a, C> {
     cluster: String,
     program_id: Pubkey,
     accounts: Vec<AccountMeta>,
@@ -410,7 +410,7 @@ pub enum RequestNamespace {
     Interface,
 }
 
-impl<'a, C: Deref<Target = S> + Clone, S: Signer> RequestBuilder<'a, C, S> {
+impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
     pub fn from(
         program_id: Pubkey,
         cluster: &str,

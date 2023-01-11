@@ -45,7 +45,7 @@ pub struct Opts {
     multithreaded: bool,
 }
 
-type TestFn<C> = &'static (dyn Fn(&Client<C, Keypair>, Pubkey) -> Result<()> + Send + Sync);
+type TestFn<C> = &'static (dyn Fn(&Client<C>, Pubkey) -> Result<()> + Send + Sync);
 
 // This example assumes a local validator is running with the programs
 // deployed at the addresses given by the CLI args.
@@ -110,8 +110,8 @@ fn main() -> Result<()> {
 // Runs a client for examples/tutorial/composite.
 //
 // Make sure to run a localnet with the program deploy to run this example.
-fn composite<C: Deref<Target = Keypair> + Clone>(
-    client: &Client<C, Keypair>,
+fn composite<C: Deref<Target = impl Signer> + Clone>(
+    client: &Client<C>,
     pid: Pubkey,
 ) -> Result<()> {
     // Program client.
@@ -184,10 +184,7 @@ fn composite<C: Deref<Target = Keypair> + Clone>(
 // Runs a client for examples/tutorial/basic-2.
 //
 // Make sure to run a localnet with the program deploy to run this example.
-fn basic_2<C: Deref<Target = S> + Clone, S: Signer>(
-    client: &Client<C, S>,
-    pid: Pubkey,
-) -> Result<()> {
+fn basic_2<C: Deref<Target = impl Signer> + Clone>(client: &Client<C>, pid: Pubkey) -> Result<()> {
     let program = client.program(pid);
 
     // `Create` parameters.
@@ -216,10 +213,7 @@ fn basic_2<C: Deref<Target = S> + Clone, S: Signer>(
     Ok(())
 }
 
-fn events<C: Deref<Target = S> + Clone, S: Signer>(
-    client: &Client<C, S>,
-    pid: Pubkey,
-) -> Result<()> {
+fn events<C: Deref<Target = impl Signer> + Clone>(client: &Client<C>, pid: Pubkey) -> Result<()> {
     let program = client.program(pid);
 
     let (sender, receiver) = std::sync::mpsc::channel();
@@ -251,8 +245,8 @@ fn events<C: Deref<Target = S> + Clone, S: Signer>(
     Ok(())
 }
 
-pub fn basic_4<C: Deref<Target = S> + Clone, S: Signer>(
-    client: &Client<C, S>,
+pub fn basic_4<C: Deref<Target = impl Signer> + Clone>(
+    client: &Client<C>,
     pid: Pubkey,
 ) -> Result<()> {
     let program = client.program(pid);
@@ -286,10 +280,7 @@ pub fn basic_4<C: Deref<Target = S> + Clone, S: Signer>(
 // Runs a client for tests/optional.
 //
 // Make sure to run a localnet with the program deploy to run this example.
-fn optional<C: Deref<Target = S> + Clone, S: Signer>(
-    client: &Client<C, S>,
-    pid: Pubkey,
-) -> Result<()> {
+fn optional<C: Deref<Target = impl Signer> + Clone>(client: &Client<C>, pid: Pubkey) -> Result<()> {
     // Program client.
     let program = client.program(pid);
 
