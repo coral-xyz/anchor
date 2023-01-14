@@ -195,10 +195,10 @@ declare type DecodeEnumFields<
  */
 declare type DecodeEnum<K extends IdlTypeDefTyEnum, Defined> = {
   // X = IdlEnumVariant
-  [X in K["variants"][number] as Uncapitalize<X["name"]>]+?: DecodeEnumFields<
+  [X in K["variants"][number] as Uncapitalize<X["name"]>]+?: X["fields"] extends unknown[] ? DecodeEnumFields<
     NonNullable<X["fields"]>,
     Defined
-  >;
+  > : { [P in Uncapitalize<X['name']>]: {} };
 };
 
 type DecodeStruct<I extends IdlTypeDefTyStruct, Defined> = {
