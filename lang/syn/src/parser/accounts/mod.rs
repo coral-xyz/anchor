@@ -304,6 +304,7 @@ fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
             | "SystemAccount"
             | "ProgramData"
             | "MultiProgramCompatibleAccount"
+            | "CompatibleProgram"
     );
     Ok(r)
 }
@@ -324,6 +325,7 @@ fn parse_ty(f: &syn::Field) -> ParseResult<(Ty, bool)> {
         "SystemAccount" => Ty::SystemAccount,
         "ProgramData" => Ty::ProgramData,
         "MultiProgramCompatibleAccount" => Ty::MultiProgramCompatibleAccount(parse_multi_program_compatible_account_ty(&path)?),
+        "CompatibleProgram" => Ty::CompatibleProgram(parse_compatible_program_ty(&path)?),
         _ => return Err(ParseError::new(f.ty.span(), "invalid account type given")),
     };
 
@@ -438,6 +440,11 @@ fn parse_multi_program_compatible_account_ty(path: &syn::Path) -> ParseResult<Mu
 fn parse_program_ty(path: &syn::Path) -> ParseResult<ProgramTy> {
     let account_type_path = parse_account(path)?;
     Ok(ProgramTy { account_type_path })
+}
+
+fn parse_compatible_program_ty(path: &syn::Path) -> ParseResult<CompatibleProgramTy> {
+    let account_type_path = parse_account(path)?;
+    Ok(CompatibleProgramTy { account_type_path })
 }
 
 // TODO: this whole method is a hack. Do something more idiomatic.

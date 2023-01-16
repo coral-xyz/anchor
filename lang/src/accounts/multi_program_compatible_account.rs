@@ -247,9 +247,10 @@ impl<'a, T: AccountSerialize + AccountDeserialize + crate::CompatibleOwners + Cl
         if info.owner == &system_program::ID && info.lamports() == 0 {
             return Err(ErrorCode::AccountNotInitialized.into());
         }
+        // todo elliot
         if !T::is_compatible_owner(info.owner) {
             return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram));
-                // .with_values((*info.owner, T::compatible_owners()))); // todo
+                // .with_values((*info.owner, T::compatible_owners())));
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(MultiProgramCompatibleAccount::new(info.clone(), T::try_deserialize(&mut data)?))
@@ -264,8 +265,9 @@ impl<'a, T: AccountSerialize + AccountDeserialize + crate::CompatibleOwners + Cl
             return Err(ErrorCode::AccountNotInitialized.into());
         }
         if !T::is_compatible_owner(info.owner) {
+            // todo elliot
             return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram));
-                // .with_values((*info.owner, T::compatible_owners()))); // todo
+                // .with_values((*info.owner, T::compatible_owners())));
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
         Ok(MultiProgramCompatibleAccount::new(

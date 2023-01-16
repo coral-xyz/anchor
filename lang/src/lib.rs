@@ -243,6 +243,15 @@ impl Key for Pubkey {
     }
 }
 
+/// Defines the ids of compatible programs.
+pub trait CompatibleIds {
+    fn compatible_ids() -> Vec<Pubkey>;
+
+    fn is_compatible_id(id: &Pubkey) -> bool {
+        Self::compatible_ids().contains(id)
+    }
+}
+
 /// The prelude contains all commonly used components of the crate.
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {

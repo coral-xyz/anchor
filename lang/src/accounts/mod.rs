@@ -19,4 +19,5 @@ pub mod signer;
 pub mod system_account;
 pub mod sysvar;
 pub mod unchecked_account;
+pub mod compatible_program;
 pub mod multi_program_compatible_account;

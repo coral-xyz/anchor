@@ -520,6 +520,13 @@ impl anchor_lang::Id for Token {
     }
 }
 
+#[cfg(feature = "token_2022_compat")]
+impl anchor_lang::CompatibleIds for Token {
+    fn compatible_ids() -> Vec<Pubkey> {
+        [spl_token_2022::ID, spl_token::ID].to_vec()
+    }
+}
+
 // Field parsers to save compute. All account validation is assumed to be done
 // outside of these methods.
 pub mod accessor {

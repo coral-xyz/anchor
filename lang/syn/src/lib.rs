@@ -450,6 +450,7 @@ impl Field {
             },
             Ty::Sysvar(_) => quote! { anchor_lang::accounts::sysvar::Sysvar },
             Ty::Program(_) => quote! { anchor_lang::accounts::program::Program },
+            Ty::CompatibleProgram(_) => quote! { anchor_lang::accounts::compatible_program::CompatibleProgram },
             Ty::AccountInfo => quote! {},
             Ty::UncheckedAccount => quote! {},
             Ty::Signer => quote! {},
@@ -530,6 +531,12 @@ impl Field {
                     #program
                 }
             }
+            Ty::CompatibleProgram(ty) => {
+                let compatible_program = &ty.account_type_path;
+                quote! {
+                    #compatible_program
+                }
+            }
         }
     }
 }
@@ -560,6 +567,7 @@ pub enum Ty {
     SystemAccount,
     ProgramData,
     MultiProgramCompatibleAccount(MultiProgramCompatibleAccountTy),
+    CompatibleProgram(CompatibleProgramTy),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -618,6 +626,12 @@ pub struct MultiProgramCompatibleAccountTy {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ProgramTy {
+    // The struct type of the account.
+    pub account_type_path: TypePath,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct CompatibleProgramTy {
     // The struct type of the account.
     pub account_type_path: TypePath,
 }
