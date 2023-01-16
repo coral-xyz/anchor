@@ -19,7 +19,7 @@ pub fn transfer<'a, 'b, 'c, 'info>(
 ) -> Result<()> {
     #[allow(deprecated)]
     let ix = spl_token_2022::instruction::transfer(
-        &spl_token_2022::ID,
+        ctx.program.key,
         ctx.accounts.source.key,
         ctx.accounts.destination.key,
         ctx.accounts.authority.key,
@@ -44,7 +44,7 @@ pub fn transfer_checked<'a, 'b, 'c, 'info>(
     decimals: u8,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::transfer_checked(
-        &spl_token_2022::ID,
+        &ctx.program.key,
         ctx.accounts.source.key,
         ctx.accounts.mint.key,
         ctx.accounts.destination.key,
@@ -71,7 +71,7 @@ pub fn mint_to<'a, 'b, 'c, 'info>(
     amount: u64,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::mint_to(
-        &spl_token_2022::ID,
+        ctx.program.key,
         ctx.accounts.mint.key,
         ctx.accounts.to.key,
         ctx.accounts.authority.key,
@@ -95,7 +95,7 @@ pub fn burn<'a, 'b, 'c, 'info>(
     amount: u64,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::burn(
-        &spl_token_2022::ID,
+        ctx.program.key,
         ctx.accounts.from.key,
         ctx.accounts.mint.key,
         ctx.accounts.authority.key,
@@ -119,7 +119,7 @@ pub fn approve<'a, 'b, 'c, 'info>(
     amount: u64,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::approve(
-        &spl_token_2022::ID,
+        ctx.program.key,
         ctx.accounts.to.key,
         ctx.accounts.delegate.key,
         ctx.accounts.authority.key,
@@ -140,7 +140,7 @@ pub fn approve<'a, 'b, 'c, 'info>(
 
 pub fn revoke<'a, 'b, 'c, 'info>(ctx: CpiContext<'a, 'b, 'c, 'info, Revoke<'info>>) -> Result<()> {
     let ix = spl_token_2022::instruction::revoke(
-        &spl_token_2022::ID,
+        ctx.program.key,
         ctx.accounts.source.key,
         ctx.accounts.authority.key,
         &[],
@@ -157,7 +157,7 @@ pub fn initialize_account<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, InitializeAccount<'info>>,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::initialize_account(
-        &spl_token_2022::ID,
+        ctx.program.key,
         ctx.accounts.account.key,
         ctx.accounts.mint.key,
         ctx.accounts.authority.key,
@@ -179,7 +179,7 @@ pub fn initialize_account3<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, InitializeAccount3<'info>>,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::initialize_account3(
-        &spl_token_2022::ID,
+        ctx.program.key,
         ctx.accounts.account.key,
         ctx.accounts.mint.key,
         ctx.accounts.authority.key,
@@ -196,7 +196,7 @@ pub fn close_account<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, CloseAccount<'info>>,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::close_account(
-        &spl_token_2022::ID,
+        ctx.program.key,
         ctx.accounts.account.key,
         ctx.accounts.destination.key,
         ctx.accounts.authority.key,
@@ -218,7 +218,7 @@ pub fn freeze_account<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, FreezeAccount<'info>>,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::freeze_account(
-        &spl_token_2022::ID,
+        ctx.program.key,
         ctx.accounts.account.key,
         ctx.accounts.mint.key,
         ctx.accounts.authority.key,
@@ -240,7 +240,7 @@ pub fn thaw_account<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, ThawAccount<'info>>,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::thaw_account(
-        &spl_token_2022::ID,
+        ctx.program.key,
         ctx.accounts.account.key,
         ctx.accounts.mint.key,
         ctx.accounts.authority.key,
@@ -265,7 +265,7 @@ pub fn initialize_mint<'a, 'b, 'c, 'info>(
     freeze_authority: Option<&Pubkey>,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::initialize_mint(
-        &spl_token_2022::ID,
+        ctx.program.key,
         ctx.accounts.mint.key,
         authority,
         freeze_authority,
@@ -286,7 +286,7 @@ pub fn initialize_mint2<'a, 'b, 'c, 'info>(
     freeze_authority: Option<&Pubkey>,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::initialize_mint2(
-        &spl_token_2022::ID,
+        ctx.program.key,
         ctx.accounts.mint.key,
         authority,
         freeze_authority,
@@ -307,7 +307,7 @@ pub fn set_authority<'a, 'b, 'c, 'info>(
     }
 
     let ix = spl_token_2022::instruction::set_authority(
-        &spl_token_2022::ID,
+        ctx.program.key,
         ctx.accounts.account_or_mint.key,
         spl_new_authority,
         authority_type,
@@ -328,7 +328,7 @@ pub fn set_authority<'a, 'b, 'c, 'info>(
 pub fn sync_native<'a, 'b, 'c, 'info>(
     ctx: CpiContext<'a, 'b, 'c, 'info, SyncNative<'info>>,
 ) -> Result<()> {
-    let ix = spl_token_2022::instruction::sync_native(&spl_token_2022::ID, ctx.accounts.account.key)?;
+    let ix = spl_token_2022::instruction::sync_native(ctx.program.key, ctx.accounts.account.key)?;
     solana_program::program::invoke_signed(&ix, &[ctx.accounts.account.clone()], ctx.signer_seeds)
         .map_err(Into::into)
 }
@@ -442,13 +442,21 @@ impl TokenAccount {
 
 impl anchor_lang::AccountDeserialize for TokenAccount {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
-        spl_token_2022::state::Account::unpack(buf)
+        spl_token_2022::extension::StateWithExtensions::<spl_token_2022::state::Account>::unpack(buf)
+            .map(|a| a.base)
             .map(TokenAccount)
             .map_err(Into::into)
     }
 }
 
 impl anchor_lang::AccountSerialize for TokenAccount {}
+
+#[cfg(feature = "token_2022_compat")]
+impl anchor_lang::CompatibleOwners for TokenAccount {
+    fn compatible_owners() -> Vec<Pubkey> {
+        [spl_token_2022::ID, spl_token::ID].to_vec()
+    }
+}
 
 impl anchor_lang::Owner for TokenAccount {
     fn owner() -> Pubkey {
@@ -473,13 +481,21 @@ impl Mint {
 
 impl anchor_lang::AccountDeserialize for Mint {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
-        spl_token_2022::state::Mint::unpack(buf)
+        spl_token_2022::extension::StateWithExtensions::<spl_token_2022::state::Mint>::unpack(buf)
+            .map(|m| m.base)
             .map(Mint)
             .map_err(Into::into)
     }
 }
 
 impl anchor_lang::AccountSerialize for Mint {}
+
+#[cfg(feature = "token_2022_compat")]
+impl anchor_lang::CompatibleOwners for Mint {
+    fn compatible_owners() -> Vec<Pubkey> {
+        [spl_token_2022::ID, spl_token::ID].to_vec()
+    }
+}
 
 impl anchor_lang::Owner for Mint {
     fn owner() -> Pubkey {

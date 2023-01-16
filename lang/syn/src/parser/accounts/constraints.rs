@@ -91,6 +91,12 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         decimals: stream.parse()?,
                     },
                 )),
+                "token_program" => ConstraintToken::MintTokenProgram(Context::new(
+                    span,
+                    ConstraintMintTokenProgram {
+                        token_program: stream.parse()?,
+                    },
+                )),
                 _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
             }
         }
@@ -118,6 +124,12 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         auth: stream.parse()?,
                     },
                 )),
+                "token_program" => ConstraintToken::TokenTokenProgram(Context::new(
+                    span,
+                    ConstraintTokenProgram {
+                        token_program: stream.parse()?,
+                    },
+                )),
                 _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
             }
         }
@@ -143,6 +155,12 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                     span,
                     ConstraintTokenAuthority {
                         auth: stream.parse()?,
+                    },
+                )),
+                "token_program" => ConstraintToken::AssociatedTokenProgram(Context::new(
+                    span,
+                    ConstraintTokenProgram {
+                        token_program: stream.parse()?,
                     },
                 )),
                 _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
@@ -340,11 +358,14 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub address: Option<Context<ConstraintAddress>>,
     pub token_mint: Option<Context<ConstraintTokenMint>>,
     pub token_authority: Option<Context<ConstraintTokenAuthority>>,
+    pub token_token_program: Option<Context<ConstraintTokenProgram>>,
     pub associated_token_mint: Option<Context<ConstraintTokenMint>>,
     pub associated_token_authority: Option<Context<ConstraintTokenAuthority>>,
+    pub associated_token_program: Option<Context<ConstraintTokenProgram>>,
     pub mint_authority: Option<Context<ConstraintMintAuthority>>,
     pub mint_freeze_authority: Option<Context<ConstraintMintFreezeAuthority>>,
     pub mint_decimals: Option<Context<ConstraintMintDecimals>>,
+    pub mint_token_program: Option<Context<ConstraintMintTokenProgram>>,
     pub bump: Option<Context<ConstraintTokenBump>>,
     pub program_seed: Option<Context<ConstraintProgramSeed>>,
     pub realloc: Option<Context<ConstraintRealloc>>,
@@ -373,11 +394,14 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             address: None,
             token_mint: None,
             token_authority: None,
+            token_token_program: None,
             associated_token_mint: None,
             associated_token_authority: None,
+            associated_token_program: None,
             mint_authority: None,
             mint_freeze_authority: None,
             mint_decimals: None,
+            mint_token_program: None,
             bump: None,
             program_seed: None,
             realloc: None,
@@ -573,11 +597,14 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             address,
             token_mint,
             token_authority,
+            token_token_program,
             associated_token_mint,
             associated_token_authority,
+            associated_token_program,
             mint_authority,
             mint_freeze_authority,
             mint_decimals,
+            mint_token_program,
             bump,
             program_seed,
             realloc,
@@ -636,18 +663,21 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             }
         }
 
-        let token_account = match (&token_mint, &token_authority) {
-            (None, None) => None,
+        let token_account = match (&token_mint, &token_authority, &token_token_program) {
+            (None, None, None) => None,
             _ => Some(ConstraintTokenAccountGroup {
                 mint: token_mint.as_ref().map(|a| a.clone().into_inner().mint),
                 authority: token_authority
                     .as_ref()
                     .map(|a| a.clone().into_inner().auth),
+                token_program: token_token_program
+                    .as_ref()
+                    .map(|a| a.clone().into_inner().token_program),
             }),
         };
 
-        let mint = match (&mint_decimals, &mint_authority, &mint_freeze_authority) {
-            (None, None, None) => None,
+        let mint = match (&mint_decimals, &mint_authority, &mint_freeze_authority, &mint_token_program) {
+            (None, None, None, None) => None,
             _ => Some(ConstraintTokenMintGroup {
                 decimals: mint_decimals
                     .as_ref()
@@ -658,6 +688,9 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 freeze_authority: mint_freeze_authority
                     .as_ref()
                     .map(|a| a.clone().into_inner().mint_freeze_auth),
+                token_program: mint_token_program
+                    .as_ref()
+                    .map(|a| a.clone().into_inner().token_program),
             }),
         };
 
@@ -677,11 +710,13 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                                 "authority must be provided to initialize a token program derived address"
                             )),
                         },
+                        token_program: token_token_program.map(|tp| tp.clone().into_inner().token_program),
                     }
                 } else if let Some(at) = &associated_token {
                     InitKind::AssociatedToken {
                         mint: at.mint.clone(),
-                        owner: at.wallet.clone()
+                        owner: at.wallet.clone(),
+                        token_program: token_token_program.map(|tp| tp.clone().into_inner().token_program),
                     }
                 } else if let Some(d) = &mint_decimals {
                     InitKind::Mint {
@@ -693,7 +728,8 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                                 "authority must be provided to initialize a mint program derived address"
                             ))
                         },
-                        freeze_authority: mint_freeze_authority.map(|fa| fa.into_inner().mint_freeze_auth)
+                        freeze_authority: mint_freeze_authority.map(|fa| fa.into_inner().mint_freeze_auth),
+                        token_program: mint_token_program.map(|tp| tp.clone().into_inner().token_program),
                     }
                 } else {
                     InitKind::Program {
@@ -743,11 +779,14 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::Address(c) => self.add_address(c),
             ConstraintToken::TokenAuthority(c) => self.add_token_authority(c),
             ConstraintToken::TokenMint(c) => self.add_token_mint(c),
+            ConstraintToken::TokenTokenProgram(c) => self.add_token_token_program(c),
             ConstraintToken::AssociatedTokenAuthority(c) => self.add_associated_token_authority(c),
             ConstraintToken::AssociatedTokenMint(c) => self.add_associated_token_mint(c),
+            ConstraintToken::AssociatedTokenProgram(c) => self.add_associated_token_program(c),
             ConstraintToken::MintAuthority(c) => self.add_mint_authority(c),
             ConstraintToken::MintFreezeAuthority(c) => self.add_mint_freeze_authority(c),
             ConstraintToken::MintDecimals(c) => self.add_mint_decimals(c),
+            ConstraintToken::MintTokenProgram(c) => self.add_mint_token_program(c),
             ConstraintToken::Bump(c) => self.add_bump(c),
             ConstraintToken::ProgramSeed(c) => self.add_program_seed(c),
             ConstraintToken::Realloc(c) => self.add_realloc(c),
@@ -775,6 +814,12 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 "init must be provided before token authority",
             ));
         }
+        if self.token_token_program.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before token account token program",
+            ));
+        }
         if self.mint_authority.is_some() {
             return Err(ParseError::new(
                 c.span(),
@@ -793,6 +838,12 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 "init must be provided before mint decimals",
             ));
         }
+        if self.mint_token_program.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before mint token program",
+            ));
+        }
         if self.associated_token_mint.is_some() {
             return Err(ParseError::new(
                 c.span(),
@@ -803,6 +854,12 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             return Err(ParseError::new(
                 c.span(),
                 "init must be provided before associated token authority",
+            ));
+        }
+        if self.associated_token_program.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "init must be provided before associated token program",
             ));
         }
         self.init.replace(c);
@@ -930,6 +987,18 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         Ok(())
     }
 
+    fn add_associated_token_program(&mut self, c: Context<ConstraintTokenProgram>) -> ParseResult<()> {
+        if self.associated_token_program.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "associated token program already provided",
+            ));
+        }
+        // todo elliot - token account check? Seems incorrect given that you can now mix
+        self.associated_token_program.replace(c);
+        Ok(())
+    }
+
     fn add_bump(&mut self, c: Context<ConstraintTokenBump>) -> ParseResult<()> {
         if self.bump.is_some() {
             return Err(ParseError::new(c.span(), "bump already provided"));
@@ -982,6 +1051,17 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         Ok(())
     }
 
+    fn add_token_token_program(&mut self, c: Context<ConstraintTokenProgram>) -> ParseResult<()> {
+        if self.token_token_program.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "token token_program already provided",
+            ));
+        }
+        self.token_token_program.replace(c);
+        Ok(())
+    }
+
     fn add_associated_token_authority(
         &mut self,
         c: Context<ConstraintTokenAuthority>,
@@ -1029,6 +1109,14 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             return Err(ParseError::new(c.span(), "mint decimals already provided"));
         }
         self.mint_decimals.replace(c);
+        Ok(())
+    }
+
+    fn add_mint_token_program(&mut self, c: Context<ConstraintMintTokenProgram>) -> ParseResult<()> {
+        if self.mint_token_program.is_some() {
+            return Err(ParseError::new(c.span(), "mint token_program already provided"));
+        }
+        self.mint_token_program.replace(c);
         Ok(())
     }
 

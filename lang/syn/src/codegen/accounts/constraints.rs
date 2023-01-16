@@ -529,18 +529,22 @@ fn generate_constraint_init_group(
 
     // Optional check idents
     let system_program = &quote! {system_program};
-    let token_program = &quote! {token_program};
     let associated_token_program = &quote! {associated_token_program};
     let rent = &quote! {rent};
 
     let mut check_scope = OptionalCheckScope::new_with_field(accs, field);
     match &c.kind {
-        InitKind::Token { owner, mint } => {
+        InitKind::Token { owner, mint, token_program } => {
+            let token_program = match token_program {
+                Some(t) => t.to_token_stream(),
+                None => quote!{token_program},
+            };
+
             let owner_optional_check = check_scope.generate_check(owner);
             let mint_optional_check = check_scope.generate_check(mint);
 
             let system_program_optional_check = check_scope.generate_check(system_program);
-            let token_program_optional_check = check_scope.generate_check(token_program);
+            let token_program_optional_check = check_scope.generate_check(&token_program);
             let rent_optional_check = check_scope.generate_check(rent);
 
             let optional_checks = quote! {
@@ -553,10 +557,31 @@ fn generate_constraint_init_group(
 
             let payer_optional_check = check_scope.generate_check(payer);
 
+            let token_account_space = quote! {token_account_space};
+            let get_token_account_space = quote! {
+                // todo elliot avoid unpacking twice here + extract this into a function
+                let #token_account_space = if #token_program.key() ==
+                anchor_spl::token_2022::Token::id() {
+                    // calculate the space for the token account with required extensions
+                    let mint_data = #mint.to_account_info().data;
+                    let mint_data_binding = mint_data.borrow();
+                    let mint = anchor_spl::token_2022::spl_token_2022::extension::StateWithExtensions::<anchor_spl::token_2022::spl_token_2022::state::Mint>::unpack(&mint_data_binding)?;
+            // .map_err(|_| Into::<ProgramError>::into(TokenError::InvalidMint))?;
+                    let mint_extensions: Vec<anchor_spl::token_2022::spl_token_2022::extension::ExtensionType> = anchor_spl::token_2022::spl_token_2022::extension::BaseStateWithExtensions::get_extension_types(&mint)?;
+
+                    let required_extensions = anchor_spl::token_2022::spl_token_2022::extension::ExtensionType::get_required_init_account_extensions(&mint_extensions);
+                    println!("required_extensions: {:?}", anchor_spl::token_2022::spl_token_2022::extension::ExtensionType::get_account_len::<anchor_spl::token_2022::spl_token_2022::state::Account>(&required_extensions));
+                    anchor_spl::token_2022::spl_token_2022::extension::ExtensionType::get_account_len::<anchor_spl::token_2022::spl_token_2022::state::Account>(&required_extensions)
+                } else {
+                    println!("RETURNING NORM LEN TOKEN ACC");
+                    anchor_spl::token::TokenAccount::LEN
+                };
+            };
+
             let create_account = generate_create_account(
                 field,
-                quote! {anchor_spl::token::TokenAccount::LEN},
-                quote! {&token_program.key()},
+                quote! {#token_account_space},
+                quote! {&#token_program.key()},
                 quote! {#payer},
                 seeds_with_bump,
             );
@@ -572,18 +597,21 @@ fn generate_constraint_init_group(
                     if !#if_needed || AsRef::<AccountInfo>::as_ref(&#field).owner == &anchor_lang::solana_program::system_program::ID {
                         #payer_optional_check
 
+                        // Get the space required for the token account.
+                        #get_token_account_space
+
                         // Create the account with the system program.
                         #create_account
 
                         // Initialize the token account.
-                        let cpi_program = token_program.to_account_info();
-                        let accounts = anchor_spl::token_2022_compat::InitializeAccount3 {
+                        let cpi_program = #token_program.to_account_info();
+                        let accounts = anchor_spl::token_2022::InitializeAccount3 {
                             account: #field.to_account_info(),
                             mint: #mint.to_account_info(),
                             authority: #owner.to_account_info(),
                         };
                         let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
-                        anchor_spl::token_2022_compat::initialize_account3(cpi_ctx)?;
+                        anchor_spl::token_2022::initialize_account3(cpi_ctx)?;
                     }
 
                     let pa: #ty_decl = #from_account_info_unchecked;
@@ -599,12 +627,16 @@ fn generate_constraint_init_group(
                 };
             }
         }
-        InitKind::AssociatedToken { owner, mint } => {
+        InitKind::AssociatedToken { owner, mint, token_program } => {
+            let token_program = match token_program {
+                Some(t) => t.to_token_stream(),
+                None => quote!{token_program},
+            };
             let owner_optional_check = check_scope.generate_check(owner);
             let mint_optional_check = check_scope.generate_check(mint);
 
             let system_program_optional_check = check_scope.generate_check(system_program);
-            let token_program_optional_check = check_scope.generate_check(token_program);
+            let token_program_optional_check = check_scope.generate_check(&token_program);
             let associated_token_program_optional_check =
                 check_scope.generate_check(associated_token_program);
             let rent_optional_check = check_scope.generate_check(rent);
@@ -638,7 +670,7 @@ fn generate_constraint_init_group(
                             authority: #owner.to_account_info(),
                             mint: #mint.to_account_info(),
                             system_program: system_program.to_account_info(),
-                            token_program: token_program.to_account_info(),
+                            token_program: #token_program.to_account_info(),
                         };
                         let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, cpi_accounts);
                         anchor_spl::associated_token::create(cpi_ctx)?;
@@ -664,7 +696,12 @@ fn generate_constraint_init_group(
             owner,
             decimals,
             freeze_authority,
+            token_program
         } => {
+            let token_program = match token_program {
+                Some(t) => t.to_token_stream(),
+                None => quote!{token_program},
+            };
             let owner_optional_check = check_scope.generate_check(owner);
             let freeze_authority_optional_check = match freeze_authority {
                 Some(fa) => check_scope.generate_check(fa),
@@ -672,7 +709,7 @@ fn generate_constraint_init_group(
             };
 
             let system_program_optional_check = check_scope.generate_check(system_program);
-            let token_program_optional_check = check_scope.generate_check(token_program);
+            let token_program_optional_check = check_scope.generate_check(&token_program);
             let rent_optional_check = check_scope.generate_check(rent);
 
             let optional_checks = quote! {
@@ -688,7 +725,7 @@ fn generate_constraint_init_group(
             let create_account = generate_create_account(
                 field,
                 quote! {anchor_spl::token::Mint::LEN},
-                quote! {&token_program.key()},
+                quote! {&#token_program.key()},
                 quote! {#payer},
                 seeds_with_bump,
             );
@@ -714,12 +751,12 @@ fn generate_constraint_init_group(
                         #create_account
 
                         // Initialize the mint account.
-                        let cpi_program = token_program.to_account_info();
-                        let accounts = anchor_spl::token_2022_compat::InitializeMint2 {
+                        let cpi_program = #token_program.to_account_info();
+                        let accounts = anchor_spl::token_2022::InitializeMint2 {
                             mint: #field.to_account_info(),
                         };
                         let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
-                        anchor_spl::token_2022_compat::initialize_mint2(cpi_ctx, #decimals, &#owner.key(), #freeze_authority)?;
+                        anchor_spl::token_2022::initialize_mint2(cpi_ctx, #decimals, &#owner.key(), #freeze_authority)?;
                     }
                     let pa: #ty_decl = #from_account_info_unchecked;
                     if #if_needed {
@@ -964,10 +1001,21 @@ fn generate_constraint_token_account(
         }
         None => quote! {},
     };
+    let token_program_check = match &c.token_program {
+        Some(token_program) => {
+            let token_program_optional_check = optional_check_scope.generate_check(token_program);
+            quote! {
+                #token_program_optional_check
+                if #name.to_account_info().owner != &#token_program.key() { return Err(anchor_lang::error::ErrorCode::ConstraintTokenTokenProgram.into()); }
+            }
+        }
+        None => quote! {},
+    };
     quote! {
         {
             #authority_check
             #mint_check
+            #token_program_check
         }
     }
 }
@@ -1013,11 +1061,25 @@ fn generate_constraint_mint(
         }
         None => quote! {},
     };
+    let token_program_check = match &c.token_program {
+        Some(token_program) => {
+            let token_program_optional_check =
+                optional_check_scope.generate_check(token_program);
+            quote! {
+                #token_program_optional_check
+                if #name.to_account_info().owner != &#token_program.key() {
+                    return Err(anchor_lang::error::ErrorCode::ConstraintMintTokenProgram.into());
+                }
+            }
+        }
+        None => quote! {},
+    };
     quote! {
         {
             #decimal_check
             #mint_authority_check
             #freeze_authority_check
+            #token_program_check
         }
     }
 }
