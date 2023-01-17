@@ -133,7 +133,7 @@ pub struct UpdateLargeAccount<'info> {
 }
 
 #[account(zero_copy)]
-#[repr(packed)]
+#[repr(C)]
 #[derive(Default)]
 pub struct Foo {
     pub authority: Pubkey,

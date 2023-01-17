@@ -144,7 +144,7 @@ pub fn account(
     let safe_bytemuck_derives = {
         if !unsafe_bytemuck {
             quote! {
-                #[derive(bytemuck::Pod, bytemuck::Zeroable)]
+                #[derive(anchor_lang::__private::bytemuck::Pod, anchor_lang::__private::bytemuck::Zeroable)]
             }
         } else {
             quote! {}
