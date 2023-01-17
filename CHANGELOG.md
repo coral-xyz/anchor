@@ -10,6 +10,10 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ## [Unreleased]
 
+### Features
+
+- ts: `provider.simulate` will send the transaction with `sigVerify: false` if no `signers` are present ([#2331](https://github.com/coral-xyz/anchor/pull/2331)).
+
 ## [0.26.0] - 2022-12-15
 
 ### Features
