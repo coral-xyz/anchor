@@ -267,6 +267,17 @@ impl Field {
                         #container_ty<#account_ty>
                     }
                 }
+            },
+            Ty::MultiProgramCompatibleAccount(MultiProgramCompatibleAccountTy { boxed, .. }) => {
+                if *boxed {
+                    quote! {
+                        Box<#container_ty<#account_ty>>
+                    }
+                } else {
+                    quote! {
+                        #container_ty<#account_ty>
+                    }
+                }
             }
             Ty::Sysvar(ty) => {
                 let account = match ty {

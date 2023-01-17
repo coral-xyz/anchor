@@ -376,6 +376,12 @@ fn ident_string(f: &syn::Field) -> ParseResult<(String, bool, Path)> {
     {
         return Ok(("Account".to_string(), optional, path));
     }
+    if parser::tts_to_string(&path)
+        .replace(' ', "")
+        .starts_with("Box<MultiProgramCompatibleAccount<")
+    {
+        return Ok(("MultiProgramCompatibleAccount".to_string(), optional, path));
+    }
     // TODO: allow segmented paths.
     if path.segments.len() != 1 {
         return Err(ParseError::new(
@@ -449,9 +455,10 @@ fn parse_compatible_program_ty(path: &syn::Path) -> ParseResult<CompatibleProgra
 
 // TODO: this whole method is a hack. Do something more idiomatic.
 fn parse_account(mut path: &syn::Path) -> ParseResult<syn::TypePath> {
-    if parser::tts_to_string(path)
-        .replace(' ', "")
-        .starts_with("Box<Account<")
+    let path_str = parser::tts_to_string(path)
+        .replace(' ', "");
+    if path_str
+        .starts_with("Box<Account<") || path_str.starts_with("Box<MultiProgramCompatibleAccount<")
     {
         let segments = &path.segments[0];
         match &segments.arguments {
