@@ -317,7 +317,6 @@ pub fn zero_copy(
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     let mut is_unsafe = false;
-    eprint!("args {:#?}", args);
     for arg in args.into_iter() {
         match arg {
             proc_macro::TokenTree::Ident(ident) => {

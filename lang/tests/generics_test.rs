@@ -36,8 +36,7 @@ where
     pub data: T,
 }
 
-// #[derive(Copy, Clone)]
-#[zero_copy(unsafe)]
+#[derive(Copy, Clone)]
 pub struct WrappedU8Array<const N: usize>(u8);
 impl<const N: usize> BorshSerialize for WrappedU8Array<N> {
     fn serialize<W: Write>(&self, _writer: &mut W) -> borsh::maybestd::io::Result<()> {
