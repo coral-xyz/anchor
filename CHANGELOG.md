@@ -26,7 +26,7 @@ The minor version will be incremented upon a breaking change and the patch versi
   This imposes useful restrictions on the type, like not having padding bytes and all fields being `Pod` themselves.
   See [bytemuck::Pod](https://docs.rs/bytemuck/latest/bytemuck/trait.Pod.html) for details.
 
-  Legacy applications can use `account(zero_copy(unsafe_bytemuck_impls))` for the old behavior.
+  Legacy applications can use `#[account(zero_copy(unsafe))]` and `#[zero_copy(unsafe)]` for the old behavior.
 
 ## [0.26.0] - 2022-12-15
 

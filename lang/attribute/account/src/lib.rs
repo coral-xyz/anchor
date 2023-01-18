@@ -82,7 +82,7 @@ pub fn account(
         if ns == "zero_copy" {
             is_zero_copy = true;
             unsafe_bytemuck = false;
-        } else if ns == "zero_copy(unsafe_bytemuck_impls)" {
+        } else if ns == "zero_copy(unsafe)" {
             is_zero_copy = true;
             unsafe_bytemuck = true;
         } else {
@@ -141,21 +141,23 @@ pub fn account(
         }
     };
 
-    let safe_bytemuck_derives = {
+    let bytemuck_derives = {
         if !unsafe_bytemuck {
             quote! {
+                #[zero_copy]
                 #[derive(anchor_lang::__private::bytemuck::Pod, anchor_lang::__private::bytemuck::Zeroable)]
             }
         } else {
-            quote! {}
+            quote! {
+                #[zero_copy(unsafe)]
+            }
         }
     };
 
     proc_macro::TokenStream::from({
         if is_zero_copy {
             quote! {
-                #[zero_copy]
-                #safe_bytemuck_derives
+                #bytemuck_derives
                 #account_strct
 
                 #unsafe_bytemuck_impl
@@ -311,9 +313,27 @@ pub fn derive_zero_copy_accessor(item: proc_macro::TokenStream) -> proc_macro::T
 /// ```
 #[proc_macro_attribute]
 pub fn zero_copy(
-    _args: proc_macro::TokenStream,
+    args: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
+    let mut is_unsafe = false;
+    eprint!("args {:#?}", args);
+    for arg in args.into_iter() {
+        match arg {
+            proc_macro::TokenTree::Ident(ident) => {
+                if ident.to_string() == "unsafe" {
+                    is_unsafe = true;
+                } else {
+                    // TODO: how to return a compile error with a span (can't return prase error because expected type TokenStream)
+                    panic!("expected single ident `unsafe`");
+                }
+            }
+            _ => {
+                panic!("expected single ident `unsafe`");
+            }
+        }
+    }
+
     let account_strct = parse_macro_input!(item as syn::ItemStruct);
 
     // Takes the first repr. It's assumed that more than one are not on the
@@ -340,12 +360,12 @@ pub fn zero_copy(
         }
     }
 
-    let pod = if has_pod_attr {
+    let pod = if has_pod_attr || is_unsafe {
         quote! {}
     } else {
         quote! {#[derive(anchor_lang::__private::bytemuck::Pod)]}
     };
-    let zeroable = if has_zeroable_attr {
+    let zeroable = if has_zeroable_attr || is_unsafe {
         quote! {}
     } else {
         quote! {#[derive(anchor_lang::__private::bytemuck::Zeroable)]}
