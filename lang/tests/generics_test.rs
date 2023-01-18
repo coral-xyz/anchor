@@ -22,7 +22,7 @@ where
     pub associated: Account<'info, Associated<U>>,
 }
 
-#[account(zero_copy))]
+#[account(zero_copy(unsafe))]
 pub struct FooAccount<const N: usize> {
     pub data: WrappedU8Array<N>,
 }
@@ -36,7 +36,8 @@ where
     pub data: T,
 }
 
-#[derive(Copy, Clone)]
+// #[derive(Copy, Clone)]
+#[zero_copy(unsafe)]
 pub struct WrappedU8Array<const N: usize>(u8);
 impl<const N: usize> BorshSerialize for WrappedU8Array<N> {
     fn serialize<W: Write>(&self, _writer: &mut W) -> borsh::maybestd::io::Result<()> {
