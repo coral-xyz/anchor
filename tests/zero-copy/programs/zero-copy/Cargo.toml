@@ -18,7 +18,7 @@ test-bpf = []
 
 [dependencies]
 anchor-lang = { path = "../../../../lang" }
-bytemuck = "1.4.0"
+bytemuck = {version = "1.4.0", features = ["min_const_generics"]}
 
 [dev-dependencies]
 anchor-client = { path = "../../../../client", features = ["debug"] }

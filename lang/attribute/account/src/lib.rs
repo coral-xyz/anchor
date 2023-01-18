@@ -328,9 +328,34 @@ pub fn zero_copy(
         None => quote! {#[repr(C)]},
     };
 
+    let mut has_pod_attr = false;
+    let mut has_zeroable_attr = false;
+    for attr in account_strct.attrs.iter() {
+        let token_string = attr.tokens.to_string();
+        if token_string.contains("bytemuck :: Pod") {
+            has_pod_attr = true;
+        }
+        if token_string.contains("bytemuck :: Zeroable") {
+            has_zeroable_attr = true;
+        }
+    }
+
+    let pod = if has_pod_attr {
+        quote! {}
+    } else {
+        quote! {#[derive(anchor_lang::__private::bytemuck::Pod)]}
+    };
+    let zeroable = if has_zeroable_attr {
+        quote! {}
+    } else {
+        quote! {#[derive(anchor_lang::__private::bytemuck::Zeroable)]}
+    };
+
     proc_macro::TokenStream::from(quote! {
         #[derive(anchor_lang::__private::ZeroCopyAccessor, Copy, Clone)]
         #repr
+        #pod
+        #zeroable
         #account_strct
     })
 }
