@@ -204,7 +204,7 @@ pub struct FeeCalculator {
     pub lamports_per_signature: u64,
 }
 
-#[account(skip_space)]
+#[account]
 pub struct Nonce {
     pub version: u32,
     pub state: u32,
