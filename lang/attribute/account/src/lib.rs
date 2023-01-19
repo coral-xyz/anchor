@@ -307,7 +307,7 @@ pub fn derive_zero_copy_accessor(item: proc_macro::TokenStream) -> proc_macro::T
 ///
 /// ```ignore
 /// #[derive(Copy, Clone)]
-/// #[derive(bytemuck::Zeroable)] 
+/// #[derive(bytemuck::Zeroable)]
 /// #[derive(bytemuck::Pod)]
 /// #[repr(C)]
 /// struct MyStruct {...}
@@ -323,7 +323,7 @@ pub fn zero_copy(
             proc_macro::TokenTree::Ident(ident) => {
                 if ident.to_string() == "unsafe" {
                     // `#[zero_copy(unsafe)]` maintains the old behaviour
-                    // 
+                    //
                     // ```ignore
                     // #[derive(Copy, Clone)]
                     // #[repr(packed)]
@@ -350,7 +350,7 @@ pub fn zero_copy(
         .iter()
         .find(|attr| anchor_syn::parser::tts_to_string(&attr.path) == "repr");
 
-        let repr = match attr {
+    let repr = match attr {
         // Users might want to manually specify repr modifiers e.g. repr(C, packed)
         Some(_attr) => quote! {},
         None => {
@@ -359,7 +359,7 @@ pub fn zero_copy(
             } else {
                 quote! {#[repr(C)]}
             }
-        },
+        }
     };
 
     let mut has_pod_attr = false;
@@ -375,7 +375,7 @@ pub fn zero_copy(
     }
 
     // TODO: Despite using the fully qualified path, after the derive macro is expanded
-    // it forces the compiler to use the local crate's bytemuck `::bytemuck::Pod`. 
+    // it forces the compiler to use the local crate's bytemuck `::bytemuck::Pod`.
     // Not sure how to get it to use anchor's privately exported bytemuck instead?
     let pod = if has_pod_attr || is_unsafe {
         quote! {}
