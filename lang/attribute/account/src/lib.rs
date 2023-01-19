@@ -145,7 +145,6 @@ pub fn account(
         if !unsafe_bytemuck {
             quote! {
                 #[zero_copy]
-                #[derive(anchor_lang::__private::bytemuck::Pod, anchor_lang::__private::bytemuck::Zeroable)]
             }
         } else {
             quote! {
@@ -304,13 +303,24 @@ pub fn derive_zero_copy_accessor(item: proc_macro::TokenStream) -> proc_macro::T
 /// A data structure that can be used as an internal field for a zero copy
 /// deserialized account, i.e., a struct marked with `#[account(zero_copy)]`.
 ///
-/// This is just a convenient alias for
+/// `#[zero_copy]` is just a convenient alias for
 ///
+/// ```ignore
+/// #[derive(Copy, Clone)]
+/// #[derive(bytemuck::Zeroable)] 
+/// #[derive(bytemuck::Pod)]
+/// #[repr(C)]
+/// struct MyStruct {...}
+/// ```
+/// 
+/// `#[zero_copy(unsafe)]` will maintain the old behaviour
+/// 
 /// ```ignore
 /// #[derive(Copy, Clone)]
 /// #[repr(packed)]
 /// struct MyStruct {...}
 /// ```
+/// 
 #[proc_macro_attribute]
 pub fn zero_copy(
     args: proc_macro::TokenStream,
@@ -344,7 +354,13 @@ pub fn zero_copy(
 
     let repr = match attr {
         Some(_attr) => quote! {},
-        None => quote! {#[repr(C)]},
+        None => {
+            if is_unsafe {
+                quote! {#[repr(packed)]}
+            } else {
+                quote! {#[repr(C)]}
+            }
+        },
     };
 
     let mut has_pod_attr = false;
@@ -359,6 +375,9 @@ pub fn zero_copy(
         }
     }
 
+    // TODO: Despite using the full qualified path, after the derive macro is expanded
+    // it forces the compiler to use the local crate's bytemuck `::bytemuck::Pod`. 
+    // Not sure how to get it to use anchor's privately exported bytemuck instead?
     let pod = if has_pod_attr || is_unsafe {
         quote! {}
     } else {
