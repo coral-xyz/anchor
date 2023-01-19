@@ -59,6 +59,9 @@ mod id;
 /// [`Pod`](https://docs.rs/bytemuck/latest/bytemuck/trait.Pod.html). Please review the
 /// [`safety`](https://docs.rs/bytemuck/latest/bytemuck/trait.Pod.html#safety)
 /// section before using.
+///
+/// Using `zero_copy` requires adding the following to your `cargo.toml` file: 
+/// `bytemuck = { version = "1.4.0", features = ["derive", "min_const_generics"]}`
 #[proc_macro_attribute]
 pub fn account(
     args: proc_macro::TokenStream,
@@ -374,18 +377,19 @@ pub fn zero_copy(
         }
     }
 
-    // TODO: Despite using the fully qualified path, after the derive macro is expanded
-    // it forces the compiler to use the local crate's bytemuck `::bytemuck::Pod`.
-    // Not sure how to get it to use anchor's privately exported bytemuck instead?
+    // Once the Pod derive macro is expanded the compiler has to use the local crate's
+    // bytemuck `::bytemuck::Pod` anyway, so we're no longer using the privately
+    // exported anchor bytemuck `__private::bytemuck`, so that there won't be any
+    // possible disparity between the anchor version and the local crate's version.
     let pod = if has_pod_attr || is_unsafe {
         quote! {}
     } else {
-        quote! {#[derive(anchor_lang::__private::bytemuck::Pod)]}
+        quote! {#[derive(::bytemuck::Pod)]}
     };
     let zeroable = if has_zeroable_attr || is_unsafe {
         quote! {}
     } else {
-        quote! {#[derive(anchor_lang::__private::bytemuck::Zeroable)]}
+        quote! {#[derive(::bytemuck::Zeroable)]}
     };
 
     proc_macro::TokenStream::from(quote! {
