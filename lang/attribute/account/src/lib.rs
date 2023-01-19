@@ -374,7 +374,7 @@ pub fn zero_copy(
         }
     }
 
-    // TODO: Despite using the full qualified path, after the derive macro is expanded
+    // TODO: Despite using the fully qualified path, after the derive macro is expanded
     // it forces the compiler to use the local crate's bytemuck `::bytemuck::Pod`. 
     // Not sure how to get it to use anchor's privately exported bytemuck instead?
     let pod = if has_pod_attr || is_unsafe {
