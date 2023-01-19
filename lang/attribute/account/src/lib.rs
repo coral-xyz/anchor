@@ -312,15 +312,6 @@ pub fn derive_zero_copy_accessor(item: proc_macro::TokenStream) -> proc_macro::T
 /// #[repr(C)]
 /// struct MyStruct {...}
 /// ```
-/// 
-/// `#[zero_copy(unsafe)]` will maintain the old behaviour
-/// 
-/// ```ignore
-/// #[derive(Copy, Clone)]
-/// #[repr(packed)]
-/// struct MyStruct {...}
-/// ```
-/// 
 #[proc_macro_attribute]
 pub fn zero_copy(
     args: proc_macro::TokenStream,
@@ -331,6 +322,13 @@ pub fn zero_copy(
         match arg {
             proc_macro::TokenTree::Ident(ident) => {
                 if ident.to_string() == "unsafe" {
+                    // `#[zero_copy(unsafe)]` maintains the old behaviour
+                    // 
+                    // ```ignore
+                    // #[derive(Copy, Clone)]
+                    // #[repr(packed)]
+                    // struct MyStruct {...}
+                    // ```
                     is_unsafe = true;
                 } else {
                     // TODO: how to return a compile error with a span (can't return prase error because expected type TokenStream)
@@ -352,7 +350,8 @@ pub fn zero_copy(
         .iter()
         .find(|attr| anchor_syn::parser::tts_to_string(&attr.path) == "repr");
 
-    let repr = match attr {
+        let repr = match attr {
+        // Users might want to manually specify repr modifiers e.g. repr(C, packed)
         Some(_attr) => quote! {},
         None => {
             if is_unsafe {
