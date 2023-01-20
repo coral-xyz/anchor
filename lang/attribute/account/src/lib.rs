@@ -60,7 +60,7 @@ mod id;
 /// [`safety`](https://docs.rs/bytemuck/latest/bytemuck/trait.Pod.html#safety)
 /// section before using.
 ///
-/// Using `zero_copy` requires adding the following to your `cargo.toml` file: 
+/// Using `zero_copy` requires adding the following to your `cargo.toml` file:
 /// `bytemuck = { version = "1.4.0", features = ["derive", "min_const_generics"]}`
 #[proc_macro_attribute]
 pub fn account(
