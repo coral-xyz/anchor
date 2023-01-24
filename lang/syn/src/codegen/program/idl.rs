@@ -37,20 +37,21 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
         #[derive(Accounts)]
         pub struct IdlCreateAccounts<'info> {
             // Payer of the transaction.
-            pub from: Signer<'info>,
+            #[account(signer)]
+            pub from: AccountInfo<'info>,
             // The deterministically defined "state" account being created via
             // `create_account_with_seed`.
             #[account(mut)]
-            pub to: SystemAccount<'info>,
+            pub to: AccountInfo<'info>,
             // The program-derived-address signing off on the account creation.
             // Seeds = &[] + bump seed.
             #[account(seeds = [], bump)]
-            pub base: SystemAccount<'info>,
+            pub base: AccountInfo<'info>,
             // The system program.
-            pub system_program: Program<'info, System>,
+            pub system_program: AccountInfo<'info>,
             // The program whose state is being constructed.
             #[account(executable)]
-            pub program: UncheckedAccount<'info>,
+            pub program: AccountInfo<'info>,
         }
 
         // Accounts for Idl instructions.
