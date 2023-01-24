@@ -1,8 +1,8 @@
 use crate::codegen::program::common::*;
+use crate::program_codegen::idl::idl_accounts_and_functions;
 use crate::Program;
 use heck::CamelCase;
 use quote::{quote, ToTokens};
-use crate::program_codegen::idl::idl_accounts_and_functions;
 
 // Generate non-inlined wrappers for each instruction handler, since Solana's
 // BPF max stack size can't handle reasonable sized dispatch trees without doing

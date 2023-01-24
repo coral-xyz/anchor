@@ -7,8 +7,8 @@ mod cpi;
 mod dispatch;
 mod entry;
 mod handlers;
-mod instruction;
 mod idl;
+mod instruction;
 
 pub fn generate(program: &Program) -> proc_macro2::TokenStream {
     let mod_name = &program.name;

@@ -1,9 +1,9 @@
 use quote::quote;
 
 pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
-    quote!{
+    quote! {
         use anchor_lang::idl::{ERASED_AUTHORITY, IdlAccount};
-        
+
         // Accounts for the Create instruction.
         #[derive(Accounts)]
         pub struct IdlCreateAccounts<'info> {

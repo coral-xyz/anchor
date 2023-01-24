@@ -33,21 +33,21 @@ pub const IDL_IX_TAG_LE: [u8; 8] = IDL_IX_TAG.to_le_bytes();
 pub const ERASED_AUTHORITY: Pubkey = Pubkey::new_from_array([0u8; 32]);
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
-    pub enum IdlInstruction {
-        // One time initializer for creating the program's idl account.
-        Create { data_len: u64 },
-        // Creates a new IDL account buffer. Can be called several times.
-        CreateBuffer,
-        // Appends the given data to the end of the idl account buffer.
-        Write { data: Vec<u8> },
-        // Sets a new data buffer for the IdlAccount.
-        SetBuffer,
-        // Sets a new authority on the IdlAccount.
-        SetAuthority { new_authority: Pubkey },
-        Close,
-        // Increases account size for accounts that need over 10kb.
-        Resize { data_len: u64 },
-    }
+pub enum IdlInstruction {
+    // One time initializer for creating the program's idl account.
+    Create { data_len: u64 },
+    // Creates a new IDL account buffer. Can be called several times.
+    CreateBuffer,
+    // Appends the given data to the end of the idl account buffer.
+    Write { data: Vec<u8> },
+    // Sets a new data buffer for the IdlAccount.
+    SetBuffer,
+    // Sets a new authority on the IdlAccount.
+    SetAuthority { new_authority: Pubkey },
+    Close,
+    // Increases account size for accounts that need over 10kb.
+    Resize { data_len: u64 },
+}
 
 // The account holding a program's IDL. This is stored on chain so that clients
 // can fetch it and generate a client with nothing but a program's ID.
