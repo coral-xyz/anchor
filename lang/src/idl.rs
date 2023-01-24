@@ -28,6 +28,7 @@ use solana_program::pubkey::Pubkey;
 //
 // Sha256(anchor:idl)[..8];
 pub const IDL_IX_TAG: u64 = 0x0a69e9a778bcf440;
+pub const IDL_IX_TAG_LE: [u8; 8] = IDL_IX_TAG.to_le_bytes();
 
 // The Pubkey that is stored as the 'authority' on the IdlAccount when the authority
 // is "erased".

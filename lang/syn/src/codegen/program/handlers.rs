@@ -84,7 +84,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 Ok(())
             }
 
-            // One time IDL account initializer. Will faill on subsequent
+            // One time IDL account initializer. Will fail on subsequent
             // invocations.
             #[inline(never)]
             pub fn __idl_create_account(
