@@ -2,7 +2,7 @@ use quote::quote;
 
 pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
     quote!{
-        use anchor_lang::idl::ERASED_AUTHORITY;
+        use anchor_lang::idl::{ERASED_AUTHORITY, IdlAccount};
         
         // Accounts for the Create instruction.
         #[derive(Accounts)]
@@ -109,7 +109,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
         #[inline(never)]
         pub fn __idl_create_account(
             program_id: &Pubkey,
-            accounts: &mut anchor_lang::idl::IdlCreateAccounts,
+            accounts: &mut IdlCreateAccounts,
             data_len: u64,
         ) -> anchor_lang::Result<()> {
             #[cfg(not(feature = "no-log-ix-name"))]
@@ -121,7 +121,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
             // Create the IDL's account.
             let from = accounts.from.key;
             let (base, nonce) = Pubkey::find_program_address(&[], program_id);
-            let seed = anchor_lang::idl::IdlAccount::seed();
+            let seed = IdlAccount::seed();
             let owner = accounts.program.key;
             let to = Pubkey::create_with_seed(&base, seed, owner).unwrap();
             // Space: account discriminator || authority pubkey || vec len || vec data
@@ -153,7 +153,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
             let mut idl_account = {
                 let mut account_data =  accounts.to.try_borrow_data()?;
                 let mut account_data_slice: &[u8] = &account_data;
-                anchor_lang::idl::IdlAccount::try_deserialize_unchecked(
+                IdlAccount::try_deserialize_unchecked(
                     &mut account_data_slice,
                 )?
             };
@@ -173,7 +173,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
         #[inline(never)]
         pub fn __idl_resize_account(
             program_id: &Pubkey,
-            accounts: &mut anchor_lang::idl::IdlResizeAccount,
+            accounts: &mut IdlResizeAccount,
             data_len: u64,
         ) -> anchor_lang::Result<()> {
             #[cfg(not(feature = "no-log-ix-name"))]
@@ -220,7 +220,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
         #[inline(never)]
         pub fn __idl_close_account(
             program_id: &Pubkey,
-            accounts: &mut anchor_lang::idl::IdlCloseAccount,
+            accounts: &mut IdlCloseAccount,
         ) -> anchor_lang::Result<()> {
             #[cfg(not(feature = "no-log-ix-name"))]
             anchor_lang::prelude::msg!("Instruction: IdlCloseAccount");
@@ -231,7 +231,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
         #[inline(never)]
         pub fn __idl_create_buffer(
             program_id: &Pubkey,
-            accounts: &mut anchor_lang::idl::IdlCreateBuffer,
+            accounts: &mut IdlCreateBuffer,
         ) -> anchor_lang::Result<()> {
             #[cfg(not(feature = "no-log-ix-name"))]
             anchor_lang::prelude::msg!("Instruction: IdlCreateBuffer");
@@ -244,7 +244,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
         #[inline(never)]
         pub fn __idl_write(
             program_id: &Pubkey,
-            accounts: &mut anchor_lang::idl::IdlAccounts,
+            accounts: &mut IdlAccounts,
             idl_data: Vec<u8>,
         ) -> anchor_lang::Result<()> {
             #[cfg(not(feature = "no-log-ix-name"))]
@@ -254,7 +254,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
             let new_len: usize = prev_len + idl_data.len();
             accounts.idl.data_len = accounts.idl.data_len.checked_add(::std::convert::TryInto::<u32>::try_into(idl_data.len()).unwrap()).unwrap();
 
-            use anchor_lang::idl::IdlTrailingData;
+            use IdlTrailingData;
             let mut idl_bytes = accounts.idl.trailing_data_mut();
             let idl_expansion = &mut idl_bytes[prev_len..new_len];
             require_eq!(idl_expansion.len(), idl_data.len());
@@ -266,7 +266,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
         #[inline(never)]
         pub fn __idl_set_authority(
             program_id: &Pubkey,
-            accounts: &mut anchor_lang::idl::IdlAccounts,
+            accounts: &mut IdlAccounts,
             new_authority: Pubkey,
         ) -> anchor_lang::Result<()> {
             #[cfg(not(feature = "no-log-ix-name"))]
@@ -279,14 +279,14 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
         #[inline(never)]
         pub fn __idl_set_buffer(
             program_id: &Pubkey,
-            accounts: &mut anchor_lang::idl::IdlSetBuffer,
+            accounts: &mut IdlSetBuffer,
         ) -> anchor_lang::Result<()> {
             #[cfg(not(feature = "no-log-ix-name"))]
             anchor_lang::prelude::msg!("Instruction: IdlSetBuffer");
 
             accounts.idl.data_len = accounts.buffer.data_len;
 
-            use anchor_lang::idl::IdlTrailingData;
+            use IdlTrailingData;
             let buffer_len = ::std::convert::TryInto::<usize>::try_into(accounts.buffer.data_len).unwrap();
             let mut target = accounts.idl.trailing_data_mut();
             let source = &accounts.buffer.trailing_data()[..buffer_len];
