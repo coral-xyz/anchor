@@ -21,7 +21,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
             pub system_program: Program<'info, System>,
             // The program whose state is being constructed.
             #[account(executable)]
-            pub program: AccountInfo<'info>,
+            pub program: UncheckedAccount<'info>,
         }
 
 
@@ -29,8 +29,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
         #[derive(Accounts)]
         pub struct IdlAccounts<'info> {
             #[account(mut, has_one = authority)]
-            #[allow(deprecated)]
-            pub idl: ProgramAccount<'info, IdlAccount>,
+            pub idl: Account<'info, IdlAccount>,
             #[account(constraint = authority.key != &ERASED_AUTHORITY)]
             pub authority: Signer<'info>,
         }
@@ -39,8 +38,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
         #[derive(Accounts)]
         pub struct IdlResizeAccount<'info> {
             #[account(mut, has_one = authority)]
-            #[allow(deprecated)]
-            pub idl: ProgramAccount<'info, IdlAccount>,
+            pub idl: Account<'info, IdlAccount>,
             #[account(mut, constraint = authority.key != &ERASED_AUTHORITY)]
             pub authority: Signer<'info>,
             pub system_program: Program<'info, System>,
@@ -50,8 +48,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
         #[derive(Accounts)]
         pub struct IdlCreateBuffer<'info> {
             #[account(zero)]
-            #[allow(deprecated)]
-            pub buffer: ProgramAccount<'info, IdlAccount>,
+            pub buffer: Account<'info, IdlAccount>,
             #[account(constraint = authority.key != &ERASED_AUTHORITY)]
             pub authority: Signer<'info>,
         }
@@ -61,12 +58,10 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
         pub struct IdlSetBuffer<'info> {
             // The buffer with the new idl data.
             #[account(mut, constraint = buffer.authority == idl.authority)]
-            #[allow(deprecated)]
-            pub buffer: ProgramAccount<'info, IdlAccount>,
+            pub buffer: Account<'info, IdlAccount>,
             // The idl account to be updated with the buffer's data.
             #[account(mut, has_one = authority)]
-            #[allow(deprecated)]
-            pub idl: ProgramAccount<'info, IdlAccount>,
+            pub idl: Account<'info, IdlAccount>,
             #[account(constraint = authority.key != &ERASED_AUTHORITY)]
             pub authority: Signer<'info>,
         }
@@ -75,8 +70,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
         #[derive(Accounts)]
         pub struct IdlCloseAccount<'info> {
             #[account(mut, has_one = authority, close = sol_destination)]
-            #[allow(deprecated)]
-            pub account: ProgramAccount<'info, IdlAccount>,
+            pub account: Account<'info, IdlAccount>,
             #[account(constraint = authority.key != &ERASED_AUTHORITY)]
             pub authority: Signer<'info>,
             #[account(mut)]
@@ -91,8 +85,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
             fn trailing_data_mut(self) -> RefMut<'info, [u8]>;
         }
 
-        #[allow(deprecated)]
-        impl<'a, 'info: 'a> IdlTrailingData<'a> for &'a ProgramAccount<'info, IdlAccount> {
+        impl<'a, 'info: 'a> IdlTrailingData<'a> for &'a Account<'info, IdlAccount> {
             fn trailing_data(self) -> Ref<'a, [u8]> {
                 let info = self.as_ref();
                 Ref::map(info.try_borrow_data().unwrap(), |d| &d[44..])
