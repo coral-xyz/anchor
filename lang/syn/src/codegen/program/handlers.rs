@@ -32,7 +32,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         let mut bumps = std::collections::BTreeMap::new();
                         let mut reallocs = std::collections::BTreeSet::new();
                         let mut accounts =
-                            anchor_lang::idl::IdlCreateAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                            IdlCreateAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
                         __idl_create_account(program_id, &mut accounts, data_len)?;
                         accounts.exit(program_id)?;
                     },
@@ -40,7 +40,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         let mut bumps = std::collections::BTreeMap::new();
                         let mut reallocs = std::collections::BTreeSet::new();
                         let mut accounts =
-                            anchor_lang::idl::IdlResizeAccount::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                            IdlResizeAccount::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
                         __idl_resize_account(program_id, &mut accounts, data_len)?;
                         accounts.exit(program_id)?;
                     },
@@ -48,7 +48,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         let mut bumps = std::collections::BTreeMap::new();
                         let mut reallocs = std::collections::BTreeSet::new();
                         let mut accounts =
-                            anchor_lang::idl::IdlCloseAccount::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                            IdlCloseAccount::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
                         __idl_close_account(program_id, &mut accounts)?;
                         accounts.exit(program_id)?;
                     },
@@ -56,7 +56,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         let mut bumps = std::collections::BTreeMap::new();
                         let mut reallocs = std::collections::BTreeSet::new();
                         let mut accounts =
-                            anchor_lang::idl::IdlCreateBuffer::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                            IdlCreateBuffer::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
                         __idl_create_buffer(program_id, &mut accounts)?;
                         accounts.exit(program_id)?;
                     },
@@ -64,7 +64,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         let mut bumps = std::collections::BTreeMap::new();
                         let mut reallocs = std::collections::BTreeSet::new();
                         let mut accounts =
-                            anchor_lang::idl::IdlAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                            IdlAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
                         __idl_write(program_id, &mut accounts, data)?;
                         accounts.exit(program_id)?;
                     },
@@ -72,7 +72,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         let mut bumps = std::collections::BTreeMap::new();
                         let mut reallocs = std::collections::BTreeSet::new();
                         let mut accounts =
-                            anchor_lang::idl::IdlAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                            IdlAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
                         __idl_set_authority(program_id, &mut accounts, new_authority)?;
                         accounts.exit(program_id)?;
                     },
@@ -80,7 +80,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         let mut bumps = std::collections::BTreeMap::new();
                         let mut reallocs = std::collections::BTreeSet::new();
                         let mut accounts =
-                            anchor_lang::idl::IdlSetBuffer::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                            IdlSetBuffer::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
                         __idl_set_buffer(program_id, &mut accounts)?;
                         accounts.exit(program_id)?;
                     },

@@ -54,6 +54,11 @@ pub enum IdlInstruction {
 //
 // Note: we use the same account for the "write buffer", similar to the
 //       bpf upgradeable loader's mechanism.
+// 
+// TODO: IdlAccount exists here only because it's needed by the CLI, the IDL
+// itself uses an IdlAccount defined inside the program itself, see program/idl.rs.
+// Ideally it would be deleted and a better solution for sharing the type with CLI
+// could be found.
 #[account("internal")]
 #[derive(Debug)]
 pub struct IdlAccount {

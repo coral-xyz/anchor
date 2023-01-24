@@ -2,7 +2,36 @@ use quote::quote;
 
 pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
     quote! {
-        use anchor_lang::idl::{ERASED_AUTHORITY, IdlAccount};
+        use anchor_lang::idl::{ERASED_AUTHORITY};
+
+        #[account("internal")]
+        #[derive(Debug)]
+        pub struct IdlAccount {
+            // Address that can modify the IDL.
+            pub authority: Pubkey,
+            // Length of compressed idl bytes.
+            pub data_len: u32,
+            // Followed by compressed idl bytes.
+        }
+
+        impl IdlAccount {
+            pub fn address(program_id: &Pubkey) -> Pubkey {
+                let program_signer = Pubkey::find_program_address(&[], program_id).0;
+                Pubkey::create_with_seed(&program_signer, IdlAccount::seed(), program_id)
+                    .expect("Seed is always valid")
+            }
+            pub fn seed() -> &'static str {
+                "anchor:idl"
+            }
+        }
+
+        // Hacky workaround because of some internals to how account attribute
+        // works. Namespaces are the root of most of the problem.
+        impl anchor_lang::Owner for IdlAccount {
+            fn owner() -> Pubkey {
+                crate::ID
+            }
+        }
 
         // Accounts for the Create instruction.
         #[derive(Accounts)]
@@ -15,7 +44,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
             pub to: SystemAccount<'info>,
             // The program-derived-address signing off on the account creation.
             // Seeds = &[] + bump seed.
-            #[account(seeds = [])]
+            #[account(seeds = [], bump)]
             pub base: SystemAccount<'info>,
             // The system program.
             pub system_program: Program<'info, System>,
@@ -23,7 +52,6 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
             #[account(executable)]
             pub program: UncheckedAccount<'info>,
         }
-
 
         // Accounts for Idl instructions.
         #[derive(Accounts)]
