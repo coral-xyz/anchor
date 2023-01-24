@@ -84,12 +84,6 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 Ok(())
             }
 
-            #[inline(never)]
-            #[cfg(feature = "no-idl")]
-            pub fn __idl_dispatch(program_id: &Pubkey, accounts: &[AccountInfo], idl_ix_data: &[u8]) -> anchor_lang::Result<()> {
-                Err(anchor_lang::error::ErrorCode::IdlInstructionStub.into())
-            }
-
             // One time IDL account initializer. Will faill on subsequent
             // invocations.
             #[inline(never)]
