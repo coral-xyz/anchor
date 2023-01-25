@@ -3,6 +3,15 @@ use anchor_lang::prelude::*;
 // Needed to declare accounts.
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
+mod inside_mod {
+    use super::*;
+
+    #[derive(InitSpace)]
+    pub struct Data {
+        pub data: u64,
+    }
+}
+
 #[derive(InitSpace)]
 pub enum TestBasicEnum {
     Basic1,
@@ -73,6 +82,12 @@ pub struct TestMatrixStruct {
     pub test_matrix: Vec<Vec<u8>>,
 }
 
+#[derive(InitSpace)]
+pub struct TestFullPath {
+    pub test_option_path: Option<inside_mod::Data>,
+    pub test_path: inside_mod::Data,
+}
+
 #[test]
 fn test_empty_struct() {
     assert_eq!(TestEmptyAccount::INIT_SPACE, 0);
@@ -112,4 +127,9 @@ fn test_nested_struct() {
 #[test]
 fn test_matrix_struct() {
     assert_eq!(TestMatrixStruct::INIT_SPACE, 4 + (2 * (4 + 4)))
+}
+
+#[test]
+fn test_full_path() {
+    assert_eq!(TestFullPath::INIT_SPACE, 8 + 9)
 }

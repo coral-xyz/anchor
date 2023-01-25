@@ -100,8 +100,8 @@ fn len_from_type(ty: Type, attrs: &mut Option<IntoIter<LitInt>>) -> TokenStream2
             let type_len = len_from_type(*elem, attrs);
             quote!((#array_len * #type_len))
         }
-        Type::Path(path) => {
-            let path_segment = path.path.segments.last().unwrap();
+        Type::Path(ty_path) => {
+            let path_segment = ty_path.path.segments.last().unwrap();
             let ident = &path_segment.ident;
             let type_name = ident.to_string();
             let first_ty = get_first_ty_arg(&path_segment.arguments);
@@ -137,7 +137,7 @@ fn len_from_type(ty: Type, attrs: &mut Option<IntoIter<LitInt>>) -> TokenStream2
                     }
                 }
                 _ => {
-                    let ty = &path_segment.ident;
+                    let ty = &ty_path.path;
                     quote!(<#ty as anchor_lang::Space>::INIT_SPACE)
                 }
             }
