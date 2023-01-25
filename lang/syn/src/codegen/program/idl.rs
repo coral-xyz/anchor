@@ -2,7 +2,7 @@ use quote::quote;
 
 pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
     quote! {
-        use anchor_lang::idl::{ERASED_AUTHORITY};
+        use anchor_lang::idl::ERASED_AUTHORITY;
 
         #[account("internal")]
         #[derive(Debug)]
@@ -45,12 +45,12 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
             pub to: AccountInfo<'info>,
             // The program-derived-address signing off on the account creation.
             // Seeds = &[] + bump seed.
-            #[account(seeds = [], bump)]
+            // #[account(seeds = [], bump)]
             pub base: AccountInfo<'info>,
             // The system program.
             pub system_program: AccountInfo<'info>,
             // The program whose state is being constructed.
-            #[account(executable)]
+            // #[account(executable)]
             pub program: AccountInfo<'info>,
         }
 
@@ -116,11 +116,11 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
 
         impl<'a, 'info: 'a> IdlTrailingData<'a> for &'a Account<'info, IdlAccount> {
             fn trailing_data(self) -> Ref<'a, [u8]> {
-                let info = self.as_ref();
+                let info: &AccountInfo<'info> = self.as_ref();
                 Ref::map(info.try_borrow_data().unwrap(), |d| &d[44..])
             }
             fn trailing_data_mut(self) -> RefMut<'a, [u8]> {
-                let info = self.as_ref();
+                let info: &AccountInfo<'info> = self.as_ref();
                 RefMut::map(info.try_borrow_mut_data().unwrap(), |d| &mut d[44..])
             }
         }
