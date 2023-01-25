@@ -10,12 +10,19 @@ use syn::{
 /// Implements a [`Space`](./trait.Space.html) trait on the given
 /// struct or enum.
 ///
+/// For types that have a variable size like String and Vec, it is necessary to indicate the size by the `max_len` attribute.
+/// For nested types, it is necessary to specify a size for each variable type (see example).
+///
 /// # Example
 /// ```ignore
 /// #[account]
 /// #[derive(InitSpace)]
 /// pub struct ExampleAccount {
 ///     pub data: u64,
+///     #[max_len(50)]
+///     pub string_one: String,
+///     #[max_len(10, 5)]
+///     pub nested: Vec<Vec<u8>>,
 /// }
 ///
 /// #[derive(Accounts)]
