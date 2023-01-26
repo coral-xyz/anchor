@@ -13,6 +13,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 ### Features
 
 - cli: Add `env` option to verifiable builds ([#2325](https://github.com/coral-xyz/anchor/pull/2325)).
+- lang: Add the `InitSpace` derive macro to automatically calculate the space at the initialization of an account ([#2346](https://github.com/coral-xyz/anchor/pull/2346)).
 
 ### Fixes
 
