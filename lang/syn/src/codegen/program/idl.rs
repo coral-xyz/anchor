@@ -45,12 +45,12 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
             pub to: AccountInfo<'info>,
             // The program-derived-address signing off on the account creation.
             // Seeds = &[] + bump seed.
-            // #[account(seeds = [], bump)]
+            #[account(seeds = [], bump)]
             pub base: AccountInfo<'info>,
             // The system program.
-            pub system_program: AccountInfo<'info>,
+            pub system_program: Program<'info, System>,
             // The program whose state is being constructed.
-            // #[account(executable)]
+            #[account(executable)]
             pub program: AccountInfo<'info>,
         }
 
@@ -166,7 +166,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
                     accounts.from.clone(),
                     accounts.to.clone(),
                     accounts.base.clone(),
-                    accounts.system_program.clone(),
+                    accounts.system_program.to_account_info().clone(),
                 ],
                 &[seeds],
             )?;
