@@ -496,6 +496,7 @@ fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinit
                 if let Ok(strct) = &struct_res {
                     let mut unpacked = strct.clone();
                     unpacked.name = format!("{}Unpacked", strct.name);
+                    unpacked.docs = Some(vec![format!("Unpacked version of [`{}`]", strct.name)]);
                     unpacked_structs.push(unpacked);
                 }
             }
