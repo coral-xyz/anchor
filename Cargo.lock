@@ -192,7 +192,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-cli"
-version = "0.25.10"
+version = "0.25.11"
 dependencies = [
  "anchor-client",
  "anchor-lang",
