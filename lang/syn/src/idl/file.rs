@@ -426,7 +426,9 @@ fn parse_consts(ctx: &CrateContext) -> Vec<&syn::ItemConst> {
 
 // Parse all user defined types in the file.
 fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinition>> {
-    ctx.structs()
+    let mut unpacked_structs = vec![];
+    let mut ty_defs = ctx
+        .structs()
         .filter_map(|item_strct| {
             // Only take serializable types
             let serializable = item_strct.attrs.iter().any(|attr| {
@@ -444,6 +446,12 @@ fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinit
             if !serializable {
                 return None;
             }
+
+            let unpackable = item_strct.attrs.iter().any(|attr| {
+                let attr_string = attr.tokens.to_string();
+                let attr_name = attr.path.segments.last().unwrap().ident.to_string();
+                attr_name == "derive" && attr_string.contains("Unpackable")
+            });
 
             // Only take public types
             match &item_strct.vis {
@@ -478,11 +486,21 @@ fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinit
                 _ => panic!("Empty structs are allowed."),
             };
 
-            Some(fields.map(|fields| IdlTypeDefinition {
+            let struct_res = fields.map(|fields| IdlTypeDefinition {
                 name,
                 docs: doc,
                 ty: IdlTypeDefinitionTy::Struct { fields },
-            }))
+            });
+
+            if unpackable {
+                if let Ok(strct) = &struct_res {
+                    let mut unpacked = strct.clone();
+                    unpacked.name = format!("{}Unpacked", strct.name);
+                    unpacked_structs.push(unpacked);
+                }
+            }
+
+            Some(struct_res)
         })
         .chain(ctx.enums().filter_map(|enm| {
             // Only take serializable types
@@ -560,7 +578,9 @@ fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinit
                 ty: IdlTypeDefinitionTy::Enum { variants },
             }))
         }))
-        .collect()
+        .collect::<Result<Vec<IdlTypeDefinition>>>()?;
+    ty_defs.extend(unpacked_structs);
+    Ok(ty_defs)
 }
 
 // Replace variable array lengths with values
