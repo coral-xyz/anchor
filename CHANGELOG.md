@@ -39,7 +39,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Remove deprecated literal constraint which has been replaced by `#[account(constraint = {})]` ([#2379](https://github.com/coral-xyz/anchor/pull/2379)).
 - lang: `account(zero_copy)` and `zero_copy` attributes now derive the `bytemuck::Pod` and `bytemuck::Zeroable` traits instead of using `unsafe impl` ([#2330](https://github.com/coral-xyz/anchor/pull/2330)). This imposes useful restrictions on the type, like not having padding bytes and all fields being `Pod` themselves. See [bytemuck::Pod](https://docs.rs/bytemuck/latest/bytemuck/trait.Pod.html) for details. This change requires adding `bytemuck = { version = "1.4.0", features = ["derive", "min_const_generics"]}` to your `cargo.toml`. Legacy applications can still use `#[account(zero_copy(unsafe))]` and `#[zero_copy(unsafe)]` for the old behavior.
 - ts: Remove `createProgramAddressSync`, `findProgramAddressSync` (now available in `@solana/web3.js`) and update `associatedAddress` to be synchronous ([#2357](https://github.com/coral-xyz/anchor/pull/2357)).
-- ts: Add support for `VersionedTransaction` to `AnchorProvider`, `Transaction` is no longer accepted as an argument ([#2380](https://github.com/coral-xyz/anchor/pull/2380)).
+- ts: Add support for `VersionedTransaction` to `AnchorProvider`, `Transaction` is no longer accepted as an argument ([#2382](https://github.com/coral-xyz/anchor/pull/2382)).
 
 ## [0.26.0] - 2022-12-15
 
