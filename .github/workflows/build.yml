@@ -1,0 +1,112 @@
+# from sugar's build script https://github.com/metaplex-foundation/sugar/blob/7dd0628f42777fb6c04e3f2fb78e332af7337d7a/.github/workflows/build.yml
+name: Build and Release
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, reopened]
+  push:
+    branches: "**"
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+          - macos-latest
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install libudev-dev on Ubuntu
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install libudev-dev
+      - name: Install Latest Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          override: true
+
+      - name: Install rustfmt, clippy and cargo-cache
+        run: |
+          rustup component add rustfmt clippy
+          cargo install cargo-cache
+      - name: Cache Dependencies
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      - name: Build
+        id: build
+        shell: bash
+        run: |
+          binary_extension=""
+          if [[ "${RUNNER_OS}" == "Windows" ]]; then
+            binary_extension=".exe"
+            binary_path="anchor-windows-latest${binary_extension}"
+          elif [[ "${RUNNER_OS}" == "macOS" ]]; then
+            binary_path="anchor-macos-intel-latest"
+          elif [[ "${RUNNER_OS}" == "Linux" ]]; then
+            binary_path="anchor-ubuntu-latest"
+          else
+            echo "error: unknown OS: ${RUNNER_OS}"
+            exit 1
+          fi
+          echo "::set-output name=binary_path::${binary_path}"
+          # clean build for release
+          if [[ "${GITHUB_REF}" = refs/tags/* ]]; then
+            cargo clean
+          fi
+          cargo build -p anchor-cli --release --locked
+          cp "target/release/anchor${binary_extension}" "${binary_path}"
+          strip "${binary_path}"
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+
+#      - name: Rustfmt
+#        uses: actions-rs/cargo@v1
+#        with:
+#          command: fmt
+#          args: --all -- --check
+#
+#      - name: Clippy
+#        uses: actions-rs/cargo@v1
+#        with:
+#          command: clippy
+#          args: -- -D warnings
+
+      - name: Cleanup Dependencies
+        run: cargo cache clean-unref
+
+      - name: Publish Artifacts
+        uses: actions/upload-artifact@v3
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        with:
+          name: ${{ matrix.os }}
+          path: ${{ steps.build.outputs.binary_path }}
+
+      - name: Release Tags
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ${{ steps.build.outputs.binary_path }}
