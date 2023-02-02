@@ -186,7 +186,7 @@ pub fn parse(
             .collect::<Vec<IdlErrorCode>>()
     });
 
-    let instructions = p
+    let mut instructions = p
         .ixs
         .iter()
         .map(|ix| {
@@ -224,7 +224,7 @@ pub fn parse(
         })
         .collect::<Vec<_>>();
 
-    let events = parse_events(&ctx)
+    let mut events = parse_events(&ctx)
         .iter()
         .map(|e: &&syn::ItemStruct| {
             let fields = match &e.fields {
@@ -279,7 +279,7 @@ pub fn parse(
         }
     }
 
-    let constants = parse_consts(&ctx)
+    let mut constants = parse_consts(&ctx)
         .iter()
         .map(|c: &&syn::ItemConst| IdlConst {
             name: c.ident.to_string(),
@@ -287,6 +287,13 @@ pub fn parse(
             value: c.expr.to_token_stream().to_string().parse().unwrap(),
         })
         .collect::<Vec<IdlConst>>();
+
+    // sort everything by name
+    instructions.sort_by(|a, b| a.name.cmp(&b.name));
+    types.sort_by(|a, b| a.name.cmp(&b.name));
+    accounts.sort_by(|a, b| a.name.cmp(&b.name));
+    events.sort_by(|a, b| a.name.cmp(&b.name));
+    constants.sort_by(|a, b| a.name.cmp(&b.name));
 
     Ok(Some(Idl {
         version,
