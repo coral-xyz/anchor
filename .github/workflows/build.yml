@@ -37,10 +37,10 @@ jobs:
           default: true
           override: true
 
-      - name: Install rustfmt, clippy and cargo-cache
-        run: |
-          rustup component add rustfmt clippy
-          cargo install cargo-cache
+#      - name: Install rustfmt, clippy and cargo-cache
+#        run: |
+#          rustup component add rustfmt clippy
+#          cargo install cargo-cache
       - name: Cache Dependencies
         if: runner.os == 'Linux' || runner.os == 'macOS'
         uses: actions/cache@v3
