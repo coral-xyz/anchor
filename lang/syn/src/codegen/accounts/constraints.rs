@@ -521,9 +521,11 @@ fn generate_constraint_init_group(
 
             let payer_optional_check = check_scope.generate_check(payer);
 
+            let token_account_space = generate_get_token_account_space(mint);
+
             let create_account = generate_create_account(
                 field,
-                quote! {anchor_spl::token::TokenAccount::LEN},
+                quote! {#token_account_space},
                 quote! {&token_program.key()},
                 quote! {#payer},
                 seeds_with_bump,
@@ -545,13 +547,13 @@ fn generate_constraint_init_group(
 
                         // Initialize the token account.
                         let cpi_program = token_program.to_account_info();
-                        let accounts = anchor_spl::token::InitializeAccount3 {
+                        let accounts = anchor_spl::token_2022::InitializeAccount3 {
                             account: #field.to_account_info(),
                             mint: #mint.to_account_info(),
                             authority: #owner.to_account_info(),
                         };
                         let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
-                        anchor_spl::token::initialize_account3(cpi_ctx)?;
+                        anchor_spl::token_2022::initialize_account3(cpi_ctx)?;
                     }
 
                     let pa: #ty_decl = #from_account_info_unchecked;
@@ -683,11 +685,11 @@ fn generate_constraint_init_group(
 
                         // Initialize the mint account.
                         let cpi_program = token_program.to_account_info();
-                        let accounts = anchor_spl::token::InitializeMint2 {
+                        let accounts = anchor_spl::token_2022::InitializeMint2 {
                             mint: #field.to_account_info(),
                         };
                         let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
-                        anchor_spl::token::initialize_mint2(cpi_ctx, #decimals, &#owner.key(), #freeze_authority)?;
+                        anchor_spl::token_2022::initialize_mint2(cpi_ctx, #decimals, &#owner.key(), #freeze_authority)?;
                     }
                     let pa: #ty_decl = #from_account_info_unchecked;
                     if #if_needed {
@@ -1024,6 +1026,25 @@ impl<'a> OptionalCheckScope<'a> {
                 }
             } else {
                 quote! {}
+            }
+        }
+    }
+}
+
+fn generate_get_token_account_space(mint: &Expr) -> proc_macro2::TokenStream {
+    quote! {
+        {
+            let mint_info = #mint.to_account_info();
+            if *mint_info.owner == anchor_spl::token_2022::Token2022::id() {
+                use anchor_spl::token_2022::spl_token_2022::extension::{BaseStateWithExtensions, ExtensionType, StateWithExtensions};
+                use anchor_spl::token_2022::spl_token_2022::state::{Account, Mint};
+                let mint_data = mint_info.try_borrow_data()?;
+                let mint_state = StateWithExtensions::<Mint>::unpack(&mint_data)?;
+                let mint_extensions = mint_state.get_extension_types()?;
+                let required_extensions = ExtensionType::get_required_init_account_extensions(&mint_extensions);
+                ExtensionType::get_account_len::<Account>(&required_extensions)
+            } else {
+                anchor_spl::token::TokenAccount::LEN
             }
         }
     }
