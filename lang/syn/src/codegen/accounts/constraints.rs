@@ -547,13 +547,13 @@ fn generate_constraint_init_group(
 
                         // Initialize the token account.
                         let cpi_program = token_program.to_account_info();
-                        let accounts = anchor_spl::token_2022::InitializeAccount3 {
+                        let accounts = anchor_spl::token_interface::InitializeAccount3 {
                             account: #field.to_account_info(),
                             mint: #mint.to_account_info(),
                             authority: #owner.to_account_info(),
                         };
                         let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
-                        anchor_spl::token_2022::initialize_account3(cpi_ctx)?;
+                        anchor_spl::token_interface::initialize_account3(cpi_ctx)?;
                     }
 
                     let pa: #ty_decl = #from_account_info_unchecked;
@@ -685,11 +685,11 @@ fn generate_constraint_init_group(
 
                         // Initialize the mint account.
                         let cpi_program = token_program.to_account_info();
-                        let accounts = anchor_spl::token_2022::InitializeMint2 {
+                        let accounts = anchor_spl::token_interface::InitializeMint2 {
                             mint: #field.to_account_info(),
                         };
                         let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
-                        anchor_spl::token_2022::initialize_mint2(cpi_ctx, #decimals, &#owner.key(), #freeze_authority)?;
+                        anchor_spl::token_interface::initialize_mint2(cpi_ctx, #decimals, &#owner.key(), #freeze_authority)?;
                     }
                     let pa: #ty_decl = #from_account_info_unchecked;
                     if #if_needed {
