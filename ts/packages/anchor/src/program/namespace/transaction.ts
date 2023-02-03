@@ -1,4 +1,4 @@
-import { Transaction } from "@solana/web3.js";
+import { Transaction, TransactionInstruction } from "@solana/web3.js";
 import { Idl, IdlInstruction } from "../../idl.js";
 import { splitArgsAndCtx } from "../context.js";
 import { InstructionFn } from "./instruction.js";
@@ -13,16 +13,16 @@ export default class TransactionFactory {
     idlIx: I,
     ixFn: InstructionFn<IDL, I>
   ): TransactionFn<IDL, I> {
-    const txFn: TransactionFn<IDL, I> = (...args): Transaction => {
+    const txFn: TransactionFn<IDL, I> = (...args): TransactionInstruction[] => {
       const [, ctx] = splitArgsAndCtx(idlIx, [...args]);
-      const tx = new Transaction();
+      const tx: TransactionInstruction[] = [];
       if (ctx.preInstructions && ctx.instructions) {
         throw new Error("instructions is deprecated, use preInstructions");
       }
-      ctx.preInstructions?.forEach((ix) => tx.add(ix));
-      ctx.instructions?.forEach((ix) => tx.add(ix));
-      tx.add(ixFn(...args));
-      ctx.postInstructions?.forEach((ix) => tx.add(ix));
+      ctx.preInstructions?.forEach((ix) => tx.push(ix));
+      ctx.instructions?.forEach((ix) => tx.push(ix));
+      tx.push(ixFn(...args));
+      ctx.postInstructions?.forEach((ix) => tx.push(ix));
       return tx;
     };
 
@@ -62,12 +62,12 @@ export default class TransactionFactory {
 export type TransactionNamespace<
   IDL extends Idl = Idl,
   I extends AllInstructions<IDL> = AllInstructions<IDL>
-> = MakeInstructionsNamespace<IDL, I, Transaction>;
+> = MakeInstructionsNamespace<IDL, I, TransactionInstruction[]>;
 
 /**
- * Tx is a function to create a `Transaction` for a given program instruction.
+ * Tx is a function to create a `TransactionInstruction[]` for a given program instruction.
  */
 export type TransactionFn<
   IDL extends Idl = Idl,
   I extends AllInstructions<IDL> = AllInstructions<IDL>
-> = InstructionContextFn<IDL, I, Transaction>;
+> = InstructionContextFn<IDL, I, TransactionInstruction[]>;

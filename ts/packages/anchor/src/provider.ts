@@ -2,13 +2,16 @@ import {
   Connection,
   Signer,
   PublicKey,
-  Transaction,
   TransactionSignature,
   ConfirmOptions,
   SimulatedTransactionResponse,
   Commitment,
   SendTransactionError,
   SendOptions,
+  TransactionInstruction,
+  VersionedTransaction,
+  AddressLookupTableAccount,
+  TransactionMessage,
 } from "@solana/web3.js";
 import { bs58 } from "./utils/bytes/index.js";
 import { isBrowser } from "./utils/common.js";
@@ -22,21 +25,21 @@ export default interface Provider {
   readonly publicKey?: PublicKey;
 
   send?(
-    tx: Transaction,
+    tx: TransactionInstruction[],
     signers?: Signer[],
     opts?: SendOptions
   ): Promise<TransactionSignature>;
   sendAndConfirm?(
-    tx: Transaction,
+    tx: TransactionInstruction[],
     signers?: Signer[],
     opts?: ConfirmOptions
   ): Promise<TransactionSignature>;
   sendAll?(
-    txWithSigners: { tx: Transaction; signers?: Signer[] }[],
+    txWithSigners: { tx: TransactionInstruction[]; signers?: Signer[] }[],
     opts?: ConfirmOptions
   ): Promise<Array<TransactionSignature>>;
   simulate?(
-    tx: Transaction,
+    tx: TransactionInstruction[],
     signers?: Signer[],
     commitment?: Commitment,
     includeAccounts?: boolean | PublicKey[]
@@ -124,24 +127,30 @@ export class AnchorProvider implements Provider {
    * @param opts    Transaction confirmation options.
    */
   async sendAndConfirm(
-    tx: Transaction,
+    instructions: TransactionInstruction[],
     signers?: Signer[],
-    opts?: ConfirmOptions
+    opts?: ConfirmOptions,
+    feePayer?: PublicKey,
+    lookupTable?: AddressLookupTableAccount[]
   ): Promise<TransactionSignature> {
     if (opts === undefined) {
       opts = this.opts;
     }
 
-    tx.feePayer = tx.feePayer || this.wallet.publicKey;
-
-    tx.recentBlockhash = (
-      await this.connection.getLatestBlockhash(opts.preflightCommitment)
-    ).blockhash;
+    let tx = new VersionedTransaction(
+      new TransactionMessage({
+        instructions,
+        payerKey: feePayer ?? this.wallet.publicKey,
+        recentBlockhash: (
+          await this.connection.getLatestBlockhash(opts.preflightCommitment)
+        ).blockhash,
+      }).compileToV0Message(lookupTable)
+    );
 
     tx = await this.wallet.signTransaction(tx);
-    (signers ?? []).forEach((kp) => {
-      tx.partialSign(kp);
-    });
+    if (signers) {
+      tx.sign(signers);
+    }
 
     const rawTx = tx.serialize();
 
@@ -156,7 +165,7 @@ export class AnchorProvider implements Provider {
         // because that will see the tx sent with `sendAndConfirmRawTransaction` no matter which
         // commitment `sendAndConfirmRawTransaction` used
         const failedTx = await this.connection.getTransaction(
-          bs58.encode(tx.signature!),
+          bs58.encode(tx.signatures[0]!),
           { commitment: "confirmed" }
         );
         if (!failedTx) {
@@ -178,7 +187,7 @@ export class AnchorProvider implements Provider {
    * @param opts          Transaction confirmation options.
    */
   async sendAll(
-    txWithSigners: { tx: Transaction; signers?: Signer[] }[],
+    txWithSigners: { tx: TransactionInstruction[]; signers?: Signer[] }[],
     opts?: ConfirmOptions
   ): Promise<Array<TransactionSignature>> {
     if (opts === undefined) {
@@ -253,7 +262,7 @@ export class AnchorProvider implements Provider {
    * @param opts    Transaction confirmation options.
    */
   async simulate(
-    tx: Transaction,
+    tx: TransactionInstruction[],
     signers?: Signer[],
     commitment?: Commitment,
     includeAccounts?: boolean | PublicKey[]
@@ -295,7 +304,7 @@ class SimulateError extends Error {
 }
 
 export type SendTxRequest = {
-  tx: Transaction;
+  tx: TransactionInstruction[];
   signers: Array<Signer | undefined>;
 };
 
@@ -303,8 +312,10 @@ export type SendTxRequest = {
  * Wallet interface for objects that can be used to sign provider transactions.
  */
 export interface Wallet {
-  signTransaction(tx: Transaction): Promise<Transaction>;
-  signAllTransactions(txs: Transaction[]): Promise<Transaction[]>;
+  signTransaction(tx: VersionedTransaction): Promise<VersionedTransaction>;
+  signAllTransactions(
+    txs: VersionedTransaction[]
+  ): Promise<VersionedTransaction[]>;
   publicKey: PublicKey;
 }
 
@@ -312,7 +323,7 @@ export interface Wallet {
 // a better error if 'confirmTransaction` returns an error status
 async function sendAndConfirmRawTransaction(
   connection: Connection,
-  rawTransaction: Buffer,
+  rawTransaction: Uint8Array,
   options?: ConfirmOptions
 ): Promise<TransactionSignature> {
   const sendOptions = options && {
