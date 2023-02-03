@@ -284,6 +284,7 @@ pub fn generate_constraint_signer(f: &Field, c: &ConstraintSigner) -> proc_macro
     let info = match f.ty {
         Ty::AccountInfo => quote! { #ident },
         Ty::Account(_) => quote! { #ident.to_account_info() },
+        Ty::InterfaceAccount(_) => quote! { #ident.to_account_info() },
         Ty::AccountLoader(_) => quote! { #ident.to_account_info() },
         _ => panic!("Invalid syntax: signer cannot be specified."),
     };
@@ -707,7 +708,7 @@ fn generate_constraint_init_group(
                 };
             }
         }
-        InitKind::Program { owner } => {
+        InitKind::Program { owner } | InitKind::Interface { owner } => {
             // Define the space variable.
             let space = quote! {let space = #space;};
 
