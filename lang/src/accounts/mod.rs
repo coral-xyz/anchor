@@ -15,6 +15,7 @@ pub mod program;
 #[doc(hidden)]
 #[allow(deprecated)]
 pub mod program_account;
+pub mod program_owned_account;
 pub mod signer;
 pub mod system_account;
 pub mod sysvar;
