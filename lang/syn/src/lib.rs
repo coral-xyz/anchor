@@ -14,8 +14,8 @@ use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::token::Comma;
 use syn::{
-    Expr, Generics, Ident, ItemEnum, ItemFn, ItemMod, ItemStruct, LitInt, LitStr, PatType, Token,
-    Type, TypePath,
+    Expr, Generics, Ident, ItemEnum, ItemFn, ItemMod, ItemStruct, LitInt, PatType, Token, Type,
+    TypePath,
 };
 
 pub mod codegen;
@@ -204,9 +204,6 @@ impl AccountField {
         let qualified_ty_name = match self {
             AccountField::Field(field) => match &field.ty {
                 Ty::Account(account) => Some(parser::tts_to_string(&account.account_type_path)),
-                Ty::ProgramAccount(account) => {
-                    Some(parser::tts_to_string(&account.account_type_path))
-                }
                 _ => None,
             },
             AccountField::CompositeField(field) => Some(field.symbol.clone()),
@@ -300,8 +297,6 @@ impl Field {
         }
     }
 
-    // TODO: remove the option once `CpiAccount` is completely removed (not
-    //       just deprecated).
     // Ignores optional accounts. Optional account checks and handing should be done prior to this
     // function being called.
     pub fn from_account_info(
@@ -350,23 +345,6 @@ impl Field {
                     stream
                 }
             }
-            Ty::CpiAccount(_) => {
-                if checked {
-                    quote! {
-                        match #container_ty::try_from(&#field) {
-                            Ok(val) => val,
-                            Err(e) => return Err(e.with_account_name(#field_str))
-                        }
-                    }
-                } else {
-                    quote! {
-                        match #container_ty::try_from_unchecked(&#field) {
-                            Ok(val) => val,
-                            Err(e) => return Err(e.with_account_name(#field_str))
-                        }
-                    }
-                }
-            }
             Ty::AccountLoader(_) => {
                 if checked {
                     quote! {
@@ -406,20 +384,11 @@ impl Field {
 
     pub fn container_ty(&self) -> proc_macro2::TokenStream {
         match &self.ty {
-            Ty::ProgramAccount(_) => quote! {
-                anchor_lang::accounts::program_account::ProgramAccount
-            },
             Ty::Account(_) => quote! {
                 anchor_lang::accounts::account::Account
             },
             Ty::AccountLoader(_) => quote! {
                 anchor_lang::accounts::account_loader::AccountLoader
-            },
-            Ty::Loader(_) => quote! {
-                anchor_lang::accounts::loader::Loader
-            },
-            Ty::CpiAccount(_) => quote! {
-                anchor_lang::accounts::cpi_account::CpiAccount
             },
             Ty::Sysvar(_) => quote! { anchor_lang::accounts::sysvar::Sysvar },
             Ty::Program(_) => quote! { anchor_lang::accounts::program::Program },
@@ -449,12 +418,6 @@ impl Field {
             Ty::ProgramData => quote! {
                 ProgramData
             },
-            Ty::ProgramAccount(ty) => {
-                let ident = &ty.account_type_path;
-                quote! {
-                    #ident
-                }
-            }
             Ty::Account(ty) => {
                 let ident = &ty.account_type_path;
                 quote! {
@@ -462,18 +425,6 @@ impl Field {
                 }
             }
             Ty::AccountLoader(ty) => {
-                let ident = &ty.account_type_path;
-                quote! {
-                    #ident
-                }
-            }
-            Ty::Loader(ty) => {
-                let ident = &ty.account_type_path;
-                quote! {
-                    #ident
-                }
-            }
-            Ty::CpiAccount(ty) => {
                 let ident = &ty.account_type_path;
                 quote! {
                     #ident
@@ -516,10 +467,7 @@ pub struct CompositeField {
 pub enum Ty {
     AccountInfo,
     UncheckedAccount,
-    ProgramAccount(ProgramAccountTy),
-    Loader(LoaderTy),
     AccountLoader(AccountLoaderTy),
-    CpiAccount(CpiAccountTy),
     Sysvar(SysvarTy),
     Account(AccountTy),
     Program(ProgramTy),
@@ -543,25 +491,7 @@ pub enum SysvarTy {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct ProgramAccountTy {
-    // The struct type of the account.
-    pub account_type_path: TypePath,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct CpiAccountTy {
-    // The struct type of the account.
-    pub account_type_path: TypePath,
-}
-
-#[derive(Debug, PartialEq, Eq)]
 pub struct AccountLoaderTy {
-    // The struct type of the account.
-    pub account_type_path: TypePath,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct LoaderTy {
     // The struct type of the account.
     pub account_type_path: TypePath,
 }
@@ -627,7 +557,6 @@ pub struct ConstraintGroup {
     pub seeds: Option<ConstraintSeedsGroup>,
     pub executable: Option<ConstraintExecutable>,
     pub has_one: Vec<ConstraintHasOne>,
-    pub literal: Vec<ConstraintLiteral>,
     pub raw: Vec<ConstraintRaw>,
     pub close: Option<ConstraintClose>,
     pub address: Option<ConstraintAddress>,
@@ -666,7 +595,6 @@ pub enum Constraint {
     Mut(ConstraintMut),
     Signer(ConstraintSigner),
     HasOne(ConstraintHasOne),
-    Literal(ConstraintLiteral),
     Raw(ConstraintRaw),
     Owner(ConstraintOwner),
     RentExempt(ConstraintRentExempt),
@@ -689,7 +617,6 @@ pub enum ConstraintToken {
     Mut(Context<ConstraintMut>),
     Signer(Context<ConstraintSigner>),
     HasOne(Context<ConstraintHasOne>),
-    Literal(Context<ConstraintLiteral>),
     Raw(Context<ConstraintRaw>),
     Owner(Context<ConstraintOwner>),
     RentExempt(Context<ConstraintRentExempt>),
@@ -766,11 +693,6 @@ pub struct ConstraintSigner {
 pub struct ConstraintHasOne {
     pub join_target: Expr,
     pub error: Option<Expr>,
-}
-
-#[derive(Debug, Clone)]
-pub struct ConstraintLiteral {
-    pub lit: LitStr,
 }
 
 #[derive(Debug, Clone)]
