@@ -1,6 +1,7 @@
 //! This example demonstrates the use of the `anchor_spl::token` CPI client.
 
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{
     self, Burn, Mint, MintTo, SetAuthority, TokenAccount, TokenInterface, Transfer,
 };
@@ -30,6 +31,20 @@ mod token_proxy {
         new_authority: Option<Pubkey>,
     ) -> Result<()> {
         token_interface::set_authority(ctx.accounts.into(), authority_type.into(), new_authority)
+    }
+
+    pub fn proxy_create_token_account(_ctx: Context<ProxyCreateTokenAccount>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn proxy_create_associated_token_account(
+        _ctx: Context<ProxyCreateAssociatedTokenAccount>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn proxy_create_mint(_ctx: Context<ProxyCreateMint>, _name: String) -> Result<()> {
+        Ok(())
     }
 }
 
@@ -89,6 +104,57 @@ pub struct ProxySetAuthority<'info> {
     #[account(mut)]
     /// CHECK:
     pub account_or_mint: AccountInfo<'info>,
+    pub token_program: Interface<'info, TokenInterface>,
+}
+
+#[derive(Accounts)]
+pub struct ProxyCreateTokenAccount<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    pub mint: InterfaceAccount<'info, Mint>,
+    #[account(init,
+        token::mint = mint,
+        token::authority = authority,
+        seeds = [authority.key().as_ref(), mint.key().as_ref(), b"token-proxy-account"],
+        bump,
+        payer = authority
+    )]
+    pub token_account: InterfaceAccount<'info, TokenAccount>,
+    pub system_program: Program<'info, System>,
+    pub token_program: Interface<'info, TokenInterface>,
+}
+
+#[derive(Accounts)]
+pub struct ProxyCreateAssociatedTokenAccount<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    #[account(
+        init,
+        associated_token::mint = mint,
+        payer = authority,
+        associated_token::authority = authority,
+    )]
+    pub token_account: InterfaceAccount<'info, TokenAccount>,
+    pub mint: InterfaceAccount<'info, Mint>,
+    pub system_program: Program<'info, System>,
+    pub token_program: Interface<'info, TokenInterface>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+}
+
+#[derive(Accounts)]
+#[instruction(name: String)]
+pub struct ProxyCreateMint<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    #[account(init,
+        mint::decimals = 9,
+        mint::authority = authority,
+        seeds = [authority.key().as_ref(), name.as_bytes(), b"token-proxy-mint"],
+        bump,
+        payer = authority
+    )]
+    pub mint: InterfaceAccount<'info, Mint>,
+    pub system_program: Program<'info, System>,
     pub token_program: Interface<'info, TokenInterface>,
 }
 

@@ -46,6 +46,79 @@ describe("program", () => {
         );
       });
 
+      it("Creates a token account", async () => {
+        const newMint = await createMint(tokenProgram);
+        const authority = provider.wallet.publicKey;
+        const [tokenAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+          [
+            authority.toBytes(),
+            newMint.toBytes(),
+            Buffer.from("token-proxy-account"),
+          ],
+          program.programId
+        );
+        await program.rpc.proxyCreateTokenAccount({
+          accounts: {
+            authority,
+            mint: newMint,
+            tokenAccount,
+            systemProgram: anchor.web3.SystemProgram.programId,
+            tokenProgram: tokenProgram.programId,
+          },
+        });
+        const account = await getTokenAccount(provider, tokenAccount);
+        assert.isTrue(account.amount.eq(new anchor.BN(0)));
+      });
+
+      it("Creates an associated token account", async () => {
+        const newMint = await createMint(tokenProgram);
+        const authority = provider.wallet.publicKey;
+        const associatedTokenProgram = new anchor.web3.PublicKey(
+          "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        );
+        const [tokenAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+          [
+            authority.toBytes(),
+            tokenProgram.programId.toBytes(),
+            newMint.toBytes(),
+          ],
+          associatedTokenProgram
+        );
+
+        await program.rpc.proxyCreateAssociatedTokenAccount({
+          accounts: {
+            tokenAccount,
+            mint: newMint,
+            authority,
+            systemProgram: anchor.web3.SystemProgram.programId,
+            tokenProgram: tokenProgram.programId,
+            associatedTokenProgram,
+          },
+        });
+        const account = await getTokenAccount(provider, tokenAccount);
+        assert.isTrue(account.amount.eq(new anchor.BN(0)));
+      });
+
+      it("Creates a mint", async () => {
+        const authority = provider.wallet.publicKey;
+        const [newMint] = anchor.web3.PublicKey.findProgramAddressSync(
+          [
+            authority.toBytes(),
+            Buffer.from(name),
+            Buffer.from("token-proxy-mint"),
+          ],
+          program.programId
+        );
+        await program.rpc.proxyCreateMint(name, {
+          accounts: {
+            authority,
+            mint: newMint,
+            systemProgram: anchor.web3.SystemProgram.programId,
+            tokenProgram: tokenProgram.programId,
+          },
+        });
+      });
+
       it("Mints a token", async () => {
         await program.rpc.proxyMintTo(new anchor.BN(1000), {
           accounts: {
