@@ -792,8 +792,7 @@ fn expand_program(
 
     let version = cargo.version();
     let time = chrono::Utc::now().to_string().replace(' ', "_");
-    let file_path =
-        program_expansions_path.join(format!("{package_name}-{version}-{time}.rs"));
+    let file_path = program_expansions_path.join(format!("{package_name}-{version}-{time}.rs"));
     fs::write(&file_path, &exit.stdout).map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
 
     println!(
