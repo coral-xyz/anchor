@@ -876,7 +876,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         {
             return Err(ParseError::new(
                 c.span(),
-                "close must be on an Account, ProgramAccount, or Loader",
+                "close must be on an Account, AccountLoader",
             ));
         }
         if self.mutable.is_none() {

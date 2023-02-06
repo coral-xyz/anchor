@@ -297,8 +297,6 @@ impl Field {
         }
     }
 
-    // TODO: remove the option once `CpiAccount` is completely removed (not
-    //       just deprecated).
     // Ignores optional accounts. Optional account checks and handing should be done prior to this
     // function being called.
     pub fn from_account_info(
