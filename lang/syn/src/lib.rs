@@ -14,8 +14,8 @@ use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::token::Comma;
 use syn::{
-    Expr, Generics, Ident, ImplItemMethod, ItemEnum, ItemFn, ItemImpl, ItemMod, ItemStruct, LitInt,
-    LitStr, PatType, Token, Type, TypePath,
+    Expr, Generics, Ident, ItemEnum, ItemFn, ItemMod, ItemStruct, LitInt, LitStr, PatType, Token,
+    Type, TypePath,
 };
 
 pub mod codegen;
@@ -29,7 +29,6 @@ pub mod parser;
 
 #[derive(Debug)]
 pub struct Program {
-    pub state: Option<State>,
     pub ixs: Vec<Ix>,
     pub name: Ident,
     pub docs: Option<Vec<String>>,
@@ -54,32 +53,6 @@ impl ToTokens for Program {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         tokens.extend::<TokenStream>(self.into());
     }
-}
-
-#[derive(Debug)]
-pub struct State {
-    pub name: String,
-    pub strct: ItemStruct,
-    pub ctor_and_anchor: Option<(ImplItemMethod, Ident)>,
-    pub impl_block_and_methods: Option<(ItemImpl, Vec<StateIx>)>,
-    pub interfaces: Option<Vec<StateInterface>>,
-    pub is_zero_copy: bool,
-}
-
-#[derive(Debug)]
-pub struct StateIx {
-    pub raw_method: ImplItemMethod,
-    pub ident: Ident,
-    pub args: Vec<IxArg>,
-    pub anchor_ident: Ident,
-    // True if there exists a &self on the method.
-    pub has_receiver: bool,
-}
-
-#[derive(Debug)]
-pub struct StateInterface {
-    pub trait_name: String,
-    pub methods: Vec<StateIx>,
 }
 
 #[derive(Debug)]
@@ -449,8 +422,6 @@ impl Field {
                 anchor_lang::accounts::cpi_account::CpiAccount
             },
             Ty::Sysvar(_) => quote! { anchor_lang::accounts::sysvar::Sysvar },
-            Ty::CpiState(_) => quote! { anchor_lang::accounts::cpi_state::CpiState },
-            Ty::ProgramState(_) => quote! { anchor_lang::accounts::state::ProgramState },
             Ty::Program(_) => quote! { anchor_lang::accounts::program::Program },
             Ty::AccountInfo => quote! {},
             Ty::UncheckedAccount => quote! {},
@@ -508,18 +479,6 @@ impl Field {
                     #ident
                 }
             }
-            Ty::ProgramState(ty) => {
-                let account = &ty.account_type_path;
-                quote! {
-                    #account
-                }
-            }
-            Ty::CpiState(ty) => {
-                let account = &ty.account_type_path;
-                quote! {
-                    #account
-                }
-            }
             Ty::Sysvar(ty) => match ty {
                 SysvarTy::Clock => quote! {Clock},
                 SysvarTy::Rent => quote! {Rent},
@@ -557,8 +516,6 @@ pub struct CompositeField {
 pub enum Ty {
     AccountInfo,
     UncheckedAccount,
-    ProgramState(ProgramStateTy),
-    CpiState(CpiStateTy),
     ProgramAccount(ProgramAccountTy),
     Loader(LoaderTy),
     AccountLoader(AccountLoaderTy),
@@ -583,16 +540,6 @@ pub enum SysvarTy {
     StakeHistory,
     Instructions,
     Rewards,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct ProgramStateTy {
-    pub account_type_path: TypePath,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct CpiStateTy {
-    pub account_type_path: TypePath,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -671,24 +618,23 @@ pub struct ErrorCode {
 // All well formed constraints on a single `Accounts` field.
 #[derive(Debug, Default, Clone)]
 pub struct ConstraintGroup {
-    init: Option<ConstraintInitGroup>,
-    zeroed: Option<ConstraintZeroed>,
-    mutable: Option<ConstraintMut>,
-    signer: Option<ConstraintSigner>,
-    owner: Option<ConstraintOwner>,
-    rent_exempt: Option<ConstraintRentExempt>,
-    seeds: Option<ConstraintSeedsGroup>,
-    executable: Option<ConstraintExecutable>,
-    state: Option<ConstraintState>,
-    has_one: Vec<ConstraintHasOne>,
-    literal: Vec<ConstraintLiteral>,
-    raw: Vec<ConstraintRaw>,
-    close: Option<ConstraintClose>,
-    address: Option<ConstraintAddress>,
-    associated_token: Option<ConstraintAssociatedToken>,
-    token_account: Option<ConstraintTokenAccountGroup>,
-    mint: Option<ConstraintTokenMintGroup>,
-    realloc: Option<ConstraintReallocGroup>,
+    pub init: Option<ConstraintInitGroup>,
+    pub zeroed: Option<ConstraintZeroed>,
+    pub mutable: Option<ConstraintMut>,
+    pub signer: Option<ConstraintSigner>,
+    pub owner: Option<ConstraintOwner>,
+    pub rent_exempt: Option<ConstraintRentExempt>,
+    pub seeds: Option<ConstraintSeedsGroup>,
+    pub executable: Option<ConstraintExecutable>,
+    pub has_one: Vec<ConstraintHasOne>,
+    pub literal: Vec<ConstraintLiteral>,
+    pub raw: Vec<ConstraintRaw>,
+    pub close: Option<ConstraintClose>,
+    pub address: Option<ConstraintAddress>,
+    pub associated_token: Option<ConstraintAssociatedToken>,
+    pub token_account: Option<ConstraintTokenAccountGroup>,
+    pub mint: Option<ConstraintTokenMintGroup>,
+    pub realloc: Option<ConstraintReallocGroup>,
 }
 
 impl ConstraintGroup {
@@ -727,7 +673,6 @@ pub enum Constraint {
     Seeds(ConstraintSeedsGroup),
     AssociatedToken(ConstraintAssociatedToken),
     Executable(ConstraintExecutable),
-    State(ConstraintState),
     Close(ConstraintClose),
     Address(ConstraintAddress),
     TokenAccount(ConstraintTokenAccountGroup),
@@ -750,7 +695,6 @@ pub enum ConstraintToken {
     RentExempt(Context<ConstraintRentExempt>),
     Seeds(Context<ConstraintSeeds>),
     Executable(Context<ConstraintExecutable>),
-    State(Context<ConstraintState>),
     Close(Context<ConstraintClose>),
     Payer(Context<ConstraintPayer>),
     Space(Context<ConstraintSpace>),
@@ -879,11 +823,6 @@ pub struct ConstraintSeeds {
 pub struct ConstraintExecutable {}
 
 #[derive(Debug, Clone)]
-pub struct ConstraintState {
-    pub program_target: Ident,
-}
-
-#[derive(Debug, Clone)]
 pub struct ConstraintPayer {
     pub target: Expr,
 }
@@ -923,37 +862,37 @@ pub struct ConstraintClose {
 
 #[derive(Debug, Clone)]
 pub struct ConstraintTokenMint {
-    mint: Expr,
+    pub mint: Expr,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConstraintTokenAuthority {
-    auth: Expr,
+    pub auth: Expr,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConstraintMintAuthority {
-    mint_auth: Expr,
+    pub mint_auth: Expr,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConstraintMintFreezeAuthority {
-    mint_freeze_auth: Expr,
+    pub mint_freeze_auth: Expr,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConstraintMintDecimals {
-    decimals: Expr,
+    pub decimals: Expr,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConstraintTokenBump {
-    bump: Option<Expr>,
+    pub bump: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConstraintProgramSeed {
-    program_seed: Expr,
+    pub program_seed: Expr,
 }
 
 #[derive(Debug, Clone)]

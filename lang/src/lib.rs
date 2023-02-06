@@ -36,7 +36,6 @@ mod bpf_upgradeable_state;
 mod bpf_writer;
 mod common;
 pub mod context;
-mod ctor;
 pub mod error;
 #[doc(hidden)]
 pub mod idl;
@@ -49,10 +48,9 @@ pub use anchor_attribute_account::{account, declare_id, zero_copy};
 pub use anchor_attribute_constant::constant;
 pub use anchor_attribute_error::*;
 pub use anchor_attribute_event::{emit, event};
-pub use anchor_attribute_interface::interface;
 pub use anchor_attribute_program::program;
-pub use anchor_attribute_state::state;
 pub use anchor_derive_accounts::Accounts;
+pub use anchor_derive_space::InitSpace;
 /// Borsh is the default serialization format for instructions and accounts.
 pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorSerialize};
 pub use solana_program;
@@ -211,6 +209,11 @@ pub trait Discriminator {
     }
 }
 
+/// Defines the space of an account for initialization.
+pub trait Space {
+    const INIT_SPACE: usize;
+}
+
 /// Bump seed for program derived addresses.
 pub trait Bump {
     fn seed(&self) -> u8;
@@ -245,12 +248,12 @@ pub mod prelude {
         accounts::account_loader::AccountLoader, accounts::program::Program,
         accounts::signer::Signer, accounts::system_account::SystemAccount,
         accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, constant,
-        context::Context, context::CpiContext, declare_id, emit, err, error, event, interface,
-        program, require, require_eq, require_gt, require_gte, require_keys_eq, require_keys_neq,
-        require_neq, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source, state,
+        context::Context, context::CpiContext, declare_id, emit, err, error, event, program,
+        require, require_eq, require_gt, require_gte, require_keys_eq, require_keys_neq,
+        require_neq, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source,
         system_program::System, zero_copy, AccountDeserialize, AccountSerialize, Accounts,
-        AccountsClose, AccountsExit, AnchorDeserialize, AnchorSerialize, Id, Key, Owner,
-        ProgramData, Result, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        AccountsClose, AccountsExit, AnchorDeserialize, AnchorSerialize, Id, InitSpace, Key, Owner,
+        ProgramData, Result, Space, ToAccountInfo, ToAccountInfos, ToAccountMetas,
     };
     pub use anchor_attribute_error::*;
     pub use borsh;
@@ -275,11 +278,8 @@ pub mod prelude {
 /// Internal module used by macros and unstable apis.
 #[doc(hidden)]
 pub mod __private {
-    use super::Result;
     /// The discriminator anchor uses to mark an account as closed.
     pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
-
-    pub use crate::ctor::Ctor;
 
     pub use anchor_attribute_account::ZeroCopyAccessor;
 
@@ -291,15 +291,11 @@ pub mod __private {
 
     use solana_program::pubkey::Pubkey;
 
-    pub mod state {
-        pub use crate::accounts::state::*;
-    }
-
-    // Calculates the size of an account, which may be larger than the deserialized
-    // data in it. This trait is currently only used for `#[state]` accounts.
+    // Used to calculate the maximum between two expressions.
+    // It is necessary for the calculation of the enum space.
     #[doc(hidden)]
-    pub trait AccountSize {
-        fn size(&self) -> Result<u64>;
+    pub const fn max(a: usize, b: usize) -> usize {
+        [a, b][(a < b) as usize]
     }
 
     // Very experimental trait.
@@ -318,9 +314,6 @@ pub mod __private {
             input.to_bytes()
         }
     }
-
-    #[doc(hidden)]
-    pub use crate::accounts::state::PROGRAM_STATE_SEED;
 }
 
 /// Ensures a condition is true, otherwise returns with the given error.

@@ -5,7 +5,6 @@ use anchor_lang::solana_program::hash::Hash;
 use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::pubkey::Pubkey;
-use anchor_lang::solana_program::system_program;
 use anchor_lang::{AccountDeserialize, Discriminator, InstructionData, ToAccountMetas};
 use regex::Regex;
 use solana_account_decoder::UiAccountEncoding;
@@ -25,7 +24,7 @@ use solana_sdk::signature::{Signature, Signer};
 use solana_sdk::transaction::Transaction;
 use std::convert::Into;
 use std::iter::Map;
-use std::rc::Rc;
+use std::ops::Deref;
 use std::vec::IntoIter;
 use thiserror::Error;
 
@@ -45,12 +44,12 @@ pub type EventHandle = PubsubClientSubscription<RpcResponse<RpcLogsResponse>>;
 /// Client defines the base configuration for building RPC clients to
 /// communicate with Anchor programs running on a Solana cluster. It's
 /// primary use is to build a `Program` client via the `program` method.
-pub struct Client {
-    cfg: Config,
+pub struct Client<C> {
+    cfg: Config<C>,
 }
 
-impl Client {
-    pub fn new(cluster: Cluster, payer: Rc<dyn Signer>) -> Self {
+impl<C: Clone + Deref<Target = impl Signer>> Client<C> {
+    pub fn new(cluster: Cluster, payer: C) -> Self {
         Self {
             cfg: Config {
                 cluster,
@@ -60,11 +59,7 @@ impl Client {
         }
     }
 
-    pub fn new_with_options(
-        cluster: Cluster,
-        payer: Rc<dyn Signer>,
-        options: CommitmentConfig,
-    ) -> Self {
+    pub fn new_with_options(cluster: Cluster, payer: C, options: CommitmentConfig) -> Self {
         Self {
             cfg: Config {
                 cluster,
@@ -74,7 +69,7 @@ impl Client {
         }
     }
 
-    pub fn program(&self, program_id: Pubkey) -> Program {
+    pub fn program(&self, program_id: Pubkey) -> Program<C> {
         Program {
             program_id,
             cfg: Config {
@@ -88,43 +83,31 @@ impl Client {
 
 // Internal configuration for a client.
 #[derive(Debug)]
-struct Config {
+struct Config<C> {
     cluster: Cluster,
-    payer: Rc<dyn Signer>,
+    payer: C,
     options: Option<CommitmentConfig>,
 }
 
 /// Program is the primary client handle to be used to build and send requests.
 #[derive(Debug)]
-pub struct Program {
+pub struct Program<C> {
     program_id: Pubkey,
-    cfg: Config,
+    cfg: Config<C>,
 }
 
-impl Program {
+impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
     pub fn payer(&self) -> Pubkey {
         self.cfg.payer.pubkey()
     }
 
     /// Returns a request builder.
-    pub fn request(&self) -> RequestBuilder {
+    pub fn request(&self) -> RequestBuilder<C> {
         RequestBuilder::from(
             self.program_id,
             self.cfg.cluster.url(),
             self.cfg.payer.clone(),
             self.cfg.options,
-            RequestNamespace::Global,
-        )
-    }
-
-    /// Returns a request builder for program state.
-    pub fn state_request(&self) -> RequestBuilder {
-        RequestBuilder::from(
-            self.program_id,
-            self.cfg.cluster.url(),
-            self.cfg.payer.clone(),
-            self.cfg.options,
-            RequestNamespace::State { new: false },
         )
     }
 
@@ -177,10 +160,6 @@ impl Program {
         })
     }
 
-    pub fn state<T: AccountDeserialize>(&self) -> Result<T, ClientError> {
-        self.account(anchor_lang::__private::state::address(&self.program_id))
-    }
-
     pub fn rpc(&self) -> RpcClient {
         RpcClient::new_with_commitment(
             self.cfg.cluster.url().to_string(),
@@ -228,7 +207,7 @@ impl Program {
                                         if self_program_str == execution.program() {
                                             handle_program_log(&self_program_str, l).unwrap_or_else(
                                                 |e| {
-                                                    println!("Unable to parse log: {}", e);
+                                                    println!("Unable to parse log: {e}");
                                                     std::process::exit(1);
                                                 },
                                             )
@@ -322,7 +301,7 @@ fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
 }
 
 fn handle_system_log(this_program_str: &str, log: &str) -> (Option<String>, bool) {
-    if log.starts_with(&format!("Program {} log:", this_program_str)) {
+    if log.starts_with(&format!("Program {this_program_str} log:")) {
         (Some(this_program_str.to_string()), false)
     } else if log.contains("invoke") {
         (Some("cpi".to_string()), false) // Any string will do.
@@ -398,37 +377,24 @@ pub enum ClientError {
 
 /// `RequestBuilder` provides a builder interface to create and send
 /// transactions to a cluster.
-pub struct RequestBuilder<'a> {
+pub struct RequestBuilder<'a, C> {
     cluster: String,
     program_id: Pubkey,
     accounts: Vec<AccountMeta>,
     options: CommitmentConfig,
     instructions: Vec<Instruction>,
-    payer: Rc<dyn Signer>,
+    payer: C,
     // Serialized instruction data for the target RPC.
     instruction_data: Option<Vec<u8>>,
     signers: Vec<&'a dyn Signer>,
-    // True if the user is sending a state instruction.
-    namespace: RequestNamespace,
 }
 
-#[derive(PartialEq, Eq)]
-pub enum RequestNamespace {
-    Global,
-    State {
-        // True if the request is to the state's new ctor.
-        new: bool,
-    },
-    Interface,
-}
-
-impl<'a> RequestBuilder<'a> {
+impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
     pub fn from(
         program_id: Pubkey,
         cluster: &str,
-        payer: Rc<dyn Signer>,
+        payer: C,
         options: Option<CommitmentConfig>,
-        namespace: RequestNamespace,
     ) -> Self {
         Self {
             program_id,
@@ -439,12 +405,11 @@ impl<'a> RequestBuilder<'a> {
             instructions: Vec::new(),
             instruction_data: None,
             signers: Vec::new(),
-            namespace,
         }
     }
 
     #[must_use]
-    pub fn payer(mut self, payer: Rc<dyn Signer>) -> Self {
+    pub fn payer(mut self, payer: C) -> Self {
         self.payer = payer;
         self
     }
@@ -486,16 +451,6 @@ impl<'a> RequestBuilder<'a> {
         self
     }
 
-    /// Invokes the `#[state]`'s `new` constructor.
-    #[allow(clippy::wrong_self_convention)]
-    #[must_use]
-    pub fn new(mut self, args: impl InstructionData) -> Self {
-        assert!(self.namespace == RequestNamespace::State { new: false });
-        self.namespace = RequestNamespace::State { new: true };
-        self.instruction_data = Some(args.data());
-        self
-    }
-
     #[must_use]
     pub fn signer(mut self, signer: &'a dyn Signer) -> Self {
         self.signers.push(signer);
@@ -503,36 +458,12 @@ impl<'a> RequestBuilder<'a> {
     }
 
     pub fn instructions(&self) -> Result<Vec<Instruction>, ClientError> {
-        let mut accounts = match self.namespace {
-            RequestNamespace::State { new } => match new {
-                false => vec![AccountMeta::new(
-                    anchor_lang::__private::state::address(&self.program_id),
-                    false,
-                )],
-                true => vec![
-                    AccountMeta::new_readonly(self.payer.pubkey(), true),
-                    AccountMeta::new(
-                        anchor_lang::__private::state::address(&self.program_id),
-                        false,
-                    ),
-                    AccountMeta::new_readonly(
-                        Pubkey::find_program_address(&[], &self.program_id).0,
-                        false,
-                    ),
-                    AccountMeta::new_readonly(system_program::ID, false),
-                    AccountMeta::new_readonly(self.program_id, false),
-                ],
-            },
-            _ => Vec::new(),
-        };
-        accounts.extend_from_slice(&self.accounts);
-
         let mut instructions = self.instructions.clone();
         if let Some(ix_data) = &self.instruction_data {
             instructions.push(Instruction {
                 program_id: self.program_id,
                 data: ix_data.clone(),
-                accounts,
+                accounts: self.accounts.clone(),
             });
         }
 

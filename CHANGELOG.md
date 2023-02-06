@@ -12,7 +12,26 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Features
 
+- lang: Add the `InitSpace` derive macro to automatically calculate the space at the initialization of an account ([#2346](https://github.com/coral-xyz/anchor/pull/2346)).
+- cli: Add `env` option to verifiable builds ([#2325](https://github.com/coral-xyz/anchor/pull/2325)).
+- cli: Add `idl close` command to close a program's IDL account ([#2329](https://github.com/coral-xyz/anchor/pull/2329)).
+- cli: `idl init` now supports very large IDL files ([#2329](https://github.com/coral-xyz/anchor/pull/2329)).
+- spl: Add `transfer_checked` function ([#2353](https://github.com/coral-xyz/anchor/pull/2353)).
+- client: Add support for multithreading to the rust client: use flag `--multithreaded` ([#2321](https://github.com/coral-xyz/anchor/pull/2321)).
 - client: Add `async_rpc` a method which returns a nonblocking solana rpc client ([2322](https://github.com/coral-xyz/anchor/pull/2322)).
+
+### Fixes
+
+- cli: Don't regenerate idl in read_all_programs(). ([#2332](https://github.com/coral-xyz/anchor/pull/2332)).
+- ts: `provider.simulate` will send the transaction with `sigVerify: false` if no `signers` are present ([#2331](https://github.com/coral-xyz/anchor/pull/2331)).
+- idl: Update the IDL program to use non-deprecated account types ([#2365](https://github.com/coral-xyz/anchor/pull/2365)).
+- ts: Enum fields weren't being converted from snake_case to camelCase ([#2378](https://github.com/coral-xyz/anchor/pull/2378)).
+
+### Breaking
+
+- lang: Remove `state` and `interface` attributes ([#2285](https://github.com/coral-xyz/anchor/pull/2285)).
+- lang: `account(zero_copy)` and `zero_copy` attributes now derive the `bytemuck::Pod` and `bytemuck::Zeroable` traits instead of using `unsafe impl` ([#2330](https://github.com/coral-xyz/anchor/pull/2330)). This imposes useful restrictions on the type, like not having padding bytes and all fields being `Pod` themselves. See [bytemuck::Pod](https://docs.rs/bytemuck/latest/bytemuck/trait.Pod.html) for details. This change requires adding `bytemuck = { version = "1.4.0", features = ["derive", "min_const_generics"]}` to your `cargo.toml`. Legacy applications can still use `#[account(zero_copy(unsafe))]` and `#[zero_copy(unsafe)]` for the old behavior.
+- ts: Remove `createProgramAddressSync`, `findProgramAddressSync` (now available in `@solana/web3.js`) and update `associatedAddress` to be synchronous ([#2357](https://github.com/coral-xyz/anchor/pull/2357)).
 
 ## [0.26.0] - 2022-12-15
 

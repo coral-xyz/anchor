@@ -40,7 +40,7 @@ pub fn current_version() -> Result<Version> {
 /// Path to the binary for the given version
 pub fn version_binary_path(version: &Version) -> PathBuf {
     let mut version_path = AVM_HOME.join("bin");
-    version_path.push(format!("anchor-{}", version));
+    version_path.push(format!("anchor-{version}"));
     version_path
 }
 
@@ -50,12 +50,9 @@ pub fn use_version(version: &Version) -> Result<()> {
     // Make sure the requested version is installed
     if !installed_versions.contains(version) {
         if let Ok(current) = current_version() {
-            println!(
-                "Version {} is not installed, staying on version {}.",
-                version, current
-            );
+            println!("Version {version} is not installed, staying on version {current}.");
         } else {
-            println!("Version {} is not installed, no current version.", version);
+            println!("Version {version} is not installed, no current version.");
         }
 
         return Err(anyhow!(
@@ -83,7 +80,7 @@ pub fn install_version(version: &Version, force: bool) -> Result<()> {
     // If version is already installed we ignore the request.
     let installed_versions = read_installed_versions();
     if installed_versions.contains(version) && !force {
-        println!("Version {} is already installed", version);
+        println!("Version {version} is already installed");
         return Ok(());
     }
 
@@ -112,8 +109,8 @@ pub fn install_version(version: &Version, force: bool) -> Result<()> {
         ));
     }
     fs::rename(
-        &AVM_HOME.join("bin").join("anchor"),
-        &AVM_HOME.join("bin").join(format!("anchor-{}", version)),
+        AVM_HOME.join("bin").join("anchor"),
+        AVM_HOME.join("bin").join(format!("anchor-{version}")),
     )?;
     // If .version file is empty or not parseable, write the newly installed version to it
     if current_version().is_err() {
@@ -126,7 +123,7 @@ pub fn install_version(version: &Version, force: bool) -> Result<()> {
 
 /// Remove an installed version of anchor-cli
 pub fn uninstall_version(version: &Version) -> Result<()> {
-    let version_path = AVM_HOME.join("bin").join(format!("anchor-{}", version));
+    let version_path = AVM_HOME.join("bin").join(format!("anchor-{version}"));
     if !version_path.exists() {
         return Err(anyhow!("anchor-cli {} is not installed", version));
     }
@@ -189,7 +186,7 @@ pub fn list_versions() -> Result<()> {
     available_versions.reverse();
 
     available_versions.iter().enumerate().for_each(|(i, v)| {
-        print!("{}", v);
+        print!("{v}");
         let mut flags = vec![];
         if i == available_versions.len() - 1 {
             flags.push("latest");
@@ -219,7 +216,7 @@ pub fn get_latest_version() -> semver::Version {
 pub fn read_installed_versions() -> Vec<semver::Version> {
     let home_dir = AVM_HOME.to_path_buf();
     let mut versions = vec![];
-    for file in fs::read_dir(&home_dir.join("bin")).unwrap() {
+    for file in fs::read_dir(home_dir.join("bin")).unwrap() {
         let file_name = file.unwrap().file_name();
         // Match only things that look like anchor-*
         if file_name.to_str().unwrap().starts_with("anchor-") {
