@@ -10,6 +10,10 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ## [Unreleased]
 
+### Features
+
+- client: Add `async_rpc` a method which returns a nonblocking solana rpc client ([2322](https://github.com/coral-xyz/anchor/pull/2322)).
+
 ## [0.26.0] - 2022-12-15
 
 ### Features
