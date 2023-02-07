@@ -99,7 +99,7 @@ pub enum Command {
         /// verifiable builds. Only works for debian-based images.
         #[clap(arg_enum, short, long, default_value = "none")]
         bootstrap: BootstrapMode,
-        /// Arguments to pass to the underlying `cargo build-bpf` command
+        /// Arguments to pass to the underlying `cargo build-sbf` command
         #[clap(
             required = false,
             takes_value = true,
@@ -183,7 +183,7 @@ pub enum Command {
         detach: bool,
         #[clap(multiple_values = true)]
         args: Vec<String>,
-        /// Arguments to pass to the underlying `cargo build-bpf` command.
+        /// Arguments to pass to the underlying `cargo build-sbf` command.
         #[clap(
             required = false,
             takes_value = true,
@@ -1223,7 +1223,8 @@ fn _build_cwd(
     cargo_args: Vec<String>,
 ) -> Result<()> {
     let exit = std::process::Command::new("cargo")
-        .arg("build-bpf")
+        .arg("build-sbf")
+        .args(["--arch", "bpf"])
         .args(cargo_args)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())

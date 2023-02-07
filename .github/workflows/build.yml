@@ -3,10 +3,7 @@ name: Build and Release
 
 on:
   workflow_dispatch:
-  pull_request:
-    types: [opened, reopened]
   push:
-    branches: "**"
     tags:
       - "v*.*.*"
 
