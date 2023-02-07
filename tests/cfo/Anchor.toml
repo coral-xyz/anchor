@@ -18,7 +18,7 @@ test-with-build = "anchor run build && anchor test --skip-build --skip-lint"
 #
 build = "anchor run build-deps && anchor build --skip-lint"
 build-deps = "anchor run build-dex && anchor run build-swap && anchor run build-stake"
-build-dex = "pushd deps/openbook-dex/dex/ && cargo build-bpf && popd"
+build-dex = "pushd deps/openbook-dex/dex/ && cargo build-sbf --arch bpf && popd"
 build-swap = "cd deps/swap && pwd && anchor build --skip-lint && cd ../../"
 build-stake = "pushd deps/stake && anchor build --skip-lint && popd"
 #

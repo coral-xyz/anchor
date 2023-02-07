@@ -104,7 +104,7 @@ pub enum Command {
         /// Environment variables to pass into the docker container
         #[clap(short, long, required = false)]
         env: Vec<String>,
-        /// Arguments to pass to the underlying `cargo build-bpf` command
+        /// Arguments to pass to the underlying `cargo build-sbf` command
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
         /// Suppress doc strings in IDL output
@@ -147,7 +147,7 @@ pub enum Command {
         /// Environment variables to pass into the docker container
         #[clap(short, long, required = false)]
         env: Vec<String>,
-        /// Arguments to pass to the underlying `cargo build-bpf` command.
+        /// Arguments to pass to the underlying `cargo build-sbf` command.
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
         /// Flag to skip building the program in the workspace,
@@ -185,7 +185,7 @@ pub enum Command {
         /// Environment variables to pass into the docker container
         #[clap(short, long, required = false)]
         env: Vec<String>,
-        /// Arguments to pass to the underlying `cargo build-bpf` command.
+        /// Arguments to pass to the underlying `cargo build-sbf` command.
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
     },
@@ -253,7 +253,7 @@ pub enum Command {
         /// Environment variables to pass into the docker container
         #[clap(short, long, required = false)]
         env: Vec<String>,
-        /// Arguments to pass to the underlying `cargo build-bpf` command.
+        /// Arguments to pass to the underlying `cargo build-sbf` command.
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
         /// Flag to skip building the program in the workspace,
@@ -283,7 +283,7 @@ pub enum Command {
         /// Environment variables to pass into the docker container
         #[clap(short, long, required = false)]
         env: Vec<String>,
-        /// Arguments to pass to the underlying `cargo build-bpf` command.
+        /// Arguments to pass to the underlying `cargo build-sbf` command.
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
     },
@@ -1209,7 +1209,9 @@ fn docker_build_bpf(
         .args([
             container_name,
             "cargo",
-            "build-bpf",
+            "build-sbf",
+            "--arch",
+            "bpf",
             "--manifest-path",
             &manifest_path.display().to_string(),
         ])
@@ -1302,7 +1304,7 @@ fn _build_cwd(
     cargo_args: Vec<String>,
 ) -> Result<()> {
     let exit = std::process::Command::new("cargo")
-        .arg("build-bpf")
+        .args(["build-sbf", "--arch", "bpf"])
         .args(cargo_args)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
