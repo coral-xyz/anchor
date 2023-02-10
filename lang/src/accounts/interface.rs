@@ -74,6 +74,14 @@ use std::ops::Deref;
 ///
 #[derive(Clone)]
 pub struct Interface<'info, T>(Program<'info, T>);
+impl<'a, T> Interface<'a, T> {
+    pub(crate) fn new(info: AccountInfo<'a>) -> Self {
+        Self(Program::new(info))
+    }
+    pub fn programdata_address(&self) -> Result<Option<Pubkey>> {
+        self.0.programdata_address()
+    }
+}
 impl<'a, T: CheckId> TryFrom<&AccountInfo<'a>> for Interface<'a, T> {
     type Error = Error;
     /// Deserializes the given `info` into a `Program`.
@@ -82,18 +90,17 @@ impl<'a, T: CheckId> TryFrom<&AccountInfo<'a>> for Interface<'a, T> {
         if !info.executable {
             return Err(ErrorCode::InvalidProgramExecutable.into());
         }
-
-        Ok(Self(Program::new(info.clone())))
+        Ok(Self::new(info.clone()))
     }
 }
 impl<'info, T> Deref for Interface<'info, T> {
-    type Target = Program<'info, T>;
+    type Target = AccountInfo<'info>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl<'info, T> AsRef<Program<'info, T>> for Interface<'info, T> {
-    fn as_ref(&self) -> &Program<'info, T> {
+impl<'info, T> AsRef<AccountInfo<'info>> for Interface<'info, T> {
+    fn as_ref(&self) -> &AccountInfo<'info> {
         &self.0
     }
 }
