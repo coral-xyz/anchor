@@ -3,7 +3,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{
-    self, Burn, Mint, MintTo, SetAuthority, TokenAccount, TokenInterface, Transfer,
+    self, Burn, Mint, MintTo, SetAuthority, TokenAccount, TokenInterface, Transfer, TransferChecked,
 };
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
@@ -15,6 +15,34 @@ mod token_proxy {
     pub fn proxy_transfer(ctx: Context<ProxyTransfer>, amount: u64) -> Result<()> {
         #[allow(deprecated)]
         token_interface::transfer(ctx.accounts.into(), amount)
+    }
+
+    pub fn proxy_optional_transfer(ctx: Context<ProxyOptionalTransfer>, amount: u64) -> Result<()> {
+        if let Some(token_program) = &ctx.accounts.token_program {
+            if let Some(mint) = &ctx.accounts.mint {
+                let cpi_accounts = TransferChecked {
+                    from: ctx.accounts.from.to_account_info().clone(),
+                    mint: mint.to_account_info().clone(),
+                    to: ctx.accounts.to.to_account_info().clone(),
+                    authority: ctx.accounts.authority.clone(),
+                };
+                let cpi_program = token_program.to_account_info();
+                let cpi_context = CpiContext::new(cpi_program, cpi_accounts);
+                token_interface::transfer_checked(cpi_context, amount, mint.decimals)
+            } else {
+                let cpi_accounts = Transfer {
+                    from: ctx.accounts.from.to_account_info().clone(),
+                    to: ctx.accounts.to.to_account_info().clone(),
+                    authority: ctx.accounts.authority.clone(),
+                };
+                let cpi_program = token_program.to_account_info();
+                let cpi_context = CpiContext::new(cpi_program, cpi_accounts);
+                #[allow(deprecated)]
+                token_interface::transfer(cpi_context, amount)
+            }
+        } else {
+            Ok(())
+        }
     }
 
     pub fn proxy_mint_to(ctx: Context<ProxyMintTo>, amount: u64) -> Result<()> {
@@ -70,6 +98,19 @@ pub struct ProxyTransfer<'info> {
     #[account(mut)]
     pub to: InterfaceAccount<'info, TokenAccount>,
     pub token_program: Interface<'info, TokenInterface>,
+}
+
+#[derive(Accounts)]
+pub struct ProxyOptionalTransfer<'info> {
+    #[account(signer)]
+    /// CHECK:
+    pub authority: AccountInfo<'info>,
+    #[account(mut)]
+    pub from: InterfaceAccount<'info, TokenAccount>,
+    #[account(mut)]
+    pub to: InterfaceAccount<'info, TokenAccount>,
+    pub mint: Option<InterfaceAccount<'info, Mint>>,
+    pub token_program: Option<Interface<'info, TokenInterface>>,
 }
 
 #[derive(Accounts)]

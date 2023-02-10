@@ -135,7 +135,12 @@ describe("program", () => {
       });
 
       it("Transfers a token", async () => {
-        await program.rpc.proxyTransfer(new anchor.BN(400), {
+        const preFromAccount = await getTokenAccount(provider, from);
+        const preToAccount = await getTokenAccount(provider, to);
+
+        const transferAmount = new anchor.BN(400);
+
+        await program.rpc.proxyTransfer(transferAmount, {
           accounts: {
             authority: provider.wallet.publicKey,
             to,
@@ -144,15 +149,72 @@ describe("program", () => {
           },
         });
 
-        const fromAccount = await getTokenAccount(provider, from);
-        const toAccount = await getTokenAccount(provider, to);
+        const postFromAccount = await getTokenAccount(provider, from);
+        const postToAccount = await getTokenAccount(provider, to);
 
-        assert.isTrue(fromAccount.amount.eq(new anchor.BN(600)));
-        assert.isTrue(toAccount.amount.eq(new anchor.BN(400)));
+        assert.isTrue(
+          postFromAccount.amount.eq(preFromAccount.amount.sub(transferAmount))
+        );
+        assert.isTrue(
+          postToAccount.amount.eq(preToAccount.amount.add(transferAmount))
+        );
+      });
+
+      it("Transfers a token with optional accounts", async () => {
+        const preFromAccount = await getTokenAccount(provider, from);
+        const preToAccount = await getTokenAccount(provider, to);
+
+        const transferAmount = new anchor.BN(10);
+
+        await program.rpc.proxyOptionalTransfer(transferAmount, {
+          accounts: {
+            authority: provider.wallet.publicKey,
+            to,
+            from,
+            mint,
+            tokenProgram: tokenProgram.programId,
+          },
+        });
+
+        const postFromAccount = await getTokenAccount(provider, from);
+        const postToAccount = await getTokenAccount(provider, to);
+
+        assert.isTrue(
+          postFromAccount.amount.eq(preFromAccount.amount.sub(transferAmount))
+        );
+        assert.isTrue(
+          postToAccount.amount.eq(preToAccount.amount.add(transferAmount))
+        );
+      });
+
+      it("Does not transfer a token without optional accounts", async () => {
+        const preFromAccount = await getTokenAccount(provider, from);
+        const preToAccount = await getTokenAccount(provider, to);
+
+        const optionalTransferIx = await program.methods
+          .proxyOptionalTransfer(new anchor.BN(10))
+          .accounts({
+            authority: provider.wallet.publicKey,
+            to,
+            from,
+            mint: null,
+            tokenProgram: null,
+          })
+          .instruction();
+        const tx = new anchor.web3.Transaction().add(optionalTransferIx);
+        await provider.sendAndConfirm(tx);
+
+        const postFromAccount = await getTokenAccount(provider, from);
+        const postToAccount = await getTokenAccount(provider, to);
+
+        assert.isTrue(postFromAccount.amount.eq(preFromAccount.amount));
+        assert.isTrue(postToAccount.amount.eq(preToAccount.amount));
       });
 
       it("Burns a token", async () => {
-        await program.rpc.proxyBurn(new anchor.BN(399), {
+        const preAccount = await getTokenAccount(provider, to);
+        const burnAmount = new anchor.BN(300);
+        await program.rpc.proxyBurn(burnAmount, {
           accounts: {
             authority: provider.wallet.publicKey,
             mint,
@@ -161,8 +223,8 @@ describe("program", () => {
           },
         });
 
-        const toAccount = await getTokenAccount(provider, to);
-        assert.isTrue(toAccount.amount.eq(new anchor.BN(1)));
+        const postAccount = await getTokenAccount(provider, to);
+        assert.isTrue(postAccount.amount.eq(preAccount.amount.sub(burnAmount)));
       });
 
       it("Set new mint authority", async () => {
