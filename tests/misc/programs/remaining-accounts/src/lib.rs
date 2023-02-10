@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use std::mem::size_of;
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("Gjh8jWBfM5ge2kjJ6TiiJWzorxTxKitwiNq2e7P3A7kd");
 
 #[program]
 pub mod remaining_accounts {

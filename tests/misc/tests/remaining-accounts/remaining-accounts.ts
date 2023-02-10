@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { AnchorError, Program } from "@coral-xyz/anchor";
-import { RemainingAccounts } from "../../target/types/remaing_accounts";
+import { RemainingAccounts } from "../../target/types/remaining_accounts";
 import { SystemProgram, LAMPORTS_PER_SOL, Keypair } from "@solana/web3.js";
 import { expect } from "chai";
 
@@ -8,7 +8,7 @@ describe("remaining-accounts", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.InitIfNeeded as Program<RemainingAccounts>;
+  const program = anchor.workspace.RemainingAccounts as Program<RemainingAccounts>;
 
   const payer = Keypair.generate();
 
