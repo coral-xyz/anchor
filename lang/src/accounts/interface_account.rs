@@ -157,31 +157,38 @@ use std::ops::{Deref, DerefMut};
 /// ```
 /// to access mint accounts.
 #[derive(Clone)]
-pub struct InterfaceAccount<'info, T: AccountSerialize + AccountDeserialize + Clone>(
-    Account<'info, T>,
-);
+pub struct InterfaceAccount<'info, T: AccountSerialize + AccountDeserialize + Clone> {
+    account: Account<'info, T>,
+    // The owner here is used to make sure that changes aren't incorrectly propagated
+    // to an account with a modified owner
+    owner: Pubkey,
+}
 
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone + fmt::Debug> fmt::Debug
     for InterfaceAccount<'info, T>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt_with_name("InterfaceAccount", f)
+        self.account.fmt_with_name("InterfaceAccount", f)
     }
 }
 
 impl<'a, T: AccountSerialize + AccountDeserialize + Clone> InterfaceAccount<'a, T> {
     fn new(info: AccountInfo<'a>, account: T) -> Self {
-        Self(Account::new(info, account))
+        let owner = *info.owner;
+        Self {
+            account: Account::new(info, account),
+            owner,
+        }
     }
 
     /// Reloads the account from storage. This is useful, for example, when
     /// observing side effects after CPI.
     pub fn reload(&mut self) -> Result<()> {
-        self.0.reload()
+        self.account.reload()
     }
 
     pub fn into_inner(self) -> T {
-        self.0.into_inner()
+        self.account.into_inner()
     }
 
     /// Sets the inner account.
@@ -201,7 +208,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> InterfaceAccount<'a, 
     /// }
     /// ```
     pub fn set_inner(&mut self, inner: T) {
-        self.0.set_inner(inner);
+        self.account.set_inner(inner);
     }
 }
 
@@ -258,7 +265,8 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Owners + Clone> AccountsE
     for InterfaceAccount<'info, T>
 {
     fn exit(&self, program_id: &Pubkey) -> Result<()> {
-        self.0.exit(program_id)
+        self.account
+            .exit_with_expected_owner(&self.owner, program_id)
     }
 }
 
@@ -266,7 +274,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsClose<'inf
     for InterfaceAccount<'info, T>
 {
     fn close(&self, sol_destination: AccountInfo<'info>) -> Result<()> {
-        self.0.close(sol_destination)
+        self.account.close(sol_destination)
     }
 }
 
@@ -274,7 +282,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountMetas
     for InterfaceAccount<'info, T>
 {
     fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
-        self.0.to_account_metas(is_signer)
+        self.account.to_account_metas(is_signer)
     }
 }
 
@@ -282,7 +290,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> ToAccountInfos<'in
     for InterfaceAccount<'info, T>
 {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        self.0.to_account_infos()
+        self.account.to_account_infos()
     }
 }
 
@@ -290,7 +298,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AsRef<AccountInfo<
     for InterfaceAccount<'info, T>
 {
     fn as_ref(&self) -> &AccountInfo<'info> {
-        self.0.as_ref()
+        self.account.as_ref()
     }
 }
 
@@ -298,7 +306,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AsRef<T>
     for InterfaceAccount<'info, T>
 {
     fn as_ref(&self) -> &T {
-        self.0.as_ref()
+        self.account.as_ref()
     }
 }
 
@@ -306,18 +314,18 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Deref for InterfaceAc
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        self.0.deref()
+        self.account.deref()
     }
 }
 
 impl<'a, T: AccountSerialize + AccountDeserialize + Clone> DerefMut for InterfaceAccount<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.0.deref_mut()
+        self.account.deref_mut()
     }
 }
 
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> Key for InterfaceAccount<'info, T> {
     fn key(&self) -> Pubkey {
-        self.0.key()
+        self.account.key()
     }
 }

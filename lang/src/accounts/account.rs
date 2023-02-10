@@ -250,6 +250,22 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Account<'a, T> {
         Self { info, account }
     }
 
+    pub(crate) fn exit_with_expected_owner(
+        &self,
+        expected_owner: &Pubkey,
+        program_id: &Pubkey,
+    ) -> Result<()> {
+        // Only persist if the owner is the current program and the account is not closed.
+        if expected_owner == program_id && !crate::common::is_closed(&self.info) {
+            let info = self.to_account_info();
+            let mut data = info.try_borrow_mut_data()?;
+            let dst: &mut [u8] = &mut data;
+            let mut writer = BpfWriter::new(dst);
+            self.account.try_serialize(&mut writer)?;
+        }
+        Ok(())
+    }
+
     /// Reloads the account from storage. This is useful, for example, when
     /// observing side effects after CPI.
     pub fn reload(&mut self) -> Result<()> {
@@ -340,19 +356,11 @@ where
     }
 }
 
-impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info>
+impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsExit<'info>
     for Account<'info, T>
 {
     fn exit(&self, program_id: &Pubkey) -> Result<()> {
-        // Only persist if the owner is the current program and the account is not closed.
-        if self.info.owner == program_id && !crate::common::is_closed(&self.info) {
-            let info = self.to_account_info();
-            let mut data = info.try_borrow_mut_data()?;
-            let dst: &mut [u8] = &mut data;
-            let mut writer = BpfWriter::new(dst);
-            self.account.try_serialize(&mut writer)?;
-        }
-        Ok(())
+        self.exit_with_expected_owner(&T::owner(), program_id)
     }
 }
 
