@@ -32,11 +32,11 @@ describe("escrow", () => {
   const takerAmount = 1000;
   const initializerAmount = 500;
 
-  const escrowAccount = Keypair.generate();
   const payer = Keypair.generate();
   const mintAuthority = Keypair.generate();
 
   TEST_PROGRAM_IDS.forEach((tokenProgramIds) => {
+    const escrowAccount = Keypair.generate();
     const [tokenProgramIdA, tokenProgramIdB] = tokenProgramIds;
     let name;
     if (tokenProgramIdA === tokenProgramIdB) {

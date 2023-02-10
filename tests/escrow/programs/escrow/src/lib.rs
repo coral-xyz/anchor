@@ -130,13 +130,13 @@ pub struct Exchange<'info> {
     /// CHECK:
     pub taker: AccountInfo<'info>,
     #[account(mut, token::mint = deposit_mint)]
-    pub taker_deposit_token_account: InterfaceAccount<'info, TokenAccount>,
+    pub taker_deposit_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(mut, token::mint = receive_mint)]
-    pub taker_receive_token_account: InterfaceAccount<'info, TokenAccount>,
+    pub taker_receive_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(mut, token::mint = receive_mint)]
-    pub pda_deposit_token_account: InterfaceAccount<'info, TokenAccount>,
+    pub pda_deposit_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(mut, token::mint = deposit_mint)]
-    pub initializer_receive_token_account: InterfaceAccount<'info, TokenAccount>,
+    pub initializer_receive_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(mut)]
     /// CHECK:
     pub initializer_main_account: AccountInfo<'info>,
