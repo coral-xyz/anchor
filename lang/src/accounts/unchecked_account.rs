@@ -2,7 +2,7 @@
 //! that no checks are performed
 
 use crate::error::ErrorCode;
-use crate::{Accounts, AccountsExit, Key, Result, ToAccountInfos, ToAccountMetas};
+use crate::{Accounts, AccountsExit, Key, Result, ToAccountInfos, ToAccountMeta, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -37,14 +37,20 @@ impl<'info> Accounts<'info> for UncheckedAccount<'info> {
     }
 }
 
-impl<'info> ToAccountMetas for UncheckedAccount<'info> {
-    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
+impl<'info> ToAccountMeta for UncheckedAccount<'info> {
+    fn to_account_meta(&self, is_signer: Option<bool>) -> AccountMeta {
         let is_signer = is_signer.unwrap_or(self.is_signer);
         let meta = match self.is_writable {
             false => AccountMeta::new_readonly(*self.key, is_signer),
             true => AccountMeta::new(*self.key, is_signer),
         };
-        vec![meta]
+        meta
+    }
+}
+
+impl<'info> ToAccountMetas for UncheckedAccount<'info> {
+    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
+        vec![self.to_account_meta(is_signer)]
     }
 }
 
