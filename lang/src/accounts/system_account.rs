@@ -53,14 +53,20 @@ impl<'info> Accounts<'info> for SystemAccount<'info> {
 
 impl<'info> AccountsExit<'info> for SystemAccount<'info> {}
 
-impl<'info> ToAccountMetas for SystemAccount<'info> {
-    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
+impl<'info> ToAccountMeta for SystemAccount<'info> {
+    fn to_account_meta(&self, is_signer: Option<bool>) -> AccountMeta {
         let is_signer = is_signer.unwrap_or(self.info.is_signer);
         let meta = match self.info.is_writable {
             false => AccountMeta::new_readonly(*self.info.key, is_signer),
             true => AccountMeta::new(*self.info.key, is_signer),
         };
-        vec![meta]
+        meta
+    }
+}
+
+impl<'info> ToAccountMetas for SystemAccount<'info> {
+    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
+        vec![self.to_account_meta(is_signer)]
     }
 }
 

@@ -2,7 +2,8 @@
 
 use crate::error::{Error, ErrorCode};
 use crate::{
-    AccountDeserialize, Accounts, AccountsExit, Id, Key, Result, ToAccountInfos, ToAccountMetas,
+    AccountDeserialize, Accounts, AccountsExit, Id, Key, Result, ToAccountInfos, ToAccountMeta,
+    ToAccountMetas,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::bpf_loader_upgradeable::{self, UpgradeableLoaderState};
@@ -158,14 +159,20 @@ where
     }
 }
 
-impl<'info, T: Id + Clone> ToAccountMetas for Program<'info, T> {
-    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
+impl<'info, T: Id + Clone> ToAccountMeta for Program<'info, T> {
+    fn to_account_meta(&self, is_signer: Option<bool>) -> AccountMeta {
         let is_signer = is_signer.unwrap_or(self.info.is_signer);
         let meta = match self.info.is_writable {
             false => AccountMeta::new_readonly(*self.info.key, is_signer),
             true => AccountMeta::new(*self.info.key, is_signer),
         };
-        vec![meta]
+        meta
+    }
+}
+
+impl<'info, T: Id + Clone> ToAccountMetas for Program<'info, T> {
+    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
+        vec![self.to_account_meta(is_signer)]
     }
 }
 

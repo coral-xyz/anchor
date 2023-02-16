@@ -1,6 +1,6 @@
 //! Type validating that the account signed the transaction
 use crate::error::ErrorCode;
-use crate::{Accounts, AccountsExit, Key, Result, ToAccountInfos, ToAccountMetas};
+use crate::{Accounts, AccountsExit, Key, Result, ToAccountInfos, ToAccountMeta, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -74,14 +74,20 @@ impl<'info> Accounts<'info> for Signer<'info> {
 
 impl<'info> AccountsExit<'info> for Signer<'info> {}
 
-impl<'info> ToAccountMetas for Signer<'info> {
-    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
+impl<'info> ToAccountMeta for Signer<'info> {
+    fn to_account_meta(&self, is_signer: Option<bool>) -> AccountMeta {
         let is_signer = is_signer.unwrap_or(self.info.is_signer);
         let meta = match self.info.is_writable {
             false => AccountMeta::new_readonly(*self.info.key, is_signer),
             true => AccountMeta::new(*self.info.key, is_signer),
         };
-        vec![meta]
+        meta
+    }
+}
+
+impl<'info> ToAccountMetas for Signer<'info> {
+    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
+        vec![self.to_account_meta(is_signer)]
     }
 }
 
