@@ -256,11 +256,10 @@ impl<'info, T: ZeroCopy + Owner> AccountsClose<'info> for AccountLoader<'info, T
 impl<'info, T: ZeroCopy + Owner> ToAccountMeta for AccountLoader<'info, T> {
     fn to_account_meta(&self, is_signer: Option<bool>) -> AccountMeta {
         let is_signer = is_signer.unwrap_or(self.acc_info.is_signer);
-        let meta = match self.acc_info.is_writable {
+        match self.acc_info.is_writable {
             false => AccountMeta::new_readonly(*self.acc_info.key, is_signer),
             true => AccountMeta::new(*self.acc_info.key, is_signer),
-        };
-        meta
+        }
     }
 }
 

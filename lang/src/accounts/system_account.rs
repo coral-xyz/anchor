@@ -56,11 +56,10 @@ impl<'info> AccountsExit<'info> for SystemAccount<'info> {}
 impl<'info> ToAccountMeta for SystemAccount<'info> {
     fn to_account_meta(&self, is_signer: Option<bool>) -> AccountMeta {
         let is_signer = is_signer.unwrap_or(self.info.is_signer);
-        let meta = match self.info.is_writable {
+        match self.info.is_writable {
             false => AccountMeta::new_readonly(*self.info.key, is_signer),
             true => AccountMeta::new(*self.info.key, is_signer),
-        };
-        meta
+        }
     }
 }
 

@@ -29,11 +29,10 @@ impl<'info> Accounts<'info> for AccountInfo<'info> {
 impl<'info> ToAccountMeta for AccountInfo<'info> {
     fn to_account_meta(&self, is_signer: Option<bool>) -> AccountMeta {
         let is_signer = is_signer.unwrap_or(self.is_signer);
-        let meta = match self.is_writable {
+        match self.is_writable {
             false => AccountMeta::new_readonly(*self.key, is_signer),
             true => AccountMeta::new(*self.key, is_signer),
-        };
-        meta
+        }
     }
 }
 
