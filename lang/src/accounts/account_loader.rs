@@ -4,7 +4,7 @@ use crate::bpf_writer::BpfWriter;
 use crate::error::{Error, ErrorCode};
 use crate::{
     Accounts, AccountsClose, AccountsExit, Key, Owner, Result, ToAccountInfo, ToAccountInfos,
-    ToAccountMetas, ZeroCopy,
+    ToAccountMeta, ToAccountMetas, ZeroCopy,
 };
 use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;
@@ -253,14 +253,19 @@ impl<'info, T: ZeroCopy + Owner> AccountsClose<'info> for AccountLoader<'info, T
     }
 }
 
-impl<'info, T: ZeroCopy + Owner> ToAccountMetas for AccountLoader<'info, T> {
-    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
+impl<'info, T: ZeroCopy + Owner> ToAccountMeta for AccountLoader<'info, T> {
+    fn to_account_meta(&self, is_signer: Option<bool>) -> AccountMeta {
         let is_signer = is_signer.unwrap_or(self.acc_info.is_signer);
-        let meta = match self.acc_info.is_writable {
+        match self.acc_info.is_writable {
             false => AccountMeta::new_readonly(*self.acc_info.key, is_signer),
             true => AccountMeta::new(*self.acc_info.key, is_signer),
-        };
-        vec![meta]
+        }
+    }
+}
+
+impl<'info, T: ZeroCopy + Owner> ToAccountMetas for AccountLoader<'info, T> {
+    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
+        vec![self.to_account_meta(is_signer)]
     }
 }
 

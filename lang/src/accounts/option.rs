@@ -15,7 +15,8 @@ use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
 use crate::{
-    error::ErrorCode, Accounts, AccountsClose, AccountsExit, Result, ToAccountInfos, ToAccountMetas,
+    error::ErrorCode, Accounts, AccountsClose, AccountsExit, Result, ToAccountInfos, ToAccountMeta,
+    ToAccountMetas,
 };
 
 impl<'info, T: Accounts<'info>> Accounts<'info> for Option<T> {
@@ -59,6 +60,14 @@ impl<'info, T: ToAccountInfos<'info>> ToAccountInfos<'info> for Option<T> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         self.as_ref()
             .map_or_else(Vec::new, |account| account.to_account_infos())
+    }
+}
+
+impl<T: ToAccountMeta> ToAccountMeta for Option<T> {
+    fn to_account_meta(&self, is_signer: Option<bool>) -> AccountMeta {
+        self.as_ref()
+            .expect("Cannot run `to_account_meta` on None")
+            .to_account_meta(is_signer)
     }
 }
 

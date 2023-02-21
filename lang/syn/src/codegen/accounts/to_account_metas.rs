@@ -22,18 +22,20 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             if is_optional {
                 quote! {
                     if let Some(#name) = &self.#name {
-                        account_metas.extend(#name.to_account_metas(#is_signer));
+                        account_metas.push(#name.to_account_meta(#is_signer));
                     } else {
                         account_metas.push(AccountMeta::new_readonly(crate::ID, false));
                     }
                 }
             } else {
                 quote! {
-                    account_metas.extend(self.#name.to_account_metas(#is_signer));
+                    account_metas.push(self.#name.to_account_meta(#is_signer));
                 }
             }
         })
         .collect();
+
+    let length = to_acc_metas.len();
 
     let (impl_gen, ty_gen, where_clause) = accs.generics.split_for_impl();
 
@@ -41,7 +43,9 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         #[automatically_derived]
         impl #impl_gen anchor_lang::ToAccountMetas for #name #ty_gen #where_clause{
             fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<anchor_lang::solana_program::instruction::AccountMeta> {
-                let mut account_metas = vec![];
+                use anchor_lang::ToAccountMeta;
+
+                let mut account_metas = Vec::with_capacity(#length);
 
                 #(#to_acc_metas)*
 
