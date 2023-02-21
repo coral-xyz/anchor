@@ -1,4 +1,4 @@
-use crate::is_hidden;
+use crate::{is_hidden, target_dir};
 use anchor_client::Cluster;
 use anchor_syn::idl::Idl;
 use anyhow::{anyhow, Context, Error, Result};
@@ -179,8 +179,9 @@ impl WithPath<Config> {
         for path in self.get_program_list()? {
             let cargo = Manifest::from_path(path.join("Cargo.toml"))?;
             let lib_name = cargo.lib_name()?;
+            let target_dir = target_dir(PathBuf::from("target"));
 
-            let idl_filepath = format!("target/idl/{lib_name}.json");
+            let idl_filepath = target_dir.join("idl/{lib_name}.json");
             let idl = fs::read(idl_filepath)
                 .ok()
                 .map(|bytes| serde_json::from_reader(&*bytes))
@@ -1099,12 +1100,19 @@ impl Program {
 
     // Lazily initializes the keypair file with a new key if it doesn't exist.
     pub fn keypair_file(&self) -> Result<WithPath<File>> {
-        let deploy_dir_path = "target/deploy/";
-        fs::create_dir_all(deploy_dir_path)
-            .with_context(|| format!("Error creating directory with path: {deploy_dir_path}"))?;
+        let deploy_dir_path = target_dir(PathBuf::from("target")).join("deploy/");
+        fs::create_dir_all(&deploy_dir_path).with_context(|| {
+            format!(
+                "Error creating directory with path: {}",
+                &deploy_dir_path.display()
+            )
+        })?;
+
         let path = std::env::current_dir()
             .expect("Must have current dir")
-            .join(format!("target/deploy/{}-keypair.json", self.lib_name));
+            .join("target");
+
+        let path = target_dir(path).join(format!("deploy/{}-keypair.json", self.lib_name));
         if path.exists() {
             return Ok(WithPath::new(
                 File::open(&path)
@@ -1120,9 +1128,11 @@ impl Program {
     }
 
     pub fn binary_path(&self) -> PathBuf {
-        std::env::current_dir()
+        let path = std::env::current_dir()
             .expect("Must have current dir")
-            .join(format!("target/deploy/{}.so", self.lib_name))
+            .join("target");
+
+        target_dir(path).join(format!("deploy/{}.so", self.lib_name))
     }
 }
 

@@ -841,16 +841,17 @@ pub fn build(
     let cfg_parent = cfg.path().parent().expect("Invalid Anchor.toml");
 
     let cargo = Manifest::discover()?;
+    let target_dir = target_dir(cfg_parent.join("target"));
 
     let idl_out = match idl {
         Some(idl) => Some(PathBuf::from(idl)),
-        None => Some(cfg_parent.join("target/idl")),
+        None => Some(target_dir.join("idl")),
     };
     fs::create_dir_all(idl_out.as_ref().unwrap())?;
 
     let idl_ts_out = match idl_ts {
         Some(idl_ts) => Some(PathBuf::from(idl_ts)),
-        None => Some(cfg_parent.join("target/types")),
+        None => Some(target_dir.join("types")),
     };
     fs::create_dir_all(idl_ts_out.as_ref().unwrap())?;
 
@@ -984,7 +985,7 @@ fn build_cwd(
 }
 
 // Builds an anchor program in a docker image and copies the build artifacts
-// into the `target/` directory.
+// into the `target/` or `CARGO_TARGET_DIR` directory if exists.
 #[allow(clippy::too_many_arguments)]
 fn build_cwd_verifiable(
     cfg: &WithPath<Config>,
@@ -999,9 +1000,12 @@ fn build_cwd_verifiable(
 ) -> Result<()> {
     // Create output dirs.
     let workspace_dir = cfg.path().parent().unwrap().canonicalize()?;
-    fs::create_dir_all(workspace_dir.join("target/verifiable"))?;
-    fs::create_dir_all(workspace_dir.join("target/idl"))?;
-    fs::create_dir_all(workspace_dir.join("target/types"))?;
+
+    let target_dir = target_dir(workspace_dir.join("target"));
+
+    fs::create_dir_all(target_dir.join("verifiable"))?;
+    fs::create_dir_all(target_dir.join("idl"))?;
+    fs::create_dir_all(target_dir.join("types"))?;
     if !&cfg.workspace.types.is_empty() {
         fs::create_dir_all(workspace_dir.join(&cfg.workspace.types))?;
     }
@@ -1030,12 +1034,12 @@ fn build_cwd_verifiable(
             if let Ok(Some(idl)) = extract_idl(cfg, "src/lib.rs", skip_lint, no_docs) {
                 // Write out the JSON file.
                 println!("Writing the IDL file");
-                let out_file = workspace_dir.join(format!("target/idl/{}.json", idl.name));
+                let out_file = target_dir.join(format!("idl/{}.json", idl.name));
                 write_idl(&idl, OutFile::File(out_file))?;
 
                 // Write out the TypeScript type.
                 println!("Writing the .ts file");
-                let ts_file = workspace_dir.join(format!("target/types/{}.ts", idl.name));
+                let ts_file = target_dir.join(format!("types/{}.ts", idl.name));
                 fs::write(&ts_file, template::idl_ts(&idl)?)?;
 
                 // Copy out the TypeScript type.
@@ -1230,9 +1234,8 @@ fn docker_build_bpf(
 
     // Copy the binary out of the docker image.
     println!("Copying out the build artifacts");
-    let out_file = cfg_parent
-        .canonicalize()?
-        .join(format!("target/verifiable/{binary_name}.so"))
+    let out_file = self::target_dir(cfg_parent.canonicalize()?.join("target"))
+        .join(format!("verifiable/{binary_name}.so"))
         .display()
         .to_string();
 
@@ -1394,8 +1397,8 @@ fn verify(
         .path()
         .parent()
         .ok_or_else(|| anyhow!("Unable to find workspace root"))?
-        .join("target/verifiable/")
-        .join(format!("{binary_name}.so"));
+        .join("target");
+    let bin_path = target_dir(bin_path).join(format!("verifiable/{binary_name}.so"));
 
     let url = cluster_url(&cfg, &cfg.test_validator);
     let bin_ver = verify_bin(program_id, &bin_path, &url)?;
@@ -2446,7 +2449,8 @@ fn validator_flags(
             idl.metadata = Some(serde_json::to_value(IdlTestMetadata { address })?);
 
             // Persist it.
-            let idl_out = PathBuf::from("target/idl")
+            let idl_out = target_dir("target")
+                .join("idl")
                 .join(&idl.name)
                 .with_extension("json");
             write_idl(idl, OutFile::File(idl_out))?;
@@ -2561,7 +2565,8 @@ fn stream_logs(config: &WithPath<Config>, rpc_url: &str) -> Result<Vec<std::proc
     fs::create_dir_all(program_logs_dir)?;
     let mut handles = vec![];
     for program in config.read_all_programs()? {
-        let mut file = File::open(format!("target/idl/{}.json", program.lib_name))?;
+        let mut file =
+            File::open(target_dir("target").join(format!("idl/{}.json", program.lib_name)))?;
         let mut contents = vec![];
         file.read_to_end(&mut contents)?;
         let idl: Idl = serde_json::from_slice(&contents)?;
@@ -2748,7 +2753,7 @@ fn cluster_url(cfg: &Config, test_validator: &Option<TestValidator>) -> String {
 fn clean(cfg_override: &ConfigOverride) -> Result<()> {
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
     let cfg_parent = cfg.path().parent().expect("Invalid Anchor.toml");
-    let target_dir = cfg_parent.join("target");
+    let target_dir = target_dir(cfg_parent.join("target"));
     let deploy_dir = target_dir.join("deploy");
 
     for entry in fs::read_dir(target_dir)? {
@@ -2835,7 +2840,8 @@ fn deploy(
                 })?);
 
                 // Persist it.
-                let idl_out = PathBuf::from("target/idl")
+                let idl_out = target_dir("target")
+                    .join("idl")
                     .join(&idl.name)
                     .with_extension("json");
                 write_idl(idl, OutFile::File(idl_out))?;
@@ -3594,6 +3600,16 @@ fn strip_workspace_prefix(absolute_path: String) -> String {
         .strip_prefix(&workspace_prefix)
         .unwrap_or(&absolute_path)
         .into()
+}
+
+pub fn cargo_target_dir() -> Option<PathBuf> {
+    // Use a subdir in here to avoid mixing artifacts with other projects, specially
+    // when cleaning `target` directory.
+    std::env::var_os("CARGO_TARGET_DIR").map(|p| PathBuf::from(p).join("anchor"))
+}
+
+pub fn target_dir<P: AsRef<Path>>(path: P) -> PathBuf {
+    cargo_target_dir().unwrap_or(path.as_ref().to_path_buf())
 }
 
 #[cfg(test)]
