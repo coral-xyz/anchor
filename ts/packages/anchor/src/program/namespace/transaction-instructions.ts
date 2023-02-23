@@ -1,4 +1,4 @@
-import { Transaction, TransactionInstruction } from "@solana/web3.js";
+import { TransactionInstruction } from "@solana/web3.js";
 import { Idl, IdlInstruction } from "../../idl.js";
 import { splitArgsAndCtx } from "../context.js";
 import { InstructionFn } from "./instruction.js";
@@ -8,12 +8,14 @@ import {
   MakeInstructionsNamespace,
 } from "./types.js";
 
-export default class TransactionFactory {
+export default class TransactionInstructionsFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
     idlIx: I,
     ixFn: InstructionFn<IDL, I>
-  ): TransactionFn<IDL, I> {
-    const txFn: TransactionFn<IDL, I> = (...args): TransactionInstruction[] => {
+  ): TransactionInstructionsFn<IDL, I> {
+    const txIxsFn: TransactionInstructionsFn<IDL, I> = (
+      ...args
+    ): TransactionInstruction[] => {
       const [, ctx] = splitArgsAndCtx(idlIx, [...args]);
       const tx: TransactionInstruction[] = [];
       if (ctx.preInstructions && ctx.instructions) {
@@ -26,18 +28,18 @@ export default class TransactionFactory {
       return tx;
     };
 
-    return txFn;
+    return txIxsFn;
   }
 }
 
 /**
- * The namespace provides functions to build [[Transaction]] objects for each
+ * The namespace provides functions to build [[TransactionInstruction\[\]]] objects for each
  * method of a program.
  *
  * ## Usage
  *
  * ```javascript
- * program.transaction.<method>(...args, ctx);
+ * program.transactionInstructions.<method>(...args, ctx);
  * ```
  *
  * ## Parameters
@@ -52,22 +54,22 @@ export default class TransactionFactory {
  * To create an instruction for the `increment` method above,
  *
  * ```javascript
- * const tx = await program.transaction.increment({
+ * const tx = await program.transactionInstructions.increment({
  *   accounts: {
  *     counter,
  *   },
  * });
  * ```
  */
-export type TransactionNamespace<
+export type TransactionInstructionsNamespace<
   IDL extends Idl = Idl,
   I extends AllInstructions<IDL> = AllInstructions<IDL>
 > = MakeInstructionsNamespace<IDL, I, TransactionInstruction[]>;
 
 /**
- * Tx is a function to create a `TransactionInstruction[]` for a given program instruction.
+ * TxIxs is a function to create a `TransactionInstruction[]` for a given program instruction.
  */
-export type TransactionFn<
+export type TransactionInstructionsFn<
   IDL extends Idl = Idl,
   I extends AllInstructions<IDL> = AllInstructions<IDL>
 > = InstructionContextFn<IDL, I, TransactionInstruction[]>;

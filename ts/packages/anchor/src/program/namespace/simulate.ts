@@ -2,7 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 import Provider from "../../provider.js";
 import { SuccessfulTxSimulationResponse } from "src/utils/rpc.js";
 import { splitArgsAndCtx } from "../context.js";
-import { TransactionFn } from "./transaction.js";
+import { TransactionInstructionsFn } from "./transaction-instructions.js";
 import { EventParser, Event } from "../event.js";
 import { Coder } from "../../coder/index.js";
 import { Idl, IdlEvent } from "../../idl.js";
@@ -17,7 +17,7 @@ import {
 export default class SimulateFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
     idlIx: AllInstructions<IDL>,
-    txFn: TransactionFn<IDL>,
+    txIxsFn: TransactionInstructionsFn<IDL>,
     idlErrors: Map<number, string>,
     provider: Provider,
     coder: Coder,
@@ -25,7 +25,7 @@ export default class SimulateFactory {
     idl: IDL
   ): SimulateFn<IDL, I> {
     const simulate: SimulateFn<IDL> = async (...args) => {
-      const tx = txFn(...args);
+      const tx = txIxsFn(...args);
       const [, ctx] = splitArgsAndCtx(idlIx, [...args]);
       let resp: SuccessfulTxSimulationResponse | undefined = undefined;
       if (provider.simulate === undefined) {

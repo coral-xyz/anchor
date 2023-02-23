@@ -6,7 +6,7 @@ import { Coder, BorshCoder } from "../coder/index.js";
 import NamespaceFactory, {
   RpcNamespace,
   InstructionNamespace,
-  TransactionNamespace,
+  TransactionInstructionsNamespace,
   AccountNamespace,
   SimulateNamespace,
   MethodsNamespace,
@@ -138,13 +138,13 @@ export class Program<IDL extends Idl = Idl> {
   readonly instruction: InstructionNamespace<IDL>;
 
   /**
-   * The namespace provides functions to build [[Transaction]] objects for each
+   * The namespace provides functions to build [[TransactionInstruction\[\]]] objects for each
    * method of a program.
    *
    * ## Usage
    *
    * ```javascript
-   * program.transaction.<method>(...args, ctx);
+   * program.transactionInstructions.<method>(...args, ctx);
    * ```
    *
    * ## Parameters
@@ -159,7 +159,7 @@ export class Program<IDL extends Idl = Idl> {
    * To create an instruction for the `increment` method above,
    *
    * ```javascript
-   * const tx = await program.transaction.increment({
+   * const tx = await program.transactionInstructions.increment({
    *   accounts: {
    *     counter,
    *   },
@@ -167,7 +167,7 @@ export class Program<IDL extends Idl = Idl> {
    * ```
    * @deprecated
    */
-  readonly transaction: TransactionNamespace<IDL>;
+  readonly transactionInstructions: TransactionInstructionsNamespace<IDL>;
 
   /**
    * The namespace provides functions to simulate transactions for each method
@@ -283,17 +283,24 @@ export class Program<IDL extends Idl = Idl> {
     this._events = new EventManager(this._programId, provider, this._coder);
 
     // Dynamic namespaces.
-    const [rpc, instruction, transaction, account, simulate, methods, views] =
-      NamespaceFactory.build(
-        idl,
-        this._coder,
-        programId,
-        provider,
-        getCustomResolver ?? (() => undefined)
-      );
+    const [
+      rpc,
+      instruction,
+      transactionInstructions,
+      account,
+      simulate,
+      methods,
+      views,
+    ] = NamespaceFactory.build(
+      idl,
+      this._coder,
+      programId,
+      provider,
+      getCustomResolver ?? (() => undefined)
+    );
     this.rpc = rpc;
     this.instruction = instruction;
-    this.transaction = transaction;
+    this.transactionInstructions = transactionInstructions;
     this.account = account;
     this.simulate = simulate;
     this.methods = methods;

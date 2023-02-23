@@ -4,7 +4,9 @@ import { Coder } from "../../coder/index.js";
 import Provider from "../../provider.js";
 import { Idl, IdlInstruction } from "../../idl.js";
 import InstructionFactory, { InstructionNamespace } from "./instruction.js";
-import TransactionFactory, { TransactionNamespace } from "./transaction.js";
+import TransactionInstructionsFactory, {
+  TransactionInstructionsNamespace,
+} from "./transaction-instructions.js";
 import RpcFactory, { RpcNamespace } from "./rpc.js";
 import AccountFactory, { AccountNamespace } from "./account.js";
 import SimulateFactory, { SimulateNamespace } from "./simulate.js";
@@ -15,7 +17,10 @@ import { CustomAccountResolver } from "../accounts-resolver.js";
 
 // Re-exports.
 export { InstructionNamespace, InstructionFn } from "./instruction.js";
-export { TransactionNamespace, TransactionFn } from "./transaction.js";
+export {
+  TransactionInstructionsNamespace,
+  TransactionInstructionsFn,
+} from "./transaction-instructions.js";
 export { RpcNamespace, RpcFn } from "./rpc.js";
 export { AccountNamespace, AccountClient, ProgramAccount } from "./account.js";
 export { SimulateNamespace, SimulateFn } from "./simulate.js";
@@ -38,7 +43,7 @@ export default class NamespaceFactory {
   ): [
     RpcNamespace<IDL>,
     InstructionNamespace<IDL>,
-    TransactionNamespace<IDL>,
+    TransactionInstructionsNamespace<IDL>,
     AccountNamespace<IDL>,
     SimulateNamespace<IDL>,
     MethodsNamespace<IDL>,
@@ -46,7 +51,7 @@ export default class NamespaceFactory {
   ] {
     const rpc: RpcNamespace = {};
     const instruction: InstructionNamespace = {};
-    const transaction: TransactionNamespace = {};
+    const transactionInstructions: TransactionInstructionsNamespace = {};
     const simulate: SimulateNamespace = {};
     const methods: MethodsNamespace = {};
     const view: ViewNamespace = {};
@@ -63,11 +68,11 @@ export default class NamespaceFactory {
         (ixName, ix) => coder.instruction.encode(ixName, ix),
         programId
       );
-      const txItem = TransactionFactory.build(idlIx, ixItem);
-      const rpcItem = RpcFactory.build(idlIx, txItem, idlErrors, provider);
+      const txIxsItem = TransactionInstructionsFactory.build(idlIx, ixItem);
+      const rpcItem = RpcFactory.build(idlIx, txIxsItem, idlErrors, provider);
       const simulateItem = SimulateFactory.build(
         idlIx,
-        txItem,
+        txIxsItem,
         idlErrors,
         provider,
         coder,
@@ -80,7 +85,7 @@ export default class NamespaceFactory {
         programId,
         idlIx,
         ixItem,
-        txItem,
+        txIxsItem,
         rpcItem,
         simulateItem,
         viewItem,
@@ -91,7 +96,7 @@ export default class NamespaceFactory {
       const name = camelCase(idlIx.name);
 
       instruction[name] = ixItem;
-      transaction[name] = txItem;
+      transactionInstructions[name] = txIxsItem;
       rpc[name] = rpcItem;
       simulate[name] = simulateItem;
       methods[name] = methodItem;
@@ -103,7 +108,7 @@ export default class NamespaceFactory {
     return [
       rpc as RpcNamespace<IDL>,
       instruction as InstructionNamespace<IDL>,
-      transaction as TransactionNamespace<IDL>,
+      transactionInstructions as TransactionInstructionsNamespace<IDL>,
       account,
       simulate as SimulateNamespace<IDL>,
       methods as MethodsNamespace<IDL>,

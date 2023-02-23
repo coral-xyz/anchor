@@ -15,31 +15,28 @@ import {
 } from "@solana/web3.js";
 import { bs58 } from "./utils/bytes/index.js";
 import { isBrowser } from "./utils/common.js";
-import {
-  simulateTransaction,
-  SuccessfulTxSimulationResponse,
-} from "./utils/rpc.js";
+import { SuccessfulTxSimulationResponse } from "./utils/rpc.js";
 
 export default interface Provider {
   readonly connection: Connection;
   readonly publicKey?: PublicKey;
 
   send?(
-    tx: TransactionInstruction[],
+    txIxs: TransactionInstruction[],
     signers?: Signer[],
     opts?: SendOptions
   ): Promise<TransactionSignature>;
   sendAndConfirm?(
-    tx: TransactionInstruction[],
+    txIxs: TransactionInstruction[],
     signers?: Signer[],
     opts?: ConfirmOptions
   ): Promise<TransactionSignature>;
   sendAll?(
-    txWithSigners: { tx: TransactionInstruction[]; signers?: Signer[] }[],
+    txWithSigners: { txIxs: TransactionInstruction[]; signers?: Signer[] }[],
     opts?: ConfirmOptions
   ): Promise<Array<TransactionSignature>>;
   simulate?(
-    tx: TransactionInstruction[],
+    txIxs: TransactionInstruction[],
     signers?: Signer[],
     commitment?: Commitment,
     includeAccounts?: boolean | PublicKey[]
@@ -278,8 +275,10 @@ export class AnchorProvider implements Provider {
     if (signers) {
       tx = await this.wallet.signTransaction(tx);
     }
-    const result = await simulateTransaction(
-      this.connection,
+    // TODO: update to the latest version that passes in versioned transactions
+    // We have to figure out how to update all of the things above as well.
+    // Since it has to go txIxs -> TxMsg -> VersionedTransaction
+    const result = await this.connection.simulateTransaction(
       tx,
       signers,
       commitment,

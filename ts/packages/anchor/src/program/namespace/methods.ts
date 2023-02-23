@@ -3,7 +3,6 @@ import {
   ConfirmOptions,
   PublicKey,
   Signer,
-  Transaction,
   TransactionInstruction,
   TransactionSignature,
 } from "@solana/web3.js";
@@ -20,7 +19,7 @@ import { AccountNamespace } from "./account.js";
 import { InstructionFn } from "./instruction.js";
 import { RpcFn } from "./rpc.js";
 import { SimulateFn, SimulateResponse } from "./simulate.js";
-import { TransactionFn } from "./transaction.js";
+import { TransactionInstructionsFn } from "./transaction-instructions.js";
 import {
   AllInstructions,
   InstructionAccountAddresses,
@@ -40,7 +39,7 @@ export class MethodsBuilderFactory {
     programId: PublicKey,
     idlIx: AllInstructions<IDL>,
     ixFn: InstructionFn<IDL>,
-    txFn: TransactionFn<IDL>,
+    txIxsFn: TransactionInstructionsFn<IDL>,
     rpcFn: RpcFn<IDL>,
     simulateFn: SimulateFn<IDL>,
     viewFn: ViewFn<IDL> | undefined,
@@ -52,7 +51,7 @@ export class MethodsBuilderFactory {
       new MethodsBuilder(
         args,
         ixFn,
-        txFn,
+        txIxsFn,
         rpcFn,
         simulateFn,
         viewFn,
@@ -121,7 +120,7 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   constructor(
     _args: Array<any>,
     private _ixFn: InstructionFn<IDL>,
-    private _txFn: TransactionFn<IDL>,
+    private _txIxsFn: TransactionInstructionsFn<IDL>,
     private _rpcFn: RpcFn<IDL>,
     private _simulateFn: SimulateFn<IDL>,
     private _viewFn: ViewFn<IDL> | undefined,
@@ -299,13 +298,13 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     };
   }
 
-  public async transaction(): Promise<Transaction> {
+  public async transactionInstructions(): Promise<TransactionInstruction[]> {
     if (this._autoResolveAccounts) {
       await this._accountsResolver.resolve();
     }
 
     // @ts-ignore
-    return this._txFn(...this._args, {
+    return this._txIxsFn(...this._args, {
       accounts: this._accounts,
       signers: this._signers,
       remainingAccounts: this._remainingAccounts,
