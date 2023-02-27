@@ -35,9 +35,9 @@ export default class NodeWallet implements Wallet {
     return new NodeWallet(payer);
   }
 
-  async signTransaction(
-    tx: Transaction | VersionedTransaction
-  ): Promise<Transaction | VersionedTransaction> {
+  async signTransaction<T extends Transaction | VersionedTransaction>(
+    tx: T
+  ): Promise<T> {
     if (tx instanceof Transaction) {
       tx.partialSign(this.payer);
     } else {
@@ -46,9 +46,9 @@ export default class NodeWallet implements Wallet {
     return tx;
   }
 
-  async signAllTransactions(
-    txs: (Transaction | VersionedTransaction)[]
-  ): Promise<(Transaction | VersionedTransaction)[]> {
+  async signAllTransactions<T extends Transaction | VersionedTransaction>(
+    txs: T[]
+  ): Promise<T[]> {
     return txs.map((t) => {
       if (t instanceof Transaction) {
         t.partialSign(this.payer);

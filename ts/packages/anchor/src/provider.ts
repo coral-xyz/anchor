@@ -12,6 +12,7 @@ import {
   VersionedTransaction,
   Version,
   AddressLookupTableAccount,
+  TransactionMessage,
 } from "@solana/web3.js";
 import { bs58 } from "./utils/bytes/index.js";
 import { isBrowser } from "./utils/common.js";
@@ -133,24 +134,41 @@ export class AnchorProvider implements Provider {
   async sendAndConfirm(
     tx: Transaction,
     signers?: Signer[],
-    opts?: ConfirmOptions
+    opts?: ConfirmOptions,
+    lookupTableAccounts?: AddressLookupTableAccount[]
   ): Promise<TransactionSignature> {
     if (opts === undefined) {
       opts = this.opts;
     }
 
-    tx.feePayer = tx.feePayer || this.wallet.publicKey;
-
-    tx.recentBlockhash = (
+    const recentBlockhash = (
       await this.connection.getLatestBlockhash(opts.preflightCommitment)
     ).blockhash;
 
-    tx = await this.wallet.signTransaction(tx);
-    (signers ?? []).forEach((kp) => {
-      tx.partialSign(kp);
-    });
+    let rawTx: Buffer | Uint8Array;
+    if (lookupTableAccounts === undefined) {
+      tx.feePayer = tx.feePayer ?? this.wallet.publicKey;
 
-    const rawTx = tx.serialize();
+      tx.recentBlockhash = recentBlockhash;
+
+      tx = await this.wallet.signTransaction(tx);
+      (signers ?? []).forEach((kp) => {
+        tx.partialSign(kp);
+      });
+      rawTx = tx.serialize();
+    } else {
+      let vTx = new VersionedTransaction(
+        new TransactionMessage({
+          instructions: tx.instructions,
+          payerKey: tx.feePayer ?? this.wallet.publicKey,
+          recentBlockhash,
+        }).compileToV0Message(lookupTableAccounts)
+      );
+      if (signers) {
+        vTx.sign(signers);
+      }
+      rawTx = vTx.serialize();
+    }
 
     try {
       return await sendAndConfirmRawTransaction(this.connection, rawTx, opts);
@@ -162,6 +180,7 @@ export class AnchorProvider implements Provider {
         // (the json RPC does not support any shorter than "confirmed" for 'getTransaction')
         // because that will see the tx sent with `sendAndConfirmRawTransaction` no matter which
         // commitment `sendAndConfirmRawTransaction` used
+        // TODO: Add if (vTx) statement once we figure out how to get the vTx signature
         const failedTx = await this.connection.getTransaction(
           bs58.encode(tx.signature!),
           { commitment: "confirmed" }
@@ -180,34 +199,52 @@ export class AnchorProvider implements Provider {
 
   /**
    * Similar to `send`, but for an array of transactions and signers.
+   * All transactions need to be of the same type, it can't support a mix of `VersionedTransaction`s and regular `Transaction`s.
    *
    * @param txWithSigners Array of transactions and signers.
    * @param opts          Transaction confirmation options.
    */
   async sendAll(
-    txWithSigners: { tx: Transaction; signers?: Signer[] }[],
+    txWithSigners: {
+      tx: Transaction;
+      signers?: Signer[];
+      lookupTableAccounts?: AddressLookupTableAccount[];
+    }[],
     opts?: ConfirmOptions
   ): Promise<Array<TransactionSignature>> {
     if (opts === undefined) {
       opts = this.opts;
     }
-    const blockhash = await this.connection.getLatestBlockhash(
-      opts.preflightCommitment
-    );
+    const recentBlockhash = (
+      await this.connection.getLatestBlockhash(opts.preflightCommitment)
+    ).blockhash;
 
     let txs = txWithSigners.map((r) => {
-      let tx = r.tx;
-      let signers = r.signers ?? [];
+      if (r.lookupTableAccounts === undefined) {
+        let tx = r.tx;
+        let signers = r.signers ?? [];
 
-      tx.feePayer = tx.feePayer || this.wallet.publicKey;
+        tx.feePayer = tx.feePayer ?? this.wallet.publicKey;
 
-      tx.recentBlockhash = blockhash.blockhash;
+        tx.recentBlockhash = recentBlockhash;
 
-      signers.forEach((kp) => {
-        tx.partialSign(kp);
-      });
-
-      return tx;
+        signers.forEach((kp) => {
+          tx.partialSign(kp);
+        });
+        return tx;
+      } else {
+        let vTx = new VersionedTransaction(
+          new TransactionMessage({
+            instructions: r.tx.instructions,
+            payerKey: r.tx.feePayer ?? this.wallet.publicKey,
+            recentBlockhash,
+          }).compileToV0Message(r.lookupTableAccounts)
+        );
+        if (r.signers) {
+          vTx.sign(r.signers);
+        }
+        return vTx;
+      }
     });
 
     const signedTxs = await this.wallet.signAllTransactions(txs);
@@ -230,10 +267,16 @@ export class AnchorProvider implements Provider {
           // (the json RPC does not support any shorter than "confirmed" for 'getTransaction')
           // because that will see the tx sent with `sendAndConfirmRawTransaction` no matter which
           // commitment `sendAndConfirmRawTransaction` used
-          const failedTx = await this.connection.getTransaction(
-            bs58.encode(tx.signature!),
-            { commitment: "confirmed" }
-          );
+          let failedTx;
+          if (tx instanceof Transaction) {
+            failedTx = await this.connection.getTransaction(
+              bs58.encode(tx.signature!),
+              { commitment: "confirmed" }
+            );
+          } else {
+            // TODO add support for VersionedTransaction once we figure out how to get the signature correctly
+            failedTx = null;
+          }
           if (!failedTx) {
             throw err;
           } else {
@@ -263,26 +306,46 @@ export class AnchorProvider implements Provider {
     tx: Transaction,
     signers?: Signer[],
     commitment?: Commitment,
-    includeAccounts?: boolean | PublicKey[]
+    includeAccounts?: boolean | PublicKey[],
+    lookupTableAccounts?: AddressLookupTableAccount[]
   ): Promise<SuccessfulTxSimulationResponse> {
-    tx.feePayer = tx.feePayer || this.wallet.publicKey;
-
-    tx.recentBlockhash = (
+    let recentBlockhash = (
       await this.connection.getLatestBlockhash(
         commitment ?? this.connection.commitment
       )
     ).blockhash;
 
-    if (signers) {
-      tx = await this.wallet.signTransaction(tx);
+    let result;
+    if (lookupTableAccounts == undefined) {
+      tx.feePayer = tx.feePayer || this.wallet.publicKey;
+      tx.recentBlockhash = recentBlockhash;
+
+      if (signers) {
+        tx = await this.wallet.signTransaction(tx);
+      }
+      result = await simulateTransaction(
+        this.connection,
+        tx,
+        signers,
+        commitment,
+        includeAccounts
+      );
+    } else {
+      let vTx = new VersionedTransaction(
+        new TransactionMessage({
+          instructions: tx.instructions,
+          payerKey: tx.feePayer ?? this.wallet.publicKey,
+          recentBlockhash,
+        }).compileToV0Message(lookupTableAccounts)
+      );
+      if (signers) {
+        vTx.sign(signers);
+      }
+
+      // Doesn't support includeAccounts which has been changed to something
+      // else in later versions of this function.
+      result = await this.connection.simulateTransaction(vTx, { commitment });
     }
-    const result = await simulateTransaction(
-      this.connection,
-      tx,
-      signers,
-      commitment,
-      includeAccounts
-    );
 
     if (result.value.err) {
       throw new SimulateError(result.value);
@@ -310,12 +373,12 @@ export type SendTxRequest = {
  * Wallet interface for objects that can be used to sign provider transactions.
  */
 export interface Wallet {
-  signTransaction(
-    tx: Transaction | VersionedTransaction
-  ): Promise<Transaction | VersionedTransaction>;
-  signAllTransactions(
-    txs: (Transaction | VersionedTransaction)[]
-  ): Promise<(Transaction | VersionedTransaction)[]>;
+  signTransaction<T extends Transaction | VersionedTransaction>(
+    tx: T
+  ): Promise<T>;
+  signAllTransactions<T extends Transaction | VersionedTransaction>(
+    txs: T[]
+  ): Promise<T[]>;
   publicKey: PublicKey;
 }
 
@@ -323,7 +386,7 @@ export interface Wallet {
 // a better error if 'confirmTransaction` returns an error status
 async function sendAndConfirmRawTransaction(
   connection: Connection,
-  rawTransaction: Buffer,
+  rawTransaction: Buffer | Uint8Array,
   options?: ConfirmOptions
 ): Promise<TransactionSignature> {
   const sendOptions = options && {
