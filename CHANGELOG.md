@@ -22,6 +22,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - client: Add support for multithreading to the rust client: use flag `--multithreaded` ([#2321](https://github.com/coral-xyz/anchor/pull/2321)).
 - client: Add `async_rpc` a method which returns a nonblocking solana rpc client ([2322](https://github.com/coral-xyz/anchor/pull/2322)).
 - avm, cli: Use the `rustls-tls` feature of `reqwest` so that users don't need OpenSSL installed ([#2385](https://github.com/coral-xyz/anchor/pull/2385)).
+- ts: Add `VersionedTransaction` support. Provider class methods now take an optional argument `lookupTableAccounts` which, if detected, will be used to create a `VersionedTransaction` object. Wallet interface also now supports the `VersionedTransaction`type ([2407](https://github.com/coral-xyz/anchor/pull/2407)).
 
 ### Fixes
 
