@@ -1,5 +1,10 @@
 import { Buffer } from "buffer";
-import { Keypair, PublicKey, Transaction } from "@solana/web3.js";
+import {
+  Keypair,
+  PublicKey,
+  Transaction,
+  VersionedTransaction,
+} from "@solana/web3.js";
 import { Wallet } from "./provider";
 
 /**
@@ -30,14 +35,26 @@ export default class NodeWallet implements Wallet {
     return new NodeWallet(payer);
   }
 
-  async signTransaction(tx: Transaction): Promise<Transaction> {
-    tx.partialSign(this.payer);
+  async signTransaction(
+    tx: Transaction | VersionedTransaction
+  ): Promise<Transaction | VersionedTransaction> {
+    if (tx instanceof Transaction) {
+      tx.partialSign(this.payer);
+    } else {
+      tx.sign([this.payer]);
+    }
     return tx;
   }
 
-  async signAllTransactions(txs: Transaction[]): Promise<Transaction[]> {
+  async signAllTransactions(
+    txs: (Transaction | VersionedTransaction)[]
+  ): Promise<(Transaction | VersionedTransaction)[]> {
     return txs.map((t) => {
-      t.partialSign(this.payer);
+      if (t instanceof Transaction) {
+        t.partialSign(this.payer);
+      } else {
+        t.sign([this.payer]);
+      }
       return t;
     });
   }

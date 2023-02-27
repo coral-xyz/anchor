@@ -9,6 +9,9 @@ import {
   Commitment,
   SendTransactionError,
   SendOptions,
+  VersionedTransaction,
+  Version,
+  AddressLookupTableAccount,
 } from "@solana/web3.js";
 import { bs58 } from "./utils/bytes/index.js";
 import { isBrowser } from "./utils/common.js";
@@ -24,22 +27,26 @@ export default interface Provider {
   send?(
     tx: Transaction,
     signers?: Signer[],
-    opts?: SendOptions
+    opts?: SendOptions,
+    lookupTableAccounts?: AddressLookupTableAccount[]
   ): Promise<TransactionSignature>;
   sendAndConfirm?(
     tx: Transaction,
     signers?: Signer[],
-    opts?: ConfirmOptions
+    opts?: ConfirmOptions,
+    lookupTableAccounts?: AddressLookupTableAccount[]
   ): Promise<TransactionSignature>;
   sendAll?(
     txWithSigners: { tx: Transaction; signers?: Signer[] }[],
-    opts?: ConfirmOptions
+    opts?: ConfirmOptions,
+    lookupTable?: AddressLookupTableAccount[]
   ): Promise<Array<TransactionSignature>>;
   simulate?(
     tx: Transaction,
     signers?: Signer[],
     commitment?: Commitment,
-    includeAccounts?: boolean | PublicKey[]
+    includeAccounts?: boolean | PublicKey[],
+    lookupTableAccounts?: AddressLookupTableAccount[]
   ): Promise<SuccessfulTxSimulationResponse>;
 }
 
@@ -303,8 +310,12 @@ export type SendTxRequest = {
  * Wallet interface for objects that can be used to sign provider transactions.
  */
 export interface Wallet {
-  signTransaction(tx: Transaction): Promise<Transaction>;
-  signAllTransactions(txs: Transaction[]): Promise<Transaction[]>;
+  signTransaction(
+    tx: Transaction | VersionedTransaction
+  ): Promise<Transaction | VersionedTransaction>;
+  signAllTransactions(
+    txs: (Transaction | VersionedTransaction)[]
+  ): Promise<(Transaction | VersionedTransaction)[]>;
   publicKey: PublicKey;
 }
 
