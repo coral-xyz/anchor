@@ -6,6 +6,9 @@ import {
   SystemProgram,
   Message,
   VersionedTransaction,
+  AddressLookupTableProgram,
+  Transaction,
+  TransactionMessage,
 } from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
@@ -14,6 +17,9 @@ import {
 } from "@solana/spl-token";
 import { Misc } from "../../target/types/misc";
 import { MiscOptional } from "../../target/types/misc_optional";
+import { connect } from "http2";
+import { PROGRAM_LAYOUT_VERSIONS } from "@project-serum/serum/lib/tokens_and_markets";
+import { lookup } from "dns";
 
 const utf8 = anchor.utils.bytes.utf8;
 const { assert, expect } = require("chai");
@@ -59,6 +65,50 @@ const miscTest = (
       });
       const dataAccount = await program.account.dataU16.fetch(data.publicKey);
       assert.strictEqual(dataAccount.data, 99);
+    });
+
+    it("Can send VersionedTransaction", async () => {
+      // Create the lookup table
+      const recentSlot = await provider.connection.getSlot();
+      const [loookupTableInstruction, lookupTableAddress] =
+        AddressLookupTableProgram.createLookupTable({
+          authority: provider.publicKey,
+          payer: provider.publicKey,
+          recentSlot,
+        });
+      const extendInstruction = AddressLookupTableProgram.extendLookupTable({
+        payer: provider.publicKey,
+        authority: provider.publicKey,
+        lookupTable: lookupTableAddress,
+        addresses: [provider.publicKey, SystemProgram.programId],
+      });
+      let createLookupTableTx = new VersionedTransaction(
+        new TransactionMessage({
+          instructions: [loookupTableInstruction, extendInstruction],
+          payerKey: program.provider.publicKey,
+          recentBlockhash: (await provider.connection.getLatestBlockhash())
+            .blockhash,
+        }).compileToV0Message()
+      );
+      await provider.sendAndConfirm(createLookupTableTx);
+      const lookupTableAccount = await provider.connection
+        .getAddressLookupTable(lookupTableAddress)
+        .then((res) => res.value);
+      const target = anchor.web3.Keypair.generate();
+      let transferInstruction = SystemProgram.transfer({
+        fromPubkey: provider.publicKey,
+        lamports: 100_000,
+        toPubkey: target.publicKey,
+      });
+      let transferUsingLookupTx = new VersionedTransaction(
+        new TransactionMessage({
+          instructions: [transferInstruction],
+          payerKey: program.provider.publicKey,
+          recentBlockhash: (await provider.connection.getLatestBlockhash())
+            .blockhash,
+        }).compileToV0Message([lookupTableAccount])
+      );
+      await provider.sendAndConfirm(transferUsingLookupTx);
     });
 
     it("Can embed programs into genesis from the Anchor.toml", async () => {
