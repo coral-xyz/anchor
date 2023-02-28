@@ -101,10 +101,9 @@ const miscTest = (
       const target = anchor.web3.Keypair.generate();
       let transferInstruction = SystemProgram.transfer({
         fromPubkey: provider.publicKey,
-        lamports: 100_000,
+        lamports: 1_000_000,
         toPubkey: target.publicKey,
       });
-      console.log(transferInstruction);
       let transferUsingLookupTx = new VersionedTransaction(
         new TransactionMessage({
           instructions: [transferInstruction],
