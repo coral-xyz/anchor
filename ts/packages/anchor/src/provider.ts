@@ -144,7 +144,6 @@ export class AnchorProvider implements Provider {
         await this.connection.getLatestBlockhash(opts.preflightCommitment)
       ).blockhash;
 
-      tx = await this.wallet.signTransaction(tx);
       if (signers) {
         for (const signer of signers) {
           tx.partialSign(signer);
@@ -155,6 +154,7 @@ export class AnchorProvider implements Provider {
         tx.sign(signers);
       }
     }
+    tx = await this.wallet.signTransaction(tx);
     const rawTx = tx.serialize();
 
     try {
@@ -316,6 +316,7 @@ export class AnchorProvider implements Provider {
     } else {
       if (signers) {
         tx.sign(signers);
+        tx = await this.wallet.signTransaction(tx);
       }
 
       // Doesn't support includeAccounts which has been changed to something

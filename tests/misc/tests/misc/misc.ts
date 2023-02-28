@@ -90,7 +90,11 @@ const miscTest = (
             .blockhash,
         }).compileToV0Message()
       );
-      await provider.sendAndConfirm(createLookupTableTx);
+      await provider.sendAndConfirm(createLookupTableTx, [], {
+        skipPreflight: true,
+      });
+
+      // Use the lookup table in a transaction
       const lookupTableAccount = await provider.connection
         .getAddressLookupTable(lookupTableAddress)
         .then((res) => res.value);
@@ -100,6 +104,7 @@ const miscTest = (
         lamports: 100_000,
         toPubkey: target.publicKey,
       });
+      console.log(transferInstruction);
       let transferUsingLookupTx = new VersionedTransaction(
         new TransactionMessage({
           instructions: [transferInstruction],
@@ -108,7 +113,9 @@ const miscTest = (
             .blockhash,
         }).compileToV0Message([lookupTableAccount])
       );
-      await provider.sendAndConfirm(transferUsingLookupTx);
+      await provider.sendAndConfirm(transferUsingLookupTx, [], {
+        skipPreflight: true,
+      });
     });
 
     it("Can embed programs into genesis from the Anchor.toml", async () => {
