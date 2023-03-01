@@ -17,7 +17,6 @@ export default class RpcFactory {
     idlErrors: Map<number, string>,
     provider: Provider
   ): RpcFn {
-    // TODO: How do we add lookupTableAccounts as an optional argument to rpc()?
     const rpc: RpcFn<IDL, I> = async (...args) => {
       const tx = txFn(...args);
       const [, ctx] = splitArgsAndCtx(idlIx, [...args]);
