@@ -167,16 +167,14 @@ export class AnchorProvider implements Provider {
         // (the json RPC does not support any shorter than "confirmed" for 'getTransaction')
         // because that will see the tx sent with `sendAndConfirmRawTransaction` no matter which
         // commitment `sendAndConfirmRawTransaction` used
-        let failedTx: TransactionResponse | null;
-        if (tx instanceof Transaction) {
-          failedTx = await this.connection.getTransaction(
-            bs58.encode(tx.signature!),
-            { commitment: "confirmed" }
-          );
-        } else {
-          // TODO add support for VersionedTransaction once we figure out how to get the signature correctly
-          failedTx = null;
-        }
+        const txSig = bs58.encode(
+          tx instanceof VersionedTransaction
+            ? tx.signatures?.[0] || new Uint8Array()
+            : tx.signature ?? new Uint8Array()
+        );
+        const failedTx = await this.connection.getTransaction(txSig, {
+          commitment: "confirmed",
+        });
         if (!failedTx) {
           throw err;
         } else {
@@ -251,16 +249,14 @@ export class AnchorProvider implements Provider {
           // (the json RPC does not support any shorter than "confirmed" for 'getTransaction')
           // because that will see the tx sent with `sendAndConfirmRawTransaction` no matter which
           // commitment `sendAndConfirmRawTransaction` used
-          let failedTx: TransactionResponse | null;
-          if (tx instanceof Transaction) {
-            failedTx = await this.connection.getTransaction(
-              bs58.encode(tx.signature!),
-              { commitment: "confirmed" }
-            );
-          } else {
-            // TODO add support for VersionedTransaction once we figure out how to get the signature correctly
-            failedTx = null;
-          }
+          const txSig = bs58.encode(
+            tx instanceof VersionedTransaction
+              ? tx.signatures?.[0] || new Uint8Array()
+              : tx.signature ?? new Uint8Array()
+          );
+          const failedTx = await this.connection.getTransaction(txSig, {
+            commitment: "confirmed",
+          });
           if (!failedTx) {
             throw err;
           } else {
