@@ -270,6 +270,7 @@ impl<T> std::ops::DerefMut for WithPath<T> {
 pub struct Config {
     pub anchor_version: Option<String>,
     pub solana_version: Option<String>,
+    pub mptest: Option<MultiProcessTestConfig>,
     pub features: FeaturesConfig,
     pub registry: RegistryConfig,
     pub provider: ProviderConfig,
@@ -289,6 +290,14 @@ pub struct FeaturesConfig {
     pub seeds: bool,
     #[serde(default, rename = "skip-lint")]
     pub skip_lint: bool,
+}
+
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct MultiProcessTestConfig {
+    #[serde(default)]
+    pub cmd: String,
+    #[serde(default)]
+    pub tests: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -414,6 +423,7 @@ impl Config {
 struct _Config {
     anchor_version: Option<String>,
     solana_version: Option<String>,
+    mptest: Option<MultiProcessTestConfig>,
     features: Option<FeaturesConfig>,
     programs: Option<BTreeMap<String, BTreeMap<String, serde_json::Value>>>,
     registry: Option<RegistryConfig>,
@@ -490,6 +500,7 @@ impl ToString for Config {
         let cfg = _Config {
             anchor_version: self.anchor_version.clone(),
             solana_version: self.solana_version.clone(),
+            mptest: self.mptest.clone(),
             features: Some(self.features.clone()),
             registry: Some(self.registry.clone()),
             provider: Provider {
@@ -519,6 +530,7 @@ impl FromStr for Config {
         Ok(Config {
             anchor_version: cfg.anchor_version,
             solana_version: cfg.solana_version,
+            mptest: cfg.mptest,
             features: cfg.features.unwrap_or_default(),
             registry: cfg.registry.unwrap_or_default(),
             provider: ProviderConfig {
