@@ -116,8 +116,8 @@ const miscTest = (
       await provider.simulate(transferUsingLookupTx, [], "processed");
       await provider.sendAndConfirm(transferUsingLookupTx, [], {
         skipPreflight: true,
+        commitment: "confirmed",
       });
-      // await new Promise((resolve) => setTimeout(resolve, 2000));
       let newBalance = await provider.connection.getBalance(
         target.publicKey,
         "confirmed"
@@ -156,9 +156,8 @@ const miscTest = (
       );
       await provider.sendAll(
         [{ tx: oneTransferUsingLookupTx }, { tx: twoTransferUsingLookupTx }],
-        { skipPreflight: true }
+        { skipPreflight: true, commitment: "confirmed" }
       );
-      // await new Promise((resolve) => setTimeout(resolve, 4000));
       newBalance = await provider.connection.getBalance(
         target.publicKey,
         "confirmed"
