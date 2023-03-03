@@ -10,10 +10,6 @@ import {
   SendTransactionError,
   SendOptions,
   VersionedTransaction,
-  Version,
-  AddressLookupTableAccount,
-  TransactionMessage,
-  TransactionResponse,
   RpcResponseAndContext,
 } from "@solana/web3.js";
 import { bs58 } from "./utils/bytes/index.js";
@@ -38,7 +34,10 @@ export default interface Provider {
     opts?: ConfirmOptions
   ): Promise<TransactionSignature>;
   sendAll?(
-    txWithSigners: { tx: Transaction; signers?: Signer[] }[],
+    txWithSigners: {
+      tx: Transaction | VersionedTransaction;
+      signers?: Signer[];
+    }[],
     opts?: ConfirmOptions
   ): Promise<Array<TransactionSignature>>;
   simulate?(

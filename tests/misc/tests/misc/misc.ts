@@ -95,13 +95,14 @@ const miscTest = (
       });
 
       // Use the lookup table in a transaction
+      const transferAmount = 1_000_000;
       const lookupTableAccount = await provider.connection
         .getAddressLookupTable(lookupTableAddress)
         .then((res) => res.value);
       const target = anchor.web3.Keypair.generate();
       let transferInstruction = SystemProgram.transfer({
         fromPubkey: provider.publicKey,
-        lamports: 1_000_000,
+        lamports: transferAmount,
         toPubkey: target.publicKey,
       });
       let transferUsingLookupTx = new VersionedTransaction(
@@ -112,9 +113,57 @@ const miscTest = (
             .blockhash,
         }).compileToV0Message([lookupTableAccount])
       );
+      await provider.simulate(transferUsingLookupTx, [], "processed");
       await provider.sendAndConfirm(transferUsingLookupTx, [], {
         skipPreflight: true,
       });
+      // await new Promise((resolve) => setTimeout(resolve, 2000));
+      let newBalance = await provider.connection.getBalance(
+        target.publicKey,
+        "confirmed"
+      );
+      assert.strictEqual(newBalance, transferAmount);
+
+      // Test sendAll with versioned transaction
+      let oneTransferUsingLookupTx = new VersionedTransaction(
+        new TransactionMessage({
+          instructions: [
+            SystemProgram.transfer({
+              fromPubkey: provider.publicKey,
+              // Needed to make the transactions distinct
+              lamports: transferAmount + 1,
+              toPubkey: target.publicKey,
+            }),
+          ],
+          payerKey: program.provider.publicKey,
+          recentBlockhash: (await provider.connection.getLatestBlockhash())
+            .blockhash,
+        }).compileToV0Message([lookupTableAccount])
+      );
+      let twoTransferUsingLookupTx = new VersionedTransaction(
+        new TransactionMessage({
+          instructions: [
+            SystemProgram.transfer({
+              fromPubkey: provider.publicKey,
+              lamports: transferAmount,
+              toPubkey: target.publicKey,
+            }),
+          ],
+          payerKey: program.provider.publicKey,
+          recentBlockhash: (await provider.connection.getLatestBlockhash())
+            .blockhash,
+        }).compileToV0Message([lookupTableAccount])
+      );
+      await provider.sendAll(
+        [{ tx: oneTransferUsingLookupTx }, { tx: twoTransferUsingLookupTx }],
+        { skipPreflight: true }
+      );
+      // await new Promise((resolve) => setTimeout(resolve, 4000));
+      newBalance = await provider.connection.getBalance(
+        target.publicKey,
+        "confirmed"
+      );
+      assert.strictEqual(newBalance, transferAmount * 3 + 1);
     });
 
     it("Can embed programs into genesis from the Anchor.toml", async () => {
