@@ -7,7 +7,6 @@ import {
   Message,
   VersionedTransaction,
   AddressLookupTableProgram,
-  Transaction,
   TransactionMessage,
 } from "@solana/web3.js";
 import {
@@ -17,9 +16,6 @@ import {
 } from "@solana/spl-token";
 import { Misc } from "../../target/types/misc";
 import { MiscOptional } from "../../target/types/misc_optional";
-import { connect } from "http2";
-import { PROGRAM_LAYOUT_VERSIONS } from "@project-serum/serum/lib/tokens_and_markets";
-import { lookup } from "dns";
 
 const utf8 = anchor.utils.bytes.utf8;
 const { assert, expect } = require("chai");
