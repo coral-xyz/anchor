@@ -391,7 +391,7 @@ jobs:
             path: tests/realloc
           - cmd: cd tests/system-accounts && anchor test --skip-lint
             path: tests/system-accounts
-          - cmd: cd tests/misc && anchor test --skip-lint && npx tsc --noEmit
+          - cmd: cd tests/misc && yarn link @coral-xyz/anchor && anchor test --skip-lint && npx tsc --noEmit
             path: tests/misc
           - cmd: cd tests/events && anchor test --skip-lint
             path: tests/events
