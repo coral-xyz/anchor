@@ -87,6 +87,19 @@ const miscTest = (
         }).compileToV0Message()
       );
       console.log("first transaction", createLookupTableTx);
+      console.log("send and confirm function", provider.sendAndConfirm);
+      type SendParams = Parameters<typeof provider.sendAndConfirm>;
+      const testThis: SendParams = [
+        new VersionedTransaction(
+          new TransactionMessage({
+            instructions: [loookupTableInstruction, extendInstruction],
+            payerKey: program.provider.publicKey,
+            recentBlockhash: (await provider.connection.getLatestBlockhash())
+              .blockhash,
+          }).compileToV0Message()
+        ),
+      ];
+      console.log("Send and confirm Parameters", testThis);
       await provider.sendAndConfirm(createLookupTableTx, [], {
         skipPreflight: true,
       });
