@@ -137,7 +137,11 @@ export class AnchorProvider implements Provider {
       opts = this.opts;
     }
 
-    if (tx instanceof Transaction) {
+    if (tx instanceof VersionedTransaction) {
+      if (signers) {
+        tx.sign(signers);
+      }
+    } else {
       tx.feePayer = tx.feePayer ?? this.wallet.publicKey;
       tx.recentBlockhash = (
         await this.connection.getLatestBlockhash(opts.preflightCommitment)
@@ -147,10 +151,6 @@ export class AnchorProvider implements Provider {
         for (const signer of signers) {
           tx.partialSign(signer);
         }
-      }
-    } else {
-      if (signers) {
-        tx.sign(signers);
       }
     }
     tx = await this.wallet.signTransaction(tx);
@@ -188,14 +188,14 @@ export class AnchorProvider implements Provider {
 
   /**
    * Similar to `send`, but for an array of transactions and signers.
-   * All transactions need to be of the same type, it can't support a mix of `VersionedTransaction`s and regular `Transaction`s.
+   * All transactions need to be of the same type, it doesn't support a mix of `VersionedTransaction`s and `Transaction`s.
    *
    * @param txWithSigners Array of transactions and signers.
    * @param opts          Transaction confirmation options.
    */
-  async sendAll(
+  async sendAll<T extends Transaction | VersionedTransaction>(
     txWithSigners: {
-      tx: Transaction | VersionedTransaction;
+      tx: T;
       signers?: Signer[];
     }[],
     opts?: ConfirmOptions
@@ -208,8 +208,14 @@ export class AnchorProvider implements Provider {
     ).blockhash;
 
     let txs = txWithSigners.map((r) => {
-      if (r.tx instanceof Transaction) {
-        let tx = r.tx;
+      if (r.tx instanceof VersionedTransaction) {
+        let tx: VersionedTransaction = r.tx;
+        if (r.signers) {
+          tx.sign(r.signers);
+        }
+        return tx;
+      } else {
+        let tx: Transaction = r.tx;
         let signers = r.signers ?? [];
 
         tx.feePayer = tx.feePayer ?? this.wallet.publicKey;
@@ -218,12 +224,6 @@ export class AnchorProvider implements Provider {
         signers.forEach((kp) => {
           tx.partialSign(kp);
         });
-        return tx;
-      } else {
-        let tx = r.tx;
-        if (r.signers) {
-          tx.sign(r.signers);
-        }
         return tx;
       }
     });
@@ -294,7 +294,16 @@ export class AnchorProvider implements Provider {
     ).blockhash;
 
     let result: RpcResponseAndContext<SimulatedTransactionResponse>;
-    if (tx instanceof Transaction) {
+    if (tx instanceof VersionedTransaction) {
+      if (signers) {
+        tx.sign(signers);
+        tx = await this.wallet.signTransaction(tx);
+      }
+
+      // Doesn't support includeAccounts which has been changed to something
+      // else in later versions of this function.
+      result = await this.connection.simulateTransaction(tx, { commitment });
+    } else {
       tx.feePayer = tx.feePayer || this.wallet.publicKey;
       tx.recentBlockhash = recentBlockhash;
 
@@ -308,15 +317,6 @@ export class AnchorProvider implements Provider {
         commitment,
         includeAccounts
       );
-    } else {
-      if (signers) {
-        tx.sign(signers);
-        tx = await this.wallet.signTransaction(tx);
-      }
-
-      // Doesn't support includeAccounts which has been changed to something
-      // else in later versions of this function.
-      result = await this.connection.simulateTransaction(tx, { commitment });
     }
 
     if (result.value.err) {
