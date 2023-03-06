@@ -86,6 +86,7 @@ const miscTest = (
             .blockhash,
         }).compileToV0Message()
       );
+      console.log("first transaction", createLookupTableTx);
       await provider.sendAndConfirm(createLookupTableTx, [], {
         skipPreflight: true,
       });
