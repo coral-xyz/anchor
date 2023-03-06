@@ -103,6 +103,7 @@ const miscTest = (
       await provider.sendAndConfirm(createLookupTableTx, [], {
         skipPreflight: true,
       });
+      console.log("got to the other side");
 
       // Use the lookup table in a transaction
       const transferAmount = 1_000_000;
