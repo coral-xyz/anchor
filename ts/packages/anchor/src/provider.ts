@@ -33,9 +33,9 @@ export default interface Provider {
     signers?: Signer[],
     opts?: ConfirmOptions
   ): Promise<TransactionSignature>;
-  sendAll?(
+  sendAll?<T extends Transaction | VersionedTransaction>(
     txWithSigners: {
-      tx: Transaction | VersionedTransaction;
+      tx: T;
       signers?: Signer[];
     }[],
     opts?: ConfirmOptions
