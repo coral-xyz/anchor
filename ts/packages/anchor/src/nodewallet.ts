@@ -42,9 +42,9 @@ export default class NodeWallet implements Wallet {
     // Type checking tx using instanceof failed to detect VersionedTransaction
     // or Transaction types sometimes. Can't figure out why. Using this
     // approach instead.
-    // if (typeof tx["partialSign"] === "function") {
-    //   (tx as Transaction).partialSign(this.payer);
-    if (typeof tx["sign"] === "function") {
+    if (typeof tx["partialSign"] === "function") {
+      (tx as Transaction).partialSign(this.payer);
+    } else if (typeof tx["sign"] === "function") {
       (tx as VersionedTransaction).sign([this.payer]);
     } else {
       console.log("Failed Transaction Object: ", tx);

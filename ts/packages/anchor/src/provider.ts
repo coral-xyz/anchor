@@ -343,6 +343,7 @@ export type SendTxRequest = {
 
 /**
  * Wallet interface for objects that can be used to sign provider transactions.
+ * VersionedTransactions sign everything at once
  */
 export interface Wallet {
   signTransaction<T extends Transaction | VersionedTransaction>(

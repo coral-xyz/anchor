@@ -174,6 +174,9 @@ const miscTest = (
         "confirmed"
       );
       assert.strictEqual(newBalance, transferAmount * 3 + 1);
+
+      // Test sending with signatures
+      // TODO: add create account transaction which needs the original account to sign
     });
 
     it("Can embed programs into genesis from the Anchor.toml", async () => {
