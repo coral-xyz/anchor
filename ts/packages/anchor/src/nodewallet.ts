@@ -39,18 +39,6 @@ export default class NodeWallet implements Wallet {
   async signTransaction<T extends Transaction | VersionedTransaction>(
     tx: T
   ): Promise<T> {
-    // Type checking tx using instanceof failed to detect VersionedTransaction
-    // or Transaction types sometimes. Can't figure out why. Using this
-    // approach instead.
-    // if (typeof tx["partialSign"] === "function") {
-    //   (tx as Transaction).partialSign(this.payer);
-    // } else if (typeof tx["sign"] === "function") {
-    //   (tx as VersionedTransaction).sign([this.payer]);
-    // } else {
-    //   console.log("Failed Transaction Object: ", tx);
-    //   throw new Error(`Object of type ${typeof tx} cannot be signed`);
-    // }
-
     if (isVersionedTransaction(tx)) {
       tx.sign([this.payer]);
     } else {

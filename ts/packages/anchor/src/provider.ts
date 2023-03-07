@@ -137,7 +137,7 @@ export class AnchorProvider implements Provider {
       opts = this.opts;
     }
 
-    if (tx instanceof VersionedTransaction) {
+    if (isVersionedTransaction(tx)) {
       if (signers) {
         tx.sign(signers);
       }
@@ -167,7 +167,7 @@ export class AnchorProvider implements Provider {
         // because that will see the tx sent with `sendAndConfirmRawTransaction` no matter which
         // commitment `sendAndConfirmRawTransaction` used
         const txSig = bs58.encode(
-          tx instanceof VersionedTransaction
+          isVersionedTransaction(tx)
             ? tx.signatures?.[0] || new Uint8Array()
             : tx.signature ?? new Uint8Array()
         );
@@ -208,8 +208,8 @@ export class AnchorProvider implements Provider {
     ).blockhash;
 
     let txs = txWithSigners.map((r) => {
-      if (r.tx instanceof VersionedTransaction) {
-        let tx: VersionedTransaction = r.tx;
+      if (isVersionedTransaction(r.tx)) {
+        let tx = r.tx;
         if (r.signers) {
           tx.sign(r.signers);
         }
@@ -249,7 +249,7 @@ export class AnchorProvider implements Provider {
           // because that will see the tx sent with `sendAndConfirmRawTransaction` no matter which
           // commitment `sendAndConfirmRawTransaction` used
           const txSig = bs58.encode(
-            tx instanceof VersionedTransaction
+            isVersionedTransaction(tx)
               ? tx.signatures?.[0] || new Uint8Array()
               : tx.signature ?? new Uint8Array()
           );
@@ -294,7 +294,7 @@ export class AnchorProvider implements Provider {
     ).blockhash;
 
     let result: RpcResponseAndContext<SimulatedTransactionResponse>;
-    if (tx instanceof VersionedTransaction) {
+    if (isVersionedTransaction(tx)) {
       if (signers) {
         tx.sign(signers);
         tx = await this.wallet.signTransaction(tx);
