@@ -40,9 +40,13 @@ export default class NodeWallet implements Wallet {
   ): Promise<T> {
     if (tx instanceof VersionedTransaction) {
       tx.sign([this.payer]);
-    } else {
+    } else if (tx instanceof Transaction) {
       tx.partialSign(this.payer);
+    } else {
+      console.log("Failed Transaction Type: ", tx);
+      throw new Error("Object of type ${typeof tx} cannot be signed");
     }
+
     return tx;
   }
 
