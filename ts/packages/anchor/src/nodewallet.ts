@@ -3,6 +3,7 @@ import {
   Keypair,
   PublicKey,
   Transaction,
+  Version,
   VersionedTransaction,
 } from "@solana/web3.js";
 import { Wallet } from "./provider";
@@ -38,14 +39,26 @@ export default class NodeWallet implements Wallet {
   async signTransaction<T extends Transaction | VersionedTransaction>(
     tx: T
   ): Promise<T> {
-    if (tx instanceof VersionedTransaction) {
-      tx.sign([this.payer]);
-    } else if (tx instanceof Transaction) {
-      tx.partialSign(this.payer);
+    // Type checking tx using instanceof failed to detect VersionedTransaction
+    // or Transaction types sometimes. Can't figure out why. Using this
+    // approach instead.
+    // if (typeof tx["partialSign"] === "function") {
+    //   (tx as Transaction).partialSign(this.payer);
+    if (typeof tx["sign"] === "function") {
+      (tx as VersionedTransaction).sign([this.payer]);
     } else {
-      console.log("Failed Transaction Type: ", tx);
-      throw new Error("Object of type ${typeof tx} cannot be signed");
+      console.log("Failed Transaction Object: ", tx);
+      throw new Error(`Object of type ${typeof tx} cannot be signed`);
     }
+
+    // if (tx instanceof VersionedTransaction) {
+    //   tx.sign([this.payer]);
+    // } else if (tx instanceof Transaction) {
+    //   tx.partialSign(this.payer);
+    // } else {
+    //   console.log("Failed Transaction Type: ", tx);
+    //   throw new Error(`Object of type ${typeof tx} cannot be signed`);
+    // }
 
     return tx;
   }
