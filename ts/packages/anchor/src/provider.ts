@@ -11,6 +11,7 @@ import {
   SendOptions,
   VersionedTransaction,
   RpcResponseAndContext,
+  Version,
 } from "@solana/web3.js";
 import { bs58 } from "./utils/bytes/index.js";
 import { isBrowser, isVersionedTransaction } from "./utils/common.js";
@@ -209,7 +210,7 @@ export class AnchorProvider implements Provider {
 
     let txs = txWithSigners.map((r) => {
       if (isVersionedTransaction(r.tx)) {
-        let tx = r.tx;
+        let tx: VersionedTransaction = r.tx;
         if (r.signers) {
           tx.sign(r.signers);
         }

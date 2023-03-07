@@ -86,8 +86,6 @@ const miscTest = (
             .blockhash,
         }).compileToV0Message()
       );
-      console.log("first transaction", createLookupTableTx);
-      console.log("send and confirm function", provider.sendAndConfirm);
       type SendParams = Parameters<typeof provider.sendAndConfirm>;
       const testThis: SendParams = [
         new VersionedTransaction(
@@ -99,18 +97,16 @@ const miscTest = (
           }).compileToV0Message()
         ),
       ];
-      console.log("Send and confirm Parameters", testThis);
       await provider.sendAndConfirm(createLookupTableTx, [], {
         skipPreflight: true,
       });
-      console.log("got to the other side");
 
       // Use the lookup table in a transaction
       const transferAmount = 1_000_000;
       const lookupTableAccount = await provider.connection
         .getAddressLookupTable(lookupTableAddress)
         .then((res) => res.value);
-      const target = anchor.web3.Keypair.generate();
+      const target = Keypair.generate();
       let transferInstruction = SystemProgram.transfer({
         fromPubkey: provider.publicKey,
         lamports: transferAmount,
@@ -174,9 +170,43 @@ const miscTest = (
         "confirmed"
       );
       assert.strictEqual(newBalance, transferAmount * 3 + 1);
+    });
 
+    it("Can send VersionedTransaction with extra signatures", async () => {
       // Test sending with signatures
       // TODO: add create account transaction which needs the original account to sign
+      const initSpace = 100;
+      const rentExemptAmount =
+        await provider.connection.getMinimumBalanceForRentExemption(initSpace);
+
+      const newAccount = Keypair.generate();
+      let createAccountIx = SystemProgram.createAccount({
+        fromPubkey: provider.publicKey,
+        lamports: rentExemptAmount,
+        newAccountPubkey: newAccount.publicKey,
+        programId: program.programId,
+        space: initSpace,
+      });
+      let createAccountTx = new VersionedTransaction(
+        new TransactionMessage({
+          instructions: [createAccountIx],
+          payerKey: provider.publicKey,
+          recentBlockhash: (await provider.connection.getLatestBlockhash())
+            .blockhash,
+        }).compileToV0Message()
+      );
+      await provider.simulate(createAccountTx, [], "processed");
+      await provider.sendAndConfirm(createAccountTx, [newAccount], {
+        skipPreflight: false,
+        commitment: "confirmed",
+      });
+      let newAccountInfo = await provider.connection.getAccountInfo(
+        newAccount.publicKey
+      );
+      assert.strictEqual(
+        newAccountInfo.owner.toBase58(),
+        program.programId.toBase58()
+      );
     });
 
     it("Can embed programs into genesis from the Anchor.toml", async () => {
