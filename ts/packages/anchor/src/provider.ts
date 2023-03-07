@@ -11,7 +11,6 @@ import {
   SendOptions,
   VersionedTransaction,
   RpcResponseAndContext,
-  Version,
 } from "@solana/web3.js";
 import { bs58 } from "./utils/bytes/index.js";
 import { isBrowser, isVersionedTransaction } from "./utils/common.js";

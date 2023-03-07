@@ -174,7 +174,6 @@ const miscTest = (
 
     it("Can send VersionedTransaction with extra signatures", async () => {
       // Test sending with signatures
-      // TODO: add create account transaction which needs the original account to sign
       const initSpace = 100;
       const rentExemptAmount =
         await provider.connection.getMinimumBalanceForRentExemption(initSpace);
