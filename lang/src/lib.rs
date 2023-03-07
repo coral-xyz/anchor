@@ -36,7 +36,6 @@ mod bpf_upgradeable_state;
 mod bpf_writer;
 mod common;
 pub mod context;
-mod ctor;
 pub mod error;
 #[doc(hidden)]
 pub mod idl;
@@ -51,6 +50,7 @@ pub use anchor_attribute_error::*;
 pub use anchor_attribute_event::{emit, event};
 pub use anchor_attribute_program::program;
 pub use anchor_derive_accounts::Accounts;
+pub use anchor_derive_space::InitSpace;
 /// Borsh is the default serialization format for instructions and accounts.
 pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorSerialize};
 pub use solana_program;
@@ -209,6 +209,11 @@ pub trait Discriminator {
     }
 }
 
+/// Defines the space of an account for initialization.
+pub trait Space {
+    const INIT_SPACE: usize;
+}
+
 /// Bump seed for program derived addresses.
 pub trait Bump {
     fn seed(&self) -> u8;
@@ -219,9 +224,52 @@ pub trait Owner {
     fn owner() -> Pubkey;
 }
 
+/// Defines a list of addresses expected to own an account.
+pub trait Owners {
+    fn owners() -> &'static [Pubkey];
+}
+
+/// Defines a trait for checking the owner of a program.
+pub trait CheckOwner {
+    fn check_owner(owner: &Pubkey) -> Result<()>;
+}
+
+impl<T: Owners> CheckOwner for T {
+    fn check_owner(owner: &Pubkey) -> Result<()> {
+        if !Self::owners().contains(owner) {
+            Err(
+                error::Error::from(error::ErrorCode::AccountOwnedByWrongProgram)
+                    .with_account_name(*owner),
+            )
+        } else {
+            Ok(())
+        }
+    }
+}
+
 /// Defines the id of a program.
 pub trait Id {
     fn id() -> Pubkey;
+}
+
+/// Defines the possible ids of a program.
+pub trait Ids {
+    fn ids() -> &'static [Pubkey];
+}
+
+/// Defines a trait for checking the id of a program.
+pub trait CheckId {
+    fn check_id(id: &Pubkey) -> Result<()>;
+}
+
+impl<T: Ids> CheckId for T {
+    fn check_id(id: &Pubkey) -> Result<()> {
+        if !Self::ids().contains(id) {
+            Err(error::Error::from(error::ErrorCode::InvalidProgramId).with_account_name(*id))
+        } else {
+            Ok(())
+        }
+    }
 }
 
 /// Defines the Pubkey of an account.
@@ -240,15 +288,16 @@ impl Key for Pubkey {
 pub mod prelude {
     pub use super::{
         access_control, account, accounts::account::Account,
-        accounts::account_loader::AccountLoader, accounts::program::Program,
+        accounts::account_loader::AccountLoader, accounts::interface::Interface,
+        accounts::interface_account::InterfaceAccount, accounts::program::Program,
         accounts::signer::Signer, accounts::system_account::SystemAccount,
         accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, constant,
         context::Context, context::CpiContext, declare_id, emit, err, error, event, program,
         require, require_eq, require_gt, require_gte, require_keys_eq, require_keys_neq,
         require_neq, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source,
         system_program::System, zero_copy, AccountDeserialize, AccountSerialize, Accounts,
-        AccountsClose, AccountsExit, AnchorDeserialize, AnchorSerialize, Id, Key, Owner,
-        ProgramData, Result, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        AccountsClose, AccountsExit, AnchorDeserialize, AnchorSerialize, Id, InitSpace, Key, Owner,
+        ProgramData, Result, Space, ToAccountInfo, ToAccountInfos, ToAccountMetas,
     };
     pub use anchor_attribute_error::*;
     pub use borsh;
@@ -276,8 +325,6 @@ pub mod __private {
     /// The discriminator anchor uses to mark an account as closed.
     pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 8] = [255, 255, 255, 255, 255, 255, 255, 255];
 
-    pub use crate::ctor::Ctor;
-
     pub use anchor_attribute_account::ZeroCopyAccessor;
 
     pub use anchor_attribute_event::EventIndex;
@@ -287,6 +334,13 @@ pub mod __private {
     pub use bytemuck;
 
     use solana_program::pubkey::Pubkey;
+
+    // Used to calculate the maximum between two expressions.
+    // It is necessary for the calculation of the enum space.
+    #[doc(hidden)]
+    pub const fn max(a: usize, b: usize) -> usize {
+        [a, b][(a < b) as usize]
+    }
 
     // Very experimental trait.
     #[doc(hidden)]
@@ -298,7 +352,7 @@ pub mod __private {
     #[doc(hidden)]
     impl ZeroCopyAccessor<Pubkey> for [u8; 32] {
         fn get(&self) -> Pubkey {
-            Pubkey::new(self)
+            Pubkey::from(*self)
         }
         fn set(input: &Pubkey) -> [u8; 32] {
             input.to_bytes()

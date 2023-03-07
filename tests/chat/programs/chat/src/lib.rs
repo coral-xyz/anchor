@@ -1,6 +1,5 @@
 //! A simple chat program using a ring buffer to store messages.
 
-use anchor_lang::accounts::loader::Loader;
 use anchor_lang::prelude::*;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
@@ -46,7 +45,7 @@ pub struct CreateUser<'info> {
         seeds = [authority.key().as_ref()],
         bump,
         payer = authority,
-        space = 320,
+        space = 8 + User::INIT_SPACE,
     )]
     user: Account<'info, User>,
     #[account(mut)]
@@ -57,7 +56,7 @@ pub struct CreateUser<'info> {
 #[derive(Accounts)]
 pub struct CreateChatRoom<'info> {
     #[account(zero)]
-    chat_room: Loader<'info, ChatRoom>,
+    chat_room: AccountLoader<'info, ChatRoom>,
 }
 
 #[derive(Accounts)]
@@ -70,11 +69,13 @@ pub struct SendMessage<'info> {
     user: Account<'info, User>,
     authority: Signer<'info>,
     #[account(mut)]
-    chat_room: Loader<'info, ChatRoom>,
+    chat_room: AccountLoader<'info, ChatRoom>,
 }
 
 #[account]
+#[derive(InitSpace)]
 pub struct User {
+    #[max_len(200)]
     name: String,
     authority: Pubkey,
     bump: u8,

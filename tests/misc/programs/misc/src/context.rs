@@ -1,5 +1,4 @@
 use crate::account::*;
-use anchor_lang::accounts::loader::Loader;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{Mint, Token, TokenAccount};
@@ -215,7 +214,7 @@ pub struct TestInit<'info> {
 #[derive(Accounts)]
 pub struct TestInitZeroCopy<'info> {
     #[account(init, payer = payer, space = DataZeroCopy::LEN + 8)]
-    pub data: Loader<'info, DataZeroCopy>,
+    pub data: AccountLoader<'info, DataZeroCopy>,
     #[account(mut)]
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -487,6 +486,7 @@ pub struct TestAuthorityConstraint<'info> {
     )]
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
+    /// CHECK: ignore
     pub fake_authority: AccountInfo<'info>,
 }
 #[derive(Accounts)]
@@ -516,7 +516,9 @@ pub struct TestMintConstraint<'info> {
         mint::freeze_authority = freeze_authority
     )]
     pub mint: Account<'info, Mint>,
+    /// CHECK: ignore
     pub mint_authority: AccountInfo<'info>,
+    /// CHECK: ignore
     pub freeze_authority: AccountInfo<'info>,
 }
 
@@ -536,7 +538,9 @@ pub struct TestMintAuthorityConstraint<'info> {
         mint::freeze_authority = freeze_authority
     )]
     pub mint: Account<'info, Mint>,
+    /// CHECK: ignore
     pub mint_authority: AccountInfo<'info>,
+    /// CHECK: ignore
     pub freeze_authority: AccountInfo<'info>,
 }
 
@@ -546,6 +550,7 @@ pub struct TestMintOneAuthorityConstraint<'info> {
         mint::authority = mint_authority,
     )]
     pub mint: Account<'info, Mint>,
+    /// CHECK: ignore
     pub mint_authority: AccountInfo<'info>,
 }
 
@@ -557,6 +562,7 @@ pub struct TestMintMissMintAuthConstraint<'info> {
         mint::freeze_authority = freeze_authority,
     )]
     pub mint: Account<'info, Mint>,
+    /// CHECK: ignore
     pub freeze_authority: AccountInfo<'info>,
 }
 
@@ -568,5 +574,6 @@ pub struct TestAssociatedToken<'info> {
     )]
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
+    /// CHECK: ignore
     pub authority: AccountInfo<'info>,
 }
