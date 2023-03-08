@@ -1,6 +1,6 @@
 WORKDIR=$(PWD)
 #
-# Extract anchor version from the Cargo.toml.
+# Anchor version.
 #
 ANCHOR_CLI=v0.27.0
 #
