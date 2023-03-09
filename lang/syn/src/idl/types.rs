@@ -151,6 +151,8 @@ pub struct IdlTypeDefinition {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub full_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub generics: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub docs: Option<Vec<String>>,
     #[serde(rename = "type")]
     pub ty: IdlTypeDefinitionTy,
@@ -202,6 +204,20 @@ pub enum IdlType {
     Option(Box<IdlType>),
     Vec(Box<IdlType>),
     Array(Box<IdlType>, usize),
+    GenericLenArray(Box<IdlType>, String),
+    Generic(String),
+    DefinedWithTypeArgs {
+        path: String,
+        type_args: Vec<IdlDefinedTypeArg>,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum IdlDefinedTypeArg {
+    Generic(String),
+    Value(String),
+    Type(IdlType),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

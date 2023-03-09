@@ -6,7 +6,10 @@ use crate::config::{
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction, ERASED_AUTHORITY};
 use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
-use anchor_syn::idl::types::{EnumFields, Idl, IdlConst, IdlErrorCode, IdlEvent, IdlType, IdlTypeDefinitionTy, IdlTypeDefinition};
+use anchor_syn::idl::types::{
+    EnumFields, Idl, IdlConst, IdlErrorCode, IdlEvent, IdlType, IdlTypeDefinition,
+    IdlTypeDefinitionTy,
+};
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use flate2::read::GzDecoder;
@@ -2664,6 +2667,12 @@ fn deserialize_idl_type_to_json(
 
             JsonValue::Array(array_data)
         }
+        IdlType::GenericLenArray(_, _) => todo!("Generic length arrays are not yet supported"),
+        IdlType::Generic(_) => todo!("Generic types are not yet supported"),
+        IdlType::DefinedWithTypeArgs {
+            path: _,
+            type_args: _,
+        } => todo!("Defined types with type args are not yet supported"),
     })
 }
 

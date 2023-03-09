@@ -26,7 +26,8 @@ pub fn get_no_docs() -> bool {
 #[allow(clippy::result_unit_err)]
 pub fn idl_type_ts_from_syn_type(
     ty: &syn::Type,
-) -> Result<(TokenStream, Option<&syn::TypePath>), ()> {
+    type_params: &Vec<Ident>,
+) -> Result<(TokenStream, Vec<syn::TypePath>), ()> {
     let (idl, _) = get_module_paths();
 
     fn the_only_segment_is(path: &syn::TypePath, cmp: &str) -> bool {
@@ -49,51 +50,51 @@ pub fn idl_type_ts_from_syn_type(
 
     match ty {
         syn::Type::Path(path) if the_only_segment_is(path, "bool") => {
-            Ok((quote! { #idl::IdlType::Bool }, None))
+            Ok((quote! { #idl::IdlType::Bool }, vec![]))
         }
         syn::Type::Path(path) if the_only_segment_is(path, "u8") => {
-            Ok((quote! { #idl::IdlType::U8 }, None))
+            Ok((quote! { #idl::IdlType::U8 }, vec![]))
         }
         syn::Type::Path(path) if the_only_segment_is(path, "i8") => {
-            Ok((quote! { #idl::IdlType::I8 }, None))
+            Ok((quote! { #idl::IdlType::I8 }, vec![]))
         }
         syn::Type::Path(path) if the_only_segment_is(path, "u16") => {
-            Ok((quote! { #idl::IdlType::U16 }, None))
+            Ok((quote! { #idl::IdlType::U16 }, vec![]))
         }
         syn::Type::Path(path) if the_only_segment_is(path, "i16") => {
-            Ok((quote! { #idl::IdlType::I16 }, None))
+            Ok((quote! { #idl::IdlType::I16 }, vec![]))
         }
         syn::Type::Path(path) if the_only_segment_is(path, "u32") => {
-            Ok((quote! { #idl::IdlType::U32 }, None))
+            Ok((quote! { #idl::IdlType::U32 }, vec![]))
         }
         syn::Type::Path(path) if the_only_segment_is(path, "i32") => {
-            Ok((quote! { #idl::IdlType::I32 }, None))
+            Ok((quote! { #idl::IdlType::I32 }, vec![]))
         }
         syn::Type::Path(path) if the_only_segment_is(path, "f32") => {
-            Ok((quote! { #idl::IdlType::F32 }, None))
+            Ok((quote! { #idl::IdlType::F32 }, vec![]))
         }
         syn::Type::Path(path) if the_only_segment_is(path, "u64") => {
-            Ok((quote! { #idl::IdlType::U64 }, None))
+            Ok((quote! { #idl::IdlType::U64 }, vec![]))
         }
         syn::Type::Path(path) if the_only_segment_is(path, "i64") => {
-            Ok((quote! { #idl::IdlType::I64 }, None))
+            Ok((quote! { #idl::IdlType::I64 }, vec![]))
         }
         syn::Type::Path(path) if the_only_segment_is(path, "f64") => {
-            Ok((quote! { #idl::IdlType::F64 }, None))
+            Ok((quote! { #idl::IdlType::F64 }, vec![]))
         }
         syn::Type::Path(path) if the_only_segment_is(path, "u128") => {
-            Ok((quote! { #idl::IdlType::U128 }, None))
+            Ok((quote! { #idl::IdlType::U128 }, vec![]))
         }
         syn::Type::Path(path) if the_only_segment_is(path, "i128") => {
-            Ok((quote! { #idl::IdlType::I128 }, None))
+            Ok((quote! { #idl::IdlType::I128 }, vec![]))
         }
         syn::Type::Path(path)
             if the_only_segment_is(path, "String") || the_only_segment_is(path, "&str") =>
         {
-            Ok((quote! { #idl::IdlType::String }, None))
+            Ok((quote! { #idl::IdlType::String }, vec![]))
         }
         syn::Type::Path(path) if the_only_segment_is(path, "Pubkey") => {
-            Ok((quote! { #idl::IdlType::PublicKey }, None))
+            Ok((quote! { #idl::IdlType::PublicKey }, vec![]))
         }
         syn::Type::Path(path) if the_only_segment_is(path, "Vec") => {
             let segment = path.path.segments.first().unwrap();
@@ -103,11 +104,11 @@ pub fn idl_type_ts_from_syn_type(
             };
             match arg {
                 syn::Type::Path(path) if the_only_segment_is(path, "u8") => {
-                    return Ok((quote! {#idl::IdlType::Bytes}, None));
+                    return Ok((quote! {#idl::IdlType::Bytes}, vec![]));
                 }
                 _ => (),
             };
-            let (inner, defined) = idl_type_ts_from_syn_type(arg)?;
+            let (inner, defined) = idl_type_ts_from_syn_type(arg, type_params)?;
             Ok((quote! { #idl::IdlType::Vec(Box::new(#inner)) }, defined))
         }
         syn::Type::Path(path) if the_only_segment_is(path, "Option") => {
@@ -116,7 +117,7 @@ pub fn idl_type_ts_from_syn_type(
                 Some(arg) => arg,
                 None => unreachable!("Option arguments can only be of AngleBracketed variant"),
             };
-            let (inner, defined) = idl_type_ts_from_syn_type(arg)?;
+            let (inner, defined) = idl_type_ts_from_syn_type(arg, type_params)?;
             Ok((quote! { #idl::IdlType::Option(Box::new(#inner)) }, defined))
         }
         syn::Type::Path(path) if the_only_segment_is(path, "Box") => {
@@ -125,21 +126,81 @@ pub fn idl_type_ts_from_syn_type(
                 Some(arg) => arg,
                 None => unreachable!("Box arguments can only be of AngleBracketed variant"),
             };
-            let (ts, defined) = idl_type_ts_from_syn_type(arg)?;
+            let (ts, defined) = idl_type_ts_from_syn_type(arg, type_params)?;
             Ok((quote! { #ts }, defined))
         }
         syn::Type::Array(arr) => {
             let len = arr.len.clone();
-            let (inner, defined) = idl_type_ts_from_syn_type(&arr.elem)?;
-            Ok((
-                quote! { #idl::IdlType::Array(Box::new(#inner), #len) },
-                defined,
-            ))
+            let len_is_generic = type_params.iter().any(|param| match len {
+                syn::Expr::Path(ref path) => path.path.is_ident(param),
+                _ => false,
+            });
+
+            let (inner, defined) = idl_type_ts_from_syn_type(&arr.elem, type_params)?;
+
+            if len_is_generic {
+                match len {
+                    syn::Expr::Path(ref len) => {
+                        let len = len.path.get_ident().unwrap().to_string();
+                        Ok((
+                            quote! { #idl::IdlType::GenericLenArray(Box::new(#inner), #len.into()) },
+                            defined,
+                        ))
+                    }
+                    _ => unreachable!("Array length can only be a generic parameter"),
+                }
+            } else {
+                Ok((
+                    quote! { #idl::IdlType::Array(Box::new(#inner), #len) },
+                    defined,
+                ))
+            }
         }
-        syn::Type::Path(path) => Ok((
-            quote! { #idl::IdlType::Defined(#path::__anchor_private_full_path())},
-            Some(path),
-        )),
+        syn::Type::Path(path) => {
+            let is_generic_param = type_params.iter().any(|param| path.path.is_ident(param));
+
+            if is_generic_param {
+                let generic = format!("{}", path.path.get_ident().unwrap());
+                Ok((quote! { #idl::IdlType::Generic(#generic.into()) }, vec![]))
+            } else {
+                let mut params = vec![];
+                let mut defined = vec![path.clone()];
+
+                if let Some(segment) = &path.path.segments.last() {
+                    if let syn::PathArguments::AngleBracketed(ref args) = segment.arguments {
+                        for arg in &args.args {
+                            match arg {
+                                syn::GenericArgument::Type(ty) => {
+                                    let (ts, def) = idl_type_ts_from_syn_type(ty, type_params)?;
+                                    params.push(quote! { #idl::IdlDefinedTypeArg::Type(#ts) });
+                                    defined.extend(def);
+                                }
+                                syn::GenericArgument::Const(c) => params.push(
+                                    quote! { #idl::IdlDefinedTypeArg::Value(format!("{}", #c))},
+                                ),
+                                _ => (),
+                            }
+                        }
+                    }
+                }
+
+                if !params.is_empty() {
+                    let params = quote! { vec![#(#params),*] };
+                    Ok((
+                        quote! { #idl::IdlType::DefinedWithTypeArgs {
+                            path: <#path>::__anchor_private_full_path(),
+                            type_args: #params
+                        } },
+                        defined,
+                    ))
+                } else {
+                    Ok((
+                        quote! { #idl::IdlType::Defined(<#path>::__anchor_private_full_path()) },
+                        vec![path.clone()],
+                    ))
+                }
+            }
+        }
         _ => Err(()),
     }
 }
@@ -151,7 +212,8 @@ pub fn idl_type_ts_from_syn_type(
 pub fn idl_field_ts_from_syn_field(
     field: &syn::Field,
     no_docs: bool,
-) -> Result<(TokenStream, Option<&syn::TypePath>), ()> {
+    type_params: &Vec<syn::Ident>,
+) -> Result<(TokenStream, Vec<syn::TypePath>), ()> {
     let (idl, _) = get_module_paths();
 
     let name = field.ident.as_ref().unwrap().to_string().to_mixed_case();
@@ -159,7 +221,7 @@ pub fn idl_field_ts_from_syn_field(
         Some(docs) if !no_docs => quote! {Some(vec![#(#docs.into()),*])},
         _ => quote! {None},
     };
-    let (ty, defined) = idl_type_ts_from_syn_type(&field.ty)?;
+    let (ty, defined) = idl_type_ts_from_syn_type(&field.ty, type_params)?;
 
     Ok((
         quote! {
@@ -179,11 +241,11 @@ pub fn idl_field_ts_from_syn_field(
 #[allow(clippy::result_unit_err)]
 pub fn idl_event_field_ts_from_syn_field(
     field: &syn::Field,
-) -> Result<(TokenStream, Option<&syn::TypePath>), ()> {
+) -> Result<(TokenStream, Vec<syn::TypePath>), ()> {
     let (idl, _) = get_module_paths();
 
     let name = field.ident.as_ref().unwrap().to_string().to_mixed_case();
-    let (ty, defined) = idl_type_ts_from_syn_type(&field.ty)?;
+    let (ty, defined) = idl_type_ts_from_syn_type(&field.ty, &vec![])?;
 
     let index: bool = field
         .attrs
@@ -211,7 +273,7 @@ pub fn idl_event_field_ts_from_syn_field(
 pub fn idl_type_definition_ts_from_syn_struct(
     item_strct: &syn::ItemStruct,
     no_docs: bool,
-) -> Result<(TokenStream, Vec<&syn::TypePath>), ()> {
+) -> Result<(TokenStream, Vec<syn::TypePath>), ()> {
     let (idl, _) = get_module_paths();
 
     let name = item_strct.ident.to_string();
@@ -220,27 +282,44 @@ pub fn idl_type_definition_ts_from_syn_struct(
         _ => quote! {None},
     };
 
-    let (fields, defined): (Vec<TokenStream>, Vec<Option<&syn::TypePath>>) =
-        match &item_strct.fields {
-            syn::Fields::Named(fields) => fields
-                .named
-                .iter()
-                .map(|f: &syn::Field| idl_field_ts_from_syn_field(f, no_docs))
-                .collect::<Result<Vec<_>, _>>()?
-                .into_iter()
-                .unzip::<_, _, Vec<_>, Vec<_>>(),
-            _ => return Err(()),
-        };
+    let type_params = item_strct
+        .generics
+        .params
+        .iter()
+        .filter_map(|p| match p {
+            syn::GenericParam::Type(ty) => Some(ty.ident.clone()),
+            syn::GenericParam::Const(c) => Some(c.ident.clone()),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    let (fields, defined): (Vec<TokenStream>, Vec<Vec<syn::TypePath>>) = match &item_strct.fields {
+        syn::Fields::Named(fields) => fields
+            .named
+            .iter()
+            .map(|f: &syn::Field| idl_field_ts_from_syn_field(f, no_docs, &type_params))
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .unzip::<_, _, Vec<_>, Vec<_>>(),
+        _ => return Err(()),
+    };
     let defined = defined
         .into_iter()
         .flatten()
-        .collect::<Vec<&syn::TypePath>>();
+        .collect::<Vec<syn::TypePath>>();
+
+    let generics = if !type_params.is_empty() {
+        let g: Vec<String> = type_params.iter().map(|id| id.to_string()).collect();
+        quote! { Some(vec![#(#g.into()),*]) }
+    } else {
+        quote! { None }
+    };
 
     Ok((
         quote! {
             #idl::IdlTypeDefinition {
                 name: #name.into(),
                 full_path: Some(Self::__anchor_private_full_path()),
+                generics: #generics,
                 docs: #docs,
                 ty: #idl::IdlTypeDefinitionTy::Struct{
                     fields: vec![
@@ -260,7 +339,7 @@ pub fn idl_type_definition_ts_from_syn_struct(
 pub fn idl_type_definition_ts_from_syn_enum(
     enum_item: &syn::ItemEnum,
     no_docs: bool,
-) -> Result<(TokenStream, Vec<&syn::TypePath>), ()> {
+) -> Result<(TokenStream, Vec<syn::TypePath>), ()> {
     let (idl, _) = get_module_paths();
 
     let name = enum_item.ident.to_string();
@@ -269,35 +348,46 @@ pub fn idl_type_definition_ts_from_syn_enum(
         _ => quote! {None},
     };
 
-    let (variants, defined): (Vec<TokenStream>, Vec<Vec<&syn::TypePath>>) = enum_item.variants.iter().map(|variant: &syn::Variant| {
+    let type_params = enum_item
+        .generics
+        .params
+        .iter()
+        .filter_map(|p| match p {
+            syn::GenericParam::Type(ty) => Some(ty.ident.clone()),
+            syn::GenericParam::Const(c) => Some(c.ident.clone()),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+
+    let (variants, defined): (Vec<TokenStream>, Vec<Vec<syn::TypePath>>) = enum_item.variants.iter().map(|variant: &syn::Variant| {
         let name = variant.ident.to_string();
-        let (fields, defined): (TokenStream, Vec<&syn::TypePath>) = match &variant.fields {
+        let (fields, defined): (TokenStream, Vec<syn::TypePath>) = match &variant.fields {
             syn::Fields::Unit => (quote!{None}, vec![]),
             syn::Fields::Unnamed(fields) => {
                 let (types, defined) = fields.unnamed
                     .iter()
-                    .map(|f| idl_type_ts_from_syn_type(&f.ty))
+                    .map(|f| idl_type_ts_from_syn_type(&f.ty, &type_params))
                     .collect::<Result<Vec<_>, _>>()?
                     .into_iter()
-                    .unzip::<TokenStream, Option<&syn::TypePath>, Vec<TokenStream>, Vec<Option<&syn::TypePath>>>();
+                    .unzip::<TokenStream, Vec<syn::TypePath>, Vec<TokenStream>, Vec<Vec<syn::TypePath>>>();
                 let defined = defined
                     .into_iter()
                     .flatten()
-                    .collect::<Vec<&syn::TypePath>>();
+                    .collect::<Vec<_>>();
 
                 (quote!{ Some(#idl::EnumFields::Tuple(vec![#(#types),*]))}, defined)
             }
             syn::Fields::Named(fields) => {
                 let (fields, defined) = fields.named
                     .iter()
-                    .map(|f| idl_field_ts_from_syn_field(f, no_docs))
+                    .map(|f| idl_field_ts_from_syn_field(f, no_docs, &type_params))
                     .collect::<Result<Vec<_>, _>>()?
                     .into_iter()
-                    .unzip::<TokenStream, Option<&syn::TypePath>, Vec<TokenStream>, Vec<Option<&syn::TypePath>>>();
+                    .unzip::<TokenStream, Vec<syn::TypePath>, Vec<TokenStream>, Vec<Vec<syn::TypePath>>>();
                 let defined = defined
                     .into_iter()
                     .flatten()
-                    .collect::<Vec<&syn::TypePath>>();
+                    .collect::<Vec<_>>();
 
                 (quote!{ Some(#idl::EnumFields::Named(vec![#(#fields),*]))}, defined)
             }
@@ -307,18 +397,26 @@ pub fn idl_type_definition_ts_from_syn_enum(
     })
     .collect::<Result<Vec<_>, _>>()?
     .into_iter()
-    .unzip::<TokenStream, Vec<&syn::TypePath>, Vec<TokenStream>, Vec<Vec<&syn::TypePath>>>();
+    .unzip::<TokenStream, Vec<syn::TypePath>, Vec<TokenStream>, Vec<Vec<syn::TypePath>>>();
 
     let defined = defined
         .into_iter()
         .flatten()
-        .collect::<Vec<&syn::TypePath>>();
+        .collect::<Vec<syn::TypePath>>();
+
+    let generics = if !type_params.is_empty() {
+        let g: Vec<String> = type_params.iter().map(|id| id.to_string()).collect();
+        quote! { Some(vec![#(#g.into()),*]) }
+    } else {
+        quote! { None }
+    };
 
     Ok((
         quote! {
             #idl::IdlTypeDefinition {
                 name: #name.into(),
                 full_path: Some(Self::__anchor_private_full_path()),
+                generics: #generics,
                 docs: #docs,
                 ty: #idl::IdlTypeDefinitionTy::Enum{
                     variants: vec![
@@ -369,10 +467,10 @@ pub fn gen_idl_gen_impl_for_struct(strct: &ItemStruct, no_docs: bool) -> TokenSt
         idl_type_definition_ts = quote! {Some(#ts)};
         insert_defined_ts = quote! {
             #({
-                #defined::__anchor_private_insert_idl_defined(defined_types);
+                <#defined>::__anchor_private_insert_idl_defined(defined_types);
 
-                let path = #defined::__anchor_private_full_path();
-                #defined::__anchor_private_gen_idl_type()
+                let path = <#defined>::__anchor_private_full_path();
+                <#defined>::__anchor_private_gen_idl_type()
                     .and_then(|ty| defined_types.insert(path, ty));
             });*
         };
@@ -401,10 +499,10 @@ pub fn gen_idl_gen_impl_for_enum(enm: ItemEnum, no_docs: bool) -> TokenStream {
         idl_type_definition_ts = quote! {Some(#ts)};
         insert_defined_ts = quote! {
             #({
-                #defined::__anchor_private_insert_idl_defined(defined_types);
+                <#defined>::__anchor_private_insert_idl_defined(defined_types);
 
-                let path = #defined::__anchor_private_full_path();
-                #defined::__anchor_private_gen_idl_type()
+                let path = <#defined>::__anchor_private_full_path();
+                <#defined>::__anchor_private_gen_idl_type()
                     .and_then(|ty| defined_types.insert(path, ty));
             });*
         };
@@ -428,7 +526,7 @@ pub fn gen_idl_gen_impl_for_enum(enm: ItemEnum, no_docs: bool) -> TokenStream {
 pub fn gen_idl_gen_impl_for_event(event_strct: &ItemStruct) -> TokenStream {
     fn parse_fields(
         fields: &syn::FieldsNamed,
-    ) -> Result<(Vec<TokenStream>, Vec<&syn::TypePath>), ()> {
+    ) -> Result<(Vec<TokenStream>, Vec<syn::TypePath>), ()> {
         let (fields, defined) = fields
             .named
             .iter()
@@ -439,7 +537,7 @@ pub fn gen_idl_gen_impl_for_event(event_strct: &ItemStruct) -> TokenStream {
         let defined = defined
             .into_iter()
             .flatten()
-            .collect::<Vec<&syn::TypePath>>();
+            .collect::<Vec<syn::TypePath>>();
 
         Ok((fields, defined))
     }
@@ -464,10 +562,10 @@ pub fn gen_idl_gen_impl_for_event(event_strct: &ItemStruct) -> TokenStream {
             };
             let types_ts = quote! {
                 #({
-                    #defined::__anchor_private_insert_idl_defined(defined_types);
+                    <#defined>::__anchor_private_insert_idl_defined(defined_types);
 
-                    let path = #defined::__anchor_private_full_path();
-                    #defined::__anchor_private_gen_idl_type()
+                    let path = <#defined>::__anchor_private_full_path();
+                    <#defined>::__anchor_private_gen_idl_type()
                         .and_then(|ty| defined_types.insert(path, ty));
                 });*
             };
@@ -528,7 +626,7 @@ pub fn gen_idl_gen_impl_for_accounts_strct(
                 (quote!{
                     #idl::IdlAccountItem::IdlAccounts(#idl::IdlAccounts {
                         name: #name.into(),
-                        accounts: #ty::__anchor_private_gen_idl_accounts(accounts, defined_types),
+                        accounts: <#ty>::__anchor_private_gen_idl_accounts(accounts, defined_types),
                     })
                 }, None)
             }
@@ -579,10 +677,10 @@ pub fn gen_idl_gen_impl_for_accounts_strct(
                 defined_types: &mut std::collections::HashMap<String, #idl::IdlTypeDefinition>,
             ) -> Vec<#idl::IdlAccountItem> {
                 #({
-                    #acc_types::__anchor_private_insert_idl_defined(defined_types);
+                    <#acc_types>::__anchor_private_insert_idl_defined(defined_types);
 
-                    let path = #acc_types::__anchor_private_full_path();
-                    #acc_types::__anchor_private_gen_idl_type()
+                    let path = <#acc_types>::__anchor_private_full_path();
+                    <#acc_types>::__anchor_private_gen_idl_type()
                         .and_then(|ty| accounts.insert(path, ty));
 
                 });*
@@ -617,7 +715,7 @@ pub fn gen_idl_print_function_for_program(program: &Program, no_docs: bool) -> T
                         Some(docs) if !no_docs => quote! {Some(vec![#(#docs.into()),*])},
                         _ => quote! {None},
                     };
-                    let (ty, defined) = idl_type_ts_from_syn_type(&arg.raw_arg.ty)?;
+                    let (ty, defined) = idl_type_ts_from_syn_type(&arg.raw_arg.ty, &vec![])?;
 
                     Ok((quote! {
                         #idl::IdlField {
@@ -629,9 +727,9 @@ pub fn gen_idl_print_function_for_program(program: &Program, no_docs: bool) -> T
                 })
                 .collect::<Result<Vec<_>, ()>>()?
                 .into_iter()
-                .unzip::<TokenStream, Option<&syn::TypePath>, Vec<TokenStream>, Vec<Option<&syn::TypePath>>>();
+                .unzip::<TokenStream, Vec<syn::TypePath>, Vec<TokenStream>, Vec<Vec<syn::TypePath>>>();
 
-            let returns = match idl_type_ts_from_syn_type(&ix.returns.ty) {
+            let returns = match idl_type_ts_from_syn_type(&ix.returns.ty, &vec![]) {
                 Ok((ty, def)) => {
                     defined.push(def);
                     quote!{ Some(#ty) }
@@ -652,12 +750,12 @@ pub fn gen_idl_print_function_for_program(program: &Program, no_docs: bool) -> T
                 }
             }, defined))
         })
-        .unzip::<TokenStream, Vec<Option<&syn::TypePath>>, Vec<TokenStream>, Vec<Vec<Option<&syn::TypePath>>>>();
+        .unzip::<TokenStream, Vec<Vec<syn::TypePath>>, Vec<TokenStream>, Vec<Vec<Vec<syn::TypePath>>>>();
     let defined = defined
         .into_iter()
         .flatten()
         .flatten()
-        .collect::<Vec<&syn::TypePath>>();
+        .collect::<Vec<syn::TypePath>>();
 
     let name = program.name.to_string();
     let docs = match &program.docs {
@@ -674,10 +772,10 @@ pub fn gen_idl_print_function_for_program(program: &Program, no_docs: bool) -> T
                 std::collections::HashMap::new();
 
             #({
-                #defined::__anchor_private_insert_idl_defined(&mut defined_types);
+                <#defined>::__anchor_private_insert_idl_defined(&mut defined_types);
 
-                let path = #defined::__anchor_private_full_path();
-                #defined::__anchor_private_gen_idl_type()
+                let path = <#defined>::__anchor_private_full_path();
+                <#defined>::__anchor_private_gen_idl_type()
                     .and_then(|ty| defined_types.insert(path, ty));
             });*
 
@@ -742,7 +840,7 @@ pub fn gen_idl_print_function_for_constant(item: &syn::ItemConst) -> TokenStream
     let name = item.ident.to_string();
     let expr = &item.expr;
 
-    let impl_ts = match idl_type_ts_from_syn_type(&item.ty) {
+    let impl_ts = match idl_type_ts_from_syn_type(&item.ty, &vec![]) {
         Ok((ty, _)) => quote! {
             let value = format!("{}", #expr);
 
