@@ -1,5 +1,6 @@
 [features]
-seeds = false
+seeds = true
+
 [programs.localnet]
 idl = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
 idl_2 = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"

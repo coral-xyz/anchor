@@ -20,6 +20,13 @@ pub fn get_no_docs() -> bool {
         .unwrap_or(false)
 }
 
+#[inline(always)]
+pub fn get_seeds_feature() -> bool {
+    std::option_env!("ANCHOR_IDL_GEN_SEEDS_FEATURE")
+        .map(|val| val == "TRUE")
+        .unwrap_or(false)
+}
+
 // Returns TokenStream for IdlType enum and the syn::TypePath for the defined
 // type if any.
 // Returns Err when the type wasn't parsed successfully.
@@ -643,7 +650,7 @@ pub fn gen_idl_gen_impl_for_accounts_strct(
                     _ => quote! {None},
                 };
                 let pda = quote!{None}; // TODO
-                let relations = quote!{Vec::new()}; // TODO
+                let relations = super::parse::relations::parse(acc, get_seeds_feature());
 
                 let acc_type_path = match &acc.ty {
                     crate::Ty::Account(ty) => Some(&ty.account_type_path),
@@ -659,7 +666,7 @@ pub fn gen_idl_gen_impl_for_accounts_strct(
                         is_optional: #is_optional,
                         docs: #docs,
                         pda: #pda,
-                        relations: #relations,
+                        relations: vec![#(#relations.into()),*],
                     })
                 }, acc_type_path)
             }

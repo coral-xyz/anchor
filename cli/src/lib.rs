@@ -2237,6 +2237,9 @@ fn idl_parse(
 fn idl_build(no_docs: bool) -> Result<()> {
     let no_docs = if no_docs { "TRUE" } else { "FALSE" };
 
+    let cfg = Config::discover(&ConfigOverride::default())?.expect("Not in workspace.");
+    let seeds_feature = if cfg.features.seeds { "TRUE" } else { "FALSE" };
+
     let exit = std::process::Command::new("cargo")
         .args([
             "test",
@@ -2248,6 +2251,7 @@ fn idl_build(no_docs: bool) -> Result<()> {
             "--quiet",
         ])
         .env("ANCHOR_IDL_GEN_NO_DOCS", no_docs)
+        .env("ANCHOR_IDL_GEN_SEEDS_FEATURE", seeds_feature)
         .stderr(Stdio::inherit())
         .output()
         .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
