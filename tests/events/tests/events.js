@@ -1,4 +1,5 @@
 const anchor = require("@coral-xyz/anchor");
+const { bs58, base64 } = require("@coral-xyz/anchor/dist/cjs/utils/bytes");
 const { assert } = require("chai");
 
 describe("events", () => {
@@ -53,6 +54,34 @@ describe("events", () => {
     assert.isAbove(slotTwo, 0);
     assert.strictEqual(eventTwo.data.toNumber(), 6);
     assert.strictEqual(eventTwo.label, "bye");
+  });
+
+  it("Self-CPI events work", async () => {
+    await sleep(200);
+
+    let sendTx = await program.transaction.testEventCpi({
+      accounts: {
+        program: program.programId,
+      },
+    });
+
+    let provider = anchor.getProvider();
+    let connection = provider.connection;
+    let txid = await provider.sendAndConfirm(sendTx, [], {
+      commitment: "confirmed",
+    });
+
+    let tx = await connection.getTransaction(txid, { commitment: "confirmed" });
+
+    let cpiEventData = tx.meta.innerInstructions[0].instructions[0].data;
+    let ixData = bs58.decode(cpiEventData);
+    let eventData = ixData.slice(8);
+
+    let coder = new anchor.BorshEventCoder(program.idl);
+    let event = coder.decode(base64.encode(eventData)).data;
+
+    assert.strictEqual(event.data.toNumber(), 7);
+    assert.strictEqual(event.label, "cpi");
   });
 });
 

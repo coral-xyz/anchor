@@ -2,6 +2,7 @@
 //! subscribed to by a client.
 
 use anchor_lang::prelude::*;
+use anchor_lang::{_emit_cpi_data, _emit_cpi_invoke, emit_cpi};
 
 declare_id!("2dhGsWUzy5YKUsjZdLHLmkNpUDAXkNa9MYWsPc4Ziqzy");
 
@@ -23,6 +24,17 @@ pub mod events {
         });
         Ok(())
     }
+
+    pub fn test_event_cpi(ctx: Context<TestEventCpi>) -> Result<()> {
+        emit_cpi!(
+            MyOtherEvent {
+                data: 7,
+                label: "cpi".to_string(),
+            },
+            &ctx.accounts.program.to_account_info()
+        );
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -30,6 +42,12 @@ pub struct Initialize {}
 
 #[derive(Accounts)]
 pub struct TestEvent {}
+
+#[derive(Accounts)]
+pub struct TestEventCpi<'info> {
+    /// CHECK: this is the program itself
+    program: AccountInfo<'info>,
+}
 
 #[event]
 pub struct MyEvent {
