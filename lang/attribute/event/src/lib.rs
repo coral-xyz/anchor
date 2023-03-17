@@ -81,6 +81,16 @@ pub fn emit(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     })
 }
 
+#[proc_macro]
+pub fn _emit_cpi_data(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let data: proc_macro2::TokenStream = input.into();
+    proc_macro::TokenStream::from(quote! {
+            let __disc: Vec<u8> = crate::event::EVENT_IX_TAG_LE.to_vec();
+            let __inner_data: &Vec<u8> = &anchor_lang::Event::data(&#data);
+            let __ix_data: Vec<u8> = __disc.iter().chain(__inner_data.iter()).cloned().collect();
+    })
+}
+
 // EventIndex is a marker macro. It functionally does nothing other than
 // allow one to mark fields with the `#[index]` inert attribute, which is
 // used to add metadata to IDLs.

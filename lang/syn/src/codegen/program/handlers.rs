@@ -91,6 +91,16 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         }
     };
 
+    let non_inlined_event: proc_macro2::TokenStream = {
+        quote! {
+            #[inline(never)]
+            #[cfg(not(feature = "no-cpi-events"))]
+            pub fn __event_dispatch(program_id: &Pubkey, accounts: &[AccountInfo], event_data: &[u8]) -> anchor_lang::Result<()> {
+                Ok(())
+            }
+        }
+    };
+
     let non_inlined_handlers: Vec<proc_macro2::TokenStream> = program
         .ixs
         .iter()
@@ -173,7 +183,12 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 #idl_accounts_and_functions
             }
 
+            /// __idl mod defines handler for self-cpi based event logging
+            pub mod __events {
+                use super::*;
 
+                #non_inlined_event
+            }
 
             /// __global mod defines wrapped handlers for global instructions.
             pub mod __global {

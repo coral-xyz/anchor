@@ -78,6 +78,18 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         Err(anchor_lang::error::ErrorCode::IdlInstructionStub.into())
                     }
                 }
+                anchor_lang::event::EVENT_IX_TAG_LE => {
+                   // If the method identifier is the event tag, then execute an event cpi
+                   if cfg!(not(feature = "no-cpi-event")) {
+                        __private::__events::__event_dispatch(
+                            program_id,
+                            accounts,
+                            &ix_data,
+                        )
+                    } else {
+                        Err(anchor_lang::error::ErrorCode::IdlInstructionStub.into())
+                    }
+                }
                 _ => {
                     #fallback_fn
                 }

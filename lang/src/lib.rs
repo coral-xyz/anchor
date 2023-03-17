@@ -25,7 +25,7 @@ extern crate self as anchor_lang;
 
 use bytemuck::{Pod, Zeroable};
 use solana_program::account_info::AccountInfo;
-use solana_program::instruction::AccountMeta;
+use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::pubkey::Pubkey;
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
@@ -37,6 +37,7 @@ mod bpf_writer;
 mod common;
 pub mod context;
 pub mod error;
+pub mod event;
 #[doc(hidden)]
 pub mod idl;
 pub mod system_program;
@@ -47,7 +48,7 @@ pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::{account, declare_id, zero_copy};
 pub use anchor_attribute_constant::constant;
 pub use anchor_attribute_error::*;
-pub use anchor_attribute_event::{emit, event};
+pub use anchor_attribute_event::{_emit_cpi_data, emit, event};
 pub use anchor_attribute_program::program;
 pub use anchor_derive_accounts::Accounts;
 pub use anchor_derive_space::InitSpace;
@@ -191,6 +192,26 @@ pub trait InstructionData: Discriminator + AnchorSerialize {
 /// An event that can be emitted via a Solana log. See [`emit!`](crate::prelude::emit) for an example.
 pub trait Event: AnchorSerialize + AnchorDeserialize + Discriminator {
     fn data(&self) -> Vec<u8>;
+}
+
+/// `emit!()` for an event that is emitted through a CPI
+#[macro_export]
+macro_rules! emit_cpi {
+    ($event:expr, $program_info:expr) => {{
+        let program_info: &AccountInfo = $program_info;
+        _emit_cpi_data!($event);
+        crate::_emit_cpi_invoke(__ix_data, program_info)?;
+    }};
+}
+
+pub fn _emit_cpi_invoke(ix_data: Vec<u8>, program: &AccountInfo) -> Result<()> {
+    let ix: Instruction = Instruction::new_with_bytes(
+        program.key.clone(),
+        ix_data.as_ref(),
+        vec![AccountMeta::new_readonly(*program.key, false)],
+    );
+    solana_program::program::invoke(&ix, &[program.clone()])?;
+    Ok(())
 }
 
 // The serialized event data to be emitted via a Solana log.
