@@ -2,7 +2,7 @@
 //! subscribed to by a client.
 
 use anchor_lang::prelude::*;
-use anchor_lang::{_emit_cpi_data, _emit_cpi_invoke, emit_cpi};
+use anchor_lang::{_emit_cpi_data, emit_cpi};
 
 declare_id!("2dhGsWUzy5YKUsjZdLHLmkNpUDAXkNa9MYWsPc4Ziqzy");
 

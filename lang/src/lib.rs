@@ -25,7 +25,7 @@ extern crate self as anchor_lang;
 
 use bytemuck::{Pod, Zeroable};
 use solana_program::account_info::AccountInfo;
-use solana_program::instruction::{AccountMeta, Instruction};
+use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
@@ -200,18 +200,8 @@ macro_rules! emit_cpi {
     ($event:expr, $program_info:expr) => {{
         let program_info: &AccountInfo = $program_info;
         _emit_cpi_data!($event);
-        crate::_emit_cpi_invoke(__ix_data, program_info)?;
+        anchor_lang::__private::_emit_cpi_invoke(__ix_data, program_info)?;
     }};
-}
-
-pub fn _emit_cpi_invoke(ix_data: Vec<u8>, program: &AccountInfo) -> Result<()> {
-    let ix: Instruction = Instruction::new_with_bytes(
-        program.key.clone(),
-        ix_data.as_ref(),
-        vec![AccountMeta::new_readonly(*program.key, false)],
-    );
-    solana_program::program::invoke(&ix, &[program.clone()])?;
-    Ok(())
 }
 
 // The serialized event data to be emitted via a Solana log.
@@ -354,6 +344,8 @@ pub mod __private {
 
     pub use bytemuck;
 
+    use solana_program::account_info::AccountInfo;
+    use solana_program::instruction::{AccountMeta, Instruction};
     use solana_program::pubkey::Pubkey;
 
     // Used to calculate the maximum between two expressions.
@@ -378,6 +370,17 @@ pub mod __private {
         fn set(input: &Pubkey) -> [u8; 32] {
             input.to_bytes()
         }
+    }
+
+    #[doc(hidden)]
+    pub fn _emit_cpi_invoke(ix_data: Vec<u8>, program: &AccountInfo) -> anchor_lang::Result<()> {
+        let ix: Instruction = Instruction::new_with_bytes(
+            program.key.clone(),
+            ix_data.as_ref(),
+            vec![AccountMeta::new_readonly(*program.key, false)],
+        );
+        solana_program::program::invoke(&ix, &[program.clone()])?;
+        Ok(())
     }
 }
 
