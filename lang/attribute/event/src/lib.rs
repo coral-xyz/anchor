@@ -82,14 +82,35 @@ pub fn emit(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 }
 
 #[proc_macro]
-pub fn _emit_cpi_data(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let data: proc_macro2::TokenStream = input.into();
+pub fn emit_cpi(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // let strct: proc_macro2::TokenStream = input.into();
+    let tuple = parse_macro_input!(input as syn::ExprTuple);
+
+    let elems = tuple.elems;
+    if elems.len() != 2 {
+        panic!("Expected a tuple with exactly two elements.");
+    }
+
+    let first = &elems[0];
+    let second = &elems[1];
+
     proc_macro::TokenStream::from(quote! {
-            let __disc: Vec<u8> = crate::event::EVENT_IX_TAG_LE.to_vec();
-            let __inner_data: &Vec<u8> = &anchor_lang::Event::data(&#data);
-            let __ix_data: Vec<u8> = __disc.iter().chain(__inner_data.iter()).cloned().collect();
+        let program_info: &anchor_lang::solana_program::account_info::AccountInfo = &#first;
+
+        let __disc: Vec<u8> = crate::event::EVENT_IX_TAG_LE.to_vec();
+        let __inner_data: &Vec<u8> = &anchor_lang::Event::data(&#second);
+        let __ix_data: Vec<u8> = __disc.iter().chain(__inner_data.iter()).cloned().collect();
+
+        anchor_lang::__private::_emit_cpi_invoke(__ix_data, program_info)?;
     })
 }
+
+// #[proc_macro]
+// pub fn _emit_cpi_data(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+//     let data: proc_macro2::TokenStream = input.into();
+//     proc_macro::TokenStream::from(quote! {
+//     })
+// }
 
 // EventIndex is a marker macro. It functionally does nothing other than
 // allow one to mark fields with the `#[index]` inert attribute, which is

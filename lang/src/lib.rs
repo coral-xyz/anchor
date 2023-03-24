@@ -48,7 +48,7 @@ pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::{account, declare_id, zero_copy};
 pub use anchor_attribute_constant::constant;
 pub use anchor_attribute_error::*;
-pub use anchor_attribute_event::{_emit_cpi_data, emit, event};
+pub use anchor_attribute_event::{emit, emit_cpi, event};
 pub use anchor_attribute_program::program;
 pub use anchor_derive_accounts::Accounts;
 pub use anchor_derive_space::InitSpace;
@@ -194,16 +194,6 @@ pub trait Event: AnchorSerialize + AnchorDeserialize + Discriminator {
     fn data(&self) -> Vec<u8>;
 }
 
-/// `emit!()` for an event that is emitted through a CPI
-#[macro_export]
-macro_rules! emit_cpi {
-    ($event:expr, $program_info:expr) => {{
-        let program_info: &AccountInfo = $program_info;
-        _emit_cpi_data!($event);
-        anchor_lang::__private::_emit_cpi_invoke(__ix_data, program_info)?;
-    }};
-}
-
 // The serialized event data to be emitted via a Solana log.
 // TODO: remove this on the next major version upgrade.
 #[doc(hidden)]
@@ -298,7 +288,7 @@ impl Key for Pubkey {
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
     pub use super::{
-        _emit_cpi_data, access_control, account, accounts::account::Account,
+        access_control, account, accounts::account::Account,
         accounts::account_loader::AccountLoader, accounts::interface::Interface,
         accounts::interface_account::InterfaceAccount, accounts::program::Program,
         accounts::signer::Signer, accounts::system_account::SystemAccount,
