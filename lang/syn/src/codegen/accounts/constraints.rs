@@ -614,6 +614,7 @@ fn generate_constraint_init_group(
                         ::anchor_spl::associated_token::create(cpi_ctx)?;
                     }
                     let pa: #ty_decl = #from_account_info_unchecked;
+                    let mint_info = #mint.to_account_info();
                     if #if_needed {
                         if pa.mint != #mint.key() {
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenMint).with_account_name(#name_str).with_pubkeys((pa.mint, #mint.key())));
@@ -622,7 +623,7 @@ fn generate_constraint_init_group(
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenOwner).with_account_name(#name_str).with_pubkeys((pa.owner, #owner.key())));
                         }
 
-                        if pa.key() != ::anchor_spl::associated_token::get_associated_token_address(&#owner.key(), &#mint.key()) {
+                        if pa.key() != ::anchor_spl::associated_token::get_associated_token_address_with_program_id(&#owner.key(), &#mint.key(), *mint_info.owner) {
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountNotAssociatedTokenAccount).with_account_name(#name_str));
                         }
                     }
