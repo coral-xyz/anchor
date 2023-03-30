@@ -334,8 +334,6 @@ pub mod __private {
 
     pub use bytemuck;
 
-    use solana_program::account_info::AccountInfo;
-    use solana_program::instruction::{AccountMeta, Instruction};
     use solana_program::pubkey::Pubkey;
 
     // Used to calculate the maximum between two expressions.
@@ -360,17 +358,6 @@ pub mod __private {
         fn set(input: &Pubkey) -> [u8; 32] {
             input.to_bytes()
         }
-    }
-
-    #[doc(hidden)]
-    pub fn _emit_cpi_invoke(ix_data: Vec<u8>, program: &AccountInfo) -> anchor_lang::Result<()> {
-        let ix: Instruction = Instruction::new_with_bytes(
-            program.key.clone(),
-            ix_data.as_ref(),
-            vec![AccountMeta::new_readonly(*program.key, false)],
-        );
-        solana_program::program::invoke(&ix, &[program.clone()])?;
-        Ok(())
     }
 }
 
