@@ -170,7 +170,7 @@ pub struct ProxyCreateAssociatedTokenAccount<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
     #[account(
-        init,
+        init_if_needed,
         associated_token::mint = mint,
         payer = authority,
         associated_token::authority = authority,
