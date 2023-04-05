@@ -616,7 +616,7 @@ fn generate_constraint_init_group(
                     let pa: #ty_decl = #from_account_info_unchecked;
                     if #if_needed {
                         let mint_program_id = {
-                            let mint_account = #mint.to_account_info();
+                            let mint_account: &AccountInfo = #mint.as_ref();
                             mint_account.owner
                         };
 
