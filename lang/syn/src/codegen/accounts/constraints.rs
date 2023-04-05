@@ -898,7 +898,7 @@ fn generate_constraint_associated_token(
         {
             #optional_checks
             let mint_program_id = {
-              let mint_account = #spl_token_mint_address.to_account_info();
+              let mint_account: &AccountInfo = #spl_token_mint_address.as_ref();
               mint_account.owner
             };
             let my_owner = #name.owner;
