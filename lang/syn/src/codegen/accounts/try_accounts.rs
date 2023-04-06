@@ -66,13 +66,23 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                             }
                         }
                     } else {
-                        let name = f.ident.to_string();
-                        let typed_name = f.typed_ident();
-                        quote! {
-                            #[cfg(feature = "anchor-debug")]
-                            ::solana_program::log::sol_log(stringify!(#typed_name));
-                            let #typed_name = anchor_lang::Accounts::try_accounts(program_id, accounts, ix_data, __bumps, __reallocs)
-                                .map_err(|e| e.with_account_name(#name))?;
+                        if f.is_reference {
+                            let name = &f.ident;
+                            quote! {
+                                #[cfg(feature = "anchor-debug")]
+                                ::solana_program::log::sol_log(stringify!(#name));
+                                let #name = &accounts[0];
+                                *accounts = &accounts[1..];
+                            }
+                        }else {
+                            let name = f.ident.to_string();
+                            let typed_name = f.typed_ident();
+                            quote! {
+                                #[cfg(feature = "anchor-debug")]
+                                ::solana_program::log::sol_log(stringify!(#typed_name));
+                                let #typed_name = anchor_lang::Accounts::try_accounts(program_id, accounts, ix_data, __bumps, __reallocs)
+                                    .map_err(|e| e.with_account_name(#name))?;
+                            }
                         }
                     }
                 }
@@ -119,7 +129,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             #[inline(never)]
             fn try_accounts(
                 program_id: &anchor_lang::solana_program::pubkey::Pubkey,
-                accounts: &mut &[anchor_lang::solana_program::account_info::AccountInfo<'info>],
+                accounts: &mut &'info [anchor_lang::solana_program::account_info::AccountInfo<'info>],
                 ix_data: &[u8],
                 __bumps: &mut std::collections::BTreeMap<String, u8>,
                 __reallocs: &mut std::collections::BTreeSet<anchor_lang::solana_program::pubkey::Pubkey>,

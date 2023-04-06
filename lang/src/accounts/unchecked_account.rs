@@ -12,10 +12,10 @@ use std::ops::Deref;
 /// Explicit wrapper for AccountInfo types to emphasize
 /// that no checks are performed
 #[derive(Debug, Clone)]
-pub struct UncheckedAccount<'info>(AccountInfo<'info>);
+pub struct UncheckedAccount<'info>(&'info AccountInfo<'info>);
 
 impl<'info> UncheckedAccount<'info> {
-    pub fn try_from(acc_info: AccountInfo<'info>) -> Self {
+    pub fn try_from(acc_info: &'info AccountInfo<'info>) -> Self {
         Self(acc_info)
     }
 }
@@ -23,7 +23,7 @@ impl<'info> UncheckedAccount<'info> {
 impl<'info> Accounts<'info> for UncheckedAccount<'info> {
     fn try_accounts(
         _program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
+        accounts: &mut &'info [AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
         _reallocs: &mut BTreeSet<Pubkey>,
@@ -33,7 +33,7 @@ impl<'info> Accounts<'info> for UncheckedAccount<'info> {
         }
         let account = &accounts[0];
         *accounts = &accounts[1..];
-        Ok(UncheckedAccount(account.clone()))
+        Ok(UncheckedAccount(account))
     }
 }
 

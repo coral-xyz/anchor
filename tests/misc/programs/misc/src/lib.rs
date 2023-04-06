@@ -350,4 +350,8 @@ pub mod misc {
     pub fn test_associated_constraint(_ctx: Context<TestAssociatedToken>) -> Result<()> {
         Ok(())
     }
+
+    pub fn test_accounts_by_ref(_ctx: Context<TestAccountsByRef>) -> Result<()> {
+        Ok(())
+    }
 }

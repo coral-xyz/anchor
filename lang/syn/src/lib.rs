@@ -222,6 +222,7 @@ pub struct Field {
     pub constraints: ConstraintGroup,
     pub ty: Ty,
     pub is_optional: bool,
+    pub is_reference: bool,
     /// IDL Doc comment
     pub docs: Option<Vec<String>>,
 }

@@ -37,7 +37,7 @@ impl<'info> Accounts<'info> for SystemAccount<'info> {
     #[inline(never)]
     fn try_accounts(
         _program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
+        accounts: &mut &'info [AccountInfo<'info>],
         _ix_data: &[u8],
         _bumps: &mut BTreeMap<String, u8>,
         _reallocs: &mut BTreeSet<Pubkey>,

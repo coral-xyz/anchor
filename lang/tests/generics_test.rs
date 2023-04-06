@@ -15,6 +15,7 @@ where
     U: BorshSerialize + BorshDeserialize + Default + Clone,
 {
     pub non_generic: AccountInfo<'info>,
+    pub reference: &'info AccountInfo<'info>,
     pub generic: Account<'info, T>,
 
     pub const_generic: AccountLoader<'info, FooAccount<N>>,

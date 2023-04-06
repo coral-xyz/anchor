@@ -577,3 +577,9 @@ pub struct TestAssociatedToken<'info> {
     /// CHECK: ignore
     pub authority: AccountInfo<'info>,
 }
+
+#[derive(Accounts)]
+pub struct TestAccountsByRef<'info> {
+    pub account1: &'info AccountInfo<'info>,
+    pub account2: UncheckedAccount<'info>,
+}

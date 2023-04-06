@@ -249,18 +249,19 @@ pub fn parse_account_field(f: &syn::Field) -> ParseResult<AccountField> {
     let docs = docs::parse(&f.attrs);
     let account_field = match is_field_primitive(f)? {
         true => {
-            let (ty, is_optional) = parse_ty(f)?;
+            let (ty, is_optional, is_reference) = parse_ty(f)?;
             let account_constraints = constraints::parse(f, Some(&ty))?;
             AccountField::Field(Field {
                 ident,
                 ty,
                 is_optional,
+                is_reference,
                 constraints: account_constraints,
                 docs,
             })
         }
         false => {
-            let (_, optional, _) = ident_string(f)?;
+            let (_, optional, _, _) = ident_string(f)?;
             if optional {
                 return Err(ParseError::new(
                     f.ty.span(),
@@ -298,8 +299,8 @@ fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
     Ok(r)
 }
 
-fn parse_ty(f: &syn::Field) -> ParseResult<(Ty, bool)> {
-    let (ident, optional, path) = ident_string(f)?;
+fn parse_ty(f: &syn::Field) -> ParseResult<(Ty, bool, bool)> {
+    let (ident, optional, reference, path) = ident_string(f)?;
     let ty = match ident.as_str() {
         "Sysvar" => Ty::Sysvar(parse_sysvar(&path)?),
         "AccountInfo" => Ty::AccountInfo,
@@ -315,7 +316,7 @@ fn parse_ty(f: &syn::Field) -> ParseResult<(Ty, bool)> {
         _ => return Err(ParseError::new(f.ty.span(), "invalid account type given")),
     };
 
-    Ok((ty, optional))
+    Ok((ty, optional, reference))
 }
 
 fn option_to_inner_path(path: &Path) -> ParseResult<Path> {
@@ -343,11 +344,20 @@ fn option_to_inner_path(path: &Path) -> ParseResult<Path> {
     }
 }
 
-fn ident_string(f: &syn::Field) -> ParseResult<(String, bool, Path)> {
-    let mut path = match &f.ty {
+fn ident_string(f: &syn::Field) -> ParseResult<(String, bool, bool, Path)> {
+    let mut field_ty = &f.ty;
+    let mut reference = false;
+
+    if let syn::Type::Reference(ty_ref) = field_ty {
+        reference = true;
+        field_ty = ty_ref.elem.as_ref();
+    }
+
+    let mut path = match field_ty {
         syn::Type::Path(ty_path) => ty_path.path.clone(),
         _ => return Err(ParseError::new(f.ty.span(), "invalid account type given")),
     };
+
     let mut optional = false;
     if parser::tts_to_string(&path)
         .replace(' ', "")
@@ -360,13 +370,13 @@ fn ident_string(f: &syn::Field) -> ParseResult<(String, bool, Path)> {
         .replace(' ', "")
         .starts_with("Box<Account<")
     {
-        return Ok(("Account".to_string(), optional, path));
+        return Ok(("Account".to_string(), optional, reference, path));
     }
     if parser::tts_to_string(&path)
         .replace(' ', "")
         .starts_with("Box<InterfaceAccount<")
     {
-        return Ok(("InterfaceAccount".to_string(), optional, path));
+        return Ok(("InterfaceAccount".to_string(), optional, reference, path));
     }
     // TODO: allow segmented paths.
     if path.segments.len() != 1 {
@@ -377,7 +387,7 @@ fn ident_string(f: &syn::Field) -> ParseResult<(String, bool, Path)> {
     }
 
     let segments = &path.segments[0];
-    Ok((segments.ident.to_string(), optional, path))
+    Ok((segments.ident.to_string(), optional, reference, path))
 }
 
 fn parse_program_account_loader(path: &syn::Path) -> ParseResult<AccountLoaderTy> {
