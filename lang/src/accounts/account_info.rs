@@ -50,3 +50,37 @@ impl<'info> Key for AccountInfo<'info> {
         *self.key
     }
 }
+
+impl<'info> Accounts<'info> for &'info AccountInfo<'info> {
+    fn try_accounts(
+        _program_id: &Pubkey,
+        accounts: &mut &'info [AccountInfo<'info>],
+        _ix_data: &[u8],
+        _bumps: &mut BTreeMap<String, u8>,
+        _reallocs: &mut BTreeSet<Pubkey>,
+    ) -> Result<Self> {
+        if accounts.is_empty() {
+            return Err(ErrorCode::AccountNotEnoughKeys.into());
+        }
+        let account = &accounts[0];
+        *accounts = &accounts[1..];
+        Ok(account)
+    }
+}
+
+impl<'info> ToAccountMetas for &'info AccountInfo<'info> {
+    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
+        let is_signer = is_signer.unwrap_or(self.is_signer);
+        let meta = match self.is_writable {
+            false => AccountMeta::new_readonly(*self.key, is_signer),
+            true => AccountMeta::new(*self.key, is_signer),
+        };
+        vec![meta]
+    }
+}
+
+impl<'info> ToAccountInfos<'info> for &'info AccountInfo<'info> {
+    fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
+        vec![(**self).clone()]
+    }
+}

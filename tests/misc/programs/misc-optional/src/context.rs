@@ -564,3 +564,9 @@ pub struct TestAssociatedToken<'info> {
     pub mint: Option<Account<'info, Mint>>,
     pub authority: Option<AccountInfo<'info>>,
 }
+
+#[derive(Accounts)]
+pub struct TestAccountsByRef<'info> {
+    pub account1: Option<&'info AccountInfo<'info>>,
+    pub account2: Option<UncheckedAccount<'info>>,
+}

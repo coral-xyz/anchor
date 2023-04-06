@@ -240,9 +240,17 @@ impl Field {
         let account_ty = self.account_ty();
         let container_ty = self.container_ty();
         let inner_ty = match &self.ty {
-            Ty::AccountInfo => quote! {
-                AccountInfo
-            },
+            Ty::AccountInfo => {
+                if self.is_reference {
+                    quote! {
+                        &AccountInfo
+                    }
+                } else {
+                    quote! {
+                        AccountInfo
+                    }
+                }
+            }
             Ty::UncheckedAccount => quote! {
                 UncheckedAccount
             },
@@ -319,9 +327,15 @@ impl Field {
             },
         };
         match &self.ty {
-            Ty::AccountInfo => quote! { #field.to_account_info() },
+            Ty::AccountInfo => {
+                if self.is_reference {
+                    quote! { #field }
+                } else {
+                    quote! { #field.to_account_info() }
+                }
+            }
             Ty::UncheckedAccount => {
-                quote! { UncheckedAccount::try_from(#field.to_account_info()) }
+                quote! { UncheckedAccount::try_from(#field) }
             }
             Ty::Account(AccountTy { boxed, .. })
             | Ty::InterfaceAccount(InterfaceAccountTy { boxed, .. }) => {

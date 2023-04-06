@@ -58,7 +58,7 @@ impl<'info> AccountsExit<'info> for UncheckedAccount<'info> {}
 
 impl<'info> AsRef<AccountInfo<'info>> for UncheckedAccount<'info> {
     fn as_ref(&self) -> &AccountInfo<'info> {
-        &self.0
+        self.0
     }
 }
 
@@ -66,7 +66,7 @@ impl<'info> Deref for UncheckedAccount<'info> {
     type Target = AccountInfo<'info>;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        self.0
     }
 }
 

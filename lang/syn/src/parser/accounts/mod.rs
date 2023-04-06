@@ -319,7 +319,7 @@ fn parse_ty(f: &syn::Field) -> ParseResult<(Ty, bool, bool)> {
     Ok((ty, optional, reference))
 }
 
-fn option_to_inner_path(path: &Path) -> ParseResult<Path> {
+fn option_to_inner_path(path: &Path) -> ParseResult<(bool, Path)> {
     let segment_0 = path.segments[0].clone();
     match segment_0.arguments {
         syn::PathArguments::AngleBracketed(args) => {
@@ -329,10 +329,22 @@ fn option_to_inner_path(path: &Path) -> ParseResult<Path> {
                     "can only have one argument in option",
                 ));
             }
-            match &args.args[0] {
-                syn::GenericArgument::Type(syn::Type::Path(ty_path)) => Ok(ty_path.path.clone()),
+
+            let extract_path = |ty: &syn::Type, is_ref: bool| match ty {
+                syn::Type::Path(ty_path) => Ok((is_ref, ty_path.path.clone())),
                 _ => Err(ParseError::new(
-                    args.args[1].span(),
+                    ty.span(),
+                    "invalid type, only path and reference are allowed",
+                )),
+            };
+
+            match &args.args[0] {
+                syn::GenericArgument::Type(ty) => match ty {
+                    syn::Type::Reference(ty_ref) => extract_path(ty_ref.elem.as_ref(), true),
+                    _ => extract_path(ty, false),
+                },
+                _ => Err(ParseError::new(
+                    args.args[0].span(),
                     "first bracket argument must be a lifetime",
                 )),
             }
@@ -363,7 +375,7 @@ fn ident_string(f: &syn::Field) -> ParseResult<(String, bool, bool, Path)> {
         .replace(' ', "")
         .starts_with("Option<")
     {
-        path = option_to_inner_path(&path)?;
+        (reference, path) = option_to_inner_path(&path)?;
         optional = true;
     }
     if parser::tts_to_string(&path)
