@@ -81,6 +81,6 @@ impl<'info> ToAccountMetas for &'info AccountInfo<'info> {
 
 impl<'info> ToAccountInfos<'info> for &'info AccountInfo<'info> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
-        vec![(**self).clone()]
+        vec![(*self).clone()]
     }
 }
