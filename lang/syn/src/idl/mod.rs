@@ -243,33 +243,30 @@ impl std::str::FromStr for IdlType {
             "Vec<u8>" => IdlType::Bytes,
             "String" | "&str" | "&'staticstr" => IdlType::String,
             "Pubkey" => IdlType::PublicKey,
-            _ => match s.to_string().strip_prefix("Option<") {
-                None => match s.to_string().strip_prefix("Vec<") {
-                    None => {
-                        if s.to_string().starts_with('[') {
-                            array_from_str(&s)
-                        } else {
-                            IdlType::Defined(s.to_string())
-                        }
-                    }
-                    Some(inner) => {
-                        let inner_ty = Self::from_str(
-                            inner
-                                .strip_suffix('>')
-                                .ok_or_else(|| anyhow::anyhow!("Invalid option"))?,
-                        )?;
-                        IdlType::Vec(Box::new(inner_ty))
-                    }
-                },
-                Some(inner) => {
+            _ => {
+                if let Some(inner) = s.strip_prefix("Option<") {
                     let inner_ty = Self::from_str(
                         inner
                             .strip_suffix('>')
                             .ok_or_else(|| anyhow::anyhow!("Invalid option"))?,
                     )?;
                     IdlType::Option(Box::new(inner_ty))
+                } else if let Some(inner) = s.strip_prefix("Vec<") {
+                    let inner_ty = Self::from_str(
+                        inner
+                            .strip_suffix('>')
+                            .ok_or_else(|| anyhow::anyhow!("Invalid option"))?,
+                    )?;
+                    IdlType::Vec(Box::new(inner_ty))
+                } else if s.starts_with('[') {
+                    array_from_str(&s)
+                } else {
+                    // Make sure that we remove generics from the type name.
+                    // For example, that we convert `MyStruct<T>` to `MyStruct`.
+                    let s = s.split('<').next().unwrap().to_string();
+                    IdlType::Defined(s)
                 }
-            },
+            }
         };
         Ok(r)
     }
@@ -326,5 +323,29 @@ mod tests {
             IdlType::from_str("Vec<bool>").unwrap(),
             IdlType::Vec(Box::new(IdlType::Bool))
         )
+    }
+
+    #[test]
+    fn defined() {
+        assert_eq!(
+            IdlType::from_str("MyStruct").unwrap(),
+            IdlType::Defined("MyStruct".to_string())
+        );
+    }
+
+    #[test]
+    fn defined_with_generics() {
+        assert_eq!(
+            IdlType::from_str("MyStruct<T>").unwrap(),
+            IdlType::Defined("MyStruct".to_string())
+        );
+        assert_eq!(
+            IdlType::from_str("MyStruct<T, U>").unwrap(),
+            IdlType::Defined("MyStruct".to_string())
+        );
+        assert_eq!(
+            IdlType::from_str("MyStruct<T, U, const V: usize>").unwrap(),
+            IdlType::Defined("MyStruct".to_string())
+        );
     }
 }
