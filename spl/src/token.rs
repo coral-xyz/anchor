@@ -349,110 +349,110 @@ pub fn sync_native<'info>(ctx: CpiContext<'_, '_, '_, 'info, SyncNative<'info>>)
 
 #[derive(Accounts)]
 pub struct Transfer<'info> {
-    pub from: AccountInfo<'info>,
-    pub to: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub from: &'info AccountInfo<'info>,
+    pub to: &'info AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct TransferChecked<'info> {
-    pub from: AccountInfo<'info>,
-    pub mint: AccountInfo<'info>,
-    pub to: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub from: &'info AccountInfo<'info>,
+    pub mint: &'info AccountInfo<'info>,
+    pub to: &'info AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct MintTo<'info> {
-    pub mint: AccountInfo<'info>,
-    pub to: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub mint: &'info AccountInfo<'info>,
+    pub to: &'info AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct Burn<'info> {
-    pub mint: AccountInfo<'info>,
-    pub from: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub mint: &'info AccountInfo<'info>,
+    pub from: &'info AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct Approve<'info> {
-    pub to: AccountInfo<'info>,
-    pub delegate: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub to: &'info AccountInfo<'info>,
+    pub delegate: &'info AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct ApproveChecked<'info> {
-    pub to: AccountInfo<'info>,
-    pub mint: AccountInfo<'info>,
-    pub delegate: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub to: &'info AccountInfo<'info>,
+    pub mint: &'info AccountInfo<'info>,
+    pub delegate: &'info AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct Revoke<'info> {
-    pub source: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub source: &'info AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct InitializeAccount<'info> {
-    pub account: AccountInfo<'info>,
-    pub mint: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
-    pub rent: AccountInfo<'info>,
+    pub account: &'info AccountInfo<'info>,
+    pub mint: &'info AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
+    pub rent: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct InitializeAccount3<'info> {
-    pub account: AccountInfo<'info>,
-    pub mint: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub account: &'info AccountInfo<'info>,
+    pub mint: &'info AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct CloseAccount<'info> {
-    pub account: AccountInfo<'info>,
-    pub destination: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub account: &'info AccountInfo<'info>,
+    pub destination: &'info AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct FreezeAccount<'info> {
-    pub account: AccountInfo<'info>,
-    pub mint: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub account: &'info AccountInfo<'info>,
+    pub mint: &'info AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct ThawAccount<'info> {
-    pub account: AccountInfo<'info>,
-    pub mint: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub account: &'info AccountInfo<'info>,
+    pub mint: &'info AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct InitializeMint<'info> {
-    pub mint: AccountInfo<'info>,
-    pub rent: AccountInfo<'info>,
+    pub mint: &'info AccountInfo<'info>,
+    pub rent: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct InitializeMint2<'info> {
-    pub mint: AccountInfo<'info>,
+    pub mint: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct SetAuthority<'info> {
-    pub current_authority: AccountInfo<'info>,
-    pub account_or_mint: AccountInfo<'info>,
+    pub current_authority: &'info AccountInfo<'info>,
+    pub account_or_mint: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct SyncNative<'info> {
-    pub account: AccountInfo<'info>,
+    pub account: &'info AccountInfo<'info>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]

@@ -45,7 +45,7 @@ mod tests {
     #[derive(Accounts)]
     pub struct Test<'info> {
         #[account(signer)]
-        test: AccountInfo<'info>,
+        test: &'info AccountInfo<'info>,
     }
 
     #[test]

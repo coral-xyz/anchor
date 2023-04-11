@@ -22,9 +22,9 @@ pub fn advance_nonce_account<'info>(
     crate::solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.nonce,
-            ctx.accounts.recent_blockhashes,
-            ctx.accounts.authorized,
+            ctx.accounts.nonce.to_owned(),
+            ctx.accounts.recent_blockhashes.to_owned(),
+            ctx.accounts.authorized.to_owned(),
         ],
         ctx.signer_seeds,
     )
@@ -33,9 +33,9 @@ pub fn advance_nonce_account<'info>(
 
 #[derive(Accounts)]
 pub struct AdvanceNonceAccount<'info> {
-    pub nonce: AccountInfo<'info>,
-    pub authorized: AccountInfo<'info>,
-    pub recent_blockhashes: AccountInfo<'info>,
+    pub nonce: &'info AccountInfo<'info>,
+    pub authorized: &'info AccountInfo<'info>,
+    pub recent_blockhashes: &'info AccountInfo<'info>,
 }
 
 pub fn allocate<'info>(
@@ -48,7 +48,7 @@ pub fn allocate<'info>(
     );
     crate::solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.account_to_allocate],
+        &[ctx.accounts.account_to_allocate.to_owned()],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -56,7 +56,7 @@ pub fn allocate<'info>(
 
 #[derive(Accounts)]
 pub struct Allocate<'info> {
-    pub account_to_allocate: AccountInfo<'info>,
+    pub account_to_allocate: &'info AccountInfo<'info>,
 }
 
 pub fn allocate_with_seed<'info>(
@@ -74,7 +74,10 @@ pub fn allocate_with_seed<'info>(
     );
     crate::solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.account_to_allocate, ctx.accounts.base],
+        &[
+            ctx.accounts.account_to_allocate.to_owned(),
+            ctx.accounts.base.to_owned(),
+        ],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -82,8 +85,8 @@ pub fn allocate_with_seed<'info>(
 
 #[derive(Accounts)]
 pub struct AllocateWithSeed<'info> {
-    pub account_to_allocate: AccountInfo<'info>,
-    pub base: AccountInfo<'info>,
+    pub account_to_allocate: &'info AccountInfo<'info>,
+    pub base: &'info AccountInfo<'info>,
 }
 
 pub fn assign<'info>(
@@ -96,7 +99,7 @@ pub fn assign<'info>(
     );
     crate::solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.account_to_assign],
+        &[ctx.accounts.account_to_assign.to_owned()],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -104,7 +107,7 @@ pub fn assign<'info>(
 
 #[derive(Accounts)]
 pub struct Assign<'info> {
-    pub account_to_assign: AccountInfo<'info>,
+    pub account_to_assign: &'info AccountInfo<'info>,
 }
 
 pub fn assign_with_seed<'info>(
@@ -120,7 +123,10 @@ pub fn assign_with_seed<'info>(
     );
     crate::solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.account_to_assign, ctx.accounts.base],
+        &[
+            ctx.accounts.account_to_assign.to_owned(),
+            ctx.accounts.base.to_owned(),
+        ],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -128,8 +134,8 @@ pub fn assign_with_seed<'info>(
 
 #[derive(Accounts)]
 pub struct AssignWithSeed<'info> {
-    pub account_to_assign: AccountInfo<'info>,
-    pub base: AccountInfo<'info>,
+    pub account_to_assign: &'info AccountInfo<'info>,
+    pub base: &'info AccountInfo<'info>,
 }
 
 pub fn authorize_nonce_account<'info>(
@@ -143,7 +149,10 @@ pub fn authorize_nonce_account<'info>(
     );
     crate::solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.nonce, ctx.accounts.authorized],
+        &[
+            ctx.accounts.nonce.to_owned(),
+            ctx.accounts.authorized.to_owned(),
+        ],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -151,8 +160,8 @@ pub fn authorize_nonce_account<'info>(
 
 #[derive(Accounts)]
 pub struct AuthorizeNonceAccount<'info> {
-    pub nonce: AccountInfo<'info>,
-    pub authorized: AccountInfo<'info>,
+    pub nonce: &'info AccountInfo<'info>,
+    pub authorized: &'info AccountInfo<'info>,
 }
 
 pub fn create_account<'info>(
@@ -170,7 +179,7 @@ pub fn create_account<'info>(
     );
     crate::solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.from, ctx.accounts.to],
+        &[ctx.accounts.from.to_owned(), ctx.accounts.to.to_owned()],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -178,8 +187,8 @@ pub fn create_account<'info>(
 
 #[derive(Accounts)]
 pub struct CreateAccount<'info> {
-    pub from: AccountInfo<'info>,
-    pub to: AccountInfo<'info>,
+    pub from: &'info AccountInfo<'info>,
+    pub to: &'info AccountInfo<'info>,
 }
 
 pub fn create_account_with_seed<'info>(
@@ -200,7 +209,11 @@ pub fn create_account_with_seed<'info>(
     );
     crate::solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.from, ctx.accounts.to, ctx.accounts.base],
+        &[
+            ctx.accounts.from.to_owned(),
+            ctx.accounts.to.to_owned(),
+            ctx.accounts.base.to_owned(),
+        ],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -208,9 +221,9 @@ pub fn create_account_with_seed<'info>(
 
 #[derive(Accounts)]
 pub struct CreateAccountWithSeed<'info> {
-    pub from: AccountInfo<'info>,
-    pub to: AccountInfo<'info>,
-    pub base: AccountInfo<'info>,
+    pub from: &'info AccountInfo<'info>,
+    pub to: &'info AccountInfo<'info>,
+    pub base: &'info AccountInfo<'info>,
 }
 
 pub fn create_nonce_account<'info>(
@@ -226,16 +239,16 @@ pub fn create_nonce_account<'info>(
     );
     crate::solana_program::program::invoke_signed(
         &ixs[0],
-        &[ctx.accounts.from, ctx.accounts.nonce.clone()],
+        &[ctx.accounts.from.to_owned(), ctx.accounts.nonce.to_owned()],
         ctx.signer_seeds,
     )?;
 
     crate::solana_program::program::invoke_signed(
         &ixs[1],
         &[
-            ctx.accounts.nonce,
-            ctx.accounts.recent_blockhashes,
-            ctx.accounts.rent,
+            ctx.accounts.nonce.to_owned(),
+            ctx.accounts.recent_blockhashes.to_owned(),
+            ctx.accounts.rent.to_owned(),
         ],
         ctx.signer_seeds,
     )
@@ -244,10 +257,10 @@ pub fn create_nonce_account<'info>(
 
 #[derive(Accounts)]
 pub struct CreateNonceAccount<'info> {
-    pub from: AccountInfo<'info>,
-    pub nonce: AccountInfo<'info>,
-    pub recent_blockhashes: AccountInfo<'info>,
-    pub rent: AccountInfo<'info>,
+    pub from: &'info AccountInfo<'info>,
+    pub nonce: &'info AccountInfo<'info>,
+    pub recent_blockhashes: &'info AccountInfo<'info>,
+    pub rent: &'info AccountInfo<'info>,
 }
 
 pub fn create_nonce_account_with_seed<'info>(
@@ -267,9 +280,9 @@ pub fn create_nonce_account_with_seed<'info>(
     crate::solana_program::program::invoke_signed(
         &ixs[0],
         &[
-            ctx.accounts.from,
-            ctx.accounts.nonce.clone(),
-            ctx.accounts.base,
+            ctx.accounts.from.to_owned(),
+            ctx.accounts.nonce.to_owned(),
+            ctx.accounts.base.to_owned(),
         ],
         ctx.signer_seeds,
     )?;
@@ -277,9 +290,9 @@ pub fn create_nonce_account_with_seed<'info>(
     crate::solana_program::program::invoke_signed(
         &ixs[1],
         &[
-            ctx.accounts.nonce,
-            ctx.accounts.recent_blockhashes,
-            ctx.accounts.rent,
+            ctx.accounts.nonce.to_owned(),
+            ctx.accounts.recent_blockhashes.to_owned(),
+            ctx.accounts.rent.to_owned(),
         ],
         ctx.signer_seeds,
     )
@@ -288,11 +301,11 @@ pub fn create_nonce_account_with_seed<'info>(
 
 #[derive(Accounts)]
 pub struct CreateNonceAccountWithSeed<'info> {
-    pub from: AccountInfo<'info>,
-    pub nonce: AccountInfo<'info>,
-    pub base: AccountInfo<'info>,
-    pub recent_blockhashes: AccountInfo<'info>,
-    pub rent: AccountInfo<'info>,
+    pub from: &'info AccountInfo<'info>,
+    pub nonce: &'info AccountInfo<'info>,
+    pub base: &'info AccountInfo<'info>,
+    pub recent_blockhashes: &'info AccountInfo<'info>,
+    pub rent: &'info AccountInfo<'info>,
 }
 
 pub fn transfer<'info>(
@@ -306,7 +319,7 @@ pub fn transfer<'info>(
     );
     crate::solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.from, ctx.accounts.to],
+        &[ctx.accounts.from.to_owned(), ctx.accounts.to.to_owned()],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -314,8 +327,8 @@ pub fn transfer<'info>(
 
 #[derive(Accounts)]
 pub struct Transfer<'info> {
-    pub from: AccountInfo<'info>,
-    pub to: AccountInfo<'info>,
+    pub from: &'info AccountInfo<'info>,
+    pub to: &'info AccountInfo<'info>,
 }
 
 pub fn transfer_with_seed<'info>(
@@ -334,7 +347,11 @@ pub fn transfer_with_seed<'info>(
     );
     crate::solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.from, ctx.accounts.base, ctx.accounts.to],
+        &[
+            ctx.accounts.from.to_owned(),
+            ctx.accounts.base.to_owned(),
+            ctx.accounts.to.to_owned(),
+        ],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -342,9 +359,9 @@ pub fn transfer_with_seed<'info>(
 
 #[derive(Accounts)]
 pub struct TransferWithSeed<'info> {
-    pub from: AccountInfo<'info>,
-    pub base: AccountInfo<'info>,
-    pub to: AccountInfo<'info>,
+    pub from: &'info AccountInfo<'info>,
+    pub base: &'info AccountInfo<'info>,
+    pub to: &'info AccountInfo<'info>,
 }
 
 pub fn withdraw_nonce_account<'info>(
@@ -360,11 +377,11 @@ pub fn withdraw_nonce_account<'info>(
     crate::solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.nonce,
-            ctx.accounts.to,
-            ctx.accounts.recent_blockhashes,
-            ctx.accounts.rent,
-            ctx.accounts.authorized,
+            ctx.accounts.nonce.to_owned(),
+            ctx.accounts.to.to_owned(),
+            ctx.accounts.recent_blockhashes.to_owned(),
+            ctx.accounts.rent.to_owned(),
+            ctx.accounts.authorized.to_owned(),
         ],
         ctx.signer_seeds,
     )
@@ -373,9 +390,9 @@ pub fn withdraw_nonce_account<'info>(
 
 #[derive(Accounts)]
 pub struct WithdrawNonceAccount<'info> {
-    pub nonce: AccountInfo<'info>,
-    pub to: AccountInfo<'info>,
-    pub recent_blockhashes: AccountInfo<'info>,
-    pub rent: AccountInfo<'info>,
-    pub authorized: AccountInfo<'info>,
+    pub nonce: &'info AccountInfo<'info>,
+    pub to: &'info AccountInfo<'info>,
+    pub recent_blockhashes: &'info AccountInfo<'info>,
+    pub rent: &'info AccountInfo<'info>,
+    pub authorized: &'info AccountInfo<'info>,
 }

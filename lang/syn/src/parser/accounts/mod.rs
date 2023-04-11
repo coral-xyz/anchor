@@ -249,19 +249,18 @@ pub fn parse_account_field(f: &syn::Field) -> ParseResult<AccountField> {
     let docs = docs::parse(&f.attrs);
     let account_field = match is_field_primitive(f)? {
         true => {
-            let (ty, is_optional, is_reference) = parse_ty(f)?;
+            let (ty, is_optional) = parse_ty(f)?;
             let account_constraints = constraints::parse(f, Some(&ty))?;
             AccountField::Field(Field {
                 ident,
                 ty,
                 is_optional,
-                is_reference,
                 constraints: account_constraints,
                 docs,
             })
         }
         false => {
-            let (_, optional, _, _) = ident_string(f)?;
+            let (_, optional, _) = ident_string(f)?;
             if optional {
                 return Err(ParseError::new(
                     f.ty.span(),
@@ -299,8 +298,8 @@ fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
     Ok(r)
 }
 
-fn parse_ty(f: &syn::Field) -> ParseResult<(Ty, bool, bool)> {
-    let (ident, optional, reference, path) = ident_string(f)?;
+fn parse_ty(f: &syn::Field) -> ParseResult<(Ty, bool)> {
+    let (ident, optional, path) = ident_string(f)?;
     let ty = match ident.as_str() {
         "Sysvar" => Ty::Sysvar(parse_sysvar(&path)?),
         "AccountInfo" => Ty::AccountInfo,
@@ -316,10 +315,10 @@ fn parse_ty(f: &syn::Field) -> ParseResult<(Ty, bool, bool)> {
         _ => return Err(ParseError::new(f.ty.span(), "invalid account type given")),
     };
 
-    Ok((ty, optional, reference))
+    Ok((ty, optional))
 }
 
-fn option_to_inner_path(path: &Path) -> ParseResult<(bool, Path)> {
+fn option_to_inner_path(path: &Path) -> ParseResult<Path> {
     let segment_0 = path.segments[0].clone();
     match segment_0.arguments {
         syn::PathArguments::AngleBracketed(args) => {
@@ -330,8 +329,8 @@ fn option_to_inner_path(path: &Path) -> ParseResult<(bool, Path)> {
                 ));
             }
 
-            let extract_path = |ty: &syn::Type, is_ref: bool| match ty {
-                syn::Type::Path(ty_path) => Ok((is_ref, ty_path.path.clone())),
+            let extract_path = |ty: &syn::Type| match ty {
+                syn::Type::Path(ty_path) => Ok(ty_path.path.clone()),
                 _ => Err(ParseError::new(
                     ty.span(),
                     "invalid type, only path and reference are allowed",
@@ -340,8 +339,8 @@ fn option_to_inner_path(path: &Path) -> ParseResult<(bool, Path)> {
 
             match &args.args[0] {
                 syn::GenericArgument::Type(ty) => match ty {
-                    syn::Type::Reference(ty_ref) => extract_path(ty_ref.elem.as_ref(), true),
-                    _ => extract_path(ty, false),
+                    syn::Type::Reference(ty_ref) => extract_path(ty_ref.elem.as_ref()),
+                    _ => extract_path(ty),
                 },
                 _ => Err(ParseError::new(
                     args.args[0].span(),
@@ -356,12 +355,10 @@ fn option_to_inner_path(path: &Path) -> ParseResult<(bool, Path)> {
     }
 }
 
-fn ident_string(f: &syn::Field) -> ParseResult<(String, bool, bool, Path)> {
+fn ident_string(f: &syn::Field) -> ParseResult<(String, bool, Path)> {
     let mut field_ty = &f.ty;
-    let mut reference = false;
 
     if let syn::Type::Reference(ty_ref) = field_ty {
-        reference = true;
         field_ty = ty_ref.elem.as_ref();
     }
 
@@ -375,20 +372,20 @@ fn ident_string(f: &syn::Field) -> ParseResult<(String, bool, bool, Path)> {
         .replace(' ', "")
         .starts_with("Option<")
     {
-        (reference, path) = option_to_inner_path(&path)?;
+        (path) = option_to_inner_path(&path)?;
         optional = true;
     }
     if parser::tts_to_string(&path)
         .replace(' ', "")
         .starts_with("Box<Account<")
     {
-        return Ok(("Account".to_string(), optional, reference, path));
+        return Ok(("Account".to_string(), optional, path));
     }
     if parser::tts_to_string(&path)
         .replace(' ', "")
         .starts_with("Box<InterfaceAccount<")
     {
-        return Ok(("InterfaceAccount".to_string(), optional, reference, path));
+        return Ok(("InterfaceAccount".to_string(), optional, path));
     }
     // TODO: allow segmented paths.
     if path.segments.len() != 1 {
@@ -399,7 +396,7 @@ fn ident_string(f: &syn::Field) -> ParseResult<(String, bool, bool, Path)> {
     }
 
     let segments = &path.segments[0];
-    Ok((segments.ident.to_string(), optional, reference, path))
+    Ok((segments.ident.to_string(), optional, path))
 }
 
 fn parse_program_account_loader(path: &syn::Path) -> ParseResult<AccountLoaderTy> {

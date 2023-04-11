@@ -17,12 +17,12 @@ pub fn create<'info>(ctx: CpiContext<'_, '_, '_, 'info, Create<'info>>) -> Resul
     solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.payer,
-            ctx.accounts.associated_token,
-            ctx.accounts.authority,
-            ctx.accounts.mint,
-            ctx.accounts.system_program,
-            ctx.accounts.token_program,
+            ctx.accounts.payer.to_owned(),
+            ctx.accounts.associated_token.to_owned(),
+            ctx.accounts.authority.to_owned(),
+            ctx.accounts.mint.to_owned(),
+            ctx.accounts.system_program.to_owned(),
+            ctx.accounts.token_program.to_owned(),
         ],
         ctx.signer_seeds,
     )
@@ -41,12 +41,12 @@ pub fn create_idempotent<'info>(
     solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.payer,
-            ctx.accounts.associated_token,
-            ctx.accounts.authority,
-            ctx.accounts.mint,
-            ctx.accounts.system_program,
-            ctx.accounts.token_program,
+            ctx.accounts.payer.to_owned(),
+            ctx.accounts.associated_token.to_owned(),
+            ctx.accounts.authority.to_owned(),
+            ctx.accounts.mint.to_owned(),
+            ctx.accounts.system_program.to_owned(),
+            ctx.accounts.token_program.to_owned(),
         ],
         ctx.signer_seeds,
     )
@@ -55,12 +55,12 @@ pub fn create_idempotent<'info>(
 
 #[derive(Accounts)]
 pub struct Create<'info> {
-    pub payer: AccountInfo<'info>,
-    pub associated_token: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
-    pub mint: AccountInfo<'info>,
-    pub system_program: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
+    pub payer: &'info AccountInfo<'info>,
+    pub associated_token: &'info AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
+    pub mint: &'info AccountInfo<'info>,
+    pub system_program: &'info AccountInfo<'info>,
+    pub token_program: &'info AccountInfo<'info>,
 }
 
 type CreateIdempotent<'info> = Create<'info>;

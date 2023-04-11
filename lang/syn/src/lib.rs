@@ -222,7 +222,6 @@ pub struct Field {
     pub constraints: ConstraintGroup,
     pub ty: Ty,
     pub is_optional: bool,
-    pub is_reference: bool,
     /// IDL Doc comment
     pub docs: Option<Vec<String>>,
 }
@@ -240,17 +239,9 @@ impl Field {
         let account_ty = self.account_ty();
         let container_ty = self.container_ty();
         let inner_ty = match &self.ty {
-            Ty::AccountInfo => {
-                if self.is_reference {
-                    quote! {
-                        &AccountInfo
-                    }
-                } else {
-                    quote! {
-                        AccountInfo
-                    }
-                }
-            }
+            Ty::AccountInfo => quote! {
+                &AccountInfo
+            },
             Ty::UncheckedAccount => quote! {
                 UncheckedAccount
             },
@@ -327,13 +318,7 @@ impl Field {
             },
         };
         match &self.ty {
-            Ty::AccountInfo => {
-                if self.is_reference {
-                    quote! { #field }
-                } else {
-                    quote! { #field.to_account_info() }
-                }
-            }
+            Ty::AccountInfo => quote! { #field },
             Ty::UncheckedAccount => {
                 quote! { UncheckedAccount::try_from(#field) }
             }
