@@ -11,7 +11,7 @@ pub mod pyth {
     pub fn initialize(ctx: Context<Initialize>, price: i64, expo: i32, conf: u64) -> Result<()> {
         let oracle = &ctx.accounts.price;
 
-        let mut price_oracle = Price::load(&oracle).unwrap();
+        let mut price_oracle = Price::load(oracle).unwrap();
 
         price_oracle.agg.price = price;
         price_oracle.agg.conf = conf;
@@ -22,7 +22,7 @@ pub mod pyth {
 
     pub fn set_price(ctx: Context<SetPrice>, price: i64) -> Result<()> {
         let oracle = &ctx.accounts.price;
-        let mut price_oracle = Price::load(&oracle).unwrap();
+        let mut price_oracle = Price::load(oracle).unwrap();
         price_oracle.agg.price = price as i64;
         Ok(())
     }
@@ -31,11 +31,11 @@ pub mod pyth {
 #[derive(Accounts)]
 pub struct SetPrice<'info> {
     #[account(mut)]
-    pub price: AccountInfo<'info>,
+    pub price: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(mut)]
-    pub price: AccountInfo<'info>,
+    pub price: &'info AccountInfo<'info>,
 }

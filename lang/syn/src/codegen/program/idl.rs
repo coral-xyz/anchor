@@ -38,20 +38,20 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
         pub struct IdlCreateAccounts<'info> {
             // Payer of the transaction.
             #[account(signer)]
-            pub from: AccountInfo<'info>,
+            pub from: &'info AccountInfo<'info>,
             // The deterministically defined "state" account being created via
             // `create_account_with_seed`.
             #[account(mut)]
-            pub to: AccountInfo<'info>,
+            pub to: &'info AccountInfo<'info>,
             // The program-derived-address signing off on the account creation.
             // Seeds = &[] + bump seed.
             #[account(seeds = [], bump)]
-            pub base: AccountInfo<'info>,
+            pub base: &'info AccountInfo<'info>,
             // The system program.
             pub system_program: Program<'info, System>,
             // The program whose state is being constructed.
             #[account(executable)]
-            pub program: AccountInfo<'info>,
+            pub program: &'info AccountInfo<'info>,
         }
 
         // Accounts for Idl instructions.
@@ -103,7 +103,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
             #[account(constraint = authority.key != &ERASED_AUTHORITY)]
             pub authority: Signer<'info>,
             #[account(mut)]
-            pub sol_destination: AccountInfo<'info>,
+            pub sol_destination: &'info AccountInfo<'info>,
         }
 
 
@@ -166,7 +166,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
                     accounts.from.clone(),
                     accounts.to.clone(),
                     accounts.base.clone(),
-                    accounts.system_program.to_account_info().clone(),
+                    accounts.system_program.to_account_info(),
                 ],
                 &[seeds],
             )?;
@@ -222,14 +222,14 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
                 let new_rent_minimum = sysvar_rent.minimum_balance(new_account_space);
                 anchor_lang::system_program::transfer(
                     anchor_lang::context::CpiContext::new(
-                        accounts.system_program.to_account_info(),
+                        accounts.system_program.as_ref(),
                         anchor_lang::system_program::Transfer {
                             from: accounts.authority.to_account_info(),
-                            to: accounts.idl.to_account_info().clone(),
+                            to: accounts.idl.to_account_info(),
                         },
                     ),
                     new_rent_minimum
-                        .checked_sub(accounts.idl.to_account_info().lamports())
+                        .checked_sub(AsRef::<AccountInfo>::as_ref(&accounts.idl).lamports())
                         .unwrap(),
                 )?;
                 accounts.idl.to_account_info().realloc(new_account_space, false)?;

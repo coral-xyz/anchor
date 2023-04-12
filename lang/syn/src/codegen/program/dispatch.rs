@@ -72,7 +72,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         __private::__idl::__idl_dispatch(
                             program_id,
                             accounts,
-                            &ix_data,
+                            ix_data,
                         )
                     } else {
                         Err(anchor_lang::error::ErrorCode::IdlInstructionStub.into())

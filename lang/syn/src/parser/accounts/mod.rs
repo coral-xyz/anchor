@@ -20,6 +20,7 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
         })
         .map(|ix_attr| ix_attr.parse_args_with(Punctuated::<Expr, Comma>::parse_terminated))
         .transpose()?;
+    let only_cpi = strct.attrs.iter().any(|a| a.path.is_ident("only_cpi"));
     let fields = match &strct.fields {
         syn::Fields::Named(fields) => fields
             .named
@@ -36,7 +37,12 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
 
     constraints_cross_checks(&fields)?;
 
-    Ok(AccountsStruct::new(strct.clone(), fields, instruction_api))
+    Ok(AccountsStruct::new(
+        strct.clone(),
+        fields,
+        instruction_api,
+        only_cpi,
+    ))
 }
 
 fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
@@ -372,7 +378,7 @@ fn ident_string(f: &syn::Field) -> ParseResult<(String, bool, Path)> {
         .replace(' ', "")
         .starts_with("Option<")
     {
-        (path) = option_to_inner_path(&path)?;
+        path = option_to_inner_path(&path)?;
         optional = true;
     }
     if parser::tts_to_string(&path)

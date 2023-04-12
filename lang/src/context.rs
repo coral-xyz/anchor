@@ -168,7 +168,7 @@ where
 {
     pub accounts: T,
     pub remaining_accounts: Vec<AccountInfo<'info>>,
-    pub program: AccountInfo<'info>,
+    pub program: &'b AccountInfo<'info>,
     pub signer_seeds: &'a [&'b [&'c [u8]]],
 }
 
@@ -176,7 +176,7 @@ impl<'a, 'b, 'c, 'info, T> CpiContext<'a, 'b, 'c, 'info, T>
 where
     T: ToAccountMetas + ToAccountInfos<'info>,
 {
-    pub fn new(program: AccountInfo<'info>, accounts: T) -> Self {
+    pub fn new(program: &'b AccountInfo<'info>, accounts: T) -> Self {
         Self {
             accounts,
             program,
@@ -187,7 +187,7 @@ where
 
     #[must_use]
     pub fn new_with_signer(
-        program: AccountInfo<'info>,
+        program: &'b AccountInfo<'info>,
         accounts: T,
         signer_seeds: &'a [&'b [&'c [u8]]],
     ) -> Self {
@@ -218,7 +218,7 @@ impl<'info, T: ToAccountInfos<'info> + ToAccountMetas> ToAccountInfos<'info>
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         let mut infos = self.accounts.to_account_infos();
         infos.extend_from_slice(&self.remaining_accounts);
-        infos.push(self.program.clone());
+        infos.push(self.program.to_owned());
         infos
     }
 }

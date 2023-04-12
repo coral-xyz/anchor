@@ -84,3 +84,5 @@ impl<'info> ToAccountInfos<'info> for &'info AccountInfo<'info> {
         vec![(*self).clone()]
     }
 }
+
+impl<'info> AccountsExit<'info> for &'info AccountInfo<'info> {}

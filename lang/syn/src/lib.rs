@@ -93,6 +93,8 @@ pub struct AccountsStruct {
     pub fields: Vec<AccountField>,
     // Instruction data api expression.
     instruction_api: Option<Punctuated<Expr, Comma>>,
+    // Used internally to limit the codegen
+    only_cpi: bool,
 }
 
 impl Parse for AccountsStruct {
@@ -119,6 +121,7 @@ impl AccountsStruct {
         strct: ItemStruct,
         fields: Vec<AccountField>,
         instruction_api: Option<Punctuated<Expr, Comma>>,
+        only_cpi: bool,
     ) -> Self {
         let ident = strct.ident.clone();
         let generics = strct.generics;
@@ -127,6 +130,7 @@ impl AccountsStruct {
             generics,
             fields,
             instruction_api,
+            only_cpi,
         }
     }
 

@@ -29,11 +29,12 @@ pub fn ret<'a, 'b, 'c, 'info>(
         data,
     };
     let mut accounts = vec![ctx.accounts.buffer];
-    accounts.push(ctx.program.clone());
+    accounts.push(ctx.program);
     program::invoke(&instruction, &accounts)
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct Ret<'info> {
     #[account(mut)]
     pub buffer: AccountInfo<'info>,
