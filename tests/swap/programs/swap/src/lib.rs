@@ -192,14 +192,14 @@ fn apply_risk_checks(event: DidSwap) -> Result<()> {
 pub struct Swap<'info> {
     market: MarketAccounts<'info>,
     #[account(signer)]
-    authority: AccountInfo<'info>,
+    authority: &'info AccountInfo<'info>,
     #[account(mut)]
-    pc_wallet: AccountInfo<'info>,
+    pc_wallet: &'info AccountInfo<'info>,
     // Programs.
-    dex_program: AccountInfo<'info>,
-    token_program: AccountInfo<'info>,
+    dex_program: &'info AccountInfo<'info>,
+    token_program: &'info AccountInfo<'info>,
     // Sysvars.
-    rent: AccountInfo<'info>,
+    rent: &'info AccountInfo<'info>,
 }
 
 impl<'info> From<&Swap<'info>> for OrderbookClient<'info> {
@@ -225,14 +225,14 @@ pub struct SwapTransitive<'info> {
     to: MarketAccounts<'info>,
     // Must be the authority over all open orders accounts used.
     #[account(signer)]
-    authority: AccountInfo<'info>,
+    authority: &'info AccountInfo<'info>,
     #[account(mut)]
-    pc_wallet: AccountInfo<'info>,
+    pc_wallet: &'info AccountInfo<'info>,
     // Programs.
-    dex_program: AccountInfo<'info>,
-    token_program: AccountInfo<'info>,
+    dex_program: &'info AccountInfo<'info>,
+    token_program: &'info AccountInfo<'info>,
     // Sysvars.
-    rent: AccountInfo<'info>,
+    rent: &'info AccountInfo<'info>,
 }
 
 impl<'info> SwapTransitive<'info> {
@@ -394,36 +394,36 @@ fn coin_lots(market: &MarketState, size: u64) -> u64 {
 #[derive(Accounts, Clone)]
 pub struct MarketAccounts<'info> {
     #[account(mut)]
-    market: AccountInfo<'info>,
+    market: &'info AccountInfo<'info>,
     #[account(mut)]
-    open_orders: AccountInfo<'info>,
+    open_orders: &'info AccountInfo<'info>,
     #[account(mut)]
-    request_queue: AccountInfo<'info>,
+    request_queue: &'info AccountInfo<'info>,
     #[account(mut)]
-    event_queue: AccountInfo<'info>,
+    event_queue: &'info AccountInfo<'info>,
     #[account(mut)]
-    bids: AccountInfo<'info>,
+    bids: &'info AccountInfo<'info>,
     #[account(mut)]
-    asks: AccountInfo<'info>,
+    asks: &'info AccountInfo<'info>,
     // The `spl_token::Account` that funds will be taken from, i.e., transferred
     // from the user into the market's vault.
     //
     // For bids, this is the base currency. For asks, the quote.
     #[account(mut)]
-    order_payer_token_account: AccountInfo<'info>,
+    order_payer_token_account: &'info AccountInfo<'info>,
     // Also known as the "base" currency. For a given A/B market,
     // this is the vault for the A mint.
     #[account(mut)]
-    coin_vault: AccountInfo<'info>,
+    coin_vault: &'info AccountInfo<'info>,
     // Also known as the "quote" currency. For a given A/B market,
     // this is the vault for the B mint.
     #[account(mut)]
-    pc_vault: AccountInfo<'info>,
+    pc_vault: &'info AccountInfo<'info>,
     // PDA owner of the DEX's token accounts for base + quote currencies.
-    vault_signer: AccountInfo<'info>,
+    vault_signer: &'info AccountInfo<'info>,
     // User wallets.
     #[account(mut)]
-    coin_wallet: AccountInfo<'info>,
+    coin_wallet: &'info AccountInfo<'info>,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize)]

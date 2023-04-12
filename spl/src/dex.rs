@@ -203,6 +203,7 @@ pub fn initialize_market<'info>(
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct NewOrderV3<'info> {
     pub market: AccountInfo<'info>,
     pub open_orders: AccountInfo<'info>,
@@ -225,6 +226,7 @@ pub struct NewOrderV3<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct CancelOrderV2<'info> {
     pub market: AccountInfo<'info>,
     pub market_bids: AccountInfo<'info>,
@@ -235,6 +237,7 @@ pub struct CancelOrderV2<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct SettleFunds<'info> {
     pub market: AccountInfo<'info>,
     pub open_orders: AccountInfo<'info>,
@@ -250,6 +253,7 @@ pub struct SettleFunds<'info> {
 /// To use an (optional) market authority, add it as the first account of the
 /// CpiContext's `remaining_accounts` Vec.
 #[derive(Accounts)]
+#[only_cpi]
 pub struct InitOpenOrders<'info> {
     pub open_orders: AccountInfo<'info>,
     pub authority: AccountInfo<'info>,
@@ -258,6 +262,7 @@ pub struct InitOpenOrders<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct CloseOpenOrders<'info> {
     pub open_orders: AccountInfo<'info>,
     pub authority: AccountInfo<'info>,
@@ -266,6 +271,7 @@ pub struct CloseOpenOrders<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct SweepFees<'info> {
     pub market: AccountInfo<'info>,
     pub pc_vault: AccountInfo<'info>,
@@ -276,6 +282,7 @@ pub struct SweepFees<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct InitializeMarket<'info> {
     pub market: AccountInfo<'info>,
     pub coin_mint: AccountInfo<'info>,

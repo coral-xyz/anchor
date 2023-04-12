@@ -240,8 +240,10 @@ pub fn generate_constraint_close(
 pub fn generate_constraint_mut(f: &Field, c: &ConstraintMut) -> proc_macro2::TokenStream {
     let ident = &f.ident;
     let error = generate_custom_error(ident, &c.error, quote! { ConstraintMut }, &None);
+    let account_ref = generate_account_ref(f);
+
     quote! {
-        if !AsRef::<AccountInfo>::as_ref(&#ident).is_writable {
+        if !#account_ref.is_writable {
             return #error;
         }
     }
@@ -281,17 +283,11 @@ pub fn generate_constraint_has_one(
 
 pub fn generate_constraint_signer(f: &Field, c: &ConstraintSigner) -> proc_macro2::TokenStream {
     let ident = &f.ident;
-    let info = match f.ty {
-        Ty::AccountInfo => quote! { #ident },
-        Ty::Account(_) => quote! { #ident.as_ref() },
-        Ty::InterfaceAccount(_) => quote! { #ident.as_ref() },
-        Ty::AccountLoader(_) => quote! { #ident.as_ref() },
-        _ => panic!("Invalid syntax: signer cannot be specified."),
-    };
     let error = generate_custom_error(ident, &c.error, quote! { ConstraintSigner }, &None);
+    let account_ref = generate_account_ref(f);
+
     quote! {
-        let account: &AccountInfo = #info;
-        if !account.is_signer {
+        if !#account_ref.is_signer {
             return #error;
         }
     }
@@ -389,7 +385,7 @@ fn generate_constraint_realloc(
                 if __new_rent_minimum > __field_info.lamports() {
                     anchor_lang::system_program::transfer(
                         anchor_lang::context::CpiContext::new(
-                            system_program.as_ref(),
+                            system_program.to_account_info(),
                             anchor_lang::system_program::Transfer {
                                 from: #payer.to_account_info(),
                                 to: __field_info,
@@ -547,7 +543,7 @@ fn generate_constraint_init_group(
                         #create_account
 
                         // Initialize the token account.
-                        let cpi_program: &AccountInfo = token_program.as_ref();
+                        let cpi_program = token_program.to_account_info();
                         let accounts = ::anchor_spl::token_interface::InitializeAccount3 {
                             account: #field.to_account_info(),
                             mint: #mint.to_account_info(),
@@ -602,7 +598,7 @@ fn generate_constraint_init_group(
                     if !#if_needed || AsRef::<AccountInfo>::as_ref(&#field).owner == &anchor_lang::solana_program::system_program::ID {
                         #payer_optional_check
 
-                        let cpi_program: &AccountInfo = associated_token_program.as_ref();
+                        let cpi_program = associated_token_program.to_account_info();
                         let cpi_accounts = ::anchor_spl::associated_token::Create {
                             payer: #payer.to_account_info(),
                             associated_token: #field.to_account_info(),
@@ -685,7 +681,7 @@ fn generate_constraint_init_group(
                         #create_account
 
                         // Initialize the mint account.
-                        let cpi_program: &AccountInfo = token_program.as_ref();
+                        let cpi_program = token_program.to_account_info();
                         let accounts = ::anchor_spl::token_interface::InitializeMint2 {
                             mint: #field.to_account_info(),
                         };
@@ -1080,7 +1076,7 @@ fn generate_create_account(
                 from: #payer.to_account_info(),
                 to: #field.to_account_info()
             };
-            let cpi_context = anchor_lang::context::CpiContext::new(system_program.as_ref(), cpi_accounts);
+            let cpi_context = anchor_lang::context::CpiContext::new(system_program.to_account_info(), cpi_accounts);
             anchor_lang::system_program::create_account(cpi_context.with_signer(&[#seeds_with_nonce]), lamports, space as u64, #owner)?;
         } else {
             require_keys_neq!(#payer.key(), #field.key(), anchor_lang::error::ErrorCode::TryingToInitPayerAsProgramAccount);
@@ -1094,20 +1090,20 @@ fn generate_create_account(
                     from: #payer.to_account_info(),
                     to: #field.to_account_info(),
                 };
-                let cpi_context = anchor_lang::context::CpiContext::new(system_program.as_ref(), cpi_accounts);
+                let cpi_context = anchor_lang::context::CpiContext::new(system_program.to_account_info(), cpi_accounts);
                 anchor_lang::system_program::transfer(cpi_context, required_lamports)?;
             }
             // Allocate space.
             let cpi_accounts = anchor_lang::system_program::Allocate {
                 account_to_allocate: #field.to_account_info()
             };
-            let cpi_context = anchor_lang::context::CpiContext::new(system_program.as_ref(), cpi_accounts);
+            let cpi_context = anchor_lang::context::CpiContext::new(system_program.to_account_info(), cpi_accounts);
             anchor_lang::system_program::allocate(cpi_context.with_signer(&[#seeds_with_nonce]), #space as u64)?;
             // Assign to the spl token program.
             let cpi_accounts = anchor_lang::system_program::Assign {
                 account_to_assign: #field.to_account_info()
             };
-            let cpi_context = anchor_lang::context::CpiContext::new(system_program.as_ref(), cpi_accounts);
+            let cpi_context = anchor_lang::context::CpiContext::new(system_program.to_account_info(), cpi_accounts);
             anchor_lang::system_program::assign(cpi_context.with_signer(&[#seeds_with_nonce]), #owner)?;
         }
     }
@@ -1119,11 +1115,12 @@ pub fn generate_constraint_executable(
 ) -> proc_macro2::TokenStream {
     let name = &f.ident;
     let name_str = name.to_string();
+    let account_ref = generate_account_ref(f);
 
     // because we are only acting on the field, we know it isnt optional at this point
     // as it was unwrapped in `generate_constraint`
     quote! {
-        if !AsRef::<AccountInfo>::as_ref(&#name).executable {
+        if !#account_ref.executable {
             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintExecutable).with_account_name(#name_str));
         }
     }
@@ -1154,5 +1151,15 @@ fn generate_custom_error(
 
     quote! {
         Err(#error)
+    }
+}
+
+fn generate_account_ref(field: &Field) -> proc_macro2::TokenStream {
+    let ident = &field.ident;
+    match &field.ty {
+        Ty::AccountInfo => quote!(#ident),
+        Ty::Account(acc) if acc.boxed => quote!(AsRef::<AccountInfo>::as_ref(&(*#ident))),
+        Ty::InterfaceAccount(acc) if acc.boxed => quote!(AsRef::<AccountInfo>::as_ref(&(*#ident))),
+        _ => quote!(AsRef::<AccountInfo>::as_ref(&#ident)),
     }
 }

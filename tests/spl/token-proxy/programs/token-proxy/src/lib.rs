@@ -92,7 +92,7 @@ pub enum AuthorityType {
 pub struct ProxyTransfer<'info> {
     #[account(signer)]
     /// CHECK:
-    pub authority: AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
     #[account(mut)]
     pub from: InterfaceAccount<'info, TokenAccount>,
     #[account(mut)]
@@ -104,7 +104,7 @@ pub struct ProxyTransfer<'info> {
 pub struct ProxyOptionalTransfer<'info> {
     #[account(signer)]
     /// CHECK:
-    pub authority: AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
     #[account(mut)]
     pub from: InterfaceAccount<'info, TokenAccount>,
     #[account(mut)]
@@ -117,7 +117,7 @@ pub struct ProxyOptionalTransfer<'info> {
 pub struct ProxyMintTo<'info> {
     #[account(signer)]
     /// CHECK:
-    pub authority: AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
     #[account(mut)]
     pub mint: InterfaceAccount<'info, Mint>,
     #[account(mut)]
@@ -129,7 +129,7 @@ pub struct ProxyMintTo<'info> {
 pub struct ProxyBurn<'info> {
     #[account(signer)]
     /// CHECK:
-    pub authority: AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
     #[account(mut)]
     pub mint: InterfaceAccount<'info, Mint>,
     #[account(mut)]
@@ -141,10 +141,10 @@ pub struct ProxyBurn<'info> {
 pub struct ProxySetAuthority<'info> {
     #[account(signer)]
     /// CHECK:
-    pub current_authority: AccountInfo<'info>,
+    pub current_authority: &'info AccountInfo<'info>,
     #[account(mut)]
     /// CHECK:
-    pub account_or_mint: AccountInfo<'info>,
+    pub account_or_mint: &'info AccountInfo<'info>,
     pub token_program: Interface<'info, TokenInterface>,
 }
 
@@ -218,8 +218,8 @@ impl<'a, 'b, 'c, 'info> From<&mut ProxyMintTo<'info>>
 {
     fn from(accounts: &mut ProxyMintTo<'info>) -> CpiContext<'a, 'b, 'c, 'info, MintTo<'info>> {
         let cpi_accounts = MintTo {
-            mint: accounts.mint.to_account_info().clone(),
-            to: accounts.to.to_account_info().clone(),
+            mint: accounts.mint.to_account_info(),
+            to: accounts.to.to_account_info(),
             authority: accounts.authority.clone(),
         };
         let cpi_program = accounts.token_program.to_account_info();
@@ -230,8 +230,8 @@ impl<'a, 'b, 'c, 'info> From<&mut ProxyMintTo<'info>>
 impl<'a, 'b, 'c, 'info> From<&mut ProxyBurn<'info>> for CpiContext<'a, 'b, 'c, 'info, Burn<'info>> {
     fn from(accounts: &mut ProxyBurn<'info>) -> CpiContext<'a, 'b, 'c, 'info, Burn<'info>> {
         let cpi_accounts = Burn {
-            mint: accounts.mint.to_account_info().clone(),
-            from: accounts.from.to_account_info().clone(),
+            mint: accounts.mint.to_account_info(),
+            from: accounts.from.to_account_info(),
             authority: accounts.authority.clone(),
         };
         let cpi_program = accounts.token_program.to_account_info();
