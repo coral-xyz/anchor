@@ -29,7 +29,7 @@ pub struct CheckCpi<'info> {
     )]
     bar: AccountLoader<'info, Bar>,
     #[account(signer)]
-    authority: AccountInfo<'info>,
+    authority: &'info AccountInfo<'info>,
     foo: AccountLoader<'info, Foo>,
     zero_copy_program: Program<'info, ZeroCopy>,
 }

@@ -240,10 +240,14 @@ impl ParsedModule {
                 syn::Type::Path(syn::TypePath {
                     path: syn::Path { segments, .. },
                     ..
-                }) => {
-                    segments.len() == 1 && segments[0].ident == "UncheckedAccount"
-                        || segments[0].ident == "AccountInfo"
-                }
+                }) => segments.len() == 1 && segments[0].ident == "UncheckedAccount",
+                syn::Type::Reference(syn::TypeReference { elem, .. }) => match elem.as_ref() {
+                    Type::Path(syn::TypePath {
+                        path: syn::Path { segments, .. },
+                        ..
+                    }) => segments.len() == 1 && segments[0].ident == "AccountInfo",
+                    _ => false,
+                },
                 _ => false,
             })
     }

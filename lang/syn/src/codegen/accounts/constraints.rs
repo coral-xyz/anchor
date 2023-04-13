@@ -312,9 +312,10 @@ pub fn generate_constraint_owner(f: &Field, c: &ConstraintOwner) -> proc_macro2:
         quote! { ConstraintOwner },
         &Some(&(quote! { *my_owner }, quote! { owner_address })),
     );
+    let account_ref = generate_account_ref(f);
     quote! {
         {
-            let my_owner = AsRef::<AccountInfo>::as_ref(&#ident).owner;
+            let my_owner = #account_ref.owner;
             let owner_address = #owner_address;
             if my_owner != &owner_address {
                 return #error;
@@ -388,7 +389,7 @@ fn generate_constraint_realloc(
                             system_program.to_account_info(),
                             anchor_lang::system_program::Transfer {
                                 from: #payer.to_account_info(),
-                                to: __field_info,
+                                to: __field_info.clone(),
                             },
                         ),
                         __new_rent_minimum.checked_sub(__field_info.lamports()).unwrap(),
@@ -426,6 +427,8 @@ fn generate_constraint_init_group(
     // Convert from account info to account context wrapper type.
     let from_account_info = f.from_account_info(Some(&c.kind), true);
     let from_account_info_unchecked = f.from_account_info(Some(&c.kind), false);
+
+    let account_ref = generate_account_ref(f);
 
     // PDA bump seeds.
     let (find_pda, seeds_with_bump) = match &c.seeds {
@@ -536,7 +539,7 @@ fn generate_constraint_init_group(
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
-                    if !#if_needed || AsRef::<AccountInfo>::as_ref(&#field).owner == &anchor_lang::solana_program::system_program::ID {
+                    if !#if_needed || #account_ref.owner == &anchor_lang::solana_program::system_program::ID {
                         #payer_optional_check
 
                         // Create the account with the system program.
@@ -595,7 +598,7 @@ fn generate_constraint_init_group(
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
-                    if !#if_needed || AsRef::<AccountInfo>::as_ref(&#field).owner == &anchor_lang::solana_program::system_program::ID {
+                    if !#if_needed || #account_ref.owner == &anchor_lang::solana_program::system_program::ID {
                         #payer_optional_check
 
                         let cpi_program = associated_token_program.to_account_info();
@@ -673,7 +676,7 @@ fn generate_constraint_init_group(
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
-                    if !#if_needed || AsRef::<AccountInfo>::as_ref(&#field).owner == &anchor_lang::solana_program::system_program::ID {
+                    if !#if_needed || #account_ref.owner == &anchor_lang::solana_program::system_program::ID {
                         // Define payer variable.
                         #payer_optional_check
 
@@ -760,7 +763,7 @@ fn generate_constraint_init_group(
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
-                    let actual_field: &AccountInfo = #field.as_ref();
+                    let actual_field = #account_ref;
                     let actual_owner = actual_field.owner;
 
                     // Define the account space variable.
@@ -1031,7 +1034,7 @@ impl<'a> OptionalCheckScope<'a> {
 fn generate_get_token_account_space(mint: &Expr) -> proc_macro2::TokenStream {
     quote! {
         {
-            let mint_info: &AccountInfo = #mint.as_ref();
+            let mint_info = #mint.to_account_info();
             if *mint_info.owner == ::anchor_spl::token_2022::Token2022::id() {
                 use ::anchor_spl::token_2022::spl_token_2022::extension::{BaseStateWithExtensions, ExtensionType, StateWithExtensions};
                 use ::anchor_spl::token_2022::spl_token_2022::state::{Account, Mint};
@@ -1155,11 +1158,14 @@ fn generate_custom_error(
 }
 
 fn generate_account_ref(field: &Field) -> proc_macro2::TokenStream {
-    let ident = &field.ident;
+    let name = &field.ident;
+
     match &field.ty {
-        Ty::AccountInfo => quote!(#ident),
-        Ty::Account(acc) if acc.boxed => quote!(AsRef::<AccountInfo>::as_ref(&(*#ident))),
-        Ty::InterfaceAccount(acc) if acc.boxed => quote!(AsRef::<AccountInfo>::as_ref(&(*#ident))),
-        _ => quote!(AsRef::<AccountInfo>::as_ref(&#ident)),
+        Ty::AccountInfo => quote!(#name),
+        Ty::Account(acc) if acc.boxed => quote!(AsRef::<AccountInfo>::as_ref(#name.as_ref())),
+        Ty::InterfaceAccount(acc) if acc.boxed => {
+            quote!(AsRef::<AccountInfo>::as_ref(#name.as_ref()))
+        }
+        _ => quote!(AsRef::<AccountInfo>::as_ref(&#name)),
     }
 }
