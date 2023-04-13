@@ -25,7 +25,7 @@ pub struct TestTokenSeedsInit<'info> {
     pub my_pda: Option<Account<'info, TokenAccount>>,
     #[account(mut)]
     /// CHECK:
-    pub authority: Option<AccountInfo<'info>>,
+    pub authority: Option<&'info AccountInfo<'info>>,
     pub system_program: Option<Program<'info, System>>,
     pub token_program: Option<Program<'info, Token>>,
 }
@@ -56,7 +56,7 @@ pub struct TestValidateAssociatedToken<'info> {
     pub token: Option<Account<'info, TokenAccount>>,
     pub mint: Option<Account<'info, Mint>>,
     /// CHECK:
-    pub wallet: Option<AccountInfo<'info>>,
+    pub wallet: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
@@ -67,9 +67,9 @@ pub struct TestInstructionConstraint<'info> {
         bump = nonce,
     )]
     /// CHECK:
-    pub my_pda: Option<AccountInfo<'info>>,
+    pub my_pda: Option<&'info AccountInfo<'info>>,
     /// CHECK:
-    pub my_account: Option<AccountInfo<'info>>,
+    pub my_account: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
@@ -86,7 +86,7 @@ pub struct TestPdaInit<'info> {
     #[account(mut)]
     pub my_payer: Option<Signer<'info>>,
     /// CHECK:
-    pub foo: Option<AccountInfo<'info>>,
+    pub foo: Option<&'info AccountInfo<'info>>,
     pub system_program: Option<Program<'info, System>>,
 }
 
@@ -114,7 +114,7 @@ pub struct TestPdaMutZeroCopy<'info> {
     )]
     pub my_pda: Option<AccountLoader<'info, DataZeroCopy>>,
     /// CHECK:
-    pub my_payer: Option<AccountInfo<'info>>,
+    pub my_payer: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
@@ -132,23 +132,23 @@ pub struct InitializeSkipRentExempt<'info> {
 #[derive(Accounts)]
 pub struct InitializeNoRentExempt<'info> {
     /// CHECK:
-    pub data: Option<AccountInfo<'info>>,
+    pub data: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
 pub struct TestOwner<'info> {
     #[account(owner = *misc.key)]
     /// CHECK:
-    pub data: Option<AccountInfo<'info>>,
+    pub data: Option<&'info AccountInfo<'info>>,
     /// CHECK:
-    pub misc: AccountInfo<'info>,
+    pub misc: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct TestExecutable<'info> {
     #[account(executable)]
     /// CHECK:
-    pub program: Option<AccountInfo<'info>>,
+    pub program: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
@@ -156,7 +156,7 @@ pub struct TestClose<'info> {
     #[account(mut, close = sol_dest)]
     pub data: Option<Account<'info, Data>>,
     /// CHECK:
-    sol_dest: Option<AccountInfo<'info>>,
+    sol_dest: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
@@ -164,7 +164,7 @@ pub struct TestCloseTwice<'info> {
     #[account(mut, close = sol_dest)]
     pub data: Option<Account<'info, Data>>,
     /// CHECK:
-    pub sol_dest: Option<AccountInfo<'info>>,
+    pub sol_dest: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
@@ -172,7 +172,7 @@ pub struct TestCloseMut<'info> {
     #[account(mut)]
     pub data: Option<Account<'info, Data>>,
     /// CHECK:
-    pub sol_dest: Option<AccountInfo<'info>>,
+    pub sol_dest: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
@@ -266,7 +266,7 @@ pub struct TestInitWithEmptySeeds<'info> {
 pub struct TestEmptySeedsConstraint<'info> {
     #[account(seeds = [], bump)]
     /// CHECK:
-    pub pda: Option<AccountInfo<'info>>,
+    pub pda: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
@@ -297,7 +297,7 @@ pub struct TestInitIfNeededChecksOwner<'info> {
     pub payer: Option<Signer<'info>>,
     pub system_program: Option<Program<'info, System>>,
     /// CHECK:
-    pub owner: AccountInfo<'info>,
+    pub owner: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -321,9 +321,9 @@ pub struct TestInitMintIfNeeded<'info> {
     pub system_program: Option<Program<'info, System>>,
     pub token_program: Option<Program<'info, Token>>,
     /// CHECK:
-    pub mint_authority: Option<AccountInfo<'info>>,
+    pub mint_authority: Option<&'info AccountInfo<'info>>,
     /// CHECK:
-    pub freeze_authority: Option<AccountInfo<'info>>,
+    pub freeze_authority: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
@@ -336,7 +336,7 @@ pub struct TestInitTokenIfNeeded<'info> {
     pub system_program: Option<Program<'info, System>>,
     pub token_program: Option<Program<'info, Token>>,
     /// CHECK:
-    pub authority: Option<AccountInfo<'info>>,
+    pub authority: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
@@ -355,7 +355,7 @@ pub struct TestInitAssociatedTokenIfNeeded<'info> {
     pub token_program: Option<Program<'info, Token>>,
     pub associated_token_program: Option<Program<'info, AssociatedToken>>,
     /// CHECK:
-    pub authority: Option<AccountInfo<'info>>,
+    pub authority: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
@@ -385,21 +385,21 @@ pub struct TestMultidimensionalArrayConstSizes<'info> {
 #[derive(Accounts)]
 pub struct NoRentExempt<'info> {
     /// CHECK:
-    pub data: Option<AccountInfo<'info>>,
+    pub data: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
 pub struct EnforceRentExempt<'info> {
     #[account(rent_exempt = enforce)]
     /// CHECK:
-    pub data: Option<AccountInfo<'info>>,
+    pub data: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
 pub struct InitDecreaseLamports<'info> {
     #[account(init, payer = user, space = 1000)]
     /// CHECK:
-    pub data: Option<AccountInfo<'info>>,
+    pub data: Option<&'info AccountInfo<'info>>,
     #[account(mut)]
     pub user: Option<Signer<'info>>,
     pub system_program: Option<Program<'info, System>>,
@@ -409,7 +409,7 @@ pub struct InitDecreaseLamports<'info> {
 pub struct InitIfNeededChecksRentExemption<'info> {
     #[account(init_if_needed, payer = user, space = 1000)]
     /// CHECK:
-    pub data: Option<AccountInfo<'info>>,
+    pub data: Option<&'info AccountInfo<'info>>,
     #[account(mut)]
     pub user: Option<Signer<'info>>,
     pub system_program: Option<Program<'info, System>>,
@@ -422,11 +422,11 @@ pub struct TestProgramIdConstraint<'info> {
     // just deriving like this for testing purposes
     #[account(seeds = [b"seed"], bump = bump, seeds::program = anchor_spl::associated_token::ID)]
     /// CHECK:
-    first: Option<AccountInfo<'info>>,
+    first: Option<&'info AccountInfo<'info>>,
 
     #[account(seeds = [b"seed"], bump = second_bump, seeds::program = crate::ID)]
     /// CHECK:
-    second: Option<AccountInfo<'info>>,
+    second: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
@@ -435,11 +435,11 @@ pub struct TestProgramIdConstraintUsingFindPda<'info> {
     // just deriving like this for testing purposes
     #[account(seeds = [b"seed"], bump, seeds::program = anchor_spl::associated_token::ID)]
     /// CHECK:
-    first: Option<AccountInfo<'info>>,
+    first: Option<&'info AccountInfo<'info>>,
 
     #[account(seeds = [b"seed"], bump, seeds::program = crate::ID)]
     /// CHECK:
-    second: Option<AccountInfo<'info>>,
+    second: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
@@ -481,7 +481,7 @@ pub struct TestAuthorityConstraint<'info> {
     )]
     pub token: Option<Account<'info, TokenAccount>>,
     pub mint: Option<Account<'info, Mint>>,
-    pub fake_authority: Option<AccountInfo<'info>>,
+    pub fake_authority: Option<&'info AccountInfo<'info>>,
 }
 #[derive(Accounts)]
 pub struct TestOnlyAuthorityConstraint<'info> {
@@ -510,8 +510,8 @@ pub struct TestMintConstraint<'info> {
         mint::freeze_authority = freeze_authority
     )]
     pub mint: Option<Account<'info, Mint>>,
-    pub mint_authority: Option<AccountInfo<'info>>,
-    pub freeze_authority: Option<AccountInfo<'info>>,
+    pub mint_authority: Option<&'info AccountInfo<'info>>,
+    pub freeze_authority: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
@@ -530,8 +530,8 @@ pub struct TestMintAuthorityConstraint<'info> {
         mint::freeze_authority = freeze_authority
     )]
     pub mint: Option<Account<'info, Mint>>,
-    pub mint_authority: Option<AccountInfo<'info>>,
-    pub freeze_authority: Option<AccountInfo<'info>>,
+    pub mint_authority: Option<&'info AccountInfo<'info>>,
+    pub freeze_authority: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
@@ -540,7 +540,7 @@ pub struct TestMintOneAuthorityConstraint<'info> {
         mint::authority = mint_authority,
     )]
     pub mint: Option<Account<'info, Mint>>,
-    pub mint_authority: Option<AccountInfo<'info>>,
+    pub mint_authority: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
@@ -551,7 +551,7 @@ pub struct TestMintMissMintAuthConstraint<'info> {
         mint::freeze_authority = freeze_authority,
     )]
     pub mint: Option<Account<'info, Mint>>,
-    pub freeze_authority: Option<AccountInfo<'info>>,
+    pub freeze_authority: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]
@@ -562,7 +562,7 @@ pub struct TestAssociatedToken<'info> {
     )]
     pub token: Option<Account<'info, TokenAccount>>,
     pub mint: Option<Account<'info, Mint>>,
-    pub authority: Option<AccountInfo<'info>>,
+    pub authority: Option<&'info AccountInfo<'info>>,
 }
 
 #[derive(Accounts)]

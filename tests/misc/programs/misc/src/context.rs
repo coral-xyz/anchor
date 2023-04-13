@@ -25,7 +25,7 @@ pub struct TestTokenSeedsInit<'info> {
     pub my_pda: Account<'info, TokenAccount>,
     #[account(mut)]
     /// CHECK:
-    pub authority: AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
 }
@@ -56,7 +56,7 @@ pub struct TestValidateAssociatedToken<'info> {
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
     /// CHECK:
-    pub wallet: AccountInfo<'info>,
+    pub wallet: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -67,9 +67,9 @@ pub struct TestInstructionConstraint<'info> {
         bump = nonce,
     )]
     /// CHECK:
-    pub my_pda: AccountInfo<'info>,
+    pub my_pda: &'info AccountInfo<'info>,
     /// CHECK:
-    pub my_account: AccountInfo<'info>,
+    pub my_account: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -86,7 +86,7 @@ pub struct TestPdaInit<'info> {
     #[account(mut)]
     pub my_payer: Signer<'info>,
     /// CHECK:
-    pub foo: AccountInfo<'info>,
+    pub foo: &'info AccountInfo<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -114,7 +114,7 @@ pub struct TestPdaMutZeroCopy<'info> {
     )]
     pub my_pda: AccountLoader<'info, DataZeroCopy>,
     /// CHECK:
-    pub my_payer: AccountInfo<'info>,
+    pub my_payer: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -138,23 +138,23 @@ pub struct InitializeSkipRentExempt<'info> {
 #[derive(Accounts)]
 pub struct InitializeNoRentExempt<'info> {
     /// CHECK:
-    pub data: AccountInfo<'info>,
+    pub data: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct TestOwner<'info> {
     #[account(owner = *misc.key)]
     /// CHECK:
-    pub data: AccountInfo<'info>,
+    pub data: &'info AccountInfo<'info>,
     /// CHECK:
-    pub misc: AccountInfo<'info>,
+    pub misc: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct TestExecutable<'info> {
     #[account(executable)]
     /// CHECK:
-    pub program: AccountInfo<'info>,
+    pub program: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -162,7 +162,7 @@ pub struct TestClose<'info> {
     #[account(mut, close = sol_dest)]
     pub data: Account<'info, Data>,
     /// CHECK:
-    sol_dest: AccountInfo<'info>,
+    sol_dest: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -170,7 +170,7 @@ pub struct TestCloseTwice<'info> {
     #[account(mut, close = sol_dest)]
     pub data: Account<'info, Data>,
     /// CHECK:
-    pub sol_dest: AccountInfo<'info>,
+    pub sol_dest: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -178,7 +178,7 @@ pub struct TestCloseMut<'info> {
     #[account(mut)]
     pub data: Account<'info, Data>,
     /// CHECK:
-    pub sol_dest: AccountInfo<'info>,
+    pub sol_dest: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -271,7 +271,7 @@ pub struct TestInitWithEmptySeeds<'info> {
 pub struct TestEmptySeedsConstraint<'info> {
     #[account(seeds = [], bump)]
     /// CHECK:
-    pub pda: AccountInfo<'info>,
+    pub pda: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -302,7 +302,7 @@ pub struct TestInitIfNeededChecksOwner<'info> {
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
     /// CHECK:
-    pub owner: AccountInfo<'info>,
+    pub owner: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -326,9 +326,9 @@ pub struct TestInitMintIfNeeded<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     /// CHECK:
-    pub mint_authority: AccountInfo<'info>,
+    pub mint_authority: &'info AccountInfo<'info>,
     /// CHECK:
-    pub freeze_authority: AccountInfo<'info>,
+    pub freeze_authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -341,7 +341,7 @@ pub struct TestInitTokenIfNeeded<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     /// CHECK:
-    pub authority: AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -360,7 +360,7 @@ pub struct TestInitAssociatedTokenIfNeeded<'info> {
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     /// CHECK:
-    pub authority: AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -390,21 +390,21 @@ pub struct TestMultidimensionalArrayConstSizes<'info> {
 #[derive(Accounts)]
 pub struct NoRentExempt<'info> {
     /// CHECK:
-    pub data: AccountInfo<'info>,
+    pub data: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct EnforceRentExempt<'info> {
     #[account(rent_exempt = enforce)]
     /// CHECK:
-    pub data: AccountInfo<'info>,
+    pub data: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct InitDecreaseLamports<'info> {
     #[account(init, payer = user, space = 1000)]
     /// CHECK:
-    pub data: AccountInfo<'info>,
+    pub data: &'info AccountInfo<'info>,
     #[account(mut)]
     pub user: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -414,7 +414,7 @@ pub struct InitDecreaseLamports<'info> {
 pub struct InitIfNeededChecksRentExemption<'info> {
     #[account(init_if_needed, payer = user, space = 1000)]
     /// CHECK:
-    pub data: AccountInfo<'info>,
+    pub data: &'info AccountInfo<'info>,
     #[account(mut)]
     pub user: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -427,11 +427,11 @@ pub struct TestProgramIdConstraint<'info> {
     // just deriving like this for testing purposes
     #[account(seeds = [b"seed"], bump = bump, seeds::program = anchor_spl::associated_token::ID)]
     /// CHECK:
-    first: AccountInfo<'info>,
+    first: &'info AccountInfo<'info>,
 
     #[account(seeds = [b"seed"], bump = second_bump, seeds::program = crate::ID)]
     /// CHECK:
-    second: AccountInfo<'info>,
+    second: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -440,11 +440,11 @@ pub struct TestProgramIdConstraintUsingFindPda<'info> {
     // just deriving like this for testing purposes
     #[account(seeds = [b"seed"], bump, seeds::program = anchor_spl::associated_token::ID)]
     /// CHECK:
-    first: AccountInfo<'info>,
+    first: &'info AccountInfo<'info>,
 
     #[account(seeds = [b"seed"], bump, seeds::program = crate::ID)]
     /// CHECK:
-    second: AccountInfo<'info>,
+    second: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -487,7 +487,7 @@ pub struct TestAuthorityConstraint<'info> {
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
     /// CHECK: ignore
-    pub fake_authority: AccountInfo<'info>,
+    pub fake_authority: &'info AccountInfo<'info>,
 }
 #[derive(Accounts)]
 pub struct TestOnlyAuthorityConstraint<'info> {
@@ -517,9 +517,9 @@ pub struct TestMintConstraint<'info> {
     )]
     pub mint: Account<'info, Mint>,
     /// CHECK: ignore
-    pub mint_authority: AccountInfo<'info>,
+    pub mint_authority: &'info AccountInfo<'info>,
     /// CHECK: ignore
-    pub freeze_authority: AccountInfo<'info>,
+    pub freeze_authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -539,9 +539,9 @@ pub struct TestMintAuthorityConstraint<'info> {
     )]
     pub mint: Account<'info, Mint>,
     /// CHECK: ignore
-    pub mint_authority: AccountInfo<'info>,
+    pub mint_authority: &'info AccountInfo<'info>,
     /// CHECK: ignore
-    pub freeze_authority: AccountInfo<'info>,
+    pub freeze_authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -551,7 +551,7 @@ pub struct TestMintOneAuthorityConstraint<'info> {
     )]
     pub mint: Account<'info, Mint>,
     /// CHECK: ignore
-    pub mint_authority: AccountInfo<'info>,
+    pub mint_authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -563,7 +563,7 @@ pub struct TestMintMissMintAuthConstraint<'info> {
     )]
     pub mint: Account<'info, Mint>,
     /// CHECK: ignore
-    pub freeze_authority: AccountInfo<'info>,
+    pub freeze_authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -575,7 +575,7 @@ pub struct TestAssociatedToken<'info> {
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
     /// CHECK: ignore
-    pub authority: AccountInfo<'info>,
+    pub authority: &'info AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
