@@ -120,7 +120,7 @@ pub enum ErrorCode {
     ConstraintMintTokenProgram,
     /// 2023 - A mint token program constraint was violated
     #[msg("An associated token account token program constraint was violated")]
-    ConstraintAssociatedTokenProgram,
+    ConstraintAssociatedTokenTokenProgram,
 
     // Require
     /// 2500 - A require expression was violated

@@ -914,7 +914,7 @@ fn generate_constraint_associated_token(
             let token_program_optional_check = optional_check_scope.generate_check(token_program);
             quote! {
                 #token_program_optional_check
-                if #name.to_account_info().owner != &#token_program.key() { return Err(anchor_lang::error::ErrorCode::ConstraintAssociatedTokenProgram.into()); }
+                if #name.to_account_info().owner != &#token_program.key() { return Err(anchor_lang::error::ErrorCode::ConstraintAssociatedTokenTokenProgram.into()); }
             }
         }
         None => quote! {},
@@ -1027,11 +1027,22 @@ fn generate_constraint_mint(
         }
         None => quote! {},
     };
+    let token_program_check = match &c.token_program {
+        Some(token_program) => {
+            let token_program_optional_check = optional_check_scope.generate_check(token_program);
+            quote! {
+                #token_program_optional_check
+                if #name.to_account_info().owner != &#token_program.key() { return Err(anchor_lang::error::ErrorCode::ConstraintMintTokenProgram.into()); }
+            }
+        }
+        None => quote! {},
+    };
     quote! {
         {
             #decimal_check
             #mint_authority_check
             #freeze_authority_check
+            #token_program_check
         }
     }
 }

@@ -665,11 +665,11 @@ pub enum ConstraintToken {
     TokenTokenProgram(Context<ConstraintTokenProgram>),
     AssociatedTokenMint(Context<ConstraintTokenMint>),
     AssociatedTokenAuthority(Context<ConstraintTokenAuthority>),
-    AssociatedTokenProgram(Context<ConstraintTokenProgram>),
+    AssociatedTokenTokenProgram(Context<ConstraintTokenProgram>),
     MintAuthority(Context<ConstraintMintAuthority>),
     MintFreezeAuthority(Context<ConstraintMintFreezeAuthority>),
     MintDecimals(Context<ConstraintMintDecimals>),
-    MintTokenProgram(Context<ConstraintMintTokenProgram>),
+    MintTokenProgram(Context<ConstraintTokenProgram>),
     Bump(Context<ConstraintTokenBump>),
     ProgramSeed(Context<ConstraintProgramSeed>),
     Realloc(Context<ConstraintRealloc>),
@@ -853,11 +853,6 @@ pub struct ConstraintMintFreezeAuthority {
 #[derive(Debug, Clone)]
 pub struct ConstraintMintDecimals {
     pub decimals: Expr,
-}
-
-#[derive(Debug, Clone)]
-pub struct ConstraintMintTokenProgram {
-    token_program: Expr,
 }
 
 #[derive(Debug, Clone)]
