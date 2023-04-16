@@ -242,7 +242,6 @@ export class Markdown {
     unreleasedSection = unreleasedSection
       .split("\n")
       .map((line, i) => {
-        console.log(line);
         // First 4 lines don't change
         if ([0, 1, 2, 3].includes(i)) return line;
 
