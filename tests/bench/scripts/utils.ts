@@ -112,8 +112,8 @@ export class BenchData {
           throw new Error(
             [
               `Compute units for instruction '${ixName}' has changed more than ${THRESHOLD_PERCENTAGE}% but is not saved.`,
-              "In order to save, run `anchor test --skip-lint` in tests/bench and commit the changes.",
-            ].join("\n")
+              "Run `anchor test --skip-lint` in tests/bench and commit the changes.",
+            ].join(" ")
           );
         }
 
