@@ -648,6 +648,12 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                     auth.span(),
                     "mint must be provided to specify an associated token program derived address",
                 ))
+            },
+            (None, None, Some(token_program)) => {
+                return Err(ParseError::new(
+                    token_program.span(),
+                    "mint and authority must be provided to specify an associated token program derived address",
+                ))
             }
             _ => None,
         };

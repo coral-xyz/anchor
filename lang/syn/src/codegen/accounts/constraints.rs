@@ -547,7 +547,8 @@ fn generate_constraint_init_group(
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
-                    if !#if_needed || AsRef::<AccountInfo>::as_ref(&#field).owner == &anchor_lang::solana_program::system_program::ID {
+                    let owner_program = AsRef::<AccountInfo>::as_ref(&#field).owner;
+                    if !#if_needed || owner_program == &anchor_lang::solana_program::system_program::ID {
                         #payer_optional_check
 
                         // Create the account with the system program.
@@ -571,6 +572,9 @@ fn generate_constraint_init_group(
                         }
                         if pa.owner != #owner.key() {
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenOwner).with_account_name(#name_str).with_pubkeys((pa.owner, #owner.key())));
+                        }
+                        if owner_program != &#token_program.key() {
+                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenTokenProgram).with_account_name(#name_str).with_pubkeys((*owner_program, #token_program.key())));
                         }
                     }
                     pa
@@ -614,7 +618,8 @@ fn generate_constraint_init_group(
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
-                    if !#if_needed || AsRef::<AccountInfo>::as_ref(&#field).owner == &anchor_lang::solana_program::system_program::ID {
+                    let owner_program = AsRef::<AccountInfo>::as_ref(&#field).owner;
+                    if !#if_needed || owner_program == &anchor_lang::solana_program::system_program::ID {
                         #payer_optional_check
 
                         let cpi_program = associated_token_program.to_account_info();
@@ -636,6 +641,9 @@ fn generate_constraint_init_group(
                         }
                         if pa.owner != #owner.key() {
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenOwner).with_account_name(#name_str).with_pubkeys((pa.owner, #owner.key())));
+                        }
+                        if owner_program != &#token_program.key() {
+                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintAssociatedTokenTokenProgram).with_account_name(#name_str).with_pubkeys((*owner_program, #token_program.key())));
                         }
 
                         if pa.key() != ::anchor_spl::associated_token::get_associated_token_address(&#owner.key(), &#mint.key()) {
@@ -697,7 +705,8 @@ fn generate_constraint_init_group(
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
-                    if !#if_needed || AsRef::<AccountInfo>::as_ref(&#field).owner == &anchor_lang::solana_program::system_program::ID {
+                    let owner_program = AsRef::<AccountInfo>::as_ref(&#field).owner;
+                    if !#if_needed || owner_program == &anchor_lang::solana_program::system_program::ID {
                         // Define payer variable.
                         #payer_optional_check
 
@@ -725,6 +734,9 @@ fn generate_constraint_init_group(
                         }
                         if pa.decimals != #decimals {
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintMintDecimals).with_account_name(#name_str).with_values((pa.decimals, #decimals)));
+                        }
+                        if owner_program != &#token_program.key() {
+                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintMintTokenProgram).with_account_name(#name_str).with_pubkeys((*owner_program, #token_program.key())));
                         }
                     }
                     pa
@@ -923,6 +935,7 @@ fn generate_constraint_associated_token(
     quote! {
         {
             #optional_checks
+            #token_program_check
 
             let my_owner = #name.owner;
             let wallet_address = #wallet_address.key();
@@ -934,8 +947,6 @@ fn generate_constraint_associated_token(
             if my_key != __associated_token_address {
                 return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintAssociated).with_account_name(#name_str).with_pubkeys((my_key, __associated_token_address)));
             }
-
-            #token_program_check
         }
     }
 }
