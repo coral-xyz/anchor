@@ -224,12 +224,12 @@ describe(IDL.name, () => {
     const bench = await BenchData.open();
 
     // Compare and update compute units changes
-    const unreleasedComputeUnits = bench.getUnreleased().computeUnits;
+    const oldComputeUnits = bench.getUnreleased().computeUnits;
     const { needsUpdate } = bench.compareComputeUnits(
       computeUnits,
-      unreleasedComputeUnits,
+      oldComputeUnits,
       (ixName, newComputeUnits) => {
-        unreleasedComputeUnits[ixName] = newComputeUnits;
+        oldComputeUnits[ixName] = newComputeUnits;
       }
     );
 

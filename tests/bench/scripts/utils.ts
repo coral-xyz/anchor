@@ -65,11 +65,9 @@ export class BenchData {
     return this.get("unreleased");
   }
 
-  /** Get the last released version result */
-  getLastVersionResult() {
-    const versions = Object.keys(this.#data);
-    const lastVersion = versions[versions.length - 2];
-    return this.get(lastVersion);
+  /** Get all versions */
+  getVersions() {
+    return Object.keys(this.#data);
   }
 
   /** Compare and update compute units changes */
@@ -81,7 +79,7 @@ export class BenchData {
       newComputeUnits: number,
       oldComputeUnits: number
     ) => void,
-    noChangeCb?: (ixName: string, newComputeUnits: number) => void
+    noChangeCb?: (ixName: string, computeUnits: number) => void
   ) {
     let needsUpdate = false;
 
@@ -155,13 +153,15 @@ export class BenchData {
    * Loop through all of the markdown files and run the given callback before
    * saving the file.
    */
-  static async forEachMarkdown(cb: (markdown: Markdown) => void) {
+  static async forEachMarkdown(
+    cb: (markdown: Markdown, fileName: string) => void
+  ) {
     const fileNames = await fs.readdir(BENCH_DIR_PATH);
     const markdownFileNames = fileNames.filter((n) => n.endsWith(".md"));
 
     for (const fileName of markdownFileNames) {
       const markdown = await Markdown.open(path.join(BENCH_DIR_PATH, fileName));
-      cb(markdown);
+      cb(markdown, fileName);
       await markdown.save();
     }
 
@@ -207,17 +207,20 @@ export class Markdown {
     await fs.writeFile(this.#path, this.#text);
   }
 
-  /** Change unreleased table with the given table */
-  updateUnreleased(table: MarkdownTable) {
+  /** Change version table with the given table */
+  updateTable(version: string, table: MarkdownTable) {
     const md = this.#text;
-    const titleStartIndex = md.indexOf(Markdown.#UNRELEASED_VERSION);
+
+    let titleStartIndex = md.indexOf(`[${version}]`);
+    if (titleStartIndex === -1) {
+      titleStartIndex = md.indexOf(Markdown.#UNRELEASED_VERSION);
+    }
+
     const startIndex = titleStartIndex + md.slice(titleStartIndex).indexOf("|");
     const endIndex = startIndex + md.slice(startIndex).indexOf("\n\n");
 
     this.#text =
-      this.#text.slice(0, startIndex) +
-      table.toString() +
-      this.#text.slice(endIndex + 1);
+      md.slice(0, startIndex) + table.toString() + md.slice(endIndex + 1);
   }
 
   /** Bump the version to the given version */

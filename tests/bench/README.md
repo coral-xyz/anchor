@@ -10,7 +10,7 @@ The script will check whether there is a difference between the current result a
 
 ## Scripts
 
-`anchor test --skip-lint`: Run all tests. This is the only command that needs to be run for most use cases.
+`anchor test --skip-lint`: Run all tests and update benchmark files when necessary. This is the only command that needs to be run for most use cases.
 
 ---
 
