@@ -156,9 +156,10 @@ export class BenchData {
    * saving the file.
    */
   static async forEachMarkdown(cb: (markdown: Markdown) => void) {
-    const BENCH_FILENAMES = ["COMPUTE_UNITS.md"];
+    const fileNames = await fs.readdir(BENCH_DIR_PATH);
+    const markdownFileNames = fileNames.filter((n) => n.endsWith(".md"));
 
-    for (const fileName of BENCH_FILENAMES) {
+    for (const fileName of markdownFileNames) {
       const markdown = await Markdown.open(path.join(BENCH_DIR_PATH, fileName));
       cb(markdown);
       await markdown.save();
