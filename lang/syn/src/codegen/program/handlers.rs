@@ -113,13 +113,13 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 pub fn #ix_method_name(
                     __program_id: &Pubkey,
                     __accounts: &[AccountInfo],
-                    ix_data: &[u8],
+                    __ix_data: &[u8],
                 ) -> anchor_lang::Result<()> {
                     #[cfg(not(feature = "no-log-ix-name"))]
                     anchor_lang::prelude::msg!(#ix_name_log);
 
                     // Deserialize data.
-                    let ix = instruction::#ix_name::deserialize(&mut &ix_data[..])
+                    let ix = instruction::#ix_name::deserialize(&mut &__ix_data[..])
                         .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                     let instruction::#variant_arm = ix;
 
@@ -129,11 +129,11 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     let mut __reallocs = std::collections::BTreeSet::new();
 
                     // Deserialize accounts.
-                    let mut remaining_accounts: &[AccountInfo] = __accounts;
+                    let mut __remaining_accounts: &[AccountInfo] = __accounts;
                     let mut __accounts = #anchor::try_accounts(
                         __program_id,
-                        &mut remaining_accounts,
-                        ix_data,
+                        &mut __remaining_accounts,
+                        __ix_data,
                         &mut __bumps,
                         &mut __reallocs,
                     )?;
@@ -143,7 +143,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         anchor_lang::context::Context::new(
                             __program_id,
                             &mut __accounts,
-                            remaining_accounts,
+                            __remaining_accounts,
                             __bumps,
                         ),
                         #(#ix_arg_names),*
