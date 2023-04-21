@@ -395,7 +395,7 @@ pub mod misc {
 
     #[allow(unused_variables)]
     pub fn test_used_identifiers(
-        _ctx: Context<Initialize>,
+        _ctx: Context<TestUsedIdentifiers>,
         program_id: u8,
         accounts: u8,
         ix_data: u8,

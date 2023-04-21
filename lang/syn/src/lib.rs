@@ -311,7 +311,7 @@ impl Field {
         let owner_addr = match &kind {
             None => quote! { program_id },
             Some(InitKind::Program { .. }) => quote! {
-                program_id
+                __program_id
             },
             _ => quote! {
                 &anchor_spl::token::ID
