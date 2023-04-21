@@ -741,5 +741,30 @@ pub struct TestUsedIdentifiers<'info> {
         constraint = 4 == remaining_accounts,
     )]
     /// CHECK: ignore
-    pub authority: AccountInfo<'info>,
+    pub test: AccountInfo<'info>,
+
+    #[account(
+        seeds = [&[program_id], &[accounts], &[ix_data], &[remaining_accounts]],
+        bump = program_id,
+    )]
+    /// CHECK: ignore
+    pub test1: AccountInfo<'info>,
+    #[account(
+        seeds = [&[program_id], &[accounts], &[ix_data], &[remaining_accounts]],
+        bump = accounts,
+    )]
+    /// CHECK: ignore
+    pub test2: AccountInfo<'info>,
+    #[account(
+        seeds = [&[program_id], &[accounts], &[ix_data], &[remaining_accounts]],
+        bump = ix_data,
+    )]
+    /// CHECK: ignore
+    pub test3: AccountInfo<'info>,
+    #[account(
+        seeds = [&[program_id], &[accounts], &[ix_data], &[remaining_accounts]],
+        bump = remaining_accounts,
+    )]
+    /// CHECK: ignore
+    pub test4: AccountInfo<'info>,
 }
