@@ -12,8 +12,8 @@ describe(IDL.name, () => {
   const program = anchor.workspace.Bench as anchor.Program<Bench>;
   const owner = program.provider.publicKey!;
 
-  let mintAccount: anchor.web3.PublicKey;
-  let tokenAccount: anchor.web3.PublicKey;
+  let mintPk: anchor.web3.PublicKey;
+  let tokenPk: anchor.web3.PublicKey;
 
   const computeUnits: ComputeUnits = {};
 
@@ -63,9 +63,7 @@ describe(IDL.name, () => {
               continue;
             }
 
-            // @ts-ignore
             if (account.name === "payer") {
-              // @ts-ignore
               accounts[account.name] = owner;
               continue;
             }
@@ -75,9 +73,13 @@ describe(IDL.name, () => {
               continue;
             }
 
+            if (options.generatePublicKey) {
+              accounts[account.name] = options.generatePublicKey(account.name);
+              continue;
+            }
+
             const keypair = options.generateKeypair(account.name);
-            accounts[account.name] =
-              options.generatePublicKey?.(account.name) ?? keypair.publicKey;
+            accounts[account.name] = keypair.publicKey;
 
             if (account.isSigner) {
               signers.push(keypair);
@@ -117,25 +119,25 @@ describe(IDL.name, () => {
 
     // Create mint account
     const mintKp = new anchor.web3.Keypair();
-    mintAccount = mintKp.publicKey;
+    mintPk = mintKp.publicKey;
     const createMintIx = await tokenProgram.account.mint.createInstruction(
       mintKp
     );
     const initMintIx = await tokenProgram.methods
       .initializeMint2(0, owner, null)
-      .accounts({ mint: mintAccount })
+      .accounts({ mint: mintPk })
       .instruction();
     tx.add(createMintIx, initMintIx);
 
     // Create token account
     const tokenKp = new anchor.web3.Keypair();
-    tokenAccount = tokenKp.publicKey;
+    tokenPk = tokenKp.publicKey;
     const createTokenIx = await tokenProgram.account.account.createInstruction(
       tokenKp
     );
     const initTokenIx = await tokenProgram.methods
       .initializeAccount3(owner)
-      .accounts({ account: tokenAccount, mint: mintAccount })
+      .accounts({ account: tokenPk, mint: mintPk })
       .instruction();
     tx.add(createTokenIx, initTokenIx);
 
@@ -172,25 +174,25 @@ describe(IDL.name, () => {
 
   it("Boxed Interface Account Mint", async () => {
     await measureComputeUnits("boxedInterfaceAccountMint", {
-      generatePublicKey: () => mintAccount,
+      generatePublicKey: () => mintPk,
     });
   });
 
   it("Boxed Interface Account Token", async () => {
     await measureComputeUnits("boxedInterfaceAccountToken", {
-      generatePublicKey: () => tokenAccount,
+      generatePublicKey: () => tokenPk,
     });
   });
 
   it("Interface Account Mint", async () => {
     await measureComputeUnits("interfaceAccountMint", {
-      generatePublicKey: () => mintAccount,
+      generatePublicKey: () => mintPk,
     });
   });
 
   it("Interface Account Token", async () => {
     await measureComputeUnits("interfaceAccountToken", {
-      generatePublicKey: () => tokenAccount,
+      generatePublicKey: () => tokenPk,
       accountCounts: [1, 2, 4],
     });
   });
