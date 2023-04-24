@@ -908,7 +908,6 @@ fn generate_constraint_associated_token(
 ) -> proc_macro2::TokenStream {
     let name = &f.ident;
     let name_str = name.to_string();
-    let account_ref = generate_account_ref(f);
     let wallet_address = &c.wallet;
     let spl_token_mint_address = &c.mint;
     let mut optional_check_scope = OptionalCheckScope::new_with_field(accs, name);
@@ -924,7 +923,7 @@ fn generate_constraint_associated_token(
             let token_program_optional_check = optional_check_scope.generate_check(token_program);
             quote! {
                 #token_program_optional_check
-                if #account_ref.owner != &#token_program.key() { return Err(anchor_lang::error::ErrorCode::ConstraintAssociatedTokenTokenProgram.into()); }
+                if #name.to_account_info().owner != &#token_program.key() { return Err(anchor_lang::error::ErrorCode::ConstraintAssociatedTokenTokenProgram.into()); }
             }
         }
         None => quote! {},
@@ -955,7 +954,6 @@ fn generate_constraint_token_account(
     accs: &AccountsStruct,
 ) -> proc_macro2::TokenStream {
     let name = &f.ident;
-    let account_ref = generate_account_ref(f);
     let mut optional_check_scope = OptionalCheckScope::new_with_field(accs, name);
     let authority_check = match &c.authority {
         Some(authority) => {
@@ -982,7 +980,7 @@ fn generate_constraint_token_account(
             let token_program_optional_check = optional_check_scope.generate_check(token_program);
             quote! {
                 #token_program_optional_check
-                if #account_ref.owner != &#token_program.key() { return Err(anchor_lang::error::ErrorCode::ConstraintTokenTokenProgram.into()); }
+                if #name.to_account_info().owner != &#token_program.key() { return Err(anchor_lang::error::ErrorCode::ConstraintTokenTokenProgram.into()); }
             }
         }
         None => quote! {},
@@ -1002,7 +1000,6 @@ fn generate_constraint_mint(
     accs: &AccountsStruct,
 ) -> proc_macro2::TokenStream {
     let name = &f.ident;
-    let account_ref = generate_account_ref(f);
 
     let decimal_check = match &c.decimals {
         Some(decimals) => quote! {
@@ -1043,7 +1040,7 @@ fn generate_constraint_mint(
             let token_program_optional_check = optional_check_scope.generate_check(token_program);
             quote! {
                 #token_program_optional_check
-                if #account_ref.owner != &#token_program.key() { return Err(anchor_lang::error::ErrorCode::ConstraintMintTokenProgram.into()); }
+                if #name.to_account_info().owner != &#token_program.key() { return Err(anchor_lang::error::ErrorCode::ConstraintMintTokenProgram.into()); }
             }
         }
         None => quote! {},
