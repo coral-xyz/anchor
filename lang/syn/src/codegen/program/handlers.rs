@@ -110,9 +110,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             };
             quote! {
                 #[inline(never)]
-                pub fn #ix_method_name(
+                pub fn #ix_method_name<'info>(
                     __program_id: &Pubkey,
-                    __accounts: &'info [AccountInfo],
+                    __accounts: &'info [AccountInfo<'info>],
                     __ix_data: &[u8],
                 ) -> anchor_lang::Result<()> {
                     #[cfg(not(feature = "no-log-ix-name"))]
