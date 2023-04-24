@@ -768,3 +768,28 @@ pub struct TestUsedIdentifiers<'info> {
     /// CHECK: ignore
     pub test4: AccountInfo<'info>,
 }
+
+#[derive(Accounts)]
+pub struct TestInitTokenAccountWithMintWrongOrder<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(
+        init,
+        token::authority = payer,
+        token::mint = mint,
+        payer = payer
+    )]
+    pub token: Account<'info, TokenAccount>,
+
+    #[account(
+        init,
+        mint::authority = payer,
+        mint::decimals = 0,
+        payer = payer
+    )]
+    pub mint: Account<'info, Mint>,
+
+    pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
+}

@@ -3317,6 +3317,22 @@ const miscTest = (
         }
       });
     });
+
+    it("Init constraint ordering", async () => {
+      const mint = anchor.web3.Keypair.generate();
+      const token = anchor.web3.Keypair.generate();
+
+      await program.rpc.testInitTokenAccountWithMintWrongOrder({
+        accounts: {
+          payer: provider.wallet.publicKey,
+          token: token.publicKey,
+          mint: mint.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+        signers: [mint, token],
+      });
+    });
   };
 };
 

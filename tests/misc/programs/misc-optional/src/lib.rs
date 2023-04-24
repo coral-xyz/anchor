@@ -404,4 +404,10 @@ pub mod misc_optional {
     pub fn test_associated_token_with_token_program_constraint(_ctx: Context<TestAssociatedTokenWithTokenProgramConstraint>) -> Result<()> {
         Ok(())
     }
+
+    pub fn test_init_token_account_with_mint_wrong_order(
+        _ctx: Context<TestInitTokenAccountWithMintWrongOrder>,
+    ) -> Result<()> {
+        Ok(())
+    }
 }

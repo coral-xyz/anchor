@@ -1,5 +1,5 @@
 use crate::codegen::accounts::{constraints, generics, ParsedGenerics};
-use crate::{AccountField, AccountsStruct};
+use crate::{AccountField, AccountsStruct, Field};
 use quote::quote;
 use syn::Expr;
 
@@ -141,9 +141,7 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     let non_init_fields: Vec<&AccountField> =
         accs.fields.iter().filter(|af| !is_init(af)).collect();
 
-    // Deserialization for each pda init field. This must be after
-    // the inital extraction from the accounts slice and before access_checks.
-    let init_fields: Vec<proc_macro2::TokenStream> = accs
+    let mut init_fields: Vec<&Field> = accs
         .fields
         .iter()
         .filter_map(|af| match af {
@@ -153,6 +151,18 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 true => Some(f),
             },
         })
+        .collect();
+
+    // Sort init constraint to ensure mint accounts are always initialized before token accounts.
+    init_fields.sort_by_key(|f| match &f.constraints.init.as_ref().unwrap().kind {
+        crate::InitKind::Mint { .. } => -1,
+        _ => 1,
+    });
+
+    // Deserialization for each pda init field. This must be after
+    // the inital extraction from the accounts slice and before access_checks.
+    let sorted_init_fields: Vec<proc_macro2::TokenStream> = init_fields
+        .iter()
         .map(|f| constraints::generate(f, accs))
         .collect();
 
@@ -166,7 +176,7 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         .collect();
 
     quote! {
-        #(#init_fields)*
+        #(#sorted_init_fields)*
         #(#access_checks)*
     }
 }
