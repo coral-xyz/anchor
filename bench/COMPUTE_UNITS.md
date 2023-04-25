@@ -13,10 +13,6 @@ The programs and their tests are located in [/tests/bench](https://github.com/co
 
 | Instruction                 | Compute Units | +/- |
 | --------------------------- | ------------- | --- |
-| accountInfo1                | 954           | -   |
-| accountInfo2                | 1567          | -   |
-| accountInfo4                | 2059          | -   |
-| accountInfo8                | 3856          | -   |
 | accountEmptyInit1           | 5958          | -   |
 | accountEmpty1               | 1090          | -   |
 | accountEmptyInit2           | 10583         | -   |
@@ -109,10 +105,6 @@ The programs and their tests are located in [/tests/bench](https://github.com/co
 
 | Instruction                 | Compute Units | +/- |
 | --------------------------- | ------------- | --- |
-| accountInfo1                | 954           | N/A |
-| accountInfo2                | 1567          | N/A |
-| accountInfo4                | 2059          | N/A |
-| accountInfo8                | 3856          | N/A |
 | accountEmptyInit1           | 5958          | N/A |
 | accountEmpty1               | 1090          | N/A |
 | accountEmptyInit2           | 10574         | N/A |

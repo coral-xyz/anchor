@@ -57,8 +57,8 @@ pub mod swap {
         // Execute trade.
         let orderbook: OrderbookClient<'info> = (&*ctx.accounts).into();
         match side {
-            Side::Bid => orderbook.buy(amount, referral.clone())?,
-            Side::Ask => orderbook.sell(amount, referral.clone())?,
+            Side::Bid => orderbook.buy(amount, referral.to_account_info())?,
+            Side::Ask => orderbook.sell(amount, referral.to_account_info())?,
         };
         orderbook.settle(referral)?;
 
@@ -122,8 +122,8 @@ pub mod swap {
 
             // Execute the trade.
             let orderbook = ctx.accounts.orderbook_from();
-            orderbook.sell(amount, referral.clone())?;
-            orderbook.settle(referral.clone())?;
+            orderbook.sell(amount, referral.to_account_info())?;
+            orderbook.settle(referral.to_account_info())?;
 
             // Token balances after the trade.
             let base_after = token::accessor::amount(&ctx.accounts.from.coin_wallet)?;
@@ -144,7 +144,7 @@ pub mod swap {
 
             // Execute the trade.
             let orderbook = ctx.accounts.orderbook_to();
-            orderbook.buy(sell_proceeds, referral.clone())?;
+            orderbook.buy(sell_proceeds, referral.to_account_info())?;
             orderbook.settle(referral)?;
 
             // Token balances after the trade.
@@ -192,25 +192,25 @@ fn apply_risk_checks(event: DidSwap) -> Result<()> {
 pub struct Swap<'info> {
     market: MarketAccounts<'info>,
     #[account(signer)]
-    authority: AccountInfo<'info>,
+    authority: UncheckedAccount<'info>,
     #[account(mut)]
-    pc_wallet: AccountInfo<'info>,
+    pc_wallet: UncheckedAccount<'info>,
     // Programs.
-    dex_program: AccountInfo<'info>,
-    token_program: AccountInfo<'info>,
+    dex_program: UncheckedAccount<'info>,
+    token_program: UncheckedAccount<'info>,
     // Sysvars.
-    rent: AccountInfo<'info>,
+    rent: UncheckedAccount<'info>,
 }
 
 impl<'info> From<&Swap<'info>> for OrderbookClient<'info> {
     fn from(accounts: &Swap<'info>) -> OrderbookClient<'info> {
         OrderbookClient {
-            market: accounts.market.clone(),
-            authority: accounts.authority.clone(),
-            pc_wallet: accounts.pc_wallet.clone(),
-            dex_program: accounts.dex_program.clone(),
-            token_program: accounts.token_program.clone(),
-            rent: accounts.rent.clone(),
+            market: accounts.market.to_account_info(),
+            authority: accounts.authority.to_account_info(),
+            pc_wallet: accounts.pc_wallet.to_account_info(),
+            dex_program: accounts.dex_program.to_account_info(),
+            token_program: accounts.token_program.to_account_info(),
+            rent: accounts.rent.to_account_info(),
         }
     }
 }
@@ -225,35 +225,35 @@ pub struct SwapTransitive<'info> {
     to: MarketAccounts<'info>,
     // Must be the authority over all open orders accounts used.
     #[account(signer)]
-    authority: AccountInfo<'info>,
+    authority: UncheckedAccount<'info>,
     #[account(mut)]
-    pc_wallet: AccountInfo<'info>,
+    pc_wallet: UncheckedAccount<'info>,
     // Programs.
-    dex_program: AccountInfo<'info>,
-    token_program: AccountInfo<'info>,
+    dex_program: UncheckedAccount<'info>,
+    token_program: UncheckedAccount<'info>,
     // Sysvars.
-    rent: AccountInfo<'info>,
+    rent: UncheckedAccount<'info>,
 }
 
 impl<'info> SwapTransitive<'info> {
     fn orderbook_from(&self) -> OrderbookClient<'info> {
         OrderbookClient {
-            market: self.from.clone(),
-            authority: self.authority.clone(),
-            pc_wallet: self.pc_wallet.clone(),
-            dex_program: self.dex_program.clone(),
-            token_program: self.token_program.clone(),
-            rent: self.rent.clone(),
+            market: self.from.to_account_info(),
+            authority: self.authority.to_account_info(),
+            pc_wallet: self.pc_wallet.to_account_info(),
+            dex_program: self.dex_program.to_account_info(),
+            token_program: self.token_program.to_account_info(),
+            rent: self.rent.to_account_info(),
         }
     }
     fn orderbook_to(&self) -> OrderbookClient<'info> {
         OrderbookClient {
-            market: self.to.clone(),
-            authority: self.authority.clone(),
-            pc_wallet: self.pc_wallet.clone(),
-            dex_program: self.dex_program.clone(),
-            token_program: self.token_program.clone(),
-            rent: self.rent.clone(),
+            market: self.to.to_account_info(),
+            authority: self.authority.to_account_info(),
+            pc_wallet: self.pc_wallet.to_account_info(),
+            dex_program: self.dex_program.to_account_info(),
+            token_program: self.token_program.to_account_info(),
+            rent: self.rent.to_account_info(),
         }
     }
 }
@@ -394,36 +394,36 @@ fn coin_lots(market: &MarketState, size: u64) -> u64 {
 #[derive(Accounts, Clone)]
 pub struct MarketAccounts<'info> {
     #[account(mut)]
-    market: AccountInfo<'info>,
+    market: UncheckedAccount<'info>,
     #[account(mut)]
-    open_orders: AccountInfo<'info>,
+    open_orders: UncheckedAccount<'info>,
     #[account(mut)]
-    request_queue: AccountInfo<'info>,
+    request_queue: UncheckedAccount<'info>,
     #[account(mut)]
-    event_queue: AccountInfo<'info>,
+    event_queue: UncheckedAccount<'info>,
     #[account(mut)]
-    bids: AccountInfo<'info>,
+    bids: UncheckedAccount<'info>,
     #[account(mut)]
-    asks: AccountInfo<'info>,
+    asks: UncheckedAccount<'info>,
     // The `spl_token::Account` that funds will be taken from, i.e., transferred
     // from the user into the market's vault.
     //
     // For bids, this is the base currency. For asks, the quote.
     #[account(mut)]
-    order_payer_token_account: AccountInfo<'info>,
+    order_payer_token_account: UncheckedAccount<'info>,
     // Also known as the "base" currency. For a given A/B market,
     // this is the vault for the A mint.
     #[account(mut)]
-    coin_vault: AccountInfo<'info>,
+    coin_vault: UncheckedAccount<'info>,
     // Also known as the "quote" currency. For a given A/B market,
     // this is the vault for the B mint.
     #[account(mut)]
-    pc_vault: AccountInfo<'info>,
+    pc_vault: UncheckedAccount<'info>,
     // PDA owner of the DEX's token accounts for base + quote currencies.
-    vault_signer: AccountInfo<'info>,
+    vault_signer: UncheckedAccount<'info>,
     // User wallets.
     #[account(mut)]
-    coin_wallet: AccountInfo<'info>,
+    coin_wallet: UncheckedAccount<'info>,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize)]

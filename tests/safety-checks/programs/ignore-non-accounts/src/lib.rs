@@ -13,18 +13,14 @@ pub mod ignore_non_accounts {
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     /// CHECK:
-    checked1: UncheckedAccount<'info>,
-    /// CHECK:
-    checked2: AccountInfo<'info>,
+    checked: UncheckedAccount<'info>,
 }
 
 #[derive(Debug)]
 pub struct ShouldIgnore1<'info> {
-    unchecked1: UncheckedAccount<'info>,
-    unchecked2: AccountInfo<'info>,
+    unchecked: UncheckedAccount<'info>,
 }
 
 pub struct ShouldIgnore2<'info> {
-    unchecked1: UncheckedAccount<'info>,
-    unchecked2: AccountInfo<'info>,
+    unchecked: UncheckedAccount<'info>,
 }

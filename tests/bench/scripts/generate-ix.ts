@@ -26,10 +26,6 @@ type Instruction = {
  */
 const INSTRUCTIONS: Instruction[] = [
   {
-    name: "account_info",
-    accountType: "AccountInfo<'info>",
-  },
-  {
     name: "account_empty_init",
     accountType: "Account<'info, Empty>",
     accountMacro: {

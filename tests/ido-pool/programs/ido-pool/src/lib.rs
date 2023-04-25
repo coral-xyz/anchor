@@ -205,7 +205,7 @@ pub mod ido_pool {
         if ctx.accounts.user_redeemable.amount == 0 {
             let cpi_accounts = CloseAccount {
                 account: ctx.accounts.user_redeemable.to_account_info(),
-                destination: ctx.accounts.user_authority.clone(),
+                destination: ctx.accounts.user_authority.to_account_info(),
                 authority: ctx.accounts.ido_account.to_account_info(),
             };
             let cpi_program = ctx.accounts.token_program.to_account_info();
@@ -268,7 +268,7 @@ pub mod ido_pool {
         if ctx.accounts.escrow_usdc.amount == 0 {
             let cpi_accounts = CloseAccount {
                 account: ctx.accounts.escrow_usdc.to_account_info(),
-                destination: ctx.accounts.user_authority.clone(),
+                destination: ctx.accounts.user_authority.to_account_info(),
                 authority: ctx.accounts.ido_account.to_account_info(),
             };
             let cpi_program = ctx.accounts.token_program.to_account_info();
@@ -460,7 +460,7 @@ pub struct ExchangeRedeemableForWatermelon<'info> {
     pub payer: Signer<'info>,
     // User Accounts
     #[account(mut)] // Sol rent from empty redeemable account is refunded to the user
-    pub user_authority: AccountInfo<'info>,
+    pub user_authority: UncheckedAccount<'info>,
     // TODO replace with ATA constraints
     #[account(mut,
         constraint = user_watermelon.owner == user_authority.key(),
@@ -523,7 +523,7 @@ pub struct WithdrawFromEscrow<'info> {
     pub payer: Signer<'info>,
     // User Accounts
     #[account(mut)]
-    pub user_authority: AccountInfo<'info>,
+    pub user_authority: UncheckedAccount<'info>,
     #[account(mut,
         constraint = user_usdc.owner == user_authority.key(),
         constraint = user_usdc.mint == usdc_mint.key())]

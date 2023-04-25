@@ -144,10 +144,6 @@ describe(IDL.name, () => {
     await tokenProgram.provider.sendAndConfirm!(tx, [mintKp, tokenKp]);
   });
 
-  it("AccountInfo", async () => {
-    await measureComputeUnits("accountInfo");
-  });
-
   it("Account Empty", async () => {
     await measureComputeUnits("accountEmpty");
   });

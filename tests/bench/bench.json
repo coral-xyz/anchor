@@ -1,10 +1,6 @@
 {
   "0.27.0": {
     "computeUnits": {
-      "accountInfo1": 954,
-      "accountInfo2": 1567,
-      "accountInfo4": 2059,
-      "accountInfo8": 3856,
       "accountEmptyInit1": 5958,
       "accountEmpty1": 1090,
       "accountEmptyInit2": 10574,
@@ -92,10 +88,6 @@
   },
   "unreleased": {
     "computeUnits": {
-      "accountInfo1": 954,
-      "accountInfo2": 1567,
-      "accountInfo4": 2059,
-      "accountInfo8": 3856,
       "accountEmptyInit1": 5958,
       "accountEmpty1": 1090,
       "accountEmptyInit2": 10583,
