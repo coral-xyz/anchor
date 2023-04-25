@@ -81,6 +81,7 @@ pub fn deactivate_stake<'info>(
 // CPI accounts
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct Authorize<'info> {
     /// The stake account to be updated
     pub stake: AccountInfo<'info>,
@@ -96,6 +97,7 @@ pub struct Authorize<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct Withdraw<'info> {
     /// The stake account to be updated
     pub stake: AccountInfo<'info>,
@@ -114,6 +116,7 @@ pub struct Withdraw<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct DeactivateStake<'info> {
     /// The stake account to be deactivated
     pub stake: AccountInfo<'info>,

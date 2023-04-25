@@ -554,6 +554,7 @@ pub fn unverify_sized_collection_item<'info>(
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct ApproveCollectionAuthority<'info> {
     pub collection_authority_record: AccountInfo<'info>,
     pub new_collection_authority: AccountInfo<'info>,
@@ -564,6 +565,7 @@ pub struct ApproveCollectionAuthority<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct BubblegumSetCollectionSize<'info> {
     pub metadata_account: AccountInfo<'info>,
     pub update_authority: AccountInfo<'info>,
@@ -572,6 +574,7 @@ pub struct BubblegumSetCollectionSize<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct BurnEditionNft<'info> {
     pub metadata: AccountInfo<'info>,
     pub owner: AccountInfo<'info>,
@@ -586,6 +589,7 @@ pub struct BurnEditionNft<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct BurnNft<'info> {
     pub metadata: AccountInfo<'info>,
     pub owner: AccountInfo<'info>,
@@ -597,6 +601,7 @@ pub struct BurnNft<'info> {
 
 #[deprecated(note = "internal instructions deprecated by Metaplex")]
 #[derive(Accounts)]
+#[only_cpi]
 pub struct CreateMetadataAccountsV2<'info> {
     pub metadata: AccountInfo<'info>,
     pub mint: AccountInfo<'info>,
@@ -608,6 +613,7 @@ pub struct CreateMetadataAccountsV2<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct CreateMetadataAccountsV3<'info> {
     pub metadata: AccountInfo<'info>,
     pub mint: AccountInfo<'info>,
@@ -619,12 +625,14 @@ pub struct CreateMetadataAccountsV3<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct UpdateMetadataAccountsV2<'info> {
     pub metadata: AccountInfo<'info>,
     pub update_authority: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct CreateMasterEditionV3<'info> {
     pub edition: AccountInfo<'info>,
     pub mint: AccountInfo<'info>,
@@ -638,6 +646,7 @@ pub struct CreateMasterEditionV3<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct MintNewEditionFromMasterEditionViaToken<'info> {
     pub new_metadata: AccountInfo<'info>,
     pub new_edition: AccountInfo<'info>,
@@ -664,6 +673,7 @@ pub struct MintNewEditionFromMasterEditionViaToken<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct RevokeCollectionAuthority<'info> {
     pub collection_authority_record: AccountInfo<'info>,
     pub delegate_authority: AccountInfo<'info>,
@@ -673,6 +683,7 @@ pub struct RevokeCollectionAuthority<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct SetCollectionSize<'info> {
     pub metadata: AccountInfo<'info>,
     pub mint: AccountInfo<'info>,
@@ -681,6 +692,7 @@ pub struct SetCollectionSize<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct SetTokenStandard<'info> {
     pub metadata_account: AccountInfo<'info>,
     pub update_authority: AccountInfo<'info>,
@@ -688,6 +700,7 @@ pub struct SetTokenStandard<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct VerifyCollection<'info> {
     pub payer: AccountInfo<'info>,
     pub metadata: AccountInfo<'info>,
@@ -698,6 +711,7 @@ pub struct VerifyCollection<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct VerifySizedCollectionItem<'info> {
     pub payer: AccountInfo<'info>,
     pub metadata: AccountInfo<'info>,
@@ -708,6 +722,7 @@ pub struct VerifySizedCollectionItem<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct SetAndVerifyCollection<'info> {
     pub metadata: AccountInfo<'info>,
     pub collection_authority: AccountInfo<'info>,
@@ -719,6 +734,7 @@ pub struct SetAndVerifyCollection<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct SetAndVerifySizedCollectionItem<'info> {
     pub metadata: AccountInfo<'info>,
     pub collection_authority: AccountInfo<'info>,
@@ -730,6 +746,7 @@ pub struct SetAndVerifySizedCollectionItem<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct FreezeDelegatedAccount<'info> {
     pub metadata: AccountInfo<'info>,
     pub delegate: AccountInfo<'info>,
@@ -740,6 +757,7 @@ pub struct FreezeDelegatedAccount<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct ThawDelegatedAccount<'info> {
     pub metadata: AccountInfo<'info>,
     pub delegate: AccountInfo<'info>,
@@ -750,6 +768,7 @@ pub struct ThawDelegatedAccount<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct UpdatePrimarySaleHappenedViaToken<'info> {
     pub metadata: AccountInfo<'info>,
     pub owner: AccountInfo<'info>,
@@ -757,18 +776,21 @@ pub struct UpdatePrimarySaleHappenedViaToken<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct SignMetadata<'info> {
     pub creator: AccountInfo<'info>,
     pub metadata: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct RemoveCreatorVerification<'info> {
     pub creator: AccountInfo<'info>,
     pub metadata: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct Utilize<'info> {
     pub metadata: AccountInfo<'info>,
     pub token_account: AccountInfo<'info>,
@@ -778,6 +800,7 @@ pub struct Utilize<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct UnverifyCollection<'info> {
     pub metadata: AccountInfo<'info>,
     pub collection_authority: AccountInfo<'info>,
@@ -787,6 +810,7 @@ pub struct UnverifyCollection<'info> {
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct UnverifySizedCollectionItem<'info> {
     pub metadata: AccountInfo<'info>,
     pub collection_authority: AccountInfo<'info>,

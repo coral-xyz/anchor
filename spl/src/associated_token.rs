@@ -54,6 +54,7 @@ pub fn create_idempotent<'info>(
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct Create<'info> {
     pub payer: AccountInfo<'info>,
     pub associated_token: AccountInfo<'info>,

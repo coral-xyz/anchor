@@ -34,6 +34,7 @@ pub fn ret<'a, 'b, 'c, 'info>(
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct Ret<'info> {
     #[account(mut)]
     pub buffer: AccountInfo<'info>,
@@ -41,6 +42,7 @@ pub struct Ret<'info> {
 
 // A set of accounts that can be used with shared memory.
 #[derive(Accounts)]
+#[only_cpi]
 pub struct Shmem<'info> {
     // Shared memory account to write the return value into.
     #[account(mut, constraint = shmem.owner == shmem_program.key)]

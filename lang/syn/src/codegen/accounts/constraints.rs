@@ -282,7 +282,7 @@ pub fn generate_constraint_has_one(
 pub fn generate_constraint_signer(f: &Field, c: &ConstraintSigner) -> proc_macro2::TokenStream {
     let ident = &f.ident;
     let info = match f.ty {
-        Ty::AccountInfo => quote! { #ident },
+        Ty::UncheckedAccount => quote! { #ident.to_account_info() },
         Ty::Account(_) => quote! { #ident.to_account_info() },
         Ty::InterfaceAccount(_) => quote! { #ident.to_account_info() },
         Ty::AccountLoader(_) => quote! { #ident.to_account_info() },

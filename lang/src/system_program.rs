@@ -32,6 +32,7 @@ pub fn advance_nonce_account<'info>(
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct AdvanceNonceAccount<'info> {
     pub nonce: AccountInfo<'info>,
     pub authorized: AccountInfo<'info>,
@@ -55,6 +56,7 @@ pub fn allocate<'info>(
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct Allocate<'info> {
     pub account_to_allocate: AccountInfo<'info>,
 }
@@ -81,6 +83,7 @@ pub fn allocate_with_seed<'info>(
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct AllocateWithSeed<'info> {
     pub account_to_allocate: AccountInfo<'info>,
     pub base: AccountInfo<'info>,
@@ -103,6 +106,7 @@ pub fn assign<'info>(
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct Assign<'info> {
     pub account_to_assign: AccountInfo<'info>,
 }
@@ -127,6 +131,7 @@ pub fn assign_with_seed<'info>(
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct AssignWithSeed<'info> {
     pub account_to_assign: AccountInfo<'info>,
     pub base: AccountInfo<'info>,
@@ -150,6 +155,7 @@ pub fn authorize_nonce_account<'info>(
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct AuthorizeNonceAccount<'info> {
     pub nonce: AccountInfo<'info>,
     pub authorized: AccountInfo<'info>,
@@ -177,6 +183,7 @@ pub fn create_account<'info>(
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct CreateAccount<'info> {
     pub from: AccountInfo<'info>,
     pub to: AccountInfo<'info>,
@@ -207,6 +214,7 @@ pub fn create_account_with_seed<'info>(
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct CreateAccountWithSeed<'info> {
     pub from: AccountInfo<'info>,
     pub to: AccountInfo<'info>,
@@ -243,6 +251,7 @@ pub fn create_nonce_account<'info>(
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct CreateNonceAccount<'info> {
     pub from: AccountInfo<'info>,
     pub nonce: AccountInfo<'info>,
@@ -287,6 +296,7 @@ pub fn create_nonce_account_with_seed<'info>(
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct CreateNonceAccountWithSeed<'info> {
     pub from: AccountInfo<'info>,
     pub nonce: AccountInfo<'info>,
@@ -313,6 +323,7 @@ pub fn transfer<'info>(
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct Transfer<'info> {
     pub from: AccountInfo<'info>,
     pub to: AccountInfo<'info>,
@@ -341,6 +352,7 @@ pub fn transfer_with_seed<'info>(
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct TransferWithSeed<'info> {
     pub from: AccountInfo<'info>,
     pub base: AccountInfo<'info>,
@@ -372,6 +384,7 @@ pub fn withdraw_nonce_account<'info>(
 }
 
 #[derive(Accounts)]
+#[only_cpi]
 pub struct WithdrawNonceAccount<'info> {
     pub nonce: AccountInfo<'info>,
     pub to: AccountInfo<'info>,
