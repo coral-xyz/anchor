@@ -57,8 +57,8 @@ pub mod swap {
         // Execute trade.
         let orderbook: OrderbookClient<'info> = (&*ctx.accounts).into();
         match side {
-            Side::Bid => orderbook.buy(amount, referral.to_account_info())?,
-            Side::Ask => orderbook.sell(amount, referral.to_account_info())?,
+            Side::Bid => orderbook.buy(amount, referral.clone())?,
+            Side::Ask => orderbook.sell(amount, referral.clone())?,
         };
         orderbook.settle(referral)?;
 
@@ -122,8 +122,8 @@ pub mod swap {
 
             // Execute the trade.
             let orderbook = ctx.accounts.orderbook_from();
-            orderbook.sell(amount, referral.to_account_info())?;
-            orderbook.settle(referral.to_account_info())?;
+            orderbook.sell(amount, referral.clone())?;
+            orderbook.settle(referral.clone())?;
 
             // Token balances after the trade.
             let base_after = token::accessor::amount(&ctx.accounts.from.coin_wallet)?;
@@ -144,7 +144,7 @@ pub mod swap {
 
             // Execute the trade.
             let orderbook = ctx.accounts.orderbook_to();
-            orderbook.buy(sell_proceeds, referral.to_account_info())?;
+            orderbook.buy(sell_proceeds, referral.clone())?;
             orderbook.settle(referral)?;
 
             // Token balances after the trade.
@@ -205,7 +205,7 @@ pub struct Swap<'info> {
 impl<'info> From<&Swap<'info>> for OrderbookClient<'info> {
     fn from(accounts: &Swap<'info>) -> OrderbookClient<'info> {
         OrderbookClient {
-            market: accounts.market.to_account_info(),
+            market: accounts.market.clone(),
             authority: accounts.authority.to_account_info(),
             pc_wallet: accounts.pc_wallet.to_account_info(),
             dex_program: accounts.dex_program.to_account_info(),
@@ -238,7 +238,7 @@ pub struct SwapTransitive<'info> {
 impl<'info> SwapTransitive<'info> {
     fn orderbook_from(&self) -> OrderbookClient<'info> {
         OrderbookClient {
-            market: self.from.to_account_info(),
+            market: self.from.clone(),
             authority: self.authority.to_account_info(),
             pc_wallet: self.pc_wallet.to_account_info(),
             dex_program: self.dex_program.to_account_info(),
@@ -248,7 +248,7 @@ impl<'info> SwapTransitive<'info> {
     }
     fn orderbook_to(&self) -> OrderbookClient<'info> {
         OrderbookClient {
-            market: self.to.to_account_info(),
+            market: self.to.clone(),
             authority: self.authority.to_account_info(),
             pc_wallet: self.pc_wallet.to_account_info(),
             dex_program: self.dex_program.to_account_info(),
@@ -334,20 +334,20 @@ impl<'info> OrderbookClient<'info> {
         let limit = 65535;
 
         let dex_accs = dex::NewOrderV3 {
-            market: self.market.market.clone(),
-            open_orders: self.market.open_orders.clone(),
-            request_queue: self.market.request_queue.clone(),
-            event_queue: self.market.event_queue.clone(),
-            market_bids: self.market.bids.clone(),
-            market_asks: self.market.asks.clone(),
-            order_payer_token_account: self.market.order_payer_token_account.clone(),
-            open_orders_authority: self.authority.clone(),
-            coin_vault: self.market.coin_vault.clone(),
-            pc_vault: self.market.pc_vault.clone(),
-            token_program: self.token_program.clone(),
-            rent: self.rent.clone(),
+            market: self.market.market.to_account_info(),
+            open_orders: self.market.open_orders.to_account_info(),
+            request_queue: self.market.request_queue.to_account_info(),
+            event_queue: self.market.event_queue.to_account_info(),
+            market_bids: self.market.bids.to_account_info(),
+            market_asks: self.market.asks.to_account_info(),
+            order_payer_token_account: self.market.order_payer_token_account.to_account_info(),
+            open_orders_authority: self.authority.to_account_info(),
+            coin_vault: self.market.coin_vault.to_account_info(),
+            pc_vault: self.market.pc_vault.to_account_info(),
+            token_program: self.token_program.to_account_info(),
+            rent: self.rent.to_account_info(),
         };
-        let mut ctx = CpiContext::new(self.dex_program.clone(), dex_accs);
+        let mut ctx = CpiContext::new(self.dex_program.to_account_info(), dex_accs);
         if let Some(referral) = referral {
             ctx = ctx.with_remaining_accounts(vec![referral]);
         }
@@ -366,17 +366,17 @@ impl<'info> OrderbookClient<'info> {
 
     fn settle(&self, referral: Option<AccountInfo<'info>>) -> Result<()> {
         let settle_accs = dex::SettleFunds {
-            market: self.market.market.clone(),
-            open_orders: self.market.open_orders.clone(),
-            open_orders_authority: self.authority.clone(),
-            coin_vault: self.market.coin_vault.clone(),
-            pc_vault: self.market.pc_vault.clone(),
-            coin_wallet: self.market.coin_wallet.clone(),
-            pc_wallet: self.pc_wallet.clone(),
-            vault_signer: self.market.vault_signer.clone(),
-            token_program: self.token_program.clone(),
+            market: self.market.market.to_account_info(),
+            open_orders: self.market.open_orders.to_account_info(),
+            open_orders_authority: self.authority.to_account_info(),
+            coin_vault: self.market.coin_vault.to_account_info(),
+            pc_vault: self.market.pc_vault.to_account_info(),
+            coin_wallet: self.market.coin_wallet.to_account_info(),
+            pc_wallet: self.pc_wallet.to_account_info(),
+            vault_signer: self.market.vault_signer.to_account_info(),
+            token_program: self.token_program.to_account_info(),
         };
-        let mut ctx = CpiContext::new(self.dex_program.clone(), settle_accs);
+        let mut ctx = CpiContext::new(self.dex_program.to_account_info(), settle_accs);
         if let Some(referral) = referral {
             ctx = ctx.with_remaining_accounts(vec![referral]);
         }
