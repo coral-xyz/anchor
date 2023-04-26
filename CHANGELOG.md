@@ -24,6 +24,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Breaking
 
+- lang: Remove the use of `AccountInfo` in the context of the accounts. Use `UncheckedAccount` instead ([#2470](https://github.com/coral-xyz/anchor/pull/2470)).
 - lang: Identifiers that are intended for internal usage(`program_id`, `accounts`, `ix_data`, `remaining_accounts`) have been renamed with `__` prefix ([#2464](https://github.com/coral-xyz/anchor/pull/2464))
 
 ## [0.27.0] - 2023-03-08
