@@ -404,7 +404,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Deref for Acc
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &(*self).account
+        &self.account
     }
 }
 

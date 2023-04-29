@@ -1,3 +1,5 @@
+#![allow(clippy::result_large_err)]
+
 //! `anchor_client` provides an RPC client to send transactions and fetch
 //! deserialized accounts from Solana programs written in `anchor_lang`.
 
@@ -155,6 +157,7 @@ impl Program {
         &self,
         filters: Vec<RpcFilterType>,
     ) -> Result<ProgramAccountsIterator<T>, ClientError> {
+        #[allow(deprecated)]
         let account_type_filter = RpcFilterType::Memcmp(Memcmp {
             offset: 0,
             bytes: MemcmpEncodedBytes::Base58(bs58::encode(T::discriminator()).into_string()),
@@ -285,7 +288,7 @@ fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
         .strip_prefix(PROGRAM_LOG)
         .or_else(|| l.strip_prefix(PROGRAM_DATA))
     {
-        let borsh_bytes = match anchor_lang::__private::base64::decode(&log) {
+        let borsh_bytes = match anchor_lang::__private::base64::decode(log) {
             Ok(borsh_bytes) => borsh_bytes,
             _ => {
                 #[cfg(feature = "debug")]

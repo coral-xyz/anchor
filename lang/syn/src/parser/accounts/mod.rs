@@ -33,7 +33,7 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
         }
     };
 
-    let _ = constraints_cross_checks(&fields)?;
+    constraints_cross_checks(&fields)?;
 
     Ok(AccountsStruct::new(strct.clone(), fields, instruction_api))
 }
@@ -340,7 +340,7 @@ fn parse_program_account_loader(path: &syn::Path) -> ParseResult<AccountLoaderTy
 
 fn parse_account_ty(path: &syn::Path) -> ParseResult<AccountTy> {
     let account_type_path = parse_account(path)?;
-    let boxed = parser::tts_to_string(&path)
+    let boxed = parser::tts_to_string(path)
         .replace(' ', "")
         .starts_with("Box<Account<");
     Ok(AccountTy {

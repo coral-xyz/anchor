@@ -1,3 +1,5 @@
+#![allow(clippy::crate_in_macro_def, clippy::result_large_err)]
+
 //! Anchor ⚓ is a framework for Solana's Sealevel runtime providing several
 //! convenient developer tools.
 //!
@@ -305,6 +307,7 @@ pub mod __private {
     #[doc(hidden)]
     impl ZeroCopyAccessor<Pubkey> for [u8; 32] {
         fn get(&self) -> Pubkey {
+            #[allow(deprecated)]
             Pubkey::new(self)
         }
         fn set(input: &Pubkey) -> [u8; 32] {

@@ -571,7 +571,7 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
         let mut package_json = File::create("package.json")?;
         package_json.write_all(template::package_json().as_bytes())?;
 
-        let mut mocha = File::create(&format!("tests/{}.js", name))?;
+        let mut mocha = File::create(format!("tests/{}.js", name))?;
         mocha.write_all(template::mocha(&name).as_bytes())?;
 
         let mut deploy = File::create("migrations/deploy.js")?;
@@ -587,7 +587,7 @@ fn init(cfg_override: &ConfigOverride, name: String, javascript: bool, no_git: b
         let mut deploy = File::create("migrations/deploy.ts")?;
         deploy.write_all(template::ts_deploy_script().as_bytes())?;
 
-        let mut mocha = File::create(&format!("tests/{}.ts", name))?;
+        let mut mocha = File::create(format!("tests/{}.ts", name))?;
         mocha.write_all(template::ts_mocha(&name).as_bytes())?;
     }
 
@@ -633,7 +633,7 @@ fn new(cfg_override: &ConfigOverride, name: String) -> Result<()> {
                 println!("Unable to make new program");
             }
             Some(parent) => {
-                std::env::set_current_dir(&parent)?;
+                std::env::set_current_dir(parent)?;
                 new_program(&name)?;
                 println!("Created new program.");
             }
@@ -644,13 +644,13 @@ fn new(cfg_override: &ConfigOverride, name: String) -> Result<()> {
 
 // Creates a new program crate in the current directory with `name`.
 fn new_program(name: &str) -> Result<()> {
-    fs::create_dir(&format!("programs/{}", name))?;
-    fs::create_dir(&format!("programs/{}/src/", name))?;
-    let mut cargo_toml = File::create(&format!("programs/{}/Cargo.toml", name))?;
+    fs::create_dir(format!("programs/{}", name))?;
+    fs::create_dir(format!("programs/{}/src/", name))?;
+    let mut cargo_toml = File::create(format!("programs/{}/Cargo.toml", name))?;
     cargo_toml.write_all(template::cargo_toml(name).as_bytes())?;
-    let mut xargo_toml = File::create(&format!("programs/{}/Xargo.toml", name))?;
+    let mut xargo_toml = File::create(format!("programs/{}/Xargo.toml", name))?;
     xargo_toml.write_all(template::xargo_toml().as_bytes())?;
-    let mut lib_rs = File::create(&format!("programs/{}/src/lib.rs", name))?;
+    let mut lib_rs = File::create(format!("programs/{}/src/lib.rs", name))?;
     lib_rs.write_all(template::lib_rs(name).as_bytes())?;
     Ok(())
 }
@@ -900,7 +900,7 @@ fn build_cwd(
 ) -> Result<()> {
     match cargo_toml.parent() {
         None => return Err(anyhow!("Unable to find parent")),
-        Some(p) => std::env::set_current_dir(&p)?,
+        Some(p) => std::env::set_current_dir(p)?,
     };
     match build_config.verifiable {
         false => _build_cwd(cfg, idl_out, idl_ts_out, skip_lint, cargo_args),
@@ -1012,7 +1012,7 @@ fn docker_build(
     let target_dir = workdir.join("docker-target");
     println!("Run docker image");
     let exit = std::process::Command::new("docker")
-        .args(&[
+        .args([
             "run",
             "-it",
             "-d",
@@ -1124,7 +1124,7 @@ fn docker_build_bpf(
 
     // Execute the build.
     let exit = std::process::Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             "--env",
             "PATH=/root/.local/share/solana/install/active_release/bin:/root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
@@ -1167,7 +1167,7 @@ fn docker_build_bpf(
         bin_path.as_path().to_str().unwrap()
     );
     let exit = std::process::Command::new("docker")
-        .args(&["cp", &bin_artifact, &out_file])
+        .args(["cp", &bin_artifact, &out_file])
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
@@ -1189,7 +1189,7 @@ fn docker_cleanup(container_name: &str, target_dir: &Path) -> Result<()> {
     // Remove the docker image.
     println!("Removing the docker container");
     let exit = std::process::Command::new("docker")
-        .args(&["rm", "-f", container_name])
+        .args(["rm", "-f", container_name])
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
@@ -1302,7 +1302,7 @@ fn verify(
         cargo_args,
         false,
     )?;
-    std::env::set_current_dir(&cur_dir)?;
+    std::env::set_current_dir(cur_dir)?;
 
     // Verify binary.
     let binary_name = cargo.lib_name()?;
@@ -1354,7 +1354,7 @@ fn cd_member(cfg_override: &ConfigOverride, program_name: &str) -> Result<()> {
             return Ok(());
         }
     }
-    return Err(anyhow!("{} is not part of the workspace", program_name,));
+    Err(anyhow!("{} is not part of the workspace", program_name,))
 }
 
 pub fn verify_bin(program_id: Pubkey, bin_path: &Path, cluster: &str) -> Result<BinVerification> {
@@ -1385,6 +1385,7 @@ pub fn verify_bin(program_id: Pubkey, bin_path: &Path, cluster: &str) -> Result<
                         )?
                         .value
                         .map_or(Err(anyhow!("Account not found")), Ok)?;
+                    #[allow(deprecated)]
                     let bin = account.data
                         [UpgradeableLoaderState::programdata_data_offset().unwrap_or(0)..]
                         .to_vec();
@@ -1404,6 +1405,7 @@ pub fn verify_bin(program_id: Pubkey, bin_path: &Path, cluster: &str) -> Result<
                     }
                 }
                 UpgradeableLoaderState::Buffer { .. } => {
+                    #[allow(deprecated)]
                     let offset = UpgradeableLoaderState::buffer_data_offset().unwrap_or(0);
                     (
                         account.data[offset..].to_vec(),
@@ -2346,10 +2348,10 @@ fn test_validator_file_paths(test_validator: &Option<TestValidator>) -> (String,
         std::process::exit(1);
     }
     if Path::new(&ledger_directory).exists() {
-        fs::remove_dir_all(&ledger_directory).unwrap();
+        fs::remove_dir_all(ledger_directory).unwrap();
     }
 
-    fs::create_dir_all(&ledger_directory).unwrap();
+    fs::create_dir_all(ledger_directory).unwrap();
 
     (
         ledger_directory.to_string(),
@@ -2572,7 +2574,7 @@ fn create_idl_buffer(
 
     // Creates the new buffer account with the system program.
     let create_account_ix = {
-        let space = 8 + 32 + 4 + serialize_idl(idl)?.len() as usize;
+        let space = 8 + 32 + 4 + serialize_idl(idl)?.len();
         let lamports = client.get_minimum_balance_for_rent_exemption(space)?;
         solana_sdk::system_instruction::create_account(
             &keypair.pubkey(),
@@ -2703,7 +2705,7 @@ fn set_workspace_dir_or_exit() {
                     println!("Unable to make new program");
                 }
                 Some(parent) => {
-                    if std::env::set_current_dir(&parent).is_err() {
+                    if std::env::set_current_dir(parent).is_err() {
                         println!("Not in anchor workspace.");
                         std::process::exit(1);
                     }
@@ -2798,7 +2800,7 @@ fn shell(cfg_override: &ConfigOverride) -> Result<()> {
         let url = cluster_url(cfg, &cfg.test_validator);
         let js_code = template::node_shell(&url, &cfg.provider.wallet.to_string(), programs)?;
         let mut child = std::process::Command::new("node")
-            .args(&["-e", &js_code, "-i", "--experimental-repl-await"])
+            .args(["-e", &js_code, "-i", "--experimental-repl-await"])
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .spawn()
@@ -2994,7 +2996,7 @@ fn publish(
         });
     let client = Client::new();
     let resp = client
-        .post(&format!("{}/api/v0/build", cfg.registry.url))
+        .post(format!("{}/api/v0/build", cfg.registry.url))
         .bearer_auth(token)
         .multipart(form)
         .send()?;

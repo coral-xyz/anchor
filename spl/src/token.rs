@@ -9,8 +9,8 @@ use std::ops::Deref;
 pub use spl_token;
 pub use spl_token::ID;
 
-pub fn transfer<'a, 'b, 'c, 'info>(
-    ctx: CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>,
+pub fn transfer<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, Transfer<'info>>,
     amount: u64,
 ) -> Result<()> {
     let ix = spl_token::instruction::transfer(
@@ -33,8 +33,8 @@ pub fn transfer<'a, 'b, 'c, 'info>(
     .map_err(Into::into)
 }
 
-pub fn mint_to<'a, 'b, 'c, 'info>(
-    ctx: CpiContext<'a, 'b, 'c, 'info, MintTo<'info>>,
+pub fn mint_to<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, MintTo<'info>>,
     amount: u64,
 ) -> Result<()> {
     let ix = spl_token::instruction::mint_to(
@@ -57,10 +57,7 @@ pub fn mint_to<'a, 'b, 'c, 'info>(
     .map_err(Into::into)
 }
 
-pub fn burn<'a, 'b, 'c, 'info>(
-    ctx: CpiContext<'a, 'b, 'c, 'info, Burn<'info>>,
-    amount: u64,
-) -> Result<()> {
+pub fn burn<'info>(ctx: CpiContext<'_, '_, '_, 'info, Burn<'info>>, amount: u64) -> Result<()> {
     let ix = spl_token::instruction::burn(
         &spl_token::ID,
         ctx.accounts.from.key,
@@ -81,8 +78,8 @@ pub fn burn<'a, 'b, 'c, 'info>(
     .map_err(Into::into)
 }
 
-pub fn approve<'a, 'b, 'c, 'info>(
-    ctx: CpiContext<'a, 'b, 'c, 'info, Approve<'info>>,
+pub fn approve<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, Approve<'info>>,
     amount: u64,
 ) -> Result<()> {
     let ix = spl_token::instruction::approve(
@@ -105,7 +102,7 @@ pub fn approve<'a, 'b, 'c, 'info>(
     .map_err(Into::into)
 }
 
-pub fn revoke<'a, 'b, 'c, 'info>(ctx: CpiContext<'a, 'b, 'c, 'info, Revoke<'info>>) -> Result<()> {
+pub fn revoke<'info>(ctx: CpiContext<'_, '_, '_, 'info, Revoke<'info>>) -> Result<()> {
     let ix = spl_token::instruction::revoke(
         &spl_token::ID,
         ctx.accounts.source.key,
@@ -120,8 +117,8 @@ pub fn revoke<'a, 'b, 'c, 'info>(ctx: CpiContext<'a, 'b, 'c, 'info, Revoke<'info
     .map_err(Into::into)
 }
 
-pub fn initialize_account<'a, 'b, 'c, 'info>(
-    ctx: CpiContext<'a, 'b, 'c, 'info, InitializeAccount<'info>>,
+pub fn initialize_account<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, InitializeAccount<'info>>,
 ) -> Result<()> {
     let ix = spl_token::instruction::initialize_account(
         &spl_token::ID,
@@ -142,9 +139,7 @@ pub fn initialize_account<'a, 'b, 'c, 'info>(
     .map_err(Into::into)
 }
 
-pub fn close_account<'a, 'b, 'c, 'info>(
-    ctx: CpiContext<'a, 'b, 'c, 'info, CloseAccount<'info>>,
-) -> Result<()> {
+pub fn close_account<'info>(ctx: CpiContext<'_, '_, '_, 'info, CloseAccount<'info>>) -> Result<()> {
     let ix = spl_token::instruction::close_account(
         &spl_token::ID,
         ctx.accounts.account.key,
@@ -164,8 +159,8 @@ pub fn close_account<'a, 'b, 'c, 'info>(
     .map_err(Into::into)
 }
 
-pub fn freeze_account<'a, 'b, 'c, 'info>(
-    ctx: CpiContext<'a, 'b, 'c, 'info, FreezeAccount<'info>>,
+pub fn freeze_account<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, FreezeAccount<'info>>,
 ) -> Result<()> {
     let ix = spl_token::instruction::freeze_account(
         &spl_token::ID,
@@ -186,9 +181,7 @@ pub fn freeze_account<'a, 'b, 'c, 'info>(
     .map_err(Into::into)
 }
 
-pub fn thaw_account<'a, 'b, 'c, 'info>(
-    ctx: CpiContext<'a, 'b, 'c, 'info, ThawAccount<'info>>,
-) -> Result<()> {
+pub fn thaw_account<'info>(ctx: CpiContext<'_, '_, '_, 'info, ThawAccount<'info>>) -> Result<()> {
     let ix = spl_token::instruction::thaw_account(
         &spl_token::ID,
         ctx.accounts.account.key,
@@ -208,8 +201,8 @@ pub fn thaw_account<'a, 'b, 'c, 'info>(
     .map_err(Into::into)
 }
 
-pub fn initialize_mint<'a, 'b, 'c, 'info>(
-    ctx: CpiContext<'a, 'b, 'c, 'info, InitializeMint<'info>>,
+pub fn initialize_mint<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, InitializeMint<'info>>,
     decimals: u8,
     authority: &Pubkey,
     freeze_authority: Option<&Pubkey>,
@@ -229,8 +222,8 @@ pub fn initialize_mint<'a, 'b, 'c, 'info>(
     .map_err(Into::into)
 }
 
-pub fn set_authority<'a, 'b, 'c, 'info>(
-    ctx: CpiContext<'a, 'b, 'c, 'info, SetAuthority<'info>>,
+pub fn set_authority<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, SetAuthority<'info>>,
     authority_type: spl_token::instruction::AuthorityType,
     new_authority: Option<Pubkey>,
 ) -> Result<()> {
@@ -258,9 +251,7 @@ pub fn set_authority<'a, 'b, 'c, 'info>(
     .map_err(Into::into)
 }
 
-pub fn sync_native<'a, 'b, 'c, 'info>(
-    ctx: CpiContext<'a, 'b, 'c, 'info, SyncNative<'info>>,
-) -> Result<()> {
+pub fn sync_native<'info>(ctx: CpiContext<'_, '_, '_, 'info, SyncNative<'info>>) -> Result<()> {
     let ix = spl_token::instruction::sync_native(&spl_token::ID, ctx.accounts.account.key)?;
     solana_program::program::invoke_signed(&ix, &[ctx.accounts.account.clone()], ctx.signer_seeds)
         .map_err(Into::into)

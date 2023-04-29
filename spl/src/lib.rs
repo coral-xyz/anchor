@@ -1,3 +1,5 @@
+#![allow(clippy::result_large_err)]
+
 #[cfg(feature = "associated_token")]
 pub mod associated_token;
 
