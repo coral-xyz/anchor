@@ -2,7 +2,7 @@
 name = "anchor-cli"
 version = "0.25.13"
 authors = ["armaniferrante <armaniferrante@gmail.com>"]
-rust-version = "1.59"
+rust-version = "1.62"
 edition = "2021"
 repository = "https://github.com/coral-xyz/anchor"
 description = "Anchor CLI"
