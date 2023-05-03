@@ -1,7 +1,10 @@
 extern crate proc_macro;
 
 use quote::quote;
-use syn::parse_macro_input;
+use syn::{
+    parse::{Parse, ParseStream},
+    parse_macro_input, Expr, Token,
+};
 
 /// The event attribute allows a struct to be used with
 /// [emit!](./macro.emit.html) so that programs can log significant events in
@@ -81,23 +84,39 @@ pub fn emit(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     })
 }
 
+// Custom wrapper struct (thanks ChatGPT!)
+struct TwoArgs {
+    arg1: Expr,
+    arg2: Expr,
+}
+
+// Implement the `Parse` trait for the `TwoArgs` struct
+impl Parse for TwoArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let arg1: Expr = input.parse()?;
+        input.parse::<Token![,]>()?;
+        let arg2: Expr = input.parse()?;
+
+        if !input.is_empty() {
+            return Err(input.error("Expected exactly 2 arguments"));
+        }
+
+        Ok(TwoArgs { arg1, arg2 })
+    }
+}
+
 #[proc_macro]
 pub fn emit_cpi(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let tuple = parse_macro_input!(input as syn::ExprTuple);
+    let two_args = parse_macro_input!(input as TwoArgs);
 
-    let elems = tuple.elems;
-    if elems.len() != 2 {
-        panic!("Expected a tuple with exactly two elements.");
-    }
-
-    let first = &elems[0];
-    let second = &elems[1];
+    let self_program_info = &two_args.arg1;
+    let event_struct = &two_args.arg2;
 
     proc_macro::TokenStream::from(quote! {
-        let program_info: anchor_lang::solana_program::account_info::AccountInfo = #first;
+        let program_info: anchor_lang::solana_program::account_info::AccountInfo = #self_program_info;
 
         let __disc = crate::event::EVENT_IX_TAG_LE;
-        let __inner_data: Vec<u8> = anchor_lang::Event::data(&#second);
+        let __inner_data: Vec<u8> = anchor_lang::Event::data(&#event_struct);
         let __ix_data: Vec<u8> = __disc.into_iter().chain(__inner_data.into_iter()).collect();
 
         let __ix = anchor_lang::solana_program::instruction::Instruction::new_with_bytes(
