@@ -95,47 +95,6 @@ pub fn burn_nft<'info>(
     .map_err(Into::into)
 }
 
-#[deprecated(note = "internal instructions deprecated by Metaplex")]
-pub fn create_metadata_accounts_v2<'info>(
-    ctx: CpiContext<'_, '_, '_, 'info, CreateMetadataAccountsV2<'info>>,
-    data: DataV2,
-    is_mutable: bool,
-    update_authority_is_signer: bool,
-) -> Result<()> {
-    let DataV2 {
-        name,
-        symbol,
-        uri,
-        creators,
-        seller_fee_basis_points,
-        collection,
-        uses,
-    } = data;
-    let ix = mpl_token_metadata::instruction::create_metadata_accounts_v2(
-        ID,
-        *ctx.accounts.metadata.key,
-        *ctx.accounts.mint.key,
-        *ctx.accounts.mint_authority.key,
-        *ctx.accounts.payer.key,
-        *ctx.accounts.update_authority.key,
-        name,
-        symbol,
-        uri,
-        creators,
-        seller_fee_basis_points,
-        update_authority_is_signer,
-        is_mutable,
-        collection,
-        uses,
-    );
-    solana_program::program::invoke_signed(
-        &ix,
-        &ToAccountInfos::to_account_infos(&ctx),
-        ctx.signer_seeds,
-    )
-    .map_err(Into::into)
-}
-
 pub fn create_metadata_accounts_v3<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, CreateMetadataAccountsV3<'info>>,
     data: DataV2,
@@ -593,18 +552,6 @@ pub struct BurnNft<'info> {
     pub token: AccountInfo<'info>,
     pub edition: AccountInfo<'info>,
     pub spl_token: AccountInfo<'info>,
-}
-
-#[deprecated(note = "internal instructions deprecated by Metaplex")]
-#[derive(Accounts)]
-pub struct CreateMetadataAccountsV2<'info> {
-    pub metadata: AccountInfo<'info>,
-    pub mint: AccountInfo<'info>,
-    pub mint_authority: AccountInfo<'info>,
-    pub payer: AccountInfo<'info>,
-    pub update_authority: AccountInfo<'info>,
-    pub system_program: AccountInfo<'info>,
-    pub rent: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
