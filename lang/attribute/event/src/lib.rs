@@ -96,9 +96,9 @@ pub fn emit_cpi(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     proc_macro::TokenStream::from(quote! {
         let program_info: &anchor_lang::solana_program::account_info::AccountInfo = &#first;
 
-        let __disc: Vec<u8> = crate::event::EVENT_IX_TAG_LE.to_vec();
-        let __inner_data: &Vec<u8> = &anchor_lang::Event::data(&#second);
-        let ix_data: Vec<u8> = __disc.iter().chain(__inner_data.iter()).cloned().collect();
+        let __disc = crate::event::EVENT_IX_TAG_LE;
+        let __inner_data: Vec<u8> = anchor_lang::Event::data(&#second);
+        let ix_data: Vec<u8> = __disc.into_iter().chain(__inner_data.into_iter()).collect();
 
         let ix = anchor_lang::solana_program::instruction::Instruction::new_with_bytes(
             program_info.key.clone(),
