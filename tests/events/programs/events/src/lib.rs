@@ -26,7 +26,7 @@ pub mod events {
 
     pub fn test_event_cpi(ctx: Context<TestEventCpi>) -> Result<()> {
         emit_cpi!((
-            &ctx.accounts.program.to_account_info(),
+            ctx.accounts.program.to_account_info(),
             MyOtherEvent {
                 data: 7,
                 label: "cpi".to_string(),

@@ -94,19 +94,19 @@ pub fn emit_cpi(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let second = &elems[1];
 
     proc_macro::TokenStream::from(quote! {
-        let program_info: &anchor_lang::solana_program::account_info::AccountInfo = &#first;
+        let program_info: anchor_lang::solana_program::account_info::AccountInfo = #first;
 
         let __disc = crate::event::EVENT_IX_TAG_LE;
         let __inner_data: Vec<u8> = anchor_lang::Event::data(&#second);
-        let ix_data: Vec<u8> = __disc.into_iter().chain(__inner_data.into_iter()).collect();
+        let __ix_data: Vec<u8> = __disc.into_iter().chain(__inner_data.into_iter()).collect();
 
-        let ix = anchor_lang::solana_program::instruction::Instruction::new_with_bytes(
-            program_info.key.clone(),
-            ix_data.as_ref(),
+        let __ix = anchor_lang::solana_program::instruction::Instruction::new_with_bytes(
+            *program_info.key,
+            __ix_data.as_ref(),
             vec![anchor_lang::solana_program::instruction::AccountMeta::new_readonly(*program_info.key, false)],
         );
-        anchor_lang::solana_program::program::invoke(&ix, &[program_info.clone()])
-            .map_err(|e: anchor_lang::solana_program::program_error::ProgramError| crate::Error::from(e))?;
+        anchor_lang::solana_program::program::invoke(&__ix, &[program_info])
+            .map_err(anchor_lang::error::Error::from)?;
     })
 }
 
