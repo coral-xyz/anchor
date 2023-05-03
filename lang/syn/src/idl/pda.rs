@@ -4,7 +4,6 @@ use crate::parser::context::CrateContext;
 use crate::ConstraintSeedsGroup;
 use crate::{AccountsStruct, Field};
 use std::collections::HashMap;
-use std::str::FromStr;
 use syn::{Expr, ExprLit, Lit};
 
 // Parses a seeds constraint, extracting the IdlSeed types.
@@ -144,7 +143,7 @@ impl<'a> PdaParser<'a> {
     }
 
     fn parse_instruction(&self, seed_path: &SeedPath) -> Option<IdlSeed> {
-        let idl_ty = IdlType::from_str(self.ix_args.get(&seed_path.name()).unwrap()).ok()?;
+        let idl_ty = IdlType::from_str(self.ix_args.get(&seed_path.name()).unwrap()).unwrap()?;
         Some(IdlSeed::Arg(IdlSeedArg {
             ty: idl_ty,
             path: seed_path.path(),
@@ -159,7 +158,7 @@ impl<'a> PdaParser<'a> {
             .consts()
             .find(|c| c.ident == seed_path.name())
             .unwrap();
-        let idl_ty = IdlType::from_str(&parser::tts_to_string(&const_item.ty)).ok()?;
+        let idl_ty = IdlType::from_str(&parser::tts_to_string(&const_item.ty)).unwrap()?;
 
         let idl_ty_value = parser::tts_to_string(&const_item.expr);
         let idl_ty_value = str_lit_to_array(&idl_ty, &idl_ty_value);
@@ -180,7 +179,7 @@ impl<'a> PdaParser<'a> {
             .unwrap()
             .1;
 
-        let idl_ty = IdlType::from_str(&parser::tts_to_string(&static_item.ty)).ok()?;
+        let idl_ty = IdlType::from_str(&parser::tts_to_string(&static_item.ty)).unwrap()?;
 
         let idl_ty_value = parser::tts_to_string(&static_item.expr);
         let idl_ty_value = str_lit_to_array(&idl_ty, &idl_ty_value);
@@ -342,7 +341,7 @@ fn parse_field_path(ctx: &CrateContext, strct: &syn::ItemStruct, path: &mut &[St
 
     // The path is empty so this must be a primitive type.
     if path.is_empty() {
-        return next_field_ty_str.parse().unwrap();
+        return IdlType::from_str(&next_field_ty_str).unwrap().unwrap();
     }
 
     // Get the rust representation of hte field's struct.

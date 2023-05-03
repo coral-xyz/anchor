@@ -1,9 +1,25 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
+use thiserror::Error;
 
 pub mod file;
 pub mod pda;
 pub mod relations;
+
+#[derive(Debug, Error)]
+pub enum IdlError {
+    // This error should be handled by inside IDL parser and **not** returned
+    // to the end user.
+    #[error("Type to skip")]
+    TypeToSkip,
+
+    #[error("Could not parse ; delimiter from array type: {0}")]
+    ArrayDelimiter(String),
+    #[error("Could not parse length from array type: {0}")]
+    ArrayLength(String),
+    #[error("Invalid option: {0}")]
+    Option(String),
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Idl {
@@ -206,69 +222,81 @@ pub enum IdlType {
     Array(Box<IdlType>, usize),
 }
 
-impl std::str::FromStr for IdlType {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+impl IdlType {
+    fn from_str(s: &str) -> Result<Option<Self>, IdlError> {
         let mut s = s.to_string();
-        fn array_from_str(inner: &str) -> IdlType {
+        fn array_from_str(inner: &str) -> Result<Option<IdlType>, IdlError> {
             match inner.strip_suffix(']') {
                 None => {
-                    let (raw_type, raw_length) = inner.rsplit_once(';').unwrap();
-                    let ty = IdlType::from_str(raw_type).unwrap();
-                    let len = raw_length.replace('_', "").parse::<usize>().unwrap();
-                    IdlType::Array(Box::new(ty), len)
+                    let (raw_type, raw_length) = inner
+                        .rsplit_once(';')
+                        .ok_or(IdlError::ArrayDelimiter(inner.to_owned()))?;
+                    match IdlType::from_str(raw_type)? {
+                        Some(ty) => {
+                            let len = raw_length
+                                .replace('_', "")
+                                .parse::<usize>()
+                                .map_err(|_| IdlError::ArrayLength(inner.to_owned()))?;
+                            Ok(Some(IdlType::Array(Box::new(ty), len)))
+                        }
+                        None => Ok(None),
+                    }
                 }
                 Some(nested_inner) => array_from_str(&nested_inner[1..]),
             }
         }
         s.retain(|c| !c.is_whitespace());
 
-        let r = match s.as_str() {
-            "bool" => IdlType::Bool,
-            "u8" => IdlType::U8,
-            "i8" => IdlType::I8,
-            "u16" => IdlType::U16,
-            "i16" => IdlType::I16,
-            "u32" => IdlType::U32,
-            "i32" => IdlType::I32,
-            "f32" => IdlType::F32,
-            "u64" => IdlType::U64,
-            "i64" => IdlType::I64,
-            "f64" => IdlType::F64,
-            "u128" => IdlType::U128,
-            "i128" => IdlType::I128,
-            "u256" => IdlType::U256,
-            "i256" => IdlType::I256,
-            "Vec<u8>" => IdlType::Bytes,
-            "String" | "&str" | "&'staticstr" => IdlType::String,
-            "Pubkey" => IdlType::PublicKey,
+        Ok(match s.as_str() {
+            "bool" => Some(IdlType::Bool),
+            "u8" => Some(IdlType::U8),
+            "i8" => Some(IdlType::I8),
+            "u16" => Some(IdlType::U16),
+            "i16" => Some(IdlType::I16),
+            "u32" => Some(IdlType::U32),
+            "i32" => Some(IdlType::I32),
+            "f32" => Some(IdlType::F32),
+            "u64" => Some(IdlType::U64),
+            "i64" => Some(IdlType::I64),
+            "f64" => Some(IdlType::F64),
+            "u128" => Some(IdlType::U128),
+            "i128" => Some(IdlType::I128),
+            "u256" => Some(IdlType::U256),
+            "i256" => Some(IdlType::I256),
+            "Vec<u8>" => Some(IdlType::Bytes),
+            "String" | "&str" | "&'staticstr" => Some(IdlType::String),
+            "Pubkey" => Some(IdlType::PublicKey),
             _ => {
+                // Skip marker types, which have no relevance to TypeScript.
+                if s.starts_with("PhantomData") || s.starts_with("PhantomPinned") {
+                    return Ok(None);
+                }
+
+                // Handle options, vectors, array or defined types.
                 if let Some(inner) = s.strip_prefix("Option<") {
-                    let inner_ty = Self::from_str(
+                    Self::from_str(
                         inner
                             .strip_suffix('>')
-                            .ok_or_else(|| anyhow::anyhow!("Invalid option"))?,
-                    )?;
-                    IdlType::Option(Box::new(inner_ty))
+                            .ok_or_else(|| IdlError::Option(s.clone()))?,
+                    )?
+                    .map(|inner_ty| IdlType::Option(Box::new(inner_ty)))
                 } else if let Some(inner) = s.strip_prefix("Vec<") {
-                    let inner_ty = Self::from_str(
+                    Self::from_str(
                         inner
                             .strip_suffix('>')
-                            .ok_or_else(|| anyhow::anyhow!("Invalid option"))?,
-                    )?;
-                    IdlType::Vec(Box::new(inner_ty))
+                            .ok_or_else(|| IdlError::Option(s.clone()))?,
+                    )?
+                    .map(|inner_ty| IdlType::Vec(Box::new(inner_ty)))
                 } else if s.starts_with('[') {
-                    array_from_str(&s)
+                    array_from_str(&s)?
                 } else {
                     // Make sure that we remove generics from the type name.
                     // For example, that we convert `MyStruct<T>` to `MyStruct`.
                     let s = s.split('<').next().unwrap().to_string();
-                    IdlType::Defined(s)
+                    Some(IdlType::Defined(s))
                 }
             }
-        };
-        Ok(r)
+        })
     }
 }
 
@@ -283,12 +311,11 @@ pub struct IdlErrorCode {
 #[cfg(test)]
 mod tests {
     use crate::idl::IdlType;
-    use std::str::FromStr;
 
     #[test]
     fn multidimensional_array() {
         assert_eq!(
-            IdlType::from_str("[[u8;16];32]").unwrap(),
+            IdlType::from_str("[[u8;16];32]").unwrap().unwrap(),
             IdlType::Array(Box::new(IdlType::Array(Box::new(IdlType::U8), 16)), 32)
         );
     }
@@ -296,7 +323,7 @@ mod tests {
     #[test]
     fn array() {
         assert_eq!(
-            IdlType::from_str("[Pubkey;16]").unwrap(),
+            IdlType::from_str("[Pubkey;16]").unwrap().unwrap(),
             IdlType::Array(Box::new(IdlType::PublicKey), 16)
         );
     }
@@ -304,7 +331,7 @@ mod tests {
     #[test]
     fn array_with_underscored_length() {
         assert_eq!(
-            IdlType::from_str("[u8;50_000]").unwrap(),
+            IdlType::from_str("[u8;50_000]").unwrap().unwrap(),
             IdlType::Array(Box::new(IdlType::U8), 50000)
         );
     }
@@ -312,7 +339,7 @@ mod tests {
     #[test]
     fn option() {
         assert_eq!(
-            IdlType::from_str("Option<bool>").unwrap(),
+            IdlType::from_str("Option<bool>").unwrap().unwrap(),
             IdlType::Option(Box::new(IdlType::Bool))
         )
     }
@@ -320,7 +347,7 @@ mod tests {
     #[test]
     fn vector() {
         assert_eq!(
-            IdlType::from_str("Vec<bool>").unwrap(),
+            IdlType::from_str("Vec<bool>").unwrap().unwrap(),
             IdlType::Vec(Box::new(IdlType::Bool))
         )
     }
@@ -328,7 +355,7 @@ mod tests {
     #[test]
     fn defined() {
         assert_eq!(
-            IdlType::from_str("MyStruct").unwrap(),
+            IdlType::from_str("MyStruct").unwrap().unwrap(),
             IdlType::Defined("MyStruct".to_string())
         );
     }
@@ -336,16 +363,58 @@ mod tests {
     #[test]
     fn defined_with_generics() {
         assert_eq!(
-            IdlType::from_str("MyStruct<T>").unwrap(),
+            IdlType::from_str("MyStruct<T>").unwrap().unwrap(),
             IdlType::Defined("MyStruct".to_string())
         );
         assert_eq!(
-            IdlType::from_str("MyStruct<T, U>").unwrap(),
+            IdlType::from_str("MyStruct<T, U>").unwrap().unwrap(),
             IdlType::Defined("MyStruct".to_string())
         );
         assert_eq!(
-            IdlType::from_str("MyStruct<T, U, const V: usize>").unwrap(),
+            IdlType::from_str("MyStruct<T, U, const V: usize>")
+                .unwrap()
+                .unwrap(),
             IdlType::Defined("MyStruct".to_string())
         );
+    }
+
+    #[test]
+    fn phantom_data() {
+        assert_eq!(IdlType::from_str("PhantomData<T>").unwrap(), None);
+    }
+
+    #[test]
+    fn array_phantom_data() {
+        assert_eq!(IdlType::from_str("[PhantomData<T>; 16]").unwrap(), None);
+    }
+
+    #[test]
+    fn option_phantom_data() {
+        assert_eq!(IdlType::from_str("Option<PhantomData<T>>").unwrap(), None);
+    }
+
+    #[test]
+    fn vector_phantom_data() {
+        assert_eq!(IdlType::from_str("Vec<PhantomData<T>>").unwrap(), None);
+    }
+
+    #[test]
+    fn phantom_pinned() {
+        assert_eq!(IdlType::from_str("PhantomPinned").unwrap(), None);
+    }
+
+    #[test]
+    fn array_phantom_pinned() {
+        assert_eq!(IdlType::from_str("[PhantomPinned; 16]").unwrap(), None);
+    }
+
+    #[test]
+    fn option_phantom_pinned() {
+        assert_eq!(IdlType::from_str("Option<PhantomPinned>").unwrap(), None);
+    }
+
+    #[test]
+    fn vector_phantom_pinned() {
+        assert_eq!(IdlType::from_str("Vec<PhantomPinned>").unwrap(), None);
     }
 }

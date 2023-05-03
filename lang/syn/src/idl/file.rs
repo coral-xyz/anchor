@@ -61,39 +61,42 @@ pub fn parse(
         .ixs
         .iter()
         .map(|ix| {
-            let args = ix
+            let args: Result<Vec<IdlField>> = ix
                 .args
                 .iter()
-                .map(|arg| {
+                .filter_map(|arg| {
                     let doc = if !no_docs {
                         docs::parse(&arg.raw_arg.attrs)
                     } else {
                         None
                     };
-                    IdlField {
-                        name: arg.name.to_string().to_mixed_case(),
-                        docs: doc,
-                        ty: to_idl_type(&ctx, &arg.raw_arg.ty),
-                    }
+                    to_idl_type(&ctx, &arg.raw_arg.ty).transpose().map(|ty| {
+                        ty.map(|ty| IdlField {
+                            name: arg.name.to_string().to_mixed_case(),
+                            docs: doc,
+                            ty,
+                        })
+                    })
                 })
-                .collect::<Vec<_>>();
-            // todo: don't unwrap
+                .collect();
+
             let accounts_strct = accs.get(&ix.anchor_ident.to_string()).unwrap();
             let accounts = idl_accounts(&ctx, accounts_strct, &accs, seeds_feature, no_docs);
             let ret_type_str = ix.returns.ty.to_token_stream().to_string();
             let returns = match ret_type_str.as_str() {
                 "()" => None,
-                _ => Some(ret_type_str.parse().unwrap()),
+                _ => IdlType::from_str(&ret_type_str)?,
             };
-            IdlInstruction {
+
+            Ok(IdlInstruction {
                 name: ix.ident.to_string().to_mixed_case(),
                 docs: ix.docs.clone(),
                 accounts,
-                args,
+                args: args?,
                 returns,
-            }
+            })
         })
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<IdlInstruction>>>()?;
 
     let events = parse_events(&ctx)
         .iter()
@@ -102,28 +105,30 @@ pub fn parse(
                 syn::Fields::Named(n) => n,
                 _ => panic!("Event fields must be named"),
             };
-            let fields = fields
+            let fields: Result<Vec<IdlEventField>, _> = fields
                 .named
                 .iter()
-                .map(|f: &syn::Field| {
+                .filter_map(|f: &syn::Field| {
                     let index = match f.attrs.get(0) {
                         None => false,
                         Some(i) => parser::tts_to_string(&i.path) == "index",
                     };
-                    IdlEventField {
-                        name: f.ident.clone().unwrap().to_string().to_mixed_case(),
-                        ty: to_idl_type(&ctx, &f.ty),
-                        index,
-                    }
+                    to_idl_type(&ctx, &f.ty).transpose().map(|ty| {
+                        ty.map(|t| IdlEventField {
+                            name: f.ident.clone().unwrap().to_string().to_mixed_case(),
+                            ty: t,
+                            index,
+                        })
+                    })
                 })
-                .collect::<Vec<IdlEventField>>();
+                .collect();
 
-            IdlEvent {
+            Ok(IdlEvent {
                 name: e.ident.to_string(),
-                fields,
-            }
+                fields: fields?,
+            })
         })
-        .collect::<Vec<IdlEvent>>();
+        .collect::<Result<Vec<IdlEvent>>>()?;
 
     // All user defined types.
     let mut accounts = vec![];
@@ -152,8 +157,8 @@ pub fn parse(
 
     let constants = parse_consts(&ctx)
         .iter()
-        .map(|c: &&syn::ItemConst| to_idl_const(c))
-        .collect::<Vec<IdlConst>>();
+        .filter_map(|c: &&syn::ItemConst| to_idl_const(c).transpose())
+        .collect::<Result<Vec<IdlConst>, _>>()?;
 
     Ok(Some(Idl {
         version,
@@ -327,16 +332,18 @@ fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinit
                 syn::Fields::Named(fields) => fields
                     .named
                     .iter()
-                    .map(|f: &syn::Field| {
+                    .filter_map(|f: &syn::Field| {
                         let doc = if !no_docs {
                             docs::parse(&f.attrs)
                         } else {
                             None
                         };
-                        Ok(IdlField {
-                            name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
-                            docs: doc,
-                            ty: to_idl_type(ctx, &f.ty),
+                        to_idl_type(ctx, &f.ty).transpose().map(|ty| {
+                            ty.map(|ty| IdlField {
+                                name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
+                                docs: doc,
+                                ty,
+                            })
                         })
                     })
                     .collect::<Result<Vec<IdlField>>>(),
@@ -370,43 +377,47 @@ fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinit
                     let fields = match &variant.fields {
                         syn::Fields::Unit => None,
                         syn::Fields::Unnamed(fields) => {
-                            let fields: Vec<IdlType> = fields
+                            let fields = fields
                                 .unnamed
                                 .iter()
-                                .map(|f| to_idl_type(ctx, &f.ty))
-                                .collect();
+                                .filter_map(|f| to_idl_type(ctx, &f.ty).transpose())
+                                .collect::<Result<Vec<IdlType>>>()?;
                             Some(EnumFields::Tuple(fields))
                         }
                         syn::Fields::Named(fields) => {
-                            let fields: Vec<IdlField> = fields
+                            let fields = fields
                                 .named
                                 .iter()
-                                .map(|f: &syn::Field| {
+                                .filter_map(|f: &syn::Field| {
                                     let name = f.ident.as_ref().unwrap().to_string();
                                     let doc = if !no_docs {
                                         docs::parse(&f.attrs)
                                     } else {
                                         None
                                     };
-                                    let ty = to_idl_type(ctx, &f.ty);
-                                    IdlField {
-                                        name,
-                                        docs: doc,
-                                        ty,
-                                    }
+                                    to_idl_type(ctx, &f.ty).transpose().map(|ty| {
+                                        ty.map(|ty| IdlField {
+                                            name,
+                                            docs: doc,
+                                            ty,
+                                        })
+                                    })
                                 })
-                                .collect();
+                                .collect::<Result<Vec<IdlField>>>()?;
                             Some(EnumFields::Named(fields))
                         }
                     };
-                    IdlEnumVariant { name, fields }
+                    Ok(IdlEnumVariant { name, fields })
                 })
-                .collect::<Vec<IdlEnumVariant>>();
-            Some(Ok(IdlTypeDefinition {
-                name,
-                docs: doc,
-                ty: IdlTypeDefinitionTy::Enum { variants },
-            }))
+                .collect::<Result<Vec<IdlEnumVariant>>>();
+            match variants {
+                Ok(variants) => Some(Ok(IdlTypeDefinition {
+                    name,
+                    docs: doc,
+                    ty: IdlTypeDefinitionTy::Enum { variants },
+                })),
+                Err(e) => Some(Err(e)),
+            }
         }))
         .collect()
 }
@@ -471,7 +482,7 @@ fn resolve_variable_array_lengths(ctx: &CrateContext, mut tts_string: String) ->
     tts_string
 }
 
-fn to_idl_type(ctx: &CrateContext, ty: &syn::Type) -> IdlType {
+fn to_idl_type(ctx: &CrateContext, ty: &syn::Type) -> Result<Option<IdlType>> {
     let mut tts_string = parser::tts_to_string(ty);
     if tts_string.starts_with('[') {
         tts_string = resolve_variable_array_lengths(ctx, tts_string);
@@ -483,38 +494,40 @@ fn to_idl_type(ctx: &CrateContext, ty: &syn::Type) -> IdlType {
         .unwrap_or(&tts_string)
         .into();
 
-    tts_string.parse().unwrap()
+    IdlType::from_str(&tts_string).map_err(|e| e.into())
 }
 
 // TODO parse other issues
-fn to_idl_const(item: &ItemConst) -> IdlConst {
+fn to_idl_const(item: &ItemConst) -> Result<Option<IdlConst>> {
     let name = item.ident.to_string();
 
     if let Expr::Lit(ExprLit { lit, .. }) = &*item.expr {
         match lit {
             ByteStr(lit_byte_str) => {
-                return IdlConst {
+                return Ok(Some(IdlConst {
                     name,
                     ty: IdlType::Bytes,
                     value: format!("{:?}", lit_byte_str.value()),
-                }
+                }))
             }
             Byte(lit_byte) => {
-                return IdlConst {
+                return Ok(Some(IdlConst {
                     name,
                     ty: IdlType::U8,
                     value: lit_byte.value().to_string(),
-                }
+                }))
             }
             _ => (),
         }
     }
 
-    IdlConst {
-        name,
-        ty: item.ty.to_token_stream().to_string().parse().unwrap(),
-        value: item.expr.to_token_stream().to_string().parse().unwrap(),
-    }
+    Ok(
+        IdlType::from_str(&item.ty.to_token_stream().to_string())?.map(|ty| IdlConst {
+            name,
+            ty,
+            value: item.expr.to_token_stream().to_string().parse().unwrap(),
+        }),
+    )
 }
 
 fn idl_accounts(
