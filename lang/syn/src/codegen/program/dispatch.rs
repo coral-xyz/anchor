@@ -87,7 +87,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             &ix_data,
                         )
                     } else {
-                        Err(anchor_lang::error::ErrorCode::IdlInstructionStub.into())
+                        Err(anchor_lang::error::ErrorCode::EventInstructionStub.into())
                     }
                 }
                 _ => {

@@ -44,6 +44,11 @@ pub enum ErrorCode {
     #[msg("IDL account must be empty in order to resize, try closing first")]
     IdlAccountNotEmpty,
 
+    // Event instructions
+    /// 1500 - The program was compiled without event instructions
+    #[msg("The program was compiled without event instructions")]
+    EventInstructionStub = 1500,
+
     // Constraints
     /// 2000 - A mut constraint was violated
     #[msg("A mut constraint was violated")]
