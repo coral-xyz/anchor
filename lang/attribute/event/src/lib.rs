@@ -85,46 +85,54 @@ pub fn emit(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 }
 
 // Custom wrapper struct (thanks ChatGPT!)
-struct TwoArgs {
+struct ThreeArgs {
     arg1: Expr,
     arg2: Expr,
+    arg3: Expr,
 }
 
 // Implement the `Parse` trait for the `TwoArgs` struct
-impl Parse for TwoArgs {
+impl Parse for ThreeArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let arg1: Expr = input.parse()?;
         input.parse::<Token![,]>()?;
         let arg2: Expr = input.parse()?;
+        input.parse::<Token![,]>()?;
+        let arg3: Expr = input.parse()?;
 
         if !input.is_empty() {
-            return Err(input.error("Expected exactly 2 arguments"));
+            return Err(input.error("Expected exactly 3 arguments"));
         }
 
-        Ok(TwoArgs { arg1, arg2 })
+        Ok(ThreeArgs { arg1, arg2, arg3 })
     }
 }
 
 #[proc_macro]
 pub fn emit_cpi(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let two_args = parse_macro_input!(input as TwoArgs);
+    let args = parse_macro_input!(input as ThreeArgs);
 
-    let self_program_info = &two_args.arg1;
-    let event_struct = &two_args.arg2;
+    let self_program_info = &args.arg1;
+    let event_authority_info = &args.arg2;
+    let event_struct = &args.arg3;
 
     proc_macro::TokenStream::from(quote! {
-        let program_info: anchor_lang::solana_program::account_info::AccountInfo = #self_program_info;
+        let __program_info: anchor_lang::solana_program::account_info::AccountInfo = #self_program_info;
+        let __event_authority_info: anchor_lang::solana_program::account_info::AccountInfo = #event_authority_info;
 
         let __disc = crate::event::EVENT_IX_TAG_LE;
         let __inner_data: Vec<u8> = anchor_lang::Event::data(&#event_struct);
         let __ix_data: Vec<u8> = __disc.into_iter().chain(__inner_data.into_iter()).collect();
 
         let __ix = anchor_lang::solana_program::instruction::Instruction::new_with_bytes(
-            *program_info.key,
+            *__program_info.key,
             __ix_data.as_ref(),
-            vec![anchor_lang::solana_program::instruction::AccountMeta::new_readonly(*program_info.key, false)],
+            vec![
+                anchor_lang::solana_program::instruction::AccountMeta::new_readonly(*__program_info.key, false),
+                anchor_lang::solana_program::instruction::AccountMeta::new_readonly(*__event_authority_info.key, true)
+            ]
         );
-        anchor_lang::solana_program::program::invoke(&__ix, &[program_info])
+        anchor_lang::solana_program::program::invoke_signed(&__ix, &[__program_info], &[&[b"__event_authority"]])
             .map_err(anchor_lang::error::Error::from)?;
     })
 }

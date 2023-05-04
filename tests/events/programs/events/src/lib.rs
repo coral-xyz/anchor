@@ -27,6 +27,7 @@ pub mod events {
     pub fn test_event_cpi(ctx: Context<TestEventCpi>) -> Result<()> {
         emit_cpi!(
             ctx.accounts.program.to_account_info(),
+            ctx.accounts.event_authority.to_account_info(),
             MyOtherEvent {
                 data: 7,
                 label: "cpi".to_string(),
@@ -46,6 +47,9 @@ pub struct TestEvent {}
 pub struct TestEventCpi<'info> {
     /// CHECK: this is the program itself
     program: AccountInfo<'info>,
+    /// CHECK: this is the global event authority
+    #[account(seeds=[b"__event_authority"], bump)]
+    event_authority: AccountInfo<'info>,
 }
 
 #[event]
