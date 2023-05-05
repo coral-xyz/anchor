@@ -15,7 +15,7 @@ proc-macro = true
 anchor-debug = ["anchor-syn/anchor-debug"]
 
 [dependencies]
-anchor-syn = { path = "../../syn", version = "0.25.14", features = ["hash"] }
+anchor-syn = { path = "../../syn", version = "0.25.14", registry = "star-atlas", features = ["hash"] }
 anyhow = "1.0.32"
 bs58 = "0.4.0"
 proc-macro2 = "1.0"
