@@ -94,7 +94,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
     let non_inlined_event: proc_macro2::TokenStream = {
         quote! {
             #[inline(never)]
-            #[cfg((feature = "cpi-events"))]
+            #[cfg(not(feature = "no-cpi-events"))]
             pub fn __event_dispatch(program_id: &Pubkey, accounts: &[AccountInfo], event_data: &[u8]) -> anchor_lang::Result<()> {
                 Ok(())
             }

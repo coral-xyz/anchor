@@ -67,26 +67,35 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 #(#global_dispatch_arms)*
                 anchor_lang::idl::IDL_IX_TAG_LE => {
                     // If the method identifier is the IDL tag, then execute an IDL
-                    // instruction, injected into all Anchor programs.
-                    if cfg!(not(feature = "no-idl")) {
+                    // instruction, injected into all Anchor programs unless they have
+                    // no-idl enabled
+                    #[cfg!(not(feature = "no-idl"))]
+                    {
                         __private::__idl::__idl_dispatch(
                             program_id,
                             accounts,
                             &ix_data,
                         )
-                    } else {
+                    }
+                    #[cfg!(feature = "no-idl")]
+                    {
                         Err(anchor_lang::error::ErrorCode::IdlInstructionStub.into())
                     }
                 }
                 anchor_lang::event::EVENT_IX_TAG_LE => {
                    // If the method identifier is the event tag, then execute an event cpi
-                   if cfg!(feature = "cpi-events") {
+                   // against the noop instruction injected into all Anchor programs unless they have
+                   // no-cpi-events enabled.
+                    #[cfg(not(feature = "no-cpi-events"))]
+                    {
                         __private::__events::__event_dispatch(
                             program_id,
                             accounts,
                             &ix_data,
                         )
-                    } else {
+                    }
+                    #[cfg(feature = "no-cpi-events")]
+                    {
                         Err(anchor_lang::error::ErrorCode::EventInstructionStub.into())
                     }
                 }
