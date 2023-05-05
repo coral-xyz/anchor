@@ -69,7 +69,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     // If the method identifier is the IDL tag, then execute an IDL
                     // instruction, injected into all Anchor programs unless they have
                     // no-idl enabled
-                    #[cfg!(not(feature = "no-idl"))]
+                    #[cfg(not(feature = "no-idl"))]
                     {
                         __private::__idl::__idl_dispatch(
                             program_id,
@@ -77,7 +77,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             &ix_data,
                         )
                     }
-                    #[cfg!(feature = "no-idl")]
+                    #[cfg(feature = "no-idl")]
                     {
                         Err(anchor_lang::error::ErrorCode::IdlInstructionStub.into())
                     }
