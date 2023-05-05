@@ -61,7 +61,7 @@ export type MakeInstructionsNamespace<
   Ret,
   Mk extends { [M in keyof InstructionMap<I>]: unknown } = {
     [M in keyof InstructionMap<I>]: unknown;
-  }
+  },
 > = {
   [M in keyof InstructionMap<I>]: InstructionContextFn<
     IDL,
@@ -82,20 +82,20 @@ export type MakeMethodsNamespace<IDL extends Idl, I extends IdlInstruction> = {
 export type InstructionContextFn<
   IDL extends Idl,
   I extends AllInstructions<IDL>,
-  Ret
+  Ret,
 > = (...args: InstructionContextFnArgs<IDL, I>) => Ret;
 
 export type InstructionContextFnArgs<
   IDL extends Idl,
-  I extends IDL["instructions"][number]
+  I extends IDL["instructions"][number],
 > = [
   ...ArgsTuple<I["args"], IdlTypes<IDL>>,
-  Context<Accounts<I["accounts"][number]>>
+  Context<Accounts<I["accounts"][number]>>,
 ];
 
 export type InstructionAccountAddresses<
   IDL extends Idl,
-  I extends AllInstructions<IDL>
+  I extends AllInstructions<IDL>,
 > = InstructionAccountsAddresses<I["accounts"][number]>;
 
 type InstructionAccountsAddresses<A extends IdlAccountItem = IdlAccountItem> = {
@@ -110,7 +110,7 @@ type InstructionAccountsAddress<A extends IdlAccountItem> =
 export type MethodsFn<
   IDL extends Idl,
   I extends IDL["instructions"][number],
-  Ret
+  Ret,
 > = (...args: ArgsTuple<I["args"], IdlTypes<IDL>>) => Ret;
 
 type TypeMap = {
@@ -128,20 +128,14 @@ export type DecodeType<T extends IdlType, Defined> = T extends keyof TypeMap
   ? TypeMap[T]
   : T extends { defined: keyof Defined }
   ? Defined[T["defined"]]
-  : T extends { option: { defined: keyof Defined } }
-  ? Defined[T["option"]["defined"]] | null
-  : T extends { option: keyof TypeMap }
-  ? TypeMap[T["option"]] | null
-  : T extends { coption: { defined: keyof Defined } }
-  ? Defined[T["coption"]["defined"]] | null
-  : T extends { coption: keyof TypeMap }
-  ? TypeMap[T["coption"]] | null
-  : T extends { vec: keyof TypeMap }
-  ? TypeMap[T["vec"]][]
-  : T extends { vec: { defined: keyof Defined } }
-  ? Defined[T["vec"]["defined"]][]
-  : T extends { array: [defined: keyof TypeMap, size: number] }
-  ? TypeMap[T["array"][0]][]
+  : T extends { option: IdlType }
+  ? DecodeType<T["option"], Defined> | null
+  : T extends { coption: IdlType }
+  ? DecodeType<T["coption"], Defined> | null
+  : T extends { vec: IdlType }
+  ? DecodeType<T["vec"], Defined>[]
+  : T extends { array: [defined: IdlType, size: number] }
+  ? DecodeType<T["array"][0], Defined>[]
   : unknown;
 
 /**
@@ -179,7 +173,7 @@ declare type DecodeEnumField<F, Defined> = F extends IdlType
  */
 declare type DecodeEnumFields<
   F extends IdlEnumFields,
-  Defined
+  Defined,
 > = F extends IdlEnumFieldsNamed
   ? {
       [F2 in F[number] as SnakeToCamelCase<F2["name"]>]: DecodeEnumField<
@@ -196,17 +190,23 @@ declare type DecodeEnumFields<
     }
   : Record<string, never>;
 
-/**
- * Since TypeScript do not provide OneOf helper we can
- * simply mark enum variants with +?
- */
-declare type DecodeEnum<K extends IdlTypeDefTyEnum, Defined> = {
-  // X = IdlEnumVariant
-  [X in K["variants"][number] as Uncapitalize<X["name"]>]+?: DecodeEnumFields<
-    NonNullable<X["fields"]>,
+type DecodeEnumVariants<I extends IdlTypeDefTyEnum, Defined> = {
+  [V in I["variants"][number] as Uncapitalize<V["name"]>]: DecodeEnumFields<
+    NonNullable<V["fields"]>,
     Defined
   >;
 };
+
+type ValueOf<T> = T[keyof T];
+type XorEnumVariants<T extends Record<string, unknown>> = ValueOf<{
+  [K1 in keyof T]: {
+    [K2 in Exclude<keyof T, K1>]?: never;
+  } & { [K2 in K1]: T[K2] };
+}>;
+
+type DecodeEnum<I extends IdlTypeDefTyEnum, Defined> = XorEnumVariants<
+  DecodeEnumVariants<I, Defined>
+>;
 
 type DecodeStruct<I extends IdlTypeDefTyStruct, Defined> = {
   [F in I["fields"][number] as F["name"]]: DecodeType<F["type"], Defined>;
@@ -214,7 +214,7 @@ type DecodeStruct<I extends IdlTypeDefTyStruct, Defined> = {
 
 export type TypeDef<
   I extends IdlTypeDef,
-  Defined
+  Defined,
 > = I["type"] extends IdlTypeDefTyEnum
   ? DecodeEnum<I["type"], Defined>
   : I["type"] extends IdlTypeDefTyStruct
@@ -238,7 +238,7 @@ type EmptyDefined = Record<UnknownType, never>;
 type RecursiveDepth2<
   T extends IdlTypeDef[],
   Defined = EmptyDefined,
-  Decoded = DecodedHelper<T, Defined>
+  Decoded = DecodedHelper<T, Defined>,
 > = UnknownType extends UnboxToUnion<Decoded>
   ? RecursiveDepth3<T, DecodedHelper<T, Defined>>
   : Decoded;
@@ -246,14 +246,14 @@ type RecursiveDepth2<
 type RecursiveDepth3<
   T extends IdlTypeDef[],
   Defined = EmptyDefined,
-  Decoded = DecodedHelper<T, Defined>
+  Decoded = DecodedHelper<T, Defined>,
 > = UnknownType extends UnboxToUnion<Decoded>
   ? RecursiveDepth4<T, DecodedHelper<T, Defined>>
   : Decoded;
 
 type RecursiveDepth4<
   T extends IdlTypeDef[],
-  Defined = EmptyDefined
+  Defined = EmptyDefined,
 > = DecodedHelper<T, Defined>;
 
 /**
@@ -263,7 +263,7 @@ type RecursiveDepth4<
 type RecursiveTypes<
   T extends IdlTypeDef[],
   Defined = EmptyDefined,
-  Decoded = DecodedHelper<T, Defined>
+  Decoded = DecodedHelper<T, Defined>,
 > =
   // check if some of decoded types is Unknown (not decoded properly)
   UnknownType extends UnboxToUnion<Decoded>
@@ -275,7 +275,7 @@ export type IdlTypes<T extends Idl> = RecursiveTypes<NonNullable<T["types"]>>;
 type IdlEventType<
   I extends Idl,
   Event extends NonNullable<I["events"]>[number],
-  Defined
+  Defined,
 > = {
   [F in Event["fields"][number] as F["name"]]: DecodeType<F["type"], Defined>;
 };
