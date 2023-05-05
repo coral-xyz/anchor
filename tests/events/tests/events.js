@@ -62,6 +62,10 @@ describe("events", () => {
     let sendTx = await program.transaction.testEventCpi({
       accounts: {
         program: program.programId,
+        eventAuthority: anchor.web3.PublicKey.findProgramAddressSync(
+          [Buffer.from("__event_authority")],
+          program.programId
+        )[0],
       },
     });
 
@@ -69,6 +73,7 @@ describe("events", () => {
     let connection = provider.connection;
     let txid = await provider.sendAndConfirm(sendTx, [], {
       commitment: "confirmed",
+      skipPreflight: true,
     });
 
     let tx = await connection.getTransaction(txid, { commitment: "confirmed" });

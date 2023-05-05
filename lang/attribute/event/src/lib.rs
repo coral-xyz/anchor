@@ -85,40 +85,50 @@ pub fn emit(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 }
 
 // Custom wrapper struct (thanks ChatGPT!)
-struct ThreeArgs {
-    arg1: Expr,
-    arg2: Expr,
-    arg3: Expr,
+struct EmitCpiArgs {
+    self_program_info: Expr,
+    event_authority_info: Expr,
+    event_authority_bump: Expr,
+    event_struct: Expr,
 }
 
 // Implement the `Parse` trait for the `TwoArgs` struct
-impl Parse for ThreeArgs {
+impl Parse for EmitCpiArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let arg1: Expr = input.parse()?;
+        let self_program_info: Expr = input.parse()?;
         input.parse::<Token![,]>()?;
-        let arg2: Expr = input.parse()?;
+        let event_authority_info: Expr = input.parse()?;
         input.parse::<Token![,]>()?;
-        let arg3: Expr = input.parse()?;
+        let event_authority_bump: Expr = input.parse()?;
+        input.parse::<Token![,]>()?;
+        let event_struct: Expr = input.parse()?;
 
         if !input.is_empty() {
             return Err(input.error("Expected exactly 3 arguments"));
         }
 
-        Ok(ThreeArgs { arg1, arg2, arg3 })
+        Ok(EmitCpiArgs {
+            self_program_info,
+            event_authority_info,
+            event_authority_bump,
+            event_struct,
+        })
     }
 }
 
 #[proc_macro]
 pub fn emit_cpi(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let args = parse_macro_input!(input as ThreeArgs);
+    let args = parse_macro_input!(input as EmitCpiArgs);
 
-    let self_program_info = &args.arg1;
-    let event_authority_info = &args.arg2;
-    let event_struct = &args.arg3;
+    let self_program_info = &args.self_program_info;
+    let event_authority_info = &args.event_authority_info;
+    let event_authority_bump = &args.event_authority_bump;
+    let event_struct = &args.event_struct;
 
     proc_macro::TokenStream::from(quote! {
         let __program_info: anchor_lang::solana_program::account_info::AccountInfo = #self_program_info;
         let __event_authority_info: anchor_lang::solana_program::account_info::AccountInfo = #event_authority_info;
+        let __event_authority_bump: u8 = #event_authority_bump;
 
         let __disc = crate::event::EVENT_IX_TAG_LE;
         let __inner_data: Vec<u8> = anchor_lang::Event::data(&#event_struct);
@@ -128,11 +138,10 @@ pub fn emit_cpi(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             *__program_info.key,
             __ix_data.as_ref(),
             vec![
-                anchor_lang::solana_program::instruction::AccountMeta::new_readonly(*__program_info.key, false),
                 anchor_lang::solana_program::instruction::AccountMeta::new_readonly(*__event_authority_info.key, true)
             ]
         );
-        anchor_lang::solana_program::program::invoke_signed(&__ix, &[__program_info], &[&[b"__event_authority"]])
+        anchor_lang::solana_program::program::invoke_signed(&__ix, &[__program_info, __event_authority_info], &[&[b"__event_authority", &[__event_authority_bump]]])
             .map_err(anchor_lang::error::Error::from)?;
     })
 }
