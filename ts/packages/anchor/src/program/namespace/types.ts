@@ -124,7 +124,9 @@ type TypeMap = {
   [K in "u64" | "i64" | "u128" | "i128" | "u256" | "i256"]: BN;
 };
 
-export type DecodeType<T extends IdlType, Defined> = T extends keyof TypeMap
+export type DecodeType<T extends IdlType, Defined> = IdlType extends T
+  ? unknown
+  : T extends keyof TypeMap
   ? TypeMap[T]
   : T extends { defined: keyof Defined }
   ? Defined[T["defined"]]
