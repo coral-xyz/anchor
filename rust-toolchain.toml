@@ -1,0 +1,6 @@
+[toolchain]
+# Check https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu.html
+# for valid toolchains.
+channel = "nightly-2023-03-22"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

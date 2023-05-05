@@ -1,0 +1,36 @@
+[unstable]
+registry-auth = true
+
+[registries.star-atlas]
+index = "ssh://git@ssh.shipyard.rs/star-atlas/crate-index.git"
+
+[net]
+git-fetch-with-cli = true
+
+## Uncomment if on stable
+## Make sure to gitignore this file if uncommented
+## authenticated downloads
+## -----------------------
+##
+## this setting is a hack to get cargo
+## to send an auth token along with
+## download requests. until RFC 3193 is
+## implemented, this is our solution to ensure
+## that crates can't be downloaded over the
+## public internet with zero authentication (!)
+##
+## note: this setting is only needed if you are
+## not using the currently unstable registry-auth
+## feature in cargo. this setting is only available
+## in cargo nightly 2022-11-17 or newer currently,
+## and requires the unstable registry-auth feature
+## to be enabled.
+##
+## note: the token value ('6MZafJNolbd...')
+## is only an example. you should substitute an
+## actual token value (create one on the
+## Shipyard.rs/tokens page) instead of copying
+## the example verbatim.
+##
+#[http]
+#user-agent = "shipyard 6MZafJNolbdX6/NYE4q5lh7sPGl5fC8MFa5Ae4SbHHpULrEGMSK2/dKTuqxpGUQZTAE="

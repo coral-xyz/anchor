@@ -1,12 +1,12 @@
 [package]
 name = "anchor-cli"
-version = "0.25.13"
+version = "0.25.14"
 authors = ["armaniferrante <armaniferrante@gmail.com>"]
-rust-version = "1.62"
 edition = "2021"
 repository = "https://github.com/coral-xyz/anchor"
 description = "Anchor CLI"
 license = "Apache-2.0"
+publish = ["star-atlas"]
 
 [[bin]]
 name = "anchor"
@@ -17,31 +17,31 @@ dev = []
 default = []
 
 [dependencies]
-clap = { version = "3.0.13", features = ["derive"] }
+anchor-client = { path = "../client", version = "0.25.14", repository = "star-atlas" }
+anchor-lang = { path = "../lang", version = "0.25.14", repository = "star-atlas" }
+anchor-syn = { path = "../lang/syn", features = ["idl", "init-if-needed"], version = "0.25.14", repository = "star-atlas" }
 anyhow = "1.0.32"
-syn = { version = "1.0.60", features = ["full", "extra-traits"] }
-anchor-lang = { path = "../lang", version = "0.25.0" }
-anchor-client = { path = "../client", version = "0.25.0" }
-anchor-syn = { path = "../lang/syn", features = ["idl", "init-if-needed"], version = "0.25.0" }
-serde_json = "1.0"
-shellexpand = "2.1.0"
-toml = "0.5.8"
+cargo_toml = "0.10.3"
+chrono = "0.4.19"
+clap = { version = "3.0.13", features = ["derive"] }
+dirs = "3.0"
+flate2 = "1.0.19"
+heck = "0.3.1"
+pathdiff = "0.2.0"
+portpicker = "0.1.1"
+rand = "0.7.3"
+reqwest = { version = "0.11.4", features = ["multipart", "blocking"] }
 semver = "1.0.4"
 serde = { version = "1.0.122", features = ["derive"] }
-solana-sdk = "1.10.29"
-solana-program = "1.10.29"
-solana-client = "1.10.29"
+serde_json = "1.0"
+shellexpand = "2.1.0"
 solana-cli-config = "1.10.29"
+solana-client = "1.10.29"
 solana-faucet = "1.10.29"
-dirs = "3.0"
-heck = "0.3.1"
-flate2 = "1.0.19"
-rand = "0.7.3"
+solana-program = "1.10.29"
+solana-sdk = "1.10.29"
+syn = { version = "1.0.60", features = ["full", "extra-traits"] }
 tar = "0.4.35"
-reqwest = { version = "0.11.4", features = ["multipart", "blocking"] }
 tokio = "1.0"
-pathdiff = "0.2.0"
-cargo_toml = "0.10.3"
+toml = "0.5.8"
 walkdir = "2.3.2"
-chrono = "0.4.19"
-portpicker = "0.1.1"
