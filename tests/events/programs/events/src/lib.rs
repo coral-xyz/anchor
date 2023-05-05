@@ -46,8 +46,7 @@ pub struct TestEvent {}
 
 #[derive(Accounts)]
 pub struct TestEventCpi<'info> {
-    /// CHECK: this is the program itself
-    program: AccountInfo<'info>,
+    program: Program<'info, crate::program::Events>,
     /// CHECK: this is the global event authority
     #[account(seeds=[b"__event_authority"], bump)]
     event_authority: AccountInfo<'info>,

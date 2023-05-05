@@ -135,7 +135,7 @@ impl Parse for EmitCpiArgs {
 /// // handler function inside #[program]
 /// pub fn do_something(ctx: Context<DoSomething>) -> Result<()> {
 ///     emit_cpi!(
-///         ctx.accounts.program.clone(),
+///         ctx.accounts.program.to_account_info(),
 ///         ctx.accounts.event_authority.clone(),
 ///         *ctx.bumps.get("event_authority").unwrap(),
 ///         MyEvent {
@@ -151,8 +151,7 @@ impl Parse for EmitCpiArgs {
 ///     /// CHECK: this account is needed to guarantee that your program is the one doing the logging
 ///     #[account(seeds=[b"__event_authority"], bump)]
 ///     pub event_authority: AccountInfo<'info>,
-///     /// CHECK: this is your the program being invoked
-///     pub program: AccountInfo<'info>,
+///     pub program: Program<'info, crate::program::MyProgramName>,
 /// }
 ///
 /// #[event]

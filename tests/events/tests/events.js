@@ -1,5 +1,5 @@
 const anchor = require("@coral-xyz/anchor");
-const { bs58, base64 } = require("@coral-xyz/anchor/dist/cjs/utils/bytes");
+const { bs58, base64 } = require("@coral-xyz/anchor/utils/bytes");
 const { assert } = require("chai");
 
 describe("events", () => {
@@ -63,6 +63,10 @@ describe("events", () => {
       .testEventCpi()
       .accounts({
         program: program.programId,
+        eventAuthority: anchor.web3.PublicKey.findProgramAddressSync(
+          [Buffer.from("__event_authority")],
+          program.programId
+        )[0],
       })
       .transaction();
 
