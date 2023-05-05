@@ -17,9 +17,9 @@ dev = []
 default = []
 
 [dependencies]
-anchor-client = { path = "../client", version = "0.25.14", repository = "star-atlas" }
-anchor-lang = { path = "../lang", version = "0.25.14", repository = "star-atlas" }
-anchor-syn = { path = "../lang/syn", features = ["idl", "init-if-needed"], version = "0.25.14", repository = "star-atlas" }
+anchor-client = { path = "../client", version = "0.25.14", registry = "star-atlas" }
+anchor-lang = { path = "../lang", version = "0.25.14", registry = "star-atlas" }
+anchor-syn = { path = "../lang/syn", features = ["idl", "init-if-needed"], version = "0.25.14", registry = "star-atlas" }
 anyhow = "1.0.32"
 cargo_toml = "0.10.3"
 chrono = "0.4.19"
