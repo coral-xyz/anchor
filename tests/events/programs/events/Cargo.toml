@@ -13,7 +13,8 @@ name = "events"
 no-entrypoint = []
 no-idl = []
 cpi = ["no-entrypoint"]
-default = []
+default = ["no-cpi-events"]
+no-cpi-events = []
 
 [dependencies]
 anchor-lang = { path = "../../../../lang" }

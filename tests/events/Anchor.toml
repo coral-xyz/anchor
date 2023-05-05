@@ -1,5 +1,6 @@
 [features]
 seeds = true
+# cpi-events = true
 
 [provider]
 cluster = "localnet"
