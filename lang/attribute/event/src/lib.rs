@@ -116,6 +116,51 @@ impl Parse for EmitCpiArgs {
     }
 }
 
+/// Logs an event that can be subscribed to by clients. More stable than `emit!` because
+/// RPCs are less likely to truncate CPI information than program logs. Generated code for this feature
+/// can be disabled by adding `no-cpi-events` to the `defaults = []` section of your program's Cargo.toml.
+///
+/// Uses a [`invoke_signed`](https://docs.rs/solana-program/latest/solana_program/program/fn.invoke_signed.html)
+/// syscall to store data in the ledger, which results in data being stored in the transaction metadata.
+///
+/// This also requires the usage of an additional PDA, derived from &[b"__event_authority"], to guarantee that
+/// the self-CPI is truly being invoked by the same program. Requiring this PDA to be a signer during `invoke_signed` syscall
+/// ensures that the program is the one doing the logging.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use anchor_lang::prelude::*;
+///
+/// // handler function inside #[program]
+/// pub fn do_something(ctx: Context<DoSomething>) -> Result<()> {
+///     emit_cpi!(
+///         ctx.accounts.program.clone(),
+///         ctx.accounts.event_authority.clone(),
+///         *ctx.bumps.get("event_authority").unwrap(),
+///         MyEvent {
+///             data: 5,
+///             label: [1,2,3,4,5],
+///         }
+///     );
+///     Ok(())
+/// }
+///
+/// #[derive(Accounts)]
+/// pub struct DoSomething<'info> {
+///     /// CHECK: this account is needed to guarantee that your program is the one doing the logging
+///     #[account(seeds=[b"__event_authority"], bump)]
+///     pub event_authority: AccountInfo<'info>,
+///     /// CHECK: this is your the program being invoked
+///     pub program: AccountInfo<'info>,
+/// }
+///
+/// #[event]
+/// pub struct MyEvent {
+///     pub data: u64,
+///     pub label: [u8; 5],
+/// }
+/// ```
 #[proc_macro]
 pub fn emit_cpi(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let args = parse_macro_input!(input as EmitCpiArgs);
