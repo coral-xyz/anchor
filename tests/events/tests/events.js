@@ -59,15 +59,12 @@ describe("events", () => {
   it("Self-CPI events work", async () => {
     await sleep(200);
 
-    let sendTx = await program.transaction.testEventCpi({
-      accounts: {
+    let sendTx = await program.methods
+      .testEventCpi()
+      .accounts({
         program: program.programId,
-        eventAuthority: anchor.web3.PublicKey.findProgramAddressSync(
-          [Buffer.from("__event_authority")],
-          program.programId
-        )[0],
-      },
-    });
+      })
+      .transaction();
 
     let provider = anchor.getProvider();
     let connection = provider.connection;
