@@ -206,11 +206,11 @@ impl<'info> From<&Swap<'info>> for OrderbookClient<'info> {
     fn from(accounts: &Swap<'info>) -> OrderbookClient<'info> {
         OrderbookClient {
             market: accounts.market.clone(),
-            authority: accounts.authority.to_account_info(),
-            pc_wallet: accounts.pc_wallet.to_account_info(),
-            dex_program: accounts.dex_program.to_account_info(),
-            token_program: accounts.token_program.to_account_info(),
-            rent: accounts.rent.to_account_info(),
+            authority: accounts.authority.to_account_info().into(),
+            pc_wallet: accounts.pc_wallet.to_account_info().into(),
+            dex_program: accounts.dex_program.to_account_info().into(),
+            token_program: accounts.token_program.to_account_info().into(),
+            rent: accounts.rent.to_account_info().into(),
         }
     }
 }
@@ -239,21 +239,21 @@ impl<'info> SwapTransitive<'info> {
     fn orderbook_from(&self) -> OrderbookClient<'info> {
         OrderbookClient {
             market: self.from.clone(),
-            authority: self.authority.to_account_info(),
-            pc_wallet: self.pc_wallet.to_account_info(),
-            dex_program: self.dex_program.to_account_info(),
-            token_program: self.token_program.to_account_info(),
-            rent: self.rent.to_account_info(),
+            authority: self.authority.to_account_info().into(),
+            pc_wallet: self.pc_wallet.to_account_info().into(),
+            dex_program: self.dex_program.to_account_info().into(),
+            token_program: self.token_program.to_account_info().into(),
+            rent: self.rent.to_account_info().into(),
         }
     }
     fn orderbook_to(&self) -> OrderbookClient<'info> {
         OrderbookClient {
             market: self.to.clone(),
-            authority: self.authority.to_account_info(),
-            pc_wallet: self.pc_wallet.to_account_info(),
-            dex_program: self.dex_program.to_account_info(),
-            token_program: self.token_program.to_account_info(),
-            rent: self.rent.to_account_info(),
+            authority: self.authority.to_account_info().into(),
+            pc_wallet: self.pc_wallet.to_account_info().into(),
+            dex_program: self.dex_program.to_account_info().into(),
+            token_program: self.token_program.to_account_info().into(),
+            rent: self.rent.to_account_info().into(),
         }
     }
 }
@@ -334,18 +334,22 @@ impl<'info> OrderbookClient<'info> {
         let limit = 65535;
 
         let dex_accs = dex::NewOrderV3 {
-            market: self.market.market.to_account_info(),
-            open_orders: self.market.open_orders.to_account_info(),
-            request_queue: self.market.request_queue.to_account_info(),
-            event_queue: self.market.event_queue.to_account_info(),
-            market_bids: self.market.bids.to_account_info(),
-            market_asks: self.market.asks.to_account_info(),
-            order_payer_token_account: self.market.order_payer_token_account.to_account_info(),
-            open_orders_authority: self.authority.to_account_info(),
-            coin_vault: self.market.coin_vault.to_account_info(),
-            pc_vault: self.market.pc_vault.to_account_info(),
-            token_program: self.token_program.to_account_info(),
-            rent: self.rent.to_account_info(),
+            market: self.market.market.to_account_info().into(),
+            open_orders: self.market.open_orders.to_account_info().into(),
+            request_queue: self.market.request_queue.to_account_info().into(),
+            event_queue: self.market.event_queue.to_account_info().into(),
+            market_bids: self.market.bids.to_account_info().into(),
+            market_asks: self.market.asks.to_account_info().into(),
+            order_payer_token_account: self
+                .market
+                .order_payer_token_account
+                .to_account_info()
+                .into(),
+            open_orders_authority: self.authority.to_account_info().into(),
+            coin_vault: self.market.coin_vault.to_account_info().into(),
+            pc_vault: self.market.pc_vault.to_account_info().into(),
+            token_program: self.token_program.to_account_info().into(),
+            rent: self.rent.to_account_info().into(),
         };
         let mut ctx = CpiContext::new(self.dex_program.to_account_info(), dex_accs);
         if let Some(referral) = referral {
@@ -366,15 +370,15 @@ impl<'info> OrderbookClient<'info> {
 
     fn settle(&self, referral: Option<AccountInfo<'info>>) -> Result<()> {
         let settle_accs = dex::SettleFunds {
-            market: self.market.market.to_account_info(),
-            open_orders: self.market.open_orders.to_account_info(),
-            open_orders_authority: self.authority.to_account_info(),
-            coin_vault: self.market.coin_vault.to_account_info(),
-            pc_vault: self.market.pc_vault.to_account_info(),
-            coin_wallet: self.market.coin_wallet.to_account_info(),
-            pc_wallet: self.pc_wallet.to_account_info(),
-            vault_signer: self.market.vault_signer.to_account_info(),
-            token_program: self.token_program.to_account_info(),
+            market: self.market.market.to_account_info().into(),
+            open_orders: self.market.open_orders.to_account_info().into(),
+            open_orders_authority: self.authority.to_account_info().into(),
+            coin_vault: self.market.coin_vault.to_account_info().into(),
+            pc_vault: self.market.pc_vault.to_account_info().into(),
+            coin_wallet: self.market.coin_wallet.to_account_info().into(),
+            pc_wallet: self.pc_wallet.to_account_info().into(),
+            vault_signer: self.market.vault_signer.to_account_info().into(),
+            token_program: self.token_program.to_account_info().into(),
         };
         let mut ctx = CpiContext::new(self.dex_program.to_account_info(), settle_accs);
         if let Some(referral) = referral {

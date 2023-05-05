@@ -11,9 +11,9 @@ pub mod zero_cpi {
     pub fn check_cpi(ctx: Context<CheckCpi>, data: u64) -> Result<()> {
         let cpi_program = ctx.accounts.zero_copy_program.to_account_info();
         let cpi_accounts = UpdateBar {
-            authority: ctx.accounts.authority.to_account_info(),
-            bar: ctx.accounts.bar.to_account_info(),
-            foo: ctx.accounts.foo.to_account_info(),
+            authority: ctx.accounts.authority.to_account_info().into(),
+            bar: ctx.accounts.bar.to_account_info().into(),
+            foo: ctx.accounts.foo.to_account_info().into(),
         };
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
         zero_copy::cpi::update_bar(cpi_ctx, data)?;

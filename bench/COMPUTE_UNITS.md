@@ -11,91 +11,91 @@ The programs and their tests are located in [/tests/bench](https://github.com/co
 
 ## [Unreleased]
 
-| Instruction                 | Compute Units | +/- |
-| --------------------------- | ------------- | --- |
-| accountEmptyInit1           | 5958          | -   |
-| accountEmpty1               | 1090          | -   |
-| accountEmptyInit2           | 10583         | -   |
-| accountEmpty2               | 1852          | -   |
-| accountEmptyInit4           | 19557         | -   |
-| accountEmpty4               | 2646          | -   |
-| accountEmptyInit8           | 37541         | -   |
-| accountEmpty8               | 5043          | -   |
-| accountSizedInit1           | 6063          | -   |
-| accountSized1               | 1135          | -   |
-| accountSizedInit2           | 10783         | -   |
-| accountSized2               | 1966          | -   |
-| accountSizedInit4           | 19975         | -   |
-| accountSized4               | 2787          | -   |
-| accountSizedInit8           | 38381         | -   |
-| accountSized8               | 5359          | -   |
-| accountUnsizedInit1         | 6193          | -   |
-| accountUnsized1             | 1243          | -   |
-| accountUnsizedInit2         | 11042         | -   |
-| accountUnsized2             | 1893          | -   |
-| accountUnsizedInit4         | 20495         | -   |
-| accountUnsized4             | 3104          | -   |
-| accountUnsizedInit8         | 39419         | -   |
-| accountUnsized8             | 6051          | -   |
-| boxedAccountEmptyInit1      | 6160          | -   |
-| boxedAccountEmpty1          | 976           | -   |
-| boxedAccountEmptyInit2      | 10784         | -   |
-| boxedAccountEmpty2          | 1499          | -   |
-| boxedAccountEmptyInit4      | 19500         | -   |
-| boxedAccountEmpty4          | 2530          | -   |
-| boxedAccountEmptyInit8      | 37415         | -   |
-| boxedAccountEmpty8          | 4780          | -   |
-| boxedAccountSizedInit1      | 6256          | -   |
-| boxedAccountSized1          | 1003          | -   |
-| boxedAccountSizedInit2      | 10975         | -   |
-| boxedAccountSized2          | 1554          | -   |
-| boxedAccountSizedInit4      | 19884         | -   |
-| boxedAccountSized4          | 2642          | -   |
-| boxedAccountSizedInit8      | 38182         | -   |
-| boxedAccountSized8          | 5003          | -   |
-| boxedAccountUnsizedInit1    | 6374          | -   |
-| boxedAccountUnsized1        | 1069          | -   |
-| boxedAccountUnsizedInit2    | 11211         | -   |
-| boxedAccountUnsized2        | 1679          | -   |
-| boxedAccountUnsizedInit4    | 20351         | -   |
-| boxedAccountUnsized4        | 2899          | -   |
-| boxedAccountUnsizedInit8    | 39118         | -   |
-| boxedAccountUnsized8        | 5517          | -   |
-| boxedInterfaceAccountMint1  | 2299          | -   |
-| boxedInterfaceAccountMint2  | 4053          | -   |
-| boxedInterfaceAccountMint4  | 7538          | -   |
-| boxedInterfaceAccountMint8  | 14699         | -   |
-| boxedInterfaceAccountToken1 | 1737          | -   |
-| boxedInterfaceAccountToken2 | 2928          | -   |
-| boxedInterfaceAccountToken4 | 5291          | -   |
-| boxedInterfaceAccountToken8 | 10205         | -   |
-| interfaceAccountMint1       | 2530          | -   |
-| interfaceAccountMint2       | 4726          | -   |
-| interfaceAccountMint4       | 9431          | -   |
-| interfaceAccountMint8       | 17709         | -   |
-| interfaceAccountToken1      | 1755          | -   |
-| interfaceAccountToken2      | 3211          | -   |
-| interfaceAccountToken4      | 6006          | -   |
-| interface1                  | 999           | -   |
-| interface2                  | 1574          | -   |
-| interface4                  | 1996          | -   |
-| interface8                  | 3651          | -   |
-| program1                    | 999           | -   |
-| program2                    | 1573          | -   |
-| program4                    | 1998          | -   |
-| program8                    | 3651          | -   |
-| signer1                     | 958           | -   |
-| signer2                     | 1576          | -   |
-| signer4                     | 2079          | -   |
-| signer8                     | 3895          | -   |
-| systemAccount1              | 1013          | -   |
-| systemAccount2              | 1686          | -   |
-| systemAccount4              | 2298          | -   |
-| systemAccount8              | 4336          | -   |
-| uncheckedAccount1           | 953           | -   |
-| uncheckedAccount2           | 1567          | -   |
-| uncheckedAccount4           | 2060          | -   |
-| uncheckedAccount8           | 3855          | -   |
+| Instruction                 | Compute Units | +/-           |
+| --------------------------- | ------------- | ------------- |
+| accountEmptyInit1           | 6246          | 🔴 **+4.83%** |
+| accountEmpty1               | 1090          | -             |
+| accountEmptyInit2           | 11090         | 🔴 **+4.88%** |
+| accountEmpty2               | 1852          | -             |
+| accountEmptyInit4           | 20579         | 🔴 **+5.23%** |
+| accountEmpty4               | 2646          | -             |
+| accountEmptyInit8           | 39582         | 🔴 **+5.44%** |
+| accountEmpty8               | 5043          | -             |
+| accountSizedInit1           | 6353          | 🔴 **+4.78%** |
+| accountSized1               | 1135          | -             |
+| accountSizedInit2           | 11301         | 🔴 **+4.80%** |
+| accountSized2               | 1966          | -             |
+| accountSizedInit4           | 21000         | 🔴 **+5.13%** |
+| accountSized4               | 2787          | -             |
+| accountSizedInit8           | 40422         | 🔴 **+5.32%** |
+| accountSized8               | 5359          | -             |
+| accountUnsizedInit1         | 6482          | 🔴 **+4.67%** |
+| accountUnsized1             | 1243          | -             |
+| accountUnsizedInit2         | 11560         | 🔴 **+4.69%** |
+| accountUnsized2             | 1893          | -             |
+| accountUnsizedInit4         | 21519         | 🔴 **+5.00%** |
+| accountUnsized4             | 3104          | -             |
+| accountUnsizedInit8         | 41461         | 🔴 **+5.18%** |
+| accountUnsized8             | 6051          | -             |
+| boxedAccountEmptyInit1      | 6447          | 🔴 **+4.66%** |
+| boxedAccountEmpty1          | 976           | -             |
+| boxedAccountEmptyInit2      | 11292         | 🔴 **+4.71%** |
+| boxedAccountEmpty2          | 1499          | -             |
+| boxedAccountEmptyInit4      | 20521         | 🔴 **+5.24%** |
+| boxedAccountEmpty4          | 2530          | -             |
+| boxedAccountEmptyInit8      | 39456         | 🔴 **+5.46%** |
+| boxedAccountEmpty8          | 4780          | -             |
+| boxedAccountSizedInit1      | 6544          | 🔴 **+4.60%** |
+| boxedAccountSized1          | 1003          | -             |
+| boxedAccountSizedInit2      | 11485         | 🔴 **+4.65%** |
+| boxedAccountSized2          | 1554          | -             |
+| boxedAccountSizedInit4      | 20904         | 🔴 **+5.13%** |
+| boxedAccountSized4          | 2642          | -             |
+| boxedAccountSizedInit8      | 40224         | 🔴 **+5.35%** |
+| boxedAccountSized8          | 5003          | -             |
+| boxedAccountUnsizedInit1    | 6661          | 🔴 **+4.50%** |
+| boxedAccountUnsized1        | 1069          | -             |
+| boxedAccountUnsizedInit2    | 11720         | 🔴 **+4.54%** |
+| boxedAccountUnsized2        | 1679          | -             |
+| boxedAccountUnsizedInit4    | 21372         | 🔴 **+5.02%** |
+| boxedAccountUnsized4        | 2899          | -             |
+| boxedAccountUnsizedInit8    | 41159         | 🔴 **+5.22%** |
+| boxedAccountUnsized8        | 5517          | -             |
+| boxedInterfaceAccountMint1  | 2299          | -             |
+| boxedInterfaceAccountMint2  | 4053          | -             |
+| boxedInterfaceAccountMint4  | 7538          | -             |
+| boxedInterfaceAccountMint8  | 14699         | -             |
+| boxedInterfaceAccountToken1 | 1737          | -             |
+| boxedInterfaceAccountToken2 | 2928          | -             |
+| boxedInterfaceAccountToken4 | 5291          | -             |
+| boxedInterfaceAccountToken8 | 10205         | -             |
+| interfaceAccountMint1       | 2530          | -             |
+| interfaceAccountMint2       | 4726          | -             |
+| interfaceAccountMint4       | 9431          | -             |
+| interfaceAccountMint8       | 17709         | -             |
+| interfaceAccountToken1      | 1755          | -             |
+| interfaceAccountToken2      | 3211          | -             |
+| interfaceAccountToken4      | 6006          | -             |
+| interface1                  | 999           | -             |
+| interface2                  | 1574          | -             |
+| interface4                  | 1996          | -             |
+| interface8                  | 3651          | -             |
+| program1                    | 999           | -             |
+| program2                    | 1573          | -             |
+| program4                    | 1998          | -             |
+| program8                    | 3651          | -             |
+| signer1                     | 958           | -             |
+| signer2                     | 1576          | -             |
+| signer4                     | 2079          | -             |
+| signer8                     | 3895          | -             |
+| systemAccount1              | 1013          | -             |
+| systemAccount2              | 1686          | -             |
+| systemAccount4              | 2298          | -             |
+| systemAccount8              | 4336          | -             |
+| uncheckedAccount1           | 953           | -             |
+| uncheckedAccount2           | 1567          | -             |
+| uncheckedAccount4           | 2060          | -             |
+| uncheckedAccount8           | 3855          | -             |
 
 ### Notable changes
 
@@ -105,6 +105,10 @@ The programs and their tests are located in [/tests/bench](https://github.com/co
 
 | Instruction                 | Compute Units | +/- |
 | --------------------------- | ------------- | --- |
+| accountInfo1                | 954           | N/A |
+| accountInfo2                | 1567          | N/A |
+| accountInfo4                | 2059          | N/A |
+| accountInfo8                | 3856          | N/A |
 | accountEmptyInit1           | 5958          | N/A |
 | accountEmpty1               | 1090          | N/A |
 | accountEmptyInit2           | 10574         | N/A |

@@ -193,8 +193,11 @@ impl<'info> From<&mut InitializeEscrow<'info>>
 {
     fn from(accounts: &mut InitializeEscrow<'info>) -> Self {
         let cpi_accounts = SetAuthority {
-            account_or_mint: accounts.initializer_deposit_token_account.to_account_info(),
-            current_authority: accounts.initializer.to_account_info(),
+            account_or_mint: accounts
+                .initializer_deposit_token_account
+                .to_account_info()
+                .into(),
+            current_authority: accounts.initializer.to_account_info().into(),
         };
         let cpi_program = accounts.token_program.to_account_info();
         CpiContext::new(cpi_program, cpi_accounts)
@@ -204,8 +207,8 @@ impl<'info> From<&mut InitializeEscrow<'info>>
 impl<'info> CancelEscrow<'info> {
     fn into_set_authority_context(&self) -> CpiContext<'_, '_, '_, 'info, SetAuthority<'info>> {
         let cpi_accounts = SetAuthority {
-            account_or_mint: self.pda_deposit_token_account.to_account_info(),
-            current_authority: self.pda_account.to_account_info(),
+            account_or_mint: self.pda_deposit_token_account.to_account_info().into(),
+            current_authority: self.pda_account.to_account_info().into(),
         };
         let cpi_program = self.token_program.to_account_info();
         CpiContext::new(cpi_program, cpi_accounts)
@@ -215,8 +218,8 @@ impl<'info> CancelEscrow<'info> {
 impl<'info> Exchange<'info> {
     fn into_set_authority_context(&self) -> CpiContext<'_, '_, '_, 'info, SetAuthority<'info>> {
         let cpi_accounts = SetAuthority {
-            account_or_mint: self.pda_deposit_token_account.to_account_info(),
-            current_authority: self.pda_account.to_account_info(),
+            account_or_mint: self.pda_deposit_token_account.to_account_info().into(),
+            current_authority: self.pda_account.to_account_info().into(),
         };
         let cpi_program = self.receive_token_program.to_account_info();
         CpiContext::new(cpi_program, cpi_accounts)
@@ -228,10 +231,10 @@ impl<'info> Exchange<'info> {
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, TransferChecked<'info>> {
         let cpi_accounts = TransferChecked {
-            from: self.pda_deposit_token_account.to_account_info(),
-            mint: self.receive_mint.to_account_info(),
-            to: self.taker_receive_token_account.to_account_info(),
-            authority: self.pda_account.to_account_info(),
+            from: self.pda_deposit_token_account.to_account_info().into(),
+            mint: self.receive_mint.to_account_info().into(),
+            to: self.taker_receive_token_account.to_account_info().into(),
+            authority: self.pda_account.to_account_info().into(),
         };
         let cpi_program = self.receive_token_program.to_account_info();
         CpiContext::new(cpi_program, cpi_accounts)
@@ -243,10 +246,13 @@ impl<'info> Exchange<'info> {
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, TransferChecked<'info>> {
         let cpi_accounts = TransferChecked {
-            from: self.taker_deposit_token_account.to_account_info(),
-            mint: self.deposit_mint.to_account_info(),
-            to: self.initializer_receive_token_account.to_account_info(),
-            authority: self.taker.to_account_info(),
+            from: self.taker_deposit_token_account.to_account_info().into(),
+            mint: self.deposit_mint.to_account_info().into(),
+            to: self
+                .initializer_receive_token_account
+                .to_account_info()
+                .into(),
+            authority: self.taker.to_account_info().into(),
         };
         let cpi_program = self.deposit_token_program.to_account_info();
         CpiContext::new(cpi_program, cpi_accounts)

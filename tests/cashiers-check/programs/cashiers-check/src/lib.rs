@@ -22,9 +22,9 @@ pub mod cashiers_check {
     ) -> Result<()> {
         // Transfer funds to the check.
         let cpi_accounts = Transfer {
-            from: ctx.accounts.from.to_account_info(),
-            to: ctx.accounts.vault.to_account_info(),
-            authority: ctx.accounts.owner.to_account_info(),
+            from: ctx.accounts.from.to_account_info().into(),
+            to: ctx.accounts.vault.to_account_info().into(),
+            authority: ctx.accounts.owner.to_account_info().into(),
         };
         let cpi_program = ctx.accounts.token_program.to_account_info();
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
@@ -50,9 +50,9 @@ pub mod cashiers_check {
         ];
         let signer = &[&seeds[..]];
         let cpi_accounts = Transfer {
-            from: ctx.accounts.vault.to_account_info(),
-            to: ctx.accounts.to.to_account_info(),
-            authority: ctx.accounts.check_signer.to_account_info(),
+            from: ctx.accounts.vault.to_account_info().into(),
+            to: ctx.accounts.to.to_account_info().into(),
+            authority: ctx.accounts.check_signer.to_account_info().into(),
         };
         let cpi_program = ctx.accounts.token_program.to_account_info();
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
@@ -70,9 +70,9 @@ pub mod cashiers_check {
         ];
         let signer = &[&seeds[..]];
         let cpi_accounts = Transfer {
-            from: ctx.accounts.vault.to_account_info(),
-            to: ctx.accounts.from.to_account_info(),
-            authority: ctx.accounts.check_signer.to_account_info(),
+            from: ctx.accounts.vault.to_account_info().into(),
+            to: ctx.accounts.from.to_account_info().into(),
+            authority: ctx.accounts.check_signer.to_account_info().into(),
         };
         let cpi_program = ctx.accounts.token_program.to_account_info();
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);

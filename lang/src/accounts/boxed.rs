@@ -59,6 +59,6 @@ impl<'info, T: AccountsClose<'info>> AccountsClose<'info> for Box<T> {
 
 impl<'info, T: Into<UncheckedAccount<'info>>> From<Box<T>> for UncheckedAccount<'info> {
     fn from(value: Box<T>) -> Self {
-        value.into()
+        T::into(*value)
     }
 }
