@@ -2,6 +2,7 @@
 
 use crate::accounts::account::Account;
 use crate::error::ErrorCode;
+use crate::prelude::UncheckedAccount;
 use crate::{
     AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, CheckOwner, Key,
     Owners, Result, ToAccountInfos, ToAccountMetas,
@@ -327,5 +328,13 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> DerefMut for Interfac
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> Key for InterfaceAccount<'info, T> {
     fn key(&self) -> Pubkey {
         self.account.key()
+    }
+}
+
+impl<'info, T: AccountSerialize + AccountDeserialize + Clone> From<InterfaceAccount<'info, T>>
+    for UncheckedAccount<'info>
+{
+    fn from(value: InterfaceAccount<'info, T>) -> Self {
+        value.account.into()
     }
 }

@@ -1,6 +1,7 @@
 //! Type validating that the account is the given Program
 
 use crate::error::{Error, ErrorCode};
+use crate::prelude::UncheckedAccount;
 use crate::{
     AccountDeserialize, Accounts, AccountsExit, Id, Key, Result, ToAccountInfos, ToAccountMetas,
 };
@@ -194,5 +195,11 @@ impl<'info, T: AccountDeserialize> AccountsExit<'info> for Program<'info, T> {}
 impl<'info, T: AccountDeserialize> Key for Program<'info, T> {
     fn key(&self) -> Pubkey {
         *self.info.key
+    }
+}
+
+impl<'info, T> From<Program<'info, T>> for UncheckedAccount<'info> {
+    fn from(value: Program<'info, T>) -> Self {
+        UncheckedAccount::try_from(value.info)
     }
 }

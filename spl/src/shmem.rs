@@ -1,13 +1,13 @@
 //! CPI API for interacting with the SPL shared memory
 //! [program](https://github.com/solana-labs/solana-program-library/tree/master/shared-memory).
 
-use anchor_lang::ToAccountInfo;
-use anchor_lang::{context::CpiContext, Accounts};
-use solana_program::account_info::AccountInfo;
-use solana_program::declare_id;
-use solana_program::entrypoint::ProgramResult;
-use solana_program::instruction::{AccountMeta, Instruction};
+use anchor_lang::{context::CpiContext, prelude::UncheckedAccount, Accounts, ToAccountInfo};
 use solana_program::program;
+use solana_program::{
+    declare_id,
+    entrypoint::ProgramResult,
+    instruction::{AccountMeta, Instruction},
+};
 
 // TODO: update this once the final shared memory program gets released.
 //       shmem4EWT2sPdVGvTZCzXXRAURL9G5vpPxNwSeKhHUL.
@@ -28,25 +28,23 @@ pub fn ret<'a, 'b, 'c, 'info>(
         accounts: vec![AccountMeta::new(*ctx.accounts.buffer.key, false)],
         data,
     };
-    let mut accounts = vec![ctx.accounts.buffer];
-    accounts.push(ctx.program.clone());
+    let mut accounts = vec![ctx.accounts.buffer.to_account_info()];
+    accounts.push(ctx.program.to_account_info());
     program::invoke(&instruction, &accounts)
 }
 
 #[derive(Accounts)]
-#[only_cpi]
 pub struct Ret<'info> {
     #[account(mut)]
-    pub buffer: AccountInfo<'info>,
+    pub buffer: UncheckedAccount<'info>,
 }
 
 // A set of accounts that can be used with shared memory.
 #[derive(Accounts)]
-#[only_cpi]
 pub struct Shmem<'info> {
     // Shared memory account to write the return value into.
     #[account(mut, constraint = shmem.owner == shmem_program.key)]
-    pub shmem: AccountInfo<'info>,
+    pub shmem: UncheckedAccount<'info>,
     #[account(constraint = shmem_program.key == &ID)]
-    pub shmem_program: AccountInfo<'info>,
+    pub shmem_program: UncheckedAccount<'info>,
 }

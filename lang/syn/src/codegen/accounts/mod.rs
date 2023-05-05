@@ -22,21 +22,14 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     let __client_accounts_mod = __client_accounts::generate(accs);
     let __cpi_client_accounts_mod = __cpi_client_accounts::generate(accs);
 
-    if accs.only_cpi {
-        quote! {
-            #impl_to_account_infos
-            #impl_to_account_metas
-        }
-    } else {
-        quote! {
-            #impl_try_accounts
-            #impl_to_account_infos
-            #impl_to_account_metas
-            #impl_exit
+    quote! {
+        #impl_try_accounts
+        #impl_to_account_infos
+        #impl_to_account_metas
+        #impl_exit
 
-            #__client_accounts_mod
-            #__cpi_client_accounts_mod
-        }
+        #__client_accounts_mod
+        #__cpi_client_accounts_mod
     }
 }
 

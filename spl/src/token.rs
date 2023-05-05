@@ -1,9 +1,10 @@
+use anchor_lang::prelude::UncheckedAccount;
 use anchor_lang::solana_program::account_info::AccountInfo;
 
 use anchor_lang::solana_program::program_pack::Pack;
 use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::{context::CpiContext, Accounts};
-use anchor_lang::{solana_program, Result};
+use anchor_lang::{solana_program, Result, ToAccountInfo};
 use std::ops::Deref;
 
 pub use spl_token;
@@ -23,7 +24,11 @@ pub fn transfer<'info>(
     )?;
     solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.from, ctx.accounts.to, ctx.accounts.authority],
+        &[
+            ctx.accounts.from.to_account_info(),
+            ctx.accounts.to.to_account_info(),
+            ctx.accounts.authority.to_account_info(),
+        ],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -47,10 +52,10 @@ pub fn transfer_checked<'info>(
     solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.from,
-            ctx.accounts.mint,
-            ctx.accounts.to,
-            ctx.accounts.authority,
+            ctx.accounts.from.to_account_info(),
+            ctx.accounts.mint.to_account_info(),
+            ctx.accounts.to.to_account_info(),
+            ctx.accounts.authority.to_account_info(),
         ],
         ctx.signer_seeds,
     )
@@ -71,7 +76,11 @@ pub fn mint_to<'info>(
     )?;
     solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.to, ctx.accounts.mint, ctx.accounts.authority],
+        &[
+            ctx.accounts.to.to_account_info(),
+            ctx.accounts.mint.to_account_info(),
+            ctx.accounts.authority.to_account_info(),
+        ],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -88,7 +97,11 @@ pub fn burn<'info>(ctx: CpiContext<'_, '_, '_, 'info, Burn<'info>>, amount: u64)
     )?;
     solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.from, ctx.accounts.mint, ctx.accounts.authority],
+        &[
+            ctx.accounts.from.to_account_info(),
+            ctx.accounts.mint.to_account_info(),
+            ctx.accounts.authority.to_account_info(),
+        ],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -109,9 +122,9 @@ pub fn approve<'info>(
     solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.to,
-            ctx.accounts.delegate,
-            ctx.accounts.authority,
+            ctx.accounts.to.to_account_info(),
+            ctx.accounts.delegate.to_account_info(),
+            ctx.accounts.authority.to_account_info(),
         ],
         ctx.signer_seeds,
     )
@@ -136,10 +149,10 @@ pub fn approve_checked<'info>(
     solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.to,
-            ctx.accounts.mint,
-            ctx.accounts.delegate,
-            ctx.accounts.authority,
+            ctx.accounts.to.to_account_info(),
+            ctx.accounts.mint.to_account_info(),
+            ctx.accounts.delegate.to_account_info(),
+            ctx.accounts.authority.to_account_info(),
         ],
         ctx.signer_seeds,
     )
@@ -155,7 +168,10 @@ pub fn revoke<'info>(ctx: CpiContext<'_, '_, '_, 'info, Revoke<'info>>) -> Resul
     )?;
     solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.source, ctx.accounts.authority],
+        &[
+            ctx.accounts.source.to_account_info(),
+            ctx.accounts.authority.to_account_info(),
+        ],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -173,10 +189,10 @@ pub fn initialize_account<'info>(
     solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.account,
-            ctx.accounts.mint,
-            ctx.accounts.authority,
-            ctx.accounts.rent,
+            ctx.accounts.account.to_account_info(),
+            ctx.accounts.mint.to_account_info(),
+            ctx.accounts.authority.to_account_info(),
+            ctx.accounts.rent.to_account_info(),
         ],
         ctx.signer_seeds,
     )
@@ -194,7 +210,10 @@ pub fn initialize_account3<'info>(
     )?;
     solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.account, ctx.accounts.mint],
+        &[
+            ctx.accounts.account.to_account_info(),
+            ctx.accounts.mint.to_account_info(),
+        ],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -211,9 +230,9 @@ pub fn close_account<'info>(ctx: CpiContext<'_, '_, '_, 'info, CloseAccount<'inf
     solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.account,
-            ctx.accounts.destination,
-            ctx.accounts.authority,
+            ctx.accounts.account.to_account_info(),
+            ctx.accounts.destination.to_account_info(),
+            ctx.accounts.authority.to_account_info(),
         ],
         ctx.signer_seeds,
     )
@@ -233,9 +252,9 @@ pub fn freeze_account<'info>(
     solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.account,
-            ctx.accounts.mint,
-            ctx.accounts.authority,
+            ctx.accounts.account.to_account_info(),
+            ctx.accounts.mint.to_account_info(),
+            ctx.accounts.authority.to_account_info(),
         ],
         ctx.signer_seeds,
     )
@@ -253,9 +272,9 @@ pub fn thaw_account<'info>(ctx: CpiContext<'_, '_, '_, 'info, ThawAccount<'info>
     solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.account,
-            ctx.accounts.mint,
-            ctx.accounts.authority,
+            ctx.accounts.account.to_account_info(),
+            ctx.accounts.mint.to_account_info(),
+            ctx.accounts.authority.to_account_info(),
         ],
         ctx.signer_seeds,
     )
@@ -277,7 +296,10 @@ pub fn initialize_mint<'info>(
     )?;
     solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.mint, ctx.accounts.rent],
+        &[
+            ctx.accounts.mint.to_account_info(),
+            ctx.accounts.rent.to_account_info(),
+        ],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -296,8 +318,12 @@ pub fn initialize_mint2<'info>(
         freeze_authority,
         decimals,
     )?;
-    solana_program::program::invoke_signed(&ix, &[ctx.accounts.mint], ctx.signer_seeds)
-        .map_err(Into::into)
+    solana_program::program::invoke_signed(
+        &ix,
+        &[ctx.accounts.mint.to_account_info()],
+        ctx.signer_seeds,
+    )
+    .map_err(Into::into)
 }
 
 pub fn set_authority<'info>(
@@ -320,7 +346,10 @@ pub fn set_authority<'info>(
     )?;
     solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.account_or_mint, ctx.accounts.current_authority],
+        &[
+            ctx.accounts.account_or_mint.to_account_info(),
+            ctx.accounts.current_authority.to_account_info(),
+        ],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -328,132 +357,120 @@ pub fn set_authority<'info>(
 
 pub fn sync_native<'info>(ctx: CpiContext<'_, '_, '_, 'info, SyncNative<'info>>) -> Result<()> {
     let ix = spl_token::instruction::sync_native(&spl_token::ID, ctx.accounts.account.key)?;
-    solana_program::program::invoke_signed(&ix, &[ctx.accounts.account], ctx.signer_seeds)
-        .map_err(Into::into)
+    solana_program::program::invoke_signed(
+        &ix,
+        &[ctx.accounts.account.to_account_info()],
+        ctx.signer_seeds,
+    )
+    .map_err(Into::into)
 }
 
 #[derive(Accounts)]
-#[only_cpi]
 pub struct Transfer<'info> {
-    pub from: AccountInfo<'info>,
-    pub to: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub from: UncheckedAccount<'info>,
+    pub to: UncheckedAccount<'info>,
+    pub authority: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
-#[only_cpi]
 pub struct TransferChecked<'info> {
-    pub from: AccountInfo<'info>,
-    pub mint: AccountInfo<'info>,
-    pub to: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub from: UncheckedAccount<'info>,
+    pub mint: UncheckedAccount<'info>,
+    pub to: UncheckedAccount<'info>,
+    pub authority: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
-#[only_cpi]
 pub struct MintTo<'info> {
-    pub mint: AccountInfo<'info>,
-    pub to: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub mint: UncheckedAccount<'info>,
+    pub to: UncheckedAccount<'info>,
+    pub authority: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
-#[only_cpi]
 pub struct Burn<'info> {
-    pub mint: AccountInfo<'info>,
-    pub from: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub mint: UncheckedAccount<'info>,
+    pub from: UncheckedAccount<'info>,
+    pub authority: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
-#[only_cpi]
 pub struct Approve<'info> {
-    pub to: AccountInfo<'info>,
-    pub delegate: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub to: UncheckedAccount<'info>,
+    pub delegate: UncheckedAccount<'info>,
+    pub authority: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
-#[only_cpi]
 pub struct ApproveChecked<'info> {
-    pub to: AccountInfo<'info>,
-    pub mint: AccountInfo<'info>,
-    pub delegate: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub to: UncheckedAccount<'info>,
+    pub mint: UncheckedAccount<'info>,
+    pub delegate: UncheckedAccount<'info>,
+    pub authority: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
-#[only_cpi]
 pub struct Revoke<'info> {
-    pub source: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub source: UncheckedAccount<'info>,
+    pub authority: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
-#[only_cpi]
 pub struct InitializeAccount<'info> {
-    pub account: AccountInfo<'info>,
-    pub mint: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
-    pub rent: AccountInfo<'info>,
+    pub account: UncheckedAccount<'info>,
+    pub mint: UncheckedAccount<'info>,
+    pub authority: UncheckedAccount<'info>,
+    pub rent: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
-#[only_cpi]
 pub struct InitializeAccount3<'info> {
-    pub account: AccountInfo<'info>,
-    pub mint: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub account: UncheckedAccount<'info>,
+    pub mint: UncheckedAccount<'info>,
+    pub authority: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
-#[only_cpi]
 pub struct CloseAccount<'info> {
-    pub account: AccountInfo<'info>,
-    pub destination: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub account: UncheckedAccount<'info>,
+    pub destination: UncheckedAccount<'info>,
+    pub authority: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
-#[only_cpi]
 pub struct FreezeAccount<'info> {
-    pub account: AccountInfo<'info>,
-    pub mint: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub account: UncheckedAccount<'info>,
+    pub mint: UncheckedAccount<'info>,
+    pub authority: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
-#[only_cpi]
 pub struct ThawAccount<'info> {
-    pub account: AccountInfo<'info>,
-    pub mint: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
+    pub account: UncheckedAccount<'info>,
+    pub mint: UncheckedAccount<'info>,
+    pub authority: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
-#[only_cpi]
 pub struct InitializeMint<'info> {
-    pub mint: AccountInfo<'info>,
-    pub rent: AccountInfo<'info>,
+    pub mint: UncheckedAccount<'info>,
+    pub rent: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
-#[only_cpi]
 pub struct InitializeMint2<'info> {
-    pub mint: AccountInfo<'info>,
+    pub mint: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
-#[only_cpi]
 pub struct SetAuthority<'info> {
-    pub current_authority: AccountInfo<'info>,
-    pub account_or_mint: AccountInfo<'info>,
+    pub current_authority: UncheckedAccount<'info>,
+    pub account_or_mint: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
-#[only_cpi]
 pub struct SyncNative<'info> {
-    pub account: AccountInfo<'info>,
+    pub account: UncheckedAccount<'info>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]

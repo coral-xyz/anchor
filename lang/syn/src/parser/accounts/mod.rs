@@ -20,7 +20,6 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
         })
         .map(|ix_attr| ix_attr.parse_args_with(Punctuated::<Expr, Comma>::parse_terminated))
         .transpose()?;
-    let only_cpi = strct.attrs.iter().any(|a| a.path.is_ident("only_cpi"));
     let fields = match &strct.fields {
         syn::Fields::Named(fields) => fields
             .named
@@ -35,33 +34,9 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
         }
     };
 
-    if !only_cpi {
-        prevent_account_info(&fields)?;
-    }
-
     constraints_cross_checks(&fields)?;
 
-    Ok(AccountsStruct::new(
-        strct.clone(),
-        fields,
-        instruction_api,
-        only_cpi,
-    ))
-}
-
-fn prevent_account_info(fields: &[AccountField]) -> ParseResult<()> {
-    let field = fields.iter().find(|f| match f {
-        AccountField::Field(acc_f) => acc_f.ty == Ty::AccountInfo,
-        _ => false,
-    });
-
-    match field {
-        Some(f) => Err(ParseError::new(
-            f.ident().span(),
-            "AccountInfo can no longer be used in the context. Please use UncheckedAccount instead.",
-        )),
-        None => Ok(()),
-    }
+    Ok(AccountsStruct::new(strct.clone(), fields, instruction_api))
 }
 
 fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
@@ -318,7 +293,6 @@ fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
     let r = matches!(
         ident_string(f)?.0.as_str(),
         "Sysvar"
-            | "AccountInfo"
             | "UncheckedAccount"
             | "AccountLoader"
             | "Account"
@@ -336,7 +310,6 @@ fn parse_ty(f: &syn::Field) -> ParseResult<(Ty, bool)> {
     let (ident, optional, path) = ident_string(f)?;
     let ty = match ident.as_str() {
         "Sysvar" => Ty::Sysvar(parse_sysvar(&path)?),
-        "AccountInfo" => Ty::AccountInfo,
         "UncheckedAccount" => Ty::UncheckedAccount,
         "AccountLoader" => Ty::AccountLoader(parse_program_account_loader(&path)?),
         "Account" => Ty::Account(parse_account_ty(&path)?),

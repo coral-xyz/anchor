@@ -2,6 +2,7 @@
 
 use crate::bpf_writer::BpfWriter;
 use crate::error::{Error, ErrorCode};
+use crate::prelude::UncheckedAccount;
 use crate::{
     Accounts, AccountsClose, AccountsExit, Key, Owner, Result, ToAccountInfo, ToAccountInfos,
     ToAccountMetas, ZeroCopy,
@@ -80,7 +81,7 @@ use std::ops::DerefMut;
 ///     bar: AccountLoader<'info, Bar>,
 ///     #[account(mut)]
 ///     authority: Signer<'info>,
-///     system_program: AccountInfo<'info>,
+///     system_program: UncheckedAccount<'info>,
 /// }
 ///
 /// #[derive(Accounts)]
@@ -279,5 +280,11 @@ impl<'info, T: ZeroCopy + Owner> ToAccountInfos<'info> for AccountLoader<'info, 
 impl<'info, T: ZeroCopy + Owner> Key for AccountLoader<'info, T> {
     fn key(&self) -> Pubkey {
         *self.acc_info.key
+    }
+}
+
+impl<'info, T: ZeroCopy + Owner> From<AccountLoader<'info, T>> for UncheckedAccount<'info> {
+    fn from(value: AccountLoader<'info, T>) -> Self {
+        UncheckedAccount::try_from(value.acc_info)
     }
 }

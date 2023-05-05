@@ -75,3 +75,9 @@ impl<'info> Key for UncheckedAccount<'info> {
         *self.0.key
     }
 }
+
+impl<'info> From<AccountInfo<'info>> for UncheckedAccount<'info> {
+    fn from(value: AccountInfo<'info>) -> Self {
+        UncheckedAccount::try_from(value)
+    }
+}

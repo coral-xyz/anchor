@@ -18,7 +18,7 @@ pub mod caller {
     pub fn cpi_call_return_u64(ctx: Context<CpiReturnContext>) -> Result<()> {
         let cpi_program = ctx.accounts.cpi_return_program.to_account_info();
         let cpi_accounts = CpiReturn {
-            account: ctx.accounts.cpi_return.to_account_info(),
+            account: ctx.accounts.cpi_return.clone().into(),
         };
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
         let result = callee::cpi::return_u64(cpi_ctx)?;
@@ -30,7 +30,7 @@ pub mod caller {
     pub fn cpi_call_return_struct(ctx: Context<CpiReturnContext>) -> Result<()> {
         let cpi_program = ctx.accounts.cpi_return_program.to_account_info();
         let cpi_accounts = CpiReturn {
-            account: ctx.accounts.cpi_return.to_account_info(),
+            account: ctx.accounts.cpi_return.clone().into(),
         };
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
         let result = callee::cpi::return_struct(cpi_ctx)?;
@@ -42,7 +42,7 @@ pub mod caller {
     pub fn cpi_call_return_vec(ctx: Context<CpiReturnContext>) -> Result<()> {
         let cpi_program = ctx.accounts.cpi_return_program.to_account_info();
         let cpi_accounts = CpiReturn {
-            account: ctx.accounts.cpi_return.to_account_info(),
+            account: ctx.accounts.cpi_return.clone().into(),
         };
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
         let result = callee::cpi::return_vec(cpi_ctx)?;

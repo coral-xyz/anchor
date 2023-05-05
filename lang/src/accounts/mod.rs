@@ -1,6 +1,7 @@
 //! Account types that can be used in the account validation struct.
 
 pub mod account;
+#[doc(hidden)]
 pub mod account_info;
 pub mod account_loader;
 pub mod boxed;

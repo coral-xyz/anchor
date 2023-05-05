@@ -31,10 +31,11 @@ pub mod token_wrapper {
                     from: ctx
                         .accounts
                         .initializer_deposit_token_account
-                        .to_account_info(),
-                    mint: ctx.accounts.deposit_mint.to_account_info(),
-                    to: ctx.accounts.deposit_token_vault.to_account_info(),
-                    authority: ctx.accounts.initializer.to_account_info(),
+                        .clone()
+                        .into(),
+                    mint: ctx.accounts.deposit_mint.clone().into(),
+                    to: ctx.accounts.deposit_token_vault.clone().into(),
+                    authority: ctx.accounts.initializer.clone().into(),
                 },
             ),
             initializer_amount,
@@ -53,12 +54,13 @@ pub mod token_wrapper {
             CpiContext::new_with_signer(
                 ctx.accounts.wrapped_token_program.to_account_info(),
                 token_interface::MintTo {
-                    mint: ctx.accounts.wrapped_mint.to_account_info(),
+                    mint: ctx.accounts.wrapped_mint.clone().into(),
                     to: ctx
                         .accounts
                         .initializer_wrapped_token_account
-                        .to_account_info(),
-                    authority: ctx.accounts.wrapper_authority.to_account_info(),
+                        .clone()
+                        .into(),
+                    authority: ctx.accounts.wrapper_authority.clone().into(),
                 },
                 signer_seeds,
             ),
@@ -74,10 +76,10 @@ pub mod token_wrapper {
             CpiContext::new(
                 ctx.accounts.deposit_token_program.to_account_info(),
                 token_interface::TransferChecked {
-                    from: ctx.accounts.user_deposit_token_account.to_account_info(),
-                    mint: ctx.accounts.deposit_mint.to_account_info(),
-                    to: ctx.accounts.deposit_token_vault.to_account_info(),
-                    authority: ctx.accounts.signer.to_account_info(),
+                    from: ctx.accounts.user_deposit_token_account.clone().into(),
+                    mint: ctx.accounts.deposit_mint.clone().into(),
+                    to: ctx.accounts.deposit_token_vault.clone().into(),
+                    authority: ctx.accounts.signer.clone().into(),
                 },
             ),
             wrap_amount,
@@ -96,9 +98,9 @@ pub mod token_wrapper {
             CpiContext::new_with_signer(
                 ctx.accounts.wrapped_token_program.to_account_info(),
                 token_interface::MintTo {
-                    mint: ctx.accounts.wrapped_mint.to_account_info(),
-                    to: ctx.accounts.user_wrapped_token_account.to_account_info(),
-                    authority: ctx.accounts.wrapper_authority.to_account_info(),
+                    mint: ctx.accounts.wrapped_mint.clone().into(),
+                    to: ctx.accounts.user_wrapped_token_account.clone().into(),
+                    authority: ctx.accounts.wrapper_authority.clone().into(),
                 },
                 signer_seeds,
             ),
@@ -114,9 +116,9 @@ pub mod token_wrapper {
             CpiContext::new(
                 ctx.accounts.wrapped_token_program.to_account_info(),
                 token_interface::Burn {
-                    mint: ctx.accounts.wrapped_mint.to_account_info(),
-                    from: ctx.accounts.user_wrapped_token_account.to_account_info(),
-                    authority: ctx.accounts.signer.to_account_info(),
+                    mint: ctx.accounts.wrapped_mint.clone().into(),
+                    from: ctx.accounts.user_wrapped_token_account.clone().into(),
+                    authority: ctx.accounts.signer.clone().into(),
                 },
             ),
             unwrap_amount,
@@ -134,10 +136,10 @@ pub mod token_wrapper {
             CpiContext::new_with_signer(
                 ctx.accounts.deposit_token_program.to_account_info(),
                 token_interface::TransferChecked {
-                    from: ctx.accounts.deposit_token_vault.to_account_info(),
-                    mint: ctx.accounts.deposit_mint.to_account_info(),
-                    to: ctx.accounts.user_deposit_token_account.to_account_info(),
-                    authority: ctx.accounts.wrapper_authority.to_account_info(),
+                    from: ctx.accounts.deposit_token_vault.clone().into(),
+                    mint: ctx.accounts.deposit_mint.clone().into(),
+                    to: ctx.accounts.user_deposit_token_account.clone().into(),
+                    authority: ctx.accounts.wrapper_authority.clone().into(),
                 },
                 signer_seeds,
             ),
