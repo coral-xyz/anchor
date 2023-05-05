@@ -80,7 +80,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 }
                 anchor_lang::event::EVENT_IX_TAG_LE => {
                    // If the method identifier is the event tag, then execute an event cpi
-                   if cfg!(not(feature = "no-cpi-event")) {
+                   if cfg!(feature = "cpi-events") {
                         __private::__events::__event_dispatch(
                             program_id,
                             accounts,
