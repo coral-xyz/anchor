@@ -61,7 +61,7 @@ export type MakeInstructionsNamespace<
   Ret,
   Mk extends { [M in keyof InstructionMap<I>]: unknown } = {
     [M in keyof InstructionMap<I>]: unknown;
-  },
+  }
 > = {
   [M in keyof InstructionMap<I>]: InstructionContextFn<
     IDL,
@@ -82,20 +82,20 @@ export type MakeMethodsNamespace<IDL extends Idl, I extends IdlInstruction> = {
 export type InstructionContextFn<
   IDL extends Idl,
   I extends AllInstructions<IDL>,
-  Ret,
+  Ret
 > = (...args: InstructionContextFnArgs<IDL, I>) => Ret;
 
 export type InstructionContextFnArgs<
   IDL extends Idl,
-  I extends IDL["instructions"][number],
+  I extends IDL["instructions"][number]
 > = [
   ...ArgsTuple<I["args"], IdlTypes<IDL>>,
-  Context<Accounts<I["accounts"][number]>>,
+  Context<Accounts<I["accounts"][number]>>
 ];
 
 export type InstructionAccountAddresses<
   IDL extends Idl,
-  I extends AllInstructions<IDL>,
+  I extends AllInstructions<IDL>
 > = InstructionAccountsAddresses<I["accounts"][number]>;
 
 type InstructionAccountsAddresses<A extends IdlAccountItem = IdlAccountItem> = {
@@ -110,7 +110,7 @@ type InstructionAccountsAddress<A extends IdlAccountItem> =
 export type MethodsFn<
   IDL extends Idl,
   I extends IDL["instructions"][number],
-  Ret,
+  Ret
 > = (...args: ArgsTuple<I["args"], IdlTypes<IDL>>) => Ret;
 
 type TypeMap = {
@@ -175,7 +175,7 @@ declare type DecodeEnumField<F, Defined> = F extends IdlType
  */
 declare type DecodeEnumFields<
   F extends IdlEnumFields,
-  Defined,
+  Defined
 > = F extends IdlEnumFieldsNamed
   ? {
       [F2 in F[number] as SnakeToCamelCase<F2["name"]>]: DecodeEnumField<
@@ -216,7 +216,7 @@ type DecodeStruct<I extends IdlTypeDefTyStruct, Defined> = {
 
 export type TypeDef<
   I extends IdlTypeDef,
-  Defined,
+  Defined
 > = I["type"] extends IdlTypeDefTyEnum
   ? DecodeEnum<I["type"], Defined>
   : I["type"] extends IdlTypeDefTyStruct
@@ -240,7 +240,7 @@ type EmptyDefined = Record<UnknownType, never>;
 type RecursiveDepth2<
   T extends IdlTypeDef[],
   Defined = EmptyDefined,
-  Decoded = DecodedHelper<T, Defined>,
+  Decoded = DecodedHelper<T, Defined>
 > = UnknownType extends UnboxToUnion<Decoded>
   ? RecursiveDepth3<T, DecodedHelper<T, Defined>>
   : Decoded;
@@ -248,14 +248,14 @@ type RecursiveDepth2<
 type RecursiveDepth3<
   T extends IdlTypeDef[],
   Defined = EmptyDefined,
-  Decoded = DecodedHelper<T, Defined>,
+  Decoded = DecodedHelper<T, Defined>
 > = UnknownType extends UnboxToUnion<Decoded>
   ? RecursiveDepth4<T, DecodedHelper<T, Defined>>
   : Decoded;
 
 type RecursiveDepth4<
   T extends IdlTypeDef[],
-  Defined = EmptyDefined,
+  Defined = EmptyDefined
 > = DecodedHelper<T, Defined>;
 
 /**
@@ -265,7 +265,7 @@ type RecursiveDepth4<
 type RecursiveTypes<
   T extends IdlTypeDef[],
   Defined = EmptyDefined,
-  Decoded = DecodedHelper<T, Defined>,
+  Decoded = DecodedHelper<T, Defined>
 > =
   // check if some of decoded types is Unknown (not decoded properly)
   UnknownType extends UnboxToUnion<Decoded>
@@ -277,7 +277,7 @@ export type IdlTypes<T extends Idl> = RecursiveTypes<NonNullable<T["types"]>>;
 type IdlEventType<
   I extends Idl,
   Event extends NonNullable<I["events"]>[number],
-  Defined,
+  Defined
 > = {
   [F in Event["fields"][number] as F["name"]]: DecodeType<F["type"], Defined>;
 };
