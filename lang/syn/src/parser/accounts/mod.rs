@@ -185,17 +185,14 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                         match &f.constraints.init.as_ref().unwrap().kind {
                             InitKind::Token { mint, .. }
                             | InitKind::AssociatedToken { mint, .. } => {
-                                mint.to_token_stream()
-                                    .to_string()
-                                    .starts_with(&field.ident.to_string())
-                                    && pos > f_pos
+                                field.ident == mint.to_token_stream().to_string() && pos > f_pos
                             }
                             _ => false,
                         }
                     }) {
                         return Err(ParseError::new(
                             field.ident.span(),
-                            "because of the init constraint, the mint has to be declared before any corresponding token account",
+                            "because of the init constraint, the mint has to be declared before the corresponding token account",
                         ));
                     }
                 }
