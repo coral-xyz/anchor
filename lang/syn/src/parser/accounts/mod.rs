@@ -9,8 +9,8 @@ use syn::Path;
 
 pub mod constraints;
 
-pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
-    let instruction_api: Option<Punctuated<Expr, Comma>> = strct
+pub fn parse(accounts_struct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
+    let instruction_api: Option<Punctuated<Expr, Comma>> = accounts_struct
         .attrs
         .iter()
         .find(|a| {
@@ -20,7 +20,20 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
         })
         .map(|ix_attr| ix_attr.parse_args_with(Punctuated::<Expr, Comma>::parse_terminated))
         .transpose()?;
-    let fields = match &strct.fields {
+
+    let is_event_cpi = accounts_struct
+        .attrs
+        .iter()
+        .filter_map(|attr| attr.path.get_ident())
+        .find(|ident| *ident == "event_cpi")
+        .is_some();
+    let accounts_struct = if is_event_cpi {
+        add_event_cpi_accounts(accounts_struct)?
+    } else {
+        accounts_struct.clone()
+    };
+
+    let fields = match &accounts_struct.fields {
         syn::Fields::Named(fields) => fields
             .named
             .iter()
@@ -28,7 +41,7 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
             .collect::<ParseResult<Vec<AccountField>>>()?,
         _ => {
             return Err(ParseError::new_spanned(
-                &strct.fields,
+                &accounts_struct.fields,
                 "fields must be named",
             ))
         }
@@ -36,7 +49,62 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
 
     constraints_cross_checks(&fields)?;
 
-    Ok(AccountsStruct::new(strct.clone(), fields, instruction_api))
+    Ok(AccountsStruct::new(
+        accounts_struct,
+        fields,
+        instruction_api,
+    ))
+}
+
+/// Add necessary event CPI accounts to the given accounts struct.
+pub fn add_event_cpi_accounts(accounts_struct: &syn::ItemStruct) -> ParseResult<syn::ItemStruct> {
+    let syn::ItemStruct {
+        attrs,
+        vis,
+        struct_token,
+        ident,
+        generics,
+        fields,
+        ..
+    } = accounts_struct;
+
+    let attrs = if attrs.is_empty() {
+        quote! {}
+    } else {
+        quote! { #(#attrs)* }
+    };
+
+    let fields = fields.into_iter().collect::<Vec<_>>();
+    let fields = if fields.is_empty() {
+        quote! {}
+    } else {
+        quote! { #(#fields)*, }
+    };
+
+    let info_lifetime = generics
+        .lifetimes()
+        .next()
+        .map(|lifetime| quote! {#lifetime})
+        .unwrap_or(quote! {'info});
+    let generics = generics
+        .lt_token
+        .map(|_| quote! {#generics})
+        .unwrap_or(quote! {<'info>});
+
+    let accounts_struct = quote! {
+        #attrs
+        #vis #struct_token #ident #generics {
+            #fields
+
+            /// CHECK: Only the event authority can call the CPI event
+            #[account(seeds = [b"__event_authority"], bump)]
+            pub event_authority: AccountInfo<#info_lifetime>,
+            /// CHECK: The program itself
+            #[account(address = crate::ID)]
+            pub program: AccountInfo<#info_lifetime>,
+        }
+    };
+    syn::parse2(accounts_struct)
 }
 
 fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {

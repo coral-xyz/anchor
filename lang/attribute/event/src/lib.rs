@@ -1,5 +1,6 @@
 extern crate proc_macro;
 
+use anchor_syn::parser::accounts::add_event_cpi_accounts;
 use quote::quote;
 use syn::parse_macro_input;
 
@@ -162,45 +163,9 @@ pub fn event_cpi(
     _attr: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    let syn::ItemStruct {
-        attrs,
-        vis,
-        struct_token,
-        ident,
-        generics,
-        fields,
-        ..
-    } = parse_macro_input!(input as syn::ItemStruct);
-    let fields = fields.into_iter().collect::<Vec<_>>();
-    let fields = if fields.is_empty() {
-        quote! {}
-    } else {
-        quote! { #(#fields)*, }
-    };
-
-    let info_lifetime = generics
-        .lifetimes()
-        .next()
-        .map(|lifetime| quote! {#lifetime})
-        .unwrap_or(quote! {'info});
-    let generics = generics
-        .lt_token
-        .map(|_| quote! {#generics})
-        .unwrap_or(quote! {<'info>});
-
-    proc_macro::TokenStream::from(quote! {
-        #(#attrs)*
-        #vis #struct_token #ident #generics {
-            #fields
-
-            /// CHECK: Only the event authority can call the CPI event
-            #[account(seeds = [b"__event_authority"], bump)]
-            pub event_authority: AccountInfo<#info_lifetime>,
-            /// CHECK: The program itself
-            #[account(address = crate::ID)]
-            pub program: AccountInfo<#info_lifetime>,
-        }
-    })
+    let accounts_struct = parse_macro_input!(input as syn::ItemStruct);
+    let accounts_struct = add_event_cpi_accounts(&accounts_struct).unwrap();
+    proc_macro::TokenStream::from(quote! {#accounts_struct})
 }
 
 // EventIndex is a marker macro. It functionally does nothing other than
