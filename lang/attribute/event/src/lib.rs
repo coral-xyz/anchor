@@ -130,9 +130,9 @@ pub fn emit_cpi(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let event_struct = parse_macro_input!(input as syn::Expr);
 
     proc_macro::TokenStream::from(quote! {
-        let __program_info = ctx.accounts.program.to_account_info();
         let __event_authority_info = ctx.accounts.event_authority.to_account_info();
         let __event_authority_bump = *ctx.bumps.get("event_authority").unwrap();
+        let __program_info = ctx.accounts.program.to_account_info();
 
         let __disc = crate::event::EVENT_IX_TAG_LE;
         let __inner_data: Vec<u8> = anchor_lang::Event::data(&#event_struct);
@@ -140,7 +140,7 @@ pub fn emit_cpi(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
         let __ix = anchor_lang::solana_program::instruction::Instruction::new_with_bytes(
             *__program_info.key,
-            __ix_data.as_ref(),
+            &__ix_data,
             vec![
                 anchor_lang::solana_program::instruction::AccountMeta::new_readonly(
                     *__event_authority_info.key,
@@ -154,6 +154,52 @@ pub fn emit_cpi(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             &[&[b"__event_authority", &[__event_authority_bump]]],
         )
         .map_err(anchor_lang::error::Error::from)?;
+    })
+}
+
+#[proc_macro_attribute]
+pub fn event_cpi(
+    _attr: proc_macro::TokenStream,
+    input: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    let syn::ItemStruct {
+        attrs,
+        vis,
+        struct_token,
+        ident,
+        generics,
+        fields,
+        ..
+    } = parse_macro_input!(input as syn::ItemStruct);
+    let fields = fields.into_iter().collect::<Vec<_>>();
+    let fields = if fields.is_empty() {
+        quote! {}
+    } else {
+        quote! { #(#fields)*, }
+    };
+
+    let info_lifetime = generics
+        .lifetimes()
+        .next()
+        .map(|lifetime| quote! {#lifetime})
+        .unwrap_or(quote! {'info});
+    let generics = generics
+        .lt_token
+        .map(|_| quote! {#generics})
+        .unwrap_or(quote! {<'info>});
+
+    proc_macro::TokenStream::from(quote! {
+        #(#attrs)*
+        #vis #struct_token #ident #generics {
+            #fields
+
+            /// CHECK: Only the event authority can call the CPI event
+            #[account(seeds = [b"__event_authority"], bump)]
+            pub event_authority: AccountInfo<#info_lifetime>,
+            /// CHECK: The program itself
+            #[account(address = crate::ID)]
+            pub program: AccountInfo<#info_lifetime>,
+        }
     })
 }
 

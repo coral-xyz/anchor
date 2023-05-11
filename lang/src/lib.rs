@@ -48,9 +48,9 @@ pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::{account, declare_id, zero_copy};
 pub use anchor_attribute_constant::constant;
 pub use anchor_attribute_error::*;
-#[cfg(not(feature = "no-cpi-events"))]
-pub use anchor_attribute_event::emit_cpi;
 pub use anchor_attribute_event::{emit, event};
+#[cfg(not(feature = "no-cpi-events"))]
+pub use anchor_attribute_event::{emit_cpi, event_cpi};
 pub use anchor_attribute_program::program;
 pub use anchor_derive_accounts::Accounts;
 pub use anchor_derive_space::InitSpace;
@@ -289,8 +289,6 @@ impl Key for Pubkey {
 /// The prelude contains all commonly used components of the crate.
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
-    #[cfg(not(feature = "no-cpi-events"))]
-    pub use super::emit_cpi;
     pub use super::{
         access_control, account, accounts::account::Account,
         accounts::account_loader::AccountLoader, accounts::interface::Interface,
@@ -304,6 +302,8 @@ pub mod prelude {
         AccountsClose, AccountsExit, AnchorDeserialize, AnchorSerialize, Id, InitSpace, Key, Owner,
         ProgramData, Result, Space, ToAccountInfo, ToAccountInfos, ToAccountMetas,
     };
+    #[cfg(not(feature = "no-cpi-events"))]
+    pub use super::{emit_cpi, event_cpi};
     pub use anchor_attribute_error::*;
     pub use borsh;
     pub use error::*;
