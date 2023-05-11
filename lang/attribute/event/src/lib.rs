@@ -1,10 +1,7 @@
 extern crate proc_macro;
 
 use quote::quote;
-use syn::{
-    parse::{Parse, ParseStream},
-    parse_macro_input, Expr, Token,
-};
+use syn::parse_macro_input;
 
 /// The event attribute allows a struct to be used with
 /// [emit!](./macro.emit.html) so that programs can log significant events in
@@ -84,38 +81,6 @@ pub fn emit(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     })
 }
 
-// Custom wrapper struct (thanks ChatGPT!)
-struct EmitCpiArgs {
-    self_program_info: Expr,
-    event_authority_info: Expr,
-    event_authority_bump: Expr,
-    event_struct: Expr,
-}
-
-// Implement the `Parse` trait for the `TwoArgs` struct
-impl Parse for EmitCpiArgs {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let self_program_info: Expr = input.parse()?;
-        input.parse::<Token![,]>()?;
-        let event_authority_info: Expr = input.parse()?;
-        input.parse::<Token![,]>()?;
-        let event_authority_bump: Expr = input.parse()?;
-        input.parse::<Token![,]>()?;
-        let event_struct: Expr = input.parse()?;
-
-        if !input.is_empty() {
-            return Err(input.error("Expected exactly 3 arguments"));
-        }
-
-        Ok(EmitCpiArgs {
-            self_program_info,
-            event_authority_info,
-            event_authority_bump,
-            event_struct,
-        })
-    }
-}
-
 /// Logs an event that can be subscribed to by clients. More stable than `emit!` because
 /// RPCs are less likely to truncate CPI information than program logs. Generated code for this feature
 /// can be disabled by adding `no-cpi-events` to the `defaults = []` section of your program's Cargo.toml.
@@ -162,17 +127,12 @@ impl Parse for EmitCpiArgs {
 /// ```
 #[proc_macro]
 pub fn emit_cpi(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let args = parse_macro_input!(input as EmitCpiArgs);
-
-    let self_program_info = &args.self_program_info;
-    let event_authority_info = &args.event_authority_info;
-    let event_authority_bump = &args.event_authority_bump;
-    let event_struct = &args.event_struct;
+    let event_struct = parse_macro_input!(input as syn::Expr);
 
     proc_macro::TokenStream::from(quote! {
-        let __program_info: anchor_lang::solana_program::account_info::AccountInfo = #self_program_info;
-        let __event_authority_info: anchor_lang::solana_program::account_info::AccountInfo = #event_authority_info;
-        let __event_authority_bump: u8 = #event_authority_bump;
+        let __program_info = ctx.accounts.program.to_account_info();
+        let __event_authority_info = ctx.accounts.event_authority.to_account_info();
+        let __event_authority_bump = *ctx.bumps.get("event_authority").unwrap();
 
         let __disc = crate::event::EVENT_IX_TAG_LE;
         let __inner_data: Vec<u8> = anchor_lang::Event::data(&#event_struct);
@@ -182,11 +142,18 @@ pub fn emit_cpi(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             *__program_info.key,
             __ix_data.as_ref(),
             vec![
-                anchor_lang::solana_program::instruction::AccountMeta::new_readonly(*__event_authority_info.key, true)
-            ]
+                anchor_lang::solana_program::instruction::AccountMeta::new_readonly(
+                    *__event_authority_info.key,
+                    true,
+                ),
+            ],
         );
-        anchor_lang::solana_program::program::invoke_signed(&__ix, &[__program_info, __event_authority_info], &[&[b"__event_authority", &[__event_authority_bump]]])
-            .map_err(anchor_lang::error::Error::from)?;
+        anchor_lang::solana_program::program::invoke_signed(
+            &__ix,
+            &[__program_info, __event_authority_info],
+            &[&[b"__event_authority", &[__event_authority_bump]]],
+        )
+        .map_err(anchor_lang::error::Error::from)?;
     })
 }
 
