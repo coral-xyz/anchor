@@ -3028,7 +3028,10 @@ fn deploy(
                 Some(program_keypair) => program_keypair.clone(),
                 None => program.keypair_file()?.path().display().to_string(),
             };
-
+            let program_id = solana_sdk::signature::read_keypair_file(program_keypair_filepath.clone()).map_err(
+                |_| anyhow!("Unable to read keypair file")
+            ).unwrap().pubkey();
+            
             // Send deploy transactions.
             let exit = std::process::Command::new("solana")
                 .arg("program")
@@ -3049,7 +3052,7 @@ fn deploy(
                 std::process::exit(exit.status.code().unwrap_or(1));
             }
 
-            let program_pubkey = program.pubkey()?;
+            let program_pubkey = program_id;
             if let Some(mut idl) = program.idl.as_mut() {
                 // Add program address to the IDL.
                 idl.metadata = Some(serde_json::to_value(IdlTestMetadata {
