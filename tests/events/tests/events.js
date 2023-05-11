@@ -1,5 +1,5 @@
 const anchor = require("@coral-xyz/anchor");
-const { bs58, base64 } = require("@coral-xyz/anchor/utils/bytes");
+const { bs58, base64 } = anchor.utils.bytes;
 const { assert } = require("chai");
 
 describe("events", () => {
@@ -59,7 +59,7 @@ describe("events", () => {
   it("Self-CPI events work", async () => {
     await sleep(200);
 
-    let sendTx = await program.methods
+    const tx = await program.methods
       .testEventCpi()
       .accounts({
         program: program.programId,
@@ -70,24 +70,24 @@ describe("events", () => {
       })
       .transaction();
 
-    let provider = anchor.getProvider();
-    let connection = provider.connection;
-    let txid = await provider.sendAndConfirm(sendTx, [], {
+    const config = {
       commitment: "confirmed",
-      skipPreflight: true,
-    });
+    };
+    const txHash = await program.provider.sendAndConfirm(tx, [], config);
+    const txResult = await program.provider.connection.getTransaction(
+      txHash,
+      config
+    );
 
-    let tx = await connection.getTransaction(txid, { commitment: "confirmed" });
+    const ixData = anchor.utils.bytes.bs58.decode(
+      txResult.meta.innerInstructions[0].instructions[0].data
+    );
+    const eventData = anchor.utils.bytes.base64.encode(ixData.slice(8));
+    const event = program.coder.events.decode(eventData);
 
-    let cpiEventData = tx.meta.innerInstructions[0].instructions[0].data;
-    let ixData = bs58.decode(cpiEventData);
-    let eventData = ixData.slice(8);
-
-    let coder = new anchor.BorshEventCoder(program.idl);
-    let event = coder.decode(base64.encode(eventData)).data;
-
-    assert.strictEqual(event.data.toNumber(), 7);
-    assert.strictEqual(event.label, "cpi");
+    assert.strictEqual(event.name, "MyOtherEvent");
+    assert.strictEqual(event.data.label, "cpi");
+    assert.strictEqual(event.data.data.toNumber(), 7);
   });
 });
 
