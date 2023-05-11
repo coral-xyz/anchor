@@ -17,8 +17,8 @@ default = ["test"]
 test = []
 
 [dependencies]
-anchor-lang = { path = "../../../../lang" }
-anchor-spl = { path = "../../../../spl" }
+anchor-lang = { path = "../../../../lang", package = "light-anchor-lang" }
+anchor-spl = { path = "../../../../spl", package = "light-anchor-spl" }
 spl-token = { version = "3.5.0", features = ["no-entrypoint"] }
 swap = { path = "../../deps/swap/programs/swap", features = ["cpi"] }
 serum_dex = { path = "../../deps/openbook-dex/dex", features = ["no-entrypoint"] }

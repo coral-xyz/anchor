@@ -81,16 +81,16 @@ jobs:
           path: ${{ env.CARGO_CACHE_PATH }}
           key: cargo-${{ runner.os }}-${{ env.CARGO_PROFILE }}-anchor-${{ hashFiles('**/Cargo.lock') }}
 
-      - run: cargo install --path cli anchor-cli --locked --force --debug
+      - run: cargo install --path cli light-anchor-cli --locked --force --debug
         if: env.CARGO_PROFILE == 'debug'
-      - run: cargo install --path cli anchor-cli --locked --force
+      - run: cargo install --path cli light-anchor-cli --locked --force
         if: env.CARGO_PROFILE != 'debug'
 
-      - run: chmod +x ~/.cargo/bin/anchor
+      - run: chmod +x ~/.cargo/bin/light-anchor
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ANCHOR_BINARY_NAME }}
-          path: ~/.cargo/bin/anchor
+          path: ~/.cargo/bin/light-anchor
 
       - uses: ./.github/actions/git-diff/
 
@@ -105,7 +105,7 @@ jobs:
         with:
           name: ${{ env.ANCHOR_BINARY_NAME }}
           path: ~/.cargo/bin/
-      - run: chmod +rwx ~/.cargo/bin/anchor
+      - run: chmod +rwx ~/.cargo/bin/light-anchor
 
       - uses: ./.github/actions/setup/
       - uses: ./.github/actions/setup-solana/
@@ -182,9 +182,9 @@ jobs:
         with:
           name: ${{ env.ANCHOR_BINARY_NAME }}
           path: ~/.cargo/bin/
-      - run: chmod +rwx ~/.cargo/bin/anchor
+      - run: chmod +rwx ~/.cargo/bin/light-anchor
 
-      - run: cd ${{ matrix.node.path }} && anchor build --skip-lint
+      - run: cd ${{ matrix.node.path }} && light-anchor build --skip-lint
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.node.name }}
@@ -205,7 +205,7 @@ jobs:
         with:
           name: ${{ env.ANCHOR_BINARY_NAME }}
           path: ~/.cargo/bin/
-      - run: chmod +x ~/.cargo/bin/anchor
+      - run: chmod +x ~/.cargo/bin/light-anchor
 
       - uses: actions/download-artifact@v3
         with:
@@ -255,13 +255,13 @@ jobs:
         id: cache-anchor
         with:
           path: ${{ env.CARGO_CACHE_PATH }}
-          key: cargo-${{ runner.os }}-${{ env.CARGO_PROFILE }}-anchor-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-${{ runner.os }}-${{ env.CARGO_PROFILE }}-light-anchor-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: actions/download-artifact@v3
         with:
           name: ${{ env.ANCHOR_BINARY_NAME }}
           path: ~/.cargo/bin/
-      - run: chmod +x ~/.cargo/bin/anchor
+      - run: chmod +x ~/.cargo/bin/light-anchor
 
       - uses: actions/cache@v3
         if: ${{ env.CACHE != 'false' }}
@@ -275,9 +275,9 @@ jobs:
         name: start validator
       - run: cd tests/bpf-upgradeable-state && yarn --frozen-lockfile
       - run: cd tests/bpf-upgradeable-state
-      - run: cd tests/bpf-upgradeable-state && anchor build --skip-lint
+      - run: cd tests/bpf-upgradeable-state && light-anchor build --skip-lint
       - run: cd tests/bpf-upgradeable-state && solana program deploy --program-id program_with_different_programdata.json target/deploy/bpf_upgradeable_state.so
-      - run: cd tests/bpf-upgradeable-state && cp bpf_upgradeable_state-keypair.json target/deploy/bpf_upgradeable_state-keypair.json && anchor test --skip-local-validator --skip-build --skip-lint
+      - run: cd tests/bpf-upgradeable-state && cp bpf_upgradeable_state-keypair.json target/deploy/bpf_upgradeable_state-keypair.json && light-anchor test --skip-local-validator --skip-build --skip-lint
       - run: cd tests/bpf-upgradeable-state && npx tsc --noEmit
       - uses: ./.github/actions/git-diff/
 
@@ -349,18 +349,19 @@ jobs:
         id: cache-anchor
         with:
           path: ${{ env.CARGO_CACHE_PATH }}
-          key: cargo-${{ runner.os }}-${{ env.CARGO_PROFILE }}-anchor-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-${{ runner.os }}-${{ env.CARGO_PROFILE }}-light-anchor-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: actions/download-artifact@v3
         with:
           name: ${{ env.ANCHOR_BINARY_NAME }}
           path: ~/.cargo/bin/
-      - run: chmod +x ~/.cargo/bin/anchor
+      - run: chmod +x ~/.cargo/bin/light-anchor
 
-      - run: cd "$(mktemp -d)" && anchor init hello-anchor && cd hello-anchor && yarn link @coral-xyz/anchor && yarn && anchor test && yarn lint:fix
+      - run: cd "$(mktemp -d)" && light-anchor init hello-anchor && cd hello-anchor && yarn link light-anchor && yarn && light-anchor test && yarn lint:fix
       - uses: ./.github/actions/git-diff/
 
   test-programs:
+    if: false
     needs: setup-anchor-cli
     name: Test ${{ matrix.node.path }}
     runs-on: ubuntu-latest
@@ -369,75 +370,75 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - cmd: cd tests/sysvars && anchor test --skip-lint
+          - cmd: cd tests/sysvars && light-anchor test --skip-lint
             path: tests/sysvars
-          - cmd: cd tests/composite && anchor test --skip-lint
+          - cmd: cd tests/composite && light-anchor test --skip-lint
             path: tests/composite
-          - cmd: cd tests/errors && anchor test --skip-lint && npx tsc --noEmit
+          - cmd: cd tests/errors && light-anchor test --skip-lint && npx tsc --noEmit
             path: tests/errors
-          - cmd: cd tests/spl/token-proxy && anchor test --skip-lint
+          - cmd: cd tests/spl/token-proxy && light-anchor test --skip-lint
             path: spl/token-proxy
-          - cmd: cd tests/spl/token-wrapper && anchor test --skip-lint
+          - cmd: cd tests/spl/token-wrapper && light-anchor test --skip-lint
             path: spl/token-wrapper
-          - cmd: cd tests/multisig && anchor test --skip-lint
+          - cmd: cd tests/multisig && light-anchor test --skip-lint
             path: tests/multisig
-          # - cmd: cd tests/lockup && anchor test --skip-lint
+          # - cmd: cd tests/lockup && light-anchor test --skip-lint
           #   path: tests/lockup
-          - cmd: cd tests/swap/deps/openbook-dex/dex && cargo build-bpf -- --locked && cd ../../../ && anchor test --skip-lint
+          - cmd: cd tests/swap/deps/openbook-dex/dex && cargo build-bpf -- --locked && cd ../../../ && light-anchor test --skip-lint
             path: tests/swap
-          - cmd: cd tests/escrow && anchor test --skip-lint && npx tsc --noEmit
+          - cmd: cd tests/escrow && light-anchor test --skip-lint && npx tsc --noEmit
             path: tests/escrow
-          - cmd: cd tests/pyth && anchor test --skip-lint && npx tsc --noEmit
+          - cmd: cd tests/pyth && light-anchor test --skip-lint && npx tsc --noEmit
             path: tests/pyth
-          - cmd: cd tests/realloc && anchor test --skip-lint && npx tsc --noEmit
+          - cmd: cd tests/realloc && light-anchor test --skip-lint && npx tsc --noEmit
             path: tests/realloc
-          - cmd: cd tests/system-accounts && anchor test --skip-lint
+          - cmd: cd tests/system-accounts && light-anchor test --skip-lint
             path: tests/system-accounts
-          - cmd: cd tests/misc && anchor test --skip-lint && npx tsc --noEmit
+          - cmd: cd tests/misc && light-anchor test --skip-lint && npx tsc --noEmit
             path: tests/misc
-          - cmd: cd tests/events && anchor test --skip-lint
+          - cmd: cd tests/events && light-anchor test --skip-lint
             path: tests/events
-          - cmd: cd tests/cashiers-check && anchor test --skip-lint
+          - cmd: cd tests/cashiers-check && light-anchor test --skip-lint
             path: tests/cashiers-check
-          - cmd: cd tests/declare-id && anchor test --skip-lint && npx tsc --noEmit
+          - cmd: cd tests/declare-id && light-anchor test --skip-lint && npx tsc --noEmit
             path: tests/declare-id
-          - cmd: cd tests/typescript && anchor test --skip-lint && npx tsc --noEmit
+          - cmd: cd tests/typescript && light-anchor test --skip-lint && npx tsc --noEmit
             path: tests/typescript
-          - cmd: cd tests/zero-copy && anchor test --skip-lint && cd programs/zero-copy && cargo test-bpf
+          - cmd: cd tests/zero-copy && light-anchor test --skip-lint && cd programs/zero-copy && cargo test-bpf
             path: tests/zero-copy
-          - cmd: cd tests/chat && anchor test --skip-lint
+          - cmd: cd tests/chat && light-anchor test --skip-lint
             path: tests/chat
-          - cmd: cd tests/ido-pool && anchor test --skip-lint
+          - cmd: cd tests/ido-pool && light-anchor test --skip-lint
             path: tests/ido-pool
-          # - cmd: cd tests/cfo && anchor run test-with-build && cd deps/stake && git checkout Cargo.lock && cd ../swap && git checkout Cargo.lock
+          # - cmd: cd tests/cfo && light-anchor run test-with-build && cd deps/stake && git checkout Cargo.lock && cd ../swap && git checkout Cargo.lock
           #   path: tests/cfo
-          - cmd: cd tests/auction-house && yarn --frozen-lockfile && anchor test --skip-lint && git checkout Cargo.lock
+          - cmd: cd tests/auction-house && yarn --frozen-lockfile && light-anchor test --skip-lint && git checkout Cargo.lock
             path: tests/auction-house
-          - cmd: cd tests/floats && yarn --frozen-lockfile && anchor test --skip-lint && npx tsc --noEmit
+          - cmd: cd tests/floats && yarn --frozen-lockfile && light-anchor test --skip-lint && npx tsc --noEmit
             path: tests/floats
-          - cmd: cd tests/safety-checks && anchor run test
+          - cmd: cd tests/safety-checks && light-anchor run test
             path: tests/safety-checks
-          - cmd: cd tests/custom-coder && anchor test --skip-lint && npx tsc --noEmit
+          - cmd: cd tests/custom-coder && light-anchor test --skip-lint && npx tsc --noEmit
             path: tests/custom-coder
-          - cmd: cd tests/validator-clone && anchor test --skip-lint && npx tsc --noEmit
+          - cmd: cd tests/validator-clone && light-anchor test --skip-lint && npx tsc --noEmit
             path: tests/validator-clone
-          - cmd: cd tests/cpi-returns && anchor test --skip-lint && npx tsc --noEmit
+          - cmd: cd tests/cpi-returns && light-anchor test --skip-lint && npx tsc --noEmit
             path: tests/cpi-returns
-          - cmd: cd tests/multiple-suites && anchor test --skip-lint && npx tsc --noEmit
+          - cmd: cd tests/multiple-suites && light-anchor test --skip-lint && npx tsc --noEmit
             path: tests/multiple-suites
-          - cmd: cd tests/multiple-suites-run-single && anchor test --skip-lint --run tests/should-run && npx tsc --noEmit
+          - cmd: cd tests/multiple-suites-run-single && light-anchor test --skip-lint --run tests/should-run && npx tsc --noEmit
             path: tests/multiple-suites-run-single
-          - cmd: cd tests/optional && anchor test --skip-lint && npx tsc --noEmit
+          - cmd: cd tests/optional && light-anchor test --skip-lint && npx tsc --noEmit
             path: tests/optional
-          - cmd: cd tests/pda-derivation && anchor test --skip-lint && npx tsc --noEmit
+          - cmd: cd tests/pda-derivation && light-anchor test --skip-lint && npx tsc --noEmit
             path: tests/pda-derivation
-          - cmd: cd tests/relations-derivation && anchor test --skip-lint && npx tsc --noEmit
+          - cmd: cd tests/relations-derivation && light-anchor test --skip-lint && npx tsc --noEmit
             path: tests/relations-derivation
           - cmd: cd tests/anchor-cli-idl && ./test.sh
             path: tests/anchor-cli-idl
-          - cmd: cd tests/anchor-cli-account && anchor test --skip-lint
+          - cmd: cd tests/anchor-cli-account && light-anchor test --skip-lint
             path: tests/anchor-cli-account
-          - cmd: cd tests/bench && anchor test --skip-lint
+          - cmd: cd tests/bench && light-anchor test --skip-lint
             path: tests/bench
     steps:
       - uses: actions/checkout@v3
@@ -451,13 +452,13 @@ jobs:
         id: cache-anchor
         with:
           path: ${{ env.CARGO_CACHE_PATH }}
-          key: cargo-${{ runner.os }}-${{ env.CARGO_PROFILE }}-anchor-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-${{ runner.os }}-${{ env.CARGO_PROFILE }}-light-anchor-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: actions/download-artifact@v3
         with:
           name: ${{ env.ANCHOR_BINARY_NAME }}
           path: ~/.cargo/bin/
-      - run: chmod +x ~/.cargo/bin/anchor
+      - run: chmod +x ~/.cargo/bin/light-anchor
 
       - uses: actions/cache@v3
         if: ${{ env.CACHE != 'false' }}

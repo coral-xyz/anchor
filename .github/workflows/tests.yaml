@@ -17,4 +17,4 @@ jobs:
       solana_cli_version: 1.14.16
       node_version: 17.0.1
       cargo_profile: debug
-      anchor_binary_name: anchor-binary
+      anchor_binary_name: light-anchor-binary

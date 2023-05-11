@@ -2,6 +2,8 @@ use anyhow::{Error, Result};
 use clap::{Parser, Subcommand};
 use semver::Version;
 
+use light_avm as avm;
+
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Parser)]

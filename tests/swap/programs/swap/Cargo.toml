@@ -16,6 +16,6 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = { path = "../../../../lang" }
-anchor-spl = { path = "../../../../spl", features = ["dex"] }
+anchor-lang = { path = "../../../../lang", package = "light-anchor-lang" }
+anchor-spl = { path = "../../../../spl", features = ["dex"], package = "light-anchor-spl" }
 serum_dex = { git = "https://github.com/openbook-dex/program", rev = "1be91f2", version = "0.4.0", features = ["no-entrypoint"] }

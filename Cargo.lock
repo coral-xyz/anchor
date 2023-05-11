@@ -99,8 +99,8 @@ checksum = "6b2d54853319fd101b8dd81de382bcbf3e03410a64d8928bbee85a3e7dcde483"
 name = "anchor-attribute-access-control"
 version = "0.27.0"
 dependencies = [
- "anchor-syn",
  "anyhow",
+ "light-anchor-syn",
  "proc-macro2 1.0.56",
  "quote 1.0.26",
  "regex",
@@ -111,9 +111,9 @@ dependencies = [
 name = "anchor-attribute-account"
 version = "0.27.0"
 dependencies = [
- "anchor-syn",
  "anyhow",
  "bs58 0.4.0",
+ "light-anchor-syn",
  "proc-macro2 1.0.56",
  "quote 1.0.26",
  "rustversion",
@@ -124,7 +124,7 @@ dependencies = [
 name = "anchor-attribute-constant"
 version = "0.27.0"
 dependencies = [
- "anchor-syn",
+ "light-anchor-syn",
  "proc-macro2 1.0.56",
  "syn 1.0.109",
 ]
@@ -133,7 +133,7 @@ dependencies = [
 name = "anchor-attribute-error"
 version = "0.27.0"
 dependencies = [
- "anchor-syn",
+ "light-anchor-syn",
  "proc-macro2 1.0.56",
  "quote 1.0.26",
  "syn 1.0.109",
@@ -143,8 +143,8 @@ dependencies = [
 name = "anchor-attribute-event"
 version = "0.27.0"
 dependencies = [
- "anchor-syn",
  "anyhow",
+ "light-anchor-syn",
  "proc-macro2 1.0.56",
  "quote 1.0.26",
  "syn 1.0.109",
@@ -154,68 +154,19 @@ dependencies = [
 name = "anchor-attribute-program"
 version = "0.27.0"
 dependencies = [
- "anchor-syn",
  "anyhow",
+ "light-anchor-syn",
  "proc-macro2 1.0.56",
  "quote 1.0.26",
  "syn 1.0.109",
 ]
 
 [[package]]
-name = "anchor-cli"
-version = "0.27.0"
-dependencies = [
- "anchor-client",
- "anchor-lang",
- "anchor-syn",
- "anyhow",
- "cargo_toml",
- "chrono",
- "clap 4.2.4",
- "dirs",
- "flate2",
- "heck 0.4.0",
- "pathdiff",
- "portpicker",
- "reqwest",
- "semver 1.0.16",
- "serde",
- "serde_json",
- "shellexpand",
- "solana-cli-config",
- "solana-client",
- "solana-faucet",
- "solana-program",
- "solana-sdk",
- "solang-parser",
- "syn 1.0.109",
- "tar",
- "tokio",
- "toml",
- "walkdir",
-]
-
-[[package]]
-name = "anchor-client"
-version = "0.27.0"
-dependencies = [
- "anchor-lang",
- "anyhow",
- "regex",
- "serde",
- "solana-account-decoder",
- "solana-client",
- "solana-sdk",
- "thiserror",
- "url",
-]
-
-[[package]]
 name = "anchor-derive-accounts"
 version = "0.27.0"
 dependencies = [
- "anchor-syn",
  "anyhow",
+ "light-anchor-syn",
  "proc-macro2 1.0.56",
  "quote 1.0.26",
  "syn 1.0.109",
@@ -228,58 +179,6 @@ dependencies = [
  "proc-macro2 1.0.56",
  "quote 1.0.26",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "anchor-lang"
-version = "0.27.0"
-dependencies = [
- "anchor-attribute-access-control",
- "anchor-attribute-account",
- "anchor-attribute-constant",
- "anchor-attribute-error",
- "anchor-attribute-event",
- "anchor-attribute-program",
- "anchor-derive-accounts",
- "anchor-derive-space",
- "arrayref",
- "base64 0.13.1",
- "bincode",
- "borsh",
- "bytemuck",
- "solana-program",
- "thiserror",
-]
-
-[[package]]
-name = "anchor-spl"
-version = "0.27.0"
-dependencies = [
- "anchor-lang",
- "borsh",
- "mpl-token-metadata",
- "serum_dex",
- "solana-program",
- "spl-associated-token-account",
- "spl-token",
- "spl-token-2022",
- "winnow",
-]
-
-[[package]]
-name = "anchor-syn"
-version = "0.27.0"
-dependencies = [
- "anyhow",
- "bs58 0.3.1",
- "heck 0.3.3",
- "proc-macro2 1.0.56",
- "quote 1.0.26",
- "serde",
- "serde_json",
- "sha2 0.9.9",
- "syn 1.0.109",
- "thiserror",
 ]
 
 [[package]]
@@ -2236,6 +2135,107 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67abfe149395e3aa1c48a2beb32b068e2334402df8181f818d3aee2b304c4f5d"
 dependencies = [
  "libsecp256k1-core",
+]
+
+[[package]]
+name = "light-anchor-cli"
+version = "0.27.0"
+dependencies = [
+ "anyhow",
+ "cargo_toml",
+ "chrono",
+ "clap 4.2.4",
+ "dirs",
+ "flate2",
+ "heck 0.4.0",
+ "light-anchor-client",
+ "light-anchor-lang",
+ "light-anchor-syn",
+ "pathdiff",
+ "portpicker",
+ "reqwest",
+ "semver 1.0.16",
+ "serde",
+ "serde_json",
+ "shellexpand",
+ "solana-cli-config",
+ "solana-client",
+ "solana-faucet",
+ "solana-program",
+ "solana-sdk",
+ "solang-parser",
+ "syn 1.0.109",
+ "tar",
+ "tokio",
+ "toml",
+ "walkdir",
+]
+
+[[package]]
+name = "light-anchor-client"
+version = "0.27.0"
+dependencies = [
+ "anyhow",
+ "light-anchor-lang",
+ "regex",
+ "serde",
+ "solana-account-decoder",
+ "solana-client",
+ "solana-sdk",
+ "thiserror",
+ "url",
+]
+
+[[package]]
+name = "light-anchor-lang"
+version = "0.27.0"
+dependencies = [
+ "anchor-attribute-access-control",
+ "anchor-attribute-account",
+ "anchor-attribute-constant",
+ "anchor-attribute-error",
+ "anchor-attribute-event",
+ "anchor-attribute-program",
+ "anchor-derive-accounts",
+ "anchor-derive-space",
+ "arrayref",
+ "base64 0.13.1",
+ "bincode",
+ "borsh",
+ "bytemuck",
+ "solana-program",
+ "thiserror",
+]
+
+[[package]]
+name = "light-anchor-spl"
+version = "0.27.0"
+dependencies = [
+ "borsh",
+ "light-anchor-lang",
+ "mpl-token-metadata",
+ "serum_dex",
+ "solana-program",
+ "spl-associated-token-account",
+ "spl-token",
+ "spl-token-2022",
+ "winnow",
+]
+
+[[package]]
+name = "light-anchor-syn"
+version = "0.27.0"
+dependencies = [
+ "anyhow",
+ "bs58 0.3.1",
+ "heck 0.3.3",
+ "proc-macro2 1.0.56",
+ "quote 1.0.26",
+ "serde",
+ "serde_json",
+ "sha2 0.9.9",
+ "syn 1.0.109",
+ "thiserror",
 ]
 
 [[package]]

@@ -1,3 +1,4 @@
+use light_avm as avm;
 use std::{env, fs, process::Command};
 
 fn main() -> anyhow::Result<()> {

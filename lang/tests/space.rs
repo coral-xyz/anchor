@@ -1,3 +1,5 @@
+use light_anchor_lang as anchor_lang;
+
 use anchor_lang::prelude::*;
 
 // Needed to declare accounts.

@@ -14,5 +14,5 @@ no-entrypoint = []
 cpi = ["no-entrypoint"]
 
 [dependencies]
-anchor-lang = { path = "../../../../../lang" }
+anchor-lang = { path = "../../../../../lang", package = "light-anchor-lang" }
 puppet = { path = "../puppet", features = ["cpi"] }

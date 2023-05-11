@@ -1,5 +1,5 @@
 [package]
-name = "anchor-lang"
+name = "light-anchor-lang"
 version = "0.27.0"
 authors = ["Serum Foundation <foundation@projectserum.com>"]
 repository = "https://github.com/coral-xyz/anchor"

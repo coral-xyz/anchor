@@ -1,7 +1,7 @@
-use anchor_cli::Opts;
 use anyhow::Result;
 use clap::Parser;
+use light_anchor_cli::Opts;
 
 fn main() -> Result<()> {
-    anchor_cli::entry(Opts::parse())
+    light_anchor_cli::entry(Opts::parse())
 }

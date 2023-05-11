@@ -1,15 +1,15 @@
 [package]
-name = "avm"
+name = "light-avm"
 version = "0.27.0"
 rust-version = "1.60"
 edition = "2021"
 
 [[bin]]
-name = "avm"
+name = "light-avm"
 path = "src/main.rs"
 
 [[bin]]
-name = "anchor"
+name = "light-anchor"
 path = "src/anchor/main.rs"
 
 [dependencies]

@@ -14,5 +14,5 @@
 	branch = armani/cfo
 [submodule "tests/auction-house"]
 	path = tests/auction-house
-	url = https://github.com/armaniferrante/auction-house
+	url = https://github.com/Lightprotocol/auction-house
 	branch = armani/pda

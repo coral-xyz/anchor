@@ -16,5 +16,5 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = { path = "../../../../lang" }
+anchor-lang = { path = "../../../../lang", package = "light-anchor-lang" }
 zero-copy = { path = "../zero-copy", features = ["cpi"] }

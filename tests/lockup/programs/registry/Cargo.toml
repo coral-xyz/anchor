@@ -16,6 +16,6 @@ anchor-deprecated-state = []
 default = ["anchor-deprecated-state"]
 
 [dependencies]
-anchor-lang = { path = "../../../../lang" }
-anchor-spl = { path = "../../../../spl" }
+anchor-lang = { path = "../../../../lang", package = "light-anchor-lang" }
+anchor-spl = { path = "../../../../spl", package = "light-anchor-spl" }
 lockup = { path = "../lockup", features = ["cpi"] }

@@ -14,4 +14,4 @@ jobs:
       solana_cli_version: 1.14.16
       node_version: 17.0.1
       cargo_profile: release
-      anchor_binary_name: anchor-binary-no-caching
+      anchor_binary_name: light-anchor-binary-no-caching

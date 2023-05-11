@@ -16,6 +16,6 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = { path = "../../../../lang" }
+anchor-lang = { path = "../../../../lang", package = "light-anchor-lang" }
 arrayref = "0.3.6"
 bytemuck = { version = "1.4.0" }

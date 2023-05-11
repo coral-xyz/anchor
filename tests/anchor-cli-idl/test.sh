@@ -27,7 +27,7 @@ echo '{
 
 echo "Building programs"
 
-anchor build
+light-anchor build
 
 echo "Starting local validator for test"
 
@@ -42,6 +42,6 @@ sleep 10
 
 echo "Running tests"
 
-anchor test --skip-deploy --skip-local-validator
+light-anchor test --skip-deploy --skip-local-validator
 
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT

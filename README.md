@@ -1,3 +1,16 @@
+# Light Anchor
+
+**Light Anchor** is a fork of [Anchor framework](https://github.com/coral-xyz) built for [Light Protocol](https://www.lightprotocol.com/) and zero-knowledge applications
+based on it. It mostly contains changes in the [IDL](https://en.wikipedia.org/wiki/Interface_description_language) system, which are needed due to:
+
+* Usage of generics in structs in Solana accounts of Light Protocol.
+* Usage of macros which are extending `Accounts` structs with additional fields.
+* Usage of types from external crates as account fields.
+
+This fork in in active development and is not recommended to use if there is no dependency on Light Protocol.
+
+---
+
 <div align="center">
   <img height="170x" src="https://pbs.twimg.com/media/FVUVaO9XEAAulvK?format=png&name=small" />
 
