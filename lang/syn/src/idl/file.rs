@@ -1,36 +1,40 @@
-use crate::idl::*;
-use crate::parser::context::CrateContext;
-use crate::parser::{self, accounts, docs, error, program};
-use crate::Ty;
-use crate::{AccountField, AccountsStruct};
-use anyhow::Result;
-use heck::MixedCase;
-use quote::ToTokens;
-use std::collections::{HashMap, HashSet};
-use std::path::Path;
-use syn::{
-    Expr, ExprLit, ItemConst,
-    Lit::{Byte, ByteStr},
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
 };
 
-const DERIVE_NAME: &str = "Accounts";
+use anyhow::Result;
+use heck::{MixedCase, SnakeCase};
+use quote::ToTokens;
+use syn::{
+    Expr, ExprLit, GenericArgument, ItemConst,
+    Lit::{Byte, ByteStr},
+    PathArguments, Type,
+};
+
+use crate::{
+    idl::*,
+    parser::{self, accounts, context::CrateContext, docs, program},
+    AccountField, AccountsStruct, Error, ErrorCode, Ty,
+};
+
 // TODO: share this with `anchor_lang` crate.
 const ERROR_CODE_OFFSET: u32 = 6000;
 
 // Parse an entire interface file.
 pub fn parse(
-    filename: impl AsRef<Path>,
+    crate_root: PathBuf,
     version: String,
     seeds_feature: bool,
     no_docs: bool,
     safety_checks: bool,
 ) -> Result<Option<Idl>> {
-    let ctx = CrateContext::parse(filename)?;
+    let ctx = CrateContext::parse(crate_root)?;
     if safety_checks {
         ctx.safety_checks()?;
     }
 
-    let program_mod = match parse_program_mod(&ctx) {
+    let program_mod = match parse_program_mod(&ctx)? {
         None => return Ok(None),
         Some(m) => m,
     };
@@ -44,18 +48,6 @@ pub fn parse(
     }
 
     let accs = parse_account_derives(&ctx);
-
-    let error = parse_error_enum(&ctx).map(|mut e| error::parse(&mut e, None));
-    let error_codes = error.as_ref().map(|e| {
-        e.codes
-            .iter()
-            .map(|code| IdlErrorCode {
-                code: ERROR_CODE_OFFSET + code.id,
-                name: code.ident.to_string(),
-                msg: code.msg.clone(),
-            })
-            .collect::<Vec<IdlErrorCode>>()
-    });
 
     let instructions = p
         .ixs
@@ -130,12 +122,33 @@ pub fn parse(
         })
         .collect::<Result<Vec<IdlEvent>>>()?;
 
+    let (error_name, account_serialize_impls, borsh_serialize_impls) = parse_impls(&ctx);
+    let error = error_name.map(|name| {
+        let (mut error_enum, error_msg_impl) = parse_error(&ctx, name);
+        parse_idl_error(&mut error_enum, &error_msg_impl)
+    });
+    let error_codes = error.as_ref().map(|e| {
+        e.codes
+            .iter()
+            .map(|code| IdlErrorCode {
+                code: ERROR_CODE_OFFSET + code.id,
+                name: code.ident.to_string(),
+                msg: code.msg.clone(),
+            })
+            .collect::<Vec<IdlErrorCode>>()
+    });
+
     // All user defined types.
     let mut accounts = vec![];
     let mut types = vec![];
-    let ty_defs = parse_ty_defs(&ctx, no_docs)?;
+    let ty_defs = parse_ty_defs(
+        &ctx,
+        &account_serialize_impls,
+        &borsh_serialize_impls,
+        no_docs,
+    )?;
 
-    let account_structs = parse_accounts(&ctx);
+    let account_structs = parse_accounts(&ctx, &account_serialize_impls);
     let account_names: HashSet<String> = account_structs
         .iter()
         .map(|a| a.ident.to_string())
@@ -178,19 +191,48 @@ pub fn parse(
     }))
 }
 
-// Parse the main program mod.
-fn parse_program_mod(ctx: &CrateContext) -> Option<syn::ItemMod> {
+/// Parse the main program mod.
+fn parse_program_mod(ctx: &CrateContext) -> Result<Option<syn::ItemMod>> {
     let root = ctx.root_module();
+    let prog_mods = root
+        .items()
+        .filter_map(|i| match i {
+            syn::Item::Mod(item_mod) => {
+                if item_mod.ident == "program" {
+                    return Some(item_mod);
+                }
+                None
+            }
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+
+    if prog_mods.len() != 1 {
+        return Ok(None);
+    }
+
+    let strcts = match prog_mods[0].content {
+        Some((_, ref items)) => items
+            .iter()
+            .filter_map(|i| match i {
+                syn::Item::Struct(strct) => Some(strct),
+                _ => None,
+            })
+            .collect::<Vec<_>>(),
+        None => return Ok(None),
+    };
+
+    if strcts.len() != 1 {
+        return Ok(None);
+    }
+
+    let mod_ident = strcts[0].ident.to_string().to_snake_case();
+
     let mods = root
         .items()
         .filter_map(|i| match i {
             syn::Item::Mod(item_mod) => {
-                let mod_count = item_mod
-                    .attrs
-                    .iter()
-                    .filter(|attr| attr.path.segments.last().unwrap().ident == "program")
-                    .count();
-                if mod_count != 1 {
+                if item_mod.ident != mod_ident {
                     return None;
                 }
                 Some(item_mod)
@@ -198,31 +240,146 @@ fn parse_program_mod(ctx: &CrateContext) -> Option<syn::ItemMod> {
             _ => None,
         })
         .collect::<Vec<_>>();
+
     if mods.len() != 1 {
-        return None;
+        return Err(anyhow::anyhow!(
+            "Expected to find a program mod named `{}`. Please note that program mod name has \
+             to be easily convertible between camel case and snake case, therefore names like \
+             `name_0` are problematic (it's better to use `name0`).",
+            mod_ident
+        ));
     }
-    Some(mods[0].clone())
+    Ok(Some(mods[0].clone()))
 }
 
-fn parse_error_enum(ctx: &CrateContext) -> Option<syn::ItemEnum> {
-    ctx.enums()
-        .filter_map(|item_enum| {
-            let attrs_count = item_enum
-                .attrs
-                .iter()
-                .filter(|attr| {
-                    let segment = attr.path.segments.last().unwrap();
-                    segment.ident == "error_code"
-                })
-                .count();
-            match attrs_count {
-                0 => None,
-                1 => Some(item_enum),
-                _ => panic!("Invalid syntax: one error attribute allowed"),
+/// Parse the error enum.
+fn parse_error(ctx: &CrateContext, error_name: String) -> (syn::ItemEnum, syn::ItemImpl) {
+    let mut item_error = None;
+    for item_enum in ctx.enums() {
+        if item_enum.ident == error_name {
+            if item_error.is_some() {
+                panic!("Invalid syntax: one error attribute allowed");
             }
+            item_error = Some(item_enum.clone());
+        }
+    }
+    let mut item_error_msg_impl = None;
+    for item_impl in ctx.impls() {
+        // impl std::fmt::Display for ErrorCode
+        if let Some((_, path, _)) = &item_impl.trait_ {
+            let mut segments = path.segments.iter();
+            if segments.next().map_or(false, |s| s.ident == "std")
+                && segments.next().map_or(false, |s| s.ident == "fmt")
+                && segments.next().map_or(false, |s| s.ident == "Display")
+            {
+                if let syn::Type::Path(type_path) = &*item_impl.self_ty {
+                    if let Some(ident) = type_path.path.get_ident() {
+                        if ident == &error_name {
+                            item_error_msg_impl = Some(item_impl.clone());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    let item_error = item_error.unwrap_or_else(|| {
+        // Impossible to happen unless we have a bug in parsing
+        // `impl From<...> for anchor_lang::error::Error` blocks.
+        panic!("Error enum `{}` not found", error_name)
+    });
+    let item_error_msg_impl = item_error_msg_impl.unwrap_or_else(|| {
+        panic!(
+            "`impl std::fmt::Display` block with error messages for `{}` not found",
+            item_error.ident
+        )
+    });
+    (item_error, item_error_msg_impl)
+}
+
+/// Parse the Rust error enum (to retrieve error names and codes) and
+/// `impl std::fmt::Display` block for that enum (to retrieve error messages),
+/// convert them into IDL error.
+pub fn parse_idl_error(error_enum: &mut syn::ItemEnum, error_msg_impl: &syn::ItemImpl) -> Error {
+    let ident = error_enum.ident.clone();
+    let mut last_discriminant = 0;
+
+    let error_msgs: HashMap<String, String> = error_msg_impl
+        .items
+        .iter()
+        .filter_map(|item| {
+            if let syn::ImplItem::Method(method) = item {
+                if method.sig.ident == "fmt" {
+                    return method.block.stmts.first();
+                }
+            }
+            None
         })
-        .next()
-        .cloned()
+        .filter_map(|stmt| {
+            if let syn::Stmt::Expr(syn::Expr::Match(expr_match)) = stmt {
+                return Some(expr_match);
+            }
+            None
+        })
+        .flat_map(|expr_match| expr_match.arms.iter())
+        .filter_map(|arm| {
+            if let syn::Pat::Path(path) = &arm.pat {
+                if let Some(last_segment) = path.path.segments.iter().last() {
+                    if let syn::Expr::MethodCall(syn::ExprMethodCall { args, .. }) =
+                        arm.body.as_ref()
+                    {
+                        if let Some(syn::Expr::Macro(expr_macro)) = args.iter().next() {
+                            if let Some(proc_macro2::TokenTree::Literal(literal)) =
+                                expr_macro.mac.tokens.clone().into_iter().next()
+                            {
+                                return Some((
+                                    last_segment.ident.to_string(),
+                                    literal.to_string().trim_matches('\"').to_owned(),
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+
+            None
+        })
+        .collect();
+
+    let codes: Vec<ErrorCode> = error_enum
+        .variants
+        .iter_mut()
+        .map(|variant| {
+            let ident = variant.ident.clone();
+            let msg = error_msgs.get(&ident.to_string()).map(|m| m.to_owned());
+            let id = match &variant.discriminant {
+                None => last_discriminant,
+                Some((_, disc)) => match disc {
+                    syn::Expr::Lit(expr_lit) => match &expr_lit.lit {
+                        syn::Lit::Int(int) => {
+                            int.base10_parse::<u32>().expect("Must be a base 10 number")
+                        }
+                        _ => panic!("Invalid error discriminant"),
+                    },
+                    _ => panic!("Invalid error discriminant"),
+                },
+            };
+            last_discriminant = id + 1;
+
+            // Remove any non-doc attributes on the error variant.
+            variant
+                .attrs
+                .retain(|attr| attr.path.segments[0].ident == "doc");
+
+            ErrorCode { id, ident, msg }
+        })
+        .collect();
+    Error {
+        name: error_enum.ident.to_string(),
+        raw_enum: error_enum.clone(),
+        ident,
+        codes,
+        args: None,
+    }
 }
 
 fn parse_events(ctx: &CrateContext) -> Vec<&syn::ItemStruct> {
@@ -245,37 +402,141 @@ fn parse_events(ctx: &CrateContext) -> Vec<&syn::ItemStruct> {
         .collect()
 }
 
-fn parse_accounts(ctx: &CrateContext) -> Vec<&syn::ItemStruct> {
-    ctx.structs()
-        .filter_map(|item_strct| {
-            let attrs_count = item_strct
-                .attrs
-                .iter()
-                .filter(|attr| {
-                    let segment = attr.path.segments.last().unwrap();
-                    segment.ident == "account" || segment.ident == "associated"
-                })
-                .count();
-            match attrs_count {
-                0 => None,
-                1 => Some(item_strct),
-                _ => panic!("Invalid syntax: one event attribute allowed"),
+/// Parse `impl` blocks to retrieve:
+/// * The name of the error enum (if exists).
+/// * Names of types implementing `AnchorSerialize` and/or `AnchorDeserialize` -
+///   accounts types.
+/// * Names of types implementing `BorshSerialize` and/or `BorshDeserialize` -
+///   types which might be potentially used in account fields.
+fn parse_impls(ctx: &CrateContext) -> (Option<String>, HashSet<String>, HashSet<String>) {
+    let mut error_name = None;
+    let mut account_serialize_impls = HashSet::new();
+    let mut borsh_serialize_impls = HashSet::new();
+
+    for i_impl in ctx.impls() {
+        if let Type::Path(path) = i_impl.self_ty.as_ref() {
+            let mut segments = path.path.segments.iter();
+            if segments.next().map_or(false, |s| s.ident == "anchor_lang")
+                && segments.next().map_or(false, |s| s.ident == "error")
+                && segments.next().map_or(false, |s| s.ident == "Error")
+            {
+                if let Some((_, path, _)) = &i_impl.trait_ {
+                    let segments = &mut path.segments.iter();
+                    if let Some(segment) = segments.next() {
+                        if segment.ident == "From" {
+                            if let PathArguments::AngleBracketed(arguments) = &segment.arguments {
+                                if let Some(GenericArgument::Type(Type::Path(path))) =
+                                    arguments.args.iter().next()
+                                {
+                                    if let Some(segment) = path.path.segments.iter().next() {
+                                        error_name = Some(segment.ident.to_string());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
+        }
+
+        if let Some((_, path, _)) = &i_impl.trait_ {
+            let segments = &path.segments;
+            if segments.iter().any(|segment| {
+                matches!(
+                    segment.ident.to_string().as_str(),
+                    "AccountSerialize" | "AccountDeserialize"
+                )
+            }) {
+                let r#type = i_impl.self_ty.as_ref();
+                if let Type::Path(path) = r#type {
+                    if let Some(segment) = path.path.segments.iter().next() {
+                        let ident = segment.ident.to_string();
+                        if ident != "IdlAccount" {
+                            account_serialize_impls.insert(ident);
+                        }
+                    }
+                }
+            }
+            if segments.iter().any(|segment| {
+                matches!(
+                    segment.ident.to_string().as_str(),
+                    "BorshSerialize" | "BorshDeserialize"
+                )
+            }) {
+                let r#type = i_impl.self_ty.as_ref();
+                if let Type::Path(path) = r#type {
+                    if let Some(segment) = path.path.segments.iter().next() {
+                        let ident = segment.ident.to_string();
+                        borsh_serialize_impls.insert(ident);
+                    }
+                }
+            }
+        }
+    }
+    (error_name, account_serialize_impls, borsh_serialize_impls)
+}
+
+/// Parse accounts - structs which implement `AccountSerialize` and/or
+/// `AnchorDeserialize`.
+fn parse_accounts<'a>(
+    ctx: &'a CrateContext,
+    account_serialize_impls: &HashSet<String>,
+) -> Vec<&'a syn::ItemStruct> {
+    ctx.structs()
+        .filter(|item_strct| {
+            account_serialize_impls
+                .get(&item_strct.ident.to_string())
+                .is_some()
         })
         .collect()
 }
 
-// Parse all structs implementing the `Accounts` trait.
+/// Parse all structs implementing the `Accounts` trait.
 fn parse_account_derives(ctx: &CrateContext) -> HashMap<String, AccountsStruct> {
-    // TODO: parse manual implementations. Currently we only look
-    //       for derives.
+    let accounts_impls: HashMap<String, ()> = ctx
+        .impls()
+        .filter_map(|i_impl| match &i_impl.trait_ {
+            Some((_, path, _)) => {
+                let mut segments = path.segments.iter();
+
+                let segment_1 = segments.next();
+                let segment_2 = segments.next();
+
+                if let Some(segment_1) = segment_1 {
+                    if let Some(segment_2) = segment_2 {
+                        if segment_1.ident == "anchor_lang" && segment_2.ident == "Accounts" {
+                            if let Type::Path(path) = i_impl.self_ty.as_ref() {
+                                if let Some(segment) = path.path.segments.iter().next() {
+                                    let ident = segment.ident.to_string();
+                                    if [
+                                        "IdlCreateAccounts",
+                                        "IdlAccounts",
+                                        "IdlResizeAccount",
+                                        "IdlCreateBuffer",
+                                        "IdlSetBuffer",
+                                        "IdlCloseAccount",
+                                    ]
+                                    .iter()
+                                    .any(|&s| s == ident)
+                                    {
+                                        return None;
+                                    }
+                                    return Some((ident, ()));
+                                }
+                            }
+                        }
+                    }
+                }
+                None
+            }
+            None => None,
+        })
+        .collect();
     ctx.structs()
         .filter_map(|i_strct| {
-            for attr in &i_strct.attrs {
-                if attr.path.is_ident("derive") && attr.tokens.to_string().contains(DERIVE_NAME) {
-                    let strct = accounts::parse(i_strct).expect("Code not parseable");
-                    return Some((strct.ident.to_string(), strct));
-                }
+            if accounts_impls.get(&i_strct.ident.to_string()).is_some() {
+                let strct = accounts::parse(i_strct).expect("Code not parseable");
+                return Some((strct.ident.to_string(), strct));
             }
             None
         })
@@ -295,24 +556,23 @@ fn parse_consts(ctx: &CrateContext) -> Vec<&syn::ItemConst> {
         .collect()
 }
 
-// Parse all user defined types in the file.
-fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinition>> {
+/// Parse all user defined types in the file.
+fn parse_ty_defs(
+    ctx: &CrateContext,
+    account_serialize_impls: &HashSet<String>,
+    borsh_serialize_impls: &HashSet<String>,
+    no_docs: bool,
+) -> Result<Vec<IdlTypeDefinition>> {
     ctx.structs()
         .filter_map(|item_strct| {
             // Only take serializable types
-            let serializable = item_strct.attrs.iter().any(|attr| {
-                let attr_string = attr.tokens.to_string();
-                let attr_name = attr.path.segments.last().unwrap().ident.to_string();
-                let attr_serializable = ["account", "associated", "event", "zero_copy"];
-
-                let derived_serializable = attr_name == "derive"
-                    && attr_string.contains("AnchorSerialize")
-                    && attr_string.contains("AnchorDeserialize");
-
-                attr_serializable.iter().any(|a| *a == attr_name) || derived_serializable
-            });
-
-            if !serializable {
+            if account_serialize_impls
+                .get(&item_strct.ident.to_string())
+                .is_none()
+                && borsh_serialize_impls
+                    .get(&item_strct.ident.to_string())
+                    .is_none()
+            {
                 return None;
             }
 

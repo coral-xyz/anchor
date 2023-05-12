@@ -1,5 +1,5 @@
 [package]
-name = "basic0"
+name = "basic-macro"
 version = "0.1.0"
 description = "Created with Anchor"
 rust-version = "1.60"
@@ -7,11 +7,11 @@ edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "basic0"
+name = "basic_macro"
 
 [features]
 no-entrypoint = []
 cpi = ["no-entrypoint"]
 
 [dependencies]
-anchor-lang = { path = "../../../../../lang", package = "light-anchor-lang" }
+anchor-lang = { path = "../../../../../lang" }

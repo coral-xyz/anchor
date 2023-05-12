@@ -385,9 +385,9 @@ pub enum IdlCommand {
     },
     /// Parses an IDL from source.
     Parse {
-        /// Path to the program's interface definition.
-        #[clap(short, long)]
-        file: String,
+        /// Path to the program crate to parse IDL from.
+        #[clap(short, long, alias = "file")]
+        crate_: String,
         /// Output file for the IDL (stdout if not specified).
         #[clap(short, long)]
         out: Option<String>,
@@ -812,11 +812,11 @@ pub fn expand(
         // No Cargo.toml found, expand entire workspace
         None => expand_all(&workspace_cfg, expansions_path, cargo_args),
         // Cargo.toml is at root of workspace, expand entire workspace
-        Some(cargo) if cargo.path().parent() == workspace_cfg.path().parent() => {
+        Some((_, cargo)) if cargo.path().parent() == workspace_cfg.path().parent() => {
             expand_all(&workspace_cfg, expansions_path, cargo_args)
         }
         // Reaching this arm means Cargo.toml belongs to a single package. Expand it.
-        Some(cargo) => expand_program(
+        Some((_, cargo)) => expand_program(
             // If we found Cargo.toml, it must be in a directory so unwrap is safe
             cargo.path().parent().unwrap().to_path_buf(),
             expansions_path,
@@ -953,7 +953,7 @@ pub fn build(
             arch,
         )?,
         // If the Cargo.toml is at the root, build the entire workspace.
-        Some(cargo) if cargo.path().parent() == cfg.path().parent() => build_all(
+        Some((_, cargo)) if cargo.path().parent() == cfg.path().parent() => build_all(
             &cfg,
             cfg.path(),
             idl_out,
@@ -968,7 +968,7 @@ pub fn build(
             arch,
         )?,
         // Cargo.toml represents a single package. Build it.
-        Some(cargo) => build_rust_cwd(
+        Some((_, cargo)) => build_rust_cwd(
             &cfg,
             cargo.path().to_path_buf(),
             idl_out,
@@ -1571,7 +1571,7 @@ fn verify(
 
     // Proceed with the command.
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
-    let cargo = Manifest::discover()?.ok_or_else(|| anyhow!("Cargo.toml not found"))?;
+    let (_, cargo) = Manifest::discover()?.ok_or_else(|| anyhow!("Cargo.toml not found"))?;
 
     // Build the program we want to verify.
     let cur_dir = std::env::current_dir()?;
@@ -1801,16 +1801,21 @@ fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
 
 fn extract_idl(
     cfg: &WithPath<Config>,
-    file: &str,
+    crate_root: &str,
     skip_lint: bool,
     no_docs: bool,
 ) -> Result<Option<Idl>> {
-    let file = shellexpand::tilde(file);
-    let manifest_from_path = std::env::current_dir()?.join(PathBuf::from(&*file).parent().unwrap());
-    let cargo = Manifest::discover_from_path(manifest_from_path)?
+    let crate_root = shellexpand::tilde(crate_root);
+    let manifest_from_path = std::env::current_dir()?.join(PathBuf::from(&*crate_root));
+    // Make sure that `crate_root` really points to the crate root, not to any
+    // file inside. We don't raise any error if `crate_root` provided by user
+    // is in a path to a source code file (inside the crate) for backwards
+    // compatibility (with upstream Anchor, where the argument for `idl parse`
+    // was the source code file path).
+    let (crate_root, cargo) = Manifest::discover_from_path(manifest_from_path)?
         .ok_or_else(|| anyhow!("Cargo.toml not found"))?;
     anchor_syn::idl::file::parse(
-        &*file,
+        crate_root,
         cargo.version(),
         cfg.features.seeds,
         no_docs,
@@ -1844,7 +1849,7 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
         IdlCommand::EraseAuthority { program_id } => idl_erase_authority(cfg_override, program_id),
         IdlCommand::Authority { program_id } => idl_authority(cfg_override, program_id),
         IdlCommand::Parse {
-            file,
+            crate_: file,
             out,
             out_ts,
             no_docs,
@@ -2156,13 +2161,14 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
 
 fn idl_parse(
     cfg_override: &ConfigOverride,
-    file: String,
+    crate_root: String,
     out: Option<String>,
     out_ts: Option<String>,
     no_docs: bool,
 ) -> Result<()> {
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
-    let idl = extract_idl(&cfg, &file, true, no_docs)?.ok_or_else(|| anyhow!("IDL not parsed"))?;
+    let idl =
+        extract_idl(&cfg, &crate_root, true, no_docs)?.ok_or_else(|| anyhow!("IDL not parsed"))?;
     let out = match out {
         None => OutFile::Stdout,
         Some(out) => OutFile::File(PathBuf::from(out)),

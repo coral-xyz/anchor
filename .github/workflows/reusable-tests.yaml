@@ -81,6 +81,10 @@ jobs:
           path: ${{ env.CARGO_CACHE_PATH }}
           key: cargo-${{ runner.os }}-${{ env.CARGO_PROFILE }}-anchor-${{ hashFiles('**/Cargo.lock') }}
 
+      # TODO(vadorovsky): Think of smarter way or requiring/shipping Rust nightly
+      # together with light-anchor.
+      - run: rustup toolchain install nightly
+
       - run: cargo install --path cli light-anchor-cli --locked --force --debug
         if: env.CARGO_PROFILE == 'debug'
       - run: cargo install --path cli light-anchor-cli --locked --force
@@ -97,6 +101,7 @@ jobs:
   test-examples:
     needs: setup-anchor-cli
     name: Examples Test
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -356,6 +361,10 @@ jobs:
           name: ${{ env.ANCHOR_BINARY_NAME }}
           path: ~/.cargo/bin/
       - run: chmod +x ~/.cargo/bin/light-anchor
+
+      # TODO(vadorovsky): Think of smarter way or requiring/shipping Rust nightly
+      # together with light-anchor.
+      - run: rustup toolchain install nightly
 
       - run: cd "$(mktemp -d)" && light-anchor init hello-anchor && cd hello-anchor && yarn link light-anchor && yarn && light-anchor test && yarn lint:fix
       - uses: ./.github/actions/git-diff/

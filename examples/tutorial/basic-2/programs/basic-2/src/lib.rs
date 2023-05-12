@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 #[program]
-mod basic_2 {
+mod basic2 {
     use super::*;
 
     pub fn create(ctx: Context<Create>, authority: Pubkey) -> Result<()> {

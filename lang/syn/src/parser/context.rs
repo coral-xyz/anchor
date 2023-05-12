@@ -1,7 +1,10 @@
+use std::{
+    collections::BTreeMap,
+    path::Path,
+    process::{Command, Stdio},
+};
+
 use anyhow::anyhow;
-use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
-use syn::parse::{Error as ParseError, Result as ParseResult};
 use syn::{Ident, ImplItem, ImplItemConst, Type, TypePath};
 
 /// Crate parse context
@@ -14,6 +17,10 @@ pub struct CrateContext {
 impl CrateContext {
     pub fn consts(&self) -> impl Iterator<Item = &syn::ItemConst> {
         self.modules.iter().flat_map(|(_, ctx)| ctx.consts())
+    }
+
+    pub fn impls(&self) -> impl Iterator<Item = &syn::ItemImpl> {
+        self.modules.iter().flat_map(|(_, ctx)| ctx.impls())
     }
 
     pub fn impl_consts(&self) -> impl Iterator<Item = (&Ident, &syn::ImplItemConst)> {
@@ -63,12 +70,11 @@ impl CrateContext {
                     // Error if undocumented.
                     return Err(anyhow!(
                         r#"
-        {}:{}:{}
+        {}:{}
         Struct field "{}" is unsafe, but is not documented.
         Please add a `/// CHECK:` doc comment explaining why no checks through types are necessary.
         See https://www.anchor-lang.com/docs/the-accounts-struct#safety-checks for more information.
                     "#,
-                        ctx.file.canonicalize().unwrap().display(),
                         span.start().line,
                         span.start().column,
                         ident.to_string()
@@ -93,10 +99,9 @@ impl<'krate> ModuleContext<'krate> {
         self.detail.items.iter()
     }
 }
+
 struct ParsedModule {
     name: String,
-    file: PathBuf,
-    path: String,
     items: Vec<syn::Item>,
 }
 
@@ -104,18 +109,25 @@ impl ParsedModule {
     fn parse_recursive(root: &Path) -> Result<BTreeMap<String, ParsedModule>, anyhow::Error> {
         let mut modules = BTreeMap::new();
 
-        let root_content = std::fs::read_to_string(root)?;
+        let root_content = String::from_utf8(
+            Command::new("cargo")
+                .args([
+                    "+nightly",
+                    "rustc",
+                    "--profile=check",
+                    "--",
+                    "-Zunpretty=expanded",
+                ])
+                .current_dir(root)
+                .stderr(Stdio::inherit())
+                .output()?
+                .stdout,
+        )?;
+
         let root_file = syn::parse_file(&root_content)?;
-        let root_mod = Self::new(
-            String::new(),
-            root.to_owned(),
-            "crate".to_owned(),
-            root_file.items,
-        );
+        let root_mod = Self::new("crate".to_owned(), root_file.items);
 
         struct UnparsedModule {
-            file: PathBuf,
-            path: String,
             name: String,
             item: syn::ItemMod,
         }
@@ -123,25 +135,20 @@ impl ParsedModule {
         let mut unparsed = root_mod
             .submodules()
             .map(|item| UnparsedModule {
-                file: root_mod.file.clone(),
-                path: root_mod.path.clone(),
                 name: item.ident.to_string(),
                 item: item.clone(),
             })
             .collect::<Vec<_>>();
 
         while let Some(to_parse) = unparsed.pop() {
-            let path = format!("{}::{}", to_parse.path, to_parse.name);
             let name = to_parse.name;
-            let module = Self::from_item_mod(&to_parse.file, &path, to_parse.item)?;
+            let module = Self::from_item_mod(to_parse.item)?;
 
             unparsed.extend(module.submodules().map(|item| UnparsedModule {
                 item: item.clone(),
-                file: module.file.clone(),
-                path: module.path.clone(),
                 name: item.ident.to_string(),
             }));
-            modules.insert(format!("{}{}", module.path.clone(), name.clone()), module);
+            modules.insert(name.clone(), module);
         }
 
         modules.insert(root_mod.name.clone(), root_mod);
@@ -149,67 +156,51 @@ impl ParsedModule {
         Ok(modules)
     }
 
-    fn from_item_mod(
-        parent_file: &Path,
-        parent_path: &str,
-        item: syn::ItemMod,
-    ) -> ParseResult<Self> {
+    fn from_item_mod(item: syn::ItemMod) -> syn::parse::Result<Self> {
         Ok(match item.content {
             Some((_, items)) => {
                 // The module content is within the parent file being parsed
-                Self::new(
-                    parent_path.to_owned(),
-                    parent_file.to_owned(),
-                    item.ident.to_string(),
-                    items,
-                )
+                Self::new(item.ident.to_string(), items)
             }
             None => {
-                // The module is referencing some other file, so we need to load that
-                // to parse the items it has.
-                let parent_dir = parent_file.parent().unwrap();
-                let parent_filename = parent_file.file_stem().unwrap().to_str().unwrap();
-                let parent_mod_dir = parent_dir.join(parent_filename);
-
-                let possible_file_paths = vec![
-                    parent_dir.join(format!("{}.rs", item.ident)),
-                    parent_dir.join(format!("{}/mod.rs", item.ident)),
-                    parent_mod_dir.join(format!("{}.rs", item.ident)),
-                    parent_mod_dir.join(format!("{}/mod.rs", item.ident)),
-                ];
-
-                let mod_file_path = possible_file_paths
-                    .into_iter()
-                    .find(|p| p.exists())
-                    .ok_or_else(|| ParseError::new_spanned(&item, "could not find file"))?;
-                let mod_file_content = std::fs::read_to_string(&mod_file_path)
-                    .map_err(|_| ParseError::new_spanned(&item, "could not read file"))?;
-                let mod_file = syn::parse_file(&mod_file_content)?;
-
-                Self::new(
-                    parent_path.to_owned(),
-                    mod_file_path,
-                    item.ident.to_string(),
-                    mod_file.items,
-                )
+                // NOTE(vadorovsky): Upstream Anchor assumes that in this case
+                // the module is referencing some other file. With our current
+                // approach of expanding macros of the whole crate at once,
+                // that assumption is gone.
+                // But we might still (unlikely) encounter that case if there
+                // is an empty module. We are going to just return an empty
+                // module in that case.
+                Self::new(item.ident.to_string(), Vec::new())
             }
         })
     }
 
-    fn new(path: String, file: PathBuf, name: String, items: Vec<syn::Item>) -> Self {
-        Self {
-            name,
-            file,
-            path,
-            items,
-        }
+    fn new(name: String, items: Vec<syn::Item>) -> Self {
+        Self { name, items }
     }
 
     fn submodules(&self) -> impl Iterator<Item = &syn::ItemMod> {
-        self.items.iter().filter_map(|i| match i {
-            syn::Item::Mod(item) => Some(item),
-            _ => None,
-        })
+        let mut res = Vec::new();
+
+        fn submodules_recursive(items: &[syn::Item]) -> Vec<&syn::ItemMod> {
+            let mut res = Vec::new();
+            for item in items.iter() {
+                if let syn::Item::Mod(item) = item {
+                    let ident = item.ident.to_string();
+                    if ident.starts_with("__") || ident == "instruction" {
+                        continue;
+                    }
+                    res.push(item);
+                    if let Some((_, items)) = &item.content {
+                        res.extend(submodules_recursive(items));
+                    }
+                }
+            }
+            res
+        }
+
+        res.extend(submodules_recursive(&self.items));
+        res.into_iter()
     }
 
     fn structs(&self) -> impl Iterator<Item = &syn::ItemStruct> {
@@ -258,6 +249,13 @@ impl ParsedModule {
     fn consts(&self) -> impl Iterator<Item = &syn::ItemConst> {
         self.items.iter().filter_map(|i| match i {
             syn::Item::Const(item) => Some(item),
+            _ => None,
+        })
+    }
+
+    fn impls(&self) -> impl Iterator<Item = &syn::ItemImpl> {
+        self.items.iter().filter_map(|i| match i {
+            syn::Item::Impl(item) => Some(item),
             _ => None,
         })
     }

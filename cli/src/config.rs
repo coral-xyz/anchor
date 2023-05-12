@@ -105,15 +105,25 @@ impl Manifest {
     }
 
     // Climbs each parent directory from the current dir until we find a Cargo.toml
-    pub fn discover() -> Result<Option<WithPath<Manifest>>> {
+    pub fn discover() -> Result<Option<(PathBuf, WithPath<Manifest>)>> {
         Manifest::discover_from_path(std::env::current_dir()?)
     }
 
     // Climbs each parent directory from a given starting directory until we find a Cargo.toml.
-    pub fn discover_from_path(start_from: PathBuf) -> Result<Option<WithPath<Manifest>>> {
+    pub fn discover_from_path(
+        start_from: PathBuf,
+    ) -> Result<Option<(PathBuf, WithPath<Manifest>)>> {
         let mut cwd_opt = Some(start_from.as_path());
 
         while let Some(cwd) = cwd_opt {
+            let cwd = if cwd.is_file() {
+                cwd.parent().ok_or(anyhow!(
+                    "Unable to get parent directory of {}",
+                    cwd.display()
+                ))?
+            } else {
+                cwd
+            };
             for f in fs::read_dir(cwd).with_context(|| {
                 format!("Error reading the directory with path: {}", cwd.display())
             })? {
@@ -124,8 +134,8 @@ impl Manifest {
                     .path();
                 if let Some(filename) = p.file_name() {
                     if filename.to_str() == Some("Cargo.toml") {
-                        let m = WithPath::new(Manifest::from_path(&p)?, p);
-                        return Ok(Some(m));
+                        let m = WithPath::new(Manifest::from_path(&p)?, p.clone());
+                        return Ok(Some((cwd.to_path_buf(), m)));
                     }
                 }
             }

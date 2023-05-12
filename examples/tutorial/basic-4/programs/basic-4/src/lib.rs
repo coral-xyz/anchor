@@ -4,7 +4,7 @@ use std::ops::DerefMut;
 declare_id!("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr");
 
 #[program]
-pub mod basic_4 {
+pub mod basic4 {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
