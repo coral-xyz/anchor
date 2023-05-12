@@ -1,9 +1,11 @@
 use std::{
     collections::{HashMap, HashSet},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use anyhow::Result;
+use cargo::core::Workspace;
+use cargo_metadata::{CargoOpt, MetadataCommand};
 use heck::{MixedCase, SnakeCase};
 use quote::ToTokens;
 use syn::{
@@ -24,12 +26,13 @@ const ERROR_CODE_OFFSET: u32 = 6000;
 // Parse an entire interface file.
 pub fn parse(
     crate_root: PathBuf,
+    cargo_path: PathBuf,
     version: String,
     seeds_feature: bool,
     no_docs: bool,
     safety_checks: bool,
 ) -> Result<Option<Idl>> {
-    let ctx = CrateContext::parse(crate_root)?;
+    let ctx = CrateContext::parse(crate_root, &None)?;
     if safety_checks {
         ctx.safety_checks()?;
     }
@@ -156,14 +159,75 @@ pub fn parse(
 
     let error_name = error.map(|e| e.name).unwrap_or_else(|| "".to_string());
 
+    // All external types which are imported in our main crate. They might be
+    // potentially used as type fields.
+    let external_types = parse_external_types(&ctx);
+
+    let mut external_types_to_parse: HashMap<String, String> = HashMap::new();
+
     // All types that aren't in the accounts section, are in the types section.
     for ty_def in ty_defs {
         // Don't add the error type to the types or accounts sections.
         if ty_def.name != error_name {
+            // If type of any field is an external type, we need to parse the
+            // crate it comes from and include that type in IDL.
+            // TODO(vadorovsky): Handle external types in data-carrying enums.
+            if let IdlTypeDefinitionTy::Struct { fields } = &ty_def.ty {
+                for field in fields {
+                    if let IdlType::Defined(ty) = &field.ty {
+                        if let Some(crate_name) = external_types.get(ty) {
+                            external_types_to_parse.insert(ty.clone(), crate_name.clone());
+                        }
+                    }
+                }
+            }
+
+            if let Some(crate_name) = external_types.get(&ty_def.name) {
+                external_types_to_parse.insert(ty_def.name.clone(), crate_name.clone());
+            }
             if account_names.contains(&ty_def.name) {
                 accounts.push(ty_def);
             } else if !events.iter().any(|e| e.name == ty_def.name) {
                 types.push(ty_def);
+            }
+        }
+    }
+
+    if !external_types_to_parse.is_empty() {
+        let dependencies = dependencies(&cargo_path)?;
+
+        for (ty_name, crate_name) in external_types_to_parse {
+            let dependency = if let Some(dependency) = dependencies.get(&crate_name) {
+                dependency
+            } else if let Some(dependency) = dependencies.get(&crate_name.replace('_', "-")) {
+                dependency
+            } else {
+                return Err(anyhow::anyhow!(
+                    "Crate {} (or {}) not found in Cargo.toml",
+                    crate_name.replace('_', "-"),
+                    crate_name
+                ));
+            };
+
+            let mut parsed_types = HashSet::new();
+            let crate_ctx = CrateContext::parse(&dependency.path, &dependency.features)?;
+            let (_, account_serialize_impls, borsh_serialize_impls) = parse_impls(&crate_ctx);
+            let ty_defs = parse_ty_defs(
+                &crate_ctx,
+                &account_serialize_impls,
+                &borsh_serialize_impls,
+                no_docs,
+            )?;
+            for ty_def in ty_defs {
+                parsed_types.insert(ty_def.name.clone());
+                types.push(ty_def);
+            }
+            if !parsed_types.contains(&ty_name) {
+                return Err(anyhow::anyhow!(
+                    "Type {} not found in crate {}",
+                    ty_name,
+                    crate_name
+                ));
             }
         }
     }
@@ -189,6 +253,62 @@ pub fn parse(
         metadata: None,
         constants,
     }))
+}
+
+/// Dependency of a Rust crate (an another crate).
+struct CargoDependency {
+    path: PathBuf,
+    features: Option<Vec<String>>,
+}
+
+/// Parse the Cargo metadata and return a map of dependencies, their source
+/// paths (inside Cargo cache), and their enabled features from Cargo metadata
+/// of the main crate.
+fn dependencies<P>(cargo_path: P) -> Result<HashMap<String, CargoDependency>>
+where
+    P: AsRef<Path>,
+{
+    let config = cargo::Config::default()?;
+    let ws = Workspace::new(cargo_path.as_ref(), &config)?;
+
+    let dependency_features = ws
+        .members()
+        .flat_map(|member| {
+            member.dependencies().iter().map(move |dependency| {
+                let features: Vec<String> = dependency
+                    .features()
+                    .iter()
+                    .map(|feature| feature.to_string())
+                    .collect();
+                (dependency.package_name().to_string(), features)
+            })
+        })
+        .collect::<HashMap<String, Vec<String>>>();
+
+    // TODO(vadorovsky): We are using `cargo_metadata` crate to parse information
+    // about features of dependencies, but it's calling the cargo binary. We
+    // should try to avoid that and find the way to use the API of `cargo` crate
+    // to retrieve that information just with Rust code.
+    let metadata = MetadataCommand::new()
+        .manifest_path(cargo_path.as_ref())
+        .features(CargoOpt::AllFeatures)
+        .exec()?;
+    Ok(metadata
+        .packages
+        .iter()
+        .filter(|package| package.id != metadata.workspace_members[0]) // Filter out the current crate
+        .filter_map(|package| {
+            package.manifest_path.parent().map(|cache_dir| {
+                (
+                    package.name.clone(),
+                    CargoDependency {
+                        path: cache_dir.to_path_buf().into_std_path_buf(),
+                        features: dependency_features.get(&package.name).cloned(),
+                    },
+                )
+            })
+        })
+        .collect())
 }
 
 /// Parse the main program mod.
@@ -582,40 +702,7 @@ fn parse_ty_defs(
                 _ => return None,
             }
 
-            let name = item_strct.ident.to_string();
-            let doc = if !no_docs {
-                docs::parse(&item_strct.attrs)
-            } else {
-                None
-            };
-            let fields = match &item_strct.fields {
-                syn::Fields::Named(fields) => fields
-                    .named
-                    .iter()
-                    .filter_map(|f: &syn::Field| {
-                        let doc = if !no_docs {
-                            docs::parse(&f.attrs)
-                        } else {
-                            None
-                        };
-                        to_idl_type(ctx, &f.ty).transpose().map(|ty| {
-                            ty.map(|ty| IdlField {
-                                name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
-                                docs: doc,
-                                ty,
-                            })
-                        })
-                    })
-                    .collect::<Result<Vec<IdlField>>>(),
-                syn::Fields::Unnamed(_) => return None,
-                _ => panic!("Empty structs are allowed."),
-            };
-
-            Some(fields.map(|fields| IdlTypeDefinition {
-                name,
-                docs: doc,
-                ty: IdlTypeDefinitionTy::Struct { fields },
-            }))
+            parse_ty_def_strct(ctx, item_strct, no_docs).transpose()
         })
         .chain(ctx.enums().filter_map(|enm| {
             // Only take public types
@@ -623,63 +710,164 @@ fn parse_ty_defs(
                 syn::Visibility::Public(_) => (),
                 _ => return None,
             }
-            let name = enm.ident.to_string();
-            let doc = if !no_docs {
-                docs::parse(&enm.attrs)
-            } else {
-                None
-            };
-            let variants = enm
-                .variants
-                .iter()
-                .map(|variant: &syn::Variant| {
-                    let name = variant.ident.to_string();
-                    let fields = match &variant.fields {
-                        syn::Fields::Unit => None,
-                        syn::Fields::Unnamed(fields) => {
-                            let fields = fields
-                                .unnamed
-                                .iter()
-                                .filter_map(|f| to_idl_type(ctx, &f.ty).transpose())
-                                .collect::<Result<Vec<IdlType>>>()?;
-                            Some(EnumFields::Tuple(fields))
-                        }
-                        syn::Fields::Named(fields) => {
-                            let fields = fields
-                                .named
-                                .iter()
-                                .filter_map(|f: &syn::Field| {
-                                    let name = f.ident.as_ref().unwrap().to_string();
-                                    let doc = if !no_docs {
-                                        docs::parse(&f.attrs)
-                                    } else {
-                                        None
-                                    };
-                                    to_idl_type(ctx, &f.ty).transpose().map(|ty| {
-                                        ty.map(|ty| IdlField {
-                                            name,
-                                            docs: doc,
-                                            ty,
-                                        })
-                                    })
-                                })
-                                .collect::<Result<Vec<IdlField>>>()?;
-                            Some(EnumFields::Named(fields))
-                        }
-                    };
-                    Ok(IdlEnumVariant { name, fields })
-                })
-                .collect::<Result<Vec<IdlEnumVariant>>>();
-            match variants {
-                Ok(variants) => Some(Ok(IdlTypeDefinition {
-                    name,
-                    docs: doc,
-                    ty: IdlTypeDefinitionTy::Enum { variants },
-                })),
-                Err(e) => Some(Err(e)),
-            }
+
+            parse_ty_def_enum(ctx, enm, no_docs).transpose()
         }))
         .collect()
+}
+
+/// Parse IDL type definition from a Rust struct.
+fn parse_ty_def_strct(
+    ctx: &CrateContext,
+    item_strct: &syn::ItemStruct,
+    no_docs: bool,
+) -> Result<Option<IdlTypeDefinition>> {
+    let name = item_strct.ident.to_string();
+    let doc = if !no_docs {
+        docs::parse(&item_strct.attrs)
+    } else {
+        None
+    };
+    let fields = match &item_strct.fields {
+        syn::Fields::Named(fields) => fields
+            .named
+            .iter()
+            .filter_map(|f: &syn::Field| {
+                let doc = if !no_docs {
+                    docs::parse(&f.attrs)
+                } else {
+                    None
+                };
+                to_idl_type(ctx, &f.ty).transpose().map(|ty| {
+                    ty.map(|ty| IdlField {
+                        name: f.ident.as_ref().unwrap().to_string().to_mixed_case(),
+                        docs: doc,
+                        ty,
+                    })
+                })
+            })
+            .collect::<Result<Vec<IdlField>>>(),
+        syn::Fields::Unnamed(_) => return Ok(None),
+        _ => panic!("Empty structs are allowed."),
+    };
+
+    Some(fields.map(|fields| IdlTypeDefinition {
+        name,
+        docs: doc,
+        ty: IdlTypeDefinitionTy::Struct { fields },
+    }))
+    .transpose()
+}
+
+fn parse_ty_def_enum(
+    ctx: &CrateContext,
+    item_enum: &syn::ItemEnum,
+    no_docs: bool,
+) -> Result<Option<IdlTypeDefinition>> {
+    let name = item_enum.ident.to_string();
+    let doc = if !no_docs {
+        docs::parse(&item_enum.attrs)
+    } else {
+        None
+    };
+    let variants = item_enum
+        .variants
+        .iter()
+        .map(|variant: &syn::Variant| {
+            let name = variant.ident.to_string();
+            let fields = match &variant.fields {
+                syn::Fields::Unit => None,
+                syn::Fields::Unnamed(fields) => {
+                    let fields = fields
+                        .unnamed
+                        .iter()
+                        .filter_map(|f| to_idl_type(ctx, &f.ty).transpose())
+                        .collect::<Result<Vec<IdlType>>>()?;
+                    Some(EnumFields::Tuple(fields))
+                }
+                syn::Fields::Named(fields) => {
+                    let fields = fields
+                        .named
+                        .iter()
+                        .filter_map(|f: &syn::Field| {
+                            let name = f.ident.as_ref().unwrap().to_string();
+                            let doc = if !no_docs {
+                                docs::parse(&f.attrs)
+                            } else {
+                                None
+                            };
+                            to_idl_type(ctx, &f.ty).transpose().map(|ty| {
+                                ty.map(|ty| IdlField {
+                                    name,
+                                    docs: doc,
+                                    ty,
+                                })
+                            })
+                        })
+                        .collect::<Result<Vec<IdlField>>>()?;
+                    Some(EnumFields::Named(fields))
+                }
+            };
+            Ok(IdlEnumVariant { name, fields })
+        })
+        .collect::<Result<Vec<IdlEnumVariant>>>();
+    match variants {
+        Ok(variants) => Ok(Some(IdlTypeDefinition {
+            name,
+            docs: doc,
+            ty: IdlTypeDefinitionTy::Enum { variants },
+        })),
+        Err(e) => Err(e),
+    }
+}
+
+/// Parse all `use` tokens from the crate context and returns a map of imported
+/// types and their path roots (external crates they're imported from).
+fn parse_external_types(ctx: &CrateContext) -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    for use_ in ctx.uses() {
+        // This should always be the case - the first `use` tree item should be
+        // always be a path to either:
+        // * external crate (case we are supporting right now)
+        // * already imported module (TODO(vadorovsky): we don't support this
+        //   case yet, but we should!)
+        // * `self` or `crate` (we don't care about this case - we are always
+        //   expanding macros, therefore we are already parsing the whole crate
+        //   and we focus only on external imports)
+        if let syn::UseTree::Path(p) = &use_.tree {
+            let ident = &p.ident;
+            if ident == "self" || ident == "crate" {
+                continue;
+            }
+            parse_use_tree(&p.tree, &mut map, &ident.to_string())
+        }
+    }
+    map
+}
+
+/// Parses subtress of `use` tokens and populates the `map` with types and
+/// their base paths (external crates they're imported from).
+fn parse_use_tree(use_tree: &syn::UseTree, map: &mut HashMap<String, String>, crate_name: &str) {
+    match use_tree {
+        syn::UseTree::Path(p) => {
+            parse_use_tree(&p.tree, map, crate_name);
+        }
+        syn::UseTree::Name(n) => {
+            map.insert(n.ident.to_string(), crate_name.to_owned());
+        }
+        syn::UseTree::Group(g) => {
+            for use_tree in &g.items {
+                parse_use_tree(use_tree, map, crate_name);
+            }
+        }
+        // TODO(vadorovsky): Parse global imports too, just in case someone
+        // is using globally imported type. Our current limitation is that we
+        // only support types that are imported via `use` statement.
+        // It will be REALLY tricky to do it in performant and feasible way
+        // (the ideal solution would be doing so **without** parsing all
+        // external crates, but not sure if it's possible).
+        _ => {}
+    }
 }
 
 // Replace variable array lengths with values

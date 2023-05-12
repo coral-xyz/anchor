@@ -1816,6 +1816,7 @@ fn extract_idl(
         .ok_or_else(|| anyhow!("Cargo.toml not found"))?;
     anchor_syn::idl::file::parse(
         crate_root,
+        cargo.path().to_path_buf(),
         cargo.version(),
         cfg.features.seeds,
         no_docs,

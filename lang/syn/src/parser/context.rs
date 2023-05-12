@@ -39,15 +39,22 @@ impl CrateContext {
         self.modules.values().map(|detail| ModuleContext { detail })
     }
 
+    pub fn uses(&self) -> impl Iterator<Item = &syn::ItemUse> {
+        self.modules.iter().flat_map(|(_, ctx)| ctx.uses())
+    }
+
     pub fn root_module(&self) -> ModuleContext {
         ModuleContext {
             detail: self.modules.get("crate").unwrap(),
         }
     }
 
-    pub fn parse(root: impl AsRef<Path>) -> Result<Self, anyhow::Error> {
+    pub fn parse(
+        root: impl AsRef<Path>,
+        features: &Option<Vec<String>>,
+    ) -> Result<Self, anyhow::Error> {
         Ok(CrateContext {
-            modules: ParsedModule::parse_recursive(root.as_ref())?,
+            modules: ParsedModule::parse_recursive(root.as_ref(), features)?,
         })
     }
 
@@ -106,18 +113,26 @@ struct ParsedModule {
 }
 
 impl ParsedModule {
-    fn parse_recursive(root: &Path) -> Result<BTreeMap<String, ParsedModule>, anyhow::Error> {
+    fn parse_recursive(
+        root: &Path,
+        features: &Option<Vec<String>>,
+    ) -> Result<BTreeMap<String, ParsedModule>, anyhow::Error> {
         let mut modules = BTreeMap::new();
+
+        let mut args = vec![
+            "+nightly".to_owned(),
+            "rustc".to_owned(),
+            "--profile=check".to_owned(),
+        ];
+        if let Some(features) = features {
+            args.push("--features".to_owned());
+            args.push(features.join(","));
+        }
+        args.extend(vec!["--".to_owned(), "-Zunpretty=expanded".to_owned()]);
 
         let root_content = String::from_utf8(
             Command::new("cargo")
-                .args([
-                    "+nightly",
-                    "rustc",
-                    "--profile=check",
-                    "--",
-                    "-Zunpretty=expanded",
-                ])
+                .args(args)
                 .current_dir(root)
                 .stderr(Stdio::inherit())
                 .output()?
@@ -290,5 +305,12 @@ impl ParsedModule {
                 _ => None,
             })
             .flatten()
+    }
+
+    fn uses(&self) -> impl Iterator<Item = &syn::ItemUse> {
+        self.items.iter().filter_map(|i| match i {
+            syn::Item::Use(item) => Some(item),
+            _ => None,
+        })
     }
 }
