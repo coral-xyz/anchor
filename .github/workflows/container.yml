@@ -15,7 +15,10 @@ env:
 
 jobs:
   container:
-    if: github.repository_owner == 'Lightprotocol'
+    # NODE(vadorovsky): So far it's killing the Github runners. Let's not use
+    # it for now.
+    # if: github.repository_owner == 'Lightprotocol'
+    if: false
     name: container
     runs-on: ubuntu-latest
     steps:
