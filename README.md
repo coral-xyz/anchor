@@ -7,7 +7,7 @@ based on it. It mostly contains changes in the [IDL](https://en.wikipedia.org/wi
 * Usage of macros which are extending `Accounts` structs with additional fields.
 * Usage of types from external crates as account fields.
 
-This fork in in active development and is not recommended to use if there is no dependency on Light Protocol.
+This fork is in active development and is not recommended to use if there is no dependency on Light Protocol.
 
 ---
 
