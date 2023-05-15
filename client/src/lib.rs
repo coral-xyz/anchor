@@ -373,6 +373,45 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
     }
 }
 
+fn parse_logs_response<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
+    logs: RpcResponse<RpcLogsResponse>,
+    program_id_str: &str,
+) -> Vec<T> {
+    let mut logs = &logs.value.logs[..];
+    let mut events: Vec<T> = Vec::new();
+    if !logs.is_empty() {
+        if let Ok(mut execution) = Execution::new(&mut logs) {
+            for l in logs {
+                // Parse the log.
+                let (event, new_program, did_pop) = {
+                    if program_id_str == execution.program() {
+                        handle_program_log(program_id_str, l).unwrap_or_else(|e| {
+                            println!("Unable to parse log: {e}");
+                            std::process::exit(1);
+                        })
+                    } else {
+                        let (program, did_pop) = handle_system_log(program_id_str, l);
+                        (None, program, did_pop)
+                    }
+                };
+                // Emit the event.
+                if let Some(e) = event {
+                    events.push(e);
+                }
+                // Switch program context on CPI.
+                if let Some(new_program) = new_program {
+                    execution.push(new_program);
+                }
+                // Program returned.
+                if did_pop {
+                    execution.pop();
+                }
+            }
+        }
+    }
+    events
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,3 +1,7 @@
+use crate::{
+    parse_logs_response, ClientError, EventContext, EventHandle, Program, ProgramAccountsIterator,
+    RequestBuilder,
+};
 use anchor_lang::{prelude::Pubkey, AccountDeserialize, Discriminator};
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::{
@@ -14,11 +18,6 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use std::ops::Deref;
-
-use crate::{
-    handle_program_log, handle_system_log, ClientError, EventContext, EventHandle, Execution,
-    Program, ProgramAccountsIterator, RequestBuilder,
-};
 
 impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
     /// Returns the account at the given address.
@@ -90,51 +89,14 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         let self_program_str = self.program_id.to_string();
         let (client, receiver) = PubsubClient::logs_subscribe(&ws_url, filter, cfg)?;
         std::thread::spawn(move || {
-            loop {
-                match receiver.recv() {
-                    Ok(logs) => {
-                        let ctx = EventContext {
-                            signature: logs.value.signature.parse().unwrap(),
-                            slot: logs.context.slot,
-                        };
-                        let mut logs = &logs.value.logs[..];
-                        if !logs.is_empty() {
-                            if let Ok(mut execution) = Execution::new(&mut logs) {
-                                for l in logs {
-                                    // Parse the log.
-                                    let (event, new_program, did_pop) = {
-                                        if self_program_str == execution.program() {
-                                            handle_program_log(&self_program_str, l).unwrap_or_else(
-                                                |e| {
-                                                    println!("Unable to parse log: {e}");
-                                                    std::process::exit(1);
-                                                },
-                                            )
-                                        } else {
-                                            let (program, did_pop) =
-                                                handle_system_log(&self_program_str, l);
-                                            (None, program, did_pop)
-                                        }
-                                    };
-                                    // Emit the event.
-                                    if let Some(e) = event {
-                                        f(&ctx, e);
-                                    }
-                                    // Switch program context on CPI.
-                                    if let Some(new_program) = new_program {
-                                        execution.push(new_program);
-                                    }
-                                    // Program returned.
-                                    if did_pop {
-                                        execution.pop();
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Err(_err) => {
-                        return;
-                    }
+            while let Ok(logs) = receiver.recv() {
+                let ctx = EventContext {
+                    signature: logs.value.signature.parse().unwrap(),
+                    slot: logs.context.slot,
+                };
+                let events: Vec<T> = parse_logs_response(logs, &self_program_str);
+                for e in events {
+                    f(&ctx, e);
                 }
             }
         });

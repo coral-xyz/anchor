@@ -1,6 +1,6 @@
 use crate::{
-    handle_program_log, handle_system_log, ClientError, EventContext, Execution, Program,
-    ProgramAccountsIterator, RequestBuilder,
+    parse_logs_response, ClientError, EventContext, Program, ProgramAccountsIterator,
+    RequestBuilder,
 };
 use anchor_lang::{prelude::Pubkey, AccountDeserialize, Discriminator};
 use futures::stream::StreamExt;
@@ -27,18 +27,16 @@ use tokio::{
 };
 
 type UnsubscribeFunc = Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send>;
+type Event = (
+    JoinHandle<Result<(), ClientError>>,
+    UnboundedReceiver<UnsubscribeFunc>,
+);
 
 pub struct EventHandler {
     client: Arc<PubsubClient>,
     program_id: Pubkey,
     config: RpcTransactionLogsConfig,
-    events: BTreeMap<
-        u8,
-        (
-            JoinHandle<Result<(), ClientError>>,
-            UnboundedReceiver<UnsubscribeFunc>,
-        ),
-    >,
+    events: BTreeMap<u8, Event>,
 }
 
 impl EventHandler {
@@ -78,39 +76,9 @@ impl EventHandler {
                         signature: logs.value.signature.parse().unwrap(),
                         slot: logs.context.slot,
                     };
-                    let mut logs = &logs.value.logs[..];
-                    if !logs.is_empty() {
-                        if let Ok(mut execution) = Execution::new(&mut logs) {
-                            for l in logs {
-                                // Parse the log.
-                                let (event, new_program, did_pop) = {
-                                    if self_program_str == execution.program() {
-                                        handle_program_log(&self_program_str, l).unwrap_or_else(
-                                            |e| {
-                                                println!("Unable to parse log: {e}");
-                                                std::process::exit(1);
-                                            },
-                                        )
-                                    } else {
-                                        let (program, did_pop) =
-                                            handle_system_log(&self_program_str, l);
-                                        (None, program, did_pop)
-                                    }
-                                };
-                                // Emit the event.
-                                if let Some(e) = event {
-                                    f(&ctx, e);
-                                }
-                                // Switch program context on CPI.
-                                if let Some(new_program) = new_program {
-                                    execution.push(new_program);
-                                }
-                                // Program returned.
-                                if did_pop {
-                                    execution.pop();
-                                }
-                            }
-                        }
+                    let events = parse_logs_response(logs, &self_program_str);
+                    for e in events {
+                        f(&ctx, e);
                     }
                 }
                 Ok::<(), ClientError>(())
@@ -119,7 +87,7 @@ impl EventHandler {
         let id = find_id(&self.events)?;
         self.events.insert(id, (handle, unsubscribe_receiver));
 
-        return Ok(id);
+        Ok(id)
     }
 
     pub async fn unsubscribe(&mut self, id: u8) {
