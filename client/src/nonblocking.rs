@@ -33,7 +33,7 @@ pub struct EventHandler {
     program_id: Pubkey,
     config: RpcTransactionLogsConfig,
     events: BTreeMap<
-        &'static str,
+        u8,
         (
             JoinHandle<Result<(), ClientError>>,
             UnboundedReceiver<UnsubscribeFunc>,
@@ -50,11 +50,10 @@ impl EventHandler {
             events: BTreeMap::new(),
         }
     }
-    pub fn suscribe<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
+    pub fn subscribe<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
         &mut self,
-        name: &'static str,
         f: impl Fn(&EventContext, T) + Send + 'static,
-    ) {
+    ) -> Result<u8, ClientError> {
         let addresses = vec![self.program_id.to_string()];
         let filter = RpcTransactionLogsFilter::Mentions(addresses);
         let self_program_str = self.program_id.to_string();
@@ -117,14 +116,16 @@ impl EventHandler {
                 Ok::<(), ClientError>(())
             }
         });
+        let id = find_id(&self.events)?;
+        self.events.insert(id, (handle, unsubscribe_receiver));
 
-        self.events.insert(name, (handle, unsubscribe_receiver));
+        return Ok(id);
     }
 
-    pub async fn unsubscribe(&mut self, name: &'static str) {
-        if let Some(mut event) = self.events.remove(name) {
-            if let Some(unsuscribe) = event.1.recv().await {
-                unsuscribe().await;
+    pub async fn unsubscribe(&mut self, id: u8) {
+        if let Some(mut event) = self.events.remove(&id) {
+            if let Some(unsubscribe) = event.1.recv().await {
+                unsubscribe().await;
             }
 
             let _ = event.0.await;
@@ -240,4 +241,13 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
             .await
             .map_err(Into::into)
     }
+}
+
+fn find_id<T>(map: &BTreeMap<u8, T>) -> Result<u8, ClientError> {
+    for i in u8::MIN..u8::MAX {
+        if !map.contains_key(&i) {
+            return Ok(i);
+        }
+    }
+    Err(ClientError::NoIdFound)
 }

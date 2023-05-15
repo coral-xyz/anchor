@@ -182,11 +182,11 @@ pub async fn events<C: Deref<Target = impl Signer> + Clone>(
     let (sender, mut receiver) = mpsc::unbounded_channel();
     let mut event_handler = program.create_event_handler().await?;
 
-    event_handler.suscribe("myevent", move |_ctx: &EventContext, event: MyEvent| {
+    let event_id = event_handler.subscribe(move |_ctx: &EventContext, event: MyEvent| {
         if sender.send(event).is_err() {
             println!("Error while transferring the event.")
         }
-    });
+    })?;
 
     sleep(Duration::from_millis(1000)).await;
 
@@ -200,7 +200,7 @@ pub async fn events<C: Deref<Target = impl Signer> + Clone>(
     assert_eq!(event.data, 5);
     assert_eq!(event.label, "hello".to_string());
 
-    event_handler.unsubscribe("myevent").await;
+    event_handler.unsubscribe(event_id).await;
 
     println!("Events success!");
 

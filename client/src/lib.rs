@@ -248,6 +248,9 @@ pub enum ClientError {
     SolanaClientPubsubError(#[from] solana_client::nonblocking::pubsub_client::PubsubClientError),
     #[error("Unable to parse log: {0}")]
     LogParseError(String),
+    #[cfg(feature = "async")]
+    #[error("No id was found for the event")]
+    NoIdFound,
 }
 
 /// `RequestBuilder` provides a builder interface to create and send
