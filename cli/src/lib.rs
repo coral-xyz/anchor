@@ -3,7 +3,6 @@ use crate::config::{
     ProgramDeployment, ProgramWorkspace, ScriptsConfig, TestValidator, WithPath, SHUTDOWN_WAIT,
     STARTUP_WAIT,
 };
-use crate::transaction_model::TransactionInstruction;
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction, ERASED_AUTHORITY};
 use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
@@ -48,7 +47,6 @@ pub mod config;
 mod path;
 pub mod rust_template;
 pub mod solidity_template;
-pub mod transaction_model;
 
 // Version of the docker image.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -1944,7 +1942,7 @@ fn idl_set_buffer(
             keypair.pubkey()
         };
         // Instruction to set the buffer onto the IdlAccount.
-        let set_buffer_ix = {
+        let ix = {
             let accounts = vec![
                 AccountMeta::new(buffer, false),
                 AccountMeta::new(idl_address, false),
@@ -1960,21 +1958,12 @@ fn idl_set_buffer(
         };
 
         if print_only {
-            let instruction: TransactionInstruction = set_buffer_ix.into();
-            println!("Print only mode. No execution!");
-            println!(
-                "base64 set-buffer to idl account {} of program {}:",
-                idl_address, instruction.program_id
-            );
-            println!(
-                " {}",
-                anchor_lang::__private::base64::encode(&instruction.try_to_vec()?)
-            );
+            print_idl_instruction("SetBuffer", &ix, &idl_address)?;
         } else {
             // Build the transaction.
             let latest_hash = client.get_latest_blockhash()?;
             let tx = Transaction::new_signed_with_payer(
-                &[set_buffer_ix],
+                &[ix],
                 Some(&keypair.pubkey()),
                 &[&keypair],
                 latest_hash,
@@ -2066,16 +2055,7 @@ fn idl_set_authority(
         };
 
         if print_only {
-            let instruction: TransactionInstruction = ix.into();
-            println!("Print only mode. No execution!");
-            println!(
-                "base64 set-authority to idl account {} of program {}:",
-                idl_address, instruction.program_id
-            );
-            println!(
-                " {}",
-                anchor_lang::__private::base64::encode(&instruction.try_to_vec()?)
-            );
+            print_idl_instruction("SetAuthority", &ix, &idl_address)?;
         } else {
             // Send transaction.
             let latest_hash = client.get_latest_blockhash()?;
@@ -2143,16 +2123,7 @@ fn idl_close_account(
     };
 
     if print_only {
-        let instruction: TransactionInstruction = ix.into();
-        println!("Print only mode. No execution!");
-        println!(
-            "base64 close idl account {} of program {}:",
-            idl_address, instruction.program_id
-        );
-        println!(
-            " {}",
-            anchor_lang::__private::base64::encode(&instruction.try_to_vec()?)
-        );
+        print_idl_instruction("Close", &ix, &idl_address)?;
     } else {
         // Send transaction.
         let latest_hash = client.get_latest_blockhash()?;
@@ -2270,6 +2241,35 @@ fn write_idl(idl: &Idl, out: OutFile) -> Result<()> {
         OutFile::Stdout => println!("{idl_json}"),
         OutFile::File(out) => fs::write(out, idl_json)?,
     };
+
+    Ok(())
+}
+
+/// Print `base64+borsh` encoded IDL instruction.
+fn print_idl_instruction(ix_name: &str, ix: &Instruction, idl_address: &Pubkey) -> Result<()> {
+    println!("Print only mode. No execution!");
+    println!("Instruction: {ix_name}");
+    println!("IDL address: {idl_address}");
+    println!("Program: {}", ix.program_id);
+
+    // Serialize with `bincode` because `Instruction` does not implement `BorshSerialize`
+    let mut serialized_ix = bincode::serialize(ix)?;
+
+    // Remove extra bytes in order to make the serialized instruction `borsh` compatible
+    // `bincode` uses 8 bytes(LE) for length meanwhile `borsh` uses 4 bytes(LE)
+    let mut remove_extra_vec_bytes = |index: usize| {
+        serialized_ix.drain((index + 4)..(index + 8));
+    };
+
+    let accounts_index = std::mem::size_of_val(&ix.program_id);
+    remove_extra_vec_bytes(accounts_index);
+    let data_index = accounts_index + 4 + std::mem::size_of_val(&*ix.accounts);
+    remove_extra_vec_bytes(data_index);
+
+    println!(
+        "Base64 encoded instruction: {}",
+        base64::encode(serialized_ix)
+    );
 
     Ok(())
 }
