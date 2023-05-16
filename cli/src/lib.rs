@@ -1934,10 +1934,7 @@ fn idl_set_buffer(cfg_override: &ConfigOverride, program_id: Pubkey, buffer: Pub
         client.send_and_confirm_transaction_with_spinner_and_config(
             &tx,
             CommitmentConfig::confirmed(),
-            RpcSendTransactionConfig {
-                skip_preflight: true,
-                ..RpcSendTransactionConfig::default()
-            },
+            RpcSendTransactionConfig::default(),
         )?;
 
         Ok(())
@@ -2023,10 +2020,7 @@ fn idl_set_authority(
         client.send_and_confirm_transaction_with_spinner_and_config(
             &tx,
             CommitmentConfig::confirmed(),
-            RpcSendTransactionConfig {
-                skip_preflight: true,
-                ..RpcSendTransactionConfig::default()
-            },
+            RpcSendTransactionConfig::default(),
         )?;
 
         println!("Authority update complete.");
@@ -2080,10 +2074,7 @@ fn idl_close_account(cfg: &Config, program_id: &Pubkey, idl_address: Pubkey) -> 
     client.send_and_confirm_transaction_with_spinner_and_config(
         &tx,
         CommitmentConfig::confirmed(),
-        RpcSendTransactionConfig {
-            skip_preflight: true,
-            ..RpcSendTransactionConfig::default()
-        },
+        RpcSendTransactionConfig::default(),
     )?;
 
     Ok(())
@@ -2144,10 +2135,7 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
         client.send_and_confirm_transaction_with_spinner_and_config(
             &tx,
             CommitmentConfig::confirmed(),
-            RpcSendTransactionConfig {
-                skip_preflight: true,
-                ..RpcSendTransactionConfig::default()
-            },
+            RpcSendTransactionConfig::default(),
         )?;
         offset += MAX_WRITE_SIZE;
     }
@@ -3178,10 +3166,7 @@ fn create_idl_account(
         client.send_and_confirm_transaction_with_spinner_and_config(
             &tx,
             CommitmentConfig::finalized(),
-            RpcSendTransactionConfig {
-                skip_preflight: true,
-                ..RpcSendTransactionConfig::default()
-            },
+            RpcSendTransactionConfig::default(),
         )?;
     }
 
@@ -3246,10 +3231,7 @@ fn create_idl_buffer(
     client.send_and_confirm_transaction_with_spinner_and_config(
         &tx,
         CommitmentConfig::confirmed(),
-        RpcSendTransactionConfig {
-            skip_preflight: true,
-            ..RpcSendTransactionConfig::default()
-        },
+        RpcSendTransactionConfig::default(),
     )?;
 
     Ok(buffer.pubkey())
