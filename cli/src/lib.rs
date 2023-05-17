@@ -46,6 +46,7 @@ use tar::Archive;
 
 pub mod config;
 mod path;
+pub mod psp_template;
 pub mod rust_template;
 pub mod solidity_template;
 
@@ -66,6 +67,18 @@ pub struct Opts {
 pub enum Command {
     /// Initializes a workspace.
     Init {
+        name: String,
+        #[clap(short, long)]
+        javascript: bool,
+        #[clap(short, long)]
+        solidity: bool,
+        #[clap(long)]
+        no_git: bool,
+        #[clap(long)]
+        jest: bool,
+    },
+    /// Initializes a Light Protocol PSP workspace.
+    InitPsp {
         name: String,
         #[clap(short, long)]
         javascript: bool,
@@ -423,6 +436,13 @@ pub fn entry(opts: Opts) -> Result<()> {
             no_git,
             jest,
         } => init(&opts.cfg_override, name, javascript, solidity, no_git, jest),
+        Command::InitPsp {
+            name,
+            javascript,
+            solidity,
+            no_git,
+            jest,
+        } => init_psp(&opts.cfg_override, name, javascript, solidity, no_git, jest),
         Command::New { solidity, name } => new(&opts.cfg_override, solidity, name),
         Command::Build {
             idl,
@@ -729,6 +749,191 @@ fn init(
     Ok(())
 }
 
+fn init_psp(
+    cfg_override: &ConfigOverride,
+    name: String,
+    javascript: bool,
+    solidity: bool,
+    no_git: bool,
+    jest: bool,
+) -> Result<()> {
+    if Config::discover(cfg_override)?.is_some() {
+        return Err(anyhow!("Workspace already initialized"));
+    }
+    if solidity {
+        return Err(anyhow!("Solidity option is not implemented"));
+    }
+    if jest {
+        return Err(anyhow!("jest option is not implemented"));
+    }
+    if no_git {
+        return Err(anyhow!("no_git option is not implemented"));
+    }
+    if javascript {
+        return Err(anyhow!("javascript option is not implemented"));
+    }
+
+    // We need to format different cases for the dir and the name
+    let rust_name = name.to_snake_case();
+    let project_name = if name == rust_name {
+        rust_name.clone()
+    } else {
+        name.to_kebab_case()
+    };
+
+    // Additional keywords that have not been added to the `syn` crate as reserved words
+    // https://github.com/dtolnay/syn/pull/1098
+    let extra_keywords = ["async", "await", "try"];
+    // Anchor converts to snake case before writing the program name
+    if syn::parse_str::<syn::Ident>(&rust_name).is_err()
+        || extra_keywords.contains(&rust_name.as_str())
+    {
+        return Err(anyhow!(
+            "Anchor workspace name must be a valid Rust identifier. It may not be a Rust reserved word, start with a digit, or include certain disallowed characters. See https://doc.rust-lang.org/reference/identifiers.html for more detail.",
+        ));
+    }
+
+    fs::create_dir(&project_name)?;
+    std::env::set_current_dir(&project_name)?;
+    fs::create_dir("app")?;
+
+    let mut cfg = Config::default();
+    if jest {
+        cfg.scripts.insert(
+            "test".to_owned(),
+            if javascript {
+                "yarn run jest"
+            } else {
+                "yarn run jest --preset ts-jest"
+            }
+            .to_owned(),
+        );
+    } else {
+        cfg.scripts.insert(
+            "test".to_owned(),
+            if javascript {
+                "yarn run mocha -t 1000000 tests/"
+            } else {
+                "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/test.ts --exit"
+            }
+            .to_owned(),
+        );
+    }
+
+    let mut localnet = BTreeMap::new();
+    localnet.insert(
+        rust_name.clone(),
+        ProgramDeployment {
+            address: if solidity {
+                solidity_template::default_program_id()
+            } else {
+                psp_template::default_program_id()
+            },
+            path: None,
+            idl: None,
+        },
+    );
+    cfg.programs.insert(Cluster::Localnet, localnet);
+    let toml = cfg.to_string();
+    fs::write("Anchor.toml", toml)?;
+
+    // Initialize .gitignore file
+    fs::write(".gitignore", psp_template::git_ignore_psp())?;
+
+    // Initialize .prettierignore file
+    fs::write(".prettierignore", psp_template::prettier_ignore_psp())?;
+
+    fs::create_dir("circuit")?;
+    fs::write(".prettierignore", psp_template::prettier_ignore_psp())?;
+    let circuit_path = format!("circuit/{}.light", rust_name);
+    let mut circuit = File::create(circuit_path)?;
+    circuit.write_all(psp_template::circuit_psp(&project_name).as_bytes())?;
+
+    // Build the program.
+    if solidity {
+        fs::create_dir("solidity")?;
+
+        new_solidity_program(&project_name)?;
+    } else {
+        // Build virtual manifest for rust programs
+        fs::write("Cargo.toml", psp_template::virtual_manifest())?;
+
+        fs::create_dir("programs")?;
+
+        new_rust_psp(&project_name)?;
+    }
+    // Build the test suite.
+    fs::create_dir("tests")?;
+    // Build the migrations directory.
+    fs::create_dir("migrations")?;
+
+    if javascript {
+        // Build javascript config
+        let mut package_json = File::create("package.json")?;
+        package_json.write_all(rust_template::package_json(jest).as_bytes())?;
+
+        if jest {
+            let mut test = File::create(format!("tests/{}.test.js", &project_name))?;
+            if solidity {
+                test.write_all(solidity_template::jest(&project_name).as_bytes())?;
+            } else {
+                test.write_all(rust_template::jest(&project_name).as_bytes())?;
+            }
+        } else {
+            let mut test = File::create(format!("tests/{}.js", &project_name))?;
+            if solidity {
+                test.write_all(solidity_template::mocha(&project_name).as_bytes())?;
+            } else {
+                test.write_all(rust_template::mocha(&project_name).as_bytes())?;
+            }
+        }
+
+        let mut deploy = File::create("migrations/deploy.js")?;
+
+        deploy.write_all(rust_template::deploy_script().as_bytes())?;
+    } else {
+        // Build typescript config
+        let mut ts_config = File::create("tsconfig.json")?;
+        ts_config.write_all(psp_template::ts_config(jest).as_bytes())?;
+
+        let mut ts_package_json = File::create("package.json")?;
+        ts_package_json
+            .write_all(psp_template::ts_package_json_psp(jest, &project_name).as_bytes())?;
+
+        let mut deploy = File::create("migrations/deploy.ts")?;
+        deploy.write_all(psp_template::ts_deploy_script().as_bytes())?;
+
+        let mut mocha = File::create(format!("tests/{}.ts", &project_name))?;
+        if solidity {
+            mocha.write_all(solidity_template::ts_mocha(&project_name).as_bytes())?;
+        } else {
+            mocha.write_all(psp_template::ts_mocha_psp(&project_name).as_bytes())?;
+        }
+    }
+
+    let yarn_result = install_node_modules("yarn")?;
+    if !yarn_result.status.success() {
+        println!("Failed yarn install will attempt to npm install");
+        install_node_modules("npm")?;
+    }
+
+    if !no_git {
+        let git_result = std::process::Command::new("git")
+            .arg("init")
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .map_err(|e| anyhow::format_err!("git init failed: {}", e.to_string()))?;
+        if !git_result.status.success() {
+            eprintln!("Failed to automatically initialize a new git repository");
+        }
+    }
+
+    println!("{project_name} initialized");
+
+    Ok(())
+}
+
 fn install_node_modules(cmd: &str) -> Result<std::process::Output> {
     if cfg!(target_os = "windows") {
         std::process::Command::new("cmd")
@@ -780,6 +985,23 @@ fn new_rust_program(name: &str) -> Result<()> {
     xargo_toml.write_all(rust_template::xargo_toml().as_bytes())?;
     let mut lib_rs = File::create(format!("programs/{name}/src/lib.rs"))?;
     lib_rs.write_all(rust_template::lib_rs(name).as_bytes())?;
+    Ok(())
+}
+
+// Creates a new private rust program crate in the current directory with `name`.
+fn new_rust_psp(name: &str) -> Result<()> {
+    if !PathBuf::from("Cargo.toml").exists() {
+        fs::write("Cargo.toml", psp_template::virtual_manifest())?;
+    }
+    fs::create_dir_all(format!("programs/{name}/src/"))?;
+    let mut cargo_toml = File::create(format!("programs/{name}/Cargo.toml"))?;
+    cargo_toml.write_all(psp_template::cargo_toml_psp(name).as_bytes())?;
+    let mut xargo_toml = File::create(format!("programs/{name}/Xargo.toml"))?;
+    xargo_toml.write_all(psp_template::xargo_toml().as_bytes())?;
+    let mut lib_rs = File::create(format!("programs/{name}/src/lib.rs"))?;
+    lib_rs.write_all(psp_template::lib_rs_psp(name).as_bytes())?;
+    let mut processor_rs = File::create(format!("programs/{name}/src/processor.rs"))?;
+    processor_rs.write_all(psp_template::processor_rs_psp(name).as_bytes())?;
     Ok(())
 }
 
