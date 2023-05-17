@@ -22,7 +22,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         .map(|macro_name: &String| {
             let macro_name: proc_macro2::TokenStream = macro_name.parse().unwrap();
             quote! {
-                pub use crate::#macro_name::*;
+                pub use super::#macro_name::*;
             }
         })
         .collect();

@@ -122,7 +122,7 @@ pub fn account(
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::Owner for #account_name #type_gen #where_clause {
                     fn owner() -> Pubkey {
-                        crate::ID
+                        ID // crate::ID
                     }
                 }
             }

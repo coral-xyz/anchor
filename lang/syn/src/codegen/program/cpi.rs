@@ -9,7 +9,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         .ixs
         .iter()
         .map(|ix| {
-            let accounts_ident: proc_macro2::TokenStream = format!("crate::cpi::accounts::{}", &ix.anchor_ident.to_string()).parse().unwrap();
+            let accounts_ident: proc_macro2::TokenStream = format!("super::cpi::accounts::{}", &ix.anchor_ident.to_string()).parse().unwrap();
             let cpi_method = {
                 let ix_variant = generate_ix_variant(ix.raw_method.sig.ident.to_string(), &ix.args);
                 let method_name = &ix.ident;
@@ -22,8 +22,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let (method_ret, maybe_return) = match ret_type.to_string().as_str() {
                     "()" => (quote! {anchor_lang::Result<()> }, quote! { Ok(()) }),
                     _ => (
-                        quote! { anchor_lang::Result<crate::cpi::Return::<#ret_type>> },
-                        quote! { Ok(crate::cpi::Return::<#ret_type> { phantom: crate::cpi::PhantomData }) }
+                        quote! { anchor_lang::Result<super::cpi::Return::<#ret_type>> },
+                        quote! { Ok(super::cpi::Return::<#ret_type> { phantom: super::cpi::PhantomData }) }
                     )
                 };
 
@@ -40,7 +40,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             data.append(&mut ix_data);
                             let accounts = ctx.to_account_metas(None);
                             anchor_lang::solana_program::instruction::Instruction {
-                                program_id: crate::ID,
+                                program_id: super::ID,
                                 accounts,
                                 data,
                             }
@@ -110,7 +110,7 @@ pub fn generate_accounts(program: &Program) -> proc_macro2::TokenStream {
         .map(|macro_name: &String| {
             let macro_name: proc_macro2::TokenStream = macro_name.parse().unwrap();
             quote! {
-                pub use crate::#macro_name::*;
+                pub use super::#macro_name::*;
             }
         })
         .collect();

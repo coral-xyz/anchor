@@ -29,7 +29,7 @@ pub fn idl_accounts_and_functions() -> proc_macro2::TokenStream {
         // works. Namespaces are the root of most of the problem.
         impl anchor_lang::Owner for IdlAccount {
             fn owner() -> Pubkey {
-                crate::ID
+                super::ID
             }
         }
 
