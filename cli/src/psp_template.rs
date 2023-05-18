@@ -586,7 +586,7 @@ pub fn ts_package_json_psp(jest: bool, name: &str) -> String {
         "@coral-xyz/anchor": "^{VERSION}",
         "circomlib": "^2.0.5",
         "circomlibjs": "^0.1.7",
-        "@lightprotocol/zk.js": "^0.3.0"
+        "@lightprotocol/zk.js": "0.3.2-alpha.2"
     }},
     "devDependencies": {{
         "chai": "^4.3.4",
