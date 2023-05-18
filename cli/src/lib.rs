@@ -1873,7 +1873,7 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
 fn get_idl_account(client: &RpcClient, idl_address: &Pubkey) -> Result<IdlAccount> {
     let account = client.get_account(idl_address)?;
     let mut data: &[u8] = &account.data;
-    return AccountDeserialize::try_deserialize(&mut data).map_err(|e| anyhow!("{:?}", e));
+    AccountDeserialize::try_deserialize(&mut data).map_err(|e| anyhow!("{:?}", e))
 }
 
 fn idl_init(cfg_override: &ConfigOverride, program_id: Pubkey, idl_filepath: String) -> Result<()> {
