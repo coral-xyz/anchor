@@ -885,7 +885,7 @@ include "../node_modules/@lightprotocol/zk.js/node_modules/circomlib/circuits/co
 // will create a new instance of the circuit
 #[instance]
 {{
-    fileName: {},
+    fileName: {}_main,
     config(),
     nrAppUtoxs: 1,
     publicInputs: [currentSlot]
@@ -912,7 +912,7 @@ template {}() {{
 // throw error when there is no #[instance]
 // throw error when there is no #[lightTransaction(verifierTwo)]
 "#,
-        name.to_upper_camel_case(),
+        name.to_lower_camel_case(),
         name.to_lower_camel_case()
     )
 }
