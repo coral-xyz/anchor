@@ -586,7 +586,7 @@ pub fn ts_package_json_psp(jest: bool, name: &str) -> String {
         "@coral-xyz/anchor": "^{VERSION}",
         "circomlib": "^2.0.5",
         "circomlibjs": "^0.1.7",
-        "light-sdk": "git+https://github.com/lightprotocol/light-protocol.git#v0.3.0"
+        "@lightprotocol/zk.js": "^0.3.0"
     }},
     "devDependencies": {{
         "chai": "^4.3.4",
@@ -628,7 +628,7 @@ import {{
     verifierProgramStorageProgramId,
     verifierProgramTwoProgramId,
     ProgramParameters
-}} from "light-sdk";
+}} from "@lightprotocol/zk.js";
 import {{
   Keypair as SolanaKeypair,
   SystemProgram,
@@ -876,11 +876,11 @@ anchor.workspace.{} = new anchor.Program({}, new PublicKey("{}"), provider);
 pub fn circuit_psp(name: &str) -> String {
     format!(
         r#"pragma circom 2.1.4;
-include "../node_modules/light-sdk/node_modules/circomlib/circuits/poseidon.circom";
-include "../node_modules/light-sdk/circuit-lib/merkleProof.circom";
-include "../node_modules/light-sdk/circuit-lib/keypair.circom";
-include "../node_modules/light-sdk/node_modules/circomlib/circuits/gates.circom";
-include "../node_modules/light-sdk/node_modules/circomlib/circuits/comparators.circom";
+include "../node_modules/@lightprotocol/zk.js/node_modules/circomlib/circuits/poseidon.circom";
+include "../node_modules/@lightprotocol/zk.js/circuit-lib/merkleProof.circom";
+include "../node_modules/@lightprotocol/zk.js/circuit-lib/keypair.circom";
+include "../node_modules/@lightprotocol/zk.js/node_modules/circomlib/circuits/gates.circom";
+include "../node_modules/@lightprotocol/zk.js/node_modules/circomlib/circuits/comparators.circom";
 
 // will create a new instance of the circuit
 #[instance]
