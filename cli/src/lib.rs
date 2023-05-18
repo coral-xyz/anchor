@@ -993,6 +993,9 @@ fn new_rust_psp(name: &str) -> Result<()> {
     if !PathBuf::from("Cargo.toml").exists() {
         fs::write("Cargo.toml", psp_template::virtual_manifest())?;
     }
+    fs::create_dir_all(".devcontainer")?;
+    let mut devcontainer = File::create(".devcontainer/devcontainer.json")?;
+    devcontainer.write_all(psp_template::devcontainer().as_bytes())?;
     fs::create_dir_all(format!("programs/{name}/src/"))?;
     let mut cargo_toml = File::create(format!("programs/{name}/Cargo.toml"))?;
     cargo_toml.write_all(psp_template::cargo_toml_psp(name).as_bytes())?;

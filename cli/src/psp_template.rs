@@ -12,6 +12,41 @@ pub fn default_program_id() -> Pubkey {
         .unwrap()
 }
 
+pub fn devcontainer() -> &'static str {
+    r#"// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/rust
+{
+	"name": "Light Protocol",
+	"image": "ghcr.io/lightprotocol/devcontainer:main",
+	"mounts": [
+		// Solana keypair.
+		{
+			"source": "lightprotocol-solana-config-${devcontainerId}",
+			"target": "/home/node/.config/solana",
+			"type": "volume"
+		}
+	],
+	// Use 'mounts' to make the cargo cache persistent in a Docker Volume.
+	// "mounts": [
+	// 	{
+	// 		"source": "devcontainer-cargo-cache-${devcontainerId}",
+	// 		"target": "/usr/local/cargo",
+	// 		"type": "volume"
+	// 	}
+	// ]
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {},
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "rustc --version",
+	// Configure tool-specific properties.
+	// "customizations": {},
+	"remoteUser": "node"
+}
+"#
+}
+
 pub fn virtual_manifest() -> &'static str {
     r#"[workspace]
 members = [
