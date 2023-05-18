@@ -666,12 +666,16 @@ fn parse_account_derives(ctx: &CrateContext) -> HashMap<String, AccountsStruct> 
 fn parse_consts(ctx: &CrateContext) -> Vec<&syn::ItemConst> {
     ctx.consts()
         .filter(|item_strct| {
-            for attr in &item_strct.attrs {
-                if attr.path.segments.last().unwrap().ident == "constant" {
-                    return true;
-                }
+            // TODO(vadorovsky): Find an another way to recognize consts for
+            // which we should generate IDL.
+            if item_strct.vis
+                != syn::Visibility::Public(syn::VisPublic {
+                    pub_token: Default::default(),
+                })
+            {
+                return false;
             }
-            false
+            true
         })
         .collect()
 }
