@@ -876,11 +876,11 @@ anchor.workspace.{} = new anchor.Program({}, new PublicKey("{}"), provider);
 pub fn circuit_psp(name: &str) -> String {
     format!(
         r#"pragma circom 2.1.4;
-include "../node_modules/@lightprotocol/zk.js/node_modules/circomlib/circuits/poseidon.circom";
+include "../node_modules/circomlib/circuits/poseidon.circom";
 include "../node_modules/@lightprotocol/zk.js/circuit-lib/merkleProof.circom";
 include "../node_modules/@lightprotocol/zk.js/circuit-lib/keypair.circom";
-include "../node_modules/@lightprotocol/zk.js/node_modules/circomlib/circuits/gates.circom";
-include "../node_modules/@lightprotocol/zk.js/node_modules/circomlib/circuits/comparators.circom";
+include "../node_modules/circomlib/circuits/gates.circom";
+include "../node_modules/circomlib/circuits/comparators.circom";
 
 // will create a new instance of the circuit
 #[instance]
