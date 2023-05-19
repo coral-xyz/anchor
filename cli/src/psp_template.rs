@@ -64,6 +64,7 @@ codegen-units = 1
 
 [patch.crates-io]
 solana-program = { git = "https://github.com/Lightprotocol/solana", branch="v1.15" }
+solana-zk-token-sdk = { git = "https://github.com/Lightprotocol/solana", branch="v1.15" }
 winnow = { git = "https://github.com/winnow-rs/winnow", tag="v0.4.1" }
 "#
 }
@@ -609,8 +610,6 @@ pub fn ts_package_json_psp(jest: bool, name: &str) -> String {
 pub fn ts_mocha_psp(name: &str) -> String {
     format!(
         r#"import * as anchor from "@coral-xyz/anchor";
-
-import * as anchor from "@coral-xyz/anchor";
 import {{assert}} from "chai";
 import {{
     Utxo,
@@ -885,7 +884,7 @@ include "../node_modules/circomlib/circuits/comparators.circom";
 // will create a new instance of the circuit
 #[instance]
 {{
-    fileName: {}_main,
+    fileName: {},
     config(),
     nrAppUtoxs: 1,
     publicInputs: [currentSlot]
