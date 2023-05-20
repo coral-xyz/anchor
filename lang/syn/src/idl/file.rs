@@ -173,6 +173,163 @@ pub fn parse(
     }))
 }
 
+// Parse an entire interface file.
+pub fn parse_all(
+    filename: impl AsRef<Path>,
+    version: String,
+    seeds_feature: bool,
+    no_docs: bool,
+    safety_checks: bool,
+) -> Result<Vec<Result<Option<Idl>>>> {
+    let ctx = CrateContext::parse(&filename)?;
+    if safety_checks {
+        ctx.safety_checks()?;
+    }
+    Ok(parse_program_mods(&ctx)
+        .into_iter()
+        .map(|program_mod| {
+            let mut p = program::parse(program_mod)?;
+
+            if no_docs {
+                p.docs = None;
+                for ix in &mut p.ixs {
+                    ix.docs = None;
+                }
+            }
+
+            let accs = parse_account_derives(&ctx);
+
+            let error = parse_error_enum(&ctx).map(|mut e| error::parse(&mut e, None));
+            let error_codes = error.as_ref().map(|e| {
+                e.codes
+                    .iter()
+                    .map(|code| IdlErrorCode {
+                        code: ERROR_CODE_OFFSET + code.id,
+                        name: code.ident.to_string(),
+                        msg: code.msg.clone(),
+                    })
+                    .collect::<Vec<IdlErrorCode>>()
+            });
+
+            let instructions = p
+                .ixs
+                .iter()
+                .map(|ix| {
+                    let args = ix
+                        .args
+                        .iter()
+                        .map(|arg| {
+                            let doc = if !no_docs {
+                                docs::parse(&arg.raw_arg.attrs)
+                            } else {
+                                None
+                            };
+                            IdlField {
+                                name: arg.name.to_string().to_mixed_case(),
+                                docs: doc,
+                                ty: to_idl_type(&ctx, &arg.raw_arg.ty),
+                            }
+                        })
+                        .collect::<Vec<_>>();
+                    // todo: don't unwrap
+                    let accounts_strct = accs.get(&ix.anchor_ident.to_string()).unwrap();
+                    let accounts =
+                        idl_accounts(&ctx, accounts_strct, &accs, seeds_feature, no_docs);
+                    let ret_type_str = ix.returns.ty.to_token_stream().to_string();
+                    let returns = match ret_type_str.as_str() {
+                        "()" => None,
+                        _ => Some(ret_type_str.parse().unwrap()),
+                    };
+                    IdlInstruction {
+                        name: ix.ident.to_string().to_mixed_case(),
+                        docs: ix.docs.clone(),
+                        accounts,
+                        args,
+                        returns,
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            let events = parse_events(&ctx)
+                .iter()
+                .map(|e: &&syn::ItemStruct| {
+                    let fields = match &e.fields {
+                        syn::Fields::Named(n) => n,
+                        _ => panic!("Event fields must be named"),
+                    };
+                    let fields = fields
+                        .named
+                        .iter()
+                        .map(|f: &syn::Field| {
+                            let index = match f.attrs.get(0) {
+                                None => false,
+                                Some(i) => parser::tts_to_string(&i.path) == "index",
+                            };
+                            IdlEventField {
+                                name: f.ident.clone().unwrap().to_string().to_mixed_case(),
+                                ty: to_idl_type(&ctx, &f.ty),
+                                index,
+                            }
+                        })
+                        .collect::<Vec<IdlEventField>>();
+
+                    IdlEvent {
+                        name: e.ident.to_string(),
+                        fields,
+                    }
+                })
+                .collect::<Vec<IdlEvent>>();
+
+            // All user defined types.
+            let mut accounts = vec![];
+            let mut types = vec![];
+            let ty_defs = parse_ty_defs(&ctx, no_docs)?;
+
+            let account_structs = parse_accounts(&ctx);
+            let account_names: HashSet<String> = account_structs
+                .iter()
+                .map(|a| a.ident.to_string())
+                .collect::<HashSet<_>>();
+
+            let error_name = error.map(|e| e.name).unwrap_or_else(|| "".to_string());
+
+            // All types that aren't in the accounts section, are in the types section.
+            for ty_def in ty_defs {
+                // Don't add the error type to the types or accounts sections.
+                if ty_def.name != error_name {
+                    if account_names.contains(&ty_def.name) {
+                        accounts.push(ty_def);
+                    } else if !events.iter().any(|e| e.name == ty_def.name) {
+                        types.push(ty_def);
+                    }
+                }
+            }
+
+            let constants = parse_consts(&ctx)
+                .iter()
+                .map(|c: &&syn::ItemConst| to_idl_const(c))
+                .collect::<Vec<IdlConst>>();
+
+            Ok(Some(Idl {
+                version: version.clone(),
+                name: p.name.to_string(),
+                docs: p.docs.clone(),
+                instructions,
+                types,
+                accounts,
+                events: if events.is_empty() {
+                    None
+                } else {
+                    Some(events)
+                },
+                errors: error_codes,
+                metadata: None,
+                constants,
+            }))
+        })
+        .collect::<Vec<_>>())
+}
+
 // Parse the main program mod.
 fn parse_program_mod(ctx: &CrateContext) -> Option<syn::ItemMod> {
     let root = ctx.root_module();
@@ -197,6 +354,30 @@ fn parse_program_mod(ctx: &CrateContext) -> Option<syn::ItemMod> {
         return None;
     }
     Some(mods[0].clone())
+}
+
+fn parse_program_mods(ctx: &CrateContext) -> Vec<syn::ItemMod> {
+    ctx.modules()
+        .flat_map(|module| {
+            module
+                .items()
+                .filter_map(|i| match i {
+                    syn::Item::Mod(item_mod) => {
+                        let mod_count = item_mod
+                            .attrs
+                            .iter()
+                            .filter(|attr| attr.path.segments.last().unwrap().ident == "program")
+                            .count();
+                        if mod_count != 1 {
+                            return None;
+                        }
+                        Some(item_mod.clone())
+                    }
+                    _ => None,
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>()
 }
 
 fn parse_error_enum(ctx: &CrateContext) -> Option<syn::ItemEnum> {

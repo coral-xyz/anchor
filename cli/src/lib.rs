@@ -1456,16 +1456,16 @@ fn _build_rust_cwd(
     }
 
     // Always assume idl is located at src/lib.rs.
-    if let Some(idl) = extract_idl(cfg, "src/lib.rs", skip_lint, false)? {
+    for idl in extract_idl_all(cfg, "src/lib.rs", skip_lint, false)?.into_iter() {
         // JSON out path.
         let out = match idl_out {
             None => PathBuf::from(".").join(&idl.name).with_extension("json"),
-            Some(o) => PathBuf::from(&o.join(&idl.name).with_extension("json")),
+            Some(ref o) => PathBuf::from(&o.join(&idl.name).with_extension("json")),
         };
         // TS out path.
         let ts_out = match idl_ts_out {
             None => PathBuf::from(".").join(&idl.name).with_extension("ts"),
-            Some(o) => PathBuf::from(&o.join(&idl.name).with_extension("ts")),
+            Some(ref o) => PathBuf::from(&o.join(&idl.name).with_extension("ts")),
         };
 
         // Write out the JSON file.
@@ -1827,6 +1827,30 @@ fn extract_idl(
         no_docs,
         !(cfg.features.skip_lint || skip_lint),
     )
+}
+
+fn extract_idl_all(
+    cfg: &WithPath<Config>,
+    file: &str,
+    skip_lint: bool,
+    no_docs: bool,
+) -> Result<Vec<Idl>> {
+    let file = shellexpand::tilde(file);
+    let manifest_from_path = std::env::current_dir()?.join(PathBuf::from(&*file).parent().unwrap());
+    let cargo = Manifest::discover_from_path(manifest_from_path)?
+        .ok_or_else(|| anyhow!("Cargo.toml not found"))?;
+    anchor_syn::idl::file::parse_all(
+        &*file,
+        cargo.version(),
+        cfg.features.seeds,
+        no_docs,
+        !(cfg.features.skip_lint || skip_lint),
+    )
+    .map(|idls| {
+        idls.into_iter()
+            .filter_map(|idl| if let Ok(val) = idl { val } else { None })
+            .collect::<Vec<_>>()
+    })
 }
 
 fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
