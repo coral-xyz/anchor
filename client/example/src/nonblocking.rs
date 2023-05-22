@@ -1,7 +1,7 @@
 use anchor_client::solana_sdk::pubkey::Pubkey;
 use anchor_client::solana_sdk::signature::{Keypair, Signer};
 use anchor_client::solana_sdk::system_instruction;
-use anchor_client::{Client, Cluster, EventContext};
+use anchor_client::{Client, Cluster};
 use anyhow::Result;
 use clap::Parser;
 use solana_sdk::commitment_config::CommitmentConfig;
@@ -180,13 +180,13 @@ pub async fn events<C: Deref<Target = impl Signer> + Clone>(
     let program = client.program(pid);
 
     let (sender, mut receiver) = mpsc::unbounded_channel();
-    let mut event_handler = program.create_event_handler().await?;
-
-    let event_id = event_handler.subscribe(move |_ctx: &EventContext, event: MyEvent| {
-        if sender.send(event).is_err() {
-            println!("Error while transferring the event.")
-        }
-    })?;
+    let event_unsubscriber = program
+        .on(move |_, event: MyEvent| {
+            if sender.send(event).is_err() {
+                println!("Error while transferring the event.")
+            }
+        })
+        .await?;
 
     sleep(Duration::from_millis(1000)).await;
 
@@ -200,7 +200,7 @@ pub async fn events<C: Deref<Target = impl Signer> + Clone>(
     assert_eq!(event.data, 5);
     assert_eq!(event.label, "hello".to_string());
 
-    event_handler.unsubscribe(event_id).await;
+    event_unsubscriber.unsubscribe().await;
 
     println!("Events success!");
 

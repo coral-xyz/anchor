@@ -3,12 +3,10 @@ use anyhow::Result;
 use clap::Parser;
 
 #[cfg(not(feature = "async"))]
-#[path = "blocking.rs"]
-mod lib;
+mod blocking;
 
 #[cfg(feature = "async")]
-#[path = "nonblocking.rs"]
-mod lib;
+mod nonblocking;
 
 #[derive(Parser, Debug)]
 pub struct Opts {
@@ -30,11 +28,11 @@ pub struct Opts {
 // deployed at the addresses given by the CLI args.
 #[cfg(not(feature = "async"))]
 fn main() -> Result<()> {
-    lib::main()
+    blocking::main()
 }
 
 #[cfg(feature = "async")]
 #[tokio::main]
 async fn main() -> Result<()> {
-    lib::main().await
+    nonblocking::main().await
 }
