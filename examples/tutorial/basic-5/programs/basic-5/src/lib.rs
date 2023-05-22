@@ -53,7 +53,7 @@ pub mod basic_5 {
 pub struct Create<'info> {
     // init means to create action_state account
     // bump to use unique address for action_state account
-    #[account(init, payer=user, space=ActionState::LEN, seeds=[b"action-state".as_ref(), user.key().as_ref()], bump)]
+    #[account(init, payer=user, space= 8 + ActionState::INIT_SPACE, seeds=[b"action-state".as_ref(), user.key().as_ref()], bump)]
     pub action_state: Account<'info, ActionState>,
     // mut makes it changeble (mutable)
     #[account(mut)]
@@ -102,17 +102,8 @@ pub struct Reset<'info> {
 }
 
 #[account]
+#[derive(InitSpace)]
 pub struct ActionState {
     pub user: Pubkey,
     pub action: u8,
-}
-
-const DISCRIMINATOR_LENGTH: usize = 8;
-const PUBLIC_KEY_LENGTH: usize = 32;
-const U8_LENGTH: usize = 1;
-
-impl ActionState {
-    const LEN: usize = DISCRIMINATOR_LENGTH +
-                       PUBLIC_KEY_LENGTH +
-                       U8_LENGTH;
 }
