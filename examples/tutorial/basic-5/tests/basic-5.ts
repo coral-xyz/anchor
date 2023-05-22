@@ -1,6 +1,6 @@
-import * as anchor from "@project-serum/anchor";
-import { Program } from "@project-serum/anchor";
-import { Transaction, TransactionInstruction, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
+import * as anchor from "@coral-xyz/anchor";
+import { Program } from "@coral-xyz/anchor";
+import { TransactionInstruction, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
 import { Basic5 } from "../target/types/basic_5";
 
 describe("basic-5", () => {
@@ -11,7 +11,7 @@ describe("basic-5", () => {
   const program = anchor.workspace.Basic5 as Program<Basic5>;
   const user = anchor.web3.Keypair.generate();
 
-  let [action_state] = anchor.web3.PublicKey.findProgramAddressSync(
+  let [actionState] = anchor.web3.PublicKey.findProgramAddressSync(  
     [anchor.utils.bytes.utf8.encode("action-state"),
     user.publicKey.toBuffer()
     ],
@@ -32,46 +32,55 @@ describe("basic-5", () => {
   });
 
   it("basic-5: Robot actions!", async () => {
+    // First instruction: set up the Solana accounts to be used
+    const instructionOne = await program.methods
+        .create()
+        .accounts({
+          actionState: actionState,
+          user: user.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .instruction();
+    // Second instruction: Invoke the Robot to walk
+    const instructionTwo = await program.methods
+        .walk()
+        .accounts({
+          actionState: actionState,
+          user: user.publicKey,
+        })
+        .instruction();
+    // Third instruction: Invoke the Robot to run    
+    const instructionThree = await program.methods
+        .run()
+        .accounts({
+          actionState: actionState,
+          user: user.publicKey,
+        })
+        .instruction();
+    // Fourth instruction: Invoke the Robot to jump    
+    const instructionFour = await program.methods
+        .jump()
+        .accounts({
+          actionState: actionState,
+          user: user.publicKey,
+        })
+        .instruction();
+    // Fifth instruction: Reset actions of the Robot    
+    const instructionFive = await program.methods
+        .reset()
+        .accounts({
+          actionState: actionState,
+          user: user.publicKey,
+        })
+        .instruction();
 
     // Array of instructions
     const instructions: TransactionInstruction[] = [
-      // First instruction: set up the Solana accounts to be used
-      program.instruction.create({
-        accounts: {
-          actionState: action_state,
-          user: user.publicKey,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        },
-      }),
-      // Second instruction: Invoke the Robot to walk
-      program.instruction.walk({
-        accounts: {
-          actionState: action_state,
-          user: user.publicKey,
-        },
-      }),
-      // Third instruction: Invoke the Robot to run
-      program.instruction.run({
-        accounts: {
-          actionState: action_state,
-          user: user.publicKey,
-        },
-      }),
-      // Fourth instruction: Invoke the Robot to jump
-      program.instruction.jump({
-        accounts: {
-          actionState: action_state,
-          user: user.publicKey,
-        },
-      }),
-      // Fifth instruction: Reset actions of the Robot
-      program.instruction.reset({
-        accounts: {
-          actionState: action_state,
-          user: user.publicKey,
-        },
-      }),
-
+      instructionOne,
+      instructionTwo,
+      instructionThree,
+      instructionFour,
+      instructionFive,
     ];
 
     createAndSendV0Tx(instructions);
@@ -109,7 +118,7 @@ describe("basic-5", () => {
       if (confirmation.value.err) { throw new Error("   ❌ - Transaction not confirmed.") }
       //console.log('🎉 Transaction Succesfully Confirmed!', '\n', `https://explorer.solana.com/tx/${txid}?cluster=devnet`);
       console.log('🎉 Transaction Succesfully Confirmed!');
-      let result = await program.account.actionState.fetch(action_state);
+      let result = await program.account.actionState.fetch(actionState);
       console.log("robot action state details: ", result);
   }
 
