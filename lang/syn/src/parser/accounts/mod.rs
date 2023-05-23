@@ -25,8 +25,7 @@ pub fn parse(accounts_struct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
         .attrs
         .iter()
         .filter_map(|attr| attr.path.get_ident())
-        .find(|ident| *ident == "event_cpi")
-        .is_some();
+        .any(|ident| *ident == "event_cpi");
     let accounts_struct = if is_event_cpi {
         add_event_cpi_accounts(accounts_struct)?
     } else {
