@@ -1,6 +1,3 @@
-[features]
-seeds = false
-
 [provider]
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"
