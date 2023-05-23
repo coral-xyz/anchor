@@ -1,6 +1,6 @@
 extern crate proc_macro;
 
-use anchor_syn::parser::accounts::add_event_cpi_accounts;
+use anchor_syn::parser::accounts::{add_event_cpi_accounts, EventAuthority};
 use quote::quote;
 use syn::parse_macro_input;
 
@@ -130,31 +130,37 @@ pub fn emit(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 pub fn emit_cpi(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let event_struct = parse_macro_input!(input as syn::Expr);
 
+    let authority = EventAuthority::get();
+    let authority_name = authority.name_token_stream();
+    let authority_name_str = authority.name;
+    let authority_seeds = authority.seeds;
+
     proc_macro::TokenStream::from(quote! {
-        let __event_authority_info = ctx.accounts.event_authority.to_account_info();
-        let __event_authority_bump = *ctx.bumps.get("event_authority").unwrap();
-        let __program_info = ctx.accounts.program.to_account_info();
+        {
+            let authority_info = ctx.accounts.#authority_name.to_account_info();
+            let authority_bump = *ctx.bumps.get(#authority_name_str).unwrap();
 
-        let __disc = crate::event::EVENT_IX_TAG_LE;
-        let __inner_data: Vec<u8> = anchor_lang::Event::data(&#event_struct);
-        let __ix_data: Vec<u8> = __disc.into_iter().chain(__inner_data.into_iter()).collect();
+            let disc = anchor_lang::event::EVENT_IX_TAG_LE;
+            let inner_data = anchor_lang::Event::data(&#event_struct);
+            let ix_data: Vec<u8> = disc.into_iter().chain(inner_data.into_iter()).collect();
 
-        let __ix = anchor_lang::solana_program::instruction::Instruction::new_with_bytes(
-            *__program_info.key,
-            &__ix_data,
-            vec![
-                anchor_lang::solana_program::instruction::AccountMeta::new_readonly(
-                    *__event_authority_info.key,
-                    true,
-                ),
-            ],
-        );
-        anchor_lang::solana_program::program::invoke_signed(
-            &__ix,
-            &[__program_info, __event_authority_info],
-            &[&[b"__event_authority", &[__event_authority_bump]]],
-        )
-        .map_err(anchor_lang::error::Error::from)?;
+            let ix = anchor_lang::solana_program::instruction::Instruction::new_with_bytes(
+                crate::ID,
+                &ix_data,
+                vec![
+                    anchor_lang::solana_program::instruction::AccountMeta::new_readonly(
+                        *authority_info.key,
+                        true,
+                    ),
+                ],
+            );
+            anchor_lang::solana_program::program::invoke_signed(
+                &ix,
+                &[authority_info],
+                &[&[#authority_seeds, &[authority_bump]]],
+            )
+            .map_err(anchor_lang::error::Error::from)?;
+        }
     })
 }
 

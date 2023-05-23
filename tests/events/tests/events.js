@@ -6,7 +6,7 @@ describe("Events", () => {
   anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.Events;
 
-  xdescribe("Normal events", () => {
+  describe("Normal event", () => {
     it("Single event works", async () => {
       let listener = null;
 
@@ -57,7 +57,7 @@ describe("Events", () => {
     });
   });
 
-  describe("CPI events", () => {
+  describe("Self-CPI event", () => {
     it("Works without accounts being specified", async () => {
       const tx = await program.methods.testEventCpi().transaction();
       const config = {
@@ -106,8 +106,8 @@ describe("Events", () => {
 
       try {
         await program.provider.sendAndConfirm(tx, []);
-      } catch {
-        return;
+      } catch (e) {
+        if (e.logs.some((log) => log.includes("ConstraintSigner"))) return;
       }
 
       throw new Error("Was able to invoke the self-CPI instruction");

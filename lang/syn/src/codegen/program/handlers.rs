@@ -1,6 +1,6 @@
-use crate::codegen::program::common::*;
 use crate::program_codegen::idl::idl_accounts_and_functions;
 use crate::Program;
+use crate::{codegen::program::common::*, parser::accounts::EventAuthority};
 use heck::CamelCase;
 use quote::{quote, ToTokens};
 
@@ -92,10 +92,36 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
     };
 
     let non_inlined_event: proc_macro2::TokenStream = {
+        let authority = EventAuthority::get();
+        let authority_name = authority.name;
+        let authority_seeds = authority.seeds;
+
         quote! {
             #[inline(never)]
             #[cfg(not(feature = "no-cpi-events"))]
-            pub fn __event_dispatch(program_id: &Pubkey, accounts: &[AccountInfo], event_data: &[u8]) -> anchor_lang::Result<()> {
+            pub fn __event_dispatch(
+                program_id: &Pubkey,
+                accounts: &[AccountInfo],
+                event_data: &[u8],
+            ) -> anchor_lang::Result<()> {
+                let given_event_authority = next_account_info(&mut accounts.iter())?;
+                if !given_event_authority.is_signer {
+                    return Err(anchor_lang::error::Error::from(
+                        anchor_lang::error::ErrorCode::ConstraintSigner,
+                    )
+                    .with_account_name(#authority_name));
+                }
+
+                let (expected_event_authority, _) =
+                    Pubkey::find_program_address(&[#authority_seeds], &program_id);
+                if given_event_authority.key() != expected_event_authority {
+                    return Err(anchor_lang::error::Error::from(
+                        anchor_lang::error::ErrorCode::ConstraintSeeds,
+                    )
+                    .with_account_name(#authority_name)
+                    .with_pubkeys((given_event_authority.key(), expected_event_authority)));
+                }
+
                 Ok(())
             }
         }

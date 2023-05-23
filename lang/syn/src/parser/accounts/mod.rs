@@ -55,6 +55,30 @@ pub fn parse(accounts_struct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
     ))
 }
 
+/// This struct is used to keep the authority account information in sync.
+pub struct EventAuthority {
+    /// Account name of the event authority
+    pub name: &'static str,
+    /// Seeds expression of the event authority
+    pub seeds: proc_macro2::TokenStream,
+}
+
+impl EventAuthority {
+    /// Returns the account name and the seeds(in order) of the log event authority.
+    pub fn get() -> Self {
+        Self {
+            name: "event_authority",
+            seeds: quote! {b"__event_authority"},
+        }
+    }
+
+    /// Returns the name without surrounding quotes.
+    pub fn name_token_stream(&self) -> proc_macro2::TokenStream {
+        let name_token_stream = syn::parse_str::<syn::Expr>(self.name).unwrap();
+        quote! {#name_token_stream}
+    }
+}
+
 /// Add necessary event CPI accounts to the given accounts struct.
 pub fn add_event_cpi_accounts(accounts_struct: &syn::ItemStruct) -> ParseResult<syn::ItemStruct> {
     let syn::ItemStruct {
@@ -90,16 +114,19 @@ pub fn add_event_cpi_accounts(accounts_struct: &syn::ItemStruct) -> ParseResult<
         .map(|_| quote! {#generics})
         .unwrap_or(quote! {<'info>});
 
+    let authority = EventAuthority::get();
+    let authority_name = authority.name_token_stream();
+    let authority_seeds = authority.seeds;
+
     let accounts_struct = quote! {
         #attrs
         #vis #struct_token #ident #generics {
             #fields
 
-            /// CHECK: Only the event authority can call the CPI event
-            #[account(seeds = [b"__event_authority"], bump)]
-            pub event_authority: AccountInfo<#info_lifetime>,
-            /// CHECK: The program itself
-            #[account(address = crate::ID)]
+            /// CHECK: Only the event authority can call self-CPI
+            #[account(seeds = [#authority_seeds], bump)]
+            pub #authority_name: AccountInfo<#info_lifetime>,
+            /// CHECK: Self-CPI will fail if the program is not the current program
             pub program: AccountInfo<#info_lifetime>,
         }
     };
