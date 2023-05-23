@@ -15,7 +15,7 @@ pub mod basic_5 {
 
         Ok(())
     }
-    
+
     pub fn walk(ctx: Context<Walk>) -> Result<()> {
         let action_state = &mut ctx.accounts.action_state;
         // Lets change the robot action state to "walk"
@@ -23,7 +23,7 @@ pub mod basic_5 {
 
         Ok(())
     }
-    
+
     pub fn run(ctx: Context<Run>) -> Result<()> {
         let action_state = &mut ctx.accounts.action_state;
         // Lets change the robot action state to "run"
@@ -31,12 +31,12 @@ pub mod basic_5 {
 
         Ok(())
     }
-    
+
     pub fn jump(ctx: Context<Jump>) -> Result<()> {
         let action_state = &mut ctx.accounts.action_state;
         // Lets change the robot action state to "jump"
         action_state.action = 3;
-        
+
         Ok(())
     }
 
@@ -44,7 +44,7 @@ pub mod basic_5 {
         let action_state = &mut ctx.accounts.action_state;
         // Lets reset the robot action states
         action_state.action = 0;
-        
+
         Ok(())
     }
 }
@@ -53,7 +53,13 @@ pub mod basic_5 {
 pub struct Create<'info> {
     // init means to create action_state account
     // bump to use unique address for action_state account
-    #[account(init, payer=user, space= 8 + ActionState::INIT_SPACE, seeds=[b"action-state".as_ref(), user.key().as_ref()], bump)]
+    #[account(
+        init,
+        payer = user,
+        space = 8 + ActionState::INIT_SPACE,
+        seeds = [b"action-state".as_ref(), user.key().as_ref()],
+        bump
+    )]
     pub action_state: Account<'info, ActionState>,
     // mut makes it changeble (mutable)
     #[account(mut)]
