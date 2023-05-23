@@ -1,5 +1,4 @@
 const anchor = require("@coral-xyz/anchor");
-const { bs58, base64 } = anchor.utils.bytes;
 const { assert } = require("chai");
 
 describe("events", () => {
@@ -59,17 +58,7 @@ describe("events", () => {
   it("Self-CPI events work", async () => {
     await sleep(200);
 
-    const tx = await program.methods
-      .testEventCpi()
-      .accounts({
-        program: program.programId,
-        eventAuthority: anchor.web3.PublicKey.findProgramAddressSync(
-          [Buffer.from("__event_authority")],
-          program.programId
-        )[0],
-      })
-      .transaction();
-
+    const tx = await program.methods.testEventCpi().transaction();
     const config = {
       commitment: "confirmed",
     };
