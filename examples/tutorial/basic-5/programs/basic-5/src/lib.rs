@@ -57,7 +57,7 @@ pub struct Create<'info> {
         init,
         payer = user,
         space = 8 + ActionState::INIT_SPACE,
-        seeds = [b"action-state".as_ref(), user.key().as_ref()],
+        seeds = [b"action-state", user.key().as_ref()],
         bump
     )]
     pub action_state: Account<'info, ActionState>,

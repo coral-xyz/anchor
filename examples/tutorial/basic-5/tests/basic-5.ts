@@ -37,8 +37,8 @@ describe("basic-5", () => {
   });
 
   it("basic-5: Robot actions!", async () => {
-    // First instruction: set up the Solana accounts to be used
-    const instructionOne = await program.methods
+    // Create instruction: set up the Solana accounts to be used
+    const createInstruction = await program.methods
       .create()
       .accounts({
         actionState: actionState,
@@ -46,32 +46,32 @@ describe("basic-5", () => {
         systemProgram: anchor.web3.SystemProgram.programId,
       })
       .instruction();
-    // Second instruction: Invoke the Robot to walk
-    const instructionTwo = await program.methods
+    // Walk instruction: Invoke the Robot to walk
+    const walkInstruction = await program.methods
       .walk()
       .accounts({
         actionState: actionState,
         user: user.publicKey,
       })
       .instruction();
-    // Third instruction: Invoke the Robot to run
-    const instructionThree = await program.methods
+    // Run instruction: Invoke the Robot to run
+    const runInstruction = await program.methods
       .run()
       .accounts({
         actionState: actionState,
         user: user.publicKey,
       })
       .instruction();
-    // Fourth instruction: Invoke the Robot to jump
-    const instructionFour = await program.methods
+    // Jump instruction: Invoke the Robot to jump
+    const jumpInstruction = await program.methods
       .jump()
       .accounts({
         actionState: actionState,
         user: user.publicKey,
       })
       .instruction();
-    // Fifth instruction: Reset actions of the Robot
-    const instructionFive = await program.methods
+    // Reset instruction: Reset actions of the Robot
+    const resetInstruction = await program.methods
       .reset()
       .accounts({
         actionState: actionState,
@@ -81,11 +81,11 @@ describe("basic-5", () => {
 
     // Array of instructions
     const instructions: TransactionInstruction[] = [
-      instructionOne,
-      instructionTwo,
-      instructionThree,
-      instructionFour,
-      instructionFive,
+      createInstruction,
+      walkInstruction,
+      runInstruction,
+      jumpInstruction,
+      resetInstruction,
     ];
 
     createAndSendV0Tx(instructions);
