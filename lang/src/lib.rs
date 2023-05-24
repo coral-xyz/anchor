@@ -49,7 +49,7 @@ pub use anchor_attribute_account::{account, declare_id, zero_copy};
 pub use anchor_attribute_constant::constant;
 pub use anchor_attribute_error::*;
 pub use anchor_attribute_event::{emit, event};
-#[cfg(not(feature = "no-cpi-events"))]
+#[cfg(feature = "event-cpi")]
 pub use anchor_attribute_event::{emit_cpi, event_cpi};
 pub use anchor_attribute_program::program;
 pub use anchor_derive_accounts::Accounts;
@@ -302,7 +302,7 @@ pub mod prelude {
         AccountsClose, AccountsExit, AnchorDeserialize, AnchorSerialize, Id, InitSpace, Key, Owner,
         ProgramData, Result, Space, ToAccountInfo, ToAccountInfos, ToAccountMetas,
     };
-    #[cfg(not(feature = "no-cpi-events"))]
+    #[cfg(feature = "event-cpi")]
     pub use super::{emit_cpi, event_cpi};
     pub use anchor_attribute_error::*;
     pub use borsh;

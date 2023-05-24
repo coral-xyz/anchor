@@ -45,8 +45,8 @@ pub enum ErrorCode {
     IdlAccountNotEmpty,
 
     // Event instructions
-    /// 1500 - The program was compiled without event instructions
-    #[msg("The program was compiled without event instructions")]
+    /// 1500 - The program was compiled without `event-cpi` feature
+    #[msg("The program was compiled without `event-cpi` feature")]
     EventInstructionStub = 1500,
 
     // Constraints

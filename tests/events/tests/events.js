@@ -108,6 +108,7 @@ describe("Events", () => {
         await program.provider.sendAndConfirm(tx, []);
       } catch (e) {
         if (e.logs.some((log) => log.includes("ConstraintSigner"))) return;
+        console.log(e);
       }
 
       throw new Error("Was able to invoke the self-CPI instruction");

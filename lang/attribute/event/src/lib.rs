@@ -1,6 +1,7 @@
 extern crate proc_macro;
 
-use anchor_syn::parser::accounts::{add_event_cpi_accounts, EventAuthority};
+#[cfg(feature = "event-cpi")]
+use anchor_syn::parser::accounts::event_cpi::{add_event_cpi_accounts, EventAuthority};
 use quote::quote;
 use syn::parse_macro_input;
 
@@ -46,6 +47,14 @@ pub fn event(
     })
 }
 
+// EventIndex is a marker macro. It functionally does nothing other than
+// allow one to mark fields with the `#[index]` inert attribute, which is
+// used to add metadata to IDLs.
+#[proc_macro_derive(EventIndex, attributes(index))]
+pub fn derive_event(_item: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    proc_macro::TokenStream::from(quote! {})
+}
+
 /// Logs an event that can be subscribed to by clients.
 /// Uses the [`sol_log_data`](https://docs.rs/solana-program/latest/solana_program/log/fn.sol_log_data.html)
 /// syscall which results in the following log:
@@ -82,6 +91,7 @@ pub fn emit(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     })
 }
 
+// TODO: Update docs
 /// Logs an event that can be subscribed to by clients. More stable than `emit!` because
 /// RPCs are less likely to truncate CPI information than program logs. Generated code for this feature
 /// can be disabled by adding `no-cpi-events` to the `defaults = []` section of your program's Cargo.toml.
@@ -126,6 +136,7 @@ pub fn emit(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 ///     pub label: [u8; 5],
 /// }
 /// ```
+#[cfg(feature = "event-cpi")]
 #[proc_macro]
 pub fn emit_cpi(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let event_struct = parse_macro_input!(input as syn::Expr);
@@ -164,6 +175,8 @@ pub fn emit_cpi(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     })
 }
 
+/// TODO: Add docs
+#[cfg(feature = "event-cpi")]
 #[proc_macro_attribute]
 pub fn event_cpi(
     _attr: proc_macro::TokenStream,
@@ -172,12 +185,4 @@ pub fn event_cpi(
     let accounts_struct = parse_macro_input!(input as syn::ItemStruct);
     let accounts_struct = add_event_cpi_accounts(&accounts_struct).unwrap();
     proc_macro::TokenStream::from(quote! {#accounts_struct})
-}
-
-// EventIndex is a marker macro. It functionally does nothing other than
-// allow one to mark fields with the `#[index]` inert attribute, which is
-// used to add metadata to IDLs.
-#[proc_macro_derive(EventIndex, attributes(index))]
-pub fn derive_event(_item: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    proc_macro::TokenStream::from(quote! {})
 }

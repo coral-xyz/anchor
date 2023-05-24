@@ -1,3 +1,7 @@
+pub mod constraints;
+#[cfg(feature = "event-cpi")]
+pub mod event_cpi;
+
 use crate::parser::docs;
 use crate::*;
 use syn::parse::{Error as ParseError, Result as ParseResult};
@@ -6,8 +10,6 @@ use syn::spanned::Spanned;
 use syn::token::Comma;
 use syn::Expr;
 use syn::Path;
-
-pub mod constraints;
 
 pub fn parse(accounts_struct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
     let instruction_api: Option<Punctuated<Expr, Comma>> = accounts_struct
@@ -21,16 +23,21 @@ pub fn parse(accounts_struct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
         .map(|ix_attr| ix_attr.parse_args_with(Punctuated::<Expr, Comma>::parse_terminated))
         .transpose()?;
 
-    let is_event_cpi = accounts_struct
-        .attrs
-        .iter()
-        .filter_map(|attr| attr.path.get_ident())
-        .any(|ident| *ident == "event_cpi");
-    let accounts_struct = if is_event_cpi {
-        add_event_cpi_accounts(accounts_struct)?
-    } else {
-        accounts_struct.clone()
+    #[cfg(feature = "event-cpi")]
+    let accounts_struct = {
+        let is_event_cpi = accounts_struct
+            .attrs
+            .iter()
+            .filter_map(|attr| attr.path.get_ident())
+            .any(|ident| *ident == "event_cpi");
+        if is_event_cpi {
+            event_cpi::add_event_cpi_accounts(accounts_struct)?
+        } else {
+            accounts_struct.clone()
+        }
     };
+    #[cfg(not(feature = "event-cpi"))]
+    let accounts_struct = accounts_struct.clone();
 
     let fields = match &accounts_struct.fields {
         syn::Fields::Named(fields) => fields
@@ -53,84 +60,6 @@ pub fn parse(accounts_struct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
         fields,
         instruction_api,
     ))
-}
-
-/// This struct is used to keep the authority account information in sync.
-pub struct EventAuthority {
-    /// Account name of the event authority
-    pub name: &'static str,
-    /// Seeds expression of the event authority
-    pub seeds: proc_macro2::TokenStream,
-}
-
-impl EventAuthority {
-    /// Returns the account name and the seeds(in order) of the log event authority.
-    pub fn get() -> Self {
-        Self {
-            name: "event_authority",
-            seeds: quote! {b"__event_authority"},
-        }
-    }
-
-    /// Returns the name without surrounding quotes.
-    pub fn name_token_stream(&self) -> proc_macro2::TokenStream {
-        let name_token_stream = syn::parse_str::<syn::Expr>(self.name).unwrap();
-        quote! {#name_token_stream}
-    }
-}
-
-/// Add necessary event CPI accounts to the given accounts struct.
-pub fn add_event_cpi_accounts(accounts_struct: &syn::ItemStruct) -> ParseResult<syn::ItemStruct> {
-    let syn::ItemStruct {
-        attrs,
-        vis,
-        struct_token,
-        ident,
-        generics,
-        fields,
-        ..
-    } = accounts_struct;
-
-    let attrs = if attrs.is_empty() {
-        quote! {}
-    } else {
-        quote! { #(#attrs)* }
-    };
-
-    let fields = fields.into_iter().collect::<Vec<_>>();
-    let fields = if fields.is_empty() {
-        quote! {}
-    } else {
-        quote! { #(#fields)*, }
-    };
-
-    let info_lifetime = generics
-        .lifetimes()
-        .next()
-        .map(|lifetime| quote! {#lifetime})
-        .unwrap_or(quote! {'info});
-    let generics = generics
-        .lt_token
-        .map(|_| quote! {#generics})
-        .unwrap_or(quote! {<'info>});
-
-    let authority = EventAuthority::get();
-    let authority_name = authority.name_token_stream();
-    let authority_seeds = authority.seeds;
-
-    let accounts_struct = quote! {
-        #attrs
-        #vis #struct_token #ident #generics {
-            #fields
-
-            /// CHECK: Only the event authority can call self-CPI
-            #[account(seeds = [#authority_seeds], bump)]
-            pub #authority_name: AccountInfo<#info_lifetime>,
-            /// CHECK: Self-CPI will fail if the program is not the current program
-            pub program: AccountInfo<#info_lifetime>,
-        }
-    };
-    syn::parse2(accounts_struct)
 }
 
 fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
