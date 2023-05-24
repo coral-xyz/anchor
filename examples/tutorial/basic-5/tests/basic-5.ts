@@ -1,5 +1,4 @@
 import * as anchor from "@coral-xyz/anchor";
-import { Program } from "@coral-xyz/anchor";
 import {
   TransactionInstruction,
   TransactionMessage,
@@ -13,36 +12,21 @@ describe("basic-5", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.Basic5 as Program<Basic5>;
-  const user = anchor.web3.Keypair.generate();
+  const program = anchor.workspace.Basic5 as anchor.Program<Basic5>;
+  const user = provider.wallet.publicKey;
 
   let [actionState] = anchor.web3.PublicKey.findProgramAddressSync(
-    [anchor.utils.bytes.utf8.encode("action-state"), user.publicKey.toBuffer()],
+    [Buffer.from("action-state"), user.toBuffer()],
     program.programId
   );
-
-  before(async () => {
-    let res = await provider.connection.requestAirdrop(
-      user.publicKey,
-      10 * anchor.web3.LAMPORTS_PER_SOL
-    );
-
-    let latestBlockHash = await provider.connection.getLatestBlockhash();
-
-    await provider.connection.confirmTransaction({
-      blockhash: latestBlockHash.blockhash,
-      lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
-      signature: res,
-    });
-  });
 
   it("basic-5: Robot actions!", async () => {
     // Create instruction: set up the Solana accounts to be used
     const createInstruction = await program.methods
       .create()
       .accounts({
-        actionState: actionState,
-        user: user.publicKey,
+        actionState,
+        user,
         systemProgram: anchor.web3.SystemProgram.programId,
       })
       .instruction();
@@ -50,32 +34,32 @@ describe("basic-5", () => {
     const walkInstruction = await program.methods
       .walk()
       .accounts({
-        actionState: actionState,
-        user: user.publicKey,
+        actionState,
+        user,
       })
       .instruction();
     // Run instruction: Invoke the Robot to run
     const runInstruction = await program.methods
       .run()
       .accounts({
-        actionState: actionState,
-        user: user.publicKey,
+        actionState,
+        user,
       })
       .instruction();
     // Jump instruction: Invoke the Robot to jump
     const jumpInstruction = await program.methods
       .jump()
       .accounts({
-        actionState: actionState,
-        user: user.publicKey,
+        actionState,
+        user,
       })
       .instruction();
     // Reset instruction: Reset actions of the Robot
     const resetInstruction = await program.methods
       .reset()
       .accounts({
-        actionState: actionState,
-        user: user.publicKey,
+        actionState,
+        user,
       })
       .instruction();
 
@@ -103,7 +87,7 @@ describe("basic-5", () => {
 
     // Step 2 - Generate Transaction Message
     const messageV0 = new TransactionMessage({
-      payerKey: user.publicKey,
+      payerKey: user,
       recentBlockhash: latestBlockhash.blockhash,
       instructions: txInstructions,
     }).compileToV0Message();
@@ -111,7 +95,7 @@ describe("basic-5", () => {
     const transaction = new VersionedTransaction(messageV0);
 
     // Step 3 - Sign your transaction with the required `Signers`
-    transaction.sign([user]);
+    provider.wallet.signTransaction(transaction);
     console.log("   ✅ - Transaction Signed");
 
     // Step 4 - Send our v0 transaction to the cluster
