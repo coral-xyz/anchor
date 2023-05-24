@@ -88,11 +88,11 @@ describe("basic-5", () => {
       resetInstruction,
     ];
 
-    createAndSendV0Tx(instructions);
+    await createAndSendV0Tx(instructions);
   });
 
   async function createAndSendV0Tx(txInstructions: TransactionInstruction[]) {
-    // Step 1 - Fetch Latest Blockhash
+    // Step 1 - Fetch the latest blockhash
     let latestBlockhash = await provider.connection.getLatestBlockhash(
       "confirmed"
     );
@@ -127,11 +127,13 @@ describe("basic-5", () => {
       lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
     });
     if (confirmation.value.err) {
-      throw new Error("   ❌ - Transaction not confirmed.");
+      throw new Error(
+        `   ❌ - Transaction not confirmed.\nReason: ${confirmation.value.err}`
+      );
     }
-    //console.log('🎉 Transaction Succesfully Confirmed!', '\n', `https://explorer.solana.com/tx/${txid}?cluster=devnet`);
+
     console.log("🎉 Transaction Succesfully Confirmed!");
     let result = await program.account.actionState.fetch(actionState);
-    console.log("robot action state details: ", result);
+    console.log("Robot action state details: ", result);
   }
 });
