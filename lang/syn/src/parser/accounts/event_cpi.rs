@@ -48,7 +48,7 @@ pub fn add_event_cpi_accounts(
     let fields = if fields.is_empty() {
         quote! {}
     } else {
-        quote! { #(#fields)*, }
+        quote! { #(#fields,)* }
     };
 
     let info_lifetime = generics
