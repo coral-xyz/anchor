@@ -38,18 +38,7 @@ pub fn add_event_cpi_accounts(
         ..
     } = accounts_struct;
 
-    let attrs = if attrs.is_empty() {
-        quote! {}
-    } else {
-        quote! { #(#attrs)* }
-    };
-
     let fields = fields.into_iter().collect::<Vec<_>>();
-    let fields = if fields.is_empty() {
-        quote! {}
-    } else {
-        quote! { #(#fields,)* }
-    };
 
     let info_lifetime = generics
         .lifetimes()
@@ -66,9 +55,9 @@ pub fn add_event_cpi_accounts(
     let authority_seeds = authority.seeds;
 
     let accounts_struct = quote! {
-        #attrs
+        #(#attrs)*
         #vis #struct_token #ident #generics {
-            #fields
+            #(#fields,)*
 
             /// CHECK: Only the event authority can call self-CPI
             #[account(seeds = [#authority_seeds], bump)]
