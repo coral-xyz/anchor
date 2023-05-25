@@ -37,6 +37,7 @@ mod bpf_writer;
 mod common;
 pub mod context;
 pub mod error;
+#[doc(hidden)]
 pub mod event;
 #[doc(hidden)]
 pub mod idl;

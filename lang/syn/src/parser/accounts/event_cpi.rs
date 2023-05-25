@@ -59,7 +59,7 @@ pub fn add_event_cpi_accounts(
         #vis #struct_token #ident #generics {
             #(#fields,)*
 
-            /// CHECK: Only the event authority can call self-CPI
+            /// CHECK: Only the event authority can invoke self-CPI
             #[account(seeds = [#authority_seeds], bump)]
             pub #authority_name: AccountInfo<#info_lifetime>,
             /// CHECK: Self-CPI will fail if the program is not the current program
