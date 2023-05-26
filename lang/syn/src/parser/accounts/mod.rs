@@ -115,14 +115,23 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
         // init token/a_token/mint needs token program.
         match kind {
             InitKind::Program { .. } | InitKind::Interface { .. } => (),
-            InitKind::Token { .. } | InitKind::AssociatedToken { .. } | InitKind::Mint { .. } => {
-                if !fields
-                    .iter()
-                    .any(|f| f.ident() == "token_program" && !(required_init && f.is_optional()))
-                {
+            InitKind::Token { token_program, .. }
+            | InitKind::AssociatedToken { token_program, .. }
+            | InitKind::Mint { token_program, .. } => {
+                // is the token_program constraint specified?
+                let token_program_field = if let Some(token_program_id) = token_program {
+                    // if so, is it present in the struct?
+                    token_program_id.to_token_stream().to_string()
+                } else {
+                    // if not, look for the token_program field
+                    "token_program".to_string()
+                };
+                if !fields.iter().any(|f| {
+                    f.ident() == &token_program_field && !(required_init && f.is_optional())
+                }) {
                     return Err(ParseError::new(
                         init_fields[0].ident.span(),
-                        message("init", "token_program", required_init),
+                        message("init", &token_program_field, required_init),
                     ));
                 }
             }
@@ -140,7 +149,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
             }
         }
 
-        for field in init_fields {
+        for (pos, field) in init_fields.iter().enumerate() {
             // Get payer for init-ed account
             let associated_payer_name = match field.constraints.init.clone().unwrap().payer {
                 // composite payer, check not supported
@@ -176,7 +185,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                     ));
                 }
             }
-            match kind {
+            match &field.constraints.init.as_ref().unwrap().kind {
                 // This doesn't catch cases like account.key() or account.key.
                 // My guess is that doesn't happen often and we can revisit
                 // this if I'm wrong.
@@ -189,6 +198,24 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                         return Err(ParseError::new(
                             field.ident.span(),
                             "the mint constraint has to be an account field for token initializations (not a public key)",
+                        ));
+                    }
+                }
+
+                // Make sure initialiazed token accounts are always declared after their corresponding mint.
+                InitKind::Mint { .. } => {
+                    if init_fields.iter().enumerate().any(|(f_pos, f)| {
+                        match &f.constraints.init.as_ref().unwrap().kind {
+                            InitKind::Token { mint, .. }
+                            | InitKind::AssociatedToken { mint, .. } => {
+                                field.ident == mint.to_token_stream().to_string() && pos > f_pos
+                            }
+                            _ => false,
+                        }
+                    }) {
+                        return Err(ParseError::new(
+                            field.ident.span(),
+                            "because of the init constraint, the mint has to be declared before the corresponding token account",
                         ));
                     }
                 }
