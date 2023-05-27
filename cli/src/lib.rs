@@ -3075,7 +3075,7 @@ fn clean(cfg_override: &ConfigOverride) -> Result<()> {
             }
         }
     } else {
-        println!("skipping deply directory: not found")
+        println!("skipping deploy directory: not found")
     }
 
     Ok(())
