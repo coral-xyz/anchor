@@ -3832,7 +3832,7 @@ fn keys_sync(cfg_override: &ConfigOverride, program_name: Option<String>) -> Res
             }
 
             // Handle declaration in Anchor.toml
-            'outer: for (_, programs) in &mut cfg.programs {
+            'outer: for programs in cfg.programs.values_mut() {
                 for (name, mut deployment) in programs {
                     // Skip other programs
                     if name != &program.lib_name {
