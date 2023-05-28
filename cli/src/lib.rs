@@ -3828,6 +3828,7 @@ fn keys_sync(cfg_override: &ConfigOverride, program_name: Option<String>) -> Res
                     fs::write(&path, content)?;
 
                     println!("Updated to {actual_program_id}\n");
+                    break;
                 }
             }
 
