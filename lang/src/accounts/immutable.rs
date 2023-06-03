@@ -12,7 +12,7 @@ use solana_program::pubkey::Pubkey;
 use solana_program::system_program;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 /// Wrapper around [`AccountInfo`](crate::solana_program::account_info::AccountInfo)
 /// that verifies program ownership and deserializes underlying data into a Rust type.
@@ -412,17 +412,6 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Deref for Immutable<'
 
     fn deref(&self) -> &Self::Target {
         &(self).account
-    }
-}
-
-impl<'a, T: AccountSerialize + AccountDeserialize + Clone> DerefMut for Immutable<'a, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        #[cfg(feature = "anchor-debug")]
-        if !self.info.is_writable {
-            solana_program::msg!("The given Account is not mutable");
-            panic!();
-        }
-        &mut self.account
     }
 }
 
