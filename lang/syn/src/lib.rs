@@ -255,6 +255,7 @@ impl Field {
                 SystemAccount
             },
             Ty::Account(AccountTy { boxed, .. })
+            | Ty::Immutable(ImmutableTy { boxed, .. })
             | Ty::InterfaceAccount(InterfaceAccountTy { boxed, .. }) => {
                 if *boxed {
                     quote! {
@@ -389,6 +390,9 @@ impl Field {
             Ty::Account(_) => quote! {
                 anchor_lang::accounts::account::Account
             },
+            Ty::Immutable(_) => quote! {
+                anchor_lang::accounts::immutable::Immutable
+            },
             Ty::AccountLoader(_) => quote! {
                 anchor_lang::accounts::account_loader::AccountLoader
             },
@@ -425,6 +429,12 @@ impl Field {
                 ProgramData
             },
             Ty::Account(ty) => {
+                let ident = &ty.account_type_path;
+                quote! {
+                    #ident
+                }
+            }
+            Ty::Immutable(ty) => {
                 let ident = &ty.account_type_path;
                 quote! {
                     #ident
@@ -488,6 +498,7 @@ pub enum Ty {
     AccountLoader(AccountLoaderTy),
     Sysvar(SysvarTy),
     Account(AccountTy),
+    Immutable(ImmutableTy),
     Program(ProgramTy),
     Interface(InterfaceTy),
     InterfaceAccount(InterfaceAccountTy),
@@ -518,6 +529,14 @@ pub struct AccountLoaderTy {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct AccountTy {
+    // The struct type of the account.
+    pub account_type_path: TypePath,
+    // True if the account has been boxed via `Box<T>`.
+    pub boxed: bool,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct ImmutableTy {
     // The struct type of the account.
     pub account_type_path: TypePath,
     // True if the account has been boxed via `Box<T>`.

@@ -338,6 +338,7 @@ fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
             | "UncheckedAccount"
             | "AccountLoader"
             | "Account"
+            | "Immutable"
             | "Program"
             | "Interface"
             | "InterfaceAccount"
@@ -356,6 +357,7 @@ fn parse_ty(f: &syn::Field) -> ParseResult<(Ty, bool)> {
         "UncheckedAccount" => Ty::UncheckedAccount,
         "AccountLoader" => Ty::AccountLoader(parse_program_account_loader(&path)?),
         "Account" => Ty::Account(parse_account_ty(&path)?),
+        "Immutable" => Ty::Immutable(parse_immutable_ty(&path)?),
         "Program" => Ty::Program(parse_program_ty(&path)?),
         "Interface" => Ty::Interface(parse_interface_ty(&path)?),
         "InterfaceAccount" => Ty::InterfaceAccount(parse_interface_account_ty(&path)?),
@@ -414,6 +416,12 @@ fn ident_string(f: &syn::Field) -> ParseResult<(String, bool, Path)> {
     }
     if parser::tts_to_string(&path)
         .replace(' ', "")
+        .starts_with("Box<Immutable<")
+    {
+        return Ok(("Immutable".to_string(), optional, path));
+    }
+    if parser::tts_to_string(&path)
+        .replace(' ', "")
         .starts_with("Box<InterfaceAccount<")
     {
         return Ok(("InterfaceAccount".to_string(), optional, path));
@@ -448,6 +456,17 @@ fn parse_account_ty(path: &syn::Path) -> ParseResult<AccountTy> {
     })
 }
 
+fn parse_immutable_ty(path: &syn::Path) -> ParseResult<ImmutableTy> {
+    let account_type_path = parse_account(path)?;
+    let boxed = parser::tts_to_string(path)
+        .replace(' ', "")
+        .starts_with("Box<Immutable<");
+    Ok(ImmutableTy {
+        account_type_path,
+        boxed,
+    })
+}
+
 fn parse_interface_account_ty(path: &syn::Path) -> ParseResult<InterfaceAccountTy> {
     let account_type_path = parse_account(path)?;
     let boxed = parser::tts_to_string(path)
@@ -472,7 +491,10 @@ fn parse_interface_ty(path: &syn::Path) -> ParseResult<InterfaceTy> {
 // TODO: this whole method is a hack. Do something more idiomatic.
 fn parse_account(mut path: &syn::Path) -> ParseResult<syn::TypePath> {
     let path_str = parser::tts_to_string(path).replace(' ', "");
-    if path_str.starts_with("Box<Account<") || path_str.starts_with("Box<InterfaceAccount<") {
+    if path_str.starts_with("Box<Account<")
+        || path_str.starts_with("Box<InterfaceAccount<")
+        || path_str.starts_with("Box<Immutable<")
+    {
         let segments = &path.segments[0];
         match &segments.arguments {
             syn::PathArguments::AngleBracketed(args) => {
