@@ -1,6 +1,6 @@
 use crate::accounts_codegen::constraints::OptionalCheckScope;
 use crate::codegen::accounts::{generics, ParsedGenerics};
-use crate::{AccountField, AccountsStruct};
+use crate::{AccountField, AccountsStruct, Ty};
 use quote::quote;
 
 // Generates the `Exit` trait implementation.
@@ -45,11 +45,29 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     }
                 } else {
                     match f.constraints.is_mutable() {
-                        false => quote! {},
-                        true => quote! {
-                            anchor_lang::AccountsExit::exit(&self.#ident, program_id)
-                                .map_err(|e| e.with_account_name(#name_str))?;
-                        },
+                        false => {
+                            if let Ty::Account(ty) = &f.ty {
+                                println!(
+                                    "Help: prefer Immutable<'info, {}> for the immutable field '{}' of struct '{}'",
+                                   ty.account_type_path.path.get_ident().map(|id| id.to_string()).unwrap_or("T".into()), f.ident.to_string(), name.to_string()
+                                );
+                            }
+                            quote! {}
+                        }
+                        true => {
+                            if let Ty::Immutable(ty) = &f.ty {
+                                println!(
+                                    "Help: prefer removing 'mut' attribute as it has no effect on field '{}' as it is Immutable<'info, {}>, of struct '{}'",
+                                    f.ident.to_string(), ty.account_type_path.path.get_ident().map(|id| id.to_string()).unwrap_or("T".into()), name.to_string()
+                                );
+                                quote!{}
+                            } else {
+                                quote! {
+                                    anchor_lang::AccountsExit::exit(&self.#ident, program_id)
+                                        .map_err(|e| e.with_account_name(#name_str))?;
+                                }
+                            }
+                        }
                     }
                 }
             }
