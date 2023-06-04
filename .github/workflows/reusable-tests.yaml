@@ -384,7 +384,9 @@ jobs:
             path: tests/multisig
           # - cmd: cd tests/lockup && anchor test --skip-lint
           #   path: tests/lockup
-          - cmd: cd tests/swap/deps/openbook-dex/dex && cargo build-bpf -- --locked && cd ../../../ && anchor test --skip-lint
+          # TODO: Remove `1.14.18` installation if/when https://github.com/solana-labs/solana/issues/31960 is solved
+          # `swap` tests don't work with Solana `1.16.0`, downgrade to `1.14.18`
+          - cmd: cd tests/swap/deps/openbook-dex/dex && solana-install init 1.14.18 && cargo build-bpf -- --locked && cd ../../../ && anchor test --skip-lint
             path: tests/swap
           - cmd: cd tests/escrow && anchor test --skip-lint && npx tsc --noEmit
             path: tests/escrow
@@ -412,6 +414,8 @@ jobs:
             path: tests/ido-pool
           # - cmd: cd tests/cfo && anchor run test-with-build && cd deps/stake && git checkout Cargo.lock && cd ../swap && git checkout Cargo.lock
           #   path: tests/cfo
+          # TODO: Remove `1.14.18` installation if/when https://github.com/solana-labs/solana/issues/31960 is solved
+          # `auction-house` tests don't work with Solana `1.16.0`, downgrade to `1.14.18`
           - cmd: cd tests/auction-house && solana-install init 1.14.18 && yarn --frozen-lockfile && anchor test --skip-lint && git checkout Cargo.lock
             path: tests/auction-house
           - cmd: cd tests/floats && yarn --frozen-lockfile && anchor test --skip-lint && npx tsc --noEmit
