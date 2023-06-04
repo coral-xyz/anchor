@@ -778,6 +778,10 @@ fn new(cfg_override: &ConfigOverride, solidity: bool, name: String) -> Result<()
 
                 let cluster = cfg.provider.cluster.clone();
                 let programs = cfg.programs.entry(cluster).or_insert(BTreeMap::new());
+                if programs.contains_key(&name) {
+                    return Err(anyhow!("Program already exists"));
+                }
+
                 programs.insert(
                     name.clone(),
                     ProgramDeployment {
