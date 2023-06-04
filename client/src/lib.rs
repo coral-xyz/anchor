@@ -252,12 +252,9 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
             let (mut notifications, unsubscribe) = client.logs_subscribe(filter, config).await?;
 
             tx.send(unsubscribe).map_err(|e| {
-                ClientError::SolanaClientPubsubError(
-                    solana_client::nonblocking::pubsub_client::PubsubClientError::SubscribeFailed {
-                        message: e.to_string(),
-                        reason: e.to_string(),
-                    },
-                )
+                ClientError::SolanaClientPubsubError(PubsubClientError::UnexpectedMessageError(
+                    e.to_string(),
+                ))
             })?;
 
             while let Some(logs) = notifications.next().await {
