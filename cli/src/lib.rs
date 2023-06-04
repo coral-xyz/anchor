@@ -775,11 +775,27 @@ fn new(cfg_override: &ConfigOverride, solidity: bool, name: String) -> Result<()
             }
             Some(parent) => {
                 std::env::set_current_dir(parent)?;
-                if solidity {
-                    new_solidity_program(&name)?;
-                } else {
-                    new_rust_program(&name)?;
-                }
+
+                let cluster = cfg.provider.cluster.clone();
+                let programs = cfg.programs.entry(cluster).or_insert(BTreeMap::new());
+                programs.insert(
+                    name.clone(),
+                    ProgramDeployment {
+                        address: if solidity {
+                            new_solidity_program(&name)?;
+                            solidity_template::default_program_id()
+                        } else {
+                            new_rust_program(&name)?;
+                            rust_template::default_program_id()
+                        },
+                        path: None,
+                        idl: None,
+                    },
+                );
+
+                let toml = cfg.to_string();
+                fs::write("Anchor.toml", toml)?;
+                
                 println!("Created new program.");
             }
         };
