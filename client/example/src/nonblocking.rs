@@ -66,7 +66,7 @@ pub async fn composite<C: Deref<Target = impl Signer> + Clone>(
     pid: Pubkey,
 ) -> Result<()> {
     // Program client.
-    let program = client.program(pid);
+    let program = client.program(pid)?;
 
     // `Initialize` parameters.
     let dummy_a = Keypair::new();
@@ -79,7 +79,7 @@ pub async fn composite<C: Deref<Target = impl Signer> + Clone>(
             &program.payer(),
             &dummy_a.pubkey(),
             program
-                .rpc()
+                .async_rpc()
                 .get_minimum_balance_for_rent_exemption(500)
                 .await?,
             500,
@@ -89,7 +89,7 @@ pub async fn composite<C: Deref<Target = impl Signer> + Clone>(
             &program.payer(),
             &dummy_b.pubkey(),
             program
-                .rpc()
+                .async_rpc()
                 .get_minimum_balance_for_rent_exemption(500)
                 .await?,
             500,
@@ -144,7 +144,7 @@ pub async fn basic_2<C: Deref<Target = impl Signer> + Clone>(
     client: &Client<C>,
     pid: Pubkey,
 ) -> Result<()> {
-    let program = client.program(pid);
+    let program = client.program(pid)?;
 
     // `Create` parameters.
     let counter = Keypair::new();
@@ -177,7 +177,7 @@ pub async fn events<C: Deref<Target = impl Signer> + Clone>(
     client: &Client<C>,
     pid: Pubkey,
 ) -> Result<()> {
-    let program = client.program(pid);
+    let program = client.program(pid)?;
 
     let (sender, mut receiver) = mpsc::unbounded_channel();
     let event_unsubscriber = program
@@ -211,7 +211,7 @@ pub async fn basic_4<C: Deref<Target = impl Signer> + Clone>(
     client: &Client<C>,
     pid: Pubkey,
 ) -> Result<()> {
-    let program = client.program(pid);
+    let program = client.program(pid)?;
     let authority = program.payer();
     let (counter, _) = Pubkey::find_program_address(&[b"counter"], &pid);
 
@@ -250,7 +250,7 @@ pub async fn optional<C: Deref<Target = impl Signer> + Clone>(
     pid: Pubkey,
 ) -> Result<()> {
     // Program client.
-    let program = client.program(pid);
+    let program = client.program(pid)?;
 
     // `Initialize` parameters.
     let data_account_keypair = Keypair::new();
@@ -270,7 +270,7 @@ pub async fn optional<C: Deref<Target = impl Signer> + Clone>(
             &program.payer(),
             &required_keypair.pubkey(),
             program
-                .rpc()
+                .async_rpc()
                 .get_minimum_balance_for_rent_exemption(DataAccount::LEN)
                 .await?,
             DataAccount::LEN as u64,

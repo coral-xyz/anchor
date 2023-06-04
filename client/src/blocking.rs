@@ -1,37 +1,41 @@
 use crate::{
-    parse_logs_response, ClientError, EventContext, EventHandle, Program, ProgramAccountsIterator,
+    ClientError, Config, EventContext, EventUnsubscriber, Program, ProgramAccountsIterator,
     RequestBuilder,
 };
 use anchor_lang::{prelude::Pubkey, AccountDeserialize, Discriminator};
-use solana_account_decoder::UiAccountEncoding;
-use solana_client::{
-    pubsub_client::PubsubClient,
-    rpc_client::RpcClient,
-    rpc_config::{
-        RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig,
-        RpcTransactionLogsConfig, RpcTransactionLogsFilter,
-    },
-    rpc_filter::{Memcmp, RpcFilterType},
-};
+use solana_client::{rpc_config::RpcSendTransactionConfig, rpc_filter::RpcFilterType};
 use solana_sdk::{
     commitment_config::CommitmentConfig, signature::Signature, signer::Signer,
     transaction::Transaction,
 };
-use std::ops::Deref;
+use std::{marker::PhantomData, ops::Deref};
+use tokio::{
+    runtime::{Builder, Handle},
+    sync::Mutex,
+};
+
+impl<'a> EventUnsubscriber<'a> {
+    /// Unsubscribe gracefully.
+    pub fn unsubscribe(self) {
+        self.runtime_handle.block_on(self.unsubscribe_internal())
+    }
+}
 
 impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
+    pub fn new(program_id: Pubkey, cfg: Config<C>) -> Result<Self, ClientError> {
+        let rt: tokio::runtime::Runtime = Builder::new_multi_thread().enable_all().build()?;
+
+        Ok(Self {
+            program_id,
+            cfg,
+            sub_client: Mutex::new(None),
+            rt,
+        })
+    }
+
     /// Returns the account at the given address.
     pub fn account<T: AccountDeserialize>(&self, address: Pubkey) -> Result<T, ClientError> {
-        let rpc_client = RpcClient::new_with_commitment(
-            self.cfg.cluster.url().to_string(),
-            self.cfg.options.unwrap_or_default(),
-        );
-        let account = rpc_client
-            .get_account_with_commitment(&address, CommitmentConfig::processed())?
-            .value
-            .ok_or(ClientError::AccountNotFound)?;
-        let mut data: &[u8] = &account.data;
-        T::try_deserialize(&mut data).map_err(Into::into)
+        self.rt.block_on(self.account_internal(address))
     }
 
     /// Returns all program accounts of the given type matching the given filters
@@ -48,95 +52,58 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         &self,
         filters: Vec<RpcFilterType>,
     ) -> Result<ProgramAccountsIterator<T>, ClientError> {
-        let account_type_filter =
-            RpcFilterType::Memcmp(Memcmp::new_base58_encoded(0, &T::discriminator()));
-        let config = RpcProgramAccountsConfig {
-            filters: Some([vec![account_type_filter], filters].concat()),
-            account_config: RpcAccountInfoConfig {
-                encoding: Some(UiAccountEncoding::Base64),
-                ..RpcAccountInfoConfig::default()
-            },
-            ..RpcProgramAccountsConfig::default()
-        };
-        Ok(ProgramAccountsIterator {
-            inner: self
-                .rpc()
-                .get_program_accounts_with_config(&self.id(), config)?
-                .into_iter()
-                .map(|(key, account)| {
-                    Ok((key, T::try_deserialize(&mut (&account.data as &[u8]))?))
-                }),
-        })
-    }
-
-    pub fn rpc(&self) -> RpcClient {
-        RpcClient::new_with_commitment(
-            self.cfg.cluster.url().to_string(),
-            self.cfg.options.unwrap_or_default(),
-        )
+        self.rt.block_on(self.accounts_lazy_internal(filters))
     }
 
     pub fn on<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
         &self,
         f: impl Fn(&EventContext, T) + Send + 'static,
-    ) -> Result<EventHandle, ClientError> {
-        let addresses = vec![self.program_id.to_string()];
-        let filter = RpcTransactionLogsFilter::Mentions(addresses);
-        let ws_url = self.cfg.cluster.ws_url().to_string();
-        let cfg = RpcTransactionLogsConfig {
-            commitment: self.cfg.options,
-        };
-        let self_program_str = self.program_id.to_string();
-        let (client, receiver) = PubsubClient::logs_subscribe(&ws_url, filter, cfg)?;
-        std::thread::spawn(move || {
-            while let Ok(logs) = receiver.recv() {
-                let ctx = EventContext {
-                    signature: logs.value.signature.parse().unwrap(),
-                    slot: logs.context.slot,
-                };
-                let events: Vec<T> = parse_logs_response(logs, &self_program_str);
-                for e in events {
-                    f(&ctx, e);
-                }
-            }
-        });
-        Ok(client)
+    ) -> Result<EventUnsubscriber, ClientError> {
+        let (handle, rx) = self.rt.block_on(self.on_internal(f))?;
+
+        Ok(EventUnsubscriber {
+            handle,
+            rx,
+            runtime_handle: self.rt.handle(),
+            _lifetime_marker: PhantomData,
+        })
     }
 }
 
 impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
-    pub fn signed_transaction(&self) -> Result<Transaction, ClientError> {
-        let latest_hash =
-            RpcClient::new_with_commitment(&self.cluster, self.options).get_latest_blockhash()?;
-        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
-
-        Ok(tx)
+    pub fn from(
+        program_id: Pubkey,
+        cluster: &str,
+        payer: C,
+        options: Option<CommitmentConfig>,
+        handle: &'a Handle,
+    ) -> Self {
+        Self {
+            program_id,
+            payer,
+            cluster: cluster.to_string(),
+            accounts: Vec::new(),
+            options: options.unwrap_or_default(),
+            instructions: Vec::new(),
+            instruction_data: None,
+            signers: Vec::new(),
+            handle,
+        }
     }
 
-    pub fn send(self) -> Result<Signature, ClientError> {
-        let rpc_client = RpcClient::new_with_commitment(&self.cluster, self.options);
-        let latest_hash = rpc_client.get_latest_blockhash()?;
-        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
+    pub fn signed_transaction(&self) -> Result<Transaction, ClientError> {
+        self.handle.block_on(self.signed_transaction_internal())
+    }
 
-        rpc_client
-            .send_and_confirm_transaction(&tx)
-            .map_err(Into::into)
+    pub fn send(&self) -> Result<Signature, ClientError> {
+        self.handle.block_on(self.send_internal())
     }
 
     pub fn send_with_spinner_and_config(
-        self,
+        &self,
         config: RpcSendTransactionConfig,
     ) -> Result<Signature, ClientError> {
-        let rpc_client = RpcClient::new_with_commitment(&self.cluster, self.options);
-        let latest_hash = rpc_client.get_latest_blockhash()?;
-        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
-
-        rpc_client
-            .send_and_confirm_transaction_with_spinner_and_config(
-                &tx,
-                rpc_client.commitment(),
-                config,
-            )
-            .map_err(Into::into)
+        self.handle
+            .block_on(self.send_with_spinner_and_config_internal(config))
     }
 }

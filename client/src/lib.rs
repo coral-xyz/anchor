@@ -5,11 +5,22 @@ use anchor_lang::solana_program::hash::Hash;
 use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::pubkey::Pubkey;
-use anchor_lang::{InstructionData, ToAccountMetas};
+use anchor_lang::{AccountDeserialize, Discriminator, InstructionData, ToAccountMetas};
+use futures::{Future, StreamExt};
 use regex::Regex;
-use solana_client::pubsub_client::PubsubClientSubscription;
+use solana_account_decoder::UiAccountEncoding;
+use solana_client::rpc_config::{
+    RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig,
+    RpcTransactionLogsConfig, RpcTransactionLogsFilter,
+};
+use solana_client::rpc_filter::{Memcmp, RpcFilterType};
 use solana_client::{
     client_error::ClientError as SolanaClientError,
+    nonblocking::{
+        pubsub_client::{PubsubClient, PubsubClientError},
+        rpc_client::RpcClient as AsyncRpcClient,
+    },
+    rpc_client::RpcClient,
     rpc_response::{Response as RpcResponse, RpcLogsResponse},
 };
 use solana_sdk::account::Account;
@@ -17,9 +28,18 @@ use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::signature::{Signature, Signer};
 use solana_sdk::transaction::Transaction;
 use std::iter::Map;
+use std::marker::PhantomData;
 use std::ops::Deref;
+use std::pin::Pin;
+use std::sync::Arc;
 use std::vec::IntoIter;
 use thiserror::Error;
+use tokio::sync::Mutex;
+use tokio::{
+    runtime::Handle,
+    sync::mpsc::{unbounded_channel, UnboundedReceiver},
+    task::JoinHandle,
+};
 
 pub use anchor_lang;
 pub use cluster::Cluster;
@@ -36,8 +56,12 @@ mod nonblocking;
 const PROGRAM_LOG: &str = "Program log: ";
 const PROGRAM_DATA: &str = "Program data: ";
 
-/// EventHandle unsubscribes from a program event stream on drop.
-pub type EventHandle = PubsubClientSubscription<RpcResponse<RpcLogsResponse>>;
+type UnsubscribeFn = Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send>;
+type SubClientConfig = (
+    Arc<PubsubClient>,
+    RpcTransactionLogsConfig,
+    RpcTransactionLogsFilter,
+);
 
 /// Client defines the base configuration for building RPC clients to
 /// communicate with Anchor programs running on a Solana cluster. It's
@@ -67,31 +91,50 @@ impl<C: Clone + Deref<Target = impl Signer>> Client<C> {
         }
     }
 
-    pub fn program(&self, program_id: Pubkey) -> Program<C> {
-        Program {
-            program_id,
-            cfg: Config {
-                cluster: self.cfg.cluster.clone(),
-                options: self.cfg.options,
-                payer: self.cfg.payer.clone(),
-            },
-        }
+    pub fn program(&self, program_id: Pubkey) -> Result<Program<C>, ClientError> {
+        let cfg = Config {
+            cluster: self.cfg.cluster.clone(),
+            options: self.cfg.options,
+            payer: self.cfg.payer.clone(),
+        };
+
+        Program::new(program_id, cfg)
     }
 }
 
 // Internal configuration for a client.
 #[derive(Debug)]
-struct Config<C> {
+pub struct Config<C> {
     cluster: Cluster,
     payer: C,
     options: Option<CommitmentConfig>,
 }
 
+pub struct EventUnsubscriber<'a> {
+    handle: JoinHandle<Result<(), ClientError>>,
+    rx: UnboundedReceiver<UnsubscribeFn>,
+    #[cfg(not(feature = "async"))]
+    runtime_handle: &'a Handle,
+    _lifetime_marker: PhantomData<&'a Handle>,
+}
+
+impl<'a> EventUnsubscriber<'a> {
+    async fn unsubscribe_internal(mut self) {
+        if let Some(unsubscribe) = self.rx.recv().await {
+            unsubscribe().await;
+        }
+
+        let _ = self.handle.await;
+    }
+}
+
 /// Program is the primary client handle to be used to build and send requests.
-#[derive(Debug)]
 pub struct Program<C> {
     program_id: Pubkey,
     cfg: Config<C>,
+    sub_client: Mutex<Option<Arc<PubsubClient>>>,
+    #[cfg(not(feature = "async"))]
+    rt: tokio::runtime::Runtime,
 }
 
 impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
@@ -106,11 +149,131 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
             self.cfg.cluster.url(),
             self.cfg.payer.clone(),
             self.cfg.options,
+            #[cfg(not(feature = "async"))]
+            self.rt.handle(),
         )
     }
 
     pub fn id(&self) -> Pubkey {
         self.program_id
+    }
+
+    pub fn rpc(&self) -> RpcClient {
+        RpcClient::new_with_commitment(
+            self.cfg.cluster.url().to_string(),
+            self.cfg.options.unwrap_or_default(),
+        )
+    }
+
+    pub fn async_rpc(&self) -> AsyncRpcClient {
+        AsyncRpcClient::new_with_commitment(
+            self.cfg.cluster.url().to_string(),
+            self.cfg.options.unwrap_or_default(),
+        )
+    }
+
+    async fn account_internal<T: AccountDeserialize>(
+        &self,
+        address: Pubkey,
+    ) -> Result<T, ClientError> {
+        let rpc_client = AsyncRpcClient::new_with_commitment(
+            self.cfg.cluster.url().to_string(),
+            self.cfg.options.unwrap_or_default(),
+        );
+        let account = rpc_client
+            .get_account_with_commitment(&address, CommitmentConfig::processed())
+            .await?
+            .value
+            .ok_or(ClientError::AccountNotFound)?;
+        let mut data: &[u8] = &account.data;
+        T::try_deserialize(&mut data).map_err(Into::into)
+    }
+
+    async fn accounts_lazy_internal<T: AccountDeserialize + Discriminator>(
+        &self,
+        filters: Vec<RpcFilterType>,
+    ) -> Result<ProgramAccountsIterator<T>, ClientError> {
+        let account_type_filter =
+            RpcFilterType::Memcmp(Memcmp::new_base58_encoded(0, &T::discriminator()));
+        let config = RpcProgramAccountsConfig {
+            filters: Some([vec![account_type_filter], filters].concat()),
+            account_config: RpcAccountInfoConfig {
+                encoding: Some(UiAccountEncoding::Base64),
+                ..RpcAccountInfoConfig::default()
+            },
+            ..RpcProgramAccountsConfig::default()
+        };
+        Ok(ProgramAccountsIterator {
+            inner: self
+                .async_rpc()
+                .get_program_accounts_with_config(&self.id(), config)
+                .await?
+                .into_iter()
+                .map(|(key, account)| {
+                    Ok((key, T::try_deserialize(&mut (&account.data as &[u8]))?))
+                }),
+        })
+    }
+
+    async fn get_sub_client(&self) -> Result<SubClientConfig, ClientError> {
+        let mut lock = self.sub_client.lock().await;
+        let config = RpcTransactionLogsConfig {
+            commitment: self.cfg.options,
+        };
+        let program_id_str = self.program_id.to_string();
+        let filter = RpcTransactionLogsFilter::Mentions(vec![program_id_str]);
+        let client = match lock.as_ref() {
+            Some(client) => client.to_owned(),
+            None => {
+                let client = Arc::new(PubsubClient::new(self.cfg.cluster.ws_url()).await?);
+                *lock = Some(client.clone());
+                client
+            }
+        };
+
+        Ok((client, config, filter))
+    }
+
+    async fn on_internal<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
+        &self,
+        f: impl Fn(&EventContext, T) + Send + 'static,
+    ) -> Result<
+        (
+            JoinHandle<Result<(), ClientError>>,
+            UnboundedReceiver<UnsubscribeFn>,
+        ),
+        ClientError,
+    > {
+        let (tx, rx) = unbounded_channel::<_>();
+        let (client, config, filter) = self.get_sub_client().await?;
+        let program_id_str = self.program_id.to_string();
+
+        let handle = tokio::spawn(async move {
+            let (mut notifications, unsubscribe) = client.logs_subscribe(filter, config).await?;
+
+            tx.send(unsubscribe).map_err(|e| {
+                ClientError::SolanaClientPubsubError(
+                    solana_client::nonblocking::pubsub_client::PubsubClientError::SubscribeFailed {
+                        message: e.to_string(),
+                        reason: e.to_string(),
+                    },
+                )
+            })?;
+
+            while let Some(logs) = notifications.next().await {
+                let ctx = EventContext {
+                    signature: logs.value.signature.parse().unwrap(),
+                    slot: logs.context.slot,
+                };
+                let events = parse_logs_response(logs, &program_id_str);
+                for e in events {
+                    f(&ctx, e);
+                }
+            }
+            Ok::<(), ClientError>(())
+        });
+
+        Ok((handle, rx))
     }
 }
 
@@ -240,14 +403,12 @@ pub enum ClientError {
     ProgramError(#[from] ProgramError),
     #[error("{0}")]
     SolanaClientError(#[from] SolanaClientError),
-    #[cfg(not(feature = "async"))]
     #[error("{0}")]
-    SolanaClientPubsubError(#[from] solana_client::pubsub_client::PubsubClientError),
-    #[cfg(feature = "async")]
-    #[error("{0}")]
-    SolanaClientPubsubError(#[from] solana_client::nonblocking::pubsub_client::PubsubClientError),
+    SolanaClientPubsubError(#[from] PubsubClientError),
     #[error("Unable to parse log: {0}")]
     LogParseError(String),
+    #[error(transparent)]
+    IOError(#[from] std::io::Error),
 }
 
 /// `RequestBuilder` provides a builder interface to create and send
@@ -262,27 +423,11 @@ pub struct RequestBuilder<'a, C> {
     // Serialized instruction data for the target RPC.
     instruction_data: Option<Vec<u8>>,
     signers: Vec<&'a dyn Signer>,
+    #[cfg(not(feature = "async"))]
+    handle: &'a Handle,
 }
 
 impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
-    pub fn from(
-        program_id: Pubkey,
-        cluster: &str,
-        payer: C,
-        options: Option<CommitmentConfig>,
-    ) -> Self {
-        Self {
-            program_id,
-            payer,
-            cluster: cluster.to_string(),
-            accounts: Vec::new(),
-            options: options.unwrap_or_default(),
-            instructions: Vec::new(),
-            instruction_data: None,
-            signers: Vec::new(),
-        }
-    }
-
     #[must_use]
     pub fn payer(mut self, payer: C) -> Self {
         self.payer = payer;
@@ -367,6 +512,45 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
         let instructions = &self.instructions;
         let tx = Transaction::new_with_payer(instructions, Some(&self.payer.pubkey()));
         Ok(tx)
+    }
+
+    async fn signed_transaction_internal(&self) -> Result<Transaction, ClientError> {
+        let latest_hash =
+            AsyncRpcClient::new_with_commitment(self.cluster.to_owned(), self.options)
+                .get_latest_blockhash()
+                .await?;
+        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
+
+        Ok(tx)
+    }
+
+    async fn send_internal(&self) -> Result<Signature, ClientError> {
+        let rpc_client = AsyncRpcClient::new_with_commitment(self.cluster.to_owned(), self.options);
+        let latest_hash = rpc_client.get_latest_blockhash().await?;
+        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
+
+        rpc_client
+            .send_and_confirm_transaction(&tx)
+            .await
+            .map_err(Into::into)
+    }
+
+    async fn send_with_spinner_and_config_internal(
+        &self,
+        config: RpcSendTransactionConfig,
+    ) -> Result<Signature, ClientError> {
+        let rpc_client = AsyncRpcClient::new_with_commitment(self.cluster.to_owned(), self.options);
+        let latest_hash = rpc_client.get_latest_blockhash().await?;
+        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
+
+        rpc_client
+            .send_and_confirm_transaction_with_spinner_and_config(
+                &tx,
+                rpc_client.commitment(),
+                config,
+            )
+            .await
+            .map_err(Into::into)
     }
 }
 

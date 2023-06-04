@@ -1,7 +1,7 @@
 use anchor_client::solana_sdk::pubkey::Pubkey;
 use anchor_client::solana_sdk::signature::{Keypair, Signer};
 use anchor_client::solana_sdk::system_instruction;
-use anchor_client::{Client, Cluster, EventContext};
+use anchor_client::{Client, Cluster};
 use anyhow::Result;
 use clap::Parser;
 use solana_sdk::commitment_config::CommitmentConfig;
@@ -28,6 +28,7 @@ use optional::account::{DataAccount, DataPda};
 use std::ops::Deref;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::thread::sleep;
 use std::time::Duration;
 
 type TestFn<C> = &'static (dyn Fn(&Client<C>, Pubkey) -> Result<()> + Send + Sync);
@@ -98,7 +99,7 @@ pub fn composite<C: Deref<Target = impl Signer> + Clone>(
     pid: Pubkey,
 ) -> Result<()> {
     // Program client.
-    let program = client.program(pid);
+    let program = client.program(pid)?;
 
     // `Initialize` parameters.
     let dummy_a = Keypair::new();
@@ -171,7 +172,7 @@ pub fn basic_2<C: Deref<Target = impl Signer> + Clone>(
     client: &Client<C>,
     pid: Pubkey,
 ) -> Result<()> {
-    let program = client.program(pid);
+    let program = client.program(pid)?;
 
     // `Create` parameters.
     let counter = Keypair::new();
@@ -203,14 +204,16 @@ pub fn events<C: Deref<Target = impl Signer> + Clone>(
     client: &Client<C>,
     pid: Pubkey,
 ) -> Result<()> {
-    let program = client.program(pid);
+    let program = client.program(pid)?;
 
     let (sender, receiver) = std::sync::mpsc::channel();
-    let handle = program.on(move |_ctx: &EventContext, event: MyEvent| {
-        sender.send(event).unwrap();
+    let event_unsubscriber = program.on(move |_, event: MyEvent| {
+        if sender.send(event).is_err() {
+            println!("Error while transferring the event.")
+        }
     })?;
 
-    std::thread::sleep(Duration::from_millis(1000));
+    sleep(Duration::from_millis(1000));
 
     program
         .request()
@@ -221,13 +224,7 @@ pub fn events<C: Deref<Target = impl Signer> + Clone>(
     assert_eq!(event.data, 5);
     assert_eq!(event.label, "hello".to_string());
 
-    // TODO: remove once https://github.com/solana-labs/solana/issues/16102
-    //       is addressed. Until then, drop the subscription handle in another
-    //       thread so that we deadlock in the other thread as to not block
-    //       this thread.
-    std::thread::spawn(move || {
-        drop(handle);
-    });
+    event_unsubscriber.unsubscribe();
 
     println!("Events success!");
 
@@ -238,7 +235,7 @@ pub fn basic_4<C: Deref<Target = impl Signer> + Clone>(
     client: &Client<C>,
     pid: Pubkey,
 ) -> Result<()> {
-    let program = client.program(pid);
+    let program = client.program(pid)?;
     let authority = program.payer();
     let (counter, _) = Pubkey::find_program_address(&[b"counter"], &pid);
 
@@ -278,7 +275,7 @@ pub fn optional<C: Deref<Target = impl Signer> + Clone>(
     pid: Pubkey,
 ) -> Result<()> {
     // Program client.
-    let program = client.program(pid);
+    let program = client.program(pid)?;
 
     // `Initialize` parameters.
     let data_account_keypair = Keypair::new();
