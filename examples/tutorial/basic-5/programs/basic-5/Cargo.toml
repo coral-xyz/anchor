@@ -1,5 +1,5 @@
 [package]
-name = "token-proxy"
+name = "basic-5"
 version = "0.1.0"
 description = "Created with Anchor"
 rust-version = "1.60"
@@ -7,7 +7,7 @@ edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "token_proxy"
+name = "basic_5"
 
 [features]
 no-entrypoint = []
@@ -15,4 +15,3 @@ cpi = ["no-entrypoint"]
 
 [dependencies]
 anchor-lang = { path = "../../../../../lang" }
-anchor-spl = { path = "../../../../../spl" }
