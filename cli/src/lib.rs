@@ -799,7 +799,7 @@ fn new(cfg_override: &ConfigOverride, solidity: bool, name: String) -> Result<()
 
                 let toml = cfg.to_string();
                 fs::write("Anchor.toml", toml)?;
-                
+
                 println!("Created new program.");
             }
         };
