@@ -3066,70 +3066,80 @@ fn deploy(
         println!("Deploying cluster: {url}");
         println!("Upgrade authority: {keypair}");
 
+        let mut program_found = true; // Flag to track if the specified program is found
+
         for mut program in cfg.read_all_programs()? {
             if let Some(single_prog_str) = &program_str {
                 let program_name = program.path.file_name().unwrap().to_str().unwrap();
+
                 if single_prog_str.as_str() != program_name {
-                    continue;
+                    program_found = false;
+                } else {
+                    program_found = true;
                 }
             }
-            let binary_path = program.binary_path().display().to_string();
+            if program_found {
+                let binary_path = program.binary_path().display().to_string();
 
-            println!(
-                "Deploying program {:?}...",
-                program.path.file_name().unwrap().to_str().unwrap()
-            );
+                println!(
+                    "Deploying program {:?}...",
+                    program.path.file_name().unwrap().to_str().unwrap()
+                );
+                println!("Program path: {binary_path}...");
 
-            println!("Program path: {binary_path}...");
+                let (program_keypair_filepath, program_id) = match &program_keypair {
+                    Some(path) => (
+                        path.clone(),
+                        solana_sdk::signature::read_keypair_file(path)
+                            .map_err(|_| anyhow!("Unable to read keypair file"))?
+                            .pubkey(),
+                    ),
+                    None => (
+                        program.keypair_file()?.path().display().to_string(),
+                        program.pubkey()?,
+                    ),
+                };
 
-            let (program_keypair_filepath, program_id) = match &program_keypair {
-                Some(path) => (
-                    path.clone(),
-                    solana_sdk::signature::read_keypair_file(path)
-                        .map_err(|_| anyhow!("Unable to read keypair file"))?
-                        .pubkey(),
-                ),
-                None => (
-                    program.keypair_file()?.path().display().to_string(),
-                    program.pubkey()?,
-                ),
-            };
+                // Send deploy transactions.
+                let exit = std::process::Command::new("solana")
+                    .arg("program")
+                    .arg("deploy")
+                    .arg("--url")
+                    .arg(&url)
+                    .arg("--keypair")
+                    .arg(&keypair)
+                    .arg("--program-id")
+                    .arg(strip_workspace_prefix(program_keypair_filepath))
+                    .arg(strip_workspace_prefix(binary_path))
+                    .stdout(Stdio::inherit())
+                    .stderr(Stdio::inherit())
+                    .output()
+                    .expect("Must deploy");
+                if !exit.status.success() {
+                    println!("There was a problem deploying: {exit:?}.");
+                    std::process::exit(exit.status.code().unwrap_or(1));
+                }
 
-            // Send deploy transactions.
-            let exit = std::process::Command::new("solana")
-                .arg("program")
-                .arg("deploy")
-                .arg("--url")
-                .arg(&url)
-                .arg("--keypair")
-                .arg(&keypair)
-                .arg("--program-id")
-                .arg(strip_workspace_prefix(program_keypair_filepath))
-                .arg(strip_workspace_prefix(binary_path))
-                .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit())
-                .output()
-                .expect("Must deploy");
-            if !exit.status.success() {
-                println!("There was a problem deploying: {exit:?}.");
-                std::process::exit(exit.status.code().unwrap_or(1));
-            }
+                if let Some(mut idl) = program.idl.as_mut() {
+                    // Add program address to the IDL.
+                    idl.metadata = Some(serde_json::to_value(IdlTestMetadata {
+                        address: program_id.to_string(),
+                    })?);
 
-            if let Some(mut idl) = program.idl.as_mut() {
-                // Add program address to the IDL.
-                idl.metadata = Some(serde_json::to_value(IdlTestMetadata {
-                    address: program_id.to_string(),
-                })?);
-
-                // Persist it.
-                let idl_out = PathBuf::from("target/idl")
-                    .join(&idl.name)
-                    .with_extension("json");
-                write_idl(idl, OutFile::File(idl_out))?;
+                    // Persist it.
+                    let idl_out = PathBuf::from("target/idl")
+                        .join(&idl.name)
+                        .with_extension("json");
+                    write_idl(idl, OutFile::File(idl_out))?;
+                }
             }
         }
 
-        println!("Deploy success");
+        if program_str.is_some() && !program_found {
+            println!("Specified program not found");
+        } else {
+            println!("Deploy success");
+        }
 
         Ok(())
     })
