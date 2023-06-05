@@ -3064,8 +3064,8 @@ fn deploy(
         let keypair = cfg.provider.wallet.to_string();
 
         // Deploy the programs.
-        println!("Deploying cluster: {url}");
-        println!("Upgrade authority: {keypair}");
+        println!("Deploying cluster: {}", url);
+        println!("Upgrade authority: {}", keypair);
 
         let mut program_found = true; // Flag to track if the specified program is found
 
