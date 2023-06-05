@@ -3140,6 +3140,12 @@ fn deploy(
                     write_idl(idl, OutFile::File(idl_out))?;
                 }
             }
+            
+
+            // Break the loop if a specific programme is discovered and program_str is not None.
+            if program_str.is_some() && program_found {
+                break;
+            }
         }
 
         // If a program string is provided but not found
