@@ -3058,7 +3058,6 @@ fn deploy(
     program_str: Option<String>,
     program_keypair: Option<String>,
 ) -> Result<()> {
-    
     // Execute the code within the workspace
     with_workspace(cfg_override, |cfg| {
         let url = cluster_url(cfg, &cfg.test_validator);
@@ -3082,7 +3081,7 @@ fn deploy(
                     program_found = true;
                 }
             }
-            
+
             if program_found {
                 let binary_path = program.binary_path().display().to_string();
 
