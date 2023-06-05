@@ -3063,7 +3063,7 @@ fn deploy(
         let keypair = cfg.provider.wallet.to_string();
 
         // Deploy the programs.
-        println!("Deploying workspace: {url}");
+        println!("Deploying cluster: {url}");
         println!("Upgrade authority: {keypair}");
 
         for mut program in cfg.read_all_programs()? {

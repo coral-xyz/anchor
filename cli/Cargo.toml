@@ -9,7 +9,7 @@ description = "Anchor CLI"
 license = "Apache-2.0"
 
 [[bin]]
-name = "anchor"
+name = "xanchor"
 path = "src/bin/main.rs"
 
 [features]
