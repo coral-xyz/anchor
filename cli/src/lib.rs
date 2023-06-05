@@ -791,7 +791,7 @@ fn new(cfg_override: &ConfigOverride, solidity: bool, name: String) -> Result<()
                             solidity_template::default_program_id()
                         } else {
                             new_rust_program(&name)?;
-                            rust_template::default_program_id()
+                            rust_template::get_or_create_program_id(&name)
                         },
                         path: None,
                         idl: None,
