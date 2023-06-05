@@ -3058,6 +3058,8 @@ fn deploy(
     program_str: Option<String>,
     program_keypair: Option<String>,
 ) -> Result<()> {
+    
+    // Execute the code within the workspace
     with_workspace(cfg_override, |cfg| {
         let url = cluster_url(cfg, &cfg.test_validator);
         let keypair = cfg.provider.wallet.to_string();
@@ -3069,15 +3071,18 @@ fn deploy(
         let mut program_found = true; // Flag to track if the specified program is found
 
         for mut program in cfg.read_all_programs()? {
+            // If a program string is provided
             if let Some(single_prog_str) = &program_str {
                 let program_name = program.path.file_name().unwrap().to_str().unwrap();
 
+                // Check if the provided program string matches the program name
                 if single_prog_str.as_str() != program_name {
                     program_found = false;
                 } else {
                     program_found = true;
                 }
             }
+            
             if program_found {
                 let binary_path = program.binary_path().display().to_string();
 
@@ -3085,7 +3090,7 @@ fn deploy(
                     "Deploying program {:?}...",
                     program.path.file_name().unwrap().to_str().unwrap()
                 );
-                println!("Program path: {binary_path}...");
+                println!("Program path: {}...", binary_path);
 
                 let (program_keypair_filepath, program_id) = match &program_keypair {
                     Some(path) => (
@@ -3100,7 +3105,7 @@ fn deploy(
                     ),
                 };
 
-                // Send deploy transactions.
+                // Send deploy transactions using the Solana CLI
                 let exit = std::process::Command::new("solana")
                     .arg("program")
                     .arg("deploy")
@@ -3115,6 +3120,8 @@ fn deploy(
                     .stderr(Stdio::inherit())
                     .output()
                     .expect("Must deploy");
+
+                // Check if deployment was successful
                 if !exit.status.success() {
                     println!("There was a problem deploying: {exit:?}.");
                     std::process::exit(exit.status.code().unwrap_or(1));
@@ -3135,6 +3142,7 @@ fn deploy(
             }
         }
 
+        // If a program string is provided but not found
         if program_str.is_some() && !program_found {
             println!("Specified program not found");
         } else {
