@@ -34,10 +34,12 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::vec::IntoIter;
 use thiserror::Error;
-use tokio::sync::Mutex;
 use tokio::{
     runtime::Handle,
-    sync::mpsc::{unbounded_channel, UnboundedReceiver},
+    sync::{
+        mpsc::{unbounded_channel, UnboundedReceiver},
+        RwLock,
+    },
     task::JoinHandle,
 };
 
@@ -57,12 +59,6 @@ const PROGRAM_LOG: &str = "Program log: ";
 const PROGRAM_DATA: &str = "Program data: ";
 
 type UnsubscribeFn = Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send>;
-type SubClientConfig = (
-    Arc<PubsubClient>,
-    RpcTransactionLogsConfig,
-    RpcTransactionLogsFilter,
-);
-
 /// Client defines the base configuration for building RPC clients to
 /// communicate with Anchor programs running on a Solana cluster. It's
 /// primary use is to build a `Program` client via the `program` method.
@@ -132,7 +128,7 @@ impl<'a> EventUnsubscriber<'a> {
 pub struct Program<C> {
     program_id: Pubkey,
     cfg: Config<C>,
-    sub_client: Mutex<Option<Arc<PubsubClient>>>,
+    sub_client: Arc<RwLock<Option<PubsubClient>>>,
     #[cfg(not(feature = "async"))]
     rt: tokio::runtime::Runtime,
 }
@@ -215,23 +211,16 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         })
     }
 
-    async fn get_sub_client(&self) -> Result<SubClientConfig, ClientError> {
-        let mut lock = self.sub_client.lock().await;
-        let config = RpcTransactionLogsConfig {
-            commitment: self.cfg.options,
-        };
-        let program_id_str = self.program_id.to_string();
-        let filter = RpcTransactionLogsFilter::Mentions(vec![program_id_str]);
-        let client = match lock.as_ref() {
-            Some(client) => client.to_owned(),
-            None => {
-                let client = Arc::new(PubsubClient::new(self.cfg.cluster.ws_url()).await?);
-                *lock = Some(client.clone());
-                client
-            }
-        };
+    async fn init_sub_client_if_needed(&self) -> Result<(), ClientError> {
+        let lock = &self.sub_client;
+        let mut client = lock.write().await;
 
-        Ok((client, config, filter))
+        if client.is_none() {
+            let sub_client = PubsubClient::new(self.cfg.cluster.ws_url()).await?;
+            *client = Some(sub_client);
+        }
+
+        Ok(())
     }
 
     async fn on_internal<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
@@ -244,27 +233,36 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         ),
         ClientError,
     > {
+        self.init_sub_client_if_needed().await?;
         let (tx, rx) = unbounded_channel::<_>();
-        let (client, config, filter) = self.get_sub_client().await?;
+        let config = RpcTransactionLogsConfig {
+            commitment: self.cfg.options,
+        };
         let program_id_str = self.program_id.to_string();
+        let filter = RpcTransactionLogsFilter::Mentions(vec![program_id_str.clone()]);
+
+        let lock = Arc::clone(&self.sub_client);
 
         let handle = tokio::spawn(async move {
-            let (mut notifications, unsubscribe) = client.logs_subscribe(filter, config).await?;
+            if let Some(ref client) = *lock.read().await {
+                let (mut notifications, unsubscribe) =
+                    client.logs_subscribe(filter, config).await?;
 
-            tx.send(unsubscribe).map_err(|e| {
-                ClientError::SolanaClientPubsubError(PubsubClientError::UnexpectedMessageError(
-                    e.to_string(),
-                ))
-            })?;
+                tx.send(unsubscribe).map_err(|e| {
+                    ClientError::SolanaClientPubsubError(PubsubClientError::UnexpectedMessageError(
+                        e.to_string(),
+                    ))
+                })?;
 
-            while let Some(logs) = notifications.next().await {
-                let ctx = EventContext {
-                    signature: logs.value.signature.parse().unwrap(),
-                    slot: logs.context.slot,
-                };
-                let events = parse_logs_response(logs, &program_id_str);
-                for e in events {
-                    f(&ctx, e);
+                while let Some(logs) = notifications.next().await {
+                    let ctx = EventContext {
+                        signature: logs.value.signature.parse().unwrap(),
+                        slot: logs.context.slot,
+                    };
+                    let events = parse_logs_response(logs, &program_id_str);
+                    for e in events {
+                        f(&ctx, e);
+                    }
                 }
             }
             Ok::<(), ClientError>(())

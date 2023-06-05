@@ -8,10 +8,10 @@ use solana_sdk::{
     commitment_config::CommitmentConfig, signature::Signature, signer::Signer,
     transaction::Transaction,
 };
-use std::{marker::PhantomData, ops::Deref};
+use std::{marker::PhantomData, ops::Deref, sync::Arc};
 use tokio::{
     runtime::{Builder, Handle},
-    sync::Mutex,
+    sync::RwLock,
 };
 
 impl<'a> EventUnsubscriber<'a> {
@@ -28,7 +28,7 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         Ok(Self {
             program_id,
             cfg,
-            sub_client: Mutex::new(None),
+            sub_client: Arc::new(RwLock::new(None)),
             rt,
         })
     }
