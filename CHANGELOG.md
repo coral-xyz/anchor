@@ -12,15 +12,24 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Features
 
+- client: Add `async` feature flag to use an asynchronous anchor-client ([#2488](https://github.com/coral-xyz/anchor/pull/2488)).
 - spl: Add metadata wrappers `approve_collection_authority`, `bubblegum_set_collection_size`, `burn_edition_nft`, `burn_nft`, `revoke_collection_authority`, `set_token_standard`, `utilize`, `unverify_sized_collection_item`, `unverify_collection` ([#2430](https://github.com/coral-xyz/anchor/pull/2430))
 - spl: Add `token_program` constraint to `Token`, `Mint`, and `AssociatedToken` accounts in order to override required `token_program` fields and use different token interface implementations in the same instruction ([#2460](https://github.com/coral-xyz/anchor/pull/2460))
 - cli: Add support for Solidity programs. `anchor init` and `anchor new` take an option `--solidity` which creates solidity code rather than rust. `anchor build` and `anchor test` work accordingly ([#2421](https://github.com/coral-xyz/anchor/pull/2421))
 - bench: Add benchmarking for compute units usage ([#2466](https://github.com/coral-xyz/anchor/pull/2466))
+- cli: `idl set-buffer`, `idl set-authority` and `idl close` take an option `--print-only`. which prints transaction in a base64 Borsh compatible format but not sent to the cluster. It's helpful when managing authority under a multisig, e.g., a user can create a proposal for a `Custom Instruction` in SPL Governance ([#2486](https://github.com/coral-xyz/anchor/pull/2486)).
+- lang: Add `emit_cpi!` and `#[event_cpi]` macros(behind `event-cpi` feature flag) to store event logs in transaction metadata ([#2438](https://github.com/coral-xyz/anchor/pull/2438)).
+- cli: Add `keys sync` command to sync program id declarations ([#2505](https://github.com/coral-xyz/anchor/pull/2505)).
+- cli: Create new programs with correct program ids ([#2509](https://github.com/coral-xyz/anchor/pull/2509)).
+- cli, client, lang, spl: Update Solana toolchain and dependencies to `1.16.0` and specify maximum version of `<1.17.0` ([#2512](https://github.com/coral-xyz/anchor/pull/2512)).
 
 ### Fixes
 
 - ts: Narrowed `AccountClient` type to it's appropriate account type ([#2440](https://github.com/coral-xyz/anchor/pull/2440))
 - lang: Fix inability to use identifiers `program_id`, `accounts`, `ix_data`, `remaining_accounts` in instruction arguments ([#2464](https://github.com/coral-xyz/anchor/pull/2464))
+- cli: Fix incorrect `metadata.address` generation in IDL after deploying with a custom keypair ([#2485](https://github.com/coral-xyz/anchor/pull/2485))
+- cli: IDL commands no longer hang when the payer doesn't have funds to pay for the transaction fee ([#2492](https://github.com/coral-xyz/anchor/pull/2492))
+- cli: Fix `anchor new` not updating `Anchor.toml` ([#2516](https://github.com/coral-xyz/anchor/pull/2516)).
 
 ### Breaking
 

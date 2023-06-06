@@ -14,13 +14,13 @@ use flate2::read::ZlibDecoder;
 use flate2::write::{GzEncoder, ZlibEncoder};
 use flate2::Compression;
 use heck::{ToKebabCase, ToSnakeCase};
+use regex::RegexBuilder;
 use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value as JsonValue};
 use solana_client::rpc_client::RpcClient;
-use solana_client::rpc_config::RpcSendTransactionConfig;
 use solana_program::instruction::{AccountMeta, Instruction};
 use solana_sdk::account_utils::StateMut;
 use solana_sdk::bpf_loader;
@@ -324,7 +324,14 @@ pub enum Command {
 
 #[derive(Debug, Parser)]
 pub enum KeysCommand {
+    /// List all of the program keys.
     List,
+    /// Sync the program's `declare_id!` pubkey with the program's actual pubkey.
+    Sync {
+        /// Only sync the given program instead of all programs
+        #[clap(short, long)]
+        program_name: Option<String>,
+    },
 }
 
 #[derive(Debug, Parser)]
@@ -337,6 +344,10 @@ pub enum IdlCommand {
     },
     Close {
         program_id: Pubkey,
+        /// When used, the content of the instruction will only be printed in base64 form and not executed.
+        /// Useful for multisig execution when the local wallet keypair is not available.
+        #[clap(long)]
+        print_only: bool,
     },
     /// Writes an IDL into a buffer account. This can be used with SetBuffer
     /// to perform an upgrade.
@@ -351,6 +362,10 @@ pub enum IdlCommand {
         /// Address of the buffer account to set as the idl on the program.
         #[clap(short, long)]
         buffer: Pubkey,
+        /// When used, the content of the instruction will only be printed in base64 form and not executed.
+        /// Useful for multisig execution when the local wallet keypair is not available.
+        #[clap(long)]
+        print_only: bool,
     },
     /// Upgrades the IDL to the new file. An alias for first writing and then
     /// then setting the idl buffer account.
@@ -370,6 +385,10 @@ pub enum IdlCommand {
         /// New authority of the IDL account.
         #[clap(short, long)]
         new_authority: Pubkey,
+        /// When used, the content of the instruction will only be printed in base64 form and not executed.
+        /// Useful for multisig execution when the local wallet keypair is not available.
+        #[clap(long)]
+        print_only: bool,
     },
     /// Command to remove the ability to modify the IDL account. This should
     /// likely be used in conjection with eliminating an "upgrade authority" on
@@ -623,14 +642,15 @@ fn init(
     }
 
     let mut localnet = BTreeMap::new();
+    let program_id = if solidity {
+        solidity_template::default_program_id()
+    } else {
+        rust_template::get_or_create_program_id(&rust_name)
+    };
     localnet.insert(
         rust_name,
         ProgramDeployment {
-            address: if solidity {
-                solidity_template::default_program_id()
-            } else {
-                rust_template::default_program_id()
-            },
+            address: program_id,
             path: None,
             idl: None,
         },
@@ -756,11 +776,31 @@ fn new(cfg_override: &ConfigOverride, solidity: bool, name: String) -> Result<()
             }
             Some(parent) => {
                 std::env::set_current_dir(parent)?;
-                if solidity {
-                    new_solidity_program(&name)?;
-                } else {
-                    new_rust_program(&name)?;
+
+                let cluster = cfg.provider.cluster.clone();
+                let programs = cfg.programs.entry(cluster).or_insert(BTreeMap::new());
+                if programs.contains_key(&name) {
+                    return Err(anyhow!("Program already exists"));
                 }
+
+                programs.insert(
+                    name.clone(),
+                    ProgramDeployment {
+                        address: if solidity {
+                            new_solidity_program(&name)?;
+                            solidity_template::default_program_id()
+                        } else {
+                            new_rust_program(&name)?;
+                            rust_template::get_or_create_program_id(&name)
+                        },
+                        path: None,
+                        idl: None,
+                    },
+                );
+
+                let toml = cfg.to_string();
+                fs::write("Anchor.toml", toml)?;
+
                 println!("Created new program.");
             }
         };
@@ -1657,14 +1697,12 @@ fn cd_member(cfg_override: &ConfigOverride, program_name: &str) -> Result<()> {
 }
 
 pub fn verify_bin(program_id: Pubkey, bin_path: &Path, cluster: &str) -> Result<BinVerification> {
-    let client = RpcClient::new(cluster.to_string());
+    // Use `finalized` state for verify
+    let client = RpcClient::new_with_commitment(cluster, CommitmentConfig::finalized());
 
     // Get the deployed build artifacts.
     let (deployed_bin, state) = {
-        let account = client
-            .get_account_with_commitment(&program_id, CommitmentConfig::default())?
-            .value
-            .map_or(Err(anyhow!("Program account not found")), Ok)?;
+        let account = client.get_account(&program_id)?;
         if account.owner == bpf_loader::id() || account.owner == bpf_loader_deprecated::id() {
             let bin = account.data.to_vec();
             let state = BinVerificationState::ProgramData {
@@ -1677,13 +1715,7 @@ pub fn verify_bin(program_id: Pubkey, bin_path: &Path, cluster: &str) -> Result<
                 UpgradeableLoaderState::Program {
                     programdata_address,
                 } => {
-                    let account = client
-                        .get_account_with_commitment(
-                            &programdata_address,
-                            CommitmentConfig::default(),
-                        )?
-                        .value
-                        .map_or(Err(anyhow!("Program data account not found")), Ok)?;
+                    let account = client.get_account(&programdata_address)?;
                     let bin = account.data
                         [UpgradeableLoaderState::size_of_programdata_metadata()..]
                         .to_vec();
@@ -1772,19 +1804,12 @@ fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
         }
     };
 
-    let client = RpcClient::new(url);
+    let client = create_client(url);
 
-    let mut account = client
-        .get_account_with_commitment(&idl_addr, CommitmentConfig::processed())?
-        .value
-        .map_or(Err(anyhow!("IDL account not found")), Ok)?;
-
+    let mut account = client.get_account(&idl_addr)?;
     if account.executable {
         let idl_addr = IdlAccount::address(&idl_addr);
-        account = client
-            .get_account_with_commitment(&idl_addr, CommitmentConfig::processed())?
-            .value
-            .map_or(Err(anyhow!("IDL account not found")), Ok)?;
+        account = client.get_account(&idl_addr)?;
     }
 
     // Cut off account discriminator.
@@ -1824,14 +1849,19 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
             program_id,
             filepath,
         } => idl_init(cfg_override, program_id, filepath),
-        IdlCommand::Close { program_id } => idl_close(cfg_override, program_id),
+        IdlCommand::Close {
+            program_id,
+            print_only,
+        } => idl_close(cfg_override, program_id, print_only),
         IdlCommand::WriteBuffer {
             program_id,
             filepath,
         } => idl_write_buffer(cfg_override, program_id, filepath).map(|_| ()),
-        IdlCommand::SetBuffer { program_id, buffer } => {
-            idl_set_buffer(cfg_override, program_id, buffer)
-        }
+        IdlCommand::SetBuffer {
+            program_id,
+            buffer,
+            print_only,
+        } => idl_set_buffer(cfg_override, program_id, buffer, print_only),
         IdlCommand::Upgrade {
             program_id,
             filepath,
@@ -1840,7 +1870,8 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
             program_id,
             address,
             new_authority,
-        } => idl_set_authority(cfg_override, program_id, address, new_authority),
+            print_only,
+        } => idl_set_authority(cfg_override, program_id, address, new_authority, print_only),
         IdlCommand::EraseAuthority { program_id } => idl_erase_authority(cfg_override, program_id),
         IdlCommand::Authority { program_id } => idl_authority(cfg_override, program_id),
         IdlCommand::Parse {
@@ -1851,6 +1882,12 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
         } => idl_parse(cfg_override, file, out, out_ts, no_docs),
         IdlCommand::Fetch { address, out } => idl_fetch(cfg_override, address, out),
     }
+}
+
+fn get_idl_account(client: &RpcClient, idl_address: &Pubkey) -> Result<IdlAccount> {
+    let account = client.get_account(idl_address)?;
+    let mut data: &[u8] = &account.data;
+    AccountDeserialize::try_deserialize(&mut data).map_err(|e| anyhow!("{:?}", e))
 }
 
 fn idl_init(cfg_override: &ConfigOverride, program_id: Pubkey, idl_filepath: String) -> Result<()> {
@@ -1867,12 +1904,14 @@ fn idl_init(cfg_override: &ConfigOverride, program_id: Pubkey, idl_filepath: Str
     })
 }
 
-fn idl_close(cfg_override: &ConfigOverride, program_id: Pubkey) -> Result<()> {
+fn idl_close(cfg_override: &ConfigOverride, program_id: Pubkey, print_only: bool) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         let idl_address = IdlAccount::address(&program_id);
-        idl_close_account(cfg, &program_id, idl_address)?;
+        idl_close_account(cfg, &program_id, idl_address, print_only)?;
 
-        println!("Idl account closed: {idl_address:?}");
+        if !print_only {
+            println!("Idl account closed: {idl_address:?}");
+        }
 
         Ok(())
     })
@@ -1898,19 +1937,30 @@ fn idl_write_buffer(
     })
 }
 
-fn idl_set_buffer(cfg_override: &ConfigOverride, program_id: Pubkey, buffer: Pubkey) -> Result<()> {
+fn idl_set_buffer(
+    cfg_override: &ConfigOverride,
+    program_id: Pubkey,
+    buffer: Pubkey,
+    print_only: bool,
+) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         let keypair = solana_sdk::signature::read_keypair_file(&cfg.provider.wallet.to_string())
             .map_err(|_| anyhow!("Unable to read keypair file"))?;
         let url = cluster_url(cfg, &cfg.test_validator);
-        let client = RpcClient::new(url);
+        let client = create_client(url);
 
+        let idl_address = IdlAccount::address(&program_id);
+        let idl_authority = if print_only {
+            get_idl_account(&client, &idl_address)?.authority
+        } else {
+            keypair.pubkey()
+        };
         // Instruction to set the buffer onto the IdlAccount.
-        let set_buffer_ix = {
+        let ix = {
             let accounts = vec![
                 AccountMeta::new(buffer, false),
-                AccountMeta::new(IdlAccount::address(&program_id), false),
-                AccountMeta::new(keypair.pubkey(), true),
+                AccountMeta::new(idl_address, false),
+                AccountMeta::new(idl_authority, true),
             ];
             let mut data = anchor_lang::idl::IDL_IX_TAG.to_le_bytes().to_vec();
             data.append(&mut IdlInstruction::SetBuffer.try_to_vec()?);
@@ -1921,24 +1971,21 @@ fn idl_set_buffer(cfg_override: &ConfigOverride, program_id: Pubkey, buffer: Pub
             }
         };
 
-        // Build the transaction.
-        let latest_hash = client.get_latest_blockhash()?;
-        let tx = Transaction::new_signed_with_payer(
-            &[set_buffer_ix],
-            Some(&keypair.pubkey()),
-            &[&keypair],
-            latest_hash,
-        );
+        if print_only {
+            print_idl_instruction("SetBuffer", &ix, &idl_address)?;
+        } else {
+            // Build the transaction.
+            let latest_hash = client.get_latest_blockhash()?;
+            let tx = Transaction::new_signed_with_payer(
+                &[ix],
+                Some(&keypair.pubkey()),
+                &[&keypair],
+                latest_hash,
+            );
 
-        // Send the transaction.
-        client.send_and_confirm_transaction_with_spinner_and_config(
-            &tx,
-            CommitmentConfig::confirmed(),
-            RpcSendTransactionConfig {
-                skip_preflight: true,
-                ..RpcSendTransactionConfig::default()
-            },
-        )?;
+            // Send the transaction.
+            client.send_and_confirm_transaction_with_spinner(&tx)?;
+        }
 
         Ok(())
     })
@@ -1950,18 +1997,15 @@ fn idl_upgrade(
     idl_filepath: String,
 ) -> Result<()> {
     let buffer = idl_write_buffer(cfg_override, program_id, idl_filepath)?;
-    idl_set_buffer(cfg_override, program_id, buffer)
+    idl_set_buffer(cfg_override, program_id, buffer, false)
 }
 
 fn idl_authority(cfg_override: &ConfigOverride, program_id: Pubkey) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         let url = cluster_url(cfg, &cfg.test_validator);
-        let client = RpcClient::new(url);
+        let client = create_client(url);
         let idl_address = {
-            let account = client
-                .get_account_with_commitment(&program_id, CommitmentConfig::processed())?
-                .value
-                .map_or(Err(anyhow!("Account not found")), Ok)?;
+            let account = client.get_account(&program_id)?;
             if account.executable {
                 IdlAccount::address(&program_id)
             } else {
@@ -1969,9 +2013,7 @@ fn idl_authority(cfg_override: &ConfigOverride, program_id: Pubkey) -> Result<()
             }
         };
 
-        let account = client.get_account(&idl_address)?;
-        let mut data: &[u8] = &account.data;
-        let idl_account: IdlAccount = AccountDeserialize::try_deserialize(&mut data)?;
+        let idl_account = get_idl_account(&client, &idl_address)?;
 
         println!("{:?}", idl_account.authority);
 
@@ -1984,6 +2026,7 @@ fn idl_set_authority(
     program_id: Pubkey,
     address: Option<Pubkey>,
     new_authority: Pubkey,
+    print_only: bool,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         // Misc.
@@ -1994,7 +2037,13 @@ fn idl_set_authority(
         let keypair = solana_sdk::signature::read_keypair_file(&cfg.provider.wallet.to_string())
             .map_err(|_| anyhow!("Unable to read keypair file"))?;
         let url = cluster_url(cfg, &cfg.test_validator);
-        let client = RpcClient::new(url);
+        let client = create_client(url);
+
+        let idl_authority = if print_only {
+            get_idl_account(&client, &idl_address)?.authority
+        } else {
+            keypair.pubkey()
+        };
 
         // Instruction data.
         let data =
@@ -2003,7 +2052,7 @@ fn idl_set_authority(
         // Instruction accounts.
         let accounts = vec![
             AccountMeta::new(idl_address, false),
-            AccountMeta::new_readonly(keypair.pubkey(), true),
+            AccountMeta::new_readonly(idl_authority, true),
         ];
 
         // Instruction.
@@ -2012,24 +2061,22 @@ fn idl_set_authority(
             accounts,
             data,
         };
-        // Send transaction.
-        let latest_hash = client.get_latest_blockhash()?;
-        let tx = Transaction::new_signed_with_payer(
-            &[ix],
-            Some(&keypair.pubkey()),
-            &[&keypair],
-            latest_hash,
-        );
-        client.send_and_confirm_transaction_with_spinner_and_config(
-            &tx,
-            CommitmentConfig::confirmed(),
-            RpcSendTransactionConfig {
-                skip_preflight: true,
-                ..RpcSendTransactionConfig::default()
-            },
-        )?;
 
-        println!("Authority update complete.");
+        if print_only {
+            print_idl_instruction("SetAuthority", &ix, &idl_address)?;
+        } else {
+            // Send transaction.
+            let latest_hash = client.get_latest_blockhash()?;
+            let tx = Transaction::new_signed_with_payer(
+                &[ix],
+                Some(&keypair.pubkey()),
+                &[&keypair],
+                latest_hash,
+            );
+            client.send_and_confirm_transaction_with_spinner(&tx)?;
+
+            println!("Authority update complete.");
+        }
 
         Ok(())
     })
@@ -2046,22 +2093,32 @@ fn idl_erase_authority(cfg_override: &ConfigOverride, program_id: Pubkey) -> Res
         return Ok(());
     }
 
-    idl_set_authority(cfg_override, program_id, None, ERASED_AUTHORITY)?;
+    idl_set_authority(cfg_override, program_id, None, ERASED_AUTHORITY, false)?;
 
     Ok(())
 }
 
-fn idl_close_account(cfg: &Config, program_id: &Pubkey, idl_address: Pubkey) -> Result<()> {
+fn idl_close_account(
+    cfg: &Config,
+    program_id: &Pubkey,
+    idl_address: Pubkey,
+    print_only: bool,
+) -> Result<()> {
     let keypair = solana_sdk::signature::read_keypair_file(&cfg.provider.wallet.to_string())
         .map_err(|_| anyhow!("Unable to read keypair file"))?;
     let url = cluster_url(cfg, &cfg.test_validator);
-    let client = RpcClient::new(url);
+    let client = create_client(url);
 
+    let idl_authority = if print_only {
+        get_idl_account(&client, &idl_address)?.authority
+    } else {
+        keypair.pubkey()
+    };
     // Instruction accounts.
     let accounts = vec![
         AccountMeta::new(idl_address, false),
-        AccountMeta::new_readonly(keypair.pubkey(), true),
-        AccountMeta::new(keypair.pubkey(), true),
+        AccountMeta::new_readonly(idl_authority, true),
+        AccountMeta::new(keypair.pubkey(), false),
     ];
     // Instruction.
     let ix = Instruction {
@@ -2069,22 +2126,20 @@ fn idl_close_account(cfg: &Config, program_id: &Pubkey, idl_address: Pubkey) -> 
         accounts,
         data: { serialize_idl_ix(anchor_lang::idl::IdlInstruction::Close {})? },
     };
-    // Send transaction.
-    let latest_hash = client.get_latest_blockhash()?;
-    let tx = Transaction::new_signed_with_payer(
-        &[ix],
-        Some(&keypair.pubkey()),
-        &[&keypair],
-        latest_hash,
-    );
-    client.send_and_confirm_transaction_with_spinner_and_config(
-        &tx,
-        CommitmentConfig::confirmed(),
-        RpcSendTransactionConfig {
-            skip_preflight: true,
-            ..RpcSendTransactionConfig::default()
-        },
-    )?;
+
+    if print_only {
+        print_idl_instruction("Close", &ix, &idl_address)?;
+    } else {
+        // Send transaction.
+        let latest_hash = client.get_latest_blockhash()?;
+        let tx = Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&keypair.pubkey()),
+            &[&keypair],
+            latest_hash,
+        );
+        client.send_and_confirm_transaction_with_spinner(&tx)?;
+    }
 
     Ok(())
 }
@@ -2101,7 +2156,7 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
     let keypair = solana_sdk::signature::read_keypair_file(&cfg.provider.wallet.to_string())
         .map_err(|_| anyhow!("Unable to read keypair file"))?;
     let url = cluster_url(cfg, &cfg.test_validator);
-    let client = RpcClient::new(url);
+    let client = create_client(url);
 
     // Serialize and compress the idl.
     let idl_data = {
@@ -2141,14 +2196,7 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
             &[&keypair],
             latest_hash,
         );
-        client.send_and_confirm_transaction_with_spinner_and_config(
-            &tx,
-            CommitmentConfig::confirmed(),
-            RpcSendTransactionConfig {
-                skip_preflight: true,
-                ..RpcSendTransactionConfig::default()
-            },
-        )?;
+        client.send_and_confirm_transaction_with_spinner(&tx)?;
         offset += MAX_WRITE_SIZE;
     }
     Ok(())
@@ -2192,6 +2240,35 @@ fn write_idl(idl: &Idl, out: OutFile) -> Result<()> {
         OutFile::Stdout => println!("{idl_json}"),
         OutFile::File(out) => fs::write(out, idl_json)?,
     };
+
+    Ok(())
+}
+
+/// Print `base64+borsh` encoded IDL instruction.
+fn print_idl_instruction(ix_name: &str, ix: &Instruction, idl_address: &Pubkey) -> Result<()> {
+    println!("Print only mode. No execution!");
+    println!("Instruction: {ix_name}");
+    println!("IDL address: {idl_address}");
+    println!("Program: {}", ix.program_id);
+
+    // Serialize with `bincode` because `Instruction` does not implement `BorshSerialize`
+    let mut serialized_ix = bincode::serialize(ix)?;
+
+    // Remove extra bytes in order to make the serialized instruction `borsh` compatible
+    // `bincode` uses 8 bytes(LE) for length meanwhile `borsh` uses 4 bytes(LE)
+    let mut remove_extra_vec_bytes = |index: usize| {
+        serialized_ix.drain((index + 4)..(index + 8));
+    };
+
+    let accounts_index = std::mem::size_of_val(&ix.program_id);
+    remove_extra_vec_bytes(accounts_index);
+    let data_index = accounts_index + 4 + std::mem::size_of_val(&*ix.accounts);
+    remove_extra_vec_bytes(data_index);
+
+    println!(
+        "Base64 encoded instruction: {}",
+        base64::encode(serialized_ix)
+    );
 
     Ok(())
 }
@@ -2244,7 +2321,7 @@ fn account(
         .unwrap_or(Cluster::Localnet);
     cluster = cfg_override.cluster.as_ref().unwrap_or(cluster);
 
-    let data = RpcClient::new(cluster.url()).get_account_data(&address)?;
+    let data = create_client(cluster.url()).get_account_data(&address)?;
     if data.len() < 8 {
         return Err(anyhow!(
             "The account has less than 8 bytes and is not an Anchor account."
@@ -2708,7 +2785,7 @@ fn validator_flags(
                 } else if key == "clone" {
                     // Client for fetching accounts data
                     let client = if let Some(url) = entries["url"].as_str() {
-                        RpcClient::new(url.to_string())
+                        create_client(url)
                     } else {
                         return Err(anyhow!(
                             "Validator url for Solana's JSON RPC should be provided in order to clone accounts from it"
@@ -2727,12 +2804,7 @@ fn validator_flags(
                         .collect::<Result<HashSet<Pubkey>>>()?;
 
                     let accounts_keys = pubkeys.iter().cloned().collect::<Vec<_>>();
-                    let accounts = client
-                        .get_multiple_accounts_with_commitment(
-                            &accounts_keys,
-                            CommitmentConfig::default(),
-                        )?
-                        .value;
+                    let accounts = client.get_multiple_accounts(&accounts_keys)?;
 
                     // Check if there are program accounts
                     for (account, acc_key) in accounts.iter().zip(accounts_keys) {
@@ -2840,7 +2912,6 @@ fn start_test_validator(
     flags: Option<Vec<String>>,
     test_log_stdout: bool,
 ) -> Result<Child> {
-    //
     let (test_ledger_directory, test_ledger_log_filename) =
         test_validator_file_paths(test_validator);
 
@@ -2892,7 +2963,7 @@ fn start_test_validator(
         .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
 
     // Wait for the validator to be ready.
-    let client = RpcClient::new(rpc_url);
+    let client = create_client(rpc_url);
     let mut count = 0;
     let ms_wait = test_validator
         .as_ref()
@@ -2973,23 +3044,31 @@ fn clean(cfg_override: &ConfigOverride) -> Result<()> {
     let target_dir = cfg_parent.join("target");
     let deploy_dir = target_dir.join("deploy");
 
-    for entry in fs::read_dir(target_dir)? {
-        let path = entry?.path();
-        if path.is_dir() && path != deploy_dir {
-            fs::remove_dir_all(&path)
-                .map_err(|e| anyhow!("Could not remove directory {}: {}", path.display(), e))?;
-        } else if path.is_file() {
-            fs::remove_file(&path)
-                .map_err(|e| anyhow!("Could not remove file {}: {}", path.display(), e))?;
+    if target_dir.exists() {
+        for entry in fs::read_dir(target_dir)? {
+            let path = entry?.path();
+            if path.is_dir() && path != deploy_dir {
+                fs::remove_dir_all(&path)
+                    .map_err(|e| anyhow!("Could not remove directory {}: {}", path.display(), e))?;
+            } else if path.is_file() {
+                fs::remove_file(&path)
+                    .map_err(|e| anyhow!("Could not remove file {}: {}", path.display(), e))?;
+            }
         }
+    } else {
+        println!("skipping target directory: not found")
     }
 
-    for file in fs::read_dir(deploy_dir)? {
-        let path = file?.path();
-        if path.extension() != Some(&OsString::from("json")) {
-            fs::remove_file(&path)
-                .map_err(|e| anyhow!("Could not remove file {}: {}", path.display(), e))?;
+    if deploy_dir.exists() {
+        for file in fs::read_dir(deploy_dir)? {
+            let path = file?.path();
+            if path.extension() != Some(&OsString::from("json")) {
+                fs::remove_file(&path)
+                    .map_err(|e| anyhow!("Could not remove file {}: {}", path.display(), e))?;
+            }
         }
+    } else {
+        println!("skipping deploy directory: not found")
     }
 
     Ok(())
@@ -3000,71 +3079,100 @@ fn deploy(
     program_str: Option<String>,
     program_keypair: Option<String>,
 ) -> Result<()> {
+    // Execute the code within the workspace
     with_workspace(cfg_override, |cfg| {
         let url = cluster_url(cfg, &cfg.test_validator);
         let keypair = cfg.provider.wallet.to_string();
 
         // Deploy the programs.
-        println!("Deploying workspace: {url}");
-        println!("Upgrade authority: {keypair}");
+        println!("Deploying cluster: {}", url);
+        println!("Upgrade authority: {}", keypair);
+
+        let mut program_found = true; // Flag to track if the specified program is found
 
         for mut program in cfg.read_all_programs()? {
+            // If a program string is provided
             if let Some(single_prog_str) = &program_str {
                 let program_name = program.path.file_name().unwrap().to_str().unwrap();
+
+                // Check if the provided program string matches the program name
                 if single_prog_str.as_str() != program_name {
-                    continue;
+                    program_found = false;
+                } else {
+                    program_found = true;
                 }
             }
-            let binary_path = program.binary_path().display().to_string();
 
-            println!(
-                "Deploying program {:?}...",
-                program.path.file_name().unwrap().to_str().unwrap()
-            );
+            if program_found {
+                let binary_path = program.binary_path().display().to_string();
 
-            println!("Program path: {binary_path}...");
+                println!(
+                    "Deploying program {:?}...",
+                    program.path.file_name().unwrap().to_str().unwrap()
+                );
+                println!("Program path: {}...", binary_path);
 
-            let program_keypair_filepath = match &program_keypair {
-                Some(program_keypair) => program_keypair.clone(),
-                None => program.keypair_file()?.path().display().to_string(),
-            };
+                let (program_keypair_filepath, program_id) = match &program_keypair {
+                    Some(path) => (
+                        path.clone(),
+                        solana_sdk::signature::read_keypair_file(path)
+                            .map_err(|_| anyhow!("Unable to read keypair file"))?
+                            .pubkey(),
+                    ),
+                    None => (
+                        program.keypair_file()?.path().display().to_string(),
+                        program.pubkey()?,
+                    ),
+                };
 
-            // Send deploy transactions.
-            let exit = std::process::Command::new("solana")
-                .arg("program")
-                .arg("deploy")
-                .arg("--url")
-                .arg(&url)
-                .arg("--keypair")
-                .arg(&keypair)
-                .arg("--program-id")
-                .arg(strip_workspace_prefix(program_keypair_filepath))
-                .arg(strip_workspace_prefix(binary_path))
-                .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit())
-                .output()
-                .expect("Must deploy");
-            if !exit.status.success() {
-                println!("There was a problem deploying: {exit:?}.");
-                std::process::exit(exit.status.code().unwrap_or(1));
+                // Send deploy transactions using the Solana CLI
+                let exit = std::process::Command::new("solana")
+                    .arg("program")
+                    .arg("deploy")
+                    .arg("--url")
+                    .arg(&url)
+                    .arg("--keypair")
+                    .arg(&keypair)
+                    .arg("--program-id")
+                    .arg(strip_workspace_prefix(program_keypair_filepath))
+                    .arg(strip_workspace_prefix(binary_path))
+                    .stdout(Stdio::inherit())
+                    .stderr(Stdio::inherit())
+                    .output()
+                    .expect("Must deploy");
+
+                // Check if deployment was successful
+                if !exit.status.success() {
+                    println!("There was a problem deploying: {exit:?}.");
+                    std::process::exit(exit.status.code().unwrap_or(1));
+                }
+
+                if let Some(mut idl) = program.idl.as_mut() {
+                    // Add program address to the IDL.
+                    idl.metadata = Some(serde_json::to_value(IdlTestMetadata {
+                        address: program_id.to_string(),
+                    })?);
+
+                    // Persist it.
+                    let idl_out = PathBuf::from("target/idl")
+                        .join(&idl.name)
+                        .with_extension("json");
+                    write_idl(idl, OutFile::File(idl_out))?;
+                }
             }
 
-            let program_pubkey = program.pubkey()?;
-            if let Some(mut idl) = program.idl.as_mut() {
-                // Add program address to the IDL.
-                idl.metadata = Some(serde_json::to_value(IdlTestMetadata {
-                    address: program_pubkey.to_string(),
-                })?);
-
-                // Persist it.
-                let idl_out = PathBuf::from("target/idl")
-                    .join(&idl.name)
-                    .with_extension("json");
-                write_idl(idl, OutFile::File(idl_out))?;
+            // Break the loop if a specific programme is discovered and program_str is not None.
+            if program_str.is_some() && program_found {
+                break;
             }
         }
 
-        println!("Deploy success");
+        // If a program string is provided but not found
+        if program_str.is_some() && !program_found {
+            println!("Specified program not found");
+        } else {
+            println!("Deploy success");
+        }
 
         Ok(())
     })
@@ -3113,7 +3221,7 @@ fn create_idl_account(
     let keypair = solana_sdk::signature::read_keypair_file(keypair_path)
         .map_err(|_| anyhow!("Unable to read keypair file"))?;
     let url = cluster_url(cfg, &cfg.test_validator);
-    let client = RpcClient::new(url);
+    let client = create_client(url);
     let idl_data = serialize_idl(idl)?;
 
     // Run `Create instruction.
@@ -3168,14 +3276,7 @@ fn create_idl_account(
             &[&keypair],
             latest_hash,
         );
-        client.send_and_confirm_transaction_with_spinner_and_config(
-            &tx,
-            CommitmentConfig::finalized(),
-            RpcSendTransactionConfig {
-                skip_preflight: true,
-                ..RpcSendTransactionConfig::default()
-            },
-        )?;
+        client.send_and_confirm_transaction_with_spinner(&tx)?;
     }
 
     // Write directly to the IDL account buffer.
@@ -3193,7 +3294,7 @@ fn create_idl_buffer(
     let keypair = solana_sdk::signature::read_keypair_file(keypair_path)
         .map_err(|_| anyhow!("Unable to read keypair file"))?;
     let url = cluster_url(cfg, &cfg.test_validator);
-    let client = RpcClient::new(url);
+    let client = create_client(url);
 
     let buffer = Keypair::new();
 
@@ -3236,14 +3337,7 @@ fn create_idl_buffer(
     );
 
     // Send the transaction.
-    client.send_and_confirm_transaction_with_spinner_and_config(
-        &tx,
-        CommitmentConfig::confirmed(),
-        RpcSendTransactionConfig {
-            skip_preflight: true,
-            ..RpcSendTransactionConfig::default()
-        },
-    )?;
+    client.send_and_confirm_transaction_with_spinner(&tx)?;
 
     Ok(buffer.pubkey())
 }
@@ -3678,6 +3772,7 @@ fn registry_api_token(_cfg_override: &ConfigOverride) -> Result<String> {
 fn keys(cfg_override: &ConfigOverride, cmd: KeysCommand) -> Result<()> {
     match cmd {
         KeysCommand::List => keys_list(cfg_override),
+        KeysCommand::Sync { program_name } => keys_sync(cfg_override, program_name),
     }
 }
 
@@ -3687,6 +3782,81 @@ fn keys_list(cfg_override: &ConfigOverride) -> Result<()> {
             let pubkey = program.pubkey()?;
             println!("{}: {}", program.lib_name, pubkey);
         }
+        Ok(())
+    })
+}
+
+/// Sync the program's `declare_id!` pubkey with the pubkey from `target/deploy/<KEYPAIR>.json`.
+fn keys_sync(cfg_override: &ConfigOverride, program_name: Option<String>) -> Result<()> {
+    with_workspace(cfg_override, |cfg| {
+        let programs = cfg.read_all_programs()?;
+        let programs = match program_name {
+            Some(program_name) => vec![programs
+                .into_iter()
+                .find(|program| program.lib_name == program_name)
+                .ok_or_else(|| anyhow!("`{program_name}` is not found"))?],
+            None => programs,
+        };
+
+        let declare_id_regex = RegexBuilder::new(r#"^(([\w]+::)*)declare_id!\("(\w*)"\)"#)
+            .multi_line(true)
+            .build()
+            .unwrap();
+
+        for program in programs {
+            // Get the pubkey from the keypair file
+            let actual_program_id = program.pubkey()?.to_string();
+
+            // Handle declaration in program files
+            let src_path = program.path.join("src");
+            let files_to_check = vec![src_path.join("lib.rs"), src_path.join("id.rs")];
+
+            for path in files_to_check {
+                let mut content = match fs::read_to_string(&path) {
+                    Ok(content) => content,
+                    Err(_) => continue,
+                };
+
+                let incorrect_program_id = declare_id_regex
+                    .captures(&content)
+                    .and_then(|captures| captures.get(3))
+                    .filter(|program_id_match| program_id_match.as_str() != actual_program_id);
+                if let Some(program_id_match) = incorrect_program_id {
+                    println!("Found incorrect program id declaration in {path:?}");
+
+                    // Update the program id
+                    content.replace_range(program_id_match.range(), &actual_program_id);
+                    fs::write(&path, content)?;
+
+                    println!("Updated to {actual_program_id}\n");
+                    break;
+                }
+            }
+
+            // Handle declaration in Anchor.toml
+            'outer: for programs in cfg.programs.values_mut() {
+                for (name, mut deployment) in programs {
+                    // Skip other programs
+                    if name != &program.lib_name {
+                        continue;
+                    }
+
+                    if deployment.address.to_string() != actual_program_id {
+                        println!("Found incorrect program id declaration in Anchor.toml for the program `{name}`");
+
+                        // Update the program id
+                        deployment.address = Pubkey::from_str(&actual_program_id).unwrap();
+                        fs::write(cfg.path(), cfg.to_string())?;
+
+                        println!("Updated to {actual_program_id}\n");
+                        break 'outer;
+                    }
+                }
+            }
+        }
+
+        println!("All program id declarations are synced.");
+
         Ok(())
     })
 }
@@ -3820,6 +3990,11 @@ fn strip_workspace_prefix(absolute_path: String) -> String {
         .strip_prefix(&workspace_prefix)
         .unwrap_or(&absolute_path)
         .into()
+}
+
+/// Create a new [`RpcClient`] with `confirmed` commitment level instead of the default(finalized).
+fn create_client<U: ToString>(url: U) -> RpcClient {
+    RpcClient::new_with_commitment(url, CommitmentConfig::confirmed())
 }
 
 #[cfg(test)]
