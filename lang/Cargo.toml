@@ -39,7 +39,7 @@ base64 = "0.13"
 bincode = "1"
 borsh = "<0.11.0"
 bytemuck = "1"
-solana-program = "<1.17.0"
+solana-program = ">=1.13, <1.17"
 thiserror = "1"
 
 # TODO: Remove. This crate has been added to fix a build error with the 1.16.0 release.
