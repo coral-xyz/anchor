@@ -37,7 +37,7 @@ anchor-derive-space = { path = "./derive/space", version = "0.27.0" }
 arrayref = "0.3"
 base64 = "0.13"
 bincode = "1"
-borsh = "<0.11.0"
+borsh = ">=0.9, <0.11"
 bytemuck = "1"
 solana-program = ">=1.13, <1.17"
 thiserror = "1"
