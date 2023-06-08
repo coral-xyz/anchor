@@ -42,6 +42,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 quote! {
                     /// Instruction.
                     #[derive(AnchorSerialize, AnchorDeserialize)]
+                    #[cfg_attr(feature = "arbitrary", derive(Debug, Clone, arbitrary::Arbitrary))]
                     pub struct #ix_name_camel;
 
                     #ix_data_trait
@@ -50,6 +51,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 quote! {
                     /// Instruction.
                     #[derive(AnchorSerialize, AnchorDeserialize)]
+                    #[cfg_attr(feature = "arbitrary", derive(Debug, Clone, arbitrary::Arbitrary))]
                     pub struct #ix_name_camel {
                         #(#raw_args),*
                     }
