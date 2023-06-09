@@ -30,6 +30,10 @@ pub mod basic_4 {
         ctx.accounts.counter.count += 1;
         Ok(())
     }
+
+    pub fn get_count(ctx: Context<GetCount>) -> Result<u64> {
+        Ok(ctx.accounts.counter.count)
+    }
 }
 
 #[derive(Accounts)]
@@ -56,6 +60,11 @@ pub struct Increment<'info> {
     )]
     counter: Account<'info, Counter>,
     authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct GetCount<'info> {
+    counter: Account<'info, Counter>,
 }
 
 #[account]

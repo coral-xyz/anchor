@@ -45,7 +45,14 @@ describe("basic-4", () => {
       })
       .rpc();
 
-    const counterAccount = await program.account.counter.fetch(counterPubkey);
-    assert.ok(counterAccount.count.eq(new anchor.BN(1)));
+    const response = await program.methods
+      .getCount()
+      .accounts({
+        counter: counterPubkey,
+      })
+      .simulate();
+    const count = response.returnData;
+
+    assert.ok(count.eq(new anchor.BN(1)));
   });
 });
