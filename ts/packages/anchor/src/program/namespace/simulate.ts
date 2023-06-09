@@ -1,4 +1,4 @@
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, TransactionReturnData } from "@solana/web3.js";
 import Provider from "../../provider.js";
 import { SuccessfulTxSimulationResponse } from "src/utils/rpc.js";
 import { splitArgsAndCtx } from "../context.js";
@@ -57,7 +57,7 @@ export default class SimulateFactory {
           events.push(event);
         }
       }
-      return { events, raw: logs };
+      return { events, raw: logs, rawReturnData: resp.returnData };
     };
 
     return simulate;
@@ -129,4 +129,5 @@ export type SimulateFn<
 export type SimulateResponse<E extends IdlEvent, Defined> = {
   events: readonly Event<E, Defined>[];
   raw: readonly string[];
+  rawReturnData?: TransactionReturnData | null;
 };
