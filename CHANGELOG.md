@@ -10,6 +10,8 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ## [Unreleased]
 
+## [0.28.0] - 2023-06-09
+
 ### Features
 
 - client: Add `async` feature flag to use an asynchronous anchor-client ([#2488](https://github.com/coral-xyz/anchor/pull/2488)).
