@@ -30,5 +30,5 @@ runs:
       shell: bash
     - run: cd examples/tutorial && yarn link @coral-xyz/anchor @coral-xyz/borsh && yarn --frozen-lockfile && cd ../../
       shell: bash
-    - run: cd tests && yarn link @coral-xyz/anchor && yarn link @coral-xyz/spl-associated-token-account && yarn link @coral-xyz/spl-token && yarn --frozen-lockfile && cd ..
+    - run: cd tests && yarn link @coral-xyz/anchor @coral-xyz/borsh @coral-xyz/spl-associated-token-account @coral-xyz/spl-token && yarn --frozen-lockfile && cd ..
       shell: bash
