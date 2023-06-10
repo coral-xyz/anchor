@@ -1,7 +1,7 @@
 [package]
 name = "anchor-attribute-error"
-version = "0.27.0"
-authors = ["Serum Foundation <foundation@projectserum.com>"]
+version = "0.28.0"
+authors = ["Anchor Maintainers <accounts@200ms.io>"]
 repository = "https://github.com/coral-xyz/anchor"
 license = "Apache-2.0"
 description = "Anchor attribute macro for creating error types"
@@ -15,7 +15,7 @@ proc-macro = true
 anchor-debug = ["anchor-syn/anchor-debug"]
 
 [dependencies]
-proc-macro2 = "1.0"
-quote = "1.0"
-syn = { version = "1.0.60", features = ["full"] }
-anchor-syn = { path = "../../syn", version = "0.27.0" }
+anchor-syn = { path = "../../syn", version = "0.28.0" }
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "1", features = ["full"] }

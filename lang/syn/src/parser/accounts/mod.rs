@@ -1,3 +1,7 @@
+pub mod constraints;
+#[cfg(feature = "event-cpi")]
+pub mod event_cpi;
+
 use crate::parser::docs;
 use crate::*;
 use syn::parse::{Error as ParseError, Result as ParseResult};
@@ -7,10 +11,8 @@ use syn::token::Comma;
 use syn::Expr;
 use syn::Path;
 
-pub mod constraints;
-
-pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
-    let instruction_api: Option<Punctuated<Expr, Comma>> = strct
+pub fn parse(accounts_struct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
+    let instruction_api: Option<Punctuated<Expr, Comma>> = accounts_struct
         .attrs
         .iter()
         .find(|a| {
@@ -20,7 +22,24 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
         })
         .map(|ix_attr| ix_attr.parse_args_with(Punctuated::<Expr, Comma>::parse_terminated))
         .transpose()?;
-    let fields = match &strct.fields {
+
+    #[cfg(feature = "event-cpi")]
+    let accounts_struct = {
+        let is_event_cpi = accounts_struct
+            .attrs
+            .iter()
+            .filter_map(|attr| attr.path.get_ident())
+            .any(|ident| *ident == "event_cpi");
+        if is_event_cpi {
+            event_cpi::add_event_cpi_accounts(accounts_struct)?
+        } else {
+            accounts_struct.clone()
+        }
+    };
+    #[cfg(not(feature = "event-cpi"))]
+    let accounts_struct = accounts_struct.clone();
+
+    let fields = match &accounts_struct.fields {
         syn::Fields::Named(fields) => fields
             .named
             .iter()
@@ -28,7 +47,7 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
             .collect::<ParseResult<Vec<AccountField>>>()?,
         _ => {
             return Err(ParseError::new_spanned(
-                &strct.fields,
+                &accounts_struct.fields,
                 "fields must be named",
             ))
         }
@@ -36,7 +55,11 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
 
     constraints_cross_checks(&fields)?;
 
-    Ok(AccountsStruct::new(strct.clone(), fields, instruction_api))
+    Ok(AccountsStruct::new(
+        accounts_struct,
+        fields,
+        instruction_api,
+    ))
 }
 
 fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
@@ -126,7 +149,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
             }
         }
 
-        for field in init_fields {
+        for (pos, field) in init_fields.iter().enumerate() {
             // Get payer for init-ed account
             let associated_payer_name = match field.constraints.init.clone().unwrap().payer {
                 // composite payer, check not supported
@@ -162,7 +185,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                     ));
                 }
             }
-            match kind {
+            match &field.constraints.init.as_ref().unwrap().kind {
                 // This doesn't catch cases like account.key() or account.key.
                 // My guess is that doesn't happen often and we can revisit
                 // this if I'm wrong.
@@ -175,6 +198,24 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                         return Err(ParseError::new(
                             field.ident.span(),
                             "the mint constraint has to be an account field for token initializations (not a public key)",
+                        ));
+                    }
+                }
+
+                // Make sure initialiazed token accounts are always declared after their corresponding mint.
+                InitKind::Mint { .. } => {
+                    if init_fields.iter().enumerate().any(|(f_pos, f)| {
+                        match &f.constraints.init.as_ref().unwrap().kind {
+                            InitKind::Token { mint, .. }
+                            | InitKind::AssociatedToken { mint, .. } => {
+                                field.ident == mint.to_token_stream().to_string() && pos > f_pos
+                            }
+                            _ => false,
+                        }
+                    }) {
+                        return Err(ParseError::new(
+                            field.ident.span(),
+                            "because of the init constraint, the mint has to be declared before the corresponding token account",
                         ));
                     }
                 }
