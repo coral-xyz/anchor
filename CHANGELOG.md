@@ -18,6 +18,8 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Breaking
 
+- lang: Remove the use of `AccountInfo` in the context of the accounts. Use `UncheckedAccount` instead ([#2470](https://github.com/coral-xyz/anchor/pull/2470)).
+
 ## [0.28.0] - 2023-06-09
 
 ### Features

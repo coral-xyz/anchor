@@ -334,7 +334,6 @@ fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
     let r = matches!(
         ident_string(f)?.0.as_str(),
         "Sysvar"
-            | "AccountInfo"
             | "UncheckedAccount"
             | "AccountLoader"
             | "Account"
@@ -352,7 +351,6 @@ fn parse_ty(f: &syn::Field) -> ParseResult<(Ty, bool)> {
     let (ident, optional, path) = ident_string(f)?;
     let ty = match ident.as_str() {
         "Sysvar" => Ty::Sysvar(parse_sysvar(&path)?),
-        "AccountInfo" => Ty::AccountInfo,
         "UncheckedAccount" => Ty::UncheckedAccount,
         "AccountLoader" => Ty::AccountLoader(parse_program_account_loader(&path)?),
         "Account" => Ty::Account(parse_account_ty(&path)?),

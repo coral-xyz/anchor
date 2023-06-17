@@ -40,12 +40,14 @@ mod tests {
     use solana_program::clock::Epoch;
     use solana_program::pubkey::Pubkey;
 
+    use crate::{prelude::UncheckedAccount, ToAccountInfo};
+
     use super::*;
 
     #[derive(Accounts)]
     pub struct Test<'info> {
         #[account(signer)]
-        test: AccountInfo<'info>,
+        test: UncheckedAccount<'info>,
     }
 
     #[test]

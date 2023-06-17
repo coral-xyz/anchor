@@ -14,17 +14,6 @@ fi
 popd
 
 #
-# Build the AccountInfo variant.
-#
-pushd programs/account-info/
-output=$(anchor build 2>&1 > /dev/null)
-if ! [[ $output =~ "Struct field \"unchecked\" is unsafe" ]]; then
-   echo "Error: expected /// CHECK error"
-   exit 1
-fi
-popd
-
-#
 # Build the control variant.
 #
 pushd programs/ignore-non-accounts/

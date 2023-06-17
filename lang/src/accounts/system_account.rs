@@ -1,6 +1,7 @@
 //! Type validating that the account is owned by the system program
 
 use crate::error::ErrorCode;
+use crate::prelude::UncheckedAccount;
 use crate::*;
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
@@ -87,5 +88,11 @@ impl<'info> Deref for SystemAccount<'info> {
 impl<'info> Key for SystemAccount<'info> {
     fn key(&self) -> Pubkey {
         *self.info.key
+    }
+}
+
+impl<'info> From<SystemAccount<'info>> for UncheckedAccount<'info> {
+    fn from(value: SystemAccount<'info>) -> Self {
+        UncheckedAccount::try_from(value.info)
     }
 }

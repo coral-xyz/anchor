@@ -1,6 +1,7 @@
 //! Type validating that the account is a sysvar and deserializing it
 
 use crate::error::ErrorCode;
+use crate::prelude::UncheckedAccount;
 use crate::{Accounts, AccountsExit, Key, Result, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
@@ -119,5 +120,11 @@ impl<'info, T: solana_program::sysvar::Sysvar> AccountsExit<'info> for Sysvar<'i
 impl<'info, T: solana_program::sysvar::Sysvar> Key for Sysvar<'info, T> {
     fn key(&self) -> Pubkey {
         *self.info.key
+    }
+}
+
+impl<'info, T: solana_program::sysvar::Sysvar> From<Sysvar<'info, T>> for UncheckedAccount<'info> {
+    fn from(value: Sysvar<'info, T>) -> Self {
+        UncheckedAccount::try_from(value.info)
     }
 }

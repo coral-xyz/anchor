@@ -2,6 +2,7 @@
 
 use crate::bpf_writer::BpfWriter;
 use crate::error::{Error, ErrorCode};
+use crate::prelude::UncheckedAccount;
 use crate::{
     AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, Key, Owner,
     Result, ToAccountInfo, ToAccountInfos, ToAccountMetas,
@@ -427,5 +428,13 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> DerefMut for Account<
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone> Key for Account<'info, T> {
     fn key(&self) -> Pubkey {
         *self.info.key
+    }
+}
+
+impl<'info, T: AccountSerialize + AccountDeserialize + Clone> From<Account<'info, T>>
+    for UncheckedAccount<'info>
+{
+    fn from(value: Account<'info, T>) -> Self {
+        UncheckedAccount::try_from(value.info)
     }
 }

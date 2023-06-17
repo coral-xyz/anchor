@@ -1,5 +1,6 @@
 //! Type validating that the account signed the transaction
 use crate::error::ErrorCode;
+use crate::prelude::UncheckedAccount;
 use crate::{Accounts, AccountsExit, Key, Result, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
@@ -108,5 +109,11 @@ impl<'info> Deref for Signer<'info> {
 impl<'info> Key for Signer<'info> {
     fn key(&self) -> Pubkey {
         *self.info.key
+    }
+}
+
+impl<'info> From<Signer<'info>> for UncheckedAccount<'info> {
+    fn from(value: Signer<'info>) -> Self {
+        UncheckedAccount::try_from(value.info)
     }
 }

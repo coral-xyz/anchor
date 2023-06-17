@@ -12,7 +12,7 @@ mod puppet_master {
     pub fn pull_strings(ctx: Context<PullStrings>, data: u64) -> anchor_lang::Result<()> {
         let cpi_program = ctx.accounts.puppet_program.to_account_info();
         let cpi_accounts = SetData {
-            puppet: ctx.accounts.puppet.to_account_info(),
+            puppet: ctx.accounts.puppet.to_account_info().into(),
         };
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
         puppet::cpi::set_data(cpi_ctx, data)

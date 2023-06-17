@@ -11,22 +11,6 @@ declare_id!("Bench11111111111111111111111111111111111111");
 pub mod bench {
     use super::*;
 
-    pub fn account_info1(_ctx: Context<AccountInfo1>) -> Result<()> {
-        Ok(())
-    }
-
-    pub fn account_info2(_ctx: Context<AccountInfo2>) -> Result<()> {
-        Ok(())
-    }
-
-    pub fn account_info4(_ctx: Context<AccountInfo4>) -> Result<()> {
-        Ok(())
-    }
-
-    pub fn account_info8(_ctx: Context<AccountInfo8>) -> Result<()> {
-        Ok(())
-    }
-
     pub fn account_empty_init1(_ctx: Context<AccountEmptyInit1>) -> Result<()> {
         Ok(())
     }
@@ -379,37 +363,6 @@ pub struct Sized {
 #[account]
 pub struct Unsized {
     pub field: Vec<u8>,
-}
-
-#[derive(Accounts)]
-pub struct AccountInfo1<'info> {
-    pub account1: AccountInfo<'info>,
-}
-
-#[derive(Accounts)]
-pub struct AccountInfo2<'info> {
-    pub account1: AccountInfo<'info>,
-    pub account2: AccountInfo<'info>,
-}
-
-#[derive(Accounts)]
-pub struct AccountInfo4<'info> {
-    pub account1: AccountInfo<'info>,
-    pub account2: AccountInfo<'info>,
-    pub account3: AccountInfo<'info>,
-    pub account4: AccountInfo<'info>,
-}
-
-#[derive(Accounts)]
-pub struct AccountInfo8<'info> {
-    pub account1: AccountInfo<'info>,
-    pub account2: AccountInfo<'info>,
-    pub account3: AccountInfo<'info>,
-    pub account4: AccountInfo<'info>,
-    pub account5: AccountInfo<'info>,
-    pub account6: AccountInfo<'info>,
-    pub account7: AccountInfo<'info>,
-    pub account8: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]

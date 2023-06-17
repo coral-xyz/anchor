@@ -1,4 +1,4 @@
-use anchor_lang::solana_program::account_info::AccountInfo;
+use anchor_lang::prelude::UncheckedAccount;
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::{context::CpiContext, Accounts, Result, ToAccountInfos};
@@ -204,89 +204,89 @@ pub fn initialize_market<'info>(
 
 #[derive(Accounts)]
 pub struct NewOrderV3<'info> {
-    pub market: AccountInfo<'info>,
-    pub open_orders: AccountInfo<'info>,
-    pub request_queue: AccountInfo<'info>,
-    pub event_queue: AccountInfo<'info>,
-    pub market_bids: AccountInfo<'info>,
-    pub market_asks: AccountInfo<'info>,
+    pub market: UncheckedAccount<'info>,
+    pub open_orders: UncheckedAccount<'info>,
+    pub request_queue: UncheckedAccount<'info>,
+    pub event_queue: UncheckedAccount<'info>,
+    pub market_bids: UncheckedAccount<'info>,
+    pub market_asks: UncheckedAccount<'info>,
     // Token account where funds are transferred from for the order. If
     // posting a bid market A/B, then this is the SPL token account for B.
-    pub order_payer_token_account: AccountInfo<'info>,
-    pub open_orders_authority: AccountInfo<'info>,
+    pub order_payer_token_account: UncheckedAccount<'info>,
+    pub open_orders_authority: UncheckedAccount<'info>,
     // Also known as the "base" currency. For a given A/B market,
     // this is the vault for the A mint.
-    pub coin_vault: AccountInfo<'info>,
+    pub coin_vault: UncheckedAccount<'info>,
     // Also known as the "quote" currency. For a given A/B market,
     // this is the vault for the B mint.
-    pub pc_vault: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
-    pub rent: AccountInfo<'info>,
+    pub pc_vault: UncheckedAccount<'info>,
+    pub token_program: UncheckedAccount<'info>,
+    pub rent: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
 pub struct CancelOrderV2<'info> {
-    pub market: AccountInfo<'info>,
-    pub market_bids: AccountInfo<'info>,
-    pub market_asks: AccountInfo<'info>,
-    pub open_orders: AccountInfo<'info>,
-    pub open_orders_authority: AccountInfo<'info>,
-    pub event_queue: AccountInfo<'info>,
+    pub market: UncheckedAccount<'info>,
+    pub market_bids: UncheckedAccount<'info>,
+    pub market_asks: UncheckedAccount<'info>,
+    pub open_orders: UncheckedAccount<'info>,
+    pub open_orders_authority: UncheckedAccount<'info>,
+    pub event_queue: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
 pub struct SettleFunds<'info> {
-    pub market: AccountInfo<'info>,
-    pub open_orders: AccountInfo<'info>,
-    pub open_orders_authority: AccountInfo<'info>,
-    pub coin_vault: AccountInfo<'info>,
-    pub pc_vault: AccountInfo<'info>,
-    pub coin_wallet: AccountInfo<'info>,
-    pub pc_wallet: AccountInfo<'info>,
-    pub vault_signer: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
+    pub market: UncheckedAccount<'info>,
+    pub open_orders: UncheckedAccount<'info>,
+    pub open_orders_authority: UncheckedAccount<'info>,
+    pub coin_vault: UncheckedAccount<'info>,
+    pub pc_vault: UncheckedAccount<'info>,
+    pub coin_wallet: UncheckedAccount<'info>,
+    pub pc_wallet: UncheckedAccount<'info>,
+    pub vault_signer: UncheckedAccount<'info>,
+    pub token_program: UncheckedAccount<'info>,
 }
 
 /// To use an (optional) market authority, add it as the first account of the
 /// CpiContext's `remaining_accounts` Vec.
 #[derive(Accounts)]
 pub struct InitOpenOrders<'info> {
-    pub open_orders: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
-    pub market: AccountInfo<'info>,
-    pub rent: AccountInfo<'info>,
+    pub open_orders: UncheckedAccount<'info>,
+    pub authority: UncheckedAccount<'info>,
+    pub market: UncheckedAccount<'info>,
+    pub rent: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
 pub struct CloseOpenOrders<'info> {
-    pub open_orders: AccountInfo<'info>,
-    pub authority: AccountInfo<'info>,
-    pub destination: AccountInfo<'info>,
-    pub market: AccountInfo<'info>,
+    pub open_orders: UncheckedAccount<'info>,
+    pub authority: UncheckedAccount<'info>,
+    pub destination: UncheckedAccount<'info>,
+    pub market: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
 pub struct SweepFees<'info> {
-    pub market: AccountInfo<'info>,
-    pub pc_vault: AccountInfo<'info>,
-    pub sweep_authority: AccountInfo<'info>,
-    pub sweep_receiver: AccountInfo<'info>,
-    pub vault_signer: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
+    pub market: UncheckedAccount<'info>,
+    pub pc_vault: UncheckedAccount<'info>,
+    pub sweep_authority: UncheckedAccount<'info>,
+    pub sweep_receiver: UncheckedAccount<'info>,
+    pub vault_signer: UncheckedAccount<'info>,
+    pub token_program: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
 pub struct InitializeMarket<'info> {
-    pub market: AccountInfo<'info>,
-    pub coin_mint: AccountInfo<'info>,
-    pub pc_mint: AccountInfo<'info>,
-    pub coin_vault: AccountInfo<'info>,
-    pub pc_vault: AccountInfo<'info>,
-    pub bids: AccountInfo<'info>,
-    pub asks: AccountInfo<'info>,
-    pub req_q: AccountInfo<'info>,
-    pub event_q: AccountInfo<'info>,
-    pub rent: AccountInfo<'info>,
+    pub market: UncheckedAccount<'info>,
+    pub coin_mint: UncheckedAccount<'info>,
+    pub pc_mint: UncheckedAccount<'info>,
+    pub coin_vault: UncheckedAccount<'info>,
+    pub pc_vault: UncheckedAccount<'info>,
+    pub bids: UncheckedAccount<'info>,
+    pub asks: UncheckedAccount<'info>,
+    pub req_q: UncheckedAccount<'info>,
+    pub event_q: UncheckedAccount<'info>,
+    pub rent: UncheckedAccount<'info>,
 }
 
 #[derive(Clone)]

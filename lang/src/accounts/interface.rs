@@ -2,6 +2,7 @@
 
 use crate::accounts::program::Program;
 use crate::error::{Error, ErrorCode};
+use crate::prelude::UncheckedAccount;
 use crate::{
     AccountDeserialize, Accounts, AccountsExit, CheckId, Key, Result, ToAccountInfos,
     ToAccountMetas,
@@ -140,5 +141,11 @@ impl<'info, T: AccountDeserialize> AccountsExit<'info> for Interface<'info, T> {
 impl<'info, T: AccountDeserialize> Key for Interface<'info, T> {
     fn key(&self) -> Pubkey {
         self.0.key()
+    }
+}
+
+impl<'info, T> From<Interface<'info, T>> for UncheckedAccount<'info> {
+    fn from(value: Interface<'info, T>) -> Self {
+        value.0.into()
     }
 }

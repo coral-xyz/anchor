@@ -1,5 +1,6 @@
 use anchor_lang::{
     context::CpiContext,
+    prelude::UncheckedAccount,
     solana_program::{
         account_info::AccountInfo,
         pubkey::Pubkey,
@@ -9,7 +10,7 @@ use anchor_lang::{
             state::{StakeAuthorize, StakeState},
         },
     },
-    Accounts, Result,
+    Accounts, Result, ToAccountInfo,
 };
 use borsh::BorshDeserialize;
 use std::ops::Deref;
@@ -29,9 +30,9 @@ pub fn authorize<'info>(
         custodian.as_ref().map(|c| c.key),
     );
     let mut account_infos = vec![
-        ctx.accounts.stake,
-        ctx.accounts.clock,
-        ctx.accounts.authorized,
+        ctx.accounts.stake.to_account_info(),
+        ctx.accounts.clock.to_account_info(),
+        ctx.accounts.authorized.to_account_info(),
     ];
     if let Some(c) = custodian {
         account_infos.push(c);
@@ -53,11 +54,11 @@ pub fn withdraw<'info>(
         custodian.as_ref().map(|c| c.key),
     );
     let mut account_infos = vec![
-        ctx.accounts.stake,
-        ctx.accounts.to,
-        ctx.accounts.clock,
-        ctx.accounts.stake_history,
-        ctx.accounts.withdrawer,
+        ctx.accounts.stake.to_account_info(),
+        ctx.accounts.to.to_account_info(),
+        ctx.accounts.clock.to_account_info(),
+        ctx.accounts.stake_history.to_account_info(),
+        ctx.accounts.withdrawer.to_account_info(),
     ];
     if let Some(c) = custodian {
         account_infos.push(c);
@@ -72,7 +73,11 @@ pub fn deactivate_stake<'info>(
     let ix = stake::instruction::deactivate_stake(ctx.accounts.stake.key, ctx.accounts.staker.key);
     solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.stake, ctx.accounts.clock, ctx.accounts.staker],
+        &[
+            ctx.accounts.stake.to_account_info(),
+            ctx.accounts.clock.to_account_info(),
+            ctx.accounts.staker.to_account_info(),
+        ],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -83,46 +88,46 @@ pub fn deactivate_stake<'info>(
 #[derive(Accounts)]
 pub struct Authorize<'info> {
     /// The stake account to be updated
-    pub stake: AccountInfo<'info>,
+    pub stake: UncheckedAccount<'info>,
 
     /// The existing authority
-    pub authorized: AccountInfo<'info>,
+    pub authorized: UncheckedAccount<'info>,
 
     /// The new authority to replace the existing authority
-    pub new_authorized: AccountInfo<'info>,
+    pub new_authorized: UncheckedAccount<'info>,
 
     /// Clock sysvar
-    pub clock: AccountInfo<'info>,
+    pub clock: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
     /// The stake account to be updated
-    pub stake: AccountInfo<'info>,
+    pub stake: UncheckedAccount<'info>,
 
     /// The stake account's withdraw authority
-    pub withdrawer: AccountInfo<'info>,
+    pub withdrawer: UncheckedAccount<'info>,
 
     /// Account to send withdrawn lamports to
-    pub to: AccountInfo<'info>,
+    pub to: UncheckedAccount<'info>,
 
     /// Clock sysvar
-    pub clock: AccountInfo<'info>,
+    pub clock: UncheckedAccount<'info>,
 
     /// StakeHistory sysvar
-    pub stake_history: AccountInfo<'info>,
+    pub stake_history: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
 pub struct DeactivateStake<'info> {
     /// The stake account to be deactivated
-    pub stake: AccountInfo<'info>,
+    pub stake: UncheckedAccount<'info>,
 
     /// The stake account's stake authority
-    pub staker: AccountInfo<'info>,
+    pub staker: UncheckedAccount<'info>,
 
     /// Clock sysvar
-    pub clock: AccountInfo<'info>,
+    pub clock: UncheckedAccount<'info>,
 }
 
 // State

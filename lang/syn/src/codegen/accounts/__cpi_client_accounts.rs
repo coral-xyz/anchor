@@ -63,12 +63,12 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 if f.is_optional {
                     quote! {
                         #docs
-                        pub #name: Option<anchor_lang::solana_program::account_info::AccountInfo<'info>>
+                        pub #name: Option<anchor_lang::accounts::unchecked_account::UncheckedAccount<'info>>
                     }
                 } else {
                     quote! {
                         #docs
-                        pub #name: anchor_lang::solana_program::account_info::AccountInfo<'info>
+                        pub #name: anchor_lang::accounts::unchecked_account::UncheckedAccount<'info>
                     }
                 }
             }

@@ -13,6 +13,7 @@
 //! }
 //! ```
 
+use crate::prelude::UncheckedAccount;
 use crate::{Accounts, AccountsClose, AccountsExit, Result, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
@@ -53,5 +54,11 @@ impl<T: ToAccountMetas> ToAccountMetas for Box<T> {
 impl<'info, T: AccountsClose<'info>> AccountsClose<'info> for Box<T> {
     fn close(&self, sol_destination: AccountInfo<'info>) -> Result<()> {
         T::close(self, sol_destination)
+    }
+}
+
+impl<'info, T: Into<UncheckedAccount<'info>>> From<Box<T>> for UncheckedAccount<'info> {
+    fn from(value: Box<T>) -> Self {
+        T::into(*value)
     }
 }

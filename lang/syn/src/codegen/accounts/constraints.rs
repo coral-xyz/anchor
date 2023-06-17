@@ -282,7 +282,7 @@ pub fn generate_constraint_has_one(
 pub fn generate_constraint_signer(f: &Field, c: &ConstraintSigner) -> proc_macro2::TokenStream {
     let ident = &f.ident;
     let info = match f.ty {
-        Ty::AccountInfo => quote! { #ident },
+        Ty::UncheckedAccount => quote! { #ident.to_account_info() },
         Ty::Account(_) => quote! { #ident.to_account_info() },
         Ty::InterfaceAccount(_) => quote! { #ident.to_account_info() },
         Ty::AccountLoader(_) => quote! { #ident.to_account_info() },
@@ -390,8 +390,8 @@ fn generate_constraint_realloc(
                         anchor_lang::context::CpiContext::new(
                             system_program.to_account_info(),
                             anchor_lang::system_program::Transfer {
-                                from: #payer.to_account_info(),
-                                to: __field_info.clone(),
+                                from: #payer.to_account_info().into(),
+                                to: __field_info.clone().into(),
                             },
                         ),
                         __new_rent_minimum.checked_sub(__field_info.lamports()).unwrap(),
@@ -557,9 +557,9 @@ fn generate_constraint_init_group(
                         // Initialize the token account.
                         let cpi_program = #token_program.to_account_info();
                         let accounts = ::anchor_spl::token_interface::InitializeAccount3 {
-                            account: #field.to_account_info(),
-                            mint: #mint.to_account_info(),
-                            authority: #owner.to_account_info(),
+                            account: #field.to_account_info().into(),
+                            mint: #mint.to_account_info().into(),
+                            authority: #owner.to_account_info().into(),
                         };
                         let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
                         ::anchor_spl::token_interface::initialize_account3(cpi_ctx)?;
@@ -624,12 +624,12 @@ fn generate_constraint_init_group(
 
                         let cpi_program = associated_token_program.to_account_info();
                         let cpi_accounts = ::anchor_spl::associated_token::Create {
-                            payer: #payer.to_account_info(),
-                            associated_token: #field.to_account_info(),
-                            authority: #owner.to_account_info(),
-                            mint: #mint.to_account_info(),
-                            system_program: system_program.to_account_info(),
-                            token_program: #token_program.to_account_info(),
+                            payer: #payer.to_account_info().into(),
+                            associated_token: #field.to_account_info().into(),
+                            authority: #owner.to_account_info().into(),
+                            mint: #mint.to_account_info().into(),
+                            system_program: system_program.to_account_info().into(),
+                            token_program: #token_program.to_account_info().into(),
                         };
                         let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, cpi_accounts);
                         ::anchor_spl::associated_token::create(cpi_ctx)?;
@@ -716,7 +716,7 @@ fn generate_constraint_init_group(
                         // Initialize the mint account.
                         let cpi_program = #token_program.to_account_info();
                         let accounts = ::anchor_spl::token_interface::InitializeMint2 {
-                            mint: #field.to_account_info(),
+                            mint: #field.to_account_info().into(),
                         };
                         let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
                         ::anchor_spl::token_interface::initialize_mint2(cpi_ctx, #decimals, &#owner.key(), #freeze_authority)?;
@@ -1142,13 +1142,13 @@ fn generate_create_account(
             let space = #space;
             let lamports = __anchor_rent.minimum_balance(space);
             let cpi_accounts = anchor_lang::system_program::CreateAccount {
-                from: #payer.to_account_info(),
-                to: #field.to_account_info()
+                from: #payer.to_account_info().into(),
+                to: #field.to_account_info().into(),
             };
             let cpi_context = anchor_lang::context::CpiContext::new(system_program.to_account_info(), cpi_accounts);
             anchor_lang::system_program::create_account(cpi_context.with_signer(&[#seeds_with_nonce]), lamports, space as u64, #owner)?;
         } else {
-            require_keys_neq!(#payer.key(), #field.key(), anchor_lang::error::ErrorCode::TryingToInitPayerAsProgramAccount);
+            require_keys_neq!(#payer.key(), *#field.key, anchor_lang::error::ErrorCode::TryingToInitPayerAsProgramAccount);
             // Fund the account for rent exemption.
             let required_lamports = __anchor_rent
                 .minimum_balance(#space)
@@ -1156,21 +1156,21 @@ fn generate_create_account(
                 .saturating_sub(__current_lamports);
             if required_lamports > 0 {
                 let cpi_accounts = anchor_lang::system_program::Transfer {
-                    from: #payer.to_account_info(),
-                    to: #field.to_account_info(),
+                    from: #payer.to_account_info().into(),
+                    to: #field.to_account_info().into(),
                 };
                 let cpi_context = anchor_lang::context::CpiContext::new(system_program.to_account_info(), cpi_accounts);
                 anchor_lang::system_program::transfer(cpi_context, required_lamports)?;
             }
             // Allocate space.
             let cpi_accounts = anchor_lang::system_program::Allocate {
-                account_to_allocate: #field.to_account_info()
+                account_to_allocate: #field.to_account_info().into(),
             };
             let cpi_context = anchor_lang::context::CpiContext::new(system_program.to_account_info(), cpi_accounts);
             anchor_lang::system_program::allocate(cpi_context.with_signer(&[#seeds_with_nonce]), #space as u64)?;
             // Assign to the spl token program.
             let cpi_accounts = anchor_lang::system_program::Assign {
-                account_to_assign: #field.to_account_info()
+                account_to_assign: #field.to_account_info().into(),
             };
             let cpi_context = anchor_lang::context::CpiContext::new(system_program.to_account_info(), cpi_accounts);
             anchor_lang::system_program::assign(cpi_context.with_signer(&[#seeds_with_nonce]), #owner)?;
