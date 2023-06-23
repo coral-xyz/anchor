@@ -646,7 +646,7 @@ fn generate_constraint_init_group(
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintAssociatedTokenTokenProgram).with_account_name(#name_str).with_pubkeys((*owner_program, #token_program.key())));
                         }
 
-                        if pa.key() != ::anchor_spl::associated_token::get_associated_token_address(&#owner.key(), &#mint.key()) {
+                        if pa.key() != ::anchor_spl::associated_token::get_associated_token_address_with_program_id(&#owner.key(), &#mint.key(), &#token_program.key()) {
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountNotAssociatedTokenAccount).with_account_name(#name_str));
                         }
                     }
