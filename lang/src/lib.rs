@@ -177,6 +177,13 @@ pub trait AccountDeserialize: Sized {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self>;
 }
 
+/// Determines how many accounts are
+/// specified within `cpi::accounts::*`
+/// structure
+pub trait AccountsCount {
+    const ACCOUNTS_COUNT: usize;
+}
+
 /// An account data structure capable of zero copy deserialization.
 pub trait ZeroCopy: Discriminator + Copy + Clone + Zeroable + Pod {}
 

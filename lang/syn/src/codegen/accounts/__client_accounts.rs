@@ -3,6 +3,16 @@ use heck::SnakeCase;
 use quote::quote;
 use std::str::FromStr;
 
+fn get_symbol_full_path(s: &crate::CompositeField) -> proc_macro2::TokenStream {
+    format!(
+        "__client_accounts_{0}::{1}",
+        s.symbol.to_snake_case(),
+        s.symbol,
+    )
+    .parse()
+    .unwrap()
+}
+
 // Generates the private `__client_accounts` mod implementation, containing
 // a generated struct mapping 1-1 to the `Accounts` struct, except with
 // `Pubkey`s as the types. This is generated for Rust *clients*.
@@ -33,13 +43,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 } else {
                     quote!()
                 };
-                let symbol: proc_macro2::TokenStream = format!(
-                    "__client_accounts_{0}::{1}",
-                    s.symbol.to_snake_case(),
-                    s.symbol,
-                )
-                .parse()
-                .unwrap();
+                let symbol = get_symbol_full_path(s);
                 quote! {
                     #docs
                     pub #name: #symbol
@@ -114,6 +118,25 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             }
         })
         .collect();
+
+    let accounts_count = accs.fields.iter().fold(
+        vec![quote! { 0 }],
+        |mut accounts_count, f: &AccountField| {
+            match f {
+                AccountField::CompositeField(s) => {
+                    let symbol: proc_macro2::TokenStream = get_symbol_full_path(s);
+                    accounts_count.push(quote! {
+                        <#symbol as anchor_lang::AccountsCount>::ACCOUNTS_COUNT
+                    });
+                }
+                AccountField::Field(_f) => {
+                    accounts_count.push(quote! { 1 });
+                }
+            };
+            accounts_count
+        },
+    );
+
     // Re-export all composite account structs (i.e. other structs deriving
     // accounts embedded into this struct. Required because, these embedded
     // structs are *not* visible from the #[program] macro, which is responsible
@@ -126,11 +149,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             AccountField::CompositeField(s) => Some(s),
             AccountField::Field(_) => None,
         }) {
-            re_exports.insert(format!(
-                "__client_accounts_{0}::{1}",
-                f.symbol.to_snake_case(),
-                f.symbol,
-            ));
+            re_exports.insert(get_symbol_full_path(f).to_string());
         }
 
         re_exports
@@ -179,6 +198,11 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
 
                     account_metas
                 }
+            }
+
+            #[automatically_derived]
+            impl anchor_lang::AccountsCount for #name {
+                const ACCOUNTS_COUNT: usize = #(#accounts_count)+*;
             }
         }
     }
