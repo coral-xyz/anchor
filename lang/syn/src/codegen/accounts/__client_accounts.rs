@@ -119,23 +119,50 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         })
         .collect();
 
-    let accounts_count = accs.fields.iter().fold(
-        vec![quote! { 0 }],
-        |mut accounts_count, f: &AccountField| {
-            match f {
+    let (accounts_count, accounts_from, accounts_name) = accs
+        .fields
+        .iter()
+        .fold((vec![quote! { 0 }], vec![], vec![]), |(mut accounts_count, mut accounts_from, mut accounts_name), f: &AccountField|  {
+             match f {
                 AccountField::CompositeField(s) => {
+                    let name = &s.ident;
                     let symbol: proc_macro2::TokenStream = get_symbol_full_path(s);
                     accounts_count.push(quote! {
                         <#symbol as anchor_lang::AccountsCount>::ACCOUNTS_COUNT
                     });
+                    accounts_from.push(quote! {
+                        let #name = #symbol::from(
+                            <[Pubkey; <#symbol as anchor_lang::AccountsCount>::ACCOUNTS_COUNT]>::try_from(
+                                &pubkeys[current_index..current_index+<#symbol as anchor_lang::AccountsCount>::ACCOUNTS_COUNT]
+                            ).unwrap()
+                        );
+                        current_index += <#symbol as anchor_lang::AccountsCount>::ACCOUNTS_COUNT;
+                    });
+                    accounts_name.push(quote! {
+                        #name
+                    });
                 }
-                AccountField::Field(_f) => {
+                AccountField::Field(f) => {
+                    let name = &f.ident;
+
                     accounts_count.push(quote! { 1 });
+                    accounts_from.push(quote! {
+                        let #name = pubkeys[current_index];
+                        current_index += 1;
+                    });
+                    if f.is_optional {
+                        accounts_name.push(quote! {
+                            #name: #name.ne(&crate::ID).then_some(#name)
+                        });
+                    } else {
+                        accounts_name.push(quote! {
+                            #name
+                        });
+                    }
                 }
             };
-            accounts_count
-        },
-    );
+            (accounts_count, accounts_from, accounts_name)
+        });
 
     // Re-export all composite account structs (i.e. other structs deriving
     // accounts embedded into this struct. Required because, these embedded
@@ -200,9 +227,23 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 }
             }
 
+            const ACCOUNTS_COUNT: usize = #(#accounts_count)+*;
+
             #[automatically_derived]
             impl anchor_lang::AccountsCount for #name {
-                const ACCOUNTS_COUNT: usize = #(#accounts_count)+*;
+                const ACCOUNTS_COUNT: usize = ACCOUNTS_COUNT;
+            }
+
+            impl From<[anchor_lang::solana_program::pubkey::Pubkey; ACCOUNTS_COUNT]> for #name {
+                fn from(
+                    pubkeys: [anchor_lang::solana_program::pubkey::Pubkey; ACCOUNTS_COUNT]
+                ) -> Self {
+                    let mut current_index = 0;
+                    #(#accounts_from)*
+                    Self {
+                        #(#accounts_name),*
+                    }
+                }
             }
         }
     }
