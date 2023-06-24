@@ -132,7 +132,7 @@ pub mod misc_optional {
     pub fn test_pda_init_zero_copy(ctx: Context<TestPdaInitZeroCopy>) -> Result<()> {
         let mut acc = ctx.accounts.my_pda.as_ref().unwrap().load_init()?;
         acc.data = 9;
-        acc.bump = *ctx.bumps.get("my_pda").unwrap();
+        acc.bump = ctx.bumps.my_pda;
         Ok(())
     }
 
@@ -171,7 +171,9 @@ pub mod misc_optional {
         Ok(())
     }
 
-    pub fn test_init_mint_with_token_program(_ctx: Context<TestInitMintWithTokenProgram>) -> Result<()> {
+    pub fn test_init_mint_with_token_program(
+        _ctx: Context<TestInitMintWithTokenProgram>,
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -182,10 +184,11 @@ pub mod misc_optional {
         Ok(())
     }
 
-    pub fn test_init_token_with_token_program(_ctx: Context<TestInitTokenWithTokenProgram>) -> Result<()> {
+    pub fn test_init_token_with_token_program(
+        _ctx: Context<TestInitTokenWithTokenProgram>,
+    ) -> Result<()> {
         Ok(())
     }
-
 
     pub fn test_composite_payer(ctx: Context<TestCompositePayer>) -> Result<()> {
         ctx.accounts.composite.data.as_mut().unwrap().data = 1;
@@ -201,7 +204,9 @@ pub mod misc_optional {
         Ok(())
     }
 
-    pub fn test_init_associated_token_with_token_program(ctx: Context<TestInitAssociatedTokenWithTokenProgram>) -> Result<()> {
+    pub fn test_init_associated_token_with_token_program(
+        ctx: Context<TestInitAssociatedTokenWithTokenProgram>,
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -261,7 +266,9 @@ pub mod misc_optional {
         Ok(())
     }
 
-    pub fn test_init_token_if_needed_with_token_program(_ctx: Context<TestInitTokenIfNeededWithTokenProgram>) -> Result<()> {
+    pub fn test_init_token_if_needed_with_token_program(
+        _ctx: Context<TestInitTokenIfNeededWithTokenProgram>,
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -357,7 +364,9 @@ pub mod misc_optional {
         Ok(())
     }
 
-    pub fn test_only_token_program_constraint(_ctx: Context<TestOnlyTokenProgramConstraint>) -> Result<()> {
+    pub fn test_only_token_program_constraint(
+        _ctx: Context<TestOnlyTokenProgramConstraint>,
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -401,7 +410,9 @@ pub mod misc_optional {
         Ok(())
     }
 
-    pub fn test_associated_token_with_token_program_constraint(_ctx: Context<TestAssociatedTokenWithTokenProgramConstraint>) -> Result<()> {
+    pub fn test_associated_token_with_token_program_constraint(
+        _ctx: Context<TestAssociatedTokenWithTokenProgramConstraint>,
+    ) -> Result<()> {
         Ok(())
     }
 }
