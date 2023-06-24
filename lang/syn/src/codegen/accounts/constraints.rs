@@ -931,6 +931,16 @@ fn generate_constraint_associated_token(
         }
         None => quote! {},
     };
+    let get_associated_token_address = match &c.token_program {
+        Some(token_program) => {
+            quote! {
+                ::anchor_spl::associated_token::get_associated_token_address_with_program_id(&wallet_address, &#spl_token_mint_address.key(), &#token_program.key())
+            }
+        }
+        None => quote! {
+            ::anchor_spl::associated_token::get_associated_token_address(&wallet_address, &#spl_token_mint_address.key())
+        },
+    };
 
     quote! {
         {
@@ -942,7 +952,7 @@ fn generate_constraint_associated_token(
             if my_owner != wallet_address {
                 return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenOwner).with_account_name(#name_str).with_pubkeys((my_owner, wallet_address)));
             }
-            let __associated_token_address = ::anchor_spl::associated_token::get_associated_token_address(&wallet_address, &#spl_token_mint_address.key());
+            let __associated_token_address = #get_associated_token_address;
             let my_key = #name.key();
             if my_key != __associated_token_address {
                 return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintAssociated).with_account_name(#name_str).with_pubkeys((my_key, __associated_token_address)));
