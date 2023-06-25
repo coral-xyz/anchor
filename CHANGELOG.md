@@ -18,6 +18,8 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Breaking
 
+- lang: Switch to type safe bumps in context ([#2542](https://github.com/coral-xyz/anchor/pull/2542)).
+
 ## [0.28.0] - 2023-06-09
 
 ### Features
