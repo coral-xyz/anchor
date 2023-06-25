@@ -90,7 +90,10 @@ const navigation = [
   },
   {
     title: 'Projects',
-    links: [{ title: 'Tic-Tac-Toe', href: '/docs/tic-tac-toe' }],
+    links: [
+      { title: 'Tic-Tac-Toe', href: '/docs/tic-tac-toe' },
+      { title: 'IDO Program', href: '/docs/ido-program' },
+    ],
   },
   {
     title: 'Common Security Exploits',
