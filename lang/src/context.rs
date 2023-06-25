@@ -36,9 +36,9 @@ pub struct Context<'a, 'b, 'c, 'info, T: Bumps> {
     pub bumps: T::Bumps,
 }
 
-impl<'a, 'b, 'c, 'info, T: Bumps> fmt::Debug for Context<'a, 'b, 'c, 'info, T>
+impl<'a, 'b, 'c, 'info, T> fmt::Debug for Context<'a, 'b, 'c, 'info, T>
 where
-    T: fmt::Debug,
+    T: fmt::Debug + Bumps,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Context")
@@ -50,7 +50,10 @@ where
     }
 }
 
-impl<'a, 'b, 'c, 'info, T: Bumps + Accounts<'info, T::Bumps>> Context<'a, 'b, 'c, 'info, T> {
+impl<'a, 'b, 'c, 'info, T> Context<'a, 'b, 'c, 'info, T>
+where
+    T: Bumps + Accounts<'info, T::Bumps>,
+{
     pub fn new(
         program_id: &'a Pubkey,
         accounts: &'b mut T,
