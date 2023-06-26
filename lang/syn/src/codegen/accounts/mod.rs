@@ -30,11 +30,10 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         #impl_to_account_infos
         #impl_to_account_metas
         #impl_exit
+        #bumps_struct
 
         #__client_accounts_mod
         #__cpi_client_accounts_mod
-
-        #bumps_struct
     }
 }
 
