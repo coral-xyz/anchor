@@ -947,12 +947,16 @@ fn generate_constraint_associated_token(
             #optional_checks
             #token_program_check
 
+            let mint_program_id = {
+              let mint_account: &AccountInfo = #spl_token_mint_address.as_ref();
+              mint_account.owner
+            };
             let my_owner = #name.owner;
             let wallet_address = #wallet_address.key();
             if my_owner != wallet_address {
                 return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenOwner).with_account_name(#name_str).with_pubkeys((my_owner, wallet_address)));
             }
-            let __associated_token_address = #get_associated_token_address;
+            let __associated_token_address = ::anchor_spl::associated_token::get_associated_token_address_with_program_id(&wallet_address, &#spl_token_mint_address.key(), &mint_program_id);
             let my_key = #name.key();
             if my_key != __associated_token_address {
                 return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintAssociated).with_account_name(#name_str).with_pubkeys((my_key, __associated_token_address)));
