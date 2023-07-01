@@ -138,10 +138,10 @@ where
 }
 
 /// Lamports related utility methods for accounts.
-pub trait Lamports<'info>: ToAccountInfo<'info> {
+pub trait Lamports<'info>: AsRef<AccountInfo<'info>> {
     /// Get the lamports of the account.
     fn get_lamports(&self) -> u64 {
-        self.to_account_info().lamports()
+        self.as_ref().lamports()
     }
 
     /// Add lamports to the account.
@@ -157,7 +157,7 @@ pub trait Lamports<'info>: ToAccountInfo<'info> {
     ///
     /// See [`Lamports::sub_lamports`] for subtracting lamports.
     fn add_lamports(&self, amount: u64) -> Result<&Self> {
-        **self.to_account_info().try_borrow_mut_lamports()? += amount;
+        **self.as_ref().try_borrow_mut_lamports()? += amount;
         Ok(self)
     }
 
@@ -175,12 +175,12 @@ pub trait Lamports<'info>: ToAccountInfo<'info> {
     ///
     /// See [`Lamports::add_lamports`] for adding lamports.
     fn sub_lamports(&self, amount: u64) -> Result<&Self> {
-        **self.to_account_info().try_borrow_mut_lamports()? -= amount;
+        **self.as_ref().try_borrow_mut_lamports()? -= amount;
         Ok(self)
     }
 }
 
-impl<'info, T: ToAccountInfo<'info>> Lamports<'info> for T {}
+impl<'info, T: AsRef<AccountInfo<'info>>> Lamports<'info> for T {}
 
 /// A data structure that can be serialized and stored into account storage,
 /// i.e. an
