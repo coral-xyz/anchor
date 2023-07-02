@@ -635,7 +635,7 @@ mod tests {
 
     #[test]
     fn handle_multiple_instr_parsing() {
-        let mut instrs =  &vec![
+        let instrs =  &vec![
   "Program FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH invoke [1]".to_owned(),
   "Program FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH consumed 2179 of 480000 compute units".to_owned(),
   "Program FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH success".to_owned(),
