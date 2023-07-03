@@ -64,9 +64,11 @@ pub struct TestZeroCopyStruct {
     pub test_u32: u32,
 }
 
+const MAX_LEN: u8 = 10;
+
 #[derive(InitSpace)]
 pub struct ChildStruct {
-    #[max_len(10)]
+    #[max_len(MAX_LEN)]
     pub test_string: String,
 }
 
