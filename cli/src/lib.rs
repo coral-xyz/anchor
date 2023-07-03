@@ -37,7 +37,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs::{self, File};
-use std::io::prelude::*;
+use std::io::{prelude::*, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Stdio};
 use std::str::FromStr;
@@ -86,6 +86,10 @@ pub enum Command {
         /// no "CHECK" comments where normally required
         #[clap(long)]
         skip_lint: bool,
+        /// True and it will output in meaningful way   
+        /// how much stack is allocated on the function 
+        #[clap(long)]
+        bench: bool,
         /// Output directory for the TypeScript IDL.
         #[clap(short = 't', long)]
         idl_ts: Option<String>,
@@ -456,6 +460,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             skip_lint,
             no_docs,
             arch,
+            bench
         } => build(
             &opts.cfg_override,
             idl,
@@ -471,6 +476,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             env,
             cargo_args,
             no_docs,
+            bench,
             arch,
         ),
         Command::Verify {
@@ -942,6 +948,7 @@ pub fn build(
     env_vars: Vec<String>,
     cargo_args: Vec<String>,
     no_docs: bool,
+    bench: bool,
     arch: ProgramArch,
 ) -> Result<()> {
     // Change to the workspace member directory, if needed.
@@ -990,6 +997,7 @@ pub fn build(
             cargo_args,
             skip_lint,
             no_docs,
+            bench,
             arch,
         )?,
         // If the Cargo.toml is at the root, build the entire workspace.
@@ -1005,6 +1013,7 @@ pub fn build(
             cargo_args,
             skip_lint,
             no_docs,
+            bench,
             arch,
         )?,
         // Cargo.toml represents a single package. Build it.
@@ -1020,6 +1029,7 @@ pub fn build(
             cargo_args,
             skip_lint,
             no_docs,
+            bench,
             &arch,
         )?,
     }
@@ -1042,6 +1052,7 @@ fn build_all(
     cargo_args: Vec<String>,
     skip_lint: bool,
     no_docs: bool,
+    bench: bool,
     arch: ProgramArch,
 ) -> Result<()> {
     let cur_dir = std::env::current_dir()?;
@@ -1061,6 +1072,7 @@ fn build_all(
                     cargo_args.clone(),
                     skip_lint,
                     no_docs,
+                    bench,
                     &arch,
                 )?;
             }
@@ -1098,6 +1110,7 @@ fn build_rust_cwd(
     cargo_args: Vec<String>,
     skip_lint: bool,
     no_docs: bool,
+    bench: bool,
     arch: &ProgramArch,
 ) -> Result<()> {
     match cargo_toml.parent() {
@@ -1105,7 +1118,7 @@ fn build_rust_cwd(
         Some(p) => std::env::set_current_dir(p)?,
     };
     match build_config.verifiable {
-        false => _build_rust_cwd(cfg, idl_out, idl_ts_out, skip_lint, arch, cargo_args),
+        false => _build_rust_cwd(cfg, idl_out, idl_ts_out, skip_lint, arch, cargo_args, bench),
         true => build_cwd_verifiable(
             cfg,
             cargo_toml,
@@ -1471,15 +1484,43 @@ fn _build_rust_cwd(
     skip_lint: bool,
     arch: &ProgramArch,
     cargo_args: Vec<String>,
+    bench: bool,
 ) -> Result<()> {
     let subcommand = arch.build_subcommand();
-    let exit = std::process::Command::new("cargo")
+    let stdio_type = |bench: bool| { 
+            match bench {
+                true => Stdio::piped(),
+                false => Stdio::inherit()
+            }
+        };
+    let out = std::process::Command::new("cargo")
         .arg(subcommand)
         .args(cargo_args)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
+        .stdout(stdio_type(bench))
+        .stderr(stdio_type(bench))
         .output()
         .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
+    let exit = out;
+
+    println!("{}", bench);
+    println!("{:?}", idl_out);
+    if bench {
+        let re = RegexBuilder::new(r"Error: Function _[a-zA-Z0-9_]* Stack offset of \d* exceeded max offset of \d* by \d* bytes, please minimize large stack variables")
+        .multi_line(true)
+        .build()
+        .unwrap();
+
+        let stdout = exit.stdout;
+        println!("{}", stdout.len());
+        let buf_reader = BufReader::new(&stdout[..]);
+        for line in buf_reader.lines() {
+            let content = line.unwrap();
+            println!("{}", content);
+            if re.is_match(&content) {
+                println!("{}", content);
+            }
+        }
+    }
     if !exit.status.success() {
         std::process::exit(exit.status.code().unwrap_or(1));
     }
@@ -1630,6 +1671,7 @@ fn verify(
             None,                                                  // stderr
             env_vars,
             cargo_args,
+            false,
             false,
             arch,
         )?;
@@ -2549,6 +2591,7 @@ fn test(
                 None,
                 env_vars,
                 cargo_args,
+                false,
                 false,
                 arch,
             )?;
@@ -3677,6 +3720,7 @@ fn publish(
             env_vars,
             cargo_args,
             true,
+            false,
             arch,
         )?;
     }
@@ -3846,6 +3890,7 @@ fn localnet(
                 None,
                 env_vars,
                 cargo_args,
+                false,
                 false,
                 arch,
             )?;
