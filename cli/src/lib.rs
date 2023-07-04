@@ -6,7 +6,6 @@ use crate::config::{
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction, ERASED_AUTHORITY};
 use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
-use anchor_lang::bench_ix;
 use anchor_syn::idl::{EnumFields, Idl, IdlType, IdlTypeDefinitionTy};
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
@@ -33,11 +32,13 @@ use solana_sdk::signature::Keypair;
 use solana_sdk::signature::Signer;
 use solana_sdk::sysvar;
 use solana_sdk::transaction::Transaction;
-use syn::Item;
+use syn::__private::ToTokens;
+use syn::{Item, Attribute, ItemUse};
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ffi::OsString;
+use std::fmt::Debug;
 use std::fs::{self, File};
 use std::io::{prelude::*, BufReader};
 use std::ops::Sub;
@@ -955,26 +956,30 @@ pub fn bench(cfg_override: &ConfigOverride, program_name: Option<String>) -> Res
     for program in programs {
         let mut path_lib_rs = PathBuf::from(&program.path);
         path_lib_rs.push("src/lib.rs");
-        let mut file_lib_rs = File::open(path_lib_rs).expect("Unable to open file");
+        let mut file_lib_rs = File::open(&path_lib_rs).expect("Unable to open file");
         let mut src = String::new();
         file_lib_rs.read_to_string(&mut src).expect("Unable to open file");
-        let syntax = syn::parse_file(&src).expect("Unable to parse the file");
+        let mut syntax = syn::parse_file(&src).expect("Unable to parse the file");
 
         let current_program_name = program.lib_name;
-        println!("Current item {}", current_program_name);
         // Loop over the syntax.items
-        for item in syntax.items {
+        syntax.items.iter_mut().for_each(|item| {
             // Look for the mod of the program_name
             match item {
                 Item::Mod(item_mod) => if item_mod.ident.to_string().eq(&current_program_name) {
                     // Get the content of the mod
-                    let items_mod = item_mod.content.unwrap().1;
+                    let items_mod = &mut item_mod.content.as_mut().unwrap().1;
+                    // Add `use anchor_lang::attribute_bench::benc_ix
+                    let use_bench_ix: ItemUse = syn::parse_quote! {
+                        use anchor_lang::bench_ix;
+                    };
+                    items_mod.insert(0, Item::Use(use_bench_ix));
+
                     for item_mod in items_mod {
                         match item_mod {
                             Item::Fn(item_fn) => {
-                                let fn_name = item_fn.sig.ident.to_string();
-                                // Write the bench macro
-                                println!("{}", fn_name);
+                                let macro_bench_ix_attr: Attribute = syn::parse_quote!(#[bench_ix]);
+                                item_fn.attrs.push(macro_bench_ix_attr);
                             }
                             _ => {}
                         }
@@ -982,6 +987,30 @@ pub fn bench(cfg_override: &ConfigOverride, program_name: Option<String>) -> Res
                 },
                 _ => {}
             }
+        });
+
+
+        // Parse the AST & Create the file 
+        let content_modified_lib_rs = syntax.into_token_stream().to_string();
+        let mut path_modified_lib_rs = PathBuf::from(&path_lib_rs);
+        path_modified_lib_rs.pop();
+        path_modified_lib_rs.push("_lib.rs");
+        println!("{}", path_modified_lib_rs.display());
+        let mut modified_lib_rs = File::create(&path_modified_lib_rs).expect("Unable to create the file");
+        modified_lib_rs.write(content_modified_lib_rs.as_bytes()).unwrap();
+
+        // Format the code
+        // Can only work if the user got rustfmt
+        let exit = std::process::Command::new("rustfmt")
+            .arg(path_modified_lib_rs.to_str().unwrap())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
+
+        if !exit.status.success() {
+            eprintln!("'anchor bench' failed. Perhaps you have not installed 'rustfmt'? https://github.com/rust-lang/rustfmt");
+            std::process::exit(exit.status.code().unwrap_or(1));
         }
     }
     // We only operate on a single project for the moment
