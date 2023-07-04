@@ -133,6 +133,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "anchor-attribute-bench"
+version = "0.28.0"
+dependencies = [
+ "proc-macro2 1.0.60",
+ "quote 1.0.28",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "anchor-attribute-constant"
 version = "0.28.0"
 dependencies = [
@@ -253,6 +262,7 @@ version = "0.28.0"
 dependencies = [
  "anchor-attribute-access-control",
  "anchor-attribute-account",
+ "anchor-attribute-bench",
  "anchor-attribute-constant",
  "anchor-attribute-error",
  "anchor-attribute-event",

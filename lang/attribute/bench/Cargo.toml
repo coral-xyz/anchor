@@ -1,0 +1,17 @@
+[package]
+name = "anchor-attribute-bench"
+version = "0.28.0"
+authors = ["dr0maz <dr0maz@proton.me>"]
+repository = "https://github.com/coral-xyz/anchor"
+license = "Apache-2.0"
+description = "Anchor attribute macro for defining a program"
+rust-version = "1.60"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "1", features = ["full"] }

@@ -383,6 +383,7 @@ pub struct Unsized {
 
 #[derive(Accounts)]
 pub struct AccountInfo1<'info> {
+    /// CHECK:
     pub account1: AccountInfo<'info>,
 }
 
