@@ -64,11 +64,9 @@ pub struct TestZeroCopyStruct {
     pub test_u32: u32,
 }
 
-const MAX_LEN: u8 = 10;
-
 #[derive(InitSpace)]
 pub struct ChildStruct {
-    #[max_len(MAX_LEN)]
+    #[max_len(10)]
     pub test_string: String,
 }
 
@@ -88,6 +86,15 @@ pub struct TestMatrixStruct {
 pub struct TestFullPath {
     pub test_option_path: Option<inside_mod::Data>,
     pub test_path: inside_mod::Data,
+}
+
+const MAX_LEN: u8 = 10;
+
+#[derive(InitSpace)]
+pub struct TestConst {
+    #[max_len(MAX_LEN)]
+    pub test_string: String,
+    pub test_array: [u8; MAX_LEN as usize],
 }
 
 #[test]
@@ -134,4 +141,9 @@ fn test_matrix_struct() {
 #[test]
 fn test_full_path() {
     assert_eq!(TestFullPath::INIT_SPACE, 8 + 9)
+}
+
+#[test]
+fn test_const() {
+    assert_eq!(TestConst::INIT_SPACE, (4 + 10) + 10)
 }
