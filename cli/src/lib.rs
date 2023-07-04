@@ -38,6 +38,7 @@ use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::{prelude::*, BufReader};
+use std::ops::Sub;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Stdio};
 use std::str::FromStr;
@@ -1502,23 +1503,30 @@ fn _build_rust_cwd(
         .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
     let exit = out;
 
-    println!("{}", bench);
-    println!("{:?}", idl_out);
     if bench {
         let re = RegexBuilder::new(r"Error: Function _[a-zA-Z0-9_]* Stack offset of \d* exceeded max offset of \d* by \d* bytes, please minimize large stack variables")
         .multi_line(true)
         .build()
         .unwrap();
 
-        let stdout = exit.stdout;
-        println!("{}", stdout.len());
-        let buf_reader = BufReader::new(&stdout[..]);
+        let re_stack = RegexBuilder::new(r"Stack offset of (\d*)")
+        .build()
+        .unwrap();
+        let diff_stack = 8184;
+        let stderr = exit.stderr;
+        let buf_reader = BufReader::new(&stderr[..]);
         for line in buf_reader.lines() {
             let content = line.unwrap();
-            println!("{}", content);
             if re.is_match(&content) {
-                println!("{}", content);
-            }
+                // captured
+                let caps = re_stack.captures(&content).unwrap();
+                let number = &caps[1].parse::<i64>()?;
+                let stack_size_ix = number.sub(diff_stack);
+                println!("The size of stack frame for the instruction initialize is {}", stack_size_ix);
+                /*
+                    Error: Function _ZN17hello_world_bench17hello_world_bench10initialize17h012353b3e640f4a5E Stack offset of 800320 exceeded max offset of 4096 by 796224 bytes, please minimize large stack variables 
+                 */
+           }
         }
     }
     if !exit.status.success() {
