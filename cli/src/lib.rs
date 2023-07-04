@@ -47,6 +47,7 @@ use std::string::ToString;
 use syn::__private::ToTokens;
 use syn::{Attribute, Item, ItemUse};
 use tar::Archive;
+use  rustc_demangle::demangle;
 
 pub mod config;
 mod path;
@@ -1033,7 +1034,12 @@ pub fn bench(cfg_override: &ConfigOverride, program_name: Option<String>) -> Res
         .build()
         .unwrap();
 
-        let re_stack = RegexBuilder::new(r"Stack offset of (\d*)").build().unwrap();
+        let re_stack = RegexBuilder::new(r"Stack offset of (\d*)")
+            .build()
+            .unwrap();
+        let re_func = RegexBuilder::new(r"Error: Function (_[a-zA-Z0-9_]*)")
+            .build()
+            .unwrap();
 
         let diff_stack = 8184;
         let stderr = exit_build.stderr;
@@ -1041,14 +1047,31 @@ pub fn bench(cfg_override: &ConfigOverride, program_name: Option<String>) -> Res
         for line in buf_reader.lines() {
             let content = line.unwrap();
             if re.is_match(&content) {
-                // captured
-                let caps = re_stack.captures(&content).unwrap();
-                let number = &caps[1].parse::<i64>()?;
+                // capture func name
+                let ix_name_caps = re_func.captures(&content).unwrap();
+                let ix_name_mangle = &ix_name_caps[1];
+                let ix_name = demangle(ix_name_mangle).to_string();
+
+                
+
+                let format_kb = |b: f32| {
+                    let kb = b / 1024.0;
+                    format!("{:.2} KB", kb)
+                };
+
+                // captured stack size
+                let stack_caps = re_stack.captures(&content).unwrap();
+                let number = &stack_caps[1].parse::<i64>()?;
                 let stack_size_ix = number.sub(diff_stack);
+                // Get instruction name
                 println!(
-                    "The size of stack frame for the instruction is {}",
-                    stack_size_ix
+                    "The size of stack frame for the instruction {a} is {b}",
+                    a=ix_name,
+                    b=format_kb(stack_size_ix as f32)
                 );
+
+                // size -> stack_size_ix
+                // ix_name -> ix_name
             }
         }
     }
