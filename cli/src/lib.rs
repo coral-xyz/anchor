@@ -32,8 +32,6 @@ use solana_sdk::signature::Keypair;
 use solana_sdk::signature::Signer;
 use solana_sdk::sysvar;
 use solana_sdk::transaction::Transaction;
-use syn::__private::ToTokens;
-use syn::{Item, Attribute, ItemUse};
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -46,6 +44,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Stdio};
 use std::str::FromStr;
 use std::string::ToString;
+use syn::__private::ToTokens;
+use syn::{Attribute, Item, ItemUse};
 use tar::Archive;
 
 pub mod config;
@@ -96,7 +96,7 @@ pub enum Command {
         #[clap(long)]
         skip_lint: bool,
         /// True and it will output in meaningful way   
-        /// how much stack is allocated on the function 
+        /// how much stack is allocated on the function
         #[clap(long)]
         bench: bool,
         /// Output directory for the TypeScript IDL.
@@ -448,9 +448,7 @@ pub enum ClusterCommand {
 
 pub fn entry(opts: Opts) -> Result<()> {
     match opts.command {
-        Command::Bench { program_name } => {
-            bench(&opts.cfg_override, program_name)
-        }
+        Command::Bench { program_name } => bench(&opts.cfg_override, program_name),
         Command::Init {
             name,
             javascript,
@@ -472,7 +470,7 @@ pub fn entry(opts: Opts) -> Result<()> {
             skip_lint,
             no_docs,
             arch,
-            bench
+            bench,
         } => build(
             &opts.cfg_override,
             idl,
@@ -958,7 +956,9 @@ pub fn bench(cfg_override: &ConfigOverride, program_name: Option<String>) -> Res
         path_lib_rs.push("src/lib.rs");
         let mut file_lib_rs = File::open(&path_lib_rs).expect("Unable to open file");
         let mut src = String::new();
-        file_lib_rs.read_to_string(&mut src).expect("Unable to open file");
+        file_lib_rs
+            .read_to_string(&mut src)
+            .expect("Unable to open file");
         let mut syntax = syn::parse_file(&src).expect("Unable to parse the file");
 
         let current_program_name = program.lib_name;
@@ -966,71 +966,92 @@ pub fn bench(cfg_override: &ConfigOverride, program_name: Option<String>) -> Res
         syntax.items.iter_mut().for_each(|item| {
             // Look for the mod of the program_name
             match item {
-                Item::Mod(item_mod) => if item_mod.ident.to_string().eq(&current_program_name) {
-                    // Get the content of the mod
-                    let items_mod = &mut item_mod.content.as_mut().unwrap().1;
-                    // Add `use anchor_lang::attribute_bench::benc_ix
-                    let use_bench_ix: ItemUse = syn::parse_quote! {
-                        use anchor_lang::bench_ix;
-                    };
-                    items_mod.insert(0, Item::Use(use_bench_ix));
+                Item::Mod(item_mod) => {
+                    if item_mod.ident.to_string().eq(&current_program_name) {
+                        // Get the content of the mod
+                        let items_mod = &mut item_mod.content.as_mut().unwrap().1;
+                        // Add `use anchor_lang::attribute_bench::benc_ix
+                        let use_bench_ix: ItemUse = syn::parse_quote! {
+                            use anchor_lang::bench_ix;
+                        };
+                        items_mod.insert(0, Item::Use(use_bench_ix));
 
-                    for item_mod in items_mod {
-                        match item_mod {
-                            Item::Fn(item_fn) => {
-                                let macro_bench_ix_attr: Attribute = syn::parse_quote!(#[bench_ix]);
-                                item_fn.attrs.push(macro_bench_ix_attr);
+                        for item_mod in items_mod {
+                            match item_mod {
+                                Item::Fn(item_fn) => {
+                                    let macro_bench_ix_attr: Attribute =
+                                        syn::parse_quote!(#[bench_ix]);
+                                    item_fn.attrs.push(macro_bench_ix_attr);
+                                }
+                                _ => {}
                             }
-                            _ => {}
                         }
-                    } 
-                },
+                    }
+                }
                 _ => {}
             }
         });
 
-
-        // Parse the AST & Create the file 
+        // Parse the AST & Create the file
         let content_modified_lib_rs = syntax.into_token_stream().to_string();
         let mut path_modified_lib_rs = PathBuf::from(&path_lib_rs);
         path_modified_lib_rs.pop();
-        path_modified_lib_rs.push("_lib.rs");
+        path_modified_lib_rs.push("lib.rs");
         println!("{}", path_modified_lib_rs.display());
-        let mut modified_lib_rs = File::create(&path_modified_lib_rs).expect("Unable to create the file");
-        modified_lib_rs.write(content_modified_lib_rs.as_bytes()).unwrap();
+        let mut modified_lib_rs =
+            File::create(&path_modified_lib_rs).expect("Unable to create the file");
+        modified_lib_rs
+            .write(content_modified_lib_rs.as_bytes())
+            .unwrap();
 
         // Format the code
         // Can only work if the user got rustfmt
-        let exit = std::process::Command::new("rustfmt")
+        let exit_rustfmt = std::process::Command::new("rustfmt")
             .arg(path_modified_lib_rs.to_str().unwrap())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .output()
             .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
 
-        if !exit.status.success() {
+        if !exit_rustfmt.status.success() {
             eprintln!("'anchor bench' failed. Perhaps you have not installed 'rustfmt'? https://github.com/rust-lang/rustfmt");
-            std::process::exit(exit.status.code().unwrap_or(1));
+            std::process::exit(exit_rustfmt.status.code().unwrap_or(1));
+        }
+
+        // Using the default arch
+        let arch = ProgramArch::Bpf;
+        let subcommand = arch.build_subcommand();
+        let exit_build = std::process::Command::new("cargo")
+            .arg(subcommand)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
+
+        let re = RegexBuilder::new(r"Error: Function _[a-zA-Z0-9_]* Stack offset of \d* exceeded max offset of \d* by \d* bytes, please minimize large stack variables")
+        .multi_line(true)
+        .build()
+        .unwrap();
+
+        let re_stack = RegexBuilder::new(r"Stack offset of (\d*)").build().unwrap();
+
+        let diff_stack = 8184;
+        let stderr = exit_build.stderr;
+        let buf_reader = BufReader::new(&stderr[..]);
+        for line in buf_reader.lines() {
+            let content = line.unwrap();
+            if re.is_match(&content) {
+                // captured
+                let caps = re_stack.captures(&content).unwrap();
+                let number = &caps[1].parse::<i64>()?;
+                let stack_size_ix = number.sub(diff_stack);
+                println!(
+                    "The size of stack frame for the instruction is {}",
+                    stack_size_ix
+                );
+            }
         }
     }
-    // We only operate on a single project for the moment
-    // Then look at src/lib.rs
-    // Maybe there will be need for having a more dynamic way to look throught the 
-    // location to find the lib.rs file 
-
-    /*
-
-    let path_lib_rs = current_path.to_str().expect("Unable to get path");
-    println!("{}", path_lib_rs);
-    let mut file_lib_rs = File::open(path_lib_rs).expect("Unable to open file");
-    let mut src = String::new();
-    file_lib_rs.read_to_string(&mut src).expect("Unable to read file");
-    let syntax = syn::parse_file(&src).expect("Unable to parse the file");
-
-    println!("{:#?}", syntax);
-    
-    */
-
     Ok(())
 }
 
@@ -1589,12 +1610,10 @@ fn _build_rust_cwd(
     bench: bool,
 ) -> Result<()> {
     let subcommand = arch.build_subcommand();
-    let stdio_type = |bench: bool| { 
-            match bench {
-                true => Stdio::piped(),
-                false => Stdio::inherit()
-            }
-        };
+    let stdio_type = |bench: bool| match bench {
+        true => Stdio::piped(),
+        false => Stdio::inherit(),
+    };
     let out = std::process::Command::new("cargo")
         .arg(subcommand)
         .args(cargo_args)
@@ -1610,9 +1629,7 @@ fn _build_rust_cwd(
         .build()
         .unwrap();
 
-        let re_stack = RegexBuilder::new(r"Stack offset of (\d*)")
-        .build()
-        .unwrap();
+        let re_stack = RegexBuilder::new(r"Stack offset of (\d*)").build().unwrap();
         let diff_stack = 8184;
         let stderr = exit.stderr;
         let buf_reader = BufReader::new(&stderr[..]);
@@ -1623,11 +1640,14 @@ fn _build_rust_cwd(
                 let caps = re_stack.captures(&content).unwrap();
                 let number = &caps[1].parse::<i64>()?;
                 let stack_size_ix = number.sub(diff_stack);
-                println!("The size of stack frame for the instruction initialize is {}", stack_size_ix);
+                println!(
+                    "The size of stack frame for the instruction is {}",
+                    stack_size_ix
+                );
                 /*
-                    Error: Function _ZN17hello_world_bench17hello_world_bench10initialize17h012353b3e640f4a5E Stack offset of 800320 exceeded max offset of 4096 by 796224 bytes, please minimize large stack variables 
-                 */
-           }
+                   Error: Function _ZN17hello_world_bench17hello_world_bench10initialize17h012353b3e640f4a5E Stack offset of 800320 exceeded max offset of 4096 by 796224 bytes, please minimize large stack variables
+                */
+            }
         }
     }
     if !exit.status.success() {
