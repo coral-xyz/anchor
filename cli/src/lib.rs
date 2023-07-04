@@ -1074,6 +1074,11 @@ pub fn bench(cfg_override: &ConfigOverride, program_name: Option<String>) -> Res
                 // ix_name -> ix_name
             }
         }
+
+        // restore the original lib.rs file
+        let mut f = std::fs::OpenOptions::new().write(true).truncate(true).open(&path_modified_lib_rs)?;
+        f.write_all(src.as_bytes())?;
+        f.flush()?;
     }
     Ok(())
 }
