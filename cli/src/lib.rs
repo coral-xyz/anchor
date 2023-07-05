@@ -953,6 +953,8 @@ pub fn bench(cfg_override: &ConfigOverride, program_name: Option<String>) -> Res
 
     // Loop over each program to bench their ix
     for program in programs {
+
+        let mut json_map = serde_json::Map::new();
         let mut path_lib_rs = PathBuf::from(&program.path);
         path_lib_rs.push("src/lib.rs");
         let mut file_lib_rs = File::open(&path_lib_rs).expect("Unable to open file");
@@ -1059,6 +1061,7 @@ pub fn bench(cfg_override: &ConfigOverride, program_name: Option<String>) -> Res
                     format!("{:.2} KB", kb)
                 };
 
+
                 // captured stack size
                 let stack_caps = re_stack.captures(&content).unwrap();
                 let number = &stack_caps[1].parse::<i64>()?;
@@ -1072,6 +1075,12 @@ pub fn bench(cfg_override: &ConfigOverride, program_name: Option<String>) -> Res
 
                 // size -> stack_size_ix
                 // ix_name -> ix_name
+                json_map.insert(ix_name, format_kb(stack_size_ix as f32).into());
+
+                // get current version
+                // solana version
+
+                
             }
         }
 
@@ -1079,6 +1088,30 @@ pub fn bench(cfg_override: &ConfigOverride, program_name: Option<String>) -> Res
         let mut f = std::fs::OpenOptions::new().write(true).truncate(true).open(&path_modified_lib_rs)?;
         f.write_all(src.as_bytes())?;
         f.flush()?;
+
+        if json_map.len() > 1 {
+        let anchor_version = "0.28.0";
+        let solana_version = "1.16.0";
+        let bench_stack_json = json!({
+                    anchor_version: {
+                        "solanaVersion": solana_version,
+                        "result": {
+                            "stackSize": json_map
+                        }
+                    }
+        });
+
+        let pretty_json = |value: &serde_json::Value| {
+            serde_json::to_string_pretty(value).unwrap()
+        };
+
+        let mut bench_path_json = PathBuf::from(&cfg.path());
+        bench_path_json.pop();
+        bench_path_json.push("bench_stack_size.json");
+
+
+        std::fs::write(bench_path_json, pretty_json(&bench_stack_json))?;
+        }
     }
     Ok(())
 }
