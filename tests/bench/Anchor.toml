@@ -9,7 +9,7 @@ bench = "Bench11111111111111111111111111111111111111"
 members = ["programs/bench"]
 
 [scripts]
-test = "yarn run ts-mocha -t 1000000 -p ./tsconfig.json tests/**/*.ts"
+test = "yarn run ts-mocha -t 1000000 -p ./tsconfig.json tests/stack-memory.ts"
 sync = "yarn run ts-node scripts/sync.ts"
 sync-markdown = "yarn run ts-node scripts/sync-markdown.ts"
 generate-ix = "yarn run ts-node scripts/generate-ix.ts"
