@@ -21,7 +21,7 @@ idl-build = [
     "anchor-attribute-account/idl-build",
     "anchor-attribute-constant/idl-build",
     "anchor-attribute-event/idl-build",
-    "anchor-attribute-error/anchor-debug",
+    "anchor-attribute-error/idl-build",
     "anchor-attribute-program/idl-build",
 ]
 anchor-debug = [
