@@ -11,7 +11,7 @@ edition = "2021"
 [features]
 allow-missing-optionals = []
 init-if-needed = []
-idl-gen = []
+idl-build = []
 idl-parse = []
 idl-types = []
 hash = []

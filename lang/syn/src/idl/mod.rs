@@ -1,6 +1,6 @@
-#[cfg(feature = "idl-gen")]
-pub mod gen;
-#[cfg(any(feature = "idl-parse", feature = "idl-gen"))]
+#[cfg(feature = "idl-build")]
+pub mod build;
+#[cfg(any(feature = "idl-parse", feature = "idl-build"))]
 pub mod parse;
-#[cfg(any(feature = "idl-types", feature = "idl-gen", feature = "idl-parse"))]
+#[cfg(any(feature = "idl-types", feature = "idl-build", feature = "idl-parse"))]
 pub mod types;

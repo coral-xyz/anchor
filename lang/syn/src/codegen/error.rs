@@ -1,8 +1,8 @@
 use crate::Error;
 use quote::quote;
 
-#[cfg(feature = "idl-gen")]
-use crate::idl::gen::gen_idl_print_function_for_error;
+#[cfg(feature = "idl-build")]
+use crate::idl::build::gen_idl_print_function_for_error;
 
 pub fn generate(error: Error) -> proc_macro2::TokenStream {
     let error_enum = &error.raw_enum;
@@ -101,7 +101,7 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
         }
     };
 
-    #[cfg(feature = "idl-gen")]
+    #[cfg(feature = "idl-build")]
     {
         let idl_gen = gen_idl_print_function_for_error(&error);
         return quote! {

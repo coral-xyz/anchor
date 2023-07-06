@@ -13,8 +13,8 @@ name = "relations_derivation"
 no-entrypoint = []
 no-idl = []
 cpi = ["no-entrypoint"]
-idl-gen = [
-    "anchor-lang/idl-gen",
+idl-build = [
+    "anchor-lang/idl-build",
 ]
 default = []
 

@@ -296,7 +296,7 @@
   "accounts": [
     {
       "name": "SomeZcAccount",
-      "full_path": "idl::SomeZcAccount",
+      "path": "idl::SomeZcAccount",
       "type": {
         "kind": "struct",
         "fields": [
@@ -311,7 +311,7 @@
     },
     {
       "name": "State",
-      "full_path": "idl::State",
+      "path": "idl::State",
       "docs": [
         "An account containing various fields"
       ],
@@ -457,7 +457,7 @@
     },
     {
       "name": "State2",
-      "full_path": "idl::State2",
+      "path": "idl::State2",
       "type": {
         "kind": "struct",
         "fields": [
@@ -480,7 +480,7 @@
   "types": [
     {
       "name": "BarStruct",
-      "full_path": "idl::BarStruct",
+      "path": "idl::BarStruct",
       "docs": [
         "Bar struct type"
       ],
@@ -503,7 +503,7 @@
     },
     {
       "name": "FooEnum",
-      "full_path": "idl::FooEnum",
+      "path": "idl::FooEnum",
       "docs": [
         "Enum type"
       ],
@@ -586,7 +586,7 @@
     },
     {
       "name": "FooStruct",
-      "full_path": "idl::FooStruct",
+      "path": "idl::FooStruct",
       "type": {
         "kind": "struct",
         "fields": [
@@ -631,7 +631,7 @@
     },
     {
       "name": "SomeRetStruct",
-      "full_path": "idl::SomeRetStruct",
+      "path": "idl::SomeRetStruct",
       "type": {
         "kind": "struct",
         "fields": [
@@ -644,7 +644,7 @@
     },
     {
       "name": "ZcStruct",
-      "full_path": "idl::ZcStruct",
+      "path": "idl::ZcStruct",
       "type": {
         "kind": "struct",
         "fields": [
@@ -657,7 +657,7 @@
     },
     {
       "name": "Baz",
-      "full_path": "idl::some_other_module::Baz",
+      "path": "idl::some_other_module::Baz",
       "type": {
         "kind": "struct",
         "fields": [
@@ -670,7 +670,7 @@
     },
     {
       "name": "Baz",
-      "full_path": "some_external_program::Baz",
+      "path": "some_external_program::Baz",
       "type": {
         "kind": "struct",
         "fields": [

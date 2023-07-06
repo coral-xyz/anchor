@@ -14,15 +14,15 @@ init-if-needed = ["anchor-derive-accounts/init-if-needed"]
 derive = []
 default = []
 event-cpi = ["anchor-attribute-event/event-cpi"]
-idl-gen = [
-    "anchor-syn/idl-gen",
-    "anchor-derive-accounts/idl-gen",
-    "anchor-derive-serde/idl-gen",
-    "anchor-attribute-account/idl-gen",
-    "anchor-attribute-constant/idl-gen",
-    "anchor-attribute-event/idl-gen",
+idl-build = [
+    "anchor-syn/idl-build",
+    "anchor-derive-accounts/idl-build",
+    "anchor-derive-serde/idl-build",
+    "anchor-attribute-account/idl-build",
+    "anchor-attribute-constant/idl-build",
+    "anchor-attribute-event/idl-build",
     "anchor-attribute-error/anchor-debug",
-    "anchor-attribute-program/idl-gen",
+    "anchor-attribute-program/idl-build",
 ]
 anchor-debug = [
     "anchor-attribute-access-control/anchor-debug",
@@ -45,7 +45,7 @@ anchor-attribute-program = { path = "./attribute/program", version = "0.28.0" }
 anchor-derive-accounts = { path = "./derive/accounts", version = "0.28.0" }
 anchor-derive-serde = { path = "./derive/serde", version = "0.28.0" }
 anchor-derive-space = { path = "./derive/space", version = "0.28.0" }
-# anchor-syn can and should only be included only for idl-gen. It won't compile
+# anchor-syn can and should only be included only for idl-build. It won't compile
 # for bpf due to proc-macro2 crate.
 anchor-syn = { path = "./syn", version = "0.28.0", optional = true }
 arrayref = "0.3"

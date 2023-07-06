@@ -9,7 +9,7 @@ use syn::{Ident, ItemEnum, ItemStruct};
 fn get_module_paths() -> (TokenStream, TokenStream) {
     (
         quote!(anchor_lang::anchor_syn::idl::types),
-        quote!(anchor_lang::anchor_syn::idl::gen::serde_json),
+        quote!(anchor_lang::anchor_syn::idl::build::serde_json),
     )
 }
 

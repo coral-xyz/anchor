@@ -12,8 +12,8 @@ edition = "2021"
 proc-macro = true
 
 [features]
-idl-gen = [
-    "anchor-syn/idl-gen",
+idl-build = [
+    "anchor-syn/idl-build",
 ]
 
 [dependencies]

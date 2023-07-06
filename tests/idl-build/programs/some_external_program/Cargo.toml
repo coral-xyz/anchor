@@ -12,7 +12,7 @@ name = "some_external_program"
 no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
-idl-gen = ["anchor-lang/idl-gen"]
+idl-build = ["anchor-lang/idl-build"]
 cpi = ["no-entrypoint"]
 default = []
 

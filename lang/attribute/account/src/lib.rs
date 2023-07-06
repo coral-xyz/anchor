@@ -1,7 +1,7 @@
 extern crate proc_macro;
 
-#[cfg(feature = "idl-gen")]
-use anchor_syn::idl::gen::*;
+#[cfg(feature = "idl-build")]
+use anchor_syn::idl::build::*;
 use quote::quote;
 use syn::parse_macro_input;
 
@@ -402,7 +402,7 @@ pub fn zero_copy(
         #account_strct
     };
 
-    #[cfg(feature = "idl-gen")]
+    #[cfg(feature = "idl-build")]
     {
         let no_docs = get_no_docs();
         let idl_gen_impl = gen_idl_gen_impl_for_struct(&account_strct, no_docs);

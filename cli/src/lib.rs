@@ -2245,7 +2245,7 @@ fn idl_build(no_docs: bool) -> Result<()> {
             "test",
             "__anchor_private_print_idl",
             "--features",
-            "idl-gen",
+            "idl-build",
             "--",
             "--show-output",
             "--quiet",

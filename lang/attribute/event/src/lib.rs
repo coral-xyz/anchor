@@ -46,9 +46,9 @@ pub fn event(
         }
     };
 
-    #[cfg(feature = "idl-gen")]
+    #[cfg(feature = "idl-build")]
     {
-        let idl_gen = anchor_syn::idl::gen::gen_idl_print_function_for_event(&event_strct);
+        let idl_gen = anchor_syn::idl::build::gen_idl_print_function_for_event(&event_strct);
         return proc_macro::TokenStream::from(quote! {
             #ret
             #idl_gen

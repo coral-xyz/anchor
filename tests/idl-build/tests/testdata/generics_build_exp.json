@@ -30,7 +30,7 @@
           "type": {
             "definedWithTypeArgs": {
               "path": "generics::GenericType",
-              "type_args": [
+              "args": [
                 {
                   "type": "u32"
                 },
@@ -50,7 +50,7 @@
   "accounts": [
     {
       "name": "GenericAccount",
-      "full_path": "generics::GenericAccount",
+      "path": "generics::GenericAccount",
       "type": {
         "kind": "struct",
         "fields": [
@@ -59,7 +59,7 @@
             "type": {
               "definedWithTypeArgs": {
                 "path": "generics::GenericType",
-                "type_args": [
+                "args": [
                   {
                     "type": "u32"
                   },
@@ -80,7 +80,7 @@
   "types": [
     {
       "name": "GenericEnum",
-      "full_path": "generics::GenericEnum",
+      "path": "generics::GenericEnum",
       "generics": [
         "T",
         "U",
@@ -123,7 +123,7 @@
               {
                 "definedWithTypeArgs": {
                   "path": "generics::GenericNested",
-                  "type_args": [
+                  "args": [
                     {
                       "type": {
                         "generic": "T"
@@ -157,7 +157,7 @@
     },
     {
       "name": "GenericNested",
-      "full_path": "generics::GenericNested",
+      "path": "generics::GenericNested",
       "generics": [
         "V",
         "Z"
@@ -182,7 +182,7 @@
     },
     {
       "name": "GenericType",
-      "full_path": "generics::GenericType",
+      "path": "generics::GenericType",
       "generics": [
         "T",
         "U",
@@ -208,7 +208,7 @@
             "type": {
               "definedWithTypeArgs": {
                 "path": "generics::GenericNested",
-                "type_args": [
+                "args": [
                   {
                     "type": "u32"
                   },
@@ -226,7 +226,7 @@
             "type": {
               "definedWithTypeArgs": {
                 "path": "generics::GenericNested",
-                "type_args": [
+                "args": [
                   {
                     "type": {
                       "generic": "T"
@@ -246,7 +246,7 @@
             "type": {
               "definedWithTypeArgs": {
                 "path": "generics::GenericNested",
-                "type_args": [
+                "args": [
                   {
                     "type": {
                       "generic": "T"
@@ -266,7 +266,7 @@
             "type": {
               "definedWithTypeArgs": {
                 "path": "generics::GenericNested",
-                "type_args": [
+                "args": [
                   {
                     "type": "u32"
                   },
@@ -282,7 +282,7 @@
             "type": {
               "definedWithTypeArgs": {
                 "path": "generics::GenericNested",
-                "type_args": [
+                "args": [
                   {
                     "type": {
                       "generic": "T"
@@ -292,7 +292,7 @@
                     "type": {
                       "definedWithTypeArgs": {
                         "path": "generics::GenericNested",
-                        "type_args": [
+                        "args": [
                           {
                             "type": {
                               "generic": "T"
@@ -325,7 +325,7 @@
             "type": {
               "definedWithTypeArgs": {
                 "path": "generics::WrappedU8Array",
-                "type_args": [
+                "args": [
                   {
                     "type": {
                       "generic": "N"
@@ -340,7 +340,7 @@
             "type": {
               "definedWithTypeArgs": {
                 "path": "generics::WrappedU8Array",
-                "type_args": [
+                "args": [
                   {
                     "value": "10"
                   }
@@ -353,7 +353,7 @@
             "type": {
               "definedWithTypeArgs": {
                 "path": "generics::GenericEnum",
-                "type_args": [
+                "args": [
                   {
                     "type": {
                       "generic": "T"
@@ -378,12 +378,12 @@
             "type": {
               "definedWithTypeArgs": {
                 "path": "generics::GenericEnum",
-                "type_args": [
+                "args": [
                   {
                     "type": {
                       "definedWithTypeArgs": {
                         "path": "generics::GenericNested",
-                        "type_args": [
+                        "args": [
                           {
                             "type": {
                               "generic": "T"
@@ -411,7 +411,7 @@
     },
     {
       "name": "Baz",
-      "full_path": "some_external_program::Baz",
+      "path": "some_external_program::Baz",
       "type": {
         "kind": "struct",
         "fields": [

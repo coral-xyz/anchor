@@ -5,8 +5,8 @@ use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use syn::{Ident, Item};
 
-#[cfg(feature = "idl-gen")]
-use {anchor_syn::idl::gen::*, quote::quote};
+#[cfg(feature = "idl-build")]
+use {anchor_syn::idl::build::*, quote::quote};
 
 fn gen_borsh_serialize(input: TokenStream) -> TokenStream2 {
     let cratename = Ident::new("borsh", Span::call_site());
@@ -28,12 +28,12 @@ fn gen_borsh_serialize(input: TokenStream) -> TokenStream2 {
 
 #[proc_macro_derive(AnchorSerialize, attributes(borsh_skip))]
 pub fn anchor_serialize(input: TokenStream) -> TokenStream {
-    #[cfg(not(feature = "idl-gen"))]
+    #[cfg(not(feature = "idl-build"))]
     let ret = gen_borsh_serialize(input);
-    #[cfg(feature = "idl-gen")]
+    #[cfg(feature = "idl-build")]
     let ret = gen_borsh_serialize(input.clone());
 
-    #[cfg(feature = "idl-gen")]
+    #[cfg(feature = "idl-build")]
     {
         let no_docs = get_no_docs();
 
