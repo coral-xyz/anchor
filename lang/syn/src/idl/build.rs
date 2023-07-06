@@ -655,6 +655,7 @@ pub fn gen_idl_gen_impl_for_accounts_strct(
                 let acc_type_path = match &acc.ty {
                     crate::Ty::Account(ty) => Some(&ty.account_type_path),
                     crate::Ty::AccountLoader(ty) => Some(&ty.account_type_path),
+                    crate::Ty::InterfaceAccount(ty) => Some(&ty.account_type_path),
                     _ => None,
                 };
 
