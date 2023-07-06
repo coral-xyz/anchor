@@ -2328,11 +2328,8 @@ fn idl_build(no_docs: bool) -> Result<()> {
                     }
 
                     let prog_ty = std::mem::take(&mut idl.types);
-                    defined_types.extend(
-                        prog_ty
-                            .into_iter()
-                            .map(|ty| (ty.full_path.clone().unwrap(), ty)),
-                    );
+                    defined_types
+                        .extend(prog_ty.into_iter().map(|ty| (ty.path.clone().unwrap(), ty)));
                     idl.types = defined_types.into_values().collect::<Vec<_>>();
 
                     idls.push(idl);
@@ -2356,7 +2353,7 @@ fn idl_build(no_docs: bool) -> Result<()> {
                         event
                             .defined_types
                             .into_iter()
-                            .map(|ty| (ty.full_path.clone().unwrap(), ty)),
+                            .map(|ty| (ty.path.clone().unwrap(), ty)),
                     );
                     state = State::Pass;
                     continue;

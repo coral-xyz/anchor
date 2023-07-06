@@ -149,7 +149,7 @@ pub struct IdlEventField {
 pub struct IdlTypeDefinition {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub full_path: Option<String>,
+    pub path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub generics: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]

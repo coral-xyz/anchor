@@ -325,7 +325,7 @@ pub fn idl_type_definition_ts_from_syn_struct(
         quote! {
             #idl::IdlTypeDefinition {
                 name: #name.into(),
-                full_path: Some(Self::__anchor_private_full_path()),
+                path: Some(Self::__anchor_private_full_path()),
                 generics: #generics,
                 docs: #docs,
                 ty: #idl::IdlTypeDefinitionTy::Struct{
@@ -422,7 +422,7 @@ pub fn idl_type_definition_ts_from_syn_enum(
         quote! {
             #idl::IdlTypeDefinition {
                 name: #name.into(),
-                full_path: Some(Self::__anchor_private_full_path()),
+                path: Some(Self::__anchor_private_full_path()),
                 generics: #generics,
                 docs: #docs,
                 ty: #idl::IdlTypeDefinitionTy::Enum{
