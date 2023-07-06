@@ -244,7 +244,7 @@ name = "anchor-derive-serde"
 version = "0.28.0"
 dependencies = [
  "anchor-syn",
- "borsh-derive-internal",
+ "borsh-derive-internal 0.10.3",
  "proc-macro2 1.0.60",
  "quote 1.0.28",
  "syn 1.0.109",
