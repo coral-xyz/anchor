@@ -196,7 +196,7 @@ pub fn idl_type_ts_from_syn_type(
                     Ok((
                         quote! { #idl::IdlType::DefinedWithTypeArgs {
                             path: <#path>::__anchor_private_full_path(),
-                            type_args: #params
+                            args: #params
                         } },
                         defined,
                     ))

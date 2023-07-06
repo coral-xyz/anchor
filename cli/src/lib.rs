@@ -2670,10 +2670,9 @@ fn deserialize_idl_type_to_json(
         }
         IdlType::GenericLenArray(_, _) => todo!("Generic length arrays are not yet supported"),
         IdlType::Generic(_) => todo!("Generic types are not yet supported"),
-        IdlType::DefinedWithTypeArgs {
-            path: _,
-            type_args: _,
-        } => todo!("Defined types with type args are not yet supported"),
+        IdlType::DefinedWithTypeArgs { path: _, args: _ } => {
+            todo!("Defined types with type args are not yet supported")
+        }
     })
 }
 

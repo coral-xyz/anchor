@@ -208,7 +208,7 @@ pub enum IdlType {
     Generic(String),
     DefinedWithTypeArgs {
         path: String,
-        type_args: Vec<IdlDefinedTypeArg>,
+        args: Vec<IdlDefinedTypeArg>,
     },
 }
 
