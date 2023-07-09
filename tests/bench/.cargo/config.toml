@@ -1,0 +1,3 @@
+# For dev purpose
+[alias]
+r = "run --manifest-path /Users/dromaz/f/hello_world_bench/anchor/cli/Cargo.toml"

@@ -42,6 +42,7 @@ anchor-attribute-constant = { path = "./attribute/constant", version = "0.28.0" 
 anchor-attribute-error = { path = "./attribute/error", version = "0.28.0" }
 anchor-attribute-event = { path = "./attribute/event", version = "0.28.0" }
 anchor-attribute-program = { path = "./attribute/program", version = "0.28.0" }
+anchor-attribute-bench = { path = "./attribute/bench", version = "0.28.0" }
 anchor-derive-accounts = { path = "./derive/accounts", version = "0.28.0" }
 anchor-derive-serde = { path = "./derive/serde", version = "0.28.0" }
 anchor-derive-space = { path = "./derive/space", version = "0.28.0" }
