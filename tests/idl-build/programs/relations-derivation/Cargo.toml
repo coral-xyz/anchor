@@ -19,4 +19,4 @@ idl-build = [
 default = []
 
 [dependencies]
-anchor-lang = { path = "../../../../lang" }
+anchor-lang.workspace = true

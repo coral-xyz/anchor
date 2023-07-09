@@ -16,7 +16,7 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = { path = "../../../../lang", features = ["init-if-needed"] }
-anchor-spl = { path = "../../../../spl" }
-spl-associated-token-account = "1.1.1"
-bytemuck = {version = "1.4.0", features = ["derive", "min_const_generics"]}
+anchor-lang = { workspace = true, features = ["init-if-needed"] }
+anchor-spl.workspace = true
+spl-associated-token-account.workspace = true
+bytemuck = { workspace = true, features = ["derive", "min_const_generics"]}

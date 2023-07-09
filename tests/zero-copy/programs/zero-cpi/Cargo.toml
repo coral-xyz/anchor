@@ -16,5 +16,5 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = { path = "../../../../lang" }
+anchor-lang.workspace = true
 zero-copy = { path = "../zero-copy", features = ["cpi"] }

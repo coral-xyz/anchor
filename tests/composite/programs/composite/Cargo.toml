@@ -14,4 +14,4 @@ no-entrypoint = []
 cpi = ["no-entrypoint"]
 
 [dependencies]
-anchor-lang = { path = "../../../../lang" }
+anchor-lang.workspace = true

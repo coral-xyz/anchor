@@ -19,4 +19,4 @@ default = []
 overflow-checks = true
 
 [dependencies]
-anchor-lang = { path = "../../../../lang" }
+anchor-lang.workspace = true

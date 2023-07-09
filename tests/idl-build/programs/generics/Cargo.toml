@@ -20,6 +20,6 @@ idl-build = [
 default = []
 
 [dependencies]
-anchor-lang = { path = "../../../../lang" }
-anchor-spl = { path = "../../../../spl" }
+anchor-lang.workspace = true
+anchor-spl.workspace = true
 some-external-program = { path = "../some_external_program", features = ["no-entrypoint"] }

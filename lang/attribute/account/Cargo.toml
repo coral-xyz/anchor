@@ -16,10 +16,10 @@ idl-build = ["anchor-syn/idl-build"]
 anchor-debug = ["anchor-syn/anchor-debug"]
 
 [dependencies]
-anchor-syn = { path = "../../syn", version = "0.28.0", features = ["hash"] }
-anyhow = "1"
-bs58 = "0.5"
-proc-macro2 = "1"
-quote = "1"
-rustversion = "1"
-syn = { version = "1", features = ["full"] }
+anchor-syn = { workspace = true, features = ["hash"] }
+anyhow.workspace = true
+bs58.workspace = true
+proc-macro2.workspace = true
+quote.workspace = true
+rustversion.workspace = true
+syn = {  workspace = true, features = ["full"] }

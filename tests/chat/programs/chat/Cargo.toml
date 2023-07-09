@@ -16,5 +16,5 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = { path = "../../../../lang" }
-bytemuck = {version = "1.4.0", features = ["derive", "min_const_generics"]}
+anchor-lang.workspace = true
+bytemuck = { workspace = true, features = ["derive", "min_const_generics"]}

@@ -13,4 +13,4 @@ no-entrypoint = []
 cpi = ["no-entrypoint"]
 
 [dependencies]
-anchor-lang = { path = "../../../../lang", features = ["allow-missing-optionals"] }
+anchor-lang = { workspace = true, features = ["allow-missing-optionals"] }
