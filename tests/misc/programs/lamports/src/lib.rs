@@ -52,6 +52,53 @@ pub mod lamports {
 
         Ok(())
     }
+
+    pub fn test_lamports_trait_checked(ctx: Context<TestLamportsTrait>, amount: u64) -> Result<()> {
+        let pda = &ctx.accounts.pda;
+        let signer = &ctx.accounts.signer;
+
+        // Transfer **to** PDA
+        {
+            // Get the balance of the PDA **before** the transfer to PDA
+            let pda_balance_before = pda.get_lamports();
+
+            // Transfer to the PDA
+            anchor_lang::system_program::transfer(
+                CpiContext::new(
+                    ctx.accounts.system_program.to_account_info(),
+                    anchor_lang::system_program::Transfer {
+                        from: signer.to_account_info(),
+                        to: pda.to_account_info(),
+                    },
+                ),
+                amount,
+            )?;
+
+            // Get the balance of the PDA **after** the transfer to PDA
+            let pda_balance_after = pda.get_lamports();
+
+            // Validate balance
+            require_eq!(pda_balance_after, pda_balance_before + amount);
+        }
+
+        // Transfer **from** PDA
+        {
+            // Get the balance of the PDA **before** the transfer from PDA
+            let pda_balance_before = pda.get_lamports();
+
+            // Transfer from the PDA
+            pda.sub_lamports_checked(amount, LamportsError::NumericOverflow)?;
+            signer.add_lamports_checked(amount, LamportsError::NumericOverflow)?;
+
+            // Get the balance of the PDA **after** the transfer from PDA
+            let pda_balance_after = pda.get_lamports();
+
+            // Validate balance
+            require_eq!(pda_balance_after, pda_balance_before - amount);
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -73,3 +120,9 @@ pub struct TestLamportsTrait<'info> {
 
 #[account]
 pub struct LamportsPda {}
+
+#[error_code]
+pub enum LamportsError {
+    #[msg("Numeric Overflow.")]
+    NumericOverflow,
+}
