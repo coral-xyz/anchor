@@ -20,6 +20,13 @@ exclude = [
     "tests/cfo/deps/openbook-dex",
 ]
 
+[workspace.package]
+rust-version = "1.60"
+edition = "2021"
+repository = "https://github.com/coral-xyz/anchor"
+license = "Apache-2.0"
+authors = ["Anchor Maintainers <accounts@200ms.io>"]
+
 [workspace.dependencies]
 anyhow                  = "1.0.32"
 cfg-if                  = "1.0.0"

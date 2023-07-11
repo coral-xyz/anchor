@@ -1,8 +1,8 @@
 [package]
-name = "floats"
-version = "0.1.0"
+name        = "floats"
+version     = "0.1.0"
 description = "Created with Anchor"
-edition = "2018"
+edition     = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "lib"]

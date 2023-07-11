@@ -1,11 +1,11 @@
 [package]
-name = "anchor-spl"
-version = "0.28.0"
-authors = ["Anchor Maintainers <accounts@200ms.io>"]
-rust-version = "1.60"
-edition = "2021"
-license = "Apache-2.0"
-description = "CPI clients for SPL programs"
+name            = "anchor-spl"
+version         = "0.28.0"
+authors         = { workspace = true }
+rust-version    = { workspace = true }
+edition         = { workspace = true }
+license         = { workspace = true }
+description     = "CPI clients for SPL programs"
 
 [features]
 default = ["mint", "token", "token_2022", "associated_token"]

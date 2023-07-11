@@ -1,12 +1,12 @@
 [package]
-name = "anchor-attribute-account"
-version = "0.28.0"
-authors = ["Anchor Maintainers <accounts@200ms.io>"]
-repository = "https://github.com/coral-xyz/anchor"
-license = "Apache-2.0"
-description = "Anchor attribute macro for defining an account"
-rust-version = "1.60"
-edition = "2021"
+name            = "anchor-attribute-account"
+version         = "0.28.0"
+authors         = { workspace = true }
+repository      = { workspace = true }
+license         = { workspace = true }
+description     = "Anchor attribute macro for defining an account"
+rust-version    = { workspace = true }
+edition         = { workspace = true }
 
 [lib]
 proc-macro = true
@@ -16,10 +16,10 @@ idl-build = ["anchor-syn/idl-build"]
 anchor-debug = ["anchor-syn/anchor-debug"]
 
 [dependencies]
-anchor-syn = { workspace = true, features = ["hash"] }
-anyhow.workspace = true
-bs58.workspace = true
-proc-macro2.workspace = true
-quote.workspace = true
-rustversion.workspace = true
-syn = {  workspace = true, features = ["full"] }
+anchor-syn  = { workspace = true, features = ["hash"] }
+anyhow      = { workspace = true }
+bs58        = { workspace = true }
+proc-macro2 = { workspace = true }
+quote       = { workspace = true }
+rustversion = { workspace = true }
+syn         = {  workspace = true, features = ["full"] }

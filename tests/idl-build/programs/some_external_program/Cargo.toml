@@ -1,8 +1,8 @@
 [package]
-name = "some-external-program"
-version = "0.1.0"
+name        = "some-external-program"
+version     = "0.1.0"
 description = "Created with Anchor"
-edition = "2021"
+edition     = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "lib"]

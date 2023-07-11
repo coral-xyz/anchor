@@ -1,8 +1,8 @@
 [package]
-name = "avm"
-version = "0.28.0"
-rust-version = "1.60"
-edition = "2021"
+name         = "avm"
+version      = "0.28.0"
+rust-version = { workspace = true }
+edition      = { workspace = true }
 
 [[bin]]
 name = "avm"
