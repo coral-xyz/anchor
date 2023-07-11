@@ -2381,12 +2381,14 @@ fn idl_build(no_docs: bool) -> Result<()> {
     }
 
     // Convert path to name if there are no conflicts
-    let path_regex = Regex::new(r#"\"((\w+::)+)(\w+)\""#).unwrap();
+    let path_regex = Regex::new(r#""((\w+::)+)(\w+)""#).unwrap();
     let idls = idls
         .into_iter()
         .map(|idl| {
             let mut modified_content = serde_json::to_string_pretty(&idl).unwrap();
 
+            // TODO: Remove. False positive https://github.com/rust-lang/rust-clippy/issues/10577
+            #[allow(clippy::redundant_clone)]
             for captures in path_regex.captures_iter(&modified_content.clone()) {
                 let path = captures.get(0).unwrap().as_str();
                 let name = captures.get(3).unwrap().as_str();
