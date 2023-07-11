@@ -20,7 +20,7 @@ idl-build = [
 default = []
 
 [dependencies]
-anchor-lang.workspace = true
-anchor-spl.workspace = true
-bytemuck = { workspace = true, features = ["derive", "min_const_generics"]}
-some-external-program = { path = "../some_external_program", features = ["no-entrypoint"] }
+anchor-lang             = { workspace = true }
+anchor-spl              = { workspace = true }
+bytemuck                = { workspace = true, features = ["derive", "min_const_generics"]}
+some-external-program   = { path = "../some_external_program", features = ["no-entrypoint"] }

@@ -17,9 +17,9 @@ default = []
 test-bpf = []
 
 [dependencies]
-anchor-lang.workspace = true
-bytemuck = {version = "1.4.0", features = ["derive", "min_const_generics"]}
+anchor-lang     = { workspace = true }
+bytemuck        = { workspace = true, features = ["derive", "min_const_generics"]}
 
 [dev-dependencies]
-anchor-client = { workspace = true, features = ["debug", "async"] }
-solana-program-test.workspace = true
+anchor-client       = { workspace = true, features = ["debug", "async"] }
+solana-program-test = { workspace = true }

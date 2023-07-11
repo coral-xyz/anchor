@@ -19,4 +19,4 @@ default = []
 overflow-checks = true
 
 [dependencies]
-anchor-lang.workspace = true
+anchor-lang = { workspace = true }

@@ -19,4 +19,4 @@ idl-build = [
 default = []
 
 [dependencies]
-anchor-lang.workspace = true
+anchor-lang = { workspace = true }

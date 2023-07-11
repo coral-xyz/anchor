@@ -16,5 +16,5 @@ anchor-deprecated-state = []
 default = ["anchor-deprecated-state"]
 
 [dependencies]
-anchor-lang.workspace = true
-anchor-spl.workspace = true
+anchor-lang = { workspace = true }
+anchor-spl  = { workspace = true }

@@ -12,14 +12,14 @@ debug = []
 async = []
 
 [dependencies]
-anchor-lang.workspace = true
-anyhow.workspace = true
-futures.workspace = true
-regex.workspace = true
-serde = { workspace = true, features = ["derive"] }
-solana-client.workspace = true
-solana-sdk.workspace = true
-solana-account-decoder.workspace = true
-thiserror.workspace = true
-tokio = { workspace = true, features = ["rt", "sync"] }
-url.workspace = true
+anchor-lang             = { workspace = true }
+anyhow                  = { workspace = true }
+futures                 = { workspace = true }
+regex                   = { workspace = true }
+serde                   = { workspace = true, features = ["derive"] }
+thiserror               = { workspace = true }
+tokio                   = { workspace = true, features = ["rt", "sync"] }
+url                     = { workspace = true }
+solana-client           = { workspace = true }
+solana-sdk              = { workspace = true }
+solana-account-decoder  = { workspace = true }

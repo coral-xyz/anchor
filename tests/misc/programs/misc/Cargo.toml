@@ -16,7 +16,7 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = { workspace = true, features = ["init-if-needed"] }
-anchor-spl.workspace = true
-spl-associated-token-account.workspace = true
-bytemuck = { workspace = true, features = ["derive", "min_const_generics"]}
+anchor-lang                     = { workspace = true, features = ["init-if-needed"] }
+anchor-spl                      = { workspace = true }
+spl-associated-token-account    = { workspace = true }
+bytemuck                        = { workspace = true, features = ["derive", "min_const_generics"]}

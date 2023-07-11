@@ -15,9 +15,9 @@ proc-macro = true
 anchor-debug = ["anchor-syn/anchor-debug"]
 
 [dependencies]
-anchor-syn.workspace = true
-anyhow.workspace = true
-proc-macro2.workspace = true
-quote.workspace = true
-regex.workspace = true
-syn = { workspace = true, features = ["full"] }
+anchor-syn      = { workspace = true }
+anyhow          = { workspace = true }
+proc-macro2     = { workspace = true }
+quote           = { workspace = true }
+regex           = { workspace = true }
+syn             = { workspace = true, features = ["full"] }

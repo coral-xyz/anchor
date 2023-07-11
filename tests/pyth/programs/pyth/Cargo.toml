@@ -16,6 +16,6 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang.workspace = true
-arrayref.workspace = true
-bytemuck.workspace = true
+anchor-lang = { workspace = true }
+arrayref    = { workspace = true }
+bytemuck    = { workspace = true }

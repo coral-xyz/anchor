@@ -14,5 +14,5 @@ no-entrypoint = []
 cpi = ["no-entrypoint"]
 
 [dependencies]
-anchor-lang.workspace = true
-anchor-spl.workspace = true
+anchor-lang = { workspace = true }
+anchor-spl  = { workspace = true }

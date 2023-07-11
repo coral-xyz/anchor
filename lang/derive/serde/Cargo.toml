@@ -17,8 +17,8 @@ idl-build = [
 ]
 
 [dependencies]
-anchor-syn.workspace = true
-borsh-derive-internal.workspace = true
-proc-macro2.workspace = true
-syn = { workspace = true, features = ["full"] }
-quote.workspace = true
+anchor-syn              = { workspace = true }
+borsh-derive-internal   = { workspace = true }
+proc-macro2             = { workspace = true }
+syn                     = { workspace = true, features = ["full"] }
+quote                   = { workspace = true }
