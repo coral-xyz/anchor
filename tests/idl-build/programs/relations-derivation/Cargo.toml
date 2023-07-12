@@ -14,7 +14,7 @@ no-entrypoint = []
 no-idl = []
 cpi = ["no-entrypoint"]
 idl-build = [
-	"anchor-lang/idl-build",
+    "anchor-lang/idl-build",
 ]
 default = []
 

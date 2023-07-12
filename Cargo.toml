@@ -6,18 +6,18 @@ codegen-units = 1
 
 [workspace]
 members = [
-	"avm",
-	"cli",
-	"client",
-	"lang",
-	"lang/attribute/*",
-	"lang/derive/*",
-	"lang/syn",
-	"spl",
+    "avm",
+    "cli",
+    "client",
+    "lang",
+    "lang/attribute/*",
+    "lang/derive/*",
+    "lang/syn",
+    "spl",
 ]
 exclude = [
-	"tests/swap/deps/openbook-dex",
-	"tests/cfo/deps/openbook-dex",
+    "tests/swap/deps/openbook-dex",
+    "tests/cfo/deps/openbook-dex",
 ]
 
 [workspace.package]

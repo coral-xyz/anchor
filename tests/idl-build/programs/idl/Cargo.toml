@@ -14,8 +14,8 @@ no-idl = []
 no-log-ix-name = []
 cpi = ["no-entrypoint"]
 idl-build = [
-	"anchor-lang/idl-build",
-	"some-external-program/idl-build",
+    "anchor-lang/idl-build",
+    "some-external-program/idl-build",
 ]
 default = []
 

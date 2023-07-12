@@ -15,24 +15,24 @@ derive = []
 default = []
 event-cpi = ["anchor-attribute-event/event-cpi"]
 idl-build = [
-	"anchor-syn/idl-build",
-	"anchor-derive-accounts/idl-build",
-	"anchor-derive-serde/idl-build",
-	"anchor-attribute-account/idl-build",
-	"anchor-attribute-constant/idl-build",
-	"anchor-attribute-event/idl-build",
-	"anchor-attribute-error/idl-build",
-	"anchor-attribute-program/idl-build",
+    "anchor-syn/idl-build",
+    "anchor-derive-accounts/idl-build",
+    "anchor-derive-serde/idl-build",
+    "anchor-attribute-account/idl-build",
+    "anchor-attribute-constant/idl-build",
+    "anchor-attribute-event/idl-build",
+    "anchor-attribute-error/idl-build",
+    "anchor-attribute-program/idl-build",
 ]
 anchor-debug = [
-	"anchor-attribute-access-control/anchor-debug",
-	"anchor-attribute-account/anchor-debug",
-	"anchor-attribute-constant/anchor-debug",
-	"anchor-attribute-error/anchor-debug",
-	"anchor-attribute-event/anchor-debug",
-	"anchor-attribute-program/anchor-debug",
-	"anchor-attribute-program/anchor-debug",
-	"anchor-derive-accounts/anchor-debug",
+    "anchor-attribute-access-control/anchor-debug",
+    "anchor-attribute-account/anchor-debug",
+    "anchor-attribute-constant/anchor-debug",
+    "anchor-attribute-error/anchor-debug",
+    "anchor-attribute-event/anchor-debug",
+    "anchor-attribute-program/anchor-debug",
+    "anchor-attribute-program/anchor-debug",
+    "anchor-derive-accounts/anchor-debug",
 ]
 
 [dependencies]

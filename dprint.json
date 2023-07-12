@@ -1,8 +1,8 @@
 {
     "toml": {
         "lineWidth": 120,
-        "indentWidth": 2,
-        "useTabs": true,
+        "indentWidth": 4,
+        "useTabs": false,
         "newLineKind": "lf",
         "comment.forceLeadingSpace": true,
         "cargo.applyConventions": true
