@@ -1,9 +1,9 @@
 [package]
-name            = "swap"
-version         = "0.1.0"
-description     = "Created with Anchor"
-rust-version    = { workspace = true }
-edition         = { workspace = true }
+name = "swap"
+version = "0.1.0"
+edition = { workspace = true }
+rust-version = { workspace = true }
+description = "Created with Anchor"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -16,6 +16,6 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang     = { workspace = true }
-anchor-spl      = { workspace = true, features = ["dex"] }
-serum_dex       = { git = "https://github.com/openbook-dex/program", rev = "1be91f2", version = "0.4.0", features = ["no-entrypoint"] }
+anchor-lang = { workspace = true }
+anchor-spl = { workspace = true, features = ["dex"] }
+serum_dex = { git = "https://github.com/openbook-dex/program", rev = "1be91f2", version = "0.4.0", features = ["no-entrypoint"] }

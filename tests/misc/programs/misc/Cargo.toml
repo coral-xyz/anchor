@@ -1,9 +1,9 @@
 [package]
-name            = "misc"
-version         = "0.1.0"
-description     = "Created with Anchor"
-rust-version    = { workspace = true }
-edition         = { workspace = true }
+name = "misc"
+version = "0.1.0"
+edition = { workspace = true }
+rust-version = { workspace = true }
+description = "Created with Anchor"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -16,7 +16,7 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang                     = { workspace = true, features = ["init-if-needed"] }
-anchor-spl                      = { workspace = true }
-spl-associated-token-account    = { workspace = true }
-bytemuck                        = { workspace = true, features = ["derive", "min_const_generics"]}
+anchor-lang = { workspace = true, features = ["init-if-needed"] }
+anchor-spl = { workspace = true }
+bytemuck = { workspace = true, features = ["derive", "min_const_generics"] }
+spl-associated-token-account = { workspace = true }

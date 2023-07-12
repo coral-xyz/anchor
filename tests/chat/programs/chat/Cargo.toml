@@ -1,9 +1,9 @@
 [package]
-name            = "chat"
-version         = "0.1.0"
-description     = "Created with Anchor"
-rust-version    = { workspace = true }
-edition         = { workspace = true }
+name = "chat"
+version = "0.1.0"
+edition = { workspace = true }
+rust-version = { workspace = true }
+description = "Created with Anchor"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -16,5 +16,5 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang     = { workspace = true }
-bytemuck        = { workspace = true, features = ["derive", "min_const_generics"]}
+anchor-lang = { workspace = true }
+bytemuck = { workspace = true, features = ["derive", "min_const_generics"] }

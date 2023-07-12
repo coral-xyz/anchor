@@ -1,9 +1,9 @@
 [package]
-name            = "cfo"
-version         = "0.1.0"
-description     = "Created with Anchor"
-rust-version    = { workspace = true }
-edition         = { workspace = true }
+name = "cfo"
+version = "0.1.0"
+edition = { workspace = true }
+rust-version = { workspace = true }
+description = "Created with Anchor"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -17,10 +17,10 @@ default = ["test"]
 test = []
 
 [dependencies]
-anchor-lang     = { workspace = true }
-anchor-spl      = { workspace = true }
-spl-token       = { workspace = true, features = ["no-entrypoint"] }
-swap            = { path = "../../deps/swap/programs/swap", features = ["cpi"] }
-serum_dex       = { path = "../../deps/openbook-dex/dex", features = ["no-entrypoint"] }
-registry        = { path = "../../deps/stake/programs/registry", features = ["cpi"] }
-lockup          = { path = "../../deps/stake/programs/lockup", features = ["cpi"] }
+anchor-lang = { workspace = true }
+anchor-spl = { workspace = true }
+lockup = { path = "../../deps/stake/programs/lockup", features = ["cpi"] }
+registry = { path = "../../deps/stake/programs/registry", features = ["cpi"] }
+serum_dex = { path = "../../deps/openbook-dex/dex", features = ["no-entrypoint"] }
+spl-token = { workspace = true, features = ["no-entrypoint"] }
+swap = { path = "../../deps/swap/programs/swap", features = ["cpi"] }

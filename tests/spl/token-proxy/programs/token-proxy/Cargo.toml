@@ -1,9 +1,9 @@
 [package]
-name            = "token-proxy"
-version         = "0.1.0"
-description     = "Created with Anchor"
-rust-version    = "1.60"
-edition         = { workspace = true }
+name = "token-proxy"
+version = "0.1.0"
+edition = { workspace = true }
+rust-version = "1.60"
+description = "Created with Anchor"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -15,4 +15,4 @@ cpi = ["no-entrypoint"]
 
 [dependencies]
 anchor-lang = { workspace = true }
-anchor-spl  = { workspace = true }
+anchor-spl = { workspace = true }

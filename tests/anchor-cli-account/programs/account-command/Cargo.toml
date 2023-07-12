@@ -1,8 +1,8 @@
 [package]
-name        = "account-command"
-version     = "0.1.0"
+name = "account-command"
+version = "0.1.0"
+edition = { workspace = true }
 description = "Created with Anchor"
-edition     = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "lib"]

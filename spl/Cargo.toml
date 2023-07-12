@@ -1,11 +1,11 @@
 [package]
-name            = "anchor-spl"
-version         = "0.28.0"
-authors         = { workspace = true }
-rust-version    = { workspace = true }
-edition         = { workspace = true }
-license         = { workspace = true }
-description     = "CPI clients for SPL programs"
+name = "anchor-spl"
+version = "0.28.0"
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+rust-version = { workspace = true }
+description = "CPI clients for SPL programs"
 
 [features]
 default = ["mint", "token", "token_2022", "associated_token"]
@@ -21,11 +21,11 @@ metadata = ["mpl-token-metadata"]
 dex = ["serum_dex"]
 
 [dependencies]
-anchor-lang         = { workspace = true, features = ["derive"] }
-borsh               = { workspace = true, optional = true }
-mpl-token-metadata  = { workspace = true, optional = true, features = ["no-entrypoint"] }
-serum_dex           = { git = "https://github.com/openbook-dex/program/", rev = "1be91f2", version = "0.4.0", features = ["no-entrypoint"], optional = true }
-solana-program      = { workspace = true }
+anchor-lang = { workspace = true, features = ["derive"] }
+borsh = { workspace = true, optional = true }
+mpl-token-metadata = { workspace = true, optional = true, features = ["no-entrypoint"] }
+serum_dex = { git = "https://github.com/openbook-dex/program/", rev = "1be91f2", version = "0.4.0", features = ["no-entrypoint"], optional = true }
+solana-program = { workspace = true }
 spl-associated-token-account = { workspace = true, features = ["no-entrypoint"], optional = true }
-spl-token                    = { workspace = true, features = ["no-entrypoint"], optional = true }
-spl-token-2022               = { workspace = true, features = ["no-entrypoint"], optional = true }
+spl-token = { workspace = true, features = ["no-entrypoint"], optional = true }
+spl-token-2022 = { workspace = true, features = ["no-entrypoint"], optional = true }

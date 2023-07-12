@@ -1,9 +1,9 @@
 [workspace]
 members = [
-    "programs/*"
+	"programs/*",
 ]
 exclude = [
-    "deps/openbook-dex",
-    "deps/stake",
-    "deps/swap"
+	"deps/openbook-dex",
+	"deps/stake",
+	"deps/swap",
 ]

@@ -1,8 +1,8 @@
 [package]
-name        = "caller"
-version     = "0.1.0"
+name = "caller"
+version = "0.1.0"
+edition = { workspace = true }
 description = "Created with Anchor"
-edition     = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -16,5 +16,5 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang     = { workspace = true, features = ["init-if-needed"] }
-callee          = { path = "../callee", features = ["cpi"] }
+anchor-lang = { workspace = true, features = ["init-if-needed"] }
+callee = { path = "../callee", features = ["cpi"] }

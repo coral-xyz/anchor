@@ -1,9 +1,9 @@
 [package]
-name            = "relations-derivation"
-version         = "0.1.0"
-description     = "Created with Anchor"
-rust-version    = { workspace = true }
-edition         = { workspace = true }
+name = "relations-derivation"
+version = "0.1.0"
+edition = { workspace = true }
+rust-version = { workspace = true }
+description = "Created with Anchor"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -14,7 +14,7 @@ no-entrypoint = []
 no-idl = []
 cpi = ["no-entrypoint"]
 idl-build = [
-    "anchor-lang/idl-build",
+	"anchor-lang/idl-build",
 ]
 default = []
 

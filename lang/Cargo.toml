@@ -2,10 +2,10 @@
 name = "anchor-lang"
 version = "0.28.0"
 authors = ["Anchor Maintainers <accounts@200ms.io>"]
-repository = "https://github.com/coral-xyz/anchor"
-rust-version = "1.60"
 edition = "2021"
 license = "Apache-2.0"
+repository = "https://github.com/coral-xyz/anchor"
+rust-version = "1.60"
 description = "Solana Sealevel eDSL"
 
 [features]
@@ -15,47 +15,47 @@ derive = []
 default = []
 event-cpi = ["anchor-attribute-event/event-cpi"]
 idl-build = [
-    "anchor-syn/idl-build",
-    "anchor-derive-accounts/idl-build",
-    "anchor-derive-serde/idl-build",
-    "anchor-attribute-account/idl-build",
-    "anchor-attribute-constant/idl-build",
-    "anchor-attribute-event/idl-build",
-    "anchor-attribute-error/idl-build",
-    "anchor-attribute-program/idl-build",
+	"anchor-syn/idl-build",
+	"anchor-derive-accounts/idl-build",
+	"anchor-derive-serde/idl-build",
+	"anchor-attribute-account/idl-build",
+	"anchor-attribute-constant/idl-build",
+	"anchor-attribute-event/idl-build",
+	"anchor-attribute-error/idl-build",
+	"anchor-attribute-program/idl-build",
 ]
 anchor-debug = [
-    "anchor-attribute-access-control/anchor-debug",
-    "anchor-attribute-account/anchor-debug",
-    "anchor-attribute-constant/anchor-debug",
-    "anchor-attribute-error/anchor-debug",
-    "anchor-attribute-event/anchor-debug",
-    "anchor-attribute-program/anchor-debug",
-    "anchor-attribute-program/anchor-debug",
-    "anchor-derive-accounts/anchor-debug"
+	"anchor-attribute-access-control/anchor-debug",
+	"anchor-attribute-account/anchor-debug",
+	"anchor-attribute-constant/anchor-debug",
+	"anchor-attribute-error/anchor-debug",
+	"anchor-attribute-event/anchor-debug",
+	"anchor-attribute-program/anchor-debug",
+	"anchor-attribute-program/anchor-debug",
+	"anchor-derive-accounts/anchor-debug",
 ]
 
 [dependencies]
-anchor-attribute-access-control     = { workspace = true }
-anchor-attribute-account            = { workspace = true }
-anchor-attribute-constant           = { workspace = true }
-anchor-attribute-error              = { workspace = true }
-anchor-attribute-event              = { workspace = true }
-anchor-attribute-program            = { workspace = true }
-anchor-derive-accounts              = { workspace = true }
-anchor-derive-serde                 = { workspace = true }
-anchor-derive-space                 = { workspace = true }
+anchor-attribute-access-control = { workspace = true }
+anchor-attribute-account = { workspace = true }
+anchor-attribute-constant = { workspace = true }
+anchor-attribute-error = { workspace = true }
+anchor-attribute-event = { workspace = true }
+anchor-attribute-program = { workspace = true }
+anchor-derive-accounts = { workspace = true }
+anchor-derive-serde = { workspace = true }
+anchor-derive-space = { workspace = true }
 
 # anchor-syn can and should only be included only for idl-build. It won't compile
 # for bpf due to proc-macro2 crate.
-anchor-syn      = { workspace = true, optional = true }
-arrayref        = { workspace = true }
-base64          = { workspace = true }
-bincode         = { workspace = true }
-borsh           = { workspace = true }
-bytemuck        = { workspace = true }
-solana-program  = { workspace = true }
-thiserror       = { workspace = true }
+anchor-syn = { workspace = true, optional = true }
+arrayref = { workspace = true }
+base64 = { workspace = true }
+bincode = { workspace = true }
+borsh = { workspace = true }
+bytemuck = { workspace = true }
+solana-program = { workspace = true }
+thiserror = { workspace = true }
 
 # TODO: Remove. This crate has been added to fix a build error with the 1.16.0 release.
-getrandom       = { workspace = true, features = ["custom"] }
+getrandom = { workspace = true, features = ["custom"] }
