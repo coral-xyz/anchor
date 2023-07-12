@@ -1,0 +1,23 @@
+{
+    "typescript": {},
+    "json": {},
+    "markdown": {},
+    "toml": {
+        "lineWidth": 120,
+        "indentWidth": 2,
+        "useTabs": false,
+        "newLineKind": "lf",
+        "comment.forceLeadingSpace": true,
+        "cargo.applyConventions": true
+    },
+    "includes": [
+        "**/*.{ts,tsx,js,jsx,cjs,mjs,json,md,toml}"
+    ],
+    "excludes": [
+        "**/node_modules",
+        "**/*-lock.json"
+    ],
+    "plugins": [
+        "https://plugins.dprint.dev/toml-0.5.4.wasm"
+    ]
+}
