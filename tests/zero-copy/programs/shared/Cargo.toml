@@ -1,8 +1,8 @@
 [package]
 name = "shared"
 version = "0.1.0"
-edition = { workspace = true }
-rust-version = { workspace = true }
+edition = "2021"
+rust-version = "1.60"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

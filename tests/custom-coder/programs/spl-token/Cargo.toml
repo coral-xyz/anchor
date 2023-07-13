@@ -1,8 +1,8 @@
 [package]
 name = "spl-token"
 version = "0.1.0"
-edition = { workspace = true }
-rust-version = { workspace = true }
+edition = "2021"
+rust-version = "1.60"
 description = "Created with Anchor"
 
 [lib]
@@ -17,4 +17,4 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang.workspace = true
+anchor-lang = { path = "../../../../lang" }
