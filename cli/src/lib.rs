@@ -382,6 +382,12 @@ pub enum IdlCommand {
         #[clap(short, long)]
         out: Option<String>,
     },
+    /// Sets the IDL for a program, running `init` if necessary.
+    Deploy {
+        program_id: Pubkey,
+        #[clap(short, long)]
+        filepath: String,
+    },
 }
 
 #[derive(Debug, Parser)]
@@ -1550,6 +1556,22 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
             no_docs,
         } => idl_parse(cfg_override, file, out, out_ts, no_docs),
         IdlCommand::Fetch { address, out } => idl_fetch(cfg_override, address, out),
+        IdlCommand::Deploy {
+            filepath,
+            program_id,
+        } => idl_deploy(cfg_override, program_id, filepath),
+    }
+}
+
+fn idl_deploy(
+    cfg_override: &ConfigOverride,
+    program_id: Pubkey,
+    idl_filepath: String,
+) -> Result<()> {
+    if fetch_idl(cfg_override, program_id).is_ok() {
+        idl_upgrade(cfg_override, program_id, idl_filepath)
+    } else {
+        idl_init(cfg_override, program_id, idl_filepath)
     }
 }
 
