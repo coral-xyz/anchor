@@ -1,5 +1,6 @@
 //! Account container that checks ownership on deserialization.
 
+use crate::__private::CLOSED_ACCOUNT_DISCRIMINATOR;
 use crate::bpf_writer::BpfWriter;
 use crate::error::{Error, ErrorCode};
 use crate::{
@@ -340,9 +341,11 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> AccountsEx
         if &T::owner() == program_id {
             let info = self.to_account_info();
             let mut data = info.try_borrow_mut_data()?;
-            let dst: &mut [u8] = &mut data;
-            let mut writer = BpfWriter::new(dst);
-            self.account.try_serialize(&mut writer)?;
+            if data[..8] != CLOSED_ACCOUNT_DISCRIMINATOR {
+                let dst: &mut [u8] = &mut data;
+                let mut writer = BpfWriter::new(dst);
+                self.account.try_serialize(&mut writer)?;
+            }
         }
         Ok(())
     }

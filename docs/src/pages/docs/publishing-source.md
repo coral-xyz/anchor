@@ -34,7 +34,7 @@ have an `Anchor.toml` to define the build.
 An example `Anchor.toml` config looks as follows,
 
 ```toml
-anchor_version = "0.25.14"
+anchor_version = "0.25.15"
 
 [workspace]
 members = ["programs/multisig"]

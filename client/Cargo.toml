@@ -1,6 +1,6 @@
 [package]
 name = "anchor-client"
-version = "0.25.14"
+version = "0.25.15"
 authors = ["Serum Foundation <foundation@projectserum.com>"]
 edition = "2021"
 license = "Apache-2.0"
@@ -11,7 +11,7 @@ publish = ["star-atlas"]
 debug = []
 
 [dependencies]
-anchor-lang = { path = "../lang", version = "0.25.14", registry = "star-atlas" }
+anchor-lang = { path = "../lang", version = "0.25.15", registry = "star-atlas" }
 anyhow = "1.0.32"
 regex = "1.4.5"
 serde = { version = "1.0.122", features = ["derive"] }
