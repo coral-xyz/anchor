@@ -4,6 +4,7 @@ use crate::{
     Accounts, AccountsClose, AccountsExit, Key, Result, ToAccountInfo, ToAccountInfos,
     ToAccountMetas, ZeroCopy,
 };
+use anchor_lang::__private::CLOSED_ACCOUNT_DISCRIMINATOR;
 use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
@@ -181,8 +182,10 @@ impl<'info, T: ZeroCopy> AccountsExit<'info> for Loader<'info, T> {
     fn exit(&self, _program_id: &Pubkey) -> Result<()> {
         let mut data = self.acc_info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
-        let mut writer = BpfWriter::new(dst);
-        writer.write_all(&T::discriminator()).unwrap();
+        if dst[..8] != CLOSED_ACCOUNT_DISCRIMINATOR {
+            let mut writer = BpfWriter::new(dst);
+            writer.write_all(&T::discriminator()).unwrap();
+        }
         Ok(())
     }
 }

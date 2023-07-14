@@ -6,6 +6,7 @@ use crate::{
     AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, Key, Result,
     ToAccountInfo, ToAccountInfos, ToAccountMetas,
 };
+use anchor_lang::__private::CLOSED_ACCOUNT_DISCRIMINATOR;
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -101,9 +102,11 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AccountsExit<'info
     fn exit(&self, _program_id: &Pubkey) -> Result<()> {
         let info = self.to_account_info();
         let mut data = info.try_borrow_mut_data()?;
-        let dst: &mut [u8] = &mut data;
-        let mut writer = BpfWriter::new(dst);
-        self.inner.account.try_serialize(&mut writer)?;
+        if data[..8] != CLOSED_ACCOUNT_DISCRIMINATOR {
+            let dst: &mut [u8] = &mut data;
+            let mut writer = BpfWriter::new(dst);
+            self.inner.account.try_serialize(&mut writer)?;
+        }
         Ok(())
     }
 }
