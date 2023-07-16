@@ -48,7 +48,7 @@ pub fn version_binary_path(version: &Version) -> PathBuf {
 pub fn use_version(opt_version: Option<Version>) -> Result<()> {
     let version = match opt_version {
         Some(version) => version,
-        None => read_anchorversion_file()?
+        None => read_anchorversion_file()?,
     };
 
     let installed_versions = read_installed_versions();
@@ -142,10 +142,10 @@ pub fn uninstall_version(version: &Version) -> Result<()> {
 /// Read version from .anchorversion
 pub fn read_anchorversion_file() -> Result<Version> {
     fs::read_to_string(".anchorversion")
-    .map_err(|e| anyhow!(".anchorversion file not found: {e}"))
-    .map(|content| Version::parse(content.trim()))?
-    .map_err(|e| anyhow!("Unable to parse version: {e}"))
-} 
+        .map_err(|e| anyhow!(".anchorversion file not found: {e}"))
+        .map(|content| Version::parse(content.trim()))?
+        .map_err(|e| anyhow!("Unable to parse version: {e}"))
+}
 
 /// Ensure the users home directory is setup with the paths required by AVM.
 pub fn ensure_paths() {
@@ -250,9 +250,9 @@ pub fn read_installed_versions() -> Vec<semver::Version> {
 mod tests {
     use crate::*;
     use semver::Version;
+    use std::env;
     use std::fs;
     use std::io::Write;
-    use std::env;
 
     #[test]
     fn test_read_anchorversion() {
@@ -263,12 +263,11 @@ mod tests {
         let test_version = "0.26.0";
         file_created.write(test_version.as_bytes()).unwrap();
 
-
         let version = read_anchorversion_file();
         match version {
             Ok(v) => {
                 assert_eq!(v.to_string(), test_version);
-            },
+            }
             Err(_e) => {
                 assert!(false);
             }
