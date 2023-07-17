@@ -1,5 +1,4 @@
 use anyhow::{Error, Result};
-use avm;
 use clap::{Parser, Subcommand};
 use semver::Version;
 
