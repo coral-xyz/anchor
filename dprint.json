@@ -1,0 +1,17 @@
+{
+    "toml": {
+        "lineWidth": 120,
+        "indentWidth": 4,
+        "useTabs": false,
+        "newLineKind": "lf",
+        "comment.forceLeadingSpace": true,
+        "cargo.applyConventions": true
+    },
+    "includes": [
+        "**/*.{toml}"
+    ],
+    "excludes": [],
+    "plugins": [
+        "https://plugins.dprint.dev/toml-0.5.4.wasm"
+    ]
+}

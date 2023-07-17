@@ -1,8 +1,8 @@
 [package]
 name = "idl"
 version = "0.1.0"
-description = "Created with Anchor"
 edition = "2021"
+description = "Created with Anchor"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -22,5 +22,5 @@ default = []
 [dependencies]
 anchor-lang = { path = "../../../../lang" }
 anchor-spl = { path = "../../../../spl" }
-bytemuck = {version = "1.4.0", features = ["derive", "min_const_generics"]}
+bytemuck = { version = "1.4.0", features = ["derive", "min_const_generics"] }
 some-external-program = { path = "../some_external_program", features = ["no-entrypoint"] }

@@ -1,8 +1,8 @@
 [package]
 name = "caller"
 version = "0.1.0"
+edition = "2021"
 description = "Created with Anchor"
-edition = "2018"
 
 [lib]
 crate-type = ["cdylib", "lib"]

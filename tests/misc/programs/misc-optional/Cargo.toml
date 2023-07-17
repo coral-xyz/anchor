@@ -1,9 +1,9 @@
 [package]
 name = "misc-optional"
 version = "0.1.0"
-description = "Created with Anchor"
-rust-version = "1.56"
 edition = "2021"
+rust-version = "1.60"
+description = "Created with Anchor"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -18,5 +18,5 @@ default = []
 [dependencies]
 anchor-lang = { path = "../../../../lang", features = ["init-if-needed"] }
 anchor-spl = { path = "../../../../spl" }
-spl-associated-token-account = "1.1.1"
-bytemuck = {version = "1.4.0", features = ["derive", "min_const_generics"]}
+bytemuck = { version = "1.4.0", features = ["derive", "min_const_generics"] }
+spl-associated-token-account = "^1.1"

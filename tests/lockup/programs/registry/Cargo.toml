@@ -1,9 +1,9 @@
 [package]
 name = "registry"
 version = "0.1.0"
-description = "Created with Anchor"
-rust-version = "1.60"
 edition = "2021"
+rust-version = "1.60"
+description = "Created with Anchor"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -16,6 +16,6 @@ anchor-deprecated-state = []
 default = ["anchor-deprecated-state"]
 
 [dependencies]
-anchor-lang = { path = "../../../../lang" }
-anchor-spl = { path = "../../../../spl" }
+anchor-lang = { workspace = true }
+anchor-spl = { workspace = true }
 lockup = { path = "../lockup", features = ["cpi"] }
