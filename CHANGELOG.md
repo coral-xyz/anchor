@@ -44,6 +44,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - cli: Create new programs with correct program ids ([#2509](https://github.com/coral-xyz/anchor/pull/2509)).
 - cli, client, lang, spl: Update Solana toolchain and dependencies to `1.16.0` and specify maximum version of `<1.17.0` ([#2512](https://github.com/coral-xyz/anchor/pull/2512)).
 - cli: `anchor deploy` command's `--program-name` argument accepts program lib names ([#2519](https://github.com/coral-xyz/anchor/pull/2519)).
+- avm, cli: Add support for the `.anchorversion` file to facilitate switching between different versions of the anchor-cli. ([#2533](https://github.com/coral-xyz/anchor/pull/2553)).
 
 ### Fixes
 
