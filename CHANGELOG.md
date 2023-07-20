@@ -16,6 +16,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - client: Add a helper struct `DynSigner` to simplify use of `Client<C> where <C: Clone + Deref<Target = impl Signer>>` with Solana clap CLI utils that loads `Signer` as `Box<dyn Signer>` ([#2550](https://github.com/coral-xyz/anchor/pull/2550)).
 - lang: Allow CPI calls matching an interface without pinning program ID ([#2559](https://github.com/coral-xyz/anchor/pull/2559)).
 - cli, lang: Add IDL generation through compilation. `anchor build` still uses parsing method to generate IDLs, use `anchor idl build` to generate IDLs with the build method ([#2011](https://github.com/coral-xyz/anchor/pull/2011)).
+- avm: Add support for the `.anchorversion` file to facilitate switching between different versions of the `anchor-cli` ([#2553](https://github.com/coral-xyz/anchor/pull/2553)).
 
 ### Fixes
 
@@ -44,7 +45,6 @@ The minor version will be incremented upon a breaking change and the patch versi
 - cli: Create new programs with correct program ids ([#2509](https://github.com/coral-xyz/anchor/pull/2509)).
 - cli, client, lang, spl: Update Solana toolchain and dependencies to `1.16.0` and specify maximum version of `<1.17.0` ([#2512](https://github.com/coral-xyz/anchor/pull/2512)).
 - cli: `anchor deploy` command's `--program-name` argument accepts program lib names ([#2519](https://github.com/coral-xyz/anchor/pull/2519)).
-- avm, cli: Add support for the `.anchorversion` file to facilitate switching between different versions of the anchor-cli. ([#2533](https://github.com/coral-xyz/anchor/pull/2553)).
 
 ### Fixes
 
