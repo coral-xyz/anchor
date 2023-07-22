@@ -2274,7 +2274,7 @@ fn generate_idl(cfg: &WithPath<Config>, skip_lint: bool, no_docs: bool) -> Resul
             .ok_or_else(|| anyhow!("Could not build IDL"))
     } else {
         generate_idl_parse(
-            &*shellexpand::tilde("src/lib.rs"),
+            "src/lib.rs",
             manifest.version(),
             cfg.features.seeds,
             no_docs,
