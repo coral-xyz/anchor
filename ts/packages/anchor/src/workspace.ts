@@ -29,25 +29,24 @@ const workspace = new Proxy(
       const fs = require("fs");
       const path = require("path");
 
-      const idlFolder = path.join("target", "idl");
-      if (!fs.existsSync(idlFolder)) {
-        throw new Error(
-          `${idlFolder} doesn't exist. Did you run \`anchor build\`?`
-        );
-      }
-
       // Override the workspace programs if the user put them in the config.
       const anchorToml = toml.parse(fs.readFileSync("Anchor.toml"));
       const clusterId = anchorToml.provider.cluster;
       const programEntry = anchorToml.programs?.[clusterId]?.[programName];
 
-      let idlPath;
+      let idlPath: string;
       let programId;
       if (typeof programEntry === "object" && programEntry.idl) {
         idlPath = programEntry.idl;
         programId = programEntry.address;
       } else {
-        idlPath = path.join(idlFolder, `${programName}.json`);
+        idlPath = path.join("target", "idl", `${programName}.json`);
+      }
+
+      if (!fs.existsSync(idlPath)) {
+        throw new Error(
+          `${idlPath} doesn't exist. Did you run \`anchor build\`?`
+        );
       }
 
       const idl = JSON.parse(fs.readFileSync(idlPath));
