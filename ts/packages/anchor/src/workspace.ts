@@ -1,11 +1,7 @@
-import camelCase from "camelcase";
 import * as toml from "toml";
-import { PublicKey } from "@solana/web3.js";
+import { snakeCase } from "snake-case";
 import { Program } from "./program/index.js";
-import { Idl } from "./idl.js";
 import { isBrowser } from "./utils/common.js";
-
-let _populatedWorkspace = false;
 
 /**
  * The `workspace` namespace provides a convenience API to automatically
@@ -14,95 +10,61 @@ let _populatedWorkspace = false;
  *
  * This API is for Node only.
  */
-const workspace = new Proxy({} as any, {
-  get(workspaceCache: { [key: string]: Program }, programName: string) {
-    if (isBrowser) {
-      throw new Error("Workspaces aren't available in the browser");
-    }
+const workspace = new Proxy(
+  {},
+  {
+    get(workspaceCache: { [key: string]: Program }, programName: string) {
+      if (isBrowser) {
+        throw new Error("Workspaces aren't available in the browser");
+      }
 
-    const fs = require("fs");
-    const process = require("process");
+      // Converting `programName` to snake_case enables the ability to use any
+      // of the following to access the workspace program:
+      // `workspace.myProgram`, `workspace.MyProgram`, `workspace["my-program"]`...
+      programName = snakeCase(programName);
 
-    if (!_populatedWorkspace) {
+      // Return early if the program is in cache
+      if (workspaceCache[programName]) return workspaceCache[programName];
+
+      const fs = require("fs");
       const path = require("path");
 
-      let projectRoot = process.cwd();
-      while (!fs.existsSync(path.join(projectRoot, "Anchor.toml"))) {
-        const parentDir = path.dirname(projectRoot);
-        if (parentDir === projectRoot) {
-          projectRoot = undefined;
-        }
-        projectRoot = parentDir;
-      }
-
-      if (projectRoot === undefined) {
-        throw new Error("Could not find workspace root.");
-      }
-
-      const idlFolder = `${projectRoot}/target/idl`;
+      const idlFolder = path.join("target", "idl");
       if (!fs.existsSync(idlFolder)) {
         throw new Error(
-          `${idlFolder} doesn't exist. Did you use "anchor build"?`
+          `${idlFolder} doesn't exist. Did you run \`anchor build\`?`
         );
       }
-
-      const idlMap = new Map<string, Idl>();
-      fs.readdirSync(idlFolder)
-        .filter((file) => file.endsWith(".json"))
-        .forEach((file) => {
-          const filePath = `${idlFolder}/${file}`;
-          const idlStr = fs.readFileSync(filePath);
-          const idl = JSON.parse(idlStr);
-          idlMap.set(idl.name, idl);
-          const name = camelCase(idl.name, { pascalCase: true });
-          if (idl.metadata && idl.metadata.address) {
-            workspaceCache[name] = new Program(
-              idl,
-              new PublicKey(idl.metadata.address)
-            );
-          }
-        });
 
       // Override the workspace programs if the user put them in the config.
-      const anchorToml = toml.parse(
-        fs.readFileSync(path.join(projectRoot, "Anchor.toml"), "utf-8")
-      );
+      const anchorToml = toml.parse(fs.readFileSync("Anchor.toml"));
       const clusterId = anchorToml.provider.cluster;
-      if (anchorToml.programs && anchorToml.programs[clusterId]) {
-        attachWorkspaceOverride(
-          workspaceCache,
-          anchorToml.programs[clusterId],
-          idlMap
-        );
+      const programEntry = anchorToml.programs?.[clusterId]?.[programName];
+
+      let idlPath;
+      let programId;
+      if (typeof programEntry === "object" && programEntry.idl) {
+        idlPath = programEntry.idl;
+        programId = programEntry.address;
+      } else {
+        idlPath = path.join(idlFolder, `${programName}.json`);
       }
 
-      _populatedWorkspace = true;
-    }
+      const idl = JSON.parse(fs.readFileSync(idlPath));
+      if (!programId) {
+        if (!idl.metadata?.address) {
+          throw new Error(
+            `IDL for program \`${programName}\` does not have \`metadata.address\` field.\n` +
+              "To add the missing field, run `anchor deploy` or `anchor test`."
+          );
+        }
+        programId = idl.metadata.address;
+      }
+      workspaceCache[programName] = new Program(idl, programId);
 
-    return workspaceCache[programName];
-  },
-});
-
-function attachWorkspaceOverride(
-  workspaceCache: { [key: string]: Program },
-  overrideConfig: { [key: string]: string | { address: string; idl?: string } },
-  idlMap: Map<string, Idl>
-) {
-  Object.keys(overrideConfig).forEach((programName) => {
-    const wsProgramName = camelCase(programName, { pascalCase: true });
-    const entry = overrideConfig[programName];
-    const overrideAddress = new PublicKey(
-      typeof entry === "string" ? entry : entry.address
-    );
-    let idl = idlMap.get(programName);
-    if (typeof entry !== "string" && entry.idl) {
-      idl = JSON.parse(require("fs").readFileSync(entry.idl, "utf-8"));
-    }
-    if (!idl) {
-      throw new Error(`Error loading workspace IDL for ${programName}`);
-    }
-    workspaceCache[wsProgramName] = new Program(idl, overrideAddress);
-  });
-}
+      return workspaceCache[programName];
+    },
+  }
+);
 
 export default workspace;
