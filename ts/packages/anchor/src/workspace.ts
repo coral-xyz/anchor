@@ -23,6 +23,23 @@ const workspace = new Proxy(
       // `workspace.myProgram`, `workspace.MyProgram`, `workspace["my-program"]`...
       programName = snakeCase(programName);
 
+      // Check whether the program name contains any digits
+      if (/\d/.test(programName)) {
+        // Numbers cannot be properly converted from camelCase to snake_case,
+        // e.g. if the `programName` is `myProgram2`, the actual program name could
+        // be `my_program2` or `my_program_2`. This implementation assumes the
+        // latter as the default and always converts to `_numbers`.
+        //
+        // A solution to the conversion of program names with numbers in them
+        // would be to always convert the `programName` to camelCase instead of
+        // snake_case. The problem with this approach is that it would require
+        // converting everything else e.g. program names in Anchor.toml and IDL
+        // file names which are both snake_case.
+        programName = programName
+          .replace(/\d+/g, (match) => "_" + match)
+          .replace("__", "_");
+      }
+
       // Return early if the program is in cache
       if (workspaceCache[programName]) return workspaceCache[programName];
 
