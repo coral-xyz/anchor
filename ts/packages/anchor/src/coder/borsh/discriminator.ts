@@ -1,4 +1,4 @@
-import { sha256 } from "@noble/hashes/sha256.js";
+import { sha256 } from "@noble/hashes/sha256";
 
 /**
  * Number of bytes in anchor discriminators

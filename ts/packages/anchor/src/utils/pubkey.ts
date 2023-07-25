@@ -1,7 +1,7 @@
 import { Buffer } from "buffer";
 import { PublicKey } from "@solana/web3.js";
 import { Address, translateAddress } from "../program/common.js";
-import { sha256 } from "@noble/hashes/sha256.js";
+import { sha256 } from "@noble/hashes/sha256";
 
 // Sync version of web3.PublicKey.createWithSeed.
 export function createWithSeedSync(

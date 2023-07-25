@@ -20,7 +20,7 @@ import {
 } from "../../idl.js";
 import { IdlCoder } from "./idl.js";
 import { InstructionCoder } from "../index.js";
-import { sha256 } from "@noble/hashes/sha256.js";
+import { sha256 } from "@noble/hashes/sha256";
 
 /**
  * Namespace for global instruction function signatures (i.e. functions
