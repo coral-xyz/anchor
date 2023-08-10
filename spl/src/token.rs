@@ -2,6 +2,7 @@ use anchor_lang::solana_program::account_info::AccountInfo;
 
 use anchor_lang::solana_program::program_pack::Pack;
 use anchor_lang::solana_program::pubkey::Pubkey;
+use anchor_lang::ToAccountInfo;
 use anchor_lang::{context::CpiContext, Accounts};
 use anchor_lang::{solana_program, Result};
 use std::ops::Deref;
@@ -9,26 +10,35 @@ use std::ops::Deref;
 pub use spl_token;
 pub use spl_token::ID;
 
-pub fn transfer<'info>(
-    ctx: CpiContext<'_, '_, '_, 'info, Transfer<'info>>,
+pub fn transfer<
+    'info,
+    X: ToAccountInfo<'info>,
+    Y: ToAccountInfo<'info>,
+    Z: ToAccountInfo<'info>,
+>(
+    from: &X,
+    to: &Y,
+    authority: &Z,
+    signer_seeds: Option<&[&[&[u8]]]>,
     amount: u64,
 ) -> Result<()> {
+    let from = from.to_account_info();
+    let to = to.to_account_info();
+    let authority = authority.to_account_info();
+
     let ix = spl_token::instruction::transfer(
         &spl_token::ID,
-        ctx.accounts.from.key,
-        ctx.accounts.to.key,
-        ctx.accounts.authority.key,
+        from.key,
+        to.key,
+        authority.key,
         &[],
         amount,
     )?;
+
     solana_program::program::invoke_signed(
         &ix,
-        &[
-            ctx.accounts.from.clone(),
-            ctx.accounts.to.clone(),
-            ctx.accounts.authority.clone(),
-        ],
-        ctx.signer_seeds,
+        &[from.clone(), to.clone(), authority.clone()],
+        signer_seeds.unwrap_or(&[]),
     )
     .map_err(Into::into)
 }
