@@ -504,7 +504,9 @@ impl std::convert::From<Error> for anchor_lang::solana_program::program_error::P
     fn from(e: Error) -> anchor_lang::solana_program::program_error::ProgramError {
         match e {
             Error::AnchorError(error) => {
-                anchor_lang::solana_program::program_error::ProgramError::Custom(error.error_code_number)
+                anchor_lang::solana_program::program_error::ProgramError::Custom(
+                    error.error_code_number,
+                )
             }
             Error::ProgramError(program_error) => program_error.program_error,
         }
