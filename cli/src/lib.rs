@@ -856,8 +856,9 @@ pub type Files = Vec<(PathBuf, String)>;
 /// Create files from the given (path, content) tuple array.
 ///
 /// # Example
-/// ```
-/// crate_files(&[("programs/my_program/src/lib.rs".into(), "// Content".into())])?;
+///
+/// ```ignore
+/// crate_files(vec![("programs/my_program/src/lib.rs".into(), "// Content".into())])?;
 /// ```
 pub fn create_files(files: &Files) -> Result<()> {
     for (path, content) in files {
