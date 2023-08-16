@@ -2,7 +2,7 @@
 
 set -e
 
-steps=(step0 step1 step2 step3)
+steps=(step0 step1 step2 step3 step4)
 step0=(anchor-syn)
 step1=(
   anchor-attribute-access-control
@@ -19,14 +19,14 @@ step2=(anchor-lang)
 step3=(
   anchor-spl
   anchor-client
-  anchor-cli
 )
+step4=(anchor-cli)
 
 for stepName in "${steps[@]}"; do
   declare -n step="$stepName"
   pids=()
   for prog in "${step[@]}"; do
-    cargo publish -p "$prog" &
+    cargo publish --registry star-atlas -p "$prog" &
     pids+=($!)
   done
   for pid in "${pids[@]}"; do
