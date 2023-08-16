@@ -1,6 +1,6 @@
 [package]
 name = "anchor-attribute-account"
-version = "0.25.16"
+version = "0.25.19"
 authors = ["Serum Foundation <foundation@projectserum.com>"]
 repository = "https://github.com/staratlasmeta/anchor.git"
 license = "Apache-2.0"
@@ -15,7 +15,7 @@ proc-macro = true
 anchor-debug = ["anchor-syn/anchor-debug"]
 
 [dependencies]
-anchor-syn = { path = "../../syn", version = "0.25.16", registry = "star-atlas", features = ["hash"] }
+anchor-syn = { path = "../../syn", version = "0.25.19", registry = "star-atlas", features = ["hash"] }
 anyhow = "1.0.32"
 bs58 = "0.4.0"
 proc-macro2 = "1.0"

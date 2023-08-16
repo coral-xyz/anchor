@@ -1,6 +1,6 @@
 [package]
 name = "anchor-client"
-version = "0.25.16"
+version = "0.25.19"
 authors = ["Serum Foundation <foundation@projectserum.com>"]
 edition = "2021"
 license = "Apache-2.0"
@@ -11,12 +11,12 @@ publish = ["star-atlas"]
 debug = []
 
 [dependencies]
-anchor-lang = { path = "../lang", version = "0.25.16", registry = "star-atlas" }
+anchor-lang = { path = "../lang", version = "0.25.19", registry = "star-atlas" }
 anyhow = "1.0.32"
 regex = "1.4.5"
 serde = { version = "1.0.122", features = ["derive"] }
-solana-account-decoder = "1.10.29"
-solana-client = "1.10.29"
-solana-sdk = "1.10.29"
+solana-account-decoder = ">=1.10.29,<1.15"
+solana-client = ">=1.10.29,<1.15"
+solana-sdk = ">=1.10.29,<1.15"
 thiserror = "1.0.20"
 url = "2.2.2"
