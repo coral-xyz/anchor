@@ -22,6 +22,10 @@ const { assert, expect } = require("chai");
 const nativeAssert = require("assert");
 const miscIdl = require("../../target/idl/misc.json");
 
+const TOKEN_2022_PROGRAM_ID = new anchor.web3.PublicKey(
+  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+);
+
 const miscTest = (
   program: anchor.Program<Misc> | anchor.Program<MiscOptional>
 ) => {
@@ -1060,14 +1064,14 @@ const miscTest = (
             mint: newMint.publicKey,
             payer: provider.wallet.publicKey,
             systemProgram: anchor.web3.SystemProgram.programId,
-            tokenProgram: TOKEN_PROGRAM_ID,
+            tokenProgram: TOKEN_2022_PROGRAM_ID,
           },
           signers: [newMint],
         });
 
         const associatedToken = await Token.getAssociatedTokenAddress(
           ASSOCIATED_TOKEN_PROGRAM_ID,
-          TOKEN_PROGRAM_ID,
+          TOKEN_2022_PROGRAM_ID,
           newMint.publicKey,
           provider.wallet.publicKey
         );
@@ -1078,7 +1082,7 @@ const miscTest = (
             mint: newMint.publicKey,
             payer: provider.wallet.publicKey,
             systemProgram: anchor.web3.SystemProgram.programId,
-            associatedTokenTokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenTokenProgram: TOKEN_2022_PROGRAM_ID,
             associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
           },
         });
@@ -1086,7 +1090,7 @@ const miscTest = (
         const token = new Token(
           program.provider.connection,
           newMint.publicKey,
-          TOKEN_PROGRAM_ID,
+          TOKEN_2022_PROGRAM_ID,
           wallet.payer
         );
         const ataAccount = await token.getAccountInfo(associatedToken);
@@ -1767,14 +1771,14 @@ const miscTest = (
           mint: newMint.publicKey,
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: TOKEN_2022_PROGRAM_ID,
         },
         signers: [newMint],
       });
 
       const associatedToken = await Token.getAssociatedTokenAddress(
         ASSOCIATED_TOKEN_PROGRAM_ID,
-        TOKEN_PROGRAM_ID,
+        TOKEN_2022_PROGRAM_ID,
         newMint.publicKey,
         provider.wallet.publicKey
       );
@@ -1786,7 +1790,7 @@ const miscTest = (
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-          associatedTokenTokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenTokenProgram: TOKEN_2022_PROGRAM_ID,
           authority: provider.wallet.publicKey,
         },
       });
@@ -1794,7 +1798,7 @@ const miscTest = (
       const mintClient = new Token(
         provider.connection,
         newMint.publicKey,
-        TOKEN_PROGRAM_ID,
+        TOKEN_2022_PROGRAM_ID,
         wallet.payer
       );
       const ataAccount = await mintClient.getAccountInfo(associatedToken);
@@ -2439,14 +2443,14 @@ const miscTest = (
           mint: mint.publicKey,
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: TOKEN_2022_PROGRAM_ID,
         },
         signers: [mint],
       });
 
       const associatedToken = await Token.getAssociatedTokenAddress(
         ASSOCIATED_TOKEN_PROGRAM_ID,
-        TOKEN_PROGRAM_ID,
+        TOKEN_2022_PROGRAM_ID,
         mint.publicKey,
         provider.wallet.publicKey
       );
@@ -2457,7 +2461,7 @@ const miscTest = (
           mint: mint.publicKey,
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: TOKEN_2022_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
         },
       });
@@ -2468,7 +2472,7 @@ const miscTest = (
           mint: mint.publicKey,
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-          associatedTokenTokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenTokenProgram: TOKEN_2022_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
           authority: provider.wallet.publicKey,
         },
