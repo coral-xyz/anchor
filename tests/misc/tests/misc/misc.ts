@@ -1004,7 +1004,7 @@ const miscTest = (
       );
       const ataAccount = AccountLayout.decode(rawAccount.data);
       assert.strictEqual(ataAccount.state, 1);
-      assert.strictEqual(new BN(ataAccount.amount).toNumber(), 0);
+      assert.strictEqual(new anchor.BN(ataAccount.amount).toNumber(), 0);
       assert.strictEqual(
         new PublicKey(ataAccount.owner).toString(),
         provider.wallet.publicKey.toString()
@@ -1091,7 +1091,7 @@ const miscTest = (
         );
         const ataAccount = AccountLayout.decode(rawAta.data);
         assert.strictEqual(ataAccount.state, 1);
-        assert.strictEqual(new BN(ataAccount.amount).toNumber(), 0);
+        assert.strictEqual(new anchor.BN(ataAccount.amount).toNumber(), 0);
         assert.strictEqual(
           new PublicKey(ataAccount.owner).toString(),
           provider.wallet.publicKey.toString()
@@ -1679,7 +1679,7 @@ const miscTest = (
         newToken.publicKey
       );
       const ataAccount = AccountLayout.decode(rawAccount.data);
-      assert.strictEqual(new BN(ataAccount.amount).toNumber(), 0);
+      assert.strictEqual(new anchor.BN(ataAccount.amount).toNumber(), 0);
       assert.strictEqual(
         new PublicKey(ataAccount.mint).toString(),
         newMint.publicKey.toString()
@@ -1786,7 +1786,7 @@ const miscTest = (
         associatedToken
       );
       const ataAccount = AccountLayout.decode(rawAccount.data);
-      assert.strictEqual(new BN(ataAccount.amount).toNumber(), 0);
+      assert.strictEqual(new anchor.BN(ataAccount.amount).toNumber(), 0);
       assert.strictEqual(
         new PublicKey(ataAccount.mint).toString(),
         newMint.publicKey.toString()
