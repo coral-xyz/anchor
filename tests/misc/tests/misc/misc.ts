@@ -967,7 +967,9 @@ const miscTest = (
         },
         signers: [newMint],
       });
-      const rawAccount = await provider.connection.getAccountInfo(newMint.publicKey)
+      const rawAccount = await provider.connection.getAccountInfo(
+        newMint.publicKey
+      );
       const mintAccount = MintLayout.decode(rawAccount.data);
       assert.strictEqual(mintAccount.decimals, 6);
       assert.strictEqual(
@@ -978,7 +980,10 @@ const miscTest = (
         new PublicKey(mintAccount.freezeAuthority).toString(),
         provider.wallet.publicKey.toString()
       );
-      assert.strictEqual(rawAccount.owner.toString(), TOKEN_2022_PROGRAM_ID.toString());
+      assert.strictEqual(
+        rawAccount.owner.toString(),
+        TOKEN_2022_PROGRAM_ID.toString()
+      );
     });
 
     it("Can create a random token account with token program", async () => {
@@ -994,7 +999,9 @@ const miscTest = (
         signers: [token],
       });
 
-      const rawAccount = await provider.connection.getAccountInfo(token.publicKey)
+      const rawAccount = await provider.connection.getAccountInfo(
+        token.publicKey
+      );
       const ataAccount = AccountLayout.decode(rawAccount.data);
       assert.strictEqual(ataAccount.state, 1);
       assert.strictEqual(new BN(ataAccount.amount).toNumber(), 0);
@@ -1002,7 +1009,10 @@ const miscTest = (
         new PublicKey(ataAccount.owner).toString(),
         provider.wallet.publicKey.toString()
       );
-      assert.strictEqual(new PublicKey(ataAccount.mint).toString(), mint.publicKey.toString());
+      assert.strictEqual(
+        new PublicKey(ataAccount.mint).toString(),
+        mint.publicKey.toString()
+      );
     });
 
     describe("associated_token constraints", () => {
