@@ -23,6 +23,7 @@ token_2022 = ["spl-token-2022"]
 [dependencies]
 anchor-lang = { path = "../lang", version = "0.28.0", features = ["derive"] }
 borsh = { version = ">=0.9, <0.11", optional = true }
+mpl-token-auth-rules = "1.4.3"
 mpl-token-metadata = { version = "1.11", optional = true, features = ["no-entrypoint"] }
 serum_dex = { git = "https://github.com/openbook-dex/program/", rev = "1be91f2", version = "0.4.0", features = ["no-entrypoint"], optional = true }
 solana-program = ">=1.14, <1.17"

@@ -7,6 +7,7 @@ use solana_program::pubkey::Pubkey;
 use std::ops::Deref;
 
 pub use mpl_token_metadata;
+pub use mpl_token_auth_rules;
 pub use mpl_token_metadata::ID;
 
 pub fn approve_collection_authority<'info>(
@@ -852,6 +853,15 @@ impl Deref for TokenRecordAccount {
     type Target = mpl_token_metadata::state::TokenRecord;
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+#[derive(Clone)]
+pub struct TokenAuthRules;
+
+impl anchor_lang::Id for TokenAuthRules {
+    fn id() -> Pubkey {
+        mpl_token_auth_rules::ID;
     }
 }
 
