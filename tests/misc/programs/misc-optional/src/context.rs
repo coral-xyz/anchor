@@ -2,6 +2,7 @@ use crate::account::*;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{Mint, Token, TokenAccount};
+use anchor_spl::token_interface::{Mint as MintInterface, TokenAccount as TokenAccountInterface};
 
 #[derive(Accounts)]
 pub struct TestTokenSeedsInit<'info> {
@@ -55,8 +56,8 @@ pub struct TestInitAssociatedTokenWithTokenProgram<'info> {
         associated_token::authority = payer,
         associated_token::token_program = associated_token_token_program,
     )]
-    pub token: Option<Account<'info, TokenAccount>>,
-    pub mint: Option<Account<'info, Mint>>,
+    pub token: Option<InterfaceAccount<'info, TokenAccountInterface>>,
+    pub mint: Option<InterfaceAccount<'info, MintInterface>>,
     #[account(mut)]
     pub payer: Option<Signer<'info>>,
     pub system_program: Option<Program<'info, System>>,
@@ -268,7 +269,7 @@ pub struct TestInitMintWithTokenProgram<'info> {
         mint::freeze_authority = payer,
         mint::token_program = mint_token_program,
     )]
-    pub mint: Option<Account<'info, Mint>>,
+    pub mint: Option<InterfaceAccount<'info, MintInterface>>,
     #[account(mut)]
     pub payer: Option<Signer<'info>>,
     pub system_program: Option<Program<'info, System>>,
@@ -465,8 +466,8 @@ pub struct TestInitAssociatedTokenIfNeededWithTokenProgram<'info> {
         associated_token::authority = authority,
         associated_token::token_program = associated_token_token_program,
     )]
-    pub token: Option<Account<'info, TokenAccount>>,
-    pub mint: Option<Account<'info, Mint>>,
+    pub token: Option<InterfaceAccount<'info, TokenAccountInterface>>,
+    pub mint: Option<InterfaceAccount<'info, MintInterface>>,
     #[account(mut)]
     pub payer: Option<Signer<'info>>,
     pub system_program: Option<Program<'info, System>>,
