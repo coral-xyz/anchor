@@ -27,3 +27,6 @@ pub mod stake;
 
 #[cfg(feature = "metadata")]
 pub mod metadata;
+
+#[cfg(feature = "programmable")]
+pub mod programmable;
