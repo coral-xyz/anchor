@@ -22,7 +22,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - spl: Add `TokenRecordAccount` for pNFTs ([#2597](https://github.com/coral-xyz/anchor/pull/2597)).
 - ts: Add support for unnamed(tuple) enum in accounts ([#2601](https://github.com/coral-xyz/anchor/pull/2601)).
 - cli: Add program template with multiple files for instructions, state... ([#2602](https://github.com/coral-xyz/anchor/pull/2602)).
-- spl: Add `TokenAuthRules` program for pNFTs ([2611](https://github.com/coral-xyz/anchor/pull/2611))
+- spl: Introduce `programmable` feature for pNFTs. Add `Auth Program` and revert the changes for `Token Record Account` ([#2597](https://github.com/coral-xyz/anchor/pull/2597)) into this feature ([#2611](https://github.com/coral-xyz/anchor/pull/2611))
 
 ### Fixes
 
