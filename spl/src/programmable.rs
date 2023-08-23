@@ -1,4 +1,8 @@
+use anchor_lang::error::ErrorCode;
+use mpl_token_metadata;
+
 pub use mpl_token_auth_rules;
+pub use mpl_token_metadata;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TokenRecordAccount(mpl_token_metadata::state::TokenRecord);
