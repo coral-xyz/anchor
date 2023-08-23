@@ -28,4 +28,4 @@ serum_dex = { git = "https://github.com/openbook-dex/program/", rev = "1be91f2",
 solana-program = ">=1.14, <1.17"
 spl-associated-token-account = { version = "^1.1", features = ["no-entrypoint"], optional = true }
 spl-token = { version = "3.5", features = ["no-entrypoint"], optional = true }
-spl-token-2022 = { version = "0.6", features = ["no-entrypoint"], optional = true }
+spl-token-2022 = { version = "0.7", features = ["no-entrypoint"], optional = true }
