@@ -48,7 +48,6 @@ pub struct TestInitAssociatedToken<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
-
 #[derive(Accounts)]
 pub struct TestInitAssociatedTokenWithTokenProgram<'info> {
     #[account(
@@ -729,8 +728,8 @@ pub struct TestAssociatedTokenWithTokenProgramConstraint<'info> {
         associated_token::authority = authority,
         associated_token::token_program = associated_token_token_program,
     )]
-    pub token: Account<'info, TokenAccount>,
-    pub mint: Account<'info, Mint>,
+    pub token: InterfaceAccount<'info, TokenAccountInterface>,
+    pub mint: InterfaceAccount<'info, MintInterface>,
     /// CHECK: ignore
     pub authority: AccountInfo<'info>,
     /// CHECK: ignore

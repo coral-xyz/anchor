@@ -712,8 +712,8 @@ pub struct TestAssociatedTokenWithTokenProgramConstraint<'info> {
         associated_token::authority = authority,
         associated_token::token_program = associated_token_token_program,
     )]
-    pub token: Option<Account<'info, TokenAccount>>,
-    pub mint: Account<'info, Mint>,
+    pub token: Option<InterfaceAccount<'info, TokenAccountInterface>>,
+    pub mint: InterfaceAccount<'info, MintInterface>,
     /// CHECK: ignore
     pub authority: AccountInfo<'info>,
     /// CHECK: ignore

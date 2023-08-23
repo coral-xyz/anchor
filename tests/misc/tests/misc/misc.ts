@@ -1195,31 +1195,31 @@ const miscTest = (
 
       it("associated_token constraints (no init) - Can make with associated_token::token_program", async () => {
         const mint = anchor.web3.Keypair.generate();
-        await program.rpc.testInitMint({
+        await program.rpc.testInitMintWithTokenProgram({
           accounts: {
             mint: mint.publicKey,
             payer: provider.wallet.publicKey,
             systemProgram: anchor.web3.SystemProgram.programId,
-            tokenProgram: TOKEN_PROGRAM_ID,
+            mintTokenProgram: TOKEN_2022_PROGRAM_ID,
           },
           signers: [mint],
         });
 
         const associatedToken = await Token.getAssociatedTokenAddress(
           ASSOCIATED_TOKEN_PROGRAM_ID,
-          TOKEN_PROGRAM_ID,
+          TOKEN_2022_PROGRAM_ID,
           mint.publicKey,
           provider.wallet.publicKey
         );
 
-        await program.rpc.testInitAssociatedToken({
+        await program.rpc.testInitAssociatedTokenWithTokenProgram({
           accounts: {
             token: associatedToken,
             mint: mint.publicKey,
             payer: provider.wallet.publicKey,
             systemProgram: anchor.web3.SystemProgram.programId,
-            tokenProgram: TOKEN_PROGRAM_ID,
             associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            associatedTokenTokenProgram: TOKEN_2022_PROGRAM_ID,
           },
           signers: [],
         });
@@ -1228,7 +1228,7 @@ const miscTest = (
             token: associatedToken,
             mint: mint.publicKey,
             authority: provider.wallet.publicKey,
-            associatedTokenTokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenTokenProgram: TOKEN_2022_PROGRAM_ID,
           },
         });
 
@@ -1237,7 +1237,7 @@ const miscTest = (
         );
         assert.strictEqual(
           account.owner.toString(),
-          TOKEN_PROGRAM_ID.toString()
+          TOKEN_2022_PROGRAM_ID.toString()
         );
       });
 
