@@ -21,6 +21,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - spl: Export `mpl-token-metadata` crate ([#2583](https://github.com/coral-xyz/anchor/pull/2583)).
 - spl: Add `TokenRecordAccount` for pNFTs ([#2597](https://github.com/coral-xyz/anchor/pull/2597)).
 - ts: Add support for unnamed(tuple) enum in accounts([#2601](https://github.com/coral-xyz/anchor/pull/2601)).
+- lang: boxed the inner Enums of anchor_lang::error to fit within 128 bytes ([#2600](https://github.com/coral-xyz/anchor/pull/2600)).
 
 ### Fixes
 
