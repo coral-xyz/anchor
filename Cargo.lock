@@ -277,6 +277,7 @@ version = "0.28.0"
 dependencies = [
  "anchor-lang",
  "borsh 0.10.3",
+ "mpl-token-auth-rules",
  "mpl-token-metadata",
  "serum_dex",
  "solana-program",
@@ -2456,11 +2457,12 @@ dependencies = [
 
 [[package]]
 name = "mpl-token-auth-rules"
-version = "1.3.0"
+version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24dcb2b0ec0e9246f6f035e0336ba3359c21f6928dfd90281999e2c8e8ab53eb"
+checksum = "66b1ec5ee0570f688cc84ff4624c5c50732f1a2bfc789f6b34af5b563428d971"
 dependencies = [
- "borsh 0.9.3",
+ "borsh 0.10.3",
+ "bytemuck",
  "mpl-token-metadata-context-derive",
  "num-derive",
  "num-traits",
