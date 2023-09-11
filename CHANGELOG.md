@@ -37,7 +37,6 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Breaking
 
-- lang: Switch to type safe bumps in context ([#2542](https://github.com/coral-xyz/anchor/pull/2542)).
 - syn: `idl` feature has been replaced with `idl-build`, `idl-parse` and `idl-types` features ([#2011](https://github.com/coral-xyz/anchor/pull/2011)).
 - syn: IDL `parse` method now returns `Result<Idl>` instead of `Result<Option<Idl>>` ([#2582](https://github.com/coral-xyz/anchor/pull/2582)).
 
