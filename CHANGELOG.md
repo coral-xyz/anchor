@@ -12,13 +12,33 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Features
 
+- lang: Add `get_lamports`, `add_lamports` and `sub_lamports` methods for all account types ([#2552](https://github.com/coral-xyz/anchor/pull/2552)).
+- client: Add a helper struct `DynSigner` to simplify use of `Client<C> where <C: Clone + Deref<Target = impl Signer>>` with Solana clap CLI utils that loads `Signer` as `Box<dyn Signer>` ([#2550](https://github.com/coral-xyz/anchor/pull/2550)).
+- lang: Allow CPI calls matching an interface without pinning program ID ([#2559](https://github.com/coral-xyz/anchor/pull/2559)).
+- cli, lang: Add IDL generation through compilation. `anchor build` still uses parsing method to generate IDLs, use `anchor idl build` to generate IDLs with the build method ([#2011](https://github.com/coral-xyz/anchor/pull/2011)).
+- avm: Add support for the `.anchorversion` file to facilitate switching between different versions of the `anchor-cli` ([#2553](https://github.com/coral-xyz/anchor/pull/2553)).
+- ts: Add ability to access workspace programs independent of the casing used, e.g. `anchor.workspace.myProgram`, `anchor.workspace.MyProgram`... ([#2579](https://github.com/coral-xyz/anchor/pull/2579)).
+- spl: Export `mpl-token-metadata` crate ([#2583](https://github.com/coral-xyz/anchor/pull/2583)).
+- spl: Add `TokenRecordAccount` for pNFTs ([#2597](https://github.com/coral-xyz/anchor/pull/2597)).
+- ts: Add support for unnamed(tuple) enum in accounts ([#2601](https://github.com/coral-xyz/anchor/pull/2601)).
+- cli: Add program template with multiple files for instructions, state... ([#2602](https://github.com/coral-xyz/anchor/pull/2602)).
+- lang: `Box` the inner enums of `anchor_lang::error::Error` to optimize `anchor_lang::Result` ([#2600](https://github.com/coral-xyz/anchor/pull/2600)).
+
 ### Fixes
 
 - ts: Packages no longer depend on `assert` ([#2535](https://github.com/coral-xyz/anchor/pull/2535)).
+- lang: Support for `const` in the `InitSpace` macro ([#2555](https://github.com/coral-xyz/anchor/pull/2555)).
+- cli: Support workspace inheritence ([#2570](https://github.com/coral-xyz/anchor/pull/2570)).
+- client: Compile with Solana `1.14` ([#2572](https://github.com/coral-xyz/anchor/pull/2572)).
+- cli: Fix `anchor build --no-docs` adding docs to the IDL ([#2575](https://github.com/coral-xyz/anchor/pull/2575)).
+- ts: Load workspace programs on-demand rather than loading all of them at once ([#2579](https://github.com/coral-xyz/anchor/pull/2579)).
+- lang: Fix `associated_token::token_program` constraint ([#2603](https://github.com/coral-xyz/anchor/pull/2603)).
+- cli: Fix `anchor account` command panicking outside of workspace ([#2620](https://github.com/coral-xyz/anchor/pull/2620)).
 
 ### Breaking
 
-- lang: Switch to type safe bumps in context ([#2542](https://github.com/coral-xyz/anchor/pull/2542)).
+- syn: `idl` feature has been replaced with `idl-build`, `idl-parse` and `idl-types` features ([#2011](https://github.com/coral-xyz/anchor/pull/2011)).
+- syn: IDL `parse` method now returns `Result<Idl>` instead of `Result<Option<Idl>>` ([#2582](https://github.com/coral-xyz/anchor/pull/2582)).
 
 ## [0.28.0] - 2023-06-09
 

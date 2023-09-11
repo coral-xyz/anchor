@@ -8,17 +8,17 @@ license = "Apache-2.0"
 description = "CPI clients for SPL programs"
 
 [features]
-default = ["mint", "token", "token_2022", "associated_token"]
-mint = []
-token = ["spl-token"]
-token_2022 = ["spl-token-2022"]
+default = ["associated_token", "mint", "token", "token_2022"]
 associated_token = ["spl-associated-token-account"]
+dex = ["serum_dex"]
+devnet = []
 governance = []
+metadata = ["mpl-token-metadata"]
+mint = []
 shmem = []
 stake = ["borsh"]
-devnet = []
-metadata = ["mpl-token-metadata"]
-dex = ["serum_dex"]
+token = ["spl-token"]
+token_2022 = ["spl-token-2022"]
 
 [dependencies]
 anchor-lang = { path = "../lang", version = "0.28.0", features = ["derive"] }
@@ -26,6 +26,6 @@ borsh = { version = ">=0.9, <0.11", optional = true }
 mpl-token-metadata = { version = "1.11", optional = true, features = ["no-entrypoint"] }
 serum_dex = { git = "https://github.com/openbook-dex/program/", rev = "1be91f2", version = "0.4.0", features = ["no-entrypoint"], optional = true }
 solana-program = ">=1.14, <1.17"
-spl-associated-token-account = { version = "1", features = ["no-entrypoint"], optional = true }
+spl-associated-token-account = { version = "^1.1", features = ["no-entrypoint"], optional = true }
 spl-token = { version = "3.5", features = ["no-entrypoint"], optional = true }
 spl-token-2022 = { version = "0.6", features = ["no-entrypoint"], optional = true }

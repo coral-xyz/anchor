@@ -14,6 +14,7 @@ import {
   Toml,
   VersionManager,
   runAnchorTest,
+  spawn,
 } from "./utils";
 
 (async () => {
@@ -66,7 +67,6 @@ import {
 
     // Run the command to update the current version's results
     const result = runAnchorTest();
-    console.log(result.output.toString());
 
     // Check failure
     if (result.status !== 0) {
@@ -75,4 +75,7 @@ import {
       return;
     }
   }
+
+  // Sync markdown files
+  spawn("anchor", ["run", "sync-markdown"]);
 })();

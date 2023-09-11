@@ -1,7 +1,7 @@
 //! Misc optional example is a catchall program for testing unrelated features.
 //! It's not too instructive/coherent by itself, so please see other examples.
 
-use account::MAX_SIZE;
+use account::*;
 use anchor_lang::prelude::*;
 use context::*;
 use event::*;
@@ -44,11 +44,6 @@ pub mod misc_optional {
         Ok(())
     }
 
-    pub fn test_u16(ctx: Context<TestU16>, data: u16) -> Result<()> {
-        ctx.accounts.my_account.as_mut().unwrap().data = data;
-        Ok(())
-    }
-
     pub fn test_simulate(_ctx: Context<TestSimulate>, data: u32) -> Result<()> {
         emit!(E1 { data });
         emit!(E2 { data: 1234 });
@@ -59,21 +54,6 @@ pub mod misc_optional {
         emit!(E6 {
             data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
         });
-        Ok(())
-    }
-
-    pub fn test_input_enum(ctx: Context<TestSimulate>, data: TestEnum) -> Result<()> {
-        emit!(E7 { data: data });
-        Ok(())
-    }
-
-    pub fn test_i8(ctx: Context<TestI8>, data: i8) -> Result<()> {
-        ctx.accounts.data.as_mut().unwrap().data = data;
-        Ok(())
-    }
-
-    pub fn test_i16(ctx: Context<TestI16>, data: i16) -> Result<()> {
-        ctx.accounts.data.as_mut().unwrap().data = data;
         Ok(())
     }
 
@@ -205,7 +185,7 @@ pub mod misc_optional {
     }
 
     pub fn test_init_associated_token_with_token_program(
-        ctx: Context<TestInitAssociatedTokenWithTokenProgram>,
+        _ctx: Context<TestInitAssociatedTokenWithTokenProgram>,
     ) -> Result<()> {
         Ok(())
     }
@@ -284,7 +264,7 @@ pub mod misc_optional {
         Ok(())
     }
 
-    pub fn init_with_space(_ctx: Context<InitWithSpace>, data: u16) -> Result<()> {
+    pub fn init_with_space(_ctx: Context<InitWithSpace>, _data: u16) -> Result<()> {
         Ok(())
     }
 

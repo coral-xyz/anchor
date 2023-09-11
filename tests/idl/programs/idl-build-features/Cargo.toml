@@ -1,5 +1,5 @@
 [package]
-name = "idl_doc"
+name = "idl-build-features"
 version = "0.1.0"
 description = "Created with Anchor"
 rust-version = "1.60"
@@ -7,13 +7,14 @@ edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "idl_doc"
+name = "idl_build_features"
 
 [features]
 no-entrypoint = []
 no-idl = []
 cpi = ["no-entrypoint"]
+idl-build = ["anchor-lang/idl-build"]
 default = []
 
 [dependencies]
-anchor-lang = { path = "../../../../lang", features = ["init-if-needed"] }
+anchor-lang = { path = "../../../../lang" }

@@ -2,10 +2,12 @@ use anchor_lang::context::CpiContext;
 use anchor_lang::error::ErrorCode;
 use anchor_lang::{Accounts, Result, ToAccountInfos};
 use mpl_token_metadata::state::{CollectionDetails, DataV2, TokenMetadataAccount};
-use mpl_token_metadata::ID;
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
 use std::ops::Deref;
+
+pub use mpl_token_metadata;
+pub use mpl_token_metadata::ID;
 
 pub fn approve_collection_authority<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, ApproveCollectionAuthority<'info>>,
@@ -814,6 +816,42 @@ impl anchor_lang::AccountSerialize for MasterEditionAccount {}
 impl anchor_lang::Owner for MasterEditionAccount {
     fn owner() -> Pubkey {
         ID
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TokenRecordAccount(mpl_token_metadata::state::TokenRecord);
+
+impl TokenRecordAccount {
+    pub const LEN: usize = mpl_token_metadata::state::TOKEN_RECORD_SIZE;
+}
+impl anchor_lang::AccountDeserialize for TokenRecordAccount {
+    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+        let tr = Self::try_deserialize_unchecked(buf)?;
+        if tr.key != mpl_token_metadata::state::TokenRecord::key() {
+            return Err(ErrorCode::AccountNotInitialized.into());
+        }
+        Ok(tr)
+    }
+
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+        let tr = mpl_token_metadata::state::TokenRecord::safe_deserialize(buf)?;
+        Ok(Self(tr))
+    }
+}
+
+impl anchor_lang::AccountSerialize for TokenRecordAccount {}
+
+impl anchor_lang::Owner for TokenRecordAccount {
+    fn owner() -> Pubkey {
+        ID
+    }
+}
+
+impl Deref for TokenRecordAccount {
+    type Target = mpl_token_metadata::state::TokenRecord;
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 

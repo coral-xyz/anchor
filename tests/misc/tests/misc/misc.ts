@@ -1,5 +1,5 @@
 import * as anchor from "@coral-xyz/anchor";
-import { Program, BN, AnchorError, Wallet, IdlEvents } from "@coral-xyz/anchor";
+import { Program, AnchorError, Wallet } from "@coral-xyz/anchor";
 import {
   PublicKey,
   Keypair,
@@ -13,14 +13,21 @@ import {
   TOKEN_PROGRAM_ID,
   Token,
   ASSOCIATED_TOKEN_PROGRAM_ID,
+  AccountLayout,
+  MintLayout,
 } from "@solana/spl-token";
+import { assert, expect } from "chai";
+
 import { Misc } from "../../target/types/misc";
 import { MiscOptional } from "../../target/types/misc_optional";
 
 const utf8 = anchor.utils.bytes.utf8;
-const { assert, expect } = require("chai");
 const nativeAssert = require("assert");
 const miscIdl = require("../../target/idl/misc.json");
+
+const TOKEN_2022_PROGRAM_ID = new anchor.web3.PublicKey(
+  "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+);
 
 const miscTest = (
   program: anchor.Program<Misc> | anchor.Program<MiscOptional>
@@ -31,36 +38,217 @@ const miscTest = (
     const wallet = provider.wallet as Wallet;
     anchor.setProvider(provider);
 
-    const data = anchor.web3.Keypair.generate();
-
-    it("Can use u128 and i128", async () => {
-      const tx = await program.rpc.initialize(
-        new anchor.BN(1234),
-        new anchor.BN(22),
-        {
-          accounts: {
-            data: data.publicKey,
-          },
-          signers: [data],
-          instructions: [await program.account.data.createInstruction(data)],
-        }
-      );
-      const dataAccount = await program.account.data.fetch(data.publicKey);
-      assert.isTrue(dataAccount.udata.eq(new anchor.BN(1234)));
-      assert.isTrue(dataAccount.idata.eq(new anchor.BN(22)));
-    });
-
-    it("Can use u16", async () => {
+    describe("Data Account", () => {
       const data = anchor.web3.Keypair.generate();
-      const tx = await program.rpc.testU16(99, {
-        accounts: {
-          myAccount: data.publicKey,
-        },
-        signers: [data],
-        instructions: [await program.account.dataU16.createInstruction(data)],
+      const udata = new anchor.BN(1);
+      const idata = new anchor.BN(2);
+
+      it("Can initialize data account", async () => {
+        await program.methods
+          .initialize(udata, idata)
+          .accounts({ data: data.publicKey })
+          .signers([data])
+          .preInstructions([await program.account.data.createInstruction(data)])
+          .rpc();
+        const dataAccount = await program.account.data.fetch(data.publicKey);
+        assert(dataAccount.udata.eq(udata));
+        assert(dataAccount.idata.eq(idata));
       });
-      const dataAccount = await program.account.dataU16.fetch(data.publicKey);
-      assert.strictEqual(dataAccount.data, 99);
+
+      it("Can use base58 strings to fetch an account", async () => {
+        const dataAccount = await program.account.data.fetch(
+          data.publicKey.toString()
+        );
+        assert(dataAccount.udata.eq(udata));
+        assert(dataAccount.idata.eq(idata));
+      });
+
+      it("Can use the owner constraint", async () => {
+        await program.methods
+          .testOwner()
+          .accounts({
+            data: data.publicKey,
+            misc: program.programId,
+          })
+          .rpc();
+
+        await nativeAssert.rejects(
+          async () => {
+            await program.methods
+              .testOwner()
+              .accounts({
+                data: provider.wallet.publicKey,
+                misc: program.programId,
+              })
+              .rpc();
+          },
+          (err) => {
+            return true;
+          }
+        );
+      });
+
+      it("Should fail to close an account when sending lamports to itself", async () => {
+        try {
+          await program.methods
+            .testClose()
+            .accounts({
+              data: data.publicKey,
+              solDest: data.publicKey,
+            })
+            .rpc();
+          expect(false).to.be.true;
+        } catch (err) {
+          assert.strictEqual(
+            err.error.errorMessage,
+            "A close constraint was violated"
+          );
+          assert.strictEqual(err.error.errorCode.number, 2011);
+        }
+      });
+
+      it("Can close an account", async () => {
+        const connection = program.provider.connection;
+        const openAccount = await connection.getAccountInfo(data.publicKey);
+
+        assert.isNotNull(openAccount);
+        const openAccountBalance = openAccount.lamports;
+        // double balance to calculate closed balance correctly
+        const transferIx = anchor.web3.SystemProgram.transfer({
+          fromPubkey: provider.wallet.publicKey,
+          toPubkey: data.publicKey,
+          lamports: openAccountBalance,
+        });
+        const transferTransaction = new anchor.web3.Transaction().add(
+          transferIx
+        );
+        await provider.sendAndConfirm(transferTransaction);
+
+        let beforeBalance = (
+          await connection.getAccountInfo(provider.wallet.publicKey)
+        ).lamports;
+
+        await program.methods
+          .testClose()
+          .accounts({
+            data: data.publicKey,
+            solDest: provider.wallet.publicKey,
+          })
+          .postInstructions([transferIx])
+          .rpc();
+
+        let afterBalance = (
+          await connection.getAccountInfo(provider.wallet.publicKey)
+        ).lamports;
+
+        // Retrieved rent exemption sol.
+        expect(afterBalance > beforeBalance).to.be.true;
+
+        const closedAccount = await connection.getAccountInfo(data.publicKey);
+
+        assert.isTrue(closedAccount.data.length === 0);
+        assert.isTrue(closedAccount.owner.equals(SystemProgram.programId));
+      });
+
+      it("Can close an account twice", async () => {
+        const data = anchor.web3.Keypair.generate();
+        await program.methods
+          .initialize(new anchor.BN(10), new anchor.BN(10))
+          .accounts({ data: data.publicKey })
+          .preInstructions([await program.account.data.createInstruction(data)])
+          .signers([data])
+          .rpc();
+
+        const connection = program.provider.connection;
+        const openAccount = await connection.getAccountInfo(data.publicKey);
+        assert.isNotNull(openAccount);
+
+        const openAccountBalance = openAccount.lamports;
+        // double balance to calculate closed balance correctly
+        const transferIx = anchor.web3.SystemProgram.transfer({
+          fromPubkey: provider.wallet.publicKey,
+          toPubkey: data.publicKey,
+          lamports: openAccountBalance,
+        });
+        const transferTransaction = new anchor.web3.Transaction().add(
+          transferIx
+        );
+        await provider.sendAndConfirm(transferTransaction);
+
+        let beforeBalance = (
+          await connection.getAccountInfo(provider.wallet.publicKey)
+        ).lamports;
+
+        await program.methods
+          .testCloseTwice()
+          .accounts({
+            data: data.publicKey,
+            solDest: provider.wallet.publicKey,
+          })
+          .postInstructions([transferIx])
+          .rpc();
+
+        let afterBalance = (
+          await connection.getAccountInfo(provider.wallet.publicKey)
+        ).lamports;
+
+        // Retrieved rent exemption sol.
+        expect(afterBalance > beforeBalance).to.be.true;
+
+        const closedAccount = await connection.getAccountInfo(data.publicKey);
+        assert.isTrue(closedAccount.data.length === 0);
+        assert.isTrue(closedAccount.owner.equals(SystemProgram.programId));
+      });
+
+      it("Can close a mut account manually", async () => {
+        const data = anchor.web3.Keypair.generate();
+        await program.methods
+          .initialize(new anchor.BN(10), new anchor.BN(10))
+          .accounts({ data: data.publicKey })
+          .preInstructions([await program.account.data.createInstruction(data)])
+          .signers([data])
+          .rpc();
+
+        const connection = program.provider.connection;
+        const openAccount = await connection.getAccountInfo(data.publicKey);
+
+        assert.isNotNull(openAccount);
+        const openAccountBalance = openAccount.lamports;
+        // double balance to calculate closed balance correctly
+        const transferIx = anchor.web3.SystemProgram.transfer({
+          fromPubkey: provider.wallet.publicKey,
+          toPubkey: data.publicKey,
+          lamports: openAccountBalance,
+        });
+        const transferTransaction = new anchor.web3.Transaction().add(
+          transferIx
+        );
+        await provider.sendAndConfirm(transferTransaction);
+
+        let beforeBalance = (
+          await connection.getAccountInfo(provider.wallet.publicKey)
+        ).lamports;
+
+        await program.methods
+          .testCloseMut()
+          .accounts({
+            data: data.publicKey,
+            solDest: provider.wallet.publicKey,
+          })
+          .postInstructions([transferIx])
+          .rpc();
+
+        let afterBalance = (
+          await connection.getAccountInfo(provider.wallet.publicKey)
+        ).lamports;
+
+        // Retrieved rent exemption sol.
+        expect(afterBalance > beforeBalance).to.be.true;
+
+        const closedAccount = await connection.getAccountInfo(data.publicKey);
+        assert.isTrue(closedAccount.data.length === 0);
+        assert.isTrue(closedAccount.owner.equals(SystemProgram.programId));
+      });
     });
 
     it("Can send VersionedTransaction", async () => {
@@ -216,29 +404,6 @@ const miscTest = (
       assert.isTrue(accInfo.executable);
     });
 
-    it("Can use the owner constraint", async () => {
-      await program.rpc.testOwner({
-        accounts: {
-          data: data.publicKey,
-          misc: program.programId,
-        },
-      });
-
-      await nativeAssert.rejects(
-        async () => {
-          await program.rpc.testOwner({
-            accounts: {
-              data: provider.wallet.publicKey,
-              misc: program.programId,
-            },
-          });
-        },
-        (err) => {
-          return true;
-        }
-      );
-    });
-
     it("Can use the executable attribute", async () => {
       await program.rpc.testExecutable({
         accounts: {
@@ -289,243 +454,6 @@ const miscTest = (
         resp.events[4].data.data,
         [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
       );
-    });
-
-    it("Can use enum in idl", async () => {
-      const resp1 = await program.methods
-        .testInputEnum({ first: {} })
-        .simulate();
-      const event1 = resp1.events[0].data as IdlEvents<
-        typeof program.idl
-      >["E7"];
-      assert.deepEqual(event1.data.first, {});
-
-      const resp2 = await program.methods
-        .testInputEnum({ second: { x: new BN(1), y: new BN(2) } })
-        .simulate();
-      const event2 = resp2.events[0].data as IdlEvents<
-        typeof program.idl
-      >["E7"];
-      assert.isTrue(new BN(1).eq(event2.data.second.x));
-      assert.isTrue(new BN(2).eq(event2.data.second.y));
-
-      const resp3 = await program.methods
-        .testInputEnum({
-          tupleStructTest: [
-            { data1: 1, data2: 11, data3: 111, data4: new BN(1111) },
-          ],
-        })
-        .simulate();
-      const event3 = resp3.events[0].data as IdlEvents<
-        typeof program.idl
-      >["E7"];
-      assert.strictEqual(event3.data.tupleStructTest[0].data1, 1);
-      assert.strictEqual(event3.data.tupleStructTest[0].data2, 11);
-      assert.strictEqual(event3.data.tupleStructTest[0].data3, 111);
-      assert.isTrue(event3.data.tupleStructTest[0].data4.eq(new BN(1111)));
-
-      const resp4 = await program.methods
-        .testInputEnum({ tupleTest: [1, 2, 3, 4] })
-        .simulate();
-      const event4 = resp4.events[0].data as IdlEvents<
-        typeof program.idl
-      >["E7"];
-      assert.strictEqual(event4.data.tupleTest[0], 1);
-      assert.strictEqual(event4.data.tupleTest[1], 2);
-      assert.strictEqual(event4.data.tupleTest[2], 3);
-      assert.strictEqual(event4.data.tupleTest[3], 4);
-    });
-
-    let dataI8;
-
-    it("Can use i8 in the idl", async () => {
-      dataI8 = anchor.web3.Keypair.generate();
-      await program.rpc.testI8(-3, {
-        accounts: {
-          data: dataI8.publicKey,
-        },
-        instructions: [await program.account.dataI8.createInstruction(dataI8)],
-        signers: [dataI8],
-      });
-      const dataAccount = await program.account.dataI8.fetch(dataI8.publicKey);
-      assert.strictEqual(dataAccount.data, -3);
-    });
-
-    let dataPubkey;
-
-    it("Can use i16 in the idl", async () => {
-      const data = anchor.web3.Keypair.generate();
-      await program.rpc.testI16(-2048, {
-        accounts: {
-          data: data.publicKey,
-        },
-        instructions: [await program.account.dataI16.createInstruction(data)],
-        signers: [data],
-      });
-      const dataAccount = await program.account.dataI16.fetch(data.publicKey);
-      assert.strictEqual(dataAccount.data, -2048);
-
-      dataPubkey = data.publicKey;
-    });
-
-    it("Can use base58 strings to fetch an account", async () => {
-      const dataAccount = await program.account.dataI16.fetch(
-        dataPubkey.toString()
-      );
-      assert.strictEqual(dataAccount.data, -2048);
-    });
-
-    it("Should fail to close an account when sending lamports to itself", async () => {
-      try {
-        await program.rpc.testClose({
-          accounts: {
-            data: data.publicKey,
-            solDest: data.publicKey,
-          },
-        });
-        expect(false).to.be.true;
-      } catch (err) {
-        const errMsg = "A close constraint was violated";
-        assert.strictEqual(err.error.errorMessage, errMsg);
-        assert.strictEqual(err.error.errorCode.number, 2011);
-      }
-    });
-
-    it("Can close an account", async () => {
-      const connection = program.provider.connection;
-      const openAccount = await connection.getAccountInfo(data.publicKey);
-
-      assert.isNotNull(openAccount);
-      const openAccountBalance = openAccount.lamports;
-      // double balance to calculate closed balance correctly
-      const transferIx = anchor.web3.SystemProgram.transfer({
-        fromPubkey: provider.wallet.publicKey,
-        toPubkey: data.publicKey,
-        lamports: openAccountBalance,
-      });
-      const transferTransaction = new anchor.web3.Transaction().add(transferIx);
-      await provider.sendAndConfirm(transferTransaction);
-
-      let beforeBalance = (
-        await connection.getAccountInfo(provider.wallet.publicKey)
-      ).lamports;
-
-      await program.methods
-        .testClose()
-        .accounts({
-          data: data.publicKey,
-          solDest: provider.wallet.publicKey,
-        })
-        .postInstructions([transferIx])
-        .rpc();
-
-      let afterBalance = (
-        await connection.getAccountInfo(provider.wallet.publicKey)
-      ).lamports;
-
-      // Retrieved rent exemption sol.
-      expect(afterBalance > beforeBalance).to.be.true;
-
-      const closedAccount = await connection.getAccountInfo(data.publicKey);
-
-      assert.isTrue(closedAccount.data.length === 0);
-      assert.isTrue(closedAccount.owner.equals(SystemProgram.programId));
-    });
-
-    it("Can close an account twice", async () => {
-      const data = anchor.web3.Keypair.generate();
-      await program.methods
-        .initialize(new anchor.BN(10), new anchor.BN(10))
-        .accounts({ data: data.publicKey })
-        .preInstructions([await program.account.data.createInstruction(data)])
-        .signers([data])
-        .rpc();
-
-      const connection = program.provider.connection;
-      const openAccount = await connection.getAccountInfo(data.publicKey);
-      assert.isNotNull(openAccount);
-
-      const openAccountBalance = openAccount.lamports;
-      // double balance to calculate closed balance correctly
-      const transferIx = anchor.web3.SystemProgram.transfer({
-        fromPubkey: provider.wallet.publicKey,
-        toPubkey: data.publicKey,
-        lamports: openAccountBalance,
-      });
-      const transferTransaction = new anchor.web3.Transaction().add(transferIx);
-      await provider.sendAndConfirm(transferTransaction);
-
-      let beforeBalance = (
-        await connection.getAccountInfo(provider.wallet.publicKey)
-      ).lamports;
-
-      await program.methods
-        .testCloseTwice()
-        .accounts({
-          data: data.publicKey,
-          solDest: provider.wallet.publicKey,
-        })
-        .postInstructions([transferIx])
-        .rpc();
-
-      let afterBalance = (
-        await connection.getAccountInfo(provider.wallet.publicKey)
-      ).lamports;
-
-      // Retrieved rent exemption sol.
-      expect(afterBalance > beforeBalance).to.be.true;
-
-      const closedAccount = await connection.getAccountInfo(data.publicKey);
-      assert.isTrue(closedAccount.data.length === 0);
-      assert.isTrue(closedAccount.owner.equals(SystemProgram.programId));
-    });
-
-    it("Can close a mut account manually", async () => {
-      const data = anchor.web3.Keypair.generate();
-      await program.methods
-        .initialize(new anchor.BN(10), new anchor.BN(10))
-        .accounts({ data: data.publicKey })
-        .preInstructions([await program.account.data.createInstruction(data)])
-        .signers([data])
-        .rpc();
-
-      const connection = program.provider.connection;
-      const openAccount = await connection.getAccountInfo(data.publicKey);
-
-      assert.isNotNull(openAccount);
-      const openAccountBalance = openAccount.lamports;
-      // double balance to calculate closed balance correctly
-      const transferIx = anchor.web3.SystemProgram.transfer({
-        fromPubkey: provider.wallet.publicKey,
-        toPubkey: data.publicKey,
-        lamports: openAccountBalance,
-      });
-      const transferTransaction = new anchor.web3.Transaction().add(transferIx);
-      await provider.sendAndConfirm(transferTransaction);
-
-      let beforeBalance = (
-        await connection.getAccountInfo(provider.wallet.publicKey)
-      ).lamports;
-
-      await program.methods
-        .testCloseMut()
-        .accounts({
-          data: data.publicKey,
-          solDest: provider.wallet.publicKey,
-        })
-        .postInstructions([transferIx])
-        .rpc();
-
-      let afterBalance = (
-        await connection.getAccountInfo(provider.wallet.publicKey)
-      ).lamports;
-
-      // Retrieved rent exemption sol.
-      expect(afterBalance > beforeBalance).to.be.true;
-
-      const closedAccount = await connection.getAccountInfo(data.publicKey);
-      assert.isTrue(closedAccount.data.length === 0);
-      assert.isTrue(closedAccount.owner.equals(SystemProgram.programId));
     });
 
     it("Can use instruction data in accounts constraints", async () => {
@@ -908,28 +836,27 @@ const miscTest = (
           mint: newMint.publicKey,
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-          mintTokenProgram: TOKEN_PROGRAM_ID,
+          mintTokenProgram: TOKEN_2022_PROGRAM_ID,
         },
         signers: [newMint],
       });
-      const client = new Token(
-        program.provider.connection,
-        newMint.publicKey,
-        TOKEN_PROGRAM_ID,
-        wallet.payer
-      );
-      const mintAccount = await client.getMintInfo();
-      assert.strictEqual(mintAccount.decimals, 6);
-      assert.isTrue(
-        mintAccount.mintAuthority.equals(provider.wallet.publicKey)
-      );
-      assert.isTrue(
-        mintAccount.freezeAuthority.equals(provider.wallet.publicKey)
-      );
-      const accInfo = await program.provider.connection.getAccountInfo(
+      const rawAccount = await provider.connection.getAccountInfo(
         newMint.publicKey
       );
-      assert.strictEqual(accInfo.owner.toString(), TOKEN_PROGRAM_ID.toString());
+      const mintAccount = MintLayout.decode(rawAccount.data);
+      assert.strictEqual(mintAccount.decimals, 6);
+      assert.strictEqual(
+        new PublicKey(mintAccount.mintAuthority).toString(),
+        provider.wallet.publicKey.toString()
+      );
+      assert.strictEqual(
+        new PublicKey(mintAccount.freezeAuthority).toString(),
+        provider.wallet.publicKey.toString()
+      );
+      assert.strictEqual(
+        rawAccount.owner.toString(),
+        TOKEN_2022_PROGRAM_ID.toString()
+      );
     });
 
     it("Can create a random token account with token program", async () => {
@@ -945,22 +872,20 @@ const miscTest = (
         signers: [token],
       });
 
-      const client = new Token(
-        program.provider.connection,
-        mint.publicKey,
-        TOKEN_PROGRAM_ID,
-        wallet.payer
+      const rawAccount = await provider.connection.getAccountInfo(
+        token.publicKey
       );
-      const account = await client.getAccountInfo(token.publicKey);
-      // @ts-expect-error
-      assert.strictEqual(account.state, 1);
-      assert.strictEqual(account.amount.toNumber(), 0);
-      assert.isTrue(account.isInitialized);
+      const ataAccount = AccountLayout.decode(rawAccount.data);
+      assert.strictEqual(ataAccount.state, 1);
+      assert.strictEqual(new anchor.BN(ataAccount.amount).toNumber(), 0);
       assert.strictEqual(
-        account.owner.toString(),
+        new PublicKey(ataAccount.owner).toString(),
         provider.wallet.publicKey.toString()
       );
-      assert.strictEqual(account.mint.toString(), mint.publicKey.toString());
+      assert.strictEqual(
+        new PublicKey(ataAccount.mint).toString(),
+        mint.publicKey.toString()
+      );
     });
 
     describe("associated_token constraints", () => {
@@ -1006,19 +931,19 @@ const miscTest = (
 
       it("Can create an associated token account with token program", async () => {
         const newMint = anchor.web3.Keypair.generate();
-        await program.rpc.testInitMint({
+        await program.rpc.testInitMintWithTokenProgram({
           accounts: {
             mint: newMint.publicKey,
             payer: provider.wallet.publicKey,
             systemProgram: anchor.web3.SystemProgram.programId,
-            tokenProgram: TOKEN_PROGRAM_ID,
+            mintTokenProgram: TOKEN_2022_PROGRAM_ID,
           },
           signers: [newMint],
         });
 
         const associatedToken = await Token.getAssociatedTokenAddress(
           ASSOCIATED_TOKEN_PROGRAM_ID,
-          TOKEN_PROGRAM_ID,
+          TOKEN_2022_PROGRAM_ID,
           newMint.publicKey,
           provider.wallet.publicKey
         );
@@ -1029,36 +954,28 @@ const miscTest = (
             mint: newMint.publicKey,
             payer: provider.wallet.publicKey,
             systemProgram: anchor.web3.SystemProgram.programId,
-            associatedTokenTokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenTokenProgram: TOKEN_2022_PROGRAM_ID,
             associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
           },
         });
 
-        const token = new Token(
-          program.provider.connection,
-          newMint.publicKey,
-          TOKEN_PROGRAM_ID,
-          wallet.payer
-        );
-        const ataAccount = await token.getAccountInfo(associatedToken);
-        // @ts-expect-error
-        assert.strictEqual(ataAccount.state, 1);
-        assert.strictEqual(ataAccount.amount.toNumber(), 0);
-        assert.isTrue(ataAccount.isInitialized);
-        assert.strictEqual(
-          ataAccount.owner.toString(),
-          provider.wallet.publicKey.toString()
-        );
-        assert.strictEqual(
-          ataAccount.mint.toString(),
-          newMint.publicKey.toString()
-        );
         const rawAta = await provider.connection.getAccountInfo(
           associatedToken
         );
+        const ataAccount = AccountLayout.decode(rawAta.data);
+        assert.strictEqual(ataAccount.state, 1);
+        assert.strictEqual(new anchor.BN(ataAccount.amount).toNumber(), 0);
+        assert.strictEqual(
+          new PublicKey(ataAccount.owner).toString(),
+          provider.wallet.publicKey.toString()
+        );
+        assert.strictEqual(
+          new PublicKey(ataAccount.mint).toString(),
+          newMint.publicKey.toString()
+        );
         assert.strictEqual(
           rawAta.owner.toBase58(),
-          TOKEN_PROGRAM_ID.toBase58()
+          TOKEN_2022_PROGRAM_ID.toBase58()
         );
       });
 
@@ -1151,31 +1068,31 @@ const miscTest = (
 
       it("associated_token constraints (no init) - Can make with associated_token::token_program", async () => {
         const mint = anchor.web3.Keypair.generate();
-        await program.rpc.testInitMint({
+        await program.rpc.testInitMintWithTokenProgram({
           accounts: {
             mint: mint.publicKey,
             payer: provider.wallet.publicKey,
             systemProgram: anchor.web3.SystemProgram.programId,
-            tokenProgram: TOKEN_PROGRAM_ID,
+            mintTokenProgram: TOKEN_2022_PROGRAM_ID,
           },
           signers: [mint],
         });
 
         const associatedToken = await Token.getAssociatedTokenAddress(
           ASSOCIATED_TOKEN_PROGRAM_ID,
-          TOKEN_PROGRAM_ID,
+          TOKEN_2022_PROGRAM_ID,
           mint.publicKey,
           provider.wallet.publicKey
         );
 
-        await program.rpc.testInitAssociatedToken({
+        await program.rpc.testInitAssociatedTokenWithTokenProgram({
           accounts: {
             token: associatedToken,
             mint: mint.publicKey,
             payer: provider.wallet.publicKey,
             systemProgram: anchor.web3.SystemProgram.programId,
-            tokenProgram: TOKEN_PROGRAM_ID,
             associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            associatedTokenTokenProgram: TOKEN_2022_PROGRAM_ID,
           },
           signers: [],
         });
@@ -1184,7 +1101,7 @@ const miscTest = (
             token: associatedToken,
             mint: mint.publicKey,
             authority: provider.wallet.publicKey,
-            associatedTokenTokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenTokenProgram: TOKEN_2022_PROGRAM_ID,
           },
         });
 
@@ -1193,7 +1110,7 @@ const miscTest = (
         );
         assert.strictEqual(
           account.owner.toString(),
-          TOKEN_PROGRAM_ID.toString()
+          TOKEN_2022_PROGRAM_ID.toString()
         );
       });
 
@@ -1452,27 +1369,6 @@ const miscTest = (
       assert.deepStrictEqual(dataAccount.data, dataArray);
     });
 
-    it("Should include BASE const in IDL", async () => {
-      assert.isDefined(
-        miscIdl.constants.find(
-          (c) =>
-            c.name === "BASE" && c.type === "u128" && c.value === "1_000_000"
-        )
-      );
-    });
-
-    it("Should include DECIMALS const in IDL", async () => {
-      assert.isDefined(
-        miscIdl.constants.find(
-          (c) => c.name === "DECIMALS" && c.type === "u8" && c.value === "6"
-        )
-      );
-    });
-
-    it("Should not include NO_IDL const in IDL", async () => {
-      assert.isUndefined(miscIdl.constants.find((c) => c.name === "NO_IDL"));
-    });
-
     it("init_if_needed creates mint account if not exists", async () => {
       const newMint = anchor.web3.Keypair.generate();
 
@@ -1630,25 +1526,21 @@ const miscTest = (
         },
         signers: [newToken],
       });
-      const mintClient = new Token(
-        provider.connection,
-        newMint.publicKey,
-        TOKEN_PROGRAM_ID,
-        wallet.payer
-      );
-      const tokenAccount = await mintClient.getAccountInfo(newToken.publicKey);
-      assert.strictEqual(tokenAccount.amount.toNumber(), 0);
-      assert.strictEqual(
-        tokenAccount.mint.toString(),
-        newMint.publicKey.toString()
-      );
-      assert.strictEqual(
-        tokenAccount.owner.toString(),
-        provider.wallet.publicKey.toString()
-      );
+
       const rawAccount = await provider.connection.getAccountInfo(
         newToken.publicKey
       );
+      const ataAccount = AccountLayout.decode(rawAccount.data);
+      assert.strictEqual(new anchor.BN(ataAccount.amount).toNumber(), 0);
+      assert.strictEqual(
+        new PublicKey(ataAccount.mint).toString(),
+        newMint.publicKey.toString()
+      );
+      assert.strictEqual(
+        new PublicKey(ataAccount.owner).toString(),
+        provider.wallet.publicKey.toString()
+      );
+
       assert.strictEqual(
         rawAccount.owner.toString(),
         TOKEN_PROGRAM_ID.toString()
@@ -1713,19 +1605,19 @@ const miscTest = (
 
     it("init_if_needed creates associated token account if not exists with token program", async () => {
       const newMint = anchor.web3.Keypair.generate();
-      await program.rpc.testInitMint({
+      await program.rpc.testInitMintWithTokenProgram({
         accounts: {
           mint: newMint.publicKey,
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          mintTokenProgram: TOKEN_2022_PROGRAM_ID,
         },
         signers: [newMint],
       });
 
       const associatedToken = await Token.getAssociatedTokenAddress(
         ASSOCIATED_TOKEN_PROGRAM_ID,
-        TOKEN_PROGRAM_ID,
+        TOKEN_2022_PROGRAM_ID,
         newMint.publicKey,
         provider.wallet.publicKey
       );
@@ -1737,33 +1629,27 @@ const miscTest = (
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-          associatedTokenTokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenTokenProgram: TOKEN_2022_PROGRAM_ID,
           authority: provider.wallet.publicKey,
         },
       });
 
-      const mintClient = new Token(
-        provider.connection,
-        newMint.publicKey,
-        TOKEN_PROGRAM_ID,
-        wallet.payer
-      );
-      const ataAccount = await mintClient.getAccountInfo(associatedToken);
-      assert.strictEqual(ataAccount.amount.toNumber(), 0);
-      assert.strictEqual(
-        ataAccount.mint.toString(),
-        newMint.publicKey.toString()
-      );
-      assert.strictEqual(
-        ataAccount.owner.toString(),
-        provider.wallet.publicKey.toString()
-      );
       const rawAccount = await provider.connection.getAccountInfo(
         associatedToken
       );
+      const ataAccount = AccountLayout.decode(rawAccount.data);
+      assert.strictEqual(new anchor.BN(ataAccount.amount).toNumber(), 0);
+      assert.strictEqual(
+        new PublicKey(ataAccount.mint).toString(),
+        newMint.publicKey.toString()
+      );
+      assert.strictEqual(
+        new PublicKey(ataAccount.owner).toString(),
+        provider.wallet.publicKey.toString()
+      );
       assert.strictEqual(
         rawAccount.owner.toString(),
-        TOKEN_PROGRAM_ID.toString()
+        TOKEN_2022_PROGRAM_ID.toString()
       );
     });
 
@@ -2383,7 +2269,7 @@ const miscTest = (
       }
     });
 
-    it("init_if_needed pass if associated token exists with token program", async () => {
+    it("init_if_needed pass if associated token exists", async () => {
       const mint = anchor.web3.Keypair.generate();
       await program.rpc.testInitMint({
         accounts: {
@@ -2413,13 +2299,56 @@ const miscTest = (
         },
       });
 
+      await program.rpc.testInitAssociatedTokenIfNeeded({
+        accounts: {
+          token: associatedToken,
+          mint: mint.publicKey,
+          payer: provider.wallet.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          authority: provider.wallet.publicKey,
+        },
+      });
+    });
+
+    it("init_if_needed pass if associated token exists with token program", async () => {
+      const mint = anchor.web3.Keypair.generate();
+      await program.rpc.testInitMintWithTokenProgram({
+        accounts: {
+          mint: mint.publicKey,
+          payer: provider.wallet.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+          mintTokenProgram: TOKEN_2022_PROGRAM_ID,
+        },
+        signers: [mint],
+      });
+
+      const associatedToken = await Token.getAssociatedTokenAddress(
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+        TOKEN_2022_PROGRAM_ID,
+        mint.publicKey,
+        provider.wallet.publicKey
+      );
+
+      await program.rpc.testInitAssociatedTokenWithTokenProgram({
+        accounts: {
+          token: associatedToken,
+          mint: mint.publicKey,
+          payer: provider.wallet.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+          associatedTokenTokenProgram: TOKEN_2022_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        },
+      });
+
       await program.rpc.testInitAssociatedTokenIfNeededWithTokenProgram({
         accounts: {
           token: associatedToken,
           mint: mint.publicKey,
           payer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-          associatedTokenTokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenTokenProgram: TOKEN_2022_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
           authority: provider.wallet.publicKey,
         },
@@ -2629,6 +2558,7 @@ const miscTest = (
         });
       });
     });
+
     describe("Token Constraint Test", () => {
       it("Token Constraint Test(no init) - Can make token::mint and token::authority", async () => {
         const mint = anchor.web3.Keypair.generate();
@@ -3299,22 +3229,6 @@ const miscTest = (
           })
         );
         assert.isDefined(thisTx);
-      });
-      it("Can access enum variant fields using camel case without throwing a type error", async () => {
-        const anotherProgram = new anchor.Program<Misc>(
-          miscIdl,
-          program.programId,
-          provider
-        );
-        const enumWrappers =
-          await anotherProgram.account.coolEnumWrapperAccount.all();
-        for (let enumWrapper of enumWrappers) {
-          // this code never gets run so just putting whatever
-          console.log(enumWrapper.account.myEnum.variant2?.someSlot);
-          console.log(enumWrapper.account.myEnum.variant2?.user1);
-          console.log(enumWrapper.account.myEnum.variant3?.someSlot);
-          console.log(enumWrapper.account.myEnum.variant3?.user2);
-        }
       });
     });
   };

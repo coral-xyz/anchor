@@ -14,10 +14,10 @@ proc-macro = true
 [features]
 anchor-debug = ["anchor-syn/anchor-debug"]
 event-cpi = ["anchor-syn/event-cpi"]
+idl-build = ["anchor-syn/idl-build"]
 
 [dependencies]
 anchor-syn = { path = "../../syn", version = "0.28.0", features = ["hash"] }
-anyhow = "1"
 proc-macro2 = "1"
 quote = "1"
 syn = { version = "1", features = ["full"] }

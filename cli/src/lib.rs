@@ -6,7 +6,10 @@ use crate::config::{
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction, ERASED_AUTHORITY};
 use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
-use anchor_syn::idl::{EnumFields, Idl, IdlType, IdlTypeDefinitionTy};
+use anchor_syn::idl::types::{
+    EnumFields, Idl, IdlConst, IdlErrorCode, IdlEvent, IdlType, IdlTypeDefinition,
+    IdlTypeDefinitionTy,
+};
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use flate2::read::GzDecoder;
@@ -14,9 +17,10 @@ use flate2::read::ZlibDecoder;
 use flate2::write::{GzEncoder, ZlibEncoder};
 use flate2::Compression;
 use heck::{ToKebabCase, ToSnakeCase};
-use regex::RegexBuilder;
+use regex::{Regex, RegexBuilder};
 use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
+use rust_template::ProgramTemplate;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value as JsonValue};
@@ -66,15 +70,23 @@ pub struct Opts {
 pub enum Command {
     /// Initializes a workspace.
     Init {
+        /// Workspace name
         name: String,
+        /// Use JavaScript instead of TypeScript
         #[clap(short, long)]
         javascript: bool,
+        /// Use Solidity instead of Rust
         #[clap(short, long)]
         solidity: bool,
+        /// Don't initialize git
         #[clap(long)]
         no_git: bool,
+        /// Use `jest` instead of `mocha` for tests
         #[clap(long)]
         jest: bool,
+        /// Rust program template to use
+        #[clap(value_enum, short, long, default_value = "single")]
+        template: ProgramTemplate,
     },
     /// Builds the workspace.
     #[clap(name = "build", alias = "b")]
@@ -204,9 +216,14 @@ pub enum Command {
     },
     /// Creates a new program.
     New {
+        /// Program name
+        name: String,
+        /// Use Solidity instead of Rust
         #[clap(short, long)]
         solidity: bool,
-        name: String,
+        /// Rust program template to use
+        #[clap(value_enum, short, long, default_value = "single")]
+        template: ProgramTemplate,
     },
     /// Commands for interacting with interface definitions.
     Idl {
@@ -417,6 +434,18 @@ pub enum IdlCommand {
         #[clap(long)]
         no_docs: bool,
     },
+    /// Generates the IDL for the program using the compilation method.
+    Build {
+        /// Output file for the IDL (stdout if not specified)
+        #[clap(short, long)]
+        out: Option<String>,
+        /// Output file for the TypeScript IDL
+        #[clap(short = 't', long)]
+        out_ts: Option<String>,
+        /// Suppress doc strings in output
+        #[clap(long)]
+        no_docs: bool,
+    },
     /// Fetches an IDL for the given address from a cluster.
     /// The address can be a program, IDL account, or IDL buffer.
     Fetch {
@@ -441,8 +470,21 @@ pub fn entry(opts: Opts) -> Result<()> {
             solidity,
             no_git,
             jest,
-        } => init(&opts.cfg_override, name, javascript, solidity, no_git, jest),
-        Command::New { solidity, name } => new(&opts.cfg_override, solidity, name),
+            template,
+        } => init(
+            &opts.cfg_override,
+            name,
+            javascript,
+            solidity,
+            no_git,
+            jest,
+            template,
+        ),
+        Command::New {
+            solidity,
+            name,
+            template,
+        } => new(&opts.cfg_override, solidity, name, template),
         Command::Build {
             idl,
             idl_ts,
@@ -589,6 +631,7 @@ fn init(
     solidity: bool,
     no_git: bool,
     jest: bool,
+    template: ProgramTemplate,
 ) -> Result<()> {
     if Config::discover(cfg_override)?.is_some() {
         return Err(anyhow!("Workspace already initialized"));
@@ -667,17 +710,11 @@ fn init(
 
     // Build the program.
     if solidity {
-        fs::create_dir("solidity")?;
-
-        new_solidity_program(&project_name)?;
+        solidity_template::create_program(&project_name)?;
     } else {
-        // Build virtual manifest for rust programs
-        fs::write("Cargo.toml", rust_template::virtual_manifest())?;
-
-        fs::create_dir("programs")?;
-
-        new_rust_program(&project_name)?;
+        rust_template::create_program(&project_name, template)?;
     }
+
     // Build the test suite.
     fs::create_dir("tests")?;
     // Build the migrations directory.
@@ -768,7 +805,12 @@ fn install_node_modules(cmd: &str) -> Result<std::process::Output> {
 }
 
 // Creates a new program crate in the `programs/<name>` directory.
-fn new(cfg_override: &ConfigOverride, solidity: bool, name: String) -> Result<()> {
+fn new(
+    cfg_override: &ConfigOverride,
+    solidity: bool,
+    name: String,
+    template: ProgramTemplate,
+) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         match cfg.path().parent() {
             None => {
@@ -787,10 +829,10 @@ fn new(cfg_override: &ConfigOverride, solidity: bool, name: String) -> Result<()
                     name.clone(),
                     ProgramDeployment {
                         address: if solidity {
-                            new_solidity_program(&name)?;
+                            solidity_template::create_program(&name)?;
                             solidity_template::default_program_id()
                         } else {
-                            new_rust_program(&name)?;
+                            rust_template::create_program(&name, template)?;
                             rust_template::get_or_create_program_id(&name)
                         },
                         path: None,
@@ -808,26 +850,32 @@ fn new(cfg_override: &ConfigOverride, solidity: bool, name: String) -> Result<()
     })
 }
 
-// Creates a new rust program crate in the current directory with `name`.
-fn new_rust_program(name: &str) -> Result<()> {
-    if !PathBuf::from("Cargo.toml").exists() {
-        fs::write("Cargo.toml", rust_template::virtual_manifest())?;
-    }
-    fs::create_dir_all(format!("programs/{name}/src/"))?;
-    let mut cargo_toml = File::create(format!("programs/{name}/Cargo.toml"))?;
-    cargo_toml.write_all(rust_template::cargo_toml(name).as_bytes())?;
-    let mut xargo_toml = File::create(format!("programs/{name}/Xargo.toml"))?;
-    xargo_toml.write_all(rust_template::xargo_toml().as_bytes())?;
-    let mut lib_rs = File::create(format!("programs/{name}/src/lib.rs"))?;
-    lib_rs.write_all(rust_template::lib_rs(name).as_bytes())?;
-    Ok(())
-}
+/// Array of (path, content) tuple.
+pub type Files = Vec<(PathBuf, String)>;
 
-// Creates a new solidity program in the current directory with `name`.
-fn new_solidity_program(name: &str) -> Result<()> {
-    fs::create_dir_all("solidity")?;
-    let mut lib_rs = File::create(format!("solidity/{name}.sol"))?;
-    lib_rs.write_all(solidity_template::solidity(name).as_bytes())?;
+/// Create files from the given (path, content) tuple array.
+///
+/// # Example
+///
+/// ```ignore
+/// crate_files(vec![("programs/my_program/src/lib.rs".into(), "// Content".into())])?;
+/// ```
+pub fn create_files(files: &Files) -> Result<()> {
+    for (path, content) in files {
+        let path = Path::new(path);
+        if path.exists() {
+            continue;
+        }
+
+        match path.extension() {
+            Some(_) => {
+                fs::create_dir_all(path.parent().unwrap())?;
+                fs::write(path, content)?;
+            }
+            None => fs::create_dir_all(path)?,
+        }
+    }
+
     Ok(())
 }
 
@@ -1105,7 +1153,9 @@ fn build_rust_cwd(
         Some(p) => std::env::set_current_dir(p)?,
     };
     match build_config.verifiable {
-        false => _build_rust_cwd(cfg, idl_out, idl_ts_out, skip_lint, arch, cargo_args),
+        false => _build_rust_cwd(
+            cfg, idl_out, idl_ts_out, skip_lint, no_docs, arch, cargo_args,
+        ),
         true => build_cwd_verifiable(
             cfg,
             cargo_toml,
@@ -1192,28 +1242,28 @@ fn build_cwd_verifiable(
         Ok(_) => {
             // Build the idl.
             println!("Extracting the IDL");
-            if let Ok(Some(idl)) = extract_idl(cfg, "src/lib.rs", skip_lint, no_docs) {
-                // Write out the JSON file.
-                println!("Writing the IDL file");
-                let out_file = workspace_dir.join(format!("target/idl/{}.json", idl.name));
-                write_idl(&idl, OutFile::File(out_file))?;
+            let idl = generate_idl(cfg, skip_lint, no_docs)?;
+            // Write out the JSON file.
+            println!("Writing the IDL file");
+            let out_file = workspace_dir.join(format!("target/idl/{}.json", idl.name));
+            write_idl(&idl, OutFile::File(out_file))?;
 
-                // Write out the TypeScript type.
-                println!("Writing the .ts file");
-                let ts_file = workspace_dir.join(format!("target/types/{}.ts", idl.name));
-                fs::write(&ts_file, rust_template::idl_ts(&idl)?)?;
+            // Write out the TypeScript type.
+            println!("Writing the .ts file");
+            let ts_file = workspace_dir.join(format!("target/types/{}.ts", idl.name));
+            fs::write(&ts_file, rust_template::idl_ts(&idl)?)?;
 
-                // Copy out the TypeScript type.
-                if !&cfg.workspace.types.is_empty() {
-                    fs::copy(
-                        ts_file,
-                        workspace_dir
-                            .join(&cfg.workspace.types)
-                            .join(idl.name)
-                            .with_extension("ts"),
-                    )?;
-                }
+            // Copy out the TypeScript type.
+            if !&cfg.workspace.types.is_empty() {
+                fs::copy(
+                    ts_file,
+                    workspace_dir
+                        .join(&cfg.workspace.types)
+                        .join(idl.name)
+                        .with_extension("ts"),
+                )?;
             }
+
             println!("Build success");
         }
     }
@@ -1469,6 +1519,7 @@ fn _build_rust_cwd(
     idl_out: Option<PathBuf>,
     idl_ts_out: Option<PathBuf>,
     skip_lint: bool,
+    no_docs: bool,
     arch: &ProgramArch,
     cargo_args: Vec<String>,
 ) -> Result<()> {
@@ -1484,34 +1535,33 @@ fn _build_rust_cwd(
         std::process::exit(exit.status.code().unwrap_or(1));
     }
 
-    // Always assume idl is located at src/lib.rs.
-    if let Some(idl) = extract_idl(cfg, "src/lib.rs", skip_lint, false)? {
-        // JSON out path.
-        let out = match idl_out {
-            None => PathBuf::from(".").join(&idl.name).with_extension("json"),
-            Some(o) => PathBuf::from(&o.join(&idl.name).with_extension("json")),
-        };
-        // TS out path.
-        let ts_out = match idl_ts_out {
-            None => PathBuf::from(".").join(&idl.name).with_extension("ts"),
-            Some(o) => PathBuf::from(&o.join(&idl.name).with_extension("ts")),
-        };
+    // Generate IDL
+    let idl = generate_idl(cfg, skip_lint, no_docs)?;
+    // JSON out path.
+    let out = match idl_out {
+        None => PathBuf::from(".").join(&idl.name).with_extension("json"),
+        Some(o) => PathBuf::from(&o.join(&idl.name).with_extension("json")),
+    };
+    // TS out path.
+    let ts_out = match idl_ts_out {
+        None => PathBuf::from(".").join(&idl.name).with_extension("ts"),
+        Some(o) => PathBuf::from(&o.join(&idl.name).with_extension("ts")),
+    };
 
-        // Write out the JSON file.
-        write_idl(&idl, OutFile::File(out))?;
-        // Write out the TypeScript type.
-        fs::write(&ts_out, rust_template::idl_ts(&idl)?)?;
-        // Copy out the TypeScript type.
-        let cfg_parent = cfg.path().parent().expect("Invalid Anchor.toml");
-        if !&cfg.workspace.types.is_empty() {
-            fs::copy(
-                &ts_out,
-                cfg_parent
-                    .join(&cfg.workspace.types)
-                    .join(&idl.name)
-                    .with_extension("ts"),
-            )?;
-        }
+    // Write out the JSON file.
+    write_idl(&idl, OutFile::File(out))?;
+    // Write out the TypeScript type.
+    fs::write(&ts_out, rust_template::idl_ts(&idl)?)?;
+    // Copy out the TypeScript type.
+    let cfg_parent = cfg.path().parent().expect("Invalid Anchor.toml");
+    if !&cfg.workspace.types.is_empty() {
+        fs::copy(
+            &ts_out,
+            cfg_parent
+                .join(&cfg.workspace.types)
+                .join(&idl.name)
+                .with_extension("ts"),
+        )?;
     }
 
     Ok(())
@@ -1653,13 +1703,12 @@ fn verify(
     }
 
     // Verify IDL (only if it's not a buffer account).
-    if let Some(local_idl) = extract_idl(&cfg, "src/lib.rs", true, false)? {
-        if bin_ver.state != BinVerificationState::Buffer {
-            let deployed_idl = fetch_idl(cfg_override, program_id)?;
-            if local_idl != deployed_idl {
-                println!("Error: IDLs don't match");
-                std::process::exit(1);
-            }
+    let local_idl = generate_idl(&cfg, true, false)?;
+    if bin_ver.state != BinVerificationState::Buffer {
+        let deployed_idl = fetch_idl(cfg_override, program_id)?;
+        if local_idl != deployed_idl {
+            println!("Error: IDLs don't match");
+            std::process::exit(1);
         }
     }
 
@@ -1787,62 +1836,6 @@ pub enum BinVerificationState {
     },
 }
 
-// Fetches an IDL for the given program_id.
-fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
-    let url = match Config::discover(cfg_override)? {
-        Some(cfg) => cluster_url(&cfg, &cfg.test_validator),
-        None => {
-            // If the command is not run inside a workspace,
-            // cluster_url will be used from default solana config
-            // provider.cluster option can be used to override this
-
-            if let Some(cluster) = cfg_override.cluster.clone() {
-                cluster.url().to_string()
-            } else {
-                config::get_solana_cfg_url()?
-            }
-        }
-    };
-
-    let client = create_client(url);
-
-    let mut account = client.get_account(&idl_addr)?;
-    if account.executable {
-        let idl_addr = IdlAccount::address(&idl_addr);
-        account = client.get_account(&idl_addr)?;
-    }
-
-    // Cut off account discriminator.
-    let mut d: &[u8] = &account.data[8..];
-    let idl_account: IdlAccount = AnchorDeserialize::deserialize(&mut d)?;
-
-    let compressed_len: usize = idl_account.data_len.try_into().unwrap();
-    let compressed_bytes = &account.data[44..44 + compressed_len];
-    let mut z = ZlibDecoder::new(compressed_bytes);
-    let mut s = Vec::new();
-    z.read_to_end(&mut s)?;
-    serde_json::from_slice(&s[..]).map_err(Into::into)
-}
-
-fn extract_idl(
-    cfg: &WithPath<Config>,
-    file: &str,
-    skip_lint: bool,
-    no_docs: bool,
-) -> Result<Option<Idl>> {
-    let file = shellexpand::tilde(file);
-    let manifest_from_path = std::env::current_dir()?.join(PathBuf::from(&*file).parent().unwrap());
-    let cargo = Manifest::discover_from_path(manifest_from_path)?
-        .ok_or_else(|| anyhow!("Cargo.toml not found"))?;
-    anchor_syn::idl::file::parse(
-        &*file,
-        cargo.version(),
-        cfg.features.seeds,
-        no_docs,
-        !(cfg.features.skip_lint || skip_lint),
-    )
-}
-
 fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
     match subcmd {
         IdlCommand::Init {
@@ -1880,8 +1873,50 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
             out_ts,
             no_docs,
         } => idl_parse(cfg_override, file, out, out_ts, no_docs),
+        IdlCommand::Build {
+            out,
+            out_ts,
+            no_docs,
+        } => idl_build(out, out_ts, no_docs),
         IdlCommand::Fetch { address, out } => idl_fetch(cfg_override, address, out),
     }
+}
+
+/// Fetch an IDL for the given program id.
+fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
+    let url = match Config::discover(cfg_override)? {
+        Some(cfg) => cluster_url(&cfg, &cfg.test_validator),
+        None => {
+            // If the command is not run inside a workspace,
+            // cluster_url will be used from default solana config
+            // provider.cluster option can be used to override this
+
+            if let Some(cluster) = cfg_override.cluster.clone() {
+                cluster.url().to_string()
+            } else {
+                config::get_solana_cfg_url()?
+            }
+        }
+    };
+
+    let client = create_client(url);
+
+    let mut account = client.get_account(&idl_addr)?;
+    if account.executable {
+        let idl_addr = IdlAccount::address(&idl_addr);
+        account = client.get_account(&idl_addr)?;
+    }
+
+    // Cut off account discriminator.
+    let mut d: &[u8] = &account.data[8..];
+    let idl_account: IdlAccount = AnchorDeserialize::deserialize(&mut d)?;
+
+    let compressed_len: usize = idl_account.data_len.try_into().unwrap();
+    let compressed_bytes = &account.data[44..44 + compressed_len];
+    let mut z = ZlibDecoder::new(compressed_bytes);
+    let mut s = Vec::new();
+    z.read_to_end(&mut s)?;
+    serde_json::from_slice(&s[..]).map_err(Into::into)
 }
 
 fn get_idl_account(client: &RpcClient, idl_address: &Pubkey) -> Result<IdlAccount> {
@@ -2210,7 +2245,18 @@ fn idl_parse(
     no_docs: bool,
 ) -> Result<()> {
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
-    let idl = extract_idl(&cfg, &file, true, no_docs)?.ok_or_else(|| anyhow!("IDL not parsed"))?;
+    let file = shellexpand::tilde(&file);
+    let manifest_path = std::env::current_dir()?.join(PathBuf::from(&*file).parent().unwrap());
+    let manifest = Manifest::discover_from_path(manifest_path)?
+        .ok_or_else(|| anyhow!("Cargo.toml not found"))?;
+    let idl = generate_idl_parse(
+        &*file,
+        manifest.version(),
+        cfg.features.seeds,
+        no_docs,
+        !cfg.features.skip_lint,
+    )?;
+
     let out = match out {
         None => OutFile::Stdout,
         Some(out) => OutFile::File(PathBuf::from(out)),
@@ -2223,6 +2269,255 @@ fn idl_parse(
     }
 
     Ok(())
+}
+
+fn idl_build(out: Option<String>, out_ts: Option<String>, no_docs: bool) -> Result<()> {
+    let idls = generate_idl_build(no_docs)?;
+    if idls.len() == 1 {
+        let idl = &idls[0];
+        let out = match out {
+            None => OutFile::Stdout,
+            Some(path) => OutFile::File(PathBuf::from(path)),
+        };
+        write_idl(idl, out)?;
+
+        if let Some(path) = out_ts {
+            fs::write(path, rust_template::idl_ts(idl)?)?;
+        }
+    } else {
+        println!("{}", serde_json::to_string_pretty(&idls)?);
+    };
+
+    Ok(())
+}
+
+/// Generate IDL with method decided by whether manifest file has `idl-build` feature or not.
+fn generate_idl(cfg: &WithPath<Config>, skip_lint: bool, no_docs: bool) -> Result<Idl> {
+    let manifest = Manifest::discover()?.ok_or_else(|| anyhow!("Cargo.toml not found"))?;
+
+    // Check whether the manifest has `idl-build` feature
+    let is_idl_build = manifest
+        .features
+        .iter()
+        .any(|(feature, _)| feature == "idl-build");
+    if is_idl_build {
+        generate_idl_build(no_docs)?
+            .into_iter()
+            .next()
+            .ok_or_else(|| anyhow!("Could not build IDL"))
+    } else {
+        generate_idl_parse(
+            "src/lib.rs",
+            manifest.version(),
+            cfg.features.seeds,
+            no_docs,
+            !(cfg.features.skip_lint || skip_lint),
+        )
+    }
+}
+
+/// Generate IDL with the parsing method(default).
+fn generate_idl_parse(
+    path: impl AsRef<Path>,
+    version: String,
+    seeds_feature: bool,
+    no_docs: bool,
+    safety_checks: bool,
+) -> Result<Idl> {
+    anchor_syn::idl::parse::file::parse(path, version, seeds_feature, no_docs, safety_checks)
+}
+
+/// Generate IDL with the build method.
+fn generate_idl_build(no_docs: bool) -> Result<Vec<Idl>> {
+    let no_docs = if no_docs { "TRUE" } else { "FALSE" };
+
+    let cfg = Config::discover(&ConfigOverride::default())?.expect("Not in workspace.");
+    let seeds_feature = if cfg.features.seeds { "TRUE" } else { "FALSE" };
+
+    let exit = std::process::Command::new("cargo")
+        .args([
+            "test",
+            "__anchor_private_print_idl",
+            "--features",
+            "idl-build",
+            "--",
+            "--show-output",
+            "--quiet",
+        ])
+        .env("ANCHOR_IDL_BUILD_NO_DOCS", no_docs)
+        .env("ANCHOR_IDL_BUILD_SEEDS_FEATURE", seeds_feature)
+        .stderr(Stdio::inherit())
+        .output()
+        .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
+    if !exit.status.success() {
+        std::process::exit(exit.status.code().unwrap_or(1));
+    }
+
+    enum State {
+        Pass,
+        ConstLines(Vec<String>),
+        EventLines(Vec<String>),
+        ErrorsLines(Vec<String>),
+        ProgramLines(Vec<String>),
+    }
+
+    #[derive(Serialize, Deserialize)]
+    struct IdlBuildEventPrint {
+        event: IdlEvent,
+        defined_types: Vec<IdlTypeDefinition>,
+    }
+
+    let mut state = State::Pass;
+
+    let mut events: Vec<IdlEvent> = vec![];
+    let mut error_codes: Option<Vec<IdlErrorCode>> = None;
+    let mut constants: Vec<IdlConst> = vec![];
+    let mut defined_types: BTreeMap<String, IdlTypeDefinition> = BTreeMap::new();
+    let mut curr_idl: Option<Idl> = None;
+
+    let mut idls: Vec<Idl> = vec![];
+
+    let output = String::from_utf8_lossy(&exit.stdout);
+    for line in output.lines() {
+        match &mut state {
+            State::Pass => {
+                if line == "---- IDL begin const ----" {
+                    state = State::ConstLines(vec![]);
+                    continue;
+                } else if line == "---- IDL begin event ----" {
+                    state = State::EventLines(vec![]);
+                    continue;
+                } else if line == "---- IDL begin errors ----" {
+                    state = State::ErrorsLines(vec![]);
+                    continue;
+                } else if line == "---- IDL begin program ----" {
+                    state = State::ProgramLines(vec![]);
+                    continue;
+                } else if line.starts_with("test result: ok") {
+                    let events = std::mem::take(&mut events);
+                    let error_codes = error_codes.take();
+                    let constants = std::mem::take(&mut constants);
+                    let mut defined_types = std::mem::take(&mut defined_types);
+                    let curr_idl = curr_idl.take();
+
+                    let events = if !events.is_empty() {
+                        Some(events)
+                    } else {
+                        None
+                    };
+
+                    let mut idl = match curr_idl {
+                        Some(idl) => idl,
+                        None => continue,
+                    };
+
+                    idl.events = events;
+                    idl.errors = error_codes;
+                    idl.constants = constants;
+
+                    idl.constants.sort_by(|a, b| a.name.cmp(&b.name));
+                    idl.accounts.sort_by(|a, b| a.name.cmp(&b.name));
+                    if let Some(e) = idl.events.as_mut() {
+                        e.sort_by(|a, b| a.name.cmp(&b.name))
+                    }
+
+                    let prog_ty = std::mem::take(&mut idl.types);
+                    defined_types.extend(prog_ty.into_iter().map(|ty| (ty.name.clone(), ty)));
+                    idl.types = defined_types.into_values().collect::<Vec<_>>();
+
+                    idls.push(idl);
+                    continue;
+                }
+            }
+            State::ConstLines(lines) => {
+                if line == "---- IDL end const ----" {
+                    let constant: IdlConst = serde_json::from_str(&lines.join("\n"))?;
+                    constants.push(constant);
+                    state = State::Pass;
+                    continue;
+                }
+                lines.push(line.to_string());
+            }
+            State::EventLines(lines) => {
+                if line == "---- IDL end event ----" {
+                    let event: IdlBuildEventPrint = serde_json::from_str(&lines.join("\n"))?;
+                    events.push(event.event);
+                    defined_types.extend(
+                        event
+                            .defined_types
+                            .into_iter()
+                            .map(|ty| (ty.name.clone(), ty)),
+                    );
+                    state = State::Pass;
+                    continue;
+                }
+                lines.push(line.to_string());
+            }
+            State::ErrorsLines(lines) => {
+                if line == "---- IDL end errors ----" {
+                    let errs: Vec<IdlErrorCode> = serde_json::from_str(&lines.join("\n"))?;
+                    error_codes = Some(errs);
+                    state = State::Pass;
+                    continue;
+                }
+                lines.push(line.to_string());
+            }
+            State::ProgramLines(lines) => {
+                if line == "---- IDL end program ----" {
+                    let idl: Idl = serde_json::from_str(&lines.join("\n"))?;
+                    curr_idl = Some(idl);
+                    state = State::Pass;
+                    continue;
+                }
+                lines.push(line.to_string());
+            }
+        }
+    }
+
+    // Convert path to name if there are no conflicts
+    let path_regex = Regex::new(r#""((\w+::)+)(\w+)""#).unwrap();
+    let idls = idls
+        .into_iter()
+        .filter_map(|idl| {
+            let mut modified_idl = serde_json::to_string(&idl).unwrap();
+
+            // TODO: Remove. False positive https://github.com/rust-lang/rust-clippy/issues/10577
+            #[allow(clippy::redundant_clone)]
+            for captures in path_regex.captures_iter(&modified_idl.clone()) {
+                let path = captures.get(0).unwrap().as_str();
+                let name = captures.get(3).unwrap().as_str();
+
+                // Replace path with name
+                let replaced_idl = modified_idl.replace(path, &format!(r#""{name}""#));
+
+                // Check whether there is a conflict
+                let has_conflict = replaced_idl.contains(&format!(r#"::{name}""#));
+                if !has_conflict {
+                    modified_idl = replaced_idl;
+                }
+            }
+
+            serde_json::from_str::<Idl>(&modified_idl).ok()
+        })
+        .collect::<Vec<_>>();
+
+    // Verify IDLs are valid
+    for idl in &idls {
+        let full_path_account = idl
+            .accounts
+            .iter()
+            .find(|account| account.name.contains("::"));
+
+        if let Some(account) = full_path_account {
+            return Err(anyhow!(
+                "Conflicting accounts names are not allowed.\nProgram: {}\nAccount: {}",
+                idl.name,
+                account.name
+            ));
+        }
+    }
+
+    Ok(idls)
 }
 
 fn idl_fetch(cfg_override: &ConfigOverride, address: Pubkey, out: Option<String>) -> Result<()> {
@@ -2315,11 +2610,12 @@ fn account(
         },
     );
 
-    let mut cluster = &Config::discover(cfg_override)
-        .map(|cfg| cfg.unwrap())
-        .map(|cfg| cfg.provider.cluster.clone())
-        .unwrap_or(Cluster::Localnet);
-    cluster = cfg_override.cluster.as_ref().unwrap_or(cluster);
+    let cluster = match &cfg_override.cluster {
+        Some(cluster) => cluster.clone(),
+        None => Config::discover(cfg_override)?
+            .map(|cfg| cfg.provider.cluster.clone())
+            .unwrap_or(Cluster::Localnet),
+    };
 
     let data = create_client(cluster.url()).get_account_data(&address)?;
     if data.len() < 8 {
@@ -2499,6 +2795,11 @@ fn deserialize_idl_type_to_json(
             }
 
             JsonValue::Array(array_data)
+        }
+        IdlType::GenericLenArray(_, _) => todo!("Generic length arrays are not yet supported"),
+        IdlType::Generic(_) => todo!("Generic types are not yet supported"),
+        IdlType::DefinedWithTypeArgs { name: _, args: _ } => {
+            todo!("Defined types with type args are not yet supported")
         }
     })
 }
@@ -2735,7 +3036,7 @@ fn validator_flags(
         flags.push(address.clone());
         flags.push(binary_path);
 
-        if let Some(mut idl) = program.idl.as_mut() {
+        if let Some(idl) = program.idl.as_mut() {
             // Add program address to the IDL.
             idl.metadata = Some(serde_json::to_value(IdlTestMetadata { address })?);
 
@@ -3129,7 +3430,7 @@ fn deploy(
                 std::process::exit(exit.status.code().unwrap_or(1));
             }
 
-            if let Some(mut idl) = program.idl.as_mut() {
+            if let Some(idl) = program.idl.as_mut() {
                 // Add program address to the IDL.
                 idl.metadata = Some(serde_json::to_value(IdlTestMetadata {
                     address: program_id.to_string(),
@@ -3794,7 +4095,7 @@ fn keys_sync(cfg_override: &ConfigOverride, program_name: Option<String>) -> Res
 
             // Handle declaration in Anchor.toml
             'outer: for programs in cfg.programs.values_mut() {
-                for (name, mut deployment) in programs {
+                for (name, deployment) in programs {
                     // Skip other programs
                     if name != &program.lib_name {
                         continue;
@@ -3973,6 +4274,7 @@ mod tests {
             false,
             false,
             false,
+            ProgramTemplate::default(),
         )
         .unwrap();
     }
@@ -3990,6 +4292,7 @@ mod tests {
             false,
             false,
             false,
+            ProgramTemplate::default(),
         )
         .unwrap();
     }
@@ -4007,6 +4310,7 @@ mod tests {
             false,
             false,
             false,
+            ProgramTemplate::default(),
         )
         .unwrap();
     }

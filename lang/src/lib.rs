@@ -53,10 +53,15 @@ pub use anchor_attribute_event::{emit, event};
 pub use anchor_attribute_event::{emit_cpi, event_cpi};
 pub use anchor_attribute_program::program;
 pub use anchor_derive_accounts::Accounts;
+pub use anchor_derive_serde::{AnchorDeserialize, AnchorSerialize};
 pub use anchor_derive_space::InitSpace;
 /// Borsh is the default serialization format for instructions and accounts.
-pub use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorSerialize};
+pub use borsh::de::BorshDeserialize as AnchorDeserialize;
+pub use borsh::ser::BorshSerialize as AnchorSerialize;
 pub use solana_program;
+
+#[cfg(feature = "idl-build")]
+pub use anchor_syn;
 
 pub type Result<T> = std::result::Result<T, error::Error>;
 
@@ -164,6 +169,51 @@ where
         self.as_ref().clone()
     }
 }
+
+/// Lamports related utility methods for accounts.
+pub trait Lamports<'info>: AsRef<AccountInfo<'info>> {
+    /// Get the lamports of the account.
+    fn get_lamports(&self) -> u64 {
+        self.as_ref().lamports()
+    }
+
+    /// Add lamports to the account.
+    ///
+    /// This method is useful for transfering lamports from a PDA.
+    ///
+    /// # Requirements
+    ///
+    /// 1. The account must be marked `mut`.
+    /// 2. The total lamports **before** the transaction must equal to total lamports **after**
+    /// the transaction.
+    /// 3. `lamports` field of the account info should not currently be borrowed.
+    ///
+    /// See [`Lamports::sub_lamports`] for subtracting lamports.
+    fn add_lamports(&self, amount: u64) -> Result<&Self> {
+        **self.as_ref().try_borrow_mut_lamports()? += amount;
+        Ok(self)
+    }
+
+    /// Subtract lamports from the account.
+    ///
+    /// This method is useful for transfering lamports from a PDA.
+    ///
+    /// # Requirements
+    ///
+    /// 1. The account must be owned by the executing program.
+    /// 2. The account must be marked `mut`.
+    /// 3. The total lamports **before** the transaction must equal to total lamports **after**
+    /// the transaction.
+    /// 4. `lamports` field of the account info should not currently be borrowed.
+    ///
+    /// See [`Lamports::add_lamports`] for adding lamports.
+    fn sub_lamports(&self, amount: u64) -> Result<&Self> {
+        **self.as_ref().try_borrow_mut_lamports()? -= amount;
+        Ok(self)
+    }
+}
+
+impl<'info, T: AsRef<AccountInfo<'info>>> Lamports<'info> for T {}
 
 /// A data structure that can be serialized and stored into account storage,
 /// i.e. an
@@ -328,8 +378,8 @@ pub mod prelude {
         require, require_eq, require_gt, require_gte, require_keys_eq, require_keys_neq,
         require_neq, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source,
         system_program::System, zero_copy, AccountDeserialize, AccountSerialize, Accounts,
-        AccountsClose, AccountsExit, AnchorDeserialize, AnchorSerialize, Id, InitSpace, Key, Owner,
-        ProgramData, Result, Space, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        AccountsClose, AccountsExit, AnchorDeserialize, AnchorSerialize, Id, InitSpace, Key,
+        Lamports, Owner, ProgramData, Result, Space, ToAccountInfo, ToAccountInfos, ToAccountMetas,
     };
     #[cfg(feature = "event-cpi")]
     pub use super::{emit_cpi, event_cpi};
