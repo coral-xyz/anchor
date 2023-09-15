@@ -274,6 +274,7 @@ pub struct Initialize<'info> {
 
     nested: NestedAccounts<'info>,
     zc_account: AccountLoader<'info, SomeZcAccount>,
+
     token_account: Account<'info, token::TokenAccount>,
     mint_account: Account<'info, token::Mint>,
     token_interface_account: InterfaceAccount<'info, token_interface::TokenAccount>,
