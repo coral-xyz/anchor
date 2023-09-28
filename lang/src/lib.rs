@@ -162,9 +162,32 @@ pub trait Lamports<'info>: AsRef<AccountInfo<'info>> {
     /// the transaction.
     /// 3. `lamports` field of the account info should not currently be borrowed.
     ///
-    /// See [`Lamports::sub_lamports`] for subtracting lamports.
+    /// - See [`Lamports::add_lamports_checked`] for adding lamports with overflow checking.
+    /// - See [`Lamports::sub_lamports`] for subtracting lamports.
+    /// - See [`Lamports::sub_lamports_checked`] for subtracting lamports with overflow checking.
     fn add_lamports(&self, amount: u64) -> Result<&Self> {
         **self.as_ref().try_borrow_mut_lamports()? += amount;
+        Ok(self)
+    }
+
+    /// Add lamports to the account, checking for overflow.
+    /// 
+    /// This method is useful for transfering lamports from a PDA.
+    /// Also raises an error if the operation overflows.
+    /// 
+    /// # Requirements
+    /// 
+    /// 1. The account must be marked `mut`.
+    /// 2. The total lamports **before** the transaction must equal to total lamports **after**
+    /// the transaction.
+    /// 3. `lamports` field of the account info should not currently be borrowed.
+    /// 
+    /// - See [`Lamports::add_lamports`] for adding lamports.
+    /// - See [`Lamports::sub_lamports`] for subtracting lamports.
+    /// - See [`Lamports::sub_lamports_checked`] for subtracting lamports with overflow checking.
+    fn add_lamports_checked(&self, amount: u64, error: error::Error) -> Result<&Self> {
+        let result = self.get_lamports().checked_add(amount).ok_or(error)?;
+        **self.as_ref().try_borrow_mut_lamports()? = result;
         Ok(self)
     }
 
@@ -180,9 +203,33 @@ pub trait Lamports<'info>: AsRef<AccountInfo<'info>> {
     /// the transaction.
     /// 4. `lamports` field of the account info should not currently be borrowed.
     ///
-    /// See [`Lamports::add_lamports`] for adding lamports.
+    /// - See [`Lamports::add_lamports`] for adding lamports.
+    /// - See [`Lamports::add_lamports_checked`] for adding lamports with overflow checking.
+    /// - See [`Lamports::sub_lamports_checked`] for subtracting lamports with overflow checking.
     fn sub_lamports(&self, amount: u64) -> Result<&Self> {
         **self.as_ref().try_borrow_mut_lamports()? -= amount;
+        Ok(self)
+    }
+
+    /// Subtract lamports from the account, checking for overflow.
+    ///     
+    /// This method is useful for transfering lamports from a PDA.
+    /// Also raises an error if the operation overflows.
+    /// 
+    /// # Requirements
+    /// 
+    /// 1. The account must be owned by the executing program.
+    /// 2. The account must be marked `mut`.
+    /// 3. The total lamports **before** the transaction must equal to total lamports **after**
+    /// the transaction.
+    /// 4. `lamports` field of the account info should not currently be borrowed.
+    /// 
+    /// - See [`Lamports::add_lamports`] for adding lamports.
+    /// - See [`Lamports::add_lamports_checked`] for adding lamports with overflow checking.
+    /// - See [`Lamports::sub_lamports`] for subtracting lamports.
+    fn sub_lamports_checked(&self, amount: u64, error: error::Error) -> Result<&Self> {
+        let result = self.get_lamports().checked_sub(amount).ok_or(error)?;
+        **self.as_ref().try_borrow_mut_lamports()? = result;
         Ok(self)
     }
 }
