@@ -647,7 +647,7 @@ fn override_toolchain(cfg_override: &ConfigOverride) -> Result<ToolchainConfig> 
                 .arg("--version")
                 .output()?;
             let output_version = std::str::from_utf8(&output.stdout)?;
-            let version = Regex::new(r#"(\d+\.\d+\.\S+)"#)
+            let version = Regex::new(r"(\d+\.\d+\.\S+)")
                 .unwrap()
                 .captures_iter(output_version)
                 .next()

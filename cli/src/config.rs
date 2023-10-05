@@ -452,8 +452,7 @@ impl Config {
         let version = self
             .toolchain
             .anchor_version
-            .as_ref()
-            .map(|s| s.as_str())
+            .as_deref()
             .unwrap_or(crate::DOCKER_BUILDER_VERSION);
         format!("backpackapp/build:v{version}")
     }
