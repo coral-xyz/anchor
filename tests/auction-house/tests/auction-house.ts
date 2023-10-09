@@ -1,4 +1,3 @@
-import * as assert from "assert";
 import {
   AnchorProvider,
   Program,
@@ -6,7 +5,7 @@ import {
   BN,
   getProvider,
   setProvider,
-} from "../../../ts/packages/anchor";
+} from "@coral-xyz/anchor";
 import {
   Transaction,
   Keypair,
@@ -15,6 +14,7 @@ import {
 } from "@solana/web3.js";
 import { u64, Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import * as metaplex from "@metaplex/js";
+import * as assert from "assert";
 import { IDL, AuctionHouse } from "../target/types/auction_house";
 
 const MetadataDataData = metaplex.programs.metadata.MetadataDataData;
