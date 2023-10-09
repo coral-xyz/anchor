@@ -9,6 +9,7 @@ use heck::MixedCase;
 use quote::ToTokens;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use std::str::FromStr;
 use syn::{
     Expr, ExprLit, ItemConst,
     Lit::{Byte, ByteStr},
@@ -295,6 +296,11 @@ fn parse_consts(ctx: &CrateContext) -> Vec<&syn::ItemConst> {
 fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinition>> {
     ctx.structs()
         .filter_map(|item_strct| {
+            // Only take public types
+            if !matches!(&item_strct.vis, syn::Visibility::Public(_)) {
+                return None;
+            }
+
             // Only take serializable types
             let serializable = item_strct.attrs.iter().any(|attr| {
                 let attr_string = attr.tokens.to_string();
@@ -310,12 +316,6 @@ fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinit
 
             if !serializable {
                 return None;
-            }
-
-            // Only take public types
-            match &item_strct.vis {
-                syn::Visibility::Public(_) => (),
-                _ => return None,
             }
 
             let name = item_strct.ident.to_string();
@@ -342,7 +342,7 @@ fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinit
                     })
                     .collect::<Result<Vec<IdlField>>>(),
                 syn::Fields::Unnamed(_) => return None,
-                _ => panic!("Empty structs are allowed."),
+                _ => panic!("Empty structs are not allowed."),
             };
 
             Some(fields.map(|fields| IdlTypeDefinition {
@@ -354,10 +354,10 @@ fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinit
         })
         .chain(ctx.enums().filter_map(|enm| {
             // Only take public types
-            match &enm.vis {
-                syn::Visibility::Public(_) => (),
-                _ => return None,
+            if !matches!(&enm.vis, syn::Visibility::Public(_)) {
+                return None;
             }
+
             let name = enm.ident.to_string();
             let doc = if !no_docs {
                 docs::parse(&enm.attrs)
@@ -384,7 +384,8 @@ fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinit
                                 .named
                                 .iter()
                                 .map(|f: &syn::Field| {
-                                    let name = f.ident.as_ref().unwrap().to_string();
+                                    let name =
+                                        f.ident.as_ref().unwrap().to_string().to_mixed_case();
                                     let doc = if !no_docs {
                                         docs::parse(&f.attrs)
                                     } else {
@@ -404,12 +405,43 @@ fn parse_ty_defs(ctx: &CrateContext, no_docs: bool) -> Result<Vec<IdlTypeDefinit
                     IdlEnumVariant { name, fields }
                 })
                 .collect::<Vec<IdlEnumVariant>>();
+
             Some(Ok(IdlTypeDefinition {
                 name,
                 generics: None,
                 docs: doc,
                 ty: IdlTypeDefinitionTy::Enum { variants },
             }))
+        }))
+        .chain(ctx.type_aliases().filter_map(|alias| {
+            // Only take public types
+            if !matches!(&alias.vis, syn::Visibility::Public(_)) {
+                return None;
+            }
+            // Generic type aliases are not currently supported
+            if alias.generics.lt_token.is_some() {
+                return None;
+            }
+
+            let name = alias.ident.to_string();
+            let doc = if !no_docs {
+                docs::parse(&alias.attrs)
+            } else {
+                None
+            };
+            let result = IdlType::from_str(&alias.ty.to_token_stream().to_string()).map(|value| {
+                IdlTypeDefinition {
+                    name,
+                    generics: None,
+                    docs: doc,
+                    ty: IdlTypeDefinitionTy::Alias { value },
+                }
+            });
+
+            match &result {
+                Ok(_) => Some(result),
+                Err(_) => None,
+            }
         }))
         .collect()
 }

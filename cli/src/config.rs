@@ -114,6 +114,8 @@ impl Manifest {
         let mut cwd_opt = Some(start_from.as_path());
 
         while let Some(cwd) = cwd_opt {
+            let mut anchor_toml = false;
+
             for f in fs::read_dir(cwd).with_context(|| {
                 format!("Error reading the directory with path: {}", cwd.display())
             })? {
@@ -127,10 +129,17 @@ impl Manifest {
                         let m = WithPath::new(Manifest::from_path(&p)?, p);
                         return Ok(Some(m));
                     }
+                    if filename.to_str() == Some("Anchor.toml") {
+                        anchor_toml = true;
+                    }
                 }
             }
 
-            // Not found. Go up a directory level.
+            // Not found. Go up a directory level, but don't go up from Anchor.toml
+            if anchor_toml {
+                break;
+            }
+
             cwd_opt = cwd.parent();
         }
 
@@ -697,6 +706,7 @@ pub struct TestValidator {
     pub validator: Option<Validator>,
     pub startup_wait: i32,
     pub shutdown_wait: i32,
+    pub upgradeable: bool,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -709,6 +719,8 @@ pub struct _TestValidator {
     pub startup_wait: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub shutdown_wait: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub upgradeable: Option<bool>,
 }
 
 pub const STARTUP_WAIT: i32 = 5000;
@@ -721,6 +733,7 @@ impl From<_TestValidator> for TestValidator {
             startup_wait: _test_validator.startup_wait.unwrap_or(STARTUP_WAIT),
             genesis: _test_validator.genesis,
             validator: _test_validator.validator.map(Into::into),
+            upgradeable: _test_validator.upgradeable.unwrap_or(false),
         }
     }
 }
@@ -732,6 +745,7 @@ impl From<TestValidator> for _TestValidator {
             startup_wait: Some(test_validator.startup_wait),
             genesis: test_validator.genesis,
             validator: test_validator.validator.map(Into::into),
+            upgradeable: Some(test_validator.upgradeable),
         }
     }
 }
@@ -940,6 +954,8 @@ pub struct GenesisEntry {
     pub address: String,
     // Filepath to the compiled program to embed into the genesis.
     pub program: String,
+    // Whether the genesis program is upgradeable.
+    pub upgradeable: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

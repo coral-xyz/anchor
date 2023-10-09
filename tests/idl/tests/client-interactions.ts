@@ -81,11 +81,11 @@ describe("Client interactions", () => {
     assert.deepEqual(unit.enumField.unit, {});
 
     // Named
-    const x = new anchor.BN(1);
-    const y = new anchor.BN(2);
-    const named = await testAccountEnum({ named: { x, y } });
-    assert(named.enumField.named.x.eq(x));
-    assert(named.enumField.named.y.eq(y));
+    const pointX = new anchor.BN(1);
+    const pointY = new anchor.BN(2);
+    const named = await testAccountEnum({ named: { pointX, pointY } });
+    assert(named.enumField.named.pointX.eq(pointX));
+    assert(named.enumField.named.pointY.eq(pointY));
 
     // Unnamed
     const tupleArg = [1, 2, 3, 4] as const;
@@ -117,5 +117,33 @@ describe("Client interactions", () => {
     assert(
       unnamedStruct.enumField.unnamedStruct[0].u64.eq(tupleStructArg[0].u64)
     );
+  });
+
+  it("Can use type aliases", async () => {
+    const kp = anchor.web3.Keypair.generate();
+
+    const typeAliasU8 = 42;
+    const typeAliasU8Array = [1, 2, 3, 4, 5, 6, 7, 8];
+    const typeAliasStruct = {
+      u8: 1,
+      u16: 2,
+      u32: 3,
+      u64: new anchor.BN(4),
+    };
+
+    await program.methods
+      .typeAlias(typeAliasU8, typeAliasU8Array, typeAliasStruct)
+      .accounts({ account: kp.publicKey })
+      .signers([kp])
+      .preInstructions([await program.account.intAccount.createInstruction(kp)])
+      .rpc();
+
+    const account = await program.account.typeAliasAccount.fetch(kp.publicKey);
+    assert.strictEqual(account.typeAliasU8, typeAliasU8);
+    assert.deepEqual(account.typeAliasU8Array, typeAliasU8Array);
+    assert.strictEqual(account.typeAliasStruct.u8, typeAliasStruct.u8);
+    assert.strictEqual(account.typeAliasStruct.u16, typeAliasStruct.u16);
+    assert.strictEqual(account.typeAliasStruct.u32, typeAliasStruct.u32);
+    assert(account.typeAliasStruct.u64.eq(typeAliasStruct.u64));
   });
 });

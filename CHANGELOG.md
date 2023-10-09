@@ -18,11 +18,19 @@ The minor version will be incremented upon a breaking change and the patch versi
 - cli, lang: Add IDL generation through compilation. `anchor build` still uses parsing method to generate IDLs, use `anchor idl build` to generate IDLs with the build method ([#2011](https://github.com/coral-xyz/anchor/pull/2011)).
 - avm: Add support for the `.anchorversion` file to facilitate switching between different versions of the `anchor-cli` ([#2553](https://github.com/coral-xyz/anchor/pull/2553)).
 - ts: Add ability to access workspace programs independent of the casing used, e.g. `anchor.workspace.myProgram`, `anchor.workspace.MyProgram`... ([#2579](https://github.com/coral-xyz/anchor/pull/2579)).
+- bench: Add benchmarking for program binary size ([#2591](https://github.com/coral-xyz/anchor/pull/2591)).
 - spl: Export `mpl-token-metadata` crate ([#2583](https://github.com/coral-xyz/anchor/pull/2583)).
 - spl: Add `TokenRecordAccount` for pNFTs ([#2597](https://github.com/coral-xyz/anchor/pull/2597)).
 - ts: Add support for unnamed(tuple) enum in accounts ([#2601](https://github.com/coral-xyz/anchor/pull/2601)).
 - cli: Add program template with multiple files for instructions, state... ([#2602](https://github.com/coral-xyz/anchor/pull/2602)).
+- bench: Add benchmarking for stack memory usage ([#2617](https://github.com/coral-xyz/anchor/pull/2617)).
 - lang: `Box` the inner enums of `anchor_lang::error::Error` to optimize `anchor_lang::Result` ([#2600](https://github.com/coral-xyz/anchor/pull/2600)).
+- ts: Add strong type support for `Program.addEventListener` method ([#2627](https://github.com/coral-xyz/anchor/pull/2627)).
+- syn: Add `IdlBuild` trait to implement IDL support for custom types ([#2629](https://github.com/coral-xyz/anchor/pull/2629)).
+- spl: Add `idl-build` feature. IDL build method will not work without enabling this feature when using `anchor-spl` ([#2629](https://github.com/coral-xyz/anchor/pull/2629)).
+- lang: Add support for type aliases in IDLs ([#2637](https://github.com/coral-xyz/anchor/pull/2637)).
+- cli: Add `test.upgradeable`, `test.genesis.upgradeable` setting in anchor.toml to support testing upgradeable programs ([#2641](https://github.com/coral-xyz/anchor/pull/2642)).
+- cli, client, lang, spl: Update Solana toolchain and dependencies to `1.17.0`, `1.16` remains supported ([#2645](https://github.com/coral-xyz/anchor/pull/2645)).
 
 ### Fixes
 
@@ -34,12 +42,17 @@ The minor version will be incremented upon a breaking change and the patch versi
 - ts: Load workspace programs on-demand rather than loading all of them at once ([#2579](https://github.com/coral-xyz/anchor/pull/2579)).
 - lang: Fix `associated_token::token_program` constraint ([#2603](https://github.com/coral-xyz/anchor/pull/2603)).
 - cli: Fix `anchor account` command panicking outside of workspace ([#2620](https://github.com/coral-xyz/anchor/pull/2620)).
+- lang: IDL named enum variant fields are now camelCase as opposed to snake_case, consistent with the other IDL types ([#2633](https://github.com/coral-xyz/anchor/pull/2633)).
 
 ### Breaking
 
 - lang: Switch to type safe bumps in context ([#2542](https://github.com/coral-xyz/anchor/pull/2542)).
 - syn: `idl` feature has been replaced with `idl-build`, `idl-parse` and `idl-types` features ([#2011](https://github.com/coral-xyz/anchor/pull/2011)).
 - syn: IDL `parse` method now returns `Result<Idl>` instead of `Result<Option<Idl>>` ([#2582](https://github.com/coral-xyz/anchor/pull/2582)).
+- spl: Update `mpl-token-metadata` dependency to use the client SDK instead of the program crate ([#2632](https://github.com/coral-xyz/anchor/pull/2632)).
+- ts: Remove `base64-js` dependency ([#2635](https://github.com/coral-xyz/anchor/pull/2635)).
+- syn: `IdlTypeDefinitionTy` enum has a new variant `Alias` ([#2637](https://github.com/coral-xyz/anchor/pull/2637)).
+- cli, client, lang, spl: Solana `1.14` is no longer supported, minimum required Solana version is `1.16.0` ([#2645](https://github.com/coral-xyz/anchor/pull/2645)).
 
 ## [0.28.0] - 2023-06-09
 

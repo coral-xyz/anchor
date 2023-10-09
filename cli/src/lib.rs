@@ -2626,7 +2626,7 @@ fn account(
     let mut data_view = &data[8..];
 
     let deserialized_json =
-        deserialize_idl_struct_to_json(&idl, account_type_name, &mut data_view)?;
+        deserialize_idl_defined_type_to_json(&idl, account_type_name, &mut data_view)?;
 
     println!(
         "{}",
@@ -2636,26 +2636,25 @@ fn account(
     Ok(())
 }
 
-// Deserializes a user defined IDL struct/enum by munching the account data.
-// Recursively deserializes elements one by one
-fn deserialize_idl_struct_to_json(
+// Deserializes user defined IDL types by munching the account data(recursively).
+fn deserialize_idl_defined_type_to_json(
     idl: &Idl,
-    account_type_name: &str,
+    defined_type_name: &str,
     data: &mut &[u8],
 ) -> Result<JsonValue, anyhow::Error> {
-    let account_type = &idl
-        .accounts
+    let defined_type = &idl
+        .types
         .iter()
-        .chain(idl.types.iter())
-        .find(|account_type| account_type.name == account_type_name)
+        .chain(idl.accounts.iter())
+        .find(|defined_type| defined_type.name == defined_type_name)
         .ok_or_else(|| {
-            anyhow::anyhow!("Struct/Enum named {} not found in IDL.", account_type_name)
+            anyhow::anyhow!("Struct/Enum named {} not found in IDL.", defined_type_name)
         })?
         .ty;
 
     let mut deserialized_fields = Map::new();
 
-    match account_type {
+    match defined_type {
         IdlTypeDefinitionTy::Struct { fields } => {
             for field in fields {
                 deserialized_fields.insert(
@@ -2700,6 +2699,9 @@ fn deserialize_idl_struct_to_json(
             }
 
             deserialized_fields.insert(variant.name.clone(), value);
+        }
+        IdlTypeDefinitionTy::Alias { value } => {
+            return deserialize_idl_type_to_json(value, data, idl);
         }
     }
 
@@ -2764,7 +2766,9 @@ fn deserialize_idl_type_to_json(
         IdlType::PublicKey => {
             json!(<Pubkey as AnchorDeserialize>::deserialize(data)?.to_string())
         }
-        IdlType::Defined(type_name) => deserialize_idl_struct_to_json(parent_idl, type_name, data)?,
+        IdlType::Defined(type_name) => {
+            deserialize_idl_defined_type_to_json(parent_idl, type_name, data)?
+        }
         IdlType::Option(ty) => {
             let is_present = <u8 as AnchorDeserialize>::deserialize(data)?;
 
@@ -3021,6 +3025,11 @@ fn validator_flags(
 ) -> Result<Vec<String>> {
     let programs = cfg.programs.get(&Cluster::Localnet);
 
+    let test_upgradeable_program = test_validator
+        .as_ref()
+        .map(|test_validator| test_validator.upgradeable)
+        .unwrap_or(false);
+
     let mut flags = Vec::new();
     for mut program in cfg.read_all_programs()? {
         let binary_path = program.binary_path().display().to_string();
@@ -3032,9 +3041,16 @@ fn validator_flags(
             .map(|deployment| Ok(deployment.address.to_string()))
             .unwrap_or_else(|| program.pubkey().map(|p| p.to_string()))?;
 
-        flags.push("--bpf-program".to_string());
-        flags.push(address.clone());
-        flags.push(binary_path);
+        if test_upgradeable_program {
+            flags.push("--upgradeable-program".to_string());
+            flags.push(address.clone());
+            flags.push(binary_path);
+            flags.push(cfg.wallet_kp()?.pubkey().to_string());
+        } else {
+            flags.push("--bpf-program".to_string());
+            flags.push(address.clone());
+            flags.push(binary_path);
+        }
 
         if let Some(idl) = program.idl.as_mut() {
             // Add program address to the IDL.
@@ -3058,9 +3074,16 @@ fn validator_flags(
                         program_path.display()
                     ));
                 }
-                flags.push("--bpf-program".to_string());
-                flags.push(entry.address.clone());
-                flags.push(entry.program.clone());
+                if entry.upgradeable.unwrap_or(false) {
+                    flags.push("--upgradeable-program".to_string());
+                    flags.push(entry.address.clone());
+                    flags.push(entry.program.clone());
+                    flags.push(cfg.wallet_kp()?.pubkey().to_string());
+                } else {
+                    flags.push("--bpf-program".to_string());
+                    flags.push(entry.address.clone());
+                    flags.push(entry.program.clone());
+                }
             }
         }
         if let Some(validator) = &test.validator {
