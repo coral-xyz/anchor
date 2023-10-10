@@ -33,7 +33,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                 AccountField::Field(f) => {
                     let constraints = constraints::linearize(&f.constraints);
                     let bump_field = quote!(pub #ident: u8);
-                    let bump_default_field = quote!(#ident: 255);
+                    let bump_default_field = quote!(#ident: u8::MAX);
 
                     for c in constraints.iter() {
                         // Verify this in super::constraints
