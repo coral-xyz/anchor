@@ -81,10 +81,10 @@ Solana version: 1.17.0
 | interface_account_mint1        | 128          | 🟢 **-376 (74.60%)**   |
 | interface_account_mint2        | 128          | 🟢 **-552 (81.18%)**   |
 | interface_account_mint4        | 128          | 🟢 **-888 (87.40%)**   |
-| interface_account_mint8        | 128          | 🟢 **-1 560 (92.42%)** |
+| interface_account_mint8        | 128          | 🟢 **-1,560 (92.42%)** |
 | interface_account_token1       | 128          | 🟢 **-552 (81.18%)**   |
 | interface_account_token2       | 128          | 🟢 **-728 (85.05%)**   |
-| interface_account_token4       | 128          | 🟢 **-1 240 (90.64%)** |
+| interface_account_token4       | 128          | 🟢 **-1,240 (90.64%)** |
 | interface1                     | 128          | 🟢 **-192 (60.00%)**   |
 | interface2                     | 128          | 🟢 **-240 (65.22%)**   |
 | interface4                     | 128          | 🟢 **-424 (76.81%)**   |
@@ -141,7 +141,7 @@ Solana version: 1.16.0
 | account_unsized_init1          | 624          | 🔴 **+16 (2.63%)**     |
 | account_unsized_init2          | 584          | 🟢 **-24 (3.95%)**     |
 | account_unsized_init4          | 728          | 🟢 **-168 (18.75%)**   |
-| account_unsized_init8          | 1 016        | 🟢 **-456 (30.98%)**   |
+| account_unsized_init8          | 1,016        | 🟢 **-456 (30.98%)**   |
 | account_unsized1               | 344          | 🔴 **+168 (95.45%)**   |
 | account_unsized2               | 456          | 🔴 **+64 (16.33%)**    |
 | account_unsized4               | 632          | 🟢 **-24 (3.66%)**     |
@@ -180,11 +180,11 @@ Solana version: 1.16.0
 | boxed_interface_account_token8 | 336          | 🔴 **+24 (7.69%)**     |
 | interface_account_mint1        | 504          | 🔴 **+296 (142.31%)**  |
 | interface_account_mint2        | 680          | 🟢 **-72 (9.57%)**     |
-| interface_account_mint4        | 1 016        | 🟢 **-408 (28.65%)**   |
-| interface_account_mint8        | 1 688        | 🟢 **-1 080 (39.02%)** |
+| interface_account_mint4        | 1,016        | 🟢 **-408 (28.65%)**   |
+| interface_account_mint8        | 1,688        | 🟢 **-1,080 (39.02%)** |
 | interface_account_token1       | 680          | 🔴 **+416 (157.58%)**  |
 | interface_account_token2       | 856          | 🟢 **-248 (22.46%)**   |
-| interface_account_token4       | 1 368        | 🟢 **-760 (35.71%)**   |
+| interface_account_token4       | 1,368        | 🟢 **-760 (35.71%)**   |
 | interface1                     | 320          | 🔴 **+120 (60.00%)**   |
 | interface2                     | 368          | 🔴 **+24 (6.98%)**     |
 | interface4                     | 552          | 🔴 **+88 (18.97%)**    |
@@ -225,7 +225,7 @@ Solana version: 1.14.16
 | account_empty_init1            | 584          | N/A |
 | account_empty_init2            | 512          | N/A |
 | account_empty_init4            | 704          | N/A |
-| account_empty_init8            | 1 088        | N/A |
+| account_empty_init8            | 1,088        | N/A |
 | account_empty1                 | 200          | N/A |
 | account_empty2                 | 344          | N/A |
 | account_empty4                 | 464          | N/A |
@@ -233,7 +233,7 @@ Solana version: 1.14.16
 | account_sized_init1            | 592          | N/A |
 | account_sized_init2            | 544          | N/A |
 | account_sized_init4            | 768          | N/A |
-| account_sized_init8            | 1 216        | N/A |
+| account_sized_init8            | 1,216        | N/A |
 | account_sized1                 | 200          | N/A |
 | account_sized2                 | 360          | N/A |
 | account_sized4                 | 528          | N/A |
@@ -241,11 +241,11 @@ Solana version: 1.14.16
 | account_unsized_init1          | 608          | N/A |
 | account_unsized_init2          | 608          | N/A |
 | account_unsized_init4          | 896          | N/A |
-| account_unsized_init8          | 1 472        | N/A |
+| account_unsized_init8          | 1,472        | N/A |
 | account_unsized1               | 176          | N/A |
 | account_unsized2               | 392          | N/A |
 | account_unsized4               | 656          | N/A |
-| account_unsized8               | 1 232        | N/A |
+| account_unsized8               | 1,232        | N/A |
 | boxed_account_empty_init1      | 544          | N/A |
 | boxed_account_empty_init2      | 408          | N/A |
 | boxed_account_empty_init4      | 424          | N/A |
@@ -280,11 +280,11 @@ Solana version: 1.14.16
 | boxed_interface_account_token8 | 312          | N/A |
 | interface_account_mint1        | 208          | N/A |
 | interface_account_mint2        | 752          | N/A |
-| interface_account_mint4        | 1 424        | N/A |
-| interface_account_mint8        | 2 768        | N/A |
+| interface_account_mint4        | 1,424        | N/A |
+| interface_account_mint8        | 2,768        | N/A |
 | interface_account_token1       | 264          | N/A |
-| interface_account_token2       | 1 104        | N/A |
-| interface_account_token4       | 2 128        | N/A |
+| interface_account_token2       | 1,104        | N/A |
+| interface_account_token4       | 2,128        | N/A |
 | interface1                     | 200          | N/A |
 | interface2                     | 344          | N/A |
 | interface4                     | 464          | N/A |
