@@ -22,6 +22,7 @@ Solana version: 1.17.0
 
 ### Notable changes
 
+- Change all accounts to have a reference to `AccountInfo` ([#2656](https://github.com/coral-xyz/anchor/pull/2656)).
 - `Box` the `anchor_lang::Result` error variants ([#2600](https://github.com/coral-xyz/anchor/pull/2600)).
 
 ---
