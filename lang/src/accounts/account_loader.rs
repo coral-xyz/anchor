@@ -237,7 +237,7 @@ impl<'info, T: ZeroCopy + Owner> AccountsExit<'info> for AccountLoader<'info, T>
     // The account *cannot* be loaded when this is called.
     fn exit(&self, program_id: &Pubkey) -> Result<()> {
         // Only persist if the owner is the current program and the account is not closed.
-        if &T::owner() == program_id && !crate::common::is_closed(&self.acc_info) {
+        if &T::owner() == program_id && !crate::common::is_closed(self.acc_info) {
             let mut data = self.acc_info.try_borrow_mut_data()?;
             let dst: &mut [u8] = &mut data;
             let mut writer = BpfWriter::new(dst);
@@ -266,7 +266,7 @@ impl<'info, T: ZeroCopy + Owner> ToAccountMetas for AccountLoader<'info, T> {
 
 impl<'info, T: ZeroCopy + Owner> AsRef<AccountInfo<'info>> for AccountLoader<'info, T> {
     fn as_ref(&self) -> &AccountInfo<'info> {
-        &self.acc_info
+        self.acc_info
     }
 }
 

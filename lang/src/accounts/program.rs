@@ -177,7 +177,7 @@ impl<'info, T> ToAccountInfos<'info> for Program<'info, T> {
 
 impl<'info, T> AsRef<AccountInfo<'info>> for Program<'info, T> {
     fn as_ref(&self) -> &AccountInfo<'info> {
-        &self.info
+        self.info
     }
 }
 
@@ -185,7 +185,7 @@ impl<'info, T> Deref for Program<'info, T> {
     type Target = AccountInfo<'info>;
 
     fn deref(&self) -> &Self::Target {
-        &self.info
+        self.info
     }
 }
 

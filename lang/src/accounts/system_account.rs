@@ -72,7 +72,7 @@ impl<'info> ToAccountInfos<'info> for SystemAccount<'info> {
 
 impl<'info> AsRef<AccountInfo<'info>> for SystemAccount<'info> {
     fn as_ref(&self) -> &AccountInfo<'info> {
-        &self.info
+        self.info
     }
 }
 
@@ -80,7 +80,7 @@ impl<'info> Deref for SystemAccount<'info> {
     type Target = AccountInfo<'info>;
 
     fn deref(&self) -> &Self::Target {
-        &self.info
+        self.info
     }
 }
 

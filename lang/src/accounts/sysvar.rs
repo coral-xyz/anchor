@@ -60,7 +60,7 @@ impl<'info, T: solana_program::sysvar::Sysvar> Clone for Sysvar<'info, T> {
     fn clone(&self) -> Self {
         Self {
             info: self.info,
-            account: T::from_account_info(&self.info).unwrap(),
+            account: T::from_account_info(self.info).unwrap(),
         }
     }
 }
@@ -96,7 +96,7 @@ impl<'info, T: solana_program::sysvar::Sysvar> ToAccountInfos<'info> for Sysvar<
 
 impl<'info, T: solana_program::sysvar::Sysvar> AsRef<AccountInfo<'info>> for Sysvar<'info, T> {
     fn as_ref(&self) -> &AccountInfo<'info> {
-        &self.info
+        self.info
     }
 }
 

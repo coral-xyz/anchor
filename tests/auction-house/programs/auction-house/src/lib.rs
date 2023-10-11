@@ -1461,7 +1461,7 @@ pub struct ExecuteSale<'info> {
         seeds=[
             PREFIX.as_bytes(),
             authority.key.as_ref(),
-            treasury_mint.key().as_ref(),
+            treasury_mint.key.as_ref(),
         ],
         bump=auction_house.bump,
         has_one=authority,

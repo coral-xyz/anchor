@@ -93,7 +93,7 @@ impl<'info> ToAccountInfos<'info> for Signer<'info> {
 
 impl<'info> AsRef<AccountInfo<'info>> for Signer<'info> {
     fn as_ref(&self) -> &AccountInfo<'info> {
-        &self.info
+        self.info
     }
 }
 
@@ -101,7 +101,7 @@ impl<'info> Deref for Signer<'info> {
     type Target = AccountInfo<'info>;
 
     fn deref(&self) -> &Self::Target {
-        &self.info
+        self.info
     }
 }
 

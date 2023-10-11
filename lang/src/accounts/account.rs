@@ -256,7 +256,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Account<'a, T> {
         program_id: &Pubkey,
     ) -> Result<()> {
         // Only persist if the owner is the current program and the account is not closed.
-        if expected_owner == program_id && !crate::common::is_closed(&self.info) {
+        if expected_owner == program_id && !crate::common::is_closed(self.info) {
             let info = self.to_account_info();
             let mut data = info.try_borrow_mut_data()?;
             let dst: &mut [u8] = &mut data;
@@ -392,7 +392,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AsRef<AccountInfo<
     for Account<'info, T>
 {
     fn as_ref(&self) -> &AccountInfo<'info> {
-        &self.info
+        self.info
     }
 }
 
