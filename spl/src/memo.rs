@@ -11,12 +11,8 @@ pub fn build_memo<'info>(
     memo: &[u8],
 ) -> Result<()> {
     let ix = spl_memo::build_memo(memo, &[ctx.accounts.signer.key]);
-    solana_program::program::invoke_signed(
-        &ix,
-        &[ctx.accounts.signer],
-        ctx.signer_seeds,
-    )
-    .map_err(Into::into)
+    solana_program::program::invoke_signed(&ix, &[ctx.accounts.signer], ctx.signer_seeds)
+        .map_err(Into::into)
 }
 
 #[derive(Accounts)]
