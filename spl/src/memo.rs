@@ -1,4 +1,4 @@
-use anchor_lang::prelude::{CpiContext, Signer};
+use anchor_lang::prelude::CpiContext;
 use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::{Accounts, Result, ToAccountInfo};
 
@@ -20,7 +20,7 @@ pub fn build_memo<'info>(
 
 #[derive(Accounts)]
 pub struct BuildMemo<'info> {
-    pub signer: Signer<'info>,
+    pub signer: AccountInfo<'info>,
 }
 
 #[derive(Clone)]
