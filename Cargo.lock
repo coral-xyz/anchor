@@ -290,7 +290,7 @@ dependencies = [
  "serum_dex",
  "solana-program",
  "spl-associated-token-account",
- "spl-memo 4.0.0",
+ "spl-memo",
  "spl-token 4.0.0",
  "spl-token-2022",
 ]
