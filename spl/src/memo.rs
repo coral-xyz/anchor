@@ -9,6 +9,7 @@ pub fn build_memo<'info>(ctx: CpiContext<'_, '_, '_, 'info, BuildMemo>, memo: &[
     let ix = spl_memo::build_memo(
         memo,
         &ctx.remaining_accounts
+            .iter()
             .map(|account| account.key)
             .collect::<Vec<_>>(),
     );
