@@ -55,10 +55,8 @@ fn parse_install_target(version_or_commit: &str) -> Result<InstallTarget, Error>
         .or_else(|version_error| {
             avm::check_and_get_full_commit(version_or_commit)
                 .map(InstallTarget::Commit)
-                .or_else(|commit_error| {
-                    Err(anyhow!(
-                        "Not a valid version or commit: {version_error}, {commit_error}"
-                    ))
+                .map_err(|commit_error| {
+                    anyhow!("Not a valid version or commit: {version_error}, {commit_error}")
                 })
         })
 }
