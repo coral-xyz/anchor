@@ -1,4 +1,4 @@
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Error, Result};
 use avm::InstallTarget;
 use clap::{Parser, Subcommand};
 use semver::Version;
@@ -22,9 +22,8 @@ pub enum Commands {
     #[clap(about = "Install a version of Anchor")]
     Install {
         /// Anchor version or commit
-        version: String,
-        #[clap(short, long, required = false)]
-        is_commit: bool,
+        #[clap(value_parser = parse_install_target)]
+        version_or_commit: InstallTarget,
         #[clap(long)]
         /// Flag to force installation even if the version
         /// is already installed
@@ -50,22 +49,27 @@ fn parse_version(version: &str) -> Result<Version, Error> {
     }
 }
 
-fn parse_install_target(version_or_commit: String, is_commit: bool) -> InstallTarget {
-    if is_commit {
-        InstallTarget::Commit(version_or_commit)
-    } else {
-        InstallTarget::Version(parse_version(&version_or_commit).unwrap())
-    }
+fn parse_install_target(version_or_commit: &str) -> Result<InstallTarget, Error> {
+    parse_version(version_or_commit)
+        .map(InstallTarget::Version)
+        .or_else(|version_error| {
+            avm::check_commit(version_or_commit)
+                .map(|()| InstallTarget::Commit(version_or_commit.into()))
+                .or_else(|commit_error| {
+                    Err(anyhow!(
+                        "Not a valid version or commit: {version_error}, {commit_error}"
+                    ))
+                })
+        })
 }
 
 pub fn entry(opts: Cli) -> Result<()> {
     match opts.command {
         Commands::Use { version } => avm::use_version(version),
         Commands::Install {
-            version,
-            is_commit,
+            version_or_commit,
             force,
-        } => avm::install_anchor(parse_install_target(version, is_commit), force),
+        } => avm::install_anchor(version_or_commit, force),
         Commands::Uninstall { version } => avm::uninstall_version(&version),
         Commands::List {} => avm::list_versions(),
         Commands::Update {} => avm::update(),

@@ -88,6 +88,24 @@ pub enum InstallTarget {
     Commit(String),
 }
 
+pub fn check_commit(commit: &str) -> Result<()> {
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .get(format!(
+            "https://api.github.com/repos/coral-xyz/anchor/commits/{commit}"
+        ))
+        .header(USER_AGENT, "avm https://github.com/coral-xyz/anchor")
+        .send()
+        .unwrap();
+    if response.status() != StatusCode::OK {
+        return Err(anyhow!(
+            "Error checking commit {commit}: {}",
+            response.text().unwrap()
+        ));
+    };
+    Ok(())
+}
+
 fn get_anchor_version_from_commit(commit: &str) -> Version {
     // We read the version from cli/Cargo.toml since there is no simpler way to do so
     let client = reqwest::blocking::Client::new();
