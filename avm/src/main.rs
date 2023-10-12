@@ -1,4 +1,5 @@
 use anyhow::{Error, Result};
+use avm::InstallTarget;
 use clap::{Parser, Subcommand};
 use semver::Version;
 
@@ -20,8 +21,10 @@ pub enum Commands {
     },
     #[clap(about = "Install a version of Anchor")]
     Install {
-        #[clap(value_parser = parse_version)]
-        version: Version,
+        /// Anchor version or commit
+        version: String,
+        #[clap(short, long, required = false)]
+        is_commit: bool,
         #[clap(long)]
         /// Flag to force installation even if the version
         /// is already installed
@@ -46,10 +49,23 @@ fn parse_version(version: &str) -> Result<Version, Error> {
         Version::parse(version).map_err(|e| anyhow::anyhow!(e))
     }
 }
+
+fn parse_install_target(version_or_commit: String, is_commit: bool) -> InstallTarget {
+    if is_commit {
+        InstallTarget::Commit(version_or_commit)
+    } else {
+        InstallTarget::Version(parse_version(&version_or_commit).unwrap())
+    }
+}
+
 pub fn entry(opts: Cli) -> Result<()> {
     match opts.command {
         Commands::Use { version } => avm::use_version(version),
-        Commands::Install { version, force } => avm::install_version(&version, force),
+        Commands::Install {
+            version,
+            is_commit,
+            force,
+        } => avm::install_anchor(parse_install_target(version, is_commit), force),
         Commands::Uninstall { version } => avm::uninstall_version(&version),
         Commands::List {} => avm::list_versions(),
         Commands::Update {} => avm::update(),
