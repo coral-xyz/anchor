@@ -1,6 +1,7 @@
-use anchor_lang::prelude::CpiContext;
+use anchor_lang::solana_program::account_info::AccountInfo;
 use anchor_lang::solana_program::pubkey::Pubkey;
-use anchor_lang::{Accounts, Result, ToAccountInfo};
+use anchor_lang::Result;
+use anchor_lang::{context::CpiContext, Accounts};
 
 pub use spl_memo;
 pub use spl_memo::ID;
@@ -12,7 +13,7 @@ pub fn build_memo<'info>(
     let ix = spl_memo::build_memo(memo, &[ctx.accounts.signer.key]);
     solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.signer.to_account_info()],
+        &[ctx.accounts.signer],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
