@@ -53,8 +53,8 @@ fn parse_install_target(version_or_commit: &str) -> Result<InstallTarget, Error>
     parse_version(version_or_commit)
         .map(InstallTarget::Version)
         .or_else(|version_error| {
-            avm::check_commit(version_or_commit)
-                .map(|()| InstallTarget::Commit(version_or_commit.into()))
+            avm::check_and_get_full_commit(version_or_commit)
+                .map(InstallTarget::Commit)
                 .or_else(|commit_error| {
                     Err(anyhow!(
                         "Not a valid version or commit: {version_error}, {commit_error}"

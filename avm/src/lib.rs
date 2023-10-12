@@ -88,7 +88,15 @@ pub enum InstallTarget {
     Commit(String),
 }
 
-pub fn check_commit(commit: &str) -> Result<()> {
+#[derive(Deserialize)]
+struct GetCommitResponse {
+    sha: String,
+}
+
+/// The commit sha provided can be shortened,
+///
+/// returns the full commit sha3 for unique versioning downstream
+pub fn check_and_get_full_commit(commit: &str) -> Result<String> {
     let client = reqwest::blocking::Client::new();
     let response = client
         .get(format!(
@@ -103,7 +111,8 @@ pub fn check_commit(commit: &str) -> Result<()> {
             response.text().unwrap()
         ));
     };
-    Ok(())
+    let get_commit_response: GetCommitResponse = response.json().unwrap();
+    Ok(get_commit_response.sha)
 }
 
 fn get_anchor_version_from_commit(commit: &str) -> Version {
@@ -412,6 +421,22 @@ mod tests {
         assert_eq!(
             version.to_string(),
             "0.28.0-e1afcbf71e0f2e10fae14525934a6a68479167b9"
+        )
+    }
+
+    #[test]
+    fn test_check_and_get_full_commit_when_full_commit() {
+        assert_eq!(
+            check_and_get_full_commit("e1afcbf71e0f2e10fae14525934a6a68479167b9").unwrap(),
+            "e1afcbf71e0f2e10fae14525934a6a68479167b9"
+        )
+    }
+
+    #[test]
+    fn test_check_and_get_full_commit_when_partial_commit() {
+        assert_eq!(
+            check_and_get_full_commit("e1afcbf").unwrap(),
+            "e1afcbf71e0f2e10fae14525934a6a68479167b9"
         )
     }
 }
