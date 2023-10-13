@@ -19,7 +19,7 @@ describe("chat", () => {
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       instructions: [
-        await program.account.chatRoom.createInstruction(chatRoom),
+        await program.account.chatRoom.createInstruction(chatRoom.publicKey),
       ],
       signers: [chatRoom],
     });
