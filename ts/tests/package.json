@@ -13,7 +13,7 @@
     "typescript": "*"
   },
   "dependencies": {
-    "@coral-xyz/anchor": "=0.28.1-beta.2",
+    "@coral-xyz/anchor": "=0.28.1-beta.3",
     "@solana/web3.js": "*"
   }
 }
