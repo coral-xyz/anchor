@@ -178,7 +178,7 @@ describe("Lockup and Registry", () => {
         },
         signers: [vesting, vault],
         instructions: [
-          await lockup.account.vesting.createInstruction(vesting),
+          await lockup.account.vesting.createInstruction(vesting.publicKey),
           ...(await serumCmn.createTokenAccountInstrs(
             provider,
             vault.publicKey,
@@ -323,8 +323,8 @@ describe("Lockup and Registry", () => {
         },
         signers: [registrar, rewardQ],
         instructions: [
-          await registry.account.registrar.createInstruction(registrar),
-          await registry.account.rewardQueue.createInstruction(rewardQ, 8250),
+          await registry.account.registrar.createInstruction(registrar.publicKey),
+          await registry.account.rewardQueue.createInstruction(rewardQ.publicKey, 8250),
         ],
       }
     );
@@ -381,7 +381,7 @@ describe("Lockup and Registry", () => {
         tokenProgram: TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
-      instructions: [await registry.account.member.createInstruction(member)],
+      instructions: [await registry.account.member.createInstruction(member.publicKey)],
     });
 
     const signers = [member, provider.wallet.payer];
@@ -515,7 +515,7 @@ describe("Lockup and Registry", () => {
             mint,
             unlockedVendorSigner
           )),
-          await registry.account.rewardVendor.createInstruction(unlockedVendor),
+          await registry.account.rewardVendor.createInstruction(unlockedVendor.publicKey),
         ],
       }
     );
@@ -634,7 +634,7 @@ describe("Lockup and Registry", () => {
             mint,
             lockedVendorSigner
           )),
-          await registry.account.rewardVendor.createInstruction(lockedVendor),
+          await registry.account.rewardVendor.createInstruction(lockedVendor.publicKey),
         ],
       }
     );
@@ -721,7 +721,7 @@ describe("Lockup and Registry", () => {
       remainingAccounts,
       signers: [vendoredVesting, vendoredVestingVault],
       instructions: [
-        await lockup.account.vesting.createInstruction(vendoredVesting),
+        await lockup.account.vesting.createInstruction(vendoredVesting.publicKey),
         ...(await serumCmn.createTokenAccountInstrs(
           provider,
           vendoredVestingVault.publicKey,
@@ -834,7 +834,7 @@ describe("Lockup and Registry", () => {
       signers: [pendingWithdrawal],
       instructions: [
         await registry.account.pendingWithdrawal.createInstruction(
-          pendingWithdrawal
+          pendingWithdrawal.publicKey
         ),
       ],
     });

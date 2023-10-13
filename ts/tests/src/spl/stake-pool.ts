@@ -57,7 +57,7 @@ export async function stakePoolTests() {
     const stakePoolKp = new Keypair();
     stakePoolPk = stakePoolKp.publicKey;
     const createStakePoolAccountIx =
-      await program.account.stakePool.createInstruction(stakePoolKp, 5000);
+      await program.account.stakePool.createInstruction(stakePoolPk, 5000);
 
     [withdrawAuthorityPk] = await PublicKey.findProgramAddress(
       [stakePoolPk.toBuffer(), Buffer.from("withdraw")],
@@ -74,7 +74,7 @@ export async function stakePoolTests() {
     validatorListPk = validatorListKp.publicKey;
     const createValidatorListAccountIx =
       await program.account.validatorList.createInstruction(
-        validatorListKp,
+        validatorListPk,
         5 + 4 + 73 * VALIDATOR_LIST_COUNT
       );
 

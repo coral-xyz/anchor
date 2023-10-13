@@ -44,7 +44,7 @@ describe("spl-associated-token-coder", () => {
       })
       .preInstructions(
         await Promise.all([
-          tokenProgram.account.mint.createInstruction(mintKeypair),
+          tokenProgram.account.mint.createInstruction(mintKeypair.publicKey),
           tokenProgram.methods
             .initializeMint(mintDecimals, provider.wallet.publicKey, null)
             .accounts({

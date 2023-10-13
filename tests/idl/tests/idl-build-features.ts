@@ -18,7 +18,7 @@ describe("idl-build features", () => {
       .fullPath(outerMyStructArg, someModuleMyStructArg)
       .accounts({ account: kp.publicKey })
       .preInstructions([
-        await program.account.fullPathAccount.createInstruction(kp),
+        await program.account.fullPathAccount.createInstruction(kp.publicKey),
       ])
       .signers([kp])
       .rpc();

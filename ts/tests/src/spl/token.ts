@@ -31,7 +31,7 @@ export async function splTokenTests() {
     const mintKp = new Keypair();
     mintPk = mintKp.publicKey;
     const createMintAccountIx = await program.account.mint.createInstruction(
-      mintKp
+      mintPk
     );
     const initMintIx = await program.methods
       .initializeMint(DECIMALS, kp.publicKey, kp.publicKey)
@@ -48,7 +48,7 @@ export async function splTokenTests() {
     const accountKp = new Keypair();
     tokenAccountPk = accountKp.publicKey;
     const createTokenAccountIx =
-      await program.account.account.createInstruction(accountKp);
+      await program.account.account.createInstruction(tokenAccountPk);
     const initAccountIx = await program.methods
       .initializeAccount()
       .accounts({
@@ -70,7 +70,7 @@ export async function splTokenTests() {
     multisigPk = multisigKp.publicKey;
     const multisig1 = new Keypair();
     const createTokenAccountIx =
-      await program.account.multisig.createInstruction(multisigKp);
+      await program.account.multisig.createInstruction(multisigPk);
     const initAccountIx = await program.methods
       .initializeMultisig(MULTISIG_COUNT)
       .accounts({
@@ -237,7 +237,7 @@ export async function splTokenTests() {
     const mintKp = new Keypair();
     mintPk = mintKp.publicKey;
     const createMintAccountIx = await program.account.mint.createInstruction(
-      mintKp
+      mintPk
     );
     const initMintIx = await program.methods
       .initializeMint2(DECIMALS, kp.publicKey, kp.publicKey)
@@ -253,7 +253,7 @@ export async function splTokenTests() {
     const accountKp = new Keypair();
     tokenAccountPk = accountKp.publicKey;
     const createTokenAccountIx =
-      await program.account.account.createInstruction(accountKp);
+      await program.account.account.createInstruction(tokenAccountPk);
     const initAccountIx = await program.methods
       .initializeAccount2(kp.publicKey)
       .accounts({
@@ -273,7 +273,7 @@ export async function splTokenTests() {
     const accountKp = new Keypair();
     tokenAccountPk = accountKp.publicKey;
     const createTokenAccountIx =
-      await program.account.account.createInstruction(accountKp);
+      await program.account.account.createInstruction(tokenAccountPk);
     const initAccountIx = await program.methods
       .initializeAccount3(kp.publicKey)
       .accounts({
@@ -292,7 +292,7 @@ export async function splTokenTests() {
     const multisigKp = new Keypair();
     const multisig1 = new Keypair();
     const createTokenAccountIx =
-      await program.account.multisig.createInstruction(multisigKp);
+      await program.account.multisig.createInstruction(multisigKp.publicKey);
     const initAccountIx = await program.methods
       .initializeMultisig2(2)
       .accounts({
@@ -333,7 +333,7 @@ export async function splTokenTests() {
   async function initializeImmutableOwner() {
     const accountKp = new Keypair();
     const createAccountIx = await program.account.account.createInstruction(
-      accountKp
+      accountKp.publicKey
     );
     const initImmutableOwnerIx = await program.methods
       .initializeImmutableOwner()

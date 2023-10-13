@@ -30,7 +30,7 @@ describe("multisig", () => {
       },
       instructions: [
         await program.account.multisig.createInstruction(
-          multisig,
+          multisig.publicKey,
           multisigSize
         ),
       ],
@@ -74,7 +74,7 @@ describe("multisig", () => {
       },
       instructions: [
         await program.account.transaction.createInstruction(
-          transaction,
+          transaction.publicKey,
           txSize
         ),
       ],

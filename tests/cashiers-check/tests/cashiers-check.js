@@ -57,7 +57,7 @@ describe("cashiers-check", () => {
       },
       signers: [check, vault],
       instructions: [
-        await program.account.check.createInstruction(check, 300),
+        await program.account.check.createInstruction(check.publicKey, 300),
         ...(await serumCmn.createTokenAccountInstrs(
           program.provider,
           vault.publicKey,

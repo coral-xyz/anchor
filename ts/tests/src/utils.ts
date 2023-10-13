@@ -178,7 +178,7 @@ export async function createMint(ownerPk?: PublicKey) {
   });
   const mintKp = new Keypair();
   const createMintAccountIx = await tokenProgram.account.mint.createInstruction(
-    mintKp
+    mintKp.publicKey
   );
   const initMintIx = await tokenProgram.methods
     .initializeMint(6, ownerPk, null)
@@ -206,7 +206,7 @@ export async function createTokenAccount(
 
   const accountKp = new Keypair();
   const createTokenAccountIx =
-    await tokenProgram.account.account.createInstruction(accountKp);
+    await tokenProgram.account.account.createInstruction(accountKp.publicKey);
   const initAccountIx = await tokenProgram.methods
     .initializeAccount()
     .accounts({

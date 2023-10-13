@@ -66,9 +66,9 @@ export async function tokenLendingTests() {
     const quoteCurrency = NATIVE_MINT_PK;
 
     const lendingMarketKp = new Keypair();
-    // lendingMarketPk = lendingMarketKp.publicKey;
+    lendingMarketPk = lendingMarketKp.publicKey;
     const createLendingMarketAccountIx =
-      await program.account.lendingMarket.createInstruction(lendingMarketKp);
+      await program.account.lendingMarket.createInstruction(lendingMarketPk);
 
     const initLendingMarketIx = await program.methods
       .initLendingMarket(
@@ -105,20 +105,20 @@ export async function tokenLendingTests() {
     const reserveKp = new Keypair();
     reservePk = reserveKp.publicKey;
     const createReserveAccountIx =
-      await program.account.reserve.createInstruction(reserveKp);
+      await program.account.reserve.createInstruction(reservePk);
 
     // Create colleteral mint account
     const colleteralMintKp = new Keypair();
     colleteralMintPk = colleteralMintKp.publicKey;
     const createColleteralMintIx =
-      await tokenProgram.account.mint.createInstruction(colleteralMintKp);
+      await tokenProgram.account.mint.createInstruction(colleteralMintPk);
 
     // Create colleteral supply account
     const colleteralSupplyAccountKp = new Keypair();
     colleteralSupplyAccountPk = colleteralSupplyAccountKp.publicKey;
     const createColleteralSupplyAccountIx =
       await tokenProgram.account.account.createInstruction(
-        colleteralSupplyAccountKp
+        colleteralSupplyAccountPk
       );
 
     // Create user colleteral account
@@ -126,7 +126,7 @@ export async function tokenLendingTests() {
     userColleteralAccountPk = userColleteralAccountKp.publicKey;
     const createUserColleteralAccountIx =
       await tokenProgram.account.account.createInstruction(
-        userColleteralAccountKp
+        userColleteralAccountPk
       );
 
     // Create liquidity supply account
@@ -134,7 +134,7 @@ export async function tokenLendingTests() {
     liquiditySupplyAccountPk = liquiditySupplyAccountKp.publicKey;
     const createLiquiditySupplyAccountIx =
       await tokenProgram.account.account.createInstruction(
-        liquiditySupplyAccountKp
+        liquiditySupplyAccountPk
       );
 
     // Create liquidity fee receiver account
@@ -142,7 +142,7 @@ export async function tokenLendingTests() {
     liquidityFeeReceiverAccountPk = liquitidyFeeReceiverAccountKp.publicKey;
     const createLiquidityFeeReceiverAccountIx =
       await tokenProgram.account.account.createInstruction(
-        liquitidyFeeReceiverAccountKp
+        liquidityFeeReceiverAccountPk
       );
 
     // Send setup transaction

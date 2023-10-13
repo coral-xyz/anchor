@@ -29,7 +29,7 @@ describe("spl-token", () => {
       })
       .signers([mintKeypair])
       .preInstructions([
-        await program.account.mint.createInstruction(mintKeypair),
+        await program.account.mint.createInstruction(mintKeypair.publicKey),
       ])
       .rpc();
     const mintAccount = await program.account.mint.fetch(mintKeypair.publicKey);
@@ -53,7 +53,7 @@ describe("spl-token", () => {
       })
       .signers([aliceTokenKeypair])
       .preInstructions([
-        await program.account.account.createInstruction(aliceTokenKeypair),
+        await program.account.account.createInstruction(aliceTokenKeypair.publicKey),
       ])
       .rpc();
     const token = await program.account.account.fetch(
@@ -98,7 +98,7 @@ describe("spl-token", () => {
       })
       .signers([bobTokenKeypair])
       .preInstructions([
-        await program.account.account.createInstruction(bobTokenKeypair),
+        await program.account.account.createInstruction(bobTokenKeypair.publicKey),
       ])
       .rpc();
   });

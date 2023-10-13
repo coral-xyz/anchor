@@ -203,7 +203,7 @@ describe("errors", () => {
           },
           // this initializes the account.owner variable with Pubkey::default
           instructions: [
-            await program.account.hasOneAccount.createInstruction(account),
+            await program.account.hasOneAccount.createInstruction(account.publicKey),
           ],
           signers: [account],
         });

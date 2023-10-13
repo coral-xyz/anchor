@@ -54,7 +54,7 @@ export async function binaryOraclePairTests() {
     const poolKp = new Keypair();
     poolPk = poolKp.publicKey;
     const createPoolAccountIx = await program.account.pool.createInstruction(
-      poolKp
+      poolPk
     );
     // Accounts that are expected to be initialized
     poolDepositMintPk = await createMint();
@@ -64,18 +64,18 @@ export async function binaryOraclePairTests() {
     poolDepositTokenAccountPk = depositTokenAccountKp.publicKey;
     const createDepositTokenAccountIx =
       await tokenProgram.account.account.createInstruction(
-        depositTokenAccountKp
+        poolDepositTokenAccountPk
       );
 
     const tokenPassMintKp = new Keypair();
     tokenPassMintPk = tokenPassMintKp.publicKey;
     const createTokenPassMintIx =
-      await tokenProgram.account.mint.createInstruction(tokenPassMintKp);
+      await tokenProgram.account.mint.createInstruction(tokenPassMintPk);
 
     const tokenFailMintKp = new Keypair();
     tokenFailMintPk = tokenFailMintKp.publicKey;
     const createTokenFailMintIx =
-      await tokenProgram.account.mint.createInstruction(tokenFailMintKp);
+      await tokenProgram.account.mint.createInstruction(tokenFailMintPk);
 
     const [authorityPk, bump] = await PublicKey.findProgramAddress(
       [poolPk.toBuffer()],

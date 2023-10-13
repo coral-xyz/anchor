@@ -16,7 +16,7 @@ describe("tictactoe", () => {
       },
       signers: [dashboard],
       instructions: [
-        await program.account.dashboard.createInstruction(dashboard),
+        await program.account.dashboard.createInstruction(dashboard.publicKey),
       ],
     });
 
@@ -32,7 +32,7 @@ describe("tictactoe", () => {
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [game],
-      instructions: [await program.account.game.createInstruction(game)],
+      instructions: [await program.account.game.createInstruction(game.publicKey)],
     });
 
     console.log("transaction: ", tx);

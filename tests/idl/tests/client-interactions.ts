@@ -21,7 +21,7 @@ describe("Client interactions", () => {
       .int(i8, i16, i32, i64, i128)
       .accounts({ account: kp.publicKey })
       .signers([kp])
-      .preInstructions([await program.account.intAccount.createInstruction(kp)])
+      .preInstructions([await program.account.intAccount.createInstruction(kp.publicKey)])
       .rpc();
 
     const account = await program.account.intAccount.fetch(kp.publicKey);
@@ -46,7 +46,7 @@ describe("Client interactions", () => {
       .accounts({ account: kp.publicKey })
       .signers([kp])
       .preInstructions([
-        await program.account.unsignedIntAccount.createInstruction(kp),
+        await program.account.unsignedIntAccount.createInstruction(kp.publicKey),
       ])
       .rpc();
 
@@ -70,7 +70,7 @@ describe("Client interactions", () => {
         .accounts({ account: kp.publicKey })
         .signers([kp])
         .preInstructions([
-          await program.account.enumAccount.createInstruction(kp),
+          await program.account.enumAccount.createInstruction(kp.publicKey),
         ])
         .rpc();
       return await program.account.enumAccount.fetch(kp.publicKey);
@@ -135,7 +135,7 @@ describe("Client interactions", () => {
       .typeAlias(typeAliasU8, typeAliasU8Array, typeAliasStruct)
       .accounts({ account: kp.publicKey })
       .signers([kp])
-      .preInstructions([await program.account.intAccount.createInstruction(kp)])
+      .preInstructions([await program.account.intAccount.createInstruction(kp.publicKey)])
       .rpc();
 
     const account = await program.account.typeAliasAccount.fetch(kp.publicKey);

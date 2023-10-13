@@ -21,8 +21,8 @@ describe("composite", () => {
       },
       signers: [dummyA, dummyB],
       instructions: [
-        await program.account.dummyA.createInstruction(dummyA),
-        await program.account.dummyB.createInstruction(dummyB),
+        await program.account.dummyA.createInstruction(dummyA.publicKey),
+        await program.account.dummyB.createInstruction(dummyB.publicKey),
       ],
     });
 

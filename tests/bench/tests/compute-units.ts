@@ -121,7 +121,7 @@ describe("Compute units", () => {
     const mintKp = new anchor.web3.Keypair();
     mintPk = mintKp.publicKey;
     const createMintIx = await tokenProgram.account.mint.createInstruction(
-      mintKp
+      mintPk
     );
     const initMintIx = await tokenProgram.methods
       .initializeMint2(0, owner, null)
@@ -133,7 +133,7 @@ describe("Compute units", () => {
     const tokenKp = new anchor.web3.Keypair();
     tokenPk = tokenKp.publicKey;
     const createTokenIx = await tokenProgram.account.account.createInstruction(
-      tokenKp
+      tokenPk
     );
     const initTokenIx = await tokenProgram.methods
       .initializeAccount3(owner)

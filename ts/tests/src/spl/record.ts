@@ -28,7 +28,7 @@ export async function recordTests() {
     const recordKp = new Keypair();
     recordPk = recordKp.publicKey;
     const createRecordAccountIx =
-      await program.account.recordData.createInstruction(recordKp);
+      await program.account.recordData.createInstruction(recordPk);
     const initIx = await program.methods
       .initialize()
       .accounts({

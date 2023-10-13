@@ -68,7 +68,7 @@ export async function tokenSwapTests() {
     const poolMintKp = new Keypair();
     poolMintPk = poolMintKp.publicKey;
     const createPoolMintAccountIx =
-      await tokenProgram.account.mint.createInstruction(poolMintKp);
+      await tokenProgram.account.mint.createInstruction(poolMintPk);
     const initPoolMintAccountIx = await tokenProgram.methods
       .initializeMint(2, swapAuthorityPk, null)
       .accounts({
@@ -80,7 +80,7 @@ export async function tokenSwapTests() {
     const poolTokenAccountKp = new Keypair();
     poolTokenAccountPk = poolTokenAccountKp.publicKey;
     const createPoolTokenAccountIx =
-      await tokenProgram.account.account.createInstruction(poolTokenAccountKp);
+      await tokenProgram.account.account.createInstruction(poolTokenAccountPk);
     const initPoolTokenAccountIx = await tokenProgram.methods
       .initializeAccount()
       .accounts({
@@ -94,7 +94,7 @@ export async function tokenSwapTests() {
     const feeAccountKp = new Keypair();
     feeAccountPk = feeAccountKp.publicKey;
     const createFeeTokenAccountIx =
-      await tokenProgram.account.account.createInstruction(feeAccountKp);
+      await tokenProgram.account.account.createInstruction(feeAccountPk);
     const initFeeTokenAccountIx = await tokenProgram.methods
       .initializeAccount()
       .accounts({
@@ -108,7 +108,7 @@ export async function tokenSwapTests() {
     const mintAKp = new Keypair();
     mintAPk = mintAKp.publicKey;
     const createMintAIx = await tokenProgram.account.mint.createInstruction(
-      mintAKp
+      mintAPk
     );
     const initMintAIx = await tokenProgram.methods
       .initializeMint(2, kp.publicKey, null)
@@ -118,7 +118,7 @@ export async function tokenSwapTests() {
     const tokenAccountA = new Keypair();
     tokenAccountAPk = tokenAccountA.publicKey;
     const createTokenAccountAIx =
-      await tokenProgram.account.account.createInstruction(tokenAccountA);
+      await tokenProgram.account.account.createInstruction(tokenAccountAPk);
     const initTokenAccountAIx = await tokenProgram.methods
       .initializeAccount()
       .accounts({
@@ -140,7 +140,7 @@ export async function tokenSwapTests() {
     const mintBKp = new Keypair();
     mintBPk = mintBKp.publicKey;
     const createMintBIx = await tokenProgram.account.mint.createInstruction(
-      mintBKp
+      mintBPk
     );
     const initMintBIx = await tokenProgram.methods
       .initializeMint(2, kp.publicKey, null)
@@ -150,7 +150,7 @@ export async function tokenSwapTests() {
     const tokenAccountB = new Keypair();
     tokenAccountBPk = tokenAccountB.publicKey;
     const createTokenAccountBIx =
-      await tokenProgram.account.account.createInstruction(tokenAccountB);
+      await tokenProgram.account.account.createInstruction(tokenAccountBPk);
     const initTokenAccountBIx = await tokenProgram.methods
       .initializeAccount()
       .accounts({
@@ -171,7 +171,7 @@ export async function tokenSwapTests() {
       .instruction();
 
     const createTokenSwapAccountIx =
-      await program.account.swap.createInstruction(swapKp);
+      await program.account.swap.createInstruction(swapPk);
     const calculator = new Uint8Array(32).fill(0);
     // calculator[0] = 8;
     const initTokenSwapIx = await program.methods

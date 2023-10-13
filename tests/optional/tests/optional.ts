@@ -60,7 +60,7 @@ describe("Optional", () => {
   ): Promise<[web3.Keypair, web3.TransactionInstruction]> => {
     const keypair = requiredKeypair ?? new web3.Keypair();
     const createIx = await program.account.dataAccount.createInstruction(
-      keypair
+      keypair.publicKey
     );
     return [keypair, createIx];
   };
