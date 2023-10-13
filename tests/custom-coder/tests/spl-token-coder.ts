@@ -53,7 +53,9 @@ describe("spl-token", () => {
       })
       .signers([aliceTokenKeypair])
       .preInstructions([
-        await program.account.account.createInstruction(aliceTokenKeypair.publicKey),
+        await program.account.account.createInstruction(
+          aliceTokenKeypair.publicKey
+        ),
       ])
       .rpc();
     const token = await program.account.account.fetch(
@@ -98,7 +100,9 @@ describe("spl-token", () => {
       })
       .signers([bobTokenKeypair])
       .preInstructions([
-        await program.account.account.createInstruction(bobTokenKeypair.publicKey),
+        await program.account.account.createInstruction(
+          bobTokenKeypair.publicKey
+        ),
       ])
       .rpc();
   });

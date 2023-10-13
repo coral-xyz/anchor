@@ -19,7 +19,9 @@ describe("zero-copy", () => {
         authority: program.provider.wallet.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
-      instructions: [await program.account.foo.createInstruction(foo.publicKey)],
+      instructions: [
+        await program.account.foo.createInstruction(foo.publicKey),
+      ],
       signers: [foo],
     });
     const account = await program.account.foo.fetch(foo.publicKey);

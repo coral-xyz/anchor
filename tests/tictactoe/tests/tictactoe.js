@@ -32,7 +32,9 @@ describe("tictactoe", () => {
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [game],
-      instructions: [await program.account.game.createInstruction(game.publicKey)],
+      instructions: [
+        await program.account.game.createInstruction(game.publicKey),
+      ],
     });
 
     console.log("transaction: ", tx);

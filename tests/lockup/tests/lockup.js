@@ -323,8 +323,13 @@ describe("Lockup and Registry", () => {
         },
         signers: [registrar, rewardQ],
         instructions: [
-          await registry.account.registrar.createInstruction(registrar.publicKey),
-          await registry.account.rewardQueue.createInstruction(rewardQ.publicKey, 8250),
+          await registry.account.registrar.createInstruction(
+            registrar.publicKey
+          ),
+          await registry.account.rewardQueue.createInstruction(
+            rewardQ.publicKey,
+            8250
+          ),
         ],
       }
     );
@@ -381,7 +386,9 @@ describe("Lockup and Registry", () => {
         tokenProgram: TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
-      instructions: [await registry.account.member.createInstruction(member.publicKey)],
+      instructions: [
+        await registry.account.member.createInstruction(member.publicKey),
+      ],
     });
 
     const signers = [member, provider.wallet.payer];

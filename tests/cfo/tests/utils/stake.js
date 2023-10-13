@@ -79,7 +79,10 @@ async function setupStakePool(mint, god) {
       signers: [registrar, rewardQ],
       instructions: [
         await registry.account.registrar.createInstruction(registrar.publicKey),
-        await registry.account.rewardQueue.createInstruction(rewardQ.publicKey, 8250),
+        await registry.account.rewardQueue.createInstruction(
+          rewardQ.publicKey,
+          8250
+        ),
       ],
     }
   );

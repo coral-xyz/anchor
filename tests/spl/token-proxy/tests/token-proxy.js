@@ -266,7 +266,9 @@ async function getMintInfo(provider, mintAddr) {
 async function createMint(tokenProgram) {
   const mint = anchor.web3.Keypair.generate();
   const authority = tokenProgram.provider.wallet.publicKey;
-  const createMintIx = await tokenProgram.account.mint.createInstruction(mint.publicKey);
+  const createMintIx = await tokenProgram.account.mint.createInstruction(
+    mint.publicKey
+  );
   const initMintIx = await tokenProgram.methods
     .initializeMint2(0, authority, null)
     .accounts({ mint: mint.publicKey })

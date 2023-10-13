@@ -48,7 +48,9 @@ const miscTest = (
           .initialize(udata, idata)
           .accounts({ data: data.publicKey })
           .signers([data])
-          .preInstructions([await program.account.data.createInstruction(data.publicKey)])
+          .preInstructions([
+            await program.account.data.createInstruction(data.publicKey),
+          ])
           .rpc();
         const dataAccount = await program.account.data.fetch(data.publicKey);
         assert(dataAccount.udata.eq(udata));
@@ -155,7 +157,9 @@ const miscTest = (
         await program.methods
           .initialize(new anchor.BN(10), new anchor.BN(10))
           .accounts({ data: data.publicKey })
-          .preInstructions([await program.account.data.createInstruction(data.publicKey)])
+          .preInstructions([
+            await program.account.data.createInstruction(data.publicKey),
+          ])
           .signers([data])
           .rpc();
 
@@ -205,7 +209,9 @@ const miscTest = (
         await program.methods
           .initialize(new anchor.BN(10), new anchor.BN(10))
           .accounts({ data: data.publicKey })
-          .preInstructions([await program.account.data.createInstruction(data.publicKey)])
+          .preInstructions([
+            await program.account.data.createInstruction(data.publicKey),
+          ])
           .signers([data])
           .rpc();
 
@@ -1342,7 +1348,9 @@ const miscTest = (
         },
         signers: [data],
         instructions: [
-          await program.account.dataConstArraySize.createInstruction(data.publicKey),
+          await program.account.dataConstArraySize.createInstruction(
+            data.publicKey
+          ),
         ],
       });
       const dataAccount = await program.account.dataConstArraySize.fetch(
@@ -1360,7 +1368,9 @@ const miscTest = (
         },
         signers: [data],
         instructions: [
-          await program.account.dataConstArraySize.createInstruction(data.publicKey),
+          await program.account.dataConstArraySize.createInstruction(
+            data.publicKey
+          ),
         ],
       });
       const dataAccount = await program.account.dataConstArraySize.fetch(
