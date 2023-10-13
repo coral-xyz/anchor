@@ -349,12 +349,12 @@ export class AccountClient<
    * Returns an instruction for creating this account.
    */
   async createInstruction(
-    signer: Signer,
+    signerPubkey: PublicKey,
     sizeOverride?: number
   ): Promise<TransactionInstruction> {
-    const size = this.size;
+    const size = sizeOverride ?? this.size;
 
-    if (this._provider.publicKey === undefined) {
+    if (!this._provider.publicKey) {
       throw new Error(
         "This function requires the Provider interface implementor to have a 'publicKey' field."
       );
@@ -362,12 +362,10 @@ export class AccountClient<
 
     return SystemProgram.createAccount({
       fromPubkey: this._provider.publicKey,
-      newAccountPubkey: signer.publicKey,
-      space: sizeOverride ?? size,
+      newAccountPubkey: signerPubkey,
+      space: size,
       lamports:
-        await this._provider.connection.getMinimumBalanceForRentExemption(
-          sizeOverride ?? size
-        ),
+        await this._provider.connection.getMinimumBalanceForRentExemption(size),
       programId: this._programId,
     });
   }

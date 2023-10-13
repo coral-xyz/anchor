@@ -55,6 +55,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - ts: Remove `base64-js` dependency ([#2635](https://github.com/coral-xyz/anchor/pull/2635)).
 - syn: `IdlTypeDefinitionTy` enum has a new variant `Alias` ([#2637](https://github.com/coral-xyz/anchor/pull/2637)).
 - cli, client, lang, spl: Solana `1.14` is no longer supported, minimum required Solana version is `1.16.0` ([#2645](https://github.com/coral-xyz/anchor/pull/2645)).
+- ts: Change Provider.publicKey type into `PublicKey | null` instead of `PublicKey | undefined`, `AccountClient.createInstruction(signer: Signer, size?: number)` into `AccountClient.createInstruction(signerPubkey: PublicKey, size?: number)` ([#2665](https://github.com/coral-xyz/anchor/issues/2665)).
 
 ## [0.28.0] - 2023-06-09
 
