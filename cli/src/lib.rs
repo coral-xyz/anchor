@@ -472,6 +472,118 @@ pub fn entry(opts: Opts) -> Result<()> {
     result
 }
 
+/// Override the toolchain from `Anchor.toml`.
+///
+/// Returns the previous versions to restore back to.
+fn override_toolchain(cfg_override: &ConfigOverride) -> Result<ToolchainConfig> {
+    let mut previous_versions = ToolchainConfig::default();
+
+    let cfg = Config::discover(cfg_override)?;
+    if let Some(cfg) = cfg {
+        fn get_current_version(cmd_name: &str) -> Result<String> {
+            let output: std::process::Output = std::process::Command::new(cmd_name)
+                .arg("--version")
+                .output()?;
+            let output_version = std::str::from_utf8(&output.stdout)?;
+            let version = Regex::new(r"(\d+\.\d+\.\S+)")
+                .unwrap()
+                .captures_iter(output_version)
+                .next()
+                .unwrap()
+                .get(0)
+                .unwrap()
+                .as_str()
+                .to_string();
+
+            Ok(version)
+        }
+
+        if let Some(solana_version) = &cfg.toolchain.solana_version {
+            let current_version = get_current_version("solana")?;
+            if solana_version != &current_version {
+                // We are overriding with `solana-install` command instead of using the binaries
+                // from `~/.local/share/solana/install/releases` because we use multiple Solana
+                // binaries in various commands.
+                let exit_status = std::process::Command::new("solana-install")
+                    .arg("init")
+                    .arg(solana_version)
+                    .stderr(Stdio::null())
+                    .stdout(Stdio::null())
+                    .spawn()?
+                    .wait()?;
+
+                if !exit_status.success() {
+                    println!(
+                        "Failed to override `solana` version to {solana_version}, \
+                    using {current_version} instead"
+                    );
+                } else {
+                    previous_versions.solana_version = Some(current_version);
+                }
+            }
+        }
+
+        // Anchor version override should be handled last
+        if let Some(anchor_version) = &cfg.toolchain.anchor_version {
+            let current_version = VERSION;
+            if anchor_version != current_version {
+                let binary_path = home_dir()
+                    .unwrap()
+                    .join(".avm")
+                    .join("bin")
+                    .join(format!("anchor-{anchor_version}"));
+
+                if !binary_path.exists() {
+                    println!(
+                        "`anchor` {anchor_version} is not installed with `avm`. Installing...\n"
+                    );
+
+                    let exit_status = std::process::Command::new("avm")
+                        .arg("install")
+                        .arg(anchor_version)
+                        .spawn()?
+                        .wait()?;
+
+                    if !exit_status.success() {
+                        println!(
+                            "Failed to install `anchor` {anchor_version}, \
+                            using {current_version} instead"
+                        );
+
+                        return Ok(previous_versions);
+                    }
+                }
+
+                let exit_code = std::process::Command::new(binary_path)
+                    .args(std::env::args_os().skip(1))
+                    .spawn()?
+                    .wait()?
+                    .code()
+                    .unwrap_or(1);
+                restore_toolchain(&previous_versions)?;
+                std::process::exit(exit_code);
+            }
+        }
+    }
+
+    Ok(previous_versions)
+}
+
+/// Restore toolchain to how it was before the command was run.
+fn restore_toolchain(toolchain_config: &ToolchainConfig) -> Result<()> {
+    if let Some(solana_version) = &toolchain_config.solana_version {
+        std::process::Command::new("solana-install")
+            .arg("init")
+            .arg(solana_version)
+            .stderr(Stdio::null())
+            .stdout(Stdio::null())
+            .spawn()?
+            .wait()?;
+    }
+
+    Ok(())
+}
+
 fn process_command(opts: Opts) -> Result<()> {
     match opts.command {
         Command::Init {
@@ -632,118 +744,6 @@ fn process_command(opts: Opts) -> Result<()> {
             idl,
         } => account(&opts.cfg_override, account_type, address, idl),
     }
-}
-
-/// Override the toolchain from `Anchor.toml`.
-///
-/// Returns previous versions.
-fn override_toolchain(cfg_override: &ConfigOverride) -> Result<ToolchainConfig> {
-    let mut previous_versions = ToolchainConfig::default();
-
-    let cfg = Config::discover(cfg_override)?;
-    if let Some(cfg) = cfg {
-        fn get_installed_version(cmd_name: &str) -> Result<String> {
-            let output: std::process::Output = std::process::Command::new(cmd_name)
-                .arg("--version")
-                .output()?;
-            let output_version = std::str::from_utf8(&output.stdout)?;
-            let version = Regex::new(r"(\d+\.\d+\.\S+)")
-                .unwrap()
-                .captures_iter(output_version)
-                .next()
-                .unwrap()
-                .get(0)
-                .unwrap()
-                .as_str()
-                .to_string();
-
-            Ok(version)
-        }
-
-        if let Some(solana_version) = &cfg.toolchain.solana_version {
-            let current_version = get_installed_version("solana")?;
-            if solana_version != &current_version {
-                // We are overriding with `solana-install` command instead of using the binaries
-                // from `~/.local/share/solana/install/releases` because we use multiple Solana
-                // binaries in various commands.
-                let exit_status = std::process::Command::new("solana-install")
-                    .arg("init")
-                    .arg(solana_version)
-                    .stderr(Stdio::null())
-                    .stdout(Stdio::null())
-                    .spawn()?
-                    .wait()?;
-
-                if !exit_status.success() {
-                    println!(
-                        "Failed to override `solana` version to {solana_version}, \
-                    using {current_version} instead"
-                    );
-                } else {
-                    previous_versions.solana_version = Some(current_version);
-                }
-            }
-        }
-
-        // Anchor version override should be handled last
-        if let Some(anchor_version) = &cfg.toolchain.anchor_version {
-            let current_version = VERSION;
-            if anchor_version != current_version {
-                let binary_path = home_dir()
-                    .unwrap()
-                    .join(".avm")
-                    .join("bin")
-                    .join(format!("anchor-{anchor_version}"));
-
-                if !binary_path.exists() {
-                    println!(
-                        "`anchor` {anchor_version} is not installed with `avm`. Installing...\n"
-                    );
-
-                    let exit_status = std::process::Command::new("avm")
-                        .arg("install")
-                        .arg(anchor_version)
-                        .spawn()?
-                        .wait()?;
-
-                    if !exit_status.success() {
-                        println!(
-                            "Failed to install `anchor` {anchor_version}, \
-                            using {current_version} instead"
-                        );
-
-                        return Ok(previous_versions);
-                    }
-                }
-
-                let exit_code = std::process::Command::new(binary_path)
-                    .args(std::env::args_os().skip(1))
-                    .spawn()?
-                    .wait()?
-                    .code()
-                    .unwrap_or(1);
-                restore_toolchain(&previous_versions)?;
-                std::process::exit(exit_code);
-            }
-        }
-    }
-
-    Ok(previous_versions)
-}
-
-/// Restore toolchain to how it was before the command was run.
-fn restore_toolchain(toolchain_config: &ToolchainConfig) -> Result<()> {
-    if let Some(solana_version) = &toolchain_config.solana_version {
-        std::process::Command::new("solana-install")
-            .arg("init")
-            .arg(solana_version)
-            .stderr(Stdio::null())
-            .stdout(Stdio::null())
-            .spawn()?
-            .wait()?;
-    }
-
-    Ok(())
 }
 
 fn init(
