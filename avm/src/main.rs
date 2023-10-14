@@ -43,9 +43,9 @@ pub enum Commands {
 // If `latest` is passed use the latest available version.
 fn parse_version(version: &str) -> Result<Version, Error> {
     if version == "latest" {
-        Ok(avm::get_latest_version())
+        avm::get_latest_version()
     } else {
-        Version::parse(version).map_err(|e| anyhow::anyhow!(e))
+        Version::parse(version).map_err(|e| anyhow!(e))
     }
 }
 
@@ -67,7 +67,7 @@ pub fn entry(opts: Cli) -> Result<()> {
         Commands::Install {
             version_or_commit,
             force,
-        } => avm::install_anchor(version_or_commit, force),
+        } => avm::install_version(version_or_commit, force),
         Commands::Uninstall { version } => avm::uninstall_version(&version),
         Commands::List {} => avm::list_versions(),
         Commands::Update {} => avm::update(),
