@@ -82,6 +82,12 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     ID
                 }
             }
+
+            impl anchor_lang::Owner for #name {
+                fn owner() -> Pubkey {
+                    ID
+                }
+            }
         }
     }
 }
