@@ -51,7 +51,14 @@ fn parse_version(version: &str) -> Result<Version, Error> {
 
 fn parse_install_target(version_or_commit: &str) -> Result<InstallTarget, Error> {
     parse_version(version_or_commit)
-        .map(InstallTarget::Version)
+        .map(|version| {
+            if version.pre.is_empty() {
+                InstallTarget::Version(version)
+            } else {
+                // Allow `avm install 0.28.0-6cf200493a307c01487c7b492b4893e0d6f6cb23`
+                InstallTarget::Commit(version.pre.to_string())
+            }
+        })
         .or_else(|version_error| {
             avm::check_and_get_full_commit(version_or_commit)
                 .map(InstallTarget::Commit)
