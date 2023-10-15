@@ -7,6 +7,7 @@ mod cpi;
 mod dispatch;
 mod entry;
 mod handlers;
+mod idl;
 mod instruction;
 
 pub fn generate(program: &Program) -> proc_macro2::TokenStream {
@@ -20,16 +21,33 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
     let cpi = cpi::generate(program);
     let accounts = accounts::generate(program);
 
-    quote! {
-        // TODO: remove once we allow segmented paths in `Accounts` structs.
-        use self::#mod_name::*;
+    #[allow(clippy::let_and_return)]
+    let ret = {
+        quote! {
+            // TODO: remove once we allow segmented paths in `Accounts` structs.
+            use self::#mod_name::*;
 
-        #entry
-        #dispatch
-        #handlers
-        #user_defined_program
-        #instruction
-        #cpi
-        #accounts
-    }
+            #entry
+            #dispatch
+            #handlers
+            #user_defined_program
+            #instruction
+            #cpi
+            #accounts
+        }
+    };
+
+    #[cfg(feature = "idl-build")]
+    {
+        let no_docs = crate::idl::build::get_no_docs();
+        let idl_build = crate::idl::build::gen_idl_print_function_for_program(program, no_docs);
+
+        return quote! {
+            #ret
+            #idl_build
+        };
+    };
+
+    #[allow(unreachable_code)]
+    ret
 }

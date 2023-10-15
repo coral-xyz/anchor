@@ -8,6 +8,8 @@
   "workspaces": [
     "anchor-cli-account",
     "anchor-cli-idl",
+    "auction-house",
+    "bench",
     "cashiers-check",
     "cfo",
     "chat",
@@ -17,6 +19,7 @@
     "escrow",
     "events",
     "floats",
+    "idl",
     "ido-pool",
     "interface",
     "lockup",
@@ -28,7 +31,9 @@
     "relations-derivation",
     "pyth",
     "realloc",
+    "spl/metadata",
     "spl/token-proxy",
+    "spl/token-wrapper",
     "swap",
     "system-accounts",
     "sysvars",
@@ -40,27 +45,22 @@
     "cpi-returns",
     "multiple-suites",
     "multiple-suites-run-single",
-    "bpf-upgradeable-state"
+    "bpf-upgradeable-state",
+    "solang"
   ],
   "dependencies": {
-    "@coral-xyz/anchor": "file:../ts/packages/anchor",
     "@project-serum/common": "^0.0.1-beta.3",
     "@project-serum/serum": "^0.13.60",
-    "@coral-xyz/spl-associated-token-account": "file:../ts/packages/spl-associated-token-account",
-    "@coral-xyz/spl-token": "file:../ts/packages/spl-token",
     "@solana/spl-token": "^0.1.8",
     "@solana/web3.js": "^1.68.0"
   },
-  "resolutions": {
-    "@coral-xyz/anchor/@solana/web3.js": "^1.68.0"
-  },
   "devDependencies": {
+    "@types/bn.js": "^5.1.1",
     "@types/chai": "^4.3.0",
     "@types/mocha": "^9.1.0",
     "@types/node": "^14.14.37",
-    "@types/bn.js": "^5.1.1",
     "chai": "^4.3.4",
-    "mocha": "^10.0.0",
+    "mocha": "9.2.2",
     "prettier": "^2.5.1",
     "ts-mocha": "^10.0.0",
     "tsc": "^2.0.4",

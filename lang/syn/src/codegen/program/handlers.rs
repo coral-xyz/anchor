@@ -1,4 +1,5 @@
 use crate::codegen::program::common::*;
+use crate::program_codegen::idl::idl_accounts_and_functions;
 use crate::Program;
 use heck::CamelCase;
 use quote::{quote, ToTokens};
@@ -8,6 +9,9 @@ use quote::{quote, ToTokens};
 // so.
 pub fn generate(program: &Program) -> proc_macro2::TokenStream {
     let program_name = &program.name;
+    // A constant token stream that stores the accounts and functions, required to live
+    // inside the target program in order to get the program ID.
+    let idl_accounts_and_functions = idl_accounts_and_functions();
     let non_inlined_idl: proc_macro2::TokenStream = {
         quote! {
             // Entry for all IDL related instructions. Use the "no-idl" feature
@@ -16,7 +20,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             // on chain.
             #[inline(never)]
             #[cfg(not(feature = "no-idl"))]
-            pub fn __idl_dispatch(program_id: &Pubkey, accounts: &[AccountInfo], idl_ix_data: &[u8]) -> anchor_lang::Result<()> {
+            pub fn __idl_dispatch<'info>(program_id: &Pubkey, accounts: &'info [AccountInfo<'info>], idl_ix_data: &[u8]) -> anchor_lang::Result<()> {
                 let mut accounts = accounts;
                 let mut data: &[u8] = idl_ix_data;
 
@@ -25,42 +29,58 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
                 match ix {
                     anchor_lang::idl::IdlInstruction::Create { data_len } => {
-                        let mut bumps = std::collections::BTreeMap::new();
+                        let mut bumps = <IdlCreateAccounts as anchor_lang::Bumps>::Bumps::default();
                         let mut reallocs = std::collections::BTreeSet::new();
                         let mut accounts =
-                            anchor_lang::idl::IdlCreateAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                            IdlCreateAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
                         __idl_create_account(program_id, &mut accounts, data_len)?;
                         accounts.exit(program_id)?;
                     },
-                    anchor_lang::idl::IdlInstruction::CreateBuffer => {
-                        let mut bumps = std::collections::BTreeMap::new();
+                    anchor_lang::idl::IdlInstruction::Resize { data_len } => {
+                        let mut bumps = <IdlResizeAccount as anchor_lang::Bumps>::Bumps::default();
                         let mut reallocs = std::collections::BTreeSet::new();
                         let mut accounts =
-                            anchor_lang::idl::IdlCreateBuffer::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                            IdlResizeAccount::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                        __idl_resize_account(program_id, &mut accounts, data_len)?;
+                        accounts.exit(program_id)?;
+                    },
+                    anchor_lang::idl::IdlInstruction::Close => {
+                        let mut bumps = <IdlCloseAccount as anchor_lang::Bumps>::Bumps::default();
+                        let mut reallocs = std::collections::BTreeSet::new();
+                        let mut accounts =
+                            IdlCloseAccount::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                        __idl_close_account(program_id, &mut accounts)?;
+                        accounts.exit(program_id)?;
+                    },
+                    anchor_lang::idl::IdlInstruction::CreateBuffer => {
+                        let mut bumps = <IdlCreateBuffer as anchor_lang::Bumps>::Bumps::default();
+                        let mut reallocs = std::collections::BTreeSet::new();
+                        let mut accounts =
+                            IdlCreateBuffer::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
                         __idl_create_buffer(program_id, &mut accounts)?;
                         accounts.exit(program_id)?;
                     },
                     anchor_lang::idl::IdlInstruction::Write { data } => {
-                        let mut bumps = std::collections::BTreeMap::new();
+                        let mut bumps = <IdlAccounts as anchor_lang::Bumps>::Bumps::default();
                         let mut reallocs = std::collections::BTreeSet::new();
                         let mut accounts =
-                            anchor_lang::idl::IdlAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                            IdlAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
                         __idl_write(program_id, &mut accounts, data)?;
                         accounts.exit(program_id)?;
                     },
                     anchor_lang::idl::IdlInstruction::SetAuthority { new_authority } => {
-                        let mut bumps = std::collections::BTreeMap::new();
+                        let mut bumps = <IdlAccounts as anchor_lang::Bumps>::Bumps::default();
                         let mut reallocs = std::collections::BTreeSet::new();
                         let mut accounts =
-                            anchor_lang::idl::IdlAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                            IdlAccounts::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
                         __idl_set_authority(program_id, &mut accounts, new_authority)?;
                         accounts.exit(program_id)?;
                     },
                     anchor_lang::idl::IdlInstruction::SetBuffer => {
-                        let mut bumps = std::collections::BTreeMap::new();
+                        let mut bumps = <IdlSetBuffer as anchor_lang::Bumps>::Bumps::default();
                         let mut reallocs = std::collections::BTreeSet::new();
                         let mut accounts =
-                            anchor_lang::idl::IdlSetBuffer::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
+                            IdlSetBuffer::try_accounts(program_id, &mut accounts, &[], &mut bumps, &mut reallocs)?;
                         __idl_set_buffer(program_id, &mut accounts)?;
                         accounts.exit(program_id)?;
                     },
@@ -68,131 +88,10 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 Ok(())
             }
 
-            #[inline(never)]
-            #[cfg(feature = "no-idl")]
-            pub fn __idl_dispatch(program_id: &Pubkey, accounts: &[AccountInfo], idl_ix_data: &[u8]) -> anchor_lang::Result<()> {
-                Err(anchor_lang::error::ErrorCode::IdlInstructionStub.into())
-            }
-
-            // One time IDL account initializer. Will faill on subsequent
-            // invocations.
-            #[inline(never)]
-            pub fn __idl_create_account(
-                program_id: &Pubkey,
-                accounts: &mut anchor_lang::idl::IdlCreateAccounts,
-                data_len: u64,
-            ) -> anchor_lang::Result<()> {
-                #[cfg(not(feature = "no-log-ix-name"))]
-                anchor_lang::prelude::msg!("Instruction: IdlCreateAccount");
-
-                if program_id != accounts.program.key {
-                    return Err(anchor_lang::error::ErrorCode::IdlInstructionInvalidProgram.into());
-                }
-                // Create the IDL's account.
-                let from = accounts.from.key;
-                let (base, nonce) = Pubkey::find_program_address(&[], program_id);
-                let seed = anchor_lang::idl::IdlAccount::seed();
-                let owner = accounts.program.key;
-                let to = Pubkey::create_with_seed(&base, seed, owner).unwrap();
-                // Space: account discriminator || authority pubkey || vec len || vec data
-                let space = 8 + 32 + 4 + data_len as usize;
-                let rent = Rent::get()?;
-                let lamports = rent.minimum_balance(space);
-                let seeds = &[&[nonce][..]];
-                let ix = anchor_lang::solana_program::system_instruction::create_account_with_seed(
-                    from,
-                    &to,
-                    &base,
-                    seed,
-                    lamports,
-                    space as u64,
-                    owner,
-                );
-                anchor_lang::solana_program::program::invoke_signed(
-                    &ix,
-                    &[
-                        accounts.from.clone(),
-                        accounts.to.clone(),
-                        accounts.base.clone(),
-                        accounts.system_program.clone(),
-                    ],
-                    &[seeds],
-                )?;
-
-                // Deserialize the newly created account.
-                let mut idl_account = {
-                    let mut account_data =  accounts.to.try_borrow_data()?;
-                    let mut account_data_slice: &[u8] = &account_data;
-                    anchor_lang::idl::IdlAccount::try_deserialize_unchecked(
-                        &mut account_data_slice,
-                    )?
-                };
-
-                // Set the authority.
-                idl_account.authority = *accounts.from.key;
-
-                // Store the new account data.
-                let mut data = accounts.to.try_borrow_mut_data()?;
-                let dst: &mut [u8] = &mut data;
-                let mut cursor = std::io::Cursor::new(dst);
-                idl_account.try_serialize(&mut cursor)?;
-
-                Ok(())
-            }
-
-            #[inline(never)]
-            pub fn __idl_create_buffer(
-                program_id: &Pubkey,
-                accounts: &mut anchor_lang::idl::IdlCreateBuffer,
-            ) -> anchor_lang::Result<()> {
-                #[cfg(not(feature = "no-log-ix-name"))]
-                anchor_lang::prelude::msg!("Instruction: IdlCreateBuffer");
-
-                let mut buffer = &mut accounts.buffer;
-                buffer.authority = *accounts.authority.key;
-                Ok(())
-            }
-
-            #[inline(never)]
-            pub fn __idl_write(
-                program_id: &Pubkey,
-                accounts: &mut anchor_lang::idl::IdlAccounts,
-                idl_data: Vec<u8>,
-            ) -> anchor_lang::Result<()> {
-                #[cfg(not(feature = "no-log-ix-name"))]
-                anchor_lang::prelude::msg!("Instruction: IdlWrite");
-
-                let mut idl = &mut accounts.idl;
-                idl.data.extend(idl_data);
-                Ok(())
-            }
-
-            #[inline(never)]
-            pub fn __idl_set_authority(
-                program_id: &Pubkey,
-                accounts: &mut anchor_lang::idl::IdlAccounts,
-                new_authority: Pubkey,
-            ) -> anchor_lang::Result<()> {
-                #[cfg(not(feature = "no-log-ix-name"))]
-                anchor_lang::prelude::msg!("Instruction: IdlSetAuthority");
-
-                accounts.idl.authority = new_authority;
-                Ok(())
-            }
-
-            #[inline(never)]
-            pub fn __idl_set_buffer(
-                program_id: &Pubkey,
-                accounts: &mut anchor_lang::idl::IdlSetBuffer,
-            ) -> anchor_lang::Result<()> {
-                #[cfg(not(feature = "no-log-ix-name"))]
-                anchor_lang::prelude::msg!("Instruction: IdlSetBuffer");
-
-                accounts.idl.data = accounts.buffer.data.clone();
-                Ok(())
-            }
         }
     };
+
+    let event_cpi_mod = generate_event_cpi_mod();
 
     let non_inlined_handlers: Vec<proc_macro2::TokenStream> = program
         .ixs
@@ -203,7 +102,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             let ix_method_name = &ix.raw_method.sig.ident;
             let anchor = &ix.anchor_ident;
             let variant_arm = generate_ix_variant(ix.raw_method.sig.ident.to_string(), &ix.args);
-            let ix_name_log = format!("Instruction: {}", ix_name);
+            let ix_name_log = format!("Instruction: {ix_name}");
             let ret_type = &ix.returns.ty.to_token_stream();
             let cfgs = &ix.cfgs;
             let maybe_set_return_data = match ret_type.to_string().as_str() {
@@ -215,30 +114,30 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             quote! {
                 #(#cfgs)*
                 #[inline(never)]
-                pub fn #ix_method_name(
-                    program_id: &Pubkey,
-                    accounts: &[AccountInfo],
-                    ix_data: &[u8],
+                pub fn #ix_method_name<'info>(
+                    __program_id: &Pubkey,
+                    __accounts: &'info[AccountInfo<'info>],
+                    __ix_data: &[u8],
                 ) -> anchor_lang::Result<()> {
                     #[cfg(not(feature = "no-log-ix-name"))]
                     anchor_lang::prelude::msg!(#ix_name_log);
 
                     // Deserialize data.
-                    let ix = instruction::#ix_name::deserialize(&mut &ix_data[..])
+                    let ix = instruction::#ix_name::deserialize(&mut &__ix_data[..])
                         .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotDeserialize)?;
                     let instruction::#variant_arm = ix;
 
                     // Bump collector.
-                    let mut __bumps = std::collections::BTreeMap::new();
+                    let mut __bumps = <#anchor as anchor_lang::Bumps>::Bumps::default();
 
                     let mut __reallocs = std::collections::BTreeSet::new();
 
                     // Deserialize accounts.
-                    let mut remaining_accounts: &[AccountInfo] = accounts;
-                    let mut accounts = #anchor::try_accounts(
-                        program_id,
-                        &mut remaining_accounts,
-                        ix_data,
+                    let mut __remaining_accounts: &[AccountInfo] = __accounts;
+                    let mut __accounts = #anchor::try_accounts(
+                        __program_id,
+                        &mut __remaining_accounts,
+                        __ix_data,
                         &mut __bumps,
                         &mut __reallocs,
                     )?;
@@ -246,9 +145,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     // Invoke user defined handler.
                     let result = #program_name::#ix_method_name(
                         anchor_lang::context::Context::new(
-                            program_id,
-                            &mut accounts,
-                            remaining_accounts,
+                            __program_id,
+                            &mut __accounts,
+                            __remaining_accounts,
                             __bumps,
                         ),
                         #(#ix_arg_names),*
@@ -258,7 +157,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     #maybe_set_return_data
 
                     // Exit routine.
-                    accounts.exit(program_id)
+                    __accounts.exit(__program_id)
                 }
             }
         })
@@ -275,9 +174,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 use super::*;
 
                 #non_inlined_idl
+                #idl_accounts_and_functions
             }
-
-
 
             /// __global mod defines wrapped handlers for global instructions.
             pub mod __global {
@@ -285,6 +183,8 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 
                 #(#non_inlined_handlers)*
             }
+
+            #event_cpi_mod
         }
     }
 }
@@ -292,4 +192,50 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
 fn generate_ix_variant_name(name: String) -> proc_macro2::TokenStream {
     let n = name.to_camel_case();
     n.parse().unwrap()
+}
+
+/// Generate the event module based on whether the `event-cpi` feature is enabled.
+fn generate_event_cpi_mod() -> proc_macro2::TokenStream {
+    #[cfg(feature = "event-cpi")]
+    {
+        let authority = crate::parser::accounts::event_cpi::EventAuthority::get();
+        let authority_name = authority.name;
+        let authority_seeds = authority.seeds;
+
+        quote! {
+            /// __events mod defines handler for self-cpi based event logging
+            pub mod __events {
+                use super::*;
+
+                #[inline(never)]
+                pub fn __event_dispatch(
+                    program_id: &Pubkey,
+                    accounts: &[AccountInfo],
+                    event_data: &[u8],
+                ) -> anchor_lang::Result<()> {
+                    let given_event_authority = next_account_info(&mut accounts.iter())?;
+                    if !given_event_authority.is_signer {
+                        return Err(anchor_lang::error::Error::from(
+                            anchor_lang::error::ErrorCode::ConstraintSigner,
+                        )
+                        .with_account_name(#authority_name));
+                    }
+
+                    let (expected_event_authority, _) =
+                        Pubkey::find_program_address(&[#authority_seeds], &program_id);
+                    if given_event_authority.key() != expected_event_authority {
+                        return Err(anchor_lang::error::Error::from(
+                            anchor_lang::error::ErrorCode::ConstraintSeeds,
+                        )
+                        .with_account_name(#authority_name)
+                        .with_pubkeys((given_event_authority.key(), expected_event_authority)));
+                    }
+
+                    Ok(())
+                }
+            }
+        }
+    }
+    #[cfg(not(feature = "event-cpi"))]
+    quote! {}
 }

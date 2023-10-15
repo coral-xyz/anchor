@@ -7,6 +7,7 @@ use syn::{GenericParam, PredicateLifetime, WhereClause, WherePredicate};
 
 mod __client_accounts;
 mod __cpi_client_accounts;
+mod bumps;
 mod constraints;
 mod exit;
 mod to_account_infos;
@@ -18,19 +19,36 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     let impl_to_account_infos = to_account_infos::generate(accs);
     let impl_to_account_metas = to_account_metas::generate(accs);
     let impl_exit = exit::generate(accs);
+    let bumps_struct = bumps::generate(accs);
 
     let __client_accounts_mod = __client_accounts::generate(accs);
     let __cpi_client_accounts_mod = __cpi_client_accounts::generate(accs);
 
-    quote! {
+    let ret = quote! {
         #impl_try_accounts
         #impl_to_account_infos
         #impl_to_account_metas
         #impl_exit
+        #bumps_struct
 
         #__client_accounts_mod
         #__cpi_client_accounts_mod
+    };
+
+    #[cfg(feature = "idl-build")]
+    {
+        #![allow(warnings)]
+        let no_docs = crate::idl::build::get_no_docs();
+        let idl_build_impl =
+            crate::idl::build::gen_idl_build_impl_for_accounts_struct(&accs, no_docs);
+        return quote! {
+            #ret
+            #idl_build_impl
+        };
     }
+
+    #[allow(unreachable_code)]
+    ret
 }
 
 fn generics(accs: &AccountsStruct) -> ParsedGenerics {

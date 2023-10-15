@@ -30,12 +30,6 @@ pub struct DataI8 {
 }
 size!(DataI8, 1);
 
-#[account]
-pub struct DataI16 {
-    pub data: i16, // 2
-}
-size!(DataI16, 2);
-
 #[account(zero_copy)]
 pub struct DataZeroCopy {
     pub data: u16,    // 2

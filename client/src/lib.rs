@@ -6,26 +6,42 @@ use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::{AccountDeserialize, Discriminator, InstructionData, ToAccountMetas};
+use futures::{Future, StreamExt};
 use regex::Regex;
 use solana_account_decoder::UiAccountEncoding;
-use solana_client::client_error::ClientError as SolanaClientError;
-use solana_client::pubsub_client::{PubsubClient, PubsubClientError, PubsubClientSubscription};
-use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::{
     RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig,
     RpcTransactionLogsConfig, RpcTransactionLogsFilter,
 };
 use solana_client::rpc_filter::{Memcmp, RpcFilterType};
-use solana_client::rpc_response::{Response as RpcResponse, RpcLogsResponse};
+use solana_client::{
+    client_error::ClientError as SolanaClientError,
+    nonblocking::{
+        pubsub_client::{PubsubClient, PubsubClientError},
+        rpc_client::RpcClient as AsyncRpcClient,
+    },
+    rpc_client::RpcClient,
+    rpc_response::{Response as RpcResponse, RpcLogsResponse},
+};
 use solana_sdk::account::Account;
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::signature::{Signature, Signer};
 use solana_sdk::transaction::Transaction;
-use std::convert::Into;
 use std::iter::Map;
-use std::rc::Rc;
+use std::marker::PhantomData;
+use std::ops::Deref;
+use std::pin::Pin;
+use std::sync::Arc;
 use std::vec::IntoIter;
 use thiserror::Error;
+use tokio::{
+    runtime::Handle,
+    sync::{
+        mpsc::{unbounded_channel, UnboundedReceiver},
+        RwLock,
+    },
+    task::JoinHandle,
+};
 
 pub use anchor_lang;
 pub use cluster::Cluster;
@@ -34,21 +50,24 @@ pub use solana_sdk;
 
 mod cluster;
 
+#[cfg(not(feature = "async"))]
+mod blocking;
+#[cfg(feature = "async")]
+mod nonblocking;
+
 const PROGRAM_LOG: &str = "Program log: ";
 const PROGRAM_DATA: &str = "Program data: ";
 
-/// EventHandle unsubscribes from a program event stream on drop.
-pub type EventHandle = PubsubClientSubscription<RpcResponse<RpcLogsResponse>>;
-
+type UnsubscribeFn = Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send>;
 /// Client defines the base configuration for building RPC clients to
 /// communicate with Anchor programs running on a Solana cluster. It's
 /// primary use is to build a `Program` client via the `program` method.
-pub struct Client {
-    cfg: Config,
+pub struct Client<C> {
+    cfg: Config<C>,
 }
 
-impl Client {
-    pub fn new(cluster: Cluster, payer: Rc<dyn Signer>) -> Self {
+impl<C: Clone + Deref<Target = impl Signer>> Client<C> {
+    pub fn new(cluster: Cluster, payer: C) -> Self {
         Self {
             cfg: Config {
                 cluster,
@@ -58,11 +77,7 @@ impl Client {
         }
     }
 
-    pub fn new_with_options(
-        cluster: Cluster,
-        payer: Rc<dyn Signer>,
-        options: CommitmentConfig,
-    ) -> Self {
+    pub fn new_with_options(cluster: Cluster, payer: C, options: CommitmentConfig) -> Self {
         Self {
             cfg: Config {
                 cluster,
@@ -72,73 +87,135 @@ impl Client {
         }
     }
 
-    pub fn program(&self, program_id: Pubkey) -> Program {
-        Program {
-            program_id,
-            cfg: Config {
-                cluster: self.cfg.cluster.clone(),
-                options: self.cfg.options,
-                payer: self.cfg.payer.clone(),
-            },
-        }
+    pub fn program(&self, program_id: Pubkey) -> Result<Program<C>, ClientError> {
+        let cfg = Config {
+            cluster: self.cfg.cluster.clone(),
+            options: self.cfg.options,
+            payer: self.cfg.payer.clone(),
+        };
+
+        Program::new(program_id, cfg)
+    }
+}
+
+/// Auxiliary data structure to align the types of the Solana CLI utils with Anchor client.
+/// Client<C> implementation requires <C: Clone + Deref<Target = impl Signer>> which does not comply with Box<dyn Signer>
+/// that's used when loaded Signer from keypair file. This struct is used to wrap the usage.
+pub struct DynSigner(pub Arc<dyn Signer>);
+
+impl Signer for DynSigner {
+    fn pubkey(&self) -> Pubkey {
+        self.0.pubkey()
+    }
+
+    fn try_pubkey(&self) -> Result<Pubkey, solana_sdk::signer::SignerError> {
+        self.0.try_pubkey()
+    }
+
+    fn sign_message(&self, message: &[u8]) -> solana_sdk::signature::Signature {
+        self.0.sign_message(message)
+    }
+
+    fn try_sign_message(
+        &self,
+        message: &[u8],
+    ) -> Result<solana_sdk::signature::Signature, solana_sdk::signer::SignerError> {
+        self.0.try_sign_message(message)
+    }
+
+    fn is_interactive(&self) -> bool {
+        self.0.is_interactive()
     }
 }
 
 // Internal configuration for a client.
 #[derive(Debug)]
-struct Config {
+pub struct Config<C> {
     cluster: Cluster,
-    payer: Rc<dyn Signer>,
+    payer: C,
     options: Option<CommitmentConfig>,
 }
 
-/// Program is the primary client handle to be used to build and send requests.
-#[derive(Debug)]
-pub struct Program {
-    program_id: Pubkey,
-    cfg: Config,
+pub struct EventUnsubscriber<'a> {
+    handle: JoinHandle<Result<(), ClientError>>,
+    rx: UnboundedReceiver<UnsubscribeFn>,
+    #[cfg(not(feature = "async"))]
+    runtime_handle: &'a Handle,
+    _lifetime_marker: PhantomData<&'a Handle>,
 }
 
-impl Program {
+impl<'a> EventUnsubscriber<'a> {
+    async fn unsubscribe_internal(mut self) {
+        if let Some(unsubscribe) = self.rx.recv().await {
+            unsubscribe().await;
+        }
+
+        let _ = self.handle.await;
+    }
+}
+
+/// Program is the primary client handle to be used to build and send requests.
+pub struct Program<C> {
+    program_id: Pubkey,
+    cfg: Config<C>,
+    sub_client: Arc<RwLock<Option<PubsubClient>>>,
+    #[cfg(not(feature = "async"))]
+    rt: tokio::runtime::Runtime,
+}
+
+impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
     pub fn payer(&self) -> Pubkey {
         self.cfg.payer.pubkey()
     }
 
     /// Returns a request builder.
-    pub fn request(&self) -> RequestBuilder {
+    pub fn request(&self) -> RequestBuilder<C> {
         RequestBuilder::from(
             self.program_id,
             self.cfg.cluster.url(),
             self.cfg.payer.clone(),
             self.cfg.options,
+            #[cfg(not(feature = "async"))]
+            self.rt.handle(),
         )
     }
 
-    /// Returns the account at the given address.
-    pub fn account<T: AccountDeserialize>(&self, address: Pubkey) -> Result<T, ClientError> {
-        let rpc_client = RpcClient::new_with_commitment(
+    pub fn id(&self) -> Pubkey {
+        self.program_id
+    }
+
+    pub fn rpc(&self) -> RpcClient {
+        RpcClient::new_with_commitment(
+            self.cfg.cluster.url().to_string(),
+            self.cfg.options.unwrap_or_default(),
+        )
+    }
+
+    pub fn async_rpc(&self) -> AsyncRpcClient {
+        AsyncRpcClient::new_with_commitment(
+            self.cfg.cluster.url().to_string(),
+            self.cfg.options.unwrap_or_default(),
+        )
+    }
+
+    async fn account_internal<T: AccountDeserialize>(
+        &self,
+        address: Pubkey,
+    ) -> Result<T, ClientError> {
+        let rpc_client = AsyncRpcClient::new_with_commitment(
             self.cfg.cluster.url().to_string(),
             self.cfg.options.unwrap_or_default(),
         );
         let account = rpc_client
-            .get_account_with_commitment(&address, CommitmentConfig::processed())?
+            .get_account_with_commitment(&address, CommitmentConfig::processed())
+            .await?
             .value
             .ok_or(ClientError::AccountNotFound)?;
         let mut data: &[u8] = &account.data;
         T::try_deserialize(&mut data).map_err(Into::into)
     }
 
-    /// Returns all program accounts of the given type matching the given filters
-    pub fn accounts<T: AccountDeserialize + Discriminator>(
-        &self,
-        filters: Vec<RpcFilterType>,
-    ) -> Result<Vec<(Pubkey, T)>, ClientError> {
-        self.accounts_lazy(filters)?.collect()
-    }
-
-    /// Returns all program accounts of the given type matching the given filters as an iterator
-    /// Deserialization is executed lazily
-    pub fn accounts_lazy<T: AccountDeserialize + Discriminator>(
+    async fn accounts_lazy_internal<T: AccountDeserialize + Discriminator>(
         &self,
         filters: Vec<RpcFilterType>,
     ) -> Result<ProgramAccountsIterator<T>, ClientError> {
@@ -154,8 +231,9 @@ impl Program {
         };
         Ok(ProgramAccountsIterator {
             inner: self
-                .rpc()
-                .get_program_accounts_with_config(&self.id(), config)?
+                .async_rpc()
+                .get_program_accounts_with_config(&self.id(), config)
+                .await?
                 .into_iter()
                 .map(|(key, account)| {
                     Ok((key, T::try_deserialize(&mut (&account.data as &[u8]))?))
@@ -163,79 +241,65 @@ impl Program {
         })
     }
 
-    pub fn rpc(&self) -> RpcClient {
-        RpcClient::new_with_commitment(
-            self.cfg.cluster.url().to_string(),
-            self.cfg.options.unwrap_or_default(),
-        )
+    async fn init_sub_client_if_needed(&self) -> Result<(), ClientError> {
+        let lock = &self.sub_client;
+        let mut client = lock.write().await;
+
+        if client.is_none() {
+            let sub_client = PubsubClient::new(self.cfg.cluster.ws_url()).await?;
+            *client = Some(sub_client);
+        }
+
+        Ok(())
     }
 
-    pub fn id(&self) -> Pubkey {
-        self.program_id
-    }
-
-    pub fn on<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
+    async fn on_internal<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
         &self,
         f: impl Fn(&EventContext, T) + Send + 'static,
-    ) -> Result<EventHandle, ClientError> {
-        let addresses = vec![self.program_id.to_string()];
-        let filter = RpcTransactionLogsFilter::Mentions(addresses);
-        let ws_url = self.cfg.cluster.ws_url().to_string();
-        let cfg = RpcTransactionLogsConfig {
+    ) -> Result<
+        (
+            JoinHandle<Result<(), ClientError>>,
+            UnboundedReceiver<UnsubscribeFn>,
+        ),
+        ClientError,
+    > {
+        self.init_sub_client_if_needed().await?;
+        let (tx, rx) = unbounded_channel::<_>();
+        let config = RpcTransactionLogsConfig {
             commitment: self.cfg.options,
         };
-        let self_program_str = self.program_id.to_string();
-        let (client, receiver) = PubsubClient::logs_subscribe(&ws_url, filter, cfg)?;
-        std::thread::spawn(move || {
-            loop {
-                match receiver.recv() {
-                    Ok(logs) => {
-                        let ctx = EventContext {
-                            signature: logs.value.signature.parse().unwrap(),
-                            slot: logs.context.slot,
-                        };
-                        let mut logs = &logs.value.logs[..];
-                        if !logs.is_empty() {
-                            if let Ok(mut execution) = Execution::new(&mut logs) {
-                                for l in logs {
-                                    // Parse the log.
-                                    let (event, new_program, did_pop) = {
-                                        if self_program_str == execution.program() {
-                                            handle_program_log(&self_program_str, l).unwrap_or_else(
-                                                |e| {
-                                                    println!("Unable to parse log: {}", e);
-                                                    std::process::exit(1);
-                                                },
-                                            )
-                                        } else {
-                                            let (program, did_pop) =
-                                                handle_system_log(&self_program_str, l);
-                                            (None, program, did_pop)
-                                        }
-                                    };
-                                    // Emit the event.
-                                    if let Some(e) = event {
-                                        f(&ctx, e);
-                                    }
-                                    // Switch program context on CPI.
-                                    if let Some(new_program) = new_program {
-                                        execution.push(new_program);
-                                    }
-                                    // Program returned.
-                                    if did_pop {
-                                        execution.pop();
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Err(_err) => {
-                        return;
+        let program_id_str = self.program_id.to_string();
+        let filter = RpcTransactionLogsFilter::Mentions(vec![program_id_str.clone()]);
+
+        let lock = Arc::clone(&self.sub_client);
+
+        let handle = tokio::spawn(async move {
+            if let Some(ref client) = *lock.read().await {
+                let (mut notifications, unsubscribe) =
+                    client.logs_subscribe(filter, config).await?;
+
+                tx.send(unsubscribe).map_err(|e| {
+                    ClientError::SolanaClientPubsubError(PubsubClientError::RequestFailed {
+                        message: "Unsubscribe failed".to_string(),
+                        reason: e.to_string(),
+                    })
+                })?;
+
+                while let Some(logs) = notifications.next().await {
+                    let ctx = EventContext {
+                        signature: logs.value.signature.parse().unwrap(),
+                        slot: logs.context.slot,
+                    };
+                    let events = parse_logs_response(logs, &program_id_str);
+                    for e in events {
+                        f(&ctx, e);
                     }
                 }
             }
+            Ok::<(), ClientError>(())
         });
-        Ok(client)
+
+        Ok((handle, rx))
     }
 }
 
@@ -297,7 +361,7 @@ fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
 }
 
 fn handle_system_log(this_program_str: &str, log: &str) -> (Option<String>, bool) {
-    if log.starts_with(&format!("Program {} log:", this_program_str)) {
+    if log.starts_with(&format!("Program {this_program_str} log:")) {
         (Some(this_program_str.to_string()), false)
     } else if log.contains("invoke") {
         (Some("cpi".to_string()), false) // Any string will do.
@@ -369,43 +433,29 @@ pub enum ClientError {
     SolanaClientPubsubError(#[from] PubsubClientError),
     #[error("Unable to parse log: {0}")]
     LogParseError(String),
+    #[error(transparent)]
+    IOError(#[from] std::io::Error),
 }
 
 /// `RequestBuilder` provides a builder interface to create and send
 /// transactions to a cluster.
-pub struct RequestBuilder<'a> {
+pub struct RequestBuilder<'a, C> {
     cluster: String,
     program_id: Pubkey,
     accounts: Vec<AccountMeta>,
     options: CommitmentConfig,
     instructions: Vec<Instruction>,
-    payer: Rc<dyn Signer>,
+    payer: C,
     // Serialized instruction data for the target RPC.
     instruction_data: Option<Vec<u8>>,
     signers: Vec<&'a dyn Signer>,
+    #[cfg(not(feature = "async"))]
+    handle: &'a Handle,
 }
 
-impl<'a> RequestBuilder<'a> {
-    pub fn from(
-        program_id: Pubkey,
-        cluster: &str,
-        payer: Rc<dyn Signer>,
-        options: Option<CommitmentConfig>,
-    ) -> Self {
-        Self {
-            program_id,
-            payer,
-            cluster: cluster.to_string(),
-            accounts: Vec::new(),
-            options: options.unwrap_or_default(),
-            instructions: Vec::new(),
-            instruction_data: None,
-            signers: Vec::new(),
-        }
-    }
-
+impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
     #[must_use]
-    pub fn payer(mut self, payer: Rc<dyn Signer>) -> Self {
+    pub fn payer(mut self, payer: C) -> Self {
         self.payer = payer;
         self
     }
@@ -484,36 +534,39 @@ impl<'a> RequestBuilder<'a> {
         Ok(tx)
     }
 
-    pub fn signed_transaction(&self) -> Result<Transaction, ClientError> {
-        let latest_hash =
-            RpcClient::new_with_commitment(&self.cluster, self.options).get_latest_blockhash()?;
-        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
-
-        Ok(tx)
-    }
-
     pub fn transaction(&self) -> Result<Transaction, ClientError> {
         let instructions = &self.instructions;
         let tx = Transaction::new_with_payer(instructions, Some(&self.payer.pubkey()));
         Ok(tx)
     }
 
-    pub fn send(self) -> Result<Signature, ClientError> {
-        let rpc_client = RpcClient::new_with_commitment(&self.cluster, self.options);
-        let latest_hash = rpc_client.get_latest_blockhash()?;
+    async fn signed_transaction_internal(&self) -> Result<Transaction, ClientError> {
+        let latest_hash =
+            AsyncRpcClient::new_with_commitment(self.cluster.to_owned(), self.options)
+                .get_latest_blockhash()
+                .await?;
+        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
+
+        Ok(tx)
+    }
+
+    async fn send_internal(&self) -> Result<Signature, ClientError> {
+        let rpc_client = AsyncRpcClient::new_with_commitment(self.cluster.to_owned(), self.options);
+        let latest_hash = rpc_client.get_latest_blockhash().await?;
         let tx = self.signed_transaction_with_blockhash(latest_hash)?;
 
         rpc_client
             .send_and_confirm_transaction(&tx)
+            .await
             .map_err(Into::into)
     }
 
-    pub fn send_with_spinner_and_config(
-        self,
+    async fn send_with_spinner_and_config_internal(
+        &self,
         config: RpcSendTransactionConfig,
     ) -> Result<Signature, ClientError> {
-        let rpc_client = RpcClient::new_with_commitment(&self.cluster, self.options);
-        let latest_hash = rpc_client.get_latest_blockhash()?;
+        let rpc_client = AsyncRpcClient::new_with_commitment(self.cluster.to_owned(), self.options);
+        let latest_hash = rpc_client.get_latest_blockhash().await?;
         let tx = self.signed_transaction_with_blockhash(latest_hash)?;
 
         rpc_client
@@ -522,8 +575,48 @@ impl<'a> RequestBuilder<'a> {
                 rpc_client.commitment(),
                 config,
             )
+            .await
             .map_err(Into::into)
     }
+}
+
+fn parse_logs_response<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
+    logs: RpcResponse<RpcLogsResponse>,
+    program_id_str: &str,
+) -> Vec<T> {
+    let mut logs = &logs.value.logs[..];
+    let mut events: Vec<T> = Vec::new();
+    if !logs.is_empty() {
+        if let Ok(mut execution) = Execution::new(&mut logs) {
+            for l in logs {
+                // Parse the log.
+                let (event, new_program, did_pop) = {
+                    if program_id_str == execution.program() {
+                        handle_program_log(program_id_str, l).unwrap_or_else(|e| {
+                            println!("Unable to parse log: {e}");
+                            std::process::exit(1);
+                        })
+                    } else {
+                        let (program, did_pop) = handle_system_log(program_id_str, l);
+                        (None, program, did_pop)
+                    }
+                };
+                // Emit the event.
+                if let Some(e) = event {
+                    events.push(e);
+                }
+                // Switch program context on CPI.
+                if let Some(new_program) = new_program {
+                    execution.push(new_program);
+                }
+                // Program returned.
+                if did_pop {
+                    execution.pop();
+                }
+            }
+        }
+    }
+    events
 }
 
 #[cfg(test)]

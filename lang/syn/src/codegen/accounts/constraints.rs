@@ -1,4 +1,3 @@
-use proc_macro2_diagnostics::SpanDiagnosticExt;
 use quote::quote;
 use std::collections::HashSet;
 use syn::Expr;
@@ -57,9 +56,8 @@ pub fn generate(f: &Field, accs: &AccountsStruct) -> proc_macro2::TokenStream {
 pub fn generate_composite(f: &CompositeField) -> proc_macro2::TokenStream {
     let checks: Vec<proc_macro2::TokenStream> = linearize(&f.constraints)
         .iter()
-        .filter_map(|c| match c {
-            Constraint::Raw(_) => Some(c),
-            Constraint::Literal(_) => Some(c),
+        .map(|c| match c {
+            Constraint::Raw(_) => c,
             _ => panic!("Invariant violation: composite constraints can only be raw or literals"),
         })
         .map(|c| generate_constraint_composite(f, c))
@@ -78,7 +76,6 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
         mutable,
         signer,
         has_one,
-        literal,
         raw,
         owner,
         rent_exempt,
@@ -116,7 +113,6 @@ pub fn linearize(c_group: &ConstraintGroup) -> Vec<Constraint> {
         constraints.push(Constraint::Signer(c));
     }
     constraints.append(&mut has_one.into_iter().map(Constraint::HasOne).collect());
-    constraints.append(&mut literal.into_iter().map(Constraint::Literal).collect());
     constraints.append(&mut raw.into_iter().map(Constraint::Raw).collect());
     if let Some(c) = owner {
         constraints.push(Constraint::Owner(c));
@@ -153,7 +149,6 @@ fn generate_constraint(
         Constraint::Mut(c) => generate_constraint_mut(f, c),
         Constraint::HasOne(c) => generate_constraint_has_one(f, c, accs),
         Constraint::Signer(c) => generate_constraint_signer(f, c),
-        Constraint::Literal(c) => generate_constraint_literal(&f.ident, c),
         Constraint::Raw(c) => generate_constraint_raw(&f.ident, c),
         Constraint::Owner(c) => generate_constraint_owner(f, c),
         Constraint::RentExempt(c) => generate_constraint_rent_exempt(f, c),
@@ -171,7 +166,6 @@ fn generate_constraint(
 fn generate_constraint_composite(f: &CompositeField, c: &Constraint) -> proc_macro2::TokenStream {
     match c {
         Constraint::Raw(c) => generate_constraint_raw(&f.ident, c),
-        Constraint::Literal(c) => generate_constraint_literal(&f.ident, c),
         _ => panic!("Invariant violation"),
     }
 }
@@ -245,9 +239,10 @@ pub fn generate_constraint_close(
 
 pub fn generate_constraint_mut(f: &Field, c: &ConstraintMut) -> proc_macro2::TokenStream {
     let ident = &f.ident;
+    let account_ref = generate_account_ref(f);
     let error = generate_custom_error(ident, &c.error, quote! { ConstraintMut }, &None);
     quote! {
-        if !#ident.to_account_info().is_writable {
+        if !#account_ref.is_writable {
             return #error;
         }
     }
@@ -261,7 +256,6 @@ pub fn generate_constraint_has_one(
     let target = &c.join_target;
     let ident = &f.ident;
     let field = match &f.ty {
-        Ty::Loader(_) => quote! {#ident.load()?},
         Ty::AccountLoader(_) => quote! {#ident.load()?},
         _ => quote! {#ident},
     };
@@ -288,41 +282,12 @@ pub fn generate_constraint_has_one(
 
 pub fn generate_constraint_signer(f: &Field, c: &ConstraintSigner) -> proc_macro2::TokenStream {
     let ident = &f.ident;
-    let info = match f.ty {
-        Ty::AccountInfo => quote! { #ident },
-        Ty::ProgramAccount(_) => quote! { #ident.to_account_info() },
-        Ty::Account(_) => quote! { #ident.to_account_info() },
-        Ty::Loader(_) => quote! { #ident.to_account_info() },
-        Ty::AccountLoader(_) => quote! { #ident.to_account_info() },
-        Ty::CpiAccount(_) => quote! { #ident.to_account_info() },
-        _ => panic!("Invalid syntax: signer cannot be specified."),
-    };
+    let account_ref = generate_account_ref(f);
+
     let error = generate_custom_error(ident, &c.error, quote! { ConstraintSigner }, &None);
     quote! {
-        if !#info.is_signer {
+        if !#account_ref.is_signer {
             return #error;
-        }
-    }
-}
-
-pub fn generate_constraint_literal(
-    ident: &Ident,
-    c: &ConstraintLiteral,
-) -> proc_macro2::TokenStream {
-    let name_str = ident.to_string();
-    let lit: proc_macro2::TokenStream = {
-        let lit = &c.lit;
-        let constraint = lit.value().replace('\"', "");
-        let message = format!(
-            "Deprecated. Should be used with constraint: #[account(constraint = {})]",
-            constraint,
-        );
-        lit.span().warning(message).emit_as_item_tokens();
-        constraint.parse().unwrap()
-    };
-    quote! {
-        if !(#lit) {
-            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::Deprecated).with_account_name(#name_str));
         }
     }
 }
@@ -434,7 +399,7 @@ fn generate_constraint_realloc(
                 **__field_info.lamports.borrow_mut() = __field_info.lamports().checked_sub(__lamport_amt).unwrap();
             }
 
-            #field.to_account_info().realloc(#new_space, #zero)?;
+            __field_info.realloc(#new_space, #zero)?;
             __reallocs.insert(#field.key());
         }
     }
@@ -460,6 +425,8 @@ fn generate_constraint_init_group(
     // Convert from account info to account context wrapper type.
     let from_account_info = f.from_account_info(Some(&c.kind), true);
     let from_account_info_unchecked = f.from_account_info(Some(&c.kind), false);
+
+    let account_ref = generate_account_ref(f);
 
     // PDA bump seeds.
     let (find_pda, seeds_with_bump) = match &c.seeds {
@@ -511,9 +478,9 @@ fn generate_constraint_init_group(
                 quote! {
                     let (__pda_address, __bump) = Pubkey::find_program_address(
                         &[#maybe_seeds_plus_comma],
-                        program_id,
+                        __program_id,
                     );
-                    __bumps.insert(#name_str.to_string(), __bump);
+                    __bumps.#field = __bump;
                     #validate_pda
                 },
                 quote! {
@@ -528,18 +495,26 @@ fn generate_constraint_init_group(
 
     // Optional check idents
     let system_program = &quote! {system_program};
-    let token_program = &quote! {token_program};
     let associated_token_program = &quote! {associated_token_program};
     let rent = &quote! {rent};
 
     let mut check_scope = OptionalCheckScope::new_with_field(accs, field);
     match &c.kind {
-        InitKind::Token { owner, mint } => {
+        InitKind::Token {
+            owner,
+            mint,
+            token_program,
+        } => {
+            let token_program = match token_program {
+                Some(t) => t.to_token_stream(),
+                None => quote! {token_program},
+            };
+
             let owner_optional_check = check_scope.generate_check(owner);
             let mint_optional_check = check_scope.generate_check(mint);
 
             let system_program_optional_check = check_scope.generate_check(system_program);
-            let token_program_optional_check = check_scope.generate_check(token_program);
+            let token_program_optional_check = check_scope.generate_check(&token_program);
             let rent_optional_check = check_scope.generate_check(rent);
 
             let optional_checks = quote! {
@@ -552,10 +527,12 @@ fn generate_constraint_init_group(
 
             let payer_optional_check = check_scope.generate_check(payer);
 
+            let token_account_space = generate_get_token_account_space(mint);
+
             let create_account = generate_create_account(
                 field,
-                quote! {anchor_spl::token::TokenAccount::LEN},
-                quote! {&token_program.key()},
+                quote! {#token_account_space},
+                quote! {&#token_program.key()},
                 quote! {#payer},
                 seeds_with_bump,
             );
@@ -568,21 +545,22 @@ fn generate_constraint_init_group(
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
-                    if !#if_needed || AsRef::<AccountInfo>::as_ref(&#field).owner == &anchor_lang::solana_program::system_program::ID {
+                    let owner_program = #account_ref.owner;
+                    if !#if_needed || owner_program == &anchor_lang::solana_program::system_program::ID {
                         #payer_optional_check
 
                         // Create the account with the system program.
                         #create_account
 
                         // Initialize the token account.
-                        let cpi_program = token_program.to_account_info();
-                        let accounts = anchor_spl::token::InitializeAccount3 {
+                        let cpi_program = #token_program.to_account_info();
+                        let accounts = ::anchor_spl::token_interface::InitializeAccount3 {
                             account: #field.to_account_info(),
                             mint: #mint.to_account_info(),
                             authority: #owner.to_account_info(),
                         };
                         let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
-                        anchor_spl::token::initialize_account3(cpi_ctx)?;
+                        ::anchor_spl::token_interface::initialize_account3(cpi_ctx)?;
                     }
 
                     let pa: #ty_decl = #from_account_info_unchecked;
@@ -593,17 +571,28 @@ fn generate_constraint_init_group(
                         if pa.owner != #owner.key() {
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenOwner).with_account_name(#name_str).with_pubkeys((pa.owner, #owner.key())));
                         }
+                        if owner_program != &#token_program.key() {
+                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenTokenProgram).with_account_name(#name_str).with_pubkeys((*owner_program, #token_program.key())));
+                        }
                     }
                     pa
                 };
             }
         }
-        InitKind::AssociatedToken { owner, mint } => {
+        InitKind::AssociatedToken {
+            owner,
+            mint,
+            token_program,
+        } => {
+            let token_program = match token_program {
+                Some(t) => t.to_token_stream(),
+                None => quote! {token_program},
+            };
             let owner_optional_check = check_scope.generate_check(owner);
             let mint_optional_check = check_scope.generate_check(mint);
 
             let system_program_optional_check = check_scope.generate_check(system_program);
-            let token_program_optional_check = check_scope.generate_check(token_program);
+            let token_program_optional_check = check_scope.generate_check(&token_program);
             let associated_token_program_optional_check =
                 check_scope.generate_check(associated_token_program);
             let rent_optional_check = check_scope.generate_check(rent);
@@ -627,20 +616,21 @@ fn generate_constraint_init_group(
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
-                    if !#if_needed || AsRef::<AccountInfo>::as_ref(&#field).owner == &anchor_lang::solana_program::system_program::ID {
+                    let owner_program = #account_ref.owner;
+                    if !#if_needed || owner_program == &anchor_lang::solana_program::system_program::ID {
                         #payer_optional_check
 
                         let cpi_program = associated_token_program.to_account_info();
-                        let cpi_accounts = anchor_spl::associated_token::Create {
+                        let cpi_accounts = ::anchor_spl::associated_token::Create {
                             payer: #payer.to_account_info(),
                             associated_token: #field.to_account_info(),
                             authority: #owner.to_account_info(),
                             mint: #mint.to_account_info(),
                             system_program: system_program.to_account_info(),
-                            token_program: token_program.to_account_info(),
+                            token_program: #token_program.to_account_info(),
                         };
                         let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, cpi_accounts);
-                        anchor_spl::associated_token::create(cpi_ctx)?;
+                        ::anchor_spl::associated_token::create(cpi_ctx)?;
                     }
                     let pa: #ty_decl = #from_account_info_unchecked;
                     if #if_needed {
@@ -650,8 +640,11 @@ fn generate_constraint_init_group(
                         if pa.owner != #owner.key() {
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenOwner).with_account_name(#name_str).with_pubkeys((pa.owner, #owner.key())));
                         }
+                        if owner_program != &#token_program.key() {
+                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintAssociatedTokenTokenProgram).with_account_name(#name_str).with_pubkeys((*owner_program, #token_program.key())));
+                        }
 
-                        if pa.key() != anchor_spl::associated_token::get_associated_token_address(&#owner.key(), &#mint.key()) {
+                        if pa.key() != ::anchor_spl::associated_token::get_associated_token_address_with_program_id(&#owner.key(), &#mint.key(), &#token_program.key()) {
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountNotAssociatedTokenAccount).with_account_name(#name_str));
                         }
                     }
@@ -663,7 +656,12 @@ fn generate_constraint_init_group(
             owner,
             decimals,
             freeze_authority,
+            token_program,
         } => {
+            let token_program = match token_program {
+                Some(t) => t.to_token_stream(),
+                None => quote! {token_program},
+            };
             let owner_optional_check = check_scope.generate_check(owner);
             let freeze_authority_optional_check = match freeze_authority {
                 Some(fa) => check_scope.generate_check(fa),
@@ -671,7 +669,7 @@ fn generate_constraint_init_group(
             };
 
             let system_program_optional_check = check_scope.generate_check(system_program);
-            let token_program_optional_check = check_scope.generate_check(token_program);
+            let token_program_optional_check = check_scope.generate_check(&token_program);
             let rent_optional_check = check_scope.generate_check(rent);
 
             let optional_checks = quote! {
@@ -686,8 +684,8 @@ fn generate_constraint_init_group(
 
             let create_account = generate_create_account(
                 field,
-                quote! {anchor_spl::token::Mint::LEN},
-                quote! {&token_program.key()},
+                quote! {::anchor_spl::token::Mint::LEN},
+                quote! {&#token_program.key()},
                 quote! {#payer},
                 seeds_with_bump,
             );
@@ -705,7 +703,8 @@ fn generate_constraint_init_group(
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
-                    if !#if_needed || AsRef::<AccountInfo>::as_ref(&#field).owner == &anchor_lang::solana_program::system_program::ID {
+                    let owner_program = AsRef::<AccountInfo>::as_ref(&#field).owner;
+                    if !#if_needed || owner_program == &anchor_lang::solana_program::system_program::ID {
                         // Define payer variable.
                         #payer_optional_check
 
@@ -713,12 +712,12 @@ fn generate_constraint_init_group(
                         #create_account
 
                         // Initialize the mint account.
-                        let cpi_program = token_program.to_account_info();
-                        let accounts = anchor_spl::token::InitializeMint2 {
+                        let cpi_program = #token_program.to_account_info();
+                        let accounts = ::anchor_spl::token_interface::InitializeMint2 {
                             mint: #field.to_account_info(),
                         };
                         let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
-                        anchor_spl::token::initialize_mint2(cpi_ctx, #decimals, &#owner.key(), #freeze_authority)?;
+                        ::anchor_spl::token_interface::initialize_mint2(cpi_ctx, #decimals, &#owner.key(), #freeze_authority)?;
                     }
                     let pa: #ty_decl = #from_account_info_unchecked;
                     if #if_needed {
@@ -734,12 +733,15 @@ fn generate_constraint_init_group(
                         if pa.decimals != #decimals {
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintMintDecimals).with_account_name(#name_str).with_values((pa.decimals, #decimals)));
                         }
+                        if owner_program != &#token_program.key() {
+                            return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintMintTokenProgram).with_account_name(#name_str).with_pubkeys((*owner_program, #token_program.key())));
+                        }
                     }
                     pa
                 };
             }
         }
-        InitKind::Program { owner } => {
+        InitKind::Program { owner } | InitKind::Interface { owner } => {
             // Define the space variable.
             let space = quote! {let space = #space;};
 
@@ -750,7 +752,7 @@ fn generate_constraint_init_group(
             let (owner, owner_optional_check) = match owner {
                 None => (
                     quote! {
-                        program_id
+                        __program_id
                     },
                     quote! {},
                 ),
@@ -792,7 +794,7 @@ fn generate_constraint_init_group(
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
-                    let actual_field = #field.to_account_info();
+                    let actual_field = #account_ref;
                     let actual_owner = actual_field.owner;
 
                     // Define the account space variable.
@@ -858,7 +860,7 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
             // If they specified a seeds::program to use when deriving the PDA, use it.
             .map(|program_id| quote! { #program_id.key() })
             // Otherwise fall back to the current program's program_id.
-            .unwrap_or(quote! { program_id });
+            .unwrap_or(quote! { __program_id });
 
         // If the seeds came with a trailing comma, we need to chop it off
         // before we interpolate them below.
@@ -878,7 +880,7 @@ fn generate_constraint_seeds(f: &Field, c: &ConstraintSeedsGroup) -> proc_macro2
                     &[#maybe_seeds_plus_comma],
                     &#deriving_program_id,
                 );
-                __bumps.insert(#name_str.to_string(), __bump);
+                __bumps.#name = __bump;
             },
             // Bump target given. Use it.
             Some(b) => quote! {
@@ -907,8 +909,10 @@ fn generate_constraint_associated_token(
 ) -> proc_macro2::TokenStream {
     let name = &f.ident;
     let name_str = name.to_string();
+    let account_ref = generate_account_ref(f);
     let wallet_address = &c.wallet;
     let spl_token_mint_address = &c.mint;
+
     let mut optional_check_scope = OptionalCheckScope::new_with_field(accs, name);
     let wallet_address_optional_check = optional_check_scope.generate_check(wallet_address);
     let spl_token_mint_address_optional_check =
@@ -918,16 +922,36 @@ fn generate_constraint_associated_token(
         #spl_token_mint_address_optional_check
     };
 
+    let token_program_check = match &c.token_program {
+        Some(token_program) => {
+            let token_program_optional_check = optional_check_scope.generate_check(token_program);
+            quote! {
+                #token_program_optional_check
+                if #account_ref.owner != &#token_program.key() { return Err(anchor_lang::error::ErrorCode::ConstraintAssociatedTokenTokenProgram.into()); }
+            }
+        }
+        None => quote! {},
+    };
+    let get_associated_token_address = match &c.token_program {
+        Some(token_program) => quote! {
+            ::anchor_spl::associated_token::get_associated_token_address_with_program_id(&wallet_address, &#spl_token_mint_address.key(), &#token_program.key())
+        },
+        None => quote! {
+            ::anchor_spl::associated_token::get_associated_token_address(&wallet_address, &#spl_token_mint_address.key())
+        },
+    };
+
     quote! {
         {
             #optional_checks
+            #token_program_check
 
             let my_owner = #name.owner;
             let wallet_address = #wallet_address.key();
             if my_owner != wallet_address {
                 return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenOwner).with_account_name(#name_str).with_pubkeys((my_owner, wallet_address)));
             }
-            let __associated_token_address = anchor_spl::associated_token::get_associated_token_address(&wallet_address, &#spl_token_mint_address.key());
+            let __associated_token_address = #get_associated_token_address;
             let my_key = #name.key();
             if my_key != __associated_token_address {
                 return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintAssociated).with_account_name(#name_str).with_pubkeys((my_key, __associated_token_address)));
@@ -942,6 +966,7 @@ fn generate_constraint_token_account(
     accs: &AccountsStruct,
 ) -> proc_macro2::TokenStream {
     let name = &f.ident;
+    let account_ref = generate_account_ref(f);
     let mut optional_check_scope = OptionalCheckScope::new_with_field(accs, name);
     let authority_check = match &c.authority {
         Some(authority) => {
@@ -963,10 +988,21 @@ fn generate_constraint_token_account(
         }
         None => quote! {},
     };
+    let token_program_check = match &c.token_program {
+        Some(token_program) => {
+            let token_program_optional_check = optional_check_scope.generate_check(token_program);
+            quote! {
+                #token_program_optional_check
+                if #account_ref.owner != &#token_program.key() { return Err(anchor_lang::error::ErrorCode::ConstraintTokenTokenProgram.into()); }
+            }
+        }
+        None => quote! {},
+    };
     quote! {
         {
             #authority_check
             #mint_check
+            #token_program_check
         }
     }
 }
@@ -977,6 +1013,7 @@ fn generate_constraint_mint(
     accs: &AccountsStruct,
 ) -> proc_macro2::TokenStream {
     let name = &f.ident;
+    let account_ref = generate_account_ref(f);
 
     let decimal_check = match &c.decimals {
         Some(decimals) => quote! {
@@ -1012,11 +1049,22 @@ fn generate_constraint_mint(
         }
         None => quote! {},
     };
+    let token_program_check = match &c.token_program {
+        Some(token_program) => {
+            let token_program_optional_check = optional_check_scope.generate_check(token_program);
+            quote! {
+                #token_program_optional_check
+                if #account_ref.owner != &#token_program.key() { return Err(anchor_lang::error::ErrorCode::ConstraintMintTokenProgram.into()); }
+            }
+        }
+        None => quote! {},
+    };
     quote! {
         {
             #decimal_check
             #mint_authority_check
             #freeze_authority_check
+            #token_program_check
         }
     }
 }
@@ -1060,6 +1108,25 @@ impl<'a> OptionalCheckScope<'a> {
     }
 }
 
+fn generate_get_token_account_space(mint: &Expr) -> proc_macro2::TokenStream {
+    quote! {
+        {
+            let mint_info = #mint.to_account_info();
+            if *mint_info.owner == ::anchor_spl::token_2022::Token2022::id() {
+                use ::anchor_spl::token_2022::spl_token_2022::extension::{BaseStateWithExtensions, ExtensionType, StateWithExtensions};
+                use ::anchor_spl::token_2022::spl_token_2022::state::{Account, Mint};
+                let mint_data = mint_info.try_borrow_data()?;
+                let mint_state = StateWithExtensions::<Mint>::unpack(&mint_data)?;
+                let mint_extensions = mint_state.get_extension_types()?;
+                let required_extensions = ExtensionType::get_required_init_account_extensions(&mint_extensions);
+                ExtensionType::try_calculate_account_len::<Account>(&required_extensions)?
+            } else {
+                ::anchor_spl::token::TokenAccount::LEN
+            }
+        }
+    }
+}
+
 // Generated code to create an account with with system program with the
 // given `space` amount of data, owned by `owner`.
 //
@@ -1083,13 +1150,14 @@ fn generate_create_account(
         let __current_lamports = #field.lamports();
         if __current_lamports == 0 {
             // Create the token account with right amount of lamports and space, and the correct owner.
-            let lamports = __anchor_rent.minimum_balance(#space);
+            let space = #space;
+            let lamports = __anchor_rent.minimum_balance(space);
             let cpi_accounts = anchor_lang::system_program::CreateAccount {
                 from: #payer.to_account_info(),
                 to: #field.to_account_info()
             };
             let cpi_context = anchor_lang::context::CpiContext::new(system_program.to_account_info(), cpi_accounts);
-            anchor_lang::system_program::create_account(cpi_context.with_signer(&[#seeds_with_nonce]), lamports, #space as u64, #owner)?;
+            anchor_lang::system_program::create_account(cpi_context.with_signer(&[#seeds_with_nonce]), lamports, space as u64, #owner)?;
         } else {
             require_keys_neq!(#payer.key(), #field.key(), anchor_lang::error::ErrorCode::TryingToInitPayerAsProgramAccount);
             // Fund the account for rent exemption.
@@ -1125,13 +1193,13 @@ pub fn generate_constraint_executable(
     f: &Field,
     _c: &ConstraintExecutable,
 ) -> proc_macro2::TokenStream {
-    let name = &f.ident;
-    let name_str = name.to_string();
+    let name_str = f.ident.to_string();
+    let account_ref = generate_account_ref(f);
 
     // because we are only acting on the field, we know it isnt optional at this point
     // as it was unwrapped in `generate_constraint`
     quote! {
-        if !#name.to_account_info().executable {
+        if !#account_ref.executable {
             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintExecutable).with_account_name(#name_str));
         }
     }
@@ -1162,5 +1230,18 @@ fn generate_custom_error(
 
     quote! {
         Err(#error)
+    }
+}
+
+fn generate_account_ref(field: &Field) -> proc_macro2::TokenStream {
+    let name = &field.ident;
+
+    match &field.ty {
+        Ty::AccountInfo => quote!(&#name),
+        Ty::Account(acc) if acc.boxed => quote!(AsRef::<AccountInfo>::as_ref(#name.as_ref())),
+        Ty::InterfaceAccount(acc) if acc.boxed => {
+            quote!(AsRef::<AccountInfo>::as_ref(#name.as_ref()))
+        }
+        _ => quote!(AsRef::<AccountInfo>::as_ref(&#name)),
     }
 }

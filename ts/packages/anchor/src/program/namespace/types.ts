@@ -11,6 +11,7 @@ import {
   IdlInstruction,
   IdlType,
   IdlTypeDef,
+  IdlTypeDefTyAlias,
   IdlTypeDefTyEnum,
   IdlTypeDefTyStruct,
 } from "../../idl";
@@ -124,24 +125,20 @@ type TypeMap = {
   [K in "u64" | "i64" | "u128" | "i128" | "u256" | "i256"]: BN;
 };
 
-export type DecodeType<T extends IdlType, Defined> = T extends keyof TypeMap
+export type DecodeType<T extends IdlType, Defined> = IdlType extends T
+  ? unknown
+  : T extends keyof TypeMap
   ? TypeMap[T]
   : T extends { defined: keyof Defined }
   ? Defined[T["defined"]]
-  : T extends { option: { defined: keyof Defined } }
-  ? Defined[T["option"]["defined"]] | null
-  : T extends { option: keyof TypeMap }
-  ? TypeMap[T["option"]] | null
-  : T extends { coption: { defined: keyof Defined } }
-  ? Defined[T["coption"]["defined"]] | null
-  : T extends { coption: keyof TypeMap }
-  ? TypeMap[T["coption"]] | null
-  : T extends { vec: keyof TypeMap }
-  ? TypeMap[T["vec"]][]
-  : T extends { vec: { defined: keyof Defined } }
-  ? Defined[T["vec"]["defined"]][]
-  : T extends { array: [defined: keyof TypeMap, size: number] }
-  ? TypeMap[T["array"][0]][]
+  : T extends { option: IdlType }
+  ? DecodeType<T["option"], Defined> | null
+  : T extends { coption: IdlType }
+  ? DecodeType<T["coption"], Defined> | null
+  : T extends { vec: IdlType }
+  ? DecodeType<T["vec"], Defined>[]
+  : T extends { array: [defined: IdlType, size: number] }
+  ? DecodeType<T["array"][0], Defined>[]
   : unknown;
 
 /**
@@ -163,6 +160,10 @@ type UnboxToUnion<T> = T extends (infer U)[]
   ? UnboxToUnion<V>
   : T;
 
+type SnakeToCamelCase<S extends string> = S extends `${infer T}_${infer U}`
+  ? `${T}${Capitalize<SnakeToCamelCase<U>>}`
+  : S;
+
 /**
  * decode single enum.field
  */
@@ -178,7 +179,10 @@ declare type DecodeEnumFields<
   Defined
 > = F extends IdlEnumFieldsNamed
   ? {
-      [F2 in F[number] as F2["name"]]: DecodeEnumField<F2["type"], Defined>;
+      [F2 in F[number] as SnakeToCamelCase<F2["name"]>]: DecodeEnumField<
+        F2["type"],
+        Defined
+      >;
     }
   : F extends IdlEnumFieldsTuple
   ? {
@@ -189,21 +193,32 @@ declare type DecodeEnumFields<
     }
   : Record<string, never>;
 
-/**
- * Since TypeScript do not provide OneOf helper we can
- * simply mark enum variants with +?
- */
-declare type DecodeEnum<K extends IdlTypeDefTyEnum, Defined> = {
-  // X = IdlEnumVariant
-  [X in K["variants"][number] as Uncapitalize<X["name"]>]+?: DecodeEnumFields<
-    NonNullable<X["fields"]>,
+type DecodeEnumVariants<I extends IdlTypeDefTyEnum, Defined> = {
+  [V in I["variants"][number] as Uncapitalize<V["name"]>]: DecodeEnumFields<
+    NonNullable<V["fields"]>,
     Defined
   >;
 };
 
+type ValueOf<T> = T[keyof T];
+type XorEnumVariants<T extends Record<string, unknown>> = ValueOf<{
+  [K1 in keyof T]: {
+    [K2 in Exclude<keyof T, K1>]?: never;
+  } & { [K2 in K1]: T[K2] };
+}>;
+
+type DecodeEnum<I extends IdlTypeDefTyEnum, Defined> = XorEnumVariants<
+  DecodeEnumVariants<I, Defined>
+>;
+
 type DecodeStruct<I extends IdlTypeDefTyStruct, Defined> = {
   [F in I["fields"][number] as F["name"]]: DecodeType<F["type"], Defined>;
 };
+
+type DecodeAlias<I extends IdlTypeDefTyAlias, Defined> = DecodeType<
+  I["value"],
+  Defined
+>;
 
 export type TypeDef<
   I extends IdlTypeDef,
@@ -212,6 +227,8 @@ export type TypeDef<
   ? DecodeEnum<I["type"], Defined>
   : I["type"] extends IdlTypeDefTyStruct
   ? DecodeStruct<I["type"], Defined>
+  : I["type"] extends IdlTypeDefTyAlias
+  ? DecodeAlias<I["type"], Defined>
   : never;
 
 type TypeDefDictionary<T extends IdlTypeDef[], Defined> = {

@@ -2,7 +2,7 @@
 name = "zero-copy"
 version = "0.1.0"
 description = "Created with Anchor"
-rust-version = "1.59"
+rust-version = "1.60"
 edition = "2021"
 
 [lib]
@@ -18,8 +18,8 @@ test-bpf = []
 
 [dependencies]
 anchor-lang = { path = "../../../../lang" }
+bytemuck = {version = "1.4.0", features = ["derive", "min_const_generics"]}
 
 [dev-dependencies]
-anchor-client = { path = "../../../../client", features = ["debug"] }
-bytemuck = "1.4.0"
-solana-program-test = "1.13.5"
+anchor-client = { path = "../../../../client", features = ["debug", "async"] }
+solana-program-test = "1.16"

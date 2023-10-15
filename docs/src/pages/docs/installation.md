@@ -16,7 +16,7 @@ We recommend reading chapters 1-9 of the [Rust book](https://doc.rust-lang.org/b
 Go [here](https://docs.solana.com/cli/install-solana-cli-tools) to install Solana and then run `solana-keygen new` to create a keypair at the default location. Anchor uses this keypair to run your program tests.
 
 {% callout title="You should know!" %}
-We also recommend checking out the the official [Solana developers page](https://solana.com/developers).
+We also recommend checking out the official [Solana developers page](https://solana.com/developers).
 {% /callout %}
 
 ## Yarn
@@ -63,7 +63,7 @@ Anchor binaries are available via an NPM package [`@coral-xyz/anchor-cli`](https
 We can also use Cargo to install the CLI directly. Make sure that the `--tag` argument uses the version you want (the version here is just an example).
 
 ```shell
-cargo install --git https://github.com/coral-xyz/anchor --tag v0.26.0 anchor-cli --locked
+cargo install --git https://github.com/coral-xyz/anchor --tag v0.28.0 anchor-cli --locked
 ```
 
 On Linux systems you may need to install additional dependencies if cargo install fails. On Ubuntu,

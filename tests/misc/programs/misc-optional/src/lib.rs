@@ -1,7 +1,7 @@
 //! Misc optional example is a catchall program for testing unrelated features.
 //! It's not too instructive/coherent by itself, so please see other examples.
 
-use account::MAX_SIZE;
+use account::*;
 use anchor_lang::prelude::*;
 use context::*;
 use event::*;
@@ -44,11 +44,6 @@ pub mod misc_optional {
         Ok(())
     }
 
-    pub fn test_u16(ctx: Context<TestU16>, data: u16) -> Result<()> {
-        ctx.accounts.my_account.as_mut().unwrap().data = data;
-        Ok(())
-    }
-
     pub fn test_simulate(_ctx: Context<TestSimulate>, data: u32) -> Result<()> {
         emit!(E1 { data });
         emit!(E2 { data: 1234 });
@@ -59,21 +54,6 @@ pub mod misc_optional {
         emit!(E6 {
             data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
         });
-        Ok(())
-    }
-
-    pub fn test_input_enum(ctx: Context<TestSimulate>, data: TestEnum) -> Result<()> {
-        emit!(E7 { data: data });
-        Ok(())
-    }
-
-    pub fn test_i8(ctx: Context<TestI8>, data: i8) -> Result<()> {
-        ctx.accounts.data.as_mut().unwrap().data = data;
-        Ok(())
-    }
-
-    pub fn test_i16(ctx: Context<TestI16>, data: i16) -> Result<()> {
-        ctx.accounts.data.as_mut().unwrap().data = data;
         Ok(())
     }
 
@@ -132,7 +112,7 @@ pub mod misc_optional {
     pub fn test_pda_init_zero_copy(ctx: Context<TestPdaInitZeroCopy>) -> Result<()> {
         let mut acc = ctx.accounts.my_pda.as_ref().unwrap().load_init()?;
         acc.data = 9;
-        acc.bump = *ctx.bumps.get("my_pda").unwrap();
+        acc.bump = ctx.bumps.my_pda;
         Ok(())
     }
 
@@ -171,10 +151,22 @@ pub mod misc_optional {
         Ok(())
     }
 
+    pub fn test_init_mint_with_token_program(
+        _ctx: Context<TestInitMintWithTokenProgram>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
     pub fn test_init_token(ctx: Context<TestInitToken>) -> Result<()> {
         assert!(
             ctx.accounts.token.as_ref().unwrap().mint == ctx.accounts.mint.as_ref().unwrap().key()
         );
+        Ok(())
+    }
+
+    pub fn test_init_token_with_token_program(
+        _ctx: Context<TestInitTokenWithTokenProgram>,
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -189,6 +181,12 @@ pub mod misc_optional {
         assert!(
             ctx.accounts.token.as_ref().unwrap().mint == ctx.accounts.mint.as_ref().unwrap().key()
         );
+        Ok(())
+    }
+
+    pub fn test_init_associated_token_with_token_program(
+        _ctx: Context<TestInitAssociatedTokenWithTokenProgram>,
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -238,7 +236,19 @@ pub mod misc_optional {
         Ok(())
     }
 
+    pub fn test_init_mint_if_needed_with_token_program(
+        _ctx: Context<TestInitMintIfNeededWithTokenProgram>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
     pub fn test_init_token_if_needed(_ctx: Context<TestInitTokenIfNeeded>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn test_init_token_if_needed_with_token_program(
+        _ctx: Context<TestInitTokenIfNeededWithTokenProgram>,
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -248,7 +258,13 @@ pub mod misc_optional {
         Ok(())
     }
 
-    pub fn init_with_space(_ctx: Context<InitWithSpace>, data: u16) -> Result<()> {
+    pub fn test_init_associated_token_if_needed_with_token_program(
+        _ctx: Context<TestInitAssociatedTokenIfNeededWithTokenProgram>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn init_with_space(_ctx: Context<InitWithSpace>, _data: u16) -> Result<()> {
         Ok(())
     }
 
@@ -328,6 +344,12 @@ pub mod misc_optional {
         Ok(())
     }
 
+    pub fn test_only_token_program_constraint(
+        _ctx: Context<TestOnlyTokenProgramConstraint>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
     pub fn test_mint_constraint(_ctx: Context<TestMintConstraint>, _decimals: u8) -> Result<()> {
         Ok(())
     }
@@ -358,7 +380,19 @@ pub mod misc_optional {
         Ok(())
     }
 
+    pub fn test_mint_only_token_program_constraint(
+        _ctx: Context<TestMintOnlyTokenProgramConstraint>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
     pub fn test_associated_constraint(_ctx: Context<TestAssociatedToken>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn test_associated_token_with_token_program_constraint(
+        _ctx: Context<TestAssociatedTokenWithTokenProgramConstraint>,
+    ) -> Result<()> {
         Ok(())
     }
 }

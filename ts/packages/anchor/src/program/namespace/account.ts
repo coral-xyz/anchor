@@ -15,7 +15,7 @@ import Provider, { getProvider } from "../../provider.js";
 import { Idl, IdlAccountDef } from "../../idl.js";
 import { Coder, BorshCoder } from "../../coder/index.js";
 import { Subscription, Address, translateAddress } from "../common.js";
-import { AllAccountsMap, IdlTypes, TypeDef } from "./types.js";
+import { AllAccountsMap, IdlAccounts } from "./types.js";
 import * as pubkeyUtil from "../../utils/pubkey.js";
 import * as rpcUtil from "../../utils/rpc.js";
 
@@ -26,7 +26,7 @@ export default class AccountFactory {
     programId: PublicKey,
     provider?: Provider
   ): AccountNamespace<IDL> {
-    const accountFns: AccountNamespace = {};
+    const accountFns = {} as AccountNamespace<IDL>;
 
     idl.accounts?.forEach((idlAccount) => {
       const name = camelCase(idlAccount.name);
@@ -39,7 +39,7 @@ export default class AccountFactory {
       );
     });
 
-    return accountFns as AccountNamespace<IDL>;
+    return accountFns;
   }
 }
 
@@ -68,15 +68,14 @@ type NullableIdlAccount<IDL extends Idl> = IDL["accounts"] extends undefined
  * For the full API, see the [[AccountClient]] reference.
  */
 export type AccountNamespace<IDL extends Idl = Idl> = {
-  [M in keyof AllAccountsMap<IDL>]: AccountClient<IDL>;
+  [N in keyof AllAccountsMap<IDL>]: AccountClient<IDL, N>;
 };
 
 export class AccountClient<
   IDL extends Idl = Idl,
-  A extends NullableIdlAccount<IDL> = IDL["accounts"] extends undefined
-    ? IdlAccountDef
-    : NonNullable<IDL["accounts"]>[number],
-  T = TypeDef<A, IdlTypes<IDL>>
+  N extends keyof IdlAccounts<IDL> = keyof IdlAccounts<IDL>,
+  A extends NullableIdlAccount<IDL> = NullableIdlAccount<IDL>,
+  T = IdlAccounts<IDL>[N]
 > {
   /**
    * Returns the number of bytes in this account.
@@ -110,6 +109,12 @@ export class AccountClient<
   }
   private _coder: Coder;
 
+  /**
+   * Returns the idl account.
+   */
+  get idlAccount(): A {
+    return this._idlAccount;
+  }
   private _idlAccount: A;
 
   constructor(
@@ -205,7 +210,7 @@ export class AccountClient<
   async fetchMultiple(
     addresses: Address[],
     commitment?: Commitment
-  ): Promise<(Object | null)[]> {
+  ): Promise<(T | null)[]> {
     const accounts = await this.fetchMultipleAndContext(addresses, commitment);
     return accounts.map((account) => (account ? account.data : null));
   }
@@ -219,7 +224,7 @@ export class AccountClient<
   async fetchMultipleAndContext(
     addresses: Address[],
     commitment?: Commitment
-  ): Promise<({ data: Object; context: Context } | null)[]> {
+  ): Promise<({ data: T; context: Context } | null)[]> {
     const accounts = await rpcUtil.getMultipleAccountsAndContext(
       this._provider.connection,
       addresses.map((address) => translateAddress(address)),

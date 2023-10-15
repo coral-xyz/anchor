@@ -1,3 +1,7 @@
+pub mod constraints;
+#[cfg(feature = "event-cpi")]
+pub mod event_cpi;
+
 use crate::parser::docs;
 use crate::*;
 use syn::parse::{Error as ParseError, Result as ParseResult};
@@ -7,10 +11,8 @@ use syn::token::Comma;
 use syn::Expr;
 use syn::Path;
 
-pub mod constraints;
-
-pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
-    let instruction_api: Option<Punctuated<Expr, Comma>> = strct
+pub fn parse(accounts_struct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
+    let instruction_api: Option<Punctuated<Expr, Comma>> = accounts_struct
         .attrs
         .iter()
         .find(|a| {
@@ -20,7 +22,24 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
         })
         .map(|ix_attr| ix_attr.parse_args_with(Punctuated::<Expr, Comma>::parse_terminated))
         .transpose()?;
-    let fields = match &strct.fields {
+
+    #[cfg(feature = "event-cpi")]
+    let accounts_struct = {
+        let is_event_cpi = accounts_struct
+            .attrs
+            .iter()
+            .filter_map(|attr| attr.path.get_ident())
+            .any(|ident| *ident == "event_cpi");
+        if is_event_cpi {
+            event_cpi::add_event_cpi_accounts(accounts_struct)?
+        } else {
+            accounts_struct.clone()
+        }
+    };
+    #[cfg(not(feature = "event-cpi"))]
+    let accounts_struct = accounts_struct.clone();
+
+    let fields = match &accounts_struct.fields {
         syn::Fields::Named(fields) => fields
             .named
             .iter()
@@ -28,7 +47,7 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
             .collect::<ParseResult<Vec<AccountField>>>()?,
         _ => {
             return Err(ParseError::new_spanned(
-                &strct.fields,
+                &accounts_struct.fields,
                 "fields must be named",
             ))
         }
@@ -36,7 +55,11 @@ pub fn parse(strct: &syn::ItemStruct) -> ParseResult<AccountsStruct> {
 
     constraints_cross_checks(&fields)?;
 
-    Ok(AccountsStruct::new(strct.clone(), fields, instruction_api))
+    Ok(AccountsStruct::new(
+        accounts_struct,
+        fields,
+        instruction_api,
+    ))
 }
 
 fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
@@ -44,17 +67,17 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
     let message = |constraint: &str, field: &str, required: bool| {
         if required {
             format! {
-                "a non-optional {} constraint requires \
-                a non-optional {} field to exist in the account \
+                "a non-optional {constraint} constraint requires \
+                a non-optional {field} field to exist in the account \
                 validation struct. Use the Program type to add \
-                the {} field to your validation struct.", constraint, field, field
+                the {field} field to your validation struct."
             }
         } else {
             format! {
-                "an optional {} constraint requires \
-                an optional or required {} field to exist \
+                "an optional {constraint} constraint requires \
+                an optional or required {field} field to exist \
                 in the account validation struct. Use the Program type \
-                to add the {} field to your validation struct.", constraint, field, field
+                to add the {field} field to your validation struct."
             }
         }
     };
@@ -91,15 +114,24 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
         let kind = &init_fields[0].constraints.init.as_ref().unwrap().kind;
         // init token/a_token/mint needs token program.
         match kind {
-            InitKind::Program { .. } => (),
-            InitKind::Token { .. } | InitKind::AssociatedToken { .. } | InitKind::Mint { .. } => {
-                if !fields
-                    .iter()
-                    .any(|f| f.ident() == "token_program" && !(required_init && f.is_optional()))
-                {
+            InitKind::Program { .. } | InitKind::Interface { .. } => (),
+            InitKind::Token { token_program, .. }
+            | InitKind::AssociatedToken { token_program, .. }
+            | InitKind::Mint { token_program, .. } => {
+                // is the token_program constraint specified?
+                let token_program_field = if let Some(token_program_id) = token_program {
+                    // if so, is it present in the struct?
+                    token_program_id.to_token_stream().to_string()
+                } else {
+                    // if not, look for the token_program field
+                    "token_program".to_string()
+                };
+                if !fields.iter().any(|f| {
+                    f.ident() == &token_program_field && !(required_init && f.is_optional())
+                }) {
                     return Err(ParseError::new(
                         init_fields[0].ident.span(),
-                        message("init", "token_program", required_init),
+                        message("init", &token_program_field, required_init),
                     ));
                 }
             }
@@ -117,7 +149,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
             }
         }
 
-        for field in init_fields {
+        for (pos, field) in init_fields.iter().enumerate() {
             // Get payer for init-ed account
             let associated_payer_name = match field.constraints.init.clone().unwrap().payer {
                 // composite payer, check not supported
@@ -153,7 +185,7 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                     ));
                 }
             }
-            match kind {
+            match &field.constraints.init.as_ref().unwrap().kind {
                 // This doesn't catch cases like account.key() or account.key.
                 // My guess is that doesn't happen often and we can revisit
                 // this if I'm wrong.
@@ -166,6 +198,24 @@ fn constraints_cross_checks(fields: &[AccountField]) -> ParseResult<()> {
                         return Err(ParseError::new(
                             field.ident.span(),
                             "the mint constraint has to be an account field for token initializations (not a public key)",
+                        ));
+                    }
+                }
+
+                // Make sure initialiazed token accounts are always declared after their corresponding mint.
+                InitKind::Mint { .. } => {
+                    if init_fields.iter().enumerate().any(|(f_pos, f)| {
+                        match &f.constraints.init.as_ref().unwrap().kind {
+                            InitKind::Token { mint, .. }
+                            | InitKind::AssociatedToken { mint, .. } => {
+                                field.ident == mint.to_token_stream().to_string() && pos > f_pos
+                            }
+                            _ => false,
+                        }
+                    }) {
+                        return Err(ParseError::new(
+                            field.ident.span(),
+                            "because of the init constraint, the mint has to be declared before the corresponding token account",
                         ));
                     }
                 }
@@ -283,15 +333,14 @@ pub fn parse_account_field(f: &syn::Field) -> ParseResult<AccountField> {
 fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
     let r = matches!(
         ident_string(f)?.0.as_str(),
-        "ProgramAccount"
-            | "CpiAccount"
-            | "Sysvar"
+        "Sysvar"
             | "AccountInfo"
             | "UncheckedAccount"
-            | "Loader"
             | "AccountLoader"
             | "Account"
             | "Program"
+            | "Interface"
+            | "InterfaceAccount"
             | "Signer"
             | "SystemAccount"
             | "ProgramData"
@@ -302,15 +351,14 @@ fn is_field_primitive(f: &syn::Field) -> ParseResult<bool> {
 fn parse_ty(f: &syn::Field) -> ParseResult<(Ty, bool)> {
     let (ident, optional, path) = ident_string(f)?;
     let ty = match ident.as_str() {
-        "ProgramAccount" => Ty::ProgramAccount(parse_program_account(&path)?),
-        "CpiAccount" => Ty::CpiAccount(parse_cpi_account(&path)?),
         "Sysvar" => Ty::Sysvar(parse_sysvar(&path)?),
         "AccountInfo" => Ty::AccountInfo,
         "UncheckedAccount" => Ty::UncheckedAccount,
-        "Loader" => Ty::Loader(parse_program_account_zero_copy(&path)?),
         "AccountLoader" => Ty::AccountLoader(parse_program_account_loader(&path)?),
         "Account" => Ty::Account(parse_account_ty(&path)?),
         "Program" => Ty::Program(parse_program_ty(&path)?),
+        "Interface" => Ty::Interface(parse_interface_ty(&path)?),
+        "InterfaceAccount" => Ty::InterfaceAccount(parse_interface_account_ty(&path)?),
         "Signer" => Ty::Signer,
         "SystemAccount" => Ty::SystemAccount,
         "ProgramData" => Ty::ProgramData,
@@ -364,6 +412,12 @@ fn ident_string(f: &syn::Field) -> ParseResult<(String, bool, Path)> {
     {
         return Ok(("Account".to_string(), optional, path));
     }
+    if parser::tts_to_string(&path)
+        .replace(' ', "")
+        .starts_with("Box<InterfaceAccount<")
+    {
+        return Ok(("InterfaceAccount".to_string(), optional, path));
+    }
     // TODO: allow segmented paths.
     if path.segments.len() != 1 {
         return Err(ParseError::new(
@@ -376,26 +430,6 @@ fn ident_string(f: &syn::Field) -> ParseResult<(String, bool, Path)> {
     Ok((segments.ident.to_string(), optional, path))
 }
 
-fn parse_cpi_account(path: &syn::Path) -> ParseResult<CpiAccountTy> {
-    let account_ident = parse_account(path)?;
-    Ok(CpiAccountTy {
-        account_type_path: account_ident,
-    })
-}
-
-fn parse_program_account(path: &syn::Path) -> ParseResult<ProgramAccountTy> {
-    let account_ident = parse_account(path)?;
-    Ok(ProgramAccountTy {
-        account_type_path: account_ident,
-    })
-}
-
-fn parse_program_account_zero_copy(path: &syn::Path) -> ParseResult<LoaderTy> {
-    let account_ident = parse_account(path)?;
-    Ok(LoaderTy {
-        account_type_path: account_ident,
-    })
-}
 fn parse_program_account_loader(path: &syn::Path) -> ParseResult<AccountLoaderTy> {
     let account_ident = parse_account(path)?;
     Ok(AccountLoaderTy {
@@ -414,17 +448,31 @@ fn parse_account_ty(path: &syn::Path) -> ParseResult<AccountTy> {
     })
 }
 
+fn parse_interface_account_ty(path: &syn::Path) -> ParseResult<InterfaceAccountTy> {
+    let account_type_path = parse_account(path)?;
+    let boxed = parser::tts_to_string(path)
+        .replace(' ', "")
+        .starts_with("Box<InterfaceAccount<");
+    Ok(InterfaceAccountTy {
+        account_type_path,
+        boxed,
+    })
+}
+
 fn parse_program_ty(path: &syn::Path) -> ParseResult<ProgramTy> {
     let account_type_path = parse_account(path)?;
     Ok(ProgramTy { account_type_path })
 }
 
+fn parse_interface_ty(path: &syn::Path) -> ParseResult<InterfaceTy> {
+    let account_type_path = parse_account(path)?;
+    Ok(InterfaceTy { account_type_path })
+}
+
 // TODO: this whole method is a hack. Do something more idiomatic.
 fn parse_account(mut path: &syn::Path) -> ParseResult<syn::TypePath> {
-    if parser::tts_to_string(path)
-        .replace(' ', "")
-        .starts_with("Box<Account<")
-    {
+    let path_str = parser::tts_to_string(path).replace(' ', "");
+    if path_str.starts_with("Box<Account<") || path_str.starts_with("Box<InterfaceAccount<") {
         let segments = &path.segments[0];
         match &segments.arguments {
             syn::PathArguments::AngleBracketed(args) => {

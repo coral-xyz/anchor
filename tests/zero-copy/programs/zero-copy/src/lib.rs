@@ -97,7 +97,7 @@ pub struct CreateBar<'info> {
         init,
         seeds = [authority.key().as_ref(), foo.key().as_ref()],
         bump,
-        payer = authority, owner = *program_id,
+        payer = authority, owner = ID,
         space = Bar::LEN + 8
     )]
     bar: AccountLoader<'info, Bar>,
@@ -133,7 +133,6 @@ pub struct UpdateLargeAccount<'info> {
 }
 
 #[account(zero_copy)]
-#[repr(packed)]
 #[derive(Default)]
 pub struct Foo {
     pub authority: Pubkey,

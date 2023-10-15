@@ -40,6 +40,14 @@ pub enum ErrorCode {
     /// 1001 - Invalid program given to the IDL instruction
     #[msg("Invalid program given to the IDL instruction")]
     IdlInstructionInvalidProgram,
+    /// 1002 - IDL Account must be empty in order to resize
+    #[msg("IDL account must be empty in order to resize, try closing first")]
+    IdlAccountNotEmpty,
+
+    // Event instructions
+    /// 1500 - The program was compiled without `event-cpi` feature
+    #[msg("The program was compiled without `event-cpi` feature")]
+    EventInstructionStub = 1500,
 
     // Constraints
     /// 2000 - A mut constraint was violated
@@ -107,6 +115,17 @@ pub enum ErrorCode {
     /// 2020 - A required account for the constraint is None
     #[msg("A required account for the constraint is None")]
     ConstraintAccountIsNone,
+    /// The token token is intentional -> a token program for the token account.
+    ///
+    /// 2021 - A token account token program constraint was violated
+    #[msg("A token account token program constraint was violated")]
+    ConstraintTokenTokenProgram,
+    /// 2022 - A mint token program constraint was violated
+    #[msg("A mint token program constraint was violated")]
+    ConstraintMintTokenProgram,
+    /// 2023 - A mint token program constraint was violated
+    #[msg("An associated token account token program constraint was violated")]
+    ConstraintAssociatedTokenTokenProgram,
 
     // Require
     /// 2500 - A require expression was violated
@@ -203,8 +222,8 @@ pub enum ErrorCode {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Error {
-    AnchorError(AnchorError),
-    ProgramError(ProgramErrorWithOrigin),
+    AnchorError(Box<AnchorError>),
+    ProgramError(Box<ProgramErrorWithOrigin>),
 }
 
 impl std::error::Error for Error {}
@@ -220,24 +239,24 @@ impl Display for Error {
 
 impl From<AnchorError> for Error {
     fn from(ae: AnchorError) -> Self {
-        Self::AnchorError(ae)
+        Self::AnchorError(Box::new(ae))
     }
 }
 
 impl From<ProgramError> for Error {
     fn from(program_error: ProgramError) -> Self {
-        Self::ProgramError(program_error.into())
+        Self::ProgramError(Box::new(program_error.into()))
     }
 }
 impl From<BorshIoError> for Error {
     fn from(error: BorshIoError) -> Self {
-        Error::ProgramError(ProgramError::from(error).into())
+        Error::ProgramError(Box::new(ProgramError::from(error).into()))
     }
 }
 
 impl From<ProgramErrorWithOrigin> for Error {
     fn from(pe: ProgramErrorWithOrigin) -> Self {
-        Self::ProgramError(pe)
+        Self::ProgramError(Box::new(pe))
     }
 }
 
@@ -484,10 +503,10 @@ impl Eq for AnchorError {}
 impl std::convert::From<Error> for anchor_lang::solana_program::program_error::ProgramError {
     fn from(e: Error) -> anchor_lang::solana_program::program_error::ProgramError {
         match e {
-            Error::AnchorError(AnchorError {
-                error_code_number, ..
-            }) => {
-                anchor_lang::solana_program::program_error::ProgramError::Custom(error_code_number)
+            Error::AnchorError(error) => {
+                anchor_lang::solana_program::program_error::ProgramError::Custom(
+                    error.error_code_number,
+                )
             }
             Error::ProgramError(program_error) => program_error.program_error,
         }

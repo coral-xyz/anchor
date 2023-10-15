@@ -18,7 +18,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let ix_cfgs = &ix.cfgs;
                 let sighash_arr = sighash(SIGHASH_GLOBAL_NAMESPACE, name);
                 let sighash_tts: proc_macro2::TokenStream =
-                    format!("{:?}", sighash_arr).parse().unwrap();
+                    format!("{sighash_arr:?}").parse().unwrap();
                 let ret_type = &ix.returns.ty.to_token_stream();
                 let (method_ret, maybe_return) = match ret_type.to_string().as_str() {
                     "()" => (quote! {anchor_lang::Result<()> }, quote! { Ok(()) }),
@@ -42,7 +42,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                             data.append(&mut ix_data);
                             let accounts = ctx.to_account_metas(None);
                             anchor_lang::solana_program::instruction::Instruction {
-                                program_id: crate::ID,
+                                program_id: ctx.program.key(),
                                 accounts,
                                 data,
                             }

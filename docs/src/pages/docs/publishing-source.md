@@ -12,7 +12,7 @@ practices for security and transparency.
 
 {% callout title="Note" %}
 The Anchor Program Registry is currently in alpha testing. For access to publishing
-please ask on [Discord](http://discord.gg/ZCHmqvXgDw).
+please ask on [Discord](https://discord.gg/NHHGSXAnXk).
 {% /callout %}
 
 ## Getting Started
@@ -34,7 +34,7 @@ have an `Anchor.toml` to define the build.
 An example `Anchor.toml` config looks as follows,
 
 ```toml
-anchor_version = "0.26.0"
+anchor_version = "0.28.0"
 
 [workspace]
 members = ["programs/multisig"]
@@ -57,7 +57,7 @@ Here there are four sections.
    to all programs in the local
    workspace, i.e., the path to the `Cargo.toml` manifest associated with each
    program that can be compiled by the `anchor` CLI. For programs using the
-   standard Anchor workflow, this can be ommitted. For programs not written in Anchor
+   standard Anchor workflow, this can be omitted. For programs not written in Anchor
    but still want to publish, this should be added.
 3. `[provider]` - configures the wallet and cluster settings. Here, `mainnet` is used because the registry only supports `mainnet` binary verification at the moment.
 4. `[programs.mainnet]` - configures each program in the workpace, providing

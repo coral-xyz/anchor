@@ -22,7 +22,7 @@ where
     pub associated: Account<'info, Associated<U>>,
 }
 
-#[account(zero_copy)]
+#[account(zero_copy(unsafe))]
 pub struct FooAccount<const N: usize> {
     pub data: WrappedU8Array<N>,
 }
@@ -45,6 +45,10 @@ impl<const N: usize> BorshSerialize for WrappedU8Array<N> {
 }
 impl<const N: usize> BorshDeserialize for WrappedU8Array<N> {
     fn deserialize(_buf: &mut &[u8]) -> borsh::maybestd::io::Result<Self> {
+        todo!()
+    }
+
+    fn deserialize_reader<R: std::io::Read>(_reader: &mut R) -> std::io::Result<Self> {
         todo!()
     }
 }

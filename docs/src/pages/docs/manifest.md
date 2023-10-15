@@ -34,7 +34,7 @@ Example:
 
 ```
 [registry]
-url = "https://anchor.projectserum.com"
+url = "https://api.apr.dev"
 ```
 
 ## features
@@ -66,11 +66,11 @@ types = "app/src/idl/"
 #### members
 
 Sets the paths --relative to the `Anchor.toml`--
-   to all programs in the local
-   workspace, i.e., the path to the `Cargo.toml` manifest associated with each
-   program that can be compiled by the `anchor` CLI. For programs using the
-   standard Anchor workflow, this can be ommitted. For programs not written in Anchor
-   but still want to publish, this should be added.
+to all programs in the local
+workspace, i.e., the path to the `Cargo.toml` manifest associated with each
+program that can be compiled by the `anchor` CLI. For programs using the
+standard Anchor workflow, this can be omitted. For programs not written in Anchor
+but still want to publish, this should be added.
 
 Example:
 
@@ -122,6 +122,20 @@ program = "dex.so"
 [[test.genesis]]
 address = "22Y43yTVxuUkoRKdm9thyRhQ3SdgQS7c7kB6UNCiaczD"
 program = "swap.so"
+upgradeable = true
+```
+
+#### upgradeable
+
+Deploys the program-to-test using `--upgradeable-program`. This makes it possible to test that certain instructions can only be executed by the program's upgrade authority. The initial upgrade authority will be set to `provider.wallet`.
+
+If unspecified or explicitly set to false, then the test program will be deployed with `--bpf-program`, disabling upgrades to it.
+
+Example:
+
+```toml
+[test]
+upgradeable = true
 ```
 
 ## test.validator
@@ -178,4 +192,14 @@ filename = "some_account.json"
 [[test.validator.account]]
 address = "Ev8WSPQsGb4wfjybqff5eZNcS3n6HaMsBkMk9suAiuM"
 filename = "some_other_account.json"
+```
+
+## toolchain
+
+Override toolchain data in the workspace similar to [`rust-toolchain.toml`](https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file).
+
+```toml
+[toolchain]
+anchor_version = "0.28.0"    # `anchor-cli` version to use(requires `avm`)
+solana_version = "1.16.0"    # Solana version to use(applies to all Solana tools)
 ```
