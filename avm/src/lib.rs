@@ -315,7 +315,6 @@ pub fn get_latest_version() -> Result<Version> {
 pub fn read_installed_versions() -> Result<Vec<Version>> {
     const PREFIX: &str = "anchor-";
     let versions = fs::read_dir(get_bin_dir_path())?
-        .into_iter()
         .filter_map(|entry_result| entry_result.ok())
         .filter_map(|entry| entry.file_name().to_str().map(|f| f.to_owned()))
         .filter(|file_name| file_name.starts_with(PREFIX))
