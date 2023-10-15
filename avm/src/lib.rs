@@ -361,7 +361,7 @@ mod tests {
         let version = read_anchorversion_file()?;
         assert_eq!(version.to_string(), test_version);
 
-        fs::remove_file(&anchorversion_path)?;
+        fs::remove_file(anchorversion_path)?;
 
         Ok(())
     }
