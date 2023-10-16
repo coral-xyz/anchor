@@ -5,7 +5,7 @@ description: Anchor - Release Notes
 
 Anchor keeps a [CHANGELOG](https://github.com/coral-xyz/anchor/blob/master/CHANGELOG.md) but it's not easy to make sense what has changed, what effect does the change have and how to migrate. This is where release notes comes in, an easy to digest and actionable view for each release.
 
---
+---
 
 ## [0.29.0]
 
@@ -317,9 +317,21 @@ use anchor_spl::metadata::mpl_token_metadata;
 
 4. Removed `assert` and `base64-js` dependency.
 
+### New docker image
+
+The previous image([projectserum/build](https://hub.docker.com/r/projectserum/build)) is now deprecated, new image is [backpackapp/build](https://hub.docker.com/r/backpackapp/build).
+
+To pull the latest image, run:
+
+```sh
+docker pull backpackapp/build:v0.29.0
+```
+
+**Note:** `anchor build --verifiable` now works with the latest image.
+
 ### Enhanced performance
 
-`0.29.0` performance is noticably improved in all areas, the biggest one being [binary size](https://github.com/coral-xyz/anchor/blob/master/bench/BINARY_SIZE.md#0290) which is reduced ~36% compared to `0.29.0`!
+`0.29.0` performance is noticably improved in all areas, the biggest one being [binary size](https://github.com/coral-xyz/anchor/blob/master/bench/BINARY_SIZE.md#0290) which is reduced ~36% compared to `0.28.0`!
 
 Similar benchmarks can be found for [compute units](https://github.com/coral-xyz/anchor/blob/master/bench/COMPUTE_UNITS.md#0290) and [stack memory](https://github.com/coral-xyz/anchor/blob/master/bench/STACK_MEMORY.md#0290).
 
