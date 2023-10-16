@@ -72,7 +72,7 @@ In this release, `avm` supports installing and switching between commits.
 
 ```sh
 # <VERSION>-<COMMIT>
-avm install 0.29.0-6cf200493a307c01487c7b492b4893e0d6f6cb23
+avm install 0.28.0-6cf200493a307c01487c7b492b4893e0d6f6cb23
 
 # Full commit hash
 avm install 6cf200493a307c01487c7b492b4893e0d6f6cb23
@@ -84,14 +84,14 @@ avm install 6cf200
 **Use** a different version `avm use <VERSION>-<COMMIT>`:
 
 ```sh
-avm use 0.29.0-6cf200493a307c01487c7b492b4893e0d6f6cb23
+avm use 0.28.0-6cf200493a307c01487c7b492b4893e0d6f6cb23
 ```
 
 Specify `toolchain.anchor_version` as `<VERSION>-<COMMIT>`:
 
 ```toml
 [toolchain]
-anchor_version = "0.29.0-6cf200493a307c01487c7b492b4893e0d6f6cb23"
+anchor_version = "0.28.0-6cf200493a307c01487c7b492b4893e0d6f6cb23"
 ```
 
 ### Multiple files template
@@ -336,5 +336,7 @@ docker pull backpackapp/build:v0.29.0
 Similar benchmarks can be found for [compute units](https://github.com/coral-xyz/anchor/blob/master/bench/COMPUTE_UNITS.md#0290) and [stack memory](https://github.com/coral-xyz/anchor/blob/master/bench/STACK_MEMORY.md#0290).
 
 **Note:** The benchmark results will vary between programs but the overall direction should be the same.
+
+---
 
 See the full list of changes in the [CHANGELOG](https://github.com/coral-xyz/anchor/blob/master/CHANGELOG.md#0290---2023-10-16).
