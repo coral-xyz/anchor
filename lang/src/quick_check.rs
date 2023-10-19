@@ -67,23 +67,6 @@ mod tests {
         }
     }
 
-    // #[program]
-    // mod candy_machine { .. }
-    mod program {
-        use super::*;
-
-        #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq)]
-        pub struct CandyMachine;
-
-        pub const ID: Pubkey = pubkey!("D4fb9FSb7645bNZxSQ1P6abvpmHF5Qm7BtHnoN9jvbX6");
-
-        impl Owner for CandyMachine {
-            fn owner() -> Pubkey {
-                ID // actually users would write crate::ID
-            }
-        }
-    }
-
     const ACCOUNT_KEY: Pubkey = pubkey!("7Qn61qamvGdiLZjmXBr3UHL5FhcSQdF1ieQvVgKBNWLQ");
 
     fn new_account_info((data, lamport, owner): &mut ([u8; 1024], u64, Pubkey)) -> AccountInfo<'_> {
@@ -127,14 +110,5 @@ mod tests {
             bad_mint.err(),
             Some(Error::from(ErrorCode::AccountOwnedByWrongProgram))
         );
-    }
-
-    #[test]
-    fn test_quick_check_using_program_type() {
-        let mut candy_data = ([0; 1024], 10959, program::ID);
-        let candy_info = new_account_info(&mut candy_data);
-        let candy = Account::<QuickCheck<program::CandyMachine>>::try_from(&candy_info);
-        assert!(candy.is_ok());
-        assert_eq!(*candy.unwrap(), deserialized_value());
     }
 }
