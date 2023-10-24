@@ -361,10 +361,12 @@ fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
 }
 
 fn handle_system_log(this_program_str: &str, log: &str) -> (Option<String>, bool) {
+    // TODO: check if the `if condition` is still required
+    // during my testing I never saw any message with specified beginning
+    // if not required we can get rid of this too.
+    // effectively it'll ignore all messages except success.
     if log.starts_with(&format!("Program {this_program_str} log:")) {
         (Some(this_program_str.to_string()), false)
-    } else if log.contains("invoke") {
-        (Some("cpi".to_string()), false) // Any string will do.
     } else {
         let re = Regex::new(r"^Program (.*) success*$").unwrap();
         if re.is_match(log) {
@@ -381,21 +383,26 @@ struct Execution {
 
 impl Execution {
     pub fn new(logs: &mut &[String]) -> Result<Self, ClientError> {
-        let l = &logs[0];
-        *logs = &logs[1..];
-
         let re = Regex::new(r"^Program (.*) invoke.*$").unwrap();
-        let c = re
-            .captures(l)
-            .ok_or_else(|| ClientError::LogParseError(l.to_string()))?;
-        let program = c
-            .get(1)
-            .ok_or_else(|| ClientError::LogParseError(l.to_string()))?
-            .as_str()
-            .to_string();
-        Ok(Self {
-            stack: vec![program],
-        })
+
+        let invoke_lines = logs
+            .iter()
+            .filter(|line| line.contains("invoke"))
+            .collect::<Vec<&String>>();
+
+        let mut programs_id = Vec::with_capacity(invoke_lines.len());
+        for line in invoke_lines {
+            let program = re
+                .captures(line)
+                .ok_or_else(|| ClientError::LogParseError(line.to_owned()))?
+                .get(1)
+                .ok_or_else(|| ClientError::LogParseError(line.to_owned()))?
+                .as_str()
+                .to_string();
+            programs_id.push(program);
+        }
+
+        Ok(Self { stack: programs_id })
     }
 
     pub fn program(&self) -> String {
@@ -647,5 +654,49 @@ mod tests {
         let (program, did_pop) = handle_system_log("asdf", log);
         assert_eq!(program, None);
         assert!(!did_pop);
+    }
+
+    #[test]
+    fn handle_system_log_no_push_on_invoke() {
+        let log = "Program ComputeBudget111111111111111111111111111111 invoke [1]";
+        let (program, did_pop) = handle_system_log("asdf", log);
+        assert_eq!(program, None);
+        assert!(!did_pop);
+    }
+
+    #[test]
+    fn handle_multiple_instr_parsing() {
+        let instrs =  &vec![
+  "Program FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH invoke [1]".to_owned(),
+  "Program FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH consumed 2179 of 480000 compute units".to_owned(),
+  "Program FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH success".to_owned(),
+  "Program FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH invoke [1]".to_owned(),
+  "Program FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH consumed 2083 of 456722 compute units".to_owned(),
+  "Program FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH success".to_owned(),
+  "Program ComputeBudget111111111111111111111111111111 invoke [1]".to_owned(),
+  "Program ComputeBudget111111111111111111111111111111 success".to_owned(),
+  "Program FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH invoke [1]".to_owned(),
+  "Program FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH consumed 2323 of 454639 compute units".to_owned(),
+  "Program FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH success".to_owned(),
+];
+        let exec = Execution::new(&mut &instrs[..]).unwrap();
+        assert_eq!(4, exec.stack.len());
+
+        assert_eq!(
+            "FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH".to_owned(),
+            exec.stack[0]
+        );
+        assert_eq!(
+            "FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH".to_owned(),
+            exec.stack[1]
+        );
+        assert_eq!(
+            "ComputeBudget111111111111111111111111111111".to_owned(),
+            exec.stack[2]
+        );
+        assert_eq!(
+            "FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH".to_owned(),
+            exec.stack[3]
+        );
     }
 }
