@@ -139,7 +139,10 @@ export type IdlType =
   | IdlTypeOption
   | IdlTypeCOption
   | IdlTypeVec
-  | IdlTypeArray;
+  | IdlTypeArray
+  | IdlTypeGenericLenArray
+  | IdlTypeGeneric
+  | IdlTypeDefinedWithTypeArgs;
 
 // User defined type.
 export type IdlTypeDefined = {
@@ -160,6 +163,35 @@ export type IdlTypeVec = {
 
 export type IdlTypeArray = {
   array: [idlType: IdlType, size: number];
+};
+
+export type IdlTypeGenericLenArray = {
+  genericLenArray: [idlType: IdlType, generic: string];
+};
+
+export type IdlTypeGeneric = {
+  generic: string;
+};
+
+export type IdlTypeDefinedWithTypeArgs = {
+  definedWithTypeArgs: { name: string; args: IdlTypeDefinedTypeArg[] };
+};
+
+export type IdlTypeDefinedTypeArg =
+  | IdlTypeDefinedTypeArgGeneric
+  | IdlTypeDefinedTypeArgValue
+  | IdlTypeDefinedTypeArgType;
+
+export type IdlTypeDefinedTypeArgGeneric = {
+  generic: string;
+};
+
+export type IdlTypeDefinedTypeArgValue = {
+  value: string;
+};
+
+export type IdlTypeDefinedTypeArgType = {
+  type: IdlType;
 };
 
 export type IdlEnumVariant = {
