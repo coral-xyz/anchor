@@ -7,6 +7,11 @@ edition = "2021"
 license = "Apache-2.0"
 description = "Rust client for Anchor programs"
 
+[[test]]
+name = "wasm"
+path = "tests/wasm.rs"
+required-features = ["async"]
+
 [features]
 async = []
 debug = []
@@ -17,9 +22,35 @@ anyhow = "1"
 futures = "0.3"
 regex = "1"
 serde = { version = "1", features = ["derive"] }
-solana-account-decoder = "1.16"
-solana-client = "1.16"
-solana-sdk = "1.16"
 thiserror = "1"
-tokio = { version = "1", features = ["rt", "sync"] }
 url = "2"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+solana-client-wasm = { version = "1.17", features = ["pubsub"] }
+solana-extra-wasm = "1.17"
+bs58 = "0.5"
+wasm-bindgen-futures = "0.4"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+solana-client = "1.17"
+solana-sdk = "1.17"
+solana-account-decoder = "1.17"
+tokio = { version = "1", features = ["rt", "sync"] }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+basic-2 = { path = "../examples/tutorial/basic-2/programs/basic-2", features = [
+    "no-entrypoint",
+] }
+basic-4 = { path = "../examples/tutorial/basic-4/programs/basic-4", features = [
+    "no-entrypoint",
+] }
+events = { path = "../tests/events/programs/events", features = [
+    "no-entrypoint",
+] }
+composite = { path = "../tests/composite/programs/composite", features = [
+    "no-entrypoint",
+] }
+optional = { path = "../tests/optional/programs/optional", features = [
+    "no-entrypoint",
+] }
