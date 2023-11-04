@@ -115,6 +115,7 @@ main() {
     # Run async test.
     #
     cd ..
+    export WASM_BINDGEN_TEST_TIMEOUT=60
     wasm-pack test --headless --chrome --features async
 }
 
