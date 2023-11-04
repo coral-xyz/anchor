@@ -17,7 +17,7 @@ mod composite {
         dummy_a: u64,
         dummy_b: u64,
     ) -> Result<()> {
-        let a = &mut ctx.accounts.foo_account.dummy_a;
+        let a = &mut ctx.accounts.fred.dummy_a;
         let b = &mut ctx.accounts.bar.dummy_b;
 
         a.data = dummy_a;
@@ -37,12 +37,12 @@ pub struct Initialize<'info> {
 
 #[derive(Accounts)]
 pub struct CompositeUpdate<'info> {
-    foo_account: Foo<'info>,
+    fred: Fred<'info>,
     bar: Bar<'info>,
 }
 
 #[derive(Accounts)]
-pub struct Foo<'info> {
+pub struct Fred<'info> {
     #[account(mut)]
     pub dummy_a: Account<'info, DummyA>,
 }

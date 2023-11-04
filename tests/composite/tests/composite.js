@@ -31,7 +31,7 @@ describe("composite", () => {
       new anchor.BN(4321),
       {
         accounts: {
-          foo: {
+          fred: {
             dummyA: dummyA.publicKey,
           },
           bar: {

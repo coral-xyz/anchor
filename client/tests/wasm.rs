@@ -10,7 +10,7 @@ use basic_2::{accounts as basic_2_accounts, Counter};
 use basic_4::accounts as basic_4_accounts;
 use basic_4::instruction as basic_4_instruction;
 use basic_4::Counter as CounterAccount;
-use composite::accounts::{Bar, CompositeUpdate, Foo, Initialize};
+use composite::accounts::{Bar, CompositeUpdate, Fred, Initialize};
 use composite::instruction as composite_instruction;
 use composite::{DummyA, DummyB};
 use events::instruction as events_instruction;
@@ -143,7 +143,7 @@ async fn composite() {
     program
         .request()
         .accounts(CompositeUpdate {
-            foo: Foo {
+            fred: Fred {
                 dummy_a: dummy_a.pubkey(),
             },
             bar: Bar {
