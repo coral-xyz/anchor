@@ -788,7 +788,9 @@ fn init(
         ));
     }
 
-    fs::create_dir(&project_name)?;
+    if !force {
+        fs::create_dir(&project_name)?;
+    }
     std::env::set_current_dir(&project_name)?;
     fs::create_dir("app")?;
 
