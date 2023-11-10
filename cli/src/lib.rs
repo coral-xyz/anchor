@@ -42,7 +42,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ffi::OsString;
-use std::fs::{self, File};
+use std::fs::{self, File, remove_dir_all};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Stdio};
@@ -788,11 +788,9 @@ fn init(
         ));
     }
 
-    if !force {
-        fs::create_dir(&project_name)?;
-    }
+    fs::create_dir_all(&project_name)?;
     std::env::set_current_dir(&project_name)?;
-    fs::create_dir("app")?;
+    fs::create_dir_all("app")?;
 
     let mut cfg = Config::default();
     if jest {
@@ -845,9 +843,9 @@ fn init(
     }
 
     // Build the test suite.
-    fs::create_dir("tests")?;
+    fs::create_dir_all("tests")?;
     // Build the migrations directory.
-    fs::create_dir("migrations")?;
+    fs::create_dir_all("migrations")?;
 
     if javascript {
         // Build javascript config
@@ -953,6 +951,13 @@ fn new(
                 let programs = cfg.programs.entry(cluster).or_default();
                 if !force && programs.contains_key(&name) {
                     return Err(anyhow!("Program already exists"));
+                } else if force && programs.contains_key(&name) {
+                    // Delete all files within the program folder
+                    if solidity {
+                        remove_dir_all(std::env::current_dir()?.join("solidity").join(&name))?;
+                    } else {
+                        remove_dir_all(std::env::current_dir()?.join("programs").join(&name))?;
+                    }
                 }
 
                 if solidity {
