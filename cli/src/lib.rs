@@ -89,7 +89,7 @@ pub enum Command {
         #[clap(value_enum, short, long, default_value = "single")]
         template: ProgramTemplate,
         /// Initialize even if there are files
-        #[clap(short, long, action)]
+        #[clap(long, action)]
         force: bool,
     },
     /// Builds the workspace.
