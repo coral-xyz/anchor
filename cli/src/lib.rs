@@ -88,6 +88,9 @@ pub enum Command {
         /// Rust program template to use
         #[clap(value_enum, short, long, default_value = "single")]
         template: ProgramTemplate,
+        /// Initialize even if there are files
+        #[clap(short, long, action)]
+        force: bool,
     },
     /// Builds the workspace.
     #[clap(name = "build", alias = "b")]
@@ -592,6 +595,7 @@ fn process_command(opts: Opts) -> Result<()> {
             no_git,
             jest,
             template,
+            force,
         } => init(
             &opts.cfg_override,
             name,
@@ -600,6 +604,7 @@ fn process_command(opts: Opts) -> Result<()> {
             no_git,
             jest,
             template,
+            force,
         ),
         Command::New {
             solidity,
@@ -753,8 +758,9 @@ fn init(
     no_git: bool,
     jest: bool,
     template: ProgramTemplate,
+    force: bool,
 ) -> Result<()> {
-    if Config::discover(cfg_override)?.is_some() {
+    if Config::discover(cfg_override)?.is_some() && !force {
         return Err(anyhow!("Workspace already initialized"));
     }
 
@@ -4416,6 +4422,7 @@ mod tests {
             false,
             false,
             ProgramTemplate::default(),
+            false,
         )
         .unwrap();
     }
@@ -4434,6 +4441,7 @@ mod tests {
             false,
             false,
             ProgramTemplate::default(),
+            false,
         )
         .unwrap();
     }
@@ -4452,6 +4460,7 @@ mod tests {
             false,
             false,
             ProgramTemplate::default(),
+            false,
         )
         .unwrap();
     }
