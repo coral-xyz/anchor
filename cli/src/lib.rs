@@ -788,9 +788,17 @@ fn init(
         ));
     }
 
-    fs::create_dir_all(&project_name)?;
+    if force {
+        fs::create_dir_all(&project_name)?;
+    } else {
+        fs::create_dir(&project_name)?;
+    }
     std::env::set_current_dir(&project_name)?;
-    fs::create_dir_all("app")?;
+    if force {
+        fs::create_dir_all("app")?;
+    } else {
+        fs::create_dir("app")?;
+    }
 
     let mut cfg = Config::default();
     if jest {
@@ -836,6 +844,14 @@ fn init(
     fs::write(".prettierignore", rust_template::prettier_ignore())?;
 
     // Build the program.
+    if force {
+        if solidity {
+            remove_dir_all(std::env::current_dir()?.join("solidity").join(&project_name))?;
+        } else {
+            remove_dir_all(std::env::current_dir()?.join("programs").join(&project_name))?;
+        }
+    }
+
     if solidity {
         solidity_template::create_program(&project_name)?;
     } else {
@@ -843,9 +859,17 @@ fn init(
     }
 
     // Build the test suite.
-    fs::create_dir_all("tests")?;
+    if force {
+        fs::create_dir_all("tests")?;
+    } else {
+        fs::create_dir("tests")?;
+    }
     // Build the migrations directory.
-    fs::create_dir_all("migrations")?;
+    if force {
+        fs::create_dir_all("migrations")?;
+    } else {
+        fs::create_dir("migrations")?;
+    }
 
     if javascript {
         // Build javascript config
