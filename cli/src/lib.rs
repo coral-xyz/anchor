@@ -228,6 +228,9 @@ pub enum Command {
         /// Rust program template to use
         #[clap(value_enum, short, long, default_value = "single")]
         template: ProgramTemplate,
+        /// Create new program even if there is already one
+        #[clap(long, action)]
+        force: bool,
     },
     /// Commands for interacting with interface definitions.
     Idl {
@@ -610,7 +613,8 @@ fn process_command(opts: Opts) -> Result<()> {
             solidity,
             name,
             template,
-        } => new(&opts.cfg_override, solidity, name, template),
+            force,
+        } => new(&opts.cfg_override, solidity, name, template, force),
         Command::Build {
             idl,
             idl_ts,
@@ -933,6 +937,7 @@ fn new(
     solidity: bool,
     name: String,
     template: ProgramTemplate,
+    force: bool,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         match cfg.path().parent() {
@@ -944,7 +949,7 @@ fn new(
 
                 let cluster = cfg.provider.cluster.clone();
                 let programs = cfg.programs.entry(cluster).or_default();
-                if programs.contains_key(&name) {
+                if !force && programs.contains_key(&name) {
                     return Err(anyhow!("Program already exists"));
                 }
 
