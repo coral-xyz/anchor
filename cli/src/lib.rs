@@ -760,7 +760,7 @@ fn init(
     template: ProgramTemplate,
     force: bool,
 ) -> Result<()> {
-    if Config::discover(cfg_override)?.is_some() && !force {
+    if !force && Config::discover(cfg_override)?.is_some() {
         return Err(anyhow!("Workspace already initialized"));
     }
 
