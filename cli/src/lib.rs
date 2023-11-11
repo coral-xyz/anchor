@@ -795,11 +795,7 @@ fn init(
         fs::create_dir(&project_name)?;
     }
     std::env::set_current_dir(&project_name)?;
-    if force {
-        fs::create_dir_all("app")?;
-    } else {
-        fs::create_dir("app")?;
-    }
+    fs::create_dir_all("app")?;
 
     let mut cfg = Config::default();
     if jest {
@@ -861,17 +857,9 @@ fn init(
     }
 
     // Build the test suite.
-    if force {
-        fs::create_dir_all("tests")?;
-    } else {
-        fs::create_dir("tests")?;
-    }
+    fs::create_dir_all("tests")?;
     // Build the migrations directory.
-    if force {
-        fs::create_dir_all("migrations")?;
-    } else {
-        fs::create_dir("migrations")?;
-    }
+    fs::create_dir_all("migrations")?;
 
     if javascript {
         // Build javascript config
