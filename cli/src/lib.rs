@@ -974,9 +974,11 @@ fn new(
 
                 let cluster = cfg.provider.cluster.clone();
                 let programs = cfg.programs.entry(cluster).or_default();
-                if !force && programs.contains_key(&name) {
-                    return Err(anyhow!("Program already exists"));
-                } else if force && programs.contains_key(&name) {
+                if programs.contains_key(&name) {
+                    if !force {
+                        return Err(anyhow!("Program already exists"));
+                    }
+
                     // Delete all files within the program folder
                     fs::remove_dir_all(
                         std::env::current_dir()?
