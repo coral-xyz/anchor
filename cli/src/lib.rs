@@ -42,7 +42,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ffi::OsString;
-use std::fs::{self, remove_dir_all, File};
+use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Stdio};
@@ -845,19 +845,11 @@ fn init(
 
     // Remove the default program if `--force` is passed
     if force {
-        if solidity {
-            remove_dir_all(
-                std::env::current_dir()?
-                    .join("solidity")
-                    .join(&project_name),
-            )?;
-        } else {
-            remove_dir_all(
-                std::env::current_dir()?
-                    .join("programs")
-                    .join(&project_name),
-            )?;
-        }
+        fs::remove_dir_all(
+            std::env::current_dir()?
+                .join(if solidity { "solidity" } else { "programs" })
+                .join(&project_name),
+        )?;
     }
 
     // Build the program.
@@ -986,11 +978,11 @@ fn new(
                     return Err(anyhow!("Program already exists"));
                 } else if force && programs.contains_key(&name) {
                     // Delete all files within the program folder
-                    if solidity {
-                        remove_dir_all(std::env::current_dir()?.join("solidity").join(&name))?;
-                    } else {
-                        remove_dir_all(std::env::current_dir()?.join("programs").join(&name))?;
-                    }
+                    fs::remove_dir_all(
+                        std::env::current_dir()?
+                            .join(if solidity { "solidity" } else { "programs" })
+                            .join(&name),
+                    )?;
                 }
 
                 if solidity {
