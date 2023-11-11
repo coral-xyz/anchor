@@ -843,7 +843,7 @@ fn init(
     // Initialize .prettierignore file
     fs::write(".prettierignore", rust_template::prettier_ignore())?;
 
-    // Build the program.
+    // Remove the default program if `--force` is passed
     if force {
         if solidity {
             remove_dir_all(
@@ -860,6 +860,7 @@ fn init(
         }
     }
 
+    // Build the program.
     if solidity {
         solidity_template::create_program(&project_name)?;
     } else {
