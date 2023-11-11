@@ -42,7 +42,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ffi::OsString;
-use std::fs::{self, File, remove_dir_all};
+use std::fs::{self, remove_dir_all, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Stdio};
@@ -846,9 +846,17 @@ fn init(
     // Build the program.
     if force {
         if solidity {
-            remove_dir_all(std::env::current_dir()?.join("solidity").join(&project_name))?;
+            remove_dir_all(
+                std::env::current_dir()?
+                    .join("solidity")
+                    .join(&project_name),
+            )?;
         } else {
-            remove_dir_all(std::env::current_dir()?.join("programs").join(&project_name))?;
+            remove_dir_all(
+                std::env::current_dir()?
+                    .join("programs")
+                    .join(&project_name),
+            )?;
         }
     }
 
