@@ -754,6 +754,7 @@ fn process_command(opts: Opts) -> Result<()> {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn init(
     cfg_override: &ConfigOverride,
     name: String,
