@@ -12,6 +12,8 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Features
 
+- client: Add wasm support ([#2692](https://github.com/coral-xyz/anchor/pull/2692)).
+
 ### Fixes
 
 - syn: Add missing `new_from_array` method to `Hash` ([#2682](https://github.com/coral-xyz/anchor/pull/2682)).

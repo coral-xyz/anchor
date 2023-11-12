@@ -98,6 +98,25 @@ main() {
         --optional-pid $optional_pid \
         --multithreaded
 
+    #
+    # Restart validator for wasm test
+    #
+    cleanup
+    solana-test-validator -r \
+				--bpf-program $composite_pid ../../tests/composite/target/deploy/composite.so \
+				--bpf-program $basic_2_pid ../../examples/tutorial/basic-2/target/deploy/basic_2.so \
+				--bpf-program $basic_4_pid ../../examples/tutorial/basic-4/target/deploy/basic_4.so \
+				--bpf-program $events_pid ../../tests/events/target/deploy/events.so \
+				--bpf-program $optional_pid ../../tests/optional/target/deploy/optional.so \
+				> test-validator.log &
+    sleep 5
+
+    #
+    # Run async test.
+    #
+    cd ..
+    export WASM_BINDGEN_TEST_TIMEOUT=60
+    wasm-pack test --headless --chrome --features async
 }
 
 cleanup() {

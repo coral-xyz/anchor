@@ -3,14 +3,29 @@ use crate::{
     RequestBuilder,
 };
 use anchor_lang::{prelude::Pubkey, AccountDeserialize, Discriminator};
-use solana_client::{rpc_config::RpcSendTransactionConfig, rpc_filter::RpcFilterType};
-use solana_sdk::{
-    commitment_config::CommitmentConfig, signature::Signature, signer::Signer,
-    transaction::Transaction,
-};
-use std::{marker::PhantomData, ops::Deref, sync::Arc};
-use tokio::sync::RwLock;
+use std::ops::Deref;
 
+#[cfg(target_arch = "wasm32")]
+use solana_client_wasm::{
+    solana_sdk::{
+        commitment_config::CommitmentConfig, signature::Signature, signer::Signer,
+        transaction::Transaction,
+    },
+    utils::{rpc_config::RpcSendTransactionConfig, rpc_filter::RpcFilterType},
+};
+
+#[cfg(not(target_arch = "wasm32"))]
+use {
+    solana_client::{rpc_config::RpcSendTransactionConfig, rpc_filter::RpcFilterType},
+    solana_sdk::{
+        commitment_config::CommitmentConfig, signature::Signature, signer::Signer,
+        transaction::Transaction,
+    },
+    std::{marker::PhantomData, sync::Arc},
+    tokio::sync::RwLock,
+};
+
+#[cfg(not(target_arch = "wasm32"))]
 impl<'a> EventUnsubscriber<'a> {
     /// Unsubscribe gracefully.
     pub async fn unsubscribe(self) {
@@ -18,13 +33,27 @@ impl<'a> EventUnsubscriber<'a> {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
+impl EventUnsubscriber {
+    /// Unsubscribe gracefully.
+    pub async fn unsubscribe(self) {
+        self.unsubscribe_internal().await
+    }
+}
+
 impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn new(program_id: Pubkey, cfg: Config<C>) -> Result<Self, ClientError> {
         Ok(Self {
             program_id,
             cfg,
             sub_client: Arc::new(RwLock::new(None)),
         })
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn new(program_id: Pubkey, cfg: Config<C>) -> Result<Self, ClientError> {
+        Ok(Self { program_id, cfg })
     }
 
     /// Returns the account at the given address.
@@ -52,6 +81,7 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
     /// Subscribe to program logs.
     ///
     /// Returns an [`EventUnsubscriber`] to unsubscribe and close connection gracefully.
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn on<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
         &self,
         f: impl Fn(&EventContext, T) + Send + 'static,
@@ -63,6 +93,14 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
             rx,
             _lifetime_marker: PhantomData,
         })
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub async fn on<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
+        &self,
+        f: impl Fn(&EventContext, T) + Send + 'static,
+    ) -> EventUnsubscriber {
+        self.on_internal(f).await
     }
 }
 
