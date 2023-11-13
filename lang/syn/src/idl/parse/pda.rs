@@ -154,7 +154,7 @@ impl<'a> PdaParser<'a> {
 
     fn parse_const_path(&self, path: &Path) -> Option<IdlSeed> {
         let ident = &path.segments.first().unwrap().ident;
-        
+
         let const_item = self.ctx.consts().find(|c| c.ident == *ident).unwrap();
         let idl_ty = IdlType::from_str(&parser::tts_to_string(&const_item.ty)).ok()?;
 
