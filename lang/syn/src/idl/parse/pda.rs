@@ -135,9 +135,7 @@ impl<'a> PdaParser<'a> {
                 let seed_path: SeedPath = SeedPath(lit_byte_str.token().to_string(), Vec::new());
                 self.parse_str_literal(&seed_path)
             }
-            Expr::Path(expr_path) => {
-                self.parse_const_path(&expr_path.path)
-            }
+            Expr::Path(expr_path) => self.parse_const_path(&expr_path.path),
             // Unknown type. Please file an issue.
             _ => {
                 println!("WARNING: unexpected seed: {seed:?}");
@@ -157,11 +155,7 @@ impl<'a> PdaParser<'a> {
     fn parse_const_path(&self, path: &Path) -> Option<IdlSeed> {
         let ident = &path.segments.first().unwrap().ident;
         
-        let const_item = self
-            .ctx
-            .consts()
-            .find(|c| c.ident == *ident)
-            .unwrap();
+        let const_item = self.ctx.consts().find(|c| c.ident == *ident).unwrap();
         let idl_ty = IdlType::from_str(&parser::tts_to_string(&const_item.ty)).ok()?;
 
         let idl_ty_value = parser::tts_to_string(&const_item.expr);
