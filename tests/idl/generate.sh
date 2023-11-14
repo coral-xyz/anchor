@@ -15,4 +15,10 @@ cd ../generics
 anchor idl build -o $dir/generics_build.json
 
 cd ../relations-derivation
+IDL_PARSE=$(anchor idl parse --file src/lib.rs -o $dir/relations_build_parse.json)
+if echo "${IDL_PARSE}" | grep -q 'WARNING:'; then
+  echo "IDL parse has warnings:"
+  echo "${IDL_PARSE}"
+  exit 1
+fi
 anchor idl build -o $dir/relations_build.json
