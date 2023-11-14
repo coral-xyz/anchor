@@ -3803,8 +3803,9 @@ fn serialize_idl(idl: &Idl) -> Result<Vec<u8>> {
 }
 
 fn serialize_idl_ix(ix_inner: anchor_lang::idl::IdlInstruction) -> Result<Vec<u8>> {
-    let mut data = anchor_lang::idl::IDL_IX_TAG.to_le_bytes().to_vec();
-    data.append(&mut ix_inner.try_to_vec()?);
+    let mut data = Vec::with_capacity(1024);
+    data.extend_from_slice(&anchor_lang::idl::IDL_IX_TAG.to_le_bytes());
+    ix_inner.serialize(&mut data)?;
     Ok(data)
 }
 
