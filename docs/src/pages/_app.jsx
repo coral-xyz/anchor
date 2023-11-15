@@ -68,6 +68,7 @@ const navigation = [
   {
     title: 'References',
     links: [
+      { title: 'Account Constraints', href: '/docs/account-constraints' },
       { title: 'Anchor.toml', href: '/docs/manifest' },
       { title: 'CLI', href: '/docs/cli' },
       { title: 'AVM', href: '/docs/avm' },
