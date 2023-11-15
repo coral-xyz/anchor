@@ -26,6 +26,7 @@ const navigation = [
     title: 'Getting Started',
     links: [
       { title: 'Introduction', href: '/' },
+      { title: 'Quickstart', href: '/docs/solana-playground' },
       { title: 'Installation', href: '/docs/installation' },
       { title: 'Hello World', href: '/docs/hello-world' },
       { title: 'Intro to Solana', href: '/docs/intro-to-solana' },
