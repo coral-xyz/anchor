@@ -246,6 +246,9 @@ pub enum Command {
         /// Keypair of the program (filepath) (requires program-name)
         #[clap(long, requires = "program_name")]
         program_keypair: Option<String>,
+        /// True if the build artifact needs to be deterministic and verifiable.
+        #[clap(short, long)]
+        verifiable: bool,
     },
     /// Runs the deploy migration script.
     Migrate,
@@ -676,7 +679,13 @@ fn process_command(opts: Opts) -> Result<()> {
         Command::Deploy {
             program_name,
             program_keypair,
-        } => deploy(&opts.cfg_override, program_name, program_keypair),
+            verifiable,
+        } => deploy(
+            &opts.cfg_override,
+            program_name,
+            program_keypair,
+            verifiable,
+        ),
         Command::Expand {
             program_name,
             cargo_args,
@@ -3027,7 +3036,7 @@ fn test(
         // In either case, skip the deploy if the user specifies.
         let is_localnet = cfg.provider.cluster == Cluster::Localnet;
         if (!is_localnet || skip_local_validator) && !skip_deploy {
-            deploy(cfg_override, None, None)?;
+            deploy(cfg_override, None, None, false)?;
         }
         let mut is_first_suite = true;
         if cfg.scripts.get("test").is_some() {
@@ -3559,6 +3568,7 @@ fn deploy(
     cfg_override: &ConfigOverride,
     program_name: Option<String>,
     program_keypair: Option<String>,
+    verifiable: bool,
 ) -> Result<()> {
     // Execute the code within the workspace
     with_workspace(cfg_override, |cfg| {
