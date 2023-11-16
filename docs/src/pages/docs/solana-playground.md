@@ -33,7 +33,7 @@ Alternatively, you can use this [devnet faucet](https://faucet.solana.com/).
 
 ### Create Anchor Project
 
-Next, click the "Create a new project" button in the left-side panel.
+Next, click the "Create a new project" button on the left-side panel.
 
 Enter a project name, select Anchor as the framework, then click the "Create" button.
 
@@ -85,12 +85,14 @@ To build the program, simply run `build` in the terminal. Building the program w
 Once the program is built, run `deploy` in the terminal to deploy the program to the cluster (devnet by default).
 To deploy a program, SOL must be allocated to the on-chain account that stores the program. If you do not have enough SOL, you may need to first request an airdrop.
 
+You can also use the `Build` and `Deploy` buttons on the left-side panel.
+
+![solpg-build-deploy](/solpg-build-deploy.png)
+
 ### Test Program
 
 Included with the starter code is a test file found in `tests/anchor.test.ts`.
 This file demonstrates how to interact with the program from the client.
-
-To run the test file once the program is deployed, run `test` in the terminal.
 
 ```javascript
 // No imports needed: web3, anchor, pg and more are globally available
@@ -128,6 +130,12 @@ describe('Test', () => {
   })
 })
 ```
+
+To run the test file once the program is deployed, run `test` in the terminal.
+
+You can also use the `Test` button on the left-side panel.
+
+![solpg-test](/solpg-test.png)
 
 Lastly, the SOL allocated to the on-chain program can be fully recovered by closing the program.
 
