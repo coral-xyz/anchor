@@ -157,6 +157,8 @@ Click the `Import` button and enter a name for the project to add it to your lis
 
 ![solpg-import](/solpg-import.png)
 
-Alternatively, you have the option to import projects directly by clicking the Github icon on the left-side panel.
+Once a project is imported, all changes are automatically saved and persisted within the Playground environment.
+
+Additionally, you have the option to import projects directly by clicking the Github icon on the left-side panel.
 
 ![solpg-github](/solpg-github.png)
