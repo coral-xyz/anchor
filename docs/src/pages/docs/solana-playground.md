@@ -146,3 +146,17 @@ solana program close <ProgramID>
 ```
 
 Congratulations! You've just built and deployed your first Solana program using the Anchor framework!
+
+### Import from Github
+
+Solana Playground offers a convenient feature allowing you to import or view projects using their GitHub URLs.
+
+Open this [Solpg link](https://beta.solpg.io/https://github.com/solana-developers/anchor-examples/tree/main/quickstart) to view the Anchor project from this [Github repo](https://github.com/solana-developers/anchor-examples/tree/main/quickstart).
+
+Click the `Import` button and enter a name for the project to add it to your list of projects in Solana Playground.
+
+![solpg-import](/solpg-import.png)
+
+Alternatively, you have the option to import projects directly by clicking the Github icon on the left-side panel.
+
+![solpg-github](/solpg-github.png)

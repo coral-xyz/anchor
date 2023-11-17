@@ -45,6 +45,7 @@ Minimal reference examples for Anchor [account types](https://docs.rs/anchor-lan
 
 - ```rust
   Box<Account<'info, T>>
+  Box<InterfaceAccount<'info, T>>
   ```
 
 - [Github](https://github.com/solana-developers/anchor-examples/tree/main/account-types/Box)
