@@ -3198,7 +3198,8 @@ fn validator_flags(
 
     let mut flags = Vec::new();
     for mut program in cfg.read_all_programs()? {
-        let binary_path = program.binary_path().display().to_string();
+        let verifiable = false;
+        let binary_path = program.binary_path(verifiable).display().to_string();
 
         // Use the [programs.cluster] override and fallback to the keypair
         // files if no override is given.
@@ -3580,7 +3581,7 @@ fn deploy(
         println!("Upgrade authority: {}", keypair);
 
         for mut program in cfg.get_programs(program_name)? {
-            let binary_path = program.binary_path().display().to_string();
+            let binary_path = program.binary_path(verifiable).display().to_string();
 
             println!("Deploying program {:?}...", program.lib_name);
             println!("Program path: {}...", binary_path);
