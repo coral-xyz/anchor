@@ -246,7 +246,7 @@ pub enum Command {
         /// Keypair of the program (filepath) (requires program-name)
         #[clap(long, requires = "program_name")]
         program_keypair: Option<String>,
-        /// True if the build artifact needs to be deterministic and verifiable.
+        /// If true, deploy from path target/verifiable
         #[clap(short, long)]
         verifiable: bool,
     },
