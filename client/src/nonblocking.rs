@@ -18,7 +18,7 @@ impl<'a> EventUnsubscriber<'a> {
     }
 }
 
-impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
+impl<C: Signer + Clone> Program<C> {
     pub fn new(program_id: Pubkey, cfg: Config<C>) -> Result<Self, ClientError> {
         Ok(Self {
             program_id,
@@ -66,7 +66,7 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
     }
 }
 
-impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
+impl<'a, C: Signer + Clone> RequestBuilder<'a, C> {
     pub fn from(
         program_id: Pubkey,
         cluster: &str,
