@@ -8,7 +8,7 @@ use solana_sdk::{
     commitment_config::CommitmentConfig, signature::Signature, signer::Signer,
     transaction::Transaction,
 };
-use std::{marker::PhantomData, ops::Deref, sync::Arc};
+use std::{marker::PhantomData, sync::Arc};
 use tokio::{
     runtime::{Builder, Handle},
     sync::RwLock,

@@ -29,7 +29,6 @@ use solana_sdk::signature::{Signature, Signer};
 use solana_sdk::transaction::Transaction;
 use std::iter::Map;
 use std::marker::PhantomData;
-use std::ops::Deref;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::vec::IntoIter;
