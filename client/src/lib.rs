@@ -66,7 +66,7 @@ pub struct Client<C> {
     cfg: Config<C>,
 }
 
-impl<C: Clone + Deref<Target = impl Signer>> Client<C> {
+impl<C: Clone + Signer> Client<C> {
     pub fn new(cluster: Cluster, payer: C) -> Self {
         Self {
             cfg: Config {
@@ -98,35 +98,35 @@ impl<C: Clone + Deref<Target = impl Signer>> Client<C> {
     }
 }
 
-/// Auxiliary data structure to align the types of the Solana CLI utils with Anchor client.
-/// Client<C> implementation requires <C: Clone + Deref<Target = impl Signer>> which does not comply with Box<dyn Signer>
-/// that's used when loaded Signer from keypair file. This struct is used to wrap the usage.
-pub struct DynSigner(pub Arc<dyn Signer>);
+// /// Auxiliary data structure to align the types of the Solana CLI utils with Anchor client.
+// /// Client<C> implementation requires <C: Clone + impl Signer> which does not comply with Box<dyn Signer>
+// /// that's used when loaded Signer from keypair file. This struct is used to wrap the usage.
+// pub struct DynSigner(pub Arc<dyn Signer>);
 
-impl Signer for DynSigner {
-    fn pubkey(&self) -> Pubkey {
-        self.0.pubkey()
-    }
+// impl Signer for DynSigner {
+//     fn pubkey(&self) -> Pubkey {
+//         self.0.pubkey()
+//     }
 
-    fn try_pubkey(&self) -> Result<Pubkey, solana_sdk::signer::SignerError> {
-        self.0.try_pubkey()
-    }
+//     fn try_pubkey(&self) -> Result<Pubkey, solana_sdk::signer::SignerError> {
+//         self.0.try_pubkey()
+//     }
 
-    fn sign_message(&self, message: &[u8]) -> solana_sdk::signature::Signature {
-        self.0.sign_message(message)
-    }
+//     fn sign_message(&self, message: &[u8]) -> solana_sdk::signature::Signature {
+//         self.0.sign_message(message)
+//     }
 
-    fn try_sign_message(
-        &self,
-        message: &[u8],
-    ) -> Result<solana_sdk::signature::Signature, solana_sdk::signer::SignerError> {
-        self.0.try_sign_message(message)
-    }
+//     fn try_sign_message(
+//         &self,
+//         message: &[u8],
+//     ) -> Result<solana_sdk::signature::Signature, solana_sdk::signer::SignerError> {
+//         self.0.try_sign_message(message)
+//     }
 
-    fn is_interactive(&self) -> bool {
-        self.0.is_interactive()
-    }
-}
+//     fn is_interactive(&self) -> bool {
+//         self.0.is_interactive()
+//     }
+// }
 
 // Internal configuration for a client.
 #[derive(Debug)]
@@ -163,7 +163,7 @@ pub struct Program<C> {
     rt: tokio::runtime::Runtime,
 }
 
-impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
+impl<C: Signer + Clone> Program<C> {
     pub fn payer(&self) -> Pubkey {
         self.cfg.payer.pubkey()
     }
@@ -457,7 +457,7 @@ pub struct RequestBuilder<'a, C> {
     handle: &'a Handle,
 }
 
-impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
+impl<'a, C: Signer + Clone> RequestBuilder<'a, C> {
     #[must_use]
     pub fn payer(mut self, payer: C) -> Self {
         self.payer = payer;
@@ -526,7 +526,7 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
     ) -> Result<Transaction, ClientError> {
         let instructions = self.instructions()?;
         let mut signers = self.signers.clone();
-        signers.push(&*self.payer);
+        signers.push(&self.payer);
 
         let tx = Transaction::new_signed_with_payer(
             &instructions,
