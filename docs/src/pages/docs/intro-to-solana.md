@@ -39,7 +39,11 @@ An account also has a lamports field (a lamport is SOL’s smallest unit). Since
 
 ## Rent
 
-Because validators don’t have infinite storage and providing storage costs money, accounts need to pay rent for their existence. This rent is subtracted from their lamports regularly. However, if an account's lamports balance is above the rent-exemption threshold, it is rent-exempt and does not lose its lamports. This threshold depends on the size of the account. In 99% of cases, you will create rent-exempt accounts. It's even being considered to disable non-rent-exempt accounts.
+Accounts that maintain a minimum LAMPORT balance greater than 2 years worth of rent payments are considered "rent exempt" and will not incur a rent collection.
+
+> At the time of writing this, new Accounts and Programs **are required** to be initialized with enough LAMPORTS to become rent-exempt. The RPC endpoints have the ability to calculate this [estimated rent exempt balance](https://docs.solana.com/api/http#getminimumbalanceforrentexemption) and is recommended to be used.
+
+Every time an account's balance is reduced, a check is performed to see if the account is still rent exempt. Transactions that would cause an account's balance to drop below the rent exempt threshold will fail.
 
 ## Program Example: The System Program
 
