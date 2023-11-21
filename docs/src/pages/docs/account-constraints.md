@@ -185,18 +185,6 @@ Minimal reference examples for Anchor account [constraints](https://docs.rs/anch
 ---
 
 - ```rust
-  #[account(rent_exempt = skip)]
-  #[account(rent_exempt = enforce)]
-  ```
-
-- Github
-  Solpg
-- Enforces rent exemption with = enforce.
-  Skips rent exemption check that would normally be done through other constraints with = skip, e.g. when used with the zero constraint
-
----
-
-- ```rust
   #[account(zero)]
   ```
 
