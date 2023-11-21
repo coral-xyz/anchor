@@ -16,11 +16,13 @@ The programs and their tests are located in [/tests/bench](https://github.com/co
 
 Solana version: 1.17.0
 
-| Program | Binary Size | -   |
-| ------- | ----------- | --- |
-| bench   | 735,800     | -   |
+| Program | Binary Size | -                      |
+| ------- | ----------- | ---------------------- |
+| bench   | 676,632     | 🟢 **-59,168 (8.04%)** |
 
 ### Notable changes
+
+- lang: Remove `rent_exempt` constraint ([#2708](https://github.com/coral-xyz/anchor/pull/2708)).
 
 ---
 
