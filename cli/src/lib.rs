@@ -1188,7 +1188,10 @@ pub fn build(
     let cfg_parent = cfg.path().parent().expect("Invalid Anchor.toml");
 
     // Require overflow checks
-    check_overflow(cfg_parent.join("Cargo.toml"))?;
+    let workspace_cargo_toml_path = cfg_parent.join("Cargo.toml");
+    if workspace_cargo_toml_path.exists() {
+        check_overflow(workspace_cargo_toml_path)?;
+    }
 
     let idl_out = match idl {
         Some(idl) => Some(PathBuf::from(idl)),
