@@ -46,4 +46,34 @@ describe(IDL.name, () => {
   it("Panics on overflow mul", async () => {
     await testOverflow("testOverflowMul");
   });
+
+  it("Fails to build when `overflow-checks` is not explicitly specified", async () => {
+    const fs = await import("fs/promises");
+    const cargoToml = await fs.readFile("Cargo.toml", { encoding: "utf8" });
+    const CHECK = "overflow-checks = true";
+    const COMMENTED_CHECK = "#" + CHECK;
+    await fs.writeFile("Cargo.toml", cargoToml.replace(CHECK, COMMENTED_CHECK));
+
+    const { spawnSync } = await import("child_process");
+    const { stderr, status } = spawnSync("anchor", ["build"]);
+
+    try {
+      if (status === 0) {
+        throw new Error(
+          "Did not fail even though `overflow-checks` is not specified"
+        );
+      }
+
+      if (!stderr.includes("Error: `overflow-checks` is not enabled")) {
+        throw new Error(`Did not throw the correct overflow error:\n${stderr}`);
+      }
+    } catch (e) {
+      throw e;
+    } finally {
+      await fs.writeFile(
+        "Cargo.toml",
+        cargoToml.replace(COMMENTED_CHECK, CHECK)
+      );
+    }
+  });
 });
