@@ -25,8 +25,8 @@ pub mod overflow_checks {
             u32_left: u32::MIN,
             u32_right: u32::MAX,
             u64_left: u64::MIN,
-            u64_right: u64::MIN,
-            u128_left: u128::MAX,
+            u64_right: u64::MAX,
+            u128_left: u128::MIN,
             u128_right: u128::MAX,
         };
 
