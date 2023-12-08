@@ -8,6 +8,7 @@ use solana_program::declare_id;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::program;
+use solana_program::pubkey::Pubkey;
 
 // TODO: update this once the final shared memory program gets released.
 //       shmem4EWT2sPdVGvTZCzXXRAURL9G5vpPxNwSeKhHUL.
