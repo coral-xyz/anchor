@@ -56,11 +56,15 @@ export class BorshInstructionCoder implements InstructionCoder {
   /**
    * Encodes a program instruction.
    */
-  public encode(ixName: string, ix: any): Buffer {
-    return this._encode(SIGHASH_GLOBAL_NAMESPACE, ixName, ix);
+  public encode(ixName: string, ix: any, discriminator?: Buffer): Buffer {
+    return this._encode(
+      discriminator ?? sighash(SIGHASH_GLOBAL_NAMESPACE, ixName),
+      ixName,
+      ix
+    );
   }
 
-  private _encode(nameSpace: string, ixName: string, ix: any): Buffer {
+  private _encode(discriminator: Buffer, ixName: string, ix: any): Buffer {
     const buffer = Buffer.alloc(1000); // TODO: use a tighter buffer.
     const methodName = camelCase(ixName);
     const layout = this.ixLayout.get(methodName);
@@ -69,7 +73,7 @@ export class BorshInstructionCoder implements InstructionCoder {
     }
     const len = layout.encode(ix, buffer);
     const data = buffer.slice(0, len);
-    return Buffer.concat([sighash(nameSpace, ixName), data]);
+    return Buffer.concat([discriminator, data]);
   }
 
   private static parseIxLayout(idl: Idl): Map<string, Layout> {
