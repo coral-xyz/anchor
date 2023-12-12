@@ -11,6 +11,7 @@ use anchor_syn::idl::types::{
     IdlTypeDefinitionTy,
 };
 use anyhow::{anyhow, Context, Result};
+use checks::check_overflow;
 use clap::Parser;
 use dirs::home_dir;
 use flate2::read::GzDecoder;
@@ -44,11 +45,12 @@ use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
-use std::process::{Child, ExitStatus, Stdio};
+use std::process::{Child, Stdio};
 use std::str::FromStr;
 use std::string::ToString;
 use tar::Archive;
 
+mod checks;
 pub mod config;
 pub mod rust_template;
 pub mod solidity_template;
@@ -246,6 +248,12 @@ pub enum Command {
         /// Keypair of the program (filepath) (requires program-name)
         #[clap(long, requires = "program_name")]
         program_keypair: Option<String>,
+        /// If true, deploy from path target/verifiable
+        #[clap(short, long)]
+        verifiable: bool,
+        /// Arguments to pass to the underlying `solana program deploy` command.
+        #[clap(required = false, last = true)]
+        solana_args: Vec<String>,
     },
     /// Runs the deploy migration script.
     Migrate,
@@ -488,7 +496,7 @@ fn override_toolchain(cfg_override: &ConfigOverride) -> Result<RestoreToolchainC
     let cfg = Config::discover(cfg_override)?;
     if let Some(cfg) = cfg {
         fn get_current_version(cmd_name: &str) -> Result<String> {
-            let output: std::process::Output = std::process::Command::new(cmd_name)
+            let output = std::process::Command::new(cmd_name)
                 .arg("--version")
                 .output()?;
             let output_version = std::str::from_utf8(&output.stdout)?;
@@ -511,7 +519,7 @@ fn override_toolchain(cfg_override: &ConfigOverride) -> Result<RestoreToolchainC
                 // We are overriding with `solana-install` command instead of using the binaries
                 // from `~/.local/share/solana/install/releases` because we use multiple Solana
                 // binaries in various commands.
-                fn override_solana_version(version: String) -> std::io::Result<ExitStatus> {
+                fn override_solana_version(version: String) -> std::io::Result<bool> {
                     std::process::Command::new("solana-install")
                         .arg("init")
                         .arg(&version)
@@ -519,16 +527,17 @@ fn override_toolchain(cfg_override: &ConfigOverride) -> Result<RestoreToolchainC
                         .stdout(Stdio::null())
                         .spawn()?
                         .wait()
+                        .map(|status| status.success())
                 }
 
-                match override_solana_version(solana_version.to_owned()) {
-                    Ok(_) => restore_cbs.push(Box::new(|| {
-                        match override_solana_version(current_version)?.success() {
+                match override_solana_version(solana_version.to_owned())? {
+                    true => restore_cbs.push(Box::new(|| {
+                        match override_solana_version(current_version)? {
                             true => Ok(()),
                             false => Err(anyhow!("Failed to restore `solana` version")),
                         }
                     })),
-                    Err(_) => {
+                    false => {
                         eprintln!(
                             "Failed to override `solana` version to {solana_version}, \
                         using {current_version} instead"
@@ -540,16 +549,31 @@ fn override_toolchain(cfg_override: &ConfigOverride) -> Result<RestoreToolchainC
 
         // Anchor version override should be handled last
         if let Some(anchor_version) = &cfg.toolchain.anchor_version {
-            let current_version = VERSION;
-            if anchor_version != current_version {
+            // Anchor binary name prefix(applies to binaries that are installed via `avm`)
+            const ANCHOR_BINARY_PREFIX: &str = "anchor-";
+
+            // Get the current version from the executing binary name if possible because commit
+            // based toolchain overrides do not have version information.
+            let current_version = std::env::args()
+                .next()
+                .expect("First arg should exist")
+                .parse::<PathBuf>()?
+                .file_name()
+                .and_then(|name| name.to_str())
+                .expect("File name should be valid Unicode")
+                .split_once(ANCHOR_BINARY_PREFIX)
+                .map(|(_, version)| version)
+                .unwrap_or(VERSION)
+                .to_owned();
+            if anchor_version != &current_version {
                 let binary_path = home_dir()
                     .unwrap()
                     .join(".avm")
                     .join("bin")
-                    .join(format!("anchor-{anchor_version}"));
+                    .join(format!("{ANCHOR_BINARY_PREFIX}{anchor_version}"));
 
                 if !binary_path.exists() {
-                    println!(
+                    eprintln!(
                         "`anchor` {anchor_version} is not installed with `avm`. Installing...\n"
                     );
 
@@ -559,7 +583,7 @@ fn override_toolchain(cfg_override: &ConfigOverride) -> Result<RestoreToolchainC
                         .spawn()?
                         .wait()?;
                     if !exit_status.success() {
-                        println!(
+                        eprintln!(
                             "Failed to install `anchor` {anchor_version}, \
                             using {current_version} instead"
                         );
@@ -676,7 +700,15 @@ fn process_command(opts: Opts) -> Result<()> {
         Command::Deploy {
             program_name,
             program_keypair,
-        } => deploy(&opts.cfg_override, program_name, program_keypair),
+            verifiable,
+            solana_args,
+        } => deploy(
+            &opts.cfg_override,
+            program_name,
+            program_keypair,
+            verifiable,
+            solana_args,
+        ),
         Command::Expand {
             program_name,
             cargo_args,
@@ -1154,15 +1186,13 @@ pub fn build(
     }
 
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
-    let build_config = BuildConfig {
-        verifiable,
-        solana_version: solana_version.or_else(|| cfg.toolchain.solana_version.clone()),
-        docker_image: docker_image.unwrap_or_else(|| cfg.docker()),
-        bootstrap,
-    };
     let cfg_parent = cfg.path().parent().expect("Invalid Anchor.toml");
 
-    let cargo = Manifest::discover()?;
+    // Require overflow checks
+    let workspace_cargo_toml_path = cfg_parent.join("Cargo.toml");
+    if workspace_cargo_toml_path.exists() {
+        check_overflow(workspace_cargo_toml_path)?;
+    }
 
     let idl_out = match idl {
         Some(idl) => Some(PathBuf::from(idl)),
@@ -1176,10 +1206,17 @@ pub fn build(
     };
     fs::create_dir_all(idl_ts_out.as_ref().unwrap())?;
 
-    if !&cfg.workspace.types.is_empty() {
+    if !cfg.workspace.types.is_empty() {
         fs::create_dir_all(cfg_parent.join(&cfg.workspace.types))?;
     };
 
+    let cargo = Manifest::discover()?;
+    let build_config = BuildConfig {
+        verifiable,
+        solana_version: solana_version.or_else(|| cfg.toolchain.solana_version.clone()),
+        docker_image: docker_image.unwrap_or_else(|| cfg.docker()),
+        bootstrap,
+    };
     match cargo {
         // No Cargo.toml so build the entire workspace.
         None => build_all(
@@ -3027,7 +3064,7 @@ fn test(
         // In either case, skip the deploy if the user specifies.
         let is_localnet = cfg.provider.cluster == Cluster::Localnet;
         if (!is_localnet || skip_local_validator) && !skip_deploy {
-            deploy(cfg_override, None, None)?;
+            deploy(cfg_override, None, None, false, vec![])?;
         }
         let mut is_first_suite = true;
         if cfg.scripts.get("test").is_some() {
@@ -3189,7 +3226,8 @@ fn validator_flags(
 
     let mut flags = Vec::new();
     for mut program in cfg.read_all_programs()? {
-        let binary_path = program.binary_path().display().to_string();
+        let verifiable = false;
+        let binary_path = program.binary_path(verifiable).display().to_string();
 
         // Use the [programs.cluster] override and fallback to the keypair
         // files if no override is given.
@@ -3476,7 +3514,7 @@ fn test_validator_rpc_url(test_validator: &Option<TestValidator>) -> String {
             validator: Some(validator),
             ..
         }) => format!("http://{}:{}", validator.bind_address, validator.rpc_port),
-        _ => "http://localhost:8899".to_string(),
+        _ => "http://127.0.0.1:8899".to_string(),
     }
 }
 
@@ -3559,6 +3597,8 @@ fn deploy(
     cfg_override: &ConfigOverride,
     program_name: Option<String>,
     program_keypair: Option<String>,
+    verifiable: bool,
+    solana_args: Vec<String>,
 ) -> Result<()> {
     // Execute the code within the workspace
     with_workspace(cfg_override, |cfg| {
@@ -3570,7 +3610,7 @@ fn deploy(
         println!("Upgrade authority: {}", keypair);
 
         for mut program in cfg.get_programs(program_name)? {
-            let binary_path = program.binary_path().display().to_string();
+            let binary_path = program.binary_path(verifiable).display().to_string();
 
             println!("Deploying program {:?}...", program.lib_name);
             println!("Program path: {}...", binary_path);
@@ -3599,6 +3639,7 @@ fn deploy(
                 .arg("--program-id")
                 .arg(strip_workspace_prefix(program_keypair_filepath))
                 .arg(strip_workspace_prefix(binary_path))
+                .args(&solana_args)
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .output()

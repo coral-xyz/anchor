@@ -13,17 +13,25 @@ The minor version will be incremented upon a breaking change and the patch versi
 ### Features
 
 - cli: Allow force `init` and `new` ([#2698](https://github.com/coral-xyz/anchor/pull/2698)).
+- cli: Add verifiable option when `deploy` ([#2705](https://github.com/coral-xyz/anchor/pull/2705)).
+- cli: Add support for passing arguments to the underlying `solana program deploy` command with `anchor deploy` ([#2709](https://github.com/coral-xyz/anchor/pull/2709)).
 
 ### Fixes
 
 - syn: Add missing `new_from_array` method to `Hash` ([#2682](https://github.com/coral-xyz/anchor/pull/2682)).
 - cli: Switch to Cargo feature resolver(`resolver = "2"`) ([#2676](https://github.com/coral-xyz/anchor/pull/2676)).
 - cli: Fix using user specific path for `provider.wallet` in `Anchor.toml` ([#2696](https://github.com/coral-xyz/anchor/pull/2696)).
+- syn: Fix IDL constant seeds parsing ([#2699](https://github.com/coral-xyz/anchor/pull/2699)).
 - cli: Display errors if toolchain override restoration fails ([#2700](https://github.com/coral-xyz/anchor/pull/2700)).
+- cli: Fix commit based `anchor_version` override ([#2704](https://github.com/coral-xyz/anchor/pull/2704)).
+- spl: Fix compilation with `shmem` feature enabled ([#2722](https://github.com/coral-xyz/anchor/pull/2722)).
+- cli: Localhost default test validator address changes from `localhost` to `127.0.0.1`, NodeJS 17 IP resolution changes for IPv6 ([#2725](https://github.com/coral-xyz/anchor/pull/2725)).
 
 ### Breaking
 
 - cli: Make `cargo build-sbf` the default build command ([#2694](https://github.com/coral-xyz/anchor/pull/2694)).
+- cli: Require explicit `overflow-checks` flag ([#2716](https://github.com/coral-xyz/anchor/pull/2716)).
+- ts: Remove `anchor-deprecated-state` feature ([#2717](https://github.com/coral-xyz/anchor/pull/2717)).
 
 ## [0.29.0] - 2023-10-16
 

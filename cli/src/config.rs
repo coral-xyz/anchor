@@ -125,12 +125,11 @@ impl Manifest {
                         format!("Error reading the directory with path: {}", cwd.display())
                     })?
                     .path();
-                if let Some(filename) = p.file_name() {
-                    if filename.to_str() == Some("Cargo.toml") {
-                        let m = WithPath::new(Manifest::from_path(&p)?, p);
-                        return Ok(Some(m));
+                if let Some(filename) = p.file_name().and_then(|name| name.to_str()) {
+                    if filename == "Cargo.toml" {
+                        return Ok(Some(WithPath::new(Manifest::from_path(&p)?, p)));
                     }
-                    if filename.to_str() == Some("Anchor.toml") {
+                    if filename == "Anchor.toml" {
                         anchor_toml = true;
                     }
                 }
@@ -1257,10 +1256,16 @@ impl Program {
         Ok(WithPath::new(file, path))
     }
 
-    pub fn binary_path(&self) -> PathBuf {
+    pub fn binary_path(&self, verifiable: bool) -> PathBuf {
+        let path = if verifiable {
+            format!("target/verifiable/{}.so", self.lib_name)
+        } else {
+            format!("target/deploy/{}.so", self.lib_name)
+        };
+
         std::env::current_dir()
             .expect("Must have current dir")
-            .join(format!("target/deploy/{}.so", self.lib_name))
+            .join(path)
     }
 }
 
