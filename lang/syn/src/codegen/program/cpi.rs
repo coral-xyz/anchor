@@ -34,7 +34,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     ) -> #method_ret {
                         let ix = {
                             let ix = instruction::#ix_variant;
-                            let mut data = Vec::with_capacity(1024);
+                            let mut data = Vec::with_capacity(256);
                             data.extend_from_slice(&#sighash_tts);
                             AnchorSerialize::serialize(&ix, &mut data)
                                 .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotSerialize)?;

@@ -266,7 +266,7 @@ pub trait ZeroCopy: Discriminator + Copy + Clone + Zeroable + Pod {}
 /// to an instruction.
 pub trait InstructionData: Discriminator + AnchorSerialize {
     fn data(&self) -> Vec<u8> {
-        let mut data = Vec::with_capacity(1024);
+        let mut data = Vec::with_capacity(256);
         data.extend_from_slice(&Self::discriminator());
         self.serialize(&mut data).unwrap();
         data
