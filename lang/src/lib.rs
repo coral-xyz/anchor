@@ -65,7 +65,7 @@ pub use anchor_attribute_event::{emit_cpi, event_cpi};
 #[cfg(feature = "idl-build")]
 pub use anchor_syn::{self, idl::build::IdlBuild};
 
-pub type Result<T> = std::result::Result<T, error::Error>;
+pub type Result<T, E = error::Error> = std::result::Result<T, E>;
 
 /// A data structure of validated accounts that can be deserialized from the
 /// input to a Solana program. Implementations of this trait should perform any
