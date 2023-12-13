@@ -270,6 +270,18 @@ pub trait InstructionData: Discriminator + AnchorSerialize {
         d.append(&mut self.try_to_vec().expect("Should always serialize"));
         d
     }
+    /// Clears `vec` and writes instruction data to it
+    ///
+    /// We use a Vec<u8> here because of the additional flexibility
+    fn write_to(&self, mut vec: &mut Vec<u8>) {
+        // Clear vector
+        vec.clear();
+
+        // Write discriminator and then Self
+        borsh::to_writer(&mut vec, &Self::DISCRIMINATOR)
+            .expect("Discriminator is infallibly serializable");
+        borsh::to_writer(vec, &self).expect("InstructionData should be infallibly serializable");
+    }
 }
 
 /// An event that can be emitted via a Solana log. See [`emit!`](crate::prelude::emit) for an example.
