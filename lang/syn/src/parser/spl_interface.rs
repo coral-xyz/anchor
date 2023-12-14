@@ -11,12 +11,16 @@ pub fn parse(attrs: &[syn::Attribute]) -> Option<[u8; 8]> {
     let interfaces: Vec<[u8; 8]> = attrs
         .iter()
         .filter_map(|attr| {
-            if let Ok(Meta::List(meta_list)) = attr.parse_meta() {
-                if meta_list.path.is_ident("interface") {
+            if attr.path.is_ident("interface") {
+                if let Ok(Meta::List(meta_list)) = attr.parse_meta() {
                     if let Some(NestedMeta::Meta(Meta::Path(path))) = meta_list.nested.first() {
                         return Some(parse_interface_instruction(path));
                     }
                 }
+                panic!(
+                    "Failed to parse interface instruction:\n{}",
+                    quote::quote!(#attr)
+                );
             }
             None
         })
