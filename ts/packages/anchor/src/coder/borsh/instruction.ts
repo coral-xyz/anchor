@@ -58,13 +58,13 @@ export class BorshInstructionCoder implements InstructionCoder {
    */
   public encode(ixName: string, ix: any, discriminator?: Buffer): Buffer {
     return this._encode(
-      discriminator ?? sighash(SIGHASH_GLOBAL_NAMESPACE, ixName),
       ixName,
-      ix
+      ix,
+      discriminator ?? sighash(SIGHASH_GLOBAL_NAMESPACE, ixName)
     );
   }
 
-  private _encode(discriminator: Buffer, ixName: string, ix: any): Buffer {
+  private _encode(ixName: string, ix: any, discriminator: Buffer): Buffer {
     const buffer = Buffer.alloc(1000); // TODO: use a tighter buffer.
     const methodName = camelCase(ixName);
     const layout = this.ixLayout.get(methodName);

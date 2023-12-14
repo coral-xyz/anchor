@@ -17,7 +17,7 @@ idl-build = ["idl-parse", "idl-types"]
 idl-parse = ["idl-types"]
 idl-types = []
 init-if-needed = []
-interface-instructions = ["dep:spl-transfer-hook-interface", "dep:spl-discriminator"]
+interface-instructions = []
 seeds = []
 
 [dependencies]
@@ -29,7 +29,5 @@ quote = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
-spl-discriminator = { version = "0.1.0", optional = true }
-spl-transfer-hook-interface = { version = "0.3.0", optional = true }
 syn = { version = "1", features = ["full", "extra-traits", "parsing"] }
 thiserror = "1"
