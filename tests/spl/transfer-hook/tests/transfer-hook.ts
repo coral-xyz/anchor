@@ -160,6 +160,15 @@ describe("transfer hook", () => {
       ),
       0
     );
+    const { name, data } = new anchor.BorshInstructionCoder(program.idl).decode(
+      ix.data,
+      "hex",
+      "initialize"
+    );
+    assert.equal(name, "initialize");
+    assert.property(data, "metas");
+    assert.isArray(data.metas);
+    assert.equal(data.metas.length, extraMetas.length);
   });
 
   it("can create an `Execute` instruction with the proper discriminator", async () => {
@@ -182,6 +191,15 @@ describe("transfer hook", () => {
       ),
       0
     );
+    const { name, data } = new anchor.BorshInstructionCoder(program.idl).decode(
+      ix.data,
+      "hex",
+      "execute"
+    );
+    assert.equal(name, "execute");
+    assert.property(data, "amount");
+    assert.isTrue(anchor.BN.isBN(data.amount));
+    assert.isTrue(data.amount.eq(new anchor.BN(transferAmount)));
   });
 
   it("can transfer with extra account metas", async () => {

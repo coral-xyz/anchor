@@ -96,14 +96,21 @@ export class BorshInstructionCoder implements InstructionCoder {
    */
   public decode(
     ix: Buffer | string,
-    encoding: "hex" | "base58" = "hex"
+    encoding: "hex" | "base58" = "hex",
+    ixName?: string
   ): Instruction | null {
     if (typeof ix === "string") {
       ix = encoding === "hex" ? Buffer.from(ix, "hex") : bs58.decode(ix);
     }
-    let sighash = bs58.encode(ix.slice(0, 8));
+    // Use the provided method name to get the sighash, ignoring the
+    // discriminator in the instruction data.
+    // This is useful for decoding instructions that have been encoded with a
+    // different namespace, such as an SPL interface.
+    let sighashKey = bs58.encode(
+      ixName ? sighash(SIGHASH_GLOBAL_NAMESPACE, ixName) : ix.slice(0, 8)
+    );
     let data = ix.slice(8);
-    const decoder = this.sighashLayouts.get(sighash);
+    const decoder = this.sighashLayouts.get(sighashKey);
     if (!decoder) {
       return null;
     }
