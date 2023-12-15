@@ -751,8 +751,7 @@ fn test_instruction_data() {
 
     // Check that one is correct and that they are equal (implies other is correct)
     let correct_disc = data[0..8] == MyType::DISCRIMINATOR;
-    let correct_data = <MyType as borsh::BorshDeserialize>::deserialize(&mut &data[8..])
-        .is_ok_and(|result| result == instance);
+    let correct_data = MyType::deserialize(&mut &data[8..]).is_ok_and(|result| result == instance);
     let correct_serialization = correct_disc & correct_data;
     assert!(correct_serialization, "serialization was not correct");
     assert_eq!(
