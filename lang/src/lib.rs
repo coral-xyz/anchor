@@ -279,10 +279,11 @@ pub trait InstructionData: Discriminator + AnchorSerialize {
         vec.clear();
 
         // Write discriminator and then Self
-        borsh::to_writer(&mut vec, &Self::DISCRIMINATOR)
+        Self::DISCRIMINATOR
+            .serialize(&mut vec)
             .expect("Discriminator is infallibly serializable");
-        borsh::to_writer(vec, &self).expect("InstructionData should be infallibly serializable");
-    }
+        self.serialize(&mut vec)
+            .expect("InstructionData should be infallibly serializable");
 }
 
 /// An event that can be emitted via a Solana log. See [`emit!`](crate::prelude::emit) for an example.
