@@ -284,6 +284,7 @@ pub trait InstructionData: Discriminator + AnchorSerialize {
             .expect("Discriminator is infallibly serializable");
         self.serialize(&mut vec)
             .expect("InstructionData should be infallibly serializable");
+        }
 }
 
 /// An event that can be emitted via a Solana log. See [`emit!`](crate::prelude::emit) for an example.
