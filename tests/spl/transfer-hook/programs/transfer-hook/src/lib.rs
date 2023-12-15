@@ -119,7 +119,6 @@ pub struct Initialize<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(amount: u64)]
 pub struct Execute<'info> {
     #[account(
         token::mint = mint,

@@ -166,7 +166,6 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     >;
   }
 
-  // TODO: Remove the hard-coded discriminators once we have a JS package for Transfer Hook
   public interface(splInterface: SplInterface): MethodsBuilder<IDL, I> {
     if (
       splInterface ===
