@@ -270,10 +270,11 @@ pub trait InstructionData: Discriminator + AnchorSerialize {
         d.append(&mut self.try_to_vec().expect("Should always serialize"));
         d
     }
-    /// Clears `vec` and writes instruction data to it
+
+    /// Clears `data` and writes instruction data to it.
     ///
-    /// We use a Vec<u8> here because of the additional flexibility of re-allocation (only if necessary),
-    /// and because the data field in `Instruction` expects a `Vec<u8>`.
+    /// We use a `Vec<u8>`` here because of the additional flexibility of re-allocation (only if
+    /// necessary), and because the data field in `Instruction` expects a `Vec<u8>`.
     fn write_to(&self, mut data: &mut Vec<u8>) {
         data.clear();
         data.extend_from_slice(&Self::DISCRIMINATOR);

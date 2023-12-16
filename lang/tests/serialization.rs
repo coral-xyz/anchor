@@ -1,6 +1,4 @@
-use anchor_derive_serde::{AnchorDeserialize, AnchorSerialize};
-use anchor_lang::{Discriminator, InstructionData};
-use borsh::BorshDeserialize;
+use anchor_lang::{AnchorDeserialize, AnchorSerialize, Discriminator, InstructionData};
 
 #[test]
 fn test_instruction_data() {
