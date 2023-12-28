@@ -174,7 +174,7 @@ where
 {
     pub accounts: T,
     pub remaining_accounts: Vec<AccountInfo<'info>>,
-    pub program: AccountInfo<'info>,
+    pub program_id: Option<Pubkey>,
     pub signer_seeds: &'a [&'b [&'c [u8]]],
 }
 
@@ -182,27 +182,54 @@ impl<'a, 'b, 'c, 'info, T> CpiContext<'a, 'b, 'c, 'info, T>
 where
     T: ToAccountMetas + ToAccountInfos<'info>,
 {
-    pub fn new(program: AccountInfo<'info>, accounts: T) -> Self {
+    #[must_use]
+    pub fn new(accounts: T) -> Self {
         Self {
             accounts,
-            program,
+            program_id: None,
             remaining_accounts: Vec::new(),
             signer_seeds: &[],
         }
     }
 
     #[must_use]
-    pub fn new_with_signer(
-        program: AccountInfo<'info>,
+    pub fn new_with_id(accounts: T, program_id: Pubkey) -> Self {
+        Self {
+            accounts,
+            program_id: Some(program_id),
+            remaining_accounts: Vec::new(),
+            signer_seeds: &[],
+        }
+    }
+
+    #[must_use]
+    pub fn new_with_signer(accounts: T, signer_seeds: &'a [&'b [&'c [u8]]]) -> Self {
+        Self {
+            accounts,
+            program_id: None,
+            signer_seeds,
+            remaining_accounts: Vec::new(),
+        }
+    }
+
+    #[must_use]
+    pub fn new_with_id_and_signer(
         accounts: T,
+        program_id: Pubkey,
         signer_seeds: &'a [&'b [&'c [u8]]],
     ) -> Self {
         Self {
             accounts,
-            program,
+            program_id: Some(program_id),
             signer_seeds,
             remaining_accounts: Vec::new(),
         }
+    }
+
+    #[must_use]
+    pub fn with_program_id(mut self, program_id: Pubkey) -> Self {
+        self.program_id = Some(program_id);
+        self
     }
 
     #[must_use]
@@ -224,7 +251,6 @@ impl<'info, T: ToAccountInfos<'info> + ToAccountMetas> ToAccountInfos<'info>
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         let mut infos = self.accounts.to_account_infos();
         infos.extend_from_slice(&self.remaining_accounts);
-        infos.push(self.program.clone());
         infos
     }
 }

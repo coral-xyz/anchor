@@ -17,7 +17,7 @@ pub fn transfer<'info>(
 ) -> Result<()> {
     #[allow(deprecated)]
     let ix = spl_token_2022::instruction::transfer(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.from.key,
         ctx.accounts.to.key,
         ctx.accounts.authority.key,
@@ -38,7 +38,7 @@ pub fn transfer_checked<'info>(
     decimals: u8,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::transfer_checked(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.from.key,
         ctx.accounts.mint.key,
         ctx.accounts.to.key,
@@ -65,7 +65,7 @@ pub fn mint_to<'info>(
     amount: u64,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::mint_to(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.mint.key,
         ctx.accounts.to.key,
         ctx.accounts.authority.key,
@@ -82,7 +82,7 @@ pub fn mint_to<'info>(
 
 pub fn burn<'info>(ctx: CpiContext<'_, '_, '_, 'info, Burn<'info>>, amount: u64) -> Result<()> {
     let ix = spl_token_2022::instruction::burn(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.from.key,
         ctx.accounts.mint.key,
         ctx.accounts.authority.key,
@@ -102,7 +102,7 @@ pub fn approve<'info>(
     amount: u64,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::approve(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.to.key,
         ctx.accounts.delegate.key,
         ctx.accounts.authority.key,
@@ -123,7 +123,7 @@ pub fn approve<'info>(
 
 pub fn revoke<'info>(ctx: CpiContext<'_, '_, '_, 'info, Revoke<'info>>) -> Result<()> {
     let ix = spl_token_2022::instruction::revoke(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.source.key,
         ctx.accounts.authority.key,
         &[],
@@ -140,7 +140,7 @@ pub fn initialize_account<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, InitializeAccount<'info>>,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::initialize_account(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.account.key,
         ctx.accounts.mint.key,
         ctx.accounts.authority.key,
@@ -161,7 +161,7 @@ pub fn initialize_account3<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, InitializeAccount3<'info>>,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::initialize_account3(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.account.key,
         ctx.accounts.mint.key,
         ctx.accounts.authority.key,
@@ -172,7 +172,7 @@ pub fn initialize_account3<'info>(
 
 pub fn close_account<'info>(ctx: CpiContext<'_, '_, '_, 'info, CloseAccount<'info>>) -> Result<()> {
     let ix = spl_token_2022::instruction::close_account(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.account.key,
         ctx.accounts.destination.key,
         ctx.accounts.authority.key,
@@ -194,7 +194,7 @@ pub fn freeze_account<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, FreezeAccount<'info>>,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::freeze_account(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.account.key,
         ctx.accounts.mint.key,
         ctx.accounts.authority.key,
@@ -214,7 +214,7 @@ pub fn freeze_account<'info>(
 
 pub fn thaw_account<'info>(ctx: CpiContext<'_, '_, '_, 'info, ThawAccount<'info>>) -> Result<()> {
     let ix = spl_token_2022::instruction::thaw_account(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.account.key,
         ctx.accounts.mint.key,
         ctx.accounts.authority.key,
@@ -239,7 +239,7 @@ pub fn initialize_mint<'info>(
     freeze_authority: Option<&Pubkey>,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::initialize_mint(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.mint.key,
         authority,
         freeze_authority,
@@ -256,7 +256,7 @@ pub fn initialize_mint2<'info>(
     freeze_authority: Option<&Pubkey>,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::initialize_mint2(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.mint.key,
         authority,
         freeze_authority,
@@ -276,7 +276,7 @@ pub fn set_authority<'info>(
     }
 
     let ix = spl_token_2022::instruction::set_authority(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.account_or_mint.key,
         spl_new_authority,
         authority_type,
@@ -292,7 +292,10 @@ pub fn set_authority<'info>(
 }
 
 pub fn sync_native<'info>(ctx: CpiContext<'_, '_, '_, 'info, SyncNative<'info>>) -> Result<()> {
-    let ix = spl_token_2022::instruction::sync_native(ctx.program.key, ctx.accounts.account.key)?;
+    let ix = spl_token_2022::instruction::sync_native(
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
+        ctx.accounts.account.key,
+    )?;
     solana_program::program::invoke(&ix, &[ctx.accounts.account]).map_err(Into::into)
 }
 
@@ -301,7 +304,7 @@ pub fn get_account_data_size<'info>(
     extension_types: &[spl_token_2022::extension::ExtensionType],
 ) -> Result<u64> {
     let ix = spl_token_2022::instruction::get_account_data_size(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.mint.key,
         extension_types,
     )?;
@@ -309,7 +312,7 @@ pub fn get_account_data_size<'info>(
     solana_program::program::get_return_data()
         .ok_or(solana_program::program_error::ProgramError::InvalidInstructionData)
         .and_then(|(key, data)| {
-            if key != *ctx.program.key {
+            if key != ctx.program_id.unwrap_or(spl_token_2022::ID) {
                 Err(solana_program::program_error::ProgramError::IncorrectProgramId)
             } else {
                 data.try_into().map(u64::from_le_bytes).map_err(|_| {
@@ -325,7 +328,7 @@ pub fn initialize_mint_close_authority<'info>(
     close_authority: Option<&Pubkey>,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::initialize_mint_close_authority(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.mint.key,
         close_authority,
     )?;
@@ -336,7 +339,7 @@ pub fn initialize_immutable_owner<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, InitializeImmutableOwner<'info>>,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::initialize_immutable_owner(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.account.key,
     )?;
     solana_program::program::invoke(&ix, &[ctx.accounts.account]).map_err(Into::into)
@@ -347,7 +350,7 @@ pub fn amount_to_ui_amount<'info>(
     amount: u64,
 ) -> Result<String> {
     let ix = spl_token_2022::instruction::amount_to_ui_amount(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.account.key,
         amount,
     )?;
@@ -355,7 +358,7 @@ pub fn amount_to_ui_amount<'info>(
     solana_program::program::get_return_data()
         .ok_or(solana_program::program_error::ProgramError::InvalidInstructionData)
         .and_then(|(key, data)| {
-            if key != *ctx.program.key {
+            if key != ctx.program_id.unwrap_or(spl_token_2022::ID) {
                 Err(solana_program::program_error::ProgramError::IncorrectProgramId)
             } else {
                 String::from_utf8(data).map_err(|_| {
@@ -371,7 +374,7 @@ pub fn ui_amount_to_amount<'info>(
     ui_amount: &str,
 ) -> Result<u64> {
     let ix = spl_token_2022::instruction::ui_amount_to_amount(
-        ctx.program.key,
+        &ctx.program_id.unwrap_or(spl_token_2022::ID),
         ctx.accounts.account.key,
         ui_amount,
     )?;
@@ -379,7 +382,7 @@ pub fn ui_amount_to_amount<'info>(
     solana_program::program::get_return_data()
         .ok_or(solana_program::program_error::ProgramError::InvalidInstructionData)
         .and_then(|(key, data)| {
-            if key != *ctx.program.key {
+            if key != ctx.program_id.unwrap_or(spl_token_2022::ID) {
                 Err(solana_program::program_error::ProgramError::IncorrectProgramId)
             } else {
                 data.try_into().map(u64::from_le_bytes).map_err(|_| {
