@@ -67,7 +67,7 @@ export type IdlPda = {
   programId?: IdlSeed;
 };
 
-export type IdlSeed = any; // TODO
+export type IdlSeed = string | number[] | string[];
 
 // A nested/recursive version of IdlAccount.
 export type IdlAccounts = {
