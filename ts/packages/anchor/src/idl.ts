@@ -67,7 +67,16 @@ export type IdlPda = {
   programId?: IdlSeed;
 };
 
-export type IdlSeed = any; // TODO
+// Based on the rust type defined in lang/sync/src/idl/types.rs and the definitions in lang/syn/src/idl/pda.rs
+export type IdlSeed =
+  | { kind: 'Const'; value: IdlConstant }
+  | { kind: 'Arg'; value: IdlSeedArg }
+  | { kind: 'Account'; value: IdlAccount };
+
+export interface IdlSeedArg {
+  type: IdlType;
+  path: string;
+}
 
 // A nested/recursive version of IdlAccount.
 export type IdlAccounts = {
