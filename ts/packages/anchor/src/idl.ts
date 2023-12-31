@@ -67,8 +67,24 @@ export type IdlPda = {
   programId?: IdlSeed;
 };
 
-export type IdlSeed = any; // TODO
 
+export type IdlSeedArg = {
+  ty: IdlType;
+  path: string;
+};
+
+export type IdlSeedConst = {
+  ty: IdlType;
+  value: any; 
+};
+
+export type IdlSeed = {
+  
+  accounts: string[];
+  seedArgs?: IdlSeedArg[]; 
+  seedConsts?: IdlSeedConst[]; 
+};
+ 
 // A nested/recursive version of IdlAccount.
 export type IdlAccounts = {
   name: string;
