@@ -39,8 +39,7 @@ pub fn check_anchor_version(cfg: &WithPath<Config>) -> Result<()> {
         .filter_map(|man| man.ok())
         .filter_map(|man| man.dependencies.get("anchor-lang").map(|d| d.to_owned()))
         .filter_map(|dep| Version::parse(dep.req()).ok())
-        .filter(|ver| ver != &cli_version)
-        .next(); // Only log the warning once
+        .find(|ver| ver != &cli_version); // Only log the warning once
 
     if let Some(ver) = mismatched_lang_version {
         eprintln!(
