@@ -69,14 +69,36 @@ export type IdlPda = {
 
 // Based on the rust type defined in lang/sync/src/idl/types.rs and the definitions in lang/syn/src/idl/pda.rs
 export type IdlSeed =
-  | { kind: 'Const'; value: IdlConstant }
-  | { kind: 'Arg'; value: IdlSeedArg }
-  | { kind: 'Account'; value: IdlAccount };
+  | IdlSeedConst
+  | IdlSeedArg
+  | IdlSeedAccount;
 
-export interface IdlSeedArg {
+export type IdlSeedConst = {
+  kind: "const";
+  type: IdlType;
+  value: SerdeJsonValue;
+};
+
+export type SerdeJsonValue =
+  | null
+  | boolean
+  | number
+  | string
+  | SerdeJsonValue[]
+  | { [key: string]: SerdeJsonValue };
+
+export type IdlSeedArg = {
+  kind: "arg";
   type: IdlType;
   path: string;
-}
+};
+
+export type IdlSeedAccount = {
+  kind: "account";
+  type: IdlType;
+  account?: string; // Adjust the type based on the actual type of account in your use case
+  path: string;
+};
 
 // A nested/recursive version of IdlAccount.
 export type IdlAccounts = {
