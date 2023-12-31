@@ -76,16 +76,8 @@ export type IdlSeed =
 export type IdlSeedConst = {
   kind: "const";
   type: IdlType;
-  value: SerdeJsonValue;
+  value: any;
 };
-
-export type SerdeJsonValue =
-  | null
-  | boolean
-  | number
-  | string
-  | SerdeJsonValue[]
-  | { [key: string]: SerdeJsonValue };
 
 export type IdlSeedArg = {
   kind: "arg";
@@ -96,7 +88,7 @@ export type IdlSeedArg = {
 export type IdlSeedAccount = {
   kind: "account";
   type: IdlType;
-  account?: string; // Adjust the type based on the actual type of account in your use case
+  account?: string;
   path: string;
 };
 
