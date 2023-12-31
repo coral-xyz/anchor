@@ -67,7 +67,6 @@ export type IdlPda = {
   programId?: IdlSeed;
 };
 
-// Based on the rust type defined in lang/sync/src/idl/types.rs and the definitions in lang/syn/src/idl/pda.rs
 export type IdlSeed =
   | IdlSeedConst
   | IdlSeedArg
