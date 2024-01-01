@@ -513,35 +513,44 @@ fn override_toolchain(cfg_override: &ConfigOverride) -> Result<RestoreToolchainC
             Ok(version)
         }
 
+        fn is_solana_version_installed(version: &str) -> Result<bool> {
+            let output = std::process::Command::new("solana").arg("--version").output()?;
+            let output_version = std::str::from_utf8(&output.stdout)?;
+            Ok(output_version.contains(version))
+        }
+
         if let Some(solana_version) = &cfg.toolchain.solana_version {
             let current_version = get_current_version("solana")?;
             if solana_version != &current_version {
                 // We are overriding with `solana-install` command instead of using the binaries
                 // from `~/.local/share/solana/install/releases` because we use multiple Solana
                 // binaries in various commands.
-                fn override_solana_version(version: String) -> std::io::Result<bool> {
-                    std::process::Command::new("solana-install")
-                        .arg("init")
-                        .arg(&version)
-                        .stderr(Stdio::null())
-                        .stdout(Stdio::null())
-                        .spawn()?
-                        .wait()
-                        .map(|status| status.success())
-                }
+                if !is_solana_version_installed(solana_version)? {
+                    // Set standard I/O stream to null only if the version is not installed
+                    fn override_solana_version(version: String) -> std::io::Result<bool> {
+                        std::process::Command::new("solana-install")
+                            .arg("init")
+                            .arg(&version)
+                            .stderr(Stdio::null())
+                            .stdout(Stdio::null())
+                            .spawn()?
+                            .wait()
+                            .map(|status| status.success())
+                    }
 
-                match override_solana_version(solana_version.to_owned())? {
-                    true => restore_cbs.push(Box::new(|| {
-                        match override_solana_version(current_version)? {
-                            true => Ok(()),
-                            false => Err(anyhow!("Failed to restore `solana` version")),
-                        }
-                    })),
-                    false => {
-                        eprintln!(
-                            "Failed to override `solana` version to {solana_version}, \
+                    match override_solana_version(solana_version.to_owned())? {
+                        true => restore_cbs.push(Box::new(|| {
+                            match override_solana_version(current_version)? {
+                                true => Ok(()),
+                                false => Err(anyhow!("Failed to restore `solana` version")),
+                            }
+                        })),
+                        false => {
+                            eprintln!(
+                                "Failed to override `solana` version to {solana_version}, \
                         using {current_version} instead"
-                        );
+                            );
+                        }
                     }
                 }
             }
