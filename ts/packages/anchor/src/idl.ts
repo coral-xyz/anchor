@@ -76,12 +76,16 @@ export type IdlSeedConst = {
   kind: "const";
   type: IdlType;
   value: any;
+  path: string;
+  account?: string;
 };
 
 export type IdlSeedArg = {
   kind: "arg";
   type: IdlType;
   path: string;
+  value: any;
+  account?: string;
 };
 
 export type IdlSeedAccount = {
@@ -89,6 +93,7 @@ export type IdlSeedAccount = {
   type: IdlType;
   account?: string;
   path: string;
+  value: any;
 };
 
 // A nested/recursive version of IdlAccount.
