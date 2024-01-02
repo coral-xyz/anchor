@@ -385,7 +385,7 @@ export class AccountsResolver<IDL extends Idl> {
     if (!accountDesc.pda?.programId) {
       return this._programId;
     }
-    console.log(accountDesc.pda.programId)
+    
     switch (accountDesc.pda.programId.kind) {
       case "const":
         return new PublicKey(
