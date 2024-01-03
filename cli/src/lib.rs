@@ -375,6 +375,9 @@ pub enum IdlCommand {
     },
     Close {
         program_id: Pubkey,
+        /// The IDL account to close. If none is given, then the IDL account derived from program_id is used.
+        #[clap(short, long)]
+        idl_address: Option<Pubkey>,
         /// When used, the content of the instruction will only be printed in base64 form and not executed.
         /// Useful for multisig execution when the local wallet keypair is not available.
         #[clap(long)]
@@ -2063,8 +2066,9 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
         } => idl_init(cfg_override, program_id, filepath),
         IdlCommand::Close {
             program_id,
+            idl_address,
             print_only,
-        } => idl_close(cfg_override, program_id, print_only),
+        } => idl_close(cfg_override, program_id, idl_address, print_only),
         IdlCommand::WriteBuffer {
             program_id,
             filepath,
@@ -2158,9 +2162,14 @@ fn idl_init(cfg_override: &ConfigOverride, program_id: Pubkey, idl_filepath: Str
     })
 }
 
-fn idl_close(cfg_override: &ConfigOverride, program_id: Pubkey, print_only: bool) -> Result<()> {
+fn idl_close(
+    cfg_override: &ConfigOverride,
+    program_id: Pubkey,
+    idl_address: Option<Pubkey>,
+    print_only: bool,
+) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
-        let idl_address = IdlAccount::address(&program_id);
+        let idl_address = idl_address.unwrap_or_else(|| IdlAccount::address(&program_id));
         idl_close_account(cfg, &program_id, idl_address, print_only)?;
 
         if !print_only {
