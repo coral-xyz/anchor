@@ -385,7 +385,7 @@ export class AccountsResolver<IDL extends Idl> {
     if (!accountDesc.pda?.programId) {
       return this._programId;
     }
-    
+
     switch (accountDesc.pda.programId.kind) {
       case "const":
         return new PublicKey(
@@ -396,9 +396,7 @@ export class AccountsResolver<IDL extends Idl> {
       case "account":
         return await this.accountValue(accountDesc.pda.programId, path);
       default:
-        throw new Error(
-          `Unexpected program seed kind`
-        );
+        throw new Error(`Unexpected program seed kind`);
     }
   }
 

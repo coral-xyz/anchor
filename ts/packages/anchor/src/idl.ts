@@ -67,10 +67,7 @@ export type IdlPda = {
   programId?: IdlSeed;
 };
 
-export type IdlSeed =
-  | IdlSeedConst
-  | IdlSeedArg
-  | IdlSeedAccount;
+export type IdlSeed = IdlSeedConst | IdlSeedArg | IdlSeedAccount;
 
 export type IdlSeedConst = {
   kind: "const";
