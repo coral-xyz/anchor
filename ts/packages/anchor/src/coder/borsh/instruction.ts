@@ -232,7 +232,8 @@ class InstructionFormatter {
           .map((d: IdlField) =>
             this.formatIdlData(
               { name: "", type: (<IdlTypeVec>idlField.type).vec },
-              d
+              d,
+              types
             )
           )
           .join(", ") +
@@ -303,11 +304,15 @@ class InstructionFormatter {
           const variants = typeDef.type.variants;
           const variant = Object.keys(data)[0];
           const enumType = data[variant];
+          const camelCaseVariant = camelCase(variant);
+          const enumVariant = variants.find((v) => camelCase(v.name) === camelCaseVariant);
+          const relevantFields = enumVariant?.fields;
           const namedFields = Object.keys(enumType)
             .map((f) => {
               const fieldData = enumType[f];
-              const idlField = variants[variant]?.find(
-                (v: IdlField) => v.name === f
+              const camelCaseField = camelCase(f);
+              const idlField = relevantFields?.find<IdlField>(
+                (v): v is IdlField => camelCase((v as IdlField).name) === camelCaseField
               );
               if (!idlField) {
                 throw new Error("Unable to find variant");
