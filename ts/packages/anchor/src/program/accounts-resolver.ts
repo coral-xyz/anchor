@@ -399,7 +399,9 @@ export class AccountsResolver<IDL extends Idl> {
       case "account":
         return await this.accountValue(accountDesc.pda.programId, path);
       default:
-        throw new Error(`Unexpected program seed kind`);
+        throw new Error(
+          `Unexpected program seed: ${accountDesc.pda.programId}`
+        );
     }
   }
 
@@ -415,7 +417,7 @@ export class AccountsResolver<IDL extends Idl> {
       case "account":
         return await this.toBufferAccount(seedDesc, path);
       default:
-        throw new Error(`Unexpected seed kind`);
+        throw new Error(`Unexpected seed: ${seedDesc}`);
     }
   }
 
