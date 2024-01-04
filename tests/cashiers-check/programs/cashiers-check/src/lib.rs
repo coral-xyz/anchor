@@ -26,8 +26,7 @@ pub mod cashiers_check {
             to: ctx.accounts.vault.to_account_info(),
             authority: ctx.accounts.owner.clone(),
         };
-        let cpi_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+        let cpi_ctx = CpiContext::new(cpi_accounts);
         token::transfer(cpi_ctx, amount)?;
 
         // Print the check.
@@ -54,8 +53,7 @@ pub mod cashiers_check {
             to: ctx.accounts.to.to_account_info(),
             authority: ctx.accounts.check_signer.clone(),
         };
-        let cpi_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        let cpi_ctx = CpiContext::new_with_signer(cpi_accounts, signer);
         token::transfer(cpi_ctx, ctx.accounts.check.amount)?;
         // Burn the check for one time use.
         ctx.accounts.check.burned = true;
@@ -74,8 +72,7 @@ pub mod cashiers_check {
             to: ctx.accounts.from.to_account_info(),
             authority: ctx.accounts.check_signer.clone(),
         };
-        let cpi_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        let cpi_ctx = CpiContext::new_with_signer(cpi_accounts, signer);
         token::transfer(cpi_ctx, ctx.accounts.check.amount)?;
         ctx.accounts.check.burned = true;
         Ok(())
