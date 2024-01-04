@@ -512,11 +512,50 @@ fn override_toolchain(cfg_override: &ConfigOverride) -> Result<RestoreToolchainC
 
             Ok(version)
         }
-
+        // Function to check the installed solana version
         fn is_solana_version_installed(version: &str) -> Result<bool> {
-            let output = std::process::Command::new("solana").arg("--version").output()?;
+            let output = std::process::Command::new("solana")
+                .arg("--version")
+                .output()?;
             let output_version = std::str::from_utf8(&output.stdout)?;
             Ok(output_version.contains(version))
+        }
+        // Function to override the Solana version
+        fn override_solana_version(version: String) -> std::io::Result<bool> {
+            let is_installed = match is_solana_version_installed(&version) {
+                Ok(is_installed) => is_installed,
+                Err(err) => {
+                    eprintln!("Error checking Solana version installation: {:?}", err);
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "Error checking installation",
+                    ));
+                }
+            };
+
+            if is_installed {
+                // Solana version is already installed, set standard I/O streams to null
+                std::process::Command::new("solana-install")
+                    .arg("init")
+                    .arg(&version)
+                    .stderr(Stdio::null())
+                    .stdout(Stdio::null())
+                    .spawn()?
+                    .wait()
+                    .map(|status| status.success())
+            } else {
+                // Solana version is not installed, display installation progress
+                std::process::Command::new("solana-install")
+                    .arg("init")
+                    .arg(&version)
+                    .spawn()?
+                    .wait()
+                    .map(|status| status.success())
+                    .map_err(|err| {
+                        eprintln!("Error during Solana installation: {:?}", err);
+                        std::io::Error::new(std::io::ErrorKind::Other, "Error during installation")
+                    })
+            }
         }
 
         if let Some(solana_version) = &cfg.toolchain.solana_version {
@@ -525,32 +564,22 @@ fn override_toolchain(cfg_override: &ConfigOverride) -> Result<RestoreToolchainC
                 // We are overriding with `solana-install` command instead of using the binaries
                 // from `~/.local/share/solana/install/releases` because we use multiple Solana
                 // binaries in various commands.
-                if !is_solana_version_installed(solana_version)? {
-                    // Set standard I/O stream to null only if the version is not installed
-                    fn override_solana_version(version: String) -> std::io::Result<bool> {
-                        std::process::Command::new("solana-install")
-                            .arg("init")
-                            .arg(&version)
-                            .stderr(Stdio::null())
-                            .stdout(Stdio::null())
-                            .spawn()?
-                            .wait()
-                            .map(|status| status.success())
-                    }
-
-                    match override_solana_version(solana_version.to_owned())? {
-                        true => restore_cbs.push(Box::new(|| {
+                match override_solana_version(solana_version.to_owned())? {
+                    true => {
+                        // If successful, add a restore callback
+                        restore_cbs.push(Box::new(|| {
                             match override_solana_version(current_version)? {
                                 true => Ok(()),
                                 false => Err(anyhow!("Failed to restore `solana` version")),
                             }
-                        })),
-                        false => {
-                            eprintln!(
-                                "Failed to override `solana` version to {solana_version}, \
+                        }));
+                    }
+                    false => {
+                        // Print error message if override fails
+                        eprintln!(
+                            "Failed to override `solana` version to {solana_version}, \
                         using {current_version} instead"
-                            );
-                        }
+                        );
                     }
                 }
             }
