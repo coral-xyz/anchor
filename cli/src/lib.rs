@@ -512,15 +512,21 @@ fn override_toolchain(cfg_override: &ConfigOverride) -> Result<RestoreToolchainC
 
             Ok(version)
         }
-        // Function to check the installed solana version
+        
         fn is_solana_version_installed(version: &str) -> Result<bool> {
-            let output = std::process::Command::new("solana")
-                .arg("--version")
+            let output = std::process::Command::new("ls")
+                .arg("-l")
+                .arg("~/.local/share/solana/install/releases")
                 .output()?;
-            let output_version = std::str::from_utf8(&output.stdout)?;
-            Ok(output_version.contains(version))
+        
+            if output.status.success() {
+                let output_versions = std::str::from_utf8(&output.stdout)?;
+                Ok(output_versions.lines().any(|line| line.contains(version)))
+            } else {
+                Err(anyhow!("Failed to list Solana installed versions"))
+            }
         }
-        // Function to override the Solana version
+        
         fn override_solana_version(version: String) -> std::io::Result<bool> {
             let is_installed = match is_solana_version_installed(&version) {
                 Ok(is_installed) => is_installed,
@@ -566,7 +572,6 @@ fn override_toolchain(cfg_override: &ConfigOverride) -> Result<RestoreToolchainC
                 // binaries in various commands.
                 match override_solana_version(solana_version.to_owned())? {
                     true => {
-                        // If successful, add a restore callback
                         restore_cbs.push(Box::new(|| {
                             match override_solana_version(current_version)? {
                                 true => Ok(()),
@@ -575,7 +580,6 @@ fn override_toolchain(cfg_override: &ConfigOverride) -> Result<RestoreToolchainC
                         }));
                     }
                     false => {
-                        // Print error message if override fails
                         eprintln!(
                             "Failed to override `solana` version to {solana_version}, \
                         using {current_version} instead"
