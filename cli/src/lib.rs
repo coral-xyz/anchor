@@ -512,21 +512,32 @@ fn override_toolchain(cfg_override: &ConfigOverride) -> Result<RestoreToolchainC
 
             Ok(version)
         }
-        
+
         fn is_solana_version_installed(version: &str) -> Result<bool> {
             let output = std::process::Command::new("ls")
                 .arg("-l")
                 .arg("~/.local/share/solana/install/releases")
                 .output()?;
-        
+
             if output.status.success() {
                 let output_versions = std::str::from_utf8(&output.stdout)?;
-                Ok(output_versions.lines().any(|line| line.contains(version)))
+
+                let installed_versions: Vec<String> = output_versions
+                    .lines()
+                    .filter_map(|line| {
+                        Regex::new(r"(\d+\.\d+\.\S+)")
+                            .ok()
+                            .and_then(|re| re.captures(line))
+                            .map(|captures| captures[0].to_string())
+                    })
+                    .collect();
+
+                Ok(installed_versions.contains(&version.to_string()))
             } else {
                 Err(anyhow!("Failed to list Solana installed versions"))
             }
         }
-        
+
         fn override_solana_version(version: String) -> std::io::Result<bool> {
             let is_installed = match is_solana_version_installed(&version) {
                 Ok(is_installed) => is_installed,
