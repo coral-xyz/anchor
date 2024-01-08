@@ -2260,7 +2260,8 @@ fn idl_upgrade(
     idl_filepath: String,
 ) -> Result<()> {
     let buffer = idl_write_buffer(cfg_override, program_id, idl_filepath)?;
-    idl_set_buffer(cfg_override, program_id, buffer, false)
+    idl_set_buffer(cfg_override, program_id, buffer, false)?;
+    idl_close(cfg_override, program_id, Some(buffer), false)
 }
 
 fn idl_authority(cfg_override: &ConfigOverride, program_id: Pubkey) -> Result<()> {
