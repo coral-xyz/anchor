@@ -305,14 +305,16 @@ class InstructionFormatter {
           const variant = Object.keys(data)[0];
           const enumType = data[variant];
           const camelCaseVariant = camelCase(variant);
-          const enumVariant = variants.find((v) => camelCase(v.name) === camelCaseVariant);
+          const enumVariant = variants.find(
+            (v) => camelCase(v.name) === camelCaseVariant
+          );
           const relevantFields = enumVariant?.fields as IdlField[] | undefined;
           const namedFields = Object.keys(enumType)
             .map((f) => {
               const fieldData = enumType[f];
               const camelCaseField = camelCase(f);
               const idlField = relevantFields?.find(
-                v => camelCase(v.name) === camelCaseField
+                (v) => camelCase(v.name) === camelCaseField
               );
               if (!idlField) {
                 throw new Error("Unable to find variant");
