@@ -17,6 +17,7 @@ import {
   IdlTypeOption,
   IdlTypeDefined,
   IdlAccounts,
+  IdlEnumFieldsNamed,
 } from "../../idl.js";
 import { IdlCoder } from "./idl.js";
 import { InstructionCoder } from "../index.js";
@@ -304,21 +305,21 @@ class InstructionFormatter {
           const variants = typeDef.type.variants;
           const variant = Object.keys(data)[0];
           const enumType = data[variant];
-          const camelCaseVariant = camelCase(variant);
           const enumVariant = variants.find(
-            (v) => camelCase(v.name) === camelCaseVariant
+            (v) => camelCase(v.name) === variant
           );
-          const relevantFields = enumVariant?.fields as IdlField[] | undefined;
+          if (!enumVariant) {
+            throw new Error(`Unable to find variant \`${variant}\``);
+          }
+          const fields = enumVariant.fields as IdlEnumFieldsNamed;
           const namedFields = Object.keys(enumType)
             .map((f) => {
               const fieldData = enumType[f];
-              const camelCaseField = camelCase(f);
-              const idlField = relevantFields?.find(
-                (v) => camelCase(v.name) === camelCaseField
-              );
+              const idlField = fields.find((v) => v.name === f);
               if (!idlField) {
-                throw new Error("Unable to find variant");
+                throw new Error(`Unable to find field \`${f}\``);
               }
+
               return (
                 f +
                 ": " +
