@@ -128,7 +128,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     let instruction::#variant_arm = ix;
 
                     // Bump collector.
-                    let mut __bumps = <#anchor as anchor_lang::Bumps>::Bumps::default();
+                    let mut __bumps = Box::new(<#anchor as anchor_lang::Bumps>::Bumps::default());
 
                     let mut __reallocs = std::collections::BTreeSet::new();
 
