@@ -2068,16 +2068,26 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
             program_id,
             idl_address,
             print_only,
-        } => idl_close(cfg_override, program_id, idl_address, print_only),
+        } => {
+            let closed_address = idl_close(cfg_override, program_id, idl_address, print_only)?;
+            if !print_only {
+                println!("Idl account closed: {closed_address}");
+            }
+            Ok(())
+        }
         IdlCommand::WriteBuffer {
             program_id,
             filepath,
-        } => idl_write_buffer(cfg_override, program_id, filepath).map(|_| ()),
+        } => {
+            let idl_buffer = idl_write_buffer(cfg_override, program_id, filepath)?;
+            println!("Idl buffer created: {idl_buffer}");
+            Ok(())
+        }
         IdlCommand::SetBuffer {
             program_id,
             buffer,
             print_only,
-        } => idl_set_buffer(cfg_override, program_id, buffer, print_only),
+        } => idl_set_buffer(cfg_override, program_id, buffer, print_only).map(|_| ()),
         IdlCommand::Upgrade {
             program_id,
             filepath,
@@ -2167,16 +2177,12 @@ fn idl_close(
     program_id: Pubkey,
     idl_address: Option<Pubkey>,
     print_only: bool,
-) -> Result<()> {
+) -> Result<Pubkey> {
     with_workspace(cfg_override, |cfg| {
         let idl_address = idl_address.unwrap_or_else(|| IdlAccount::address(&program_id));
         idl_close_account(cfg, &program_id, idl_address, print_only)?;
 
-        if !print_only {
-            println!("Idl account closed: {idl_address:?}");
-        }
-
-        Ok(())
+        Ok(idl_address)
     })
 }
 
@@ -2194,8 +2200,6 @@ fn idl_write_buffer(
         let idl_buffer = create_idl_buffer(cfg, &keypair, &program_id, &idl)?;
         idl_write(cfg, &program_id, &idl, idl_buffer)?;
 
-        println!("Idl buffer created: {idl_buffer:?}");
-
         Ok(idl_buffer)
     })
 }
@@ -2205,7 +2209,7 @@ fn idl_set_buffer(
     program_id: Pubkey,
     buffer: Pubkey,
     print_only: bool,
-) -> Result<()> {
+) -> Result<Pubkey> {
     with_workspace(cfg_override, |cfg| {
         let keypair = solana_sdk::signature::read_keypair_file(&cfg.provider.wallet.to_string())
             .map_err(|_| anyhow!("Unable to read keypair file"))?;
@@ -2250,7 +2254,7 @@ fn idl_set_buffer(
             client.send_and_confirm_transaction_with_spinner(&tx)?;
         }
 
-        Ok(())
+        Ok(idl_address)
     })
 }
 
@@ -2259,9 +2263,11 @@ fn idl_upgrade(
     program_id: Pubkey,
     idl_filepath: String,
 ) -> Result<()> {
-    let buffer = idl_write_buffer(cfg_override, program_id, idl_filepath)?;
-    idl_set_buffer(cfg_override, program_id, buffer, false)?;
-    idl_close(cfg_override, program_id, Some(buffer), false)
+    let buffer_address = idl_write_buffer(cfg_override, program_id, idl_filepath)?;
+    let idl_address = idl_set_buffer(cfg_override, program_id, buffer_address, false)?;
+    idl_close(cfg_override, program_id, Some(buffer_address), false).map(|_| ())?;
+    println!("Idl account {idl_address} successfully upgraded");
+    Ok(())
 }
 
 fn idl_authority(cfg_override: &ConfigOverride, program_id: Pubkey) -> Result<()> {
