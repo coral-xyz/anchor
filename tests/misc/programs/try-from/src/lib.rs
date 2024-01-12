@@ -11,7 +11,7 @@ pub mod try_from {
         Ok(())
     }
 
-    pub fn try_from<'info>(ctx: Context<TryFrom>, field: u8) -> Result<()> {
+    pub fn try_from(ctx: Context<TryFrom>, field: u8) -> Result<()> {
         let my_account = try_from!(Account::<MyAccount>, ctx.accounts.my_account)?;
         msg!("Field: {}", my_account.field);
         require_eq!(my_account.field, field);
