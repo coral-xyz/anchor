@@ -2,7 +2,7 @@ const anchor = require("@coral-xyz/anchor");
 
 describe("basic-0", () => {
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.AnchorProvider.local());
+  anchor.setProvider(anchor.AnchorProvider.env());  // .env() にしていると自動で正しいチェーンを指定してくれるっぽい
 
   it("Uses the workspace to invoke the initialize instruction", async () => {
     // #region code

@@ -5,7 +5,7 @@
 const anchor = require("@coral-xyz/anchor");
 
 // Configure the local cluster.
-anchor.setProvider(anchor.AnchorProvider.local());
+anchor.setProvider(anchor.AnchorProvider.env());
 
 async function main() {
   // #region main
@@ -15,13 +15,13 @@ async function main() {
   );
 
   // Address of the deployed program.
-  const programId = new anchor.web3.PublicKey("<YOUR-PROGRAM-ID>");
+  const programId = new anchor.web3.PublicKey("DzVuV6qMC2oJJEwerpYrenPDhTQuHQRfMe4LdCmMZJYK");
 
   // Generate the program client from IDL.
   const program = new anchor.Program(idl, programId);
 
   // Execute the RPC.
-  await program.rpc.initialize();
+  await program.methods.initialize();
   // #endregion main
 }
 

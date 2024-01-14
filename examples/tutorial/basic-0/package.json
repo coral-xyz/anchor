@@ -15,5 +15,10 @@
   },
   "scripts": {
     "test": "anchor test --skip-lint"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.29.0",
+    "bigint-buffer": "^1.1.5",
+    "mocha": "^10.2.0"
   }
 }

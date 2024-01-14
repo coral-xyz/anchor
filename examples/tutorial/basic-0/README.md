@@ -1,0 +1,2 @@
+# devnetにデプロイしたアカウント
+https://solscan.io/account/DzVuV6qMC2oJJEwerpYrenPDhTQuHQRfMe4LdCmMZJYK
