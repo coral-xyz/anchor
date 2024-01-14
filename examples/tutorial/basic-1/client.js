@@ -27,7 +27,7 @@ async function main() {
     await program.methods
         .initialize(new anchor.BN(1234))
         .accounts({
-            myAccount: myAccount.publicKey,
+            myAccount: myAccount.publicKey,  // MEMO: lib.rsでは"myAccount"ではなく"MyAccount"だからどこで対応付けているのかと思ったけど、./target/idl/basic_1.json で対応つけているっぽい。ということは、自作じゃないものに関しても公開されているProjectなら公開実装から自前でIDL（Interface Definition Language ← EhereumでいうところABIと同じと思われる ）を用意できれば良さそう。
             user: provider.wallet.publicKey,
             systemProgram: SystemProgram.programId,
         })
