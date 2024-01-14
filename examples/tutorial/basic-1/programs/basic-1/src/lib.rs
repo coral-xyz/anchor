@@ -1,7 +1,9 @@
 use anchor_lang::prelude::*;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+// macroでProgramのAccountIDを定義している
+declare_id!("Dysswo9ycPdcCFKsn2NJGRCB9z7FY1rdiJXBhS6iVQB");
 
+// ProgramLogic部分
 #[program]
 mod basic_1 {
     use super::*;
@@ -19,6 +21,7 @@ mod basic_1 {
     }
 }
 
+// 外部のプログラムと通信するときのデーア構造を定義
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(init, payer = user, space = 8 + 8)]
@@ -28,12 +31,14 @@ pub struct Initialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
+// 外部のプログラムと通信するときのデーア構造を定義
 #[derive(Accounts)]
 pub struct Update<'info> {
     #[account(mut)]
     pub my_account: Account<'info, MyAccount>,
 }
 
+// そのデータの所有者を declare_id! で指定されたものに設定する
 #[account]
 pub struct MyAccount {
     pub data: u64,
