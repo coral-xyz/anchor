@@ -2265,7 +2265,7 @@ fn idl_upgrade(
 ) -> Result<()> {
     let buffer_address = idl_write_buffer(cfg_override, program_id, idl_filepath)?;
     let idl_address = idl_set_buffer(cfg_override, program_id, buffer_address, false)?;
-    idl_close(cfg_override, program_id, Some(buffer_address), false).map(|_| ())?;
+    idl_close(cfg_override, program_id, Some(buffer_address), false)?;
     println!("Idl account {idl_address} successfully upgraded");
     Ok(())
 }
