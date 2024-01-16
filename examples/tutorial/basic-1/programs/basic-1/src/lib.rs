@@ -21,7 +21,7 @@ mod basic_1 {
     }
 }
 
-// 外部のプログラムと通信するときのデーア構造を定義
+// 外部のプログラムと通信するときのデータ構造を定義
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(init, payer = user, space = 8 + 8)]
@@ -31,7 +31,7 @@ pub struct Initialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
-// 外部のプログラムと通信するときのデーア構造を定義
+// 外部のプログラムと通信するときのデータ構造を定義
 #[derive(Accounts)]
 pub struct Update<'info> {
     #[account(mut)]
