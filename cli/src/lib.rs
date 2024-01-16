@@ -376,7 +376,7 @@ pub enum IdlCommand {
     Close {
         program_id: Pubkey,
         /// The IDL account to close. If none is given, then the IDL account derived from program_id is used.
-        #[clap(short, long)]
+        #[clap(long)]
         idl_address: Option<Pubkey>,
         /// When used, the content of the instruction will only be printed in base64 form and not executed.
         /// Useful for multisig execution when the local wallet keypair is not available.
