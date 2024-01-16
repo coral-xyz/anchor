@@ -36,9 +36,10 @@ async function main() {
     const instruction1 = new TransactionInstruction(
       {
         keys: [
-          {pubkey: myAccount.publicKey, isSigner: true, isWritable: true },  // データアカウント
           {pubkey: payer.publicKey, isSigner: true, isWritable: true },  // マイウォレット
+          {pubkey: myAccount.publicKey, isSigner: true, isWritable: true },  // データアカウント
           {pubkey: SystemProgram.programId, isSigner: false, isWritable: false },  // データアカウント
+          {pubkey: programId, isSigner: false, isWritable: false },  // プログラムアカウント
         ],
         programId,
         data: Buffer.from(byteArray),
@@ -48,7 +49,7 @@ async function main() {
     await sendAndConfirmTransaction(
       connection,
       new Transaction().add(instruction1),
-      [myAccount, payer],
+      [payer, myAccount],
       "confirmed"
     );
 
