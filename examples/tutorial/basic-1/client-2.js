@@ -78,14 +78,14 @@ async function main() {
     const inst2_initialValue = BigInt(4321)
     const inst2_byteArray = new Uint8Array(16); // 16バイトの配列を作成（前半8バイトはsighash、後半はinitializeの引数）
     // sighashをバイト列に書き込む
-    inst2_initializeSighash[0] = inst2_initializeSighash[0]
-    inst2_initializeSighash[1] = inst2_initializeSighash[1]
-    inst2_initializeSighash[2] = inst2_initializeSighash[2]
-    inst2_initializeSighash[3] = inst2_initializeSighash[3]
-    inst2_initializeSighash[4] = inst2_initializeSighash[4]
-    inst2_initializeSighash[5] = inst2_initializeSighash[5]
-    inst2_initializeSighash[6] = inst2_initializeSighash[6]
-    inst2_initializeSighash[7] = inst2_initializeSighash[7]
+    inst2_byteArray[0] = inst2_initializeSighash[0]
+    inst2_byteArray[1] = inst2_initializeSighash[1]
+    inst2_byteArray[2] = inst2_initializeSighash[2]
+    inst2_byteArray[3] = inst2_initializeSighash[3]
+    inst2_byteArray[4] = inst2_initializeSighash[4]
+    inst2_byteArray[5] = inst2_initializeSighash[5]
+    inst2_byteArray[6] = inst2_initializeSighash[6]
+    inst2_byteArray[7] = inst2_initializeSighash[7]
     // initialValue をバイト列に書き込む
     inst2_byteArray[8] = bigintToUint8Array((inst2_initialValue >> 0n) & BigInt(0xff));
     inst2_byteArray[9] = bigintToUint8Array((inst2_initialValue >> 8n) & BigInt(0xff));
@@ -104,11 +104,9 @@ async function main() {
         data: Buffer.from(inst2_byteArray),
       }
     )
-
     await sendAndConfirmTransaction(
       connection,
-      // new Transaction().add(instruction1).add(instruction2),
-      new Transaction().add(instruction1),
+      new Transaction().add(instruction1).add(instruction2),
       [payer, myAccount],
       "confirmed"
     );
