@@ -4,6 +4,23 @@ const { TransactionInstruction, Connection, SystemProgram, sendAndConfirmTransac
 // Configure the cluster.
 anchor.setProvider(anchor.AnchorProvider.env());
 
+function bigintToUint8Array(value) {
+  // BigIntをバイナリ文字列に変換
+  const binaryString = value.toString(2);
+
+  // バイナリ文字列を8ビットごとに分割
+  const paddedBinaryString = binaryString.padStart(8 * Math.ceil(binaryString.length / 8), '0');
+  const chunks = paddedBinaryString.match(/.{8}/g);
+
+  // 各8ビットチャンクをUint8Arrayに変換
+  const uint8Array = new Uint8Array(chunks.length);
+  for (let i = 0; i < chunks.length; i++) {
+    uint8Array[i] = parseInt(chunks[i], 2);
+  }
+
+  return uint8Array;
+}
+
 async function main() {
     // #region main
     // Read the generated IDL.
@@ -24,7 +41,7 @@ async function main() {
 
     // initializeのinstructionの作成
     const inst1_initializeSighash = [0xaf, 0xaf, 0x6d, 0x1f, 0x0d, 0x98, 0x9b, 0xed]  // https://solana.stackexchange.com/questions/4948/what-is-anchor-8-bytes-discriminator
-    const inst1_initialValue = 1234
+    const inst1_initialValue = BigInt(1234)  // BigNumber
     const inst1_byteArray = new Uint8Array(16); // 16バイトの配列を作成（前半8バイトはsighash、後半はinitializeの引数）
     // sighashをバイト列に書き込む
     inst1_byteArray[0] = inst1_initializeSighash[0]
@@ -36,14 +53,14 @@ async function main() {
     inst1_byteArray[6] = inst1_initializeSighash[6]
     inst1_byteArray[7] = inst1_initializeSighash[7]
     // initialValue をバイト列に書き込む
-    inst1_byteArray[8] = (inst1_initialValue >> 0) & 0xff;
-    inst1_byteArray[9] = (inst1_initialValue >> 8) & 0xff;
-    inst1_byteArray[10] = (inst1_initialValue >> 16) & 0xff;
-    inst1_byteArray[11] = (inst1_initialValue >> 24) & 0xff;
-    inst1_byteArray[12] = (inst1_initialValue >> 32) & 0xff;
-    inst1_byteArray[13] = (inst1_initialValue >> 40) & 0xff;
-    inst1_byteArray[14] = (inst1_initialValue >> 48) & 0xff;
-    inst1_byteArray[15] = (inst1_initialValue >> 56) & 0xff;
+    inst1_byteArray[8] = bigintToUint8Array((inst1_initialValue >> 0n) & BigInt(0xff));
+    inst1_byteArray[9] = bigintToUint8Array((inst1_initialValue >> 8n) & BigInt(0xff));
+    inst1_byteArray[10] = bigintToUint8Array((inst1_initialValue >> 16n) & BigInt(0xff));
+    inst1_byteArray[11] = bigintToUint8Array((inst1_initialValue >> 24n) & BigInt(0xff));
+    inst1_byteArray[12] = bigintToUint8Array((inst1_initialValue >> 32n) & BigInt(0xff));
+    inst1_byteArray[13] = bigintToUint8Array((inst1_initialValue >> 40n) & BigInt(0xff));
+    inst1_byteArray[14] = bigintToUint8Array((inst1_initialValue >> 48n) & BigInt(0xff));
+    inst1_byteArray[15] = bigintToUint8Array((inst1_initialValue >> 56n) & BigInt(0xff));
 
     const instruction1 = new TransactionInstruction(
       {
@@ -65,33 +82,6 @@ async function main() {
       "confirmed"
     );
 
-    // transactionを作成
-    // const transaction = new Transaction();
-    // // initializeのinstructionを追加
-    // const instruction1 = await program.methods
-    //                               .initialize(new anchor.BN(1234))
-    //                               .accounts({
-    //                                 myAccount: myAccount.publicKey,
-    //                                 user: provider.wallet.publicKey,
-    //                                 systemProgram: SystemProgram.programId,
-    //                               })
-    //                               .signers([myAccount])
-    //                               .instruction();
-    // transaction.add(instruction1);
-
-    // // updateのinstructionを追加
-    // const instruction2 = await program.methods.
-    //                             update(new anchor.BN(4321))
-    //                             .accounts({
-    //                               myAccount: myAccount.publicKey,
-    //                             })
-    //                             .instruction();
-    // transaction.add(instruction2);
-
-
-    // 接続を確立
-    // transactionを署名して送信
-    // await connection.sendTransaction(transaction, [myAccount, provider.wallet]);
     // #endregion main
   }
 
