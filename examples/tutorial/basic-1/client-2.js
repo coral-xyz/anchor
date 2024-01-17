@@ -61,28 +61,57 @@ async function main() {
     inst1_byteArray[13] = bigintToUint8Array((inst1_initialValue >> 40n) & BigInt(0xff));
     inst1_byteArray[14] = bigintToUint8Array((inst1_initialValue >> 48n) & BigInt(0xff));
     inst1_byteArray[15] = bigintToUint8Array((inst1_initialValue >> 56n) & BigInt(0xff));
-
     const instruction1 = new TransactionInstruction(
       {
-        keys: [
-          {pubkey: payer.publicKey, isSigner: true, isWritable: true },  // マイウォレット
+        keys: [  // memo: lib.rsの順番通りに書けば良いっぽい？
           {pubkey: myAccount.publicKey, isSigner: true, isWritable: true },  // データアカウント
+          {pubkey: payer.publicKey, isSigner: true, isWritable: true },  // マイウォレット
           {pubkey: SystemProgram.programId, isSigner: false, isWritable: false },  // データアカウント
-          {pubkey: programId, isSigner: false, isWritable: false },  // プログラムアカウント
         ],
         programId,
         data: Buffer.from(inst1_byteArray),
       }
     )
 
+    // updateのinstructionの作成
+    const inst2_initializeSighash = [0xdb, 0xc8, 0x58, 0xb0, 0x9e, 0x3f, 0xfd, 0x7f]  // https://solana.stackexchange.com/questions/4948/what-is-anchor-8-bytes-discriminator
+    const inst2_initialValue = BigInt(4321)
+    const inst2_byteArray = new Uint8Array(16); // 16バイトの配列を作成（前半8バイトはsighash、後半はinitializeの引数）
+    // sighashをバイト列に書き込む
+    inst2_initializeSighash[0] = inst2_initializeSighash[0]
+    inst2_initializeSighash[1] = inst2_initializeSighash[1]
+    inst2_initializeSighash[2] = inst2_initializeSighash[2]
+    inst2_initializeSighash[3] = inst2_initializeSighash[3]
+    inst2_initializeSighash[4] = inst2_initializeSighash[4]
+    inst2_initializeSighash[5] = inst2_initializeSighash[5]
+    inst2_initializeSighash[6] = inst2_initializeSighash[6]
+    inst2_initializeSighash[7] = inst2_initializeSighash[7]
+    // initialValue をバイト列に書き込む
+    inst2_byteArray[8] = bigintToUint8Array((inst2_initialValue >> 0n) & BigInt(0xff));
+    inst2_byteArray[9] = bigintToUint8Array((inst2_initialValue >> 8n) & BigInt(0xff));
+    inst2_byteArray[10] = bigintToUint8Array((inst2_initialValue >> 16n) & BigInt(0xff));
+    inst2_byteArray[11] = bigintToUint8Array((inst2_initialValue >> 24n) & BigInt(0xff));
+    inst2_byteArray[12] = bigintToUint8Array((inst2_initialValue >> 32n) & BigInt(0xff));
+    inst2_byteArray[13] = bigintToUint8Array((inst2_initialValue >> 40n) & BigInt(0xff));
+    inst2_byteArray[14] = bigintToUint8Array((inst2_initialValue >> 48n) & BigInt(0xff));
+    inst2_byteArray[15] = bigintToUint8Array((inst2_initialValue >> 56n) & BigInt(0xff));
+    const instruction2 = new TransactionInstruction(
+      {
+        keys: [
+          {pubkey: myAccount.publicKey, isSigner: true, isWritable: true },  // データアカウント
+        ],
+        programId,
+        data: Buffer.from(inst2_byteArray),
+      }
+    )
+
     await sendAndConfirmTransaction(
       connection,
+      // new Transaction().add(instruction1).add(instruction2),
       new Transaction().add(instruction1),
       [payer, myAccount],
       "confirmed"
     );
-
-    // #endregion main
   }
 
 console.log("Running client.");
