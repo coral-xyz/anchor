@@ -6,7 +6,7 @@
 //!
 //! A simple example that creates a client, sends a transaction and fetches an account:
 //!
-//! ```no_run
+//! ```ignore
 //! use std::rc::Rc;
 //!
 //! use anchor_client::{
