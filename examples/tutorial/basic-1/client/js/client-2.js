@@ -25,7 +25,7 @@ async function main() {
     // #region main
     // Read the generated IDL.
     const idl = JSON.parse(
-      require("fs").readFileSync("./target/idl/basic_1.json", "utf8")
+      require("fs").readFileSync("./../../target/idl/basic_1.json", "utf8")
     );
 
     const provider = anchor.AnchorProvider.env();
