@@ -6,3 +6,6 @@ https://solscan.io/account/Dysswo9ycPdcCFKsn2NJGRCB9z7FY1rdiJXBhS6iVQB?cluster=d
 
 # セットアップ
 `sh gen-client.sh`
+
+# client実行方法
+WIP
