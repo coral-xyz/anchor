@@ -304,15 +304,25 @@ impl WithPath<Config> {
             .workspace
             .members
             .iter()
-            .map(|m| {
-                self.path()
-                    .parent()
-                    .unwrap()
-                    .join(m)
-                    .canonicalize()
-                    .unwrap_or_else(|_| {
-                        panic!("Error reading workspace.members. File {:?} does not exist at path {:?}.", m, self.path)
-                    })
+            .flat_map(|m| {
+                let path = self.path().parent().unwrap().join(m);
+                if m.ends_with('*') {
+                    let dir = path.parent().unwrap();
+                    match fs::read_dir(dir) {
+                        Ok(entries) => entries
+                            .filter_map(|entry| entry.ok())
+                            .map(|entry| entry.path().canonicalize().unwrap_or_else(|_| {
+                                panic!("Error canonicalizing path {:?}", entry.path());
+                            }))
+                            .collect::<Vec<_>>()
+                            .into_iter(),
+                        Err(_) => panic!("Error reading directory {:?}", dir),
+                    }
+                } else {
+                    vec![path.canonicalize().unwrap_or_else(|_| {
+                        panic!("Error reading workspace.members. File {:?} does not exist at path {:?}.", m, self.path())
+                    })].into_iter()
+                }
             })
             .collect();
         let exclude = self
