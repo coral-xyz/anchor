@@ -38,7 +38,7 @@ async def main():
             "user": payer.pubkey(),
         }
     )
-    tx = Transaction().add(ix)
+    tx = Transaction(fee_payer=payer.pubkey()).add(ix)
     tx.recent_blockhash = (await connection.get_latest_blockhash()).value.blockhash
     tx.sign(*[payer, my_account])
 
