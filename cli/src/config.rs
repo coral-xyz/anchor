@@ -306,7 +306,7 @@ impl WithPath<Config> {
             .iter()
             .flat_map(|m| {
                 let path = self.path().parent().unwrap().join(m);
-                if m.ends_with('*') {
+                if m.ends_with("/*") {
                     let dir = path.parent().unwrap();
                     match fs::read_dir(dir) {
                         Ok(entries) => entries
