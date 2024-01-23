@@ -16,16 +16,18 @@ async def main():
 
     # call an instruction
     url = os.environ["ANCHOR_PROVIDER_URL"]
-    options = types.TxOpts(skip_confirmation=False, preflight_commitment=Finalized)
-    connection = AsyncClient(url, options.preflight_commitment)
+    connection = AsyncClient(url, Finalized)
     wallet = Wallet.local()
-    # await connection.get_block_height()
-    print(await connection.get_latest_blockhash())
-
-    # provider = Provider.env()  # get provider
+    block_height = await connection.get_latest_blockhash()
+    options = types.TxOpts(
+        skip_confirmation=False,
+        preflight_commitment=Finalized,
+        max_retries=None,
+        last_valid_block_height=block_height.value.last_valid_block_height
+    )
     provider = Provider(connection, wallet, options)
-    payer = provider.wallet.payer
 
+    payer = provider.wallet.payer
     my_account = Keypair()  # the account to create（generating a new key-pair）
 
     ix = initialize(
@@ -38,10 +40,12 @@ async def main():
         }
     )
     tx = Transaction().add(ix)
+    tx.recent_blockhash = (await connection.get_latest_blockhash()).value.blockhash
     tx.sign(*[payer, my_account])
 
-    import time; time.sleep(5)
-    await provider.send(tx)
+    signature = await provider.send(tx)
+    if signature is not None:
+        print(f"success: transaction signature is {signature}")
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
