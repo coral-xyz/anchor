@@ -18,12 +18,11 @@ async def main():
     url = os.environ["ANCHOR_PROVIDER_URL"]
     connection = AsyncClient(url, Finalized)
     wallet = Wallet.local()
-    block_height = await connection.get_latest_blockhash()
     options = types.TxOpts(
         skip_confirmation=False,
         preflight_commitment=Finalized,
         max_retries=None,
-        last_valid_block_height=block_height.value.last_valid_block_height
+        last_valid_block_height=(await connection.get_latest_blockhash()).value.last_valid_block_height
     )
     provider = Provider(connection, wallet, options)
 
@@ -43,7 +42,7 @@ async def main():
     tx.recent_blockhash = (await connection.get_latest_blockhash()).value.blockhash
     tx.sign(*[payer, my_account])
 
-    signature = await provider.send(tx)
+    signature = await provider.send(tx, opts=options)
     if signature is not None:
         print(f"success: transaction signature is {signature}")
 
