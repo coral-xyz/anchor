@@ -314,8 +314,7 @@ impl WithPath<Config> {
                             .map(|entry| entry.path().canonicalize().unwrap_or_else(|_| {
                                 panic!("Error canonicalizing path {:?}", entry.path());
                             }))
-                            .collect::<Vec<_>>()
-                            .into_iter(),
+                            .collect(),
                         Err(_) => panic!("Error reading directory {:?}", dir),
                     }
                 } else {
