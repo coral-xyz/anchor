@@ -9,7 +9,7 @@ from solana.transaction import Transaction
 from solders.keypair import Keypair
 from anchorpy import Provider, Wallet
 
-from gen.instructions import initialize
+from gen.instructions import initialize, update
 
 
 async def main():
@@ -29,7 +29,7 @@ async def main():
     payer = provider.wallet.payer
     my_account = Keypair()  # the account to create（generating a new key-pair）
 
-    ix = initialize(
+    ix1 = initialize(
         args={
             "data": 1234
         },
@@ -38,7 +38,15 @@ async def main():
             "user": payer.pubkey(),
         }
     )
-    tx = Transaction(fee_payer=payer.pubkey()).add(ix)
+    ix2 = update(
+        args={
+            "data": 4321
+        },
+        accounts={
+            "my_account": my_account.pubkey(),
+        }
+    )
+    tx = Transaction(fee_payer=payer.pubkey()).add(ix1).add(ix2)
     tx.recent_blockhash = (await connection.get_latest_blockhash()).value.blockhash
     tx.sign(*[payer, my_account])
 
