@@ -300,46 +300,43 @@ impl WithPath<Config> {
     }
 
     pub fn canonicalize_workspace(&self) -> Result<(Vec<PathBuf>, Vec<PathBuf>)> {
-        let members = self
-            .workspace
-            .members
+        let members = self.process_paths(&self.workspace.members)?;
+        let exclude = self.process_paths(&self.workspace.exclude)?;
+        Ok((members, exclude))
+    }
+
+    fn process_paths(&self, paths: &[String]) -> Result<Vec<PathBuf>, Error> {
+        let base_path = self.path().parent().unwrap();
+        paths
             .iter()
             .flat_map(|m| {
-                let path = self.path().parent().unwrap().join(m);
+                let path = base_path.join(m);
                 if m.ends_with("/*") {
                     let dir = path.parent().unwrap();
                     match fs::read_dir(dir) {
                         Ok(entries) => entries
                             .filter_map(|entry| entry.ok())
-                            .map(|entry| entry.path().canonicalize().unwrap_or_else(|_| {
-                                panic!("Error canonicalizing path {:?}", entry.path());
-                            }))
+                            .map(|entry| self.process_single_path(&entry.path()))
                             .collect(),
-                        Err(_) => panic!("Error reading directory {:?}", dir),
+                        Err(e) => vec![Err(Error::new(io::Error::new(
+                            io::ErrorKind::Other,
+                            format!("Error reading directory {:?}: {}", dir, e),
+                        )))],
                     }
                 } else {
-                    vec![path.canonicalize().unwrap_or_else(|_| {
-                        panic!("Error reading workspace.members. File {:?} does not exist at path {:?}.", m, self.path())
-                    })].into_iter()
+                    vec![self.process_single_path(&path)]
                 }
             })
-            .collect();
-        let exclude = self
-            .workspace
-            .exclude
-            .iter()
-            .map(|m| {
-                self.path()
-                    .parent()
-                    .unwrap()
-                    .join(m)
-                    .canonicalize()
-                    .unwrap_or_else(|_| {
-                        panic!("Error reading workspace.exclude. File {:?} does not exist at path {:?}.", m, self.path)
-                    })
-            })
-            .collect();
-        Ok((members, exclude))
+            .collect()
+    }
+
+    fn process_single_path(&self, path: &PathBuf) -> Result<PathBuf, Error> {
+        path.canonicalize().map_err(|e| {
+            Error::new(io::Error::new(
+                io::ErrorKind::Other,
+                format!("Error canonicalizing path {:?}: {}", path, e),
+            ))
+        })
     }
 }
 
