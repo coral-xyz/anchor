@@ -40,6 +40,8 @@ pub struct IdlState {
 pub struct IdlInstruction {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub namespace: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub docs: Option<Vec<String>>,
     pub accounts: Vec<IdlAccountItem>,
     pub args: Vec<IdlField>,

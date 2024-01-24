@@ -68,7 +68,7 @@ pub use anchor_attribute_event::{emit_cpi, event_cpi};
 pub use anchor_syn::{self, idl::build::IdlBuild};
 
 #[cfg(feature = "interface-instructions")]
-pub use anchor_attribute_program::interface;
+pub use anchor_attribute_program::ix;
 
 pub type Result<T> = std::result::Result<T, error::Error>;
 
@@ -425,7 +425,7 @@ pub mod prelude {
     pub use super::IdlBuild;
 
     #[cfg(feature = "interface-instructions")]
-    pub use super::interface;
+    pub use super::ix;
 }
 
 /// Internal module used by macros and unstable apis.

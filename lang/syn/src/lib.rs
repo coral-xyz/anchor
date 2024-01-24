@@ -63,6 +63,8 @@ impl ToTokens for Program {
 pub struct Ix {
     pub raw_method: ItemFn,
     pub ident: Ident,
+    pub namespace: Option<String>,
+    pub name_override: Option<String>,
     pub docs: Option<Vec<String>>,
     pub args: Vec<IxArg>,
     pub returns: IxReturn,

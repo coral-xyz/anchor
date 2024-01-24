@@ -49,7 +49,7 @@ pub fn program(
 /// ```
 #[cfg(feature = "interface-instructions")]
 #[proc_macro_attribute]
-pub fn interface(
+pub fn ix(
     _args: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {

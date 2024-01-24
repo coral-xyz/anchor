@@ -87,8 +87,12 @@ pub fn parse(
                 _ => Some(ret_type_str.parse().unwrap()),
             };
             IdlInstruction {
-                name: ix.ident.to_string().to_mixed_case(),
+                name: ix
+                    .name_override
+                    .clone()
+                    .unwrap_or(ix.ident.to_string().to_mixed_case()),
                 docs: ix.docs.clone(),
+                namespace: ix.namespace.clone(),
                 accounts,
                 args,
                 returns,
