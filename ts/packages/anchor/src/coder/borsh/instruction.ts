@@ -44,9 +44,7 @@ export class BorshInstructionCoder implements InstructionCoder {
     name: string,
     namespace: string | undefined
   ): string {
-    return (
-      camelCase(namespace ?? SIGHASH_GLOBAL_NAMESPACE) + ":" + camelCase(name)
-    );
+    return (namespace ?? SIGHASH_GLOBAL_NAMESPACE) + ":" + name;
   }
 
   public constructor(private idl: Idl) {

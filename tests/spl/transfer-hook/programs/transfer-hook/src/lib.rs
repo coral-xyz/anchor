@@ -45,7 +45,10 @@ fn check_token_account_is_transferring(account_data: &[u8]) -> Result<()> {
 pub mod transfer_hook {
     use super::*;
 
-    #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]
+    #[ix(
+        namespace = "spl-transfer-hook-interface",
+        name = "initialize-extra-account-metas"
+    )]
     pub fn initialize(ctx: Context<Initialize>, metas: Vec<AnchorExtraAccountMeta>) -> Result<()> {
         let extra_metas_account = &ctx.accounts.extra_metas_account;
         let mint = &ctx.accounts.mint;
@@ -68,7 +71,7 @@ pub mod transfer_hook {
         Ok(())
     }
 
-    #[interface(spl_transfer_hook_interface::execute)]
+    #[ix(namespace = "spl-transfer-hook-interface")]
     pub fn execute(ctx: Context<Execute>, amount: u64) -> Result<()> {
         let source_account = &ctx.accounts.source_account;
         let destination_account = &ctx.accounts.destination_account;
