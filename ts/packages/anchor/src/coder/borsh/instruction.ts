@@ -18,6 +18,7 @@ import {
   IdlTypeDefined,
   IdlAccounts,
   IdlEnumFieldsNamed,
+  IdlInstruction,
 } from "../../idl.js";
 import { IdlCoder } from "./idl.js";
 import { InstructionCoder } from "../index.js";
@@ -39,15 +40,26 @@ export class BorshInstructionCoder implements InstructionCoder {
   // Base58 encoded sighash to instruction layout.
   private sighashLayouts: Map<string, { layout: Layout; name: string }>;
 
+  private static getIxName(
+    name: string,
+    namespace: string | undefined
+  ): string {
+    return (
+      camelCase(namespace ?? SIGHASH_GLOBAL_NAMESPACE) + ":" + camelCase(name)
+    );
+  }
+
   public constructor(private idl: Idl) {
     this.ixLayout = BorshInstructionCoder.parseIxLayout(idl);
 
     const sighashLayouts = new Map();
     idl.instructions.forEach((ix) => {
-      const sh = sighash(SIGHASH_GLOBAL_NAMESPACE, ix.name);
+      const sh = sighash(ix.namespace ?? SIGHASH_GLOBAL_NAMESPACE, ix.name);
       sighashLayouts.set(bs58.encode(sh), {
-        layout: this.ixLayout.get(ix.name),
-        name: ix.name,
+        layout: this.ixLayout.get(
+          BorshInstructionCoder.getIxName(ix.name, ix.namespace)
+        ),
+        name: BorshInstructionCoder.getIxName(ix.name, ix.namespace),
       });
     });
 
@@ -57,23 +69,23 @@ export class BorshInstructionCoder implements InstructionCoder {
   /**
    * Encodes a program instruction.
    */
-  public encode(ixName: string, ix: any, discriminator?: Buffer): Buffer {
-    return this._encode(
-      ixName,
-      ix,
-      discriminator ?? sighash(SIGHASH_GLOBAL_NAMESPACE, ixName)
-    );
+  public encode(ixName: string, ix: any, ixNamespace?: string): Buffer {
+    return this._encode(ixName, ix, ixNamespace ?? SIGHASH_GLOBAL_NAMESPACE);
   }
 
-  private _encode(ixName: string, ix: any, discriminator: Buffer): Buffer {
+  private _encode(ixName: string, ix: any, namespace: string): Buffer {
     const buffer = Buffer.alloc(1000); // TODO: use a tighter buffer.
     const methodName = camelCase(ixName);
-    const layout = this.ixLayout.get(methodName);
+    const layout = this.ixLayout.get(
+      BorshInstructionCoder.getIxName(ixName, namespace)
+    );
     if (!layout) {
       throw new Error(`Unknown method: ${methodName}`);
     }
     const len = layout.encode(ix, buffer);
     const data = buffer.slice(0, len);
+
+    const discriminator = sighash(namespace, ixName);
     return Buffer.concat([discriminator, data]);
   }
 
@@ -85,7 +97,7 @@ export class BorshInstructionCoder implements InstructionCoder {
           Array.from([...(idl.accounts ?? []), ...(idl.types ?? [])])
         )
       );
-      const name = camelCase(ix.name);
+      const name = this.getIxName(ix.name, ix.namespace);
       return [name, borsh.struct(fieldLayouts, name)];
     });
 
@@ -98,7 +110,8 @@ export class BorshInstructionCoder implements InstructionCoder {
   public decode(
     ix: Buffer | string,
     encoding: "hex" | "base58" = "hex",
-    ixName?: string
+    ixName?: string,
+    ixNamespace?: string
   ): Instruction | null {
     if (typeof ix === "string") {
       ix = encoding === "hex" ? Buffer.from(ix, "hex") : bs58.decode(ix);
@@ -108,7 +121,9 @@ export class BorshInstructionCoder implements InstructionCoder {
     // This is useful for decoding instructions that have been encoded with a
     // different namespace, such as an SPL interface.
     let sighashKey = bs58.encode(
-      ixName ? sighash(SIGHASH_GLOBAL_NAMESPACE, ixName) : ix.slice(0, 8)
+      ixName
+        ? sighash(ixNamespace ?? SIGHASH_GLOBAL_NAMESPACE, ixName)
+        : ix.slice(0, 8)
     );
     let data = ix.slice(8);
     const decoder = this.sighashLayouts.get(sighashKey);
@@ -379,7 +394,7 @@ function sentenceCase(field: string): string {
 // Not technically sighash, since we don't include the arguments, as Rust
 // doesn't allow function overloading.
 function sighash(nameSpace: string, ixName: string): Buffer {
-  let name = snakeCase(ixName);
+  let name = snakeCase(ixName, { delimiter: "-" });
   let preimage = `${nameSpace}:${name}`;
   return Buffer.from(sha256(preimage).slice(0, 8));
 }

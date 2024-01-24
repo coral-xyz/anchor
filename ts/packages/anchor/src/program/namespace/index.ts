@@ -12,6 +12,20 @@ import { parseIdlErrors } from "../common.js";
 import { MethodsBuilderFactory, MethodsNamespace } from "./methods";
 import ViewFactory, { ViewNamespace } from "./views";
 import { CustomAccountResolver } from "../accounts-resolver.js";
+import { SIGHASH_GLOBAL_NAMESPACE } from "../../coder/borsh/instruction.js";
+import { AllInstructions } from "./types.js";
+
+type NamespaceOf<T> = T extends { namespace: infer NS } ? NS : never;
+// type AllNamespaces = NamespaceOf<Idl["instructions"][number]>;
+type DefinedNamespace<IDL extends Idl = Idl> = Extract<
+  IDL["instructions"][number]["namespace"],
+  string
+>;
+
+export type FilteredMethodsNamespace<
+  IDL extends Idl = Idl,
+  I extends AllInstructions<IDL> = AllInstructions<IDL>
+> = Record<DefinedNamespace<IDL>, MethodsNamespace<IDL, I>>;
 
 // Re-exports.
 export { InstructionNamespace, InstructionFn } from "./instruction.js";
@@ -42,6 +56,7 @@ export default class NamespaceFactory {
     AccountNamespace<IDL>,
     SimulateNamespace<IDL>,
     MethodsNamespace<IDL>,
+    FilteredMethodsNamespace<IDL>,
     ViewNamespace<IDL> | undefined
   ] {
     const rpc: RpcNamespace = {};
@@ -49,6 +64,7 @@ export default class NamespaceFactory {
     const transaction: TransactionNamespace = {};
     const simulate: SimulateNamespace = {};
     const methods: MethodsNamespace = {};
+    const namespace: FilteredMethodsNamespace = {};
     const view: ViewNamespace = {};
 
     const idlErrors = parseIdlErrors(idl);
@@ -57,11 +73,16 @@ export default class NamespaceFactory {
       ? AccountFactory.build(idl, coder, programId, provider)
       : ({} as AccountNamespace<IDL>);
 
-    idl.instructions.forEach((idlIx) => {
+    idl.instructions.forEach((_idlIx) => {
+      const idlIx = {
+        ..._idlIx,
+        namespace: _idlIx.namespace || SIGHASH_GLOBAL_NAMESPACE,
+      };
+
       const ixItem = InstructionFactory.build<IDL, typeof idlIx>(
         idlIx,
-        (ixName, ix, discriminator) =>
-          coder.instruction.encode(ixName, ix, discriminator),
+        (ixName, ix, _) =>
+          coder.instruction.encode(ixName, ix, idlIx.namespace),
         programId
       );
       const txItem = TransactionFactory.build(idlIx, ixItem);
@@ -90,6 +111,14 @@ export default class NamespaceFactory {
         getCustomResolver && getCustomResolver(idlIx)
       );
       const name = camelCase(idlIx.name);
+      const nameSpaceIdent = idlIx.namespace
+        ? camelCase(idlIx.namespace)
+        : "global";
+
+      if (!namespace[nameSpaceIdent]) {
+        namespace[nameSpaceIdent] = {} as MethodsNamespace;
+      }
+      namespace[nameSpaceIdent][name] = methodItem;
 
       instruction[name] = ixItem;
       transaction[name] = txItem;
@@ -108,6 +137,7 @@ export default class NamespaceFactory {
       account,
       simulate as SimulateNamespace<IDL>,
       methods as MethodsNamespace<IDL>,
+      namespace as FilteredMethodsNamespace<IDL>,
       view as ViewNamespace<IDL>,
     ];
   }

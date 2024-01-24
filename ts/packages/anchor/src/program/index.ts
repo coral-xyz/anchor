@@ -12,6 +12,7 @@ import NamespaceFactory, {
   MethodsNamespace,
   ViewNamespace,
   IdlEvents,
+  FilteredMethodsNamespace,
 } from "./namespace/index.js";
 import { utf8 } from "../utils/bytes/index.js";
 import { EventManager } from "./event.js";
@@ -213,6 +214,12 @@ export class Program<IDL extends Idl = Idl> {
    */
   readonly methods: MethodsNamespace<IDL>;
 
+  /**
+   * The namespace provides a builder API for all APIs on the program.
+   * This is an alternative to using namespace the other namespaces..
+   */
+  readonly namespace: FilteredMethodsNamespace<IDL>;
+
   readonly views?: ViewNamespace<IDL>;
 
   /**
@@ -284,20 +291,29 @@ export class Program<IDL extends Idl = Idl> {
     this._events = new EventManager(this._programId, provider, this._coder);
 
     // Dynamic namespaces.
-    const [rpc, instruction, transaction, account, simulate, methods, views] =
-      NamespaceFactory.build(
-        idl,
-        this._coder,
-        programId,
-        provider,
-        getCustomResolver ?? (() => undefined)
-      );
+    const [
+      rpc,
+      instruction,
+      transaction,
+      account,
+      simulate,
+      methods,
+      namespace,
+      views,
+    ] = NamespaceFactory.build(
+      idl,
+      this._coder,
+      programId,
+      provider,
+      getCustomResolver ?? (() => undefined)
+    );
     this.rpc = rpc;
     this.instruction = instruction;
     this.transaction = transaction;
     this.account = account;
     this.simulate = simulate;
     this.methods = methods;
+    this.namespace = namespace;
     this.views = views;
   }
 

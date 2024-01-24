@@ -23,11 +23,24 @@ import { MethodsBuilder } from "./methods";
  */
 export type AllInstructions<IDL extends Idl> = IDL["instructions"][number];
 
+// /**
+//  * Returns a type of instruction namespaces to the IdlInstruction.
+//  */
+// export type NamespaceMap<I extends IdlInstruction> = {
+//   [K in I["namespace"]]: I & { namespace: K };
+// };
+
+type WithDefaultNamespace<I extends IdlInstruction> = I extends {
+  namespace: string;
+}
+  ? I
+  : I & { namespace: "global" };
+
 /**
  * Returns a type of instruction name to the IdlInstruction.
  */
 export type InstructionMap<I extends IdlInstruction> = {
-  [K in I["name"]]: I & { name: K };
+  [K in I["name"]]: WithDefaultNamespace<I> & { name: K };
 };
 
 /**
@@ -72,6 +85,30 @@ export type MakeInstructionsNamespace<
     Mk[M];
 };
 
+// export type MakeInstructionsNamespace<
+//   IDL extends Idl,
+//   I extends IdlInstruction,
+//   Ret,
+//   Mk extends { [M in keyof InstructionMap<I>]: unknown } = {
+//     [M in keyof InstructionMap<I>]: unknown;
+//   }
+// > = {
+//   // Direct access to methods without namespace
+//   [M in keyof InstructionMap<I>]: InstructionContextFn<
+//     IDL,
+//     InstructionMap<I>[M],
+//     Ret
+//   > &
+//     Mk[M];
+// } & {
+//   // Namespaced access to methods
+//   [N in InstructionMap<I>[keyof InstructionMap<I>]["namespace"]]: {
+//     [M in keyof InstructionMap<I> as InstructionMap<I>[M]["namespace"] extends N
+//       ? M
+//       : never]: InstructionContextFn<IDL, InstructionMap<I>[M], Ret> & Mk[M];
+//   };
+// };
+
 export type MakeMethodsNamespace<IDL extends Idl, I extends IdlInstruction> = {
   [M in keyof InstructionMap<I>]: MethodsFn<
     IDL,
@@ -79,6 +116,18 @@ export type MakeMethodsNamespace<IDL extends Idl, I extends IdlInstruction> = {
     MethodsBuilder<IDL, InstructionMap<I>[M]>
   >;
 };
+
+//  & {
+//   [N in InstructionMap<I>[keyof InstructionMap<I>]["namespace"]]: {
+//     [M in keyof InstructionMap<I> as InstructionMap<I>[M]["namespace"] extends N
+//       ? M
+//       : never]: MethodsFn<
+//       IDL,
+//       InstructionMap<I>[M],
+//       MethodsBuilder<IDL, InstructionMap<I>[M]>
+//     >;
+//   };
+// };
 
 export type InstructionContextFn<
   IDL extends Idl,
