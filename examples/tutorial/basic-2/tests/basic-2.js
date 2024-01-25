@@ -3,7 +3,7 @@ const anchor = require("@coral-xyz/anchor");
 const { SystemProgram } = anchor.web3;
 
 describe("basic-2", () => {
-  const provider = anchor.AnchorProvider.local();
+  const provider = anchor.AnchorProvider.env();
 
   // Configure the client to use the local cluster.
   anchor.setProvider(provider);
