@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "python-cl"
+version = "0.1.0"
+description = ""
+authors = ["toma <yiyiaxpb@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+anchorpy = "^0.18.0"
+solana = "0.30.2"
+solders = "0.18.1"
+typer = "^0.9.0"
+ipython = "8.18.1"
+autoflake = "^2.2.1"
+black = "^23.12.1"
+genpy = "^2022.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

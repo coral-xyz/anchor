@@ -4,7 +4,7 @@
 
 const anchor = require("@coral-xyz/anchor");
 
-// Configure the local cluster.
+// Configure the cluster.
 anchor.setProvider(anchor.AnchorProvider.env());
 
 async function main() {
