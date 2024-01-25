@@ -2,9 +2,9 @@
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
-[programs.localnet]
-puppet = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
-puppet_master = "HmbTLCmaGvZhKnn1Zfa1JVnp7vkMV4DYVxPLWBVoN65L"
+[programs.devnet]
+puppet = "BZt6yHTtTbQFXRcPRAPWtUrZ8vWSu2du66tZnk4hV3LF"
+puppet_master = "5iZ5SHpwQJcmWgJ7Htbvsa3HeTMviWM4KdJC2HU23CYQ"
 
 [scripts]
 test = "yarn run mocha -t 1000000 tests/"
