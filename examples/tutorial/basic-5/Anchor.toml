@@ -1,9 +1,9 @@
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [programs.localnet]
-basic_5 = "DuT6R8tQGYa8ACYXyudFJtxDppSALLcmK39b7918jeSC"
+basic_5 = "Hp6LF3LrgtHLY5jSCkE6uTo1ToifGfNxuKcrpTx39gmQ"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
