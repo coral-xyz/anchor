@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use std::ops::DerefMut;
 
-declare_id!("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr");
+declare_id!("Fz5Au4w4wwvGzPq4bUr6GUriETKTfrrQYHndb7wPuwY9");
 
 #[program]
 pub mod basic_4 {
