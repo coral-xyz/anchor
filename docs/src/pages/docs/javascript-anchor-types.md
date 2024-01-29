@@ -9,7 +9,7 @@ This reference shows you how Anchor maps Rust types to JavaScript/TypeScript typ
 
 {% table %}
 * Rust Type
-* Javascript Type
+* JavaScript Type
 * Example
 * Note
 ---
