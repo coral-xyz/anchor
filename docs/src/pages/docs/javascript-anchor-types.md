@@ -3,7 +3,7 @@ title: Javascript Anchor Types Reference
 description: Anchor - Javascript Anchor Types Reference
 ---
 
-This reference shows you how Anchor maps Tust types to JavaScript/TypeScript types in the client.
+This reference shows you how Anchor maps Rust types to JavaScript/TypeScript types in the client.
 
 ---
 
