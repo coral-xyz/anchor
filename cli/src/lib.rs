@@ -4091,7 +4091,6 @@ fn run(cfg_override: &ConfigOverride, script: String, script_args: Vec<String>) 
         } else {
             vec![format!("{script} {}", script_args.join(" "))]
         };
-        // eprintln!("Script with args: {}", script_with_args);
         for script_with_args in scripts {
             let exit = std::process::Command::new("bash")
                 .arg("-c")
