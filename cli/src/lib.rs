@@ -4079,19 +4079,19 @@ fn run(cfg_override: &ConfigOverride, script: String, script_args: Vec<String>) 
             .scripts
             .get(&script)
             .ok_or_else(|| anyhow!("Unable to find script"))?;
-            let script_with_args = format!("{script} {}", script_args.join(" "));
-            let exit = std::process::Command::new("bash")
-                .arg("-c")
-                .arg(&script_with_args)
-                .env("ANCHOR_PROVIDER_URL", &url)
-                .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
-                .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit())
-                .output()
-                .unwrap();
-            if !exit.status.success() {
-                std::process::exit(exit.status.code().unwrap_or(1));
-            }
+        let script_with_args = format!("{script} {}", script_args.join(" "));
+        let exit = std::process::Command::new("bash")
+            .arg("-c")
+            .arg(&script_with_args)
+            .env("ANCHOR_PROVIDER_URL", &url)
+            .env("ANCHOR_WALLET", cfg.provider.wallet.to_string())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .unwrap();
+        if !exit.status.success() {
+            std::process::exit(exit.status.code().unwrap_or(1));
+        }
         Ok(())
     })
 }
