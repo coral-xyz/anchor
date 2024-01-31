@@ -92,6 +92,9 @@ pub enum Command {
         /// Initialize even if there are files
         #[clap(long, action)]
         force: bool,
+        /// Initialize even if there are files
+        #[clap(short, long)]
+        rust: bool,
     },
     /// Builds the workspace.
     #[clap(name = "build", alias = "b")]
@@ -654,6 +657,7 @@ fn process_command(opts: Opts) -> Result<()> {
             jest,
             template,
             force,
+            rust,
         } => init(
             &opts.cfg_override,
             name,
@@ -663,6 +667,7 @@ fn process_command(opts: Opts) -> Result<()> {
             jest,
             template,
             force,
+            rust,
         ),
         Command::New {
             solidity,
@@ -827,6 +832,7 @@ fn init(
     jest: bool,
     template: ProgramTemplate,
     force: bool,
+    rust: bool,
 ) -> Result<()> {
     if !force && Config::discover(cfg_override)?.is_some() {
         return Err(anyhow!("Workspace already initialized"));
