@@ -22,10 +22,11 @@ pub enum ProgramTemplate {
 }
 
 /// Create a program from the given name and template.
-pub fn create_program(name: &str, template: ProgramTemplate) -> Result<()> {
+pub fn create_program(name: &str, template: ProgramTemplate, rust_test: bool) -> Result<()> {
     let program_path = Path::new("programs").join(name);
+    let tests = if rust_test { "tests" } else { "" };
     let common_files = vec![
-        ("Cargo.toml".into(), workspace_manifest().into()),
+        ("Cargo.toml".into(), workspace_manifest(tests).into()),
         (program_path.join("Cargo.toml"), cargo_toml(name)),
         (program_path.join("Xargo.toml"), xargo_toml().into()),
     ];
@@ -144,10 +145,12 @@ pub fn handler(ctx: Context<Initialize>) -> Result<()> {
     ]
 }
 
-const fn workspace_manifest() -> &'static str {
-    r#"[workspace]
+fn workspace_manifest(tests: &str) -> String {
+    format!(
+        r#"[workspace]
 members = [
-    "programs/*"
+    "programs/*",
+    "{}"
 ]
 resolver = "2"
 
@@ -159,7 +162,9 @@ codegen-units = 1
 opt-level = 3
 incremental = false
 codegen-units = 1
-"#
+"#,
+        tests
+    )
 }
 
 fn cargo_toml(name: &str) -> String {
@@ -605,4 +610,61 @@ anchor.workspace.{} = new anchor.Program({}, new PublicKey("{}"), provider);
     }
 
     Ok(eval_string)
+}
+
+pub fn tests_cargo_toml(name: &str) -> String {
+    format!(
+        r#"[package]
+name = "tests"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2021"
+
+[dependencies]
+anchor-client = "{0}"
+{1} = {{ version = "0.1.0", path = "../programs/{1}" }}
+"#,
+        VERSION, name,
+    )
+}
+
+pub fn create_tests_lib_template() -> &'static str {
+    r#"#[cfg(test)]
+mod test_initialize;
+"#
+}
+
+pub fn create_tests_template(program_id: &str, name: &str) -> String {
+    format!(
+        r#"use std::str::FromStr;
+
+use anchor_client::{{
+    solana_sdk::{{
+        commitment_config::CommitmentConfig, pubkey::Pubkey, signature::read_keypair_file,
+    }},
+    Client, Cluster,
+}};
+
+#[test]
+fn test_initialize() {{
+    let program_id = "{0}";
+    let anchor_wallet = std::env::var("ANCHOR_WALLET").expect("set ANCHOR_WALLET");
+    let payer = read_keypair_file(&anchor_wallet).expect("");
+
+    let client = Client::new_with_options(Cluster::Localnet, &payer, CommitmentConfig::confirmed());
+    let program_id = Pubkey::from_str(program_id).expect("parse program_id to Pubkey");
+    let program = client.program(program_id).expect("");
+
+    let tx = program
+        .request()
+        .accounts({1}::accounts::Initialize {{}})
+        .args({1}::instruction::Initialize {{}})
+        .send()
+        .expect("");
+
+    println!("Your transaction signature {{}}", tx);
+}}
+"#,
+        program_id, name,
+    )
 }
