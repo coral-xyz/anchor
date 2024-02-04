@@ -31,7 +31,7 @@ pub fn create_program(name: &str, template: ProgramTemplate, program_id: &str) -
         ""
     };
     let common_files = vec![
-        ("Cargo.toml".into(), workspace_manifest(tests).into()),
+        ("Cargo.toml".into(), workspace_manifest(tests)),
         (program_path.join("Cargo.toml"), cargo_toml(name)),
         (program_path.join("Xargo.toml"), xargo_toml().into()),
     ];
@@ -47,9 +47,7 @@ pub fn create_program(name: &str, template: ProgramTemplate, program_id: &str) -
                 tests_cargo_toml(name),
             )]);
             files.extend(create_program_template_rust_test(
-                name,
-                &tests_path,
-                program_id,
+                name, tests_path, program_id,
             ));
             files
         }
