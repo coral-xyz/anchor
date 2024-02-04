@@ -92,9 +92,6 @@ pub enum Command {
         /// Initialize even if there are files
         #[clap(long, action)]
         force: bool,
-        /// Initialize even if there are files
-        #[clap(short, long)]
-        rust: bool,
     },
     /// Builds the workspace.
     #[clap(name = "build", alias = "b")]
@@ -657,7 +654,6 @@ fn process_command(opts: Opts) -> Result<()> {
             jest,
             template,
             force,
-            rust,
         } => init(
             &opts.cfg_override,
             name,
@@ -667,7 +663,6 @@ fn process_command(opts: Opts) -> Result<()> {
             jest,
             template,
             force,
-            rust,
         ),
         Command::New {
             solidity,
@@ -832,7 +827,6 @@ fn init(
     jest: bool,
     template: ProgramTemplate,
     force: bool,
-    rust: bool,
 ) -> Result<()> {
     if !force && Config::discover(cfg_override)?.is_some() {
         return Err(anyhow!("Workspace already initialized"));
@@ -877,7 +871,7 @@ fn init(
             }
             .to_owned(),
         );
-    } else if rust {
+    } else if template == ProgramTemplate::RustTest {
         cfg.scripts
             .insert("test".to_owned(), "cargo test".to_owned());
     } else {
@@ -925,7 +919,7 @@ fn init(
     if solidity {
         solidity_template::create_program(&project_name)?;
     } else {
-        rust_template::create_program(&project_name, template, rust)?;
+        rust_template::create_program(&project_name, template, &program_id.to_string())?;
     }
 
     // Build the test suite.
@@ -957,19 +951,6 @@ fn init(
         let mut deploy = File::create("migrations/deploy.js")?;
 
         deploy.write_all(rust_template::deploy_script().as_bytes())?;
-    } else if rust {
-        let mut cargo_file = File::create("tests/Cargo.toml")?;
-        cargo_file.write_all(rust_template::tests_cargo_toml(&rust_name).as_bytes())?;
-
-        fs::create_dir("tests/src")?;
-
-        let mut lib = File::create("tests/src/lib.rs")?;
-        lib.write_all(rust_template::create_tests_lib_template().as_bytes())?;
-
-        let mut ini_file = File::create("tests/src/test_initialize.rs")?;
-        ini_file.write_all(
-            rust_template::create_tests_template(&program_id.to_string(), &rust_name).as_bytes(),
-        )?
     } else {
         // Build typescript config
         let mut ts_config = File::create("tsconfig.json")?;
@@ -1061,16 +1042,17 @@ fn new(
                     )?;
                 }
 
+                let program_id = rust_template::get_or_create_program_id(&name);
                 if solidity {
                     solidity_template::create_program(&name)?;
                 } else {
-                    rust_template::create_program(&name, template, false)?;
+                    rust_template::create_program(&name, template, &program_id.to_string())?;
                 }
 
                 programs.insert(
                     name.clone(),
                     ProgramDeployment {
-                        address: rust_template::get_or_create_program_id(&name),
+                        address: program_id,
                         path: None,
                         idl: None,
                     },
@@ -4570,7 +4552,6 @@ mod tests {
             false,
             ProgramTemplate::default(),
             false,
-            false,
         )
         .unwrap();
     }
@@ -4590,7 +4571,6 @@ mod tests {
             false,
             ProgramTemplate::default(),
             false,
-            false,
         )
         .unwrap();
     }
@@ -4609,7 +4589,6 @@ mod tests {
             false,
             false,
             ProgramTemplate::default(),
-            false,
             false,
         )
         .unwrap();
