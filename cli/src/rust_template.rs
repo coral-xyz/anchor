@@ -1,5 +1,4 @@
-use crate::{config::ProgramWorkspace, create_files, Files};
-use crate::{run, VERSION};
+use crate::{config::ProgramWorkspace, create_files, Files, VERSION};
 use anchor_syn::idl::types::Idl;
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
