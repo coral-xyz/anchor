@@ -1,5 +1,5 @@
-use crate::VERSION;
 use crate::{config::ProgramWorkspace, create_files, Files};
+use crate::{run, VERSION};
 use anchor_syn::idl::types::Idl;
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
@@ -41,14 +41,18 @@ pub fn create_program(name: &str, template: ProgramTemplate, program_id: &str) -
         ProgramTemplate::Single => create_program_template_single(name, &program_path),
         ProgramTemplate::Multiple => create_program_template_multiple(name, &program_path),
         ProgramTemplate::RustTest => {
-            let tests_path = Path::new("tests").join(name);
-            let mut tests_files = vec![(tests_path.join("Cargo.toml"), tests_cargo_toml(name))];
-            tests_files.extend(create_program_template_rust_test(
+            let mut files = create_program_template_single(name, &program_path);
+            let tests_path = Path::new("tests");
+            files.extend(vec![(
+                tests_path.join("Cargo.toml"),
+                tests_cargo_toml(name),
+            )]);
+            files.extend(create_program_template_rust_test(
                 name,
                 &tests_path,
                 program_id,
             ));
-            tests_files
+            files
         }
     };
 
