@@ -19,12 +19,18 @@ pub enum ProgramTemplate {
     Single,
     /// Program with multiple files for instructions, state...
     Multiple,
+    /// Generate template for Rust unit-test
+    RustTest,
 }
 
 /// Create a program from the given name and template.
-pub fn create_program(name: &str, template: ProgramTemplate, rust_test: bool) -> Result<()> {
+pub fn create_program(name: &str, template: ProgramTemplate, program_id: &str) -> Result<()> {
     let program_path = Path::new("programs").join(name);
-    let tests = if rust_test { "tests" } else { "" };
+    let tests = if template == ProgramTemplate::RustTest {
+        "tests"
+    } else {
+        ""
+    };
     let common_files = vec![
         ("Cargo.toml".into(), workspace_manifest(tests).into()),
         (program_path.join("Cargo.toml"), cargo_toml(name)),
@@ -34,6 +40,16 @@ pub fn create_program(name: &str, template: ProgramTemplate, rust_test: bool) ->
     let template_files = match template {
         ProgramTemplate::Single => create_program_template_single(name, &program_path),
         ProgramTemplate::Multiple => create_program_template_multiple(name, &program_path),
+        ProgramTemplate::RustTest => {
+            let tests_path = Path::new("tests").join(name);
+            let mut tests_files = vec![(tests_path.join("Cargo.toml"), tests_cargo_toml(name))];
+            tests_files.extend(create_program_template_rust_test(
+                name,
+                &tests_path,
+                program_id,
+            ));
+            tests_files
+        }
     };
 
     create_files(&[common_files, template_files].concat())
@@ -142,6 +158,55 @@ pub fn handler(ctx: Context<Initialize>) -> Result<()> {
             .into(),
         ),
         (src_path.join("state").join("mod.rs"), r#""#.into()),
+    ]
+}
+
+/// Generate template for Rust unit-test
+fn create_program_template_rust_test(name: &str, tests_path: &Path, program_id: &str) -> Files {
+    let src_path = tests_path.join("src");
+    vec![
+        (
+            src_path.join("lib.rs"),
+            r#"#[cfg(test)]
+mod test_initialize;
+"#
+            .into(),
+        ),
+        (
+            src_path.join("test_initialize.rs"),
+            format!(
+                r#"use std::str::FromStr;
+
+use anchor_client::{{
+    solana_sdk::{{
+        commitment_config::CommitmentConfig, pubkey::Pubkey, signature::read_keypair_file,
+    }},
+    Client, Cluster,
+}};
+
+#[test]
+fn test_initialize() {{
+    let program_id = "{0}";
+    let anchor_wallet = std::env::var("ANCHOR_WALLET").expect("set ANCHOR_WALLET");
+    let payer = read_keypair_file(&anchor_wallet).expect("");
+
+    let client = Client::new_with_options(Cluster::Localnet, &payer, CommitmentConfig::confirmed());
+    let program_id = Pubkey::from_str(program_id).expect("parse program_id to Pubkey");
+    let program = client.program(program_id).expect("");
+
+    let tx = program
+        .request()
+        .accounts({1}::accounts::Initialize {{}})
+        .args({1}::instruction::Initialize {{}})
+        .send()
+        .expect("");
+
+    println!("Your transaction signature {{}}", tx);
+}}
+"#,
+                program_id, name,
+            ),
+        ),
     ]
 }
 
@@ -625,46 +690,5 @@ anchor-client = "{0}"
 {1} = {{ version = "0.1.0", path = "../programs/{1}" }}
 "#,
         VERSION, name,
-    )
-}
-
-pub fn create_tests_lib_template() -> &'static str {
-    r#"#[cfg(test)]
-mod test_initialize;
-"#
-}
-
-pub fn create_tests_template(program_id: &str, name: &str) -> String {
-    format!(
-        r#"use std::str::FromStr;
-
-use anchor_client::{{
-    solana_sdk::{{
-        commitment_config::CommitmentConfig, pubkey::Pubkey, signature::read_keypair_file,
-    }},
-    Client, Cluster,
-}};
-
-#[test]
-fn test_initialize() {{
-    let program_id = "{0}";
-    let anchor_wallet = std::env::var("ANCHOR_WALLET").expect("set ANCHOR_WALLET");
-    let payer = read_keypair_file(&anchor_wallet).expect("");
-
-    let client = Client::new_with_options(Cluster::Localnet, &payer, CommitmentConfig::confirmed());
-    let program_id = Pubkey::from_str(program_id).expect("parse program_id to Pubkey");
-    let program = client.program(program_id).expect("");
-
-    let tx = program
-        .request()
-        .accounts({1}::accounts::Initialize {{}})
-        .args({1}::instruction::Initialize {{}})
-        .send()
-        .expect("");
-
-    println!("Your transaction signature {{}}", tx);
-}}
-"#,
-        program_id, name,
     )
 }
