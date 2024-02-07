@@ -901,7 +901,7 @@ fn generate_constraint_init_group(
                         #payer_optional_check
 
                         // Initialize the mint account.
-                        let cpi_program = #token_program.clone().to_account_info();
+                        let cpi_program = #token_program.to_account_info();
                         let accounts = ::anchor_spl::token_interface::InitializeMint2 {
                             mint: #field.to_account_info(),
                         };

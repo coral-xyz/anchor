@@ -27,3 +27,29 @@ pub struct GroupMemberPointerInitialize<'info> {
     pub token_program_id: AccountInfo<'info>,
     pub mint: AccountInfo<'info>,
 }
+
+pub fn group_member_pointer_update<'info>(
+    ctx: CpiContext<'_, '_, '_, 'info, GroupMemberPointerUpdate<'info>>,
+    authority: Pubkey,
+    member_address: Option<Pubkey>,
+) -> Result<()> {
+    let ix = spl_token_2022::extension::group_member_pointer::instruction::update(
+        ctx.accounts.token_program_id.key,
+        ctx.accounts.mint.key,
+        &authority,
+        &[&authority],
+        member_address,
+    )?;
+    solana_program::program::invoke_signed(
+        &ix,
+        &[ctx.accounts.token_program_id, ctx.accounts.mint],
+        ctx.signer_seeds,
+    )
+    .map_err(Into::into)
+}
+
+#[derive(Accounts)]
+pub struct GroupMemberPointerUpdate<'info> {
+    pub token_program_id: AccountInfo<'info>,
+    pub mint: AccountInfo<'info>,
+}

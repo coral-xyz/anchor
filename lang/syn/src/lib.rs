@@ -928,7 +928,6 @@ pub struct ConstraintMintGroupMemberPointerData {
     pub group_member_pointer_data: Expr,
 }
 
-
 #[derive(Debug, Clone)]
 pub struct ConstraintMintCloseAuthority {
     pub close_authority: Expr,
