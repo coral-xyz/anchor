@@ -928,27 +928,6 @@ pub struct ConstraintMintGroupMemberPointerData {
     pub group_member_pointer_data: Expr,
 }
 
-#[derive(Debug, Clone)]
-pub struct ConstraintExtensionTokenHook {
-    pub program_id: Option<Expr>,
-    pub authority: Option<Expr>,
-}
-
-impl ToTokens for ConstraintExtensionTokenHook {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let ConstraintExtensionTokenHook {
-            program_id,
-            authority,
-        } = self;
-
-        tokens.extend(quote! {
-                {
-                    program_id: #program_id,
-                    authority: #authority,
-                }
-        });
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct ConstraintMintCloseAuthority {
