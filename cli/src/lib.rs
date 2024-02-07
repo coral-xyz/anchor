@@ -3,6 +3,7 @@ use crate::config::{
     ProgramDeployment, ProgramWorkspace, ScriptsConfig, TestValidator, WithPath, SHUTDOWN_WAIT,
     STARTUP_WAIT,
 };
+use crate::test_template::TestTemplate;
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction, ERASED_AUTHORITY};
 use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
@@ -54,6 +55,7 @@ mod checks;
 pub mod config;
 pub mod rust_template;
 pub mod solidity_template;
+pub mod test_template;
 
 // Version of the docker image.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -861,30 +863,10 @@ fn init(
     fs::create_dir_all("app")?;
 
     let mut cfg = Config::default();
-    if jest {
-        cfg.scripts.insert(
-            "test".to_owned(),
-            if javascript {
-                "yarn run jest"
-            } else {
-                "yarn run jest --preset ts-jest"
-            }
-            .to_owned(),
-        );
-    } else if template == ProgramTemplate::RustTest {
-        cfg.scripts
-            .insert("test".to_owned(), "cargo test".to_owned());
-    } else {
-        cfg.scripts.insert(
-            "test".to_owned(),
-            if javascript {
-                "yarn run mocha -t 1000000 tests/"
-            } else {
-                "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-            }
-            .to_owned(),
-        );
-    }
+    let test_template = TestTemplate::new(&template, javascript, jest, solidity);
+    let test_script = test_template.get_test_script();
+    cfg.scripts
+        .insert("test".to_owned(), test_script.to_owned());
 
     let mut localnet = BTreeMap::new();
     let program_id = rust_template::get_or_create_program_id(&rust_name);
@@ -919,7 +901,12 @@ fn init(
     if solidity {
         solidity_template::create_program(&project_name)?;
     } else {
-        rust_template::create_program(&project_name, template, &program_id.to_string())?;
+        rust_template::create_program(
+            &project_name,
+            template,
+            &program_id.to_string(),
+            &program_id.to_string(),
+        )?;
     }
 
     // Build the test suite.
@@ -932,21 +919,33 @@ fn init(
         let mut package_json = File::create("package.json")?;
         package_json.write_all(rust_template::package_json(jest).as_bytes())?;
 
-        if jest {
-            let mut test = File::create(format!("tests/{}.test.js", &project_name))?;
-            if solidity {
-                test.write_all(solidity_template::jest(&project_name).as_bytes())?;
-            } else {
-                test.write_all(rust_template::jest(&project_name).as_bytes())?;
-            }
-        } else {
-            let mut test = File::create(format!("tests/{}.js", &project_name))?;
-            if solidity {
-                test.write_all(solidity_template::mocha(&project_name).as_bytes())?;
-            } else {
-                test.write_all(rust_template::mocha(&project_name).as_bytes())?;
-            }
-        }
+        // let mut test = File::create(format!("tests/{}.js", &project_name))?;
+        // if solidity {
+        //     test.write_all(solidity_template::mocha(&project_name).as_bytes())?;
+        // } else {
+        //     test.write_all(rust_template::mocha(&project_name).as_bytes())?;
+        // }
+        // let mut test = File::create(format!("tests/{}.test.js", &project_name))?;
+        // if solidity {
+        //     test.write_all(solidity_template::jest(&project_name).as_bytes())?;
+        // } else {
+        //     test.write_all(rust_template::jest(&project_name).as_bytes())?;
+        // }
+        // if jest {
+        //     let mut test = File::create(format!("tests/{}.test.js", &project_name))?;
+        //     if solidity {
+        //         test.write_all(solidity_template::jest(&project_name).as_bytes())?;
+        //     } else {
+        //         test.write_all(rust_template::jest(&project_name).as_bytes())?;
+        //     }
+        // } else {
+        //     let mut test = File::create(format!("tests/{}.js", &project_name))?;
+        //     if solidity {
+        //         test.write_all(solidity_template::mocha(&project_name).as_bytes())?;
+        //     } else {
+        //         test.write_all(rust_template::mocha(&project_name).as_bytes())?;
+        //     }
+        // }
 
         let mut deploy = File::create("migrations/deploy.js")?;
 
@@ -962,12 +961,43 @@ fn init(
         let mut deploy = File::create("migrations/deploy.ts")?;
         deploy.write_all(rust_template::ts_deploy_script().as_bytes())?;
 
-        let mut mocha = File::create(format!("tests/{}.ts", &project_name))?;
-        if solidity {
-            mocha.write_all(solidity_template::ts_mocha(&project_name).as_bytes())?;
-        } else {
-            mocha.write_all(rust_template::ts_mocha(&project_name).as_bytes())?;
-        }
+        // let mut mocha = File::create(format!("tests/{}.ts", &project_name))?;
+        // if solidity {
+        //     mocha.write_all(solidity_template::ts_mocha(&project_name).as_bytes())?;
+        // } else {
+        //     mocha.write_all(rust_template::ts_mocha(&project_name).as_bytes())?;
+        // }
+        // TestTemplate::Jest => {
+        //     let mut test = File::create(format!("tests/{}.test.js", &project_name))?;
+        //     if solidity {
+        //         test.write_all(solidity_template::jest(&project_name).as_bytes())?;
+        //     } else {
+        //         test.write_all(rust_template::jest(&project_name).as_bytes())?;
+        //     }
+        // }
+        // TestTemplate::Rust => {
+        //     let mut files = create_program_template_single(name, &program_path);
+        //     let tests_path = Path::new("tests");
+        //     files.extend(vec![(
+        //         tests_path.join("Cargo.toml"),
+        //         tests_cargo_toml(name),
+        //     )]);
+        //     files.extend(create_program_template_rust_test(
+        //         name, tests_path, program_id,
+        //     ));
+        //     // ProgramTemplate::RustTest => {
+        //     //     let mut files = create_program_template_single(name, &program_path);
+        //     //     let tests_path = Path::new("tests");
+        //     //     files.extend(vec![(
+        //     //         tests_path.join("Cargo.toml"),
+        //     //         tests_cargo_toml(name),
+        //     //     )]);
+        //     //     files.extend(create_program_template_rust_test(
+        //     //         name, tests_path, program_id,
+        //     //     ));
+        //     //     files
+        //     // }
+        // }
     }
 
     let yarn_result = install_node_modules("yarn")?;
@@ -1046,7 +1076,7 @@ fn new(
                 if solidity {
                     solidity_template::create_program(&name)?;
                 } else {
-                    rust_template::create_program(&name, template, &program_id.to_string())?;
+                    rust_template::create_program(&name, template, &program_id.to_string(), None)?;
                 }
 
                 programs.insert(
