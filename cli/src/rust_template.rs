@@ -23,13 +23,13 @@ pub enum ProgramTemplate {
 }
 
 /// Create a program from the given name and template.
-pub fn create_program(name: &str, template: ProgramTemplate, program_id: &str) -> Result<()> {
+pub fn create_program(
+    name: &str,
+    template: ProgramTemplate,
+    program_id: &str,
+    tests: Option<&str>,
+) -> Result<()> {
     let program_path = Path::new("programs").join(name);
-    let tests = if template == ProgramTemplate::RustTest {
-        "tests"
-    } else {
-        ""
-    };
     let common_files = vec![
         ("Cargo.toml".into(), workspace_manifest(tests)),
         (program_path.join("Cargo.toml"), cargo_toml(name)),
@@ -391,18 +391,6 @@ module.exports = async function (provider) {
   // Add your deploy script here.
 };
 "#
-}
-
-/// Test initialization template
-#[derive(Clone, Debug, Default, Eq, PartialEq, Parser, ValueEnum)]
-pub enum TestTemplate {
-    /// Generate template for Jest unit-test        
-    #[default]
-    Mocha,
-    /// Generate template for Jest unit-test    
-    Jest,
-    /// Generate template for Rust unit-test
-    Rust,
 }
 
 pub fn mocha(name: &str) -> String {
