@@ -393,6 +393,18 @@ module.exports = async function (provider) {
 "#
 }
 
+/// Test initialization template
+#[derive(Clone, Debug, Default, Eq, PartialEq, Parser, ValueEnum)]
+pub enum TestTemplate {
+    /// Generate template for Jest unit-test        
+    #[default]
+    Mocha,
+    /// Generate template for Jest unit-test    
+    Jest,
+    /// Generate template for Rust unit-test
+    Rust,
+}
+
 pub fn mocha(name: &str) -> String {
     format!(
         r#"const anchor = require("@coral-xyz/anchor");
