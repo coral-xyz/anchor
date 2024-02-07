@@ -96,53 +96,155 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         extensions: stream.parse()?,
                     },
                 )),
-                "confidential_transfer_data" => {
-                    ConstraintToken::MintConfidentialTransferData(Context::new(
-                        span,
-                        ConstraintMintConfidentialTransferData {
-                            confidential_transfer_data: stream.parse()?,
-                        },
-                    ))
+                _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
+            }
+        }
+        "extensions" => {
+            stream.parse::<Token![:]>()?;
+            stream.parse::<Token![:]>()?;
+            let kw = stream.call(Ident::parse_any)?.to_string();
+
+            match kw.as_str() {
+                "group_pointer" => {
+                    stream.parse::<Token![:]>()?;
+                    stream.parse::<Token![:]>()?;
+                    let kw = stream.call(Ident::parse_any)?.to_string();
+                    stream.parse::<Token![=]>()?;
+
+                    let span = ident
+                        .span()
+                        .join(stream.span())
+                        .unwrap_or_else(|| ident.span());
+
+                    match kw.as_str() {
+                        "authority" => {
+                            ConstraintToken::ExtensionGroupPointerAuthority(Context::new(
+                                span,
+                                ConstraintExtensionAuthority {
+                                    authority: stream.parse()?,
+                                },
+                            ))
+                        }
+                        "group_address" => {
+                            ConstraintToken::ExtensionGroupPointerGroupAddress(Context::new(
+                                span,
+                                ConstraintExtensionGroupPointerGroupAddress {
+                                    group_address: stream.parse()?,
+                                },
+                            ))
+                        }
+                        _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
+                    }
                 }
-                "token_metadata" => ConstraintToken::MintMetadataPointerData(Context::new(
-                    span,
-                    ConstraintMintMetadataPointerData {
-                        metadata_pointer_data: stream.parse()?,
-                    },
-                )),
-                "token_group_data" => ConstraintToken::MintGroupPointerData(Context::new(
-                    span,
-                    ConstraintMintGroupPointerData {
-                        group_pointer_data: stream.parse()?,
-                    },
-                )),
-                "token_group_member_data" => {
-                    ConstraintToken::MintGroupMemberPointerData(Context::new(
-                        span,
-                        ConstraintMintGroupMemberPointerData {
-                            group_member_pointer_data: stream.parse()?,
-                        },
-                    ))
+                "group_member_pointer" => {
+                    stream.parse::<Token![:]>()?;
+                    stream.parse::<Token![:]>()?;
+                    let kw = stream.call(Ident::parse_any)?.to_string();
+                    stream.parse::<Token![=]>()?;
+
+                    let span = ident
+                        .span()
+                        .join(stream.span())
+                        .unwrap_or_else(|| ident.span());
+
+                    match kw.as_str() {
+                        "authority" => {
+                            ConstraintToken::ExtensionGroupMemberPointerAuthority(Context::new(
+                                span,
+                                ConstraintExtensionAuthority {
+                                    authority: stream.parse()?,
+                                },
+                            ))
+                        }
+                        "member_address" => {
+                            ConstraintToken::ExtensionGroupMemberPointerMemberAddress(Context::new(
+                                span,
+                                ConstraintExtensionGroupMemberPointerMemberAddress {
+                                    member_address: stream.parse()?,
+                                },
+                            ))
+                        }
+                        _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
+                    }
                 }
-                "metadata_pointer_data" => ConstraintToken::MintMetadataPointerData(Context::new(
-                    span,
-                    ConstraintMintMetadataPointerData {
-                        metadata_pointer_data: stream.parse()?,
-                    },
-                )),
-                "group_pointer_data" => ConstraintToken::MintGroupPointerData(Context::new(
-                    span,
-                    ConstraintMintGroupPointerData {
-                        group_pointer_data: stream.parse()?,
-                    },
-                )),
-                "group_member_pointer_data" => {
-                    ConstraintToken::MintGroupMemberPointerData(Context::new(
-                        span,
-                        ConstraintMintGroupMemberPointerData {
-                            group_member_pointer_data: stream.parse()?,
-                        },
-                    ))
+                "metadata_pointer" => {
+                    stream.parse::<Token![:]>()?;
+                    stream.parse::<Token![:]>()?;
+                    let kw = stream.call(Ident::parse_any)?.to_string();
+                    stream.parse::<Token![=]>()?;
+
+                    let span = ident
+                        .span()
+                        .join(stream.span())
+                        .unwrap_or_else(|| ident.span());
+
+                    match kw.as_str() {
+                        "authority" => {
+                            ConstraintToken::ExtensionMetadataPointerAuthority(Context::new(
+                                span,
+                                ConstraintExtensionAuthority {
+                                    authority: stream.parse()?,
+                                },
+                            ))
+                        }
+                        "metadata_address" => {
+                            ConstraintToken::ExtensionMetadataPointerMetadataAddress(Context::new(
+                                span,
+                                ConstraintExtensionMetadataPointerMetadataAddress {
+                                    metadata_address: stream.parse()?,
+                                },
+                            ))
+                        }
+                        _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
+                    }
+                }
+                "close_authority" => {
+                    stream.parse::<Token![:]>()?;
+                    stream.parse::<Token![:]>()?;
+                    let kw = stream.call(Ident::parse_any)?.to_string();
+                    stream.parse::<Token![=]>()?;
+
+                    let span = ident
+                        .span()
+                        .join(stream.span())
+                        .unwrap_or_else(|| ident.span());
+
+                    match kw.as_str() {
+                        "authority" => ConstraintToken::ExtensionCloseAuthority(Context::new(
+                            span,
+                            ConstraintExtensionAuthority {
+                                authority: stream.parse()?,
+                            },
+                        )),
+                        _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
+                    }
+                }
+                "transfer_hook" => {
+                    stream.parse::<Token![:]>()?;
+                    stream.parse::<Token![:]>()?;
+                    let kw = stream.call(Ident::parse_any)?.to_string();
+                    stream.parse::<Token![=]>()?;
+
+                    let span = ident
+                        .span()
+                        .join(stream.span())
+                        .unwrap_or_else(|| ident.span());
+
+                    match kw.as_str() {
+                        "authority" => ConstraintToken::ExtensionTokenHookAuthority(Context::new(
+                            span,
+                            ConstraintExtensionAuthority {
+                                authority: stream.parse()?,
+                            },
+                        )),
+                        "program_id" => ConstraintToken::ExtensionTokenHookProgramId(Context::new(
+                            span,
+                            ConstraintExtensionTokenHookProgramId {
+                                program_id: stream.parse()?,
+                            },
+                        )),
+                        _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
+                    }
                 }
                 _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
             }
@@ -413,10 +515,18 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub mint_decimals: Option<Context<ConstraintMintDecimals>>,
     pub mint_token_program: Option<Context<ConstraintTokenProgram>>,
     pub mint_extensions: Option<Context<ConstraintMintExtensions>>,
-    pub mint_confidential_transfer_data: Option<Context<ConstraintMintConfidentialTransferData>>,
-    pub mint_metadata_pointer_data: Option<Context<ConstraintMintMetadataPointerData>>,
-    pub mint_group_pointer_data: Option<Context<ConstraintMintGroupPointerData>>,
-    pub mint_group_member_pointer_data: Option<Context<ConstraintMintGroupMemberPointerData>>,
+    pub extension_group_pointer_authority: Option<Context<ConstraintExtensionAuthority>>,
+    pub extension_group_pointer_group_address:
+        Option<Context<ConstraintExtensionGroupPointerGroupAddress>>,
+    pub extension_group_member_pointer_authority: Option<Context<ConstraintExtensionAuthority>>,
+    pub extension_group_member_pointer_member_address:
+        Option<Context<ConstraintExtensionGroupMemberPointerMemberAddress>>,
+    pub extension_metadata_pointer_authority: Option<Context<ConstraintExtensionAuthority>>,
+    pub extension_metadata_pointer_metadata_address:
+        Option<Context<ConstraintExtensionMetadataPointerMetadataAddress>>,
+    pub extension_close_authority: Option<Context<ConstraintExtensionAuthority>>,
+    pub extension_transfer_hook_authority: Option<Context<ConstraintExtensionAuthority>>,
+    pub extension_transfer_hook_program_id: Option<Context<ConstraintExtensionTokenHookProgramId>>,
     pub bump: Option<Context<ConstraintTokenBump>>,
     pub program_seed: Option<Context<ConstraintProgramSeed>>,
     pub realloc: Option<Context<ConstraintRealloc>>,
@@ -453,10 +563,15 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             mint_decimals: None,
             mint_token_program: None,
             mint_extensions: None,
-            mint_confidential_transfer_data: None,
-            mint_metadata_pointer_data: None,
-            mint_group_pointer_data: None,
-            mint_group_member_pointer_data: None,
+            extension_group_pointer_authority: None,
+            extension_group_pointer_group_address: None,
+            extension_group_member_pointer_authority: None,
+            extension_group_member_pointer_member_address: None,
+            extension_metadata_pointer_authority: None,
+            extension_metadata_pointer_metadata_address: None,
+            extension_close_authority: None,
+            extension_transfer_hook_authority: None,
+            extension_transfer_hook_program_id: None,
             bump: None,
             program_seed: None,
             realloc: None,
@@ -660,10 +775,15 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             mint_decimals,
             mint_token_program,
             mint_extensions,
-            mint_confidential_transfer_data,
-            mint_metadata_pointer_data,
-            mint_group_pointer_data,
-            mint_group_member_pointer_data,
+            extension_group_pointer_authority,
+            extension_group_pointer_group_address,
+            extension_group_member_pointer_authority,
+            extension_group_member_pointer_member_address,
+            extension_metadata_pointer_authority,
+            extension_metadata_pointer_metadata_address,
+            extension_close_authority,
+            extension_transfer_hook_authority,
+            extension_transfer_hook_program_id,
             bump,
             program_seed,
             realloc,
@@ -754,12 +874,32 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             &mint_freeze_authority,
             &mint_token_program,
             &mint_extensions,
-            &mint_confidential_transfer_data,
-            &mint_metadata_pointer_data,
-            &mint_group_pointer_data,
-            &mint_group_member_pointer_data,
+            &extension_group_pointer_authority,
+            &extension_group_pointer_group_address,
+            &extension_group_member_pointer_authority,
+            &extension_group_member_pointer_member_address,
+            &extension_metadata_pointer_authority,
+            &extension_metadata_pointer_metadata_address,
+            &extension_close_authority,
+            &extension_transfer_hook_authority,
+            &extension_transfer_hook_program_id,
         ) {
-            (None, None, None, None, None, None, None, None, None) => None,
+            (
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ) => None,
             _ => Some(ConstraintTokenMintGroup {
                 decimals: mint_decimals
                     .as_ref()
@@ -773,23 +913,9 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 token_program: mint_token_program
                     .as_ref()
                     .map(|a| a.clone().into_inner().token_program),
-                confidential_transfer_data: mint_confidential_transfer_data.as_ref().map(
-                    |a: &Context<ConstraintMintConfidentialTransferData>| {
-                        a.clone().into_inner().confidential_transfer_data
-                    },
-                ),
                 extensions: mint_extensions
                     .as_ref()
                     .map(|a| a.clone().into_inner().extensions),
-                metadata_pointer_data: mint_metadata_pointer_data
-                    .as_ref()
-                    .map(|a| a.clone().into_inner().metadata_pointer_data),
-                group_pointer_data: mint_group_pointer_data
-                    .as_ref()
-                    .map(|a| a.clone().into_inner().group_pointer_data),
-                group_member_pointer_data: mint_group_member_pointer_data
-                    .as_ref()
-                    .map(|a| a.clone().into_inner().group_member_pointer_data),
             }),
         };
 
@@ -830,10 +956,16 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                         freeze_authority: mint_freeze_authority.map(|fa| fa.into_inner().mint_freeze_auth),
                         token_program: mint_token_program.map(|tp| tp.into_inner().token_program),
                         extensions: mint_extensions.map(|me| me.into_inner().extensions),
-                        confidential_transfer_data: mint_confidential_transfer_data.map(|ctd| ctd.into_inner().confidential_transfer_data),
-                        metadata_pointer_data: mint_metadata_pointer_data.map(|mpd| mpd.into_inner().metadata_pointer_data),
-                        group_pointer_data: mint_group_pointer_data.map(|gpd| gpd.into_inner().group_pointer_data),
-                        group_member_pointer_data: mint_group_member_pointer_data.map(|gmpd| gmpd.into_inner().group_member_pointer_data),
+                        // extensions
+                        group_pointer_authority: extension_group_pointer_authority.map(|gpa| gpa.into_inner().authority),
+                        group_pointer_group_address: extension_group_pointer_group_address.map(|gpga| gpga.into_inner().group_address),
+                        group_member_pointer_authority: extension_group_member_pointer_authority.map(|gmpa| gmpa.into_inner().authority),
+                        group_member_pointer_member_address: extension_group_member_pointer_member_address.map(|gmpma| gmpma.into_inner().member_address),
+                        metadata_pointer_authority: extension_metadata_pointer_authority.map(|mpa| mpa.into_inner().authority),
+                        metadata_pointer_metadata_address: extension_metadata_pointer_metadata_address.map(|mpma| mpma.into_inner().metadata_address),
+                        close_authority: extension_close_authority.map(|ca| ca.into_inner().authority),
+                        token_hook_authority: extension_transfer_hook_authority.map(|tha| tha.into_inner().authority),
+                        token_hook_program_id: extension_transfer_hook_program_id.map(|thpid| thpid.into_inner().program_id),
                     }
                 } else {
                     InitKind::Program {
@@ -890,21 +1022,36 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::MintAuthority(c) => self.add_mint_authority(c),
             ConstraintToken::MintFreezeAuthority(c) => self.add_mint_freeze_authority(c),
             ConstraintToken::MintDecimals(c) => self.add_mint_decimals(c),
-            ConstraintToken::MintConfidentialTransferData(c) => {
-                self.add_mint_confidential_transfer_data(c)
-            }
-            ConstraintToken::MintExtensions(c) => self.add_mint_extensions(c),
-            ConstraintToken::MintMetadataPointerData(c) => self.add_mint_metadata_pointer_data(c),
-            ConstraintToken::MintGroupPointerData(c) => self.add_mint_group_pointer_data(c),
-            ConstraintToken::MintGroupMemberPointerData(c) => {
-                self.add_mint_group_member_pointer_data(c)
-            }
             ConstraintToken::MintTokenProgram(c) => self.add_mint_token_program(c),
             ConstraintToken::Bump(c) => self.add_bump(c),
             ConstraintToken::ProgramSeed(c) => self.add_program_seed(c),
             ConstraintToken::Realloc(c) => self.add_realloc(c),
             ConstraintToken::ReallocPayer(c) => self.add_realloc_payer(c),
             ConstraintToken::ReallocZero(c) => self.add_realloc_zero(c),
+            ConstraintToken::MintExtensions(c) => self.add_mint_extensions(c),
+            ConstraintToken::ExtensionGroupPointerAuthority(c) => {
+                self.add_extension_group_pointer_authority(c)
+            }
+            ConstraintToken::ExtensionGroupPointerGroupAddress(c) => {
+                self.add_extension_group_pointer_group_address(c)
+            }
+            ConstraintToken::ExtensionGroupMemberPointerAuthority(c) => {
+                self.add_extension_group_member_pointer_authority(c)
+            }
+            ConstraintToken::ExtensionGroupMemberPointerMemberAddress(c) => {
+                self.add_extension_group_member_pointer_member_address(c)
+            }
+            ConstraintToken::ExtensionMetadataPointerAuthority(c) => {
+                self.add_extension_metadata_pointer_authority(c)
+            }
+            ConstraintToken::ExtensionMetadataPointerMetadataAddress(c) => {
+                self.add_extension_metadata_pointer_metadata_address(c)
+            }
+            ConstraintToken::ExtensionCloseAuthority(c) => self.add_extension_close_authority(c),
+            ConstraintToken::ExtensionTokenHookAuthority(c) => self.add_extension_authority(c),
+            ConstraintToken::ExtensionTokenHookProgramId(c) => {
+                self.add_extension_token_hook_program_id(c)
+            }
         }
     }
 
@@ -1225,70 +1372,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         Ok(())
     }
 
-    fn add_mint_confidential_transfer_data(
-        &mut self,
-        c: Context<ConstraintMintConfidentialTransferData>,
-    ) -> ParseResult<()> {
-        if self.mint_confidential_transfer_data.is_some() {
-            return Err(ParseError::new(
-                c.span(),
-                "mint confidential_transfer_data already provided",
-            ));
-        }
-        self.mint_confidential_transfer_data.replace(c);
-        Ok(())
-    }
-
-    fn add_mint_extensions(&mut self, c: Context<ConstraintMintExtensions>) -> ParseResult<()> {
-        if self.mint_extensions.is_some() {
-            return Err(ParseError::new(c.span(), "mint metadata already provided"));
-        }
-        self.mint_extensions.replace(c);
-        Ok(())
-    }
-
-    fn add_mint_metadata_pointer_data(
-        &mut self,
-        c: Context<ConstraintMintMetadataPointerData>,
-    ) -> ParseResult<()> {
-        if self.mint_metadata_pointer_data.is_some() {
-            return Err(ParseError::new(
-                c.span(),
-                "mint metadata_pointer_data already provided",
-            ));
-        }
-        self.mint_metadata_pointer_data.replace(c);
-        Ok(())
-    }
-
-    fn add_mint_group_pointer_data(
-        &mut self,
-        c: Context<ConstraintMintGroupPointerData>,
-    ) -> ParseResult<()> {
-        if self.mint_group_pointer_data.is_some() {
-            return Err(ParseError::new(
-                c.span(),
-                "mint group_pointer_data already provided",
-            ));
-        }
-        self.mint_group_pointer_data.replace(c);
-        Ok(())
-    }
-
-    fn add_mint_group_member_pointer_data(
-        &mut self,
-        c: Context<ConstraintMintGroupMemberPointerData>,
-    ) -> ParseResult<()> {
-        if self.mint_group_member_pointer_data.is_some() {
-            return Err(ParseError::new(
-                c.span(),
-                "mint group_member_pointer_data already provided",
-            ));
-        }
-        self.mint_group_member_pointer_data.replace(c);
-        Ok(())
-    }
-
     fn add_mint_token_program(&mut self, c: Context<ConstraintTokenProgram>) -> ParseResult<()> {
         if self.mint_token_program.is_some() {
             return Err(ParseError::new(
@@ -1392,6 +1475,146 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             return Err(ParseError::new(c.span(), "space already provided"));
         }
         self.space.replace(c);
+        Ok(())
+    }
+
+    fn add_mint_extensions(&mut self, c: Context<ConstraintMintExtensions>) -> ParseResult<()> {
+        if self.mint_extensions.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "mint extensions already provided",
+            ));
+        }
+        self.mint_extensions.replace(c);
+        Ok(())
+    }
+
+    // extensions
+
+    fn add_extension_group_pointer_authority(
+        &mut self,
+        c: Context<ConstraintExtensionAuthority>,
+    ) -> ParseResult<()> {
+        if self.extension_group_pointer_authority.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "extension group pointer authority already provided",
+            ));
+        }
+        self.extension_group_pointer_authority.replace(c);
+        Ok(())
+    }
+
+    fn add_extension_group_pointer_group_address(
+        &mut self,
+        c: Context<ConstraintExtensionGroupPointerGroupAddress>,
+    ) -> ParseResult<()> {
+        if self.extension_group_pointer_group_address.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "extension group pointer group address already provided",
+            ));
+        }
+        self.extension_group_pointer_group_address.replace(c);
+        Ok(())
+    }
+
+    fn add_extension_group_member_pointer_authority(
+        &mut self,
+        c: Context<ConstraintExtensionAuthority>,
+    ) -> ParseResult<()> {
+        if self.extension_group_member_pointer_authority.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "extension group member pointer authority already provided",
+            ));
+        }
+        self.extension_group_member_pointer_authority.replace(c);
+        Ok(())
+    }
+
+    fn add_extension_group_member_pointer_member_address(
+        &mut self,
+        c: Context<ConstraintExtensionGroupMemberPointerMemberAddress>,
+    ) -> ParseResult<()> {
+        if self.extension_group_member_pointer_member_address.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "extension group member pointer member address already provided",
+            ));
+        }
+        self.extension_group_member_pointer_member_address
+            .replace(c);
+        Ok(())
+    }
+
+    fn add_extension_metadata_pointer_authority(
+        &mut self,
+        c: Context<ConstraintExtensionAuthority>,
+    ) -> ParseResult<()> {
+        if self.extension_metadata_pointer_authority.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "extension metadata pointer authority already provided",
+            ));
+        }
+        self.extension_metadata_pointer_authority.replace(c);
+        Ok(())
+    }
+
+    fn add_extension_metadata_pointer_metadata_address(
+        &mut self,
+        c: Context<ConstraintExtensionMetadataPointerMetadataAddress>,
+    ) -> ParseResult<()> {
+        if self.extension_metadata_pointer_metadata_address.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "extension metadata pointer metadata address already provided",
+            ));
+        }
+        self.extension_metadata_pointer_metadata_address.replace(c);
+        Ok(())
+    }
+
+    fn add_extension_close_authority(
+        &mut self,
+        c: Context<ConstraintExtensionAuthority>,
+    ) -> ParseResult<()> {
+        if self.extension_close_authority.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "extension close authority already provided",
+            ));
+        }
+        self.extension_close_authority.replace(c);
+        Ok(())
+    }
+
+    fn add_extension_authority(
+        &mut self,
+        c: Context<ConstraintExtensionAuthority>,
+    ) -> ParseResult<()> {
+        if self.extension_transfer_hook_authority.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "extension transfer hook authority already provided",
+            ));
+        }
+        self.extension_transfer_hook_authority.replace(c);
+        Ok(())
+    }
+
+    fn add_extension_token_hook_program_id(
+        &mut self,
+        c: Context<ConstraintExtensionTokenHookProgramId>,
+    ) -> ParseResult<()> {
+        if self.extension_transfer_hook_program_id.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "extension transfer hook program id already provided",
+            ));
+        }
+        self.extension_transfer_hook_program_id.replace(c);
         Ok(())
     }
 }

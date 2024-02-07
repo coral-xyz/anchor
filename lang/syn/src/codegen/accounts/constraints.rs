@@ -663,10 +663,15 @@ fn generate_constraint_init_group(
             freeze_authority,
             token_program,
             extensions,
-            confidential_transfer_data,
-            metadata_pointer_data,
-            group_pointer_data,
-            group_member_pointer_data,
+            group_pointer_authority,
+            group_pointer_group_address,
+            group_member_pointer_authority,
+            group_member_pointer_member_address,
+            metadata_pointer_authority,
+            metadata_pointer_metadata_address,
+            close_authority,
+            token_hook_authority,
+            token_hook_program_id,
         } => {
             let token_program = match token_program {
                 Some(t) => t.to_token_stream(),
@@ -682,22 +687,50 @@ fn generate_constraint_init_group(
                 None => quote! {},
             };
 
-            let confidential_transfer_data_check = match confidential_transfer_data {
+            // extension checks
+
+            let group_pointer_authority_check = match group_pointer_authority {
                 Some(fa) => check_scope.generate_check(fa),
                 None => quote! {},
             };
 
-            let metadata_pointer_data_check = match metadata_pointer_data {
+            let group_pointer_group_address_check = match group_pointer_group_address {
                 Some(fa) => check_scope.generate_check(fa),
                 None => quote! {},
             };
 
-            let group_pointer_data_check = match group_pointer_data {
+            let group_member_pointer_authority_check = match group_member_pointer_authority {
                 Some(fa) => check_scope.generate_check(fa),
                 None => quote! {},
             };
 
-            let group_member_pointer_data_check = match group_member_pointer_data {
+            let group_member_pointer_member_address_check =
+                match group_member_pointer_member_address {
+                    Some(fa) => check_scope.generate_check(fa),
+                    None => quote! {},
+                };
+
+            let metadata_pointer_authority_check = match metadata_pointer_authority {
+                Some(fa) => check_scope.generate_check(fa),
+                None => quote! {},
+            };
+
+            let metadata_pointer_metadata_address_check = match metadata_pointer_metadata_address {
+                Some(fa) => check_scope.generate_check(fa),
+                None => quote! {},
+            };
+
+            let close_authority_check = match close_authority {
+                Some(fa) => check_scope.generate_check(fa),
+                None => quote! {},
+            };
+
+            let transfer_hook_authority = match token_hook_authority {
+                Some(fa) => check_scope.generate_check(fa),
+                None => quote! {},
+            };
+
+            let transfer_hook_program_id = match token_hook_program_id {
                 Some(fa) => check_scope.generate_check(fa),
                 None => quote! {},
             };
@@ -713,10 +746,15 @@ fn generate_constraint_init_group(
                 #owner_optional_check
                 #freeze_authority_optional_check
                 #extensions_check
-                #confidential_transfer_data_check
-                #metadata_pointer_data_check
-                #group_pointer_data_check
-                #group_member_pointer_data_check
+                #group_pointer_authority_check
+                #group_pointer_group_address_check
+                #group_member_pointer_authority_check
+                #group_member_pointer_member_address_check
+                #metadata_pointer_authority_check
+                #metadata_pointer_metadata_address_check
+                #close_authority_check
+                #transfer_hook_authority
+                #transfer_hook_program_id
             };
 
             let payer_optional_check = check_scope.generate_check(payer);
@@ -726,17 +764,7 @@ fn generate_constraint_init_group(
                 None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
             };
 
-            #[cfg(not(target_os = "solana"))]
-            let confidential_transfer_data = match confidential_transfer_data {
-                Some(fa) => {
-                    quote! { Option::<&::anchor_spl::token_interface::ConfidentialTransferIntializeMintArgs>::Some(&#fa) }
-                }
-                None => {
-                    quote! { Option::<&::anchor_spl::token_interface::ConfidentialTransferIntializeMintArgs>::None }
-                }
-            };
-
-            let extensions_data = match extensions {
+            let extensions = match extensions {
                 Some(fa) => {
                     quote! { Option::<&::anchor_spl::token_interface::ExtensionsVec>::Some(&#fa) }
                 }
@@ -745,36 +773,54 @@ fn generate_constraint_init_group(
                 }
             };
 
-            let metadata_pointer_data = match metadata_pointer_data {
-                Some(fa) => {
-                    quote! { Option::<&::anchor_spl::token_interface::MetadataPointerInitializeArgs>::Some(&#fa) }
-                }
-                None => {
-                    quote! { Option::<&::anchor_spl::token_interface::MetadataPointerInitializeArgs>::None }
-                }
+            let group_pointer_authority = match group_pointer_authority {
+                Some(fa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#fa) },
+                None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
             };
 
-            let group_pointer_data = match group_pointer_data {
-                Some(fa) => {
-                    quote! { Option::<&::anchor_spl::token_interface::GroupPointerInitializeArgs>::Some(&#fa) }
-                }
-                None => {
-                    quote! { Option::<&::anchor_spl::token_interface::GroupPointerInitializeArgs>::None }
-                }
+            let group_pointer_group_address = match group_pointer_group_address {
+                Some(fa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#fa) },
+                None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
             };
 
-            let group_member_pointer_data = match group_member_pointer_data {
-                Some(fa) => {
-                    quote! { Option::<&::anchor_spl::token_interface::GroupMemberPointerInitializeArgs>::Some(&#fa) }
-                }
-                None => {
-                    quote! { Option::<&::anchor_spl::token_interface::GroupMemberPointerInitializeArgs>::None }
-                }
+            let group_member_pointer_authority = match group_member_pointer_authority {
+                Some(fa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#fa) },
+                None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
+            };
+
+            let group_member_pointer_member_address = match group_member_pointer_member_address {
+                Some(fa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#fa) },
+                None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
+            };
+
+            let metadata_pointer_authority = match metadata_pointer_authority {
+                Some(fa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#fa) },
+                None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
+            };
+
+            let metadata_pointer_metadata_address = match metadata_pointer_metadata_address {
+                Some(fa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#fa) },
+                None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
+            };
+
+            let close_authority = match close_authority {
+                Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key()) },
+                None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
+            };
+
+            let token_hook_authority = match token_hook_authority {
+                Some(fa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#fa) },
+                None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
+            };
+
+            let token_hook_program_id = match token_hook_program_id {
+                Some(fa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#fa) },
+                None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
             };
 
             let create_account = generate_create_account(
                 field,
-                quote! {::anchor_spl::token_interface::find_mint_account_size(#extensions_data)?},
+                quote! {::anchor_spl::token_interface::find_mint_account_size(#extensions)?},
                 quote! {&#token_program.key()},
                 quote! {#payer},
                 seeds_with_bump,
@@ -797,49 +843,57 @@ fn generate_constraint_init_group(
                         #create_account
                     }
 
-                    #[cfg(not(target_os = "solana"))]
-                    if #confidential_transfer_data.is_some() {
-                        let cpi_program = #token_program.to_account_info();
-                        let accounts = ::anchor_spl::token_interface::ConfidentialTransferIntializeMint {
-                            token_program_id: #token_program.to_account_info(),
-                            mint: #field.to_account_info(),
+                    if let Some(extensions) = #extensions {
+                        for e in extensions {
+                            match e {
+                                ::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::GroupPointer => {
+                                    let cpi_program = #token_program.to_account_info();
+                                    let accounts = ::anchor_spl::token_interface::GroupPointerInitialize {
+                                        token_program_id: #token_program.to_account_info(),
+                                        mint: #field.to_account_info(),
+                                    };
+                                    let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
+                                    ::anchor_spl::token_interface::group_pointer_initialize(cpi_ctx, #group_pointer_authority, #group_pointer_group_address)?;
+                                },
+                                ::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::GroupMemberPointer => {
+                                    let cpi_program = #token_program.to_account_info();
+                                    let accounts = ::anchor_spl::token_interface::GroupMemberPointerInitialize {
+                                        token_program_id: #token_program.to_account_info(),
+                                        mint: #field.to_account_info(),
+                                    };
+                                    let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
+                                    ::anchor_spl::token_interface::group_member_pointer_initialize(cpi_ctx, #group_member_pointer_authority, #group_member_pointer_member_address)?;
+                                },
+                                ::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::MetadataPointer => {
+                                    let cpi_program = #token_program.to_account_info();
+                                    let accounts = ::anchor_spl::token_interface::MetadataPointerInitialize {
+                                        token_program_id: #token_program.to_account_info(),
+                                        mint: #field.to_account_info(),
+                                    };
+                                    let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
+                                    ::anchor_spl::token_interface::metadata_pointer_initialize(cpi_ctx, #metadata_pointer_authority, #metadata_pointer_metadata_address)?;
+                                },
+                                ::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::MintCloseAuthority => {
+                                    let cpi_program = #token_program.to_account_info();
+                                    let accounts = ::anchor_spl::token_interface::MintCloseAuthorityInitialize {
+                                        token_program_id: #token_program.to_account_info(),
+                                        mint: #field.to_account_info(),
+                                    };
+                                    let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
+                                    ::anchor_spl::token_interface::mint_close_authority_initialize(cpi_ctx, #close_authority)?;
+                                },
+                                ::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::TransferHook => {
+                                    let cpi_program = #token_program.to_account_info();
+                                    let accounts = ::anchor_spl::token_interface::TransferHookInitialize {
+                                        token_program_id: #token_program.to_account_info(),
+                                        mint: #field.to_account_info(),
+                                    };
+                                    let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
+                                    ::anchor_spl::token_interface::transfer_hook_initialize(cpi_ctx, #token_hook_authority, #token_hook_program_id)?;
+                                },
+                                _ => {} // do nothing
+                            }
                         };
-                        let c = #confidential_transfer_data.unwrap().clone();
-                        let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
-                        ::anchor_spl::token_interface::confidential_transfer_initialize_mint(cpi_ctx, c)?;
-                    }
-
-                    if #metadata_pointer_data.is_some() {
-                        let cpi_program = #token_program.to_account_info();
-                        let accounts = ::anchor_spl::token_interface::MetadataPointerInitialize {
-                            token_program_id: #token_program.to_account_info(),
-                            mint: #field.to_account_info(),
-                        };
-                        let c = #metadata_pointer_data.unwrap().clone();
-                        let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
-                        ::anchor_spl::token_interface::metadata_pointer_initialize(cpi_ctx, c)?;
-                    }
-
-                    if #group_pointer_data.is_some() {
-                        let cpi_program = #token_program.to_account_info();
-                        let accounts = ::anchor_spl::token_interface::GroupPointerInitialize {
-                            token_program_id: #token_program.to_account_info(),
-                            mint: #field.to_account_info(),
-                        };
-                        let c = #group_pointer_data.unwrap().clone();
-                        let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
-                        ::anchor_spl::token_interface::group_pointer_initialize(cpi_ctx, c)?;
-                    }
-
-                    if #group_member_pointer_data.is_some() {
-                        let cpi_program = #token_program.to_account_info();
-                        let accounts = ::anchor_spl::token_interface::GroupMemberPointerInitialize {
-                            token_program_id: #token_program.to_account_info(),
-                            mint: #field.to_account_info(),
-                        };
-                        let c = #group_member_pointer_data.unwrap().clone();
-                        let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
-                        ::anchor_spl::token_interface::group_member_pointer_initialize(cpi_ctx, c)?;
                     }
 
                     if !#if_needed || owner_program == &anchor_lang::solana_program::system_program::ID {

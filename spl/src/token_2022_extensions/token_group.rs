@@ -3,25 +3,18 @@ use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::Result;
 use anchor_lang::{context::CpiContext, Accounts};
 
-use borsh::{BorshDeserialize, BorshSerialize};
-
-#[derive(Clone, BorshDeserialize, BorshSerialize)]
-pub struct TokenGroupInitializeArgs {
-    pub update_authority: Option<Pubkey>,
-    pub max_size: u32,
-}
-
 pub fn token_group_initialize<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, TokenGroupInitialize<'info>>,
-    args: TokenGroupInitializeArgs,
+    update_authority: Option<Pubkey>,
+    max_size: u32,
 ) -> Result<()> {
     let ix = spl_token_group_interface::instruction::initialize_group(
         ctx.accounts.token_program_id.key,
         ctx.accounts.group.key,
         ctx.accounts.mint.key,
         ctx.accounts.mint_authority.key,
-        args.update_authority,
-        args.max_size,
+        update_authority,
+        max_size,
     );
     solana_program::program::invoke_signed(
         &ix,

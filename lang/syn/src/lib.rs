@@ -675,17 +675,27 @@ pub enum ConstraintToken {
     MintAuthority(Context<ConstraintMintAuthority>),
     MintFreezeAuthority(Context<ConstraintMintFreezeAuthority>),
     MintDecimals(Context<ConstraintMintDecimals>),
-    MintConfidentialTransferData(Context<ConstraintMintConfidentialTransferData>),
     MintExtensions(Context<ConstraintMintExtensions>),
-    MintMetadataPointerData(Context<ConstraintMintMetadataPointerData>),
-    MintGroupPointerData(Context<ConstraintMintGroupPointerData>),
-    MintGroupMemberPointerData(Context<ConstraintMintGroupMemberPointerData>),
     MintTokenProgram(Context<ConstraintTokenProgram>),
     Bump(Context<ConstraintTokenBump>),
     ProgramSeed(Context<ConstraintProgramSeed>),
     Realloc(Context<ConstraintRealloc>),
     ReallocPayer(Context<ConstraintReallocPayer>),
     ReallocZero(Context<ConstraintReallocZero>),
+    // extensions
+    ExtensionGroupPointerAuthority(Context<ConstraintExtensionAuthority>),
+    ExtensionGroupPointerGroupAddress(Context<ConstraintExtensionGroupPointerGroupAddress>),
+    ExtensionGroupMemberPointerAuthority(Context<ConstraintExtensionAuthority>),
+    ExtensionGroupMemberPointerMemberAddress(
+        Context<ConstraintExtensionGroupMemberPointerMemberAddress>,
+    ),
+    ExtensionMetadataPointerAuthority(Context<ConstraintExtensionAuthority>),
+    ExtensionMetadataPointerMetadataAddress(
+        Context<ConstraintExtensionMetadataPointerMetadataAddress>,
+    ),
+    ExtensionCloseAuthority(Context<ConstraintExtensionAuthority>),
+    ExtensionTokenHookAuthority(Context<ConstraintExtensionAuthority>),
+    ExtensionTokenHookProgramId(Context<ConstraintExtensionTokenHookProgramId>),
 }
 
 impl Parse for ConstraintToken {
@@ -802,6 +812,32 @@ pub struct ConstraintSpace {
     pub space: Expr,
 }
 
+// extension constraints
+#[derive(Debug, Clone)]
+pub struct ConstraintExtensionAuthority {
+    pub authority: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintExtensionGroupPointerGroupAddress {
+    pub group_address: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintExtensionGroupMemberPointerMemberAddress {
+    pub member_address: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintExtensionMetadataPointerMetadataAddress {
+    pub metadata_address: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintExtensionTokenHookProgramId {
+    pub program_id: Expr,
+}
+
 #[derive(Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum InitKind {
@@ -829,10 +865,16 @@ pub enum InitKind {
         decimals: Expr,
         token_program: Option<Expr>,
         extensions: Option<Expr>,
-        confidential_transfer_data: Option<Expr>,
-        metadata_pointer_data: Option<Expr>,
-        group_pointer_data: Option<Expr>,
-        group_member_pointer_data: Option<Expr>,
+        // extensions
+        group_pointer_authority: Option<Expr>,
+        group_pointer_group_address: Option<Expr>,
+        group_member_pointer_authority: Option<Expr>,
+        group_member_pointer_member_address: Option<Expr>,
+        metadata_pointer_authority: Option<Expr>,
+        metadata_pointer_metadata_address: Option<Expr>,
+        close_authority: Option<Expr>,
+        token_hook_authority: Option<Expr>,
+        token_hook_program_id: Option<Expr>,
     },
 }
 
@@ -884,6 +926,33 @@ pub struct ConstraintMintGroupPointerData {
 #[derive(Debug, Clone)]
 pub struct ConstraintMintGroupMemberPointerData {
     pub group_member_pointer_data: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintExtensionTokenHook {
+    pub program_id: Option<Expr>,
+    pub authority: Option<Expr>,
+}
+
+impl ToTokens for ConstraintExtensionTokenHook {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let ConstraintExtensionTokenHook {
+            program_id,
+            authority,
+        } = self;
+
+        tokens.extend(quote! {
+                {
+                    program_id: #program_id,
+                    authority: #authority,
+                }
+        });
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintMintCloseAuthority {
+    pub close_authority: Expr,
 }
 
 #[derive(Debug, Clone)]
@@ -942,10 +1011,19 @@ pub struct ConstraintTokenMintGroup {
     pub freeze_authority: Option<Expr>,
     pub token_program: Option<Expr>,
     pub extensions: Option<Expr>,
-    pub confidential_transfer_data: Option<Expr>,
-    pub metadata_pointer_data: Option<Expr>,
-    pub group_pointer_data: Option<Expr>,
-    pub group_member_pointer_data: Option<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConstraintExtensionGroup {
+    pub group_pointer_authority: Option<Expr>,
+    pub group_pointer_group_address: Option<Expr>,
+    pub group_member_pointer_authority: Option<Expr>,
+    pub group_member_pointer_member_address: Option<Expr>,
+    pub metadata_pointer_authority: Option<Expr>,
+    pub metadata_pointer_metadata_address: Option<Expr>,
+    pub close_authority: Option<Expr>,
+    pub token_hook_authority: Option<Expr>,
+    pub token_hook_program_id: Option<Expr>,
 }
 
 // Syntaxt context object for preserving metadata about the inner item.
