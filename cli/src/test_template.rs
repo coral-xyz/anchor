@@ -20,43 +20,50 @@ pub enum TestTemplate {
 }
 
 impl TestTemplate {
-    pub fn new(program_template: &ProgramTemplate, js: bool, jest: bool, solidity: bool) -> Self {
+    pub fn new(
+        program_templates: &[ProgramTemplate],
+        js: bool,
+        jest: bool,
+        solidity: bool,
+    ) -> Self {
         if jest {
             return Self::Jest { js, solidity };
         }
 
-        if let ProgramTemplate::RustTest = program_template {
-            return Self::Rust;
+        for program_template in program_templates {
+            if let ProgramTemplate::RustTest = program_template {
+                return Self::Rust;
+            }
         }
 
         Self::Mocha { js, solidity }
     }
 
     pub fn get_test_script(&self) -> &str {
-    // if jest {
-    //     cfg.scripts.insert(
-    //         "test".to_owned(),
-    //         if javascript {
-    //             "yarn run jest"
-    //         } else {
-    //             "yarn run jest --preset ts-jest"
-    //         }
-    //         .to_owned(),
-    //     );
-    // } else if template == ProgramTemplate::RustTest {
-    //     cfg.scripts
-    //         .insert("test".to_owned(), "cargo test".to_owned());
-    // } else {
-    //     cfg.scripts.insert(
-    //         "test".to_owned(),
-    //         if javascript {
-    //             "yarn run mocha -t 1000000 tests/"
-    //         } else {
-    //             "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-    //         }
-    //         .to_owned(),
-    //     );
-    // }
+        // if jest {
+        //     cfg.scripts.insert(
+        //         "test".to_owned(),
+        //         if javascript {
+        //             "yarn run jest"
+        //         } else {
+        //             "yarn run jest --preset ts-jest"
+        //         }
+        //         .to_owned(),
+        //     );
+        // } else if template == ProgramTemplate::RustTest {
+        //     cfg.scripts
+        //         .insert("test".to_owned(), "cargo test".to_owned());
+        // } else {
+        //     cfg.scripts.insert(
+        //         "test".to_owned(),
+        //         if javascript {
+        //             "yarn run mocha -t 1000000 tests/"
+        //         } else {
+        //             "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+        //         }
+        //         .to_owned(),
+        //     );
+        // }
         match &self {
             Self::Mocha { js, .. } => {
                 if *js {
@@ -82,37 +89,28 @@ impl TestTemplate {
                 if *js {
                     let mut test = File::create(format!("tests/{}.js", &project_name))?;
                     if *solidity {
-                        test.write_all(solidity_template::mocha(&project_name).as_bytes())?;
+                        test.write_all(solidity_template::mocha(project_name).as_bytes())?;
                     } else {
-                        test.write_all(rust_template::mocha(&project_name).as_bytes())?;
+                        test.write_all(rust_template::mocha(project_name).as_bytes())?;
                     }
                 } else {
                     let mut mocha = File::create(format!("tests/{}.ts", &project_name))?;
                     if *solidity {
-                        mocha.write_all(solidity_template::ts_mocha(&project_name).as_bytes())?;
+                        mocha.write_all(solidity_template::ts_mocha(project_name).as_bytes())?;
                     } else {
-                        mocha.write_all(rust_template::ts_mocha(&project_name).as_bytes())?;
+                        mocha.write_all(rust_template::ts_mocha(project_name).as_bytes())?;
                     }
                 }
             }
-            Self::Jest { js, solidity } => {
-                if *js {
-                    let mut test = File::create(format!("tests/{}.test.js", &project_name))?;
-                    if *solidity {
-                        test.write_all(solidity_template::jest(&project_name).as_bytes())?;
-                    } else {
-                        test.write_all(rust_template::jest(&project_name).as_bytes())?;
-                    }
+            Self::Jest { js: _, solidity } => {
+                let mut test = File::create(format!("tests/{}.test.js", &project_name))?;
+                if *solidity {
+                    test.write_all(solidity_template::jest(project_name).as_bytes())?;
                 } else {
-                    let mut test = File::create(format!("tests/{}.test.js", &project_name))?;
-                    if *solidity {
-                        test.write_all(solidity_template::jest(&project_name).as_bytes())?;
-                    } else {
-                        test.write_all(rust_template::jest(&project_name).as_bytes())?;
-                    }
+                    test.write_all(rust_template::jest(project_name).as_bytes())?;
                 }
             }
-            Self::Rust => {}
+            _ => {}
         }
 
         Ok(())
