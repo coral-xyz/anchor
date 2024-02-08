@@ -25,33 +25,39 @@ pub enum ProgramTemplate {
 /// Create a program from the given name and template.
 pub fn create_program(
     name: &str,
-    template: ProgramTemplate,
+    templates: &[ProgramTemplate],
     program_id: &str,
     tests: Option<&str>,
 ) -> Result<()> {
     let program_path = Path::new("programs").join(name);
+    let tests = if let Some(tests) = tests { tests } else { "" };
     let common_files = vec![
         ("Cargo.toml".into(), workspace_manifest(tests)),
         (program_path.join("Cargo.toml"), cargo_toml(name)),
         (program_path.join("Xargo.toml"), xargo_toml().into()),
     ];
 
-    let template_files = match template {
-        ProgramTemplate::Single => create_program_template_single(name, &program_path),
-        ProgramTemplate::Multiple => create_program_template_multiple(name, &program_path),
-        ProgramTemplate::RustTest => {
-            let mut files = create_program_template_single(name, &program_path);
-            let tests_path = Path::new("tests");
-            files.extend(vec![(
-                tests_path.join("Cargo.toml"),
-                tests_cargo_toml(name),
-            )]);
-            files.extend(create_program_template_rust_test(
-                name, tests_path, program_id,
-            ));
-            files
-        }
-    };
+    let mut template_files = Vec::new();
+    for template in templates {
+        let files = match template {
+            ProgramTemplate::Single => create_program_template_single(name, &program_path),
+            ProgramTemplate::Multiple => create_program_template_multiple(name, &program_path),
+            ProgramTemplate::RustTest => {
+                let mut files = create_program_template_single(name, &program_path);
+                let tests_path = Path::new("tests");
+                files.extend(vec![(
+                    tests_path.join("Cargo.toml"),
+                    tests_cargo_toml(name),
+                )]);
+                files.extend(create_program_template_rust_test(
+                    name, tests_path, program_id,
+                ));
+                files
+            }
+        };
+
+        template_files.extend(files);
+    }
 
     create_files(&[common_files, template_files].concat())
 }
