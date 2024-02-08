@@ -41,7 +41,11 @@ pub fn transfer_hook_update<'info>(
     )?;
     solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.token_program_id, ctx.accounts.mint, ctx.accounts.authority],
+        &[
+            ctx.accounts.token_program_id,
+            ctx.accounts.mint,
+            ctx.accounts.authority,
+        ],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
