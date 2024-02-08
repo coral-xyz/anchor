@@ -89,8 +89,8 @@ pub enum Command {
         #[clap(long)]
         jest: bool,
         /// Rust program template to use
-        #[clap(value_enum, short, long, default_value = "single")]
-        template: ProgramTemplate,
+        #[clap(value_enum, short, long, default_value = "single", action = clap::ArgAction::Append)]
+        template: Vec<ProgramTemplate>,
         /// Initialize even if there are files
         #[clap(long, action)]
         force: bool,
@@ -663,7 +663,7 @@ fn process_command(opts: Opts) -> Result<()> {
             solidity,
             no_git,
             jest,
-            template,
+            &template,
             force,
         ),
         Command::New {
@@ -827,7 +827,7 @@ fn init(
     solidity: bool,
     no_git: bool,
     jest: bool,
-    template: ProgramTemplate,
+    templates: &[ProgramTemplate],
     force: bool,
 ) -> Result<()> {
     if !force && Config::discover(cfg_override)?.is_some() {
@@ -863,7 +863,7 @@ fn init(
     fs::create_dir_all("app")?;
 
     let mut cfg = Config::default();
-    let test_template = TestTemplate::new(&template, javascript, jest, solidity);
+    let test_template = TestTemplate::new(templates, javascript, jest, solidity);
     let test_script = test_template.get_test_script();
     cfg.scripts
         .insert("test".to_owned(), test_script.to_owned());
@@ -903,9 +903,9 @@ fn init(
     } else {
         rust_template::create_program(
             &project_name,
-            template,
+            templates,
             &program_id.to_string(),
-            &program_id.to_string(),
+            Some("tests"),
         )?;
     }
 
@@ -918,34 +918,6 @@ fn init(
         // Build javascript config
         let mut package_json = File::create("package.json")?;
         package_json.write_all(rust_template::package_json(jest).as_bytes())?;
-
-        // let mut test = File::create(format!("tests/{}.js", &project_name))?;
-        // if solidity {
-        //     test.write_all(solidity_template::mocha(&project_name).as_bytes())?;
-        // } else {
-        //     test.write_all(rust_template::mocha(&project_name).as_bytes())?;
-        // }
-        // let mut test = File::create(format!("tests/{}.test.js", &project_name))?;
-        // if solidity {
-        //     test.write_all(solidity_template::jest(&project_name).as_bytes())?;
-        // } else {
-        //     test.write_all(rust_template::jest(&project_name).as_bytes())?;
-        // }
-        // if jest {
-        //     let mut test = File::create(format!("tests/{}.test.js", &project_name))?;
-        //     if solidity {
-        //         test.write_all(solidity_template::jest(&project_name).as_bytes())?;
-        //     } else {
-        //         test.write_all(rust_template::jest(&project_name).as_bytes())?;
-        //     }
-        // } else {
-        //     let mut test = File::create(format!("tests/{}.js", &project_name))?;
-        //     if solidity {
-        //         test.write_all(solidity_template::mocha(&project_name).as_bytes())?;
-        //     } else {
-        //         test.write_all(rust_template::mocha(&project_name).as_bytes())?;
-        //     }
-        // }
 
         let mut deploy = File::create("migrations/deploy.js")?;
 
@@ -960,45 +932,8 @@ fn init(
 
         let mut deploy = File::create("migrations/deploy.ts")?;
         deploy.write_all(rust_template::ts_deploy_script().as_bytes())?;
-
-        // let mut mocha = File::create(format!("tests/{}.ts", &project_name))?;
-        // if solidity {
-        //     mocha.write_all(solidity_template::ts_mocha(&project_name).as_bytes())?;
-        // } else {
-        //     mocha.write_all(rust_template::ts_mocha(&project_name).as_bytes())?;
-        // }
-        // TestTemplate::Jest => {
-        //     let mut test = File::create(format!("tests/{}.test.js", &project_name))?;
-        //     if solidity {
-        //         test.write_all(solidity_template::jest(&project_name).as_bytes())?;
-        //     } else {
-        //         test.write_all(rust_template::jest(&project_name).as_bytes())?;
-        //     }
-        // }
-        // TestTemplate::Rust => {
-        //     let mut files = create_program_template_single(name, &program_path);
-        //     let tests_path = Path::new("tests");
-        //     files.extend(vec![(
-        //         tests_path.join("Cargo.toml"),
-        //         tests_cargo_toml(name),
-        //     )]);
-        //     files.extend(create_program_template_rust_test(
-        //         name, tests_path, program_id,
-        //     ));
-        //     // ProgramTemplate::RustTest => {
-        //     //     let mut files = create_program_template_single(name, &program_path);
-        //     //     let tests_path = Path::new("tests");
-        //     //     files.extend(vec![(
-        //     //         tests_path.join("Cargo.toml"),
-        //     //         tests_cargo_toml(name),
-        //     //     )]);
-        //     //     files.extend(create_program_template_rust_test(
-        //     //         name, tests_path, program_id,
-        //     //     ));
-        //     //     files
-        //     // }
-        // }
     }
+    test_template.create_test_files(&project_name)?;
 
     let yarn_result = install_node_modules("yarn")?;
     if !yarn_result.status.success() {
@@ -1076,7 +1011,12 @@ fn new(
                 if solidity {
                     solidity_template::create_program(&name)?;
                 } else {
-                    rust_template::create_program(&name, template, &program_id.to_string(), None)?;
+                    rust_template::create_program(
+                        &name,
+                        &[template],
+                        &program_id.to_string(),
+                        None,
+                    )?;
                 }
 
                 programs.insert(
@@ -4580,7 +4520,7 @@ mod tests {
             false,
             false,
             false,
-            ProgramTemplate::default(),
+            &[ProgramTemplate::default()],
             false,
         )
         .unwrap();
@@ -4599,7 +4539,7 @@ mod tests {
             false,
             false,
             false,
-            ProgramTemplate::default(),
+            &[ProgramTemplate::default()],
             false,
         )
         .unwrap();
@@ -4618,7 +4558,7 @@ mod tests {
             false,
             false,
             false,
-            ProgramTemplate::default(),
+            &[ProgramTemplate::default()],
             false,
         )
         .unwrap();
