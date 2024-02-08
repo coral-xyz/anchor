@@ -40,30 +40,6 @@ impl TestTemplate {
     }
 
     pub fn get_test_script(&self) -> &str {
-        // if jest {
-        //     cfg.scripts.insert(
-        //         "test".to_owned(),
-        //         if javascript {
-        //             "yarn run jest"
-        //         } else {
-        //             "yarn run jest --preset ts-jest"
-        //         }
-        //         .to_owned(),
-        //     );
-        // } else if template == ProgramTemplate::RustTest {
-        //     cfg.scripts
-        //         .insert("test".to_owned(), "cargo test".to_owned());
-        // } else {
-        //     cfg.scripts.insert(
-        //         "test".to_owned(),
-        //         if javascript {
-        //             "yarn run mocha -t 1000000 tests/"
-        //         } else {
-        //             "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-        //         }
-        //         .to_owned(),
-        //     );
-        // }
         match &self {
             Self::Mocha { js, .. } => {
                 if *js {
