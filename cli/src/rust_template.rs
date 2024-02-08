@@ -43,7 +43,7 @@ pub fn create_program(
             ProgramTemplate::Single => create_program_template_single(name, &program_path),
             ProgramTemplate::Multiple => create_program_template_multiple(name, &program_path),
             ProgramTemplate::RustTest => {
-                let mut files = create_program_template_single(name, &program_path);
+                let mut files = Vec::new();
                 let tests_path = Path::new("tests");
                 files.extend(vec![(
                     tests_path.join("Cargo.toml"),

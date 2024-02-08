@@ -86,7 +86,7 @@ impl TestTemplate {
                     test.write_all(rust_template::jest(project_name).as_bytes())?;
                 }
             }
-            _ => {}
+            Self::Rust => {}
         }
 
         Ok(())
