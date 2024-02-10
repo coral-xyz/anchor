@@ -5,7 +5,7 @@ use anchor_lang::prelude::*;
 
 declare_id!("6mogAuKLW1uiXg8Br8YwPtCTPyxKSK4YHrCcyHu6zBUY");
 
-pub const SEED: &[u8] = b"contant-seed";
+pub const SEED: &[u8] = b"constant-seed";
 
 #[program]
 pub mod relations_derivation {

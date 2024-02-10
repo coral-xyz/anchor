@@ -45,7 +45,7 @@ build_programs() {
 cleanup() {
   pkill -P $$ || true
   wait || true
-  rm test-validator.log || true
+  rm -f test-validator.log
 }
 
 start_clean_validator() {
