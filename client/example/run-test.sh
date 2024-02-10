@@ -27,6 +27,7 @@ main() {
     local basic_4_pid="CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr"
     local events_pid="2dhGsWUzy5YKUsjZdLHLmkNpUDAXkNa9MYWsPc4Ziqzy"
     local optional_pid="FNqz6pqLAwvMSds2FYjR4nKV3moVpPNtvkfGFrqLKrgG"
+    local relations_derivation_pid="6mogAuKLW1uiXg8Br8YwPtCTPyxKSK4YHrCcyHu6zBUY"
 
     #
     # Bootup validator.
@@ -37,8 +38,12 @@ main() {
 				--bpf-program $basic_4_pid ../../examples/tutorial/basic-4/target/deploy/basic_4.so \
 				--bpf-program $events_pid ../../tests/events/target/deploy/events.so \
 				--bpf-program $optional_pid ../../tests/optional/target/deploy/optional.so \
+				--bpf-program $relations_derivation_pid ../../tests/relations-derivation/target/deploy/relations_derivation.so \
 				> test-validator.log &
     sleep 5
+
+    anchor idl init --provider.cluster localnet $relations_derivation_pid \
+      --filepath ../../tests/relations-derivation/target/idl/relations_derivation.json
 
     #
     # Run single threaded test.
@@ -48,7 +53,8 @@ main() {
         --basic-2-pid $basic_2_pid \
         --basic-4-pid $basic_4_pid \
         --events-pid $events_pid \
-        --optional-pid $optional_pid
+        --optional-pid $optional_pid \
+        --relations-derivation-pid $relations_derivation_pid
 
     #
     # Restart validator for multithreaded test
@@ -60,8 +66,12 @@ main() {
 				--bpf-program $basic_4_pid ../../examples/tutorial/basic-4/target/deploy/basic_4.so \
 				--bpf-program $events_pid ../../tests/events/target/deploy/events.so \
 				--bpf-program $optional_pid ../../tests/optional/target/deploy/optional.so \
+				--bpf-program $relations_derivation_pid ../../tests/relations-derivation/target/deploy/relations_derivation.so \
 				> test-validator.log &
     sleep 5
+
+    anchor idl init --provider.cluster localnet $relations_derivation_pid \
+      --filepath ../../tests/relations-derivation/target/idl/relations_derivation.json
 
     #
     # Run multi threaded test.
@@ -72,6 +82,7 @@ main() {
         --basic-4-pid $basic_4_pid \
         --events-pid $events_pid \
         --optional-pid $optional_pid \
+        --relations-derivation-pid $relations_derivation_pid \
         --multithreaded
 
     #
@@ -84,8 +95,12 @@ main() {
 				--bpf-program $basic_4_pid ../../examples/tutorial/basic-4/target/deploy/basic_4.so \
 				--bpf-program $events_pid ../../tests/events/target/deploy/events.so \
 				--bpf-program $optional_pid ../../tests/optional/target/deploy/optional.so \
+				--bpf-program $relations_derivation_pid ../../tests/relations-derivation/target/deploy/relations_derivation.so \
 				> test-validator.log &
     sleep 5
+
+    anchor idl init --provider.cluster localnet $relations_derivation_pid \
+      --filepath ../../tests/relations-derivation/target/idl/relations_derivation.json
 
     #
     # Run async test.
@@ -96,6 +111,7 @@ main() {
         --basic-4-pid $basic_4_pid \
         --events-pid $events_pid \
         --optional-pid $optional_pid \
+        --relations-derivation-pid $relations_derivation_pid \
         --multithreaded
 
 }

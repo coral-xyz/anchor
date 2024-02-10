@@ -20,6 +20,8 @@ pub struct Opts {
     events_pid: Pubkey,
     #[clap(long)]
     optional_pid: Pubkey,
+    #[clap(long)]
+    relations_derivation_pid: Pubkey,
     #[clap(long, default_value = "false")]
     multithreaded: bool,
 }

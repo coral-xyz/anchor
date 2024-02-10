@@ -3,7 +3,7 @@
 
 use anchor_lang::prelude::*;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("6mogAuKLW1uiXg8Br8YwPtCTPyxKSK4YHrCcyHu6zBUY");
 
 pub const SEED: &[u8] = b"contant-seed";
 
