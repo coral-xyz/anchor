@@ -4513,8 +4513,8 @@ mod tests {
             true,
             false,
             false,
-            false,
-            &[ProgramTemplate::default()],
+            ProgramTemplate::default(),
+            TestTemplate::default(),
             false,
         )
         .unwrap();
@@ -4532,8 +4532,8 @@ mod tests {
             true,
             false,
             false,
-            false,
-            &[ProgramTemplate::default()],
+            ProgramTemplate::default(),
+            TestTemplate::default(),
             false,
         )
         .unwrap();
@@ -4551,8 +4551,8 @@ mod tests {
             true,
             false,
             false,
-            false,
-            &[ProgramTemplate::default()],
+            ProgramTemplate::default(),
+            TestTemplate::default(),
             false,
         )
         .unwrap();
