@@ -21,9 +21,17 @@ pub enum ProgramTemplate {
 }
 
 /// Create a program from the given name and template.
-pub fn create_program(name: &str, template: &ProgramTemplate, tests: Option<&str>) -> Result<()> {
+pub fn create_program(
+    name: &str,
+    template: &ProgramTemplate,
+    tests_mod: Option<&str>,
+) -> Result<()> {
     let program_path = Path::new("programs").join(name);
-    let tests = if let Some(tests) = tests { tests } else { "" };
+    let tests = if let Some(tests) = tests_mod {
+        tests
+    } else {
+        ""
+    };
     let common_files = vec![
         ("Cargo.toml".into(), workspace_manifest(tests)),
         (program_path.join("Cargo.toml"), cargo_toml(name)),
