@@ -739,12 +739,12 @@ use anchor_client::{{
 #[test]
 fn test_initialize() {{
     let program_id = "{0}";
-    let anchor_wallet = std::env::var("ANCHOR_WALLET").expect("set ANCHOR_WALLET");
-    let payer = read_keypair_file(&anchor_wallet).expect("");
+    let anchor_wallet = std::env::var("ANCHOR_WALLET").unwrap();
+    let payer = read_keypair_file(&anchor_wallet).unwrap();
 
     let client = Client::new_with_options(Cluster::Localnet, &payer, CommitmentConfig::confirmed());
-    let program_id = Pubkey::from_str(program_id).expect("parse program_id to Pubkey");
-    let program = client.program(program_id).expect("");
+    let program_id = Pubkey::from_str(program_id).unwrap();
+    let program = client.program(program_id).unwrap();
 
     let tx = program
         .request()

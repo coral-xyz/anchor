@@ -861,7 +861,6 @@ fn init(
     fs::create_dir_all("app")?;
 
     let mut cfg = Config::default();
-    // let test_template = TestTemplate::new(templates, javascript, jest, solidity);
     let test_script = test_template.get_test_script(javascript);
     cfg.scripts
         .insert("test".to_owned(), test_script.to_owned());
