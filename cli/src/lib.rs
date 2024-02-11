@@ -3,7 +3,6 @@ use crate::config::{
     ProgramDeployment, ProgramWorkspace, ScriptsConfig, TestValidator, WithPath, SHUTDOWN_WAIT,
     STARTUP_WAIT,
 };
-use crate::test_template::TestTemplate;
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction, ERASED_AUTHORITY};
 use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
@@ -23,7 +22,7 @@ use heck::{ToKebabCase, ToSnakeCase};
 use regex::{Regex, RegexBuilder};
 use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
-use rust_template::ProgramTemplate;
+use rust_template::{ProgramTemplate, TestTemplate};
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value as JsonValue};
@@ -55,7 +54,6 @@ mod checks;
 pub mod config;
 pub mod rust_template;
 pub mod solidity_template;
-pub mod test_template;
 
 // Version of the docker image.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -85,12 +83,12 @@ pub enum Command {
         /// Don't initialize git
         #[clap(long)]
         no_git: bool,
-        /// Use `jest` instead of `mocha` for tests
-        #[clap(long)]
-        jest: bool,
         /// Rust program template to use
-        #[clap(value_enum, short, long, default_value = "single", action = clap::ArgAction::Append)]
-        template: Vec<ProgramTemplate>,
+        #[clap(value_enum, short, long, default_value = "single")]
+        template: ProgramTemplate,
+        /// Rust program template to use
+        #[clap(value_enum, long, default_value = "mocha")]
+        test_template: TestTemplate,
         /// Initialize even if there are files
         #[clap(long, action)]
         force: bool,
@@ -653,8 +651,8 @@ fn process_command(opts: Opts) -> Result<()> {
             javascript,
             solidity,
             no_git,
-            jest,
             template,
+            test_template,
             force,
         } => init(
             &opts.cfg_override,
@@ -662,8 +660,8 @@ fn process_command(opts: Opts) -> Result<()> {
             javascript,
             solidity,
             no_git,
-            jest,
-            &template,
+            template,
+            test_template,
             force,
         ),
         Command::New {
@@ -826,8 +824,8 @@ fn init(
     javascript: bool,
     solidity: bool,
     no_git: bool,
-    jest: bool,
-    templates: &[ProgramTemplate],
+    template: ProgramTemplate,
+    test_template: TestTemplate,
     force: bool,
 ) -> Result<()> {
     if !force && Config::discover(cfg_override)?.is_some() {
@@ -863,8 +861,8 @@ fn init(
     fs::create_dir_all("app")?;
 
     let mut cfg = Config::default();
-    let test_template = TestTemplate::new(templates, javascript, jest, solidity);
-    let test_script = test_template.get_test_script();
+    // let test_template = TestTemplate::new(templates, javascript, jest, solidity);
+    let test_script = test_template.get_test_script(javascript);
     cfg.scripts
         .insert("test".to_owned(), test_script.to_owned());
 
@@ -901,12 +899,7 @@ fn init(
     if solidity {
         solidity_template::create_program(&project_name)?;
     } else {
-        rust_template::create_program(
-            &project_name,
-            templates,
-            &program_id.to_string(),
-            Some("tests"),
-        )?;
+        rust_template::create_program(&project_name, &template, Some("tests"))?;
     }
 
     // Build the test suite.
@@ -914,6 +907,7 @@ fn init(
     // Build the migrations directory.
     fs::create_dir_all("migrations")?;
 
+    let jest = TestTemplate::Jest == test_template;
     if javascript {
         // Build javascript config
         let mut package_json = File::create("package.json")?;
@@ -933,7 +927,12 @@ fn init(
         let mut deploy = File::create("migrations/deploy.ts")?;
         deploy.write_all(rust_template::ts_deploy_script().as_bytes())?;
     }
-    test_template.create_test_files(&project_name)?;
+    test_template.create_test_files(
+        &project_name,
+        javascript,
+        solidity,
+        &program_id.to_string(),
+    )?;
 
     let yarn_result = install_node_modules("yarn")?;
     if !yarn_result.status.success() {
@@ -1011,12 +1010,7 @@ fn new(
                 if solidity {
                     solidity_template::create_program(&name)?;
                 } else {
-                    rust_template::create_program(
-                        &name,
-                        &[template],
-                        &program_id.to_string(),
-                        None,
-                    )?;
+                    rust_template::create_program(&name, &template, None)?;
                 }
 
                 programs.insert(

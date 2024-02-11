@@ -1,4 +1,4 @@
-use crate::{config::ProgramWorkspace, create_files, Files, VERSION};
+use crate::{config::ProgramWorkspace, create_files, solidity_template, Files, VERSION};
 use anchor_syn::idl::types::Idl;
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
@@ -8,7 +8,7 @@ use solana_sdk::{
     signature::{read_keypair_file, write_keypair_file, Keypair},
     signer::Signer,
 };
-use std::{fmt::Write, path::Path};
+use std::{fmt::Write as _, fs::File, io::Write as _, path::Path};
 
 /// Program initialization template
 #[derive(Clone, Debug, Default, Eq, PartialEq, Parser, ValueEnum)]
@@ -18,17 +18,10 @@ pub enum ProgramTemplate {
     Single,
     /// Program with multiple files for instructions, state...
     Multiple,
-    /// Generate template for Rust unit-test
-    RustTest,
 }
 
 /// Create a program from the given name and template.
-pub fn create_program(
-    name: &str,
-    templates: &[ProgramTemplate],
-    program_id: &str,
-    tests: Option<&str>,
-) -> Result<()> {
+pub fn create_program(name: &str, template: &ProgramTemplate, tests: Option<&str>) -> Result<()> {
     let program_path = Path::new("programs").join(name);
     let tests = if let Some(tests) = tests { tests } else { "" };
     let common_files = vec![
@@ -37,27 +30,10 @@ pub fn create_program(
         (program_path.join("Xargo.toml"), xargo_toml().into()),
     ];
 
-    let mut template_files = Vec::new();
-    for template in templates {
-        let files = match template {
-            ProgramTemplate::Single => create_program_template_single(name, &program_path),
-            ProgramTemplate::Multiple => create_program_template_multiple(name, &program_path),
-            ProgramTemplate::RustTest => {
-                let mut files = Vec::new();
-                let tests_path = Path::new("tests");
-                files.extend(vec![(
-                    tests_path.join("Cargo.toml"),
-                    tests_cargo_toml(name),
-                )]);
-                files.extend(create_program_template_rust_test(
-                    name, tests_path, program_id,
-                ));
-                files
-            }
-        };
-
-        template_files.extend(files);
-    }
+    let template_files = match template {
+        ProgramTemplate::Single => create_program_template_single(name, &program_path),
+        ProgramTemplate::Multiple => create_program_template_multiple(name, &program_path),
+    };
 
     create_files(&[common_files, template_files].concat())
 }
@@ -165,55 +141,6 @@ pub fn handler(ctx: Context<Initialize>) -> Result<()> {
             .into(),
         ),
         (src_path.join("state").join("mod.rs"), r#""#.into()),
-    ]
-}
-
-/// Generate template for Rust unit-test
-fn create_program_template_rust_test(name: &str, tests_path: &Path, program_id: &str) -> Files {
-    let src_path = tests_path.join("src");
-    vec![
-        (
-            src_path.join("lib.rs"),
-            r#"#[cfg(test)]
-mod test_initialize;
-"#
-            .into(),
-        ),
-        (
-            src_path.join("test_initialize.rs"),
-            format!(
-                r#"use std::str::FromStr;
-
-use anchor_client::{{
-    solana_sdk::{{
-        commitment_config::CommitmentConfig, pubkey::Pubkey, signature::read_keypair_file,
-    }},
-    Client, Cluster,
-}};
-
-#[test]
-fn test_initialize() {{
-    let program_id = "{0}";
-    let anchor_wallet = std::env::var("ANCHOR_WALLET").expect("set ANCHOR_WALLET");
-    let payer = read_keypair_file(&anchor_wallet).expect("");
-
-    let client = Client::new_with_options(Cluster::Localnet, &payer, CommitmentConfig::confirmed());
-    let program_id = Pubkey::from_str(program_id).expect("parse program_id to Pubkey");
-    let program = client.program(program_id).expect("");
-
-    let tx = program
-        .request()
-        .accounts({1}::accounts::Initialize {{}})
-        .args({1}::instruction::Initialize {{}})
-        .send()
-        .expect("");
-
-    println!("Your transaction signature {{}}", tx);
-}}
-"#,
-                program_id, name,
-            ),
-        ),
     ]
 }
 
@@ -684,6 +611,111 @@ anchor.workspace.{} = new anchor.Program({}, new PublicKey("{}"), provider);
     Ok(eval_string)
 }
 
+/// Test initialization template
+#[derive(Clone, Debug, Default, Eq, PartialEq, Parser, ValueEnum)]
+pub enum TestTemplate {
+    /// Generate template for Jest unit-test
+    #[default]
+    Mocha,
+    /// Generate template for Jest unit-test    
+    Jest,
+    /// Generate template for Rust unit-test
+    Rust,
+}
+
+impl TestTemplate {
+    // pub fn new(
+    //     program_templates: &[ProgramTemplate],
+    //     js: bool,
+    //     jest: bool,
+    //     solidity: bool,
+    // ) -> Self {
+    //     if jest {
+    //         return Self::Jest { js, solidity };
+    //     }
+
+    //     for program_template in program_templates {
+    //         if let ProgramTemplate::RustTest = program_template {
+    //             return Self::Rust;
+    //         }
+    //     }
+
+    //     Self::Mocha { js, solidity }
+    // }
+
+    pub fn get_test_script(&self, js: bool) -> &str {
+        match &self {
+            Self::Mocha => {
+                if js {
+                    "yarn run mocha -t 1000000 tests/"
+                } else {
+                    "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+                }
+            }
+            Self::Jest => {
+                if js {
+                    "yarn run jest"
+                } else {
+                    "yarn run jest --preset ts-jest"
+                }
+            }
+            Self::Rust => "cargo test",
+        }
+    }
+
+    pub fn create_test_files(
+        &self,
+        project_name: &str,
+        js: bool,
+        solidity: bool,
+        program_id: &str,
+    ) -> Result<()> {
+        match self {
+            Self::Mocha => {
+                if js {
+                    let mut test = File::create(format!("tests/{}.js", &project_name))?;
+                    if solidity {
+                        test.write_all(solidity_template::mocha(project_name).as_bytes())?;
+                    } else {
+                        test.write_all(mocha(project_name).as_bytes())?;
+                    }
+                } else {
+                    let mut mocha = File::create(format!("tests/{}.ts", &project_name))?;
+                    if solidity {
+                        mocha.write_all(solidity_template::ts_mocha(project_name).as_bytes())?;
+                    } else {
+                        mocha.write_all(ts_mocha(project_name).as_bytes())?;
+                    }
+                }
+            }
+            Self::Jest => {
+                let mut test = File::create(format!("tests/{}.test.js", &project_name))?;
+                if solidity {
+                    test.write_all(solidity_template::jest(project_name).as_bytes())?;
+                } else {
+                    test.write_all(jest(project_name).as_bytes())?;
+                }
+            }
+            Self::Rust => {
+                let mut files = Vec::new();
+                let tests_path = Path::new("tests");
+                files.extend(vec![(
+                    tests_path.join("Cargo.toml"),
+                    tests_cargo_toml(project_name),
+                )]);
+                files.extend(create_program_template_rust_test(
+                    project_name,
+                    tests_path,
+                    program_id,
+                ));
+                create_files(&files)?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
 pub fn tests_cargo_toml(name: &str) -> String {
     format!(
         r#"[package]
@@ -698,4 +730,53 @@ anchor-client = "{0}"
 "#,
         VERSION, name,
     )
+}
+
+/// Generate template for Rust unit-test
+fn create_program_template_rust_test(name: &str, tests_path: &Path, program_id: &str) -> Files {
+    let src_path = tests_path.join("src");
+    vec![
+        (
+            src_path.join("lib.rs"),
+            r#"#[cfg(test)]
+mod test_initialize;
+"#
+            .into(),
+        ),
+        (
+            src_path.join("test_initialize.rs"),
+            format!(
+                r#"use std::str::FromStr;
+
+use anchor_client::{{
+    solana_sdk::{{
+        commitment_config::CommitmentConfig, pubkey::Pubkey, signature::read_keypair_file,
+    }},
+    Client, Cluster,
+}};
+
+#[test]
+fn test_initialize() {{
+    let program_id = "{0}";
+    let anchor_wallet = std::env::var("ANCHOR_WALLET").expect("set ANCHOR_WALLET");
+    let payer = read_keypair_file(&anchor_wallet).expect("");
+
+    let client = Client::new_with_options(Cluster::Localnet, &payer, CommitmentConfig::confirmed());
+    let program_id = Pubkey::from_str(program_id).expect("parse program_id to Pubkey");
+    let program = client.program(program_id).expect("");
+
+    let tx = program
+        .request()
+        .accounts({1}::accounts::Initialize {{}})
+        .args({1}::instruction::Initialize {{}})
+        .send()
+        .expect("");
+
+    println!("Your transaction signature {{}}", tx);
+}}
+"#,
+                program_id, name,
+            ),
+        ),
+    ]
 }
