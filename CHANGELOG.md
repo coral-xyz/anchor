@@ -51,6 +51,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - spl: Remove `shared-memory` program ([#2747](https://github.com/coral-xyz/anchor/pull/2747)).
 - ts: Remove `associated`, `account.associated` and `account.associatedAddress` methods ([#2749](https://github.com/coral-xyz/anchor/pull/2749)).
 - cli: `idl upgrade` command closes the IDL buffer account ([#2760](https://github.com/coral-xyz/anchor/pull/2760)).
+- cli: Remove `jest` flag and add new `test-template` option in `init` command  ([#2680](https://github.com/coral-xyz/anchor/issues/2680)).
 
 ## [0.29.0] - 2023-10-16
 
