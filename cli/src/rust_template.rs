@@ -614,7 +614,7 @@ anchor.workspace.{} = new anchor.Program({}, new PublicKey("{}"), provider);
 /// Test initialization template
 #[derive(Clone, Debug, Default, Eq, PartialEq, Parser, ValueEnum)]
 pub enum TestTemplate {
-    /// Generate template for Jest unit-test
+    /// Generate template for Mocha unit-test
     #[default]
     Mocha,
     /// Generate template for Jest unit-test    
@@ -624,25 +624,6 @@ pub enum TestTemplate {
 }
 
 impl TestTemplate {
-    // pub fn new(
-    //     program_templates: &[ProgramTemplate],
-    //     js: bool,
-    //     jest: bool,
-    //     solidity: bool,
-    // ) -> Self {
-    //     if jest {
-    //         return Self::Jest { js, solidity };
-    //     }
-
-    //     for program_template in program_templates {
-    //         if let ProgramTemplate::RustTest = program_template {
-    //             return Self::Rust;
-    //         }
-    //     }
-
-    //     Self::Mocha { js, solidity }
-    // }
-
     pub fn get_test_script(&self, js: bool) -> &str {
         match &self {
             Self::Mocha => {

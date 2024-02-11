@@ -86,7 +86,7 @@ pub enum Command {
         /// Rust program template to use
         #[clap(value_enum, short, long, default_value = "single")]
         template: ProgramTemplate,
-        /// Rust program template to use
+        /// Test template to use
         #[clap(value_enum, long, default_value = "mocha")]
         test_template: TestTemplate,
         /// Initialize even if there are files
