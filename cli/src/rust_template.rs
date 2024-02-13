@@ -1,4 +1,7 @@
-use crate::{config::ProgramWorkspace, create_files, solidity_template, Files, VERSION};
+use crate::{
+    config::ProgramWorkspace, create_files, override_or_create_files, solidity_template, Files,
+    VERSION,
+};
 use anchor_syn::idl::types::Idl;
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
@@ -8,7 +11,13 @@ use solana_sdk::{
     signature::{read_keypair_file, write_keypair_file, Keypair},
     signer::Signer,
 };
-use std::{fmt::Write as _, fs::File, io::Write as _, path::Path};
+use std::{
+    fmt::Write as _,
+    fs::{self, File},
+    io::Write as _,
+    path::Path,
+    process::Stdio,
+};
 
 /// Program initialization template
 #[derive(Clone, Debug, Default, Eq, PartialEq, Parser, ValueEnum)]
@@ -648,6 +657,9 @@ impl TestTemplate {
     ) -> Result<()> {
         match self {
             Self::Mocha => {
+                // Build the test suite.
+                fs::create_dir_all("tests")?;
+
                 if js {
                     let mut test = File::create(format!("tests/{}.js", &project_name))?;
                     if solidity {
@@ -665,6 +677,9 @@ impl TestTemplate {
                 }
             }
             Self::Jest => {
+                // Build the test suite.
+                fs::create_dir_all("tests")?;
+
                 let mut test = File::create(format!("tests/{}.test.js", &project_name))?;
                 if solidity {
                     test.write_all(solidity_template::jest(project_name).as_bytes())?;
@@ -673,6 +688,18 @@ impl TestTemplate {
                 }
             }
             Self::Rust => {
+                let exit = std::process::Command::new("cargo")
+                    .arg("new")
+                    .arg("--lib")
+                    .arg("tests")
+                    .stderr(Stdio::inherit())
+                    .output()
+                    .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
+                if !exit.status.success() {
+                    eprintln!("'cargo new --lib tests' failed");
+                    std::process::exit(exit.status.code().unwrap_or(1));
+                }
+
                 let mut files = Vec::new();
                 let tests_path = Path::new("tests");
                 files.extend(vec![(
@@ -684,7 +711,7 @@ impl TestTemplate {
                     tests_path,
                     program_id,
                 ));
-                create_files(&files)?;
+                override_or_create_files(&files)?;
             }
         }
 

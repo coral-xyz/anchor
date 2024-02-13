@@ -901,8 +901,6 @@ fn init(
         rust_template::create_program(&project_name, &template)?;
     }
 
-    // Build the test suite.
-    fs::create_dir_all("tests")?;
     // Build the migrations directory.
     fs::create_dir_all("migrations")?;
 
@@ -926,6 +924,7 @@ fn init(
         let mut deploy = File::create("migrations/deploy.ts")?;
         deploy.write_all(rust_template::ts_deploy_script().as_bytes())?;
     }
+
     test_template.create_test_files(
         &project_name,
         javascript,
@@ -1009,7 +1008,7 @@ fn new(
                 if solidity {
                     solidity_template::create_program(&name)?;
                 } else {
-                    rust_template::create_program(&name, &template, None)?;
+                    rust_template::create_program(&name, &template)?;
                 }
 
                 programs.insert(
@@ -1054,6 +1053,32 @@ pub fn create_files(files: &Files) -> Result<()> {
                 fs::write(path, content)?;
             }
             None => fs::create_dir_all(path)?,
+        }
+    }
+
+    Ok(())
+}
+
+/// Override or create files from the given (path, content) tuple array.
+///
+/// # Example
+///
+/// ```ignore
+/// override_or_create_files(vec![("programs/my_program/src/lib.rs".into(), "// Content".into())])?;
+/// ```
+pub fn override_or_create_files(files: &Files) -> Result<()> {
+    for (path, content) in files {
+        let path = Path::new(path);
+        if path.exists() {
+            let mut f = fs::OpenOptions::new()
+                .write(true)
+                .truncate(true)
+                .open(path)?;
+            f.write_all(content.as_bytes())?;
+            f.flush()?;
+        } else {
+            fs::create_dir_all(path.parent().unwrap())?;
+            fs::write(path, content)?;
         }
     }
 
