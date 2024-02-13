@@ -868,7 +868,7 @@ fn init(
     let mut localnet = BTreeMap::new();
     let program_id = rust_template::get_or_create_program_id(&rust_name);
     localnet.insert(
-        rust_name.clone(),
+        rust_name,
         ProgramDeployment {
             address: program_id,
             path: None,
@@ -898,7 +898,7 @@ fn init(
     if solidity {
         solidity_template::create_program(&project_name)?;
     } else {
-        rust_template::create_program(&project_name, &template)?;
+        rust_template::create_program(&project_name, template)?;
     }
 
     // Build the migrations directory.
@@ -1004,17 +1004,16 @@ fn new(
                     )?;
                 }
 
-                let program_id = rust_template::get_or_create_program_id(&name);
                 if solidity {
                     solidity_template::create_program(&name)?;
                 } else {
-                    rust_template::create_program(&name, &template)?;
+                    rust_template::create_program(&name, template)?;
                 }
 
                 programs.insert(
                     name.clone(),
                     ProgramDeployment {
-                        address: program_id,
+                        address: rust_template::get_or_create_program_id(&name),
                         path: None,
                         idl: None,
                     },

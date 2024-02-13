@@ -30,11 +30,11 @@ pub enum ProgramTemplate {
 }
 
 /// Create a program from the given name and template.
-pub fn create_program(name: &str, template: &ProgramTemplate) -> Result<()> {
+pub fn create_program(name: &str, template: ProgramTemplate) -> Result<()> {
     let program_path = Path::new("programs").join(name);
     let common_files = vec![
         ("Cargo.toml".into(), workspace_manifest().into()),
-        (program_path.join("Cargo.toml"), cargo_toml(&name)),
+        (program_path.join("Cargo.toml"), cargo_toml(name)),
         (program_path.join("Xargo.toml"), xargo_toml().into()),
     ];
 
@@ -152,10 +152,10 @@ pub fn handler(ctx: Context<Initialize>) -> Result<()> {
     ]
 }
 
-fn workspace_manifest() -> &'static str {
+const fn workspace_manifest() -> &'static str {
     r#"[workspace]
 members = [
-    "programs/*",
+    "programs/*"
 ]
 resolver = "2"
 
