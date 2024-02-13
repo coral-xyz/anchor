@@ -21,20 +21,11 @@ pub enum ProgramTemplate {
 }
 
 /// Create a program from the given name and template.
-pub fn create_program(
-    name: &str,
-    template: &ProgramTemplate,
-    tests_mod: Option<&str>,
-) -> Result<()> {
+pub fn create_program(name: &str, template: &ProgramTemplate) -> Result<()> {
     let program_path = Path::new("programs").join(name);
-    let tests = if let Some(tests) = tests_mod {
-        tests
-    } else {
-        ""
-    };
     let common_files = vec![
-        ("Cargo.toml".into(), workspace_manifest(tests)),
-        (program_path.join("Cargo.toml"), cargo_toml(name)),
+        ("Cargo.toml".into(), workspace_manifest().into()),
+        (program_path.join("Cargo.toml"), cargo_toml(&name)),
         (program_path.join("Xargo.toml"), xargo_toml().into()),
     ];
 
@@ -152,12 +143,10 @@ pub fn handler(ctx: Context<Initialize>) -> Result<()> {
     ]
 }
 
-fn workspace_manifest(tests: &str) -> String {
-    format!(
-        r#"[workspace]
+fn workspace_manifest() -> &'static str {
+    r#"[workspace]
 members = [
     "programs/*",
-    "{}"
 ]
 resolver = "2"
 
@@ -169,9 +158,7 @@ codegen-units = 1
 opt-level = 3
 incremental = false
 codegen-units = 1
-"#,
-        tests
-    )
+"#
 }
 
 fn cargo_toml(name: &str) -> String {

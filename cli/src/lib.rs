@@ -898,11 +898,7 @@ fn init(
     if solidity {
         solidity_template::create_program(&project_name)?;
     } else {
-        let tests_mod = match test_template {
-            TestTemplate::Jest | TestTemplate::Mocha => None,
-            TestTemplate::Rust => Some("tests"),
-        };
-        rust_template::create_program(&project_name, &template, tests_mod)?;
+        rust_template::create_program(&project_name, &template)?;
     }
 
     // Build the test suite.
