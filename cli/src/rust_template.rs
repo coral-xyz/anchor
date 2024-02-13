@@ -688,8 +688,11 @@ impl TestTemplate {
                 }
             }
             Self::Rust => {
+                // Do not initilize git repo
                 let exit = std::process::Command::new("cargo")
                     .arg("new")
+                    .arg("--vcs")
+                    .arg("none")
                     .arg("--lib")
                     .arg("tests")
                     .stderr(Stdio::inherit())
@@ -778,7 +781,8 @@ fn test_initialize() {{
     println!("Your transaction signature {{}}", tx);
 }}
 "#,
-                program_id, name,
+                program_id,
+                name.to_snake_case(),
             ),
         ),
     ]
