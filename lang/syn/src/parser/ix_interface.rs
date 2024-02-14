@@ -1,15 +1,18 @@
 #[cfg(feature = "interface-instructions")]
 use syn::{Lit, Meta, NestedMeta};
 
-#[cfg(not(feature = "interface-instructions"))]
-pub fn parse(_attrs: &[syn::Attribute]) -> Option<([u8; 8], String)> {
-    None
-}
-
 #[derive(Clone)]
 pub struct NameOverrides {
     pub namespace: Option<String>,
     pub name: Option<String>,
+}
+
+#[cfg(not(feature = "interface-instructions"))]
+pub fn parse(_attrs: &[syn::Attribute]) -> NameOverrides {
+    NameOverrides {
+        namespace: None,
+        name: None,
+    }
 }
 
 #[cfg(feature = "interface-instructions")]
