@@ -37,12 +37,11 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<(Vec<Ix>, Option<Fallbac
                 .namespace
                 .unwrap_or_else(|| SIGHASH_GLOBAL_NAMESPACE.to_string());
 
-            let discriminator: Option<[u8; 8]>;
-            if name_override.is_some() {
-                discriminator = Some(sighash(&namespace, &name_override.unwrap()));
+            let discriminator: Option<[u8; 8]> = if let Some(ix_name_override) = name_override {
+                Some(sighash(&namespace, &ix_name_override))
             } else {
-                discriminator = Some(sighash(&namespace, &method.sig.ident.to_string()));
-            }
+                Some(sighash(&namespace, &method.sig.ident.to_string()))
+            };
 
             Ok(Ix {
                 raw_method: method.clone(),
