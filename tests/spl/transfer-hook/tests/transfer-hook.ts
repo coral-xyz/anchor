@@ -144,6 +144,7 @@ describe("transfer hook", () => {
   });
 
   it("can create an `InitializeExtraAccountMetaList` instruction with the proper discriminator", async () => {
+    console.log("namespace", program.namespace);
     const ix = await program.namespace.splTransferHookInterface
       .initializeExtraAccountMetas(extraMetas as any[])
       .accounts({

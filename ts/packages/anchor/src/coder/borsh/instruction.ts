@@ -392,7 +392,11 @@ function sentenceCase(field: string): string {
 // Not technically sighash, since we don't include the arguments, as Rust
 // doesn't allow function overloading.
 function sighash(nameSpace: string, ixName: string): Buffer {
-  let name = snakeCase(ixName, { delimiter: "-" });
+  // snakeCase each '-' part separately
+  let name = ixName
+    .split("-")
+    .map((part) => snakeCase(part))
+    .join("-");
   let preimage = `${nameSpace}:${name}`;
   return Buffer.from(sha256(preimage).slice(0, 8));
 }

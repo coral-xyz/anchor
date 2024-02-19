@@ -85,7 +85,7 @@ pub mod transfer_hook {
         ExtraAccountMetaList::check_account_infos::<ExecuteInstruction>(
             &ctx.accounts.to_account_infos(),
             &TransferHookInstruction::Execute { amount }.pack(),
-            &ctx.program_id,
+            ctx.program_id,
             &data,
         )?;
 
