@@ -562,7 +562,7 @@ pub struct BurnEditionNft<'info> {
     pub edition_marker: AccountInfo<'info>,
     pub spl_token: AccountInfo<'info>,
 }
-/// BurnNft instruction takes in an optional 'collection_metadata' 'PubKey'.
+/// BurnNft instruction takes in an optional `collection_metadata` `PubKey` .
 /// This is because Anchor did not support optional accounts at the time this struct was designed.
 /// Care must be taken in scenarios where the NFT to be burned has its
 /// collection_metadata field set. Using this instruction as-is will 'FAIL' since
@@ -573,7 +573,9 @@ pub struct BurnEditionNft<'info> {
 /// - Creating the BurnNft CPI context.
 /// - Calling the created CPI context with the remaining accounts method,
 ///   passing in the collection_metadata as input.
-/// - Passing the CPI context of BurnNft to the wrapper function as normal including the optional collection_metadata pubkey as input.
+/// - Passing the CPI context of BurnNft to the wrapper 
+/// - function as normal including the optional 
+/// - `collection_metadata` pubkey as input.
 #[derive(Accounts)]
 pub struct BurnNft<'info> {
     pub metadata: AccountInfo<'info>,
