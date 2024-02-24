@@ -3123,7 +3123,7 @@ fn test(
                         .and_then(|captures| {
                             captures
                                 .get(1)
-                                .and_then(|mtch| captures.get(2).and_then(|ext| Some((mtch, ext))))
+                                .and_then(|mtch| captures.get(2).map(|ext| ((mtch, ext))))
                         })
                         .map(|(mtch, ext)| {
                             (
