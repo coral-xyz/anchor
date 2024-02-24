@@ -3120,11 +3120,7 @@ fn test(
                         .unwrap()
                         .captures_iter(&test_script.clone())
                         .last()
-                        .and_then(|captures| {
-                            captures
-                                .get(1)
-                                .and_then(|mtch| captures.get(2).map(|ext| ((mtch, ext))))
-                        })
+                        .and_then(|c| c.get(1).and_then(|mtch| c.get(2).map(|ext| (mtch, ext))))
                         .map(|(mtch, ext)| {
                             (
                                 mtch.as_str(),
