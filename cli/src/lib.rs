@@ -3561,7 +3561,7 @@ fn start_test_validator(
         std::thread::sleep(std::time::Duration::from_millis(100));
         count += 100;
     }
-    if count == ms_wait {
+    if count >= ms_wait {
         eprintln!(
             "Unable to get latest blockhash. Test validator does not look started. \
             Check {test_ledger_log_filename:?} for errors. Consider increasing [test.startup_wait] in Anchor.toml."
