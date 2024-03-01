@@ -42,6 +42,7 @@ pub mod error;
 pub mod event;
 #[doc(hidden)]
 pub mod idl;
+mod quick_check;
 pub mod system_program;
 
 mod vec;
@@ -55,6 +56,7 @@ pub use anchor_attribute_program::program;
 pub use anchor_derive_accounts::Accounts;
 pub use anchor_derive_serde::{AnchorDeserialize, AnchorSerialize};
 pub use anchor_derive_space::InitSpace;
+pub use quick_check::QuickCheck;
 
 /// Borsh is the default serialization format for instructions and accounts.
 pub use borsh::de::BorshDeserialize as AnchorDeserialize;
