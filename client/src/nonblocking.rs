@@ -5,11 +5,63 @@ use crate::{
 use anchor_lang::{prelude::Pubkey, AccountDeserialize, Discriminator};
 use solana_client::{rpc_config::RpcSendTransactionConfig, rpc_filter::RpcFilterType};
 use solana_sdk::{
-    commitment_config::CommitmentConfig, signature::Signature, signer::Signer,
+    commitment_config::CommitmentConfig, signature::Signature, signer::SignerError,
     transaction::Transaction,
 };
 use std::{marker::PhantomData, ops::Deref, sync::Arc};
 use tokio::sync::RwLock;
+
+/// Signer which is also Send.
+pub trait Signer: solana_sdk::signature::Signer + Send {}
+
+impl<T: solana_sdk::signature::Signer + Send> Signer for T {}
+
+/// Collection of signers.
+///
+/// We need a wrapper type because we cannot implement `Signers` trait on
+/// `Vec<&den Signer>`.
+#[derive(Clone, Default)]
+pub struct Signers<'a>(pub Vec<&'a dyn Signer>);
+
+impl<'a> Signers<'a> {
+    #[inline]
+    pub fn push(&mut self, signer: &'a dyn Signer) {
+        self.0.push(signer)
+    }
+}
+
+impl<'a> solana_sdk::signer::signers::Signers for Signers<'a> {
+    #[inline]
+    fn pubkeys(&self) -> Vec<Pubkey> {
+        self.0.iter().map(|keypair| keypair.pubkey()).collect()
+    }
+
+    #[inline]
+    fn try_pubkeys(&self) -> Result<Vec<Pubkey>, SignerError> {
+        self.0.iter().map(|keypair| keypair.try_pubkey()).collect()
+    }
+
+    #[inline]
+    fn sign_message(&self, message: &[u8]) -> Vec<Signature> {
+        self.0
+            .iter()
+            .map(|keypair| keypair.sign_message(message))
+            .collect()
+    }
+
+    #[inline]
+    fn try_sign_message(&self, message: &[u8]) -> Result<Vec<Signature>, SignerError> {
+        self.0
+            .iter()
+            .map(|keypair| keypair.try_sign_message(message))
+            .collect()
+    }
+
+    #[inline]
+    fn is_interactive(&self) -> bool {
+        self.0.iter().any(|s| s.is_interactive())
+    }
+}
 
 impl<'a> EventUnsubscriber<'a> {
     /// Unsubscribe gracefully.
@@ -81,7 +133,7 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
             options: options.unwrap_or_default(),
             instructions: Vec::new(),
             instruction_data: None,
-            signers: Vec::new(),
+            signers: Default::default(),
         }
     }
 
