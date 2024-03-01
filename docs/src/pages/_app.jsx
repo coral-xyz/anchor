@@ -53,6 +53,10 @@ const navigation = [
         title: 'Program Derived Addresses',
         href: '/docs/pdas',
       },
+      {
+        title: 'Events',
+        href: '/docs/events',
+      },
     ],
   },
   {
