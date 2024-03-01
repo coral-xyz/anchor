@@ -10,6 +10,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         .iter()
         .map(|ix| {
             let name = &ix.raw_method.sig.ident.to_string();
+            let ix_cfgs = &ix.cfgs;
             let ix_name_camel =
                 proc_macro2::Ident::new(&name.to_camel_case(), ix.raw_method.sig.ident.span());
             let raw_args: Vec<proc_macro2::TokenStream> = ix
@@ -28,10 +29,13 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 let sighash_tts: proc_macro2::TokenStream =
                     format!("{sighash_arr:?}").parse().unwrap();
                 quote! {
+                    #(#ix_cfgs)*
                     impl anchor_lang::Discriminator for #ix_name_camel {
                         const DISCRIMINATOR: [u8; 8] = #sighash_tts;
                     }
+                    #(#ix_cfgs)*
                     impl anchor_lang::InstructionData for #ix_name_camel {}
+                    #(#ix_cfgs)*
                     impl anchor_lang::Owner for #ix_name_camel {
                         fn owner() -> Pubkey {
                             ID
@@ -42,6 +46,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             // If no args, output a "unit" variant instead of a struct variant.
             if ix.args.is_empty() {
                 quote! {
+                    #(#ix_cfgs)*
                     /// Instruction.
                     #[derive(AnchorSerialize, AnchorDeserialize)]
                     pub struct #ix_name_camel;
@@ -50,6 +55,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 }
             } else {
                 quote! {
+                    #(#ix_cfgs)*
                     /// Instruction.
                     #[derive(AnchorSerialize, AnchorDeserialize)]
                     pub struct #ix_name_camel {

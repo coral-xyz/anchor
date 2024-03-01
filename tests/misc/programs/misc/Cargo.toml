@@ -14,6 +14,7 @@ no-entrypoint = []
 no-idl = []
 cpi = ["no-entrypoint"]
 default = []
+my-feature = []
 
 [dependencies]
 anchor-lang = { path = "../../../../lang", features = ["init-if-needed"] }

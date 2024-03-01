@@ -385,4 +385,9 @@ pub mod misc {
     ) -> Result<()> {
         Ok(())
     }
+
+    #[cfg(feature = "my-feature")]
+    pub fn only_my_feature(_ctx: Context<Empty>) -> Result<()> {
+        Ok(())
+    }
 }

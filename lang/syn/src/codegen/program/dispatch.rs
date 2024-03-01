@@ -9,6 +9,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         .iter()
         .map(|ix| {
             let ix_method_name = &ix.raw_method.sig.ident;
+            let ix_cfgs = &ix.cfgs;
             let ix_name_camel: proc_macro2::TokenStream = ix_method_name
                 .to_string()
                 .as_str()
@@ -17,6 +18,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 .expect("Failed to parse ix method name in camel as `TokenStream`");
 
             quote! {
+                #(#ix_cfgs)*
                 instruction::#ix_name_camel::DISCRIMINATOR => {
                     __private::__global::#ix_method_name(
                         program_id,

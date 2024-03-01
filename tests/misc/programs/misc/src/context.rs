@@ -751,3 +751,7 @@ pub struct TestUsedIdentifiers<'info> {
     /// CHECK: ignore
     pub test4: AccountInfo<'info>,
 }
+
+#[cfg(feature = "my-feature")]
+#[derive(Accounts)]
+pub struct Empty {}
