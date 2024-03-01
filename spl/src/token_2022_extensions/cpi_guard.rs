@@ -3,15 +3,12 @@ use anchor_lang::Result;
 use anchor_lang::{context::CpiContext, Accounts};
 use solana_program::account_info::AccountInfo;
 
-pub fn cpi_guard_enable<'info>(
-    ctx: CpiContext<'_, '_, '_, 'info, CpiGuard<'info>>,
-    signers: &[&Pubkey],
-) -> Result<()> {
+pub fn cpi_guard_enable<'info>(ctx: CpiContext<'_, '_, '_, 'info, CpiGuard<'info>>) -> Result<()> {
     let ix = spl_token_2022::extension::cpi_guard::instruction::enable_cpi_guard(
         ctx.accounts.token_program_id.key,
         ctx.accounts.account.key,
         ctx.accounts.account.owner,
-        signers,
+        &[],
     )?;
     solana_program::program::invoke_signed(
         &ix,

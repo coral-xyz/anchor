@@ -669,6 +669,7 @@ pub enum ConstraintToken {
     TokenMint(Context<ConstraintTokenMint>),
     TokenAuthority(Context<ConstraintTokenAuthority>),
     TokenTokenProgram(Context<ConstraintTokenProgram>),
+    TokenExtensions(Context<ConstraintTokenExtensions>),
     AssociatedTokenMint(Context<ConstraintTokenMint>),
     AssociatedTokenAuthority(Context<ConstraintTokenAuthority>),
     AssociatedTokenTokenProgram(Context<ConstraintTokenProgram>),
@@ -696,6 +697,7 @@ pub enum ConstraintToken {
     ExtensionCloseAuthority(Context<ConstraintExtensionAuthority>),
     ExtensionTokenHookAuthority(Context<ConstraintExtensionAuthority>),
     ExtensionTokenHookProgramId(Context<ConstraintExtensionTokenHookProgramId>),
+    ExtensionPermanentDelegate(Context<ConstraintExtensionPermanentDelegate>),
 }
 
 impl Parse for ConstraintToken {
@@ -839,6 +841,11 @@ pub struct ConstraintExtensionTokenHookProgramId {
 }
 
 #[derive(Debug, Clone)]
+pub struct ConstraintExtensionPermanentDelegate {
+    pub permanent_delegate: Expr,
+}
+
+#[derive(Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum InitKind {
     Program {
@@ -873,6 +880,7 @@ pub enum InitKind {
         metadata_pointer_authority: Option<Expr>,
         metadata_pointer_metadata_address: Option<Expr>,
         close_authority: Option<Expr>,
+        permanent_delegate: Option<Expr>,
         token_hook_authority: Option<Expr>,
         token_hook_program_id: Option<Expr>,
     },
@@ -944,6 +952,11 @@ pub struct ConstraintTokenProgram {
 }
 
 #[derive(Debug, Clone)]
+pub struct ConstraintTokenExtensions {
+    pub extensions: Expr,
+}
+
+#[derive(Debug, Clone)]
 pub struct ConstraintMintAuthority {
     pub mint_auth: Expr,
 }
@@ -980,6 +993,7 @@ pub struct ConstraintTokenAccountGroup {
     pub mint: Option<Expr>,
     pub authority: Option<Expr>,
     pub token_program: Option<Expr>,
+    pub extensions: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
@@ -993,6 +1007,7 @@ pub struct ConstraintTokenMintGroup {
 
 #[derive(Debug, Clone)]
 pub struct ConstraintExtensionGroup {
+    // mint extensions
     pub group_pointer_authority: Option<Expr>,
     pub group_pointer_group_address: Option<Expr>,
     pub group_member_pointer_authority: Option<Expr>,
@@ -1002,6 +1017,7 @@ pub struct ConstraintExtensionGroup {
     pub close_authority: Option<Expr>,
     pub token_hook_authority: Option<Expr>,
     pub token_hook_program_id: Option<Expr>,
+    pub permanent_delegate: Option<Expr>,
 }
 
 // Syntaxt context object for preserving metadata about the inner item.

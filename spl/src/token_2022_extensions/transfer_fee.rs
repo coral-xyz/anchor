@@ -117,7 +117,8 @@ pub fn harvest_withheld_tokens_to_mint<'info>(
     let mut account_infos = vec![ctx.accounts.token_program_id, ctx.accounts.mint];
     account_infos.extend_from_slice(&sources);
 
-    solana_program::program::invoke_signed(&ix, &account_infos, ctx.signer_seeds).map_err(Into::into)
+    solana_program::program::invoke_signed(&ix, &account_infos, ctx.signer_seeds)
+        .map_err(Into::into)
 }
 
 #[derive(Accounts)]
@@ -128,7 +129,6 @@ pub struct HarvestWithheldTokensToMint<'info> {
 
 pub fn withdraw_withheld_tokens_from_mint<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, WithdrawWithheldTokensFromMint<'info>>,
-    amount: u64,
 ) -> Result<()> {
     let ix =
         spl_token_2022::extension::transfer_fee::instruction::withdraw_withheld_tokens_from_mint(

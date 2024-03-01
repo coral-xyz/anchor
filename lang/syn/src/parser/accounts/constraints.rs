@@ -219,6 +219,27 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
                     }
                 }
+                "permanent_delegate" => {
+                    stream.parse::<Token![:]>()?;
+                    stream.parse::<Token![:]>()?;
+                    let kw = stream.call(Ident::parse_any)?.to_string();
+                    stream.parse::<Token![=]>()?;
+
+                    let span = ident
+                        .span()
+                        .join(stream.span())
+                        .unwrap_or_else(|| ident.span());
+
+                    match kw.as_str() {
+                        "delegate" => ConstraintToken::ExtensionPermanentDelegate(Context::new(
+                            span,
+                            ConstraintExtensionPermanentDelegate {
+                                permanent_delegate: stream.parse()?,
+                            },
+                        )),
+                        _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
+                    }
+                }
                 "transfer_hook" => {
                     stream.parse::<Token![:]>()?;
                     stream.parse::<Token![:]>()?;
@@ -507,6 +528,7 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub token_mint: Option<Context<ConstraintTokenMint>>,
     pub token_authority: Option<Context<ConstraintTokenAuthority>>,
     pub token_token_program: Option<Context<ConstraintTokenProgram>>,
+    pub token_extensions: Option<Context<ConstraintTokenExtensions>>,
     pub associated_token_mint: Option<Context<ConstraintTokenMint>>,
     pub associated_token_authority: Option<Context<ConstraintTokenAuthority>>,
     pub associated_token_token_program: Option<Context<ConstraintTokenProgram>>,
@@ -527,6 +549,7 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub extension_close_authority: Option<Context<ConstraintExtensionAuthority>>,
     pub extension_transfer_hook_authority: Option<Context<ConstraintExtensionAuthority>>,
     pub extension_transfer_hook_program_id: Option<Context<ConstraintExtensionTokenHookProgramId>>,
+    pub extension_permanent_delegate: Option<Context<ConstraintExtensionPermanentDelegate>>,
     pub bump: Option<Context<ConstraintTokenBump>>,
     pub program_seed: Option<Context<ConstraintProgramSeed>>,
     pub realloc: Option<Context<ConstraintRealloc>>,
@@ -555,6 +578,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             token_mint: None,
             token_authority: None,
             token_token_program: None,
+            token_extensions: None,
             associated_token_mint: None,
             associated_token_authority: None,
             associated_token_token_program: None,
@@ -572,6 +596,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             extension_close_authority: None,
             extension_transfer_hook_authority: None,
             extension_transfer_hook_program_id: None,
+            extension_permanent_delegate: None,
             bump: None,
             program_seed: None,
             realloc: None,
@@ -767,6 +792,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             token_mint,
             token_authority,
             token_token_program,
+            token_extensions,
             associated_token_mint,
             associated_token_authority,
             associated_token_token_program,
@@ -784,6 +810,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             extension_close_authority,
             extension_transfer_hook_authority,
             extension_transfer_hook_program_id,
+            extension_permanent_delegate,
             bump,
             program_seed,
             realloc,
@@ -865,6 +892,9 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 token_program: token_token_program
                     .as_ref()
                     .map(|a| a.clone().into_inner().token_program),
+                extensions: token_extensions
+                    .as_ref()
+                    .map(|a| a.clone().into_inner().extensions),
             }),
         };
 
@@ -883,8 +913,10 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             &extension_close_authority,
             &extension_transfer_hook_authority,
             &extension_transfer_hook_program_id,
+            &extension_permanent_delegate,
         ) {
             (
+                None,
                 None,
                 None,
                 None,
@@ -964,6 +996,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                         metadata_pointer_authority: extension_metadata_pointer_authority.map(|mpa| mpa.into_inner().authority),
                         metadata_pointer_metadata_address: extension_metadata_pointer_metadata_address.map(|mpma| mpma.into_inner().metadata_address),
                         close_authority: extension_close_authority.map(|ca| ca.into_inner().authority),
+                        permanent_delegate: extension_permanent_delegate.map(|pd| pd.into_inner().permanent_delegate),
                         token_hook_authority: extension_transfer_hook_authority.map(|tha| tha.into_inner().authority),
                         token_hook_program_id: extension_transfer_hook_program_id.map(|thpid| thpid.into_inner().program_id),
                     }
@@ -1014,6 +1047,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::TokenAuthority(c) => self.add_token_authority(c),
             ConstraintToken::TokenMint(c) => self.add_token_mint(c),
             ConstraintToken::TokenTokenProgram(c) => self.add_token_token_program(c),
+            ConstraintToken::TokenExtensions(c) => self.add_token_extensions(c),
             ConstraintToken::AssociatedTokenAuthority(c) => self.add_associated_token_authority(c),
             ConstraintToken::AssociatedTokenMint(c) => self.add_associated_token_mint(c),
             ConstraintToken::AssociatedTokenTokenProgram(c) => {
@@ -1051,6 +1085,9 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::ExtensionTokenHookAuthority(c) => self.add_extension_authority(c),
             ConstraintToken::ExtensionTokenHookProgramId(c) => {
                 self.add_extension_token_hook_program_id(c)
+            }
+            ConstraintToken::ExtensionPermanentDelegate(c) => {
+                self.add_extension_permanent_delegate(c)
             }
         }
     }
@@ -1325,6 +1362,17 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ));
         }
         self.token_token_program.replace(c);
+        Ok(())
+    }
+
+    fn add_token_extensions(&mut self, c: Context<ConstraintTokenExtensions>) -> ParseResult<()> {
+        if self.token_extensions.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "token extensions already provided",
+            ));
+        }
+        self.token_extensions.replace(c);
         Ok(())
     }
 
@@ -1615,6 +1663,20 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ));
         }
         self.extension_transfer_hook_program_id.replace(c);
+        Ok(())
+    }
+
+    fn add_extension_permanent_delegate(
+        &mut self,
+        c: Context<ConstraintExtensionPermanentDelegate>,
+    ) -> ParseResult<()> {
+        if self.extension_permanent_delegate.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "extension permanent delegate already provided",
+            ));
+        }
+        self.extension_permanent_delegate.replace(c);
         Ok(())
     }
 }

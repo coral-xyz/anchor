@@ -1,0 +1,24 @@
+[package]
+name = "token-extensions"
+version = "0.1.0"
+description = "Created with Anchor"
+rust-version = "1.60"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "token_extensions"
+
+[features]
+no-entrypoint = []
+no-idl = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = { path = "../../../../../lang", features = ["init-if-needed"] }
+anchor-spl = { path = "../../../../../spl", features = ["token_2022", "token_2022_extensions"]  }
+spl-tlv-account-resolution = "0.4.0"
+spl-transfer-hook-interface = "0.3.0"
+spl-type-length-value = "0.3.0"
+spl-pod = "0.1.0"

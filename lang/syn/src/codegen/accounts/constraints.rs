@@ -670,6 +670,7 @@ fn generate_constraint_init_group(
             metadata_pointer_authority,
             metadata_pointer_metadata_address,
             close_authority,
+            permanent_delegate,
             token_hook_authority,
             token_hook_program_id,
         } => {
@@ -682,7 +683,7 @@ fn generate_constraint_init_group(
                 Some(fa) => check_scope.generate_check(fa),
                 None => quote! {},
             };
-            let extensions_check = match extensions {
+            let extensions_optional_check = match extensions {
                 Some(fa) => check_scope.generate_check(fa),
                 None => quote! {},
             };
@@ -725,12 +726,17 @@ fn generate_constraint_init_group(
                 None => quote! {},
             };
 
-            let transfer_hook_authority = match token_hook_authority {
+            let transfer_hook_authority_check = match token_hook_authority {
                 Some(fa) => check_scope.generate_check(fa),
                 None => quote! {},
             };
 
-            let transfer_hook_program_id = match token_hook_program_id {
+            let transfer_hook_program_id_check = match token_hook_program_id {
+                Some(fa) => check_scope.generate_check(fa),
+                None => quote! {},
+            };
+
+            let permanent_delegate_check = match permanent_delegate {
                 Some(fa) => check_scope.generate_check(fa),
                 None => quote! {},
             };
@@ -745,7 +751,7 @@ fn generate_constraint_init_group(
                 #rent_optional_check
                 #owner_optional_check
                 #freeze_authority_optional_check
-                #extensions_check
+                #extensions_optional_check
                 #group_pointer_authority_check
                 #group_pointer_group_address_check
                 #group_member_pointer_authority_check
@@ -753,8 +759,9 @@ fn generate_constraint_init_group(
                 #metadata_pointer_authority_check
                 #metadata_pointer_metadata_address_check
                 #close_authority_check
-                #transfer_hook_authority
-                #transfer_hook_program_id
+                #transfer_hook_authority_check
+                #transfer_hook_program_id_check
+                #permanent_delegate_check
             };
 
             let payer_optional_check = check_scope.generate_check(payer);
@@ -804,7 +811,12 @@ fn generate_constraint_init_group(
             };
 
             let close_authority = match close_authority {
-                Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key()) },
+                Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa) },
+                None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
+            };
+
+            let permanent_delegate = match permanent_delegate {
+                Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa) },
                 None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
             };
 
@@ -890,6 +902,24 @@ fn generate_constraint_init_group(
                                     };
                                     let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
                                     ::anchor_spl::token_interface::transfer_hook_initialize(cpi_ctx, #token_hook_authority, #token_hook_program_id)?;
+                                },
+                                ::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::NonTransferable => {
+                                    let cpi_program = #token_program.to_account_info();
+                                    let accounts = ::anchor_spl::token_interface::NonTransferableMintInitialize {
+                                        token_program_id: #token_program.to_account_info(),
+                                        mint: #field.to_account_info(),
+                                    };
+                                    let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
+                                    ::anchor_spl::token_interface::non_transferable_mint_initialize(cpi_ctx)?;
+                                },
+                                ::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::PermanentDelegate => {
+                                    let cpi_program = #token_program.to_account_info();
+                                    let accounts = ::anchor_spl::token_interface::PermanentDelegateInitialize {
+                                        token_program_id: #token_program.to_account_info(),
+                                        mint: #field.to_account_info(),
+                                    };
+                                    let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
+                                    ::anchor_spl::token_interface::permanent_delegate_initialize(cpi_ctx, #permanent_delegate.unwrap())?;
                                 },
                                 _ => {} // do nothing
                             }
