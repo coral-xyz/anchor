@@ -26,6 +26,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - cli: `anchor test` is able to run multiple commands ([#2799](https://github.com/coral-xyz/anchor/pull/2799)).
 - cli: Check `@coral-xyz/anchor` package and CLI version compatibility ([#2813](https://github.com/coral-xyz/anchor/pull/2813)).
 - cli: Accept package name as program name ([#2816](https://github.com/coral-xyz/anchor/pull/2816)).
+- cli: Add ability to build and test only a specified program ([#2823](https://github.com/coral-xyz/anchor/pull/2823)).
 
 ### Fixes
 
@@ -44,6 +45,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - ts: Fix formatting enums ([#2763](https://github.com/coral-xyz/anchor/pull/2763)).
 - cli: Fix `migrate` command not working without global `ts-node` installation ([#2767](https://github.com/coral-xyz/anchor/pull/2767)).
 - client, lang, spl, syn: Enable all features for docs.rs build ([#2774](https://github.com/coral-xyz/anchor/pull/2774)).
+- ts: Fix construction of field layouts for type aliased instruction arguments ([#2821](https://github.com/coral-xyz/anchor/pull/2821))
 
 ### Breaking
 

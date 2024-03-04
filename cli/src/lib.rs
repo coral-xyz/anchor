@@ -1,7 +1,7 @@
 use crate::config::{
     AnchorPackage, BootstrapMode, BuildConfig, Config, ConfigOverride, Manifest, ProgramArch,
-    ProgramDeployment, ProgramWorkspace, ScriptsConfig, TestValidator, WithPath, SHUTDOWN_WAIT,
-    STARTUP_WAIT,
+    ProgramDeployment, ProgramWorkspace, ScriptsConfig, TestValidator, WithPath,
+    DEFAULT_LEDGER_PATH, SHUTDOWN_WAIT, STARTUP_WAIT,
 };
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction, ERASED_AUTHORITY};
@@ -109,6 +109,7 @@ pub enum Command {
         /// True if the build artifact needs to be deterministic and verifiable.
         #[clap(short, long)]
         verifiable: bool,
+        /// Name of the program to build
         #[clap(short, long)]
         program_name: Option<String>,
         /// Version of the Solana toolchain to use. For --verifiable builds
@@ -183,8 +184,11 @@ pub enum Command {
         skip_build: bool,
     },
     #[clap(name = "test", alias = "t")]
-    /// Runs integration tests against a localnetwork.
+    /// Runs integration tests.
     Test {
+        /// Build and test only this program
+        #[clap(short, long)]
+        program_name: Option<String>,
         /// Use this flag if you want to run tests against previously deployed
         /// programs.
         #[clap(long)]
@@ -746,6 +750,7 @@ fn process_command(opts: Opts) -> Result<()> {
         Command::Idl { subcmd } => idl(&opts.cfg_override, subcmd),
         Command::Migrate => migrate(&opts.cfg_override),
         Command::Test {
+            program_name,
             skip_deploy,
             skip_local_validator,
             skip_build,
@@ -758,6 +763,7 @@ fn process_command(opts: Opts) -> Result<()> {
             arch,
         } => test(
             &opts.cfg_override,
+            program_name,
             skip_deploy,
             skip_local_validator,
             skip_build,
@@ -3048,6 +3054,7 @@ enum OutFile {
 #[allow(clippy::too_many_arguments)]
 fn test(
     cfg_override: &ConfigOverride,
+    program_name: Option<String>,
     skip_deploy: bool,
     skip_local_validator: bool,
     skip_build: bool,
@@ -3077,7 +3084,7 @@ fn test(
                 None,
                 false,
                 skip_lint,
-                None,
+                program_name.clone(),
                 None,
                 None,
                 BootstrapMode::None,
@@ -3104,12 +3111,36 @@ fn test(
             deploy(cfg_override, None, None, false, vec![])?;
         }
         let mut is_first_suite = true;
-        if cfg.scripts.get("test").is_some() {
+        if let Some(test_script) = cfg.scripts.get_mut("test") {
             is_first_suite = false;
-            println!("\nFound a 'test' script in the Anchor.toml. Running it as a test suite!");
+
+            match program_name {
+                Some(program_name) => {
+                    if let Some((from, to)) = Regex::new("\\s(tests/\\S+\\.(js|ts))")
+                        .unwrap()
+                        .captures_iter(&test_script.clone())
+                        .last()
+                        .and_then(|c| c.get(1).and_then(|mtch| c.get(2).map(|ext| (mtch, ext))))
+                        .map(|(mtch, ext)| {
+                            (
+                                mtch.as_str(),
+                                format!("tests/{program_name}.{}", ext.as_str()),
+                            )
+                        })
+                    {
+                        println!("\nRunning tests of program `{program_name}`!");
+                        // Replace the last path to the program name's path
+                        *test_script = test_script.replace(from, &to);
+                    }
+                }
+                _ => println!(
+                    "\nFound a 'test' script in the Anchor.toml. Running it as a test suite!"
+                ),
+            }
+
             run_test_suite(
-                cfg.path(),
                 cfg,
+                cfg.path(),
                 is_localnet,
                 skip_local_validator,
                 skip_deploy,
@@ -3135,8 +3166,8 @@ fn test(
                 }
 
                 run_test_suite(
-                    test_suite.0,
                     cfg,
+                    test_suite.0,
                     is_localnet,
                     skip_local_validator,
                     skip_deploy,
@@ -3153,8 +3184,8 @@ fn test(
 
 #[allow(clippy::too_many_arguments)]
 fn run_test_suite(
-    test_suite_path: impl AsRef<Path>,
     cfg: &WithPath<Config>,
+    test_suite_path: impl AsRef<Path>,
     is_localnet: bool,
     skip_local_validator: bool,
     skip_deploy: bool,
@@ -3191,7 +3222,7 @@ fn run_test_suite(
     let log_streams = stream_logs(cfg, &url);
 
     // Run the tests.
-    let test_result: Result<_> = {
+    let test_result = {
         let cmd = scripts
             .get("test")
             .expect("Not able to find script for `test`")
@@ -3243,6 +3274,7 @@ fn run_test_suite(
 
     Ok(())
 }
+
 // Returns the solana-test-validator flags. This will embed the workspace
 // programs in the genesis block so we don't have to deploy every time. It also
 // allows control of other solana-test-validator features.
@@ -3465,7 +3497,7 @@ fn start_test_validator(
     test_log_stdout: bool,
 ) -> Result<Child> {
     let (test_ledger_directory, test_ledger_log_filename) =
-        test_validator_file_paths(test_validator);
+        test_validator_file_paths(test_validator)?;
 
     // Start a validator for testing.
     let (test_validator_stdout, test_validator_stderr) = match test_log_stdout {
@@ -3512,7 +3544,7 @@ fn start_test_validator(
         .stdout(test_validator_stdout)
         .stderr(test_validator_stderr)
         .spawn()
-        .map_err(|e| anyhow::format_err!("{}", e.to_string()))?;
+        .map_err(|e| anyhow!("Failed to spawn `solana-test-validator`: {e}"))?;
 
     // Wait for the validator to be ready.
     let client = create_client(rpc_url);
@@ -3526,12 +3558,13 @@ fn start_test_validator(
         if r.is_ok() {
             break;
         }
-        std::thread::sleep(std::time::Duration::from_millis(1));
-        count += 1;
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        count += 100;
     }
-    if count == ms_wait {
+    if count >= ms_wait {
         eprintln!(
-            "Unable to get latest blockhash. Test validator does not look started. Check {test_ledger_log_filename} for errors. Consider increasing [test.startup_wait] in Anchor.toml."
+            "Unable to get latest blockhash. Test validator does not look started. \
+            Check {test_ledger_log_filename:?} for errors. Consider increasing [test.startup_wait] in Anchor.toml."
         );
         validator_handle.kill()?;
         std::process::exit(1);
@@ -3553,31 +3586,32 @@ fn test_validator_rpc_url(test_validator: &Option<TestValidator>) -> String {
 
 // Setup and return paths to the solana-test-validator ledger directory and log
 // files given the configuration
-fn test_validator_file_paths(test_validator: &Option<TestValidator>) -> (String, String) {
-    let ledger_directory = match test_validator {
+fn test_validator_file_paths(test_validator: &Option<TestValidator>) -> Result<(PathBuf, PathBuf)> {
+    let ledger_path = match test_validator {
         Some(TestValidator {
             validator: Some(validator),
             ..
         }) => &validator.ledger,
-        _ => ".anchor/test-ledger",
+        _ => DEFAULT_LEDGER_PATH,
     };
+    let ledger_path = Path::new(ledger_path);
 
-    if !Path::new(&ledger_directory).is_relative() {
+    if !ledger_path.is_relative() {
         // Prevent absolute paths to avoid someone using / or similar, as the
         // directory gets removed
-        eprintln!("Ledger directory {ledger_directory} must be relative");
+        eprintln!("Ledger directory {ledger_path:?} must be relative");
         std::process::exit(1);
     }
-    if Path::new(&ledger_directory).exists() {
-        fs::remove_dir_all(ledger_directory).unwrap();
+    if ledger_path.exists() {
+        fs::remove_dir_all(ledger_path)?;
     }
 
-    fs::create_dir_all(ledger_directory).unwrap();
+    fs::create_dir_all(ledger_path)?;
 
-    (
-        ledger_directory.to_string(),
-        format!("{ledger_directory}/test-ledger-log.txt"),
-    )
+    Ok((
+        ledger_path.to_owned(),
+        ledger_path.join("test-ledger-log.txt"),
+    ))
 }
 
 fn cluster_url(cfg: &Config, test_validator: &Option<TestValidator>) -> String {
