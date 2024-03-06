@@ -525,7 +525,7 @@ export class AccountsResolver<IDL extends Idl> {
     return accountField;
   }
 
-  // Converts the given idl valaue into a Buffer. The values here must be
+  // Converts the given idl value into a Buffer. The values here must be
   // primitives. E.g. no structs.
   //
   // TODO: add more types here as needed.
@@ -558,7 +558,7 @@ export class AccountsResolver<IDL extends Idl> {
   }
 }
 
-// TODO: this should be configureable to avoid unnecessary requests.
+// TODO: this should be configurable to avoid unnecessary requests.
 export class AccountStore<IDL extends Idl> {
   private _cache = new Map<string, any>();
   private _idls: Record<string, AccountNamespace<any>> = {};
