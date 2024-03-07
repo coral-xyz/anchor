@@ -573,8 +573,8 @@ pub struct BurnEditionNft<'info> {
 /// - Creating the BurnNft CPI context.
 /// - Calling the created CPI context with the remaining accounts method,
 ///   passing in the collection_metadata as input.
-/// - Passing the CPI context of BurnNft to the wrapper 
-/// - function as normal including the optional 
+/// - Passing the CPI context of BurnNft to the wrapper
+/// - function as normal including the optional
 /// - `collection_metadata` pubkey as input.
 #[derive(Accounts)]
 pub struct BurnNft<'info> {
