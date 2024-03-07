@@ -144,9 +144,9 @@ describe("transfer hook", () => {
   });
 
   it("can create an `InitializeExtraAccountMetaList` instruction with the proper discriminator", async () => {
-    const ix = await program.methods
-      .initialize(extraMetas as any[])
-      .interface("spl_transfer_hook_interface::initialize_extra_account_metas")
+    console.log("namespace", program.namespace);
+    const ix = await program.namespace.splTransferHookInterface
+      .initializeExtraAccountMetas(extraMetas as any[])
       .accounts({
         extraMetasAccount: extraMetasAddress,
         mint: mint.publicKey,
@@ -163,18 +163,22 @@ describe("transfer hook", () => {
     const { name, data } = new anchor.BorshInstructionCoder(program.idl).decode(
       ix.data,
       "hex",
-      "initialize"
+      "initialize-extra-account-metas",
+      "spl-transfer-hook-interface"
     );
-    assert.equal(name, "initialize");
+    assert.equal(
+      name,
+      // Snake cased full-name
+      "spl-transfer-hook-interface:initialize-extra-account-metas"
+    );
     assert.property(data, "metas");
     assert.isArray(data.metas);
     assert.equal(data.metas.length, extraMetas.length);
   });
 
   it("can create an `Execute` instruction with the proper discriminator", async () => {
-    const ix = await program.methods
+    const ix = await program.namespace.splTransferHookInterface
       .execute(new anchor.BN(transferAmount))
-      .interface("spl_transfer_hook_interface::execute")
       .accounts({
         sourceAccount: source,
         mint: mint.publicKey,
@@ -194,9 +198,10 @@ describe("transfer hook", () => {
     const { name, data } = new anchor.BorshInstructionCoder(program.idl).decode(
       ix.data,
       "hex",
-      "execute"
+      "execute",
+      "spl-transfer-hook-interface"
     );
-    assert.equal(name, "execute");
+    assert.equal(name, "spl-transfer-hook-interface:execute");
     assert.property(data, "amount");
     assert.isTrue(anchor.BN.isBN(data.amount));
     assert.isTrue(data.amount.eq(new anchor.BN(transferAmount)));
@@ -204,9 +209,8 @@ describe("transfer hook", () => {
 
   it("can transfer with extra account metas", async () => {
     // Initialize the extra metas
-    await program.methods
-      .initialize(extraMetas as any[])
-      .interface("spl_transfer_hook_interface::initialize_extra_account_metas")
+    await program.namespace.splTransferHookInterface
+      .initializeExtraAccountMetas(extraMetas as any[])
       .accounts({
         extraMetasAccount: extraMetasAddress,
         mint: mint.publicKey,

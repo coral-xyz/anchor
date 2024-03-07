@@ -1,6 +1,8 @@
+use crate::codegen::program::common::sighash;
+use crate::codegen::program::common::SIGHASH_GLOBAL_NAMESPACE;
 use crate::parser::docs;
+use crate::parser::ix_interface;
 use crate::parser::program::ctx_accounts_ident;
-use crate::parser::spl_interface;
 use crate::{FallbackFn, Ix, IxArg, IxReturn};
 use syn::parse::{Error as ParseError, Result as ParseResult};
 use syn::spanned::Spanned;
@@ -25,10 +27,22 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<(Vec<Ix>, Option<Fallbac
         })
         .map(|method: &syn::ItemFn| {
             let (ctx, args) = parse_args(method)?;
-            let interface_discriminator = spl_interface::parse(&method.attrs);
+            let ix_interface = ix_interface::parse(&method.attrs);
             let docs = docs::parse(&method.attrs);
             let returns = parse_return(method)?;
             let anchor_ident = ctx_accounts_ident(&ctx.raw_arg)?;
+
+            let name_override = ix_interface.name.clone();
+            let namespace = ix_interface
+                .namespace
+                .unwrap_or_else(|| SIGHASH_GLOBAL_NAMESPACE.to_string());
+
+            let discriminator: Option<[u8; 8]> = if let Some(ix_name_override) = name_override {
+                Some(sighash(&namespace, &ix_name_override))
+            } else {
+                Some(sighash(&namespace, &method.sig.ident.to_string()))
+            };
+
             Ok(Ix {
                 raw_method: method.clone(),
                 ident: method.sig.ident.clone(),
@@ -36,7 +50,9 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<(Vec<Ix>, Option<Fallbac
                 args,
                 anchor_ident,
                 returns,
-                interface_discriminator,
+                name_override: ix_interface.name,
+                namespace: Some(namespace),
+                interface_discriminator: discriminator,
             })
         })
         .collect::<ParseResult<Vec<Ix>>>()?;

@@ -34,6 +34,10 @@ export type MethodsNamespace<
   I extends AllInstructions<IDL> = AllInstructions<IDL>
 > = MakeMethodsNamespace<IDL, I>;
 
+// export type FilteredMethodsNamespace<
+//   IDL extends Idl = Idl,
+//   I extends AllInstructions<IDL> = AllInstructions<IDL>
+// > = Record<string, MethodsNamespace<IDL, I>>;
 export class MethodsBuilderFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
     provider: Provider,
@@ -108,10 +112,6 @@ export function flattenPartialAccounts<A extends IdlAccountItem>(
   return toReturn;
 }
 
-type SplInterface =
-  | "spl_transfer_hook_interface::initialize_extra_account_metas"
-  | "spl_transfer_hook_interface::execute";
-
 export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
   private readonly _accounts: AccountsGeneric = {};
   private _remainingAccounts: Array<AccountMeta> = [];
@@ -164,20 +164,6 @@ export class MethodsBuilder<IDL extends Idl, I extends AllInstructions<IDL>> {
     return this._accounts as unknown as Partial<
       InstructionAccountAddresses<IDL, I>
     >;
-  }
-
-  public interface(splInterface: SplInterface): MethodsBuilder<IDL, I> {
-    if (
-      splInterface ===
-      "spl_transfer_hook_interface::initialize_extra_account_metas"
-    ) {
-      this._discriminator = Buffer.from([43, 34, 13, 49, 167, 88, 235, 235]);
-    } else if (splInterface === "spl_transfer_hook_interface::execute") {
-      this._discriminator = Buffer.from([105, 37, 101, 197, 75, 251, 102, 26]);
-    } else {
-      throw new Error(`Unsupported interface: ${splInterface}`);
-    }
-    return this;
   }
 
   public accounts(
