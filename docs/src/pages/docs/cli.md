@@ -50,7 +50,7 @@ The `program-name` is the name of the program where the account struct resides, 
 
 The `AccountTypeName` is the name of the account struct, usually in PascalCase.
 
-The `account_pubkey` refers to the Pubkey of the account to deserialise, in Base58.
+The `account_pubkey` refers to the Pubkey of the account to deserialize, in Base58.
 
 Example Usage: `anchor account anchor-escrow.EscrowAccount 3PNkzWKXCsbjijbasnx55NEpJe8DFXvEEbJKdRKpDcfK`, deserializes an account in the given pubkey with the account struct `EscrowAccount` defined in the `anchor-escrow` program.
 
