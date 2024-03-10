@@ -110,6 +110,7 @@ pub fn gen_idl_print_fn_program(program: &Program) -> TokenStream {
                 metadata: #idl::IdlMetadata {
                     name: #name.into(),
                     version: env!("CARGO_PKG_VERSION").into(),
+                    spec: #idl::IDL_SPEC.into(),
                     description: option_env!("CARGO_PKG_DESCRIPTION")
                         .filter(|d| !d.is_empty())
                         .map(|d| d.into()),

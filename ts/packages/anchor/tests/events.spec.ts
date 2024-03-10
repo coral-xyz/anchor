@@ -16,6 +16,7 @@ describe("Events", () => {
       metadata: {
         name: "basic_0",
         version: "0.0.0",
+        spec: "0.1.0",
       },
       instructions: [
         {
@@ -48,6 +49,7 @@ describe("Events", () => {
       metadata: {
         name: "basic_0",
         version: "0.0.0",
+        spec: "0.1.0",
       },
       instructions: [
         {
@@ -96,6 +98,7 @@ describe("Events", () => {
       metadata: {
         name: "basic_1",
         version: "0.0.0",
+        spec: "0.1.0",
       },
       instructions: [
         {
@@ -168,6 +171,7 @@ describe("Events", () => {
       metadata: {
         name: "basic_2",
         version: "0.0.0",
+        spec: "0.1.0",
       },
       instructions: [
         {
@@ -268,6 +272,7 @@ describe("Events", () => {
       metadata: {
         name: "basic_2",
         version: "0.0.0",
+        spec: "0.1.0",
       },
       instructions: [],
       events: [

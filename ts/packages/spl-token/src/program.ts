@@ -26,6 +26,7 @@ type SplToken = {
   metadata: {
     name: "splToken";
     version: "3.3.0";
+    spec: "0.1.0";
   };
   instructions: [
     {
@@ -865,6 +866,7 @@ const IDL: SplToken = {
   metadata: {
     name: "splToken",
     version: "3.3.0",
+    spec: "0.1.0",
   },
   instructions: [
     {

@@ -11,7 +11,8 @@ echo '{
   "address": "2uA3amp95zsEHUpo8qnLMhcFAUsiKVEcKHXS1JetFjU5",
   "metadata": {
     "name": "idl_commands_one",
-    "version": "0.1.0"
+    "version": "0.1.0",
+    "spec": "0.1.0"
   },
   "instructions": [
     {

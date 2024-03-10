@@ -3,6 +3,9 @@ use std::str::FromStr;
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 
+/// IDL specification Semantic Version
+pub const IDL_SPEC: &str = "0.1.0";
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Idl {
     pub address: String,
@@ -26,6 +29,7 @@ pub struct Idl {
 pub struct IdlMetadata {
     pub name: String,
     pub version: String,
+    pub spec: String,
     #[serde(skip_serializing_if = "is_default")]
     pub description: Option<String>,
     #[serde(skip_serializing_if = "is_default")]

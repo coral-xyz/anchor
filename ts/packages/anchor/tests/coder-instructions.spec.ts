@@ -10,6 +10,7 @@ describe("coder.instructions", () => {
       metadata: {
         name: "test",
         version: "0.0.0",
+        spec: "0.1.0",
       },
       instructions: [
         {

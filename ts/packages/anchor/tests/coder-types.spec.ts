@@ -9,6 +9,7 @@ describe("coder.types", () => {
       metadata: {
         name: "basic_0",
         version: "0.0.0",
+        spec: "0.1.0",
       },
       instructions: [
         {
@@ -54,6 +55,7 @@ describe("coder.types", () => {
       metadata: {
         name: "basic_0",
         version: "0.0.0",
+        spec: "0.1.0",
       },
       instructions: [
         {

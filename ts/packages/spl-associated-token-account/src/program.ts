@@ -28,6 +28,7 @@ type SplAssociatedTokenAccount = {
   metadata: {
     name: "splAssociatedTokenAccount";
     version: "1.1.1";
+    spec: "0.1.0";
   };
   instructions: [
     {
@@ -138,6 +139,7 @@ const IDL: SplAssociatedTokenAccount = {
   metadata: {
     name: "splAssociatedTokenAccount",
     version: "1.1.1",
+    spec: "0.1.0",
   },
   instructions: [
     {

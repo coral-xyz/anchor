@@ -18,6 +18,7 @@ export type Idl = {
 export type IdlMetadata = {
   name: string;
   version: string;
+  spec: string;
   description?: string;
   repository?: string;
   dependencies?: IdlDependency[];

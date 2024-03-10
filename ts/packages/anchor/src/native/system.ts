@@ -21,6 +21,7 @@ export type SystemProgram = {
   metadata: {
     name: "systemProgram";
     version: "0.1.0";
+    spec: "0.1.0";
   };
   instructions: [
     {
@@ -399,6 +400,7 @@ export const IDL: SystemProgram = {
   metadata: {
     name: "systemProgram",
     version: "0.1.0",
+    spec: "0.1.0",
   },
   instructions: [
     {
