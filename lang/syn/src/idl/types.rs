@@ -181,6 +181,7 @@ pub enum IdlSerialization {
     Borsh,
     Bytemuck,
     BytemuckUnsafe,
+    Custom(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

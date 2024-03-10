@@ -119,7 +119,11 @@ export type IdlTypeDef = {
   type: IdlTypeDefTy;
 };
 
-export type IdlSerialization = "borsh" | "bytemuck" | "bytemuckunsafe";
+export type IdlSerialization =
+  | "borsh"
+  | "bytemuck"
+  | "bytemuckunsafe"
+  | { custom: string };
 
 export type IdlRepr = IdlReprRust | IdlReprC | IdlReprTransparent;
 
