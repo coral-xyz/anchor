@@ -670,8 +670,8 @@ fn generate_constraint_init_group(
             metadata_pointer_metadata_address,
             close_authority,
             permanent_delegate,
-            token_hook_authority,
-            token_hook_program_id,
+            transfer_hook_authority,
+            transfer_hook_program_id,
         } => {
             let token_program = match token_program {
                 Some(t) => t.to_token_stream(),
@@ -721,12 +721,12 @@ fn generate_constraint_init_group(
                 None => quote! {},
             };
 
-            let transfer_hook_authority_check = match token_hook_authority {
+            let transfer_hook_authority_check = match transfer_hook_authority {
                 Some(tha) => check_scope.generate_check(tha),
                 None => quote! {},
             };
 
-            let transfer_hook_program_id_check = match token_hook_program_id {
+            let transfer_hook_program_id_check = match transfer_hook_program_id {
                 Some(thpid) => check_scope.generate_check(thpid),
                 None => quote! {},
             };
@@ -765,7 +765,9 @@ fn generate_constraint_init_group(
                 extensions.push(quote! {::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::GroupPointer});
             }
 
-            if group_member_pointer_authority.is_some() || group_member_pointer_member_address.is_some() {
+            if group_member_pointer_authority.is_some()
+                || group_member_pointer_member_address.is_some()
+            {
                 extensions.push(quote! {::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::GroupMemberPointer});
             }
 
@@ -777,7 +779,7 @@ fn generate_constraint_init_group(
                 extensions.push(quote! {::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::MintCloseAuthority});
             }
 
-            if token_hook_authority.is_some() || token_hook_program_id.is_some() {
+            if transfer_hook_authority.is_some() || transfer_hook_program_id.is_some() {
                 extensions.push(quote! {::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::TransferHook});
             }
 
@@ -812,7 +814,9 @@ fn generate_constraint_init_group(
             };
 
             let group_member_pointer_member_address = match group_member_pointer_member_address {
-                Some(gmpma) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#gmpma.key()) },
+                Some(gmpma) => {
+                    quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#gmpma.key()) }
+                }
                 None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
             };
 
@@ -832,23 +836,25 @@ fn generate_constraint_init_group(
             };
 
             let permanent_delegate = match permanent_delegate {
+                Some(pd) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#pd.key()) },
+                None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
+            };
+
+            let transfer_hook_authority = match transfer_hook_authority {
                 Some(pd) => quote! { &#pd },
                 None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
             };
 
-            let token_hook_authority = match token_hook_authority {
-                Some(tha) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#tha.key()) },
-                None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
-            };
-
-            let token_hook_program_id = match token_hook_program_id {
-                Some(thpid) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#thpid.key()) },
+            let transfer_hook_program_id = match transfer_hook_program_id {
+                Some(thpid) => {
+                    quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#thpid.key()) }
+                }
                 None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
             };
 
             let create_account = generate_create_account(
                 field,
-                quote! {::anchor_spl::token_interface::find_mint_account_size(#extensions)?},
+                quote! {::anchor_spl::find_mint_account_size(#extensions)?},
                 quote! {&#token_program.key()},
                 quote! {#payer},
                 seeds_with_bump,
@@ -917,7 +923,7 @@ fn generate_constraint_init_group(
                                         mint: #field.to_account_info(),
                                     };
                                     let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, accounts);
-                                    ::anchor_spl::token_interface::transfer_hook_initialize(cpi_ctx, #token_hook_authority, #token_hook_program_id)?;
+                                    ::anchor_spl::token_interface::transfer_hook_initialize(cpi_ctx, #transfer_hook_authority, #transfer_hook_program_id)?;
                                 },
                                 ::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::NonTransferable => {
                                     let cpi_program = #token_program.to_account_info();

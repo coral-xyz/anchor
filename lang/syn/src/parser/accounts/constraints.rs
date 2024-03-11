@@ -976,8 +976,8 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                         metadata_pointer_metadata_address: extension_metadata_pointer_metadata_address.map(|mpma| mpma.into_inner().metadata_address),
                         close_authority: extension_close_authority.map(|ca| ca.into_inner().authority),
                         permanent_delegate: extension_permanent_delegate.map(|pd| pd.into_inner().permanent_delegate),
-                        token_hook_authority: extension_transfer_hook_authority.map(|tha| tha.into_inner().authority),
-                        token_hook_program_id: extension_transfer_hook_program_id.map(|thpid| thpid.into_inner().program_id),
+                        transfer_hook_authority: extension_transfer_hook_authority.map(|tha| tha.into_inner().authority),
+                        transfer_hook_program_id: extension_transfer_hook_program_id.map(|thpid| thpid.into_inner().program_id),
                     }
                 } else {
                     InitKind::Program {
@@ -1061,7 +1061,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::ExtensionCloseAuthority(c) => self.add_extension_close_authority(c),
             ConstraintToken::ExtensionTokenHookAuthority(c) => self.add_extension_authority(c),
             ConstraintToken::ExtensionTokenHookProgramId(c) => {
-                self.add_extension_token_hook_program_id(c)
+                self.add_extension_transfer_hook_program_id(c)
             }
             ConstraintToken::ExtensionPermanentDelegate(c) => {
                 self.add_extension_permanent_delegate(c)
@@ -1607,7 +1607,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         Ok(())
     }
 
-    fn add_extension_token_hook_program_id(
+    fn add_extension_transfer_hook_program_id(
         &mut self,
         c: Context<ConstraintExtensionTokenHookProgramId>,
     ) -> ParseResult<()> {

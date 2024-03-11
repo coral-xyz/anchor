@@ -23,8 +23,8 @@ metadata = ["mpl-token-metadata"]
 mint = []
 stake = ["borsh"]
 token = ["spl-token"]
-token_2022 = ["spl-token-2022", "borsh"]
-token_2022_extensions = ["spl-token-2022", "borsh", "spl-token-group-interface", "spl-token-metadata-interface", "spl-pod"]
+token_2022 = ["spl-token-2022"]
+token_2022_extensions = ["spl-token-2022", "spl-token-group-interface", "spl-token-metadata-interface", "spl-pod"]
 
 [dependencies]
 anchor-lang = { path = "../lang", version = "0.29.0", features = ["derive"] }

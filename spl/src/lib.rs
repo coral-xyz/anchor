@@ -34,3 +34,19 @@ pub mod metadata;
 
 #[cfg(feature = "memo")]
 pub mod memo;
+
+use anchor_lang::Result;
+use solana_program::program_pack::Pack;
+use spl_token_2022::{extension::ExtensionType, state::Mint};
+
+pub type ExtensionsVec = Vec<ExtensionType>;
+
+pub fn find_mint_account_size(extensions: Option<&ExtensionsVec>) -> Result<usize> {
+    if let Some(extensions) = extensions {
+        Ok(ExtensionType::try_calculate_account_len::<Mint>(
+            extensions,
+        )?)
+    } else {
+        Ok(Mint::LEN)
+    }
+}

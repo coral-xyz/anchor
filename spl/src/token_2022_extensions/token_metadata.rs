@@ -3,20 +3,14 @@ use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::Result;
 use anchor_lang::{context::CpiContext, Accounts};
 
-use borsh::{BorshDeserialize, BorshSerialize};
 use spl_pod::optional_keys::OptionalNonZeroPubkey;
 use spl_token_metadata_interface::state::Field;
 
-#[derive(Clone, BorshDeserialize, BorshSerialize)]
-pub struct TokenMetadataInitializeArgs {
-    pub name: String,
-    pub symbol: String,
-    pub uri: String,
-}
-
 pub fn token_metadata_initialize<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, TokenMetadataInitialize<'info>>,
-    args: TokenMetadataInitializeArgs,
+    name: String,
+    symbol: String,
+    uri: String,
 ) -> Result<()> {
     let ix = spl_token_metadata_interface::instruction::initialize(
         ctx.accounts.token_program_id.key,
@@ -24,9 +18,9 @@ pub fn token_metadata_initialize<'info>(
         ctx.accounts.update_authority.key,
         ctx.accounts.mint.key,
         ctx.accounts.mint_authority.key,
-        args.name,
-        args.symbol,
-        args.uri,
+        name,
+        symbol,
+        uri,
     );
     solana_program::program::invoke_signed(
         &ix,
@@ -81,22 +75,17 @@ pub struct TokenMetadataUpdateAuthority<'info> {
     pub new_authority: AccountInfo<'info>,
 }
 
-#[derive(Clone, BorshDeserialize, BorshSerialize)]
-pub struct TokenMetadataUpdateFieldArgs {
-    pub field: Field,
-    pub value: String,
-}
-
 pub fn token_metadata_update_field<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, TokenMetadataUpdateField<'info>>,
-    args: TokenMetadataUpdateFieldArgs,
+    field: Field,
+    value: String,
 ) -> Result<()> {
     let ix = spl_token_metadata_interface::instruction::update_field(
         ctx.accounts.token_program_id.key,
         ctx.accounts.metadata.key,
         ctx.accounts.update_authority.key,
-        args.field,
-        args.value,
+        field,
+        value,
     );
     solana_program::program::invoke_signed(
         &ix,

@@ -878,8 +878,8 @@ pub enum InitKind {
         metadata_pointer_metadata_address: Option<Expr>,
         close_authority: Option<Expr>,
         permanent_delegate: Option<Expr>,
-        token_hook_authority: Option<Expr>,
-        token_hook_program_id: Option<Expr>,
+        transfer_hook_authority: Option<Expr>,
+        transfer_hook_program_id: Option<Expr>,
     },
 }
 
@@ -892,7 +892,6 @@ pub struct ConstraintClose {
 pub struct ConstraintTokenMint {
     pub mint: Expr,
 }
-
 
 #[derive(Debug, Clone)]
 pub struct ConstraintMintConfidentialTransferData {
@@ -944,7 +943,6 @@ pub struct ConstraintTokenProgram {
     token_program: Expr,
 }
 
-
 #[derive(Debug, Clone)]
 pub struct ConstraintMintAuthority {
     pub mint_auth: Expr,
@@ -990,21 +988,6 @@ pub struct ConstraintTokenMintGroup {
     pub mint_authority: Option<Expr>,
     pub freeze_authority: Option<Expr>,
     pub token_program: Option<Expr>,
-}
-
-#[derive(Debug, Clone)]
-pub struct ConstraintExtensionGroup {
-    // mint extensions
-    pub group_pointer_authority: Option<Expr>,
-    pub group_pointer_group_address: Option<Expr>,
-    pub group_member_pointer_authority: Option<Expr>,
-    pub group_member_pointer_member_address: Option<Expr>,
-    pub metadata_pointer_authority: Option<Expr>,
-    pub metadata_pointer_metadata_address: Option<Expr>,
-    pub close_authority: Option<Expr>,
-    pub token_hook_authority: Option<Expr>,
-    pub token_hook_program_id: Option<Expr>,
-    pub permanent_delegate: Option<Expr>,
 }
 
 // Syntaxt context object for preserving metadata about the inner item.

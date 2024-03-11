@@ -1,19 +1,3 @@
-use anchor_lang::Result;
-use solana_program::program_pack::Pack;
-use spl_token_2022::{extension::ExtensionType, state::Mint};
-
-pub type ExtensionsVec = Vec<ExtensionType>;
-
-pub fn find_mint_account_size(extensions: Option<&ExtensionsVec>) -> Result<usize> {
-    if let Some(extensions) = extensions {
-        Ok(ExtensionType::try_calculate_account_len::<Mint>(
-            extensions,
-        )?)
-    } else {
-        Ok(Mint::LEN)
-    }
-}
-
 pub mod confidential_transfer;
 pub mod confidential_transfer_fee;
 pub mod cpi_guard;
@@ -32,8 +16,6 @@ pub mod token_metadata;
 pub mod transfer_fee;
 pub mod transfer_hook;
 
-pub use confidential_transfer::*;
-pub use confidential_transfer_fee::*;
 pub use cpi_guard::*;
 pub use default_account_state::*;
 pub use group_member_pointer::*;

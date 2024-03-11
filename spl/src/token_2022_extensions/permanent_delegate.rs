@@ -14,10 +14,7 @@ pub fn permanent_delegate_initialize<'info>(
     )?;
     solana_program::program::invoke_signed(
         &ix,
-        &[
-            ctx.accounts.token_program_id,
-            ctx.accounts.mint,
-        ],
+        &[ctx.accounts.token_program_id, ctx.accounts.mint],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
