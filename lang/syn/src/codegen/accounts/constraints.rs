@@ -686,33 +686,33 @@ fn generate_constraint_init_group(
             // extension checks
 
             let group_pointer_authority_check = match group_pointer_authority {
-                Some(fa) => check_scope.generate_check(fa),
+                Some(gpa) => check_scope.generate_check(gpa),
                 None => quote! {},
             };
 
             let group_pointer_group_address_check = match group_pointer_group_address {
-                Some(fa) => check_scope.generate_check(fa),
+                Some(gpga) => check_scope.generate_check(gpga),
                 None => quote! {},
             };
 
             let group_member_pointer_authority_check = match group_member_pointer_authority {
-                Some(fa) => check_scope.generate_check(fa),
+                Some(gmpa) => check_scope.generate_check(gmpa),
                 None => quote! {},
             };
 
             let group_member_pointer_member_address_check =
                 match group_member_pointer_member_address {
-                    Some(fa) => check_scope.generate_check(fa),
+                    Some(gmpm) => check_scope.generate_check(gmpm),
                     None => quote! {},
                 };
 
             let metadata_pointer_authority_check = match metadata_pointer_authority {
-                Some(fa) => check_scope.generate_check(fa),
+                Some(mpa) => check_scope.generate_check(mpa),
                 None => quote! {},
             };
 
             let metadata_pointer_metadata_address_check = match metadata_pointer_metadata_address {
-                Some(fa) => check_scope.generate_check(fa),
+                Some(mpma) => check_scope.generate_check(mpma),
                 None => quote! {},
             };
 
@@ -841,7 +841,7 @@ fn generate_constraint_init_group(
             };
 
             let transfer_hook_authority = match transfer_hook_authority {
-                Some(pd) => quote! { &#pd },
+                Some(tha) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#tha.key()) },
                 None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
             };
 
