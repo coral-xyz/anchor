@@ -662,7 +662,6 @@ fn generate_constraint_init_group(
             decimals,
             freeze_authority,
             token_program,
-            extensions,
             group_pointer_authority,
             group_pointer_group_address,
             group_member_pointer_authority,
@@ -680,10 +679,6 @@ fn generate_constraint_init_group(
             };
             let owner_optional_check = check_scope.generate_check(owner);
             let freeze_authority_optional_check = match freeze_authority {
-                Some(fa) => check_scope.generate_check(fa),
-                None => quote! {},
-            };
-            let extensions_optional_check = match extensions {
                 Some(fa) => check_scope.generate_check(fa),
                 None => quote! {},
             };
@@ -722,22 +717,22 @@ fn generate_constraint_init_group(
             };
 
             let close_authority_check = match close_authority {
-                Some(fa) => check_scope.generate_check(fa),
+                Some(ca) => check_scope.generate_check(ca),
                 None => quote! {},
             };
 
             let transfer_hook_authority_check = match token_hook_authority {
-                Some(fa) => check_scope.generate_check(fa),
+                Some(tha) => check_scope.generate_check(tha),
                 None => quote! {},
             };
 
             let transfer_hook_program_id_check = match token_hook_program_id {
-                Some(fa) => check_scope.generate_check(fa),
+                Some(thpid) => check_scope.generate_check(thpid),
                 None => quote! {},
             };
 
             let permanent_delegate_check = match permanent_delegate {
-                Some(fa) => check_scope.generate_check(fa),
+                Some(pd) => check_scope.generate_check(pd),
                 None => quote! {},
             };
 
@@ -751,7 +746,6 @@ fn generate_constraint_init_group(
                 #rent_optional_check
                 #owner_optional_check
                 #freeze_authority_optional_check
-                #extensions_optional_check
                 #group_pointer_authority_check
                 #group_pointer_group_address_check
                 #group_member_pointer_authority_check
@@ -766,67 +760,89 @@ fn generate_constraint_init_group(
 
             let payer_optional_check = check_scope.generate_check(payer);
 
+            let mut extensions = vec![];
+            if group_pointer_authority.is_some() || group_pointer_group_address.is_some() {
+                extensions.push(quote! {::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::GroupPointer});
+            }
+
+            if group_member_pointer_authority.is_some() || group_member_pointer_member_address.is_some() {
+                extensions.push(quote! {::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::GroupMemberPointer});
+            }
+
+            if metadata_pointer_authority.is_some() || metadata_pointer_metadata_address.is_some() {
+                extensions.push(quote! {::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::MetadataPointer});
+            }
+
+            if close_authority.is_some() {
+                extensions.push(quote! {::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::MintCloseAuthority});
+            }
+
+            if token_hook_authority.is_some() || token_hook_program_id.is_some() {
+                extensions.push(quote! {::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::TransferHook});
+            }
+
+            if permanent_delegate.is_some() {
+                extensions.push(quote! {::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::PermanentDelegate});
+            }
+
+            let extensions = if extensions.is_empty() {
+                quote! {None}
+            } else {
+                quote! {Some(&vec![#(#extensions),*])}
+            };
+
             let freeze_authority = match freeze_authority {
                 Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa.key()) },
                 None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
             };
 
-            let extensions = match extensions {
-                Some(fa) => {
-                    quote! { Option::<&::anchor_spl::token_interface::ExtensionsVec>::Some(&#fa) }
-                }
-                None => {
-                    quote! { Option::<&::anchor_spl::token_interface::ExtensionsVec>::None }
-                }
-            };
-
             let group_pointer_authority = match group_pointer_authority {
-                Some(fa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#fa) },
+                Some(gpa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#gpa.key()) },
                 None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
             };
 
             let group_pointer_group_address = match group_pointer_group_address {
-                Some(fa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#fa) },
+                Some(gpga) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#gpga.key()) },
                 None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
             };
 
             let group_member_pointer_authority = match group_member_pointer_authority {
-                Some(fa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#fa) },
+                Some(gmpa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#gmpa.key()) },
                 None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
             };
 
             let group_member_pointer_member_address = match group_member_pointer_member_address {
-                Some(fa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#fa) },
+                Some(gmpma) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#gmpma.key()) },
                 None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
             };
 
             let metadata_pointer_authority = match metadata_pointer_authority {
-                Some(fa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#fa) },
+                Some(mpa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#mpa.key()) },
                 None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
             };
 
             let metadata_pointer_metadata_address = match metadata_pointer_metadata_address {
-                Some(fa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#fa) },
+                Some(mpma) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#mpma.key()) },
                 None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
             };
 
             let close_authority = match close_authority {
-                Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa) },
+                Some(ca) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#ca.key()) },
                 None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
             };
 
             let permanent_delegate = match permanent_delegate {
-                Some(fa) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#fa) },
+                Some(pd) => quote! { &#pd },
                 None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
             };
 
             let token_hook_authority = match token_hook_authority {
-                Some(fa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#fa) },
+                Some(tha) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#tha.key()) },
                 None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
             };
 
             let token_hook_program_id = match token_hook_program_id {
-                Some(fa) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#fa) },
+                Some(thpid) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#thpid.key()) },
                 None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
             };
 

@@ -8,9 +8,8 @@ use anchor_spl::{
         transfer_hook::TransferHook,
     },
     token_interface::{
-        spl_token_2022::extension::ExtensionType,
         spl_token_metadata_interface::state::TokenMetadata, token_metadata_initialize, Mint,
-        Token2022, TokenAccount, TokenMetadataInitialize, TokenMetadataInitializeArgs,
+        Token2022, TokenAccount, TokenMetadataInitialize,
     },
 };
 use spl_pod::optional_keys::OptionalNonZeroPubkey;
@@ -26,15 +25,6 @@ pub struct CreateMintAccountArgs {
     pub symbol: String,
     pub uri: String,
 }
-
-pub const MINT_EXTENSIONS: [ExtensionType; 6] = [
-    ExtensionType::MetadataPointer,
-    ExtensionType::GroupMemberPointer,
-    ExtensionType::TransferHook,
-    ExtensionType::MintCloseAuthority,
-    ExtensionType::PermanentDelegate,
-    ExtensionType::NonTransferable,
-];
 
 #[derive(Accounts)]
 #[instruction(args: CreateMintAccountArgs)]
@@ -55,15 +45,14 @@ pub struct CreateMintAccount<'info> {
         mint::decimals = 0,
         mint::authority = authority,
         mint::freeze_authority = authority,
-        mint::extensions = MINT_EXTENSIONS.to_vec(),
-        extensions::metadata_pointer::authority = authority.key(),
-        extensions::metadata_pointer::metadata_address = mint.key(),
-        extensions::group_member_pointer::authority = authority.key(),
-        extensions::group_member_pointer::member_address = mint.key(),
-        extensions::transfer_hook::authority = authority.key(),
+        extensions::metadata_pointer::authority = authority,
+        extensions::metadata_pointer::metadata_address = mint,
+        extensions::group_member_pointer::authority = authority,
+        extensions::group_member_pointer::member_address = mint,
+        extensions::transfer_hook::authority = authority,
         extensions::transfer_hook::program_id = crate::ID,
-        extensions::close_authority::authority = authority.key(),
-        extensions::permanent_delegate::delegate = authority.key(),
+        extensions::close_authority::authority = authority,
+        extensions::permanent_delegate::delegate = authority,
     )]
     pub mint: Box<InterfaceAccount<'info, Mint>>,
     #[account(
@@ -90,7 +79,12 @@ pub struct CreateMintAccount<'info> {
 }
 
 impl<'info> CreateMintAccount<'info> {
-    fn initialize_token_metadata(&self, args: TokenMetadataInitializeArgs) -> ProgramResult {
+    fn initialize_token_metadata(
+        &self,
+        name: String,
+        symbol: String,
+        uri: String,
+    ) -> ProgramResult {
         let cpi_accounts = TokenMetadataInitialize {
             token_program_id: self.token_program.to_account_info(),
             mint: self.mint.to_account_info(),
@@ -99,18 +93,17 @@ impl<'info> CreateMintAccount<'info> {
             update_authority: self.authority.to_account_info(),
         };
         let cpi_ctx = CpiContext::new(self.token_program.to_account_info(), cpi_accounts);
-        token_metadata_initialize(cpi_ctx, args)?;
+        token_metadata_initialize(cpi_ctx, name, symbol, uri)?;
         Ok(())
     }
 }
 
 pub fn handler(ctx: Context<CreateMintAccount>, args: CreateMintAccountArgs) -> Result<()> {
-    ctx.accounts
-        .initialize_token_metadata(TokenMetadataInitializeArgs {
-            name: args.name.clone(),
-            symbol: args.symbol.clone(),
-            uri: args.uri.clone(),
-        })?;
+    ctx.accounts.initialize_token_metadata(
+        args.name.clone(),
+        args.symbol.clone(),
+        args.uri.clone(),
+    )?;
     ctx.accounts.mint.reload()?;
     let mint_data = &mut ctx.accounts.mint.to_account_info();
     let metadata = get_mint_extensible_extension_data::<TokenMetadata>(mint_data)?;

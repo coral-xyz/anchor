@@ -1,10 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import {
-  PublicKey,
-  Keypair,
-} from "@solana/web3.js";
-import { assert } from "chai";
+import { PublicKey, Keypair } from "@solana/web3.js";
 import { TokenExtensions } from "../target/types/token_extensions";
 import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 
@@ -42,7 +38,13 @@ describe("token extensions", () => {
 
   it("Create mint account test passes", async () => {
     let mint = new Keypair();
-    const [extraMetasAccount] = PublicKey.findProgramAddressSync([anchor.utils.bytes.utf8.encode("extra-account-metas"), mint.publicKey.toBuffer()], program.programId);
+    const [extraMetasAccount] = PublicKey.findProgramAddressSync(
+      [
+        anchor.utils.bytes.utf8.encode("extra-account-metas"),
+        mint.publicKey.toBuffer(),
+      ],
+      program.programId
+    );
     let tx = await program.methods
       .createMintAccount({
         name: "hello",
@@ -54,7 +56,10 @@ describe("token extensions", () => {
         authority: payer.publicKey,
         receiver: payer.publicKey,
         mint: mint.publicKey,
-        mintTokenAccount: associatedAddress({mint: mint.publicKey, owner: payer.publicKey}),
+        mintTokenAccount: associatedAddress({
+          mint: mint.publicKey,
+          owner: payer.publicKey,
+        }),
         extraMetasAccount: extraMetasAccount,
         systemProgram: anchor.web3.SystemProgram.programId,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,

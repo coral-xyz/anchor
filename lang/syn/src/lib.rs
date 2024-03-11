@@ -669,14 +669,12 @@ pub enum ConstraintToken {
     TokenMint(Context<ConstraintTokenMint>),
     TokenAuthority(Context<ConstraintTokenAuthority>),
     TokenTokenProgram(Context<ConstraintTokenProgram>),
-    TokenExtensions(Context<ConstraintTokenExtensions>),
     AssociatedTokenMint(Context<ConstraintTokenMint>),
     AssociatedTokenAuthority(Context<ConstraintTokenAuthority>),
     AssociatedTokenTokenProgram(Context<ConstraintTokenProgram>),
     MintAuthority(Context<ConstraintMintAuthority>),
     MintFreezeAuthority(Context<ConstraintMintFreezeAuthority>),
     MintDecimals(Context<ConstraintMintDecimals>),
-    MintExtensions(Context<ConstraintMintExtensions>),
     MintTokenProgram(Context<ConstraintTokenProgram>),
     Bump(Context<ConstraintTokenBump>),
     ProgramSeed(Context<ConstraintProgramSeed>),
@@ -871,7 +869,6 @@ pub enum InitKind {
         freeze_authority: Option<Expr>,
         decimals: Expr,
         token_program: Option<Expr>,
-        extensions: Option<Expr>,
         // extensions
         group_pointer_authority: Option<Expr>,
         group_pointer_group_address: Option<Expr>,
@@ -896,10 +893,6 @@ pub struct ConstraintTokenMint {
     pub mint: Expr,
 }
 
-#[derive(Debug, Clone)]
-pub struct ConstraintMintExtensions {
-    pub extensions: Expr,
-}
 
 #[derive(Debug, Clone)]
 pub struct ConstraintMintConfidentialTransferData {
@@ -951,10 +944,6 @@ pub struct ConstraintTokenProgram {
     token_program: Expr,
 }
 
-#[derive(Debug, Clone)]
-pub struct ConstraintTokenExtensions {
-    pub extensions: Expr,
-}
 
 #[derive(Debug, Clone)]
 pub struct ConstraintMintAuthority {
@@ -993,7 +982,6 @@ pub struct ConstraintTokenAccountGroup {
     pub mint: Option<Expr>,
     pub authority: Option<Expr>,
     pub token_program: Option<Expr>,
-    pub extensions: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
@@ -1002,7 +990,6 @@ pub struct ConstraintTokenMintGroup {
     pub mint_authority: Option<Expr>,
     pub freeze_authority: Option<Expr>,
     pub token_program: Option<Expr>,
-    pub extensions: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]

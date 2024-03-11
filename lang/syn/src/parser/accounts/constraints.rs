@@ -90,12 +90,6 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         token_program: stream.parse()?,
                     },
                 )),
-                "extensions" => ConstraintToken::MintExtensions(Context::new(
-                    span,
-                    ConstraintMintExtensions {
-                        extensions: stream.parse()?,
-                    },
-                )),
                 _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
             }
         }
@@ -528,7 +522,6 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub token_mint: Option<Context<ConstraintTokenMint>>,
     pub token_authority: Option<Context<ConstraintTokenAuthority>>,
     pub token_token_program: Option<Context<ConstraintTokenProgram>>,
-    pub token_extensions: Option<Context<ConstraintTokenExtensions>>,
     pub associated_token_mint: Option<Context<ConstraintTokenMint>>,
     pub associated_token_authority: Option<Context<ConstraintTokenAuthority>>,
     pub associated_token_token_program: Option<Context<ConstraintTokenProgram>>,
@@ -536,7 +529,6 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub mint_freeze_authority: Option<Context<ConstraintMintFreezeAuthority>>,
     pub mint_decimals: Option<Context<ConstraintMintDecimals>>,
     pub mint_token_program: Option<Context<ConstraintTokenProgram>>,
-    pub mint_extensions: Option<Context<ConstraintMintExtensions>>,
     pub extension_group_pointer_authority: Option<Context<ConstraintExtensionAuthority>>,
     pub extension_group_pointer_group_address:
         Option<Context<ConstraintExtensionGroupPointerGroupAddress>>,
@@ -578,7 +570,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             token_mint: None,
             token_authority: None,
             token_token_program: None,
-            token_extensions: None,
             associated_token_mint: None,
             associated_token_authority: None,
             associated_token_token_program: None,
@@ -586,7 +577,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             mint_freeze_authority: None,
             mint_decimals: None,
             mint_token_program: None,
-            mint_extensions: None,
             extension_group_pointer_authority: None,
             extension_group_pointer_group_address: None,
             extension_group_member_pointer_authority: None,
@@ -792,7 +782,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             token_mint,
             token_authority,
             token_token_program,
-            token_extensions,
             associated_token_mint,
             associated_token_authority,
             associated_token_token_program,
@@ -800,7 +789,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             mint_freeze_authority,
             mint_decimals,
             mint_token_program,
-            mint_extensions,
             extension_group_pointer_authority,
             extension_group_pointer_group_address,
             extension_group_member_pointer_authority,
@@ -892,9 +880,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 token_program: token_token_program
                     .as_ref()
                     .map(|a| a.clone().into_inner().token_program),
-                extensions: token_extensions
-                    .as_ref()
-                    .map(|a| a.clone().into_inner().extensions),
             }),
         };
 
@@ -903,7 +888,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             &mint_authority,
             &mint_freeze_authority,
             &mint_token_program,
-            &mint_extensions,
             &extension_group_pointer_authority,
             &extension_group_pointer_group_address,
             &extension_group_member_pointer_authority,
@@ -916,7 +900,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             &extension_permanent_delegate,
         ) {
             (
-                None,
                 None,
                 None,
                 None,
@@ -945,9 +928,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 token_program: mint_token_program
                     .as_ref()
                     .map(|a| a.clone().into_inner().token_program),
-                extensions: mint_extensions
-                    .as_ref()
-                    .map(|a| a.clone().into_inner().extensions),
             }),
         };
 
@@ -987,7 +967,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                         },
                         freeze_authority: mint_freeze_authority.map(|fa| fa.into_inner().mint_freeze_auth),
                         token_program: mint_token_program.map(|tp| tp.into_inner().token_program),
-                        extensions: mint_extensions.map(|me| me.into_inner().extensions),
                         // extensions
                         group_pointer_authority: extension_group_pointer_authority.map(|gpa| gpa.into_inner().authority),
                         group_pointer_group_address: extension_group_pointer_group_address.map(|gpga| gpga.into_inner().group_address),
@@ -1047,7 +1026,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::TokenAuthority(c) => self.add_token_authority(c),
             ConstraintToken::TokenMint(c) => self.add_token_mint(c),
             ConstraintToken::TokenTokenProgram(c) => self.add_token_token_program(c),
-            ConstraintToken::TokenExtensions(c) => self.add_token_extensions(c),
             ConstraintToken::AssociatedTokenAuthority(c) => self.add_associated_token_authority(c),
             ConstraintToken::AssociatedTokenMint(c) => self.add_associated_token_mint(c),
             ConstraintToken::AssociatedTokenTokenProgram(c) => {
@@ -1062,7 +1040,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::Realloc(c) => self.add_realloc(c),
             ConstraintToken::ReallocPayer(c) => self.add_realloc_payer(c),
             ConstraintToken::ReallocZero(c) => self.add_realloc_zero(c),
-            ConstraintToken::MintExtensions(c) => self.add_mint_extensions(c),
             ConstraintToken::ExtensionGroupPointerAuthority(c) => {
                 self.add_extension_group_pointer_authority(c)
             }
@@ -1365,17 +1342,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
         Ok(())
     }
 
-    fn add_token_extensions(&mut self, c: Context<ConstraintTokenExtensions>) -> ParseResult<()> {
-        if self.token_extensions.is_some() {
-            return Err(ParseError::new(
-                c.span(),
-                "token extensions already provided",
-            ));
-        }
-        self.token_extensions.replace(c);
-        Ok(())
-    }
-
     fn add_associated_token_token_program(
         &mut self,
         c: Context<ConstraintTokenProgram>,
@@ -1523,17 +1489,6 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             return Err(ParseError::new(c.span(), "space already provided"));
         }
         self.space.replace(c);
-        Ok(())
-    }
-
-    fn add_mint_extensions(&mut self, c: Context<ConstraintMintExtensions>) -> ParseResult<()> {
-        if self.mint_extensions.is_some() {
-            return Err(ParseError::new(
-                c.span(),
-                "mint extensions already provided",
-            ));
-        }
-        self.mint_extensions.replace(c);
         Ok(())
     }
 
