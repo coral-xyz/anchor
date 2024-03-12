@@ -34,7 +34,6 @@ The minor version will be incremented upon a breaking change and the patch versi
 - idl, ts: Add unit and tuple struct support ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
 - idl, ts: Add generics support ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
 - ts: Add `accountsPartial` method to keep the old `accounts` method behavior ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
-- ts: Change type of `Provider.publicKey` to `PublicKey | null` for compatibility with `WalletContextState` of `@solana/wallet-adapter-react`  ([#2824](https://github.com/coral-xyz/anchor/pull/2838)).
 
 ### Fixes
 
@@ -77,6 +76,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - ts: Change `accounts` method to no longer accept resolvable accounts ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
 - ts: `Program` instances use camelCase for everything ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
 - ts: Remove discriminator functions ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- ts: Change type of `Provider.publicKey` to `PublicKey | null` for compatibility with `WalletContextState` of `@solana/wallet-adapter-react`  ([#2824](https://github.com/coral-xyz/anchor/pull/2838)).
 
 ## [0.29.0] - 2023-10-16
 
