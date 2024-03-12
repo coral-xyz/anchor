@@ -344,7 +344,7 @@ export class AccountClient<
   ): Promise<TransactionInstruction> {
     const size = this.size;
 
-    if (this._provider.publicKey === undefined) {
+    if (!this._provider.publicKey) {
       throw new Error(
         "This function requires the Provider interface implementor to have a 'publicKey' field."
       );
