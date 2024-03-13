@@ -160,3 +160,22 @@ pub fn handler(ctx: Context<CreateMintAccount>, args: CreateMintAccountArgs) -> 
 
     Ok(())
 }
+
+#[derive(Accounts)]
+#[instruction()]
+pub struct CheckMintExtensionConstraints<'info> {
+    #[account(mut)]
+    /// CHECK: can be any account
+    pub authority: Signer<'info>,
+    #[account(
+        extensions::metadata_pointer::authority = authority,
+        extensions::metadata_pointer::metadata_address = mint,
+        extensions::group_member_pointer::authority = authority,
+        extensions::group_member_pointer::member_address = mint,
+        extensions::transfer_hook::authority = authority,
+        extensions::transfer_hook::program_id = crate::ID,
+        extensions::close_authority::authority = authority,
+        extensions::permanent_delegate::delegate = authority,
+    )]
+    pub mint: Box<InterfaceAccount<'info, Mint>>,
+}

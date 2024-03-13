@@ -928,6 +928,37 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                 token_program: mint_token_program
                     .as_ref()
                     .map(|a| a.clone().into_inner().token_program),
+                // extensions
+                group_pointer_authority: extension_group_pointer_authority
+                    .as_ref()
+                    .map(|a| a.clone().into_inner().authority),
+                group_pointer_group_address: extension_group_pointer_group_address
+                    .as_ref()
+                    .map(|a| a.clone().into_inner().group_address),
+                group_member_pointer_authority: extension_group_member_pointer_authority
+                    .as_ref()
+                    .map(|a| a.clone().into_inner().authority),
+                group_member_pointer_member_address: extension_group_member_pointer_member_address
+                    .as_ref()
+                    .map(|a| a.clone().into_inner().member_address),
+                metadata_pointer_authority: extension_metadata_pointer_authority
+                    .as_ref()
+                    .map(|a| a.clone().into_inner().authority),
+                metadata_pointer_metadata_address: extension_metadata_pointer_metadata_address
+                    .as_ref()
+                    .map(|a| a.clone().into_inner().metadata_address),
+                close_authority: extension_close_authority
+                    .as_ref()
+                    .map(|a| a.clone().into_inner().authority),
+                permanent_delegate: extension_permanent_delegate
+                    .as_ref()
+                    .map(|a| a.clone().into_inner().permanent_delegate),
+                transfer_hook_authority: extension_transfer_hook_authority
+                    .as_ref()
+                    .map(|a| a.clone().into_inner().authority),
+                transfer_hook_program_id: extension_transfer_hook_program_id
+                    .as_ref()
+                    .map(|a| a.clone().into_inner().program_id),
             }),
         };
 

@@ -3,6 +3,7 @@ import { Program } from "@coral-xyz/anchor";
 import { PublicKey, Keypair } from "@solana/web3.js";
 import { TokenExtensions } from "../target/types/token_extensions";
 import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
+import { it } from "node:test";
 
 const TOKEN_2022_PROGRAM_ID = new anchor.web3.PublicKey(
   "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
@@ -29,15 +30,16 @@ describe("token extensions", () => {
 
   const payer = Keypair.generate();
 
-  before(async () => {
+  it("airdrop payer", async () => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(payer.publicKey, 10000000000),
       "confirmed"
     );
   });
 
+  let mint = new Keypair();
+
   it("Create mint account test passes", async () => {
-    let mint = new Keypair();
     const [extraMetasAccount] = PublicKey.findProgramAddressSync(
       [
         anchor.utils.bytes.utf8.encode("extra-account-metas"),
@@ -45,7 +47,7 @@ describe("token extensions", () => {
       ],
       program.programId
     );
-    let tx = await program.methods
+    await program.methods
       .createMintAccount({
         name: "hello",
         symbol: "hi",
@@ -69,4 +71,15 @@ describe("token extensions", () => {
       .signers([mint, payer])
       .rpc();
   });
+
+  it("mint extension constraints test passes", async () => {
+    await program.methods.checkMintExtensionsConstraints()
+      .accountsStrict({
+        authority: payer.publicKey,
+        mint: mint.publicKey,
+      })
+      .signers([payer])
+      .rpc();
+  });
+
 });

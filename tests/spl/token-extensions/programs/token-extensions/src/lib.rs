@@ -23,4 +23,10 @@ pub mod token_extensions {
     ) -> Result<()> {
         instructions::handler(ctx, args)
     }
+
+    pub fn check_mint_extensions_constraints(
+        _ctx: Context<CheckMintExtensionConstraints>,
+    ) -> Result<()> {
+        Ok(())
+    }
 }
