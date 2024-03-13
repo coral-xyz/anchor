@@ -32,6 +32,7 @@ use solana_sdk::bpf_loader;
 use solana_sdk::bpf_loader_deprecated;
 use solana_sdk::bpf_loader_upgradeable::{self, UpgradeableLoaderState};
 use solana_sdk::commitment_config::CommitmentConfig;
+use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signature::Signer;
@@ -2235,9 +2236,18 @@ fn idl_set_buffer(
             print_idl_instruction("SetBuffer", &ix, &idl_address)?;
         } else {
             // Build the transaction.
+            let mut instructions = vec![ix];
+            let priority_fee = get_recommended_micro_lamport_fee(&client)?;
+            if priority_fee > 0 {
+                instructions.insert(
+                    0,
+                    ComputeBudgetInstruction::set_compute_unit_price(priority_fee),
+                );
+            }
+
             let latest_hash = client.get_latest_blockhash()?;
             let tx = Transaction::new_signed_with_payer(
-                &[ix],
+                &instructions,
                 Some(&keypair.pubkey()),
                 &[&keypair],
                 latest_hash,
@@ -2447,10 +2457,18 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
             accounts,
             data,
         };
+        let mut instructions = vec![ix];
         // Send transaction.
+        let priority_fee = get_recommended_micro_lamport_fee(&client)?;
+        if priority_fee > 0 {
+            instructions.insert(
+                0,
+                ComputeBudgetInstruction::set_compute_unit_price(priority_fee),
+            );
+        }
         let latest_hash = client.get_latest_blockhash()?;
         let tx = Transaction::new_signed_with_payer(
-            &[ix],
+            &instructions,
             Some(&keypair.pubkey()),
             &[&keypair],
             latest_hash,
@@ -3610,6 +3628,13 @@ fn create_idl_account(
             });
         }
         let latest_hash = client.get_latest_blockhash()?;
+        let priority_fee = get_recommended_micro_lamport_fee(&client)?;
+        if priority_fee > 0 {
+            instructions.insert(
+                0,
+                ComputeBudgetInstruction::set_compute_unit_price(priority_fee),
+            );
+        }
         let tx = Transaction::new_signed_with_payer(
             &instructions,
             Some(&keypair.pubkey()),
@@ -3667,10 +3692,19 @@ fn create_idl_buffer(
         }
     };
 
+    let mut instructions = vec![create_account_ix, create_buffer_ix];
+    let priority_fee = get_recommended_micro_lamport_fee(&client)?;
+    if priority_fee > 0 {
+        instructions.insert(
+            0,
+            ComputeBudgetInstruction::set_compute_unit_price(priority_fee),
+        );
+    }
+
     // Build the transaction.
     let latest_hash = client.get_latest_blockhash()?;
     let tx = Transaction::new_signed_with_payer(
-        &[create_account_ix, create_buffer_ix],
+        &instructions,
         Some(&keypair.pubkey()),
         &[&keypair, &buffer],
         latest_hash,
@@ -4303,6 +4337,19 @@ fn get_node_version() -> Result<Version> {
         .unwrap()
         .trim();
     Version::parse(output).map_err(Into::into)
+}
+
+fn get_recommended_micro_lamport_fee(client: &RpcClient) -> Result<u64> {
+    let fees = client.get_recent_prioritization_fees(&[])?;
+    println!("Recent fees: {:#?}", fees);
+    let fee = fees
+        .into_iter()
+        .fold(0, |acc, x| u64::max(acc, x.prioritization_fee))
+        + 1;
+
+    println!("Selected fee: {}", fee);
+
+    Ok(fee)
 }
 
 fn get_node_dns_option() -> Result<&'static str> {
