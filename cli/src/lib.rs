@@ -2435,7 +2435,7 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
         e.finish()?
     };
 
-    const MAX_WRITE_SIZE: usize = 1000;
+    const MAX_WRITE_SIZE: usize = 500;
     let mut offset = 0;
     while offset < idl_data.len() {
         // Instruction data.
@@ -4341,15 +4341,20 @@ fn get_node_version() -> Result<Version> {
 
 fn get_recommended_micro_lamport_fee(client: &RpcClient) -> Result<u64> {
     let fees = client.get_recent_prioritization_fees(&[])?;
-    println!("Recent fees: {:#?}", fees);
     let fee = fees
         .into_iter()
         .fold(0, |acc, x| u64::max(acc, x.prioritization_fee))
         + 1;
 
-    println!("Selected fee: {}", fee);
+    // Min to 200 lamports per 200_000 CU (default 1 ix transaction)
+    // 200 * 1M / 200_000 = 1000
+    const MIN_FEE: u64 = 1000;
 
-    Ok(fee)
+    let priority_fee = u64::max(fee, MIN_FEE);
+
+    println!("Selected fee: {}", priority_fee);
+
+    Ok(priority_fee)
 }
 
 fn get_node_dns_option() -> Result<&'static str> {
@@ -4378,7 +4383,7 @@ fn strip_workspace_prefix(absolute_path: String) -> String {
 
 /// Create a new [`RpcClient`] with `confirmed` commitment level instead of the default(finalized).
 fn create_client<U: ToString>(url: U) -> RpcClient {
-    RpcClient::new_with_commitment(url, CommitmentConfig::confirmed())
+    RpcClient::new_with_commitment(url, CommitmentConfig::finalized())
 }
 
 #[cfg(test)]
