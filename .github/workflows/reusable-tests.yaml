@@ -365,6 +365,49 @@ jobs:
       # - run: cd "$(mktemp -d)" && anchor init hello-anchor && cd hello-anchor && yarn link @coral-xyz/anchor && yarn && anchor test && yarn lint:fix
       # - uses: ./.github/actions/git-diff/
 
+  test-anchor-compatibility:
+    needs: setup-anchor-cli
+    name: Test Anchor Compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup/
+      - uses: ./.github/actions/setup-ts/
+      - uses: ./.github/actions/setup-solana/
+      - uses: actions/cache@v3
+        if: ${{ env.CACHE != 'false' }}
+        name: Cache Cargo registry + index
+        id: cache-anchor
+        with:
+          path: ${{ env.CARGO_CACHE_PATH }}
+          key: cargo-${{ runner.os }}-${{ env.CARGO_PROFILE }}-anchor-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.ANCHOR_BINARY_NAME }}
+          path: ~/.cargo/bin/
+      - run: chmod +x ~/.cargo/bin/anchor
+      - name: Run Compatibility Tests
+        # TODO: Remove continue-on-error once https://github.com/coral-xyz/anchor/pull/2711 is resolved
+        continue-on-error: true
+        run: |
+          cd tests/compatibility-testing
+          test_output=$(cargo test --package compatibility-testing --test solana_program_test entrypoint_lifetime 2>&1) || test_exit_code=$?
+          echo "$test_output"
+
+          # Success exit code
+          if [ "$test_exit_code" -eq 0 ]; then
+            echo "solana_program_test entrypoint_lifetime compatibility test passed with exit code: $test_exit_code"
+          # Unrecoverable error exit code
+          elif [ "$test_exit_code" -eq 101 ]; then
+            echo "solana_program_test entrypoint_lifetime compatibility test failed with exit code: $test_exit_code"
+            exit 1
+          else
+            echo "Unexpected exit code: $test_exit_code"
+            exit 1
+          fi
+      - uses: ./.github/actions/git-diff/
+
   test-programs:
     needs: setup-anchor-cli
     name: Test ${{ matrix.node.path }}
