@@ -2435,9 +2435,12 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
         e.finish()?
     };
 
-    const MAX_WRITE_SIZE: usize = 500;
+    println!("Idl data length: {:?} bytes", idl_data.len());
+
+    const MAX_WRITE_SIZE: usize = 600;
     let mut offset = 0;
     while offset < idl_data.len() {
+        println!("Step {offset} ");
         // Instruction data.
         let data = {
             let start = offset;
@@ -2466,14 +2469,27 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
                 ComputeBudgetInstruction::set_compute_unit_price(priority_fee),
             );
         }
-        let latest_hash = client.get_latest_blockhash()?;
-        let tx = Transaction::new_signed_with_payer(
-            &instructions,
-            Some(&keypair.pubkey()),
-            &[&keypair],
-            latest_hash,
-        );
-        client.send_and_confirm_transaction_with_spinner(&tx)?;
+        for retry_transactions in 0..20 {
+            let latest_hash = client.get_latest_blockhash()?;
+            let tx = Transaction::new_signed_with_payer(
+                &instructions,
+                Some(&keypair.pubkey()),
+                &[&keypair],
+                latest_hash,
+            );
+
+            client.simulate_transaction(transaction)
+            match client.send_and_confirm_transaction_with_spinner(&tx) {
+                Ok(_) => break,
+                Err(e) => {
+                    if retry_transactions == 19 {
+                        return Err(anyhow!("Error: {e}. Failed to send transaction."));
+                    }
+                    println!("Error: {e}. Retrying transaction.");
+                }
+            }
+        }
+
         offset += MAX_WRITE_SIZE;
     }
     Ok(())
@@ -3701,17 +3717,24 @@ fn create_idl_buffer(
         );
     }
 
-    // Build the transaction.
-    let latest_hash = client.get_latest_blockhash()?;
-    let tx = Transaction::new_signed_with_payer(
-        &instructions,
-        Some(&keypair.pubkey()),
-        &[&keypair, &buffer],
-        latest_hash,
-    );
-
-    // Send the transaction.
-    client.send_and_confirm_transaction_with_spinner(&tx)?;
+    for retries in 0..5 {
+        let latest_hash = client.get_latest_blockhash()?;
+        let tx = Transaction::new_signed_with_payer(
+            &instructions,
+            Some(&keypair.pubkey()),
+            &[&keypair, &buffer],
+            latest_hash,
+        );
+        match client.send_and_confirm_transaction_with_spinner(&tx) {
+            Ok(_) => break,
+            Err(err) => {
+                if retries == 4 {
+                    return Err(anyhow!("Error creating buffer account: {}", err));
+                }
+                println!("Error creating buffer account: {}. Retrying...", err);
+            }
+        }
+    }
 
     Ok(buffer.pubkey())
 }
@@ -4348,7 +4371,7 @@ fn get_recommended_micro_lamport_fee(client: &RpcClient) -> Result<u64> {
 
     // Min to 200 lamports per 200_000 CU (default 1 ix transaction)
     // 200 * 1M / 200_000 = 1000
-    const MIN_FEE: u64 = 1000;
+    const MIN_FEE: u64 = 1000 * 15;
 
     let priority_fee = u64::max(fee, MIN_FEE);
 
@@ -4383,7 +4406,7 @@ fn strip_workspace_prefix(absolute_path: String) -> String {
 
 /// Create a new [`RpcClient`] with `confirmed` commitment level instead of the default(finalized).
 fn create_client<U: ToString>(url: U) -> RpcClient {
-    RpcClient::new_with_commitment(url, CommitmentConfig::finalized())
+    RpcClient::new_with_commitment(url, CommitmentConfig::confirmed())
 }
 
 #[cfg(test)]
