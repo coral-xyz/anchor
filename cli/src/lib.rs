@@ -2478,7 +2478,14 @@ fn idl_write(cfg: &Config, program_id: &Pubkey, idl: &Idl, idl_address: Pubkey) 
                 latest_hash,
             );
 
-            client.simulate_transaction(transaction)
+            let res = client.simulate_transaction(&tx);
+
+            if let Ok(sim_res) = res {
+                println!("Result ok, {:?} ", sim_res);
+            } else {
+                println!("Result error, {:?} ", res);
+            }
+
             match client.send_and_confirm_transaction_with_spinner(&tx) {
                 Ok(_) => break,
                 Err(e) => {
