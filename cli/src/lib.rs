@@ -4471,9 +4471,6 @@ fn get_recommended_micro_lamport_fee(client: &RpcClient, priority_fee: u64) -> R
         .fold(0, |acc, x| u64::max(acc, x.prioritization_fee))
         + 1;
 
-    // Min to 200 lamports per 200_000 CU (default 1 ix transaction)
-    // 200 * 1M / 200_000 = 1000
-
     let priority_fee = u64::max(priority_fee, fee);
 
     Ok(priority_fee)
