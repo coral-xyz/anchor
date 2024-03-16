@@ -1734,6 +1734,7 @@ fn docker_exec(container_name: &str, args: &[&str]) -> Result<()> {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn _build_rust_cwd(
     cfg: &WithPath<Config>,
     no_idl: bool,
