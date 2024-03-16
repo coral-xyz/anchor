@@ -7,6 +7,8 @@ use spl_token_2022::{
 };
 use std::ops::Deref;
 
+pub use crate::token_2022::*;
+
 static IDS: [Pubkey; 2] = [spl_token::ID, spl_token_2022::ID];
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -38,9 +40,6 @@ impl Deref for TokenAccount {
     }
 }
 
-#[cfg(feature = "idl-build")]
-impl anchor_lang::IdlBuild for TokenAccount {}
-
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Mint(spl_token_2022::state::Mint);
 
@@ -67,9 +66,6 @@ impl Deref for Mint {
         &self.0
     }
 }
-
-#[cfg(feature = "idl-build")]
-impl anchor_lang::IdlBuild for Mint {}
 
 #[derive(Clone)]
 pub struct TokenInterface;

@@ -34,3 +34,6 @@ pub mod metadata;
 
 #[cfg(feature = "memo")]
 pub mod memo;
+
+#[cfg(feature = "idl-build")]
+mod idl_build;
