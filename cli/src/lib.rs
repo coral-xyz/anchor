@@ -376,7 +376,7 @@ pub enum IdlCommand {
         program_id: Pubkey,
         #[clap(short, long)]
         filepath: String,
-        #[clap(short, long)]
+        #[clap(long)]
         priority_fee: Option<u64>,
     },
     Close {
@@ -388,7 +388,7 @@ pub enum IdlCommand {
         /// Useful for multisig execution when the local wallet keypair is not available.
         #[clap(long)]
         print_only: bool,
-        #[clap(short, long)]
+        #[clap(long)]
         priority_fee: Option<u64>,
     },
     /// Writes an IDL into a buffer account. This can be used with SetBuffer
@@ -397,7 +397,7 @@ pub enum IdlCommand {
         program_id: Pubkey,
         #[clap(short, long)]
         filepath: String,
-        #[clap(short, long)]
+        #[clap(long)]
         priority_fee: Option<u64>,
     },
     /// Sets a new IDL buffer for the program.
@@ -410,7 +410,7 @@ pub enum IdlCommand {
         /// Useful for multisig execution when the local wallet keypair is not available.
         #[clap(long)]
         print_only: bool,
-        #[clap(short, long)]
+        #[clap(long)]
         priority_fee: Option<u64>,
     },
     /// Upgrades the IDL to the new file. An alias for first writing and then
@@ -419,7 +419,7 @@ pub enum IdlCommand {
         program_id: Pubkey,
         #[clap(short, long)]
         filepath: String,
-        #[clap(short, long)]
+        #[clap(long)]
         priority_fee: Option<u64>,
     },
     /// Sets a new authority on the IDL account.
@@ -437,7 +437,7 @@ pub enum IdlCommand {
         /// Useful for multisig execution when the local wallet keypair is not available.
         #[clap(long)]
         print_only: bool,
-        #[clap(short, long)]
+        #[clap(long)]
         priority_fee: Option<u64>,
     },
     /// Command to remove the ability to modify the IDL account. This should
@@ -446,7 +446,7 @@ pub enum IdlCommand {
     EraseAuthority {
         #[clap(short, long)]
         program_id: Pubkey,
-        #[clap(short, long)]
+        #[clap(long)]
         priority_fee: Option<u64>,
     },
     /// Outputs the authority for the IDL account.
@@ -2398,11 +2398,7 @@ fn idl_set_authority(
         } else {
             let mut instructions = vec![ix];
             if let Some(priority_fee) = priority_fee {
-                let priority_fee = get_recommended_micro_lamport_fee(&client, priority_fee)?;
-                instructions.insert(
-                    0,
-                    ComputeBudgetInstruction::set_compute_unit_price(priority_fee),
-                );
+                prepend_set_compute_unit_ix(&mut instructions, &client, priority_fee)?;
             }
 
             // Send transaction.
@@ -2484,11 +2480,7 @@ fn idl_close_account(
     } else {
         let mut instructions = vec![ix];
         if let Some(priority_fee) = priority_fee {
-            let priority_fee = get_recommended_micro_lamport_fee(&client, priority_fee)?;
-            instructions.insert(
-                0,
-                ComputeBudgetInstruction::set_compute_unit_price(priority_fee),
-            );
+            prepend_set_compute_unit_ix(&mut instructions, &client, priority_fee)?;
         }
 
         // Send transaction.
@@ -2557,11 +2549,7 @@ fn idl_write(
         let mut instructions = vec![ix];
         // Send transaction.
         if let Some(priority_fee) = priority_fee {
-            let priority_fee = get_recommended_micro_lamport_fee(&client, priority_fee)?;
-            instructions.insert(
-                0,
-                ComputeBudgetInstruction::set_compute_unit_price(priority_fee),
-            );
+            prepend_set_compute_unit_ix(&mut instructions, &client, priority_fee)?;
         }
         for retry_transactions in 0..20 {
             let latest_hash = client.get_latest_blockhash()?;
@@ -3739,11 +3727,7 @@ fn create_idl_account(
         }
         let latest_hash = client.get_latest_blockhash()?;
         if let Some(priority_fee) = priority_fee {
-            let priority_fee = get_recommended_micro_lamport_fee(&client, priority_fee)?;
-            instructions.insert(
-                0,
-                ComputeBudgetInstruction::set_compute_unit_price(priority_fee),
-            );
+            prepend_set_compute_unit_ix(&mut instructions, &client, priority_fee)?;
         }
 
         let tx = Transaction::new_signed_with_payer(
@@ -3812,11 +3796,7 @@ fn create_idl_buffer(
 
     let mut instructions = vec![create_account_ix, create_buffer_ix];
     if let Some(priority_fee) = priority_fee {
-        let priority_fee = get_recommended_micro_lamport_fee(&client, priority_fee)?;
-        instructions.insert(
-            0,
-            ComputeBudgetInstruction::set_compute_unit_price(priority_fee),
-        );
+        prepend_set_compute_unit_ix(&mut instructions, &client, priority_fee)?;
     }
 
     for retries in 0..5 {
@@ -4474,6 +4454,19 @@ fn get_recommended_micro_lamport_fee(client: &RpcClient, priority_fee: u64) -> R
     let priority_fee = u64::max(priority_fee, fee);
 
     Ok(priority_fee)
+}
+
+fn prepend_set_compute_unit_ix(
+    instructions: &mut Vec<Instruction>,
+    client: &RpcClient,
+    priority_fee: u64,
+) -> Result<()> {
+    let priority_fee = get_recommended_micro_lamport_fee(client, priority_fee)?;
+    instructions.insert(
+        0,
+        ComputeBudgetInstruction::set_compute_unit_price(priority_fee),
+    );
+    Ok(())
 }
 
 fn get_node_dns_option() -> Result<&'static str> {
