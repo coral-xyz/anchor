@@ -2280,25 +2280,28 @@ fn idl_set_buffer(
             print_idl_instruction("SetBuffer", &ix, &idl_address)?;
         } else {
             // Build the transaction.
-            let mut instructions = vec![ix];
-            if let Some(priority_fee) = priority_fee {
-                let priority_fee = get_recommended_micro_lamport_fee(&client, priority_fee)?;
-                instructions.insert(
-                    0,
-                    ComputeBudgetInstruction::set_compute_unit_price(priority_fee),
-                );
-            }
-
-            let latest_hash = client.get_latest_blockhash()?;
-            let tx = Transaction::new_signed_with_payer(
-                &instructions,
-                Some(&keypair.pubkey()),
-                &[&keypair],
-                latest_hash,
-            );
+            let instructions = prepend_compute_unit_ix(vec![ix], &client, priority_fee)?;
 
             // Send the transaction.
-            client.send_and_confirm_transaction_with_spinner(&tx)?;
+            for retry_transactions in 0..20 {
+                let latest_hash = client.get_latest_blockhash()?;
+                let tx = Transaction::new_signed_with_payer(
+                    &instructions,
+                    Some(&keypair.pubkey()),
+                    &[&keypair],
+                    latest_hash,
+                );
+
+                match client.send_and_confirm_transaction_with_spinner(&tx) {
+                    Ok(_) => break,
+                    Err(e) => {
+                        if retry_transactions == 19 {
+                            return Err(anyhow!("Error: {e}. Failed to send transaction."));
+                        }
+                        println!("Error: {e}. Retrying transaction.");
+                    }
+                }
+            }
         }
 
         Ok(idl_address)
@@ -2396,10 +2399,7 @@ fn idl_set_authority(
         if print_only {
             print_idl_instruction("SetAuthority", &ix, &idl_address)?;
         } else {
-            let mut instructions = vec![ix];
-            if let Some(priority_fee) = priority_fee {
-                prepend_set_compute_unit_ix(&mut instructions, &client, priority_fee)?;
-            }
+            let instructions = prepend_compute_unit_ix(vec![ix], &client, priority_fee)?;
 
             // Send transaction.
             let latest_hash = client.get_latest_blockhash()?;
@@ -2478,10 +2478,7 @@ fn idl_close_account(
     if print_only {
         print_idl_instruction("Close", &ix, &idl_address)?;
     } else {
-        let mut instructions = vec![ix];
-        if let Some(priority_fee) = priority_fee {
-            prepend_set_compute_unit_ix(&mut instructions, &client, priority_fee)?;
-        }
+        let instructions = prepend_compute_unit_ix(vec![ix], &client, priority_fee)?;
 
         // Send transaction.
         let latest_hash = client.get_latest_blockhash()?;
@@ -2546,11 +2543,9 @@ fn idl_write(
             accounts,
             data,
         };
-        let mut instructions = vec![ix];
         // Send transaction.
-        if let Some(priority_fee) = priority_fee {
-            prepend_set_compute_unit_ix(&mut instructions, &client, priority_fee)?;
-        }
+        let instructions = prepend_compute_unit_ix(vec![ix], &client, priority_fee)?;
+
         for retry_transactions in 0..20 {
             let latest_hash = client.get_latest_blockhash()?;
             let tx = Transaction::new_signed_with_payer(
@@ -3726,9 +3721,7 @@ fn create_idl_account(
             });
         }
         let latest_hash = client.get_latest_blockhash()?;
-        if let Some(priority_fee) = priority_fee {
-            prepend_set_compute_unit_ix(&mut instructions, &client, priority_fee)?;
-        }
+        instructions = prepend_compute_unit_ix(instructions, &client, priority_fee)?;
 
         let tx = Transaction::new_signed_with_payer(
             &instructions,
@@ -3794,10 +3787,11 @@ fn create_idl_buffer(
         }
     };
 
-    let mut instructions = vec![create_account_ix, create_buffer_ix];
-    if let Some(priority_fee) = priority_fee {
-        prepend_set_compute_unit_ix(&mut instructions, &client, priority_fee)?;
-    }
+    let instructions = prepend_compute_unit_ix(
+        vec![create_account_ix, create_buffer_ix],
+        &client,
+        priority_fee,
+    )?;
 
     for retries in 0..5 {
         let latest_hash = client.get_latest_blockhash()?;
@@ -4444,29 +4438,43 @@ fn get_node_version() -> Result<Version> {
     Version::parse(output).map_err(Into::into)
 }
 
-fn get_recommended_micro_lamport_fee(client: &RpcClient, priority_fee: u64) -> Result<u64> {
-    let fees = client.get_recent_prioritization_fees(&[])?;
-    let fee = fees
-        .into_iter()
-        .fold(0, |acc, x| u64::max(acc, x.prioritization_fee))
-        + 1;
+fn get_recommended_micro_lamport_fee(client: &RpcClient, priority_fee: Option<u64>) -> Result<u64> {
+    let mut fees = client.get_recent_prioritization_fees(&[])?;
 
-    let priority_fee = u64::max(priority_fee, fee);
+    // Get the median fee from the most recent recent 150 slots' prioritization fee
+    fees.sort_unstable_by_key(|fee| fee.prioritization_fee);
+    let median_index = fees.len() / 2;
 
-    Ok(priority_fee)
+    let median_priority_fee = if fees.len() % 2 == 0 {
+        (fees[median_index - 1].prioritization_fee + fees[median_index].prioritization_fee) / 2
+    } else {
+        fees[median_index].prioritization_fee
+    };
+
+    if let Some(priority_fee) = priority_fee {
+        Ok(priority_fee)
+    } else {
+        Ok(median_priority_fee)
+    }
 }
 
-fn prepend_set_compute_unit_ix(
-    instructions: &mut Vec<Instruction>,
+fn prepend_compute_unit_ix(
+    instructions: Vec<Instruction>,
     client: &RpcClient,
-    priority_fee: u64,
-) -> Result<()> {
+    priority_fee: Option<u64>,
+) -> Result<Vec<Instruction>> {
     let priority_fee = get_recommended_micro_lamport_fee(client, priority_fee)?;
-    instructions.insert(
-        0,
-        ComputeBudgetInstruction::set_compute_unit_price(priority_fee),
-    );
-    Ok(())
+
+    if priority_fee > 0 {
+        let mut instructions_appended = instructions.clone();
+        instructions_appended.insert(
+            0,
+            ComputeBudgetInstruction::set_compute_unit_price(priority_fee),
+        );
+        Ok(instructions_appended)
+    } else {
+        Ok(instructions)
+    }
 }
 
 fn get_node_dns_option() -> Result<&'static str> {
