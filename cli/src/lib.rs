@@ -4439,6 +4439,10 @@ fn get_node_version() -> Result<Version> {
 }
 
 fn get_recommended_micro_lamport_fee(client: &RpcClient, priority_fee: Option<u64>) -> Result<u64> {
+    if let Some(priority_fee) = priority_fee {
+        return Ok(priority_fee);
+    }
+
     let mut fees = client.get_recent_prioritization_fees(&[])?;
 
     // Get the median fee from the most recent recent 150 slots' prioritization fee
@@ -4451,11 +4455,7 @@ fn get_recommended_micro_lamport_fee(client: &RpcClient, priority_fee: Option<u6
         fees[median_index].prioritization_fee
     };
 
-    if let Some(priority_fee) = priority_fee {
-        Ok(priority_fee)
-    } else {
-        Ok(median_priority_fee)
-    }
+    Ok(median_priority_fee)
 }
 
 fn prepend_compute_unit_ix(
