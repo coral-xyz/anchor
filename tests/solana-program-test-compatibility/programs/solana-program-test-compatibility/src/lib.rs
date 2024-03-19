@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
 
-declare_id!("DhFkMBzU3BqvcWuUZkFQR8QajQsiGYLPrhCh5BQBgmkg");
+declare_id!("3cgdzWdfZSy1GaV6Lg98iwLvTcL9W7AVD8BpxiZjCZ9z");
 
 #[program]
-pub mod compatibility_testing {
+pub mod solana_program_test_compatibility {
     use super::*;
 
     pub fn initialize(_ctx: Context<Initialize>) -> Result<()> {
