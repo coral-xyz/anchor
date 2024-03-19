@@ -426,8 +426,10 @@ pub fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize
 pub fn handle_system_log(this_program_str: &str, log: &str) -> (Option<String>, bool) {
     if log.starts_with(&format!("Program {this_program_str} log:")) {
         (Some(this_program_str.to_string()), false)
+
+        // `Invoke [1]` instructions are pushed to the stack in `parse_logs_response`,
+        // so this ensures we only push CPIs to the stack at this stage
     } else if log.contains("invoke") && !log.ends_with("[1]") {
-        // `Invoke [1]` instructions are pushed to the stack in `parse_logs_response`, so this ensures we only push CPIs to the stack at this stage
         (Some("cpi".to_string()), false) // Any string will do.
     } else {
         let re = Regex::new(r"^Program (.*) success*$").unwrap();
@@ -710,18 +712,21 @@ fn parse_logs_response<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
                 if did_pop {
                     execution.pop();
 
-                    // If the current iteration popped then it means there was a `Program x success` log.
-                    // If the next log in the iteration is of depth [1] then we're not within a CPI
-                    // and this is a new instruction.
+                    // If the current iteration popped then it means there was a
+                    //`Program x success` log. If the next log in the iteration is
+                    // of depth [1] then we're not within a CPI and this is a new instruction.
                     //
-                    // We need to ensure that the `Execution` instance is updated with the next program ID, or else
-                    // `execution.program()` will cause a panic during the next iteration.
+                    // We need to ensure that the `Execution` instance is updated with
+                    // the next program ID, or else `execution.program()` will cause
+                    // a panic during the next iteration.
                     if let Some(&next_log) = logs_iter.peek() {
                         if next_log.ends_with("invoke [1]") {
                             let re = Regex::new(r"^Program (.*) invoke.*$").unwrap();
                             let next_instruction =
                                 re.captures(next_log).unwrap().get(1).unwrap().as_str();
-                            // Within this if block, there will always be a regex match. Therefore it's safe to unwrap and the captured program ID at index 1 can also be safely unwrapped.
+                            // Within this if block, there will always be a regex match.
+                            // Therefore it's safe to unwrap and the captured program ID
+                            // at index 1 can also be safely unwrapped.
                             execution.push(next_instruction.to_string());
                         }
                     };
@@ -736,8 +741,8 @@ fn parse_logs_response<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
 mod tests {
     use solana_client::rpc_response::RpcResponseContext;
 
-    // Creating a mock struct that implements `anchor_lang::events` for type inference
-    // in `test_logs`
+    // Creating a mock struct that implements `anchor_lang::events`
+    // for type inference in `test_logs`
     use anchor_lang::prelude::*;
     #[derive(Debug, Clone, Copy)]
     #[event]
@@ -856,7 +861,8 @@ mod tests {
 
         let program_id_str = "VeryCoolProgram";
 
-        // No events returned here. Just ensuring that the function doesn't panic due an incorrectly emptied stack.
+        // No events returned here. Just ensuring that the function doesn't panic
+        // due an incorrectly emptied stack.
         let _: Vec<MockEvent> = parse_logs_response(
             RpcResponse {
                 context: RpcResponseContext::new(0),
