@@ -21,7 +21,7 @@ import {
 
 export default interface Provider {
   readonly connection: Connection;
-  readonly publicKey?: PublicKey;
+  readonly publicKey: PublicKey | null;
 
   send?(
     tx: Transaction | VersionedTransaction,
