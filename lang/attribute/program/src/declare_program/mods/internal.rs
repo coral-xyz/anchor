@@ -122,10 +122,27 @@ fn gen_internal_accounts_common(
             let accounts = ix.accounts.iter().map(|acc| match acc {
                 IdlInstructionAccountItem::Single(acc) => {
                     let name = format_ident!("{}", acc.name);
-                    if acc.optional {
-                        quote! { pub #name: Option<AccountInfo #generics> }
-                    } else {
-                        quote! { pub #name: AccountInfo #generics }
+
+                    let attrs = {
+                        let signer = acc.signer.then(|| quote!(signer)).unwrap_or_default();
+                        let mt = acc.writable.then(|| quote!(mut)).unwrap_or_default();
+                        if signer.is_empty() {
+                            mt
+                        } else if mt.is_empty() {
+                            signer
+                        } else {
+                            quote! { #signer, #mt }
+                        }
+                    };
+
+                    let acc_expr = acc
+                        .optional
+                        .then(|| quote! { Option<AccountInfo #generics> })
+                        .unwrap_or_else(|| quote! { AccountInfo #generics });
+
+                    quote! {
+                        #[account(#attrs)]
+                        pub #name: #acc_expr
                     }
                 }
                 IdlInstructionAccountItem::Composite(_accs) => todo!("Composite"),
