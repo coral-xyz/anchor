@@ -13,12 +13,7 @@ interface GetProgramParams {
 }
 
 export function splTokenProgram(params?: GetProgramParams): Program<SplToken> {
-  return new Program<SplToken>(
-    IDL,
-    params?.programId ?? SPL_TOKEN_PROGRAM_ID,
-    params?.provider,
-    new SplTokenCoder(IDL)
-  );
+  return new Program<SplToken>(IDL, params?.provider, new SplTokenCoder(IDL));
 }
 
 type SplToken = {

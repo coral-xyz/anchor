@@ -17,7 +17,6 @@ export function splAssociatedTokenAccountProgram(
 ): Program<SplAssociatedTokenAccount> {
   return new Program<SplAssociatedTokenAccount>(
     IDL,
-    params?.programId ?? SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID,
     params?.provider,
     new SplAssociatedTokenAccountCoder(IDL)
   );
