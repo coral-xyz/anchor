@@ -1182,11 +1182,7 @@ const miscTest = (
         new anchor.Wallet(anchor.web3.Keypair.generate()),
         { commitment: program.provider.connection.commitment }
       );
-      const anotherProgram = new anchor.Program(
-        miscIdl,
-        program.programId,
-        anotherProvider
-      );
+      const anotherProgram = new anchor.Program(miscIdl, anotherProvider);
       // Request airdrop for secondary wallet.
       const signature = await program.provider.connection.requestAirdrop(
         anotherProvider.wallet.publicKey,
