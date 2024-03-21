@@ -9,6 +9,7 @@ misc = "3TEqcc8xhrhdspwbvoamUJe2borm4Nr72JxL66k6rgrh"
 misc_optional = "FNqz6pqLAwvMSds2FYjR4nKV3moVpPNtvkfGFrqLKrgG"
 overflow_checks = "overf1owChecks11111111111111111111111111111"
 remaining_accounts = "RemainingAccounts11111111111111111111111111"
+try_from = "TryFrom111111111111111111111111111111111111"
 
 [workspace]
 exclude = ["programs/shared"]

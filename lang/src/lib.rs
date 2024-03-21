@@ -395,9 +395,10 @@ pub mod prelude {
         context::Context, context::CpiContext, declare_id, emit, err, error, event, program,
         require, require_eq, require_gt, require_gte, require_keys_eq, require_keys_neq,
         require_neq, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source,
-        system_program::System, zero_copy, AccountDeserialize, AccountSerialize, Accounts,
-        AccountsClose, AccountsExit, AnchorDeserialize, AnchorSerialize, Id, InitSpace, Key,
-        Lamports, Owner, ProgramData, Result, Space, ToAccountInfo, ToAccountInfos, ToAccountMetas,
+        system_program::System, try_from, zero_copy, AccountDeserialize, AccountSerialize,
+        Accounts, AccountsClose, AccountsExit, AnchorDeserialize, AnchorSerialize, Id, InitSpace,
+        Key, Lamports, Owner, ProgramData, Result, Space, ToAccountInfo, ToAccountInfos,
+        ToAccountMetas,
     };
     pub use anchor_attribute_error::*;
     pub use borsh;
@@ -727,5 +728,12 @@ macro_rules! source {
             filename: file!(),
             line: line!(),
         }
+    };
+}
+
+#[macro_export]
+macro_rules! try_from {
+    ($ty: ty, $acc: expr) => {
+        <$ty>::try_from(unsafe { core::mem::transmute::<_, &AccountInfo<'_>>($acc.as_ref()) })
     };
 }
