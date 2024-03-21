@@ -13,11 +13,15 @@ interface GetProgramParams {
 }
 
 export function splTokenProgram(params?: GetProgramParams): Program<SplToken> {
-  return new Program<SplToken>(IDL, params?.provider, new SplTokenCoder(IDL));
+  return new Program<SplToken>(
+    params?.programId ? { ...IDL, address: params.programId.toString() } : IDL,
+    params?.provider,
+    new SplTokenCoder(IDL)
+  );
 }
 
 type SplToken = {
-  address: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+  address: string;
   metadata: {
     name: "splToken";
     version: "3.3.0";
