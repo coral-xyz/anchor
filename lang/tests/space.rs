@@ -97,6 +97,12 @@ pub struct TestConst {
     pub test_array: [u8; MAX_LEN as usize],
 }
 
+#[derive(InitSpace)]
+pub struct RawSpace {
+    #[space(100)]
+    pub test_string: Vec<u8>,
+}
+
 #[test]
 fn test_empty_struct() {
     assert_eq!(TestEmptyAccount::INIT_SPACE, 0);
@@ -146,4 +152,9 @@ fn test_full_path() {
 #[test]
 fn test_const() {
     assert_eq!(TestConst::INIT_SPACE, (4 + 10) + 10)
+}
+
+#[test]
+fn test_raw_space() {
+    assert_eq!(RawSpace::INIT_SPACE, 100)
 }
