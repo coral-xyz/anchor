@@ -17,13 +17,10 @@ pub mod lamports {
 
             // Transfer to the PDA
             anchor_lang::system_program::transfer(
-                CpiContext::new(
-                    ctx.accounts.system_program.to_account_info(),
-                    anchor_lang::system_program::Transfer {
-                        from: signer.to_account_info(),
-                        to: pda.to_account_info(),
-                    },
-                ),
+                CpiContext::new(anchor_lang::system_program::Transfer {
+                    from: signer.to_account_info(),
+                    to: pda.to_account_info(),
+                }),
                 amount,
             )?;
 

@@ -25,8 +25,7 @@ pub mod token_wrapper {
     pub fn initialize(ctx: Context<Initialize>, initializer_amount: u64) -> Result<()> {
         // deposit into vault
         token_interface::transfer_checked(
-            CpiContext::new(
-                ctx.accounts.deposit_token_program.to_account_info(),
+            CpiContext::new_with_id(
                 token_interface::TransferChecked {
                     from: ctx
                         .accounts
@@ -36,6 +35,7 @@ pub mod token_wrapper {
                     to: ctx.accounts.deposit_token_vault.to_account_info(),
                     authority: ctx.accounts.initializer.to_account_info(),
                 },
+                ctx.accounts.deposit_token_program.key(),
             ),
             initializer_amount,
             ctx.accounts.deposit_mint.decimals,
@@ -50,8 +50,7 @@ pub mod token_wrapper {
         ];
         let signer_seeds = &[&inner_seeds[..]];
         token_interface::mint_to(
-            CpiContext::new_with_signer(
-                ctx.accounts.wrapped_token_program.to_account_info(),
+            CpiContext::new_with_id_and_signer(
                 token_interface::MintTo {
                     mint: ctx.accounts.wrapped_mint.to_account_info(),
                     to: ctx
@@ -60,6 +59,7 @@ pub mod token_wrapper {
                         .to_account_info(),
                     authority: ctx.accounts.wrapper_authority.to_account_info(),
                 },
+                ctx.accounts.wrapped_token_program.key(),
                 signer_seeds,
             ),
             initializer_amount,
@@ -71,14 +71,14 @@ pub mod token_wrapper {
     pub fn wrap(ctx: Context<Wrap>, wrap_amount: u64) -> Result<()> {
         // deposit into vault
         token_interface::transfer_checked(
-            CpiContext::new(
-                ctx.accounts.deposit_token_program.to_account_info(),
+            CpiContext::new_with_id(
                 token_interface::TransferChecked {
                     from: ctx.accounts.user_deposit_token_account.to_account_info(),
                     mint: ctx.accounts.deposit_mint.to_account_info(),
                     to: ctx.accounts.deposit_token_vault.to_account_info(),
                     authority: ctx.accounts.signer.to_account_info(),
                 },
+                ctx.accounts.deposit_token_program.key(),
             ),
             wrap_amount,
             ctx.accounts.deposit_mint.decimals,
@@ -93,13 +93,13 @@ pub mod token_wrapper {
         ];
         let signer_seeds = &[&inner_seeds[..]];
         token_interface::mint_to(
-            CpiContext::new_with_signer(
-                ctx.accounts.wrapped_token_program.to_account_info(),
+            CpiContext::new_with_id_and_signer(
                 token_interface::MintTo {
                     mint: ctx.accounts.wrapped_mint.to_account_info(),
                     to: ctx.accounts.user_wrapped_token_account.to_account_info(),
                     authority: ctx.accounts.wrapper_authority.to_account_info(),
                 },
+                ctx.accounts.wrapped_token_program.key(),
                 signer_seeds,
             ),
             wrap_amount,
@@ -111,13 +111,13 @@ pub mod token_wrapper {
     pub fn unwrap(ctx: Context<Unwrap>, unwrap_amount: u64) -> Result<()> {
         // burn wrapped tokens
         token_interface::burn(
-            CpiContext::new(
-                ctx.accounts.wrapped_token_program.to_account_info(),
+            CpiContext::new_with_id(
                 token_interface::Burn {
                     mint: ctx.accounts.wrapped_mint.to_account_info(),
                     from: ctx.accounts.user_wrapped_token_account.to_account_info(),
                     authority: ctx.accounts.signer.to_account_info(),
                 },
+                ctx.accounts.wrapped_token_program.key(),
             ),
             unwrap_amount,
         )?;
@@ -131,14 +131,14 @@ pub mod token_wrapper {
         ];
         let signer_seeds = &[&inner_seeds[..]];
         token_interface::transfer_checked(
-            CpiContext::new_with_signer(
-                ctx.accounts.deposit_token_program.to_account_info(),
+            CpiContext::new_with_id_and_signer(
                 token_interface::TransferChecked {
                     from: ctx.accounts.deposit_token_vault.to_account_info(),
                     mint: ctx.accounts.deposit_mint.to_account_info(),
                     to: ctx.accounts.user_deposit_token_account.to_account_info(),
                     authority: ctx.accounts.wrapper_authority.to_account_info(),
                 },
+                ctx.accounts.deposit_token_program.key(),
                 signer_seeds,
             ),
             unwrap_amount,
