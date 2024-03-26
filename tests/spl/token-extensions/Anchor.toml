@@ -1,0 +1,17 @@
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[programs.localnet]
+token_extensions = "JAMtZAXLXRySHgfgEPwZcB75vJ6t3m8B5w4Xbz3oY6jQ"
+
+[scripts]
+test = "yarn run ts-mocha -t 1000000 tests/*.ts"
+
+[features]
+
+[test.validator]
+url = "https://api.mainnet-beta.solana.com"
+
+[[test.validator.clone]]
+address = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"

@@ -64,4 +64,4 @@ thiserror = "1"
 getrandom = { version = "0.2", features = ["custom"] }
 
 # TODO: Remove once https://github.com/solana-labs/solana/issues/33504 is resolved.
-ahash = "=0.8.6"
+ahash = "0.8.4"
