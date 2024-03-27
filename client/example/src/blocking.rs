@@ -61,6 +61,7 @@ pub fn main() -> Result<()> {
         let client = Client::new_with_options(url, payer, CommitmentConfig::processed());
         events(&client, opts.events_pid)?;
         optional(&client, opts.optional_pid)?;
+        relations_derivation(&client, opts.relations_derivation_pid)?;
     } else {
         // Client.
         let payer = Arc::new(payer);
@@ -76,6 +77,7 @@ pub fn main() -> Result<()> {
             (&basic_4, opts.basic_4_pid),
             (&events, opts.events_pid),
             (&optional, opts.optional_pid),
+            (&relations_derivation, opts.relations_derivation_pid),
         ];
         let mut handles = vec![];
         for (test, arg) in tests {
@@ -325,5 +327,75 @@ pub fn optional<C: Deref<Target = impl Signer> + Clone>(
 
     println!("Optional success!");
 
+    Ok(())
+}
+
+// Runs a client for tests/relations-derivation.
+//
+// Make sure to run a localnet with the program deploy to run this example.
+pub fn relations_derivation<C: Deref<Target = impl Signer> + Clone>(
+    client: &Client<C>,
+    pid: Pubkey,
+) -> Result<()> {
+    use relations_derivation::{accounts, instruction};
+    let program = client.program(pid)?;
+
+    // TODO It inits the base account
+    {
+        let my_account = program.payer();
+        let (account, _) = Pubkey::find_program_address(&[b"seed"], &pid);
+        let system_program = system_program::ID;
+
+        program
+            .request()
+            .accounts(accounts::InitBase {
+                my_account,
+                account,
+                system_program,
+            })
+            .args(instruction::InitBase {})
+            .send()
+            .unwrap();
+    }
+
+    // TODO It derives relations
+    {
+        let my_account = program.payer();
+        let (account, _) = Pubkey::find_program_address(&[b"seed"], &pid);
+
+        program
+            .request()
+            .accounts(accounts::TestRelation {
+                my_account,
+                account,
+                nested: accounts::Nested {
+                    my_account,
+                    account,
+                },
+            })
+            .args(instruction::TestRelation {})
+            .send()
+            .unwrap();
+    }
+
+    // TODO It can use relations derivation with seed constant:
+    {
+        let my_account = program.payer();
+        let (account, _) = Pubkey::find_program_address(&[relations_derivation::SEED], &pid);
+        let system_program = system_program::ID;
+
+        program
+            .request()
+            .accounts(accounts::TestSeedConstant {
+                my_account,
+                account,
+                system_program,
+            })
+            .args(instruction::TestSeedConstant {})
+            .send()
+            .unwrap();
+    }
+
+    println!("Relations derivation success!");
     Ok(())
 }

@@ -57,6 +57,7 @@ pub async fn main() -> Result<()> {
     let client = Client::new_with_options(url, payer, CommitmentConfig::processed());
     events(&client, opts.events_pid).await?;
     optional(&client, opts.optional_pid).await?;
+    relations_derivation(&client, opts.relations_derivation_pid).await?;
     // Success.
     Ok(())
 }
@@ -302,5 +303,75 @@ pub async fn optional<C: Deref<Target = impl Signer> + Clone>(
 
     println!("Optional success!");
 
+    Ok(())
+}
+
+pub async fn relations_derivation<C: Deref<Target = impl Signer> + Clone>(
+    client: &Client<C>,
+    pid: Pubkey,
+) -> Result<()> {
+    use relations_derivation::{accounts, instruction};
+    let program = client.program(pid)?;
+
+    // TODO It inits the base account
+    {
+        let my_account = program.payer();
+        let (account, _) = Pubkey::find_program_address(&[b"seed"], &pid);
+        let system_program = system_program::ID;
+
+        program
+            .request()
+            .accounts(accounts::InitBase {
+                my_account,
+                account,
+                system_program,
+            })
+            .args(instruction::InitBase {})
+            .send()
+            .await
+            .unwrap();
+    }
+
+    // TODO It derives relations
+    {
+        let my_account = program.payer();
+        let (account, _) = Pubkey::find_program_address(&[b"seed"], &pid);
+
+        program
+            .request()
+            .accounts(accounts::TestRelation {
+                my_account,
+                account,
+                nested: accounts::Nested {
+                    my_account,
+                    account,
+                },
+            })
+            .args(instruction::TestRelation {})
+            .send()
+            .await
+            .unwrap();
+    }
+
+    // TODO It can use relations derivation with seed constant:
+    {
+        let my_account = program.payer();
+        let (account, _) = Pubkey::find_program_address(&[relations_derivation::SEED], &pid);
+        let system_program = system_program::ID;
+
+        program
+            .request()
+            .accounts(accounts::TestSeedConstant {
+                my_account,
+                account,
+                system_program,
+            })
+            .args(instruction::TestSeedConstant {})
+            .send()
+            .await
+            .unwrap();
+    }
+
+    println!("Relations derivation success!");
     Ok(())
 }
