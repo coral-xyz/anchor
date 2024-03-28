@@ -22,6 +22,8 @@ Solana version: 1.18.8
 
 ### Notable changes
 
+- Upgrade Solana to `1.18.8` ([#2867](https://github.com/coral-xyz/anchor/pull/2867)).
+
 ---
 
 ## [0.29.0]
