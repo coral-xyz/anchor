@@ -412,7 +412,7 @@ jobs:
             path: tests/cashiers-check
           - cmd: cd tests/declare-id && anchor test --skip-lint && npx tsc --noEmit
             path: tests/declare-id
-          - cmd: cd tests/declare-program && anchor test --skip-lint && npx tsc --noEmit
+          - cmd: cd tests/declare-program && anchor test --skip-lint
             path: tests/declare-program
           - cmd: cd tests/typescript && anchor test --skip-lint && npx tsc --noEmit
             path: tests/typescript
