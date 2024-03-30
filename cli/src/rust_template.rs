@@ -562,8 +562,7 @@ pub fn ts_config(jest: bool) -> &'static str {
 }
 
 pub fn git_ignore() -> &'static str {
-    r#"
-.anchor
+    r#".anchor
 .DS_Store
 target
 **/*.rs.bk
@@ -574,8 +573,7 @@ test-ledger
 }
 
 pub fn prettier_ignore() -> &'static str {
-    r#"
-.anchor
+    r#".anchor
 .DS_Store
 target
 node_modules
