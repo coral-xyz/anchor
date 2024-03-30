@@ -1061,7 +1061,7 @@ pub struct _Validator {
     pub warp_slot: Option<String>,
     // Deactivate one or more features.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub deactivate_feature: Option<Vec<String>>
+    pub deactivate_feature: Option<Vec<String>>,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -1098,7 +1098,7 @@ pub struct Validator {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub warp_slot: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub deactivate_feature: Option<Vec<String>>
+    pub deactivate_feature: Option<Vec<String>>,
 }
 
 impl From<_Validator> for Validator {
@@ -1127,7 +1127,7 @@ impl From<_Validator> for Validator {
             slots_per_epoch: _validator.slots_per_epoch,
             ticks_per_slot: _validator.ticks_per_slot,
             warp_slot: _validator.warp_slot,
-            deactivate_feature: _validator.deactivate_feature
+            deactivate_feature: _validator.deactivate_feature,
         }
     }
 }
@@ -1152,7 +1152,7 @@ impl From<Validator> for _Validator {
             slots_per_epoch: validator.slots_per_epoch,
             ticks_per_slot: validator.ticks_per_slot,
             warp_slot: validator.warp_slot,
-            deactivate_feature: validator.deactivate_feature
+            deactivate_feature: validator.deactivate_feature,
         }
     }
 }
@@ -1242,7 +1242,9 @@ impl Merge for _Validator {
                 .or_else(|| self.slots_per_epoch.take()),
             ticks_per_slot: other.ticks_per_slot.or_else(|| self.ticks_per_slot.take()),
             warp_slot: other.warp_slot.or_else(|| self.warp_slot.take()),
-            deactivate_feature: other.deactivate_feature.or_else(|| self.deactivate_feature.take())
+            deactivate_feature: other
+                .deactivate_feature
+                .or_else(|| self.deactivate_feature.take()),
         };
     }
 }
