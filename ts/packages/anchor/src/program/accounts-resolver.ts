@@ -501,7 +501,7 @@ export class AccountsResolver<IDL extends Idl> {
   }
 }
 
-// TODO: this should be configureable to avoid unnecessary requests.
+// TODO: this should be configurable to avoid unnecessary requests.
 class AccountStore<IDL extends Idl> {
   private _cache = new Map<string, any>();
   private _idls: Record<string, AccountNamespace<any>> = {};
@@ -558,7 +558,7 @@ class AccountStore<IDL extends Idl> {
     if (!this._idls[programIdStr]) {
       const idl = await Program.fetchIdl(programId, this._provider);
       if (idl) {
-        const program = new Program(idl, programId, this._provider);
+        const program = new Program(idl, this._provider);
         this._idls[programIdStr] = program.account;
       }
     }
