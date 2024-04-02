@@ -64,6 +64,9 @@ pub use solana_program;
 #[cfg(feature = "event-cpi")]
 pub use anchor_attribute_event::{emit_cpi, event_cpi};
 
+#[cfg(feature = "idl-build")]
+pub use idl::IdlBuild;
+
 #[cfg(feature = "interface-instructions")]
 pub use anchor_attribute_program::interface;
 
