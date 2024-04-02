@@ -77,7 +77,7 @@ impl AccountDeserialize for UpgradeableLoaderState {
 mod idl_build {
     use super::*;
 
-    impl crate::IdlBuild for ProgramData {}
+    impl crate::idl::IdlBuild for ProgramData {}
     impl crate::Discriminator for ProgramData {
         const DISCRIMINATOR: [u8; 8] = [u8::MAX; 8];
     }
