@@ -4,8 +4,19 @@ import * as base64 from "../../utils/bytes/base64.js";
 import { Idl } from "../../idl.js";
 import { IdlCoder } from "./idl.js";
 import { EventCoder } from "../index.js";
+import BN from "bn.js";
+import { PublicKey } from "@solana/web3.js";
+import { decode as bs58Decode } from "../../utils/bytes/bs58.js";
 
 export class BorshEventCoder implements EventCoder {
+  /**
+   * CPI event discriminator.
+   * https://github.com/coral-xyz/anchor/blob/v0.29.0/lang/src/event.rs
+   */
+  private static eventIxTag: BN = new BN("1d9acb512ea545e4", "hex");
+
+  private address: string;
+
   /**
    * Maps account type identifier to a layout.
    */
@@ -42,6 +53,8 @@ export class BorshEventCoder implements EventCoder {
         ev.name,
       ])
     );
+
+    this.address = idl.address;
   }
 
   public decode(log: string): {
@@ -69,5 +82,27 @@ export class BorshEventCoder implements EventCoder {
     }
     const data = layout.decode(logArr.slice(8));
     return { data, name: eventName };
+  }
+
+  get idlAddress(): PublicKey {
+    return new PublicKey(this.address);
+  }
+
+  public static isCPIEventData(buffer: Buffer): boolean {
+    return buffer
+      .subarray(0, 8)
+      .equals(BorshEventCoder.eventIxTag.toBuffer("le"));
+  }
+
+  public decodeCpi(ixInputData: string): {
+    name: string;
+    data: any;
+  } | null {
+    const ixInputBufferData = bs58Decode(ixInputData);
+    if (BorshEventCoder.isCPIEventData(ixInputBufferData)) {
+      const eventData = base64.encode(ixInputBufferData.subarray(8));
+      return this.decode(eventData);
+    }
+    return null;
   }
 }
