@@ -40,6 +40,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - ts: Add `prepend` option to MethodBuilder `preInstructions` method ([#2863](https://github.com/coral-xyz/anchor/pull/2863)).
 - lang: Add `declare_program!` macro ([#2857](https://github.com/coral-xyz/anchor/pull/2857)).
 - cli: Add `deactivate_feature` flag to `solana-test-validator` config in Anchor.toml ([#2872](https://github.com/coral-xyz/anchor/pull/2872)).
+- idl: Add `docs` field for constants ([#2887](https://github.com/coral-xyz/anchor/pull/2887)).
 
 ### Fixes
 
@@ -87,6 +88,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - ts: `Program` instances use camelCase for everything ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
 - ts: Remove discriminator functions ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
 - ts: Remove `programId` parameter of the `Program` constructor ([#2864](https://github.com/coral-xyz/anchor/pull/2864)).
+- idl, syn: Move IDL types from the `anchor-syn` crate to the new IDL crate ([#2882](https://github.com/coral-xyz/anchor/pull/2882)).
 
 ## [0.29.0] - 2023-10-16
 
