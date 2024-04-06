@@ -23,7 +23,7 @@ export type IdlMetadata = {
   repository?: string;
   dependencies?: IdlDependency[];
   contact?: string;
-  deployment?: IdlDeployment;
+  deployments?: IdlDeployments;
 };
 
 export type IdlDependency = {
@@ -31,7 +31,7 @@ export type IdlDependency = {
   version: string;
 };
 
-export type IdlDeployment = {
+export type IdlDeployments = {
   mainnet?: string;
   testnet?: string;
   devnet?: string;

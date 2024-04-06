@@ -39,7 +39,7 @@ pub struct IdlMetadata {
     #[serde(skip_serializing_if = "is_default")]
     pub contact: Option<String>,
     #[serde(skip_serializing_if = "is_default")]
-    pub deployment: Option<IdlDeployment>,
+    pub deployments: Option<IdlDeployments>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -49,7 +49,7 @@ pub struct IdlDependency {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct IdlDeployment {
+pub struct IdlDeployments {
     pub mainnet: Option<String>,
     pub testnet: Option<String>,
     pub devnet: Option<String>,
