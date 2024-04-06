@@ -23,11 +23,19 @@ export type IdlMetadata = {
   repository?: string;
   dependencies?: IdlDependency[];
   contact?: string;
+  deployment?: IdlDeployment;
 };
 
 export type IdlDependency = {
   name: string;
   version: string;
+};
+
+export type IdlDeployment = {
+  mainnet?: string;
+  testnet?: string;
+  devnet?: string;
+  localnet?: string;
 };
 
 export type IdlInstruction = {
