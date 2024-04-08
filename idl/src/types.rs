@@ -38,12 +38,22 @@ pub struct IdlMetadata {
     pub dependencies: Vec<IdlDependency>,
     #[serde(skip_serializing_if = "is_default")]
     pub contact: Option<String>,
+    #[serde(skip_serializing_if = "is_default")]
+    pub deployments: Option<IdlDeployments>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IdlDependency {
     pub name: String,
     pub version: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct IdlDeployments {
+    pub mainnet: Option<String>,
+    pub testnet: Option<String>,
+    pub devnet: Option<String>,
+    pub localnet: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -178,6 +188,7 @@ pub struct IdlTypeDef {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "lowercase")]
+#[non_exhaustive]
 pub enum IdlSerialization {
     #[default]
     Borsh,
@@ -188,6 +199,7 @@ pub enum IdlSerialization {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "kind", rename_all = "lowercase")]
+#[non_exhaustive]
 pub enum IdlRepr {
     Rust(IdlReprModifier),
     C(IdlReprModifier),
@@ -266,6 +278,7 @@ pub enum IdlGenericArg {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
+#[non_exhaustive]
 pub enum IdlType {
     Bool,
     U8,
