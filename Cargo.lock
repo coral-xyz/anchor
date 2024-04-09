@@ -309,7 +309,7 @@ dependencies = [
  "solana-program",
  "spl-associated-token-account 3.0.2",
  "spl-memo",
- "spl-pod 0.1.1",
+ "spl-pod 0.2.2",
  "spl-token 4.0.0",
  "spl-token-2022 3.0.2",
  "spl-token-group-interface 0.1.0",
