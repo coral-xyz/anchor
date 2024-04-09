@@ -794,9 +794,9 @@ fn generate_constraint_init_group(
             };
 
             let extensions = if extensions.is_empty() {
-                quote! {None}
+                quote! {Option::<&::anchor_spl::token_interface::ExtensionsVec>::None}
             } else {
-                quote! {Some(&vec![#(#extensions),*])}
+                quote! {Option::<&::anchor_spl::token_interface::ExtensionsVec>::Some(&vec![#(#extensions),*])}
             };
 
             let freeze_authority = match freeze_authority {
@@ -882,9 +882,8 @@ fn generate_constraint_init_group(
                         // Create the account with the system program.
                         #create_account
 
-                        let extensions: Option<::anchor_spl::token_interface::ExtensionsVec> = #extensions;
                         // Initialize extensions.
-                        if let Some(extensions) = extensions {
+                        if let Some(extensions) = #extensions {
                             for e in extensions {
                                 match e {
                                     ::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::GroupPointer => {
