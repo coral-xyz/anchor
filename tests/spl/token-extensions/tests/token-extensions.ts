@@ -73,7 +73,8 @@ describe("token extensions", () => {
   });
 
   it("mint extension constraints test passes", async () => {
-    await program.methods.checkMintExtensionsConstraints()
+    await program.methods
+      .checkMintExtensionsConstraints()
       .accountsStrict({
         authority: payer.publicKey,
         mint: mint.publicKey,
@@ -81,5 +82,4 @@ describe("token extensions", () => {
       .signers([payer])
       .rpc();
   });
-
 });
