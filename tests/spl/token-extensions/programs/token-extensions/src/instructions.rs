@@ -65,7 +65,7 @@ pub struct CreateMintAccount<'info> {
     pub mint_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
     /// CHECK: This account's data is a buffer of TLV data
     #[account(
-        init_if_needed,
+        init,
         space = get_meta_list_size(None),
         seeds = [META_LIST_ACCOUNT_SEED, mint.key().as_ref()],
         bump,
@@ -73,7 +73,6 @@ pub struct CreateMintAccount<'info> {
     )]
     pub extra_metas_account: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Program<'info, Token2022>,
 }

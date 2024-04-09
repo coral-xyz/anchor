@@ -64,7 +64,6 @@ describe("token extensions", () => {
         }),
         extraMetasAccount: extraMetasAccount,
         systemProgram: anchor.web3.SystemProgram.programId,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
         tokenProgram: TOKEN_2022_PROGRAM_ID,
       })

@@ -11,7 +11,7 @@ pub mod utils;
 pub use instructions::*;
 pub use utils::*;
 
-declare_id!("JAMtZAXLXRySHgfgEPwZcB75vJ6t3m8B5w4Xbz3oY6jQ");
+declare_id!("tKEkkQtgMXhdaz5NMTR3XbdUu215sZyHSj6Menvous1");
 
 #[program]
 pub mod token_extensions {

@@ -14,11 +14,12 @@ no-entrypoint = []
 no-idl = []
 cpi = ["no-entrypoint"]
 default = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 
 [dependencies]
 anchor-lang = { path = "../../../../../lang", features = ["init-if-needed"] }
-anchor-spl = { path = "../../../../../spl", features = ["token_2022", "token_2022_extensions"]  }
-spl-tlv-account-resolution = "0.4.0"
-spl-transfer-hook-interface = "0.3.0"
-spl-type-length-value = "0.3.0"
-spl-pod = "0.1.0"
+anchor-spl = { path = "../../../../../spl" }
+spl-tlv-account-resolution = "0.6.3"
+spl-transfer-hook-interface = "0.6.3"
+spl-type-length-value = "0.4.3"
+spl-pod = "0.2.2"
