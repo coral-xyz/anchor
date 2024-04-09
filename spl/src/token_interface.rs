@@ -8,6 +8,7 @@ use spl_token_2022::{
 use std::ops::Deref;
 
 pub use crate::token_2022::*;
+pub use crate::token_2022_extensions::*;
 
 static IDS: [Pubkey; 2] = [spl_token::ID, spl_token_2022::ID];
 
@@ -76,8 +77,6 @@ impl anchor_lang::Ids for TokenInterface {
     }
 }
 
-#[cfg(feature = "token_2022_extensions")]
-pub use crate::token_2022_extensions::*;
 
 pub type ExtensionsVec = Vec<ExtensionType>;
 
