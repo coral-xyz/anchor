@@ -23,7 +23,11 @@ fn gen_event(idl: &Idl) -> proc_macro2::TokenStream {
     let match_arms = idl.events.iter().map(|ev| {
         let disc = gen_discriminator(&ev.discriminator);
         let name = format_ident!("{}", ev.name);
-        let event = quote! { #name::try_from_slice(&value[8..]).map(Self::#name) };
+        let event = quote! {
+            #name::try_from_slice(&value[8..])
+                .map(Self::#name)
+                .map_err(Into::into)
+        };
         quote! { #disc => #event }
     });
 
@@ -42,22 +46,22 @@ fn gen_event(idl: &Idl) -> proc_macro2::TokenStream {
             ///
             /// This method returns an error if the discriminator of the given bytes don't match
             /// with any of the existing events, or if the deserialization fails.
-            pub fn try_from_bytes(bytes: &[u8]) -> std::io::Result<Self> {
+            pub fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
                 Self::try_from(bytes)
             }
         }
 
         impl TryFrom<&[u8]> for Event {
-            type Error = std::io::Error;
+            type Error = anchor_lang::error::Error;
 
-            fn try_from(value: &[u8]) -> std::io::Result<Self> {
+            fn try_from(value: &[u8]) -> Result<Self> {
                 if value.len() < 8 {
-                    return Err(std::io::ErrorKind::InvalidData.into());
+                    return Err(ProgramError::InvalidArgument.into());
                 }
 
                 match &value[..8] {
                     #(#match_arms,)*
-                    _ => Err(std::io::ErrorKind::NotFound.into()),
+                    _ => Err(ProgramError::InvalidArgument.into()),
                 }
             }
         }
