@@ -954,7 +954,7 @@ fn generate_constraint_init_group(
                                 }
                             };
                         }
-                        
+
                         // Initialize the mint account.
                         let cpi_program = #token_program.to_account_info();
                         let accounts = ::anchor_spl::token_interface::InitializeMint2 {
