@@ -76,9 +76,6 @@ impl anchor_lang::Ids for TokenInterface {
     }
 }
 
-#[cfg(any(feature = "token_2022", feature = "token_2022_extensions"))]
-pub use crate::token_2022::*;
-
 #[cfg(feature = "token_2022_extensions")]
 pub use crate::token_2022_extensions::*;
 
