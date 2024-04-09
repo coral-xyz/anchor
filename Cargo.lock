@@ -312,7 +312,7 @@ dependencies = [
  "spl-pod 0.2.2",
  "spl-token 4.0.0",
  "spl-token-2022 3.0.2",
- "spl-token-group-interface 0.1.0",
+ "spl-token-group-interface 0.2.3",
  "spl-token-metadata-interface 0.3.3",
 ]
 
