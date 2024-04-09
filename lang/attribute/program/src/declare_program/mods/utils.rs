@@ -51,6 +51,10 @@ fn gen_event(idl: &Idl) -> proc_macro2::TokenStream {
             type Error = std::io::Error;
 
             fn try_from(value: &[u8]) -> std::io::Result<Self> {
+                if value.len() < 8 {
+                    return Err(std::io::ErrorKind::InvalidData.into());
+                }
+
                 match &value[..8] {
                     #(#match_arms,)*
                     _ => Err(std::io::ErrorKind::NotFound.into()),
