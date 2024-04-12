@@ -58,13 +58,27 @@ describe("Events", () => {
       const ixData = anchor.utils.bytes.bs58.decode(
         txResult.meta.innerInstructions[0].instructions[0].data
       );
+
       const eventData = anchor.utils.bytes.base64.encode(ixData.slice(8));
       const event = program.coder.events.decode(eventData);
+      assertCpiEvent(event);
 
+      // ensure the coder works directly with cpiEvent
+      const cpiEvent = program.coder.events.decode(
+        txResult.meta.innerInstructions[0].instructions[0].data
+      );
+      assertCpiEvent(cpiEvent);
+
+      const cpiEvents = program.coder.events.parseCpiEvents(txResult);
+      assert(cpiEvents.length === 1);
+      assertCpiEvent(cpiEvents[0]);
+    });
+
+    function assertCpiEvent(event: any) {
       assert.strictEqual(event.name, "myOtherEvent");
       assert.strictEqual(event.data.label, "cpi");
       assert.strictEqual((event.data.data as anchor.BN).toNumber(), 7);
-    });
+    }
 
     it("Throws on unauthorized invocation", async () => {
       const tx = new anchor.web3.Transaction();

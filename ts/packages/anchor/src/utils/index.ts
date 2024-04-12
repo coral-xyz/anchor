@@ -5,4 +5,3 @@ export * as bytes from "./bytes/index.js";
 export * as token from "./token.js";
 export * as features from "./features.js";
 export * as registry from "./registry.js";
-export * as events from "./events.js";
