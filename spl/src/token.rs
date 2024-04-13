@@ -474,7 +474,7 @@ impl Deref for TokenAccount {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Copy)]
 pub struct Mint(spl_token::state::Mint);
 
 impl Mint {

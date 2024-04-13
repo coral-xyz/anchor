@@ -42,7 +42,7 @@ impl Deref for TokenAccount {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Copy)]
 pub struct Mint(spl_token_2022::state::Mint);
 
 impl anchor_lang::AccountDeserialize for Mint {
