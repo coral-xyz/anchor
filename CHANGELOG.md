@@ -44,7 +44,6 @@ The minor version will be incremented upon a breaking change and the patch versi
 - idl: Store deployment addresses for other clusters ([#2892](https://github.com/coral-xyz/anchor/pull/2892)).
 - lang: Add `Event` utility type to get events from bytes ([#2897](https://github.com/coral-xyz/anchor/pull/2897)).
 - lang, spl: Add support for [token extensions](https://solana.com/solutions/token-extensions) ([#2789](https://github.com/coral-xyz/anchor/pull/2789)).
-- spl: Make TokenAccount Copy ([#2904])(https://github.com/coral-xyz/anchor/pull/2904)
 
 ### Fixes
 
@@ -72,6 +71,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - avm, cli: Fix `stdsimd` feature compilation error from `ahash` when installing the CLI using newer Rust versions ([#2867](https://github.com/coral-xyz/anchor/pull/2867)).
 - spl: Fix not being able to deserialize newer token 2022 extensions ([#2876](https://github.com/coral-xyz/anchor/pull/2876)).
 - spl: Remove `solana-program` dependency ([#2900](https://github.com/coral-xyz/anchor/pull/2900)).
+- spl: Make TokenAccount Copy ([#2904])(https://github.com/coral-xyz/anchor/pull/2904)
 
 ### Breaking
 
