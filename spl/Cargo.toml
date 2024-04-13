@@ -25,6 +25,7 @@ stake = ["borsh"]
 token = ["spl-token"]
 token_2022 = ["spl-token-2022"]
 token_2022_extensions = ["spl-token-2022", "spl-token-group-interface", "spl-token-metadata-interface", "spl-pod"]
+mpl_core = ["mpl-core"]
 
 [dependencies]
 anchor-lang = { path = "../lang", version = "0.29.0", features = ["derive"] }
@@ -38,3 +39,4 @@ spl-token-2022 = { version = "3", features = ["no-entrypoint"], optional = true 
 spl-token-group-interface = { version = "0.2.3", optional = true }
 spl-token-metadata-interface = { version = "0.3.3", optional = true }
 spl-pod = { version = "0.2.2", optional = true }
+mpl-core = { version = "0.4.4", optional = true}

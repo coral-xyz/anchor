@@ -37,3 +37,6 @@ pub mod memo;
 
 #[cfg(feature = "idl-build")]
 mod idl_build;
+
+#[cfg(feature = "mpl_core")]
+mod mpl_core;
