@@ -9,6 +9,8 @@ import BN from "bn.js";
 import {
   CompiledInnerInstruction,
   PublicKey,
+  Transaction,
+  TransactionResponse,
   VersionedTransactionResponse,
 } from "@solana/web3.js";
 
@@ -126,7 +128,7 @@ export class BorshEventCoder implements EventCoder {
   }
 
   public parseCpiEvents(
-    transactionResponse: VersionedTransactionResponse
+    transactionResponse: VersionedTransactionResponse | TransactionResponse
   ): { name: string; data: any }[] {
     const events: { name: string; data: any }[] = [];
     const inner: CompiledInnerInstruction[] =
