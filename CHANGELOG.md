@@ -14,12 +14,6 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Fixes
 
-### Breaking
-
-## [0.30.1] - 2024-04-17
-
-### Fixes
-
 - syn: Eliminate variable allocations that build up stack space for token extension code generation ([#2913](https://github.com/coral-xyz/anchor/pull/2913)).
 
 ## [0.30.0] - 2024-04-15

@@ -248,7 +248,7 @@ name = "anchor-derive-serde"
 version = "0.30.0"
 dependencies = [
  "anchor-syn",
- "borsh-derive-internal 0.9.3",
+ "borsh-derive-internal 0.10.3",
  "proc-macro2",
  "quote",
  "syn 1.0.109",
@@ -280,7 +280,7 @@ dependencies = [
  "arrayref",
  "base64 0.21.7",
  "bincode",
- "borsh 0.9.3",
+ "borsh 0.10.3",
  "bytemuck",
  "getrandom 0.2.10",
  "solana-program",
@@ -303,7 +303,7 @@ name = "anchor-spl"
 version = "0.30.0"
 dependencies = [
  "anchor-lang",
- "borsh 0.9.3",
+ "borsh 0.10.3",
  "mpl-token-metadata",
  "serum_dex",
  "spl-associated-token-account 3.0.2",
