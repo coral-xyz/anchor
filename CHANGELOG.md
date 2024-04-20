@@ -12,6 +12,8 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Features
 
+- avm: Support customizing the installation location using `AVM_HOME` environment variable ([#2917](https://github.com/coral-xyz/anchor/pull/2917))
+
 ### Fixes
 
 - syn: Eliminate variable allocations that build up stack space for token extension code generation ([#2913](https://github.com/coral-xyz/anchor/pull/2913)).
