@@ -216,28 +216,24 @@ fn get_pda(acc: &Field, accounts: &AccountsStruct) -> TokenStream {
         })
         .and_then(|(wallet, mint, token_program)| {
             // ATA constraints have implicit `.key()` call
-            let parse_ata = |expr: &syn::Expr| {
-                let expr = quote! { #expr.key().as_ref() };
-                parse_default(&syn::parse2(expr).unwrap())
-            };
+            let parse_expr = |ts| parse_default(&syn::parse2(ts).unwrap()).ok();
+            let parse_ata = |expr| parse_expr(quote! { #expr.key().as_ref() });
 
             let wallet = parse_ata(wallet);
             let mint = parse_ata(mint);
             let token_program = token_program
                 .as_ref()
-                .map(|tp| tp.to_owned())
-                .or_else(|| syn::parse2(quote!(anchor_spl::token::ID)).ok())
-                .and_then(|tp| parse_ata(&tp).ok());
+                .and_then(parse_ata)
+                .or_else(|| parse_expr(quote!(anchor_spl::token::ID)));
 
             let seeds = match (wallet, mint, token_program) {
-                (Ok(w), Ok(m), Some(tp)) => quote! { vec![#w, #tp, #m] },
+                (Some(w), Some(m), Some(tp)) => quote! { vec![#w, #tp, #m] },
                 _ => return None,
             };
 
-            let program =
-                parse_default(&syn::parse2(quote!(anchor_spl::associated_token::ID)).unwrap())
-                    .map(|program| quote! { Some(#program) })
-                    .unwrap();
+            let program = parse_expr(quote!(anchor_spl::associated_token::ID))
+                .map(|program| quote! { Some(#program) })
+                .unwrap();
 
             Some(quote! {
                 Some(
