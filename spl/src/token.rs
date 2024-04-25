@@ -1,9 +1,8 @@
 use anchor_lang::solana_program::account_info::AccountInfo;
-
 use anchor_lang::solana_program::program_pack::Pack;
 use anchor_lang::solana_program::pubkey::Pubkey;
+use anchor_lang::Result;
 use anchor_lang::{context::CpiContext, Accounts};
-use anchor_lang::{solana_program, Result};
 use std::ops::Deref;
 
 pub use spl_token;
@@ -21,13 +20,9 @@ pub fn transfer<'info>(
         &[],
         amount,
     )?;
-    solana_program::program::invoke_signed(
+    anchor_lang::solana_program::program::invoke_signed(
         &ix,
-        &[
-            ctx.accounts.from.clone(),
-            ctx.accounts.to.clone(),
-            ctx.accounts.authority.clone(),
-        ],
+        &[ctx.accounts.from, ctx.accounts.to, ctx.accounts.authority],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -48,13 +43,13 @@ pub fn transfer_checked<'info>(
         amount,
         decimals,
     )?;
-    solana_program::program::invoke_signed(
+    anchor_lang::solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.from.clone(),
-            ctx.accounts.mint.clone(),
-            ctx.accounts.to.clone(),
-            ctx.accounts.authority.clone(),
+            ctx.accounts.from,
+            ctx.accounts.mint,
+            ctx.accounts.to,
+            ctx.accounts.authority,
         ],
         ctx.signer_seeds,
     )
@@ -73,13 +68,9 @@ pub fn mint_to<'info>(
         &[],
         amount,
     )?;
-    solana_program::program::invoke_signed(
+    anchor_lang::solana_program::program::invoke_signed(
         &ix,
-        &[
-            ctx.accounts.to.clone(),
-            ctx.accounts.mint.clone(),
-            ctx.accounts.authority.clone(),
-        ],
+        &[ctx.accounts.to, ctx.accounts.mint, ctx.accounts.authority],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -94,13 +85,9 @@ pub fn burn<'info>(ctx: CpiContext<'_, '_, '_, 'info, Burn<'info>>, amount: u64)
         &[],
         amount,
     )?;
-    solana_program::program::invoke_signed(
+    anchor_lang::solana_program::program::invoke_signed(
         &ix,
-        &[
-            ctx.accounts.from.clone(),
-            ctx.accounts.mint.clone(),
-            ctx.accounts.authority.clone(),
-        ],
+        &[ctx.accounts.from, ctx.accounts.mint, ctx.accounts.authority],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -118,12 +105,12 @@ pub fn approve<'info>(
         &[],
         amount,
     )?;
-    solana_program::program::invoke_signed(
+    anchor_lang::solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.to.clone(),
-            ctx.accounts.delegate.clone(),
-            ctx.accounts.authority.clone(),
+            ctx.accounts.to,
+            ctx.accounts.delegate,
+            ctx.accounts.authority,
         ],
         ctx.signer_seeds,
     )
@@ -145,13 +132,13 @@ pub fn approve_checked<'info>(
         amount,
         decimals,
     )?;
-    solana_program::program::invoke_signed(
+    anchor_lang::solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.to.clone(),
-            ctx.accounts.mint.clone(),
-            ctx.accounts.delegate.clone(),
-            ctx.accounts.authority.clone(),
+            ctx.accounts.to,
+            ctx.accounts.mint,
+            ctx.accounts.delegate,
+            ctx.accounts.authority,
         ],
         ctx.signer_seeds,
     )
@@ -165,9 +152,9 @@ pub fn revoke<'info>(ctx: CpiContext<'_, '_, '_, 'info, Revoke<'info>>) -> Resul
         ctx.accounts.authority.key,
         &[],
     )?;
-    solana_program::program::invoke_signed(
+    anchor_lang::solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.source.clone(), ctx.accounts.authority.clone()],
+        &[ctx.accounts.source, ctx.accounts.authority],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -182,13 +169,13 @@ pub fn initialize_account<'info>(
         ctx.accounts.mint.key,
         ctx.accounts.authority.key,
     )?;
-    solana_program::program::invoke_signed(
+    anchor_lang::solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.account.clone(),
-            ctx.accounts.mint.clone(),
-            ctx.accounts.authority.clone(),
-            ctx.accounts.rent.clone(),
+            ctx.accounts.account,
+            ctx.accounts.mint,
+            ctx.accounts.authority,
+            ctx.accounts.rent,
         ],
         ctx.signer_seeds,
     )
@@ -204,9 +191,9 @@ pub fn initialize_account3<'info>(
         ctx.accounts.mint.key,
         ctx.accounts.authority.key,
     )?;
-    solana_program::program::invoke_signed(
+    anchor_lang::solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.account.clone(), ctx.accounts.mint.clone()],
+        &[ctx.accounts.account, ctx.accounts.mint],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -220,12 +207,12 @@ pub fn close_account<'info>(ctx: CpiContext<'_, '_, '_, 'info, CloseAccount<'inf
         ctx.accounts.authority.key,
         &[], // TODO: support multisig
     )?;
-    solana_program::program::invoke_signed(
+    anchor_lang::solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.account.clone(),
-            ctx.accounts.destination.clone(),
-            ctx.accounts.authority.clone(),
+            ctx.accounts.account,
+            ctx.accounts.destination,
+            ctx.accounts.authority,
         ],
         ctx.signer_seeds,
     )
@@ -242,12 +229,12 @@ pub fn freeze_account<'info>(
         ctx.accounts.authority.key,
         &[], // TODO: Support multisig signers.
     )?;
-    solana_program::program::invoke_signed(
+    anchor_lang::solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.account.clone(),
-            ctx.accounts.mint.clone(),
-            ctx.accounts.authority.clone(),
+            ctx.accounts.account,
+            ctx.accounts.mint,
+            ctx.accounts.authority,
         ],
         ctx.signer_seeds,
     )
@@ -262,12 +249,12 @@ pub fn thaw_account<'info>(ctx: CpiContext<'_, '_, '_, 'info, ThawAccount<'info>
         ctx.accounts.authority.key,
         &[], // TODO: Support multisig signers.
     )?;
-    solana_program::program::invoke_signed(
+    anchor_lang::solana_program::program::invoke_signed(
         &ix,
         &[
-            ctx.accounts.account.clone(),
-            ctx.accounts.mint.clone(),
-            ctx.accounts.authority.clone(),
+            ctx.accounts.account,
+            ctx.accounts.mint,
+            ctx.accounts.authority,
         ],
         ctx.signer_seeds,
     )
@@ -287,9 +274,9 @@ pub fn initialize_mint<'info>(
         freeze_authority,
         decimals,
     )?;
-    solana_program::program::invoke_signed(
+    anchor_lang::solana_program::program::invoke_signed(
         &ix,
-        &[ctx.accounts.mint.clone(), ctx.accounts.rent.clone()],
+        &[ctx.accounts.mint, ctx.accounts.rent],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -308,7 +295,7 @@ pub fn initialize_mint2<'info>(
         freeze_authority,
         decimals,
     )?;
-    solana_program::program::invoke_signed(&ix, &[ctx.accounts.mint.clone()], ctx.signer_seeds)
+    anchor_lang::solana_program::program::invoke_signed(&ix, &[ctx.accounts.mint], ctx.signer_seeds)
         .map_err(Into::into)
 }
 
@@ -330,12 +317,9 @@ pub fn set_authority<'info>(
         ctx.accounts.current_authority.key,
         &[], // TODO: Support multisig signers.
     )?;
-    solana_program::program::invoke_signed(
+    anchor_lang::solana_program::program::invoke_signed(
         &ix,
-        &[
-            ctx.accounts.account_or_mint.clone(),
-            ctx.accounts.current_authority.clone(),
-        ],
+        &[ctx.accounts.account_or_mint, ctx.accounts.current_authority],
         ctx.signer_seeds,
     )
     .map_err(Into::into)
@@ -343,8 +327,12 @@ pub fn set_authority<'info>(
 
 pub fn sync_native<'info>(ctx: CpiContext<'_, '_, '_, 'info, SyncNative<'info>>) -> Result<()> {
     let ix = spl_token::instruction::sync_native(&spl_token::ID, ctx.accounts.account.key)?;
-    solana_program::program::invoke_signed(&ix, &[ctx.accounts.account.clone()], ctx.signer_seeds)
-        .map_err(Into::into)
+    anchor_lang::solana_program::program::invoke_signed(
+        &ix,
+        &[ctx.accounts.account],
+        ctx.signer_seeds,
+    )
+    .map_err(Into::into)
 }
 
 #[derive(Accounts)]
@@ -455,7 +443,7 @@ pub struct SyncNative<'info> {
     pub account: AccountInfo<'info>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Copy)]
 pub struct TokenAccount(spl_token::state::Account);
 
 impl TokenAccount {
@@ -486,7 +474,7 @@ impl Deref for TokenAccount {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Copy)]
 pub struct Mint(spl_token::state::Mint);
 
 impl Mint {

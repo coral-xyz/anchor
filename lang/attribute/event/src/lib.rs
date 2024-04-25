@@ -21,30 +21,40 @@ pub fn event(
     let event_name = &event_strct.ident;
 
     let discriminator: proc_macro2::TokenStream = {
-        let discriminator_preimage = format!("event:{event_name}");
-        let mut discriminator = [0u8; 8];
-        discriminator.copy_from_slice(
-            &anchor_syn::hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..8],
-        );
-        format!("{discriminator:?}").parse().unwrap()
+        let discriminator_preimage = format!("event:{event_name}").into_bytes();
+        let discriminator = anchor_syn::hash::hash(&discriminator_preimage);
+        format!("{:?}", &discriminator.0[..8]).parse().unwrap()
     };
 
-    proc_macro::TokenStream::from(quote! {
+    let ret = quote! {
         #[derive(anchor_lang::__private::EventIndex, AnchorSerialize, AnchorDeserialize)]
         #event_strct
 
         impl anchor_lang::Event for #event_name {
             fn data(&self) -> Vec<u8> {
-                let mut d = #discriminator.to_vec();
-                d.append(&mut self.try_to_vec().unwrap());
-                d
+                let mut data = Vec::with_capacity(256);
+                data.extend_from_slice(&#discriminator);
+                self.serialize(&mut data).unwrap();
+                data
             }
         }
 
         impl anchor_lang::Discriminator for #event_name {
             const DISCRIMINATOR: [u8; 8] = #discriminator;
         }
-    })
+    };
+
+    #[cfg(feature = "idl-build")]
+    {
+        let idl_build = anchor_syn::idl::gen_idl_print_fn_event(&event_strct);
+        return proc_macro::TokenStream::from(quote! {
+            #ret
+            #idl_build
+        });
+    }
+
+    #[allow(unreachable_code)]
+    proc_macro::TokenStream::from(ret)
 }
 
 // EventIndex is a marker macro. It functionally does nothing other than
@@ -142,13 +152,12 @@ pub fn emit_cpi(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let authority = EventAuthority::get();
     let authority_name = authority.name_token_stream();
-    let authority_name_str = authority.name;
     let authority_seeds = authority.seeds;
 
     proc_macro::TokenStream::from(quote! {
         {
             let authority_info = ctx.accounts.#authority_name.to_account_info();
-            let authority_bump = *ctx.bumps.get(#authority_name_str).unwrap();
+            let authority_bump = ctx.bumps.#authority_name;
 
             let disc = anchor_lang::event::EVENT_IX_TAG_LE;
             let inner_data = anchor_lang::Event::data(&#event_struct);

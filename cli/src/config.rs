@@ -1,8 +1,9 @@
 use crate::is_hidden;
 use anchor_client::Cluster;
-use anchor_syn::idl::Idl;
+use anchor_lang_idl::types::Idl;
 use anyhow::{anyhow, bail, Context, Error, Result};
 use clap::{Parser, ValueEnum};
+use dirs::home_dir;
 use heck::ToSnakeCase;
 use reqwest::Url;
 use serde::de::{self, MapAccess, Visitor};
@@ -114,6 +115,8 @@ impl Manifest {
         let mut cwd_opt = Some(start_from.as_path());
 
         while let Some(cwd) = cwd_opt {
+            let mut anchor_toml = false;
+
             for f in fs::read_dir(cwd).with_context(|| {
                 format!("Error reading the directory with path: {}", cwd.display())
             })? {
@@ -122,15 +125,21 @@ impl Manifest {
                         format!("Error reading the directory with path: {}", cwd.display())
                     })?
                     .path();
-                if let Some(filename) = p.file_name() {
-                    if filename.to_str() == Some("Cargo.toml") {
-                        let m = WithPath::new(Manifest::from_path(&p)?, p);
-                        return Ok(Some(m));
+                if let Some(filename) = p.file_name().and_then(|name| name.to_str()) {
+                    if filename == "Cargo.toml" {
+                        return Ok(Some(WithPath::new(Manifest::from_path(&p)?, p)));
+                    }
+                    if filename == "Anchor.toml" {
+                        anchor_toml = true;
                     }
                 }
             }
 
-            // Not found. Go up a directory level.
+            // Not found. Go up a directory level, but don't go up from Anchor.toml
+            if anchor_toml {
+                break;
+            }
+
             cwd_opt = cwd.parent();
         }
 
@@ -263,61 +272,71 @@ impl WithPath<Config> {
         Ok(r)
     }
 
+    /// Read and get all the programs from the workspace.
+    ///
+    /// This method will only return the given program if `name` exists.
+    pub fn get_programs(&self, name: Option<String>) -> Result<Vec<Program>> {
+        let programs = self.read_all_programs()?;
+        let programs = match name {
+            Some(name) => vec![programs
+                .into_iter()
+                .find(|program| {
+                    name == program.lib_name
+                        || name == program.path.file_name().unwrap().to_str().unwrap()
+                })
+                .ok_or_else(|| anyhow!("Program {name} not found"))?],
+            None => programs,
+        };
+
+        Ok(programs)
+    }
+
+    /// Get the specified program from the workspace.
+    pub fn get_program(&self, name: &str) -> Result<Program> {
+        self.get_programs(Some(name.to_owned()))?
+            .into_iter()
+            .next()
+            .ok_or_else(|| anyhow!("Expected a program"))
+    }
+
     pub fn canonicalize_workspace(&self) -> Result<(Vec<PathBuf>, Vec<PathBuf>)> {
-        let members = self
-            .workspace
-            .members
-            .iter()
-            .map(|m| {
-                self.path()
-                    .parent()
-                    .unwrap()
-                    .join(m)
-                    .canonicalize()
-                    .unwrap_or_else(|_| {
-                        panic!("Error reading workspace.members. File {:?} does not exist at path {:?}.", m, self.path)
-                    })
-            })
-            .collect();
-        let exclude = self
-            .workspace
-            .exclude
-            .iter()
-            .map(|m| {
-                self.path()
-                    .parent()
-                    .unwrap()
-                    .join(m)
-                    .canonicalize()
-                    .unwrap_or_else(|_| {
-                        panic!("Error reading workspace.exclude. File {:?} does not exist at path {:?}.", m, self.path)
-                    })
-            })
-            .collect();
+        let members = self.process_paths(&self.workspace.members)?;
+        let exclude = self.process_paths(&self.workspace.exclude)?;
         Ok((members, exclude))
     }
 
-    pub fn get_program(&self, name: &str) -> Result<Option<WithPath<Program>>> {
-        for program in self.read_all_programs()? {
-            let cargo_toml = program.path.join("Cargo.toml");
-            if !cargo_toml.exists() {
-                return Err(anyhow!(
-                    "Did not find Cargo.toml at the path: {}",
-                    program.path.display()
-                ));
-            }
-            let p_lib_name = Manifest::from_path(&cargo_toml)?.lib_name()?;
-            if name == p_lib_name {
-                let path = self
-                    .path()
-                    .parent()
-                    .unwrap()
-                    .canonicalize()?
-                    .join(&program.path);
-                return Ok(Some(WithPath::new(program, path)));
-            }
-        }
-        Ok(None)
+    fn process_paths(&self, paths: &[String]) -> Result<Vec<PathBuf>, Error> {
+        let base_path = self.path().parent().unwrap();
+        paths
+            .iter()
+            .flat_map(|m| {
+                let path = base_path.join(m);
+                if m.ends_with("/*") {
+                    let dir = path.parent().unwrap();
+                    match fs::read_dir(dir) {
+                        Ok(entries) => entries
+                            .filter_map(|entry| entry.ok())
+                            .map(|entry| self.process_single_path(&entry.path()))
+                            .collect(),
+                        Err(e) => vec![Err(Error::new(io::Error::new(
+                            io::ErrorKind::Other,
+                            format!("Error reading directory {:?}: {}", dir, e),
+                        )))],
+                    }
+                } else {
+                    vec![self.process_single_path(&path)]
+                }
+            })
+            .collect()
+    }
+
+    fn process_single_path(&self, path: &PathBuf) -> Result<PathBuf, Error> {
+        path.canonicalize().map_err(|e| {
+            Error::new(io::Error::new(
+                io::ErrorKind::Other,
+                format!("Error canonicalizing path {:?}: {}", path, e),
+            ))
+        })
     }
 }
 
@@ -336,8 +355,7 @@ impl<T> std::ops::DerefMut for WithPath<T> {
 
 #[derive(Debug, Default)]
 pub struct Config {
-    pub anchor_version: Option<String>,
-    pub solana_version: Option<String>,
+    pub toolchain: ToolchainConfig,
     pub features: FeaturesConfig,
     pub registry: RegistryConfig,
     pub provider: ProviderConfig,
@@ -352,11 +370,36 @@ pub struct Config {
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct ToolchainConfig {
+    pub anchor_version: Option<String>,
+    pub solana_version: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FeaturesConfig {
-    #[serde(default)]
-    pub seeds: bool,
+    /// Enable account resolution.
+    ///
+    /// Not able to specify default bool value: https://github.com/serde-rs/serde/issues/368
+    #[serde(default = "FeaturesConfig::get_default_resolution")]
+    pub resolution: bool,
+    /// Disable safety comment checks
     #[serde(default, rename = "skip-lint")]
     pub skip_lint: bool,
+}
+
+impl FeaturesConfig {
+    fn get_default_resolution() -> bool {
+        true
+    }
+}
+
+impl Default for FeaturesConfig {
+    fn default() -> Self {
+        Self {
+            resolution: Self::get_default_resolution(),
+            skip_lint: false,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -431,11 +474,12 @@ impl Config {
     }
 
     pub fn docker(&self) -> String {
-        let ver = self
+        let version = self
+            .toolchain
             .anchor_version
-            .clone()
-            .unwrap_or_else(|| crate::DOCKER_BUILDER_VERSION.to_string());
-        format!("projectserum/build:v{ver}")
+            .as_deref()
+            .unwrap_or(crate::DOCKER_BUILDER_VERSION);
+        format!("backpackapp/build:v{version}")
     }
 
     pub fn discover(cfg_override: &ConfigOverride) -> Result<Option<WithPath<Config>>> {
@@ -494,8 +538,7 @@ impl Config {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct _Config {
-    anchor_version: Option<String>,
-    solana_version: Option<String>,
+    toolchain: Option<ToolchainConfig>,
     features: Option<FeaturesConfig>,
     programs: Option<BTreeMap<String, BTreeMap<String, serde_json::Value>>>,
     registry: Option<RegistryConfig>,
@@ -570,13 +613,12 @@ impl ToString for Config {
             }
         };
         let cfg = _Config {
-            anchor_version: self.anchor_version.clone(),
-            solana_version: self.solana_version.clone(),
+            toolchain: Some(self.toolchain.clone()),
             features: Some(self.features.clone()),
             registry: Some(self.registry.clone()),
             provider: Provider {
                 cluster: self.provider.cluster.clone(),
-                wallet: self.provider.wallet.to_string(),
+                wallet: self.provider.wallet.stringify_with_tilde(),
             },
             test: self.test_validator.clone().map(Into::into),
             scripts: match self.scripts.is_empty() {
@@ -596,11 +638,10 @@ impl FromStr for Config {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let cfg: _Config = toml::from_str(s)
-            .map_err(|e| anyhow::format_err!("Unable to deserialize config: {}", e.to_string()))?;
+        let cfg: _Config =
+            toml::from_str(s).map_err(|e| anyhow!("Unable to deserialize config: {e}"))?;
         Ok(Config {
-            anchor_version: cfg.anchor_version,
-            solana_version: cfg.solana_version,
+            toolchain: cfg.toolchain.unwrap_or_default(),
             features: cfg.features.unwrap_or_default(),
             registry: cfg.registry.unwrap_or_default(),
             provider: ProviderConfig {
@@ -693,6 +734,7 @@ pub struct TestValidator {
     pub validator: Option<Validator>,
     pub startup_wait: i32,
     pub shutdown_wait: i32,
+    pub upgradeable: bool,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -705,6 +747,8 @@ pub struct _TestValidator {
     pub startup_wait: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub shutdown_wait: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub upgradeable: Option<bool>,
 }
 
 pub const STARTUP_WAIT: i32 = 5000;
@@ -717,6 +761,7 @@ impl From<_TestValidator> for TestValidator {
             startup_wait: _test_validator.startup_wait.unwrap_or(STARTUP_WAIT),
             genesis: _test_validator.genesis,
             validator: _test_validator.validator.map(Into::into),
+            upgradeable: _test_validator.upgradeable.unwrap_or(false),
         }
     }
 }
@@ -728,6 +773,7 @@ impl From<TestValidator> for _TestValidator {
             startup_wait: Some(test_validator.startup_wait),
             genesis: test_validator.genesis,
             validator: test_validator.validator.map(Into::into),
+            upgradeable: Some(test_validator.upgradeable),
         }
     }
 }
@@ -936,6 +982,8 @@ pub struct GenesisEntry {
     pub address: String,
     // Filepath to the compiled program to embed into the genesis.
     pub program: String,
+    // Whether the genesis program is upgradeable.
+    pub upgradeable: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1011,6 +1059,9 @@ pub struct _Validator {
     // Warp the ledger to WARP_SLOT after starting the validator.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub warp_slot: Option<String>,
+    // Deactivate one or more features.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deactivate_feature: Option<Vec<String>>,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -1046,6 +1097,8 @@ pub struct Validator {
     pub ticks_per_slot: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub warp_slot: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deactivate_feature: Option<Vec<String>>,
 }
 
 impl From<_Validator> for Validator {
@@ -1074,6 +1127,7 @@ impl From<_Validator> for Validator {
             slots_per_epoch: _validator.slots_per_epoch,
             ticks_per_slot: _validator.ticks_per_slot,
             warp_slot: _validator.warp_slot,
+            deactivate_feature: _validator.deactivate_feature,
         }
     }
 }
@@ -1098,11 +1152,12 @@ impl From<Validator> for _Validator {
             slots_per_epoch: validator.slots_per_epoch,
             ticks_per_slot: validator.ticks_per_slot,
             warp_slot: validator.warp_slot,
+            deactivate_feature: validator.deactivate_feature,
         }
     }
 }
 
-const DEFAULT_LEDGER_PATH: &str = ".anchor/test-ledger";
+pub const DEFAULT_LEDGER_PATH: &str = ".anchor/test-ledger";
 const DEFAULT_BIND_ADDRESS: &str = "0.0.0.0";
 
 impl Merge for _Validator {
@@ -1187,6 +1242,9 @@ impl Merge for _Validator {
                 .or_else(|| self.slots_per_epoch.take()),
             ticks_per_slot: other.ticks_per_slot.or_else(|| self.ticks_per_slot.take()),
             warp_slot: other.warp_slot.or_else(|| self.warp_slot.take()),
+            deactivate_feature: other
+                .deactivate_feature
+                .or_else(|| self.deactivate_feature.take()),
         };
     }
 }
@@ -1233,10 +1291,16 @@ impl Program {
         Ok(WithPath::new(file, path))
     }
 
-    pub fn binary_path(&self) -> PathBuf {
+    pub fn binary_path(&self, verifiable: bool) -> PathBuf {
+        let path = if verifiable {
+            format!("target/verifiable/{}.so", self.lib_name)
+        } else {
+            format!("target/deploy/{}.so", self.lib_name)
+        };
+
         std::env::current_dir()
             .expect("Must have current dir")
-            .join(format!("target/deploy/{}.so", self.lib_name))
+            .join(path)
     }
 }
 
@@ -1306,7 +1370,42 @@ impl AnchorPackage {
     }
 }
 
-crate::home_path!(WalletPath, ".config/solana/id.json");
+#[macro_export]
+macro_rules! home_path {
+    ($my_struct:ident, $path:literal) => {
+        #[derive(Clone, Debug)]
+        pub struct $my_struct(String);
+
+        impl Default for $my_struct {
+            fn default() -> Self {
+                $my_struct(home_dir().unwrap().join($path).display().to_string())
+            }
+        }
+
+        impl $my_struct {
+            fn stringify_with_tilde(&self) -> String {
+                self.0
+                    .replacen(home_dir().unwrap().to_str().unwrap(), "~", 1)
+            }
+        }
+
+        impl FromStr for $my_struct {
+            type Err = anyhow::Error;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                Ok(Self(s.to_owned()))
+            }
+        }
+
+        impl ToString for $my_struct {
+            fn to_string(&self) -> String {
+                self.0.clone()
+            }
+        }
+    };
+}
+
+home_path!(WalletPath, ".config/solana/id.json");
 
 #[cfg(test)]
 mod tests {

@@ -392,19 +392,57 @@ pub fn zero_copy(
         quote! {#[derive(::bytemuck::Zeroable)]}
     };
 
-    proc_macro::TokenStream::from(quote! {
+    let ret = quote! {
         #[derive(anchor_lang::__private::ZeroCopyAccessor, Copy, Clone)]
         #repr
         #pod
         #zeroable
         #account_strct
-    })
+    };
+
+    #[cfg(feature = "idl-build")]
+    {
+        let derive_unsafe = if is_unsafe {
+            // Not a real proc-macro but exists in order to pass the serialization info
+            quote! { #[derive(bytemuck::Unsafe)] }
+        } else {
+            quote! {}
+        };
+        let zc_struct = syn::parse2(quote! {
+            #derive_unsafe
+            #ret
+        })
+        .unwrap();
+        let idl_build_impl = anchor_syn::idl::impl_idl_build_struct(&zc_struct);
+        return proc_macro::TokenStream::from(quote! {
+            #ret
+            #idl_build_impl
+        });
+    }
+
+    #[allow(unreachable_code)]
+    proc_macro::TokenStream::from(ret)
 }
 
 /// Defines the program's ID. This should be used at the root of all Anchor
 /// based programs.
 #[proc_macro]
 pub fn declare_id(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    #[cfg(feature = "idl-build")]
+    let address = input.clone().to_string();
+
     let id = parse_macro_input!(input as id::Id);
-    proc_macro::TokenStream::from(quote! {#id})
+    let ret = quote! { #id };
+
+    #[cfg(feature = "idl-build")]
+    {
+        let idl_print = anchor_syn::idl::gen_idl_print_fn_address(address);
+        return proc_macro::TokenStream::from(quote! {
+            #ret
+            #idl_print
+        });
+    }
+
+    #[allow(unreachable_code)]
+    proc_macro::TokenStream::from(ret)
 }

@@ -10,7 +10,7 @@ use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 
@@ -173,7 +173,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone + fmt::Debug> fmt::
 }
 
 impl<'a, T: AccountSerialize + AccountDeserialize + Clone> InterfaceAccount<'a, T> {
-    fn new(info: AccountInfo<'a>, account: T) -> Self {
+    fn new(info: &'a AccountInfo<'a>, account: T) -> Self {
         let owner = *info.owner;
         Self {
             account: Account::new(info, account),
@@ -215,41 +215,38 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> InterfaceAccount<'a, 
 impl<'a, T: AccountSerialize + AccountDeserialize + CheckOwner + Clone> InterfaceAccount<'a, T> {
     /// Deserializes the given `info` into a `InterfaceAccount`.
     #[inline(never)]
-    pub fn try_from(info: &AccountInfo<'a>) -> Result<Self> {
+    pub fn try_from(info: &'a AccountInfo<'a>) -> Result<Self> {
         if info.owner == &system_program::ID && info.lamports() == 0 {
             return Err(ErrorCode::AccountNotInitialized.into());
         }
         T::check_owner(info.owner)?;
         let mut data: &[u8] = &info.try_borrow_data()?;
-        Ok(Self::new(info.clone(), T::try_deserialize(&mut data)?))
+        Ok(Self::new(info, T::try_deserialize(&mut data)?))
     }
 
     /// Deserializes the given `info` into a `InterfaceAccount` without checking
     /// the account discriminator. Be careful when using this and avoid it if
     /// possible.
     #[inline(never)]
-    pub fn try_from_unchecked(info: &AccountInfo<'a>) -> Result<Self> {
+    pub fn try_from_unchecked(info: &'a AccountInfo<'a>) -> Result<Self> {
         if info.owner == &system_program::ID && info.lamports() == 0 {
             return Err(ErrorCode::AccountNotInitialized.into());
         }
         T::check_owner(info.owner)?;
         let mut data: &[u8] = &info.try_borrow_data()?;
-        Ok(Self::new(
-            info.clone(),
-            T::try_deserialize_unchecked(&mut data)?,
-        ))
+        Ok(Self::new(info, T::try_deserialize_unchecked(&mut data)?))
     }
 }
 
-impl<'info, T: AccountSerialize + AccountDeserialize + CheckOwner + Clone> Accounts<'info>
+impl<'info, B, T: AccountSerialize + AccountDeserialize + CheckOwner + Clone> Accounts<'info, B>
     for InterfaceAccount<'info, T>
 {
     #[inline(never)]
     fn try_accounts(
         _program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
+        accounts: &mut &'info [AccountInfo<'info>],
         _ix_data: &[u8],
-        _bumps: &mut BTreeMap<String, u8>,
+        _bumps: &mut B,
         _reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self> {
         if accounts.is_empty() {

@@ -117,7 +117,7 @@ use syn::parse_macro_input;
 ///                         The given space number is the size of the account in bytes, so accounts that hold
 ///                         a variable number of items such as a <code>Vec</code> should allocate sufficient space for all items that may
 ///                         be added to the data structure because account size is fixed.
-///                         Check out the <a href = "https://book.anchor-lang.com/anchor_references/space.html" target = "_blank" rel = "noopener noreferrer">space reference</a>
+///                         Check out the <a href = "https://www.anchor-lang.com/docs/space" target = "_blank" rel = "noopener noreferrer">space reference</a>
 ///                         and the <a href = "https://borsh.io/" target = "_blank" rel = "noopener noreferrer">borsh library</a>
 ///                         (which anchor uses under the hood for serialization) specification to learn how much
 ///                         space different data structures require.
@@ -386,12 +386,10 @@ use syn::parse_macro_input;
 ///                 <code>#[account(close = &lt;target_account&gt;)]</code>
 ///             </td>
 ///             <td>
-///                 Marks the account as closed at the end of the instruction’s execution
-///                 (sets its discriminator to the <code>CLOSED_ACCOUNT_DISCRIMINATOR</code>)
-///                 and sends its lamports to the specified account.<br>
-///                 Setting the discriminator to a special variant
-///                 makes account revival attacks (where a subsequent instruction
-///                 adds the rent exemption lamports again) impossible.<br>
+///                 Closes the account by:<br>
+///                 &nbsp;&nbsp;&nbsp;&nbsp;- Sending the lamports to the specified account<br>
+///                 &nbsp;&nbsp;&nbsp;&nbsp;- Assigning the owner to the System Program<br>
+///                 &nbsp;&nbsp;&nbsp;&nbsp;- Resetting the data of the account<br><br>
 ///                 Requires <code>mut</code> to exist on the account.
 ///                 <br><br>
 ///                 Example:
@@ -593,16 +591,16 @@ use syn::parse_macro_input;
 ///                 <br><br>
 ///                 Example:
 ///                 <pre>
-/// use anchor_spl::{mint, token::{TokenAccount, Mint, Token}};
+/// use anchor_spl::token_interface::{TokenInterface, TokenAccount, Mint};
 /// ...&#10;
 /// #[account(
 ///     mint::token_program = token_a_token_program,
 /// )]
-/// pub token_a_mint: Box<InterfaceAccount<'info, Mint>>,
+/// pub token_a_mint: InterfaceAccount<'info, Mint>,
 /// #[account(
 ///     mint::token_program = token_b_token_program,
 /// )]
-/// pub token_b_mint: Box<InterfaceAccount<'info, Mint>>,
+/// pub token_b_mint: InterfaceAccount<'info, Mint>,
 /// #[account(
 ///     init,
 ///     payer = payer,
@@ -610,7 +608,7 @@ use syn::parse_macro_input;
 ///     token::authority = payer,
 ///     token::token_program = token_a_token_program,
 /// )]
-/// pub token_a_account: Box<InterfaceAccount<'info, TokenAccount>>,
+/// pub token_a_account: InterfaceAccount<'info, TokenAccount>,
 /// #[account(
 ///     init,
 ///     payer = payer,
@@ -618,7 +616,7 @@ use syn::parse_macro_input;
 ///     token::authority = payer,
 ///     token::token_program = token_b_token_program,
 /// )]
-/// pub token_b_account: Box<InterfaceAccount<'info, TokenAccount>>,
+/// pub token_b_account: InterfaceAccount<'info, TokenAccount>,
 /// pub token_a_token_program: Interface<'info, TokenInterface>,
 /// pub token_b_token_program: Interface<'info, TokenInterface>,
 /// #[account(mut)]
@@ -630,7 +628,7 @@ use syn::parse_macro_input;
 ///     <tbody>
 /// </table>
 #[proc_macro_derive(Accounts, attributes(account, instruction))]
-pub fn derive_anchor_deserialize(item: TokenStream) -> TokenStream {
+pub fn derive_accounts(item: TokenStream) -> TokenStream {
     parse_macro_input!(item as anchor_syn::AccountsStruct)
         .to_token_stream()
         .into()

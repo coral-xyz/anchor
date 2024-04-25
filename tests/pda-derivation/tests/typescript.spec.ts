@@ -81,7 +81,6 @@ describe("typescript", () => {
     let called = false;
     const customProgram = new Program<PdaDerivation>(
       program.idl,
-      program.programId,
       program.provider,
       program.coder,
       (instruction) => {
@@ -103,5 +102,14 @@ describe("typescript", () => {
       .pubkeys();
 
     expect(called).is.true;
+  });
+
+  it("Can resolve associated token accounts", async () => {
+    const mintKp = anchor.web3.Keypair.generate();
+    await program.methods
+      .associatedTokenResolution()
+      .accounts({ mint: mintKp.publicKey })
+      .signers([mintKp])
+      .rpc();
   });
 });

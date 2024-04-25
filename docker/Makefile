@@ -2,15 +2,15 @@ WORKDIR=$(PWD)
 #
 # Anchor version.
 #
-ANCHOR_CLI=v0.27.0
+ANCHOR_CLI=v0.30.0
 #
 # Solana toolchain.
 #
-SOLANA_CLI=v1.14.16
+SOLANA_CLI=v1.18.8
 #
 # Build version should match the Anchor cli version.
 #
-IMG_ORG ?= projectserum
+IMG_ORG ?= backpackapp
 IMG_VER ?= $(ANCHOR_CLI)
 
 .PHONY: build build-push build-shell publish

@@ -1,4 +1,4 @@
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use syn::parse::{Error as ParseError, Result as ParseResult};
@@ -12,6 +12,12 @@ pub struct CrateContext {
 }
 
 impl CrateContext {
+    pub fn parse(root: impl AsRef<Path>) -> Result<Self> {
+        Ok(CrateContext {
+            modules: ParsedModule::parse_recursive(root.as_ref())?,
+        })
+    }
+
     pub fn consts(&self) -> impl Iterator<Item = &syn::ItemConst> {
         self.modules.iter().flat_map(|(_, ctx)| ctx.consts())
     }
@@ -28,6 +34,10 @@ impl CrateContext {
         self.modules.iter().flat_map(|(_, ctx)| ctx.enums())
     }
 
+    pub fn type_aliases(&self) -> impl Iterator<Item = &syn::ItemType> {
+        self.modules.iter().flat_map(|(_, ctx)| ctx.type_aliases())
+    }
+
     pub fn modules(&self) -> impl Iterator<Item = ModuleContext> {
         self.modules.values().map(|detail| ModuleContext { detail })
     }
@@ -38,16 +48,10 @@ impl CrateContext {
         }
     }
 
-    pub fn parse(root: impl AsRef<Path>) -> Result<Self, anyhow::Error> {
-        Ok(CrateContext {
-            modules: ParsedModule::parse_recursive(root.as_ref())?,
-        })
-    }
-
     // Perform Anchor safety checks on the parsed create
-    pub fn safety_checks(&self) -> Result<(), anyhow::Error> {
+    pub fn safety_checks(&self) -> Result<()> {
         // Check all structs for unsafe field types, i.e. AccountInfo and UncheckedAccount.
-        for (_, ctx) in self.modules.iter() {
+        for ctx in self.modules.values() {
             for unsafe_field in ctx.unsafe_struct_fields() {
                 // Check if unsafe field type has been documented with a /// SAFETY: doc string.
                 let is_documented = unsafe_field.attrs.iter().any(|attr| {
@@ -100,8 +104,15 @@ struct ParsedModule {
     items: Vec<syn::Item>,
 }
 
+struct UnparsedModule {
+    file: PathBuf,
+    path: String,
+    name: String,
+    item: syn::ItemMod,
+}
+
 impl ParsedModule {
-    fn parse_recursive(root: &Path) -> Result<BTreeMap<String, ParsedModule>, anyhow::Error> {
+    fn parse_recursive(root: &Path) -> Result<BTreeMap<String, ParsedModule>> {
         let mut modules = BTreeMap::new();
 
         let root_content = std::fs::read_to_string(root)?;
@@ -113,35 +124,13 @@ impl ParsedModule {
             root_file.items,
         );
 
-        struct UnparsedModule {
-            file: PathBuf,
-            path: String,
-            name: String,
-            item: syn::ItemMod,
-        }
-
-        let mut unparsed = root_mod
-            .submodules()
-            .map(|item| UnparsedModule {
-                file: root_mod.file.clone(),
-                path: root_mod.path.clone(),
-                name: item.ident.to_string(),
-                item: item.clone(),
-            })
-            .collect::<Vec<_>>();
-
+        let mut unparsed = root_mod.unparsed_submodules();
         while let Some(to_parse) = unparsed.pop() {
             let path = format!("{}::{}", to_parse.path, to_parse.name);
-            let name = to_parse.name;
             let module = Self::from_item_mod(&to_parse.file, &path, to_parse.item)?;
 
-            unparsed.extend(module.submodules().map(|item| UnparsedModule {
-                item: item.clone(),
-                file: module.file.clone(),
-                path: module.path.clone(),
-                name: item.ident.to_string(),
-            }));
-            modules.insert(format!("{}{}", module.path.clone(), name.clone()), module);
+            unparsed.extend(module.unparsed_submodules());
+            modules.insert(format!("{}{}", module.path, to_parse.name), module);
         }
 
         modules.insert(root_mod.name.clone(), root_mod);
@@ -205,6 +194,17 @@ impl ParsedModule {
         }
     }
 
+    fn unparsed_submodules(&self) -> Vec<UnparsedModule> {
+        self.submodules()
+            .map(|item| UnparsedModule {
+                file: self.file.clone(),
+                path: self.path.clone(),
+                name: item.ident.to_string(),
+                item: item.clone(),
+            })
+            .collect()
+    }
+
     fn submodules(&self) -> impl Iterator<Item = &syn::ItemMod> {
         self.items.iter().filter_map(|i| match i {
             syn::Item::Mod(item) => Some(item),
@@ -251,6 +251,13 @@ impl ParsedModule {
     fn enums(&self) -> impl Iterator<Item = &syn::ItemEnum> {
         self.items.iter().filter_map(|i| match i {
             syn::Item::Enum(item) => Some(item),
+            _ => None,
+        })
+    }
+
+    fn type_aliases(&self) -> impl Iterator<Item = &syn::ItemType> {
+        self.items.iter().filter_map(|i| match i {
+            syn::Item::Type(item) => Some(item),
             _ => None,
         })
     }

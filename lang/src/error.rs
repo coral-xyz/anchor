@@ -126,6 +126,56 @@ pub enum ErrorCode {
     /// 2023 - A mint token program constraint was violated
     #[msg("An associated token account token program constraint was violated")]
     ConstraintAssociatedTokenTokenProgram,
+    /// Extension constraints
+    ///
+    /// 2024 - A group pointer extension constraint was violated
+    #[msg("A group pointer extension constraint was violated")]
+    ConstraintMintGroupPointerExtension,
+    /// 2025 - A group pointer extension authority constraint was violated
+    #[msg("A group pointer extension authority constraint was violated")]
+    ConstraintMintGroupPointerExtensionAuthority,
+    /// 2026 - A group pointer extension group address constraint was violated
+    #[msg("A group pointer extension group address constraint was violated")]
+    ConstraintMintGroupPointerExtensionGroupAddress,
+    /// 2027 - A group member pointer extension constraint was violated
+    #[msg("A group member pointer extension constraint was violated")]
+    ConstraintMintGroupMemberPointerExtension,
+    /// 2028 - A group member pointer extension authority constraint was violated
+    #[msg("A group member pointer extension authority constraint was violated")]
+    ConstraintMintGroupMemberPointerExtensionAuthority,
+    /// 2029 - A group member pointer extension member address constraint was violated
+    #[msg("A group member pointer extension group address constraint was violated")]
+    ConstraintMintGroupMemberPointerExtensionMemberAddress,
+    /// 2030 - A metadata pointer extension constraint was violated
+    #[msg("A metadata pointer extension constraint was violated")]
+    ConstraintMintMetadataPointerExtension,
+    /// 2031 - A metadata pointer extension authority constraint was violated
+    #[msg("A metadata pointer extension authority constraint was violated")]
+    ConstraintMintMetadataPointerExtensionAuthority,
+    /// 2032 - A metadata pointer extension metadata address constraint was violated
+    #[msg("A metadata pointer extension metadata address constraint was violated")]
+    ConstraintMintMetadataPointerExtensionMetadataAddress,
+    /// 2033 - A close authority extension constraint was violated
+    #[msg("A close authority constraint was violated")]
+    ConstraintMintCloseAuthorityExtension,
+    /// 2034 - A close authority extension authority constraint was violated
+    #[msg("A close authority extension authority constraint was violated")]
+    ConstraintMintCloseAuthorityExtensionAuthority,
+    /// 2035 - A permanent delegate extension constraint was violated
+    #[msg("A permanent delegate extension constraint was violated")]
+    ConstraintMintPermanentDelegateExtension,
+    /// 2036 - A permanent delegate extension authority constraint was violated
+    #[msg("A permanent delegate extension delegate constraint was violated")]
+    ConstraintMintPermanentDelegateExtensionDelegate,
+    /// 2037 - A transfer hook extension constraint was violated
+    #[msg("A transfer hook extension constraint was violated")]
+    ConstraintMintTransferHookExtension,
+    /// 2038 - A transfer hook extension authority constraint was violated
+    #[msg("A transfer hook extension authority constraint was violated")]
+    ConstraintMintTransferHookExtensionAuthority,
+    /// 2039 - A transfer hook extension transfer hook program id constraint was violated
+    #[msg("A transfer hook extension transfer hook program id constraint was violated")]
+    ConstraintMintTransferHookExtensionProgramId,
 
     // Require
     /// 2500 - A require expression was violated
@@ -222,8 +272,8 @@ pub enum ErrorCode {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Error {
-    AnchorError(AnchorError),
-    ProgramError(ProgramErrorWithOrigin),
+    AnchorError(Box<AnchorError>),
+    ProgramError(Box<ProgramErrorWithOrigin>),
 }
 
 impl std::error::Error for Error {}
@@ -239,24 +289,24 @@ impl Display for Error {
 
 impl From<AnchorError> for Error {
     fn from(ae: AnchorError) -> Self {
-        Self::AnchorError(ae)
+        Self::AnchorError(Box::new(ae))
     }
 }
 
 impl From<ProgramError> for Error {
     fn from(program_error: ProgramError) -> Self {
-        Self::ProgramError(program_error.into())
+        Self::ProgramError(Box::new(program_error.into()))
     }
 }
 impl From<BorshIoError> for Error {
     fn from(error: BorshIoError) -> Self {
-        Error::ProgramError(ProgramError::from(error).into())
+        Error::ProgramError(Box::new(ProgramError::from(error).into()))
     }
 }
 
 impl From<ProgramErrorWithOrigin> for Error {
     fn from(pe: ProgramErrorWithOrigin) -> Self {
-        Self::ProgramError(pe)
+        Self::ProgramError(Box::new(pe))
     }
 }
 
@@ -503,10 +553,10 @@ impl Eq for AnchorError {}
 impl std::convert::From<Error> for anchor_lang::solana_program::program_error::ProgramError {
     fn from(e: Error) -> anchor_lang::solana_program::program_error::ProgramError {
         match e {
-            Error::AnchorError(AnchorError {
-                error_code_number, ..
-            }) => {
-                anchor_lang::solana_program::program_error::ProgramError::Custom(error_code_number)
+            Error::AnchorError(error) => {
+                anchor_lang::solana_program::program_error::ProgramError::Custom(
+                    error.error_code_number,
+                )
             }
             Error::ProgramError(program_error) => program_error.program_error,
         }

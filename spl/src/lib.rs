@@ -1,3 +1,7 @@
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+
+//! Anchor CPI wrappers for popular programs in the Solana ecosystem.
+
 #[cfg(feature = "associated_token")]
 pub mod associated_token;
 
@@ -10,6 +14,9 @@ pub mod token;
 #[cfg(feature = "token_2022")]
 pub mod token_2022;
 
+#[cfg(feature = "token_2022_extensions")]
+pub mod token_2022_extensions;
+
 #[cfg(feature = "token_2022")]
 pub mod token_interface;
 
@@ -19,11 +26,14 @@ pub mod dex;
 #[cfg(feature = "governance")]
 pub mod governance;
 
-#[cfg(feature = "shmem")]
-pub mod shmem;
-
 #[cfg(feature = "stake")]
 pub mod stake;
 
 #[cfg(feature = "metadata")]
 pub mod metadata;
+
+#[cfg(feature = "memo")]
+pub mod memo;
+
+#[cfg(feature = "idl-build")]
+mod idl_build;

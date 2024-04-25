@@ -13,6 +13,162 @@ The minor version will be incremented upon a breaking change and the patch versi
 ### Features
 
 - lang: Implement `Arbitrary` trait for the anchor-generated instruction module when the program is compiled with the arbitrary feature (requires the arbitrary crate) ([2518](https://github.com/coral-xyz/anchor/pull/2518)).
+- avm: Support customizing the installation location using `AVM_HOME` environment variable ([#2917](https://github.com/coral-xyz/anchor/pull/2917))
+- idl, ts: Add accounts resolution for associated token accounts ([#2927](https://github.com/coral-xyz/anchor/pull/2927))
+
+### Fixes
+
+- lang: Eliminate variable allocations that build up stack space for token extension code generation ([#2913](https://github.com/coral-xyz/anchor/pull/2913)).
+- ts: Fix incorrect `maxSupportedTransactionVersion` in `AnchorProvider.send*()` methods ([#2922](https://github.com/coral-xyz/anchor/pull/2922)).
+
+### Breaking
+
+## [0.30.0] - 2024-04-15
+
+### Features
+
+- cli: Allow force `init` and `new` ([#2698](https://github.com/coral-xyz/anchor/pull/2698)).
+- cli: Add verifiable option when `deploy` ([#2705](https://github.com/coral-xyz/anchor/pull/2705)).
+- cli: Add support for passing arguments to the underlying `solana program deploy` command with `anchor deploy` ([#2709](https://github.com/coral-xyz/anchor/pull/2709)).
+- lang: Add `InstructionData::write_to` implementation ([#2733](https://github.com/coral-xyz/anchor/pull/2733)).
+- lang: Add `#[interface(..)]` attribute for instruction discriminator overrides ([#2728](https://github.com/coral-xyz/anchor/pull/2728)).
+- ts: Add `.interface(..)` method for instruction discriminator overrides ([#2728](https://github.com/coral-xyz/anchor/pull/2728)).
+- cli: Check `anchor-lang` and CLI version compatibility ([#2753](https://github.com/coral-xyz/anchor/pull/2753)).
+- ts: Add missing IDL PDA seed types ([#2752](https://github.com/coral-xyz/anchor/pull/2752)).
+- cli: `idl close` accepts optional `--idl-address` parameter ([#2760](https://github.com/coral-xyz/anchor/pull/2760)).
+- cli: Add support for simple wildcard patterns in Anchor.toml's `workspace.members` and `workspace.exclude`. ([#2785](https://github.com/coral-xyz/anchor/pull/2785)).
+- cli: Add `--test-template` option for `init` command ([#2805](https://github.com/coral-xyz/anchor/pull/2805)).
+- cli: `anchor test` is able to run multiple commands ([#2799](https://github.com/coral-xyz/anchor/pull/2799)).
+- cli: Check `@coral-xyz/anchor` package and CLI version compatibility ([#2813](https://github.com/coral-xyz/anchor/pull/2813)).
+- cli: Accept package name as program name ([#2816](https://github.com/coral-xyz/anchor/pull/2816)).
+- cli: Add ability to build and test only a specified program ([#2823](https://github.com/coral-xyz/anchor/pull/2823)).
+- idl: Add new IDL spec ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- idl: Add support for `repr`s ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- idl: Add support for expression evaluation ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- idl: Add support for using external types when generating the IDL ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- idl, ts: Add unit and tuple struct support ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- idl, ts: Add generics support ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- ts: Add `accountsPartial` method to keep the old `accounts` method behavior ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- ts: Make `opts` parameter of `AnchorProvider` constructor optional ([#2843](https://github.com/coral-xyz/anchor/pull/2843)).
+- cli: Add `--no-idl` flag to the `build` command ([#2847](https://github.com/coral-xyz/anchor/pull/2847)).
+- cli: Add priority fees to idl commands ([#2845](https://github.com/coral-xyz/anchor/pull/2845)).
+- ts: Add `prepend` option to MethodBuilder `preInstructions` method ([#2863](https://github.com/coral-xyz/anchor/pull/2863)).
+- lang: Add `declare_program!` macro ([#2857](https://github.com/coral-xyz/anchor/pull/2857)).
+- cli: Add `deactivate_feature` flag to `solana-test-validator` config in Anchor.toml ([#2872](https://github.com/coral-xyz/anchor/pull/2872)).
+- idl: Add `docs` field for constants ([#2887](https://github.com/coral-xyz/anchor/pull/2887)).
+- idl: Store deployment addresses for other clusters ([#2892](https://github.com/coral-xyz/anchor/pull/2892)).
+- lang: Add `Event` utility type to get events from bytes ([#2897](https://github.com/coral-xyz/anchor/pull/2897)).
+- lang, spl: Add support for [token extensions](https://solana.com/solutions/token-extensions) ([#2789](https://github.com/coral-xyz/anchor/pull/2789)).
+- lang: Return overflow error from `Lamports` trait operations ([#2907](https://github.com/coral-xyz/anchor/pull/2907)).
+
+### Fixes
+
+- syn: Add missing `new_from_array` method to `Hash` ([#2682](https://github.com/coral-xyz/anchor/pull/2682)).
+- cli: Switch to Cargo feature resolver(`resolver = "2"`) ([#2676](https://github.com/coral-xyz/anchor/pull/2676)).
+- cli: Fix using user specific path for `provider.wallet` in `Anchor.toml` ([#2696](https://github.com/coral-xyz/anchor/pull/2696)).
+- syn: Fix IDL constant seeds parsing ([#2699](https://github.com/coral-xyz/anchor/pull/2699)).
+- cli: Display errors if toolchain override restoration fails ([#2700](https://github.com/coral-xyz/anchor/pull/2700)).
+- cli: Fix commit based `anchor_version` override ([#2704](https://github.com/coral-xyz/anchor/pull/2704)).
+- spl: Fix compilation with `shmem` feature enabled ([#2722](https://github.com/coral-xyz/anchor/pull/2722)).
+- cli: Localhost default test validator address changes from `localhost` to `127.0.0.1`, NodeJS 17 IP resolution changes for IPv6 ([#2725](https://github.com/coral-xyz/anchor/pull/2725)).
+- lang: Eliminate temporary Vec allocations when serializing data with discriminant and set the default capacity to 256 bytes ([#2691](https://github.com/coral-xyz/anchor/pull/2691)).
+- lang: Allow custom lifetime in Accounts structure ([#2741](https://github.com/coral-xyz/anchor/pull/2741)).
+- lang: Remove `try_to_vec` usage while setting the return data in order to reduce heap memory usage ([#2744](https://github.com/coral-xyz/anchor/pull/2744))
+- cli: Show installation progress if Solana tools are not installed when using toolchain overrides ([#2757](https://github.com/coral-xyz/anchor/pull/2757)).
+- ts: Fix formatting enums ([#2763](https://github.com/coral-xyz/anchor/pull/2763)).
+- cli: Fix `migrate` command not working without global `ts-node` installation ([#2767](https://github.com/coral-xyz/anchor/pull/2767)).
+- client, lang, spl, syn: Enable all features for docs.rs build ([#2774](https://github.com/coral-xyz/anchor/pull/2774)).
+- ts: Fix construction of field layouts for type aliased instruction arguments ([#2821](https://github.com/coral-xyz/anchor/pull/2821))
+- idl: Fix IDL ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- idl, ts: Make casing consistent ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- ts: Fix not being able to use numbers in instruction, account, or event names in some cases due to case conversion ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- cli: Fix excessive test validator requests ([#2828](https://github.com/coral-xyz/anchor/pull/2828)).
+- client: Fix `parse_logs_response` to prevent panics when more than 1 outer instruction exists in logs ([#2856](https://github.com/coral-xyz/anchor/pull/2856)).
+- avm, cli: Fix `stdsimd` feature compilation error from `ahash` when installing the CLI using newer Rust versions ([#2867](https://github.com/coral-xyz/anchor/pull/2867)).
+- spl: Fix not being able to deserialize newer token 2022 extensions ([#2876](https://github.com/coral-xyz/anchor/pull/2876)).
+- spl: Remove `solana-program` dependency ([#2900](https://github.com/coral-xyz/anchor/pull/2900)).
+- spl: Make `TokenAccount` and ` Mint` `Copy` ([#2904](https://github.com/coral-xyz/anchor/pull/2904)).
+- ts: Add missing errors ([#2906](https://github.com/coral-xyz/anchor/pull/2906)).
+
+### Breaking
+
+- cli: Make `cargo build-sbf` the default build command ([#2694](https://github.com/coral-xyz/anchor/pull/2694)).
+- cli: Require explicit `overflow-checks` flag ([#2716](https://github.com/coral-xyz/anchor/pull/2716)).
+- ts: Remove `anchor-deprecated-state` feature ([#2717](https://github.com/coral-xyz/anchor/pull/2717)).
+- lang: Remove `CLOSED_ACCOUNT_DISCRIMINATOR` ([#2726](https://github.com/coral-xyz/anchor/pull/2726)).
+- lang: Make bumps of optional accounts `Option<u8>` rather than `u8` ([#2730](https://github.com/coral-xyz/anchor/pull/2730)).
+- spl: Remove `shared-memory` program ([#2747](https://github.com/coral-xyz/anchor/pull/2747)).
+- ts: Remove `associated`, `account.associated` and `account.associatedAddress` methods ([#2749](https://github.com/coral-xyz/anchor/pull/2749)).
+- cli: `idl upgrade` command closes the IDL buffer account ([#2760](https://github.com/coral-xyz/anchor/pull/2760)).
+- cli: Remove `--jest` option from the `init` command ([#2805](https://github.com/coral-xyz/anchor/pull/2805)).
+- cli: Require `idl-build` feature in program `Cargo.toml` ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- cli: Rename `seeds` feature to `resolution` and make it enabled by default ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- cli: Remove `idl parse` command ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- idl: Change IDL spec ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- syn: Remove `idl-parse` and `seeds` features ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- ts: Change `accounts` method to no longer accept resolvable accounts ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- ts: `Program` instances use camelCase for everything ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- ts: Remove discriminator functions ([#2824](https://github.com/coral-xyz/anchor/pull/2824)).
+- ts: Remove `programId` parameter of the `Program` constructor ([#2864](https://github.com/coral-xyz/anchor/pull/2864)).
+- idl, syn: Move IDL types from the `anchor-syn` crate to the new IDL crate ([#2882](https://github.com/coral-xyz/anchor/pull/2882)).
+- idl: Add `#[non_exhaustive]` to IDL enums ([#2890](https://github.com/coral-xyz/anchor/pull/2890)).
+
+## [0.29.0] - 2023-10-16
+
+### Features
+
+- lang: Change all accounts to have a reference to `AccountInfo` ([#2656](https://github.com/coral-xyz/anchor/pull/2656)).
+- lang: Add `get_lamports`, `add_lamports` and `sub_lamports` methods for all account types ([#2552](https://github.com/coral-xyz/anchor/pull/2552)).
+- client: Add a helper struct `DynSigner` to simplify use of `Client<C> where <C: Clone + Deref<Target = impl Signer>>` with Solana clap CLI utils that loads `Signer` as `Box<dyn Signer>` ([#2550](https://github.com/coral-xyz/anchor/pull/2550)).
+- lang: Allow CPI calls matching an interface without pinning program ID ([#2559](https://github.com/coral-xyz/anchor/pull/2559)).
+- cli, lang: Add IDL generation through compilation. `anchor build` still uses parsing method to generate IDLs, use `anchor idl build` to generate IDLs with the build method ([#2011](https://github.com/coral-xyz/anchor/pull/2011)).
+- avm: Add support for the `.anchorversion` file to facilitate switching between different versions of the `anchor-cli` ([#2553](https://github.com/coral-xyz/anchor/pull/2553)).
+- ts: Add ability to access workspace programs independent of the casing used, e.g. `anchor.workspace.myProgram`, `anchor.workspace.MyProgram`... ([#2579](https://github.com/coral-xyz/anchor/pull/2579)).
+- bench: Add benchmarking for program binary size ([#2591](https://github.com/coral-xyz/anchor/pull/2591)).
+- spl: Export `mpl-token-metadata` crate ([#2583](https://github.com/coral-xyz/anchor/pull/2583)).
+- spl: Add `TokenRecordAccount` for pNFTs ([#2597](https://github.com/coral-xyz/anchor/pull/2597)).
+- ts: Add support for unnamed(tuple) enum in accounts ([#2601](https://github.com/coral-xyz/anchor/pull/2601)).
+- cli: Add program template with multiple files for instructions, state... ([#2602](https://github.com/coral-xyz/anchor/pull/2602)).
+- bench: Add benchmarking for stack memory usage ([#2617](https://github.com/coral-xyz/anchor/pull/2617)).
+- lang: `Box` the inner enums of `anchor_lang::error::Error` to optimize `anchor_lang::Result` ([#2600](https://github.com/coral-xyz/anchor/pull/2600)).
+- ts: Add strong type support for `Program.addEventListener` method ([#2627](https://github.com/coral-xyz/anchor/pull/2627)).
+- syn: Add `IdlBuild` trait to implement IDL support for custom types ([#2629](https://github.com/coral-xyz/anchor/pull/2629)).
+- spl: Add `idl-build` feature. IDL build method will not work without enabling this feature when using `anchor-spl` ([#2629](https://github.com/coral-xyz/anchor/pull/2629)).
+- lang: Add support for type aliases in IDLs ([#2637](https://github.com/coral-xyz/anchor/pull/2637)).
+- cli: Add `test.upgradeable`, `test.genesis.upgradeable` setting in `Anchor.toml` to support testing upgradeable programs ([#2642](https://github.com/coral-xyz/anchor/pull/2642)).
+- cli, client, lang, spl: Update Solana toolchain and dependencies to `1.17.0`, `1.16` remains supported ([#2645](https://github.com/coral-xyz/anchor/pull/2645)).
+- spl: Add support for memo program ([#2661](https://github.com/coral-xyz/anchor/pull/2661)).
+- avm: Add `anchor-cli` installation from commit ([#2659](https://github.com/coral-xyz/anchor/pull/2659)).
+- cli: Add `toolchain` property in `Anchor.toml` to override Anchor and Solana versions ([#2649](https://github.com/coral-xyz/anchor/pull/2649)).
+
+### Fixes
+
+- ts: Packages no longer depend on `assert` ([#2535](https://github.com/coral-xyz/anchor/pull/2535)).
+- lang: Support for `const` in the `InitSpace` macro ([#2555](https://github.com/coral-xyz/anchor/pull/2555)).
+- cli: Support workspace inheritance ([#2570](https://github.com/coral-xyz/anchor/pull/2570)).
+- client: Compile with Solana `1.14` ([#2572](https://github.com/coral-xyz/anchor/pull/2572)).
+- cli: Fix `anchor build --no-docs` adding docs to the IDL ([#2575](https://github.com/coral-xyz/anchor/pull/2575)).
+- ts: Load workspace programs on-demand rather than loading all of them at once ([#2579](https://github.com/coral-xyz/anchor/pull/2579)).
+- lang: Fix `associated_token::token_program` constraint ([#2603](https://github.com/coral-xyz/anchor/pull/2603)).
+- cli: Fix `anchor account` command panicking outside of workspace ([#2620](https://github.com/coral-xyz/anchor/pull/2620)).
+- lang: IDL named enum variant fields are now camelCase as opposed to snake_case, consistent with the other IDL types ([#2633](https://github.com/coral-xyz/anchor/pull/2633)).
+- avm: Remove excessive panics and handle the errors gracefully ([#2671](https://github.com/coral-xyz/anchor/pull/2671)).
+
+### Breaking
+
+- lang: Switch to type safe bumps in context ([#2542](https://github.com/coral-xyz/anchor/pull/2542)).
+- syn: `idl` feature has been replaced with `idl-build`, `idl-parse` and `idl-types` features ([#2011](https://github.com/coral-xyz/anchor/pull/2011)).
+- syn: IDL `parse` method now returns `Result<Idl>` instead of `Result<Option<Idl>>` ([#2582](https://github.com/coral-xyz/anchor/pull/2582)).
+- spl: Update `mpl-token-metadata` dependency to use the client SDK instead of the program crate ([#2632](https://github.com/coral-xyz/anchor/pull/2632)).
+- ts: Remove `base64-js` dependency ([#2635](https://github.com/coral-xyz/anchor/pull/2635)).
+- syn: `IdlTypeDefinitionTy` enum has a new variant `Alias` ([#2637](https://github.com/coral-xyz/anchor/pull/2637)).
+- cli, client, lang, spl: Solana `1.14` is no longer supported, minimum required Solana version is `1.16.0` ([#2645](https://github.com/coral-xyz/anchor/pull/2645)).
+- cli: `anchor_version` and `solana_version` property in `Anchor.toml` that was being used in verifiable builds are moved inside `toolchain`. They are now being used for all commands in the workspace, not just verifiable builds ([#2649](https://github.com/coral-xyz/anchor/pull/2649)).
+
+## [0.28.0] - 2023-06-09
+
+### Features
+
 - client: Add `async` feature flag to use an asynchronous anchor-client ([#2488](https://github.com/coral-xyz/anchor/pull/2488)).
 - spl: Add metadata wrappers `approve_collection_authority`, `bubblegum_set_collection_size`, `burn_edition_nft`, `burn_nft`, `revoke_collection_authority`, `set_token_standard`, `utilize`, `unverify_sized_collection_item`, `unverify_collection` ([#2430](https://github.com/coral-xyz/anchor/pull/2430))
 - spl: Add `token_program` constraint to `Token`, `Mint`, and `AssociatedToken` accounts in order to override required `token_program` fields and use different token interface implementations in the same instruction ([#2460](https://github.com/coral-xyz/anchor/pull/2460))
@@ -23,6 +179,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - cli: Add `keys sync` command to sync program id declarations ([#2505](https://github.com/coral-xyz/anchor/pull/2505)).
 - cli: Create new programs with correct program ids ([#2509](https://github.com/coral-xyz/anchor/pull/2509)).
 - cli, client, lang, spl: Update Solana toolchain and dependencies to `1.16.0` and specify maximum version of `<1.17.0` ([#2512](https://github.com/coral-xyz/anchor/pull/2512)).
+- cli: `anchor deploy` command's `--program-name` argument accepts program lib names ([#2519](https://github.com/coral-xyz/anchor/pull/2519)).
 
 ### Fixes
 
@@ -31,6 +188,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - cli: Fix incorrect `metadata.address` generation in IDL after deploying with a custom keypair ([#2485](https://github.com/coral-xyz/anchor/pull/2485))
 - cli: IDL commands no longer hang when the payer doesn't have funds to pay for the transaction fee ([#2492](https://github.com/coral-xyz/anchor/pull/2492))
 - cli: Fix `anchor new` not updating `Anchor.toml` ([#2516](https://github.com/coral-xyz/anchor/pull/2516)).
+- client, lang, spl: Allow wider range of dependency versions to reduce dependency issues ([#2524](https://github.com/coral-xyz/anchor/pull/2524)).
 
 ### Breaking
 
@@ -506,7 +664,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 ### Breaking
 
 - cli: `[clusters.<network>]` Anchor.toml section has been renamed to `[programs.<network>]` ([#570](https://github.com/coral-xyz/anchor/pull/570)).
-- cli: `[workspace]` member and exclude arrays must now be filepaths relative to the workpsace root ([#570](https://github.com/coral-xyz/anchor/pull/570)).
+- cli: `[workspace]` member and exclude arrays must now be filepaths relative to the workspace root ([#570](https://github.com/coral-xyz/anchor/pull/570)).
 
 ## [0.12.0] - 2021-08-03
 
@@ -606,10 +764,10 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Breaking Changes
 
-- ts: Retrieving deserialized accounts from the `<program>.account.<my-account>` and `<program>.state` namespaces now require explicitly invoking the `fetch` API. For example, `program.account.myAccount(<adddress>)` and `program.state()` is now `program.account.myAccount.fetch(<address>)` and `program.state.fetch()` ([#322](https://github.com/coral-xyz/anchor/pull/322)).
+- ts: Retrieving deserialized accounts from the `<program>.account.<my-account>` and `<program>.state` namespaces now require explicitly invoking the `fetch` API. For example, `program.account.myAccount(<address>)` and `program.state()` is now `program.account.myAccount.fetch(<address>)` and `program.state.fetch()` ([#322](https://github.com/coral-xyz/anchor/pull/322)).
 - lang: `#[account(associated)]` now requires `init` to be provided to create an associated account. If not provided, then the address will be assumed to exist, and a constraint will be added to ensure the correctness of the address ([#318](https://github.com/coral-xyz/anchor/pull/318)).
 - lang, ts: Change account discriminator pre-image of the `#[state]` account discriminator to be namespaced by "state:" ([#320](https://github.com/coral-xyz/anchor/pull/320)).
-- lang, ts: Change domain delimiters for the pre-image of the instruciton sighash to be a single colon `:` to be consistent with accounts ([#321](https://github.com/coral-xyz/anchor/pull/321)).
+- lang, ts: Change domain delimiters for the pre-image of the instruction sighash to be a single colon `:` to be consistent with accounts ([#321](https://github.com/coral-xyz/anchor/pull/321)).
 - lang: Associated constraints no longer automatically implement `mut` ([#341](https://github.com/coral-xyz/anchor/pull/341)).
 - lang: Associated `space` constraints must now be literal integers instead of literal strings ([#341](https://github.com/coral-xyz/anchor/pull/341)).
 
@@ -652,7 +810,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Features
 
-- lang: Allows one to specify multiple `with` targets when creating associated acconts ([#197](https://github.com/coral-xyz/anchor/pull/197)).
+- lang: Allows one to specify multiple `with` targets when creating associated accounts ([#197](https://github.com/coral-xyz/anchor/pull/197)).
 - lang, ts: Add array support ([#202](https://github.com/coral-xyz/anchor/pull/202)).
 - lang: Zero copy deserialization for accounts ([#202](https://github.com/coral-xyz/anchor/pull/202), [#206](https://github.com/coral-xyz/anchor/pull/206)).
 - lang, spl, cli, client: Upgrade solana toolchain to 1.6.6 ([#210](https://github.com/coral-xyz/anchor/pull/210)).

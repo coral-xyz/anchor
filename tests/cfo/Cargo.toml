@@ -7,3 +7,7 @@ exclude = [
     "deps/stake",
     "deps/swap"
 ]
+resolver = "2"
+
+[profile.release]
+overflow-checks = true

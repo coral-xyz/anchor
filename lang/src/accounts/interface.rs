@@ -9,7 +9,7 @@ use crate::{
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::ops::Deref;
 
 /// Type validating that the account is one of a set of given Programs
@@ -75,22 +75,22 @@ use std::ops::Deref;
 #[derive(Clone)]
 pub struct Interface<'info, T>(Program<'info, T>);
 impl<'a, T> Interface<'a, T> {
-    pub(crate) fn new(info: AccountInfo<'a>) -> Self {
+    pub(crate) fn new(info: &'a AccountInfo<'a>) -> Self {
         Self(Program::new(info))
     }
     pub fn programdata_address(&self) -> Result<Option<Pubkey>> {
         self.0.programdata_address()
     }
 }
-impl<'a, T: CheckId> TryFrom<&AccountInfo<'a>> for Interface<'a, T> {
+impl<'a, T: CheckId> TryFrom<&'a AccountInfo<'a>> for Interface<'a, T> {
     type Error = Error;
     /// Deserializes the given `info` into a `Program`.
-    fn try_from(info: &AccountInfo<'a>) -> Result<Self> {
+    fn try_from(info: &'a AccountInfo<'a>) -> Result<Self> {
         T::check_id(info.key)?;
         if !info.executable {
             return Err(ErrorCode::InvalidProgramExecutable.into());
         }
-        Ok(Self::new(info.clone()))
+        Ok(Self::new(info))
     }
 }
 impl<'info, T> Deref for Interface<'info, T> {
@@ -105,13 +105,13 @@ impl<'info, T> AsRef<AccountInfo<'info>> for Interface<'info, T> {
     }
 }
 
-impl<'info, T: CheckId> Accounts<'info> for Interface<'info, T> {
+impl<'info, B, T: CheckId> Accounts<'info, B> for Interface<'info, T> {
     #[inline(never)]
     fn try_accounts(
         _program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
+        accounts: &mut &'info [AccountInfo<'info>],
         _ix_data: &[u8],
-        _bumps: &mut BTreeMap<String, u8>,
+        _bumps: &mut B,
         _reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self> {
         if accounts.is_empty() {

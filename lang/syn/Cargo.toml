@@ -1,31 +1,37 @@
 [package]
 name = "anchor-syn"
-version = "0.27.0"
-authors = ["Serum Foundation <foundation@projectserum.com>"]
+version = "0.30.0"
+authors = ["Anchor Maintainers <accounts@200ms.io>"]
 repository = "https://github.com/coral-xyz/anchor"
 license = "Apache-2.0"
 description = "Anchor syntax parsing and code generation tools"
 rust-version = "1.60"
 edition = "2021"
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
 [features]
 allow-missing-optionals = []
-init-if-needed = []
-idl = []
-hash = []
-default = []
 anchor-debug = []
-seeds = []
 event-cpi = []
+hash = []
+idl-build = ["cargo_toml"]
+init-if-needed = []
+interface-instructions = []
 
 [dependencies]
-proc-macro2 = { version = "1.0", features=["span-locations"]}
-quote = "1.0"
-syn = { version = "1.0.60", features = ["full", "extra-traits", "parsing"] }
-anyhow = "1.0.32"
-heck = "0.3.1"
-serde = { version = "1.0.122", features = ["derive"] }
-serde_json = "1.0"
-sha2 = "0.9.2"
-thiserror = "1.0"
-bs58 = "0.3.1"
+anyhow = "1"
+bs58 = "0.5"
+heck = "0.3"
+proc-macro2 = { version = "1", features = ["span-locations"] }
+quote = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+syn = { version = "1", features = ["full", "extra-traits", "parsing"] }
+thiserror = "1"
+
+# `idl-build` feature only
+cargo_toml = { version = "0.19", optional = true }

@@ -63,7 +63,7 @@ export class AnchorProvider implements Provider {
   constructor(
     readonly connection: Connection,
     readonly wallet: Wallet,
-    readonly opts: ConfirmOptions
+    readonly opts: ConfirmOptions = AnchorProvider.defaultOptions()
   ) {
     this.publicKey = wallet?.publicKey;
   }
@@ -83,13 +83,16 @@ export class AnchorProvider implements Provider {
    *
    * (This api is for Node only.)
    */
-  static local(url?: string, opts?: ConfirmOptions): AnchorProvider {
+  static local(
+    url?: string,
+    opts: ConfirmOptions = AnchorProvider.defaultOptions()
+  ): AnchorProvider {
     if (isBrowser) {
       throw new Error(`Provider local is not available on browser.`);
     }
-    opts = opts ?? AnchorProvider.defaultOptions();
+
     const connection = new Connection(
-      url ?? "http://localhost:8899",
+      url ?? "http://127.0.0.1:8899",
       opts.preflightCommitment
     );
     const NodeWallet = require("./nodewallet.js").default;
@@ -171,8 +174,10 @@ export class AnchorProvider implements Provider {
             ? tx.signatures?.[0] || new Uint8Array()
             : tx.signature ?? new Uint8Array()
         );
+        const maxVer = isVersionedTransaction(tx) ? 0 : undefined;
         const failedTx = await this.connection.getTransaction(txSig, {
           commitment: "confirmed",
+          maxSupportedTransactionVersion: maxVer,
         });
         if (!failedTx) {
           throw err;
@@ -253,8 +258,10 @@ export class AnchorProvider implements Provider {
               ? tx.signatures?.[0] || new Uint8Array()
               : tx.signature ?? new Uint8Array()
           );
+          const maxVer = isVersionedTransaction(tx) ? 0 : undefined;
           const failedTx = await this.connection.getTransaction(txSig, {
             commitment: "confirmed",
+            maxSupportedTransactionVersion: maxVer,
           });
           if (!failedTx) {
             throw err;
@@ -295,7 +302,7 @@ export class AnchorProvider implements Provider {
 
     let result: RpcResponseAndContext<SimulatedTransactionResponse>;
     if (isVersionedTransaction(tx)) {
-      if (signers) {
+      if (signers && signers.length > 0) {
         tx.sign(signers);
         tx = await this.wallet.signTransaction(tx);
       }
@@ -307,7 +314,7 @@ export class AnchorProvider implements Provider {
       tx.feePayer = tx.feePayer || this.wallet.publicKey;
       tx.recentBlockhash = recentBlockhash;
 
-      if (signers) {
+      if (signers && signers.length > 0) {
         tx = await this.wallet.signTransaction(tx);
       }
       result = await simulateTransaction(

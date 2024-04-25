@@ -1,4 +1,4 @@
-use crate::codegen::accounts::{constraints, generics, ParsedGenerics};
+use crate::codegen::accounts::{bumps, constraints, generics, ParsedGenerics};
 use crate::{AccountField, AccountsStruct};
 use quote::quote;
 use syn::Expr;
@@ -25,11 +25,11 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     quote! {
                         #[cfg(feature = "anchor-debug")]
                         ::solana_program::log::sol_log(stringify!(#name));
-                        let #name: #ty = anchor_lang::Accounts::try_accounts(__program_id, __accounts, __ix_data, __bumps, __reallocs)?;
+                        let #name: #ty = anchor_lang::Accounts::try_accounts(__program_id, __accounts, __ix_data, &mut __bumps.#name, __reallocs)?;
                     }
                 }
                 AccountField::Field(f) => {
-                    // `init` and `zero` acccounts are special cased as they are
+                    // `init` and `zero` accounts are special cased as they are
                     // deserialized by constraints. Here, we just take out the
                     // AccountInfo for later use at constraint validation time.
                     if is_init(af) || f.constraints.zeroed.is_some()  {
@@ -82,6 +82,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
 
     let constraints = generate_constraints(accs);
     let accounts_instance = generate_accounts_instance(accs);
+    let bumps_struct_name = bumps::generate_bumps_name(&accs.ident);
 
     let ix_de = match &accs.instruction_api {
         None => quote! {},
@@ -115,13 +116,13 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
 
     quote! {
         #[automatically_derived]
-        impl<#combined_generics> anchor_lang::Accounts<#trait_generics> for #name<#struct_generics> #where_clause {
+        impl<#combined_generics> anchor_lang::Accounts<#trait_generics, #bumps_struct_name> for #name<#struct_generics> #where_clause {
             #[inline(never)]
             fn try_accounts(
                 __program_id: &anchor_lang::solana_program::pubkey::Pubkey,
-                __accounts: &mut &[anchor_lang::solana_program::account_info::AccountInfo<'info>],
+                __accounts: &mut &#trait_generics [anchor_lang::solana_program::account_info::AccountInfo<#trait_generics>],
                 __ix_data: &[u8],
-                __bumps: &mut std::collections::BTreeMap<String, u8>,
+                __bumps: &mut #bumps_struct_name,
                 __reallocs: &mut std::collections::BTreeSet<anchor_lang::solana_program::pubkey::Pubkey>,
             ) -> anchor_lang::Result<Self> {
                 // Deserialize instruction, if declared.
@@ -142,7 +143,7 @@ pub fn generate_constraints(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         accs.fields.iter().filter(|af| !is_init(af)).collect();
 
     // Deserialization for each pda init field. This must be after
-    // the inital extraction from the accounts slice and before access_checks.
+    // the initial extraction from the accounts slice and before access_checks.
     let init_fields: Vec<proc_macro2::TokenStream> = accs
         .fields
         .iter()

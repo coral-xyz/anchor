@@ -1,7 +1,7 @@
 //! Misc example is a catchall program for testing unrelated features.
 //! It's not too instructive/coherent by itself, so please see other examples.
 
-use account::MAX_SIZE;
+use account::*;
 use anchor_lang::prelude::*;
 use context::*;
 use event::*;
@@ -11,16 +11,6 @@ mod context;
 mod event;
 
 declare_id!("3TEqcc8xhrhdspwbvoamUJe2borm4Nr72JxL66k6rgrh");
-
-#[constant]
-pub const BASE: u128 = 1_000_000;
-#[constant]
-pub const DECIMALS: u8 = 6;
-#[constant]
-pub const BYTES_STR: &[u8] = b"test";
-#[constant]
-pub const BYTE_STR: u8 = b't';
-pub const NO_IDL: u16 = 55;
 
 #[program]
 pub mod misc {
@@ -48,11 +38,6 @@ pub mod misc {
         Ok(())
     }
 
-    pub fn test_u16(ctx: Context<TestU16>, data: u16) -> Result<()> {
-        ctx.accounts.my_account.data = data;
-        Ok(())
-    }
-
     pub fn test_simulate(_ctx: Context<TestSimulate>, data: u32) -> Result<()> {
         emit!(E1 { data });
         emit!(E2 { data: 1234 });
@@ -63,21 +48,6 @@ pub mod misc {
         emit!(E6 {
             data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
         });
-        Ok(())
-    }
-
-    pub fn test_input_enum(_ctx: Context<TestSimulate>, data: TestEnum) -> Result<()> {
-        emit!(E7 { data: data });
-        Ok(())
-    }
-
-    pub fn test_i8(ctx: Context<TestI8>, data: i8) -> Result<()> {
-        ctx.accounts.data.data = data;
-        Ok(())
-    }
-
-    pub fn test_i16(ctx: Context<TestI16>, data: i16) -> Result<()> {
-        ctx.accounts.data.data = data;
         Ok(())
     }
 
@@ -136,7 +106,7 @@ pub mod misc {
     pub fn test_pda_init_zero_copy(ctx: Context<TestPdaInitZeroCopy>) -> Result<()> {
         let mut acc = ctx.accounts.my_pda.load_init()?;
         acc.data = 9;
-        acc.bump = *ctx.bumps.get("my_pda").unwrap();
+        acc.bump = ctx.bumps.my_pda;
         Ok(())
     }
 
@@ -175,7 +145,9 @@ pub mod misc {
         Ok(())
     }
 
-    pub fn test_init_mint_with_token_program(_ctx: Context<TestInitMintWithTokenProgram>) -> Result<()> {
+    pub fn test_init_mint_with_token_program(
+        _ctx: Context<TestInitMintWithTokenProgram>,
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -184,7 +156,9 @@ pub mod misc {
         Ok(())
     }
 
-    pub fn test_init_token_with_token_program(_ctx: Context<TestInitTokenWithTokenProgram>) -> Result<()> {
+    pub fn test_init_token_with_token_program(
+        _ctx: Context<TestInitTokenWithTokenProgram>,
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -200,7 +174,9 @@ pub mod misc {
         Ok(())
     }
 
-    pub fn test_init_associated_token_with_token_program(_ctx: Context<TestInitAssociatedTokenWithTokenProgram>) -> Result<()> {
+    pub fn test_init_associated_token_with_token_program(
+        _ctx: Context<TestInitAssociatedTokenWithTokenProgram>,
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -250,7 +226,7 @@ pub mod misc {
     }
 
     pub fn test_init_mint_if_needed_with_token_program(
-        _ctx: Context<TestInitMintIfNeededWithTokenProgram>
+        _ctx: Context<TestInitMintIfNeededWithTokenProgram>,
     ) -> Result<()> {
         Ok(())
     }
@@ -259,7 +235,9 @@ pub mod misc {
         Ok(())
     }
 
-    pub fn test_init_token_if_needed_with_token_program(_ctx: Context<TestInitTokenIfNeededWithTokenProgram>) -> Result<()> {
+    pub fn test_init_token_if_needed_with_token_program(
+        _ctx: Context<TestInitTokenIfNeededWithTokenProgram>,
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -345,7 +323,9 @@ pub mod misc {
         Ok(())
     }
 
-    pub fn test_only_token_program_constraint(_ctx: Context<TestOnlyTokenProgramConstraint>) -> Result<()> {
+    pub fn test_only_token_program_constraint(
+        _ctx: Context<TestOnlyTokenProgramConstraint>,
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -389,7 +369,9 @@ pub mod misc {
         Ok(())
     }
 
-    pub fn test_associated_token_with_token_program_constraint(_ctx: Context<TestAssociatedTokenWithTokenProgramConstraint>) -> Result<()> {
+    pub fn test_associated_token_with_token_program_constraint(
+        _ctx: Context<TestAssociatedTokenWithTokenProgramConstraint>,
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -399,7 +381,7 @@ pub mod misc {
         program_id: u8,
         accounts: u8,
         ix_data: u8,
-        remaining_accounts: u8
+        remaining_accounts: u8,
     ) -> Result<()> {
         Ok(())
     }

@@ -12,8 +12,5 @@
     "ts-node": "*",
     "typescript": "*"
   },
-  "dependencies": {
-    "@coral-xyz/anchor": "*",
-    "@solana/web3.js": "*"
-  }
+  "dependencies": {}
 }

@@ -1,75 +1,69 @@
 /** Sync Markdown files in /bench based on the data from bench.json */
 
-import { BenchData, Markdown } from "./utils";
+import { BenchData, BenchResult, Markdown, formatNumber } from "./utils";
 
 (async () => {
   const bench = await BenchData.open();
 
   await BenchData.forEachMarkdown((markdown, fileName) => {
-    if (fileName === "COMPUTE_UNITS.md") {
-      const versions = bench.getVersions();
+    const resultType = fileName
+      .toLowerCase()
+      .replace(".md", "")
+      .replace(/_\w/g, (match) => match[1].toUpperCase()) as keyof BenchResult;
 
-      // On the first version, compare with itself to update it with no changes
-      versions.unshift(versions[0]);
+    const versions = bench.getVersions();
 
-      for (const i in versions) {
-        const currentVersion = versions[i];
-        const nextVersion = versions[+i + 1];
+    // On the first version, compare with itself to update it with no changes
+    versions.unshift(versions[0]);
 
-        if (currentVersion === "unreleased") {
-          return;
-        }
+    for (const i in versions) {
+      const currentVersion = versions[i];
+      if (currentVersion === "unreleased") return;
 
-        const newComputeUnitsResult = bench.get(nextVersion).computeUnits;
-        const oldComputeUnitsResult = bench.get(currentVersion).computeUnits;
+      const nextVersion = versions[+i + 1];
+      const newData = bench.get(nextVersion);
+      const oldData = bench.get(currentVersion);
 
-        // Create table
-        const table = Markdown.createTable(
-          "Instruction",
-          "Compute Units",
-          "+/-"
-        );
+      // Create table
+      const table = Markdown.createTable();
 
-        bench.compareComputeUnits(
-          newComputeUnitsResult,
-          oldComputeUnitsResult,
-          ({ ixName, newComputeUnits, oldComputeUnits }) => {
-            if (newComputeUnits === null) {
-              // Deleted instruction
-              return;
-            }
-
-            let changeText;
-            if (oldComputeUnits === null) {
-              // New instruction
-              changeText = "N/A";
-            } else {
-              const percentChange = (
-                (newComputeUnits / oldComputeUnits - 1) *
-                100
-              ).toFixed(2);
-
-              if (+percentChange > 0) {
-                changeText = `🔴 **+${percentChange}%**`;
-              } else {
-                changeText = `🟢 **${percentChange}%**`;
-              }
-            }
-
-            table.insert(ixName, newComputeUnits.toString(), changeText);
-          },
-          (ixName, computeUnits) => {
-            table.insert(
-              ixName,
-              computeUnits.toString(),
-              +i === 0 ? "N/A" : "-"
-            );
+      bench.compare({
+        newResult: newData.result[resultType],
+        oldResult: oldData.result[resultType],
+        changeCb: ({ name, newValue, oldValue }) => {
+          if (newValue === null) {
+            // Deleted key
+            return;
           }
-        );
 
-        // Update version's table
-        markdown.updateTable(nextVersion, table);
-      }
+          let changeText: string;
+          if (oldValue === null) {
+            // New key
+            changeText = "N/A";
+          } else {
+            const delta = formatNumber(newValue - oldValue);
+            const percentChange = ((newValue / oldValue - 1) * 100).toFixed(2);
+
+            if (+percentChange > 0) {
+              changeText = `🔴 **+${delta} (${percentChange}%)**`;
+            } else {
+              changeText = `🟢 **${delta} (${percentChange.slice(1)}%)**`;
+            }
+          }
+
+          table.insert(name, formatNumber(newValue), changeText);
+        },
+        noChangeCb: ({ name, value }) => {
+          table.insert(name, formatNumber(value), +i === 0 ? "N/A" : "-");
+        },
+      });
+
+      // Update version data
+      markdown.updateVersion({
+        version: nextVersion,
+        solanaVersion: newData.solanaVersion,
+        table,
+      });
     }
   });
 })();

@@ -10,7 +10,7 @@ use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 
@@ -28,7 +28,7 @@ use std::ops::{Deref, DerefMut};
 /// This means that the data type that Accounts wraps around (`=T`) needs to
 /// implement the [Owner trait](crate::Owner).
 /// The `#[account]` attribute implements the Owner trait for
-/// a struct using the `crate::ID` declared by [`declareId`](crate::declare_id)
+/// a struct using the `crate::ID` declared by [`declare_id`](crate::declare_id)
 /// in the same program. It follows that Account can also be used
 /// with a `T` that comes from a different program.
 ///
@@ -225,7 +225,7 @@ use std::ops::{Deref, DerefMut};
 #[derive(Clone)]
 pub struct Account<'info, T: AccountSerialize + AccountDeserialize + Clone> {
     account: T,
-    info: AccountInfo<'info>,
+    info: &'info AccountInfo<'info>,
 }
 
 impl<'info, T: AccountSerialize + AccountDeserialize + Clone + fmt::Debug> fmt::Debug
@@ -246,7 +246,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone + fmt::Debug> Accou
 }
 
 impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Account<'a, T> {
-    pub(crate) fn new(info: AccountInfo<'a>, account: T) -> Account<'a, T> {
+    pub(crate) fn new(info: &'a AccountInfo<'a>, account: T) -> Account<'a, T> {
         Self { info, account }
     }
 
@@ -256,7 +256,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Account<'a, T> {
         program_id: &Pubkey,
     ) -> Result<()> {
         // Only persist if the owner is the current program and the account is not closed.
-        if expected_owner == program_id && !crate::common::is_closed(&self.info) {
+        if expected_owner == program_id && !crate::common::is_closed(self.info) {
             let info = self.to_account_info();
             let mut data = info.try_borrow_mut_data()?;
             let dst: &mut [u8] = &mut data;
@@ -302,7 +302,7 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Clone> Account<'a, T> {
 impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T> {
     /// Deserializes the given `info` into a `Account`.
     #[inline(never)]
-    pub fn try_from(info: &AccountInfo<'a>) -> Result<Account<'a, T>> {
+    pub fn try_from(info: &'a AccountInfo<'a>) -> Result<Account<'a, T>> {
         if info.owner == &system_program::ID && info.lamports() == 0 {
             return Err(ErrorCode::AccountNotInitialized.into());
         }
@@ -311,14 +311,14 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
                 .with_pubkeys((*info.owner, T::owner())));
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
-        Ok(Account::new(info.clone(), T::try_deserialize(&mut data)?))
+        Ok(Account::new(info, T::try_deserialize(&mut data)?))
     }
 
     /// Deserializes the given `info` into a `Account` without checking
     /// the account discriminator. Be careful when using this and avoid it if
     /// possible.
     #[inline(never)]
-    pub fn try_from_unchecked(info: &AccountInfo<'a>) -> Result<Account<'a, T>> {
+    pub fn try_from_unchecked(info: &'a AccountInfo<'a>) -> Result<Account<'a, T>> {
         if info.owner == &system_program::ID && info.lamports() == 0 {
             return Err(ErrorCode::AccountNotInitialized.into());
         }
@@ -327,14 +327,11 @@ impl<'a, T: AccountSerialize + AccountDeserialize + Owner + Clone> Account<'a, T
                 .with_pubkeys((*info.owner, T::owner())));
         }
         let mut data: &[u8] = &info.try_borrow_data()?;
-        Ok(Account::new(
-            info.clone(),
-            T::try_deserialize_unchecked(&mut data)?,
-        ))
+        Ok(Account::new(info, T::try_deserialize_unchecked(&mut data)?))
     }
 }
 
-impl<'info, T: AccountSerialize + AccountDeserialize + Owner + Clone> Accounts<'info>
+impl<'info, B, T: AccountSerialize + AccountDeserialize + Owner + Clone> Accounts<'info, B>
     for Account<'info, T>
 where
     T: AccountSerialize + AccountDeserialize + Owner + Clone,
@@ -342,9 +339,9 @@ where
     #[inline(never)]
     fn try_accounts(
         _program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
+        accounts: &mut &'info [AccountInfo<'info>],
         _ix_data: &[u8],
-        _bumps: &mut BTreeMap<String, u8>,
+        _bumps: &mut B,
         _reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self> {
         if accounts.is_empty() {
@@ -395,7 +392,7 @@ impl<'info, T: AccountSerialize + AccountDeserialize + Clone> AsRef<AccountInfo<
     for Account<'info, T>
 {
     fn as_ref(&self) -> &AccountInfo<'info> {
-        &self.info
+        self.info
     }
 }
 

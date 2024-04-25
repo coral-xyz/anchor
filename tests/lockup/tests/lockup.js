@@ -2,13 +2,11 @@ const anchor = require("@coral-xyz/anchor");
 const serumCmn = require("@project-serum/common");
 const { TOKEN_PROGRAM_ID } = require("@solana/spl-token");
 const utils = require("./utils");
-const { assert, expect } = require("chai");
+const { assert } = require("chai");
 const nativeAssert = require("assert");
 
-anchor.utils.features.set("anchor-deprecated-state");
-
 describe("Lockup and Registry", () => {
-  // Read the provider from the configured environmnet.
+  // Read the provider from the configured environments.
   const provider = anchor.AnchorProvider.env();
   // hack so we don't have to update serum-common library
   // to the new AnchorProvider class and Provider interface
@@ -936,7 +934,7 @@ describe("Lockup and Registry", () => {
     assert.isTrue(tokenAccount.amount.eq(withdrawAmount));
   });
 
-  it("Should succesfully unlock a locked reward after unstaking", async () => {
+  it("Should successfully unlock a locked reward after unstaking", async () => {
     const token = await serumCmn.createTokenAccount(
       provider,
       mint,

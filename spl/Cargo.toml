@@ -1,31 +1,40 @@
 [package]
 name = "anchor-spl"
-version = "0.27.0"
-authors = ["Serum Foundation <foundation@projectserum.com>"]
+version = "0.30.0"
+authors = ["Anchor Maintainers <accounts@200ms.io>"]
 rust-version = "1.60"
 edition = "2021"
 license = "Apache-2.0"
 description = "CPI clients for SPL programs"
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
 [features]
-default = ["mint", "token", "token_2022", "associated_token"]
+default = ["associated_token", "mint", "token", "token_2022", "token_2022_extensions"]
+associated_token = ["spl-associated-token-account"]
+dex = ["serum_dex"]
+devnet = []
+governance = []
+idl-build = ["anchor-lang/idl-build"]
+memo = ["spl-memo"]
+metadata = ["mpl-token-metadata"]
 mint = []
+stake = ["borsh"]
 token = ["spl-token"]
 token_2022 = ["spl-token-2022"]
-associated_token = ["spl-associated-token-account"]
-governance = []
-shmem = []
-stake = ["borsh"]
-devnet = []
-metadata = ["mpl-token-metadata"]
-dex = ["serum_dex"]
+token_2022_extensions = ["spl-token-2022", "spl-token-group-interface", "spl-token-metadata-interface", "spl-pod"]
 
 [dependencies]
-anchor-lang = { path = "../lang", version = "0.27.0", features = ["derive"] }
-borsh = { version = "<0.11.0", optional = true }
+anchor-lang = { path = "../lang", version = "0.30.0", features = ["derive"] }
+borsh = { version = ">=0.9, <0.11", optional = true }
+mpl-token-metadata = { version = "4", optional = true }
 serum_dex = { git = "https://github.com/openbook-dex/program/", rev = "1be91f2", version = "0.4.0", features = ["no-entrypoint"], optional = true }
-solana-program = "<1.17.0"
-spl-token = { version = "3.5.0", features = ["no-entrypoint"], optional = true }
-spl-token-2022 = { version = "0.6.1", features = ["no-entrypoint"], optional = true }
-spl-associated-token-account = { version = "1.1.1", features = ["no-entrypoint"], optional = true }
-mpl-token-metadata = { version = "^1.11.0", optional = true, features = ["no-entrypoint"] }
+spl-associated-token-account = { version = "3", features = ["no-entrypoint"], optional = true }
+spl-memo = { version = "4", features = ["no-entrypoint"], optional = true }
+spl-token = { version = "4", features = ["no-entrypoint"], optional = true }
+spl-token-2022 = { version = "3", features = ["no-entrypoint"], optional = true }
+spl-token-group-interface = { version = "0.2.3", optional = true }
+spl-token-metadata-interface = { version = "0.3.3", optional = true }
+spl-pod = { version = "0.2.2", optional = true }

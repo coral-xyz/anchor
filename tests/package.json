@@ -8,16 +8,20 @@
   "workspaces": [
     "anchor-cli-account",
     "anchor-cli-idl",
+    "auction-house",
     "bench",
     "cashiers-check",
     "cfo",
     "chat",
     "composite",
     "custom-coder",
+    "declare-id",
+    "declare-program",
     "errors",
     "escrow",
     "events",
     "floats",
+    "idl",
     "ido-pool",
     "interface",
     "lockup",
@@ -29,8 +33,11 @@
     "relations-derivation",
     "pyth",
     "realloc",
+    "spl/metadata",
+    "spl/token-extensions",
     "spl/token-proxy",
     "spl/token-wrapper",
+    "spl/transfer-hook",
     "swap",
     "system-accounts",
     "sysvars",
@@ -38,23 +45,17 @@
     "typescript",
     "validator-clone",
     "zero-copy",
-    "declare-id",
     "cpi-returns",
     "multiple-suites",
     "multiple-suites-run-single",
-    "bpf-upgradeable-state"
+    "bpf-upgradeable-state",
+    "solang"
   ],
   "dependencies": {
-    "@coral-xyz/anchor": "file:../ts/packages/anchor",
-    "@coral-xyz/spl-associated-token-account": "file:../ts/packages/spl-associated-token-account",
-    "@coral-xyz/spl-token": "file:../ts/packages/spl-token",
     "@project-serum/common": "^0.0.1-beta.3",
     "@project-serum/serum": "^0.13.60",
     "@solana/spl-token": "^0.1.8",
     "@solana/web3.js": "^1.68.0"
-  },
-  "resolutions": {
-    "@coral-xyz/anchor/@solana/web3.js": "^1.68.0"
   },
   "devDependencies": {
     "@types/bn.js": "^5.1.1",

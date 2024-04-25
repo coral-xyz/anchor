@@ -30,12 +30,6 @@ pub struct DataI8 {
 }
 size!(DataI8, 1);
 
-#[account]
-pub struct DataI16 {
-    pub data: i16, // 2
-}
-size!(DataI16, 2);
-
 #[account(zero_copy)]
 pub struct DataZeroCopy {
     pub data: u16,    // 2
@@ -93,4 +87,12 @@ pub enum CoolEnum {
         user_2: Pubkey,
         some_slot: u64,
     },
+}
+
+#[derive(Debug, Clone, Copy, AnchorSerialize, AnchorDeserialize, PartialEq, Eq)]
+pub struct TestStruct {
+    pub data1: u8,
+    pub data2: u16,
+    pub data3: u32,
+    pub data4: u64,
 }

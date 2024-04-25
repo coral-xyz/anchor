@@ -14,7 +14,8 @@ no-entrypoint = []
 no-idl = []
 cpi = ["no-entrypoint"]
 default = []
-test-bpf = []
+test-sbf = []
+idl-build = ["anchor-lang/idl-build"]
 
 [dependencies]
 anchor-lang = { path = "../../../../lang" }
@@ -22,4 +23,4 @@ bytemuck = {version = "1.4.0", features = ["derive", "min_const_generics"]}
 
 [dev-dependencies]
 anchor-client = { path = "../../../../client", features = ["debug", "async"] }
-solana-program-test = "<1.17.0"
+solana-program-test = "1.16"

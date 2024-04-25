@@ -1,0 +1,25 @@
+[package]
+name = "anchor-lang-idl"
+version = "0.1.0"
+authors = ["Anchor Maintainers <accounts@200ms.io>"]
+repository = "https://github.com/coral-xyz/anchor"
+rust-version = "1.60"
+edition = "2021"
+license = "Apache-2.0"
+description = "Anchor framework IDL"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[features]
+build = ["anchor-syn", "regex"]
+
+[dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# `build` feature only
+anchor-syn = { path = "../lang/syn", version = "0.30.0", optional = true }
+regex = { version = "1", optional = true }

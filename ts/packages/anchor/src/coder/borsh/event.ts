@@ -1,9 +1,7 @@
 import { Buffer } from "buffer";
-import * as base64 from "base64-js";
 import { Layout } from "buffer-layout";
-import { sha256 } from "js-sha256";
-import { Idl, IdlEvent, IdlTypeDef } from "../../idl.js";
-import { Event, EventData } from "../../program/event.js";
+import * as base64 from "../../utils/bytes/base64.js";
+import { Idl } from "../../idl.js";
 import { IdlCoder } from "./idl.js";
 import { EventCoder } from "../index.js";
 
@@ -19,49 +17,49 @@ export class BorshEventCoder implements EventCoder {
   private discriminators: Map<string, string>;
 
   public constructor(idl: Idl) {
-    if (idl.events === undefined) {
+    if (!idl.events) {
       this.layouts = new Map();
       return;
     }
-    const layouts: [string, Layout<any>][] = idl.events.map((event) => {
-      let eventTypeDef: IdlTypeDef = {
-        name: event.name,
-        type: {
-          kind: "struct",
-          fields: event.fields.map((f) => {
-            return { name: f.name, type: f.type };
-          }),
-        },
-      };
-      return [event.name, IdlCoder.typeDefLayout(eventTypeDef, idl.types)];
+
+    const types = idl.types;
+    if (!types) {
+      throw new Error("Events require `idl.types`");
+    }
+
+    const layouts: [string, Layout<any>][] = idl.events.map((ev) => {
+      const typeDef = types.find((ty) => ty.name === ev.name);
+      if (!typeDef) {
+        throw new Error(`Event not found: ${ev.name}`);
+      }
+      return [ev.name, IdlCoder.typeDefLayout({ typeDef, types })];
     });
     this.layouts = new Map(layouts);
 
     this.discriminators = new Map<string, string>(
-      idl.events === undefined
-        ? []
-        : idl.events.map((e) => [
-            base64.fromByteArray(eventDiscriminator(e.name)),
-            e.name,
-          ])
+      (idl.events ?? []).map((ev) => [
+        base64.encode(Buffer.from(ev.discriminator)),
+        ev.name,
+      ])
     );
   }
 
-  public decode<E extends IdlEvent = IdlEvent, T = Record<string, never>>(
-    log: string
-  ): Event<E, T> | null {
+  public decode(log: string): {
+    name: string;
+    data: any;
+  } | null {
     let logArr: Buffer;
     // This will throw if log length is not a multiple of 4.
     try {
-      logArr = Buffer.from(base64.toByteArray(log));
+      logArr = base64.decode(log);
     } catch (e) {
       return null;
     }
-    const disc = base64.fromByteArray(logArr.slice(0, 8));
+    const disc = base64.encode(logArr.slice(0, 8));
 
     // Only deserialize if the discriminator implies a proper event.
     const eventName = this.discriminators.get(disc);
-    if (eventName === undefined) {
+    if (!eventName) {
       return null;
     }
 
@@ -69,14 +67,7 @@ export class BorshEventCoder implements EventCoder {
     if (!layout) {
       throw new Error(`Unknown event: ${eventName}`);
     }
-    const data = layout.decode(logArr.slice(8)) as EventData<
-      E["fields"][number],
-      T
-    >;
+    const data = layout.decode(logArr.slice(8));
     return { data, name: eventName };
   }
-}
-
-export function eventDiscriminator(name: string): Buffer {
-  return Buffer.from(sha256.digest(`event:${name}`)).slice(0, 8);
 }
