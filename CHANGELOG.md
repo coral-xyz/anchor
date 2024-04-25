@@ -22,6 +22,10 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Breaking
 
+## Next release
+
+- cli: Use npm's configured default license for new projects make with `anchor init`. ([#2929](https://github.com/coral-xyz/anchor/pull/2929))
+
 ## [0.30.0] - 2024-04-15
 
 ### Features

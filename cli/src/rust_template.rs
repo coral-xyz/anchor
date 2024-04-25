@@ -392,10 +392,11 @@ describe("{}", () => {{
     )
 }
 
-pub fn package_json(jest: bool) -> String {
+pub fn package_json(jest: bool, license: String) -> String {
     if jest {
         format!(
             r#"{{
+  "license": "{license}",
   "scripts": {{
     "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
@@ -413,6 +414,7 @@ pub fn package_json(jest: bool) -> String {
     } else {
         format!(
             r#"{{
+  "license": "{license}",
   "scripts": {{
     "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
@@ -431,10 +433,11 @@ pub fn package_json(jest: bool) -> String {
     }
 }
 
-pub fn ts_package_json(jest: bool) -> String {
+pub fn ts_package_json(jest: bool, license: String) -> String {
     if jest {
         format!(
             r#"{{
+  "license": "{license}",              
   "scripts": {{
     "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
@@ -456,6 +459,7 @@ pub fn ts_package_json(jest: bool) -> String {
     } else {
         format!(
             r#"{{
+  "license": "{license}",  
   "scripts": {{
     "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
