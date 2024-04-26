@@ -947,11 +947,7 @@ fn init(
         &program_id.to_string(),
     )?;
 
-    let yarn_result = install_node_modules("yarn")?;
-    if !yarn_result.status.success() {
-        println!("Failed yarn install will attempt to npm install");
-        install_node_modules("npm")?;
-    }
+    install_node_modules()?;
 
     if !no_git {
         let git_result = std::process::Command::new("git")
@@ -970,21 +966,21 @@ fn init(
     Ok(())
 }
 
-fn install_node_modules(cmd: &str) -> Result<std::process::Output> {
+fn install_node_modules() -> Result<std::process::Output> {
     if cfg!(target_os = "windows") {
         std::process::Command::new("cmd")
-            .arg(format!("/C {cmd} install"))
+            .arg(format!("/C npm install"))
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .output()
-            .map_err(|e| anyhow::format_err!("{} install failed: {}", cmd, e.to_string()))
+            .map_err(|e| anyhow::format_err!("npm install failed: {}", e.to_string()))
     } else {
-        std::process::Command::new(cmd)
+        std::process::Command::new("npm")
             .arg("install")
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .output()
-            .map_err(|e| anyhow::format_err!("{} install failed: {}", cmd, e.to_string()))
+            .map_err(|e| anyhow::format_err!("npm install failed: {}", e.to_string()))
     }
 }
 
@@ -3890,7 +3886,7 @@ fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
                 rust_template::deploy_ts_script_host(&url, &module_path.display().to_string());
             fs::write(deploy_ts, deploy_script_host_str)?;
 
-            std::process::Command::new("yarn")
+            std::process::Command::new("npm")
                 .args([
                     "run",
                     "ts-node",

@@ -650,16 +650,16 @@ impl TestTemplate {
         match &self {
             Self::Mocha => {
                 if js {
-                    "yarn run mocha -t 1000000 tests/"
+                    "npm run mocha -t 1000000 tests/"
                 } else {
-                    "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+                    "npm run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
                 }
             }
             Self::Jest => {
                 if js {
-                    "yarn run jest"
+                    "npm run jest"
                 } else {
-                    "yarn run jest --preset ts-jest"
+                    "npm run jest --preset ts-jest"
                 }
             }
             Self::Rust => "cargo test",
