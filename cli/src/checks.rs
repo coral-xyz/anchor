@@ -74,7 +74,7 @@ pub fn check_anchor_version(cfg: &WithPath<Config>) -> Result<()> {
             "WARNING: `@coral-xyz/anchor` version({ver}) and the current CLI version\
                 ({cli_version}) don't match.\n\n\t\
                 This can lead to unwanted behavior. To fix, upgrade the package by running:\n\n\t\
-                yarn upgrade @coral-xyz/anchor@{cli_version}\n"
+                npm update @coral-xyz/anchor@{cli_version}\n"
         );
     }
 
