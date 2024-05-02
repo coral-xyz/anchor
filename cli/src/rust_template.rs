@@ -62,6 +62,7 @@ pub mod {} {{
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {{
+        msg!("Greetings from: {{:?}}", ctx.program_id);
         Ok(())
     }}
 }}
@@ -145,6 +146,7 @@ pub use initialize::*;
 pub struct Initialize {}
 
 pub fn handler(ctx: Context<Initialize>) -> Result<()> {
+    msg!("Greetings from: {{:?}}", ctx.program_id);
     Ok(())
 }
 "#
@@ -392,10 +394,11 @@ describe("{}", () => {{
     )
 }
 
-pub fn package_json(jest: bool) -> String {
+pub fn package_json(jest: bool, license: String) -> String {
     if jest {
         format!(
             r#"{{
+  "license": "{license}",
   "scripts": {{
     "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
@@ -413,6 +416,7 @@ pub fn package_json(jest: bool) -> String {
     } else {
         format!(
             r#"{{
+  "license": "{license}",
   "scripts": {{
     "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
@@ -431,10 +435,11 @@ pub fn package_json(jest: bool) -> String {
     }
 }
 
-pub fn ts_package_json(jest: bool) -> String {
+pub fn ts_package_json(jest: bool, license: String) -> String {
     if jest {
         format!(
             r#"{{
+  "license": "{license}",              
   "scripts": {{
     "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
@@ -456,6 +461,7 @@ pub fn ts_package_json(jest: bool) -> String {
     } else {
         format!(
             r#"{{
+  "license": "{license}",  
   "scripts": {{
     "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
