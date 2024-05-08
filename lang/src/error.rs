@@ -268,7 +268,6 @@ pub enum ErrorCode {
     #[msg("Error during numeric conversion")]
     InvalidNumericConversion = 4102,
 
-    
     // Deprecated
     /// 5000 - The API being used is deprecated and should no longer be used
     #[msg("The API being used is deprecated and should no longer be used")]
