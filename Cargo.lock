@@ -283,6 +283,7 @@ dependencies = [
  "borsh 0.10.3",
  "bytemuck",
  "getrandom 0.2.10",
+ "solana-invoke",
  "solana-program",
  "thiserror",
 ]
@@ -4050,6 +4051,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-invoke"
+version = "0.1.0"
+source = "git+https://github.com/cavemanloverboy/solana-invoke.git#22925585f75e08b542bf7d9b003b25e4eba9004b"
+dependencies = [
+ "solana-nostd-entrypoint",
+ "solana-program",
+]
+
+[[package]]
 name = "solana-logger"
 version = "1.18.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4105,6 +4115,16 @@ dependencies = [
  "solana-version",
  "tokio",
  "url",
+]
+
+[[package]]
+name = "solana-nostd-entrypoint"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78e883350427155fa6e3f4a2478f1a19a7eb8d4d29669022413586fe2fce199f"
+dependencies = [
+ "arrayvec",
+ "solana-program",
 ]
 
 [[package]]

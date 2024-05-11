@@ -19,7 +19,7 @@ pub fn advance_nonce_account<'info>(
         ctx.accounts.nonce.key,
         ctx.accounts.authorized.key,
     );
-    crate::solana_program::program::invoke_signed(
+    crate::solana_invoke::invoke_signed(
         &ix,
         &[
             ctx.accounts.nonce,
@@ -46,7 +46,7 @@ pub fn allocate<'info>(
         ctx.accounts.account_to_allocate.key,
         space,
     );
-    crate::solana_program::program::invoke_signed(
+    crate::solana_invoke::invoke_signed(
         &ix,
         &[ctx.accounts.account_to_allocate],
         ctx.signer_seeds,
@@ -72,7 +72,7 @@ pub fn allocate_with_seed<'info>(
         space,
         owner,
     );
-    crate::solana_program::program::invoke_signed(
+    crate::solana_invoke::invoke_signed(
         &ix,
         &[ctx.accounts.account_to_allocate, ctx.accounts.base],
         ctx.signer_seeds,
@@ -94,7 +94,7 @@ pub fn assign<'info>(
         ctx.accounts.account_to_assign.key,
         owner,
     );
-    crate::solana_program::program::invoke_signed(
+    crate::solana_invoke::invoke_signed(
         &ix,
         &[ctx.accounts.account_to_assign],
         ctx.signer_seeds,
@@ -118,7 +118,7 @@ pub fn assign_with_seed<'info>(
         seed,
         owner,
     );
-    crate::solana_program::program::invoke_signed(
+    crate::solana_invoke::invoke_signed(
         &ix,
         &[ctx.accounts.account_to_assign, ctx.accounts.base],
         ctx.signer_seeds,
@@ -141,7 +141,7 @@ pub fn authorize_nonce_account<'info>(
         ctx.accounts.authorized.key,
         new_authority,
     );
-    crate::solana_program::program::invoke_signed(
+    crate::solana_invoke::invoke_signed(
         &ix,
         &[ctx.accounts.nonce, ctx.accounts.authorized],
         ctx.signer_seeds,
@@ -168,7 +168,7 @@ pub fn create_account<'info>(
         space,
         owner,
     );
-    crate::solana_program::program::invoke_signed(
+    crate::solana_invoke::invoke_signed(
         &ix,
         &[ctx.accounts.from, ctx.accounts.to],
         ctx.signer_seeds,
@@ -198,7 +198,7 @@ pub fn create_account_with_seed<'info>(
         space,
         owner,
     );
-    crate::solana_program::program::invoke_signed(
+    crate::solana_invoke::invoke_signed(
         &ix,
         &[ctx.accounts.from, ctx.accounts.to, ctx.accounts.base],
         ctx.signer_seeds,
@@ -224,13 +224,13 @@ pub fn create_nonce_account<'info>(
         authority,
         lamports,
     );
-    crate::solana_program::program::invoke_signed(
+    crate::solana_invoke::invoke_signed(
         &ixs[0],
         &[ctx.accounts.from, ctx.accounts.nonce.clone()],
         ctx.signer_seeds,
     )?;
 
-    crate::solana_program::program::invoke_signed(
+    crate::solana_invoke::invoke_signed(
         &ixs[1],
         &[
             ctx.accounts.nonce,
@@ -264,7 +264,7 @@ pub fn create_nonce_account_with_seed<'info>(
         authority,
         lamports,
     );
-    crate::solana_program::program::invoke_signed(
+    crate::solana_invoke::invoke_signed(
         &ixs[0],
         &[
             ctx.accounts.from,
@@ -274,7 +274,7 @@ pub fn create_nonce_account_with_seed<'info>(
         ctx.signer_seeds,
     )?;
 
-    crate::solana_program::program::invoke_signed(
+    crate::solana_invoke::invoke_signed(
         &ixs[1],
         &[
             ctx.accounts.nonce,
@@ -304,7 +304,7 @@ pub fn transfer<'info>(
         ctx.accounts.to.key,
         lamports,
     );
-    crate::solana_program::program::invoke_signed(
+    crate::solana_invoke::invoke_signed(
         &ix,
         &[ctx.accounts.from, ctx.accounts.to],
         ctx.signer_seeds,
@@ -332,7 +332,7 @@ pub fn transfer_with_seed<'info>(
         ctx.accounts.to.key,
         lamports,
     );
-    crate::solana_program::program::invoke_signed(
+    crate::solana_invoke::invoke_signed(
         &ix,
         &[ctx.accounts.from, ctx.accounts.base, ctx.accounts.to],
         ctx.signer_seeds,
@@ -357,7 +357,7 @@ pub fn withdraw_nonce_account<'info>(
         ctx.accounts.to.key,
         lamports,
     );
-    crate::solana_program::program::invoke_signed(
+    crate::solana_invoke::invoke_signed(
         &ix,
         &[
             ctx.accounts.nonce,

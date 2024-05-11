@@ -61,6 +61,7 @@ pub use anchor_derive_space::InitSpace;
 pub use borsh::de::BorshDeserialize as AnchorDeserialize;
 pub use borsh::ser::BorshSerialize as AnchorSerialize;
 pub use solana_program;
+pub use solana_invoke;
 
 #[cfg(feature = "event-cpi")]
 pub use anchor_attribute_event::{emit_cpi, event_cpi};

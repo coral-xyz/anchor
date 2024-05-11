@@ -13,7 +13,7 @@ pub fn build_memo<'info>(ctx: CpiContext<'_, '_, '_, 'info, BuildMemo>, memo: &[
             .map(|account| account.key)
             .collect::<Vec<_>>(),
     );
-    anchor_lang::solana_program::program::invoke_signed(
+    anchor_lang::solana_invoke::invoke_signed(
         &ix,
         &ctx.remaining_accounts,
         ctx.signer_seeds,
