@@ -4053,7 +4053,8 @@ dependencies = [
 [[package]]
 name = "solana-invoke"
 version = "0.1.0"
-source = "git+https://github.com/cavemanloverboy/solana-invoke.git#22925585f75e08b542bf7d9b003b25e4eba9004b"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca2c69ba8e4618f866917f0a23437aab9a43f5713536a5f5c6fe0f1135cd2458"
 dependencies = [
  "solana-nostd-entrypoint",
  "solana-program",
