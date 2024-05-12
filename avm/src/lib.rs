@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use cargo_toml::Manifest;
+use chrono::{TimeZone, Utc};
 use once_cell::sync::Lazy;
 use reqwest::header::USER_AGENT;
 use reqwest::StatusCode;
@@ -259,16 +260,31 @@ pub fn fetch_versions() -> Result<Vec<Version>> {
         Version::parse(s.trim_start_matches('v')).map_err(de::Error::custom)
     }
 
-    let versions = reqwest::blocking::Client::new()
+    let response = reqwest::blocking::Client::new()
         .get("https://api.github.com/repos/coral-xyz/anchor/tags")
         .header(USER_AGENT, "avm https://github.com/coral-xyz/anchor")
-        .send()?
-        .json::<Vec<Release>>()?
-        .into_iter()
-        .map(|release| release.version)
-        .collect();
+        .send()?;
 
-    Ok(versions)
+    if response.status().is_success() {
+        let releases: Vec<Release> = response.json()?;
+        let versions = releases.into_iter().map(|r| r.version).collect();
+        Ok(versions)
+    } else {
+        let reset_time_header = response
+            .headers()
+            .get("X-RateLimit-Reset")
+            .map_or("unknown", |v| v.to_str().unwrap());
+        let t = Utc.timestamp_opt(reset_time_header.parse::<i64>().unwrap(), 0);
+        let reset_time = t
+            .single()
+            .map(|t| t.format("%Y-%m-%d %H:%M:%S").to_string())
+            .unwrap_or_else(|| "unknown".to_string());
+        println!(
+            "GitHub API rate limit exceeded. Try again after {} UTC.",
+            reset_time
+        );
+        Ok(vec![])
+    }
 }
 
 /// Print available versions and flags indicating installed, current and latest
