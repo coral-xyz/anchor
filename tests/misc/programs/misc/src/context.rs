@@ -751,3 +751,6 @@ pub struct TestUsedIdentifiers<'info> {
     /// CHECK: ignore
     pub test4: AccountInfo<'info>,
 }
+
+#[derive(Accounts)]
+pub struct EmptyWithCloneDerived {}

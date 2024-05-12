@@ -385,4 +385,11 @@ pub mod misc {
     ) -> Result<()> {
         Ok(())
     }
+
+    #[cfg_attr(feature = "my-feature-derive", derive(Clone))]
+    pub fn test_derive_feature(_ctx: Context<EmptyWithCloneDerived>) -> Result<()> {
+        let ix_data = instruction::TestDeriveFeature {};
+        let _ = ix_data.clone();
+        Ok(())
+    }
 }

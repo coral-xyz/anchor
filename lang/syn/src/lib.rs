@@ -26,8 +26,8 @@ use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::token::Comma;
 use syn::{
-    Expr, Generics, Ident, ItemEnum, ItemFn, ItemMod, ItemStruct, LitInt, PatType, Token, Type,
-    TypePath,
+    Attribute, Expr, Generics, Ident, ItemEnum, ItemFn, ItemMod, ItemStruct, LitInt, PatType,
+    Token, Type, TypePath,
 };
 
 #[derive(Debug)]
@@ -63,6 +63,7 @@ pub struct Ix {
     pub raw_method: ItemFn,
     pub ident: Ident,
     pub docs: Option<Vec<String>>,
+    pub cfg_attrs: Vec<Attribute>,
     pub args: Vec<IxArg>,
     pub returns: IxReturn,
     // The ident for the struct deriving Accounts.

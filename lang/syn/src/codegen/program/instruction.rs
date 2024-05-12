@@ -10,6 +10,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         .iter()
         .map(|ix| {
             let name = &ix.raw_method.sig.ident.to_string();
+            let ix_cfg_attrs = &ix.cfg_attrs;
             let ix_name_camel =
                 proc_macro2::Ident::new(&name.to_camel_case(), ix.raw_method.sig.ident.span());
             let raw_args: Vec<proc_macro2::TokenStream> = ix
@@ -43,6 +44,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             if ix.args.is_empty() {
                 quote! {
                     /// Instruction.
+                    #(#ix_cfg_attrs)*
                     #[derive(AnchorSerialize, AnchorDeserialize)]
                     pub struct #ix_name_camel;
 
@@ -51,6 +53,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             } else {
                 quote! {
                     /// Instruction.
+                    #(#ix_cfg_attrs)*
                     #[derive(AnchorSerialize, AnchorDeserialize)]
                     pub struct #ix_name_camel {
                         #(#raw_args),*
