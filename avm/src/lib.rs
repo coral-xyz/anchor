@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Error, Result};
 use cargo_toml::Manifest;
 use chrono::{TimeZone, Utc};
 use once_cell::sync::Lazy;
@@ -245,7 +245,7 @@ pub fn read_anchorversion_file() -> Result<Version> {
 
 /// Retrieve a list of installable versions of anchor-cli using the GitHub API and tags on the Anchor
 /// repository.
-pub fn fetch_versions() -> Result<Vec<Version>> {
+pub fn fetch_versions() -> Result<Vec<Version>, Error> {
     #[derive(Deserialize)]
     struct Release {
         #[serde(rename = "name", deserialize_with = "version_deserializer")]
@@ -279,11 +279,10 @@ pub fn fetch_versions() -> Result<Vec<Version>> {
             .single()
             .map(|t| t.format("%Y-%m-%d %H:%M:%S").to_string())
             .unwrap_or_else(|| "unknown".to_string());
-        println!(
+        Err(anyhow!(
             "GitHub API rate limit exceeded. Try again after {} UTC.",
             reset_time
-        );
-        Ok(vec![])
+        ))
     }
 }
 
