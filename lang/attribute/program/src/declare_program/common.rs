@@ -38,7 +38,10 @@ pub fn gen_accounts_common(idl: &Idl, prefix: &str) -> proc_macro2::TokenStream 
 }
 
 pub fn convert_idl_type_to_syn_type(ty: &IdlType) -> syn::Type {
-    syn::parse_str(&convert_idl_type_to_str(ty)).unwrap()
+    match ty {
+        IdlType::Bytes => syn::parse_str("Vec<u8>").unwrap(),
+        _ => syn::parse_str(&convert_idl_type_to_str(ty)).unwrap(),
+    }
 }
 
 // TODO: Impl `ToString` for `IdlType`
@@ -104,8 +107,15 @@ pub fn convert_idl_type_def_to_ts(
             .generics
             .iter()
             .map(|generic| match generic {
-                IdlTypeDefGeneric::Type { name } => format_ident!("{name}"),
-                IdlTypeDefGeneric::Const { name, ty } => format_ident!("{name}: {ty}"),
+                IdlTypeDefGeneric::Type { name } => {
+                    let name = format_ident!("{}", name);
+                    quote! { #name }
+                }
+                IdlTypeDefGeneric::Const { name, ty } => {
+                    let name = format_ident!("{}", name);
+                    let ty = format_ident!("{}", ty);
+                    quote! { const #name: #ty }
+                }
             })
             .collect::<Vec<_>>();
         if generics.is_empty() {
