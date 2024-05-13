@@ -641,7 +641,7 @@ export const LangErrorMessage = new Map([
   ],
   [
     LangErrorCode.InvalidNumericConversion,
-    "The program could not perform the numeric conversion, out of range integral type conversion attempted"
+    "The program could not perform the numeric conversion, out of range integral type conversion attempted",
   ],
 
   // Deprecated
