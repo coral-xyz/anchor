@@ -80,6 +80,9 @@ pub enum Command {
         /// Use Solidity instead of Rust
         #[clap(short, long)]
         solidity: bool,
+        /// Don't install JavaScript dependencies
+        #[clap(long)]
+        no_install: bool,
         /// Don't initialize git
         #[clap(long)]
         no_git: bool,
@@ -490,6 +493,11 @@ pub enum ClusterCommand {
     List,
 }
 
+fn get_keypair(path: &str) -> Result<Keypair> {
+    solana_sdk::signature::read_keypair_file(path)
+        .map_err(|_| anyhow!("Unable to read keypair file ({path})"))
+}
+
 pub fn entry(opts: Opts) -> Result<()> {
     let restore_cbs = override_toolchain(&opts.cfg_override)?;
     let result = process_command(opts);
@@ -655,12 +663,29 @@ fn restore_toolchain(restore_cbs: RestoreToolchainCallbacks) -> Result<()> {
     Ok(())
 }
 
+/// Get the system's default license - what 'npm init' would use.
+fn get_npm_init_license() -> Result<String> {
+    let npm_init_license_output = std::process::Command::new("npm")
+        .arg("config")
+        .arg("get")
+        .arg("init-license")
+        .output()?;
+
+    if !npm_init_license_output.status.success() {
+        return Err(anyhow!("Failed to get npm init license"));
+    }
+
+    let license = String::from_utf8(npm_init_license_output.stdout)?;
+    Ok(license.trim().to_string())
+}
+
 fn process_command(opts: Opts) -> Result<()> {
     match opts.command {
         Command::Init {
             name,
             javascript,
             solidity,
+            no_install,
             no_git,
             template,
             test_template,
@@ -670,6 +695,7 @@ fn process_command(opts: Opts) -> Result<()> {
             name,
             javascript,
             solidity,
+            no_install,
             no_git,
             template,
             test_template,
@@ -838,6 +864,7 @@ fn init(
     name: String,
     javascript: bool,
     solidity: bool,
+    no_install: bool,
     no_git: bool,
     template: ProgramTemplate,
     test_template: TestTemplate,
@@ -919,11 +946,13 @@ fn init(
     // Build the migrations directory.
     fs::create_dir_all("migrations")?;
 
+    let license = get_npm_init_license()?;
+
     let jest = TestTemplate::Jest == test_template;
     if javascript {
         // Build javascript config
         let mut package_json = File::create("package.json")?;
-        package_json.write_all(rust_template::package_json(jest).as_bytes())?;
+        package_json.write_all(rust_template::package_json(jest, license).as_bytes())?;
 
         let mut deploy = File::create("migrations/deploy.js")?;
 
@@ -934,7 +963,7 @@ fn init(
         ts_config.write_all(rust_template::ts_config(jest).as_bytes())?;
 
         let mut ts_package_json = File::create("package.json")?;
-        ts_package_json.write_all(rust_template::ts_package_json(jest).as_bytes())?;
+        ts_package_json.write_all(rust_template::ts_package_json(jest, license).as_bytes())?;
 
         let mut deploy = File::create("migrations/deploy.ts")?;
         deploy.write_all(rust_template::ts_deploy_script().as_bytes())?;
@@ -947,10 +976,12 @@ fn init(
         &program_id.to_string(),
     )?;
 
-    let yarn_result = install_node_modules("yarn")?;
-    if !yarn_result.status.success() {
-        println!("Failed yarn install will attempt to npm install");
-        install_node_modules("npm")?;
+    if !no_install {
+        let yarn_result = install_node_modules("yarn")?;
+        if !yarn_result.status.success() {
+            println!("Failed yarn install will attempt to npm install");
+            install_node_modules("npm")?;
+        }
     }
 
     if !no_git {
@@ -2267,8 +2298,7 @@ fn idl_set_buffer(
     priority_fee: Option<u64>,
 ) -> Result<Pubkey> {
     with_workspace(cfg_override, |cfg| {
-        let keypair = solana_sdk::signature::read_keypair_file(&cfg.provider.wallet.to_string())
-            .map_err(|_| anyhow!("Unable to read keypair file"))?;
+        let keypair = get_keypair(&cfg.provider.wallet.to_string())?;
         let url = cluster_url(cfg, &cfg.test_validator);
         let client = create_client(url);
 
@@ -2386,8 +2416,7 @@ fn idl_set_authority(
             None => IdlAccount::address(&program_id),
             Some(addr) => addr,
         };
-        let keypair = solana_sdk::signature::read_keypair_file(&cfg.provider.wallet.to_string())
-            .map_err(|_| anyhow!("Unable to read keypair file"))?;
+        let keypair = get_keypair(&cfg.provider.wallet.to_string())?;
         let url = cluster_url(cfg, &cfg.test_validator);
         let client = create_client(url);
 
@@ -2470,8 +2499,7 @@ fn idl_close_account(
     print_only: bool,
     priority_fee: Option<u64>,
 ) -> Result<()> {
-    let keypair = solana_sdk::signature::read_keypair_file(&cfg.provider.wallet.to_string())
-        .map_err(|_| anyhow!("Unable to read keypair file"))?;
+    let keypair = get_keypair(&cfg.provider.wallet.to_string())?;
     let url = cluster_url(cfg, &cfg.test_validator);
     let client = create_client(url);
 
@@ -2523,8 +2551,7 @@ fn idl_write(
     priority_fee: Option<u64>,
 ) -> Result<()> {
     // Misc.
-    let keypair = solana_sdk::signature::read_keypair_file(&cfg.provider.wallet.to_string())
-        .map_err(|_| anyhow!("Unable to read keypair file"))?;
+    let keypair = get_keypair(&cfg.provider.wallet.to_string())?;
     let url = cluster_url(cfg, &cfg.test_validator);
     let client = create_client(url);
 
@@ -2541,7 +2568,7 @@ fn idl_write(
     const MAX_WRITE_SIZE: usize = 600;
     let mut offset = 0;
     while offset < idl_data.len() {
-        println!("Step {offset} ");
+        println!("Step {offset}/{} ", idl_data.len());
         // Instruction data.
         let data = {
             let start = offset;
@@ -3613,12 +3640,7 @@ fn deploy(
             println!("Program path: {}...", binary_path);
 
             let (program_keypair_filepath, program_id) = match &program_keypair {
-                Some(path) => (
-                    path.clone(),
-                    solana_sdk::signature::read_keypair_file(path)
-                        .map_err(|_| anyhow!("Unable to read keypair file"))?
-                        .pubkey(),
-                ),
+                Some(path) => (path.clone(), get_keypair(path)?.pubkey()),
                 None => (
                     program.keypair_file()?.path().display().to_string(),
                     program.pubkey()?,
@@ -3707,8 +3729,7 @@ fn create_idl_account(
 ) -> Result<Pubkey> {
     // Misc.
     let idl_address = IdlAccount::address(program_id);
-    let keypair = solana_sdk::signature::read_keypair_file(keypair_path)
-        .map_err(|_| anyhow!("Unable to read keypair file"))?;
+    let keypair = get_keypair(keypair_path)?;
     let url = cluster_url(cfg, &cfg.test_validator);
     let client = create_client(url);
     let idl_data = serialize_idl(idl)?;
@@ -3789,8 +3810,7 @@ fn create_idl_buffer(
     idl: &Idl,
     priority_fee: Option<u64>,
 ) -> Result<Pubkey> {
-    let keypair = solana_sdk::signature::read_keypair_file(keypair_path)
-        .map_err(|_| anyhow!("Unable to read keypair file"))?;
+    let keypair = get_keypair(keypair_path)?;
     let url = cluster_url(cfg, &cfg.test_validator);
     let client = create_client(url);
 
@@ -4561,6 +4581,7 @@ mod tests {
             "await".to_string(),
             true,
             false,
+            true,
             false,
             ProgramTemplate::default(),
             TestTemplate::default(),
@@ -4580,6 +4601,7 @@ mod tests {
             "fn".to_string(),
             true,
             false,
+            true,
             false,
             ProgramTemplate::default(),
             TestTemplate::default(),
@@ -4599,6 +4621,7 @@ mod tests {
             "1project".to_string(),
             true,
             false,
+            true,
             false,
             ProgramTemplate::default(),
             TestTemplate::default(),
