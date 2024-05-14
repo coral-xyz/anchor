@@ -38,10 +38,7 @@ pub fn gen_accounts_common(idl: &Idl, prefix: &str) -> proc_macro2::TokenStream 
 }
 
 pub fn convert_idl_type_to_syn_type(ty: &IdlType) -> syn::Type {
-    match ty {
-        IdlType::Bytes => syn::parse_str("Vec<u8>").unwrap(),
-        _ => syn::parse_str(&convert_idl_type_to_str(ty)).unwrap(),
-    }
+    syn::parse_str(&convert_idl_type_to_str(ty)).unwrap()
 }
 
 // TODO: Impl `ToString` for `IdlType`
