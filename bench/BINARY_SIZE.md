@@ -30,11 +30,12 @@ Solana version: 1.18.8
 
 | Program | Binary Size | -                      |
 | ------- | ----------- | ---------------------- |
-| bench   | 791,008     | 🔴 **+47,952 (6.45%)** |
+| bench   | 701,584     | 🟢 **-41,472 (5.58%)** |
 
 ### Notable changes
 
 - Upgrade Solana to `1.18.8` ([#2867](https://github.com/coral-xyz/anchor/pull/2867)).
+- lang: Remove `rent_exempt` constraint ([#2708](https://github.com/coral-xyz/anchor/pull/2708)).
 
 ---
 

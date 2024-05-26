@@ -326,7 +326,7 @@ export const LangErrorCode = {
   ConstraintSigner: 2002,
   ConstraintRaw: 2003,
   ConstraintOwner: 2004,
-  ConstraintRentExempt: 2005,
+  // ConstraintRentExempt: 2005(DELETED)
   ConstraintSeeds: 2006,
   ConstraintExecutable: 2007,
   ConstraintState: 2008,
@@ -445,10 +445,6 @@ export const LangErrorMessage = new Map([
   [LangErrorCode.ConstraintSigner, "A signer constraint was violated"],
   [LangErrorCode.ConstraintRaw, "A raw constraint was violated"],
   [LangErrorCode.ConstraintOwner, "An owner constraint was violated"],
-  [
-    LangErrorCode.ConstraintRentExempt,
-    "A rent exemption constraint was violated",
-  ],
   [LangErrorCode.ConstraintSeeds, "A seeds constraint was violated"],
   [LangErrorCode.ConstraintExecutable, "An executable constraint was violated"],
   [

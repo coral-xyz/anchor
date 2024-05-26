@@ -95,8 +95,7 @@ use syn::parse_macro_input;
 ///             <td>
 ///                 Creates the account via a CPI to the system program and
 ///                 initializes it (sets its account discriminator).<br>
-///                 Marks the account as mutable and is mutually exclusive with <code>mut</code>.<br>
-///                 Makes the account rent exempt unless skipped with <code>rent_exempt = skip</code>.<br><br>
+///                 Marks the account as mutable and is mutually exclusive with <code>mut</code>.<br><br>
 ///                 Use <code>#[account(zero)]</code> for accounts larger than 10 Kibibyte.<br><br>
 ///                 <code>init</code> has to be used with additional constraints:
 ///                 <ul>
@@ -343,30 +342,10 @@ use syn::parse_macro_input;
 ///         </tr>
 ///         <tr>
 ///             <td>
-///                 <code>#[account(rent_exempt = skip)]</code><br><br>
-///                 <code>#[account(rent_exempt = enforce)]</code>
-///             </td>
-///             <td>
-///                 Enforces rent exemption with <code>= enforce</code>.<br>
-///                 Skips rent exemption check that would normally be done
-///                 through other constraints with <code>= skip</code>,
-///                 e.g. when used with the <code>zero</code> constraint<br><br>
-///                 Example:
-///                 <pre><code>
-/// #[account(zero, rent_exempt = skip)]
-/// pub skipped_account: Account<'info, MyData>,
-/// #[account(rent_exempt = enforce)]
-/// pub enforced_account: AccountInfo<'info>
-///                 </code></pre>
-///             </td>
-///         </tr>
-///         <tr>
-///             <td>
 ///                 <code>#[account(zero)]</code>
 ///             </td>
 ///             <td>
-///                 Checks the account discriminator is zero.<br>
-///                 Enforces rent exemption unless skipped with <code>rent_exempt = skip</code>.<br><br>
+///                 Checks the account discriminator is zero.<br><br>
 ///                 Use this constraint if you want to create an account in a previous instruction
 ///                 and then initialize it in your instruction instead of using <code>init</code>.
 ///                 This is necessary for accounts that are larger than 10 Kibibyte because those

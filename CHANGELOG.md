@@ -128,6 +128,7 @@ See the [Anchor 0.30 release notes](https://www.anchor-lang.com/release-notes/0.
 - ts: Remove `programId` parameter of the `Program` constructor ([#2864](https://github.com/coral-xyz/anchor/pull/2864)).
 - idl, syn: Move IDL types from the `anchor-syn` crate to the new IDL crate ([#2882](https://github.com/coral-xyz/anchor/pull/2882)).
 - idl: Add `#[non_exhaustive]` to IDL enums ([#2890](https://github.com/coral-xyz/anchor/pull/2890)).
+- lang: Remove `rent_exempt` constraint ([#2708](https://github.com/coral-xyz/anchor/pull/2708)).
 
 ## [0.29.0] - 2023-10-16
 

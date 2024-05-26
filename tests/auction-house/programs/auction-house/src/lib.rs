@@ -1701,8 +1701,6 @@ pub enum ErrorCode {
     PublicKeysShouldBeUnique,
     #[msg("StatementFalse")]
     StatementFalse,
-    #[msg("NotRentExempt")]
-    NotRentExempt,
     #[msg("NumericalOverflow")]
     NumericalOverflow,
     #[msg("Expected a sol account but got an spl token account instead")]
