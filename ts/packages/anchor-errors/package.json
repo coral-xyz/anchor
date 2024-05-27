@@ -16,10 +16,17 @@
   },
   "scripts": {
     "build": "tsc",
+    "lint:fix": "prettier src/** -w",
+    "lint": "prettier src/** --check",
+    "watch": "tsc --watch",
+    "prepublishOnly": "yarn build",
     "test": "",
     "clean": "rm -rf dist"
   },
   "files": [
     "dist"
-  ]
+  ],
+  "devDependencies": {
+    "prettier": "^2.1.2"
+  }
 }
