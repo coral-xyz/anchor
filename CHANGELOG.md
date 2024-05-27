@@ -26,7 +26,8 @@ The minor version will be incremented upon a breaking change and the patch versi
 - idl: Fix path resolution of the `Cargo.lock` of the project when generating idls for external types ([#2946](https://github.com/coral-xyz/anchor/pull/2946)).
 - idl: Fix potential panic on external type resolution ([#2954](https://github.com/coral-xyz/anchor/pull/2954)).
 - lang: Fix using defined types in instruction parameters with `declare_program!` ([#2959](https://github.com/coral-xyz/anchor/pull/2959)).
-
+- idl: Fix corrupted IDL on idl write ([#2964](https://github.com/coral-xyz/anchor/pull/2964)).
+  
 ### Breaking
 
 ## [0.30.0] - 2024-04-15
