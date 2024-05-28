@@ -18,6 +18,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - idl, ts: Add accounts resolution for associated token accounts ([#2927](https://github.com/coral-xyz/anchor/pull/2927)).
 - cli: Add `--no-install` option to the `init` command ([#2945](https://github.com/coral-xyz/anchor/pull/2945)).
 - lang: Implement `TryFromIntError` for `Error` to be able to propagate integer conversion errors ([#2950](https://github.com/coral-xyz/anchor/pull/2950)).
+- idl: Add ability to convert legacy IDLs ([#2986](https://github.com/coral-xyz/anchor/pull/2986)).
 - ts: Extract Anchor error codes into their own package ([#2983](https://github.com/coral-xyz/anchor/pull/2983)).
 
 ### Fixes
@@ -34,6 +35,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Fix `ProgramError::ArithmeticOverflow` not found error ([#2975](https://github.com/coral-xyz/anchor/pull/2975)).
 - lang: Fix using optional accounts with `declare_program!` ([#2967](https://github.com/coral-xyz/anchor/pull/2967)).
 - lang: Fix instruction return type generation with `declare_program!` ([#2977](https://github.com/coral-xyz/anchor/pull/2977)).
+- cli: Fix IDL write getting corrupted from retries ([#2964](https://github.com/coral-xyz/anchor/pull/2964)).
 
 ### Breaking
 
