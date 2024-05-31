@@ -4,7 +4,9 @@ use anchor_lang::Result;
 use anchor_lang::{context::CpiContext, Accounts};
 
 pub use spl_associated_token_account::{
-    get_associated_token_address, get_associated_token_address_with_program_id, ID,
+    get_associated_token_address, get_associated_token_address_with_program_id,
+    instruction::{create_associated_token_account, create_associated_token_account_idempotent},
+    ID,
 };
 
 pub fn create<'info>(ctx: CpiContext<'_, '_, '_, 'info, Create<'info>>) -> Result<()> {
