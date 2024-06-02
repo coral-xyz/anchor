@@ -507,6 +507,7 @@ pub mod __private {
 ///     pub data: Account<'info, MyData>
 /// }
 /// ```
+#[allow(clippy::crate_in_macro_def)]
 #[macro_export]
 macro_rules! require {
     ($invariant:expr, $error:tt $(,)?) => {
@@ -717,6 +718,7 @@ macro_rules! require_gte {
 ///     SomeError
 /// }
 /// ```
+#[allow(clippy::crate_in_macro_def)]
 #[macro_export]
 macro_rules! err {
     ($error:tt $(,)?) => {
