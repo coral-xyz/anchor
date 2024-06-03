@@ -21,6 +21,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - idl: Add ability to convert legacy IDLs ([#2986](https://github.com/coral-xyz/anchor/pull/2986)).
 - ts: Extract Anchor error codes into their own package ([#2983](https://github.com/coral-xyz/anchor/pull/2983)).
 - cli: Add additional solana arguments to the `upgrade` command ([#2998](https://github.com/coral-xyz/anchor/pull/2998)).
+- spl: Export `spl-associated-token-account` crate ([#2999](https://github.com/coral-xyz/anchor/pull/2999)).
 
 ### Fixes
 
@@ -39,6 +40,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - cli: Fix IDL write getting corrupted from retries ([#2964](https://github.com/coral-xyz/anchor/pull/2964)).
 - idl: Fix `unexpected_cfgs` build warning ([#2992](https://github.com/coral-xyz/anchor/pull/2992)).
 - lang: Make tuple struct fields public in `declare_program!` ([#2994](https://github.com/coral-xyz/anchor/pull/2994)).
+- Remove `rust-version` from crate manifests ([#3000](https://github.com/coral-xyz/anchor/pull/3000)).
 
 ### Breaking
 
