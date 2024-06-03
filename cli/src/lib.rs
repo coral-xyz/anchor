@@ -785,7 +785,12 @@ fn process_command(opts: Opts) -> Result<()> {
             program_id,
             program_filepath,
             solana_args,
-        } => upgrade(&opts.cfg_override, program_id, program_filepath, solana_args),
+        } => upgrade(
+            &opts.cfg_override,
+            program_id,
+            program_filepath,
+            solana_args,
+        ),
         Command::Idl { subcmd } => idl(&opts.cfg_override, subcmd),
         Command::Migrate => migrate(&opts.cfg_override),
         Command::Test {
