@@ -521,7 +521,7 @@ pub struct RequestBuilder<'a, C> {
     handle: &'a Handle,
     // Need this, otherwise the lifetime is not used and the compiler complains.
     #[cfg(feature = "async")]
-    _dummy: PhantomData<&'a ()>, // Dummy field to use the 'a lifetime
+    _lifetime_marker: PhantomData<&'a ()>, // Dummy field to use the 'a lifetime
 }
 
 impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
