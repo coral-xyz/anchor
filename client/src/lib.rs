@@ -514,7 +514,7 @@ pub struct RequestBuilder<'a, C> {
     payer: C,
     // Serialized instruction data for the target RPC.
     instruction_data: Option<Vec<u8>>,
-    signers: Vec<&'a C>,
+    signers: Vec<C>,
     #[cfg(not(feature = "async"))]
     handle: &'a Handle,
 }
