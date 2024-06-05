@@ -514,7 +514,7 @@ pub struct RequestBuilder<'a, C> {
     payer: C,
     // Serialized instruction data for the target RPC.
     instruction_data: Option<Vec<u8>>,
-    signers: Vec<&'a dyn Signer>,
+    signers: Vec<&'a C>,
     #[cfg(not(feature = "async"))]
     handle: &'a Handle,
 }
@@ -594,7 +594,7 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
     }
 
     #[must_use]
-    pub fn signer(mut self, signer: &'a dyn Signer) -> Self {
+    pub fn signer(mut self, signer: &'a C) -> Self {
         self.signers.push(signer);
         self
     }
@@ -618,7 +618,7 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
     ) -> Result<Transaction, ClientError> {
         let instructions = self.instructions()?;
         let mut signers = self.signers.clone();
-        signers.push(&*self.payer);
+        signers.push(&self.payer);
 
         let tx = Transaction::new_signed_with_payer(
             &instructions,
