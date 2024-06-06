@@ -3380,7 +3380,13 @@ fn validator_flags(
                             Some(account) => {
                                 // Use a different flag for program accounts to fix the problem
                                 // described in https://github.com/anza-xyz/agave/issues/522
-                                if account.owner == bpf_loader_upgradeable::id() {
+                                if account.owner == bpf_loader_upgradeable::id()
+                                // Only programs are supported with `--clone-upgradeable-program`
+                                    && matches!(
+                                        account.deserialize_data::<UpgradeableLoaderState>()?,
+                                        UpgradeableLoaderState::Program { .. }
+                                    )
+                                {
                                     flags.push("--clone-upgradeable-program".to_string());
                                     flags.push(pubkey.to_string());
                                 } else {
