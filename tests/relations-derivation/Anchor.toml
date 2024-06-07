@@ -6,7 +6,7 @@ cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [programs.localnet]
-relations_derivation = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+relations_derivation = "6mogAuKLW1uiXg8Br8YwPtCTPyxKSK4YHrCcyHu6zBUY"
 
 [workspace]
 members = ["programs/relations-derivation"]
