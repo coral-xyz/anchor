@@ -126,7 +126,10 @@ export class IdlCoder {
             throw new IdlError(`Invalid generic field: ${field.name}`);
           }
 
-          return IdlCoder.fieldLayout({ ...field, type: genericArg.type }, types);
+          return IdlCoder.fieldLayout(
+            { ...field, type: genericArg.type },
+            types
+          );
         }
 
         throw new IdlError(
@@ -159,10 +162,10 @@ export class IdlCoder {
             fields.map((f) => {
               const genArgs = genericArgs
                 ? IdlCoder.resolveGenericArgs({
-                  type: f.type,
-                  typeDef,
-                  genericArgs,
-                })
+                    type: f.type,
+                    typeDef,
+                    genericArgs,
+                  })
                 : genericArgs;
               return IdlCoder.fieldLayout(f, types, genArgs);
             }),
@@ -170,10 +173,10 @@ export class IdlCoder {
             fields.map((f, i) => {
               const genArgs = genericArgs
                 ? IdlCoder.resolveGenericArgs({
-                  type: f,
-                  typeDef,
-                  genericArgs,
-                })
+                    type: f,
+                    typeDef,
+                    genericArgs,
+                  })
                 : genericArgs;
               return IdlCoder.fieldLayout(
                 { name: i.toString(), type: f },
@@ -195,10 +198,10 @@ export class IdlCoder {
               fields.map((f) => {
                 const genArgs = genericArgs
                   ? IdlCoder.resolveGenericArgs({
-                    type: f.type,
-                    typeDef,
-                    genericArgs,
-                  })
+                      type: f.type,
+                      typeDef,
+                      genericArgs,
+                    })
                   : genericArgs;
                 return IdlCoder.fieldLayout(f, types, genArgs);
               }),
@@ -206,10 +209,10 @@ export class IdlCoder {
               fields.map((f, i) => {
                 const genArgs = genericArgs
                   ? IdlCoder.resolveGenericArgs({
-                    type: f,
-                    typeDef,
-                    genericArgs,
-                  })
+                      type: f,
+                      typeDef,
+                      genericArgs,
+                    })
                   : genericArgs;
                 return IdlCoder.fieldLayout(
                   { name: i.toString(), type: f },
@@ -307,10 +310,10 @@ export class IdlCoder {
             const genArgs = genericArgs ?? ty.defined.generics;
             const args = genArgs
               ? IdlCoder.resolveGenericArgs({
-                type,
-                typeDef,
-                genericArgs: genArgs,
-              })
+                  type,
+                  typeDef,
+                  genericArgs: genArgs,
+                })
               : genArgs;
 
             return IdlCoder.typeSize(type, idl, args);
