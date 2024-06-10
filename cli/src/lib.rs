@@ -488,6 +488,14 @@ pub enum IdlCommand {
         #[clap(short, long)]
         out: Option<String>,
     },
+    /// Convert legacy IDLs (pre Anchor 0.30) to the new IDL spec
+    Convert {
+        /// Path to the IDL file
+        path: String,
+        /// Output file for the idl (stdout if not specified)
+        #[clap(short, long)]
+        out: Option<String>,
+    },
 }
 
 #[derive(Debug, Parser)]
@@ -2200,6 +2208,7 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
             skip_lint,
         } => idl_build(cfg_override, program_name, out, out_ts, no_docs, skip_lint),
         IdlCommand::Fetch { address, out } => idl_fetch(cfg_override, address, out),
+        IdlCommand::Convert { path, out } => idl_convert(path, out),
     }
 }
 
@@ -2707,6 +2716,16 @@ in `{path}`."#
 
 fn idl_fetch(cfg_override: &ConfigOverride, address: Pubkey, out: Option<String>) -> Result<()> {
     let idl = fetch_idl(cfg_override, address)?;
+    let out = match out {
+        None => OutFile::Stdout,
+        Some(out) => OutFile::File(PathBuf::from(out)),
+    };
+    write_idl(&idl, out)
+}
+
+fn idl_convert(path: String, out: Option<String>) -> Result<()> {
+    let idl = fs::read(path)?;
+    let idl = Idl::from_slice_with_conversion(&idl)?;
     let out = match out {
         None => OutFile::Stdout,
         Some(out) => OutFile::File(PathBuf::from(out)),
@@ -3342,7 +3361,7 @@ fn validator_flags(
                         ));
                     };
 
-                    let mut pubkeys = value
+                    let pubkeys = value
                         .as_array()
                         .unwrap()
                         .iter()
@@ -3351,35 +3370,32 @@ fn validator_flags(
                             Pubkey::from_str(address)
                                 .map_err(|_| anyhow!("Invalid pubkey {}", address))
                         })
-                        .collect::<Result<HashSet<Pubkey>>>()?;
+                        .collect::<Result<HashSet<Pubkey>>>()?
+                        .into_iter()
+                        .collect::<Vec<_>>();
+                    let accounts = client.get_multiple_accounts(&pubkeys)?;
 
-                    let accounts_keys = pubkeys.iter().cloned().collect::<Vec<_>>();
-                    let accounts = client.get_multiple_accounts(&accounts_keys)?;
-
-                    // Check if there are program accounts
-                    for (account, acc_key) in accounts.iter().zip(accounts_keys) {
-                        if let Some(account) = account {
-                            if account.owner == bpf_loader_upgradeable::id() {
-                                let upgradable: UpgradeableLoaderState = account
-                                    .deserialize_data()
-                                    .map_err(|_| anyhow!("Invalid program account {}", acc_key))?;
-
-                                if let UpgradeableLoaderState::Program {
-                                    programdata_address,
-                                } = upgradable
+                    for (pubkey, account) in pubkeys.into_iter().zip(accounts) {
+                        match account {
+                            Some(account) => {
+                                // Use a different flag for program accounts to fix the problem
+                                // described in https://github.com/anza-xyz/agave/issues/522
+                                if account.owner == bpf_loader_upgradeable::id()
+                                // Only programs are supported with `--clone-upgradeable-program`
+                                    && matches!(
+                                        account.deserialize_data::<UpgradeableLoaderState>()?,
+                                        UpgradeableLoaderState::Program { .. }
+                                    )
                                 {
-                                    pubkeys.insert(programdata_address);
+                                    flags.push("--clone-upgradeable-program".to_string());
+                                    flags.push(pubkey.to_string());
+                                } else {
+                                    flags.push("--clone".to_string());
+                                    flags.push(pubkey.to_string());
                                 }
                             }
-                        } else {
-                            return Err(anyhow!("Account {} not found", acc_key));
+                            _ => return Err(anyhow!("Account {} not found", pubkey)),
                         }
-                    }
-
-                    for pubkey in &pubkeys {
-                        // Push the clone flag for each array entry
-                        flags.push("--clone".to_string());
-                        flags.push(pubkey.to_string());
                     }
                 } else if key == "deactivate_feature" {
                     // Verify that the feature flags are valid pubkeys
