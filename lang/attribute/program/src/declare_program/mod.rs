@@ -112,10 +112,10 @@ fn gen_id(idl: &Idl) -> proc_macro2::TokenStream {
 
     quote! {
         #[doc = #doc]
-        pub static ID: Pubkey = __ID;
+        pub const ID: Pubkey = __ID;
 
         /// The name is intentionally prefixed with `__` in order to reduce to possibility of name
         /// clashes with the crate's `ID`.
-        static __ID: Pubkey = Pubkey::new_from_array([#(#address_bytes,)*]);
+        const __ID: Pubkey = Pubkey::new_from_array([#(#address_bytes,)*]);
     }
 }

@@ -44,7 +44,7 @@ fn id_to_tokens(
 ) {
     tokens.extend(quote! {
         /// The static program ID
-        pub static ID: #pubkey_type = #id;
+        pub const ID: #pubkey_type = #id;
 
         /// Confirms that a given pubkey is equivalent to the program ID
         pub fn check_id(id: &#pubkey_type) -> bool {
@@ -71,7 +71,7 @@ fn deprecated_id_to_tokens(
 ) {
     tokens.extend(quote! {
         /// The static program ID
-        pub static ID: #pubkey_type = #id;
+        pub const ID: #pubkey_type = #id;
 
         /// Confirms that a given pubkey is equivalent to the program ID
         #[deprecated()]
