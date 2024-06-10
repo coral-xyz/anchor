@@ -46,6 +46,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - cli: Fix upgradeable program clones ([#3010](https://github.com/coral-xyz/anchor/pull/3010)).
 
 ### Breaking
+- lang: Make program ID const instead of static ([#3019](https://github.com/coral-xyz/anchor/pull/3019)).
 
 ## [0.30.0] - 2024-04-15
 
