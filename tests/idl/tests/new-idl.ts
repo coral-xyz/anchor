@@ -352,10 +352,17 @@ describe("New IDL", () => {
         arr: [{ field: 1 }, { field: 2 }, { field: 3 }, { field: 4 }],
         subField: {
           subArr: new Array(8).fill(null).map((_, i) => ({ field: i })),
-          another: [{ field: 42 }, { field: 420 }, { field: 4_200 }, { field: 42_000 }],
+          another: [
+            { field: 42 },
+            { field: 420 },
+            { field: 4_200 },
+            { field: 42_000 },
+          ],
         },
       };
-      const { pubkeys } = await program.methods.genericCustomStruct(arg).rpcAndKeys();
+      const { pubkeys } = await program.methods
+        .genericCustomStruct(arg)
+        .rpcAndKeys();
       const myAccount = await program.account.genericAccountCustomStruct.fetch(
         pubkeys.myAccount
       );
