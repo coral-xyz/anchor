@@ -1,4 +1,4 @@
-use crate::{get_keypair, is_hidden};
+use crate::{get_keypair, is_hidden, keys_sync};
 use anchor_client::Cluster;
 use anchor_lang_idl::types::Idl;
 use anyhow::{anyhow, bail, Context, Error, Result};
@@ -512,6 +512,13 @@ impl Config {
                     .path();
                 if let Some(filename) = p.file_name() {
                     if filename.to_str() == Some("Anchor.toml") {
+                        // Make sure the program id is correct (only on the initial build)
+                        let deploy_dir = p.parent().unwrap().join("target").join("deploy");
+                        if !deploy_dir.exists() {
+                            println!("Updating program ids...");
+                            keys_sync(&ConfigOverride::default(), None)?;
+                        }
+
                         let cfg = Config::from_path(&p)?;
                         return Ok(Some(WithPath::new(cfg, p)));
                     }

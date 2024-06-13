@@ -1816,20 +1816,6 @@ fn _build_rust_cwd(
     arch: &ProgramArch,
     cargo_args: Vec<String>,
 ) -> Result<()> {
-    // Make sure the program id is correct (only on the initial build)
-    let deploy_dir = cfg
-        .path()
-        .parent()
-        .ok_or_else(|| anyhow!("Config parent should exist"))?
-        .join("target")
-        .join("deploy");
-    if !deploy_dir.exists() {
-        println!("Updating program ids...");
-        let cwd = std::env::current_dir()?;
-        keys_sync(&ConfigOverride::default(), None)?;
-        std::env::set_current_dir(cwd)?;
-    }
-
     let subcommand = arch.build_subcommand();
     let exit = std::process::Command::new("cargo")
         .arg(subcommand)
