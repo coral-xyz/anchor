@@ -2,10 +2,9 @@ use crate::{
     config::ProgramWorkspace, create_files, override_or_create_files, solidity_template, Files,
     VERSION,
 };
-use anchor_syn::idl::types::Idl;
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
-use heck::{ToLowerCamelCase, ToSnakeCase, ToUpperCamelCase};
+use heck::{ToPascalCase, ToSnakeCase};
 use solana_sdk::{
     pubkey::Pubkey,
     signature::{read_keypair_file, write_keypair_file, Keypair},
@@ -60,6 +59,7 @@ pub mod {} {{
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {{
+        msg!("Greetings from: {{:?}}", ctx.program_id);
         Ok(())
     }}
 }}
@@ -143,6 +143,7 @@ pub use initialize::*;
 pub struct Initialize {}
 
 pub fn handler(ctx: Context<Initialize>) -> Result<()> {
+    msg!("Greetings from: {{:?}}", ctx.program_id);
     Ok(())
 }
 "#
@@ -183,11 +184,12 @@ crate-type = ["cdylib", "lib"]
 name = "{1}"
 
 [features]
+default = []
+cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
-cpi = ["no-entrypoint"]
-default = []
+idl-build = ["anchor-lang/idl-build"]
 
 [dependencies]
 anchor-lang = "{2}"
@@ -225,24 +227,6 @@ pub fn credentials(token: &str) -> String {
 token = "{token}"
 "#
     )
-}
-
-pub fn idl_ts(idl: &Idl) -> Result<String> {
-    let mut idl = idl.clone();
-    for acc in idl.accounts.iter_mut() {
-        acc.name = acc.name.to_lower_camel_case();
-    }
-    let idl_json = serde_json::to_string_pretty(&idl)?;
-    Ok(format!(
-        r#"export type {} = {};
-
-export const IDL: {} = {};
-"#,
-        idl.name.to_upper_camel_case(),
-        idl_json,
-        idl.name.to_upper_camel_case(),
-        idl_json
-    ))
 }
 
 pub fn deploy_js_script_host(cluster_url: &str, script_path: &str) -> String {
@@ -347,7 +331,7 @@ describe("{}", () => {{
 }});
 "#,
         name,
-        name.to_upper_camel_case(),
+        name.to_pascal_case(),
     )
 }
 
@@ -368,91 +352,95 @@ describe("{}", () => {{
 }});
 "#,
         name,
-        name.to_upper_camel_case(),
+        name.to_pascal_case(),
     )
 }
 
-pub fn package_json(jest: bool) -> String {
+pub fn package_json(jest: bool, license: String) -> String {
     if jest {
         format!(
             r#"{{
-        "scripts": {{
-            "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
-            "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
-        }},
-        "dependencies": {{
-            "@coral-xyz/anchor": "^{VERSION}"
-        }},
-        "devDependencies": {{
-            "jest": "^29.0.3",
-            "prettier": "^2.6.2"
-        }}
-    }}
+  "license": "{license}",
+  "scripts": {{
+    "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
+    "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
+  }},
+  "dependencies": {{
+    "@coral-xyz/anchor": "^{VERSION}"
+  }},
+  "devDependencies": {{
+    "jest": "^29.0.3",
+    "prettier": "^2.6.2"
+  }}
+}}
     "#
         )
     } else {
         format!(
             r#"{{
-    "scripts": {{
-        "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
-        "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
-    }},
-    "dependencies": {{
-        "@coral-xyz/anchor": "^{VERSION}"
-    }},
-    "devDependencies": {{
-        "chai": "^4.3.4",
-        "mocha": "^9.0.3",
-        "prettier": "^2.6.2"
-    }}
+  "license": "{license}",
+  "scripts": {{
+    "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
+    "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
+  }},
+  "dependencies": {{
+    "@coral-xyz/anchor": "^{VERSION}"
+  }},
+  "devDependencies": {{
+    "chai": "^4.3.4",
+    "mocha": "^9.0.3",
+    "prettier": "^2.6.2"
+  }}
 }}
 "#
         )
     }
 }
 
-pub fn ts_package_json(jest: bool) -> String {
+pub fn ts_package_json(jest: bool, license: String) -> String {
     if jest {
         format!(
             r#"{{
-        "scripts": {{
-            "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
-            "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
-        }},
-        "dependencies": {{
-            "@coral-xyz/anchor": "^{VERSION}"
-        }},
-        "devDependencies": {{
-            "@types/bn.js": "^5.1.0",
-            "@types/jest": "^29.0.3",
-            "jest": "^29.0.3",
-            "prettier": "^2.6.2",
-            "ts-jest": "^29.0.2",
-            "typescript": "^4.3.5"
-        }}
-    }}
-    "#
+  "license": "{license}",              
+  "scripts": {{
+    "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
+    "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
+  }},
+  "dependencies": {{
+    "@coral-xyz/anchor": "^{VERSION}"
+  }},
+  "devDependencies": {{
+    "@types/bn.js": "^5.1.0",
+    "@types/jest": "^29.0.3",
+    "jest": "^29.0.3",
+    "prettier": "^2.6.2",
+    "ts-jest": "^29.0.2",
+    "typescript": "^4.3.5"
+  }}
+}}
+"#
         )
     } else {
         format!(
             r#"{{
-    "scripts": {{
-        "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
-        "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
-    }},
-    "dependencies": {{
-        "@coral-xyz/anchor": "^{VERSION}"
-    }},
-    "devDependencies": {{
-        "chai": "^4.3.4",
-        "mocha": "^9.0.3",
-        "ts-mocha": "^10.0.0",
-        "@types/bn.js": "^5.1.0",
-        "@types/chai": "^4.3.0",
-        "@types/mocha": "^9.0.0",
-        "typescript": "^4.3.5",
-        "prettier": "^2.6.2"
-    }}
+  "license": "{license}",  
+  "scripts": {{
+    "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
+    "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
+  }},
+  "dependencies": {{
+    "@coral-xyz/anchor": "^{VERSION}"
+  }},
+  "devDependencies": {{
+    "chai": "^4.3.4",
+    "mocha": "^9.0.3",
+    "ts-mocha": "^10.0.0",
+    "@types/bn.js": "^5.1.0",
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^9.0.0",
+    "typescript": "^4.3.5",
+    "prettier": "^2.6.2"
+  }}
 }}
 "#
         )
@@ -478,11 +466,11 @@ describe("{}", () => {{
   }});
 }});
 "#,
-        name.to_upper_camel_case(),
+        name.to_pascal_case(),
         name.to_snake_case(),
         name,
-        name.to_upper_camel_case(),
-        name.to_upper_camel_case(),
+        name.to_pascal_case(),
+        name.to_pascal_case(),
     )
 }
 
@@ -505,45 +493,44 @@ describe("{}", () => {{
   }});
 }});
 "#,
-        name.to_upper_camel_case(),
+        name.to_pascal_case(),
         name.to_snake_case(),
         name,
-        name.to_upper_camel_case(),
-        name.to_upper_camel_case(),
+        name.to_pascal_case(),
+        name.to_pascal_case(),
     )
 }
 
 pub fn ts_config(jest: bool) -> &'static str {
     if jest {
         r#"{
-            "compilerOptions": {
-              "types": ["jest"],
-              "typeRoots": ["./node_modules/@types"],
-              "lib": ["es2015"],
-              "module": "commonjs",
-              "target": "es6",
-              "esModuleInterop": true
-            }
-          }
-          "#
+  "compilerOptions": {
+    "types": ["jest"],
+    "typeRoots": ["./node_modules/@types"],
+    "lib": ["es2015"],
+    "module": "commonjs",
+    "target": "es6",
+    "esModuleInterop": true
+  }
+}
+"#
     } else {
         r#"{
-            "compilerOptions": {
-              "types": ["mocha", "chai"],
-              "typeRoots": ["./node_modules/@types"],
-              "lib": ["es2015"],
-              "module": "commonjs",
-              "target": "es6",
-              "esModuleInterop": true
-            }
-          }
-          "#
+  "compilerOptions": {
+    "types": ["mocha", "chai"],
+    "typeRoots": ["./node_modules/@types"],
+    "lib": ["es2015"],
+    "module": "commonjs",
+    "target": "es6",
+    "esModuleInterop": true
+  }
+}
+"#
     }
 }
 
 pub fn git_ignore() -> &'static str {
-    r#"
-.anchor
+    r#".anchor
 .DS_Store
 target
 **/*.rs.bk
@@ -554,8 +541,7 @@ test-ledger
 }
 
 pub fn prettier_ignore() -> &'static str {
-    r#"
-.anchor
+    r#".anchor
 .DS_Store
 target
 node_modules
@@ -606,7 +592,7 @@ anchor.setProvider(provider);
             r#"
 anchor.workspace.{} = new anchor.Program({}, new PublicKey("{}"), provider);
 "#,
-            program.name.to_upper_camel_case(),
+            program.name.to_pascal_case(),
             serde_json::to_string(&program.idl)?,
             program.program_id
         )?;

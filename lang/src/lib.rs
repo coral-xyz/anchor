@@ -28,6 +28,7 @@ extern crate self as anchor_lang;
 use bytemuck::{Pod, Zeroable};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
+use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::{collections::BTreeSet, fmt::Debug, io::Write};
 
@@ -51,7 +52,7 @@ pub use anchor_attribute_account::{account, declare_id, pubkey, zero_copy};
 pub use anchor_attribute_constant::constant;
 pub use anchor_attribute_error::*;
 pub use anchor_attribute_event::{emit, event};
-pub use anchor_attribute_program::program;
+pub use anchor_attribute_program::{declare_program, program};
 pub use anchor_derive_accounts::Accounts;
 pub use anchor_derive_serde::{AnchorDeserialize, AnchorSerialize};
 pub use anchor_derive_space::InitSpace;
@@ -65,7 +66,7 @@ pub use solana_program;
 pub use anchor_attribute_event::{emit_cpi, event_cpi};
 
 #[cfg(feature = "idl-build")]
-pub use anchor_syn::{self, idl::build::IdlBuild};
+pub use idl::IdlBuild;
 
 #[cfg(feature = "interface-instructions")]
 pub use anchor_attribute_program::interface;
@@ -186,7 +187,7 @@ pub trait Lamports<'info>: AsRef<AccountInfo<'info>> {
 
     /// Add lamports to the account.
     ///
-    /// This method is useful for transfering lamports from a PDA.
+    /// This method is useful for transferring lamports from a PDA.
     ///
     /// # Requirements
     ///
@@ -197,13 +198,16 @@ pub trait Lamports<'info>: AsRef<AccountInfo<'info>> {
     ///
     /// See [`Lamports::sub_lamports`] for subtracting lamports.
     fn add_lamports(&self, amount: u64) -> Result<&Self> {
-        **self.as_ref().try_borrow_mut_lamports()? += amount;
+        **self.as_ref().try_borrow_mut_lamports()? = self
+            .get_lamports()
+            .checked_add(amount)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
         Ok(self)
     }
 
     /// Subtract lamports from the account.
     ///
-    /// This method is useful for transfering lamports from a PDA.
+    /// This method is useful for transferring lamports from a PDA.
     ///
     /// # Requirements
     ///
@@ -215,7 +219,10 @@ pub trait Lamports<'info>: AsRef<AccountInfo<'info>> {
     ///
     /// See [`Lamports::add_lamports`] for adding lamports.
     fn sub_lamports(&self, amount: u64) -> Result<&Self> {
-        **self.as_ref().try_borrow_mut_lamports()? -= amount;
+        **self.as_ref().try_borrow_mut_lamports()? = self
+            .get_lamports()
+            .checked_sub(amount)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
         Ok(self)
     }
 }
@@ -392,9 +399,10 @@ pub mod prelude {
         accounts::interface_account::InterfaceAccount, accounts::program::Program,
         accounts::signer::Signer, accounts::system_account::SystemAccount,
         accounts::sysvar::Sysvar, accounts::unchecked_account::UncheckedAccount, constant,
-        context::Context, context::CpiContext, declare_id, emit, err, error, event, program,
-        require, require_eq, require_gt, require_gte, require_keys_eq, require_keys_neq,
-        require_neq, solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source,
+        context::Context, context::CpiContext, declare_id, declare_program, emit, err, error,
+        event, program, require, require_eq, require_gt, require_gte, require_keys_eq,
+        require_keys_neq, require_neq,
+        solana_program::bpf_loader_upgradeable::UpgradeableLoaderState, source,
         system_program::System, zero_copy, AccountDeserialize, AccountSerialize, Accounts,
         AccountsClose, AccountsExit, AnchorDeserialize, AnchorSerialize, Id, InitSpace, Key,
         Lamports, Owner, ProgramData, Result, Space, ToAccountInfo, ToAccountInfos, ToAccountMetas,
@@ -422,7 +430,7 @@ pub mod prelude {
     pub use super::{emit_cpi, event_cpi};
 
     #[cfg(feature = "idl-build")]
-    pub use super::IdlBuild;
+    pub use super::idl::IdlBuild;
 
     #[cfg(feature = "interface-instructions")]
     pub use super::interface;

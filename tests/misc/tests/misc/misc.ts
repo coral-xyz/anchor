@@ -438,18 +438,18 @@ const miscTest = (
       ];
 
       assert.deepStrictEqual(expectedRaw, resp.raw.slice(0, -2));
-      assert.strictEqual(resp.events[0].name, "E1");
+      assert.strictEqual(resp.events[0].name, "e1");
       assert.strictEqual(resp.events[0].data.data, 44);
-      assert.strictEqual(resp.events[1].name, "E2");
+      assert.strictEqual(resp.events[1].name, "e2");
       assert.strictEqual(resp.events[1].data.data, 1234);
-      assert.strictEqual(resp.events[2].name, "E3");
+      assert.strictEqual(resp.events[2].name, "e3");
       assert.strictEqual(resp.events[2].data.data, 9);
-      assert.strictEqual(resp.events[3].name, "E5");
+      assert.strictEqual(resp.events[3].name, "e5");
       assert.deepStrictEqual(
         resp.events[3].data.data,
         [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
       );
-      assert.strictEqual(resp.events[4].name, "E6");
+      assert.strictEqual(resp.events[4].name, "e6");
       assert.deepStrictEqual(
         resp.events[4].data.data,
         [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
@@ -1182,9 +1182,9 @@ const miscTest = (
         new anchor.Wallet(anchor.web3.Keypair.generate()),
         { commitment: program.provider.connection.commitment }
       );
+
       const anotherProgram = new anchor.Program(
-        miscIdl,
-        program.programId,
+        { ...miscIdl, address: program.programId },
         anotherProvider
       );
       // Request airdrop for secondary wallet.
