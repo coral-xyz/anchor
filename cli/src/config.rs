@@ -517,6 +517,7 @@ impl Config {
                         let deploy_dir = p.parent().unwrap().join("target").join("deploy");
                         if !deploy_dir.exists() && !cfg.programs.contains_key(&Cluster::Localnet) {
                             println!("Updating program ids...");
+                            fs::create_dir_all(deploy_dir)?;
                             keys_sync(&ConfigOverride::default(), None)?;
                             cfg = Config::from_path(&p)?;
                         }
