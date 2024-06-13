@@ -25,6 +25,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - cli: Add new `test-template` option in `init` command  ([#2680](https://github.com/coral-xyz/anchor/issues/2680)).
 - cli: `anchor test` is able to run multiple commands ([#2799](https://github.com/coral-xyz/anchor/pull/2799)).
 - cli: Check `@coral-xyz/anchor` package and CLI version compatibility ([#2813](https://github.com/coral-xyz/anchor/pull/2813)).
+- lang: Add `anchor_lang::pubkey` macro for declaring `Pubkey` const values ([#3021](https://github.com/coral-xyz/anchor/pull/3021)).
 
 ### Fixes
 
