@@ -513,13 +513,14 @@ impl Config {
                 if let Some(filename) = p.file_name() {
                     if filename.to_str() == Some("Anchor.toml") {
                         // Make sure the program id is correct (only on the initial build)
+                        let mut cfg = Config::from_path(&p)?;
                         let deploy_dir = p.parent().unwrap().join("target").join("deploy");
-                        if !deploy_dir.exists() {
+                        if !deploy_dir.exists() && !cfg.programs.contains_key(&Cluster::Localnet) {
                             println!("Updating program ids...");
                             keys_sync(&ConfigOverride::default(), None)?;
+                            cfg = Config::from_path(&p)?;
                         }
 
-                        let cfg = Config::from_path(&p)?;
                         return Ok(Some(WithPath::new(cfg, p)));
                     }
                 }
