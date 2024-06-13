@@ -1825,7 +1825,9 @@ fn _build_rust_cwd(
         .join("deploy");
     if !deploy_dir.exists() {
         println!("Updating program ids...");
+        let cwd = std::env::current_dir()?;
         keys_sync(&ConfigOverride::default(), None)?;
+        std::env::set_current_dir(cwd)?;
     }
 
     let subcommand = arch.build_subcommand();
