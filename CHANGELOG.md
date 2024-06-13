@@ -90,7 +90,6 @@ See the [Anchor 0.30 release notes](https://www.anchor-lang.com/release-notes/0.
 - lang: Add `Event` utility type to get events from bytes ([#2897](https://github.com/coral-xyz/anchor/pull/2897)).
 - lang, spl: Add support for [token extensions](https://solana.com/solutions/token-extensions) ([#2789](https://github.com/coral-xyz/anchor/pull/2789)).
 - lang: Return overflow error from `Lamports` trait operations ([#2907](https://github.com/coral-xyz/anchor/pull/2907)).
->>>>>>> up/master
 
 ### Fixes
 
