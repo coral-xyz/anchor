@@ -112,4 +112,9 @@ describe("typescript", () => {
       .signers([mintKp])
       .rpc();
   });
+
+  // TODO: Support more expressions in the IDL e.g. math operations?
+  it("Can use non-supported expressions", () => {
+    // Compilation test to fix issues like https://github.com/coral-xyz/anchor/issues/2933
+  });
 });
