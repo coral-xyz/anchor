@@ -390,7 +390,9 @@ impl SeedPath {
         let seed_str = seed.to_token_stream().to_string();
 
         // Check unsupported cases e.g. `&(account.field + 1).to_le_bytes()`
-        if seed_str.contains(|c: char| matches!(c, '+' | '-' | '*' | '/' | '%' | '^')) {
+        if !seed_str.contains('"')
+            && seed_str.contains(|c: char| matches!(c, '+' | '-' | '*' | '/' | '%' | '^'))
+        {
             return Err(anyhow!("Seed expression not supported: {seed:#?}"));
         }
 
