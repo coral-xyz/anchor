@@ -24,6 +24,10 @@ The minor version will be incremented upon a breaking change and the patch versi
 - spl: Export `spl-associated-token-account` crate ([#2999](https://github.com/coral-xyz/anchor/pull/2999)).
 - lang: Support legacy IDLs with `declare_program!` ([#2997](https://github.com/coral-xyz/anchor/pull/2997)).
 - cli: Add `idl convert` command ([#3009](https://github.com/coral-xyz/anchor/pull/3009)).
+- cli: Add `idl type` command ([#3017](https://github.com/coral-xyz/anchor/pull/3017)).
+- lang: Add `anchor_lang::pubkey` macro for declaring `Pubkey` const values ([#3021](https://github.com/coral-xyz/anchor/pull/3021)).
+- cli: Sync program ids on the initial build ([#3023](https://github.com/coral-xyz/anchor/pull/3023)).
+- idl: Remove `anchor-syn` dependency ([#3030](https://github.com/coral-xyz/anchor/pull/3030)).
 
 ### Fixes
 
@@ -44,6 +48,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Make tuple struct fields public in `declare_program!` ([#2994](https://github.com/coral-xyz/anchor/pull/2994)).
 - Remove `rust-version` from crate manifests ([#3000](https://github.com/coral-xyz/anchor/pull/3000)).
 - cli: Fix upgradeable program clones ([#3010](https://github.com/coral-xyz/anchor/pull/3010)).
+- ts: Fix using IDLs that have defined types as generic arguments ([#3016](https://github.com/coral-xyz/anchor/pull/3016)).
 
 ### Breaking
 - lang: Make program ID const instead of static ([#3019](https://github.com/coral-xyz/anchor/pull/3019)).
