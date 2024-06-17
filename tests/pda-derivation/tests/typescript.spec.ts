@@ -61,7 +61,7 @@ describe("typescript", () => {
       program.programId
     )[0];
 
-    const tx = program.methods.initMyAccount(seedA).accounts({
+    const tx = program.methods.initMyAccount(seedA).accountsPartial({
       base: base.publicKey,
       base2: base.publicKey,
       anotherBase: another.publicKey,
@@ -94,7 +94,7 @@ describe("typescript", () => {
     );
     await customProgram.methods
       .initMyAccount(seedA)
-      .accounts({
+      .accountsPartial({
         base: base.publicKey,
         base2: base.publicKey,
         anotherBase: another.publicKey,
@@ -114,7 +114,7 @@ describe("typescript", () => {
   });
 
   // TODO: Support more expressions in the IDL e.g. math operations?
-  it("Can use non-supported expressions", () => {
+  it("Can use unsupported expressions", () => {
     // Compilation test to fix issues like https://github.com/coral-xyz/anchor/issues/2933
   });
 });
