@@ -9,11 +9,12 @@ crate-type = ["cdylib", "lib"]
 name = "misc"
 
 [features]
+default = ["my-feature-derive"]
 no-entrypoint = []
 no-idl = []
 cpi = ["no-entrypoint"]
-default = []
 idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+my-feature-derive = []
 
 [dependencies]
 anchor-lang = { path = "../../../../lang", features = ["init-if-needed"] }

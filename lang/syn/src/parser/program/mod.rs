@@ -12,9 +12,29 @@ pub fn parse(program_mod: syn::ItemMod) -> ParseResult<Program> {
         ixs,
         name: program_mod.ident.clone(),
         docs,
-        program_mod,
+        program_mod: remove_cfg_attr_from_fns(program_mod),
         fallback_fn,
     })
+}
+
+fn remove_cfg_attr_from_fns(program_mod: syn::ItemMod) -> syn::ItemMod {
+    let mut program_mod = program_mod;
+    if let Some((brace, items)) = program_mod.content.as_mut() {
+        for item in items.iter_mut() {
+            if let syn::Item::Fn(item_fn) = item {
+                let new_attrs = item_fn
+                    .attrs
+                    .iter()
+                    .filter(|attr| !attr.path.is_ident("cfg_attr"))
+                    .cloned()
+                    .collect();
+                item_fn.attrs = new_attrs;
+                *item = syn::Item::Fn(item_fn.clone());
+            }
+        }
+        program_mod.content = Some((*brace, items.to_vec()));
+    }
+    program_mod
 }
 
 fn ctx_accounts_ident(path_ty: &syn::PatType) -> ParseResult<proc_macro2::Ident> {
