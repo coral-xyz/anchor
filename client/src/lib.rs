@@ -84,7 +84,7 @@ use solana_client::{
 };
 use solana_sdk::account::Account;
 use solana_sdk::commitment_config::CommitmentConfig;
-use solana_sdk::signature::{Signature, Signer};
+use solana_sdk::signature::Signature;
 use solana_sdk::transaction::Transaction;
 use std::iter::Map;
 use std::marker::PhantomData;
@@ -111,8 +111,17 @@ mod cluster;
 
 #[cfg(not(feature = "async"))]
 mod blocking;
+#[cfg(not(feature = "async"))]
+use solana_sdk::signature::Signer;
+#[cfg(not(feature = "async"))]
+type Signers<'a> = Vec<&'a dyn Signer>;
+
 #[cfg(feature = "async")]
 mod nonblocking;
+#[cfg(feature = "async")]
+use nonblocking::Signer;
+#[cfg(feature = "async")]
+type Signers<'a> = nonblocking::Signers<'a>;
 
 const PROGRAM_LOG: &str = "Program log: ";
 const PROGRAM_DATA: &str = "Program data: ";
@@ -162,7 +171,7 @@ impl<C: Clone + Deref<Target = impl Signer>> Client<C> {
 /// that's used when loaded Signer from keypair file. This struct is used to wrap the usage.
 pub struct DynSigner(pub Arc<dyn Signer>);
 
-impl Signer for DynSigner {
+impl solana_sdk::signature::Signer for DynSigner {
     fn pubkey(&self) -> Pubkey {
         self.0.pubkey()
     }
@@ -514,7 +523,7 @@ pub struct RequestBuilder<'a, C> {
     payer: C,
     // Serialized instruction data for the target RPC.
     instruction_data: Option<Vec<u8>>,
-    signers: Vec<&'a dyn Signer>,
+    signers: Signers<'a>,
     #[cfg(not(feature = "async"))]
     handle: &'a Handle,
 }
