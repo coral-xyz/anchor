@@ -8,6 +8,7 @@ use crate::config::{
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction, ERASED_AUTHORITY};
 use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
+use anchor_lang_idl::convert::convert_idl;
 use anchor_lang_idl::types::{Idl, IdlArrayLen, IdlDefinedFields, IdlType, IdlTypeDefTy};
 use anyhow::{anyhow, Context, Result};
 use checks::{check_anchor_version, check_overflow};
@@ -17,7 +18,7 @@ use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
 use flate2::write::{GzEncoder, ZlibEncoder};
 use flate2::Compression;
-use heck::{ToKebabCase, ToSnakeCase};
+use heck::{ToKebabCase, ToLowerCamelCase, ToPascalCase, ToSnakeCase};
 use regex::{Regex, RegexBuilder};
 use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
@@ -484,7 +485,7 @@ pub enum IdlCommand {
     /// The address can be a program, IDL account, or IDL buffer.
     Fetch {
         address: Pubkey,
-        /// Output file for the idl (stdout if not specified).
+        /// Output file for the IDL (stdout if not specified).
         #[clap(short, long)]
         out: Option<String>,
     },
@@ -492,7 +493,15 @@ pub enum IdlCommand {
     Convert {
         /// Path to the IDL file
         path: String,
-        /// Output file for the idl (stdout if not specified)
+        /// Output file for the IDL (stdout if not specified)
+        #[clap(short, long)]
+        out: Option<String>,
+    },
+    /// Generate TypeScript type for the IDL
+    Type {
+        /// Path to the IDL file
+        path: String,
+        /// Output file for the IDL (stdout if not specified)
         #[clap(short, long)]
         out: Option<String>,
     },
@@ -1534,7 +1543,7 @@ fn build_cwd_verifiable(
             // Write out the TypeScript type.
             println!("Writing the .ts file");
             let ts_file = workspace_dir.join(format!("target/types/{}.ts", idl.metadata.name));
-            fs::write(&ts_file, rust_template::idl_ts(&idl)?)?;
+            fs::write(&ts_file, idl_ts(&idl)?)?;
 
             // Copy out the TypeScript type.
             if !&cfg.workspace.types.is_empty() {
@@ -1842,7 +1851,7 @@ fn _build_rust_cwd(
         // Write out the JSON file.
         write_idl(&idl, OutFile::File(out))?;
         // Write out the TypeScript type.
-        fs::write(&ts_out, rust_template::idl_ts(&idl)?)?;
+        fs::write(&ts_out, idl_ts(&idl)?)?;
 
         // Copy out the TypeScript type.
         let cfg_parent = cfg.path().parent().expect("Invalid Anchor.toml");
@@ -1920,7 +1929,7 @@ fn _build_solidity_cwd(
     };
 
     // Write out the TypeScript type.
-    fs::write(&ts_out, rust_template::idl_ts(&idl)?)?;
+    fs::write(&ts_out, idl_ts(&idl)?)?;
     // Copy out the TypeScript type.
     let cfg_parent = cfg.path().parent().expect("Invalid Anchor.toml");
     if !&cfg.workspace.types.is_empty() {
@@ -2209,6 +2218,7 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
         } => idl_build(cfg_override, program_name, out, out_ts, no_docs, skip_lint),
         IdlCommand::Fetch { address, out } => idl_fetch(cfg_override, address, out),
         IdlCommand::Convert { path, out } => idl_convert(path, out),
+        IdlCommand::Type { path, out } => idl_type(path, out),
     }
 }
 
@@ -2673,7 +2683,7 @@ fn idl_build(
     write_idl(&idl, out)?;
 
     if let Some(path) = out_ts {
-        fs::write(path, rust_template::idl_ts(&idl)?)?;
+        fs::write(path, idl_ts(&idl)?)?;
     }
 
     Ok(())
@@ -2725,12 +2735,58 @@ fn idl_fetch(cfg_override: &ConfigOverride, address: Pubkey, out: Option<String>
 
 fn idl_convert(path: String, out: Option<String>) -> Result<()> {
     let idl = fs::read(path)?;
-    let idl = Idl::from_slice_with_conversion(&idl)?;
+    let idl = convert_idl(&idl)?;
     let out = match out {
         None => OutFile::Stdout,
         Some(out) => OutFile::File(PathBuf::from(out)),
     };
     write_idl(&idl, out)
+}
+
+fn idl_type(path: String, out: Option<String>) -> Result<()> {
+    let idl = fs::read(path)?;
+    let idl = convert_idl(&idl)?;
+    let types = idl_ts(&idl)?;
+    match out {
+        Some(out) => fs::write(out, types)?,
+        _ => println!("{types}"),
+    };
+    Ok(())
+}
+
+fn idl_ts(idl: &Idl) -> Result<String> {
+    let idl_name = &idl.metadata.name;
+    let type_name = idl_name.to_pascal_case();
+    let idl = serde_json::to_string(idl)?;
+
+    // Convert every field of the IDL to camelCase
+    let camel_idl = Regex::new(r#""\w+":"([\w\d]+)""#)?
+        .captures_iter(&idl)
+        .fold(idl.clone(), |acc, cur| {
+            let name = cur.get(1).unwrap().as_str();
+
+            // Do not modify pubkeys
+            if Pubkey::from_str(name).is_ok() {
+                return acc;
+            }
+
+            let camel_name = name.to_lower_camel_case();
+            acc.replace(&format!(r#""{name}""#), &format!(r#""{camel_name}""#))
+        });
+
+    // Pretty format
+    let camel_idl = serde_json::to_string_pretty(&serde_json::from_str::<Idl>(&camel_idl)?)?;
+
+    Ok(format!(
+        r#"/**
+ * Program IDL in camelCase format in order to be used in JS/TS.
+ *
+ * Note that this is only a type helper and is not the actual IDL. The original
+ * IDL can be found at `target/idl/{idl_name}.json`.
+ */
+export type {type_name} = {camel_idl};
+"#
+    ))
 }
 
 fn write_idl(idl: &Idl, out: OutFile) -> Result<()> {

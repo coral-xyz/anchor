@@ -161,6 +161,7 @@ fn get_address(acc: &Field) -> TokenStream {
             .address
             .as_ref()
             .map(|constraint| &constraint.address)
+            .filter(|address| !matches!(address, syn::Expr::Field(_)))
             .map(|address| quote! { Some(#address.to_string()) })
             .unwrap_or_else(|| quote! { None }),
     }
@@ -388,6 +389,13 @@ impl SeedPath {
     fn new(seed: &syn::Expr) -> Result<Self> {
         // Convert the seed into the raw string representation.
         let seed_str = seed.to_token_stream().to_string();
+
+        // Check unsupported cases e.g. `&(account.field + 1).to_le_bytes()`
+        if !seed_str.contains('"')
+            && seed_str.contains(|c: char| matches!(c, '+' | '-' | '*' | '/' | '%' | '^'))
+        {
+            return Err(anyhow!("Seed expression not supported: {seed:#?}"));
+        }
 
         // Break up the seed into each subfield component.
         let mut components = seed_str.split('.').collect::<Vec<_>>();
