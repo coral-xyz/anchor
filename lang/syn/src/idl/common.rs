@@ -22,8 +22,9 @@ pub fn get_no_docs() -> bool {
         .unwrap_or_default()
 }
 
-pub fn get_program_path() -> Result<String> {
+pub fn get_program_path() -> Result<PathBuf> {
     std::env::var("ANCHOR_IDL_BUILD_PROGRAM_PATH")
+        .map(PathBuf::from)
         .map_err(|_| anyhow!("Failed to get program path"))
 }
 

@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use anyhow::{anyhow, Result};
 use heck::CamelCase;
 use proc_macro2::TokenStream;
@@ -175,7 +173,6 @@ fn check_safety_comments() -> Result<()> {
     }
 
     program_path
-        .map(PathBuf::from)
         .map(|path| path.join("src").join("lib.rs"))
         .map(CrateContext::parse)?
         .map_err(|e| anyhow!("Failed to parse crate: {e}"))?
