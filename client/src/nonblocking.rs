@@ -1,6 +1,6 @@
 use crate::{
     ClientError, Config, EventContext, EventUnsubscriber, Program, ProgramAccountsIterator,
-    RequestBuilder,
+    RequestBuilder, ThreadSafeSigner,
 };
 use anchor_lang::{prelude::Pubkey, AccountDeserialize, Discriminator};
 use solana_client::{rpc_config::RpcSendTransactionConfig, rpc_filter::RpcFilterType};
@@ -66,7 +66,7 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
     }
 }
 
-impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
+impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C, Box<dyn Signer + 'a>> {
     pub fn from(
         program_id: Pubkey,
         cluster: &str,
@@ -82,6 +82,43 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
             instructions: Vec::new(),
             instruction_data: None,
             signers: Vec::new(),
+            _phantom: PhantomData,
+        }
+    }
+
+    pub async fn signed_transaction(&self) -> Result<Transaction, ClientError> {
+        self.signed_transaction_internal().await
+    }
+
+    pub async fn send(self) -> Result<Signature, ClientError> {
+        self.send_internal().await
+    }
+
+    pub async fn send_with_spinner_and_config(
+        self,
+        config: RpcSendTransactionConfig,
+    ) -> Result<Signature, ClientError> {
+        self.send_with_spinner_and_config_internal(config).await
+    }
+}
+
+impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C, Arc<dyn ThreadSafeSigner>> {
+    pub fn from_threadsafe(
+        program_id: Pubkey,
+        cluster: &str,
+        payer: C,
+        options: Option<CommitmentConfig>,
+    ) -> Self {
+        Self {
+            program_id,
+            payer,
+            cluster: cluster.to_string(),
+            accounts: Vec::new(),
+            options: options.unwrap_or_default(),
+            instructions: Vec::new(),
+            instruction_data: None,
+            signers: Vec::new(),
+            _phantom: PhantomData,
         }
     }
 

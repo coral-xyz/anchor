@@ -70,7 +70,7 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
     }
 }
 
-impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
+impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C, Box<dyn Signer + 'a>> {
     pub fn from(
         program_id: Pubkey,
         cluster: &str,
@@ -88,6 +88,7 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
             instruction_data: None,
             signers: Vec::new(),
             handle,
+            _phantom: PhantomData,
         }
     }
 

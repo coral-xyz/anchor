@@ -26,7 +26,7 @@ use composite::instruction as composite_instruction;
 use composite::{DummyA, DummyB};
 use optional::account::{DataAccount, DataPda};
 use std::ops::Deref;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time::sleep;
@@ -43,7 +43,7 @@ pub async fn main() -> Result<()> {
     );
 
     // Client.
-    let payer = Rc::new(payer);
+    let payer = Arc::new(payer);
     let client =
         Client::new_with_options(url.clone(), payer.clone(), CommitmentConfig::processed());
 
@@ -51,6 +51,7 @@ pub async fn main() -> Result<()> {
     composite(&client, opts.composite_pid).await?;
     basic_2(&client, opts.basic_2_pid).await?;
     basic_4(&client, opts.basic_4_pid).await?;
+    test_tokio(client, opts.basic_2_pid).await?;
 
     // Can also use references, since they deref to a signer
     let payer: &Keypair = &payer;
@@ -58,6 +59,42 @@ pub async fn main() -> Result<()> {
     events(&client, opts.events_pid).await?;
     optional(&client, opts.optional_pid).await?;
     // Success.
+    Ok(())
+}
+
+pub async fn test_tokio(client: Client<Arc<Keypair>>, pid: Pubkey) -> Result<()> {
+    tokio::spawn(async move {
+        let program = client.program(pid).unwrap();
+
+        // `Create` parameters.
+        let counter = Arc::new(Keypair::new());
+        let counter_pubkey = counter.pubkey();
+        let authority = program.payer();
+
+        // Build and send a transaction.
+        program
+            .request_threadsafe()
+            .signer(counter)
+            .accounts(basic_2_accounts::Create {
+                counter: counter_pubkey,
+                user: authority,
+                system_program: system_program::ID,
+            })
+            .args(basic_2_instruction::Create { authority })
+            .send()
+            .await
+            .unwrap();
+
+        let counter_account: Counter = program.account(counter_pubkey).await.unwrap();
+
+        assert_eq!(counter_account.authority, authority);
+        assert_eq!(counter_account.count, 0);
+    })
+    .await
+    .unwrap();
+
+    println!("Tokio success!");
+
     Ok(())
 }
 
