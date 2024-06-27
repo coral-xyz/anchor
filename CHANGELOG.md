@@ -14,7 +14,11 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Add option to pass in rpc client when using anchor_client ([#3053](https://github.com/coral-xyz/anchor/pull/3053)).
 
 
+- ts: Add optional `commitment` parameter to `Program.addEventListener` ([#3052](https://github.com/coral-xyz/anchor/pull/3052)).
+
 ### Fixes
+
+- idl: Make safety comment checks fail silently when program path env is not set ([#3045](https://github.com/coral-xyz/anchor/pull/3045])).
 
 ### Breaking
 
