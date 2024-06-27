@@ -239,17 +239,6 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         )
     }
 
-    /// Returns a threadsafe request builder
-    #[cfg(feature = "async")]
-    pub fn request_threadsafe(&self) -> RequestBuilder<'_, C, Arc<dyn ThreadSafeSigner>> {
-        RequestBuilder::from_threadsafe(
-            self.program_id,
-            self.cfg.cluster.url(),
-            self.cfg.payer.clone(),
-            self.cfg.options,
-        )
-    }
-
     pub fn id(&self) -> Pubkey {
         self.program_id
     }
@@ -514,18 +503,6 @@ pub enum ClientError {
     IOError(#[from] std::io::Error),
 }
 
-#[cfg(feature = "async")]
-pub trait ThreadSafeSigner: Signer + Send + Sync + 'static {
-    fn as_signer(&self) -> &dyn Signer;
-}
-
-#[cfg(feature = "async")]
-impl<T: Signer + Send + Sync + 'static> ThreadSafeSigner for T {
-    fn as_signer(&self) -> &dyn Signer {
-        self
-    }
-}
-
 /// `RequestBuilder` provides a builder interface to create and send
 /// transactions to a cluster.
 pub struct RequestBuilder<'a, C, S: 'a> {
@@ -650,74 +627,6 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C, Box<dyn S
     ) -> Result<Transaction, ClientError> {
         let instructions = self.instructions()?;
         let signers: Vec<&dyn Signer> = self.signers.iter().map(|s| s.as_ref()).collect();
-        let mut all_signers = signers;
-        all_signers.push(&*self.payer);
-
-        let tx = Transaction::new_signed_with_payer(
-            &instructions,
-            Some(&self.payer.pubkey()),
-            &all_signers,
-            latest_hash,
-        );
-
-        Ok(tx)
-    }
-
-    async fn signed_transaction_internal(&self) -> Result<Transaction, ClientError> {
-        let latest_hash =
-            AsyncRpcClient::new_with_commitment(self.cluster.to_owned(), self.options)
-                .get_latest_blockhash()
-                .await?;
-        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
-
-        Ok(tx)
-    }
-
-    async fn send_internal(&self) -> Result<Signature, ClientError> {
-        let rpc_client = AsyncRpcClient::new_with_commitment(self.cluster.to_owned(), self.options);
-        let latest_hash = rpc_client.get_latest_blockhash().await?;
-        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
-
-        rpc_client
-            .send_and_confirm_transaction(&tx)
-            .await
-            .map_err(Into::into)
-    }
-
-    async fn send_with_spinner_and_config_internal(
-        &self,
-        config: RpcSendTransactionConfig,
-    ) -> Result<Signature, ClientError> {
-        let rpc_client = AsyncRpcClient::new_with_commitment(self.cluster.to_owned(), self.options);
-        let latest_hash = rpc_client.get_latest_blockhash().await?;
-        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
-
-        rpc_client
-            .send_and_confirm_transaction_with_spinner_and_config(
-                &tx,
-                rpc_client.commitment(),
-                config,
-            )
-            .await
-            .map_err(Into::into)
-    }
-}
-
-// Implementation for thread-safe version
-#[cfg(feature = "async")]
-impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C, Arc<dyn ThreadSafeSigner>> {
-    #[must_use]
-    pub fn signer<T: ThreadSafeSigner>(mut self, signer: T) -> Self {
-        self.signers.push(Arc::new(signer));
-        self
-    }
-
-    fn signed_transaction_with_blockhash(
-        &self,
-        latest_hash: Hash,
-    ) -> Result<Transaction, ClientError> {
-        let instructions = self.instructions()?;
-        let signers: Vec<&dyn Signer> = self.signers.iter().map(|s| s.as_signer()).collect();
         let mut all_signers = signers;
         all_signers.push(&*self.payer);
 
