@@ -67,8 +67,8 @@ use futures::{Future, StreamExt};
 use regex::Regex;
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::rpc_config::{
-    RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig,
-    RpcTransactionLogsConfig, RpcTransactionLogsFilter,
+    RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcTransactionLogsConfig,
+    RpcTransactionLogsFilter,
 };
 use solana_client::rpc_filter::{Memcmp, RpcFilterType};
 use solana_client::{
@@ -82,7 +82,6 @@ use solana_client::{
 };
 use solana_sdk::account::Account;
 use solana_sdk::commitment_config::CommitmentConfig;
-use solana_sdk::hash::Hash;
 use solana_sdk::instruction::{AccountMeta, Instruction};
 use solana_sdk::signature::{Signature, Signer};
 use solana_sdk::transaction::Transaction;
@@ -225,18 +224,6 @@ pub struct Program<C> {
 impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
     pub fn payer(&self) -> Pubkey {
         self.cfg.payer.pubkey()
-    }
-
-    /// Returns a request builder.
-    pub fn request(&self) -> RequestBuilder<'_, C, Box<dyn Signer + '_>> {
-        RequestBuilder::from(
-            self.program_id,
-            self.cfg.cluster.url(),
-            self.cfg.payer.clone(),
-            self.cfg.options,
-            #[cfg(not(feature = "async"))]
-            self.rt.handle(),
-        )
     }
 
     pub fn id(&self) -> Pubkey {
@@ -611,72 +598,6 @@ impl<'a, C: Deref<Target = impl Signer> + Clone, S> RequestBuilder<'a, C, S> {
         let instructions = &self.instructions;
         let tx = Transaction::new_with_payer(instructions, Some(&self.payer.pubkey()));
         Ok(tx)
-    }
-}
-
-impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C, Box<dyn Signer + 'a>> {
-    #[must_use]
-    pub fn signer<T: Signer + 'a>(mut self, signer: T) -> Self {
-        self.signers.push(Box::new(signer));
-        self
-    }
-
-    pub fn signed_transaction_with_blockhash(
-        &self,
-        latest_hash: Hash,
-    ) -> Result<Transaction, ClientError> {
-        let instructions = self.instructions()?;
-        let signers: Vec<&dyn Signer> = self.signers.iter().map(|s| s.as_ref()).collect();
-        let mut all_signers = signers;
-        all_signers.push(&*self.payer);
-
-        let tx = Transaction::new_signed_with_payer(
-            &instructions,
-            Some(&self.payer.pubkey()),
-            &all_signers,
-            latest_hash,
-        );
-
-        Ok(tx)
-    }
-
-    async fn signed_transaction_internal(&self) -> Result<Transaction, ClientError> {
-        let latest_hash =
-            AsyncRpcClient::new_with_commitment(self.cluster.to_owned(), self.options)
-                .get_latest_blockhash()
-                .await?;
-        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
-
-        Ok(tx)
-    }
-
-    async fn send_internal(&self) -> Result<Signature, ClientError> {
-        let rpc_client = AsyncRpcClient::new_with_commitment(self.cluster.to_owned(), self.options);
-        let latest_hash = rpc_client.get_latest_blockhash().await?;
-        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
-
-        rpc_client
-            .send_and_confirm_transaction(&tx)
-            .await
-            .map_err(Into::into)
-    }
-
-    async fn send_with_spinner_and_config_internal(
-        &self,
-        config: RpcSendTransactionConfig,
-    ) -> Result<Signature, ClientError> {
-        let rpc_client = AsyncRpcClient::new_with_commitment(self.cluster.to_owned(), self.options);
-        let latest_hash = rpc_client.get_latest_blockhash().await?;
-        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
-
-        rpc_client
-            .send_and_confirm_transaction_with_spinner_and_config(
-                &tx,
-                rpc_client.commitment(),
-                config,
-            )
-            .await
-            .map_err(Into::into)
     }
 }
 

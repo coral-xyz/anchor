@@ -41,8 +41,8 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
     }
 
     /// Returns a threadsafe request builder
-    pub fn request_threadsafe(&self) -> RequestBuilder<'_, C, Arc<dyn ThreadSafeSigner>> {
-        RequestBuilder::from_threadsafe(
+    pub fn request(&self) -> RequestBuilder<'_, C, Arc<dyn ThreadSafeSigner>> {
+        RequestBuilder::from(
             self.program_id,
             self.cfg.cluster.url(),
             self.cfg.payer.clone(),
@@ -89,44 +89,8 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
     }
 }
 
-impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C, Box<dyn Signer + 'a>> {
-    pub fn from(
-        program_id: Pubkey,
-        cluster: &str,
-        payer: C,
-        options: Option<CommitmentConfig>,
-    ) -> Self {
-        Self {
-            program_id,
-            payer,
-            cluster: cluster.to_string(),
-            accounts: Vec::new(),
-            options: options.unwrap_or_default(),
-            instructions: Vec::new(),
-            instruction_data: None,
-            signers: Vec::new(),
-            _phantom: PhantomData,
-        }
-    }
-
-    pub async fn signed_transaction(&self) -> Result<Transaction, ClientError> {
-        self.signed_transaction_internal().await
-    }
-
-    pub async fn send(self) -> Result<Signature, ClientError> {
-        self.send_internal().await
-    }
-
-    pub async fn send_with_spinner_and_config(
-        self,
-        config: RpcSendTransactionConfig,
-    ) -> Result<Signature, ClientError> {
-        self.send_with_spinner_and_config_internal(config).await
-    }
-}
-
 impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C, Arc<dyn ThreadSafeSigner>> {
-    pub fn from_threadsafe(
+    pub fn from(
         program_id: Pubkey,
         cluster: &str,
         payer: C,
