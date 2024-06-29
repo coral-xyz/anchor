@@ -605,7 +605,7 @@ impl<'a, C: Deref<Target = impl Signer> + Clone, S: FromSigner> RequestBuilder<'
         Ok(instructions)
     }
 
-    pub fn signed_transaction_with_blockhash(
+    fn signed_transaction_with_blockhash(
         &self,
         latest_hash: Hash,
     ) -> Result<Transaction, ClientError> {
