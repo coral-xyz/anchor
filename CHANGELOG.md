@@ -11,9 +11,6 @@ The minor version will be incremented upon a breaking change and the patch versi
 ## [Unreleased]
 
 ### Features
-- lang: Add tokio support with `request_threadsafe` to `anchor_client` ([#3057](https://github.com/coral-xyz/anchor/pull/3057])).
-
-
 - ts: Add optional `commitment` parameter to `Program.addEventListener` ([#3052](https://github.com/coral-xyz/anchor/pull/3052)).
 
 ### Fixes
@@ -21,6 +18,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - idl: Make safety comment checks fail silently when program path env is not set ([#3045](https://github.com/coral-xyz/anchor/pull/3045])).
 
 ### Breaking
+- lang: Add tokio support to `RequestBuilder` to `async` feature in `anchor_client` ([#3057](https://github.com/coral-xyz/anchor/pull/3057])).
 
 ## [0.30.1] - 2024-06-20
 

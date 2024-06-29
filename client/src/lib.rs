@@ -605,12 +605,6 @@ impl<'a, C: Deref<Target = impl Signer> + Clone, S: FromSigner> RequestBuilder<'
         Ok(instructions)
     }
 
-    pub fn transaction(&self) -> Result<Transaction, ClientError> {
-        let instructions = &self.instructions;
-        let tx = Transaction::new_with_payer(instructions, Some(&self.payer.pubkey()));
-        Ok(tx)
-    }
-
     pub fn signed_transaction_with_blockhash(
         &self,
         latest_hash: Hash,
@@ -627,6 +621,12 @@ impl<'a, C: Deref<Target = impl Signer> + Clone, S: FromSigner> RequestBuilder<'
             latest_hash,
         );
 
+        Ok(tx)
+    }
+
+    pub fn transaction(&self) -> Result<Transaction, ClientError> {
+        let instructions = &self.instructions;
+        let tx = Transaction::new_with_payer(instructions, Some(&self.payer.pubkey()));
         Ok(tx)
     }
 
