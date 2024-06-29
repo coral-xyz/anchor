@@ -85,6 +85,8 @@ use solana_client::{
 use solana_sdk::account::Account;
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::signature::{Signature, Signer};
+use solana_sdk::signer::SignerError;
+use solana_sdk::signers::Signers;
 use solana_sdk::transaction::Transaction;
 use std::iter::Map;
 use std::marker::PhantomData;
@@ -514,9 +516,12 @@ pub struct RequestBuilder<'a, C> {
     payer: C,
     // Serialized instruction data for the target RPC.
     instruction_data: Option<Vec<u8>>,
-    signers: Vec<&'a dyn Signer>,
+    signers: Vec<C>,
     #[cfg(not(feature = "async"))]
     handle: &'a Handle,
+    // Need this, otherwise the lifetime is not used and the compiler complains.
+    #[cfg(feature = "async")]
+    _lifetime_marker: PhantomData<&'a ()>, // Dummy field to use the 'a lifetime
 }
 
 impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
@@ -594,8 +599,8 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
     }
 
     #[must_use]
-    pub fn signer(mut self, signer: &'a dyn Signer) -> Self {
-        self.signers.push(signer);
+    pub fn signer(mut self, signer: &C) -> Self {
+        self.signers.push(signer.clone());
         self
     }
 
@@ -618,12 +623,13 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
     ) -> Result<Transaction, ClientError> {
         let instructions = self.instructions()?;
         let mut signers = self.signers.clone();
-        signers.push(&*self.payer);
+        signers.push(self.payer.clone());
 
         let tx = Transaction::new_signed_with_payer(
             &instructions,
             Some(&self.payer.pubkey()),
-            &signers,
+            // Need this to satisy the `Signers` trait required by `Transaction::new_signed_with_payer`.
+            &SignerVec(signers),
             latest_hash,
         );
 
@@ -735,6 +741,43 @@ fn parse_logs_response<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
         }
     }
     events
+}
+
+/// Helper type to implement the `Signers` trait for a vec of generic signers.
+/// The solana sdk automatically implements the `Signers` trait for vecs of signers, but not for
+/// the kind of generic like how we use it, and since it's a foreign trait we can't directly implement
+/// for vecs it.
+pub struct SignerVec<C>(Vec<C>);
+
+impl<C: Deref<Target = impl Signer> + Clone> Signers for SignerVec<C> {
+    fn pubkeys(&self) -> Vec<Pubkey> {
+        self.0.iter().map(|signer| signer.pubkey()).collect()
+    }
+
+    fn try_pubkeys(&self) -> Result<Vec<Pubkey>, SignerError> {
+        self.0
+            .iter()
+            .map(|signer| signer.try_pubkey())
+            .collect::<Result<Vec<_>, _>>()
+    }
+
+    fn sign_message(&self, message: &[u8]) -> Vec<Signature> {
+        self.0
+            .iter()
+            .map(|signer| signer.sign_message(message))
+            .collect()
+    }
+
+    fn try_sign_message(&self, message: &[u8]) -> Result<Vec<Signature>, SignerError> {
+        self.0
+            .iter()
+            .map(|signer| signer.try_sign_message(message))
+            .collect::<Result<Vec<_>, _>>()
+    }
+
+    fn is_interactive(&self) -> bool {
+        self.0.iter().any(|signer| signer.is_interactive())
+    }
 }
 
 #[cfg(test)]

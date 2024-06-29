@@ -82,6 +82,7 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
             instructions: Vec::new(),
             instruction_data: None,
             signers: Vec::new(),
+            _lifetime_marker: PhantomData,
         }
     }
 
