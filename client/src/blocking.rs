@@ -3,12 +3,9 @@ use crate::{
     RequestBuilder,
 };
 use anchor_lang::{prelude::Pubkey, AccountDeserialize, Discriminator};
-use solana_client::{
-    nonblocking::rpc_client::RpcClient as AsyncRpcClient, rpc_config::RpcSendTransactionConfig,
-    rpc_filter::RpcFilterType,
-};
+use solana_client::{rpc_config::RpcSendTransactionConfig, rpc_filter::RpcFilterType};
 use solana_sdk::{
-    commitment_config::CommitmentConfig, hash::Hash, signature::Signature, signer::Signer,
+    commitment_config::CommitmentConfig, signature::Signature, signer::Signer,
     transaction::Transaction,
 };
 use std::{marker::PhantomData, ops::Deref, sync::Arc};
@@ -111,64 +108,6 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C, Box<dyn S
     pub fn signer<T: Signer + 'a>(mut self, signer: T) -> Self {
         self.signers.push(Box::new(signer));
         self
-    }
-
-    pub fn signed_transaction_with_blockhash(
-        &self,
-        latest_hash: Hash,
-    ) -> Result<Transaction, ClientError> {
-        let instructions = self.instructions()?;
-        let signers: Vec<&dyn Signer> = self.signers.iter().map(|s| s.as_ref()).collect();
-        let mut all_signers = signers;
-        all_signers.push(&*self.payer);
-
-        let tx = Transaction::new_signed_with_payer(
-            &instructions,
-            Some(&self.payer.pubkey()),
-            &all_signers,
-            latest_hash,
-        );
-
-        Ok(tx)
-    }
-
-    async fn signed_transaction_internal(&self) -> Result<Transaction, ClientError> {
-        let latest_hash =
-            AsyncRpcClient::new_with_commitment(self.cluster.to_owned(), self.options)
-                .get_latest_blockhash()
-                .await?;
-        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
-
-        Ok(tx)
-    }
-
-    async fn send_internal(&self) -> Result<Signature, ClientError> {
-        let rpc_client = AsyncRpcClient::new_with_commitment(self.cluster.to_owned(), self.options);
-        let latest_hash = rpc_client.get_latest_blockhash().await?;
-        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
-
-        rpc_client
-            .send_and_confirm_transaction(&tx)
-            .await
-            .map_err(Into::into)
-    }
-
-    async fn send_with_spinner_and_config_internal(
-        &self,
-        config: RpcSendTransactionConfig,
-    ) -> Result<Signature, ClientError> {
-        let rpc_client = AsyncRpcClient::new_with_commitment(self.cluster.to_owned(), self.options);
-        let latest_hash = rpc_client.get_latest_blockhash().await?;
-        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
-
-        rpc_client
-            .send_and_confirm_transaction_with_spinner_and_config(
-                &tx,
-                rpc_client.commitment(),
-                config,
-            )
-            .await
-            .map_err(Into::into)
     }
 
     pub fn signed_transaction(&self) -> Result<Transaction, ClientError> {
