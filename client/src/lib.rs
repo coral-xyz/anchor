@@ -491,12 +491,12 @@ pub enum ClientError {
     IOError(#[from] std::io::Error),
 }
 
-pub trait FromSigner {
-    fn from_signer(&self) -> &dyn Signer;
+pub trait AsSigner {
+    fn as_signer(&self) -> &dyn Signer;
 }
 
-impl<'a> FromSigner for Box<dyn Signer + 'a> {
-    fn from_signer(&self) -> &dyn Signer {
+impl<'a> AsSigner for Box<dyn Signer + 'a> {
+    fn as_signer(&self) -> &dyn Signer {
         self.as_ref()
     }
 }
@@ -518,7 +518,7 @@ pub struct RequestBuilder<'a, C, S: 'a> {
 }
 
 // Shared implementation for all RequestBuilders
-impl<'a, C: Deref<Target = impl Signer> + Clone, S: FromSigner> RequestBuilder<'a, C, S> {
+impl<'a, C: Deref<Target = impl Signer> + Clone, S: AsSigner> RequestBuilder<'a, C, S> {
     #[must_use]
     pub fn payer(mut self, payer: C) -> Self {
         self.payer = payer;
@@ -610,7 +610,7 @@ impl<'a, C: Deref<Target = impl Signer> + Clone, S: FromSigner> RequestBuilder<'
         latest_hash: Hash,
     ) -> Result<Transaction, ClientError> {
         let instructions = self.instructions()?;
-        let signers: Vec<&dyn Signer> = self.signers.iter().map(|s| s.from_signer()).collect();
+        let signers: Vec<&dyn Signer> = self.signers.iter().map(|s| s.as_signer()).collect();
         let mut all_signers = signers;
         all_signers.push(&*self.payer);
 

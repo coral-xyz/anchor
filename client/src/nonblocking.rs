@@ -1,5 +1,5 @@
 use crate::{
-    ClientError, Config, EventContext, EventUnsubscriber, FromSigner, Program,
+    AsSigner, ClientError, Config, EventContext, EventUnsubscriber, Program,
     ProgramAccountsIterator, RequestBuilder,
 };
 use anchor_lang::{prelude::Pubkey, AccountDeserialize, Discriminator};
@@ -19,18 +19,18 @@ impl<'a> EventUnsubscriber<'a> {
 }
 
 pub trait ThreadSafeSigner: Signer + Send + Sync + 'static {
-    fn as_signer(&self) -> &dyn Signer;
+    fn to_signer(&self) -> &dyn Signer;
 }
 
 impl<T: Signer + Send + Sync + 'static> ThreadSafeSigner for T {
-    fn as_signer(&self) -> &dyn Signer {
+    fn to_signer(&self) -> &dyn Signer {
         self
     }
 }
 
-impl FromSigner for Arc<dyn ThreadSafeSigner> {
-    fn from_signer(&self) -> &dyn Signer {
-        self.as_signer()
+impl AsSigner for Arc<dyn ThreadSafeSigner> {
+    fn as_signer(&self) -> &dyn Signer {
+        self.to_signer()
     }
 }
 
