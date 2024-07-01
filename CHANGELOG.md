@@ -12,7 +12,14 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Features
 
+- ts: Add optional `commitment` parameter to `Program.addEventListener` ([#3052](https://github.com/coral-xyz/anchor/pull/3052)).
+- cli, idl: Pass `cargo` args to IDL generation when building program or IDL ([#3059](https://github.com/coral-xyz/anchor/pull/3059)).
+- cli: Add checks for incorrect usage of `idl-build` feature ([#3061](https://github.com/coral-xyz/anchor/pull/3061)).
+
 ### Fixes
+
+- idl: Make safety comment checks fail silently when program path env is not set ([#3045](https://github.com/coral-xyz/anchor/pull/3045)).
+- idl: Avoid interference from rust tests during IDL generation ([#3058](https://github.com/coral-xyz/anchor/pull/3058)).
 
 ### Breaking
 
