@@ -169,10 +169,8 @@ pub fn convert_idl_type_def_to_ts(
                 let packed = modifier.packed.then(|| quote!(packed)).unwrap_or_default();
                 let align = modifier
                     .align
-                    .map(|align| {
-                        let align_literal = &Literal::usize_unsuffixed(align);
-                        quote!(align(#align_literal))
-                    })
+                    .map(Literal::usize_unsuffixed)
+                    .map(|align| quote!(align(#align)))
                     .unwrap_or_default();
 
                 if packed.is_empty() {
