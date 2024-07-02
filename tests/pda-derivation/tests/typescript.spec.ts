@@ -110,9 +110,10 @@ describe("typescript", () => {
 
   it("Can resolve associated token accounts", async () => {
     const mintKp = anchor.web3.Keypair.generate();
+    const userKp = anchor.web3.Keypair.generate();
     await program.methods
       .associatedTokenResolution()
-      .accounts({ mint: mintKp.publicKey })
+      .accounts({ mint: mintKp.publicKey, user: userKp.publicKey })
       .signers([mintKp])
       .rpc();
   });

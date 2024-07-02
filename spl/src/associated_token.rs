@@ -8,6 +8,28 @@ pub use spl_associated_token_account::{
     get_associated_token_address, get_associated_token_address_with_program_id, ID,
 };
 
+pub fn create_slim_stack_frame<'info>(
+    payer: &AccountInfo<'info>,
+    associated_token: &AccountInfo<'info>,
+    authority: &AccountInfo<'info>,
+    mint: &AccountInfo<'info>,
+    system_program: &AccountInfo<'info>,
+    token_program: &AccountInfo<'info>,
+    associated_token_program: &AccountInfo<'info>,
+) -> Result<()> {
+    create(CpiContext::new(
+        associated_token_program.clone(),
+        Create {
+            payer: payer.clone(),
+            associated_token: associated_token.clone(),
+            authority: authority.clone(),
+            mint: mint.clone(),
+            system_program: system_program.clone(),
+            token_program: token_program.clone(),
+        },
+    ))
+}
+
 pub fn create<'info>(ctx: CpiContext<'_, '_, '_, 'info, Create<'info>>) -> Result<()> {
     let ix = spl_associated_token_account::instruction::create_associated_token_account(
         ctx.accounts.payer.key,
