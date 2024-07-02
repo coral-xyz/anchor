@@ -1,3 +1,4 @@
+import { VersionedTransactionResponse } from "@solana/web3.js";
 import { IdlEvent } from "../idl.js";
 import { Event } from "../program/event.js";
 
@@ -50,6 +51,24 @@ export interface EventCoder {
   decode<E extends IdlEvent = IdlEvent, T = Record<string, string>>(
     log: string
   ): Event<E, T> | null;
+
+  parseCpiEvents<E extends IdlEvent = IdlEvent, T = Record<string, string>>(
+    transactionResponse: VersionedTransactionResponse
+  ): Event<E, T>[];
+}
+
+export abstract class NoEventCoder implements EventCoder {
+  decode<E extends IdlEvent = IdlEvent, T = Record<string, string>>(
+    _log: string
+  ): Event<E, T> | null {
+    throw new Error(`${this.constructor} program does not have events`);
+  }
+
+  parseCpiEvents<E extends IdlEvent = IdlEvent, T = Record<string, string>>(
+    _transactionResponse: VersionedTransactionResponse
+  ): Event<E, T>[] {
+    throw new Error(`${this.constructor} program does not have CPI events`);
+  }
 }
 
 export interface TypesCoder<N extends string = string> {
