@@ -3,11 +3,14 @@ use crate::{
     RequestBuilder,
 };
 use anchor_lang::{prelude::Pubkey, AccountDeserialize, Discriminator};
+#[cfg(feature = "rpc-client")]
+use solana_client::nonblocking::rpc_client::RpcClient as AsyncRpcClient;
 use solana_client::{rpc_config::RpcSendTransactionConfig, rpc_filter::RpcFilterType};
 use solana_sdk::{
     commitment_config::CommitmentConfig, signature::Signature, signer::Signer,
     transaction::Transaction,
 };
+
 use std::{marker::PhantomData, ops::Deref, sync::Arc};
 use tokio::{
     runtime::{Builder, Handle},
@@ -25,11 +28,45 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
     pub fn new(program_id: Pubkey, cfg: Config<C>) -> Result<Self, ClientError> {
         let rt: tokio::runtime::Runtime = Builder::new_multi_thread().enable_all().build()?;
 
+        #[cfg(not(feature = "rpc-client"))]
+        return Ok(Self {
+            program_id,
+            cfg,
+            sub_client: Arc::new(RwLock::new(None)),
+            rt,
+        });
+
+        #[cfg(feature = "rpc-client")]
+        {
+            let comm_config = cfg.options.unwrap_or_default();
+            let cluster_url = cfg.cluster.url().to_string();
+            Ok(Self {
+                program_id,
+                cfg,
+                sub_client: Arc::new(RwLock::new(None)),
+                rt,
+                rpc_client: RpcClient::new_with_commitment(cluster_url.clone(), comm_config),
+                async_rpc_client: AsyncRpcClient::new_with_commitment(cluster_url, comm_config),
+            })
+        }
+    }
+
+    #[cfg(feature = "rpc-client")]
+    pub fn new_with_rpc(
+        program_id: Pubkey,
+        cfg: Config<C>,
+        rpc_client: RpcClient,
+        async_rpc_client: AsyncRpcClient,
+    ) -> Result<Self, ClientError> {
+        let rt: tokio::runtime::Runtime = Builder::new_multi_thread().enable_all().build()?;
+
         Ok(Self {
             program_id,
             cfg,
             sub_client: Arc::new(RwLock::new(None)),
             rt,
+            rpc_client,
+            async_rpc_client,
         })
     }
 
@@ -71,6 +108,7 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
 }
 
 impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
+    #[cfg(not(feature = "rpc-client"))]
     pub fn from(
         program_id: Pubkey,
         cluster: &str,
@@ -88,6 +126,29 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
             instruction_data: None,
             signers: Vec::new(),
             handle,
+        }
+    }
+
+    #[cfg(feature = "rpc-client")]
+    pub fn from(
+        program_id: Pubkey,
+        cluster: &str,
+        payer: C,
+        options: Option<CommitmentConfig>,
+        handle: &'a Handle,
+        async_rpc_client: &'a AsyncRpcClient,
+    ) -> Self {
+        Self {
+            program_id,
+            payer,
+            cluster: cluster.to_string(),
+            accounts: Vec::new(),
+            options: options.unwrap_or_default(),
+            instructions: Vec::new(),
+            instruction_data: None,
+            signers: Vec::new(),
+            handle,
+            async_rpc_client,
         }
     }
 
