@@ -85,6 +85,7 @@ pub struct InitMyAccount<'info> {
     base: Account<'info, BaseAccount>,
     // Intentionally using this qualified form instead of importing to test parsing
     another_base: Account<'info, crate::other::AnotherBaseAccount>,
+    /// CHECK:
     base2: AccountInfo<'info>,
     #[account(
         init,
@@ -163,6 +164,43 @@ pub struct AssociatedTokenResolution<'info> {
         associated_token::mint = mint,
     )]
     pub ata: Account<'info, TokenAccount>,
+    #[account(
+        init,
+        payer = payer,
+        associated_token::authority = system_program,
+        associated_token::mint = mint,
+    )]
+    pub ata2: Account<'info, TokenAccount>,
+    #[account(
+        init,
+        payer = payer,
+        associated_token::authority = token_program,
+        associated_token::mint = mint,
+    )]
+    pub ata3: Account<'info, TokenAccount>,
+    #[account(
+        init,
+        payer = payer,
+        associated_token::authority = associated_token_program,
+        associated_token::mint = mint,
+    )]
+    pub ata4: Account<'info, TokenAccount>,
+    #[account(
+        init,
+        payer = payer,
+        associated_token::authority = mint,
+        associated_token::mint = mint,
+    )]
+    pub ata5: Account<'info, TokenAccount>,
+    /// CHECK:
+    pub user: AccountInfo<'info>,
+    #[account(
+        init,
+        payer = payer,
+        associated_token::authority = user,
+        associated_token::mint = mint,
+    )]
+    pub ata6: Account<'info, TokenAccount>,
     #[account(mut)]
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -174,6 +212,7 @@ pub struct AssociatedTokenResolution<'info> {
 pub struct SeedMathExpr<'info> {
     #[account(seeds = [b"const"], bump)]
     pub my_account: Account<'info, MyAccount>,
+    /// CHECK:
     #[account(seeds = [&(my_account.data + 1).to_le_bytes()], bump)]
     pub math_expr_account: UncheckedAccount<'info>,
 }
