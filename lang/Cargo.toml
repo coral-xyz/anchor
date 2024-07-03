@@ -14,25 +14,25 @@ rustdoc-args = ["--cfg", "docsrs"]
 [features]
 allow-missing-optionals = ["anchor-derive-accounts/allow-missing-optionals"]
 anchor-debug = [
-    "anchor-attribute-access-control/anchor-debug",
-    "anchor-attribute-account/anchor-debug",
-    "anchor-attribute-constant/anchor-debug",
-    "anchor-attribute-error/anchor-debug",
-    "anchor-attribute-event/anchor-debug",
-    "anchor-attribute-program/anchor-debug",
-    "anchor-derive-accounts/anchor-debug"
+  "anchor-attribute-access-control/anchor-debug",
+  "anchor-attribute-account/anchor-debug",
+  "anchor-attribute-constant/anchor-debug",
+  "anchor-attribute-error/anchor-debug",
+  "anchor-attribute-event/anchor-debug",
+  "anchor-attribute-program/anchor-debug",
+  "anchor-derive-accounts/anchor-debug",
 ]
 derive = []
 event-cpi = ["anchor-attribute-event/event-cpi"]
 idl-build = [
-    "anchor-attribute-account/idl-build",
-    "anchor-attribute-constant/idl-build",
-    "anchor-attribute-event/idl-build",
-    "anchor-attribute-error/idl-build",
-    "anchor-attribute-program/idl-build",
-    "anchor-derive-accounts/idl-build",
-    "anchor-derive-serde/idl-build",
-    "anchor-lang-idl/build",
+  "anchor-attribute-account/idl-build",
+  "anchor-attribute-constant/idl-build",
+  "anchor-attribute-event/idl-build",
+  "anchor-attribute-error/idl-build",
+  "anchor-attribute-program/idl-build",
+  "anchor-derive-accounts/idl-build",
+  "anchor-derive-serde/idl-build",
+  "anchor-lang-idl/build",
 ]
 init-if-needed = ["anchor-derive-accounts/init-if-needed"]
 interface-instructions = ["anchor-attribute-program/interface-instructions"]
@@ -56,7 +56,7 @@ base64 = "0.21"
 bincode = "1"
 borsh = ">=0.9, <0.11"
 bytemuck = "1"
-solana-program = "1.17.3"
+solana-program = "2.0.1"
 thiserror = "1"
 # TODO: Remove. This crate has been added to fix a build error with the 1.16.0 release.
 getrandom = { version = "0.2", features = ["custom"] }

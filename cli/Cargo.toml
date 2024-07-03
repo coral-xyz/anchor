@@ -16,7 +16,10 @@ dev = []
 
 [dependencies]
 anchor-client = { path = "../client", version = "0.30.1" }
-anchor-lang-idl = { path = "../idl", version = "0.1.1", features = ["build", "convert"] }
+anchor-lang-idl = { path = "../idl", version = "0.1.1", features = [
+  "build",
+  "convert",
+] }
 anchor-lang = { path = "../lang", version = "0.30.1" }
 anyhow = "1.0.32"
 base64 = "0.21"
@@ -30,18 +33,22 @@ heck = "0.4.0"
 pathdiff = "0.2.0"
 portpicker = "0.1.1"
 regex = "1.8.3"
-reqwest = { version = "0.11.4", default-features = false, features = ["multipart", "blocking", "rustls-tls"] }
+reqwest = { version = "0.11.4", default-features = false, features = [
+  "multipart",
+  "blocking",
+  "rustls-tls",
+] }
 semver = "1.0.4"
 serde = { version = "1.0.122", features = ["derive"] }
 serde_json = "1.0"
 shellexpand = "2.1.0"
-solana-client = "1.17.3"
-solana-cli-config = "1.17.3"
-solana-faucet = "1.17.3"
-solana-program = "1.17.3"
-solana-sdk = "1.17.3"
+solana-client = "2.0.1"
+solana-cli-config = "2.0.1"
+solana-faucet = "2.0.1"
+solana-program = "2.0.1"
+solana-sdk = "2.0.1"
 # Pin solang-parser because it may break in a backwards incompatible way in minor versions
-solang-parser = "=0.3.3"
+solang-parser = "=0.3.4"
 syn = { version = "1.0.60", features = ["full", "extra-traits"] }
 tar = "0.4.35"
 toml = "0.7.6"
