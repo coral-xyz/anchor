@@ -13,11 +13,16 @@ The minor version will be incremented upon a breaking change and the patch versi
 ### Features
 
 - ts: Add optional `commitment` parameter to `Program.addEventListener` ([#3052](https://github.com/coral-xyz/anchor/pull/3052)).
+- cli, idl: Pass `cargo` args to IDL generation when building program or IDL ([#3059](https://github.com/coral-xyz/anchor/pull/3059)).
+- cli: Add checks for incorrect usage of `idl-build` feature ([#3061](https://github.com/coral-xyz/anchor/pull/3061)).
 - lang: Add `INIT_SPACE_INCL_DISC` to `Space` trait ([#3069](https://github.com/coral-xyz/anchor/pull/3069)).
 
 ### Fixes
 
-- idl: Make safety comment checks fail silently when program path env is not set ([#3045](https://github.com/coral-xyz/anchor/pull/3045])).
+- idl: Make safety comment checks fail silently when program path env is not set ([#3045](https://github.com/coral-xyz/anchor/pull/3045)).
+- idl: Avoid interference from rust tests during IDL generation ([#3058](https://github.com/coral-xyz/anchor/pull/3058)).
+- lang: Fix `align` repr support in `declare-program!` ([#3056](https://github.com/coral-xyz/anchor/pull/3056)).
+- lang: Make stack frames slimmer on ATA creation ([#3065](https://github.com/coral-xyz/anchor/pull/3065)).
 
 ### Breaking
 
