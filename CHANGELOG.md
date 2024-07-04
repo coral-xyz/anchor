@@ -13,6 +13,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 ### Features
 
 - ts: Add optional `commitment` parameter to `Program.addEventListener` ([#3052](https://github.com/coral-xyz/anchor/pull/3052)).
+- lang: Add `INIT_SPACE_INCL_DISC` to `Space` trait ([#3069](https://github.com/coral-xyz/anchor/pull/3069)).
 
 ### Fixes
 
