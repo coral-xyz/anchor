@@ -8,6 +8,8 @@ use syn::{
     LitInt, PathArguments, Type, TypeArray,
 };
 
+const DISCRIMINATOR_SIZE: usize = 8;
+
 /// Implements a [`Space`](./trait.Space.html) trait on the given
 /// struct or enum.
 ///
@@ -31,7 +33,7 @@ use syn::{
 ///    #[account(mut)]
 ///    pub payer: Signer<'info>,
 ///    pub system_program: Program<'info, System>,
-///    #[account(init, payer = payer, space = 8 + ExampleAccount::INIT_SPACE)]
+///    #[account(init, payer = payer, space = ExampleAccount::INIT_SPACE_INCL_DISC)]
 ///    pub data: Account<'info, ExampleAccount>,
 /// }
 /// ```
@@ -53,6 +55,7 @@ pub fn derive_init_space(item: TokenStream) -> TokenStream {
                     #[automatically_derived]
                     impl #impl_generics anchor_lang::Space for #name #ty_generics #where_clause {
                         const INIT_SPACE: usize = 0 #(+ #recurse)*;
+                        const INIT_SPACE_INCL_DISC: usize = Self::INIT_SPACE + #DISCRIMINATOR_SIZE;
                     }
                 }
             }
@@ -76,6 +79,7 @@ pub fn derive_init_space(item: TokenStream) -> TokenStream {
                 #[automatically_derived]
                 impl anchor_lang::Space for #name {
                     const INIT_SPACE: usize = 1 + #max;
+                    const INIT_SPACE_INCL_DISC: usize = Self::INIT_SPACE + #DISCRIMINATOR_SIZE;
                 }
             }
         }

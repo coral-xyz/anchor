@@ -100,11 +100,16 @@ pub struct TestConst {
 #[test]
 fn test_empty_struct() {
     assert_eq!(TestEmptyAccount::INIT_SPACE, 0);
+    assert_eq!(TestEmptyAccount::INIT_SPACE_INCL_DISC, 8);
 }
 
 #[test]
 fn test_basic_struct() {
     assert_eq!(TestBasicVarAccount::INIT_SPACE, 1 + 2 + 4 + 8 + 16);
+    assert_eq!(
+        TestBasicVarAccount::INIT_SPACE_INCL_DISC,
+        1 + 2 + 4 + 8 + 16 + 8
+    );
 }
 
 #[test]
@@ -112,17 +117,23 @@ fn test_complexe_struct() {
     assert_eq!(
         TestComplexeVarAccount::INIT_SPACE,
         32 + 4 + 10 + (4 + 10) + 3
-    )
+    );
+    assert_eq!(
+        TestComplexeVarAccount::INIT_SPACE_INCL_DISC,
+        32 + 4 + 10 + (4 + 10) + 3 + 8
+    );
 }
 
 #[test]
 fn test_zero_copy_struct() {
-    assert_eq!(TestZeroCopyStruct::INIT_SPACE, 8 + 4)
+    assert_eq!(TestZeroCopyStruct::INIT_SPACE, 8 + 4);
+    assert_eq!(TestZeroCopyStruct::INIT_SPACE_INCL_DISC, 8 + 4 + 8);
 }
 
 #[test]
 fn test_basic_enum() {
     assert_eq!(TestBasicEnum::INIT_SPACE, 1 + 14);
+    assert_eq!(TestBasicEnum::INIT_SPACE_INCL_DISC, 1 + 14 + 8);
 }
 
 #[test]
@@ -130,20 +141,30 @@ fn test_nested_struct() {
     assert_eq!(
         TestNestedStruct::INIT_SPACE,
         ChildStruct::INIT_SPACE + TestBasicEnum::INIT_SPACE
-    )
+    );
+    assert_eq!(
+        TestNestedStruct::INIT_SPACE_INCL_DISC,
+        ChildStruct::INIT_SPACE + TestBasicEnum::INIT_SPACE + 8
+    );
 }
 
 #[test]
 fn test_matrix_struct() {
-    assert_eq!(TestMatrixStruct::INIT_SPACE, 4 + (2 * (4 + 4)))
+    assert_eq!(TestMatrixStruct::INIT_SPACE, 4 + (2 * (4 + 4)));
+    assert_eq!(
+        TestMatrixStruct::INIT_SPACE_INCL_DISC,
+        4 + (2 * (4 + 4)) + 8
+    );
 }
 
 #[test]
 fn test_full_path() {
-    assert_eq!(TestFullPath::INIT_SPACE, 8 + 9)
+    assert_eq!(TestFullPath::INIT_SPACE, 8 + 9);
+    assert_eq!(TestFullPath::INIT_SPACE_INCL_DISC, 8 + 9 + 8);
 }
 
 #[test]
 fn test_const() {
-    assert_eq!(TestConst::INIT_SPACE, (4 + 10) + 10)
+    assert_eq!(TestConst::INIT_SPACE, (4 + 10) + 10);
+    assert_eq!(TestConst::INIT_SPACE_INCL_DISC, (4 + 10) + 10 + 8);
 }

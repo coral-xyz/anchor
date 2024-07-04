@@ -317,8 +317,11 @@ pub trait Discriminator {
 }
 
 /// Defines the space of an account for initialization.
+/// INIT_SPACE is the space required for the account, not including the discriminator.
+/// INIT_SPACE_INCL_DISC is the space required for the account, including the discriminator.
 pub trait Space {
     const INIT_SPACE: usize;
+    const INIT_SPACE_INCL_DISC: usize;
 }
 
 /// Bump seed for program derived addresses.
