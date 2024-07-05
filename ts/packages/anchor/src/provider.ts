@@ -11,6 +11,8 @@ import {
   SendOptions,
   VersionedTransaction,
   RpcResponseAndContext,
+  BlockhashWithExpiryBlockHeight,
+  SignatureResult,
 } from "@solana/web3.js";
 import { bs58 } from "./utils/bytes/index.js";
 import { isBrowser, isVersionedTransaction } from "./utils/common.js";
@@ -127,14 +129,16 @@ export class AnchorProvider implements Provider {
   /**
    * Sends the given transaction, paid for and signed by the provider's wallet.
    *
-   * @param tx      The transaction to send.
-   * @param signers The signers of the transaction.
-   * @param opts    Transaction confirmation options.
+   * @param tx        The transaction to send.
+   * @param signers   The signers of the transaction.
+   * @param opts      Transaction confirmation options.
+   * @param blockhash Blockhash with expiry blockHeight used to generate versioned transaction.
    */
   async sendAndConfirm(
     tx: Transaction | VersionedTransaction,
     signers?: Signer[],
-    opts?: ConfirmOptions
+    opts?: ConfirmOptions,
+    blockhash?: BlockhashWithExpiryBlockHeight
   ): Promise<TransactionSignature> {
     if (opts === undefined) {
       opts = this.opts;
@@ -160,7 +164,7 @@ export class AnchorProvider implements Provider {
     const rawTx = tx.serialize();
 
     try {
-      return await sendAndConfirmRawTransaction(this.connection, rawTx, opts);
+      return await sendAndConfirmRawTransaction(this.connection, rawTx, opts, blockhash);
     } catch (err) {
       // thrown if the underlying 'confirmTransaction' encounters a failed tx
       // the 'confirmTransaction' error does not return logs so we make another rpc call to get them
@@ -367,32 +371,69 @@ export interface Wallet {
 async function sendAndConfirmRawTransaction(
   connection: Connection,
   rawTransaction: Buffer | Uint8Array,
-  options?: ConfirmOptions
+  options?: ConfirmOptions,
+  blockhash?: BlockhashWithExpiryBlockHeight
 ): Promise<TransactionSignature> {
-  const sendOptions = options && {
-    skipPreflight: options.skipPreflight,
-    preflightCommitment: options.preflightCommitment || options.commitment,
+  const sendOptions: SendOptions = {
+    skipPreflight: options?.skipPreflight !== undefined ? options.skipPreflight : true,
+    preflightCommitment: options?.preflightCommitment || options?.commitment || "confirmed",
+    minContextSlot: options?.minContextSlot,
+    maxRetries: options?.maxRetries || 0,
   };
 
-  const signature = await connection.sendRawTransaction(
-    rawTransaction,
-    sendOptions
-  );
+  let status: SignatureResult;
 
-  const status = (
-    await connection.confirmTransaction(
-      signature,
-      options && options.commitment
-    )
-  ).value;
+  const startTime = Date.now();
+  while (Date.now() - startTime < 60_000) {
+    try {
+      const signature = await connection.sendRawTransaction(
+        rawTransaction,
+        sendOptions
+      );
 
-  if (status.err) {
-    throw new ConfirmError(
-      `Raw transaction ${signature} failed (${JSON.stringify(status)})`
-    );
+      if (blockhash) {
+        if (sendOptions.maxRetries === 0) {
+          const abortSignal = AbortSignal.timeout(15_000);
+          status = (
+            await connection.confirmTransaction(
+              { abortSignal, signature, ...blockhash },
+              sendOptions.preflightCommitment
+            )
+          ).value;
+          abortSignal.removeEventListener("abort", () => { });
+        } else {
+          status = (
+            await connection.confirmTransaction(
+              { signature, ...blockhash },
+              sendOptions.preflightCommitment
+            )
+          ).value;
+        }
+      } else {
+        status = (
+          await connection.confirmTransaction(
+            signature,
+            sendOptions.preflightCommitment
+          )
+        ).value;
+      }
+
+      if (status.err) {
+        throw new ConfirmError(
+          `Raw transaction ${signature} failed (${JSON.stringify(status)})`
+        );
+      }
+
+      return signature;
+    } catch (e) {
+      if (e.name === "AbortError") {
+        continue;
+      }
+      throw e;
+    }
   }
 
-  return signature;
+  throw Error("Transaction failed to confirm in 60s");
 }
 
 class ConfirmError extends Error {
