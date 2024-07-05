@@ -33,7 +33,8 @@ export default interface Provider {
   sendAndConfirm?(
     tx: Transaction | VersionedTransaction,
     signers?: Signer[],
-    opts?: ConfirmOptions
+    opts?: ConfirmOptions,
+    blockhash?: BlockhashWithExpiryBlockHeight
   ): Promise<TransactionSignature>;
   sendAll?<T extends Transaction | VersionedTransaction>(
     txWithSigners: {
@@ -132,7 +133,7 @@ export class AnchorProvider implements Provider {
    * @param tx        The transaction to send.
    * @param signers   The signers of the transaction.
    * @param opts      Transaction confirmation options.
-   * @param blockhash Blockhash with expiry blockHeight used to generate versioned transaction.
+   * @param blockhash Blockhash with expiry block height used to generate versioned transaction.
    */
   async sendAndConfirm(
     tx: Transaction | VersionedTransaction,
