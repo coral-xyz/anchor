@@ -164,7 +164,12 @@ export class AnchorProvider implements Provider {
     const rawTx = tx.serialize();
 
     try {
-      return await sendAndConfirmRawTransaction(this.connection, rawTx, opts, blockhash);
+      return await sendAndConfirmRawTransaction(
+        this.connection,
+        rawTx,
+        opts,
+        blockhash
+      );
     } catch (err) {
       // thrown if the underlying 'confirmTransaction' encounters a failed tx
       // the 'confirmTransaction' error does not return logs so we make another rpc call to get them
@@ -375,8 +380,10 @@ async function sendAndConfirmRawTransaction(
   blockhash?: BlockhashWithExpiryBlockHeight
 ): Promise<TransactionSignature> {
   const sendOptions: SendOptions = {
-    skipPreflight: options?.skipPreflight !== undefined ? options.skipPreflight : true,
-    preflightCommitment: options?.preflightCommitment || options?.commitment || "confirmed",
+    skipPreflight:
+      options?.skipPreflight !== undefined ? options.skipPreflight : true,
+    preflightCommitment:
+      options?.preflightCommitment || options?.commitment || "confirmed",
     minContextSlot: options?.minContextSlot,
     maxRetries: options?.maxRetries || 0,
   };
@@ -400,7 +407,7 @@ async function sendAndConfirmRawTransaction(
               sendOptions.preflightCommitment
             )
           ).value;
-          abortSignal.removeEventListener("abort", () => { });
+          abortSignal.removeEventListener("abort", () => {});
         } else {
           status = (
             await connection.confirmTransaction(
