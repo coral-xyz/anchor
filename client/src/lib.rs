@@ -249,17 +249,6 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
 
     /// Returns a request builder.
     pub fn request(&self) -> RequestBuilder<C> {
-        #[cfg(not(feature = "rpc-client"))]
-        return RequestBuilder::from(
-            self.program_id,
-            self.cfg.cluster.url(),
-            self.cfg.payer.clone(),
-            self.cfg.options,
-            #[cfg(not(feature = "async"))]
-            self.rt.handle(),
-        );
-
-        #[cfg(feature = "rpc-client")]
         RequestBuilder::from(
             self.program_id,
             self.cfg.cluster.url(),
@@ -267,6 +256,7 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
             self.cfg.options,
             #[cfg(not(feature = "async"))]
             self.rt.handle(),
+            #[cfg(feature = "rpc-client")]
             &self.async_rpc_client,
         )
     }

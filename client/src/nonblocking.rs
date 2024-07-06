@@ -99,31 +99,12 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
 }
 
 impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
-    #[cfg(not(feature = "rpc-client"))]
     pub fn from(
         program_id: Pubkey,
         cluster: &str,
         payer: C,
         options: Option<CommitmentConfig>,
-    ) -> Self {
-        Self {
-            program_id,
-            payer,
-            cluster: cluster.to_string(),
-            accounts: Vec::new(),
-            options: options.unwrap_or_default(),
-            instructions: Vec::new(),
-            instruction_data: None,
-            signers: Vec::new(),
-        }
-    }
-
-    #[cfg(feature = "rpc-client")]
-    pub fn from(
-        program_id: Pubkey,
-        cluster: &str,
-        payer: C,
-        options: Option<CommitmentConfig>,
+        #[cfg(feature = "rpc-client")] 
         async_rpc_client: &'a AsyncRpcClient,
     ) -> Self {
         Self {
@@ -135,6 +116,7 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
             instructions: Vec::new(),
             instruction_data: None,
             signers: Vec::new(),
+            #[cfg(feature = "rpc-client")]
             async_rpc_client,
         }
     }
