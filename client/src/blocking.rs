@@ -3,7 +3,7 @@ use crate::{
     RequestBuilder,
 };
 use anchor_lang::{prelude::Pubkey, AccountDeserialize, Discriminator};
-#[cfg(feature = "rpc-client")]
+#[cfg(feature = "mock")]
 use solana_client::nonblocking::rpc_client::RpcClient as AsyncRpcClient;
 use solana_client::{rpc_config::RpcSendTransactionConfig, rpc_filter::RpcFilterType};
 use solana_sdk::{
@@ -28,7 +28,7 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
     pub fn new(program_id: Pubkey, cfg: Config<C>) -> Result<Self, ClientError> {
         let rt: tokio::runtime::Runtime = Builder::new_multi_thread().enable_all().build()?;
 
-        #[cfg(not(feature = "rpc-client"))]
+        #[cfg(not(feature = "mock"))]
         return Ok(Self {
             program_id,
             cfg,
@@ -36,7 +36,7 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
             rt,
         });
 
-        #[cfg(feature = "rpc-client")]
+        #[cfg(feature = "mock")]
         {
             let comm_config = cfg.options.unwrap_or_default();
             let cluster_url = cfg.cluster.url().to_string();
@@ -51,7 +51,7 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         }
     }
 
-    #[cfg(feature = "rpc-client")]
+    #[cfg(feature = "mock")]
     pub fn new_with_rpc(
         program_id: Pubkey,
         cfg: Config<C>,
@@ -114,7 +114,7 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
         payer: C,
         options: Option<CommitmentConfig>,
         handle: &'a Handle,
-        #[cfg(feature = "rpc-client")] 
+        #[cfg(feature = "mock")] 
         async_rpc_client: &'a AsyncRpcClient,
     ) -> Self {
         Self {
@@ -127,7 +127,7 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
             instruction_data: None,
             signers: Vec::new(),
             handle,
-            #[cfg(feature = "rpc-client")]
+            #[cfg(feature = "mock")]
             async_rpc_client,
         }
     }
