@@ -129,9 +129,9 @@ export class AnchorProvider implements Provider {
   /**
    * Sends the given transaction, paid for and signed by the provider's wallet.
    *
-   * @param tx        The transaction to send.
-   * @param signers   The signers of the transaction.
-   * @param opts      Transaction confirmation options.
+   * @param tx      The transaction to send.
+   * @param signers The signers of the transaction.
+   * @param opts    Transaction confirmation options.
    */
   async sendAndConfirm(
     tx: Transaction | VersionedTransaction,
