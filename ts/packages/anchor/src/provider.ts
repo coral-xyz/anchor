@@ -133,13 +133,11 @@ export class AnchorProvider implements Provider {
    * @param tx        The transaction to send.
    * @param signers   The signers of the transaction.
    * @param opts      Transaction confirmation options.
-   * @param blockhash Blockhash with expiry block height used to generate versioned transaction.
    */
   async sendAndConfirm(
     tx: Transaction | VersionedTransaction,
     signers?: Signer[],
-    opts?: ConfirmOptions,
-    blockhash?: BlockhashWithExpiryBlockHeight
+    opts?: ConfirmOptions & { blockhash?: BlockhashWithExpiryBlockHeight }
   ): Promise<TransactionSignature> {
     if (opts === undefined) {
       opts = this.opts;
@@ -165,12 +163,7 @@ export class AnchorProvider implements Provider {
     const rawTx = tx.serialize();
 
     try {
-      return await sendAndConfirmRawTransaction(
-        this.connection,
-        rawTx,
-        opts,
-        blockhash
-      );
+      return await sendAndConfirmRawTransaction(this.connection, rawTx, opts);
     } catch (err) {
       // thrown if the underlying 'confirmTransaction' encounters a failed tx
       // the 'confirmTransaction' error does not return logs so we make another rpc call to get them
@@ -377,17 +370,16 @@ export interface Wallet {
 async function sendAndConfirmRawTransaction(
   connection: Connection,
   rawTransaction: Buffer | Uint8Array,
-  options?: ConfirmOptions,
-  blockhash?: BlockhashWithExpiryBlockHeight
+  options?: ConfirmOptions & { blockhash?: BlockhashWithExpiryBlockHeight }
 ): Promise<TransactionSignature> {
-  const sendOptions: SendOptions = {
-    skipPreflight:
-      options?.skipPreflight !== undefined ? options.skipPreflight : true,
-    preflightCommitment:
-      options?.preflightCommitment || options?.commitment || "confirmed",
-    minContextSlot: options?.minContextSlot,
-    maxRetries: options?.maxRetries || 0,
-  };
+  const sendOptions: SendOptions = options
+    ? {
+        skipPreflight: options.skipPreflight,
+        preflightCommitment: options.preflightCommitment || options.commitment,
+        maxRetries: options.maxRetries,
+        minContextSlot: options.minContextSlot,
+      }
+    : {};
 
   let status: SignatureResult;
 
@@ -399,21 +391,20 @@ async function sendAndConfirmRawTransaction(
         sendOptions
       );
 
-      if (blockhash) {
-        if (sendOptions.maxRetries === 0) {
+      if (options?.blockhash) {
+        if (sendOptions && sendOptions.maxRetries === 0) {
           const abortSignal = AbortSignal.timeout(15_000);
           status = (
             await connection.confirmTransaction(
-              { abortSignal, signature, ...blockhash },
-              sendOptions.preflightCommitment
+              { abortSignal, signature, ...options.blockhash },
+              options && options.commitment
             )
           ).value;
-          abortSignal.removeEventListener("abort", () => {});
         } else {
           status = (
             await connection.confirmTransaction(
-              { signature, ...blockhash },
-              sendOptions.preflightCommitment
+              { signature, ...options.blockhash },
+              options && options.commitment
             )
           ).value;
         }
@@ -421,7 +412,7 @@ async function sendAndConfirmRawTransaction(
         status = (
           await connection.confirmTransaction(
             signature,
-            sendOptions.preflightCommitment
+            options && options.commitment
           )
         ).value;
       }
@@ -434,7 +425,7 @@ async function sendAndConfirmRawTransaction(
 
       return signature;
     } catch (e) {
-      if (e.name === "AbortError") {
+      if (e.name === "TimeoutError") {
         continue;
       }
       throw e;
