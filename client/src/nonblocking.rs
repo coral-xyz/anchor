@@ -104,8 +104,7 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
         cluster: &str,
         payer: C,
         options: Option<CommitmentConfig>,
-        #[cfg(feature = "mock")] 
-        async_rpc_client: &'a AsyncRpcClient,
+        #[cfg(feature = "mock")] async_rpc_client: &'a AsyncRpcClient,
     ) -> Self {
         Self {
             program_id,
