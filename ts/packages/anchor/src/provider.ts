@@ -33,8 +33,7 @@ export default interface Provider {
   sendAndConfirm?(
     tx: Transaction | VersionedTransaction,
     signers?: Signer[],
-    opts?: ConfirmOptions,
-    blockhash?: BlockhashWithExpiryBlockHeight
+    opts?: ConfirmOptions & { blockhash?: BlockhashWithExpiryBlockHeight }
   ): Promise<TransactionSignature>;
   sendAll?<T extends Transaction | VersionedTransaction>(
     txWithSigners: {
