@@ -427,11 +427,11 @@ async function sendAndConfirmRawTransaction(
       }
 
       return signature;
-    } catch (e) {
-      if (e.name === "TimeoutError") {
+    } catch (err) {
+      if (err.name === "TimeoutError") {
         continue;
       }
-      throw e;
+      throw err;
     }
   }
 
