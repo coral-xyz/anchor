@@ -391,7 +391,7 @@ async function sendAndConfirmRawTransaction(
       );
 
       if (options?.blockhash) {
-        if (sendOptions && sendOptions.maxRetries === 0) {
+        if (sendOptions.maxRetries === 0) {
           const abortSignal = AbortSignal.timeout(15_000);
           status = (
             await connection.confirmTransaction(
