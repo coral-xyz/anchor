@@ -33,7 +33,7 @@ export default interface Provider {
   sendAndConfirm?(
     tx: Transaction | VersionedTransaction,
     signers?: Signer[],
-    opts?: ConfirmOptions & { blockhash?: BlockhashWithExpiryBlockHeight }
+    opts?: ConfirmOptionsWithBlockhash
   ): Promise<TransactionSignature>;
   sendAll?<T extends Transaction | VersionedTransaction>(
     txWithSigners: {
@@ -136,7 +136,7 @@ export class AnchorProvider implements Provider {
   async sendAndConfirm(
     tx: Transaction | VersionedTransaction,
     signers?: Signer[],
-    opts?: ConfirmOptions & { blockhash?: BlockhashWithExpiryBlockHeight }
+    opts?: ConfirmOptionsWithBlockhash
   ): Promise<TransactionSignature> {
     if (opts === undefined) {
       opts = this.opts;
@@ -350,6 +350,10 @@ export type SendTxRequest = {
   signers: Array<Signer | undefined>;
 };
 
+export type ConfirmOptionsWithBlockhash = ConfirmOptions & {
+  blockhash?: BlockhashWithExpiryBlockHeight;
+};
+
 /**
  * Wallet interface for objects that can be used to sign provider transactions.
  * VersionedTransactions sign everything at once
@@ -369,7 +373,7 @@ export interface Wallet {
 async function sendAndConfirmRawTransaction(
   connection: Connection,
   rawTransaction: Buffer | Uint8Array,
-  options?: ConfirmOptions & { blockhash?: BlockhashWithExpiryBlockHeight }
+  options?: ConfirmOptionsWithBlockhash
 ): Promise<TransactionSignature> {
   const sendOptions: SendOptions = options
     ? {
