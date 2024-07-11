@@ -11,6 +11,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 ## [Unreleased]
 
 ### Features
+
 - ts: Add optional `commitment` parameter to `Program.addEventListener` ([#3052](https://github.com/coral-xyz/anchor/pull/3052)).
 
 ### Fixes
