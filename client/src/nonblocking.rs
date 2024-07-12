@@ -1,10 +1,10 @@
 use crate::{
-    ClientError, Config, EventContext, EventUnsubscriber, Program, ProgramAccountsIterator,
-    RequestBuilder,
+    AsSigner, ClientError, Config, EventContext, EventUnsubscriber, Program,
+    ProgramAccountsIterator, RequestBuilder,
 };
 use anchor_lang::{prelude::Pubkey, AccountDeserialize, Discriminator};
 #[cfg(feature = "mock")]
-use solana_client::nonblocking::rpc_client::RpcClient as AsyncRpcClient;
+use solana_client::{nonblocking::rpc_client::RpcClient as AsyncRpcClient, rpc_client::RpcClient};
 use solana_client::{rpc_config::RpcSendTransactionConfig, rpc_filter::RpcFilterType};
 use solana_sdk::{
     commitment_config::CommitmentConfig, signature::Signature, signer::Signer,
@@ -17,6 +17,22 @@ impl<'a> EventUnsubscriber<'a> {
     /// Unsubscribe gracefully.
     pub async fn unsubscribe(self) {
         self.unsubscribe_internal().await
+    }
+}
+
+pub trait ThreadSafeSigner: Signer + Send + Sync + 'static {
+    fn to_signer(&self) -> &dyn Signer;
+}
+
+impl<T: Signer + Send + Sync + 'static> ThreadSafeSigner for T {
+    fn to_signer(&self) -> &dyn Signer {
+        self
+    }
+}
+
+impl AsSigner for Arc<dyn ThreadSafeSigner> {
+    fn as_signer(&self) -> &dyn Signer {
+        self.to_signer()
     }
 }
 
@@ -59,6 +75,18 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         })
     }
 
+    /// Returns a threadsafe request builder
+    pub fn request(&self) -> RequestBuilder<'_, C, Arc<dyn ThreadSafeSigner>> {
+        RequestBuilder::from(
+            self.program_id,
+            self.cfg.cluster.url(),
+            self.cfg.payer.clone(),
+            self.cfg.options,
+            #[cfg(feature = "mock")]
+            &self.async_rpc_client,
+        )
+    }
+
     /// Returns the account at the given address.
     pub async fn account<T: AccountDeserialize>(&self, address: Pubkey) -> Result<T, ClientError> {
         self.account_internal(address).await
@@ -98,7 +126,7 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
     }
 }
 
-impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
+impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C, Arc<dyn ThreadSafeSigner>> {
     pub fn from(
         program_id: Pubkey,
         cluster: &str,
@@ -117,7 +145,14 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
             signers: Vec::new(),
             #[cfg(feature = "mock")]
             async_rpc_client,
+            _phantom: PhantomData,
         }
+    }
+
+    #[must_use]
+    pub fn signer<T: ThreadSafeSigner>(mut self, signer: T) -> Self {
+        self.signers.push(Arc::new(signer));
+        self
     }
 
     pub async fn signed_transaction(&self) -> Result<Transaction, ClientError> {
