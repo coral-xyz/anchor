@@ -43,7 +43,7 @@ pub struct TestBasicVarAccount {
 
 #[account]
 #[derive(InitSpace)]
-pub struct TestComplexeVarAccount {
+pub struct TestComplexVarAccount {
     pub test_key: Pubkey,
     #[max_len(10)]
     pub test_vec: Vec<u8>,
@@ -120,9 +120,9 @@ fn test_basic_struct() {
 }
 
 #[test]
-fn test_complexe_struct() {
+fn test_complex_struct() {
     assert_eq!(
-        TestComplexeVarAccount::INIT_SPACE,
+        TestComplexVarAccount::INIT_SPACE,
         32 + 4 + 10 + (4 + 10) + 3
     )
 }
