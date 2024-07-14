@@ -4,8 +4,8 @@ use proc_macro::TokenStream;
 use proc_macro2::{Ident, TokenStream as TokenStream2, TokenTree};
 use quote::{quote, quote_spanned, ToTokens};
 use syn::{
-    parse::ParseStream, parse2, parse_macro_input, Attribute, DeriveInput, Fields, GenericArgument,
-    LitInt, PathArguments, Type, TypeArray,
+    parse::ParseStream, parse2, parse_macro_input, spanned::Spanned, DeriveInput, Field, Fields,
+    GenericArgument, LitInt, PathArguments, Type, TypeArray,
 };
 
 /// Implements a [`Space`](./trait.Space.html) trait on the given
@@ -13,6 +13,7 @@ use syn::{
 ///
 /// For types that have a variable size like String and Vec, it is necessary to indicate the size by the `max_len` attribute.
 /// For nested types, it is necessary to specify a size for each variable type (see example).
+/// A raw space can be specified with the `space` attribute.
 ///
 /// # Example
 /// ```ignore
@@ -24,6 +25,8 @@ use syn::{
 ///     pub string_one: String,
 ///     #[max_len(10, 5)]
 ///     pub nested: Vec<Vec<u8>>,
+///     #[space(200)]
+///     pub string_two: String,
 /// }
 ///
 /// #[derive(Accounts)]
@@ -35,7 +38,7 @@ use syn::{
 ///    pub data: Account<'info, ExampleAccount>,
 /// }
 /// ```
-#[proc_macro_derive(InitSpace, attributes(max_len))]
+#[proc_macro_derive(InitSpace, attributes(max_len, space))]
 pub fn derive_init_space(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
@@ -44,10 +47,7 @@ pub fn derive_init_space(item: TokenStream) -> TokenStream {
     let expanded: TokenStream2 = match input.data {
         syn::Data::Struct(strct) => match strct.fields {
             Fields::Named(named) => {
-                let recurse = named.named.into_iter().map(|f| {
-                    let mut max_len_args = get_max_len_args(&f.attrs);
-                    len_from_type(f.ty, &mut max_len_args)
-                });
+                let recurse = named.named.into_iter().map(get_len);
 
                 quote! {
                     #[automatically_derived]
@@ -60,10 +60,7 @@ pub fn derive_init_space(item: TokenStream) -> TokenStream {
         },
         syn::Data::Enum(enm) => {
             let variants = enm.variants.into_iter().map(|v| {
-                let len = v.fields.into_iter().map(|f| {
-                    let mut max_len_args = get_max_len_args(&f.attrs);
-                    len_from_type(f.ty, &mut max_len_args)
-                });
+                let len = v.fields.into_iter().map(get_len);
 
                 quote! {
                     0 #(+ #len)*
@@ -174,21 +171,45 @@ fn parse_len_arg(item: ParseStream) -> Result<VecDeque<TokenStream2>, syn::Error
     Ok(result)
 }
 
-fn get_max_len_args(attributes: &[Attribute]) -> Option<VecDeque<TokenStream2>> {
-    attributes
-        .iter()
-        .find(|a| a.path.is_ident("max_len"))
-        .and_then(|a| a.parse_args_with(parse_len_arg).ok())
+fn get_next_arg(ident: &Ident, args: &mut Option<VecDeque<TokenStream2>>) -> TokenStream2 {
+    let Some(arg_list) = args else {
+        return quote_spanned!(ident.span() => compile_error!("The number of lengths are invalid (Please use `#[max_len(your_len)]`)."));
+    };
+
+    let Some(arg) = arg_list.pop_back() else {
+        return quote_spanned!(ident.span() => compile_error!("Expected max_len attribute."));
+    };
+
+    quote!(#arg)
 }
 
-fn get_next_arg(ident: &Ident, args: &mut Option<VecDeque<TokenStream2>>) -> TokenStream2 {
-    if let Some(arg_list) = args {
-        if let Some(arg) = arg_list.pop_back() {
-            quote!(#arg)
-        } else {
-            quote_spanned!(ident.span() => compile_error!("The number of lengths are invalid."))
-        }
+fn get_len(field: Field) -> TokenStream2 {
+    let mut len_attrs = field
+        .attrs
+        .iter()
+        .filter(|a| a.path.is_ident("max_len") || a.path.is_ident("space"));
+
+    let Some(len_attr) = len_attrs.next() else {
+        return len_from_type(field.ty, &mut None);
+    };
+
+    if len_attrs.next().is_some() {
+        return quote_spanned!(field.span() => compile_error!("Cannot have space and max_len or duplicate at the same time."));
+    }
+
+    let mut args = len_attr.parse_args_with(parse_len_arg).ok();
+
+    if len_attr.path.is_ident("max_len") {
+        len_from_type(field.ty, &mut args)
     } else {
-        quote_spanned!(ident.span() => compile_error!("Expected max_len attribute."))
+        let Some(mut space_arg) = args else {
+            return quote_spanned!(field.span() => compile_error!("Can't parse the arg len token."));
+        };
+
+        if space_arg.len() != 1 {
+            return quote_spanned!(field.span() => compile_error!("Need to have only one space specified."));
+        }
+
+        space_arg.pop_front().unwrap()
     }
 }
