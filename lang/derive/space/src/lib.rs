@@ -61,7 +61,7 @@ pub fn derive_init_space(item: TokenStream) -> TokenStream {
             Fields::Unnamed(unnamed) => process_struct_fields(unnamed.unnamed),
             Fields::Unit => quote! {
                 #[automatically_derived]
-                impl anchor_lang::Space for #name {
+                impl #impl_generics anchor_lang::Space for #name #ty_generics #where_clause {
                     const INIT_SPACE: usize = 0;
                 }
             },
