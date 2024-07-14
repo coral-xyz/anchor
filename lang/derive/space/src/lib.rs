@@ -56,7 +56,25 @@ pub fn derive_init_space(item: TokenStream) -> TokenStream {
                     }
                 }
             }
-            _ => panic!("Please use named fields in account structure"),
+            Fields::Unnamed(unnamed) => {
+                let recurse = unnamed.unnamed.into_iter().map(|f| {
+                    let mut max_len_args = get_max_len_args(&f.attrs);
+                    len_from_type(f.ty, &mut max_len_args)
+                });
+
+                quote! {
+                    #[automatically_derived]
+                    impl #impl_generics anchor_lang::Space for #name #ty_generics #where_clause {
+                        const INIT_SPACE: usize = 0 #(+ #recurse)*;
+                    }
+                }
+            }
+            Fields::Unit => quote! {
+                #[automatically_derived]
+                impl anchor_lang::Space for #name {
+                    const INIT_SPACE: usize = 0;
+                }
+            },
         },
         syn::Data::Enum(enm) => {
             let variants = enm.variants.into_iter().map(|v| {

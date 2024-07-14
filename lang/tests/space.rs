@@ -97,6 +97,18 @@ pub struct TestConst {
     pub test_array: [u8; MAX_LEN as usize],
 }
 
+#[derive(InitSpace)]
+pub struct TestUnnamedStruct(
+    pub u8,
+    #[max_len(4)] pub Vec<u32>,
+    #[max_len(10)] pub String,
+    pub ChildStruct,
+    pub TestBasicEnum,
+);
+
+#[derive(InitSpace)]
+pub struct TestUnitStruct;
+
 #[test]
 fn test_empty_struct() {
     assert_eq!(TestEmptyAccount::INIT_SPACE, 0);
@@ -146,4 +158,17 @@ fn test_full_path() {
 #[test]
 fn test_const() {
     assert_eq!(TestConst::INIT_SPACE, (4 + 10) + 10)
+}
+
+#[test]
+fn test_unnamed_struct() {
+    assert_eq!(
+        TestUnnamedStruct::INIT_SPACE,
+        1 + 4 + 4 * 4 + 4 + 10 + ChildStruct::INIT_SPACE + TestBasicEnum::INIT_SPACE
+    )
+}
+
+#[test]
+fn test_unit_struct() {
+    assert_eq!(TestUnitStruct::INIT_SPACE, 0)
 }
