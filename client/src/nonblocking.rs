@@ -3,8 +3,7 @@ use crate::{
     ProgramAccountsIterator, RequestBuilder,
 };
 use anchor_lang::{prelude::Pubkey, AccountDeserialize, Discriminator};
-#[cfg(feature = "mock")]
-use solana_client::{nonblocking::rpc_client::RpcClient as AsyncRpcClient, rpc_client::RpcClient};
+use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_client::{rpc_config::RpcSendTransactionConfig, rpc_filter::RpcFilterType};
 use solana_sdk::{
     commitment_config::CommitmentConfig, signature::Signature, signer::Signer,
@@ -37,41 +36,23 @@ impl AsSigner for Arc<dyn ThreadSafeSigner> {
 }
 
 impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
-    pub fn new(program_id: Pubkey, cfg: Config<C>) -> Result<Self, ClientError> {
-        #[cfg(not(feature = "mock"))]
-        return Ok(Self {
-            program_id,
-            cfg,
-            sub_client: Arc::new(RwLock::new(None)),
-        });
-
-        #[cfg(feature = "mock")]
-        {
-            let comm_config = cfg.options.unwrap_or_default();
-            let cluster_url = cfg.cluster.url().to_string();
-            Ok(Self {
-                program_id,
-                cfg,
-                sub_client: Arc::new(RwLock::new(None)),
-                rpc_client: RpcClient::new_with_commitment(cluster_url.clone(), comm_config),
-                async_rpc_client: AsyncRpcClient::new_with_commitment(cluster_url, comm_config),
-            })
-        }
-    }
-
-    #[cfg(feature = "mock")]
-    pub fn new_with_rpc(
+    pub fn new(
         program_id: Pubkey,
         cfg: Config<C>,
-        rpc_client: RpcClient,
-        async_rpc_client: AsyncRpcClient,
+        #[cfg(feature = "mock")] rpc_client: RpcClient,
     ) -> Result<Self, ClientError> {
+        #[cfg(not(feature = "mock"))]
+        let rpc_client = {
+            let comm_config = cfg.options.unwrap_or_default();
+            let cluster_url = cfg.cluster.url().to_string();
+            RpcClient::new_with_commitment(cluster_url.clone(), comm_config)
+        };
+
         Ok(Self {
             program_id,
             cfg,
             sub_client: Arc::new(RwLock::new(None)),
             rpc_client,
-            async_rpc_client,
         })
     }
 
@@ -82,8 +63,7 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
             self.cfg.cluster.url(),
             self.cfg.payer.clone(),
             self.cfg.options,
-            #[cfg(feature = "mock")]
-            &self.async_rpc_client,
+            self.rpc(),
         )
     }
 
@@ -132,7 +112,7 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C, Arc<dyn T
         cluster: &str,
         payer: C,
         options: Option<CommitmentConfig>,
-        #[cfg(feature = "mock")] async_rpc_client: &'a AsyncRpcClient,
+        rpc_client: &'a RpcClient,
     ) -> Self {
         Self {
             program_id,
@@ -143,8 +123,7 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C, Arc<dyn T
             instructions: Vec::new(),
             instruction_data: None,
             signers: Vec::new(),
-            #[cfg(feature = "mock")]
-            async_rpc_client,
+            rpc_client,
             _phantom: PhantomData,
         }
     }
