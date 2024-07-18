@@ -67,8 +67,6 @@ use futures::{Future, StreamExt};
 use regex::Regex;
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::nonblocking::rpc_client::RpcClient as AsyncRpcClient;
-#[cfg(all(not(feature = "async"), not(feature = "mock")))]
-use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::{
     RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig,
     RpcTransactionLogsConfig, RpcTransactionLogsFilter,
@@ -238,32 +236,6 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
 
     pub fn id(&self) -> Pubkey {
         self.program_id
-    }
-
-    // We disable the `rpc` method for `mock` feature because otherwise we'd either have to
-    // return a new `RpcClient` instance (which is different to the one used internally)
-    // or require the user to pass another one in for blocking (since we use the non-blocking one under the hood).
-    // The former of these would be confusing and the latter would be very annoying, especially since a user
-    // using the mock feature likely already has a `RpcClient` instance at hand anyway.
-    #[cfg(all(not(feature = "mock"), not(feature = "async")))]
-    pub fn rpc(&self) -> RpcClient {
-        RpcClient::new_with_commitment(
-            self.cfg.cluster.url().to_string(),
-            self.cfg.options.unwrap_or_default(),
-        )
-    }
-
-    // We disable the `rpc` method for `mock` feature because otherwise we'd either have to
-    // return a new `RpcClient` instance (which is different to the one used internally)
-    // or require the user to pass another one in for blocking (since we use the non-blocking one under the hood).
-    // The former of these would be confusing and the latter would be very annoying, especially since a user
-    // using the mock feature likely already has a `RpcClient` instance at hand anyway.
-    #[cfg(all(not(feature = "mock"), feature = "async"))]
-    pub fn rpc(&self) -> AsyncRpcClient {
-        AsyncRpcClient::new_with_commitment(
-            self.cfg.cluster.url().to_string(),
-            self.cfg.options.unwrap_or_default(),
-        )
     }
 
     async fn account_internal<T: AccountDeserialize>(

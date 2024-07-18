@@ -56,6 +56,19 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         })
     }
 
+    // We disable the `rpc` method for `mock` feature because otherwise we'd either have to
+    // return a new `RpcClient` instance (which is different to the one used internally)
+    // or require the user to pass another one in for blocking (since we use the non-blocking one under the hood).
+    // The former of these would be confusing and the latter would be very annoying, especially since a user
+    // using the mock feature likely already has a `RpcClient` instance at hand anyway.
+    #[cfg(not(feature = "mock"))]
+    pub fn rpc(&self) -> AsyncRpcClient {
+        AsyncRpcClient::new_with_commitment(
+            self.cfg.cluster.url().to_string(),
+            self.cfg.options.unwrap_or_default(),
+        )
+    }
+
     /// Returns a threadsafe request builder
     pub fn request(&self) -> RequestBuilder<'_, C, Arc<dyn ThreadSafeSigner>> {
         RequestBuilder::from(

@@ -3,6 +3,8 @@ use crate::{
     RequestBuilder,
 };
 use anchor_lang::{prelude::Pubkey, AccountDeserialize, Discriminator};
+#[cfg(not(feature = "mock"))]
+use solana_client::rpc_client::RpcClient;
 use solana_client::{
     nonblocking::rpc_client::RpcClient as AsyncRpcClient, rpc_config::RpcSendTransactionConfig,
     rpc_filter::RpcFilterType,
@@ -11,7 +13,6 @@ use solana_sdk::{
     commitment_config::CommitmentConfig, signature::Signature, signer::Signer,
     transaction::Transaction,
 };
-
 use std::{marker::PhantomData, ops::Deref, sync::Arc};
 use tokio::{
     runtime::{Builder, Handle},
@@ -47,6 +48,19 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
             internal_rpc_client: rpc_client,
             rt,
         })
+    }
+
+    // We disable the `rpc` method for `mock` feature because otherwise we'd either have to
+    // return a new `RpcClient` instance (which is different to the one used internally)
+    // or require the user to pass another one in for blocking (since we use the non-blocking one under the hood).
+    // The former of these would be confusing and the latter would be very annoying, especially since a user
+    // using the mock feature likely already has a `RpcClient` instance at hand anyway.
+    #[cfg(not(feature = "mock"))]
+    pub fn rpc(&self) -> RpcClient {
+        RpcClient::new_with_commitment(
+            self.cfg.cluster.url().to_string(),
+            self.cfg.options.unwrap_or_default(),
+        )
     }
 
     /// Returns a request builder.
