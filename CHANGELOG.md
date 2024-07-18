@@ -16,6 +16,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - cli, idl: Pass `cargo` args to IDL generation when building program or IDL ([#3059](https://github.com/coral-xyz/anchor/pull/3059)).
 - cli: Add checks for incorrect usage of `idl-build` feature ([#3061](https://github.com/coral-xyz/anchor/pull/3061)).
 - lang: Export `Discriminator` trait from `prelude` ([#3075](https://github.com/coral-xyz/anchor/pull/3075)).
+- lang: Add `Account` utility type to get accounts from bytes ([#3091](https://github.com/coral-xyz/anchor/pull/3091)).
 - client: Add option to pass in mock rpc client when using anchor_client ([#3053](https://github.com/coral-xyz/anchor/pull/3053)).
 
 ### Fixes
@@ -25,11 +26,15 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Fix `align` repr support in `declare-program!` ([#3056](https://github.com/coral-xyz/anchor/pull/3056)).
 - lang: Make stack frames slimmer on ATA creation ([#3065](https://github.com/coral-xyz/anchor/pull/3065)).
 - lang: Remove `getrandom` dependency ([#3072](https://github.com/coral-xyz/anchor/pull/3072)).
+- lang: Make `InitSpace` support unnamed & unit structs ([#3084](https://github.com/coral-xyz/anchor/pull/3084)).
+- lang: Fix using `owner` constraint with `Box`ed accounts ([#3087](https://github.com/coral-xyz/anchor/pull/3087)).
+- lang: Add a sanity check for unimplemented token extensions ([#3090](https://github.com/coral-xyz/anchor/pull/3090)).
 
 ### Breaking
 
 - syn: Remove `bpf` target support in `hash` feature ([#3078](https://github.com/coral-xyz/anchor/pull/3078)).
 - client: Add `tokio` support to `RequestBuilder` with `async` feature ([#3057](https://github.com/coral-xyz/anchor/pull/3057])).
+- lang: Remove `EventData` trait ([#3083](https://github.com/coral-xyz/anchor/pull/3083])).
 
 ## [0.30.1] - 2024-06-20
 

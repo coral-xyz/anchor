@@ -303,6 +303,13 @@ pub fn generate_constraint_raw(ident: &Ident, c: &ConstraintRaw) -> proc_macro2:
 
 pub fn generate_constraint_owner(f: &Field, c: &ConstraintOwner) -> proc_macro2::TokenStream {
     let ident = &f.ident;
+    let maybe_deref = match &f.ty {
+        Ty::Account(AccountTy { boxed, .. })
+        | Ty::InterfaceAccount(InterfaceAccountTy { boxed, .. }) => *boxed,
+        _ => false,
+    }
+    .then(|| quote!(*))
+    .unwrap_or_default();
     let owner_address = &c.owner_address;
     let error = generate_custom_error(
         ident,
@@ -310,9 +317,10 @@ pub fn generate_constraint_owner(f: &Field, c: &ConstraintOwner) -> proc_macro2:
         quote! { ConstraintOwner },
         &Some(&(quote! { *my_owner }, quote! { owner_address })),
     );
+
     quote! {
         {
-            let my_owner = AsRef::<AccountInfo>::as_ref(&#ident).owner;
+            let my_owner = AsRef::<AccountInfo>::as_ref(& #maybe_deref #ident).owner;
             let owner_address = #owner_address;
             if my_owner != &owner_address {
                 return #error;
@@ -929,7 +937,9 @@ fn generate_constraint_init_group(
                                             mint: #field.to_account_info(),
                                         }), #permanent_delegate.unwrap())?;
                                     },
-                                    _ => {} // do nothing
+                                    // All extensions specified by the user should be implemented.
+                                    // If this line runs, it means there is a bug in the codegen.
+                                    _ => unimplemented!("{e:?}"),
                                 }
                             };
                         }
