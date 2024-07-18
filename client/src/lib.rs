@@ -66,9 +66,8 @@ use anchor_lang::{AccountDeserialize, Discriminator, InstructionData, ToAccountM
 use futures::{Future, StreamExt};
 use regex::Regex;
 use solana_account_decoder::UiAccountEncoding;
-#[cfg(feature = "async")]
-use solana_client::nonblocking::rpc_client::RpcClient;
-#[cfg(not(feature = "async"))]
+use solana_client::nonblocking::rpc_client::RpcClient as AsyncRpcClient;
+#[cfg(all(not(feature = "async"), not(feature = "mock")))]
 use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::{
     RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig,
@@ -114,16 +113,6 @@ mod blocking;
 #[cfg(feature = "async")]
 mod nonblocking;
 
-macro_rules! maybe_async {
-    ($e:expr) => {{
-        #[cfg(feature = "async")]
-        let result = $e.await;
-        #[cfg(not(feature = "async"))]
-        let result = $e;
-        result
-    }};
-}
-
 const PROGRAM_LOG: &str = "Program log: ";
 const PROGRAM_DATA: &str = "Program data: ";
 
@@ -159,7 +148,7 @@ impl<C: Clone + Deref<Target = impl Signer>> Client<C> {
     pub fn program(
         &self,
         program_id: Pubkey,
-        #[cfg(feature = "mock")] rpc_client: RpcClient,
+        #[cfg(feature = "mock")] rpc_client: AsyncRpcClient,
     ) -> Result<Program<C>, ClientError> {
         let cfg = Config {
             cluster: self.cfg.cluster.clone(),
@@ -239,7 +228,7 @@ pub struct Program<C> {
     sub_client: Arc<RwLock<Option<PubsubClient>>>,
     #[cfg(not(feature = "async"))]
     rt: tokio::runtime::Runtime,
-    rpc_client: RpcClient,
+    internal_rpc_client: AsyncRpcClient,
 }
 
 impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
@@ -251,20 +240,42 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         self.program_id
     }
 
-    pub fn rpc(&self) -> &RpcClient {
-        &self.rpc_client
+    // We disable the `rpc` method for `mock` feature because otherwise we'd either have to
+    // return a new `RpcClient` instance (which is different to the one used internally)
+    // or require the user to pass another one in for blocking (since we use the non-blocking one under the hood).
+    // The former of these would be confusing and the latter would be very annoying, especially since a user
+    // using the mock feature likely already has a `RpcClient` instance at hand anyway.
+    #[cfg(all(not(feature = "mock"), not(feature = "async")))]
+    pub fn rpc(&self) -> RpcClient {
+        RpcClient::new_with_commitment(
+            self.cfg.cluster.url().to_string(),
+            self.cfg.options.unwrap_or_default(),
+        )
+    }
+
+    // We disable the `rpc` method for `mock` feature because otherwise we'd either have to
+    // return a new `RpcClient` instance (which is different to the one used internally)
+    // or require the user to pass another one in for blocking (since we use the non-blocking one under the hood).
+    // The former of these would be confusing and the latter would be very annoying, especially since a user
+    // using the mock feature likely already has a `RpcClient` instance at hand anyway.
+    #[cfg(all(not(feature = "mock"), feature = "async"))]
+    pub fn rpc(&self) -> AsyncRpcClient {
+        AsyncRpcClient::new_with_commitment(
+            self.cfg.cluster.url().to_string(),
+            self.cfg.options.unwrap_or_default(),
+        )
     }
 
     async fn account_internal<T: AccountDeserialize>(
         &self,
         address: Pubkey,
     ) -> Result<T, ClientError> {
-        let rpc_client = self.rpc();
-        let account = maybe_async!(
-            rpc_client.get_account_with_commitment(&address, CommitmentConfig::processed())
-        )?
-        .value
-        .ok_or(ClientError::AccountNotFound)?;
+        let account = self
+            .internal_rpc_client
+            .get_account_with_commitment(&address, CommitmentConfig::processed())
+            .await?
+            .value
+            .ok_or(ClientError::AccountNotFound)?;
         let mut data: &[u8] = &account.data;
         T::try_deserialize(&mut data).map_err(Into::into)
     }
@@ -285,11 +296,14 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         };
 
         Ok(ProgramAccountsIterator {
-            inner: maybe_async!(self
-                .rpc()
-                .get_program_accounts_with_config(&self.id(), config))?
-            .into_iter()
-            .map(|(key, account)| Ok((key, T::try_deserialize(&mut (&account.data as &[u8]))?))),
+            inner: self
+                .internal_rpc_client
+                .get_program_accounts_with_config(&self.id(), config)
+                .await?
+                .into_iter()
+                .map(|(key, account)| {
+                    Ok((key, T::try_deserialize(&mut (&account.data as &[u8]))?))
+                }),
         })
     }
 
@@ -519,7 +533,7 @@ pub struct RequestBuilder<'a, C, S: 'a> {
     signers: Vec<S>,
     #[cfg(not(feature = "async"))]
     handle: &'a Handle,
-    rpc_client: &'a RpcClient,
+    internal_rpc_client: &'a AsyncRpcClient,
     _phantom: PhantomData<&'a ()>,
 }
 
@@ -598,10 +612,6 @@ impl<'a, C: Deref<Target = impl Signer> + Clone, S: AsSigner> RequestBuilder<'a,
         self
     }
 
-    fn rpc_client(&self) -> &RpcClient {
-        self.rpc_client
-    }
-
     pub fn instructions(&self) -> Result<Vec<Instruction>, ClientError> {
         let mut instructions = self.instructions.clone();
         if let Some(ix_data) = &self.instruction_data {
@@ -641,34 +651,37 @@ impl<'a, C: Deref<Target = impl Signer> + Clone, S: AsSigner> RequestBuilder<'a,
     }
 
     async fn signed_transaction_internal(&self) -> Result<Transaction, ClientError> {
-        let latest_hash = maybe_async!(self.rpc_client().get_latest_blockhash())?;
+        let latest_hash = self.internal_rpc_client.get_latest_blockhash().await?;
 
         let tx = self.signed_transaction_with_blockhash(latest_hash)?;
         Ok(tx)
     }
 
     async fn send_internal(&self) -> Result<Signature, ClientError> {
-        let latest_hash = maybe_async!(self.rpc_client().get_latest_blockhash())?;
+        let latest_hash = self.internal_rpc_client.get_latest_blockhash().await?;
         let tx = self.signed_transaction_with_blockhash(latest_hash)?;
 
-        maybe_async!(self.rpc_client().send_and_confirm_transaction(&tx)).map_err(Into::into)
+        self.internal_rpc_client
+            .send_and_confirm_transaction(&tx)
+            .await
+            .map_err(Into::into)
     }
 
     async fn send_with_spinner_and_config_internal(
         &self,
         config: RpcSendTransactionConfig,
     ) -> Result<Signature, ClientError> {
-        let latest_hash = maybe_async!(self.rpc_client().get_latest_blockhash())?;
+        let latest_hash = self.internal_rpc_client.get_latest_blockhash().await?;
         let tx = self.signed_transaction_with_blockhash(latest_hash)?;
 
-        maybe_async!(self
-            .rpc_client()
+        self.internal_rpc_client
             .send_and_confirm_transaction_with_spinner_and_config(
                 &tx,
-                self.rpc_client().commitment(),
+                self.internal_rpc_client.commitment(),
                 config,
-            ))
-        .map_err(Into::into)
+            )
+            .await
+            .map_err(Into::into)
     }
 }
 

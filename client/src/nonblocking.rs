@@ -3,7 +3,7 @@ use crate::{
     ProgramAccountsIterator, RequestBuilder,
 };
 use anchor_lang::{prelude::Pubkey, AccountDeserialize, Discriminator};
-use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_client::nonblocking::rpc_client::RpcClient as AsyncRpcClient;
 use solana_client::{rpc_config::RpcSendTransactionConfig, rpc_filter::RpcFilterType};
 use solana_sdk::{
     commitment_config::CommitmentConfig, signature::Signature, signer::Signer,
@@ -39,20 +39,20 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
     pub fn new(
         program_id: Pubkey,
         cfg: Config<C>,
-        #[cfg(feature = "mock")] rpc_client: RpcClient,
+        #[cfg(feature = "mock")] rpc_client: AsyncRpcClient,
     ) -> Result<Self, ClientError> {
         #[cfg(not(feature = "mock"))]
         let rpc_client = {
             let comm_config = cfg.options.unwrap_or_default();
             let cluster_url = cfg.cluster.url().to_string();
-            RpcClient::new_with_commitment(cluster_url.clone(), comm_config)
+            AsyncRpcClient::new_with_commitment(cluster_url.clone(), comm_config)
         };
 
         Ok(Self {
             program_id,
             cfg,
             sub_client: Arc::new(RwLock::new(None)),
-            rpc_client,
+            internal_rpc_client: rpc_client,
         })
     }
 
@@ -63,7 +63,7 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
             self.cfg.cluster.url(),
             self.cfg.payer.clone(),
             self.cfg.options,
-            self.rpc(),
+            &self.internal_rpc_client,
         )
     }
 
@@ -112,7 +112,7 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C, Arc<dyn T
         cluster: &str,
         payer: C,
         options: Option<CommitmentConfig>,
-        rpc_client: &'a RpcClient,
+        rpc_client: &'a AsyncRpcClient,
     ) -> Self {
         Self {
             program_id,
@@ -123,7 +123,7 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C, Arc<dyn T
             instructions: Vec::new(),
             instruction_data: None,
             signers: Vec::new(),
-            rpc_client,
+            internal_rpc_client: rpc_client,
             _phantom: PhantomData,
         }
     }
