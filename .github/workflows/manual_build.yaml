@@ -1,0 +1,26 @@
+name: Manual Docker Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      solana_cli_version:
+        description: 'solana cli tag'
+        required: true
+      anchor_rev:
+        description: 'commit anchor'
+        required: true
+
+jobs:
+  docker:
+    uses: debridge-finance/pipelines/.github/workflows/tmpl-docker-anchor.yml@main
+    with:
+      message: "Triggered from another repository"
+      docker_file: "docker/build/Dockerfile"
+      docker_name: "anchor-build"
+    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+      # This is used to complete the identity challenge
+      # with sigstore/fulcio when running outside of PRs.
+      id-token: write
