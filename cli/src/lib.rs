@@ -2681,6 +2681,7 @@ fn idl_build(
                 .path
         }
     };
+    check_idl_build_feature().ok();
     let idl = anchor_lang_idl::build::build_idl_with_cargo_args(
         program_path,
         cfg.features.resolution,
