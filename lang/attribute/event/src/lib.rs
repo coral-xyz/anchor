@@ -40,7 +40,7 @@ pub fn event(
         }
 
         impl anchor_lang::Discriminator for #event_name {
-            const DISCRIMINATOR: [u8; 8] = #discriminator;
+            const DISCRIMINATOR: &'static [u8] = &#discriminator;
         }
     };
 
