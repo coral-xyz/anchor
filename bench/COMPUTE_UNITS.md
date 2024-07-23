@@ -108,6 +108,8 @@ Solana version: 1.18.17
 
 ### Notable changes
 
+- lang: Update `dispatch` function to support dynamic discriminators ([#3104](https://github.com/coral-xyz/anchor/pull/3104)).
+
 ---
 
 ## [0.30.1]
