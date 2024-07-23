@@ -29,8 +29,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         .as_ref()
         .map(|fallback_fn| {
             let program_name = &program.name;
-            let method = &fallback_fn.raw_method;
-            let fn_name = &method.sig.ident;
+            let fn_name = &fallback_fn.raw_method.sig.ident;
             quote! {
                 #program_name::#fn_name(program_id, accounts, data)
             }
