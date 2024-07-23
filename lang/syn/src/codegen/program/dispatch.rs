@@ -24,9 +24,20 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         }
     });
 
-    let fallback_fn = gen_fallback(program).unwrap_or(quote! {
-        Err(anchor_lang::error::ErrorCode::InstructionFallbackNotFound.into())
-    });
+    let fallback_fn = program
+        .fallback_fn
+        .as_ref()
+        .map(|fallback_fn| {
+            let program_name = &program.name;
+            let method = &fallback_fn.raw_method;
+            let fn_name = &method.sig.ident;
+            quote! {
+                #program_name::#fn_name(program_id, accounts, data)
+            }
+        })
+        .unwrap_or(quote! {
+            Err(anchor_lang::error::ErrorCode::InstructionFallbackNotFound.into())
+        });
 
     let event_cpi_handler = generate_event_cpi_handler();
 
@@ -76,17 +87,6 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             #fallback_fn
         }
     }
-}
-
-pub fn gen_fallback(program: &Program) -> Option<proc_macro2::TokenStream> {
-    program.fallback_fn.as_ref().map(|fallback_fn| {
-        let program_name = &program.name;
-        let method = &fallback_fn.raw_method;
-        let fn_name = &method.sig.ident;
-        quote! {
-            #program_name::#fn_name(program_id, accounts, data)
-        }
-    })
 }
 
 /// Generate the event-cpi instruction handler based on whether the `event-cpi` feature is enabled.
