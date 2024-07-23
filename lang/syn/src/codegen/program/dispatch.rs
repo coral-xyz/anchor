@@ -34,8 +34,10 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 #program_name::#fn_name(program_id, accounts, data)
             }
         })
-        .unwrap_or(quote! {
-            Err(anchor_lang::error::ErrorCode::InstructionFallbackNotFound.into())
+        .unwrap_or_else(|| {
+            quote! {
+                Err(anchor_lang::error::ErrorCode::InstructionFallbackNotFound.into())
+            }
         });
 
     let event_cpi_handler = generate_event_cpi_handler();
