@@ -4,16 +4,24 @@ use crate::{
 };
 use anchor_lang::{prelude::Pubkey, AccountDeserialize, Discriminator};
 #[cfg(not(feature = "mock"))]
+#[cfg(not(target_arch = "wasm32"))]
 use solana_client::rpc_client::RpcClient;
+#[cfg(not(target_arch = "wasm32"))]
 use solana_client::{
     nonblocking::rpc_client::RpcClient as AsyncRpcClient, rpc_config::RpcSendTransactionConfig,
     rpc_filter::RpcFilterType,
+};
+#[cfg(target_arch = "wasm32")]
+use solana_client_wasm::{
+    utils::rpc_config::RpcSendTransactionConfig, utils::rpc_filter::RpcFilterType,
+    WasmClient as AsyncRpcClient, WasmClient as RpcClient,
 };
 use solana_sdk::{
     commitment_config::CommitmentConfig, signature::Signature, signer::Signer,
     transaction::Transaction,
 };
 use std::{marker::PhantomData, ops::Deref, sync::Arc};
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::{
     runtime::{Builder, Handle},
     sync::RwLock,
@@ -27,6 +35,7 @@ impl<'a> EventUnsubscriber<'a> {
 }
 
 impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn new(
         program_id: Pubkey,
         cfg: Config<C>,
@@ -58,7 +67,10 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
     #[cfg(not(feature = "mock"))]
     pub fn rpc(&self) -> RpcClient {
         RpcClient::new_with_commitment(
+            #[cfg(not(target_arch = "wasm32"))]
             self.cfg.cluster.url().to_string(),
+            #[cfg(target_arch = "wasm32")]
+            self.cfg.cluster.url(),
             self.cfg.options.unwrap_or_default(),
         )
     }
@@ -114,6 +126,7 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
 }
 
 impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C, Box<dyn Signer + 'a>> {
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn from(
         program_id: Pubkey,
         cluster: &str,

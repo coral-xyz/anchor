@@ -21,9 +21,15 @@ anyhow = "1"
 futures = "0.3"
 regex = "1"
 serde = { version = "1", features = ["derive"] }
-solana-account-decoder = "1.17.3"
-solana-client = "1.17.3"
 solana-sdk = "1.17.3"
 thiserror = "1"
 tokio = { version = "1", features = ["rt", "sync"] }
 url = "2"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+solana-client-wasm = { version = "=1.17.4" }
+solana-extra-wasm = { version = "=1.17.4" }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+solana-client = { version = "1.17.3" }
+solana-account-decoder = "1.17.3"

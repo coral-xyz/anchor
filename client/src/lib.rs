@@ -65,18 +65,42 @@ use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::{AccountDeserialize, Discriminator, InstructionData, ToAccountMetas};
 use futures::{Future, StreamExt};
 use regex::Regex;
+
+#[cfg(not(target_arch = "wasm32"))]
 use solana_account_decoder::UiAccountEncoding;
+#[cfg(not(target_arch = "wasm32"))]
 use solana_client::nonblocking::rpc_client::RpcClient as AsyncRpcClient;
+#[cfg(not(target_arch = "wasm32"))]
 use solana_client::rpc_config::{
     RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig,
     RpcTransactionLogsConfig, RpcTransactionLogsFilter,
 };
+#[cfg(not(target_arch = "wasm32"))]
 use solana_client::rpc_filter::{Memcmp, RpcFilterType};
+#[cfg(not(target_arch = "wasm32"))]
 use solana_client::{
     client_error::ClientError as SolanaClientError,
     nonblocking::pubsub_client::{PubsubClient, PubsubClientError},
     rpc_response::{Response as RpcResponse, RpcLogsResponse},
 };
+
+#[cfg(target_arch = "wasm32")]
+use solana_client_wasm::utils::rpc_config::{
+    RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig,
+    RpcTransactionLogsConfig, RpcTransactionLogsFilter,
+};
+#[cfg(target_arch = "wasm32")]
+use solana_client_wasm::utils::rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType};
+#[cfg(target_arch = "wasm32")]
+use solana_client_wasm::WasmClient as AsyncRpcClient;
+#[cfg(target_arch = "wasm32")]
+use solana_client_wasm::{
+    error::ClientError as SolanaClientError,
+    response::{ClientResponse as RpcResponse, ClientResponse as RpcLogsResponse},
+};
+#[cfg(target_arch = "wasm32")]
+use solana_extra_wasm::account_decoder::UiAccountEncoding;
+
 use solana_sdk::account::Account;
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::hash::Hash;
@@ -103,7 +127,10 @@ pub use anchor_lang;
 pub use cluster::Cluster;
 #[cfg(feature = "async")]
 pub use nonblocking::ThreadSafeSigner;
+#[cfg(not(target_arch = "wasm32"))]
 pub use solana_client;
+#[cfg(target_arch = "wasm32")]
+pub use solana_client_wasm;
 pub use solana_sdk;
 
 mod cluster;
@@ -258,8 +285,17 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         &self,
         filters: Vec<RpcFilterType>,
     ) -> Result<ProgramAccountsIterator<T>, ClientError> {
+        #[cfg(not(target_arch = "wasm32"))]
         let account_type_filter =
             RpcFilterType::Memcmp(Memcmp::new_base58_encoded(0, T::DISCRIMINATOR));
+        #[cfg(target_arch = "wasm32")]
+        let account_type_filter = RpcFilterType::Memcmp(Memcmp {
+            offset: 0,
+            bytes: MemcmpEncodedBytes::Base58(
+                String::from_utf8_lossy(T::DISCRIMINATOR).to_string(),
+            ),
+            encoding: None,
+        });
         let config = RpcProgramAccountsConfig {
             filters: Some([vec![account_type_filter], filters].concat()),
             account_config: RpcAccountInfoConfig {
@@ -644,18 +680,37 @@ impl<'a, C: Deref<Target = impl Signer> + Clone, S: AsSigner> RequestBuilder<'a,
     async fn send_with_spinner_and_config_internal(
         &self,
         config: RpcSendTransactionConfig,
-    ) -> Result<Signature, ClientError> {
+    ) -> Result<Signature, Box<dyn std::error::Error>> {
         let latest_hash = self.internal_rpc_client.get_latest_blockhash().await?;
         let tx = self.signed_transaction_with_blockhash(latest_hash)?;
 
-        self.internal_rpc_client
-            .send_and_confirm_transaction_with_spinner_and_config(
-                &tx,
-                self.internal_rpc_client.commitment(),
-                config,
-            )
-            .await
-            .map_err(Into::into)
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            return self
+                .internal_rpc_client
+                .send_and_confirm_transaction_with_spinner_and_config(
+                    &tx,
+                    self.internal_rpc_client.commitment(),
+                    config,
+                )
+                .await
+                .map_err(Into::into);
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            return self
+                .internal_rpc_client
+                .send_and_confirm_transaction_with_config(
+                    &tx,
+                    CommitmentConfig {
+                        commitment: self.internal_rpc_client.commitment(),
+                    },
+                    config,
+                )
+                .await
+                .map_err(Into::into);
+        }
     }
 }
 
