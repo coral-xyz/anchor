@@ -312,7 +312,7 @@ pub async fn optional<C: Deref<Target = impl Signer> + Clone>(
             DataAccount::LEN as u64,
             &program.id(),
         ))
-        .signer(&[required_keypair.clone(), data_account_keypair.clone()])
+        .signers(&[required_keypair.clone(), data_account_keypair.clone()])
         .accounts(OptionalInitialize {
             payer: Some(program.payer()),
             required: required_keypair.pubkey(),

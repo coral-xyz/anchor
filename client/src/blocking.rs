@@ -137,11 +137,13 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C, Box<dyn S
         }
     }
 
-    #[must_use]
-    pub fn signers<T: Signer + Clone + 'a>(mut self, signers: &[T]) -> Self {
-        for signer in signers {
-            self.signers.push(Box::new(signer.clone()));
-        }
+    #[must_use = "The signers must be provided to ensure the transaction is valid and authorized."]
+    pub fn signers<T: Signer + 'a>(mut self, signers: &'a [T]) -> Self {
+        self.signers.extend(
+            signers
+                .iter()
+                .map(|signer| Box::new(signer) as Box<dyn Signer>),
+        );
         self
     }
 
