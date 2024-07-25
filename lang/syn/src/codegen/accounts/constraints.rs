@@ -198,12 +198,7 @@ pub fn generate_constraint_init(
 }
 
 pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macro2::TokenStream {
-    // Require known account type that implements the `Discriminator` trait in order to decide
-    // the discriminator length to check
-    let account_ty = match &f.ty {
-        Ty::Account(_) | Ty::AccountLoader(_) => f.account_ty(),
-        _ => panic!("`zero` constraint requires the type to implement the `Discriminator` trait"),
-    };
+    let account_ty = f.account_ty();
     let discriminator = quote! { #account_ty::DISCRIMINATOR };
 
     let field = &f.ident;
