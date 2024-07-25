@@ -122,8 +122,7 @@ pub fn composite<C: Deref<Target = impl Signer> + Clone>(
             500,
             &program.id(),
         ))
-        .signer(&dummy_a)
-        .signer(&dummy_b)
+        .signers(&[dummy_a, dummy_b])
         .accounts(Initialize {
             dummy_a: dummy_a.pubkey(),
             dummy_b: dummy_b.pubkey(),
@@ -181,7 +180,7 @@ pub fn basic_2<C: Deref<Target = impl Signer> + Clone>(
     // Build and send a transaction.
     program
         .request()
-        .signer(&counter)
+        .signers(&[counter])
         .accounts(basic_2_accounts::Create {
             counter: counter.pubkey(),
             user: authority,
@@ -300,8 +299,7 @@ pub fn optional<C: Deref<Target = impl Signer> + Clone>(
             DataAccount::LEN as u64,
             &program.id(),
         ))
-        .signer(&data_account_keypair)
-        .signer(&required_keypair)
+        .signers(&[data_account_keypair, required_keypair])
         .accounts(OptionalInitialize {
             payer: Some(program.payer()),
             required: required_keypair.pubkey(),
