@@ -138,8 +138,10 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C, Box<dyn S
     }
 
     #[must_use]
-    pub fn signer<T: Signer + 'a>(mut self, signer: T) -> Self {
-        self.signers.push(Box::new(signer));
+    pub fn signers<T: Signer + Clone + 'a>(mut self, signers: &[T]) -> Self {
+        for signer in signers {
+            self.signers.push(Box::new(signer.clone()));
+        }
         self
     }
 
