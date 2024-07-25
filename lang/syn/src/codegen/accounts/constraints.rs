@@ -198,6 +198,14 @@ pub fn generate_constraint_init(
 }
 
 pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macro2::TokenStream {
+    // Require known account type that implements the `Discriminator` trait in order to decide
+    // the discriminator length to check
+    let account_ty = match &f.ty {
+        Ty::Account(_) | Ty::AccountLoader(_) => f.account_ty(),
+        _ => panic!("`zero` constraint requires the type to implement the `Discriminator` trait"),
+    };
+    let discriminator = quote! { #account_ty::DISCRIMINATOR };
+
     let field = &f.ident;
     let name_str = field.to_string();
     let ty_decl = f.ty_decl(true);
@@ -205,10 +213,9 @@ pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macr
     quote! {
         let #field: #ty_decl = {
             let mut __data: &[u8] = &#field.try_borrow_data()?;
-            let mut __disc_bytes = [0u8; 8];
-            __disc_bytes.copy_from_slice(&__data[..8]);
-            let __discriminator = u64::from_le_bytes(__disc_bytes);
-            if __discriminator != 0 {
+            let __disc = &__data[..#discriminator.len()];
+            let __has_disc = __disc.iter().any(|b| *b != 0);
+            if __has_disc {
                 return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintZero).with_account_name(#name_str));
             }
             #from_account_info
