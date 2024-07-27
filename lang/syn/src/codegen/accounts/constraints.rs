@@ -865,7 +865,9 @@ fn generate_constraint_init_group(
             };
 
             let interest_bearing_mint_authority = match interest_bearing_mint_authority {
-                Some(ibma) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#ibma.key()) },
+                Some(ibma) => {
+                    quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#ibma.key()) }
+                }
                 None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
             };
 

@@ -248,12 +248,14 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                                 rate: stream.parse()?,
                             },
                         )),
-                        "authority" => ConstraintToken::ExtensionInterestBearingMintAuthority(Context::new(
-                            span,
-                            ConstraintExtensionAuthority {
-                                authority: stream.parse()?,
-                            },
-                        )),
+                        "authority" => {
+                            ConstraintToken::ExtensionInterestBearingMintAuthority(Context::new(
+                                span,
+                                ConstraintExtensionAuthority {
+                                    authority: stream.parse()?,
+                                },
+                            ))
+                        }
                         _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
                     }
                 }
@@ -565,7 +567,8 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub extension_transfer_hook_authority: Option<Context<ConstraintExtensionAuthority>>,
     pub extension_transfer_hook_program_id: Option<Context<ConstraintExtensionTokenHookProgramId>>,
     pub extension_permanent_delegate: Option<Context<ConstraintExtensionPermanentDelegate>>,
-    pub extension_interest_bearing_mint_rate: Option<Context<ConstraintExtensionInterestBearingMintRate>>,
+    pub extension_interest_bearing_mint_rate:
+        Option<Context<ConstraintExtensionInterestBearingMintRate>>,
     pub extension_interest_bearing_mint_authority: Option<Context<ConstraintExtensionAuthority>>,
     pub bump: Option<Context<ConstraintTokenBump>>,
     pub program_seed: Option<Context<ConstraintProgramSeed>>,
