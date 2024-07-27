@@ -800,6 +800,10 @@ fn generate_constraint_init_group(
                 extensions.push(quote! {::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::PermanentDelegate});
             }
 
+            if interest_bearing_mint_rate.is_some() {
+                extensions.push(quote! {::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::InterestBearingConfig});
+            }
+
             let mint_space = if extensions.is_empty() {
                 quote! { ::anchor_spl::token::Mint::LEN }
             } else {
