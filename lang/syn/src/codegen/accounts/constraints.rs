@@ -681,6 +681,8 @@ fn generate_constraint_init_group(
             metadata_pointer_metadata_address,
             close_authority,
             permanent_delegate,
+            interest_bearing_mint_rate,
+            interest_bearing_mint_authority,
             transfer_hook_authority,
             transfer_hook_program_id,
         } => {
@@ -857,6 +859,16 @@ fn generate_constraint_init_group(
                 None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
             };
 
+            let interest_bearing_mint_rate = match interest_bearing_mint_rate {
+                Some(ibmr) => quote! { Option::<&i16>::Some(&#ibmr) },
+                None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
+            };
+
+            let interest_bearing_mint_authority = match interest_bearing_mint_authority {
+                Some(ibma) => quote! { Option::<&anchor_lang::prelude::Pubkey>::Some(&#ibma.key()) },
+                None => quote! { Option::<&anchor_lang::prelude::Pubkey>::None },
+            };
+
             let transfer_hook_authority = match transfer_hook_authority {
                 Some(tha) => quote! { Option::<anchor_lang::prelude::Pubkey>::Some(#tha.key()) },
                 None => quote! { Option::<anchor_lang::prelude::Pubkey>::None },
@@ -938,6 +950,12 @@ fn generate_constraint_init_group(
                                             token_program_id: #token_program.to_account_info(),
                                             mint: #field.to_account_info(),
                                         }), #permanent_delegate.unwrap())?;
+                                    },
+                                    ::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::InterestBearingMint => {
+                                        ::anchor_spl::token_interface::interest_bearing_mint(anchor_lang::context::CpiContext::new(#token_program.to_account_info(), ::anchor_spl::token_interface::InterestBearingMints {
+                                            token_program_id: #token_program.to_account_info(),
+                                            mint: #field.to_account_info(),
+                                        }), #interest_bearing_mint_authority.unwrap(), #interest_bearing_mint_rate.unwrap())?;
                                     },
                                     // All extensions specified by the user should be implemented.
                                     // If this line runs, it means there is a bug in the codegen.
