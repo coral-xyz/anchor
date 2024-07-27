@@ -954,7 +954,7 @@ fn generate_constraint_init_group(
                                         }), #permanent_delegate.unwrap())?;
                                     },
                                     ::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::InterestBearingConfig => {
-                                        ::anchor_spl::token_interface::interest_bearing_mint(anchor_lang::context::CpiContext::new(#token_program.to_account_info(), ::anchor_spl::token_interface::InterestBearingMint {
+                                        ::anchor_spl::token_interface::interest_bearing_mint(anchor_lang::context::CpiContext::new(#token_program.to_account_info(), ::anchor_spl::token_interface::InterestBearingMintInitialize {
                                             token_program_id: #token_program.to_account_info(),
                                             mint: #field.to_account_info(),
                                         }), #interest_bearing_mint_authority.unwrap(), #interest_bearing_mint_rate.unwrap())?;
