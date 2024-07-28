@@ -159,7 +159,6 @@ pub struct WithdrawWithheldTokensFromMint<'info> {
     pub authority: AccountInfo<'info>,
 }
 
-
 pub fn withdraw_withheld_tokens_from_accounts<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, WithdrawWithheldTokensFromAccounts<'info>>,
     sources: Vec<AccountInfo<'info>>,
@@ -173,7 +172,12 @@ pub fn withdraw_withheld_tokens_from_accounts<'info>(
         sources.iter().map(|a| a.key).collect::<Vec<_>>().as_slice(),
     )?;
 
-    let mut account_infos = vec![ctx.accounts.token_program_id, ctx.accounts.mint, ctx.accounts.destination, ctx.accounts.authority];
+    let mut account_infos = vec![
+        ctx.accounts.token_program_id,
+        ctx.accounts.mint,
+        ctx.accounts.destination,
+        ctx.accounts.authority,
+    ];
     account_infos.extend_from_slice(&sources);
 
     anchor_lang::solana_program::program::invoke_signed(&ix, &account_infos, ctx.signer_seeds)
