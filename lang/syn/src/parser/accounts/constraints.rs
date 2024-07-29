@@ -319,7 +319,7 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         token_program: stream.parse()?,
                     },
                 )),
-                "transfer_memp" => ConstraintToken::ExtensionTransferMemo(Context::new(
+                "transfer_memo" => ConstraintToken::ExtensionTransferMemo(Context::new(
                     span,
                     ConstraintBool {
                         enable: stream.parse()?,
