@@ -319,6 +319,12 @@ pub fn parse_token(stream: ParseStream) -> ParseResult<ConstraintToken> {
                         token_program: stream.parse()?,
                     },
                 )),
+                "transfer_memp" => ConstraintToken::ExtensionTransferMemo(Context::new(
+                    span,
+                    ConstraintBool {
+                        enable: stream.parse()?,
+                    },
+                )),
                 _ => return Err(ParseError::new(ident.span(), "Invalid attribute")),
             }
         }
@@ -554,6 +560,7 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub mint_freeze_authority: Option<Context<ConstraintMintFreezeAuthority>>,
     pub mint_decimals: Option<Context<ConstraintMintDecimals>>,
     pub mint_token_program: Option<Context<ConstraintTokenProgram>>,
+    // mint extensions.
     pub extension_group_pointer_authority: Option<Context<ConstraintExtensionAuthority>>,
     pub extension_group_pointer_group_address:
         Option<Context<ConstraintExtensionGroupPointerGroupAddress>>,
@@ -570,6 +577,8 @@ pub struct ConstraintGroupBuilder<'ty> {
     pub extension_interest_bearing_mint_rate:
         Option<Context<ConstraintExtensionInterestBearingMintRate>>,
     pub extension_interest_bearing_mint_authority: Option<Context<ConstraintExtensionAuthority>>,
+    // token extensions.
+    pub extension_memo_transfer: Option<Context<ConstraintBool>>,
     pub bump: Option<Context<ConstraintTokenBump>>,
     pub program_seed: Option<Context<ConstraintProgramSeed>>,
     pub realloc: Option<Context<ConstraintRealloc>>,
@@ -598,6 +607,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             token_mint: None,
             token_authority: None,
             token_token_program: None,
+            extension_memo_transfer: None,
             associated_token_mint: None,
             associated_token_authority: None,
             associated_token_token_program: None,
@@ -831,6 +841,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             extension_permanent_delegate,
             extension_interest_bearing_mint_rate,
             extension_interest_bearing_mint_authority,
+            extension_memo_transfer,
             bump,
             program_seed,
             realloc,
@@ -1011,6 +1022,8 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
                             )),
                         },
                         token_program: token_token_program.map(|tp| tp.into_inner().token_program),
+                        memo_transfer: extension_memo_transfer.map(|mt| mt.into_inner().enable),
+
                     }
                 } else if let Some(at) = &associated_token {
                     InitKind::AssociatedToken {
@@ -1091,6 +1104,7 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ConstraintToken::TokenAuthority(c) => self.add_token_authority(c),
             ConstraintToken::TokenMint(c) => self.add_token_mint(c),
             ConstraintToken::TokenTokenProgram(c) => self.add_token_token_program(c),
+            ConstraintToken::ExtensionTransferMemo(c) => self.add_extension_memo_transfer(c),
             ConstraintToken::AssociatedTokenAuthority(c) => self.add_associated_token_authority(c),
             ConstraintToken::AssociatedTokenMint(c) => self.add_associated_token_mint(c),
             ConstraintToken::AssociatedTokenTokenProgram(c) => {
@@ -1419,6 +1433,17 @@ impl<'ty> ConstraintGroupBuilder<'ty> {
             ));
         }
         self.token_token_program.replace(c);
+        Ok(())
+    }
+
+    fn add_extension_memo_transfer(&mut self, c: Context<ConstraintBool>) -> ParseResult<()> {
+        if self.extension_memo_transfer.is_some() {
+            return Err(ParseError::new(
+                c.span(),
+                "extension memo transfer already provided",
+            ));
+        }
+        self.extension_memo_transfer.replace(c);
         Ok(())
     }
 

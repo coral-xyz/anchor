@@ -668,6 +668,7 @@ pub enum ConstraintToken {
     TokenMint(Context<ConstraintTokenMint>),
     TokenAuthority(Context<ConstraintTokenAuthority>),
     TokenTokenProgram(Context<ConstraintTokenProgram>),
+    ExtensionTransferMemo(Context<ConstraintBool>),
     AssociatedTokenMint(Context<ConstraintTokenMint>),
     AssociatedTokenAuthority(Context<ConstraintTokenAuthority>),
     AssociatedTokenTokenProgram(Context<ConstraintTokenProgram>),
@@ -820,6 +821,11 @@ pub struct ConstraintExtensionAuthority {
 }
 
 #[derive(Debug, Clone)]
+pub struct ConstraintBool {
+    pub enable: Expr,
+}
+
+#[derive(Debug, Clone)]
 pub struct ConstraintExtensionGroupPointerGroupAddress {
     pub group_address: Expr,
 }
@@ -864,6 +870,7 @@ pub enum InitKind {
         owner: Expr,
         mint: Expr,
         token_program: Option<Expr>,
+        memo_transfer: Option<Expr>,
     },
     AssociatedToken {
         owner: Expr,
