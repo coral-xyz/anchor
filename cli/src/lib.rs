@@ -926,7 +926,12 @@ fn init(
     if force {
         fs::create_dir_all(&project_name)?;
     } else {
-        fs::create_dir(&project_name)?;
+        let path = std::env::current_dir()?;
+        let new_path = path.join(&rust_name);
+
+        if let Err(_) = fs::read_dir(new_path) {
+            fs::create_dir(&project_name)?;
+        };
     }
     std::env::set_current_dir(&project_name)?;
     fs::create_dir_all("app")?;
