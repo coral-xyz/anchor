@@ -103,3 +103,13 @@ pub fn interface(
     // discriminator.
     input
 }
+
+#[proc_macro_attribute]
+pub fn instruction(
+    _args: proc_macro::TokenStream,
+    input: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    // This macro itself is a no-op, but the `#[program]` macro will detect this attribute and use
+    // the arguments to transform the instruction.
+    input
+}
