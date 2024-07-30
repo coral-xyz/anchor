@@ -77,9 +77,9 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<(Vec<Ix>, Option<Fallbac
 fn parse_ix_attr(attrs: &[syn::Attribute]) -> ParseResult<Option<IxAttr>> {
     attrs
         .iter()
-        .find_map(|attr| match attr.path.segments.last() {
-            Some(seg) if seg.ident == "instruction" => Some(attr),
-            _ => None,
+        .find(|attr| match attr.path.segments.last() {
+            Some(seg) => seg.ident == "instruction",
+            _ => false,
         })
         .map(|attr| attr.parse_args())
         .transpose()
