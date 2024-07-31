@@ -22,7 +22,7 @@ use heck::{ToKebabCase, ToLowerCamelCase, ToPascalCase, ToSnakeCase};
 use regex::{Regex, RegexBuilder};
 use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
-use rust_template::{ProgramTemplate, TestTemplate};
+use rust_template::{workspace_manifest, ProgramTemplate, TestTemplate};
 use semver::{Version, VersionReq};
 use serde::Deserialize;
 use serde_json::{json, Map, Value as JsonValue};
@@ -923,17 +923,28 @@ fn init(
         ));
     }
 
+    let mut inside_workspace = false;
     if force {
         fs::create_dir_all(&project_name)?;
     } else {
         let path = std::env::current_dir()?;
-        let new_path = path.join(&rust_name);
-
-        if let Err(_) = fs::read_dir(new_path) {
+        let cargo_file = path.join("Cargo.toml");
+        if cargo_file.exists() {
+            inside_workspace = true;
+            let mut fh = std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(cargo_file)?;
+            fh.write_all(workspace_manifest().as_bytes())?;
+        } else {
             fs::create_dir(&project_name)?;
-        };
+        }
     }
-    std::env::set_current_dir(&project_name)?;
+
+    if !inside_workspace {
+        std::env::set_current_dir(&project_name)?;
+    }
+
     fs::create_dir_all("app")?;
 
     let mut cfg = Config::default();
