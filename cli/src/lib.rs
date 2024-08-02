@@ -3811,7 +3811,7 @@ fn upgrade(
             .arg("--url")
             .arg(url)
             .arg("--keypair")
-            .arg(&cfg.provider.wallet.to_string())
+            .arg(cfg.provider.wallet.to_string())
             .arg("--program-id")
             .arg(strip_workspace_prefix(program_id.to_string()))
             .arg(strip_workspace_prefix(program_filepath))
