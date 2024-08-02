@@ -1,5 +1,3 @@
-#![cfg_attr(nightly, feature(proc_macro_span))]
-
 use crate::config::{
     AnchorPackage, BootstrapMode, BuildConfig, Config, ConfigOverride, Manifest, ProgramArch,
     ProgramDeployment, ProgramWorkspace, ScriptsConfig, TestValidator, WithPath,
