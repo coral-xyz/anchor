@@ -31,6 +31,22 @@ mod id;
 /// check this discriminator. If it doesn't match, an invalid account was given,
 /// and the account deserialization will exit with an error.
 ///
+/// # Args
+///
+/// - `discriminator`: Override the default 8-byte discriminator
+///
+///     **Usage:** `discriminator = <CONST_EXPR>`
+///
+///     All constant expressions are supported.
+///
+///     **Examples:**
+///
+///     - `discriminator = 0` (shortcut for `[0]`)
+///     - `discriminator = [1, 2, 3, 4]`
+///     - `discriminator = b"hi"`
+///     - `discriminator = MY_DISC`
+///     - `discriminator = get_disc(...)`
+///
 /// # Zero Copy Deserialization
 ///
 /// **WARNING**: Zero copy deserialization is an experimental feature. It's
