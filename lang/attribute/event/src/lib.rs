@@ -15,6 +15,22 @@ use syn::{
 /// their programs that clients can subscribe to. Currently, this macro is for
 /// structs only.
 ///
+/// # Args
+///
+/// - `discriminator`: Override the default 8-byte discriminator
+///
+///     **Usage:** `discriminator = <CONST_EXPR>`
+///
+///     All constant expressions are supported.
+///
+///     **Examples:**
+///
+///     - `discriminator = 0` (shortcut for `[0]`)
+///     - `discriminator = [1, 2, 3, 4]`
+///     - `discriminator = b"hi"`
+///     - `discriminator = MY_DISC`
+///     - `discriminator = get_disc(...)`
+///
 /// See the [`emit!` macro](emit!) for an example.
 #[proc_macro_attribute]
 pub fn event(
