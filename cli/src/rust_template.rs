@@ -153,7 +153,7 @@ pub fn handler(ctx: Context<Initialize>) -> Result<()> {
     ]
 }
 
-const fn workspace_manifest() -> &'static str {
+pub(crate) const fn workspace_manifest() -> &'static str {
     r#"[workspace]
 members = [
     "programs/*"
