@@ -39,6 +39,7 @@
     "spl/token-proxy",
     "spl/token-wrapper",
     "spl/transfer-hook",
+    "solana-program-test-compatibility",
     "swap",
     "system-accounts",
     "sysvars",

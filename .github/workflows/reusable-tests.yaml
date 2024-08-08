@@ -463,6 +463,8 @@ jobs:
             path: tests/bench
           - cmd: cd tests/idl && ./test.sh
             path: tests/idl
+          - cmd: cd tests/solana-program-test-compatibility && cargo test-sbf --package solana-program-test-compatibility --test compatibility_test check_entrypoint
+            path: tests/idl
           # TODO: Enable when `solang` becomes compatible with the new IDL spec
           # - cmd: cd tests/solang && anchor test
           #   path: tests/solang
