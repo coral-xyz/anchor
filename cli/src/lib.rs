@@ -5,7 +5,7 @@ use crate::config::{
 };
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction, ERASED_AUTHORITY};
-use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
+use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize, Discriminator};
 use anchor_lang_idl::convert::convert_idl;
 use anchor_lang_idl::types::{Idl, IdlArrayLen, IdlDefinedFields, IdlType, IdlTypeDefTy};
 use anyhow::{anyhow, Context, Result};
@@ -2256,7 +2256,7 @@ fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
     }
 
     // Cut off account discriminator.
-    let mut d: &[u8] = &account.data[8..];
+    let mut d: &[u8] = &account.data[IdlAccount::DISCRIMINATOR.len()..];
     let idl_account: IdlAccount = AnchorDeserialize::deserialize(&mut d)?;
 
     let compressed_len: usize = idl_account.data_len.try_into().unwrap();
@@ -3942,7 +3942,7 @@ fn create_idl_buffer(
 
     // Creates the new buffer account with the system program.
     let create_account_ix = {
-        let space = 8 + 32 + 4 + serialize_idl(idl)?.len();
+        let space = IdlAccount::DISCRIMINATOR.len() + 32 + 4 + serialize_idl(idl)?.len();
         let lamports = client.get_minimum_balance_for_rent_exemption(space)?;
         solana_sdk::system_instruction::create_account(
             &keypair.pubkey(),
