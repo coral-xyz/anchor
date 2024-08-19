@@ -279,7 +279,7 @@ export class Program<IDL extends Idl = Idl> {
    *                          public keys of missing accounts when building instructions
    */
   public constructor(
-    idl: IDL,
+    idl: any,
     provider: Provider = getProvider(),
     coder?: Coder,
     getCustomResolver?: (
