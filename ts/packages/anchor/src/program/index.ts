@@ -286,20 +286,18 @@ export class Program<IDL extends Idl = Idl> {
       instruction: IdlInstruction
     ) => CustomAccountResolver<IDL> | undefined
   ) {
-    const camelCasedIdl = convertIdlToCamelCase(idl);
-
     // Fields.
-    this._idl = camelCasedIdl;
+    this._idl = convertIdlToCamelCase(idl);
     this._rawIdl = idl;
     this._provider = provider;
     this._programId = translateAddress(idl.address);
-    this._coder = coder ?? new BorshCoder(camelCasedIdl);
+    this._coder = coder ?? new BorshCoder(this._idl);
     this._events = new EventManager(this._programId, provider, this._coder);
 
     // Dynamic namespaces.
     const [rpc, instruction, transaction, account, simulate, methods, views] =
       NamespaceFactory.build(
-        camelCasedIdl,
+        this._idl,
         this._coder,
         this._programId,
         provider,
