@@ -105,10 +105,11 @@ pub fn account(
         .and_then(|ov| ov.discriminator)
         .unwrap_or_else(|| {
             // Namespace the discriminator to prevent collisions.
-            let namespace = namespace
-                .is_empty()
-                .then_some("account")
-                .unwrap_or(&namespace);
+            let namespace = if namespace.is_empty() {
+                "account"
+            } else {
+                &namespace
+            };
 
             gen_discriminator(namespace, account_name)
         });
