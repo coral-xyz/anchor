@@ -35,7 +35,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         let ix = {
                             let ix = instruction::#ix_variant;
                             let mut data = Vec::with_capacity(256);
-                            data.extend_from_slice(&#discriminator);
+                            data.extend_from_slice(#discriminator);
                             AnchorSerialize::serialize(&ix, &mut data)
                                 .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotSerialize)?;
                             let accounts = ctx.to_account_metas(None);
