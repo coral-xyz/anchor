@@ -167,7 +167,7 @@ pub fn approve<'info>(
 pub fn approve_checked<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, ApproveChecked<'info>>,
     amount: u64,
-    decimals: u8
+    decimals: u8,
 ) -> Result<()> {
     let ix = spl_token_2022::instruction::approve_checked(
         ctx.program.key,
