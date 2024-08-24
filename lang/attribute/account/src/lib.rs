@@ -12,6 +12,9 @@ use syn::{
 
 mod id;
 
+#[cfg(feature = "lazy-account")]
+mod lazy;
+
 /// An attribute for a data structure representing a Solana account.
 ///
 /// `#[account]` generates trait implementations for the following traits:
@@ -202,6 +205,17 @@ pub fn account(
                 #owner_impl
             }
         } else {
+            let lazy = {
+                #[cfg(feature = "lazy-account")]
+                match namespace.is_empty().then(|| lazy::gen_lazy(&account_strct)) {
+                    Some(Ok(lazy)) => lazy,
+                    // If lazy codegen fails for whatever reason, return empty tokenstream which
+                    // will make the account unusable with `LazyAccount<T>`
+                    _ => Default::default(),
+                }
+                #[cfg(not(feature = "lazy-account"))]
+                proc_macro2::TokenStream::default()
+            };
             quote! {
                 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
                 #account_strct
@@ -246,6 +260,8 @@ pub fn account(
                 }
 
                 #owner_impl
+
+                #lazy
             }
         }
     })
