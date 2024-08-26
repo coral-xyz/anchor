@@ -1,5 +1,3 @@
-#![cfg_attr(nightly, feature(proc_macro_span))]
-
 use crate::config::{
     AnchorPackage, BootstrapMode, BuildConfig, Config, ConfigOverride, Manifest, ProgramArch,
     ProgramDeployment, ProgramWorkspace, ScriptsConfig, TestValidator, WithPath,
@@ -7,7 +5,7 @@ use crate::config::{
 };
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction, ERASED_AUTHORITY};
-use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize};
+use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize, Discriminator};
 use anchor_lang_idl::convert::convert_idl;
 use anchor_lang_idl::types::{Idl, IdlArrayLen, IdlDefinedFields, IdlType, IdlTypeDefTy};
 use anyhow::{anyhow, Context, Result};
@@ -211,6 +209,9 @@ pub enum Command {
         /// use this to save time when running test and the program code is not altered.
         #[clap(long)]
         skip_build: bool,
+        /// Do not build the IDL
+        #[clap(long)]
+        no_idl: bool,
         /// Architecture to use when building the program
         #[clap(value_enum, long, default_value = "sbf")]
         arch: ProgramArch,
@@ -248,7 +249,7 @@ pub enum Command {
         #[clap(subcommand)]
         subcmd: IdlCommand,
     },
-    /// Remove all artifacts from the target directory except program keypairs.
+    /// Remove all artifacts from the generated directories except program keypairs.
     Clean,
     /// Deploys each program in the workspace.
     Deploy {
@@ -572,9 +573,46 @@ fn override_toolchain(cfg_override: &ConfigOverride) -> Result<RestoreToolchainC
                 // from `~/.local/share/solana/install/releases` because we use multiple Solana
                 // binaries in various commands.
                 fn override_solana_version(version: String) -> Result<bool> {
-                    let output = std::process::Command::new("solana-install")
-                        .arg("list")
-                        .output()?;
+                    // There is a deprecation warning message starting with `1.18.19` which causes
+                    // parsing problems https://github.com/coral-xyz/anchor/issues/3147
+                    let (cmd_name, domain) =
+                        if Version::parse(&version)? < Version::parse("1.18.19")? {
+                            ("solana-install", "solana.com")
+                        } else {
+                            ("agave-install", "anza.xyz")
+                        };
+
+                    // Install the command if it's not installed
+                    if get_current_version(cmd_name).is_err() {
+                        // `solana-install` and `agave-install` are not usable at the same time i.e.
+                        // using one of them makes the other unusable with the default installation,
+                        // causing the installation process to run each time users switch between
+                        // `agave` supported versions. For example, if the user's active Solana
+                        // version is `1.18.17`, and he specifies `solana_version = "2.0.6"`, this
+                        // code path will run each time an Anchor command gets executed.
+                        eprintln!(
+                            "Command not installed: `{cmd_name}`. \
+                            See https://github.com/anza-xyz/agave/wiki/Agave-Transition, \
+                            installing..."
+                        );
+                        let install_script = std::process::Command::new("curl")
+                            .args([
+                                "-sSfL",
+                                &format!("https://release.{domain}/v{version}/install"),
+                            ])
+                            .output()?;
+                        let is_successful = std::process::Command::new("sh")
+                            .args(["-c", std::str::from_utf8(&install_script.stdout)?])
+                            .spawn()?
+                            .wait_with_output()?
+                            .status
+                            .success();
+                        if !is_successful {
+                            return Err(anyhow!("Failed to install `{cmd_name}`"));
+                        }
+                    }
+
+                    let output = std::process::Command::new(cmd_name).arg("list").output()?;
                     if !output.status.success() {
                         return Err(anyhow!("Failed to list installed `solana` versions"));
                     }
@@ -589,7 +627,7 @@ fn override_toolchain(cfg_override: &ConfigOverride) -> Result<RestoreToolchainC
                         (Stdio::inherit(), Stdio::inherit())
                     };
 
-                    std::process::Command::new("solana-install")
+                    std::process::Command::new(cmd_name)
                         .arg("init")
                         .arg(&version)
                         .stderr(stderr)
@@ -597,7 +635,7 @@ fn override_toolchain(cfg_override: &ConfigOverride) -> Result<RestoreToolchainC
                         .spawn()?
                         .wait()
                         .map(|status| status.success())
-                        .map_err(|err| anyhow!("Failed to run `solana-install` command: {err}"))
+                        .map_err(|err| anyhow!("Failed to run `{cmd_name}` command: {err}"))
                 }
 
                 match override_solana_version(solana_version.to_owned())? {
@@ -818,6 +856,7 @@ fn process_command(opts: Opts) -> Result<()> {
             skip_deploy,
             skip_local_validator,
             skip_build,
+            no_idl,
             detach,
             run,
             args,
@@ -832,6 +871,7 @@ fn process_command(opts: Opts) -> Result<()> {
             skip_local_validator,
             skip_build,
             skip_lint,
+            no_idl,
             detach,
             run,
             args,
@@ -2258,7 +2298,7 @@ fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
     }
 
     // Cut off account discriminator.
-    let mut d: &[u8] = &account.data[8..];
+    let mut d: &[u8] = &account.data[IdlAccount::DISCRIMINATOR.len()..];
     let idl_account: IdlAccount = AnchorDeserialize::deserialize(&mut d)?;
 
     let compressed_len: usize = idl_account.data_len.try_into().unwrap();
@@ -2682,13 +2722,13 @@ fn idl_build(
         }
     };
     check_idl_build_feature().ok();
-    let idl = anchor_lang_idl::build::build_idl_with_cargo_args(
-        program_path,
-        cfg.features.resolution,
-        cfg.features.skip_lint || skip_lint,
-        no_docs,
-        &cargo_args,
-    )?;
+    let idl = anchor_lang_idl::build::IdlBuilder::new()
+        .program_path(program_path)
+        .resolution(cfg.features.resolution)
+        .skip_lint(cfg.features.skip_lint || skip_lint)
+        .no_docs(no_docs)
+        .cargo_args(cargo_args)
+        .build()?;
     let out = match out {
         Some(path) => OutFile::File(PathBuf::from(path)),
         None => OutFile::Stdout,
@@ -2736,13 +2776,12 @@ in `{path}`."#
 
     check_idl_build_feature().ok();
 
-    anchor_lang_idl::build::build_idl_with_cargo_args(
-        std::env::current_dir()?,
-        cfg.features.resolution,
-        cfg.features.skip_lint || skip_lint,
-        no_docs,
-        cargo_args,
-    )
+    anchor_lang_idl::build::IdlBuilder::new()
+        .resolution(cfg.features.resolution)
+        .skip_lint(cfg.features.skip_lint || skip_lint)
+        .no_docs(no_docs)
+        .cargo_args(cargo_args.into())
+        .build()
 }
 
 fn idl_fetch(cfg_override: &ConfigOverride, address: Pubkey, out: Option<String>) -> Result<()> {
@@ -2902,12 +2941,13 @@ fn account(
     };
 
     let data = create_client(cluster.url()).get_account_data(&address)?;
-    if data.len() < 8 {
-        return Err(anyhow!(
-            "The account has less than 8 bytes and is not an Anchor account."
-        ));
-    }
-    let mut data_view = &data[8..];
+    let disc_len = idl
+        .accounts
+        .iter()
+        .find(|acc| acc.name == account_type_name)
+        .map(|acc| acc.discriminator.len())
+        .ok_or_else(|| anyhow!("Account `{account_type_name}` not found in IDL"))?;
+    let mut data_view = &data[disc_len..];
 
     let deserialized_json =
         deserialize_idl_defined_type_to_json(&idl, account_type_name, &mut data_view)?;
@@ -3120,6 +3160,7 @@ fn test(
     skip_local_validator: bool,
     skip_build: bool,
     skip_lint: bool,
+    no_idl: bool,
     detach: bool,
     tests_to_run: Vec<String>,
     extra_args: Vec<String>,
@@ -3141,7 +3182,7 @@ fn test(
         if !skip_build {
             build(
                 cfg_override,
-                false,
+                no_idl,
                 None,
                 None,
                 false,
@@ -3692,8 +3733,14 @@ fn cluster_url(cfg: &Config, test_validator: &Option<TestValidator>) -> String {
 fn clean(cfg_override: &ConfigOverride) -> Result<()> {
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
     let cfg_parent = cfg.path().parent().expect("Invalid Anchor.toml");
+    let dot_anchor_dir = cfg_parent.join(".anchor");
     let target_dir = cfg_parent.join("target");
     let deploy_dir = target_dir.join("deploy");
+
+    if dot_anchor_dir.exists() {
+        fs::remove_dir_all(&dot_anchor_dir)
+            .map_err(|e| anyhow!("Could not remove directory {:?}: {}", dot_anchor_dir, e))?;
+    }
 
     if target_dir.exists() {
         for entry in fs::read_dir(target_dir)? {
@@ -3813,7 +3860,7 @@ fn upgrade(
             .arg("--url")
             .arg(url)
             .arg("--keypair")
-            .arg(&cfg.provider.wallet.to_string())
+            .arg(cfg.provider.wallet.to_string())
             .arg("--program-id")
             .arg(strip_workspace_prefix(program_id.to_string()))
             .arg(strip_workspace_prefix(program_filepath))
@@ -3943,7 +3990,7 @@ fn create_idl_buffer(
 
     // Creates the new buffer account with the system program.
     let create_account_ix = {
-        let space = 8 + 32 + 4 + serialize_idl(idl)?.len();
+        let space = IdlAccount::DISCRIMINATOR.len() + 32 + 4 + serialize_idl(idl)?.len();
         let lamports = client.get_minimum_balance_for_rent_exemption(space)?;
         solana_sdk::system_instruction::create_account(
             &keypair.pubkey(),
