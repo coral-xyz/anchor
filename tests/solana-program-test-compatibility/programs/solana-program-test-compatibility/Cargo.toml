@@ -1,0 +1,22 @@
+[package]
+name = "solana-program-test-compatibility"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "solana_program_test_compatibility"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = { path = "../../../../lang" }
+
+[dev-dependencies]
+solana-program-test = ">=1.16, <1.18"
