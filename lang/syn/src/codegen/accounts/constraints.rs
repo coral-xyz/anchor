@@ -198,6 +198,9 @@ pub fn generate_constraint_init(
 }
 
 pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macro2::TokenStream {
+    let account_ty = f.account_ty();
+    let discriminator = quote! { #account_ty::DISCRIMINATOR };
+
     let field = &f.ident;
     let name_str = field.to_string();
     let ty_decl = f.ty_decl(true);
@@ -205,10 +208,9 @@ pub fn generate_constraint_zeroed(f: &Field, _c: &ConstraintZeroed) -> proc_macr
     quote! {
         let #field: #ty_decl = {
             let mut __data: &[u8] = &#field.try_borrow_data()?;
-            let mut __disc_bytes = [0u8; 8];
-            __disc_bytes.copy_from_slice(&__data[..8]);
-            let __discriminator = u64::from_le_bytes(__disc_bytes);
-            if __discriminator != 0 {
+            let __disc = &__data[..#discriminator.len()];
+            let __has_disc = __disc.iter().any(|b| *b != 0);
+            if __has_disc {
                 return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintZero).with_account_name(#name_str));
             }
             #from_account_info
@@ -303,6 +305,13 @@ pub fn generate_constraint_raw(ident: &Ident, c: &ConstraintRaw) -> proc_macro2:
 
 pub fn generate_constraint_owner(f: &Field, c: &ConstraintOwner) -> proc_macro2::TokenStream {
     let ident = &f.ident;
+    let maybe_deref = match &f.ty {
+        Ty::Account(AccountTy { boxed, .. })
+        | Ty::InterfaceAccount(InterfaceAccountTy { boxed, .. }) => *boxed,
+        _ => false,
+    }
+    .then(|| quote!(*))
+    .unwrap_or_default();
     let owner_address = &c.owner_address;
     let error = generate_custom_error(
         ident,
@@ -310,9 +319,10 @@ pub fn generate_constraint_owner(f: &Field, c: &ConstraintOwner) -> proc_macro2:
         quote! { ConstraintOwner },
         &Some(&(quote! { *my_owner }, quote! { owner_address })),
     );
+
     quote! {
         {
-            let my_owner = AsRef::<AccountInfo>::as_ref(&#ident).owner;
+            let my_owner = AsRef::<AccountInfo>::as_ref(& #maybe_deref #ident).owner;
             let owner_address = #owner_address;
             if my_owner != &owner_address {
                 return #error;
@@ -929,7 +939,9 @@ fn generate_constraint_init_group(
                                             mint: #field.to_account_info(),
                                         }), #permanent_delegate.unwrap())?;
                                     },
-                                    _ => {} // do nothing
+                                    // All extensions specified by the user should be implemented.
+                                    // If this line runs, it means there is a bug in the codegen.
+                                    _ => unimplemented!("{e:?}"),
                                 }
                             };
                         }

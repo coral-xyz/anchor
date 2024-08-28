@@ -1,7 +1,14 @@
 extern crate proc_macro;
 
-use quote::quote;
-use syn::parse_macro_input;
+use anchor_syn::{codegen::program::common::gen_discriminator, Overrides};
+use quote::{quote, ToTokens};
+use syn::{
+    parenthesized,
+    parse::{Parse, ParseStream},
+    parse_macro_input,
+    token::{Comma, Paren},
+    Ident, LitStr,
+};
 
 mod id;
 
@@ -24,6 +31,22 @@ mod id;
 /// As a result, any calls to `AccountDeserialize`'s `try_deserialize` will
 /// check this discriminator. If it doesn't match, an invalid account was given,
 /// and the account deserialization will exit with an error.
+///
+/// # Args
+///
+/// - `discriminator`: Override the default 8-byte discriminator
+///
+///     **Usage:** `discriminator = <CONST_EXPR>`
+///
+///     All constant expressions are supported.
+///
+///     **Examples:**
+///
+///     - `discriminator = 1` (shortcut for `[1]`)
+///     - `discriminator = [1, 2, 3, 4]`
+///     - `discriminator = b"hi"`
+///     - `discriminator = MY_DISC`
+///     - `discriminator = get_disc(...)`
 ///
 /// # Zero Copy Deserialization
 ///
@@ -67,53 +90,33 @@ pub fn account(
     args: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    let mut namespace = "".to_string();
-    let mut is_zero_copy = false;
-    let mut unsafe_bytemuck = false;
-    let args_str = args.to_string();
-    let args: Vec<&str> = args_str.split(',').collect();
-    if args.len() > 2 {
-        panic!("Only two args are allowed to the account attribute.")
-    }
-    for arg in args {
-        let ns = arg
-            .to_string()
-            .replace('\"', "")
-            .chars()
-            .filter(|c| !c.is_whitespace())
-            .collect();
-        if ns == "zero_copy" {
-            is_zero_copy = true;
-            unsafe_bytemuck = false;
-        } else if ns == "zero_copy(unsafe)" {
-            is_zero_copy = true;
-            unsafe_bytemuck = true;
-        } else {
-            namespace = ns;
-        }
-    }
+    let args = parse_macro_input!(args as AccountArgs);
+    let namespace = args.namespace.unwrap_or_default();
+    let is_zero_copy = args.zero_copy.is_some();
+    let unsafe_bytemuck = args.zero_copy.unwrap_or_default();
 
     let account_strct = parse_macro_input!(input as syn::ItemStruct);
     let account_name = &account_strct.ident;
     let account_name_str = account_name.to_string();
     let (impl_gen, type_gen, where_clause) = account_strct.generics.split_for_impl();
 
-    let discriminator: proc_macro2::TokenStream = {
-        // Namespace the discriminator to prevent collisions.
-        let discriminator_preimage = {
-            // For now, zero copy accounts can't be namespaced.
-            if namespace.is_empty() {
-                format!("account:{account_name}")
+    let discriminator = args
+        .overrides
+        .and_then(|ov| ov.discriminator)
+        .unwrap_or_else(|| {
+            // Namespace the discriminator to prevent collisions.
+            let namespace = if namespace.is_empty() {
+                "account"
             } else {
-                format!("{namespace}:{account_name}")
-            }
-        };
+                &namespace
+            };
 
-        let mut discriminator = [0u8; 8];
-        discriminator.copy_from_slice(
-            &anchor_syn::hash::hash(discriminator_preimage.as_bytes()).to_bytes()[..8],
-        );
-        format!("{discriminator:?}").parse().unwrap()
+            gen_discriminator(namespace, account_name)
+        });
+    let disc = if account_strct.generics.lt_token.is_some() {
+        quote! { #account_name::#type_gen::DISCRIMINATOR }
+    } else {
+        quote! { #account_name::DISCRIMINATOR }
     };
 
     let owner_impl = {
@@ -169,7 +172,7 @@ pub fn account(
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::Discriminator for #account_name #type_gen #where_clause {
-                    const DISCRIMINATOR: [u8; 8] = #discriminator;
+                    const DISCRIMINATOR: &'static [u8] = #discriminator;
                 }
 
                 // This trait is useful for clients deserializing accounts.
@@ -177,18 +180,18 @@ pub fn account(
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
                     fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
-                        if buf.len() < #discriminator.len() {
+                        if buf.len() < #disc.len() {
                             return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound.into());
                         }
-                        let given_disc = &buf[..8];
-                        if &#discriminator != given_disc {
+                        let given_disc = &buf[..#disc.len()];
+                        if #disc != given_disc {
                             return Err(anchor_lang::error!(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch).with_account_name(#account_name_str));
                         }
                         Self::try_deserialize_unchecked(buf)
                     }
 
                     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
-                        let data: &[u8] = &buf[8..];
+                        let data: &[u8] = &buf[#disc.len()..];
                         // Re-interpret raw bytes into the POD data structure.
                         let account = anchor_lang::__private::bytemuck::from_bytes(data);
                         // Copy out the bytes into a new, owned data structure.
@@ -206,7 +209,7 @@ pub fn account(
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountSerialize for #account_name #type_gen #where_clause {
                     fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> anchor_lang::Result<()> {
-                        if writer.write_all(&#discriminator).is_err() {
+                        if writer.write_all(#disc).is_err() {
                             return Err(anchor_lang::error::ErrorCode::AccountDidNotSerialize.into());
                         }
 
@@ -220,18 +223,18 @@ pub fn account(
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::AccountDeserialize for #account_name #type_gen #where_clause {
                     fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
-                        if buf.len() < #discriminator.len() {
+                        if buf.len() < #disc.len() {
                             return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound.into());
                         }
-                        let given_disc = &buf[..8];
-                        if &#discriminator != given_disc {
+                        let given_disc = &buf[..#disc.len()];
+                        if #disc != given_disc {
                             return Err(anchor_lang::error!(anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch).with_account_name(#account_name_str));
                         }
                         Self::try_deserialize_unchecked(buf)
                     }
 
                     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
-                        let mut data: &[u8] = &buf[8..];
+                        let mut data: &[u8] = &buf[#disc.len()..];
                         AnchorDeserialize::deserialize(&mut data)
                             .map_err(|_| anchor_lang::error::ErrorCode::AccountDidNotDeserialize.into())
                     }
@@ -239,13 +242,87 @@ pub fn account(
 
                 #[automatically_derived]
                 impl #impl_gen anchor_lang::Discriminator for #account_name #type_gen #where_clause {
-                    const DISCRIMINATOR: [u8; 8] = #discriminator;
+                    const DISCRIMINATOR: &'static [u8] = #discriminator;
                 }
 
                 #owner_impl
             }
         }
     })
+}
+
+#[derive(Debug, Default)]
+struct AccountArgs {
+    /// `bool` is for deciding whether to use `unsafe` e.g. `Some(true)` for `zero_copy(unsafe)`
+    zero_copy: Option<bool>,
+    /// Account namespace override, `account` if not specified
+    namespace: Option<String>,
+    /// Named overrides
+    overrides: Option<Overrides>,
+}
+
+impl Parse for AccountArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut parsed = Self::default();
+        let args = input.parse_terminated::<_, Comma>(AccountArg::parse)?;
+        for arg in args {
+            match arg {
+                AccountArg::ZeroCopy { is_unsafe } => {
+                    parsed.zero_copy.replace(is_unsafe);
+                }
+                AccountArg::Namespace(ns) => {
+                    parsed.namespace.replace(ns);
+                }
+                AccountArg::Overrides(ov) => {
+                    parsed.overrides.replace(ov);
+                }
+            }
+        }
+
+        Ok(parsed)
+    }
+}
+
+enum AccountArg {
+    ZeroCopy { is_unsafe: bool },
+    Namespace(String),
+    Overrides(Overrides),
+}
+
+impl Parse for AccountArg {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        // Namespace
+        if let Ok(ns) = input.parse::<LitStr>() {
+            return Ok(Self::Namespace(
+                ns.to_token_stream().to_string().replace('\"', ""),
+            ));
+        }
+
+        // Zero copy
+        if input.fork().parse::<Ident>()? == "zero_copy" {
+            input.parse::<Ident>()?;
+            let is_unsafe = if input.peek(Paren) {
+                let content;
+                parenthesized!(content in input);
+                let content = content.parse::<proc_macro2::TokenStream>()?;
+                if content.to_string().as_str().trim() != "unsafe" {
+                    return Err(syn::Error::new(
+                        syn::spanned::Spanned::span(&content),
+                        "Expected `unsafe`",
+                    ));
+                }
+
+                true
+            } else {
+                false
+            };
+
+            return Ok(Self::ZeroCopy { is_unsafe });
+        };
+
+        // Overrides
+        input.parse::<Overrides>().map(Self::Overrides)
+    }
 }
 
 #[proc_macro_derive(ZeroCopyAccessor, attributes(accessor))]

@@ -16,6 +16,34 @@ The minor version will be incremented upon a breaking change and the patch versi
 - ts: Add optional `commitment` parameter to `Program.addEventListener` ([#3052](https://github.com/coral-xyz/anchor/pull/3052)).
 - cli, idl: Pass `cargo` args to IDL generation when building program or IDL ([#3059](https://github.com/coral-xyz/anchor/pull/3059)).
 - cli: Add checks for incorrect usage of `idl-build` feature ([#3061](https://github.com/coral-xyz/anchor/pull/3061)).
+- lang: Export `Discriminator` trait from `prelude` ([#3075](https://github.com/coral-xyz/anchor/pull/3075)).
+- lang: Add `Account` utility type to get accounts from bytes ([#3091](https://github.com/coral-xyz/anchor/pull/3091)).
+- client: Add option to pass in mock rpc client when using anchor_client ([#3053](https://github.com/coral-xyz/anchor/pull/3053)).
+- lang: Get discriminator length dynamically ([#3101](https://github.com/coral-xyz/anchor/pull/3101)).
+- lang: Add non-8-byte discriminator support in `declare_program!` ([#3103](https://github.com/coral-xyz/anchor/pull/3103)).
+- client: Make `ThreadSafeSigner` trait public ([#3107](https://github.com/coral-xyz/anchor/pull/3107)).
+- lang: Update `dispatch` function to support dynamic discriminators ([#3104](https://github.com/coral-xyz/anchor/pull/3104)).
+- lang: Remove the fallback function shortcut in `try_entry` function ([#3109](https://github.com/coral-xyz/anchor/pull/3109)).
+- ts: Get discriminator lengths dynamically ([#3120](https://github.com/coral-xyz/anchor/pull/3120)).
+- client: Support non-8-byte discriminators ([#3125](https://github.com/coral-xyz/anchor/pull/3125)).
+- spl: Add `withdraw_withheld_tokens_from_accounts` instruction ([#3128]([https://github.com/coral-xyz/anchor/pull/3128)).
+- ts: Add optional `wallet` property to the `Provider` interface ([#3130](https://github.com/coral-xyz/anchor/pull/3130)).
+- cli: Warn if `anchor-spl/idl-build` is missing ([#3133](https://github.com/coral-xyz/anchor/pull/3133)).
+- client: Add `internal_rpc` method for `mock` feature ([#3135](https://github.com/coral-xyz/anchor/pull/3135)).
+- lang: Add `#[instruction]` attribute proc-macro to override default instruction discriminators ([#3137](https://github.com/coral-xyz/anchor/pull/3137)).
+- lang: Use associated discriminator constants instead of hardcoding in `#[account]` ([#3144](https://github.com/coral-xyz/anchor/pull/3144)).
+- lang: Add `discriminator` argument to `#[account]` attribute ([#3149](https://github.com/coral-xyz/anchor/pull/3149)).
+- lang: Add `discriminator` argument to `#[event]` attribute ([#3152](https://github.com/coral-xyz/anchor/pull/3152)).
+- idl: Check ambiguous discriminators ([#3157](https://github.com/coral-xyz/anchor/pull/3157)).
+- idl: Disallow all zero account discriminators ([#3159](https://github.com/coral-xyz/anchor/pull/3159)).
+- cli: Support non-8-byte discriminators ([#3165](https://github.com/coral-xyz/anchor/pull/3165)).
+- idl: Disallow empty discriminators ([#3166](https://github.com/coral-xyz/anchor/pull/3166)).
+- cli: Add `--no-idl` option to the `test` command ([#3175](https://github.com/coral-xyz/anchor/pull/3175)).
+- spl: Add `burn_checked`, `mint_to_checked` and `approve_checked` instructions ([#3186]([https://github.com/coral-xyz/anchor/pull/3186)).
+- cli: Migrate to `agave-install` when `solana_version` is `>= 1.18.19` ([#3185](https://github.com/coral-xyz/anchor/pull/3185)).
+- idl: Add `IdlBuilder` ([#3188](https://github.com/coral-xyz/anchor/pull/3188)).
+- cli: Make `clean` command also remove the `.anchor` directory ([#3192](https://github.com/coral-xyz/anchor/pull/3192)).
+- lang: Deprecate `#[interface]` attribute ([#3195](https://github.com/coral-xyz/anchor/pull/3195)).
 
 ### Fixes
 
@@ -23,14 +51,41 @@ The minor version will be incremented upon a breaking change and the patch versi
 - idl: Avoid interference from rust tests during IDL generation ([#3058](https://github.com/coral-xyz/anchor/pull/3058)).
 - lang: Fix `align` repr support in `declare-program!` ([#3056](https://github.com/coral-xyz/anchor/pull/3056)).
 - lang: Make stack frames slimmer on ATA creation ([#3065](https://github.com/coral-xyz/anchor/pull/3065)).
+- lang: Remove `getrandom` dependency ([#3072](https://github.com/coral-xyz/anchor/pull/3072)).
+- lang: Make `InitSpace` support unnamed & unit structs ([#3084](https://github.com/coral-xyz/anchor/pull/3084)).
+- lang: Fix using `owner` constraint with `Box`ed accounts ([#3087](https://github.com/coral-xyz/anchor/pull/3087)).
+- lang: Add a sanity check for unimplemented token extensions ([#3090](https://github.com/coral-xyz/anchor/pull/3090)).
+- cli: Skip IDL checks if `--no-idl` option is passed ([#3093](https://github.com/coral-xyz/anchor/pull/3093)).
+- lang: Remove unnecessary clone in account exit routine ([#3139](https://github.com/coral-xyz/anchor/pull/3139)).
+- cli: Fix installation with `--locked` argument using Rust v1.80 due to `time` crate issue ([#3143](https://github.com/coral-xyz/anchor/pull/3143)).
+- lang: Fix compilation warnings due to unused deprecated program id macros ([#3170](https://github.com/coral-xyz/anchor/pull/3170)).
+- ts: Remove `crypto-hash` dependency ([#3171](https://github.com/coral-xyz/anchor/pull/3171)).
+- ts: Improve error message of unsupported `view` method ([#3177](https://github.com/coral-xyz/anchor/pull/3177)).
+- idl: Fix panicking on tests ([#3197](https://github.com/coral-xyz/anchor/pull/3197)).
+- lang: Remove `arrayref` dependency ([#3201](https://github.com/coral-xyz/anchor/pull/3201)).
 
 ### Breaking
+
+- syn: Remove `bpf` target support in `hash` feature ([#3078](https://github.com/coral-xyz/anchor/pull/3078)).
+- client: Add `tokio` support to `RequestBuilder` with `async` feature ([#3057](https://github.com/coral-xyz/anchor/pull/3057)).
+- lang: Remove `EventData` trait ([#3083](https://github.com/coral-xyz/anchor/pull/3083)).
+- client: Remove `async_rpc` method ([#3053](https://github.com/coral-xyz/anchor/pull/3053)).
+- lang: Make discriminator type unsized ([#3098](https://github.com/coral-xyz/anchor/pull/3098)).
+- lang: Require `Discriminator` trait impl when using the `zero` constraint ([#3118](https://github.com/coral-xyz/anchor/pull/3118)).
+- ts: Remove `DISCRIMINATOR_SIZE` constant ([#3120](https://github.com/coral-xyz/anchor/pull/3120)).
+- lang: `#[account]` attribute arguments no longer parses identifiers as namespaces ([#3140](https://github.com/coral-xyz/anchor/pull/3140)).
+- spl: Rename metadata interface instruction fields from `token_program_id` to `program_id` ([#3076](https://github.com/coral-xyz/anchor/pull/3076)).
+- lang, ts: Remove "8 byte" requirement from discriminator error messages ([#3161](https://github.com/coral-xyz/anchor/pull/3161)).
+- lang: Remove `discriminator` method from `Discriminator` trait ([#3163](https://github.com/coral-xyz/anchor/pull/3163)).
+- docker: Upgrade `node` to 20.16.0 LTS ([#3179](https://github.com/coral-xyz/anchor/pull/3179)).
+- ts: Change the `Program` constructor's `idl` parameter type to `any` ([#3181](https://github.com/coral-xyz/anchor/pull/3181)).
+- lang, spl: Remove `borsh 0.9` support ([#3199](https://github.com/coral-xyz/anchor/pull/3199)).
 
 ## [0.30.1] - 2024-06-20
 
 ### Features
 
-- idl: Allow overriding the idl build toolchain with the `RUSTUP_TOOLCHAIN` environment variable ([#2941](https://github.com/coral-xyz/anchor/pull/2941])).
+- idl: Allow overriding the idl build toolchain with the `RUSTUP_TOOLCHAIN` environment variable ([#2941](https://github.com/coral-xyz/anchor/pull/2941)).
 - avm: Support customizing the installation location using `AVM_HOME` environment variable ([#2917](https://github.com/coral-xyz/anchor/pull/2917)).
 - avm: Optimize `avm list` when GitHub API rate limits are reached ([#2962](https://github.com/coral-xyz/anchor/pull/2962))
 - idl, ts: Add accounts resolution for associated token accounts ([#2927](https://github.com/coral-xyz/anchor/pull/2927)).
