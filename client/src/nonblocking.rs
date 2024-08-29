@@ -15,7 +15,7 @@ use tokio::sync::RwLock;
 impl<'a> EventUnsubscriber<'a> {
     /// Unsubscribe gracefully.
     pub async fn unsubscribe(self) {
-        self.unsubscribe_internal().await
+        self.unsubscribe_internal().await;
     }
 }
 
@@ -45,7 +45,7 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         let rpc_client = {
             let comm_config = cfg.options.unwrap_or_default();
             let cluster_url = cfg.cluster.url().to_string();
-            AsyncRpcClient::new_with_commitment(cluster_url.clone(), comm_config)
+            AsyncRpcClient::new_with_commitment(cluster_url, comm_config)
         };
 
         Ok(Self {
@@ -56,11 +56,6 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         })
     }
 
-    // We disable the `rpc` method for `mock` feature because otherwise we'd either have to
-    // return a new `RpcClient` instance (which is different to the one used internally)
-    // or require the user to pass another one in for blocking (since we use the non-blocking one under the hood).
-    // The former of these would be confusing and the latter would be very annoying, especially since a user
-    // using the mock feature likely already has a `RpcClient` instance at hand anyway.
     #[cfg(not(feature = "mock"))]
     pub fn rpc(&self) -> AsyncRpcClient {
         AsyncRpcClient::new_with_commitment(
@@ -69,7 +64,6 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         )
     }
 
-    /// Returns a threadsafe request builder
     pub fn request(&self) -> RequestBuilder<'_, C, Arc<dyn ThreadSafeSigner>> {
         RequestBuilder::from(
             self.program_id,
@@ -80,12 +74,10 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         )
     }
 
-    /// Returns the account at the given address.
     pub async fn account<T: AccountDeserialize>(&self, address: Pubkey) -> Result<T, ClientError> {
         self.account_internal(address).await
     }
 
-    /// Returns all program accounts of the given type matching the given filters
     pub async fn accounts<T: AccountDeserialize + Discriminator>(
         &self,
         filters: Vec<RpcFilterType>,
@@ -93,8 +85,6 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         self.accounts_lazy(filters).await?.collect()
     }
 
-    /// Returns all program accounts of the given type matching the given filters as an iterator
-    /// Deserialization is executed lazily
     pub async fn accounts_lazy<T: AccountDeserialize + Discriminator>(
         &self,
         filters: Vec<RpcFilterType>,
@@ -102,15 +92,11 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         self.accounts_lazy_internal(filters).await
     }
 
-    /// Subscribe to program logs.
-    ///
-    /// Returns an [`EventUnsubscriber`] to unsubscribe and close connection gracefully.
     pub async fn on<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
         &self,
         f: impl Fn(&EventContext, T) + Send + 'static,
     ) -> Result<EventUnsubscriber, ClientError> {
         let (handle, rx) = self.on_internal(f).await?;
-
         Ok(EventUnsubscriber {
             handle,
             rx,
