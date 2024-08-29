@@ -304,9 +304,16 @@ pub trait Event: AnchorSerialize + AnchorDeserialize + Discriminator {
 /// This is not a trait you should derive manually, as various Anchor macros already derive it
 /// internally.
 ///
-/// Prior to Anchor v0.31, discriminators were always 8 bytes of pre-determined data. Starting with
-/// Anchor v0.31, discriminator length is no longer fixed size, which means this trait can also be
-/// used for non-Anchor programs.
+/// Prior to Anchor v0.31, discriminators were always 8 bytes in size. However, starting with Anchor
+/// v0.31, it is possible to override the default discriminators, and discriminator length is no
+/// longer fixed, which means this trait can also be implemented for non-Anchor programs.
+///
+/// It's important that the discriminator is always unique for the type you're implementing it
+/// for. While the discriminator can be at any length (including zero), the IDL generation does not
+/// currently allow empty discriminators for safety and convenience reasons. However, the trait
+/// definition still allows empty discriminators because some non-Anchor programs, e.g. the SPL
+/// Token program, don't have account discriminators. In that case, safety checks should never
+/// depend on the discriminator.
 pub trait Discriminator {
     /// Discriminator slice.
     ///
