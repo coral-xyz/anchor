@@ -5,6 +5,9 @@ declare_id!("Dec1areProgram11111111111111111111111111111");
 declare_program!(external);
 use external::program::External;
 
+// Compilation check for legacy IDL (pre Anchor `0.30`)
+declare_program!(external_legacy);
+
 #[program]
 pub mod declare_program {
     use super::*;
@@ -45,6 +48,30 @@ pub mod declare_program {
 
         cpi_my_account.reload()?;
         require_eq!(cpi_my_account.field, value);
+
+        Ok(())
+    }
+
+    pub fn account_utils(_ctx: Context<Utils>) -> Result<()> {
+        use external::utils::Account;
+
+        // Empty
+        if Account::try_from_bytes(&[]).is_ok() {
+            return Err(ProgramError::Custom(0).into());
+        }
+
+        const DISC: &[u8] = &external::accounts::MyAccount::DISCRIMINATOR;
+
+        // Correct discriminator but invalid data
+        if Account::try_from_bytes(DISC).is_ok() {
+            return Err(ProgramError::Custom(1).into());
+        };
+
+        // Correct discriminator and valid data
+        match Account::try_from_bytes(&[DISC, &[1, 0, 0, 0]].concat()) {
+            Ok(Account::MyAccount(my_account)) => require_eq!(my_account.field, 1),
+            Err(e) => return Err(e.into()),
+        }
 
         Ok(())
     }

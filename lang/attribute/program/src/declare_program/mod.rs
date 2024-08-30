@@ -1,7 +1,7 @@
 mod common;
 mod mods;
 
-use anchor_lang_idl::types::Idl;
+use anchor_lang_idl::{convert::convert_idl, types::Idl};
 use anyhow::anyhow;
 use quote::{quote, ToTokens};
 use syn::parse::{Parse, ParseStream};
@@ -35,19 +35,17 @@ impl ToTokens for DeclareProgram {
 
 fn get_idl(name: &syn::Ident) -> anyhow::Result<Idl> {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("Failed to get manifest dir");
-    let path = std::path::Path::new(&manifest_dir)
+    std::path::Path::new(&manifest_dir)
         .ancestors()
         .find_map(|ancestor| {
             let idl_dir = ancestor.join("idls");
-            std::fs::metadata(&idl_dir).map(|_| idl_dir).ok()
+            idl_dir.exists().then_some(idl_dir)
         })
         .ok_or_else(|| anyhow!("`idls` directory not found"))
-        .map(|idl_dir| idl_dir.join(name.to_string()).with_extension("json"))?;
-
-    std::fs::read(path)
-        .map_err(|e| anyhow!("Failed to read IDL: {e}"))
-        .map(|idl| serde_json::from_slice(&idl))?
-        .map_err(|e| anyhow!("Failed to parse IDL: {e}"))
+        .map(|idl_dir| idl_dir.join(name.to_string()).with_extension("json"))
+        .map(std::fs::read)?
+        .map_err(|e| anyhow!("Failed to read IDL `{name}`: {e}"))
+        .map(|buf| convert_idl(&buf))?
 }
 
 fn gen_program(idl: &Idl, name: &syn::Ident) -> proc_macro2::TokenStream {
@@ -73,6 +71,9 @@ fn gen_program(idl: &Idl, name: &syn::Ident) -> proc_macro2::TokenStream {
         #docs
         pub mod #name {
             use anchor_lang::prelude::*;
+            use accounts::*;
+            use events::*;
+            use types::*;
 
             #id
             #program_mod
@@ -113,8 +114,12 @@ fn gen_id(idl: &Idl) -> proc_macro2::TokenStream {
         #[doc = #doc]
         pub static ID: Pubkey = __ID;
 
+        /// Const version of `ID`
+        pub const ID_CONST: Pubkey = __ID_CONST;
+
         /// The name is intentionally prefixed with `__` in order to reduce to possibility of name
         /// clashes with the crate's `ID`.
         static __ID: Pubkey = Pubkey::new_from_array([#(#address_bytes,)*]);
+        const __ID_CONST : Pubkey = Pubkey::new_from_array([#(#address_bytes,)*]);
     }
 }

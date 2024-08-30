@@ -61,7 +61,7 @@ describe("typescript", () => {
       program.programId
     )[0];
 
-    const tx = program.methods.initMyAccount(seedA).accounts({
+    const tx = program.methods.initMyAccount(seedA).accountsPartial({
       base: base.publicKey,
       base2: base.publicKey,
       anotherBase: another.publicKey,
@@ -94,7 +94,7 @@ describe("typescript", () => {
     );
     await customProgram.methods
       .initMyAccount(seedA)
-      .accounts({
+      .accountsPartial({
         base: base.publicKey,
         base2: base.publicKey,
         anotherBase: another.publicKey,
@@ -104,6 +104,10 @@ describe("typescript", () => {
     expect(called).is.true;
   });
 
+  it("Can use constant seed ref", async () => {
+    await program.methods.testSeedConstant().rpc();
+  });
+
   it("Can resolve associated token accounts", async () => {
     const mintKp = anchor.web3.Keypair.generate();
     await program.methods
@@ -111,5 +115,23 @@ describe("typescript", () => {
       .accounts({ mint: mintKp.publicKey })
       .signers([mintKp])
       .rpc();
+  });
+
+  // TODO: Support more expressions in the IDL e.g. math operations?
+  it("Can use unsupported expressions", () => {
+    // Compilation test to fix issues like https://github.com/coral-xyz/anchor/issues/2933
+  });
+
+  it("Includes the unresolved accounts if resolution fails", async () => {
+    try {
+      // `unknown` account is required for account resolution to work, but it's
+      // intentionally not provided to test the error message
+      await program.methods.resolutionError().rpc();
+      throw new Error("Should throw due to account resolution failure!");
+    } catch (e) {
+      expect(e.message).to.equal(
+        "Reached maximum depth for account resolution. Unresolved accounts: `pda`, `anotherPda`"
+      );
+    }
   });
 });

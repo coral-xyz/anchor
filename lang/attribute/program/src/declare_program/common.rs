@@ -2,6 +2,7 @@ use anchor_lang_idl::types::{
     Idl, IdlArrayLen, IdlDefinedFields, IdlField, IdlGenericArg, IdlRepr, IdlSerialization,
     IdlType, IdlTypeDef, IdlTypeDefGeneric, IdlTypeDefTy,
 };
+use proc_macro2::Literal;
 use quote::{format_ident, quote};
 
 /// This function should ideally return the absolute path to the declared program's id but because
@@ -59,7 +60,7 @@ pub fn convert_idl_type_to_str(ty: &IdlType) -> String {
         IdlType::I128 => "i128".into(),
         IdlType::U256 => "u256".into(),
         IdlType::I256 => "i256".into(),
-        IdlType::Bytes => "bytes".into(),
+        IdlType::Bytes => "Vec<u8>".into(),
         IdlType::String => "String".into(),
         IdlType::Pubkey => "Pubkey".into(),
         IdlType::Option(ty) => format!("Option<{}>", convert_idl_type_to_str(ty)),
@@ -104,8 +105,15 @@ pub fn convert_idl_type_def_to_ts(
             .generics
             .iter()
             .map(|generic| match generic {
-                IdlTypeDefGeneric::Type { name } => format_ident!("{name}"),
-                IdlTypeDefGeneric::Const { name, ty } => format_ident!("{name}: {ty}"),
+                IdlTypeDefGeneric::Type { name } => {
+                    let name = format_ident!("{}", name);
+                    quote! { #name }
+                }
+                IdlTypeDefGeneric::Const { name, ty } => {
+                    let name = format_ident!("{}", name);
+                    let ty = format_ident!("{}", ty);
+                    quote! { const #name: #ty }
+                }
             })
             .collect::<Vec<_>>();
         if generics.is_empty() {
@@ -161,6 +169,7 @@ pub fn convert_idl_type_def_to_ts(
                 let packed = modifier.packed.then(|| quote!(packed)).unwrap_or_default();
                 let align = modifier
                     .align
+                    .map(Literal::usize_unsuffixed)
                     .map(|align| quote!(align(#align)))
                     .unwrap_or_default();
 
@@ -204,7 +213,11 @@ pub fn convert_idl_type_def_to_ts(
                     }
                 },
                 |tys| {
-                    let tys = tys.iter().map(convert_idl_type_to_syn_type);
+                    let tys = tys
+                        .iter()
+                        .map(convert_idl_type_to_syn_type)
+                        .map(|ty| quote! { pub #ty });
+
                     quote! {
                         #declare_struct (#(#tys,)*);
                     }

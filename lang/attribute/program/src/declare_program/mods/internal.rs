@@ -46,15 +46,11 @@ fn gen_internal_args_mod(idl: &Idl) -> proc_macro2::TokenStream {
             }
         };
 
-        let impl_discriminator = if ix.discriminator.len() == 8 {
-            let discriminator = gen_discriminator(&ix.discriminator);
-            quote! {
-                impl anchor_lang::Discriminator for #ix_struct_name {
-                    const DISCRIMINATOR: [u8; 8] = #discriminator;
-                }
+        let discriminator = gen_discriminator(&ix.discriminator);
+        let impl_discriminator = quote! {
+            impl anchor_lang::Discriminator for #ix_struct_name {
+                const DISCRIMINATOR: &'static [u8] = &#discriminator;
             }
-        } else {
-            quote! {}
         };
 
         let impl_ix_data = quote! {
@@ -107,7 +103,7 @@ fn gen_internal_accounts(idl: &Idl) -> proc_macro2::TokenStream {
 
 fn gen_internal_accounts_common(
     idl: &Idl,
-    gen_accounts: impl Fn(&AccountsStruct) -> proc_macro2::TokenStream,
+    gen_accounts: impl Fn(&AccountsStruct, proc_macro2::TokenStream) -> proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
     let accounts = idl
         .instructions
@@ -171,7 +167,7 @@ fn gen_internal_accounts_common(
             let accs_struct = syn::parse2(accs_struct).expect("Failed to parse as syn::ItemStruct");
             let accs_struct =
                 accounts::parse(&accs_struct).expect("Failed to parse accounts struct");
-            gen_accounts(&accs_struct)
+            gen_accounts(&accs_struct, get_canonical_program_id())
         });
 
     quote! { #(#accounts)* }

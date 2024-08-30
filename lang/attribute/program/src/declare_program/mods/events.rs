@@ -29,7 +29,7 @@ pub fn gen_events_mod(idl: &Idl) -> proc_macro2::TokenStream {
             }
 
             impl anchor_lang::Discriminator for #name {
-                const DISCRIMINATOR: [u8; 8] = #discriminator;
+                const DISCRIMINATOR: &'static [u8] = &#discriminator;
             }
         }
     });
@@ -37,7 +37,7 @@ pub fn gen_events_mod(idl: &Idl) -> proc_macro2::TokenStream {
     quote! {
         /// Program event type definitions.
         pub mod events {
-            use super::{*, types::*};
+            use super::*;
 
             #(#events)*
         }

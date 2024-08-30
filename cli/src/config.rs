@@ -1,4 +1,4 @@
-use crate::is_hidden;
+use crate::{get_keypair, is_hidden, keys_sync};
 use anchor_client::Cluster;
 use anchor_lang_idl::types::Idl;
 use anyhow::{anyhow, bail, Context, Error, Result};
@@ -512,7 +512,16 @@ impl Config {
                     .path();
                 if let Some(filename) = p.file_name() {
                     if filename.to_str() == Some("Anchor.toml") {
-                        let cfg = Config::from_path(&p)?;
+                        // Make sure the program id is correct (only on the initial build)
+                        let mut cfg = Config::from_path(&p)?;
+                        let deploy_dir = p.parent().unwrap().join("target").join("deploy");
+                        if !deploy_dir.exists() && !cfg.programs.contains_key(&Cluster::Localnet) {
+                            println!("Updating program ids...");
+                            fs::create_dir_all(deploy_dir)?;
+                            keys_sync(&ConfigOverride::default(), None)?;
+                            cfg = Config::from_path(&p)?;
+                        }
+
                         return Ok(Some(WithPath::new(cfg, p)));
                     }
                 }
@@ -531,8 +540,7 @@ impl Config {
     }
 
     pub fn wallet_kp(&self) -> Result<Keypair> {
-        solana_sdk::signature::read_keypair_file(&self.provider.wallet.to_string())
-            .map_err(|_| anyhow!("Unable to read keypair file"))
+        get_keypair(&self.provider.wallet.to_string())
     }
 }
 
@@ -602,8 +610,8 @@ where
     deserializer.deserialize_any(StringOrCustomCluster(PhantomData))
 }
 
-impl ToString for Config {
-    fn to_string(&self) -> String {
+impl fmt::Display for Config {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let programs = {
             let c = ser_programs(&self.programs);
             if c.is_empty() {
@@ -630,7 +638,8 @@ impl ToString for Config {
                 .then(|| self.workspace.clone()),
         };
 
-        toml::to_string(&cfg).expect("Must be well formed")
+        let cfg = toml::to_string(&cfg).expect("Must be well formed");
+        write!(f, "{}", cfg)
     }
 }
 
@@ -823,6 +832,8 @@ pub struct _TestToml {
 }
 
 impl _TestToml {
+    // TODO: Remove if/when false positive gets fixed
+    #[allow(clippy::needless_borrows_for_generic_args)]
     fn from_path(path: impl AsRef<Path>) -> Result<Self, Error> {
         let s = fs::read_to_string(&path)?;
         let parsed_toml: Self = toml::from_str(&s)?;
@@ -1265,8 +1276,7 @@ impl Program {
 
     pub fn keypair(&self) -> Result<Keypair> {
         let file = self.keypair_file()?;
-        solana_sdk::signature::read_keypair_file(file.path())
-            .map_err(|_| anyhow!("failed to read keypair for program: {}", self.lib_name))
+        get_keypair(file.path().to_str().unwrap())
     }
 
     // Lazily initializes the keypair file with a new key if it doesn't exist.
@@ -1397,9 +1407,9 @@ macro_rules! home_path {
             }
         }
 
-        impl ToString for $my_struct {
-            fn to_string(&self) -> String {
-                self.0.clone()
+        impl fmt::Display for $my_struct {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "{}", self.0)
             }
         }
     };

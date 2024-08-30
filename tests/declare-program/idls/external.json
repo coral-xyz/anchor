@@ -45,6 +45,56 @@
       "args": []
     },
     {
+      "name": "test_compilation_defined_type_param",
+      "discriminator": [
+        61,
+        118,
+        87,
+        242,
+        137,
+        97,
+        90,
+        223
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "_my_account",
+          "type": {
+            "defined": {
+              "name": "MyAccount"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "test_compilation_return_type",
+      "discriminator": [
+        174,
+        51,
+        51,
+        121,
+        52,
+        61,
+        38,
+        28
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "signer": true
+        }
+      ],
+      "args": [],
+      "returns": "bool"
+    },
+    {
       "name": "update",
       "discriminator": [
         219,

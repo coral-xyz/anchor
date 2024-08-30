@@ -12,6 +12,7 @@ use anchor_spl::{
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 pub const MY_SEED: [u8; 2] = *b"hi";
+pub const MY_SEED_BYTES: &[u8] = b"hi";
 pub const MY_SEED_STR: &str = "hi";
 pub const MY_SEED_U8: u8 = 1;
 pub const MY_SEED_U32: u32 = 2;
@@ -39,7 +40,19 @@ pub mod pda_derivation {
         Ok(())
     }
 
+    pub fn test_seed_constant(_ctx: Context<TestSeedConstant>) -> Result<()> {
+        Ok(())
+    }
+
     pub fn associated_token_resolution(_ctx: Context<AssociatedTokenResolution>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn seed_math_expr(_ctx: Context<SeedMathExpr>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn resolution_error(_ctx: Context<ResolutionError>) -> Result<()> {
         Ok(())
     }
 }
@@ -124,6 +137,21 @@ pub struct Nested<'info> {
 }
 
 #[derive(Accounts)]
+pub struct TestSeedConstant<'info> {
+    #[account(mut)]
+    my_account: Signer<'info>,
+    #[account(
+      init,
+      payer = my_account,
+      seeds = [MY_SEED_BYTES],
+      space = 100,
+      bump,
+    )]
+    account: Account<'info, MyAccount>,
+    system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
 pub struct AssociatedTokenResolution<'info> {
     #[account(
         init,
@@ -144,6 +172,23 @@ pub struct AssociatedTokenResolution<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
+}
+
+#[derive(Accounts)]
+pub struct SeedMathExpr<'info> {
+    #[account(seeds = [b"const"], bump)]
+    pub my_account: Account<'info, MyAccount>,
+    #[account(seeds = [&(my_account.data + 1).to_le_bytes()], bump)]
+    pub math_expr_account: UncheckedAccount<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ResolutionError<'info> {
+    pub unknown: UncheckedAccount<'info>,
+    #[account(seeds = [unknown.key.as_ref()], bump)]
+    pub pda: UncheckedAccount<'info>,
+    #[account(seeds = [pda.key.as_ref()], bump)]
+    pub another_pda: UncheckedAccount<'info>,
 }
 
 #[account]

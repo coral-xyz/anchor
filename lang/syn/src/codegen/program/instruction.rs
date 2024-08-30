@@ -21,15 +21,21 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         .unwrap()
                 })
                 .collect();
-            let ix_data_trait = {
-                let sighash_arr = ix
-                    .interface_discriminator
-                    .unwrap_or(sighash(SIGHASH_GLOBAL_NAMESPACE, name));
-                let sighash_tts: proc_macro2::TokenStream =
-                    format!("{sighash_arr:?}").parse().unwrap();
+            let impls = {
+                let discriminator = match ix.overrides.as_ref() {
+                    Some(overrides) if overrides.discriminator.is_some() => {
+                        overrides.discriminator.as_ref().unwrap().to_owned()
+                    }
+                    // TODO: Remove `interface_discriminator`
+                    _ => match &ix.interface_discriminator {
+                        Some(disc) => format!("&{disc:?}").parse().unwrap(),
+                        _ => gen_discriminator(SIGHASH_GLOBAL_NAMESPACE, name),
+                    },
+                };
+
                 quote! {
                     impl anchor_lang::Discriminator for #ix_name_camel {
-                        const DISCRIMINATOR: [u8; 8] = #sighash_tts;
+                        const DISCRIMINATOR: &'static [u8] = #discriminator;
                     }
                     impl anchor_lang::InstructionData for #ix_name_camel {}
                     impl anchor_lang::Owner for #ix_name_camel {
@@ -46,7 +52,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     #[derive(AnchorSerialize, AnchorDeserialize)]
                     pub struct #ix_name_camel;
 
-                    #ix_data_trait
+                    #impls
                 }
             } else {
                 quote! {
@@ -56,7 +62,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                         #(#raw_args),*
                     }
 
-                    #ix_data_trait
+                    #impls
                 }
             }
         })
@@ -71,7 +77,6 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
         /// instructions on a client.
         pub mod instruction {
             use super::*;
-
 
             #(#variants)*
         }
