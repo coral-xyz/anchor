@@ -19,7 +19,7 @@ pub mod relations_derivation {
         Ok(())
     }
 
-    pub fn test_address_relation(_ctx: Context<TestAddressRelation>) -> Result<()> {
+    pub fn test_address(_ctx: Context<TestAddress>) -> Result<()> {
         Ok(())
     }
 }
@@ -66,7 +66,7 @@ pub struct TestRelation<'info> {
 }
 
 #[derive(Accounts)]
-pub struct TestAddressRelation<'info> {
+pub struct TestAddress<'info> {
     // Included wit the `address` field in IDL
     // It's actually `static` but it doesn't matter for our purposes
     #[account(address = crate::ID)]
