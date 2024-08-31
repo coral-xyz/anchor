@@ -42,7 +42,7 @@ describe("typescript", () => {
   });
 
   it("Can use relations derivation with `address` constraint", () => {
-    // Only compile test for now since the IDL spec doesn't currently support field access
-    // expressions for the `address` constraint
+    // Only compile test for now since the IDL spec doesn't currently support
+    // non-const expressions with the `address` constraint
   });
 });
