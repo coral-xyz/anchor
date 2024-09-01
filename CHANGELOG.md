@@ -12,6 +12,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Features
 
+- ts: Add optional `options.blockhash` to `Provider.sendAndConfirm` ([#3070](https://github.com/coral-xyz/anchor/pull/3070)).
 - ts: Add optional `commitment` parameter to `Program.addEventListener` ([#3052](https://github.com/coral-xyz/anchor/pull/3052)).
 - cli, idl: Pass `cargo` args to IDL generation when building program or IDL ([#3059](https://github.com/coral-xyz/anchor/pull/3059)).
 - cli: Add checks for incorrect usage of `idl-build` feature ([#3061](https://github.com/coral-xyz/anchor/pull/3061)).
@@ -41,6 +42,9 @@ The minor version will be incremented upon a breaking change and the patch versi
 - spl: Add `burn_checked`, `mint_to_checked` and `approve_checked` instructions ([#3186]([https://github.com/coral-xyz/anchor/pull/3186)).
 - cli: Migrate to `agave-install` when `solana_version` is `>= 1.18.19` ([#3185](https://github.com/coral-xyz/anchor/pull/3185)).
 - idl: Add `IdlBuilder` ([#3188](https://github.com/coral-xyz/anchor/pull/3188)).
+- cli: Make `clean` command also remove the `.anchor` directory ([#3192](https://github.com/coral-xyz/anchor/pull/3192)).
+- lang: Deprecate `#[interface]` attribute ([#3195](https://github.com/coral-xyz/anchor/pull/3195)).
+- ts: Include unresolved accounts in the resolution error message ([#3207](https://github.com/coral-xyz/anchor/pull/3207)).
 
 ### Fixes
 
@@ -58,6 +62,10 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Fix compilation warnings due to unused deprecated program id macros ([#3170](https://github.com/coral-xyz/anchor/pull/3170)).
 - ts: Remove `crypto-hash` dependency ([#3171](https://github.com/coral-xyz/anchor/pull/3171)).
 - ts: Improve error message of unsupported `view` method ([#3177](https://github.com/coral-xyz/anchor/pull/3177)).
+- idl: Fix panicking on tests ([#3197](https://github.com/coral-xyz/anchor/pull/3197)).
+- lang: Remove `arrayref` dependency ([#3201](https://github.com/coral-xyz/anchor/pull/3201)).
+- cli: Fix template code shouldn't escape ([#3210](https://github.com/coral-xyz/anchor/pull/3210)).
+- idl: Fix using `address` constraint with non-const expressions ([#3216](https://github.com/coral-xyz/anchor/pull/3216)).
 
 ### Breaking
 
@@ -74,6 +82,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Remove `discriminator` method from `Discriminator` trait ([#3163](https://github.com/coral-xyz/anchor/pull/3163)).
 - docker: Upgrade `node` to 20.16.0 LTS ([#3179](https://github.com/coral-xyz/anchor/pull/3179)).
 - ts: Change the `Program` constructor's `idl` parameter type to `any` ([#3181](https://github.com/coral-xyz/anchor/pull/3181)).
+- lang, spl: Remove `borsh 0.9` support ([#3199](https://github.com/coral-xyz/anchor/pull/3199)).
 
 ## [0.30.1] - 2024-06-20
 
