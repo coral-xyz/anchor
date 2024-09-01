@@ -198,5 +198,4 @@ Let's dive in.
 
 ## Other Resources
 
-- [SolDev](https://soldev.app)
 - [Solana Cookbook](https://solanacookbook.com/)
