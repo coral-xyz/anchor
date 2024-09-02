@@ -9,9 +9,6 @@ on:
       solana_cli_version:
         required: true
         type: string
-      solang_version:
-        required: true
-        type: string
       node_version:
         required: true
         type: string
@@ -24,7 +21,6 @@ on:
 env:
   CACHE: inputs.cache
   SOLANA_CLI_VERSION: ${{ inputs.solana_cli_version }}
-  SOLANG_VERSION: ${{ inputs.solang_version }}
   NODE_VERSION: ${{ inputs.node_version }}
   CARGO_PROFILE: ${{ inputs.cargo_profile }}
   ANCHOR_BINARY_NAME: ${{ inputs.anchor_binary_name }}
