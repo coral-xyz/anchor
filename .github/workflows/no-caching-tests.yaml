@@ -11,7 +11,7 @@ jobs:
     uses: ./.github/workflows/reusable-tests.yaml
     with:
       cache: false
-      solana_cli_version: 1.18.17
+      solana_cli_version: 2.0.8
       solang_version: 0.3.2
       node_version: 20.16.0
       cargo_profile: release
