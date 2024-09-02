@@ -198,4 +198,5 @@ Let's dive in.
 
 ## Other Resources
 
+- [Solana Playground](https://beta.solpg.io)
 - [Solana Cookbook](https://solanacookbook.com/)
