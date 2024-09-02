@@ -19,7 +19,7 @@ runs:
         max_attempts: 10
         retry_on: error
         shell: bash
-        command: sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_CLI_VERSION }}/install)"
+        command: sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_CLI_VERSION }}/install)"
     - run: echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
       shell: bash
     - run: solana-keygen new --no-bip39-passphrase
