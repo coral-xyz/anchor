@@ -620,7 +620,7 @@ impl TestTemplate {
                 if js {
                     "yarn run mocha -t 1000000 tests/"
                 } else {
-                    "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+                    "yarn run ts-mocha -p ./tsconfig.json -t 1000000 'tests/**/*.ts'"
                 }
             }
             Self::Jest => {
