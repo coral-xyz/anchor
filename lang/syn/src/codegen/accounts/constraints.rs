@@ -562,7 +562,7 @@ fn generate_constraint_init_group(
                 // Define the bump and pda variable.
                 #find_pda
 
-                let #field: #ty_decl = (|| {
+                let #field: #ty_decl = ({ #[inline(never)] || {
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
@@ -597,7 +597,7 @@ fn generate_constraint_init_group(
                         }
                     }
                     Ok(pa)
-                })()?;
+                }})()?;
             }
         }
         InitKind::AssociatedToken {
@@ -633,7 +633,7 @@ fn generate_constraint_init_group(
                 // Define the bump and pda variable.
                 #find_pda
 
-                let #field: #ty_decl = (|| {
+                let #field: #ty_decl = ({ #[inline(never)] || {
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
@@ -672,7 +672,7 @@ fn generate_constraint_init_group(
                         }
                     }
                     Ok(pa)
-                })()?;
+                }})()?;
             }
         }
         InitKind::Mint {
@@ -888,7 +888,7 @@ fn generate_constraint_init_group(
                 // Define the bump and pda variable.
                 #find_pda
 
-                let #field: #ty_decl = (|| {
+                let #field: #ty_decl = ({ #[inline(never)] || {
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
@@ -981,7 +981,7 @@ fn generate_constraint_init_group(
                         }
                     }
                     Ok(pa)
-                })()?;
+                }})()?;
             }
         }
         InitKind::Program { owner } | InitKind::Interface { owner } => {
@@ -1033,7 +1033,7 @@ fn generate_constraint_init_group(
                 // Define the bump variable.
                 #find_pda
 
-                let #field = (|| {
+                let #field = ({ #[inline(never)] || {
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
@@ -1079,7 +1079,7 @@ fn generate_constraint_init_group(
 
                     // Done.
                     Ok(pa)
-                })()?;
+                }})()?;
             }
         }
     }
