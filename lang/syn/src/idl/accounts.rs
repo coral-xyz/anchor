@@ -59,6 +59,7 @@ pub fn gen_idl_build_impl_accounts_struct(accounts: &AccountsStruct) -> TokenStr
                     {
                         Some(&ty.account_type_path)
                     }
+                    Ty::LazyAccount(ty) => Some(&ty.account_type_path),
                     Ty::AccountLoader(ty) => Some(&ty.account_type_path),
                     Ty::InterfaceAccount(ty) => Some(&ty.account_type_path),
                     _ => None,
@@ -143,25 +144,37 @@ pub fn gen_idl_build_impl_accounts_struct(accounts: &AccountsStruct) -> TokenStr
 
 fn get_address(acc: &Field) -> TokenStream {
     match &acc.ty {
-        Ty::Program(ty) => ty
-            .account_type_path
-            .path
-            .segments
-            .last()
-            .map(|seg| &seg.ident)
-            .map(|ident| quote! { Some(#ident::id().to_string()) })
-            .unwrap_or_else(|| quote! { None }),
-        Ty::Sysvar(_) => {
+        Ty::Program(_) | Ty::Sysvar(_) => {
             let ty = acc.account_ty();
-            let sysvar_id_trait = quote!(anchor_lang::solana_program::sysvar::SysvarId);
-            quote! { Some(<#ty as #sysvar_id_trait>::id().to_string()) }
+            let id_trait = matches!(acc.ty, Ty::Program(_))
+                .then(|| quote!(anchor_lang::Id))
+                .unwrap_or_else(|| quote!(anchor_lang::solana_program::sysvar::SysvarId));
+            quote! { Some(<#ty as #id_trait>::id().to_string()) }
         }
         _ => acc
             .constraints
             .address
             .as_ref()
             .map(|constraint| &constraint.address)
-            .filter(|address| !matches!(address, syn::Expr::Field(_)))
+            .filter(|address| {
+                match address {
+                    // Allow constants (assume the identifier follows the Rust naming convention)
+                    // e.g. `crate::ID`
+                    syn::Expr::Path(expr) => expr
+                        .path
+                        .segments
+                        .last()
+                        .unwrap()
+                        .ident
+                        .to_string()
+                        .chars()
+                        .all(|c| c.is_uppercase() || c == '_'),
+                    // Allow `const fn`s (assume any stand-alone function call without an argument)
+                    // e.g. `crate::id()`
+                    syn::Expr::Call(expr) => expr.args.is_empty(),
+                    _ => false,
+                }
+            })
             .map(|address| quote! { Some(#address.to_string()) })
             .unwrap_or_else(|| quote! { None }),
     }
