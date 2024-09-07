@@ -22,6 +22,8 @@ Solana version: 1.18.17
 
 ### Notable changes
 
+- lang: Use closures for `init` constraints to reduce the stack usage of `try_accounts`. Note that the binary size increase is exaggerated for the bench program because it uses unusual number of `init` constraints. Impact for normal programs will be a lot less severe. ([#2939](https://github.com/coral-xyz/anchor/pull/2939)).
+
 ---
 
 ## [0.30.1]
