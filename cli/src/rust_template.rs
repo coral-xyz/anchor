@@ -305,7 +305,7 @@ pub fn ts_deploy_script() -> &'static str {
 
 import * as anchor from "@coral-xyz/anchor";
 
-module.exports = async function (provider: anchor.Provider) {
+module.exports = async function (provider: anchor.AnchorProvider) {
   // Configure client to use the provider.
   anchor.setProvider(provider);
 
