@@ -10,6 +10,7 @@ use std::fs;
 use std::io::{BufRead, Write};
 use std::path::PathBuf;
 use std::process::Stdio;
+use std::collections::HashSet;
 
 /// Storage directory for AVM, customizable by setting the $AVM_HOME, defaults to ~/.avm
 pub static AVM_HOME: Lazy<PathBuf> = Lazy::new(|| {
@@ -289,36 +290,42 @@ pub fn fetch_versions() -> Result<Vec<Version>, Error> {
 /// Print available versions and flags indicating installed, current and latest
 pub fn list_versions() -> Result<()> {
     let mut installed_versions = read_installed_versions()?;
-
     let mut available_versions = fetch_versions()?;
     // Reverse version list so latest versions are printed last
     available_versions.reverse();
 
-    let print_versions =
-        |versions: Vec<Version>, installed_versions: &mut Vec<Version>, show_latest: bool| {
-            versions.iter().enumerate().for_each(|(i, v)| {
-                print!("{v}");
-                let mut flags = vec![];
-                if i == versions.len() - 1 && show_latest {
-                    flags.push("latest");
-                }
-                if let Some(position) = installed_versions.iter().position(|iv| iv == v) {
-                    flags.push("installed");
-                    installed_versions.remove(position);
-                }
-                if current_version().map(|cv| &cv == v).unwrap_or_default() {
-                    flags.push("current");
-                }
+    let installed_set: HashSet<_> = installed_versions.iter().cloned().collect();
 
-                if flags.is_empty() {
-                    println!();
-                } else {
-                    println!("\t({})", flags.join(", "));
-                }
-            })
-        };
-    print_versions(available_versions, &mut installed_versions, true);
-    print_versions(installed_versions.clone(), &mut installed_versions, false);
+    // Print helper function
+    let print_version_info = |v: &Version, flags: &[&str]| {
+        print!("{v}");
+        if !flags.is_empty() {
+            println!("\t({})", flags.join(", "));
+        } else {
+            println!();
+        }
+    };
+
+    // Print available versions with flags
+    let print_available_versions = |versions: Vec<Version>, show_latest: bool| {
+        for (i, v) in versions.iter().enumerate() {
+            let mut flags = vec![];
+            if i == versions.len() - 1 && show_latest {
+                flags.push("latest");
+            }
+            if installed_set.contains(v) {
+                flags.push("installed");
+                installed_versions.retain(|iv| iv != v);
+            }
+            if current_version().map_or(false, |cv| cv == *v) {
+                flags.push("current");
+            }
+            print_version_info(v, &flags);
+        }
+    };
+
+    print_available_versions(&available_versions, true);
+    print_available_versions(&installed_versions, false);
 
     Ok(())
 }
