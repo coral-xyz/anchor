@@ -46,6 +46,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Deprecate `#[interface]` attribute ([#3195](https://github.com/coral-xyz/anchor/pull/3195)).
 - ts: Include unresolved accounts in the resolution error message ([#3207](https://github.com/coral-xyz/anchor/pull/3207)).
 - lang: Add `LazyAccount` ([#3194](https://github.com/coral-xyz/anchor/pull/3194)).
+- avm: Ask whether to install if the version is not installed with the `use` command ([#3230](https://github.com/coral-xyz/anchor/pull/3230)).
 
 ### Fixes
 
@@ -67,6 +68,8 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Remove `arrayref` dependency ([#3201](https://github.com/coral-xyz/anchor/pull/3201)).
 - cli: Fix template code shouldn't escape ([#3210](https://github.com/coral-xyz/anchor/pull/3210)).
 - idl: Fix using `address` constraint with non-const expressions ([#3216](https://github.com/coral-xyz/anchor/pull/3216)).
+- idl: Fix using full path types with `Program` ([#3228](https://github.com/coral-xyz/anchor/pull/3228)).
+- lang: Use closures for `init` constraints to reduce the stack usage of `try_accounts` ([#2939](https://github.com/coral-xyz/anchor/pull/2939)).
 
 ### Breaking
 
@@ -84,6 +87,10 @@ The minor version will be incremented upon a breaking change and the patch versi
 - docker: Upgrade `node` to 20.16.0 LTS ([#3179](https://github.com/coral-xyz/anchor/pull/3179)).
 - ts: Change the `Program` constructor's `idl` parameter type to `any` ([#3181](https://github.com/coral-xyz/anchor/pull/3181)).
 - lang, spl: Remove `borsh 0.9` support ([#3199](https://github.com/coral-xyz/anchor/pull/3199)).
+- ts: Upgrade `typescript` to `5.5.4` and remove the generic parameters of `SimulateResponse` ([#3221](https://github.com/coral-xyz/anchor/pull/3221)).
+- ts: Remove `StateCoder`([#3224](https://github.com/coral-xyz/anchor/pull/3224)).
+- cli: Accept integers for `warp_slot` ([#3235](https://github.com/coral-xyz/anchor/pull/3235)).
+- lang: Remove `EventIndex` ([#3244](https://github.com/coral-xyz/anchor/pull/3244)).
 
 ## [0.30.1] - 2024-06-20
 
