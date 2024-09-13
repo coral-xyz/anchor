@@ -10,7 +10,7 @@ use {
         },
     },
     anchor_spl::{
-        associated_token::{spl_associated_token_accoun, AssociatedToken},
+        associated_token::{spl_associated_token_account, AssociatedToken},
         metadata::mpl_token_metadata,
         token::{
             spl_token::{
