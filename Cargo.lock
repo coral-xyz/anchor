@@ -2546,14 +2546,14 @@ dependencies = [
 
 [[package]]
 name = "mpl-token-metadata"
-version = "4.1.2"
+version = "5.0.0-beta.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "caf0f61b553e424a6234af1268456972ee66c2222e1da89079242251fa7479e5"
+checksum = "b89cc55341b83e3331244447b3fa6d8711a386457799e9529c3423f9a9981a37"
 dependencies = [
  "borsh 0.10.3",
  "num-derive 0.3.3",
  "num-traits",
- "solana-program 1.18.17",
+ "solana-program 2.0.8",
  "thiserror",
 ]
 
