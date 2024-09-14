@@ -20,5 +20,5 @@ anchor-lang = { path = "../../../../../lang", features = ["init-if-needed"] }
 anchor-spl = { path = "../../../../../spl" }
 spl-tlv-account-resolution = "0.8.0"
 spl-transfer-hook-interface = "0.8.1"
-spl-type-length-value = "0.5"
+spl-type-length-value = "0.6"
 spl-pod = "0.4"
