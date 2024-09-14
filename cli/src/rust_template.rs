@@ -59,7 +59,7 @@ pub mod {} {{
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {{
-        msg!("Greetings from: {{:?}}", ctx.program_id);
+        msg!("Greetings from: {:?}", ctx.program_id);
         Ok(())
     }}
 }}
