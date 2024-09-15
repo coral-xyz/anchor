@@ -11,7 +11,6 @@ use anchor_lang_idl::types::{Idl, IdlArrayLen, IdlDefinedFields, IdlType, IdlTyp
 use anyhow::{anyhow, Context, Result};
 use checks::{check_anchor_version, check_deps, check_idl_build_feature, check_overflow};
 use clap::{CommandFactory, Parser};
-use clap_complete::generate;
 use dirs::home_dir;
 use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
@@ -931,7 +930,7 @@ fn process_command(opts: Opts) -> Result<()> {
             idl,
         } => account(&opts.cfg_override, account_type, address, idl),
         Command::Completions { shell } => {
-            generate(
+            clap_complete::generate(
                 shell,
                 &mut Opts::command(),
                 "anchor",

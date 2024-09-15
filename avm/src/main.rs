@@ -1,7 +1,6 @@
 use anyhow::{anyhow, Error, Result};
 use avm::InstallTarget;
 use clap::{CommandFactory, Parser, Subcommand};
-use clap_complete::generate;
 use semver::Version;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -85,7 +84,7 @@ pub fn entry(opts: Cli) -> Result<()> {
         Commands::List {} => avm::list_versions(),
         Commands::Update {} => avm::update(),
         Commands::Completions { shell } => {
-            generate(shell, &mut Cli::command(), "avm", &mut std::io::stdout());
+            clap_complete::generate(shell, &mut Cli::command(), "avm", &mut std::io::stdout());
             Ok(())
         }
     }
