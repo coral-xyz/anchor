@@ -267,7 +267,6 @@ See the [Anchor 0.29 release notes](https://www.anchor-lang.com/release-notes/0.
 
 ### Fixes
 
-- lang: Allow the `cfg` attribute above the instructions ([#2339](https://github.com/coral-xyz/anchor/pull/2339)).
 - ts: Packages no longer depend on `assert` ([#2535](https://github.com/coral-xyz/anchor/pull/2535)).
 - lang: Support for `const` in the `InitSpace` macro ([#2555](https://github.com/coral-xyz/anchor/pull/2555)).
 - cli: Support workspace inheritance ([#2570](https://github.com/coral-xyz/anchor/pull/2570)).
