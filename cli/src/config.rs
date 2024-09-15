@@ -1,13 +1,15 @@
-use crate::is_hidden;
+use crate::{get_keypair, is_hidden, keys_sync};
 use anchor_client::Cluster;
-use anchor_syn::idl::types::Idl;
+use anchor_lang_idl::types::Idl;
 use anyhow::{anyhow, bail, Context, Error, Result};
 use clap::{Parser, ValueEnum};
+use dirs::home_dir;
 use heck::ToSnakeCase;
 use reqwest::Url;
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 use solana_cli_config::{Config as SolanaConfig, CONFIG_FILE};
+use solana_sdk::clock::Slot;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{Keypair, Signer};
 use solang_parser::pt::{ContractTy, SourceUnitPart};
@@ -124,12 +126,11 @@ impl Manifest {
                         format!("Error reading the directory with path: {}", cwd.display())
                     })?
                     .path();
-                if let Some(filename) = p.file_name() {
-                    if filename.to_str() == Some("Cargo.toml") {
-                        let m = WithPath::new(Manifest::from_path(&p)?, p);
-                        return Ok(Some(m));
+                if let Some(filename) = p.file_name().and_then(|name| name.to_str()) {
+                    if filename == "Cargo.toml" {
+                        return Ok(Some(WithPath::new(Manifest::from_path(&p)?, p)));
                     }
-                    if filename.to_str() == Some("Anchor.toml") {
+                    if filename == "Anchor.toml" {
                         anchor_toml = true;
                     }
                 }
@@ -300,37 +301,43 @@ impl WithPath<Config> {
     }
 
     pub fn canonicalize_workspace(&self) -> Result<(Vec<PathBuf>, Vec<PathBuf>)> {
-        let members = self
-            .workspace
-            .members
-            .iter()
-            .map(|m| {
-                self.path()
-                    .parent()
-                    .unwrap()
-                    .join(m)
-                    .canonicalize()
-                    .unwrap_or_else(|_| {
-                        panic!("Error reading workspace.members. File {:?} does not exist at path {:?}.", m, self.path)
-                    })
-            })
-            .collect();
-        let exclude = self
-            .workspace
-            .exclude
-            .iter()
-            .map(|m| {
-                self.path()
-                    .parent()
-                    .unwrap()
-                    .join(m)
-                    .canonicalize()
-                    .unwrap_or_else(|_| {
-                        panic!("Error reading workspace.exclude. File {:?} does not exist at path {:?}.", m, self.path)
-                    })
-            })
-            .collect();
+        let members = self.process_paths(&self.workspace.members)?;
+        let exclude = self.process_paths(&self.workspace.exclude)?;
         Ok((members, exclude))
+    }
+
+    fn process_paths(&self, paths: &[String]) -> Result<Vec<PathBuf>, Error> {
+        let base_path = self.path().parent().unwrap();
+        paths
+            .iter()
+            .flat_map(|m| {
+                let path = base_path.join(m);
+                if m.ends_with("/*") {
+                    let dir = path.parent().unwrap();
+                    match fs::read_dir(dir) {
+                        Ok(entries) => entries
+                            .filter_map(|entry| entry.ok())
+                            .map(|entry| self.process_single_path(&entry.path()))
+                            .collect(),
+                        Err(e) => vec![Err(Error::new(io::Error::new(
+                            io::ErrorKind::Other,
+                            format!("Error reading directory {:?}: {}", dir, e),
+                        )))],
+                    }
+                } else {
+                    vec![self.process_single_path(&path)]
+                }
+            })
+            .collect()
+    }
+
+    fn process_single_path(&self, path: &PathBuf) -> Result<PathBuf, Error> {
+        path.canonicalize().map_err(|e| {
+            Error::new(io::Error::new(
+                io::ErrorKind::Other,
+                format!("Error canonicalizing path {:?}: {}", path, e),
+            ))
+        })
     }
 }
 
@@ -369,12 +376,31 @@ pub struct ToolchainConfig {
     pub solana_version: Option<String>,
 }
 
-#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FeaturesConfig {
-    #[serde(default)]
-    pub seeds: bool,
+    /// Enable account resolution.
+    ///
+    /// Not able to specify default bool value: https://github.com/serde-rs/serde/issues/368
+    #[serde(default = "FeaturesConfig::get_default_resolution")]
+    pub resolution: bool,
+    /// Disable safety comment checks
     #[serde(default, rename = "skip-lint")]
     pub skip_lint: bool,
+}
+
+impl FeaturesConfig {
+    fn get_default_resolution() -> bool {
+        true
+    }
+}
+
+impl Default for FeaturesConfig {
+    fn default() -> Self {
+        Self {
+            resolution: Self::get_default_resolution(),
+            skip_lint: false,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -487,7 +513,16 @@ impl Config {
                     .path();
                 if let Some(filename) = p.file_name() {
                     if filename.to_str() == Some("Anchor.toml") {
-                        let cfg = Config::from_path(&p)?;
+                        // Make sure the program id is correct (only on the initial build)
+                        let mut cfg = Config::from_path(&p)?;
+                        let deploy_dir = p.parent().unwrap().join("target").join("deploy");
+                        if !deploy_dir.exists() && !cfg.programs.contains_key(&Cluster::Localnet) {
+                            println!("Updating program ids...");
+                            fs::create_dir_all(deploy_dir)?;
+                            keys_sync(&ConfigOverride::default(), None)?;
+                            cfg = Config::from_path(&p)?;
+                        }
+
                         return Ok(Some(WithPath::new(cfg, p)));
                     }
                 }
@@ -506,8 +541,7 @@ impl Config {
     }
 
     pub fn wallet_kp(&self) -> Result<Keypair> {
-        solana_sdk::signature::read_keypair_file(&self.provider.wallet.to_string())
-            .map_err(|_| anyhow!("Unable to read keypair file"))
+        get_keypair(&self.provider.wallet.to_string())
     }
 }
 
@@ -577,8 +611,8 @@ where
     deserializer.deserialize_any(StringOrCustomCluster(PhantomData))
 }
 
-impl ToString for Config {
-    fn to_string(&self) -> String {
+impl fmt::Display for Config {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let programs = {
             let c = ser_programs(&self.programs);
             if c.is_empty() {
@@ -593,7 +627,7 @@ impl ToString for Config {
             registry: Some(self.registry.clone()),
             provider: Provider {
                 cluster: self.provider.cluster.clone(),
-                wallet: self.provider.wallet.to_string(),
+                wallet: self.provider.wallet.stringify_with_tilde(),
             },
             test: self.test_validator.clone().map(Into::into),
             scripts: match self.scripts.is_empty() {
@@ -605,7 +639,8 @@ impl ToString for Config {
                 .then(|| self.workspace.clone()),
         };
 
-        toml::to_string(&cfg).expect("Must be well formed")
+        let cfg = toml::to_string(&cfg).expect("Must be well formed");
+        write!(f, "{}", cfg)
     }
 }
 
@@ -613,8 +648,8 @@ impl FromStr for Config {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let cfg: _Config = toml::from_str(s)
-            .map_err(|e| anyhow::format_err!("Unable to deserialize config: {}", e.to_string()))?;
+        let cfg: _Config =
+            toml::from_str(s).map_err(|e| anyhow!("Unable to deserialize config: {e}"))?;
         Ok(Config {
             toolchain: cfg.toolchain.unwrap_or_default(),
             features: cfg.features.unwrap_or_default(),
@@ -798,6 +833,8 @@ pub struct _TestToml {
 }
 
 impl _TestToml {
+    // TODO: Remove if/when false positive gets fixed
+    #[allow(clippy::needless_borrows_for_generic_args)]
     fn from_path(path: impl AsRef<Path>) -> Result<Self, Error> {
         let s = fs::read_to_string(&path)?;
         let parsed_toml: Self = toml::from_str(&s)?;
@@ -1033,7 +1070,10 @@ pub struct _Validator {
     pub ticks_per_slot: Option<u16>,
     // Warp the ledger to WARP_SLOT after starting the validator.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub warp_slot: Option<String>,
+    pub warp_slot: Option<Slot>,
+    // Deactivate one or more features.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deactivate_feature: Option<Vec<String>>,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -1068,7 +1108,9 @@ pub struct Validator {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ticks_per_slot: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub warp_slot: Option<String>,
+    pub warp_slot: Option<Slot>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deactivate_feature: Option<Vec<String>>,
 }
 
 impl From<_Validator> for Validator {
@@ -1097,6 +1139,7 @@ impl From<_Validator> for Validator {
             slots_per_epoch: _validator.slots_per_epoch,
             ticks_per_slot: _validator.ticks_per_slot,
             warp_slot: _validator.warp_slot,
+            deactivate_feature: _validator.deactivate_feature,
         }
     }
 }
@@ -1121,11 +1164,12 @@ impl From<Validator> for _Validator {
             slots_per_epoch: validator.slots_per_epoch,
             ticks_per_slot: validator.ticks_per_slot,
             warp_slot: validator.warp_slot,
+            deactivate_feature: validator.deactivate_feature,
         }
     }
 }
 
-const DEFAULT_LEDGER_PATH: &str = ".anchor/test-ledger";
+pub const DEFAULT_LEDGER_PATH: &str = ".anchor/test-ledger";
 const DEFAULT_BIND_ADDRESS: &str = "0.0.0.0";
 
 impl Merge for _Validator {
@@ -1210,6 +1254,9 @@ impl Merge for _Validator {
                 .or_else(|| self.slots_per_epoch.take()),
             ticks_per_slot: other.ticks_per_slot.or_else(|| self.ticks_per_slot.take()),
             warp_slot: other.warp_slot.or_else(|| self.warp_slot.take()),
+            deactivate_feature: other
+                .deactivate_feature
+                .or_else(|| self.deactivate_feature.take()),
         };
     }
 }
@@ -1230,8 +1277,7 @@ impl Program {
 
     pub fn keypair(&self) -> Result<Keypair> {
         let file = self.keypair_file()?;
-        solana_sdk::signature::read_keypair_file(file.path())
-            .map_err(|_| anyhow!("failed to read keypair for program: {}", self.lib_name))
+        get_keypair(file.path().to_str().unwrap())
     }
 
     // Lazily initializes the keypair file with a new key if it doesn't exist.
@@ -1256,10 +1302,16 @@ impl Program {
         Ok(WithPath::new(file, path))
     }
 
-    pub fn binary_path(&self) -> PathBuf {
+    pub fn binary_path(&self, verifiable: bool) -> PathBuf {
+        let path = if verifiable {
+            format!("target/verifiable/{}.so", self.lib_name)
+        } else {
+            format!("target/deploy/{}.so", self.lib_name)
+        };
+
         std::env::current_dir()
             .expect("Must have current dir")
-            .join(format!("target/deploy/{}.so", self.lib_name))
+            .join(path)
     }
 }
 
@@ -1329,7 +1381,42 @@ impl AnchorPackage {
     }
 }
 
-crate::home_path!(WalletPath, ".config/solana/id.json");
+#[macro_export]
+macro_rules! home_path {
+    ($my_struct:ident, $path:literal) => {
+        #[derive(Clone, Debug)]
+        pub struct $my_struct(String);
+
+        impl Default for $my_struct {
+            fn default() -> Self {
+                $my_struct(home_dir().unwrap().join($path).display().to_string())
+            }
+        }
+
+        impl $my_struct {
+            fn stringify_with_tilde(&self) -> String {
+                self.0
+                    .replacen(home_dir().unwrap().to_str().unwrap(), "~", 1)
+            }
+        }
+
+        impl FromStr for $my_struct {
+            type Err = anyhow::Error;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                Ok(Self(s.to_owned()))
+            }
+        }
+
+        impl fmt::Display for $my_struct {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "{}", self.0)
+            }
+        }
+    };
+}
+
+home_path!(WalletPath, ".config/solana/id.json");
 
 #[cfg(test)]
 mod tests {

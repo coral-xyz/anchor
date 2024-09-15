@@ -1,11 +1,10 @@
 use crate::parser::docs;
 use crate::parser::program::ctx_accounts_ident;
-use crate::{FallbackFn, Ix, IxArg, IxReturn};
-use syn::{
-    parse::{Error as ParseError, Result as ParseResult},
-    spanned::Spanned,
-    Attribute,
-};
+use crate::parser::spl_interface;
+use crate::{FallbackFn, Ix, IxArg, IxReturn, Overrides};
+use syn::parse::{Error as ParseError, Result as ParseResult};
+use syn::spanned::Spanned;
+use syn::Attribute;
 
 // Parse all non-state ix handlers from the program mod definition.
 pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<(Vec<Ix>, Option<FallbackFn>)> {
@@ -27,6 +26,8 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<(Vec<Ix>, Option<Fallbac
         })
         .map(|method: &syn::ItemFn| {
             let (ctx, args) = parse_args(method)?;
+            let overrides = parse_overrides(&method.attrs)?;
+            let interface_discriminator = spl_interface::parse(&method.attrs);
             let docs = docs::parse(&method.attrs);
             let cfgs = parse_cfg(method);
             let returns = parse_return(method)?;
@@ -39,6 +40,8 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<(Vec<Ix>, Option<Fallbac
                 args,
                 anchor_ident,
                 returns,
+                interface_discriminator,
+                overrides,
             })
         })
         .collect::<ParseResult<Vec<Ix>>>()?;
@@ -71,6 +74,18 @@ pub fn parse(program_mod: &syn::ItemMod) -> ParseResult<(Vec<Ix>, Option<Fallbac
     };
 
     Ok((ixs, fallback_fn))
+}
+
+/// Parse overrides from the `#[instruction]` attribute proc-macro.
+fn parse_overrides(attrs: &[syn::Attribute]) -> ParseResult<Option<Overrides>> {
+    attrs
+        .iter()
+        .find(|attr| match attr.path.segments.last() {
+            Some(seg) => seg.ident == "instruction",
+            _ => false,
+        })
+        .map(|attr| attr.parse_args())
+        .transpose()
 }
 
 pub fn parse_args(method: &syn::ItemFn) -> ParseResult<(IxArg, Vec<IxArg>)> {

@@ -14,16 +14,57 @@ The programs and their tests are located in [/tests/bench](https://github.com/co
 
 ## [Unreleased]
 
+Solana version: 1.18.17
+
+| Program | Binary Size | -                        |
+| ------- | ----------- | ------------------------ |
+| bench   | 1,096,096   | 🔴 **+305,088 (38.57%)** |
+
+### Notable changes
+
+- lang: Use closures for `init` constraints to reduce the stack usage of `try_accounts`. Note that the binary size increase is exaggerated for the bench program because it uses unusual number of `init` constraints. Impact for normal programs will be a lot less severe. ([#2939](https://github.com/coral-xyz/anchor/pull/2939)).
+
+---
+
+## [0.30.1]
+
+Solana version: 1.18.17
+
+| Program | Binary Size | -   |
+| ------- | ----------- | --- |
+| bench   | 791,008     | -   |
+
+### Notable changes
+
+---
+
+## [0.30.0]
+
+Solana version: 1.18.8
+
+| Program | Binary Size | -                      |
+| ------- | ----------- | ---------------------- |
+| bench   | 791,008     | 🔴 **+47,952 (6.45%)** |
+
+### Notable changes
+
+- Upgrade Solana to `1.18.8` ([#2867](https://github.com/coral-xyz/anchor/pull/2867)).
+
+---
+
+## [0.29.0]
+
 Solana version: 1.17.0
 
 | Program | Binary Size | +/-                      |
 | ------- | ----------- | ------------------------ |
-| bench   | 735,800     | 🟢 **-417,936 (36.22%)** |
+| bench   | 743,056     | 🟢 **-417,904 (36.00%)** |
 
 ### Notable changes
 
-- Change all accounts to have a reference to `AccountInfo` ([#2656](https://github.com/coral-xyz/anchor/pull/2656)).
 - `Box` the `anchor_lang::Result` error variants ([#2600](https://github.com/coral-xyz/anchor/pull/2600)).
+- Change all accounts to have a reference to `AccountInfo` instead of cloning ([#2656](https://github.com/coral-xyz/anchor/pull/2656)).
+- Reduce unnecessary cloning ([#2663](https://github.com/coral-xyz/anchor/pull/2663)).
 
 ---
 
@@ -33,7 +74,7 @@ Solana version: 1.16.0
 
 | Program | Binary Size | +/-                    |
 | ------- | ----------- | ---------------------- |
-| bench   | 1,153,736   | 🔴 **+35,000 (3.13%)** |
+| bench   | 1,160,960   | 🔴 **+23,272 (2.05%)** |
 
 ### Notable changes
 
@@ -47,6 +88,6 @@ Solana version: 1.14.16
 
 | Program | Binary Size | +/- |
 | ------- | ----------- | --- |
-| bench   | 1,118,736   | N/A |
+| bench   | 1,137,688   | N/A |
 
 ---

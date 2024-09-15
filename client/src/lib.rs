@@ -1,14 +1,72 @@
-//! `anchor_client` provides an RPC client to send transactions and fetch
-//! deserialized accounts from Solana programs written in `anchor_lang`.
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
-use anchor_lang::solana_program::hash::Hash;
-use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
+//! An RPC client to interact with Solana programs written in [`anchor_lang`].
+//!
+//! # Examples
+//!
+//! A simple example that creates a client, sends a transaction and fetches an account:
+//!
+//! ```ignore
+//! use std::rc::Rc;
+//!
+//! use anchor_client::{
+//!     solana_sdk::{
+//!         signature::{read_keypair_file, Keypair},
+//!         signer::Signer,
+//!         system_program,
+//!     },
+//!     Client, Cluster,
+//! };
+//! use my_program::{accounts, instruction, MyAccount};
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     // Create client
+//!     let payer = read_keypair_file("keypair.json")?;
+//!     let client = Client::new(Cluster::Localnet, Rc::new(payer));
+//!
+//!     // Create program
+//!     let program = client.program(my_program::ID)?;
+//!
+//!     // Send a transaction
+//!     let my_account_kp = Keypair::new();
+//!     program
+//!         .request()
+//!         .accounts(accounts::Initialize {
+//!             my_account: my_account_kp.pubkey(),
+//!             payer: program.payer(),
+//!             system_program: system_program::ID,
+//!         })
+//!         .args(instruction::Initialize { field: 42 })
+//!         .signer(&my_account_kp)
+//!         .send()?;
+//!
+//!     // Fetch an account
+//!     let my_account: MyAccount = program.account(my_account_kp.pubkey())?;
+//!     assert_eq!(my_account.field, 42);
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! More examples can be found in [here].
+//!
+//! [here]: https://github.com/coral-xyz/anchor/tree/v0.30.1/client/example/src
+//!
+//! # Features
+//!
+//! The client is blocking by default. To enable asynchronous client, add `async` feature:
+//!
+//! ```toml
+//! anchor-client = { version = "0.30.1 ", features = ["async"] }
+//! ````
+
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::{AccountDeserialize, Discriminator, InstructionData, ToAccountMetas};
 use futures::{Future, StreamExt};
 use regex::Regex;
 use solana_account_decoder::UiAccountEncoding;
+use solana_client::nonblocking::rpc_client::RpcClient as AsyncRpcClient;
 use solana_client::rpc_config::{
     RpcAccountInfoConfig, RpcProgramAccountsConfig, RpcSendTransactionConfig,
     RpcTransactionLogsConfig, RpcTransactionLogsFilter,
@@ -16,15 +74,13 @@ use solana_client::rpc_config::{
 use solana_client::rpc_filter::{Memcmp, RpcFilterType};
 use solana_client::{
     client_error::ClientError as SolanaClientError,
-    nonblocking::{
-        pubsub_client::{PubsubClient, PubsubClientError},
-        rpc_client::RpcClient as AsyncRpcClient,
-    },
-    rpc_client::RpcClient,
+    nonblocking::pubsub_client::{PubsubClient, PubsubClientError},
     rpc_response::{Response as RpcResponse, RpcLogsResponse},
 };
 use solana_sdk::account::Account;
 use solana_sdk::commitment_config::CommitmentConfig;
+use solana_sdk::hash::Hash;
+use solana_sdk::instruction::{AccountMeta, Instruction};
 use solana_sdk::signature::{Signature, Signer};
 use solana_sdk::transaction::Transaction;
 use std::iter::Map;
@@ -45,6 +101,8 @@ use tokio::{
 
 pub use anchor_lang;
 pub use cluster::Cluster;
+#[cfg(feature = "async")]
+pub use nonblocking::ThreadSafeSigner;
 pub use solana_client;
 pub use solana_sdk;
 
@@ -87,14 +145,23 @@ impl<C: Clone + Deref<Target = impl Signer>> Client<C> {
         }
     }
 
-    pub fn program(&self, program_id: Pubkey) -> Result<Program<C>, ClientError> {
+    pub fn program(
+        &self,
+        program_id: Pubkey,
+        #[cfg(feature = "mock")] rpc_client: AsyncRpcClient,
+    ) -> Result<Program<C>, ClientError> {
         let cfg = Config {
             cluster: self.cfg.cluster.clone(),
             options: self.cfg.options,
             payer: self.cfg.payer.clone(),
         };
 
-        Program::new(program_id, cfg)
+        Program::new(
+            program_id,
+            cfg,
+            #[cfg(feature = "mock")]
+            rpc_client,
+        )
     }
 }
 
@@ -161,6 +228,7 @@ pub struct Program<C> {
     sub_client: Arc<RwLock<Option<PubsubClient>>>,
     #[cfg(not(feature = "async"))]
     rt: tokio::runtime::Runtime,
+    internal_rpc_client: AsyncRpcClient,
 }
 
 impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
@@ -168,45 +236,21 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         self.cfg.payer.pubkey()
     }
 
-    /// Returns a request builder.
-    pub fn request(&self) -> RequestBuilder<C> {
-        RequestBuilder::from(
-            self.program_id,
-            self.cfg.cluster.url(),
-            self.cfg.payer.clone(),
-            self.cfg.options,
-            #[cfg(not(feature = "async"))]
-            self.rt.handle(),
-        )
-    }
-
     pub fn id(&self) -> Pubkey {
         self.program_id
     }
 
-    pub fn rpc(&self) -> RpcClient {
-        RpcClient::new_with_commitment(
-            self.cfg.cluster.url().to_string(),
-            self.cfg.options.unwrap_or_default(),
-        )
-    }
-
-    pub fn async_rpc(&self) -> AsyncRpcClient {
-        AsyncRpcClient::new_with_commitment(
-            self.cfg.cluster.url().to_string(),
-            self.cfg.options.unwrap_or_default(),
-        )
+    #[cfg(feature = "mock")]
+    pub fn internal_rpc(&self) -> &AsyncRpcClient {
+        &self.internal_rpc_client
     }
 
     async fn account_internal<T: AccountDeserialize>(
         &self,
         address: Pubkey,
     ) -> Result<T, ClientError> {
-        let rpc_client = AsyncRpcClient::new_with_commitment(
-            self.cfg.cluster.url().to_string(),
-            self.cfg.options.unwrap_or_default(),
-        );
-        let account = rpc_client
+        let account = self
+            .internal_rpc_client
             .get_account_with_commitment(&address, CommitmentConfig::processed())
             .await?
             .value
@@ -220,7 +264,7 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
         filters: Vec<RpcFilterType>,
     ) -> Result<ProgramAccountsIterator<T>, ClientError> {
         let account_type_filter =
-            RpcFilterType::Memcmp(Memcmp::new_base58_encoded(0, &T::discriminator()));
+            RpcFilterType::Memcmp(Memcmp::new_base58_encoded(0, T::DISCRIMINATOR));
         let config = RpcProgramAccountsConfig {
             filters: Some([vec![account_type_filter], filters].concat()),
             account_config: RpcAccountInfoConfig {
@@ -229,9 +273,10 @@ impl<C: Deref<Target = impl Signer> + Clone> Program<C> {
             },
             ..RpcProgramAccountsConfig::default()
         };
+
         Ok(ProgramAccountsIterator {
             inner: self
-                .async_rpc()
+                .internal_rpc_client
                 .get_program_accounts_with_config(&self.id(), config)
                 .await?
                 .into_iter()
@@ -320,17 +365,21 @@ impl<T> Iterator for ProgramAccountsIterator<T> {
     }
 }
 
-fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
+pub fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
     self_program_str: &str,
     l: &str,
 ) -> Result<(Option<T>, Option<String>, bool), ClientError> {
+    use anchor_lang::__private::base64;
+    use base64::engine::general_purpose::STANDARD;
+    use base64::Engine;
+
     // Log emitted from the current program.
     if let Some(log) = l
         .strip_prefix(PROGRAM_LOG)
         .or_else(|| l.strip_prefix(PROGRAM_DATA))
     {
-        let borsh_bytes = match anchor_lang::__private::base64::decode(log) {
-            Ok(borsh_bytes) => borsh_bytes,
+        let log_bytes = match STANDARD.decode(log) {
+            Ok(log_bytes) => log_bytes,
             _ => {
                 #[cfg(feature = "debug")]
                 println!("Could not base64 decode log: {}", log);
@@ -338,19 +387,14 @@ fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
             }
         };
 
-        let mut slice: &[u8] = &borsh_bytes[..];
-        let disc: [u8; 8] = {
-            let mut disc = [0; 8];
-            disc.copy_from_slice(&borsh_bytes[..8]);
-            slice = &slice[8..];
-            disc
-        };
-        let mut event = None;
-        if disc == T::discriminator() {
-            let e: T = anchor_lang::AnchorDeserialize::deserialize(&mut slice)
-                .map_err(|e| ClientError::LogParseError(e.to_string()))?;
-            event = Some(e);
-        }
+        let event = log_bytes
+            .starts_with(T::DISCRIMINATOR)
+            .then(|| {
+                let mut data = &log_bytes[T::DISCRIMINATOR.len()..];
+                T::deserialize(&mut data).map_err(|e| ClientError::LogParseError(e.to_string()))
+            })
+            .transpose()?;
+
         Ok((event, None, false))
     }
     // System log.
@@ -360,10 +404,13 @@ fn handle_program_log<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
     }
 }
 
-fn handle_system_log(this_program_str: &str, log: &str) -> (Option<String>, bool) {
+pub fn handle_system_log(this_program_str: &str, log: &str) -> (Option<String>, bool) {
     if log.starts_with(&format!("Program {this_program_str} log:")) {
         (Some(this_program_str.to_string()), false)
-    } else if log.contains("invoke") {
+
+        // `Invoke [1]` instructions are pushed to the stack in `parse_logs_response`,
+        // so this ensures we only push CPIs to the stack at this stage
+    } else if log.contains("invoke") && !log.ends_with("[1]") {
         (Some("cpi".to_string()), false) // Any string will do.
     } else {
         let re = Regex::new(r"^Program (.*) success*$").unwrap();
@@ -375,7 +422,7 @@ fn handle_system_log(this_program_str: &str, log: &str) -> (Option<String>, bool
     }
 }
 
-struct Execution {
+pub struct Execution {
     stack: Vec<String>,
 }
 
@@ -437,23 +484,35 @@ pub enum ClientError {
     IOError(#[from] std::io::Error),
 }
 
+pub trait AsSigner {
+    fn as_signer(&self) -> &dyn Signer;
+}
+
+impl<'a> AsSigner for Box<dyn Signer + 'a> {
+    fn as_signer(&self) -> &dyn Signer {
+        self.as_ref()
+    }
+}
+
 /// `RequestBuilder` provides a builder interface to create and send
 /// transactions to a cluster.
-pub struct RequestBuilder<'a, C> {
+pub struct RequestBuilder<'a, C, S: 'a> {
     cluster: String,
     program_id: Pubkey,
     accounts: Vec<AccountMeta>,
     options: CommitmentConfig,
     instructions: Vec<Instruction>,
     payer: C,
-    // Serialized instruction data for the target RPC.
     instruction_data: Option<Vec<u8>>,
-    signers: Vec<&'a dyn Signer>,
+    signers: Vec<S>,
     #[cfg(not(feature = "async"))]
     handle: &'a Handle,
+    internal_rpc_client: &'a AsyncRpcClient,
+    _phantom: PhantomData<&'a ()>,
 }
 
-impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
+// Shared implementation for all RequestBuilders
+impl<'a, C: Deref<Target = impl Signer> + Clone, S: AsSigner> RequestBuilder<'a, C, S> {
     #[must_use]
     pub fn payer(mut self, payer: C) -> Self {
         self.payer = payer;
@@ -478,6 +537,36 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
         self
     }
 
+    /// Set the accounts to pass to the instruction.
+    ///
+    /// `accounts` argument can be:
+    ///
+    /// - Any type that implements [`ToAccountMetas`] trait
+    /// - A vector of [`AccountMeta`]s (for remaining accounts)
+    ///
+    /// Note that the given accounts are appended to the previous list of accounts instead of
+    /// overriding the existing ones (if any).
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// program
+    ///     .request()
+    ///     // Regular accounts
+    ///     .accounts(accounts::Initialize {
+    ///         my_account: my_account_kp.pubkey(),
+    ///         payer: program.payer(),
+    ///         system_program: system_program::ID,
+    ///     })
+    ///     // Remaining accounts
+    ///     .accounts(vec![AccountMeta {
+    ///         pubkey: remaining,
+    ///         is_signer: true,
+    ///         is_writable: true,
+    ///     }])
+    ///     .args(instruction::Initialize { field: 42 })
+    ///     .send()?;
+    /// ```
     #[must_use]
     pub fn accounts(mut self, accounts: impl ToAccountMetas) -> Self {
         let mut metas = accounts.to_account_metas(None);
@@ -494,12 +583,6 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
     #[must_use]
     pub fn args(mut self, args: impl InstructionData) -> Self {
         self.instruction_data = Some(args.data());
-        self
-    }
-
-    #[must_use]
-    pub fn signer(mut self, signer: &'a dyn Signer) -> Self {
-        self.signers.push(signer);
         self
     }
 
@@ -521,13 +604,14 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
         latest_hash: Hash,
     ) -> Result<Transaction, ClientError> {
         let instructions = self.instructions()?;
-        let mut signers = self.signers.clone();
-        signers.push(&*self.payer);
+        let signers: Vec<&dyn Signer> = self.signers.iter().map(|s| s.as_signer()).collect();
+        let mut all_signers = signers;
+        all_signers.push(&*self.payer);
 
         let tx = Transaction::new_signed_with_payer(
             &instructions,
             Some(&self.payer.pubkey()),
-            &signers,
+            &all_signers,
             latest_hash,
         );
 
@@ -541,21 +625,17 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
     }
 
     async fn signed_transaction_internal(&self) -> Result<Transaction, ClientError> {
-        let latest_hash =
-            AsyncRpcClient::new_with_commitment(self.cluster.to_owned(), self.options)
-                .get_latest_blockhash()
-                .await?;
-        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
+        let latest_hash = self.internal_rpc_client.get_latest_blockhash().await?;
 
+        let tx = self.signed_transaction_with_blockhash(latest_hash)?;
         Ok(tx)
     }
 
     async fn send_internal(&self) -> Result<Signature, ClientError> {
-        let rpc_client = AsyncRpcClient::new_with_commitment(self.cluster.to_owned(), self.options);
-        let latest_hash = rpc_client.get_latest_blockhash().await?;
+        let latest_hash = self.internal_rpc_client.get_latest_blockhash().await?;
         let tx = self.signed_transaction_with_blockhash(latest_hash)?;
 
-        rpc_client
+        self.internal_rpc_client
             .send_and_confirm_transaction(&tx)
             .await
             .map_err(Into::into)
@@ -565,14 +645,13 @@ impl<'a, C: Deref<Target = impl Signer> + Clone> RequestBuilder<'a, C> {
         &self,
         config: RpcSendTransactionConfig,
     ) -> Result<Signature, ClientError> {
-        let rpc_client = AsyncRpcClient::new_with_commitment(self.cluster.to_owned(), self.options);
-        let latest_hash = rpc_client.get_latest_blockhash().await?;
+        let latest_hash = self.internal_rpc_client.get_latest_blockhash().await?;
         let tx = self.signed_transaction_with_blockhash(latest_hash)?;
 
-        rpc_client
+        self.internal_rpc_client
             .send_and_confirm_transaction_with_spinner_and_config(
                 &tx,
-                rpc_client.commitment(),
+                self.internal_rpc_client.commitment(),
                 config,
             )
             .await
@@ -588,7 +667,10 @@ fn parse_logs_response<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
     let mut events: Vec<T> = Vec::new();
     if !logs.is_empty() {
         if let Ok(mut execution) = Execution::new(&mut logs) {
-            for l in logs {
+            // Create a new peekable iterator so that we can peek at the next log whilst iterating
+            let mut logs_iter = logs.iter().peekable();
+
+            while let Some(l) = logs_iter.next() {
                 // Parse the log.
                 let (event, new_program, did_pop) = {
                     if program_id_str == execution.program() {
@@ -612,6 +694,25 @@ fn parse_logs_response<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
                 // Program returned.
                 if did_pop {
                     execution.pop();
+
+                    // If the current iteration popped then it means there was a
+                    //`Program x success` log. If the next log in the iteration is
+                    // of depth [1] then we're not within a CPI and this is a new instruction.
+                    //
+                    // We need to ensure that the `Execution` instance is updated with
+                    // the next program ID, or else `execution.program()` will cause
+                    // a panic during the next iteration.
+                    if let Some(&next_log) = logs_iter.peek() {
+                        if next_log.ends_with("invoke [1]") {
+                            let re = Regex::new(r"^Program (.*) invoke.*$").unwrap();
+                            let next_instruction =
+                                re.captures(next_log).unwrap().get(1).unwrap().as_str();
+                            // Within this if block, there will always be a regex match.
+                            // Therefore it's safe to unwrap and the captured program ID
+                            // at index 1 can also be safely unwrapped.
+                            execution.push(next_instruction.to_string());
+                        }
+                    };
                 }
             }
         }
@@ -621,6 +722,15 @@ fn parse_logs_response<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
 
 #[cfg(test)]
 mod tests {
+    use solana_client::rpc_response::RpcResponseContext;
+
+    // Creating a mock struct that implements `anchor_lang::events`
+    // for type inference in `test_logs`
+    use anchor_lang::prelude::*;
+    #[derive(Debug, Clone, Copy)]
+    #[event]
+    pub struct MockEvent {}
+
     use super::*;
     #[test]
     fn new_execution() {
@@ -647,5 +757,107 @@ mod tests {
         let (program, did_pop) = handle_system_log("asdf", log);
         assert_eq!(program, None);
         assert!(!did_pop);
+    }
+
+    #[test]
+    fn test_parse_logs_response() -> Result<()> {
+        // Mock logs received within an `RpcResponse`. These are based on a Jupiter transaction.
+        let logs = vec![
+          "Program VeryCoolProgram invoke [1]", // Outer instruction #1 starts
+          "Program log: Instruction: VeryCoolEvent",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]",
+          "Program log: Instruction: Transfer",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 4645 of 664387 compute units",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+          "Program VeryCoolProgram consumed 42417 of 700000 compute units",
+          "Program VeryCoolProgram success", // Outer instruction #1 ends
+          "Program EvenCoolerProgram invoke [1]", // Outer instruction #2 starts
+          "Program log: Instruction: EvenCoolerEvent",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]",
+          "Program log: Instruction: TransferChecked",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 6200 of 630919 compute units",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+          "Program HyaB3W9q6XdA5xwpU4XnSZV94htfmbmqJXZcEbRaJutt invoke [2]",
+          "Program log: Instruction: Swap",
+          "Program log: INVARIANT: SWAP",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [3]",
+          "Program log: Instruction: Transfer",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 4736 of 539321 compute units",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [3]",
+          "Program log: Instruction: Transfer",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 4645 of 531933 compute units",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+          "Program HyaB3W9q6XdA5xwpU4XnSZV94htfmbmqJXZcEbRaJutt consumed 84670 of 610768 compute units",
+          "Program HyaB3W9q6XdA5xwpU4XnSZV94htfmbmqJXZcEbRaJutt success",
+          "Program EvenCoolerProgram invoke [2]",
+          "Program EvenCoolerProgram consumed 2021 of 523272 compute units",
+          "Program EvenCoolerProgram success",
+          "Program HyaB3W9q6XdA5xwpU4XnSZV94htfmbmqJXZcEbRaJutt invoke [2]",
+          "Program log: Instruction: Swap",
+          "Program log: INVARIANT: SWAP",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [3]",
+          "Program log: Instruction: Transfer",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 4736 of 418618 compute units",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [3]",
+          "Program log: Instruction: Transfer",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 4645 of 411230 compute units",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+          "Program HyaB3W9q6XdA5xwpU4XnSZV94htfmbmqJXZcEbRaJutt consumed 102212 of 507607 compute units",
+          "Program HyaB3W9q6XdA5xwpU4XnSZV94htfmbmqJXZcEbRaJutt success",
+          "Program EvenCoolerProgram invoke [2]",
+          "Program EvenCoolerProgram consumed 2021 of 402569 compute units",
+          "Program EvenCoolerProgram success",
+          "Program 9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP invoke [2]",
+          "Program log: Instruction: Swap",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [3]",
+          "Program log: Instruction: Transfer",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 4736 of 371140 compute units",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [3]",
+          "Program log: Instruction: MintTo",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 4492 of 341800 compute units",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [3]",
+          "Program log: Instruction: Transfer",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 4645 of 334370 compute units",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+          "Program 9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP consumed 57610 of 386812 compute units",
+          "Program 9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP success",
+          "Program EvenCoolerProgram invoke [2]",
+          "Program EvenCoolerProgram consumed 2021 of 326438 compute units",
+          "Program EvenCoolerProgram success",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]",
+          "Program log: Instruction: TransferChecked",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 6173 of 319725 compute units",
+          "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+          "Program EvenCoolerProgram consumed 345969 of 657583 compute units",
+          "Program EvenCoolerProgram success", // Outer instruction #2 ends
+          "Program ComputeBudget111111111111111111111111111111 invoke [1]",
+          "Program ComputeBudget111111111111111111111111111111 success",
+          "Program ComputeBudget111111111111111111111111111111 invoke [1]",
+          "Program ComputeBudget111111111111111111111111111111 success"];
+
+        // Converting to Vec<String> as expected in `RpcLogsResponse`
+        let logs: Vec<String> = logs.iter().map(|&l| l.to_string()).collect();
+
+        let program_id_str = "VeryCoolProgram";
+
+        // No events returned here. Just ensuring that the function doesn't panic
+        // due an incorrectly emptied stack.
+        let _: Vec<MockEvent> = parse_logs_response(
+            RpcResponse {
+                context: RpcResponseContext::new(0),
+                value: RpcLogsResponse {
+                    signature: "".to_string(),
+                    err: None,
+                    logs: logs.to_vec(),
+                },
+            },
+            program_id_str,
+        );
+
+        Ok(())
     }
 }

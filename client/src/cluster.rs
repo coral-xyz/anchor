@@ -3,20 +3,15 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use url::Url;
 
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Cluster {
     Testnet,
     Mainnet,
     Devnet,
+    #[default]
     Localnet,
     Debug,
     Custom(String, String),
-}
-
-impl Default for Cluster {
-    fn default() -> Self {
-        Cluster::Localnet
-    }
 }
 
 impl FromStr for Cluster {
@@ -87,8 +82,8 @@ impl Cluster {
             Cluster::Devnet => "wss://api.devnet.solana.com",
             Cluster::Testnet => "wss://api.testnet.solana.com",
             Cluster::Mainnet => "wss://api.mainnet-beta.solana.com",
-            Cluster::Localnet => "ws://127.0.0.1:9000",
-            Cluster::Debug => "ws://34.90.18.145:9000",
+            Cluster::Localnet => "ws://127.0.0.1:8900",
+            Cluster::Debug => "ws://34.90.18.145:8900",
             Cluster::Custom(_url, ws_url) => ws_url,
         }
     }
