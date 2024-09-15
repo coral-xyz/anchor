@@ -87,6 +87,7 @@ Shell completions can be generated for `bash`, `elvish`, `fish`, `powershell`, a
 ```bash
 mkdir -p $HOME/.local/share/bash-completion/completions
 anchor completions bash > $HOME/.local/share/bash-completion/completions/anchor
+avm completions bash > $HOME/.local/share/bash-completion/completions/avm
 exec bash
 ```
 
@@ -95,6 +96,7 @@ exec bash
 ```bash
 mkdir -p $HOME/.config/fish/completions
 anchor completions fish > $HOME/.config/fish/completions/anchor.fish
+avm completions fish > $HOME/.config/fish/completions/avm.fish
 source $HOME/.config/fish/config.fish
 ```
 
@@ -111,5 +113,6 @@ Next run:
 
 ```bash
 anchor completions zsh | sudo tee /usr/local/share/zsh/site-functions/_anchor
+avm completions zsh | sudo tee /usr/local/share/zsh/site-functions/_avm
 exec zsh
 ```
