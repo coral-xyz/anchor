@@ -27,6 +27,7 @@ const navigation = [
   {
     title: 'Release Notes',
     links: [
+      { title: '0.31.0', href: '/release-notes/0.31.0' },
       { title: '0.30.1', href: '/release-notes/0.30.1' },
       { title: '0.30.0', href: '/release-notes/0.30.0' },
       { title: '0.29.0', href: '/release-notes/0.29.0' },
