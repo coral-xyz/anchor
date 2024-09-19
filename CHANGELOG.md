@@ -12,6 +12,14 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Features
 
+### Fixes
+
+### Breaking
+
+## [0.31.0] - 2024-09-19
+
+### Features
+
 - ts: Add optional `options.blockhash` to `Provider.sendAndConfirm` ([#3070](https://github.com/coral-xyz/anchor/pull/3070)).
 - ts: Add optional `commitment` parameter to `Program.addEventListener` ([#3052](https://github.com/coral-xyz/anchor/pull/3052)).
 - cli, idl: Pass `cargo` args to IDL generation when building program or IDL ([#3059](https://github.com/coral-xyz/anchor/pull/3059)).
