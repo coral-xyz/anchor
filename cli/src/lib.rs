@@ -47,6 +47,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Stdio};
 use std::str::FromStr;
 use std::string::ToString;
+use std::env;
 use tar::Archive;
 
 mod checks;
@@ -938,6 +939,16 @@ fn process_command(opts: Opts) -> Result<()> {
             );
             Ok(())
         }
+    }
+}
+
+fn resolve_path(filepath: String) -> Result<PathBuf, std::io::Error> {
+    let path = PathBuf::from(filepath);
+    if path.is_relative() {
+        let current_dir = env::current_dir()?;
+        Ok(current_dir.join(path))
+    } else {
+        Ok(path)
     }
 }
 
@@ -2336,10 +2347,11 @@ fn idl_init(
     idl_filepath: String,
     priority_fee: Option<u64>,
 ) -> Result<()> {
+    let absolute_path = resolve_path(idl_filepath)?;
     with_workspace(cfg_override, |cfg| {
         let keypair = cfg.provider.wallet.to_string();
 
-        let bytes = fs::read(idl_filepath)?;
+        let bytes = fs::read(absolute_path)?;
         let idl: Idl = serde_json::from_reader(&*bytes)?;
 
         let idl_address = create_idl_account(cfg, &keypair, &program_id, &idl, priority_fee)?;
