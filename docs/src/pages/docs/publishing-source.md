@@ -35,8 +35,8 @@ An example `Anchor.toml` config looks as follows,
 
 ```toml
 [toolchain]
-anchor_version = "0.30.1"
-solana_version = "1.18.17"
+anchor_version = "0.31.0"
+solana_version = "2.0.8"
 
 [workspace]
 members = ["programs/multisig"]

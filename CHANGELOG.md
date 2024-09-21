@@ -12,6 +12,14 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Features
 
+### Fixes
+
+### Breaking
+
+## [0.31.0] - 2024-09-19
+
+### Features
+
 - ts: Add optional `options.blockhash` to `Provider.sendAndConfirm` ([#3070](https://github.com/coral-xyz/anchor/pull/3070)).
 - ts: Add optional `commitment` parameter to `Program.addEventListener` ([#3052](https://github.com/coral-xyz/anchor/pull/3052)).
 - cli, idl: Pass `cargo` args to IDL generation when building program or IDL ([#3059](https://github.com/coral-xyz/anchor/pull/3059)).
@@ -26,7 +34,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Remove the fallback function shortcut in `try_entry` function ([#3109](https://github.com/coral-xyz/anchor/pull/3109)).
 - ts: Get discriminator lengths dynamically ([#3120](https://github.com/coral-xyz/anchor/pull/3120)).
 - client: Support non-8-byte discriminators ([#3125](https://github.com/coral-xyz/anchor/pull/3125)).
-- spl: Add `withdraw_withheld_tokens_from_accounts` instruction ([#3128]([https://github.com/coral-xyz/anchor/pull/3128)).
+- spl: Add `withdraw_withheld_tokens_from_accounts` instruction ([#3128](https://github.com/coral-xyz/anchor/pull/3128)).
 - ts: Add optional `wallet` property to the `Provider` interface ([#3130](https://github.com/coral-xyz/anchor/pull/3130)).
 - cli: Warn if `anchor-spl/idl-build` is missing ([#3133](https://github.com/coral-xyz/anchor/pull/3133)).
 - client: Add `internal_rpc` method for `mock` feature ([#3135](https://github.com/coral-xyz/anchor/pull/3135)).
@@ -39,7 +47,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - cli: Support non-8-byte discriminators ([#3165](https://github.com/coral-xyz/anchor/pull/3165)).
 - idl: Disallow empty discriminators ([#3166](https://github.com/coral-xyz/anchor/pull/3166)).
 - cli: Add `--no-idl` option to the `test` command ([#3175](https://github.com/coral-xyz/anchor/pull/3175)).
-- spl: Add `burn_checked`, `mint_to_checked` and `approve_checked` instructions ([#3186]([https://github.com/coral-xyz/anchor/pull/3186)).
+- spl: Add `burn_checked`, `mint_to_checked` and `approve_checked` instructions ([#3186](https://github.com/coral-xyz/anchor/pull/3186)).
 - cli: Migrate to `agave-install` when `solana_version` is `>= 1.18.19` ([#3185](https://github.com/coral-xyz/anchor/pull/3185)).
 - idl: Add `IdlBuilder` ([#3188](https://github.com/coral-xyz/anchor/pull/3188)).
 - cli: Make `clean` command also remove the `.anchor` directory ([#3192](https://github.com/coral-xyz/anchor/pull/3192)).
@@ -48,7 +56,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Add `LazyAccount` ([#3194](https://github.com/coral-xyz/anchor/pull/3194)).
 - avm: Ask whether to install if the version is not installed with the `use` command ([#3230](https://github.com/coral-xyz/anchor/pull/3230)).
 - cli: Warn if a manifest has `solana-program` dependency ([#3250](https://github.com/coral-xyz/anchor/pull/3250)).
-- cli: Add completions command to generate shell completions via the clap_complete crate ([#3251](https://github.com/coral-xyz/anchor/pull/3251)).
+- cli: Add completions command to generate shell completions via the `clap_complete` crate ([#3251](https://github.com/coral-xyz/anchor/pull/3251)).
 
 ### Fixes
 
