@@ -2724,6 +2724,8 @@ fn idl_build(
     cargo_args: Vec<String>,
 ) -> Result<()> {
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace");
+    check_idl_build_feature()?;
+
     let program_path = match program_name {
         Some(name) => cfg.get_program(&name)?.path,
         None => {
@@ -2735,7 +2737,6 @@ fn idl_build(
                 .path
         }
     };
-    check_idl_build_feature().ok();
     let idl = anchor_lang_idl::build::IdlBuilder::new()
         .program_path(program_path)
         .resolution(cfg.features.resolution)
@@ -2763,32 +2764,7 @@ fn generate_idl(
     no_docs: bool,
     cargo_args: &[String],
 ) -> Result<Idl> {
-    // Check whether the manifest has `idl-build` feature
-    let manifest = Manifest::discover()?.ok_or_else(|| anyhow!("Cargo.toml not found"))?;
-    let is_idl_build = manifest
-        .features
-        .iter()
-        .any(|(feature, _)| feature == "idl-build");
-    if !is_idl_build {
-        let path = manifest.path().display();
-        let anchor_spl_idl_build = manifest
-            .dependencies
-            .iter()
-            .any(|dep| dep.0 == "anchor-spl")
-            .then_some(r#", "anchor-spl/idl-build""#)
-            .unwrap_or_default();
-
-        return Err(anyhow!(
-            r#"`idl-build` feature is missing. To solve, add
-
-[features]
-idl-build = ["anchor-lang/idl-build"{anchor_spl_idl_build}]
-
-in `{path}`."#
-        ));
-    }
-
-    check_idl_build_feature().ok();
+    check_idl_build_feature()?;
 
     anchor_lang_idl::build::IdlBuilder::new()
         .resolution(cfg.features.resolution)

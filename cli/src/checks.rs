@@ -115,7 +115,31 @@ pub fn check_deps(cfg: &WithPath<Config>) -> Result<()> {
 ///
 /// **Note:** The check expects the current directory to be a program directory.
 pub fn check_idl_build_feature() -> Result<()> {
-    let manifest = Manifest::from_path("Cargo.toml")?;
+    let manifest = Manifest::discover()?.ok_or_else(|| anyhow!("Cargo.toml not found"))?;
+
+    // Check whether the manifest has `idl-build` feature
+    let has_idl_build_feature = manifest
+        .features
+        .iter()
+        .any(|(feature, _)| feature == "idl-build");
+    if !has_idl_build_feature {
+        let path = manifest.path().display();
+        let anchor_spl_idl_build = manifest
+            .dependencies
+            .iter()
+            .any(|dep| dep.0 == "anchor-spl")
+            .then_some(r#", "anchor-spl/idl-build""#)
+            .unwrap_or_default();
+
+        return Err(anyhow!(
+            r#"`idl-build` feature is missing. To solve, add
+
+[features]
+idl-build = ["anchor-lang/idl-build"{anchor_spl_idl_build}]
+
+in `{path}`."#
+        ));
+    }
 
     // Check if `idl-build` is enabled by default
     manifest
