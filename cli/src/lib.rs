@@ -393,6 +393,8 @@ pub enum IdlCommand {
         filepath: String,
         #[clap(long)]
         priority_fee: Option<u64>,
+        #[clap(long)]
+        heap_size: Option<u32>,
     },
     Close {
         program_id: Pubkey,
@@ -405,6 +407,8 @@ pub enum IdlCommand {
         print_only: bool,
         #[clap(long)]
         priority_fee: Option<u64>,
+        #[clap(long)]
+        heap_size: Option<u32>,
     },
     /// Writes an IDL into a buffer account. This can be used with SetBuffer
     /// to perform an upgrade.
@@ -414,6 +418,8 @@ pub enum IdlCommand {
         filepath: String,
         #[clap(long)]
         priority_fee: Option<u64>,
+        #[clap(long)]
+        heap_size: Option<u32>,
     },
     /// Sets a new IDL buffer for the program.
     SetBuffer {
@@ -427,6 +433,8 @@ pub enum IdlCommand {
         print_only: bool,
         #[clap(long)]
         priority_fee: Option<u64>,
+        #[clap(long)]
+        heap_size: Option<u32>,
     },
     /// Upgrades the IDL to the new file. An alias for first writing and then
     /// then setting the idl buffer account.
@@ -436,6 +444,8 @@ pub enum IdlCommand {
         filepath: String,
         #[clap(long)]
         priority_fee: Option<u64>,
+        #[clap(long)]
+        heap_size: Option<u32>,
     },
     /// Sets a new authority on the IDL account.
     SetAuthority {
@@ -454,6 +464,8 @@ pub enum IdlCommand {
         print_only: bool,
         #[clap(long)]
         priority_fee: Option<u64>,
+        #[clap(long)]
+        heap_size: Option<u32>,
     },
     /// Command to remove the ability to modify the IDL account. This should
     /// likely be used in conjection with eliminating an "upgrade authority" on
@@ -463,6 +475,8 @@ pub enum IdlCommand {
         program_id: Pubkey,
         #[clap(long)]
         priority_fee: Option<u64>,
+        #[clap(long)]
+        heap_size: Option<u32>,
     },
     /// Outputs the authority for the IDL account.
     Authority {
@@ -2206,12 +2220,14 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
             program_id,
             filepath,
             priority_fee,
-        } => idl_init(cfg_override, program_id, filepath, priority_fee),
+            heap_size,
+        } => idl_init(cfg_override, program_id, filepath, priority_fee, heap_size),
         IdlCommand::Close {
             program_id,
             idl_address,
             print_only,
             priority_fee,
+            heap_size,
         } => {
             let closed_address = idl_close(
                 cfg_override,
@@ -2219,6 +2235,7 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
                 idl_address,
                 print_only,
                 priority_fee,
+                heap_size,
             )?;
             if !print_only {
                 println!("Idl account closed: {closed_address}");
@@ -2229,8 +2246,9 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
             program_id,
             filepath,
             priority_fee,
+            heap_size,
         } => {
-            let idl_buffer = idl_write_buffer(cfg_override, program_id, filepath, priority_fee)?;
+            let idl_buffer = idl_write_buffer(cfg_override, program_id, filepath, priority_fee, heap_size)?;
             println!("Idl buffer created: {idl_buffer}");
             Ok(())
         }
@@ -2239,18 +2257,21 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
             buffer,
             print_only,
             priority_fee,
-        } => idl_set_buffer(cfg_override, program_id, buffer, print_only, priority_fee).map(|_| ()),
+            heap_size,
+        } => idl_set_buffer(cfg_override, program_id, buffer, print_only, priority_fee, heap_size).map(|_| ()),
         IdlCommand::Upgrade {
             program_id,
             filepath,
             priority_fee,
-        } => idl_upgrade(cfg_override, program_id, filepath, priority_fee),
+            heap_size,
+        } => idl_upgrade(cfg_override, program_id, filepath, priority_fee, heap_size),
         IdlCommand::SetAuthority {
             program_id,
             address,
             new_authority,
             print_only,
             priority_fee,
+            heap_size,
         } => idl_set_authority(
             cfg_override,
             program_id,
@@ -2258,11 +2279,13 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
             new_authority,
             print_only,
             priority_fee,
+            heap_size,
         ),
         IdlCommand::EraseAuthority {
             program_id,
             priority_fee,
-        } => idl_erase_authority(cfg_override, program_id, priority_fee),
+            heap_size,
+        } => idl_erase_authority(cfg_override, program_id, priority_fee, heap_size),
         IdlCommand::Authority { program_id } => idl_authority(cfg_override, program_id),
         IdlCommand::Build {
             program_name,
@@ -2334,6 +2357,7 @@ fn idl_init(
     program_id: Pubkey,
     idl_filepath: String,
     priority_fee: Option<u64>,
+    heap_size: Option<u32>,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         let keypair = cfg.provider.wallet.to_string();
@@ -2341,7 +2365,7 @@ fn idl_init(
         let idl = fs::read(idl_filepath)?;
         let idl = convert_idl(&idl)?;
 
-        let idl_address = create_idl_account(cfg, &keypair, &program_id, &idl, priority_fee)?;
+        let idl_address = create_idl_account(cfg, &keypair, &program_id, &idl, priority_fee, heap_size)?;
 
         println!("Idl account created: {idl_address:?}");
         Ok(())
@@ -2354,10 +2378,11 @@ fn idl_close(
     idl_address: Option<Pubkey>,
     print_only: bool,
     priority_fee: Option<u64>,
+    heap_size: Option<u32>,
 ) -> Result<Pubkey> {
     with_workspace(cfg_override, |cfg| {
         let idl_address = idl_address.unwrap_or_else(|| IdlAccount::address(&program_id));
-        idl_close_account(cfg, &program_id, idl_address, print_only, priority_fee)?;
+        idl_close_account(cfg, &program_id, idl_address, print_only, priority_fee, heap_size)?;
 
         Ok(idl_address)
     })
@@ -2368,6 +2393,7 @@ fn idl_write_buffer(
     program_id: Pubkey,
     idl_filepath: String,
     priority_fee: Option<u64>,
+    heap_size: Option<u32>,
 ) -> Result<Pubkey> {
     with_workspace(cfg_override, |cfg| {
         let keypair = cfg.provider.wallet.to_string();
@@ -2375,8 +2401,8 @@ fn idl_write_buffer(
         let idl = fs::read(idl_filepath)?;
         let idl = convert_idl(&idl)?;
 
-        let idl_buffer = create_idl_buffer(cfg, &keypair, &program_id, &idl, priority_fee)?;
-        idl_write(cfg, &program_id, &idl, idl_buffer, priority_fee)?;
+        let idl_buffer = create_idl_buffer(cfg, &keypair, &program_id, &idl, priority_fee, heap_size)?;
+        idl_write(cfg, &program_id, &idl, idl_buffer, priority_fee, heap_size)?;
 
         Ok(idl_buffer)
     })
@@ -2388,6 +2414,7 @@ fn idl_set_buffer(
     buffer: Pubkey,
     print_only: bool,
     priority_fee: Option<u64>,
+    heap_size: Option<u32>,
 ) -> Result<Pubkey> {
     with_workspace(cfg_override, |cfg| {
         let keypair = get_keypair(&cfg.provider.wallet.to_string())?;
@@ -2420,7 +2447,7 @@ fn idl_set_buffer(
             print_idl_instruction("SetBuffer", &ix, &idl_address)?;
         } else {
             // Build the transaction.
-            let instructions = prepend_compute_unit_ix(vec![ix], &client, priority_fee)?;
+            let instructions = prepend_compute_unit_ix(vec![ix], &client, priority_fee, heap_size)?;
 
             // Send the transaction.
             let mut latest_hash = client.get_latest_blockhash()?;
@@ -2456,14 +2483,16 @@ fn idl_upgrade(
     program_id: Pubkey,
     idl_filepath: String,
     priority_fee: Option<u64>,
+    heap_size: Option<u32>,
 ) -> Result<()> {
-    let buffer_address = idl_write_buffer(cfg_override, program_id, idl_filepath, priority_fee)?;
+    let buffer_address = idl_write_buffer(cfg_override, program_id, idl_filepath, priority_fee, heap_size)?;
     let idl_address = idl_set_buffer(
         cfg_override,
         program_id,
         buffer_address,
         false,
         priority_fee,
+        heap_size,
     )?;
     idl_close(
         cfg_override,
@@ -2471,6 +2500,7 @@ fn idl_upgrade(
         Some(buffer_address),
         false,
         priority_fee,
+        heap_size,
     )?;
     println!("Idl account {idl_address} successfully upgraded");
     Ok(())
@@ -2504,6 +2534,7 @@ fn idl_set_authority(
     new_authority: Pubkey,
     print_only: bool,
     priority_fee: Option<u64>,
+    heap_size: Option<u32>,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         // Misc.
@@ -2541,7 +2572,7 @@ fn idl_set_authority(
         if print_only {
             print_idl_instruction("SetAuthority", &ix, &idl_address)?;
         } else {
-            let instructions = prepend_compute_unit_ix(vec![ix], &client, priority_fee)?;
+            let instructions = prepend_compute_unit_ix(vec![ix], &client, priority_fee, heap_size)?;
 
             // Send transaction.
             let latest_hash = client.get_latest_blockhash()?;
@@ -2564,6 +2595,7 @@ fn idl_erase_authority(
     cfg_override: &ConfigOverride,
     program_id: Pubkey,
     priority_fee: Option<u64>,
+    heap_size: Option<u32>,
 ) -> Result<()> {
     println!("Are you sure you want to erase the IDL authority: [y/n]");
 
@@ -2582,6 +2614,7 @@ fn idl_erase_authority(
         ERASED_AUTHORITY,
         false,
         priority_fee,
+        heap_size,
     )?;
 
     Ok(())
@@ -2593,6 +2626,7 @@ fn idl_close_account(
     idl_address: Pubkey,
     print_only: bool,
     priority_fee: Option<u64>,
+    heap_size: Option<u32>,
 ) -> Result<()> {
     let keypair = get_keypair(&cfg.provider.wallet.to_string())?;
     let url = cluster_url(cfg, &cfg.test_validator);
@@ -2619,7 +2653,7 @@ fn idl_close_account(
     if print_only {
         print_idl_instruction("Close", &ix, &idl_address)?;
     } else {
-        let instructions = prepend_compute_unit_ix(vec![ix], &client, priority_fee)?;
+        let instructions = prepend_compute_unit_ix(vec![ix], &client, priority_fee, heap_size)?;
 
         // Send transaction.
         let latest_hash = client.get_latest_blockhash()?;
@@ -2644,6 +2678,7 @@ fn idl_write(
     idl: &Idl,
     idl_address: Pubkey,
     priority_fee: Option<u64>,
+    heap_size: Option<u32>,
 ) -> Result<()> {
     // Misc.
     let keypair = get_keypair(&cfg.provider.wallet.to_string())?;
@@ -2684,7 +2719,7 @@ fn idl_write(
             data,
         };
         // Send transaction.
-        let instructions = prepend_compute_unit_ix(vec![ix], &client, priority_fee)?;
+        let instructions = prepend_compute_unit_ix(vec![ix], &client, priority_fee, heap_size)?;
 
         let mut latest_hash = client.get_latest_blockhash()?;
         for retries in 0..20 {
@@ -3872,6 +3907,7 @@ fn create_idl_account(
     program_id: &Pubkey,
     idl: &Idl,
     priority_fee: Option<u64>,
+    heap_size: Option<u32>,
 ) -> Result<Pubkey> {
     // Misc.
     let idl_address = IdlAccount::address(program_id);
@@ -3925,7 +3961,7 @@ fn create_idl_account(
                 data,
             });
         }
-        instructions = prepend_compute_unit_ix(instructions, &client, priority_fee)?;
+        instructions = prepend_compute_unit_ix(instructions, &client, priority_fee, heap_size)?;
 
         let mut latest_hash = client.get_latest_blockhash()?;
         for retries in 0..20 {
@@ -3959,6 +3995,7 @@ fn create_idl_account(
         idl,
         IdlAccount::address(program_id),
         priority_fee,
+        heap_size,
     )?;
 
     Ok(idl_address)
@@ -3970,6 +4007,7 @@ fn create_idl_buffer(
     program_id: &Pubkey,
     idl: &Idl,
     priority_fee: Option<u64>,
+    heap_size: Option<u32>,
 ) -> Result<Pubkey> {
     let keypair = get_keypair(keypair_path)?;
     let url = cluster_url(cfg, &cfg.test_validator);
@@ -4010,6 +4048,7 @@ fn create_idl_buffer(
         vec![create_account_ix, create_buffer_ix],
         &client,
         priority_fee,
+        heap_size,
     )?;
 
     let mut latest_hash = client.get_latest_blockhash()?;
@@ -4687,19 +4726,28 @@ fn prepend_compute_unit_ix(
     instructions: Vec<Instruction>,
     client: &RpcClient,
     priority_fee: Option<u64>,
+    heap_size: Option<u32>,
 ) -> Result<Vec<Instruction>> {
     let priority_fee = get_recommended_micro_lamport_fee(client, priority_fee)?;
+    let heap_kb = heap_size.unwrap_or(0);
+    let heap_size = heap_kb.checked_mul(1024).unwrap_or(0);
+    let mut instructions_appended = instructions.clone();
 
     if priority_fee > 0 {
-        let mut instructions_appended = instructions.clone();
         instructions_appended.insert(
             0,
             ComputeBudgetInstruction::set_compute_unit_price(priority_fee),
         );
-        Ok(instructions_appended)
-    } else {
-        Ok(instructions)
     }
+
+    if heap_size > 0 {
+        instructions_appended.insert(
+            0,
+            ComputeBudgetInstruction::request_heap_frame(heap_size),
+        );
+    }
+
+    Ok(instructions_appended)
 }
 
 fn get_node_dns_option() -> Result<&'static str> {
