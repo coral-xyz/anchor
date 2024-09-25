@@ -9,8 +9,8 @@ use anchor_lang::{AccountDeserialize, AnchorDeserialize, AnchorSerialize, Discri
 use anchor_lang_idl::convert::convert_idl;
 use anchor_lang_idl::types::{Idl, IdlArrayLen, IdlDefinedFields, IdlType, IdlTypeDefTy};
 use anyhow::{anyhow, Context, Result};
-use checks::{check_anchor_version, check_idl_build_feature, check_overflow};
-use clap::Parser;
+use checks::{check_anchor_version, check_deps, check_idl_build_feature, check_overflow};
+use clap::{CommandFactory, Parser};
 use dirs::home_dir;
 use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
@@ -326,7 +326,7 @@ pub enum Command {
         #[clap(value_enum, long, default_value = "sbf")]
         arch: ProgramArch,
     },
-    /// Keypair commands.
+    /// Program keypair commands.
     Keys {
         #[clap(subcommand)]
         subcmd: KeysCommand,
@@ -365,13 +365,18 @@ pub enum Command {
         #[clap(long)]
         idl: Option<String>,
     },
+    /// Generates shell completions.
+    Completions {
+        #[clap(value_enum)]
+        shell: clap_complete::Shell,
+    },
 }
 
 #[derive(Debug, Parser)]
 pub enum KeysCommand {
     /// List all of the program keys.
     List,
-    /// Sync the program's `declare_id!` pubkey with the program's actual pubkey.
+    /// Sync program `declare_id!` pubkeys with the program's actual pubkey.
     Sync {
         /// Only sync the given program instead of all programs
         #[clap(short, long)]
@@ -924,6 +929,15 @@ fn process_command(opts: Opts) -> Result<()> {
             address,
             idl,
         } => account(&opts.cfg_override, account_type, address, idl),
+        Command::Completions { shell } => {
+            clap_complete::generate(
+                shell,
+                &mut Opts::command(),
+                "anchor",
+                &mut std::io::stdout(),
+            );
+            Ok(())
+        }
     }
 }
 
@@ -1271,7 +1285,7 @@ fn expand_program(
     let exit = std::process::Command::new("cargo")
         .arg("expand")
         .arg(target_dir_arg)
-        .arg(&format!("--package={package_name}"))
+        .arg(format!("--package={package_name}"))
         .args(cargo_args)
         .stderr(Stdio::inherit())
         .output()
@@ -1328,6 +1342,7 @@ pub fn build(
 
     // Check whether there is a mismatch between CLI and crate/package versions
     check_anchor_version(&cfg).ok();
+    check_deps(&cfg).ok();
 
     let idl_out = match idl {
         Some(idl) => Some(PathBuf::from(idl)),
@@ -1713,7 +1728,7 @@ fn docker_prep(container_name: &str, build_config: &BuildConfig) -> Result<()> {
             &[
                 "curl",
                 "-sSfL",
-                &format!("https://release.solana.com/v{solana_version}/install",),
+                &format!("https://release.anza.xyz/v{solana_version}/install",),
                 "-o",
                 "solana_installer.sh",
             ],
@@ -1957,9 +1972,8 @@ fn _build_solidity_cwd(
         .unwrap_or(PathBuf::from("."))
         .join(format!("{}.json", name));
 
-    let idl = fs::read_to_string(idl_path)?;
-
-    let idl: Idl = serde_json::from_str(&idl)?;
+    let idl = fs::read(idl_path)?;
+    let idl = convert_idl(&idl)?;
 
     // TS out path.
     let ts_out = match idl_ts_out {
@@ -2324,8 +2338,8 @@ fn idl_init(
     with_workspace(cfg_override, |cfg| {
         let keypair = cfg.provider.wallet.to_string();
 
-        let bytes = fs::read(idl_filepath)?;
-        let idl: Idl = serde_json::from_reader(&*bytes)?;
+        let idl = fs::read(idl_filepath)?;
+        let idl = convert_idl(&idl)?;
 
         let idl_address = create_idl_account(cfg, &keypair, &program_id, &idl, priority_fee)?;
 
@@ -2358,8 +2372,8 @@ fn idl_write_buffer(
     with_workspace(cfg_override, |cfg| {
         let keypair = cfg.provider.wallet.to_string();
 
-        let bytes = fs::read(idl_filepath)?;
-        let idl: Idl = serde_json::from_reader(&*bytes)?;
+        let idl = fs::read(idl_filepath)?;
+        let idl = convert_idl(&idl)?;
 
         let idl_buffer = create_idl_buffer(cfg, &keypair, &program_id, &idl, priority_fee)?;
         idl_write(cfg, &program_id, &idl, idl_buffer, priority_fee)?;
@@ -2721,9 +2735,10 @@ fn idl_build(
                 .path
         }
     };
-    check_idl_build_feature().ok();
+    std::env::set_current_dir(program_path)?;
+
+    check_idl_build_feature()?;
     let idl = anchor_lang_idl::build::IdlBuilder::new()
-        .program_path(program_path)
         .resolution(cfg.features.resolution)
         .skip_lint(cfg.features.skip_lint || skip_lint)
         .no_docs(no_docs)
@@ -2749,32 +2764,7 @@ fn generate_idl(
     no_docs: bool,
     cargo_args: &[String],
 ) -> Result<Idl> {
-    // Check whether the manifest has `idl-build` feature
-    let manifest = Manifest::discover()?.ok_or_else(|| anyhow!("Cargo.toml not found"))?;
-    let is_idl_build = manifest
-        .features
-        .iter()
-        .any(|(feature, _)| feature == "idl-build");
-    if !is_idl_build {
-        let path = manifest.path().display();
-        let anchor_spl_idl_build = manifest
-            .dependencies
-            .iter()
-            .any(|dep| dep.0 == "anchor-spl")
-            .then_some(r#", "anchor-spl/idl-build""#)
-            .unwrap_or_default();
-
-        return Err(anyhow!(
-            r#"`idl-build` feature is missing. To solve, add
-
-[features]
-idl-build = ["anchor-lang/idl-build"{anchor_spl_idl_build}]
-
-in `{path}`."#
-        ));
-    }
-
-    check_idl_build_feature().ok();
+    check_idl_build_feature()?;
 
     anchor_lang_idl::build::IdlBuilder::new()
         .resolution(cfg.features.resolution)
@@ -2913,25 +2903,26 @@ fn account(
                 .expect("Not in workspace.")
                 .read_all_programs()
                 .expect("Workspace must contain atleast one program.")
-                .iter()
-                .find(|&p| p.lib_name == *program_name)
-                .unwrap_or_else(|| panic!("Program {program_name} not found in workspace."))
-                .idl
-                .as_ref()
-                .expect("IDL not found. Please build the program atleast once to generate the IDL.")
-                .clone()
+                .into_iter()
+                .find(|p| p.lib_name == *program_name)
+                .ok_or_else(|| anyhow!("Program {program_name} not found in workspace."))
+                .map(|p| p.idl)?
+                .ok_or_else(|| {
+                    anyhow!(
+                        "IDL not found. Please build the program atleast once to generate the IDL."
+                    )
+                })
         },
         |idl_path| {
-            let bytes = fs::read(idl_path).expect("Unable to read IDL.");
-            let idl: Idl = serde_json::from_reader(&*bytes).expect("Invalid IDL format.");
-
+            let idl = fs::read(idl_path)?;
+            let idl = convert_idl(&idl)?;
             if idl.metadata.name != program_name {
-                panic!("IDL does not match program {program_name}.");
+                return Err(anyhow!("IDL does not match program {program_name}."));
             }
 
-            idl
+            Ok(idl)
         },
-    );
+    )?;
 
     let cluster = match &cfg_override.cluster {
         Some(cluster) => cluster.clone(),
@@ -3005,7 +2996,7 @@ fn deserialize_idl_defined_type_to_json(
 
             let variant = variants
                 .get(repr as usize)
-                .unwrap_or_else(|| panic!("Error while deserializing enum variant {repr}"));
+                .ok_or_else(|| anyhow!("Error while deserializing enum variant {repr}"))?;
 
             let mut value = json!({});
 
@@ -3557,10 +3548,8 @@ fn stream_logs(config: &WithPath<Config>, rpc_url: &str) -> Result<Vec<std::proc
     fs::create_dir_all(program_logs_dir)?;
     let mut handles = vec![];
     for program in config.read_all_programs()? {
-        let mut file = File::open(format!("target/idl/{}.json", program.lib_name))?;
-        let mut contents = vec![];
-        file.read_to_end(&mut contents)?;
-        let idl: Idl = serde_json::from_slice(&contents)?;
+        let idl = fs::read(format!("target/idl/{}.json", program.lib_name))?;
+        let idl = convert_idl(&idl)?;
 
         let log_file = File::create(format!(
             "{}/{}.{}.log",
@@ -4499,7 +4488,7 @@ fn keys_list(cfg_override: &ConfigOverride) -> Result<()> {
     })
 }
 
-/// Sync the program's `declare_id!` pubkey with the pubkey from `target/deploy/<KEYPAIR>.json`.
+/// Sync program `declare_id!` pubkeys with the pubkey from `target/deploy/<KEYPAIR>.json`.
 fn keys_sync(cfg_override: &ConfigOverride, program_name: Option<String>) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         let declare_id_regex = RegexBuilder::new(r#"^(([\w]+::)*)declare_id!\("(\w*)"\)"#)

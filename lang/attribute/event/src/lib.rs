@@ -11,7 +11,7 @@ use syn::parse_macro_input;
 /// their programs that clients can subscribe to. Currently, this macro is for
 /// structs only.
 ///
-/// # Args
+/// # Arguments
 ///
 /// - `discriminator`: Override the default 8-byte discriminator
 ///
@@ -42,7 +42,7 @@ pub fn event(
         .unwrap_or_else(|| gen_discriminator("event", event_name));
 
     let ret = quote! {
-        #[derive(anchor_lang::__private::EventIndex, AnchorSerialize, AnchorDeserialize)]
+        #[derive(AnchorSerialize, AnchorDeserialize)]
         #event_strct
 
         impl anchor_lang::Event for #event_name {
@@ -70,14 +70,6 @@ pub fn event(
 
     #[allow(unreachable_code)]
     proc_macro::TokenStream::from(ret)
-}
-
-// EventIndex is a marker macro. It functionally does nothing other than
-// allow one to mark fields with the `#[index]` inert attribute, which is
-// used to add metadata to IDLs.
-#[proc_macro_derive(EventIndex, attributes(index))]
-pub fn derive_event(_item: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    proc_macro::TokenStream::from(quote! {})
 }
 
 /// Logs an event that can be subscribed to by clients.

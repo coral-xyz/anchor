@@ -14,7 +14,7 @@ The programs and their tests are located in [/tests/bench](https://github.com/co
 
 ## [Unreleased]
 
-Solana version: 1.18.17
+Solana version: 2.0.8
 
 | Instruction                    | Stack Memory | -   |
 | ------------------------------ | ------------ | --- |
@@ -107,6 +107,8 @@ Solana version: 1.18.17
 | unchecked_account8             | 144          | -   |
 
 ### Notable changes
+
+- lang: Use closures for `init` constraints to reduce the stack usage of `try_accounts` ([#2939](https://github.com/coral-xyz/anchor/pull/2939)).
 
 ---
 

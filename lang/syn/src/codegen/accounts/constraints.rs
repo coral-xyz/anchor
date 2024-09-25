@@ -1,4 +1,4 @@
-use quote::quote;
+use quote::{format_ident, quote};
 use std::collections::HashSet;
 
 use crate::*;
@@ -260,6 +260,13 @@ pub fn generate_constraint_has_one(
         Ty::AccountLoader(_) => quote! {#ident.load()?},
         _ => quote! {#ident},
     };
+    let my_key = match &f.ty {
+        Ty::LazyAccount(_) => {
+            let load_ident = format_ident!("load_{}", target.to_token_stream().to_string());
+            quote! { *#field.#load_ident()? }
+        }
+        _ => quote! { #field.#target },
+    };
     let error = generate_custom_error(
         ident,
         &c.error,
@@ -272,7 +279,7 @@ pub fn generate_constraint_has_one(
     quote! {
         {
             #target_optional_check
-            let my_key = #field.#target;
+            let my_key = #my_key;
             let target_key = #target.key();
             if my_key != target_key {
                 return #error;
@@ -575,7 +582,7 @@ fn generate_constraint_init_group(
                 // Define the bump and pda variable.
                 #find_pda
 
-                let #field: #ty_decl = {
+                let #field: #ty_decl = ({ #[inline(never)] || {
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
@@ -624,8 +631,8 @@ fn generate_constraint_init_group(
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintTokenTokenProgram).with_account_name(#name_str).with_pubkeys((*owner_program, #token_program.key())));
                         }
                     }
-                    pa
-                };
+                    Ok(pa)
+                }})()?;
             }
         }
         InitKind::AssociatedToken {
@@ -661,7 +668,7 @@ fn generate_constraint_init_group(
                 // Define the bump and pda variable.
                 #find_pda
 
-                let #field: #ty_decl = {
+                let #field: #ty_decl = ({ #[inline(never)] || {
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
@@ -699,8 +706,8 @@ fn generate_constraint_init_group(
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountNotAssociatedTokenAccount).with_account_name(#name_str));
                         }
                     }
-                    pa
-                };
+                    Ok(pa)
+                }})()?;
             }
         }
         InitKind::Mint {
@@ -934,7 +941,7 @@ fn generate_constraint_init_group(
                 // Define the bump and pda variable.
                 #find_pda
 
-                let #field: #ty_decl = {
+                let #field: #ty_decl = ({ #[inline(never)] || {
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
@@ -1032,8 +1039,8 @@ fn generate_constraint_init_group(
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintMintTokenProgram).with_account_name(#name_str).with_pubkeys((*owner_program, #token_program.key())));
                         }
                     }
-                    pa
-                };
+                    Ok(pa)
+                }})()?;
             }
         }
         InitKind::Program { owner } | InitKind::Interface { owner } => {
@@ -1085,7 +1092,7 @@ fn generate_constraint_init_group(
                 // Define the bump variable.
                 #find_pda
 
-                let #field = {
+                let #field = ({ #[inline(never)] || {
                     // Checks that all the required accounts for this operation are present.
                     #optional_checks
 
@@ -1130,8 +1137,8 @@ fn generate_constraint_init_group(
                     }
 
                     // Done.
-                    pa
-                };
+                    Ok(pa)
+                }})()?;
             }
         }
     }

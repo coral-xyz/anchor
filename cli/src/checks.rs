@@ -81,11 +81,65 @@ pub fn check_anchor_version(cfg: &WithPath<Config>) -> Result<()> {
     Ok(())
 }
 
+/// Check for potential dependency improvements.
+///
+/// The main problem people will run into with Solana v2 is that the `solana-program` version
+/// specified in users' `Cargo.toml` might be incompatible with `anchor-lang`'s dependency.
+/// To fix this and similar problems, users should use the crates exported from `anchor-lang` or
+/// `anchor-spl` when possible.
+pub fn check_deps(cfg: &WithPath<Config>) -> Result<()> {
+    // Check `solana-program`
+    cfg.get_rust_program_list()?
+        .into_iter()
+        .map(|path| path.join("Cargo.toml"))
+        .map(cargo_toml::Manifest::from_path)
+        .map(|man| man.map_err(|e| anyhow!("Failed to read manifest: {e}")))
+        .collect::<Result<Vec<_>>>()?
+        .into_iter()
+        .filter(|man| man.dependencies.contains_key("solana-program"))
+        .for_each(|man| {
+            eprintln!(
+                "WARNING: Adding `solana-program` as a separate dependency might cause conflicts.\n\
+                To solve, remove the `solana-program` dependency and use the exported crate from \
+                `anchor-lang`.\n\
+                `use solana_program` becomes `use anchor_lang::solana_program`.\n\
+                Program name: `{}`\n",
+                man.package().name()
+            )
+        });
+
+    Ok(())
+}
+
 /// Check whether the `idl-build` feature is being used correctly.
 ///
 /// **Note:** The check expects the current directory to be a program directory.
 pub fn check_idl_build_feature() -> Result<()> {
-    let manifest = Manifest::from_path("Cargo.toml")?;
+    let manifest_path = Path::new("Cargo.toml").canonicalize()?;
+    let manifest = Manifest::from_path(&manifest_path)?;
+
+    // Check whether the manifest has `idl-build` feature
+    let has_idl_build_feature = manifest
+        .features
+        .iter()
+        .any(|(feature, _)| feature == "idl-build");
+    if !has_idl_build_feature {
+        let anchor_spl_idl_build = manifest
+            .dependencies
+            .iter()
+            .any(|dep| dep.0 == "anchor-spl")
+            .then_some(r#", "anchor-spl/idl-build""#)
+            .unwrap_or_default();
+
+        return Err(anyhow!(
+            r#"`idl-build` feature is missing. To solve, add
+
+[features]
+idl-build = ["anchor-lang/idl-build"{anchor_spl_idl_build}]
+
+in `{manifest_path:?}`."#
+        ));
+    }
 
     // Check if `idl-build` is enabled by default
     manifest
