@@ -756,7 +756,6 @@ pub enum ConstraintToken {
     TokenMint(Context<ConstraintTokenMint>),
     TokenAuthority(Context<ConstraintTokenAuthority>),
     TokenTokenProgram(Context<ConstraintTokenProgram>),
-    ExtensionTransferMemo(Context<ConstraintBool>),
     AssociatedTokenMint(Context<ConstraintTokenMint>),
     AssociatedTokenAuthority(Context<ConstraintTokenAuthority>),
     AssociatedTokenTokenProgram(Context<ConstraintTokenProgram>),
@@ -958,7 +957,6 @@ pub enum InitKind {
         owner: Expr,
         mint: Expr,
         token_program: Option<Expr>,
-        memo_transfer: Option<Expr>,
     },
     AssociatedToken {
         owner: Expr,

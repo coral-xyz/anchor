@@ -525,7 +525,6 @@ fn generate_constraint_init_group(
             owner,
             mint,
             token_program,
-            memo_transfer,
         } => {
             let token_program = match token_program {
                 Some(t) => t.to_token_stream(),
@@ -539,31 +538,12 @@ fn generate_constraint_init_group(
             let token_program_optional_check = check_scope.generate_check(&token_program);
             let rent_optional_check = check_scope.generate_check(rent);
 
-            // extension checks
-            let memo_transfer_check = match memo_transfer {
-                Some(gpa) => check_scope.generate_check(gpa),
-                None => quote! {},
-            };
-
             let optional_checks = quote! {
                 #system_program_optional_check
                 #token_program_optional_check
                 #rent_optional_check
                 #owner_optional_check
                 #mint_optional_check
-                #memo_transfer_check
-            };
-
-            let mut extensions = vec![];
-
-            if memo_transfer.is_some() {
-                extensions.push(quote! {::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::MemoTransfer});
-            }
-
-            let extensions = if extensions.is_empty() {
-                quote! {Option::<&::anchor_spl::token_interface::ExtensionsVec>::None}
-            } else {
-                quote! {Option::<&::anchor_spl::token_interface::ExtensionsVec>::Some(&vec![#(#extensions),*])}
             };
 
             let payer_optional_check = check_scope.generate_check(payer);
@@ -592,21 +572,6 @@ fn generate_constraint_init_group(
 
                         // Create the account with the system program.
                         #create_account
-
-                        if let Some(extensions) = #extensions {
-                            for e in extensions {
-                                match e {
-                                    ::anchor_spl::token_interface::spl_token_2022::extension::ExtensionType::MemoTransfer => {
-                                        ::anchor_spl::token_interface::memo_transfer_initialize(anchor_lang::context::CpiContext::new(#token_program.to_account_info(), ::anchor_spl::token_interface::MemoTransfer {
-                                            token_program_id: #token_program.to_account_info(),
-                                            account: #field.to_account_info(),
-                                            owner: #owner.to_account_info(),
-                                        }))?;
-                                    },
-
-                                }
-                            }
-                        }
 
                         // Initialize the token account.
                         let cpi_program = #token_program.to_account_info();
