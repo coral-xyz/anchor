@@ -116,11 +116,10 @@ fn gen_internal_accounts_common(
         accs.iter()
             .flat_map(|acc| match acc {
                 IdlInstructionAccountItem::Composite(accs)
-                    if idl
+                    if !idl
                         .instructions
                         .iter()
-                        .find(|ix| ix.accounts == accs.accounts)
-                        .is_none() =>
+                        .any(|ix| ix.accounts == accs.accounts) =>
                 {
                     let mut non_ix_composite_accs =
                         get_non_instruction_composite_accounts(&accs.accounts, idl);
