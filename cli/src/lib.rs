@@ -1613,7 +1613,7 @@ fn build_cwd_verifiable(
                 .join("target")
                 .join("types")
                 .join(&idl.metadata.name)
-                .with_extension("json");
+                .with_extension("ts");
             fs::write(&ts_file, idl_ts(&idl)?)?;
 
             // Copy out the TypeScript type.
