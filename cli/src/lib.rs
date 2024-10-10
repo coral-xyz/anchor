@@ -3584,10 +3584,7 @@ fn stream_logs(config: &WithPath<Config>, rpc_url: &str) -> Result<Vec<std::proc
         let idl = convert_idl(&idl)?;
 
         let log_file = File::create(
-            program_logs_dir
-                .join(&idl.address)
-                .join(&program.lib_name)
-                .with_extension("log"),
+            program_logs_dir.join(format!("{}.{}.log", idl.address, program.lib_name)),
         )?;
         let stdio = std::process::Stdio::from(log_file);
         let child = std::process::Command::new("solana")
