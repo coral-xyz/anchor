@@ -3583,7 +3583,12 @@ fn stream_logs(config: &WithPath<Config>, rpc_url: &str) -> Result<Vec<std::proc
         let idl = fs::read(idl_path)?;
         let idl = convert_idl(&idl)?;
 
-        let log_file = File::create(program_logs_dir.join(&idl.address).join(&program.lib_name))?;
+        let log_file = File::create(
+            program_logs_dir
+                .join(&idl.address)
+                .join(&program.lib_name)
+                .with_extension("log"),
+        )?;
         let stdio = std::process::Stdio::from(log_file);
         let child = std::process::Command::new("solana")
             .arg("logs")
@@ -3597,7 +3602,8 @@ fn stream_logs(config: &WithPath<Config>, rpc_url: &str) -> Result<Vec<std::proc
     if let Some(test) = config.test_validator.as_ref() {
         if let Some(genesis) = &test.genesis {
             for entry in genesis {
-                let log_file = File::create(program_logs_dir.join(&entry.address))?;
+                let log_file =
+                    File::create(program_logs_dir.join(&entry.address).with_extension("log"))?;
                 let stdio = std::process::Stdio::from(log_file);
                 let child = std::process::Command::new("solana")
                     .arg("logs")
