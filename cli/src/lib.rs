@@ -1524,10 +1524,24 @@ fn build_rust_cwd(
     no_docs: bool,
     arch: &ProgramArch,
 ) -> Result<()> {
-    match cargo_toml.parent() {
+    let mut cargo_toml_parent = match cargo_toml.parent() {
+        Some(parent) => parent.to_owned(),
         None => return Err(anyhow!("Unable to find parent")),
-        Some(p) => std::env::set_current_dir(p)?,
     };
+
+    // build-sbf depends on cargo metadata, which in turn depends on glob
+    // to find packages in a workspace
+    // but glob breaks on UNC paths like \\?\C:\...\packages\*
+    // so on windows, find the relative path of the package and use
+    // https://github.com/rust-lang/glob/issues/132
+    #[cfg(windows)]
+    {
+        let workspace_dir = cfg.path().parent().unwrap();
+        let relative_path = cargo_toml_parent.strip_prefix(workspace_dir.canonicalize()?)?;
+        cargo_toml_parent = std::path::absolute(workspace_dir.join(relative_path))?;
+    }
+
+    std::env::set_current_dir(cargo_toml_parent)?;
     match build_config.verifiable {
         false => _build_rust_cwd(
             cfg, no_idl, idl_out, idl_ts_out, skip_lint, no_docs, arch, cargo_args,
@@ -1915,7 +1929,20 @@ fn _build_rust_cwd(
     arch: &ProgramArch,
     cargo_args: Vec<String>,
 ) -> Result<()> {
-    let exit = std::process::Command::new("cargo")
+    let mut build_command = std::process::Command::new("cargo");
+
+    // TODO: fix upstream in solana-build-sbf
+    #[cfg(windows)]
+    if std::env::var("HOME").is_err() {
+        build_command.env(
+            "HOME",
+            std::env::var("USERPROFILE").map_err(|e| {
+                anyhow!("env variable 'HOME' not set and could not read 'USERPROFILE': {e}")
+            })?,
+        );
+    }
+
+    let exit = build_command
         .arg(arch.build_subcommand())
         .args(cargo_args.clone())
         .stdout(Stdio::inherit())
