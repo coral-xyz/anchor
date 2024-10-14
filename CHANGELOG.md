@@ -51,6 +51,10 @@ The minor version will be incremented upon a breaking change and the patch versi
 - cli: Add completions command to generate shell completions via the clap_complete crate ([#3251](https://github.com/coral-xyz/anchor/pull/3251)).
 - cli: Always convert IDLs ([#3265](https://github.com/coral-xyz/anchor/pull/3265)).
 - cli: Check whether the `idl-build` feature exists when using the `idl build` command ([#3273](https://github.com/coral-xyz/anchor/pull/3273)).
+- cli: Build IDL if there is only one program when using the `idl build` command ([#3275](https://github.com/coral-xyz/anchor/pull/3275)).
+- cli: Add short alias for the `idl build` command ([#3283](https://github.com/coral-xyz/anchor/pull/3283)).
+- cli: Add `--program-id` option to `idl convert` command ([#3309](https://github.com/coral-xyz/anchor/pull/3309)).
+- lang: Generate documentation of constants in `declare_program!` ([#3311](https://github.com/coral-xyz/anchor/pull/3311)).
 - spl: Add 'Interest Bearing Config` Extension ([#3278](https://github.com/coral-xyz/anchor/pull/3278)).
 
 ### Fixes
@@ -76,6 +80,12 @@ The minor version will be incremented upon a breaking change and the patch versi
 - idl: Fix using full path types with `Program` ([#3228](https://github.com/coral-xyz/anchor/pull/3228)).
 - lang: Use closures for `init` constraints to reduce the stack usage of `try_accounts` ([#2939](https://github.com/coral-xyz/anchor/pull/2939)).
 - lang: Allow the `cfg` attribute above the instructions ([#2339](https://github.com/coral-xyz/anchor/pull/2339)).
+- idl: Log output with `ANCHOR_LOG` on failure and improve build error message ([#3284](https://github.com/coral-xyz/anchor/pull/3284)).
+- lang: Fix constant bytes declarations when using `declare_program!` ([#3287](https://github.com/coral-xyz/anchor/pull/3287)).
+- lang: Fix using non-instruction composite accounts with `declare_program!` ([#3290](https://github.com/coral-xyz/anchor/pull/3290)).
+- idl: Fix instructions with tuple parameters not producing an error([#3294](https://github.com/coral-xyz/anchor/pull/3294)).
+- ts: Update `engines.node` to `>= 17` ([#3301](https://github.com/coral-xyz/anchor/pull/3301)).
+- cli: Use OS-agnostic paths ([#3307](https://github.com/coral-xyz/anchor/pull/3307)).
 
 ### Breaking
 

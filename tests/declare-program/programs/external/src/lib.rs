@@ -2,6 +2,10 @@ use anchor_lang::prelude::*;
 
 declare_id!("Externa111111111111111111111111111111111111");
 
+/// Master seed slice
+#[constant]
+pub const MASTER_SEED: &[u8] = b"master";
+
 #[program]
 pub mod external {
     use super::*;
@@ -17,6 +21,15 @@ pub mod external {
 
     pub fn update_composite(ctx: Context<UpdateComposite>, value: u32) -> Result<()> {
         ctx.accounts.update.my_account.field = value;
+        Ok(())
+    }
+
+    // Test the issue described in https://github.com/coral-xyz/anchor/issues/3274
+    pub fn update_non_instruction_composite(
+        ctx: Context<UpdateNonInstructionComposite>,
+        value: u32,
+    ) -> Result<()> {
+        ctx.accounts.non_instruction_update.my_account.field = value;
         Ok(())
     }
 
@@ -62,8 +75,21 @@ pub struct Update<'info> {
 }
 
 #[derive(Accounts)]
+pub struct NonInstructionUpdate<'info> {
+    pub authority: Signer<'info>,
+    #[account(mut, seeds = [authority.key.as_ref()], bump)]
+    pub my_account: Account<'info, MyAccount>,
+    pub program: Program<'info, program::External>,
+}
+
+#[derive(Accounts)]
 pub struct UpdateComposite<'info> {
     pub update: Update<'info>,
+}
+
+#[derive(Accounts)]
+pub struct UpdateNonInstructionComposite<'info> {
+    pub non_instruction_update: NonInstructionUpdate<'info>,
 }
 
 #[account]
