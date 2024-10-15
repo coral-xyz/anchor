@@ -3,7 +3,7 @@ name: Release
 on:
   workflow_dispatch:
   push:
-    branches: [master]
+    branches: [master, "feature/windows-support"]
     tags:
       - "v*.*.*"
 
