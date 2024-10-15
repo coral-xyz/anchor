@@ -1524,6 +1524,7 @@ fn build_rust_cwd(
     no_docs: bool,
     arch: &ProgramArch,
 ) -> Result<()> {
+    #[allow(unused_mut)]
     let mut cargo_toml_parent = match cargo_toml.parent() {
         Some(parent) => parent.to_owned(),
         None => return Err(anyhow!("Unable to find parent")),
