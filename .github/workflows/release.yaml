@@ -59,11 +59,11 @@ jobs:
         run: |
           # build avm and anchor separately for now because
           # of the name conflict in avm/anchor and cli/anchor
-          # cargo build --release -p anchor-cli --bin anchor
-          # cargo build --release -p avm --bin avm
-          cargo build --release --bin hello
-          cp "target/release/hello.exe" "target/release/avm.exe"
-          cp "target/release/hello.exe" "target/release/anchor.exe"
+          cargo build --release -p anchor-cli --bin anchor
+          cargo build --release -p avm --bin avm
+          # cargo build --release --bin hello
+          # cp "target/release/hello.exe" "target/release/avm.exe"
+          # cp "target/release/hello.exe" "target/release/anchor.exe"
 
           binary_extension=""
 
