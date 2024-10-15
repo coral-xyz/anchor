@@ -66,17 +66,18 @@ jobs:
 
           if [[ "${RUNNER_OS}" == "Linux" ]]; then
             release_folder="ubuntu-latest"
-          fi
-          if [[ "${RUNNER_OS}" == "Windows" ]]; then
+          elif [[ "${RUNNER_OS}" == "Windows" ]]; then
             binary_extension=".exe"
             release_folder="windows-latest"
-          fi
-          if [[ "${RUNNER_OS}" == "macOS" ]]; then
+          elif [[ "${RUNNER_OS}" == "macOS" ]]; then
             if [[ "${{ matrix.os }}" == "macos-14" ]]; then
               release_folder="macos-m1-latest"
             else
               release_folder="macos-intel-latest"
             fi
+          else
+            echo "unknown value for RUNNER_OS: ${RUNNER_OS}"
+            exit 1
           fi
 
           mkdir -p "${release_folder}"
@@ -84,7 +85,7 @@ jobs:
 
           mv "target/release/anchor${binary_extension}" "${release_folder}"
           mv "target/release/avm${binary_extension}" "${release_folder}"
-          # strip "${release_folder}/*"
+          strip "${release_folder}/*"
 
       - name: Publish Artifacts
         if: "!startsWith(github.ref, 'refs/tags/')"
