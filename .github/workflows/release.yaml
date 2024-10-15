@@ -61,13 +61,10 @@ jobs:
           # of the name conflict in avm/anchor and cli/anchor
           cargo build --release -p anchor-cli --bin anchor
           cargo build --release -p avm --bin avm
-          # cargo build --release --bin hello
-          # cp "target/release/hello.exe" "target/release/avm.exe"
-          # cp "target/release/hello.exe" "target/release/anchor.exe"
 
           binary_extension=""
 
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
+          if [[ "${RUNNER_OS}" == "Linux" ]]; then
             release_folder="ubuntu-latest"
           fi
           if [[ "${RUNNER_OS}" == "Windows" ]]; then
