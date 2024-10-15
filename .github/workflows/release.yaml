@@ -1,0 +1,105 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os:
+          - windows-latest
+          # - ubuntu-latest
+          # - macos-latest
+          # - macos-14
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Latest Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          override: true
+
+      # - name: Cache Cargo registry + index
+      #   uses: actions/cache@v3
+      #   if: ${{ env.CACHE != 'false' }}
+      #   with:
+      #     path: |
+      #       ~/.cargo/bin/
+      #       ~/.cargo/registry/index/
+      #       ~/.cargo/registry/cache/
+      #       ~/.cargo/git/db/
+      #       ./target/
+      #     key: cargo-${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Set Version
+        id: set-version
+        shell: sh
+        run: |
+          VERSION=$(printf "%s" "${{ github.ref_name }}" | sed -e "s|/|-|g")
+          if [ "${{ github.ref_type }}" = "branch" ]; then
+            VERSION=$(printf "%s" "${GITHUB_SHA}" | cut -c-6)
+          fi
+          echo "version: ${VERSION}"
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build
+        id: build
+        shell: bash
+        run: |
+          # build avm and anchor separately for now because
+          # of the name conflict in avm/anchor and cli/anchor
+          # cargo build --release -p anchor-cli --bin anchor
+          # cargo build --release -p avm --bin avm
+          cargo build --release --bin hello
+          cp "target/release/hello.exe" "target/release/avm.exe"
+          cp "target/release/hello.exe" "target/release/anchor.exe"
+
+          binary_extension=""
+
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            release_folder="ubuntu-latest"
+          fi
+          if [[ "${RUNNER_OS}" == "Windows" ]]; then
+            binary_extension=".exe"
+            release_folder="windows-latest"
+          fi
+          if [[ "${RUNNER_OS}" == "macOS" ]]; then
+            if [[ "${{ matrix.os }}" == "macos-14" ]]; then
+              release_folder="macos-m1-latest"
+            else
+              release_folder="macos-intel-latest"
+            fi
+          fi
+
+          mkdir -p "${release_folder}"
+          echo "::set-output name=release-folder::${release_folder}"
+          
+          mv "target/release/anchor${binary_extension}" "${release_folder}"
+          mv "target/release/avm${binary_extension}" "${release_folder}"
+          # strip "${release_folder}/*"
+
+      - name: Publish Artifacts
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        uses: actions/upload-artifact@v2
+        with:
+          name: "anchor-${{ steps.build.outputs.release-folder }}-${{ steps.build.set-version.version }}"
+          path: "${{ steps.build.outputs.release-folder }}/*"
+
+      - name: Release Tags
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            ${{ steps.build.outputs.release-folder }}/avm*
+            ${{ steps.build.outputs.release-folder }}/anchor*
