@@ -19,6 +19,10 @@ Go [here](https://docs.solana.com/cli/install-solana-cli-tools) to install Solan
 We also recommend checking out the official [Solana developers page](https://solana.com/developers).
 {% /callout %}
 
+## NVM
+
+Go [here](https://www.freecodecamp.org/news/node-version-manager-nvm-install-guide/) to install nvm, which will allow you to install node and npm.
+
 ## Yarn
 
 Go [here](https://yarnpkg.com/getting-started/install) to install Yarn.
