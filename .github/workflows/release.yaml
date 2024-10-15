@@ -23,24 +23,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Latest Rust
-        uses: actions-rs/toolchain@v1
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
-          default: true
           override: true
-
-      - name: Cache Cargo registry + index
-        uses: actions/cache@v3
-        if: ${{ env.CACHE != 'false' }}
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            ./target/
-          key: cargo-${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Set Version
         id: set-version
