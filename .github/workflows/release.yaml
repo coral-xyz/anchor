@@ -30,17 +30,17 @@ jobs:
           default: true
           override: true
 
-      # - name: Cache Cargo registry + index
-      #   uses: actions/cache@v3
-      #   if: ${{ env.CACHE != 'false' }}
-      #   with:
-      #     path: |
-      #       ~/.cargo/bin/
-      #       ~/.cargo/registry/index/
-      #       ~/.cargo/registry/cache/
-      #       ~/.cargo/git/db/
-      #       ./target/
-      #     key: cargo-${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache Cargo registry + index
+        uses: actions/cache@v3
+        if: ${{ env.CACHE != 'false' }}
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ./target/
+          key: cargo-${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Set Version
         id: set-version
