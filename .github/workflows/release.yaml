@@ -83,8 +83,8 @@ jobs:
           fi
 
           mkdir -p "${release_folder}"
-          echo "::set-output name=release-folder::${release_folder}"
-          
+          echo "release-folder=${VERSION}" >> "${GITHUB_OUTPUT}"
+
           mv "target/release/anchor${binary_extension}" "${release_folder}"
           mv "target/release/avm${binary_extension}" "${release_folder}"
           # strip "${release_folder}/*"
@@ -93,11 +93,11 @@ jobs:
         if: "!startsWith(github.ref, 'refs/tags/')"
         uses: actions/upload-artifact@v4
         with:
-          name: "anchor-${{ steps.build.outputs.release-folder }}-${{ steps.build.set-version.version }}"
+          name: "anchor-${{ steps.build.outputs.release-folder }}-${{ steps.set-version.outputs.version }}"
           path: "${{ steps.build.outputs.release-folder }}/*"
 
       - name: Release Tags
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
