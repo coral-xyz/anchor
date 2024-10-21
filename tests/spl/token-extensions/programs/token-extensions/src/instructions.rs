@@ -157,7 +157,7 @@ pub fn handler(ctx: Context<CreateMintAccount>, args: CreateMintAccountArgs) -> 
         interest_bearing_config.rate_authority,
         OptionalNonZeroPubkey::try_from(authority_key)?
     );
-    assert_eq!(interest_bearing_config.rate, BasisPoints::try_from(100)?);
+    assert_eq!(interest_bearing_config.current_rate, BasisPoints::from(100));
     // transfer minimum rent to mint account
     update_account_lamports_to_minimum_balance(
         ctx.accounts.mint.to_account_info(),
