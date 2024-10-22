@@ -234,7 +234,11 @@ pub fn install_version(install_target: InstallTarget, force: bool) -> Result<()>
     }
 
     let bin_dir = get_bin_dir_path();
-    let bin_name = if cfg!(target_os = "windows") { "anchor.exe" } else { "anchor" };
+    let bin_name = if cfg!(target_os = "windows") {
+        "anchor.exe"
+    } else {
+        "anchor"
+    };
     fs::rename(
         bin_dir.join(bin_name),
         bin_dir.join(format!("anchor-{version}")),
