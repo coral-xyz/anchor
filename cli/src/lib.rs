@@ -84,7 +84,7 @@ pub enum Command {
         #[clap(long)]
         no_install: bool,
         /// Package Manager to use
-        #[clap(value_enum, long, short, default_value = "npm")]
+        #[clap(value_enum, long, default_value = "npm")]
         package_manager: PackageManager,
         /// Don't initialize git
         #[clap(long)]
@@ -144,7 +144,7 @@ pub enum Command {
         #[clap(value_enum, long, default_value = "sbf")]
         arch: ProgramArch,
         /// Package Manager to use
-        #[clap(value_enum, long, short, default_value = "npm")]
+        #[clap(value_enum, long, default_value = "npm")]
         package_manager: PackageManager,
     },
     /// Expands macros (wrapper around cargo expand)
@@ -194,7 +194,7 @@ pub enum Command {
         #[clap(long, required = false)]
         skip_build: bool,
         /// Package Manager to use
-        #[clap(value_enum, long, short, default_value = "npm")]
+        #[clap(value_enum, long, default_value = "npm")]
         package_manager: PackageManager,
     },
     #[clap(name = "test", alias = "t")]
@@ -240,7 +240,7 @@ pub enum Command {
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
         /// Package Manager to use
-        #[clap(value_enum, long, short, default_value = "npm")]
+        #[clap(value_enum, long, default_value = "npm")]
         package_manager: PackageManager,
     },
     /// Creates a new program.
@@ -282,7 +282,7 @@ pub enum Command {
     /// Runs the deploy migration script.
     Migrate {
         /// Package Manager to use
-        #[clap(value_enum, long, short, default_value = "npm")]
+        #[clap(value_enum, long, default_value = "npm")]
         package_manager: PackageManager,
     },
     /// Deploys, initializes an IDL, and migrates all in one command.
@@ -343,7 +343,7 @@ pub enum Command {
         #[clap(value_enum, long, default_value = "sbf")]
         arch: ProgramArch,
         /// Package Manager to use
-        #[clap(value_enum, long, short, default_value = "npm")]
+        #[clap(value_enum, long, default_value = "npm")]
         package_manager: PackageManager,
     },
     /// Program keypair commands.
@@ -375,7 +375,7 @@ pub enum Command {
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
         /// Package Manager to use
-        #[clap(value_enum, long, short, default_value = "npm")]
+        #[clap(value_enum, long, default_value = "npm")]
         package_manager: PackageManager,
     },
     /// Fetch and deserialize an account using the IDL provided.
