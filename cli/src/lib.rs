@@ -10,7 +10,7 @@ use anchor_lang_idl::convert::convert_idl;
 use anchor_lang_idl::types::{Idl, IdlArrayLen, IdlDefinedFields, IdlType, IdlTypeDefTy};
 use anyhow::{anyhow, Context, Result};
 use checks::{check_anchor_version, check_deps, check_idl_build_feature, check_overflow};
-use clap::{CommandFactory, Parser};
+use clap::{CommandFactory, Parser, ValueEnum};
 use dirs::home_dir;
 use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
@@ -41,6 +41,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ffi::OsString;
+use std::fmt;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -82,6 +83,9 @@ pub enum Command {
         /// Don't install JavaScript dependencies
         #[clap(long)]
         no_install: bool,
+        /// Package Manager to use
+        #[clap(value_enum, long, short, default_value = "npm")]
+        package_manager: PackageManager,
         /// Don't initialize git
         #[clap(long)]
         no_git: bool,
@@ -139,6 +143,9 @@ pub enum Command {
         /// Architecture to use when building the program
         #[clap(value_enum, long, default_value = "sbf")]
         arch: ProgramArch,
+        /// Package Manager to use
+        #[clap(value_enum, long, short, default_value = "npm")]
+        package_manager: PackageManager,
     },
     /// Expands macros (wrapper around cargo expand)
     ///
@@ -186,6 +193,9 @@ pub enum Command {
         /// use this to save time when running verify and the program code is already built.
         #[clap(long, required = false)]
         skip_build: bool,
+        /// Package Manager to use
+        #[clap(value_enum, long, short, default_value = "npm")]
+        package_manager: PackageManager,
     },
     #[clap(name = "test", alias = "t")]
     /// Runs integration tests.
@@ -229,6 +239,9 @@ pub enum Command {
         /// Arguments to pass to the underlying `cargo build-sbf` command.
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
+        /// Package Manager to use
+        #[clap(value_enum, long, short, default_value = "npm")]
+        package_manager: PackageManager,
     },
     /// Creates a new program.
     New {
@@ -267,7 +280,11 @@ pub enum Command {
         solana_args: Vec<String>,
     },
     /// Runs the deploy migration script.
-    Migrate,
+    Migrate {
+        /// Package Manager to use
+        #[clap(value_enum, long, short, default_value = "npm")]
+        package_manager: PackageManager,
+    },
     /// Deploys, initializes an IDL, and migrates all in one command.
     /// Upgrades a single program. The configured wallet must be the upgrade
     /// authority.
@@ -325,6 +342,9 @@ pub enum Command {
         /// Architecture to use when building the program
         #[clap(value_enum, long, default_value = "sbf")]
         arch: ProgramArch,
+        /// Package Manager to use
+        #[clap(value_enum, long, short, default_value = "npm")]
+        package_manager: PackageManager,
     },
     /// Program keypair commands.
     Keys {
@@ -354,6 +374,9 @@ pub enum Command {
         /// Arguments to pass to the underlying `cargo build-sbf` command.
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
+        /// Package Manager to use
+        #[clap(value_enum, long, short, default_value = "npm")]
+        package_manager: PackageManager,
     },
     /// Fetch and deserialize an account using the IDL provided.
     Account {
@@ -524,6 +547,28 @@ pub enum IdlCommand {
 pub enum ClusterCommand {
     /// Prints common cluster urls.
     List,
+}
+
+/// Package manager to use for the project.
+#[derive(Clone, Debug, Default, Eq, PartialEq, Parser, ValueEnum)]
+pub enum PackageManager {
+    /// Use npm as the package manager.
+    #[default]
+    NPM,
+    /// Use yarn as the package manager.
+    Yarn,
+    /// Use pnpm as the package manager.
+    PNPM,
+}
+
+impl fmt::Display for PackageManager {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PackageManager::NPM => write!(f, "npm"),
+            PackageManager::Yarn => write!(f, "yarn"),
+            PackageManager::PNPM => write!(f, "pnpm"),
+        }
+    }
 }
 
 fn get_keypair(path: &str) -> Result<Keypair> {
@@ -756,6 +801,7 @@ fn process_command(opts: Opts) -> Result<()> {
             javascript,
             solidity,
             no_install,
+            package_manager,
             no_git,
             template,
             test_template,
@@ -766,6 +812,7 @@ fn process_command(opts: Opts) -> Result<()> {
             javascript,
             solidity,
             no_install,
+            package_manager,
             no_git,
             template,
             test_template,
@@ -791,6 +838,7 @@ fn process_command(opts: Opts) -> Result<()> {
             skip_lint,
             no_docs,
             arch,
+            package_manager,
         } => build(
             &opts.cfg_override,
             no_idl,
@@ -808,6 +856,7 @@ fn process_command(opts: Opts) -> Result<()> {
             cargo_args,
             no_docs,
             arch,
+            package_manager,
         ),
         Command::Verify {
             program_id,
@@ -819,6 +868,7 @@ fn process_command(opts: Opts) -> Result<()> {
             cargo_args,
             skip_build,
             arch,
+            package_manager,
         } => verify(
             &opts.cfg_override,
             program_id,
@@ -830,6 +880,7 @@ fn process_command(opts: Opts) -> Result<()> {
             cargo_args,
             skip_build,
             arch,
+            package_manager,
         ),
         Command::Clean => clean(&opts.cfg_override),
         Command::Deploy {
@@ -859,7 +910,7 @@ fn process_command(opts: Opts) -> Result<()> {
             solana_args,
         ),
         Command::Idl { subcmd } => idl(&opts.cfg_override, subcmd),
-        Command::Migrate => migrate(&opts.cfg_override),
+        Command::Migrate { package_manager } => migrate(&opts.cfg_override, package_manager),
         Command::Test {
             program_name,
             skip_deploy,
@@ -873,6 +924,7 @@ fn process_command(opts: Opts) -> Result<()> {
             cargo_args,
             skip_lint,
             arch,
+            package_manager,
         } => test(
             &opts.cfg_override,
             program_name,
@@ -887,6 +939,7 @@ fn process_command(opts: Opts) -> Result<()> {
             env,
             cargo_args,
             arch,
+            package_manager,
         ),
         #[cfg(feature = "dev")]
         Command::Airdrop { .. } => airdrop(&opts.cfg_override),
@@ -903,6 +956,7 @@ fn process_command(opts: Opts) -> Result<()> {
             cargo_args,
             skip_build,
             arch,
+            package_manager,
         } => publish(
             &opts.cfg_override,
             program,
@@ -910,6 +964,7 @@ fn process_command(opts: Opts) -> Result<()> {
             cargo_args,
             skip_build,
             arch,
+            package_manager,
         ),
         Command::Keys { subcmd } => keys(&opts.cfg_override, subcmd),
         Command::Localnet {
@@ -919,6 +974,7 @@ fn process_command(opts: Opts) -> Result<()> {
             env,
             cargo_args,
             arch,
+            package_manager,
         } => localnet(
             &opts.cfg_override,
             skip_build,
@@ -927,6 +983,7 @@ fn process_command(opts: Opts) -> Result<()> {
             env,
             cargo_args,
             arch,
+            package_manager,
         ),
         Command::Account {
             account_type,
@@ -952,6 +1009,7 @@ fn init(
     javascript: bool,
     solidity: bool,
     no_install: bool,
+    package_manager: PackageManager,
     no_git: bool,
     template: ProgramTemplate,
     test_template: TestTemplate,
@@ -990,9 +1048,9 @@ fn init(
     fs::create_dir_all("app")?;
 
     let mut cfg = Config::default();
-    let test_script = test_template.get_test_script(javascript);
-    cfg.scripts
-        .insert("test".to_owned(), test_script.to_owned());
+    let package_manager_cmd = package_manager.to_string();
+    let test_script = test_template.get_test_script(javascript, &package_manager_cmd);
+    cfg.scripts.insert("test".to_owned(), test_script);
 
     let mut localnet = BTreeMap::new();
     let program_id = rust_template::get_or_create_program_id(&rust_name);
@@ -1064,10 +1122,18 @@ fn init(
     )?;
 
     if !no_install {
-        let yarn_result = install_node_modules("yarn")?;
-        if !yarn_result.status.success() {
-            println!("Failed yarn install will attempt to npm install");
-            install_node_modules("npm")?;
+        if package_manager != PackageManager::NPM {
+            let package_manager_result = install_node_modules(&package_manager_cmd)?;
+
+            if !package_manager_result.status.success() {
+                println!(
+                    "Failed {} install will attempt to npm install",
+                    package_manager_cmd
+                );
+                install_node_modules("npm")?;
+            }
+        } else {
+            install_node_modules(&package_manager_cmd)?;
         }
     }
 
@@ -1334,6 +1400,7 @@ pub fn build(
     cargo_args: Vec<String>,
     no_docs: bool,
     arch: ProgramArch,
+    package_manager: PackageManager,
 ) -> Result<()> {
     // Change to the workspace member directory, if needed.
     if let Some(program_name) = program_name.as_ref() {
@@ -1349,7 +1416,7 @@ pub fn build(
     }
 
     // Check whether there is a mismatch between CLI and crate/package versions
-    check_anchor_version(&cfg).ok();
+    check_anchor_version(&cfg, package_manager).ok();
     check_deps(&cfg).ok();
 
     let idl_out = match idl {
@@ -2034,6 +2101,7 @@ fn verify(
     cargo_args: Vec<String>,
     skip_build: bool,
     arch: ProgramArch,
+    package_manager: PackageManager,
 ) -> Result<()> {
     // Change to the workspace member directory, if needed.
     if let Some(program_name) = program_name.as_ref() {
@@ -2064,6 +2132,7 @@ fn verify(
             cargo_args.clone(),
             false,
             arch,
+            package_manager,
         )?;
     }
     std::env::set_current_dir(cur_dir)?;
@@ -3204,6 +3273,7 @@ fn test(
     env_vars: Vec<String>,
     cargo_args: Vec<String>,
     arch: ProgramArch,
+    package_manager: PackageManager,
 ) -> Result<()> {
     let test_paths = tests_to_run
         .iter()
@@ -3234,6 +3304,7 @@ fn test(
                 cargo_args,
                 false,
                 arch,
+                package_manager,
             )?;
         }
 
@@ -4102,7 +4173,7 @@ fn serialize_idl_ix(ix_inner: anchor_lang::idl::IdlInstruction) -> Result<Vec<u8
     Ok(data)
 }
 
-fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
+fn migrate(cfg_override: &ConfigOverride, package_manager: PackageManager) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         println!("Running migration deploy script");
 
@@ -4124,7 +4195,9 @@ fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
                 rust_template::deploy_ts_script_host(&url, &module_path.display().to_string());
             fs::write(deploy_ts, deploy_script_host_str)?;
 
-            std::process::Command::new("yarn")
+            let package_manager_cmd = package_manager.to_string();
+
+            std::process::Command::new(package_manager_cmd)
                 .args([
                     "run",
                     "ts-node",
@@ -4333,6 +4406,7 @@ fn publish(
     cargo_args: Vec<String>,
     skip_build: bool,
     arch: ProgramArch,
+    package_manager: PackageManager,
 ) -> Result<()> {
     // Discover the various workspace configs.
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
@@ -4464,6 +4538,7 @@ fn publish(
             cargo_args,
             true,
             arch,
+            package_manager,
         )?;
     }
 
@@ -4622,6 +4697,7 @@ fn localnet(
     env_vars: Vec<String>,
     cargo_args: Vec<String>,
     arch: ProgramArch,
+    package_manager: PackageManager,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         // Build if needed.
@@ -4643,6 +4719,7 @@ fn localnet(
                 cargo_args,
                 false,
                 arch,
+                package_manager,
             )?;
         }
 
@@ -4812,6 +4889,7 @@ mod tests {
             true,
             false,
             true,
+            PackageManager::default(),
             false,
             ProgramTemplate::default(),
             TestTemplate::default(),
@@ -4832,6 +4910,7 @@ mod tests {
             true,
             false,
             true,
+            PackageManager::default(),
             false,
             ProgramTemplate::default(),
             TestTemplate::default(),
@@ -4852,6 +4931,7 @@ mod tests {
             true,
             false,
             true,
+            PackageManager::default(),
             false,
             ProgramTemplate::default(),
             TestTemplate::default(),

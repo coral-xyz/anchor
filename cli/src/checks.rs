@@ -5,7 +5,7 @@ use semver::{Version, VersionReq};
 
 use crate::{
     config::{Config, Manifest, WithPath},
-    VERSION,
+    PackageManager, VERSION,
 };
 
 /// Check whether `overflow-checks` codegen option is enabled.
@@ -31,7 +31,7 @@ pub fn check_overflow(cargo_toml_path: impl AsRef<Path>) -> Result<bool> {
 /// - `@coral-xyz/anchor` package version
 ///
 /// This function logs warnings in the case of a mismatch.
-pub fn check_anchor_version(cfg: &WithPath<Config>) -> Result<()> {
+pub fn check_anchor_version(cfg: &WithPath<Config>, package_manager: PackageManager) -> Result<()> {
     let cli_version = Version::parse(VERSION)?;
 
     // Check lang crate
@@ -69,12 +69,18 @@ pub fn check_anchor_version(cfg: &WithPath<Config>) -> Result<()> {
         .and_then(|ver| VersionReq::parse(ver).ok())
         .filter(|ver| !ver.matches(&cli_version));
 
+    let update_cmd = match package_manager {
+        PackageManager::NPM => "npm update",
+        PackageManager::Yarn => "yarn upgrade",
+        PackageManager::PNPM => "pnpm update",
+    };
+
     if let Some(ver) = mismatched_ts_version {
         eprintln!(
             "WARNING: `@coral-xyz/anchor` version({ver}) and the current CLI version\
                 ({cli_version}) don't match.\n\n\t\
                 This can lead to unwanted behavior. To fix, upgrade the package by running:\n\n\t\
-                yarn upgrade @coral-xyz/anchor@{cli_version}\n"
+                {update_cmd} @coral-xyz/anchor@{cli_version}\n"
         );
     }
 
