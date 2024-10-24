@@ -22,7 +22,7 @@ use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
 use rust_template::{ProgramTemplate, TestTemplate};
 use semver::{Version, VersionReq};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value as JsonValue};
 use solana_client::rpc_client::RpcClient;
 use solana_program::instruction::{AccountMeta, Instruction};
@@ -41,7 +41,6 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ffi::OsString;
-use std::fmt;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -143,9 +142,6 @@ pub enum Command {
         /// Architecture to use when building the program
         #[clap(value_enum, long, default_value = "sbf")]
         arch: ProgramArch,
-        /// Package Manager to use
-        #[clap(value_enum, long, default_value = "npm")]
-        package_manager: PackageManager,
     },
     /// Expands macros (wrapper around cargo expand)
     ///
@@ -193,9 +189,6 @@ pub enum Command {
         /// use this to save time when running verify and the program code is already built.
         #[clap(long, required = false)]
         skip_build: bool,
-        /// Package Manager to use
-        #[clap(value_enum, long, default_value = "npm")]
-        package_manager: PackageManager,
     },
     #[clap(name = "test", alias = "t")]
     /// Runs integration tests.
@@ -239,9 +232,6 @@ pub enum Command {
         /// Arguments to pass to the underlying `cargo build-sbf` command.
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
-        /// Package Manager to use
-        #[clap(value_enum, long, default_value = "npm")]
-        package_manager: PackageManager,
     },
     /// Creates a new program.
     New {
@@ -280,11 +270,7 @@ pub enum Command {
         solana_args: Vec<String>,
     },
     /// Runs the deploy migration script.
-    Migrate {
-        /// Package Manager to use
-        #[clap(value_enum, long, default_value = "npm")]
-        package_manager: PackageManager,
-    },
+    Migrate,
     /// Deploys, initializes an IDL, and migrates all in one command.
     /// Upgrades a single program. The configured wallet must be the upgrade
     /// authority.
@@ -342,9 +328,6 @@ pub enum Command {
         /// Architecture to use when building the program
         #[clap(value_enum, long, default_value = "sbf")]
         arch: ProgramArch,
-        /// Package Manager to use
-        #[clap(value_enum, long, default_value = "npm")]
-        package_manager: PackageManager,
     },
     /// Program keypair commands.
     Keys {
@@ -374,9 +357,6 @@ pub enum Command {
         /// Arguments to pass to the underlying `cargo build-sbf` command.
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
-        /// Package Manager to use
-        #[clap(value_enum, long, default_value = "npm")]
-        package_manager: PackageManager,
     },
     /// Fetch and deserialize an account using the IDL provided.
     Account {
@@ -550,7 +530,7 @@ pub enum ClusterCommand {
 }
 
 /// Package manager to use for the project.
-#[derive(Clone, Debug, Default, Eq, PartialEq, Parser, ValueEnum)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Parser, ValueEnum, Serialize, Deserialize)]
 pub enum PackageManager {
     /// Use npm as the package manager.
     #[default]
@@ -561,13 +541,30 @@ pub enum PackageManager {
     PNPM,
 }
 
-impl fmt::Display for PackageManager {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            PackageManager::NPM => write!(f, "npm"),
-            PackageManager::Yarn => write!(f, "yarn"),
-            PackageManager::PNPM => write!(f, "pnpm"),
+impl FromStr for PackageManager {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<PackageManager> {
+        match s {
+            "npm" => Ok(PackageManager::NPM),
+            "yarn" => Ok(PackageManager::Yarn),
+            "pnpm" => Ok(PackageManager::PNPM),
+            _ => Err(anyhow!(
+                "Package manager should be one of [npm, yarn, pnpm]\n"
+            )),
         }
+    }
+}
+
+impl std::fmt::Display for PackageManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let pkg_manager_str = match self {
+            PackageManager::NPM => "npm",
+            PackageManager::Yarn => "yarn",
+            PackageManager::PNPM => "pnpm",
+        };
+
+        write!(f, "{pkg_manager_str}")
     }
 }
 
@@ -838,7 +835,6 @@ fn process_command(opts: Opts) -> Result<()> {
             skip_lint,
             no_docs,
             arch,
-            package_manager,
         } => build(
             &opts.cfg_override,
             no_idl,
@@ -856,7 +852,6 @@ fn process_command(opts: Opts) -> Result<()> {
             cargo_args,
             no_docs,
             arch,
-            package_manager,
         ),
         Command::Verify {
             program_id,
@@ -868,7 +863,6 @@ fn process_command(opts: Opts) -> Result<()> {
             cargo_args,
             skip_build,
             arch,
-            package_manager,
         } => verify(
             &opts.cfg_override,
             program_id,
@@ -880,7 +874,6 @@ fn process_command(opts: Opts) -> Result<()> {
             cargo_args,
             skip_build,
             arch,
-            package_manager,
         ),
         Command::Clean => clean(&opts.cfg_override),
         Command::Deploy {
@@ -910,7 +903,7 @@ fn process_command(opts: Opts) -> Result<()> {
             solana_args,
         ),
         Command::Idl { subcmd } => idl(&opts.cfg_override, subcmd),
-        Command::Migrate { package_manager } => migrate(&opts.cfg_override, package_manager),
+        Command::Migrate => migrate(&opts.cfg_override),
         Command::Test {
             program_name,
             skip_deploy,
@@ -924,7 +917,6 @@ fn process_command(opts: Opts) -> Result<()> {
             cargo_args,
             skip_lint,
             arch,
-            package_manager,
         } => test(
             &opts.cfg_override,
             program_name,
@@ -939,7 +931,6 @@ fn process_command(opts: Opts) -> Result<()> {
             env,
             cargo_args,
             arch,
-            package_manager,
         ),
         #[cfg(feature = "dev")]
         Command::Airdrop { .. } => airdrop(&opts.cfg_override),
@@ -956,7 +947,6 @@ fn process_command(opts: Opts) -> Result<()> {
             cargo_args,
             skip_build,
             arch,
-            package_manager,
         } => publish(
             &opts.cfg_override,
             program,
@@ -964,7 +954,6 @@ fn process_command(opts: Opts) -> Result<()> {
             cargo_args,
             skip_build,
             arch,
-            package_manager,
         ),
         Command::Keys { subcmd } => keys(&opts.cfg_override, subcmd),
         Command::Localnet {
@@ -974,7 +963,6 @@ fn process_command(opts: Opts) -> Result<()> {
             env,
             cargo_args,
             arch,
-            package_manager,
         } => localnet(
             &opts.cfg_override,
             skip_build,
@@ -983,7 +971,6 @@ fn process_command(opts: Opts) -> Result<()> {
             env,
             cargo_args,
             arch,
-            package_manager,
         ),
         Command::Account {
             account_type,
@@ -1049,6 +1036,7 @@ fn init(
 
     let mut cfg = Config::default();
     let package_manager_cmd = package_manager.to_string();
+    cfg.toolchain.package_manager = package_manager;
     let test_script = test_template.get_test_script(javascript, &package_manager_cmd);
     cfg.scripts.insert("test".to_owned(), test_script);
 
@@ -1122,7 +1110,7 @@ fn init(
     )?;
 
     if !no_install {
-        if package_manager != PackageManager::NPM {
+        if package_manager_cmd != PackageManager::NPM.to_string() {
             let package_manager_result = install_node_modules(&package_manager_cmd)?;
 
             if !package_manager_result.status.success() {
@@ -1400,7 +1388,6 @@ pub fn build(
     cargo_args: Vec<String>,
     no_docs: bool,
     arch: ProgramArch,
-    package_manager: PackageManager,
 ) -> Result<()> {
     // Change to the workspace member directory, if needed.
     if let Some(program_name) = program_name.as_ref() {
@@ -1416,7 +1403,7 @@ pub fn build(
     }
 
     // Check whether there is a mismatch between CLI and crate/package versions
-    check_anchor_version(&cfg, package_manager).ok();
+    check_anchor_version(&cfg, &cfg.toolchain.package_manager).ok();
     check_deps(&cfg).ok();
 
     let idl_out = match idl {
@@ -2101,7 +2088,6 @@ fn verify(
     cargo_args: Vec<String>,
     skip_build: bool,
     arch: ProgramArch,
-    package_manager: PackageManager,
 ) -> Result<()> {
     // Change to the workspace member directory, if needed.
     if let Some(program_name) = program_name.as_ref() {
@@ -2132,7 +2118,6 @@ fn verify(
             cargo_args.clone(),
             false,
             arch,
-            package_manager,
         )?;
     }
     std::env::set_current_dir(cur_dir)?;
@@ -3273,7 +3258,6 @@ fn test(
     env_vars: Vec<String>,
     cargo_args: Vec<String>,
     arch: ProgramArch,
-    package_manager: PackageManager,
 ) -> Result<()> {
     let test_paths = tests_to_run
         .iter()
@@ -3304,7 +3288,6 @@ fn test(
                 cargo_args,
                 false,
                 arch,
-                package_manager,
             )?;
         }
 
@@ -4173,7 +4156,7 @@ fn serialize_idl_ix(ix_inner: anchor_lang::idl::IdlInstruction) -> Result<Vec<u8
     Ok(data)
 }
 
-fn migrate(cfg_override: &ConfigOverride, package_manager: PackageManager) -> Result<()> {
+fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         println!("Running migration deploy script");
 
@@ -4195,7 +4178,7 @@ fn migrate(cfg_override: &ConfigOverride, package_manager: PackageManager) -> Re
                 rust_template::deploy_ts_script_host(&url, &module_path.display().to_string());
             fs::write(deploy_ts, deploy_script_host_str)?;
 
-            let package_manager_cmd = package_manager.to_string();
+            let package_manager_cmd = cfg.toolchain.package_manager.to_string();
 
             std::process::Command::new(package_manager_cmd)
                 .args([
@@ -4406,7 +4389,6 @@ fn publish(
     cargo_args: Vec<String>,
     skip_build: bool,
     arch: ProgramArch,
-    package_manager: PackageManager,
 ) -> Result<()> {
     // Discover the various workspace configs.
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace.");
@@ -4538,7 +4520,6 @@ fn publish(
             cargo_args,
             true,
             arch,
-            package_manager,
         )?;
     }
 
@@ -4697,7 +4678,6 @@ fn localnet(
     env_vars: Vec<String>,
     cargo_args: Vec<String>,
     arch: ProgramArch,
-    package_manager: PackageManager,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg| {
         // Build if needed.
@@ -4719,7 +4699,6 @@ fn localnet(
                 cargo_args,
                 false,
                 arch,
-                package_manager,
             )?;
         }
 

@@ -31,7 +31,10 @@ pub fn check_overflow(cargo_toml_path: impl AsRef<Path>) -> Result<bool> {
 /// - `@coral-xyz/anchor` package version
 ///
 /// This function logs warnings in the case of a mismatch.
-pub fn check_anchor_version(cfg: &WithPath<Config>, package_manager: PackageManager) -> Result<()> {
+pub fn check_anchor_version(
+    cfg: &WithPath<Config>,
+    package_manager: &PackageManager,
+) -> Result<()> {
     let cli_version = Version::parse(VERSION)?;
 
     // Check lang crate
