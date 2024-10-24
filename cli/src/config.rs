@@ -1,4 +1,4 @@
-use crate::{get_keypair, is_hidden, keys_sync};
+use crate::{get_keypair, is_hidden, keys_sync, PackageManager};
 use anchor_client::Cluster;
 use anchor_lang_idl::types::Idl;
 use anyhow::{anyhow, bail, Context, Error, Result};
@@ -380,6 +380,7 @@ pub struct Config {
 pub struct ToolchainConfig {
     pub anchor_version: Option<String>,
     pub solana_version: Option<String>,
+    pub package_manager: PackageManager,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

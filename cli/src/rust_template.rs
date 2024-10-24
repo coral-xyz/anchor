@@ -401,7 +401,7 @@ pub fn ts_package_json(jest: bool, license: String) -> String {
     if jest {
         format!(
             r#"{{
-  "license": "{license}",              
+  "license": "{license}",
   "scripts": {{
     "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
@@ -423,7 +423,7 @@ pub fn ts_package_json(jest: bool, license: String) -> String {
     } else {
         format!(
             r#"{{
-  "license": "{license}",  
+  "license": "{license}",
   "scripts": {{
     "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
@@ -607,30 +607,30 @@ pub enum TestTemplate {
     /// Generate template for Mocha unit-test
     #[default]
     Mocha,
-    /// Generate template for Jest unit-test    
+    /// Generate template for Jest unit-test
     Jest,
     /// Generate template for Rust unit-test
     Rust,
 }
 
 impl TestTemplate {
-    pub fn get_test_script(&self, js: bool) -> &str {
+    pub fn get_test_script(&self, js: bool, package_manager_cmd: &str) -> String {
         match &self {
             Self::Mocha => {
                 if js {
-                    "yarn run mocha -t 1000000 tests/"
+                    format!("{package_manager_cmd} run mocha -t 1000000 tests/")
                 } else {
-                    "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+                    format!("{package_manager_cmd} run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts")
                 }
             }
             Self::Jest => {
                 if js {
-                    "yarn run jest"
+                    format!("{package_manager_cmd} run jest")
                 } else {
-                    "yarn run jest --preset ts-jest"
+                    format!("{package_manager_cmd} run jest --preset ts-jest")
                 }
             }
-            Self::Rust => "cargo test",
+            Self::Rust => "cargo test".to_owned(),
         }
     }
 

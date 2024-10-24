@@ -10,7 +10,7 @@ use anchor_lang_idl::convert::convert_idl;
 use anchor_lang_idl::types::{Idl, IdlArrayLen, IdlDefinedFields, IdlType, IdlTypeDefTy};
 use anyhow::{anyhow, Context, Result};
 use checks::{check_anchor_version, check_deps, check_idl_build_feature, check_overflow};
-use clap::{CommandFactory, Parser};
+use clap::{CommandFactory, Parser, ValueEnum};
 use dirs::home_dir;
 use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
@@ -22,7 +22,7 @@ use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
 use rust_template::{ProgramTemplate, TestTemplate};
 use semver::{Version, VersionReq};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value as JsonValue};
 use solana_client::rpc_client::RpcClient;
 use solana_program::instruction::{AccountMeta, Instruction};
@@ -82,6 +82,9 @@ pub enum Command {
         /// Don't install JavaScript dependencies
         #[clap(long)]
         no_install: bool,
+        /// Package Manager to use
+        #[clap(value_enum, long, default_value = "npm")]
+        package_manager: PackageManager,
         /// Don't initialize git
         #[clap(long)]
         no_git: bool,
@@ -526,6 +529,45 @@ pub enum ClusterCommand {
     List,
 }
 
+/// Package manager to use for the project.
+#[derive(Clone, Debug, Default, Eq, PartialEq, Parser, ValueEnum, Serialize, Deserialize)]
+pub enum PackageManager {
+    /// Use npm as the package manager.
+    #[default]
+    NPM,
+    /// Use yarn as the package manager.
+    Yarn,
+    /// Use pnpm as the package manager.
+    PNPM,
+}
+
+impl FromStr for PackageManager {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<PackageManager> {
+        match s {
+            "npm" => Ok(PackageManager::NPM),
+            "yarn" => Ok(PackageManager::Yarn),
+            "pnpm" => Ok(PackageManager::PNPM),
+            _ => Err(anyhow!(
+                "Package manager should be one of [npm, yarn, pnpm]\n"
+            )),
+        }
+    }
+}
+
+impl std::fmt::Display for PackageManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let pkg_manager_str = match self {
+            PackageManager::NPM => "npm",
+            PackageManager::Yarn => "yarn",
+            PackageManager::PNPM => "pnpm",
+        };
+
+        write!(f, "{pkg_manager_str}")
+    }
+}
+
 fn get_keypair(path: &str) -> Result<Keypair> {
     solana_sdk::signature::read_keypair_file(path)
         .map_err(|_| anyhow!("Unable to read keypair file ({path})"))
@@ -756,6 +798,7 @@ fn process_command(opts: Opts) -> Result<()> {
             javascript,
             solidity,
             no_install,
+            package_manager,
             no_git,
             template,
             test_template,
@@ -766,6 +809,7 @@ fn process_command(opts: Opts) -> Result<()> {
             javascript,
             solidity,
             no_install,
+            package_manager,
             no_git,
             template,
             test_template,
@@ -952,6 +996,7 @@ fn init(
     javascript: bool,
     solidity: bool,
     no_install: bool,
+    package_manager: PackageManager,
     no_git: bool,
     template: ProgramTemplate,
     test_template: TestTemplate,
@@ -990,9 +1035,10 @@ fn init(
     fs::create_dir_all("app")?;
 
     let mut cfg = Config::default();
-    let test_script = test_template.get_test_script(javascript);
-    cfg.scripts
-        .insert("test".to_owned(), test_script.to_owned());
+    let package_manager_cmd = package_manager.to_string();
+    cfg.toolchain.package_manager = package_manager;
+    let test_script = test_template.get_test_script(javascript, &package_manager_cmd);
+    cfg.scripts.insert("test".to_owned(), test_script);
 
     let mut localnet = BTreeMap::new();
     let program_id = rust_template::get_or_create_program_id(&rust_name);
@@ -1064,10 +1110,18 @@ fn init(
     )?;
 
     if !no_install {
-        let yarn_result = install_node_modules("yarn")?;
-        if !yarn_result.status.success() {
-            println!("Failed yarn install will attempt to npm install");
-            install_node_modules("npm")?;
+        if package_manager_cmd != PackageManager::NPM.to_string() {
+            let package_manager_result = install_node_modules(&package_manager_cmd)?;
+
+            if !package_manager_result.status.success() {
+                println!(
+                    "Failed {} install will attempt to npm install",
+                    package_manager_cmd
+                );
+                install_node_modules("npm")?;
+            }
+        } else {
+            install_node_modules(&package_manager_cmd)?;
         }
     }
 
@@ -1349,7 +1403,7 @@ pub fn build(
     }
 
     // Check whether there is a mismatch between CLI and crate/package versions
-    check_anchor_version(&cfg).ok();
+    check_anchor_version(&cfg, &cfg.toolchain.package_manager).ok();
     check_deps(&cfg).ok();
 
     let idl_out = match idl {
@@ -4124,7 +4178,9 @@ fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
                 rust_template::deploy_ts_script_host(&url, &module_path.display().to_string());
             fs::write(deploy_ts, deploy_script_host_str)?;
 
-            std::process::Command::new("yarn")
+            let package_manager_cmd = cfg.toolchain.package_manager.to_string();
+
+            std::process::Command::new(package_manager_cmd)
                 .args([
                     "run",
                     "ts-node",
@@ -4812,6 +4868,7 @@ mod tests {
             true,
             false,
             true,
+            PackageManager::default(),
             false,
             ProgramTemplate::default(),
             TestTemplate::default(),
@@ -4832,6 +4889,7 @@ mod tests {
             true,
             false,
             true,
+            PackageManager::default(),
             false,
             ProgramTemplate::default(),
             TestTemplate::default(),
@@ -4852,6 +4910,7 @@ mod tests {
             true,
             false,
             true,
+            PackageManager::default(),
             false,
             ProgramTemplate::default(),
             TestTemplate::default(),
