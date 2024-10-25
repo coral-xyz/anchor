@@ -1073,18 +1073,16 @@ fn init(
     )?;
 
     if !no_install {
-        if package_manager_cmd != PackageManager::NPM.to_string() {
-            let package_manager_result = install_node_modules(&package_manager_cmd)?;
+        let package_manager_result = install_node_modules(&package_manager_cmd)?;
 
-            if !package_manager_result.status.success() {
-                println!(
-                    "Failed {} install will attempt to npm install",
-                    package_manager_cmd
-                );
-                install_node_modules("npm")?;
-            }
+        if !package_manager_result.status.success() && package_manager_cmd != "npm" {
+            println!(
+                "Failed {} install will attempt to npm install",
+                package_manager_cmd
+            );
+            install_node_modules("npm")?;
         } else {
-            install_node_modules(&package_manager_cmd)?;
+            eprintln!("Failed to install node modules");
         }
     }
 
