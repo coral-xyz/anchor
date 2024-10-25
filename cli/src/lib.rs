@@ -1036,10 +1036,10 @@ fn init(
 
     let mut cfg = Config::default();
 
-    let package_manager_cmd = package_manager.to_string();
     let test_script = test_template.get_test_script(javascript, &package_manager);
     cfg.scripts.insert("test".to_owned(), test_script);
 
+    let package_manager_cmd = package_manager.to_string();
     cfg.toolchain.package_manager = Some(package_manager);
 
     let mut localnet = BTreeMap::new();
