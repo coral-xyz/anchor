@@ -1035,10 +1035,12 @@ fn init(
     fs::create_dir_all("app")?;
 
     let mut cfg = Config::default();
+
     let package_manager_cmd = package_manager.to_string();
-    cfg.toolchain.package_manager = Some(package_manager);
-    let test_script = test_template.get_test_script(javascript, &package_manager_cmd);
+    let test_script = test_template.get_test_script(javascript, &package_manager);
     cfg.scripts.insert("test".to_owned(), test_script);
+
+    cfg.toolchain.package_manager = Some(package_manager);
 
     let mut localnet = BTreeMap::new();
     let program_id = rust_template::get_or_create_program_id(&rust_name);

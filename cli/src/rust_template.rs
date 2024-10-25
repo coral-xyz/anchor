@@ -1,6 +1,6 @@
 use crate::{
     config::ProgramWorkspace, create_files, override_or_create_files, solidity_template, Files,
-    VERSION,
+    PackageManager, VERSION,
 };
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
@@ -614,20 +614,26 @@ pub enum TestTemplate {
 }
 
 impl TestTemplate {
-    pub fn get_test_script(&self, js: bool, package_manager_cmd: &str) -> String {
+    pub fn get_test_script(&self, js: bool, pkg_manager: &PackageManager) -> String {
+        let pkg_manager_exec_cmd = match pkg_manager {
+            PackageManager::Yarn => "yarn run",
+            PackageManager::NPM => "npx",
+            PackageManager::PNPM => "pnpm exec",
+        };
+
         match &self {
             Self::Mocha => {
                 if js {
-                    format!("{package_manager_cmd} run mocha -t 1000000 tests/")
+                    format!("{pkg_manager_exec_cmd} mocha -t 1000000 tests/")
                 } else {
-                    format!("{package_manager_cmd} run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts")
+                    format!("{pkg_manager_exec_cmd} ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts")
                 }
             }
             Self::Jest => {
                 if js {
-                    format!("{package_manager_cmd} run jest")
+                    format!("{pkg_manager_exec_cmd} jest")
                 } else {
-                    format!("{package_manager_cmd} run jest --preset ts-jest")
+                    format!("{pkg_manager_exec_cmd} jest --preset ts-jest")
                 }
             }
             Self::Rust => "cargo test".to_owned(),
