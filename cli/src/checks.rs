@@ -4,8 +4,8 @@ use anyhow::{anyhow, Result};
 use semver::{Version, VersionReq};
 
 use crate::{
-    config::{Config, Manifest, WithPath},
-    PackageManager, VERSION,
+    config::{Config, Manifest, PackageManager, WithPath},
+    VERSION,
 };
 
 /// Check whether `overflow-checks` codegen option is enabled.

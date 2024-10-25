@@ -1,7 +1,7 @@
 use crate::config::{
     get_default_ledger_path, AnchorPackage, BootstrapMode, BuildConfig, Config, ConfigOverride,
-    Manifest, ProgramArch, ProgramDeployment, ProgramWorkspace, ScriptsConfig, TestValidator,
-    WithPath, SHUTDOWN_WAIT, STARTUP_WAIT,
+    Manifest, PackageManager, ProgramArch, ProgramDeployment, ProgramWorkspace, ScriptsConfig,
+    TestValidator, WithPath, SHUTDOWN_WAIT, STARTUP_WAIT,
 };
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction, ERASED_AUTHORITY};
@@ -10,7 +10,7 @@ use anchor_lang_idl::convert::convert_idl;
 use anchor_lang_idl::types::{Idl, IdlArrayLen, IdlDefinedFields, IdlType, IdlTypeDefTy};
 use anyhow::{anyhow, Context, Result};
 use checks::{check_anchor_version, check_deps, check_idl_build_feature, check_overflow};
-use clap::{CommandFactory, Parser, ValueEnum};
+use clap::{CommandFactory, Parser};
 use dirs::home_dir;
 use flate2::read::GzDecoder;
 use flate2::read::ZlibDecoder;
@@ -22,7 +22,7 @@ use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
 use rust_template::{ProgramTemplate, TestTemplate};
 use semver::{Version, VersionReq};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::{json, Map, Value as JsonValue};
 use solana_client::rpc_client::RpcClient;
 use solana_program::instruction::{AccountMeta, Instruction};
@@ -527,45 +527,6 @@ pub enum IdlCommand {
 pub enum ClusterCommand {
     /// Prints common cluster urls.
     List,
-}
-
-/// Package manager to use for the project.
-#[derive(Clone, Debug, Default, Eq, PartialEq, Parser, ValueEnum, Serialize, Deserialize)]
-pub enum PackageManager {
-    /// Use npm as the package manager.
-    #[default]
-    NPM,
-    /// Use yarn as the package manager.
-    Yarn,
-    /// Use pnpm as the package manager.
-    PNPM,
-}
-
-impl FromStr for PackageManager {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<PackageManager> {
-        match s {
-            "npm" => Ok(PackageManager::NPM),
-            "yarn" => Ok(PackageManager::Yarn),
-            "pnpm" => Ok(PackageManager::PNPM),
-            _ => Err(anyhow!(
-                "Package manager should be one of [npm, yarn, pnpm]\n"
-            )),
-        }
-    }
-}
-
-impl std::fmt::Display for PackageManager {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let pkg_manager_str = match self {
-            PackageManager::NPM => "npm",
-            PackageManager::Yarn => "yarn",
-            PackageManager::PNPM => "pnpm",
-        };
-
-        write!(f, "{pkg_manager_str}")
-    }
 }
 
 fn get_keypair(path: &str) -> Result<Keypair> {
