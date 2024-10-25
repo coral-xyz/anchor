@@ -1036,7 +1036,7 @@ fn init(
 
     let mut cfg = Config::default();
     let package_manager_cmd = package_manager.to_string();
-    cfg.toolchain.package_manager = package_manager;
+    cfg.toolchain.package_manager = Some(package_manager);
     let test_script = test_template.get_test_script(javascript, &package_manager_cmd);
     cfg.scripts.insert("test".to_owned(), test_script);
 
@@ -1403,7 +1403,7 @@ pub fn build(
     }
 
     // Check whether there is a mismatch between CLI and crate/package versions
-    check_anchor_version(&cfg, &cfg.toolchain.package_manager).ok();
+    check_anchor_version(&cfg).ok();
     check_deps(&cfg).ok();
 
     let idl_out = match idl {
@@ -4178,9 +4178,12 @@ fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
                 rust_template::deploy_ts_script_host(&url, &module_path.display().to_string());
             fs::write(deploy_ts, deploy_script_host_str)?;
 
-            let package_manager_cmd = cfg.toolchain.package_manager.to_string();
+            let pkg_manager_cmd = match &cfg.toolchain.package_manager {
+                Some(pkg_manager) => pkg_manager.to_string(),
+                None => PackageManager::default().to_string(),
+            };
 
-            std::process::Command::new(package_manager_cmd)
+            std::process::Command::new(pkg_manager_cmd)
                 .args([
                     "run",
                     "ts-node",

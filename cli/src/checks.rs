@@ -31,10 +31,7 @@ pub fn check_overflow(cargo_toml_path: impl AsRef<Path>) -> Result<bool> {
 /// - `@coral-xyz/anchor` package version
 ///
 /// This function logs warnings in the case of a mismatch.
-pub fn check_anchor_version(
-    cfg: &WithPath<Config>,
-    package_manager: &PackageManager,
-) -> Result<()> {
+pub fn check_anchor_version(cfg: &WithPath<Config>) -> Result<()> {
     let cli_version = Version::parse(VERSION)?;
 
     // Check lang crate
@@ -72,10 +69,13 @@ pub fn check_anchor_version(
         .and_then(|ver| VersionReq::parse(ver).ok())
         .filter(|ver| !ver.matches(&cli_version));
 
-    let update_cmd = match package_manager {
-        PackageManager::NPM => "npm update",
-        PackageManager::Yarn => "yarn upgrade",
-        PackageManager::PNPM => "pnpm update",
+    let update_cmd = match &cfg.toolchain.package_manager {
+        Some(pkg_manager) => match pkg_manager {
+            PackageManager::NPM => "npm update",
+            PackageManager::Yarn => "yarn upgrade",
+            PackageManager::PNPM => "pnpm update",
+        },
+        None => "npm update",
     };
 
     if let Some(ver) = mismatched_ts_version {

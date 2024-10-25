@@ -380,7 +380,7 @@ pub struct Config {
 pub struct ToolchainConfig {
     pub anchor_version: Option<String>,
     pub solana_version: Option<String>,
-    pub package_manager: PackageManager,
+    pub package_manager: Option<PackageManager>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
