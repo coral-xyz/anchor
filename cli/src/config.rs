@@ -387,9 +387,9 @@ pub struct ToolchainConfig {
 #[derive(Clone, Debug, Default, Eq, PartialEq, Parser, ValueEnum, Serialize, Deserialize)]
 pub enum PackageManager {
     /// Use npm as the package manager.
-    #[default]
     NPM,
     /// Use yarn as the package manager.
+    #[default]
     Yarn,
     /// Use pnpm as the package manager.
     PNPM,
