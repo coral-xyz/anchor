@@ -83,7 +83,7 @@ pub enum Command {
         #[clap(long)]
         no_install: bool,
         /// Package Manager to use
-        #[clap(value_enum, long, default_value = "npm")]
+        #[clap(value_enum, long, default_value = "yarn")]
         package_manager: PackageManager,
         /// Don't initialize git
         #[clap(long)]
