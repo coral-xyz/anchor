@@ -57,6 +57,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Generate documentation of constants in `declare_program!` ([#3311](https://github.com/coral-xyz/anchor/pull/3311)).
 - cli: Add support for fetching legacy IDLs ([#3324](https://github.com/coral-xyz/anchor/pull/3324)).
 - avm: Add short alias for `install` and `list` command ([#3326])(https://github.com/coral-xyz/anchor/pull/3326).
+- cli: Add optional `package-manager` flag in `init` command to set package manager field in Anchor.toml ([#3328]) (https://github.com/coral-xyz/anchor/pull/3328).
 
 ### Fixes
 
