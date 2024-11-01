@@ -930,7 +930,7 @@
     }
   },
   "unreleased": {
-    "solanaVersion": "2.0.8",
+    "solanaVersion": "2.1.0",
     "result": {
       "binarySize": {
         "bench": 1097424
