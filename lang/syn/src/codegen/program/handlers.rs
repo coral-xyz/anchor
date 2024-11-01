@@ -100,7 +100,7 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             let ix_arg_names: Vec<&syn::Ident> = ix.args.iter().map(|arg| &arg.name).collect();
             let ix_name = generate_ix_variant_name(ix.raw_method.sig.ident.to_string());
             let ix_method_name = &ix.raw_method.sig.ident;
-            let anchor = &ix.anchor_ident;
+            let accounts_struct_name = &ix.anchor_ident;
             let variant_arm = generate_ix_variant(ix.raw_method.sig.ident.to_string(), &ix.args);
             let ix_name_log = format!("Instruction: {ix_name}");
             let ret_type = &ix.returns.ty.to_token_stream();
@@ -117,9 +117,9 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                 #(#cfgs)*
                 #[inline(never)]
                 pub fn #ix_method_name<'info>(
-                    __program_id: &Pubkey,
-                    __accounts: &'info[AccountInfo<'info>],
-                    __ix_data: &[u8],
+                    __program_id: &'info Pubkey,
+                    __accounts: &'info [AccountInfo<'info>],
+                    __ix_data: &'info [u8],
                 ) -> anchor_lang::Result<()> {
                     #[cfg(not(feature = "no-log-ix-name"))]
                     anchor_lang::prelude::msg!(#ix_name_log);
@@ -130,13 +130,13 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     let instruction::#variant_arm = ix;
 
                     // Bump collector.
-                    let mut __bumps = <#anchor as anchor_lang::Bumps>::Bumps::default();
+                    let mut __bumps = <#accounts_struct_name as anchor_lang::Bumps>::Bumps::default();
 
                     let mut __reallocs = std::collections::BTreeSet::new();
 
                     // Deserialize accounts.
-                    let mut __remaining_accounts: &[AccountInfo] = __accounts;
-                    let mut __accounts = #anchor::try_accounts(
+                    let mut __remaining_accounts = __accounts;
+                    let mut __accounts = #accounts_struct_name::try_accounts(
                         __program_id,
                         &mut __remaining_accounts,
                         __ix_data,
@@ -148,7 +148,21 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
                     let result = #program_name::#ix_method_name(
                         anchor_lang::context::Context::new(
                             __program_id,
-                            &mut __accounts,
+                            // SAFETY: The transmute shortens the inner `AccountInfo` lifetimes to
+                            // match the lifetimes of other arguments. All references are going to
+                            // be valid at least for the duration of the user-defined instruction
+                            // handlers.
+                            //
+                            // This is done to avoid having to define multiple lifetimes for the
+                            // `Context` struct, which requies Anchor users to do the same in
+                            // various cases (e.g. remaining accounts usage), resulting in a poor
+                            // developer experience.
+                            unsafe {
+                                ::core::mem::transmute::<
+                                    &mut #accounts_struct_name<'info>,
+                                    &mut #accounts_struct_name<'_>
+                                >(&mut __accounts)
+                            },
                             __remaining_accounts,
                             __bumps,
                         ),
