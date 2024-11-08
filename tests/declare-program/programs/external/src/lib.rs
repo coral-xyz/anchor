@@ -35,8 +35,8 @@ pub mod external {
 
     // Test the issue described in https://github.com/coral-xyz/anchor/issues/3349
     pub fn second_use_of_non_instruction_composite(
-        ctx: Context<SecondUseOfNonInstructionComposite>,
-        value: u32,
+        _ctx: Context<SecondUseOfNonInstructionComposite>,
+        _value: u32,
     ) -> Result<()> {
         Ok(())
     }

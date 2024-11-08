@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use anchor_lang_idl::types::{
     Idl, IdlInstruction, IdlInstructionAccountItem, IdlInstructionAccounts,
 };
@@ -138,17 +140,25 @@ fn gen_internal_accounts_common(
         .iter()
         .flat_map(|ix| ix.accounts.to_owned())
         .collect::<Vec<_>>();
+    let mut account_names: HashSet<String> = std::collections::HashSet::new();
     let combined_ixs = get_non_instruction_composite_accounts(&ix_accs, idl)
         .into_iter()
-        .map(|accs| IdlInstruction {
-            // The name is not guaranteed to be the same as the one used in the actual source code
-            // of the program because the IDL only stores the field names.
-            name: accs.name.to_owned(),
-            accounts: accs.accounts.to_owned(),
-            args: Default::default(),
-            discriminator: Default::default(),
-            docs: Default::default(),
-            returns: Default::default(),
+        .filter_map(|accs| {
+            let name = accs.name.to_owned();
+            if account_names.insert(name) {
+                Some(IdlInstruction {
+                    // The name is not guaranteed to be the same as the one used in the actual source code
+                    // of the program because the IDL only stores the field names.
+                    name: accs.name.to_owned(),
+                    accounts: accs.accounts.to_owned(),
+                    args: Default::default(),
+                    discriminator: Default::default(),
+                    docs: Default::default(),
+                    returns: Default::default(),
+                })
+            } else {
+                None
+            }
         })
         .chain(idl.instructions.iter().cloned())
         .collect::<Vec<_>>();
