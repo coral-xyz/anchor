@@ -33,6 +33,14 @@ pub mod external {
         Ok(())
     }
 
+    // Test the issue described in https://github.com/coral-xyz/anchor/issues/3349
+    pub fn second_use_of_non_instruction_composite(
+        _ctx: Context<SecondUseOfNonInstructionComposite>,
+        _value: u32,
+    ) -> Result<()> {
+        Ok(())
+    }
+
     // Compilation test for whether a defined type (an account in this case) can be used in `cpi` client.
     pub fn test_compilation_defined_type_param(
         _ctx: Context<TestCompilation>,
@@ -89,6 +97,11 @@ pub struct UpdateComposite<'info> {
 
 #[derive(Accounts)]
 pub struct UpdateNonInstructionComposite<'info> {
+    pub non_instruction_update: NonInstructionUpdate<'info>,
+}
+
+#[derive(Accounts)]
+pub struct SecondUseOfNonInstructionComposite<'info> {
     pub non_instruction_update: NonInstructionUpdate<'info>,
 }
 

@@ -45,6 +45,52 @@
       "args": []
     },
     {
+      "name": "second_use_of_non_instruction_composite",
+      "discriminator": [
+        103,
+        165,
+        187,
+        198,
+        36,
+        148,
+        158,
+        119
+      ],
+      "accounts": [
+        {
+          "name": "non_instruction_update",
+          "accounts": [
+            {
+              "name": "authority",
+              "signer": true
+            },
+            {
+              "name": "my_account",
+              "writable": true,
+              "pda": {
+                "seeds": [
+                  {
+                    "kind": "account",
+                    "path": "authority"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "program",
+              "address": "Externa111111111111111111111111111111111111"
+            }
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "value",
+          "type": "u32"
+        }
+      ]
+    },
+    {
       "name": "test_compilation_defined_type_param",
       "discriminator": [
         61,
