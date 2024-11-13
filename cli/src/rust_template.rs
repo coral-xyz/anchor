@@ -179,7 +179,7 @@ fn cargo_toml(name: &str, with_mollusk: bool) -> String {
     let dev_dependencies = if with_mollusk {
         r#"
 [dev-dependencies]
-mollusk-svm = "=0.0.6-solana-1.18"
+mollusk-svm = "0.0.8"
 "#
     } else {
         ""
