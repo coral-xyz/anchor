@@ -56,6 +56,11 @@ The minor version will be incremented upon a breaking change and the patch versi
 - cli: Add `--program-id` option to `idl convert` command ([#3309](https://github.com/coral-xyz/anchor/pull/3309)).
 - lang: Generate documentation of constants in `declare_program!` ([#3311](https://github.com/coral-xyz/anchor/pull/3311)).
 - spl: Add 'Interest Bearing Config` Extension ([#3278](https://github.com/coral-xyz/anchor/pull/3278)).
+- cli: Add support for fetching legacy IDLs ([#3324](https://github.com/coral-xyz/anchor/pull/3324)).
+- avm: Add short alias for `install` and `list` commands ([#3326](https://github.com/coral-xyz/anchor/pull/3326)).
+- avm: Add Windows support for renaming anchor binary ([#3325](https://github.com/coral-xyz/anchor/pull/3325)).
+- cli: Add optional `package-manager` flag in `init` command to set package manager field in Anchor.toml ([#3328](https://github.com/coral-xyz/anchor/pull/3328)).
+- cli: Add test template for [Mollusk](https://github.com/buffalojoec/mollusk) ([#3352](https://github.com/coral-xyz/anchor/pull/3352)).
 
 ### Fixes
 
@@ -86,6 +91,10 @@ The minor version will be incremented upon a breaking change and the patch versi
 - idl: Fix instructions with tuple parameters not producing an error([#3294](https://github.com/coral-xyz/anchor/pull/3294)).
 - ts: Update `engines.node` to `>= 17` ([#3301](https://github.com/coral-xyz/anchor/pull/3301)).
 - cli: Use OS-agnostic paths ([#3307](https://github.com/coral-xyz/anchor/pull/3307)).
+- avm: Use `rustc 1.79.0` when installing versions older than v0.31 ([#3315](https://github.com/coral-xyz/anchor/pull/3315)).
+- cli: Fix priority fee calculation causing panic on localnet ([#3318](https://github.com/coral-xyz/anchor/pull/3318)).
+- cli: Fix `shell` command failing due to outdated program initialization ([#3351](https://github.com/coral-xyz/anchor/pull/3351)).
+- idl: Fix detecting false-positives from doc comments during module path conversion ([#3359](https://github.com/coral-xyz/anchor/pull/3359)).
 
 ### Breaking
 
@@ -110,6 +119,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - spl: Remove `dex` feature ([#3257](https://github.com/coral-xyz/anchor/pull/3257)).
 - client, lang, spl: Upgrade Solana to v2 and SPL to the latest ([#3219](https://github.com/coral-xyz/anchor/pull/3219)).
 - cli: Install Solana from anza.xyz domain in Docker verifiable builds ([#3271](https://github.com/coral-xyz/anchor/pull/3271)).
+- spl: Upgrade SPL deps to latest ([#3346](https://github.com/coral-xyz/anchor/pull/3346)).
 
 ## [0.30.1] - 2024-06-20
 

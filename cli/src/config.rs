@@ -380,6 +380,31 @@ pub struct Config {
 pub struct ToolchainConfig {
     pub anchor_version: Option<String>,
     pub solana_version: Option<String>,
+    pub package_manager: Option<PackageManager>,
+}
+
+/// Package manager to use for the project.
+#[derive(Clone, Debug, Default, Eq, PartialEq, Parser, ValueEnum, Serialize, Deserialize)]
+pub enum PackageManager {
+    /// Use npm as the package manager.
+    NPM,
+    /// Use yarn as the package manager.
+    #[default]
+    Yarn,
+    /// Use pnpm as the package manager.
+    PNPM,
+}
+
+impl std::fmt::Display for PackageManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let pkg_manager_str = match self {
+            PackageManager::NPM => "npm",
+            PackageManager::Yarn => "yarn",
+            PackageManager::PNPM => "pnpm",
+        };
+
+        write!(f, "{pkg_manager_str}")
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -839,8 +864,6 @@ pub struct _TestToml {
 }
 
 impl _TestToml {
-    // TODO: Remove if/when false positive gets fixed
-    #[allow(clippy::needless_borrows_for_generic_args)]
     fn from_path(path: impl AsRef<Path>) -> Result<Self, Error> {
         let s = fs::read_to_string(&path)?;
         let parsed_toml: Self = toml::from_str(&s)?;

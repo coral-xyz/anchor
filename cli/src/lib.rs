@@ -1,7 +1,7 @@
 use crate::config::{
     get_default_ledger_path, AnchorPackage, BootstrapMode, BuildConfig, Config, ConfigOverride,
-    Manifest, ProgramArch, ProgramDeployment, ProgramWorkspace, ScriptsConfig, TestValidator,
-    WithPath, SHUTDOWN_WAIT, STARTUP_WAIT,
+    Manifest, PackageManager, ProgramArch, ProgramDeployment, ProgramWorkspace, ScriptsConfig,
+    TestValidator, WithPath, SHUTDOWN_WAIT, STARTUP_WAIT,
 };
 use anchor_client::Cluster;
 use anchor_lang::idl::{IdlAccount, IdlInstruction, ERASED_AUTHORITY};
@@ -82,6 +82,9 @@ pub enum Command {
         /// Don't install JavaScript dependencies
         #[clap(long)]
         no_install: bool,
+        /// Package Manager to use
+        #[clap(value_enum, long, default_value = "yarn")]
+        package_manager: PackageManager,
         /// Don't initialize git
         #[clap(long)]
         no_git: bool,
@@ -756,6 +759,7 @@ fn process_command(opts: Opts) -> Result<()> {
             javascript,
             solidity,
             no_install,
+            package_manager,
             no_git,
             template,
             test_template,
@@ -766,6 +770,7 @@ fn process_command(opts: Opts) -> Result<()> {
             javascript,
             solidity,
             no_install,
+            package_manager,
             no_git,
             template,
             test_template,
@@ -952,6 +957,7 @@ fn init(
     javascript: bool,
     solidity: bool,
     no_install: bool,
+    package_manager: PackageManager,
     no_git: bool,
     template: ProgramTemplate,
     test_template: TestTemplate,
@@ -990,9 +996,12 @@ fn init(
     fs::create_dir_all("app")?;
 
     let mut cfg = Config::default();
-    let test_script = test_template.get_test_script(javascript);
-    cfg.scripts
-        .insert("test".to_owned(), test_script.to_owned());
+
+    let test_script = test_template.get_test_script(javascript, &package_manager);
+    cfg.scripts.insert("test".to_owned(), test_script);
+
+    let package_manager_cmd = package_manager.to_string();
+    cfg.toolchain.package_manager = Some(package_manager);
 
     let mut localnet = BTreeMap::new();
     let program_id = rust_template::get_or_create_program_id(&rust_name);
@@ -1027,7 +1036,11 @@ fn init(
     if solidity {
         solidity_template::create_program(&project_name)?;
     } else {
-        rust_template::create_program(&project_name, template)?;
+        rust_template::create_program(
+            &project_name,
+            template,
+            TestTemplate::Mollusk == test_template,
+        )?;
     }
 
     // Build the migrations directory.
@@ -1064,10 +1077,16 @@ fn init(
     )?;
 
     if !no_install {
-        let yarn_result = install_node_modules("yarn")?;
-        if !yarn_result.status.success() {
-            println!("Failed yarn install will attempt to npm install");
+        let package_manager_result = install_node_modules(&package_manager_cmd)?;
+
+        if !package_manager_result.status.success() && package_manager_cmd != "npm" {
+            println!(
+                "Failed {} install will attempt to npm install",
+                package_manager_cmd
+            );
             install_node_modules("npm")?;
+        } else {
+            eprintln!("Failed to install node modules");
         }
     }
 
@@ -1140,7 +1159,7 @@ fn new(
                 if solidity {
                     solidity_template::create_program(&name)?;
                 } else {
-                    rust_template::create_program(&name, template)?;
+                    rust_template::create_program(&name, template, false)?;
                 }
 
                 programs.insert(
@@ -2089,7 +2108,7 @@ fn verify(
     // Verify IDL (only if it's not a buffer account).
     let local_idl = generate_idl(&cfg, true, false, &cargo_args)?;
     if bin_ver.state != BinVerificationState::Buffer {
-        let deployed_idl = fetch_idl(cfg_override, program_id)?;
+        let deployed_idl = fetch_idl(cfg_override, program_id).map(serde_json::from_value)??;
         if local_idl != deployed_idl {
             println!("Error: IDLs don't match");
             std::process::exit(1);
@@ -2315,15 +2334,16 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
 }
 
 /// Fetch an IDL for the given program id.
-fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<Idl> {
+///
+/// Intentionally returns [`serde_json::Value`] rather than [`Idl`] to also support legacy IDLs.
+fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<serde_json::Value> {
     let url = match Config::discover(cfg_override)? {
         Some(cfg) => cluster_url(&cfg, &cfg.test_validator),
         None => {
             // If the command is not run inside a workspace,
             // cluster_url will be used from default solana config
             // provider.cluster option can be used to override this
-
-            if let Some(cluster) = cfg_override.cluster.clone() {
+            if let Some(cluster) = cfg_override.cluster.as_ref() {
                 cluster.url().to_string()
             } else {
                 config::get_solana_cfg_url()?
@@ -2752,10 +2772,10 @@ fn idl_build(
     cargo_args: Vec<String>,
 ) -> Result<()> {
     let cfg = Config::discover(cfg_override)?.expect("Not in workspace");
+    let current_dir = std::env::current_dir()?;
     let program_path = match program_name {
         Some(name) => cfg.get_program(&name)?.path,
         None => {
-            let current_dir = std::env::current_dir()?;
             let programs = cfg.read_all_programs()?;
             if programs.len() == 1 {
                 programs.into_iter().next().unwrap().path
@@ -2769,14 +2789,9 @@ fn idl_build(
         }
     };
     std::env::set_current_dir(program_path)?;
+    let idl = generate_idl(&cfg, skip_lint, no_docs, &cargo_args)?;
+    std::env::set_current_dir(current_dir)?;
 
-    check_idl_build_feature()?;
-    let idl = anchor_lang_idl::build::IdlBuilder::new()
-        .resolution(cfg.features.resolution)
-        .skip_lint(cfg.features.skip_lint || skip_lint)
-        .no_docs(no_docs)
-        .cargo_args(cargo_args)
-        .build()?;
     let out = match out {
         Some(path) => OutFile::File(PathBuf::from(path)),
         None => OutFile::Stdout,
@@ -2808,12 +2823,13 @@ fn generate_idl(
 }
 
 fn idl_fetch(cfg_override: &ConfigOverride, address: Pubkey, out: Option<String>) -> Result<()> {
-    let idl = fetch_idl(cfg_override, address)?;
-    let out = match out {
-        None => OutFile::Stdout,
-        Some(out) => OutFile::File(PathBuf::from(out)),
+    let idl = fetch_idl(cfg_override, address).map(|idl| serde_json::to_string_pretty(&idl))??;
+    match out {
+        Some(out) => fs::write(out, idl)?,
+        _ => println!("{idl}"),
     };
-    write_idl(&idl, out)
+
+    Ok(())
 }
 
 fn idl_convert(path: String, out: Option<String>, program_id: Option<Pubkey>) -> Result<()> {
@@ -3904,7 +3920,7 @@ fn upgrade(
             .arg("--keypair")
             .arg(cfg.provider.wallet.to_string())
             .arg("--program-id")
-            .arg(strip_workspace_prefix(program_id.to_string()))
+            .arg(program_id.to_string())
             .arg(strip_workspace_prefix(program_filepath))
             .args(&solana_args)
             .stdout(Stdio::inherit())
@@ -4127,7 +4143,12 @@ fn migrate(cfg_override: &ConfigOverride) -> Result<()> {
                 rust_template::deploy_ts_script_host(&url, &module_path.display().to_string());
             fs::write(deploy_ts, deploy_script_host_str)?;
 
-            std::process::Command::new("yarn")
+            let pkg_manager_cmd = match &cfg.toolchain.package_manager {
+                Some(pkg_manager) => pkg_manager.to_string(),
+                None => PackageManager::default().to_string(),
+            };
+
+            std::process::Command::new(pkg_manager_cmd)
                 .args([
                     "run",
                     "ts-node",
@@ -4731,6 +4752,10 @@ fn get_recommended_micro_lamport_fee(client: &RpcClient, priority_fee: Option<u6
     }
 
     let mut fees = client.get_recent_prioritization_fees(&[])?;
+    if fees.is_empty() {
+        // Fees may be empty, e.g. on localnet
+        return Ok(0);
+    }
 
     // Get the median fee from the most recent recent 150 slots' prioritization fee
     fees.sort_unstable_by_key(|fee| fee.prioritization_fee);
@@ -4811,6 +4836,7 @@ mod tests {
             true,
             false,
             true,
+            PackageManager::default(),
             false,
             ProgramTemplate::default(),
             TestTemplate::default(),
@@ -4831,6 +4857,7 @@ mod tests {
             true,
             false,
             true,
+            PackageManager::default(),
             false,
             ProgramTemplate::default(),
             TestTemplate::default(),
@@ -4851,6 +4878,7 @@ mod tests {
             true,
             false,
             true,
+            PackageManager::default(),
             false,
             ProgramTemplate::default(),
             TestTemplate::default(),

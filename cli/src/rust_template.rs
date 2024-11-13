@@ -1,10 +1,10 @@
 use crate::{
     config::ProgramWorkspace, create_files, override_or_create_files, solidity_template, Files,
-    VERSION,
+    PackageManager, VERSION,
 };
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
-use heck::{ToPascalCase, ToSnakeCase};
+use heck::{ToLowerCamelCase, ToPascalCase, ToSnakeCase};
 use solana_sdk::{
     pubkey::Pubkey,
     signature::{read_keypair_file, write_keypair_file, Keypair},
@@ -29,11 +29,14 @@ pub enum ProgramTemplate {
 }
 
 /// Create a program from the given name and template.
-pub fn create_program(name: &str, template: ProgramTemplate) -> Result<()> {
+pub fn create_program(name: &str, template: ProgramTemplate, with_mollusk: bool) -> Result<()> {
     let program_path = Path::new("programs").join(name);
     let common_files = vec![
         ("Cargo.toml".into(), workspace_manifest().into()),
-        (program_path.join("Cargo.toml"), cargo_toml(name)),
+        (
+            program_path.join("Cargo.toml"),
+            cargo_toml(name, with_mollusk),
+        ),
         (program_path.join("Xargo.toml"), xargo_toml().into()),
     ];
 
@@ -171,7 +174,17 @@ codegen-units = 1
 "#
 }
 
-fn cargo_toml(name: &str) -> String {
+fn cargo_toml(name: &str, with_mollusk: bool) -> String {
+    let test_sbf_feature = if with_mollusk { r#"test-sbf = []"# } else { "" };
+    let dev_dependencies = if with_mollusk {
+        r#"
+[dev-dependencies]
+mollusk-svm = "=0.0.6-solana-1.18"
+"#
+    } else {
+        ""
+    };
+
     format!(
         r#"[package]
 name = "{0}"
@@ -190,13 +203,17 @@ no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
 idl-build = ["anchor-lang/idl-build"]
+{2}
 
 [dependencies]
-anchor-lang = "{2}"
+anchor-lang = "{3}"
+{4}
 "#,
         name,
         name.to_snake_case(),
+        test_sbf_feature,
         VERSION,
+        dev_dependencies,
     )
 }
 
@@ -401,7 +418,7 @@ pub fn ts_package_json(jest: bool, license: String) -> String {
     if jest {
         format!(
             r#"{{
-  "license": "{license}",              
+  "license": "{license}",
   "scripts": {{
     "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
@@ -423,7 +440,7 @@ pub fn ts_package_json(jest: bool, license: String) -> String {
     } else {
         format!(
             r#"{{
-  "license": "{license}",  
+  "license": "{license}",
   "scripts": {{
     "lint:fix": "prettier */*.js \"*/**/*{{.js,.ts}}\" -w",
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
@@ -590,11 +607,10 @@ anchor.setProvider(provider);
         write!(
             &mut eval_string,
             r#"
-anchor.workspace.{} = new anchor.Program({}, new PublicKey("{}"), provider);
+anchor.workspace.{} = new anchor.Program({}, provider);
 "#,
-            program.name.to_pascal_case(),
+            program.name.to_lower_camel_case(),
             serde_json::to_string(&program.idl)?,
-            program.program_id
         )?;
     }
 
@@ -607,30 +623,39 @@ pub enum TestTemplate {
     /// Generate template for Mocha unit-test
     #[default]
     Mocha,
-    /// Generate template for Jest unit-test    
+    /// Generate template for Jest unit-test
     Jest,
     /// Generate template for Rust unit-test
     Rust,
+    /// Generate template for Mollusk Rust unit-test
+    Mollusk,
 }
 
 impl TestTemplate {
-    pub fn get_test_script(&self, js: bool) -> &str {
+    pub fn get_test_script(&self, js: bool, pkg_manager: &PackageManager) -> String {
+        let pkg_manager_exec_cmd = match pkg_manager {
+            PackageManager::Yarn => "yarn run",
+            PackageManager::NPM => "npx",
+            PackageManager::PNPM => "pnpm exec",
+        };
+
         match &self {
             Self::Mocha => {
                 if js {
-                    "yarn run mocha -t 1000000 tests/"
+                    format!("{pkg_manager_exec_cmd} mocha -t 1000000 tests/")
                 } else {
-                    "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+                    format!("{pkg_manager_exec_cmd} ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts")
                 }
             }
             Self::Jest => {
                 if js {
-                    "yarn run jest"
+                    format!("{pkg_manager_exec_cmd} jest")
                 } else {
-                    "yarn run jest --preset ts-jest"
+                    format!("{pkg_manager_exec_cmd} jest --preset ts-jest")
                 }
             }
-            Self::Rust => "cargo test",
+            Self::Rust => "cargo test".to_owned(),
+            Self::Mollusk => "cargo test-sbf".to_owned(),
         }
     }
 
@@ -699,6 +724,19 @@ impl TestTemplate {
                     project_name,
                     tests_path,
                     program_id,
+                ));
+                override_or_create_files(&files)?;
+            }
+            Self::Mollusk => {
+                // Build the test suite.
+                let tests_path_str = format!("programs/{}/tests", &project_name);
+                let tests_path = Path::new(&tests_path_str);
+                fs::create_dir_all(tests_path)?;
+
+                let mut files = Vec::new();
+                files.extend(create_program_template_mollusk_test(
+                    project_name,
+                    tests_path,
                 ));
                 override_or_create_files(&files)?;
             }
@@ -772,4 +810,36 @@ fn test_initialize() {{
             ),
         ),
     ]
+}
+
+/// Generate template for Mollusk Rust unit-test
+fn create_program_template_mollusk_test(name: &str, tests_path: &Path) -> Files {
+    vec![(
+        tests_path.join("test_initialize.rs"),
+        format!(
+            r#"#![cfg(feature = "test-sbf")]
+
+use {{
+    anchor_lang::{{solana_program::instruction::Instruction, InstructionData, ToAccountMetas}},
+    mollusk_svm::{{result::Check, Mollusk}},
+}};
+
+#[test]
+fn test_initialize() {{
+    let program_id = {0}::id();
+
+    let mollusk = Mollusk::new(&program_id, "{0}");
+
+    let instruction = Instruction::new_with_bytes(
+        program_id,
+        &{0}::instruction::Initialize {{}}.data(),
+        {0}::accounts::Initialize {{}}.to_account_metas(None),
+    );
+
+    mollusk.process_and_validate_instruction(&instruction, &[], &[Check::success()]);
+}}
+"#,
+            name.to_snake_case(),
+        ),
+    )]
 }
