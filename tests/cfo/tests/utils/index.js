@@ -9,16 +9,16 @@ const TOKEN_PROGRAM_ID = require("@solana/spl-token").TOKEN_PROGRAM_ID;
 const TokenInstructions = require("@project-serum/serum").TokenInstructions;
 const { Market, OpenOrders } = require("@project-serum/serum");
 const DexInstructions = require("@project-serum/serum").DexInstructions;
-const web3 = require("@project-serum/anchor").web3;
+const web3 = require("@coral-xyz/anchor").web3;
 const Connection = web3.Connection;
-const anchor = require("@project-serum/anchor");
+const anchor = require("@coral-xyz/anchor");
 const BN = anchor.BN;
 const serumCmn = require("@project-serum/common");
 const Account = web3.Account;
 const Transaction = web3.Transaction;
 const PublicKey = web3.PublicKey;
 const SystemProgram = web3.SystemProgram;
-const DEX_PID = new PublicKey("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin");
+const DEX_PID = new PublicKey("srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX");
 const secret = JSON.parse(
   require("fs").readFileSync("./scripts/market-maker.json")
 );
@@ -388,7 +388,7 @@ async function signTransactions({
   wallet,
   connection,
 }) {
-  const blockhash = (await connection.getRecentBlockhash("finalized"))
+  const blockhash = (await connection.getLatestBlockhash("finalized"))
     .blockhash;
   transactionsAndSigners.forEach(({ transaction, signers = [] }) => {
     transaction.recentBlockhash = blockhash;

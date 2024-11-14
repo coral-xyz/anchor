@@ -1,5 +1,5 @@
-import * as anchor from "@project-serum/anchor";
-import { Program, AnchorError } from "@project-serum/anchor";
+import * as anchor from "@coral-xyz/anchor";
+import { Program, AnchorError } from "@coral-xyz/anchor";
 import { Keypair, Transaction, TransactionInstruction } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import { assert, expect } from "chai";
@@ -7,33 +7,27 @@ import { Errors } from "../target/types/errors";
 
 const withLogTest = async (callback, expectedLogs) => {
   let logTestOk = false;
-  const listener = anchor.getProvider().connection.onLogs(
-    "all",
-    (logs) => {
-      const index = logs.logs.findIndex(
-        (logLine) => logLine === expectedLogs[0]
-      );
-      if (index === -1) {
-        console.log("Expected: ");
-        console.log(expectedLogs);
-        console.log("Actual: ");
-        console.log(logs);
-      } else {
-        const actualLogs = logs.logs.slice(index, index + expectedLogs.length);
-        for (let i = 0; i < expectedLogs.length; i++) {
-          if (actualLogs[i] !== expectedLogs[i]) {
-            console.log("Expected: ");
-            console.log(expectedLogs);
-            console.log("Actual: ");
-            console.log(logs);
-            return;
-          }
+  const listener = anchor.getProvider().connection.onLogs("all", (logs) => {
+    const index = logs.logs.findIndex((logLine) => logLine === expectedLogs[0]);
+    if (index === -1) {
+      console.log("Expected: ");
+      console.log(expectedLogs);
+      console.log("Actual: ");
+      console.log(logs);
+    } else {
+      const actualLogs = logs.logs.slice(index, index + expectedLogs.length);
+      for (let i = 0; i < expectedLogs.length; i++) {
+        if (actualLogs[i] !== expectedLogs[i]) {
+          console.log("Expected: ");
+          console.log(expectedLogs);
+          console.log("Actual: ");
+          console.log(logs);
+          return;
         }
-        logTestOk = true;
       }
-    },
-    "recent"
-  );
+      logTestOk = true;
+    }
+  });
   try {
     await callback();
   } catch (err) {
@@ -258,7 +252,7 @@ describe("errors", () => {
             },
           ],
           programId: program.programId,
-          data: program.coder.instruction.encode("signer_error", {}),
+          data: program.coder.instruction.encode("signerError", {}),
         })
       );
       await program.provider.sendAndConfirm(tx);
@@ -602,6 +596,23 @@ describe("errors", () => {
       "Program log: AnchorError thrown in programs/errors/src/lib.rs:131. Error Code: RequireGteViolated. Error Number: 2506. Error Message: A require_gte expression was violated.",
       "Program log: Left: 5",
       "Program log: Right: 10",
+    ]);
+  });
+
+  it("Emits a InvalidNumericConversion error via try_into", async () => {
+    await withLogTest(async () => {
+      try {
+        const tx = await program.methods.tryIntoInteger().rpc();
+        assert.fail(
+          "Unexpected success in creating a transaction that should have failed with `InvalidNumericConversion` error"
+        );
+      } catch (_err) {
+        assert.isTrue(_err instanceof AnchorError);
+        const err: AnchorError = _err;
+        assert.strictEqual(err.error.errorCode.number, 4102);
+      }
+    }, [
+      "Program log: AnchorError occurred. Error Code: InvalidNumericConversion. Error Number: 4102. Error Message: out of range integral type conversion attempted.",
     ]);
   });
 });

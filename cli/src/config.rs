@@ -1,22 +1,29 @@
-use crate::is_hidden;
+use crate::{get_keypair, is_hidden, keys_sync};
 use anchor_client::Cluster;
-use anchor_syn::idl::Idl;
-use anyhow::{anyhow, Context, Error, Result};
-use clap::{ArgEnum, Parser};
-use heck::SnakeCase;
-use serde::{Deserialize, Serialize};
+use anchor_lang_idl::types::Idl;
+use anyhow::{anyhow, bail, Context, Error, Result};
+use clap::{Parser, ValueEnum};
+use dirs::home_dir;
+use heck::ToSnakeCase;
+use reqwest::Url;
+use serde::de::{self, MapAccess, Visitor};
+use serde::{Deserialize, Deserializer, Serialize};
 use solana_cli_config::{Config as SolanaConfig, CONFIG_FILE};
+use solana_sdk::clock::Slot;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{Keypair, Signer};
+use solang_parser::pt::{ContractTy, SourceUnitPart};
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
+use std::ffi::OsStr;
 use std::fs::{self, File};
-use std::io;
 use std::io::prelude::*;
+use std::marker::PhantomData;
 use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::{fmt, io};
 use walkdir::WalkDir;
 
 pub trait Merge: Sized {
@@ -94,7 +101,7 @@ impl Manifest {
 
     pub fn version(&self) -> String {
         match &self.package {
-            Some(package) => package.version.to_string(),
+            Some(package) => package.version().to_string(),
             _ => "0.0.0".to_string(),
         }
     }
@@ -109,6 +116,8 @@ impl Manifest {
         let mut cwd_opt = Some(start_from.as_path());
 
         while let Some(cwd) = cwd_opt {
+            let mut anchor_toml = false;
+
             for f in fs::read_dir(cwd).with_context(|| {
                 format!("Error reading the directory with path: {}", cwd.display())
             })? {
@@ -117,15 +126,21 @@ impl Manifest {
                         format!("Error reading the directory with path: {}", cwd.display())
                     })?
                     .path();
-                if let Some(filename) = p.file_name() {
-                    if filename.to_str() == Some("Cargo.toml") {
-                        let m = WithPath::new(Manifest::from_path(&p)?, p);
-                        return Ok(Some(m));
+                if let Some(filename) = p.file_name().and_then(|name| name.to_str()) {
+                    if filename == "Cargo.toml" {
+                        return Ok(Some(WithPath::new(Manifest::from_path(&p)?, p)));
+                    }
+                    if filename == "Anchor.toml" {
+                        anchor_toml = true;
                     }
                 }
             }
 
-            // Not found. Go up a directory level.
+            // Not found. Go up a directory level, but don't go up from Anchor.toml
+            if anchor_toml {
+                break;
+            }
+
             cwd_opt = cwd.parent();
         }
 
@@ -142,7 +157,7 @@ impl Deref for Manifest {
 }
 
 impl WithPath<Config> {
-    pub fn get_program_list(&self) -> Result<Vec<PathBuf>> {
+    pub fn get_rust_program_list(&self) -> Result<Vec<PathBuf>> {
         // Canonicalize the workspace filepaths to compare with relative paths.
         let (members, exclude) = self.canonicalize_workspace()?;
 
@@ -153,12 +168,16 @@ impl WithPath<Config> {
         let program_paths: Vec<PathBuf> = {
             if members.is_empty() {
                 let path = self.path().parent().unwrap().join("programs");
-                fs::read_dir(path)?
-                    .filter(|entry| entry.as_ref().map(|e| e.path().is_dir()).unwrap_or(false))
-                    .map(|dir| dir.map(|d| d.path().canonicalize().unwrap()))
-                    .collect::<Vec<Result<PathBuf, std::io::Error>>>()
-                    .into_iter()
-                    .collect::<Result<Vec<PathBuf>, std::io::Error>>()?
+                if let Ok(entries) = fs::read_dir(path) {
+                    entries
+                        .filter(|entry| entry.as_ref().map(|e| e.path().is_dir()).unwrap_or(false))
+                        .map(|dir| dir.map(|d| d.path().canonicalize().unwrap()))
+                        .collect::<Vec<Result<PathBuf, std::io::Error>>>()
+                        .into_iter()
+                        .collect::<Result<Vec<PathBuf>, std::io::Error>>()?
+                } else {
+                    Vec::new()
+                }
             } else {
                 members
             }
@@ -171,22 +190,88 @@ impl WithPath<Config> {
             .collect())
     }
 
-    // TODO: this should read idl dir instead of parsing source.
+    /// Parse all the files with the .sol extension, and get a list of the all
+    /// contracts defined in them along with their path. One Solidity file may
+    /// define multiple contracts.
+    pub fn get_solidity_program_list(&self) -> Result<Vec<(String, PathBuf)>> {
+        let path = self.path().parent().unwrap().join("solidity");
+        let mut res = Vec::new();
+
+        if let Ok(entries) = fs::read_dir(path) {
+            for entry in entries {
+                let path = entry?.path();
+
+                if !path.is_file() || path.extension() != Some(OsStr::new("sol")) {
+                    continue;
+                }
+
+                let source = fs::read_to_string(&path)?;
+
+                let tree = match solang_parser::parse(&source, 0) {
+                    Ok((tree, _)) => tree,
+                    Err(diag) => {
+                        // The parser can return multiple errors, however this is exceedingly rare.
+                        // Just use the first one, else the formatting will be a mess.
+                        bail!(
+                            "{}: {}: {}",
+                            path.display(),
+                            diag[0].level.to_string(),
+                            diag[0].message
+                        );
+                    }
+                };
+
+                tree.0.iter().for_each(|part| {
+                    if let SourceUnitPart::ContractDefinition(contract) = part {
+                        // Must be a contract, not library/interface/abstract contract
+                        if matches!(&contract.ty, ContractTy::Contract(..)) {
+                            if let Some(name) = &contract.name {
+                                res.push((name.name.clone(), path.clone()));
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        Ok(res)
+    }
+
     pub fn read_all_programs(&self) -> Result<Vec<Program>> {
         let mut r = vec![];
-        for path in self.get_program_list()? {
-            let cargo = Manifest::from_path(&path.join("Cargo.toml"))?;
+        for path in self.get_rust_program_list()? {
+            let cargo = Manifest::from_path(path.join("Cargo.toml"))?;
             let lib_name = cargo.lib_name()?;
-            let version = cargo.version();
-            let idl = anchor_syn::idl::file::parse(
-                path.join("src/lib.rs"),
-                version,
-                self.features.seeds,
-                false,
-                false,
-            )?;
+
+            let idl_filepath = Path::new("target")
+                .join("idl")
+                .join(&lib_name)
+                .with_extension("json");
+            let idl = fs::read(idl_filepath)
+                .ok()
+                .map(|bytes| serde_json::from_reader(&*bytes))
+                .transpose()?;
+
             r.push(Program {
                 lib_name,
+                solidity: false,
+                path,
+                idl,
+            });
+        }
+        for (lib_name, path) in self.get_solidity_program_list()? {
+            let idl_filepath = Path::new("target")
+                .join("idl")
+                .join(&lib_name)
+                .with_extension("json");
+            let idl = fs::read(idl_filepath)
+                .ok()
+                .map(|bytes| serde_json::from_reader(&*bytes))
+                .transpose()?;
+
+            r.push(Program {
+                lib_name,
+                solidity: true,
                 path,
                 idl,
             });
@@ -194,61 +279,71 @@ impl WithPath<Config> {
         Ok(r)
     }
 
+    /// Read and get all the programs from the workspace.
+    ///
+    /// This method will only return the given program if `name` exists.
+    pub fn get_programs(&self, name: Option<String>) -> Result<Vec<Program>> {
+        let programs = self.read_all_programs()?;
+        let programs = match name {
+            Some(name) => vec![programs
+                .into_iter()
+                .find(|program| {
+                    name == program.lib_name
+                        || name == program.path.file_name().unwrap().to_str().unwrap()
+                })
+                .ok_or_else(|| anyhow!("Program {name} not found"))?],
+            None => programs,
+        };
+
+        Ok(programs)
+    }
+
+    /// Get the specified program from the workspace.
+    pub fn get_program(&self, name: &str) -> Result<Program> {
+        self.get_programs(Some(name.to_owned()))?
+            .into_iter()
+            .next()
+            .ok_or_else(|| anyhow!("Expected a program"))
+    }
+
     pub fn canonicalize_workspace(&self) -> Result<(Vec<PathBuf>, Vec<PathBuf>)> {
-        let members = self
-            .workspace
-            .members
-            .iter()
-            .map(|m| {
-                self.path()
-                    .parent()
-                    .unwrap()
-                    .join(m)
-                    .canonicalize()
-                    .unwrap_or_else(|_| {
-                        panic!("Error reading workspace.members. File {:?} does not exist at path {:?}.", m, self.path)
-                    })
-            })
-            .collect();
-        let exclude = self
-            .workspace
-            .exclude
-            .iter()
-            .map(|m| {
-                self.path()
-                    .parent()
-                    .unwrap()
-                    .join(m)
-                    .canonicalize()
-                    .unwrap_or_else(|_| {
-                        panic!("Error reading workspace.exclude. File {:?} does not exist at path {:?}.", m, self.path)
-                    })
-            })
-            .collect();
+        let members = self.process_paths(&self.workspace.members)?;
+        let exclude = self.process_paths(&self.workspace.exclude)?;
         Ok((members, exclude))
     }
 
-    pub fn get_program(&self, name: &str) -> Result<Option<WithPath<Program>>> {
-        for program in self.read_all_programs()? {
-            let cargo_toml = program.path.join("Cargo.toml");
-            if !cargo_toml.exists() {
-                return Err(anyhow!(
-                    "Did not find Cargo.toml at the path: {}",
-                    program.path.display()
-                ));
-            }
-            let p_lib_name = Manifest::from_path(&cargo_toml)?.lib_name()?;
-            if name == p_lib_name {
-                let path = self
-                    .path()
-                    .parent()
-                    .unwrap()
-                    .canonicalize()?
-                    .join(&program.path);
-                return Ok(Some(WithPath::new(program, path)));
-            }
-        }
-        Ok(None)
+    fn process_paths(&self, paths: &[String]) -> Result<Vec<PathBuf>, Error> {
+        let base_path = self.path().parent().unwrap();
+        paths
+            .iter()
+            .flat_map(|m| {
+                let path = base_path.join(m);
+                if m.ends_with("/*") {
+                    let dir = path.parent().unwrap();
+                    match fs::read_dir(dir) {
+                        Ok(entries) => entries
+                            .filter_map(|entry| entry.ok())
+                            .map(|entry| self.process_single_path(&entry.path()))
+                            .collect(),
+                        Err(e) => vec![Err(Error::new(io::Error::new(
+                            io::ErrorKind::Other,
+                            format!("Error reading directory {:?}: {}", dir, e),
+                        )))],
+                    }
+                } else {
+                    vec![self.process_single_path(&path)]
+                }
+            })
+            .collect()
+    }
+
+    fn process_single_path(&self, path: &PathBuf) -> Result<PathBuf, Error> {
+        path.canonicalize().map_err(|e| {
+            Error::new(io::Error::new(
+                io::ErrorKind::Other,
+                format!("Error canonicalizing path {:?}: {}", path, e),
+            ))
+        })
     }
 }
 
@@ -267,8 +362,7 @@ impl<T> std::ops::DerefMut for WithPath<T> {
 
 #[derive(Debug, Default)]
 pub struct Config {
-    pub anchor_version: Option<String>,
-    pub solana_version: Option<String>,
+    pub toolchain: ToolchainConfig,
     pub features: FeaturesConfig,
     pub registry: RegistryConfig,
     pub provider: ProviderConfig,
@@ -283,11 +377,61 @@ pub struct Config {
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
+pub struct ToolchainConfig {
+    pub anchor_version: Option<String>,
+    pub solana_version: Option<String>,
+    pub package_manager: Option<PackageManager>,
+}
+
+/// Package manager to use for the project.
+#[derive(Clone, Debug, Default, Eq, PartialEq, Parser, ValueEnum, Serialize, Deserialize)]
+pub enum PackageManager {
+    /// Use npm as the package manager.
+    NPM,
+    /// Use yarn as the package manager.
+    #[default]
+    Yarn,
+    /// Use pnpm as the package manager.
+    PNPM,
+}
+
+impl std::fmt::Display for PackageManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let pkg_manager_str = match self {
+            PackageManager::NPM => "npm",
+            PackageManager::Yarn => "yarn",
+            PackageManager::PNPM => "pnpm",
+        };
+
+        write!(f, "{pkg_manager_str}")
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FeaturesConfig {
-    #[serde(default)]
-    pub seeds: bool,
+    /// Enable account resolution.
+    ///
+    /// Not able to specify default bool value: https://github.com/serde-rs/serde/issues/368
+    #[serde(default = "FeaturesConfig::get_default_resolution")]
+    pub resolution: bool,
+    /// Disable safety comment checks
     #[serde(default, rename = "skip-lint")]
     pub skip_lint: bool,
+}
+
+impl FeaturesConfig {
+    fn get_default_resolution() -> bool {
+        true
+    }
+}
+
+impl Default for FeaturesConfig {
+    fn default() -> Self {
+        Self {
+            resolution: Self::get_default_resolution(),
+            skip_lint: false,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -323,10 +467,24 @@ pub struct WorkspaceConfig {
     pub types: String,
 }
 
-#[derive(ArgEnum, Parser, Clone, PartialEq, Debug)]
+#[derive(ValueEnum, Parser, Clone, PartialEq, Eq, Debug)]
 pub enum BootstrapMode {
     None,
     Debian,
+}
+
+#[derive(ValueEnum, Parser, Clone, PartialEq, Eq, Debug)]
+pub enum ProgramArch {
+    Bpf,
+    Sbf,
+}
+impl ProgramArch {
+    pub fn build_subcommand(&self) -> &str {
+        match self {
+            Self::Bpf => "build-bpf",
+            Self::Sbf => "build-sbf",
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -338,17 +496,22 @@ pub struct BuildConfig {
 }
 
 impl Config {
-    pub fn add_test_config(&mut self, root: impl AsRef<Path>) -> Result<()> {
-        self.test_config = TestConfig::discover(root)?;
+    pub fn add_test_config(
+        &mut self,
+        root: impl AsRef<Path>,
+        test_paths: Vec<PathBuf>,
+    ) -> Result<()> {
+        self.test_config = TestConfig::discover(root, test_paths)?;
         Ok(())
     }
 
     pub fn docker(&self) -> String {
-        let ver = self
+        let version = self
+            .toolchain
             .anchor_version
-            .clone()
-            .unwrap_or_else(|| crate::DOCKER_BUILDER_VERSION.to_string());
-        format!("projectserum/build:v{}", ver)
+            .as_deref()
+            .unwrap_or(crate::DOCKER_BUILDER_VERSION);
+        format!("backpackapp/build:v{version}")
     }
 
     pub fn discover(cfg_override: &ConfigOverride) -> Result<Option<WithPath<Config>>> {
@@ -381,7 +544,16 @@ impl Config {
                     .path();
                 if let Some(filename) = p.file_name() {
                     if filename.to_str() == Some("Anchor.toml") {
-                        let cfg = Config::from_path(&p)?;
+                        // Make sure the program id is correct (only on the initial build)
+                        let mut cfg = Config::from_path(&p)?;
+                        let deploy_dir = p.parent().unwrap().join("target").join("deploy");
+                        if !deploy_dir.exists() && !cfg.programs.contains_key(&Cluster::Localnet) {
+                            println!("Updating program ids...");
+                            fs::create_dir_all(deploy_dir)?;
+                            keys_sync(&ConfigOverride::default(), None)?;
+                            cfg = Config::from_path(&p)?;
+                        }
+
                         return Ok(Some(WithPath::new(cfg, p)));
                     }
                 }
@@ -400,15 +572,13 @@ impl Config {
     }
 
     pub fn wallet_kp(&self) -> Result<Keypair> {
-        solana_sdk::signature::read_keypair_file(&self.provider.wallet.to_string())
-            .map_err(|_| anyhow!("Unable to read keypair file"))
+        get_keypair(&self.provider.wallet.to_string())
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct _Config {
-    anchor_version: Option<String>,
-    solana_version: Option<String>,
+    toolchain: Option<ToolchainConfig>,
     features: Option<FeaturesConfig>,
     programs: Option<BTreeMap<String, BTreeMap<String, serde_json::Value>>>,
     registry: Option<RegistryConfig>,
@@ -420,12 +590,60 @@ struct _Config {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Provider {
-    cluster: String,
+    #[serde(deserialize_with = "des_cluster")]
+    cluster: Cluster,
     wallet: String,
 }
 
-impl ToString for Config {
-    fn to_string(&self) -> String {
+fn des_cluster<'de, D>(deserializer: D) -> Result<Cluster, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct StringOrCustomCluster(PhantomData<fn() -> Cluster>);
+
+    impl<'de> Visitor<'de> for StringOrCustomCluster {
+        type Value = Cluster;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("string or map")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Cluster, E>
+        where
+            E: de::Error,
+        {
+            value.parse().map_err(de::Error::custom)
+        }
+
+        fn visit_map<M>(self, mut map: M) -> Result<Cluster, M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            // Gets keys
+            if let (Some((http_key, http_value)), Some((ws_key, ws_value))) = (
+                map.next_entry::<String, String>()?,
+                map.next_entry::<String, String>()?,
+            ) {
+                // Checks keys
+                if http_key != "http" || ws_key != "ws" {
+                    return Err(de::Error::custom("Invalid key"));
+                }
+
+                // Checks urls
+                Url::parse(&http_value).map_err(de::Error::custom)?;
+                Url::parse(&ws_value).map_err(de::Error::custom)?;
+
+                Ok(Cluster::Custom(http_value, ws_value))
+            } else {
+                Err(de::Error::custom("Invalid entry"))
+            }
+        }
+    }
+    deserializer.deserialize_any(StringOrCustomCluster(PhantomData))
+}
+
+impl fmt::Display for Config {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let programs = {
             let c = ser_programs(&self.programs);
             if c.is_empty() {
@@ -435,13 +653,12 @@ impl ToString for Config {
             }
         };
         let cfg = _Config {
-            anchor_version: self.anchor_version.clone(),
-            solana_version: self.solana_version.clone(),
+            toolchain: Some(self.toolchain.clone()),
             features: Some(self.features.clone()),
             registry: Some(self.registry.clone()),
             provider: Provider {
-                cluster: format!("{}", self.provider.cluster),
-                wallet: self.provider.wallet.to_string(),
+                cluster: self.provider.cluster.clone(),
+                wallet: self.provider.wallet.stringify_with_tilde(),
             },
             test: self.test_validator.clone().map(Into::into),
             scripts: match self.scripts.is_empty() {
@@ -453,7 +670,8 @@ impl ToString for Config {
                 .then(|| self.workspace.clone()),
         };
 
-        toml::to_string(&cfg).expect("Must be well formed")
+        let cfg = toml::to_string(&cfg).expect("Must be well formed");
+        write!(f, "{}", cfg)
     }
 }
 
@@ -461,15 +679,14 @@ impl FromStr for Config {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let cfg: _Config = toml::from_str(s)
-            .map_err(|e| anyhow::format_err!("Unable to deserialize config: {}", e.to_string()))?;
+        let cfg: _Config =
+            toml::from_str(s).map_err(|e| anyhow!("Unable to deserialize config: {e}"))?;
         Ok(Config {
-            anchor_version: cfg.anchor_version,
-            solana_version: cfg.solana_version,
+            toolchain: cfg.toolchain.unwrap_or_default(),
             features: cfg.features.unwrap_or_default(),
             registry: cfg.registry.unwrap_or_default(),
             provider: ProviderConfig {
-                cluster: cfg.provider.cluster.parse()?,
+                cluster: cfg.provider.cluster,
                 wallet: shellexpand::tilde(&cfg.provider.wallet).parse()?,
             },
             scripts: cfg.scripts.unwrap_or_default(),
@@ -537,6 +754,7 @@ fn deser_programs(
                                 path: None,
                                 idl: None,
                             },
+
                             serde_json::Value::Object(_) => {
                                 serde_json::from_value(program_id.clone())
                                     .map_err(|_| anyhow!("Unable to read toml"))?
@@ -557,6 +775,7 @@ pub struct TestValidator {
     pub validator: Option<Validator>,
     pub startup_wait: i32,
     pub shutdown_wait: i32,
+    pub upgradeable: bool,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -569,6 +788,8 @@ pub struct _TestValidator {
     pub startup_wait: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub shutdown_wait: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub upgradeable: Option<bool>,
 }
 
 pub const STARTUP_WAIT: i32 = 5000;
@@ -581,6 +802,7 @@ impl From<_TestValidator> for TestValidator {
             startup_wait: _test_validator.startup_wait.unwrap_or(STARTUP_WAIT),
             genesis: _test_validator.genesis,
             validator: _test_validator.validator.map(Into::into),
+            upgradeable: _test_validator.upgradeable.unwrap_or(false),
         }
     }
 }
@@ -592,6 +814,7 @@ impl From<TestValidator> for _TestValidator {
             startup_wait: Some(test_validator.startup_wait),
             genesis: test_validator.genesis,
             validator: test_validator.validator.map(Into::into),
+            upgradeable: Some(test_validator.upgradeable),
         }
     }
 }
@@ -610,14 +833,17 @@ impl Deref for TestConfig {
 }
 
 impl TestConfig {
-    pub fn discover(root: impl AsRef<Path>) -> Result<Option<Self>> {
+    pub fn discover(root: impl AsRef<Path>, test_paths: Vec<PathBuf>) -> Result<Option<Self>> {
         let walker = WalkDir::new(root).into_iter();
         let mut test_suite_configs = HashMap::new();
         for entry in walker.filter_entry(|e| !is_hidden(e)) {
             let entry = entry?;
             if entry.file_name() == "Test.toml" {
-                let test_toml = TestToml::from_path(entry.path())?;
-                test_suite_configs.insert(entry.path().into(), test_toml);
+                let entry_path = entry.path();
+                let test_toml = TestToml::from_path(entry_path)?;
+                if test_paths.is_empty() || test_paths.iter().any(|p| entry_path.starts_with(p)) {
+                    test_suite_configs.insert(entry.path().into(), test_toml);
+                }
             }
         }
 
@@ -797,6 +1023,8 @@ pub struct GenesisEntry {
     pub address: String,
     // Filepath to the compiled program to embed into the genesis.
     pub program: String,
+    // Whether the genesis program is upgradeable.
+    pub upgradeable: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -813,11 +1041,20 @@ pub struct AccountEntry {
     pub filename: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountDirEntry {
+    // Directory containing account JSON files
+    pub directory: String,
+}
+
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct _Validator {
     // Load an account from the provided JSON file
     #[serde(skip_serializing_if = "Option::is_none")]
     pub account: Option<Vec<AccountEntry>>,
+    // Load all the accounts from the JSON files found in the specified DIRECTORY
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account_dir: Option<Vec<AccountDirEntry>>,
     // IP address to bind the validator ports. [default: 0.0.0.0]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bind_address: Option<String>,
@@ -833,6 +1070,9 @@ pub struct _Validator {
     // Give the faucet address this much SOL in genesis. [default: 1000000]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub faucet_sol: Option<String>,
+    // Geyser plugin config location
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub geyser_plugin_config: Option<String>,
     // Gossip DNS name or IP address for the validator to advertise in gossip. [default: 127.0.0.1]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gossip_host: Option<String>,
@@ -854,15 +1094,23 @@ pub struct _Validator {
     // Override the number of slots in an epoch.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub slots_per_epoch: Option<String>,
+    // The number of ticks in a slot
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ticks_per_slot: Option<u16>,
     // Warp the ledger to WARP_SLOT after starting the validator.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub warp_slot: Option<String>,
+    pub warp_slot: Option<Slot>,
+    // Deactivate one or more features.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deactivate_feature: Option<Vec<String>>,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Validator {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub account: Option<Vec<AccountEntry>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account_dir: Option<Vec<AccountDirEntry>>,
     pub bind_address: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub clone: Option<Vec<CloneEntry>>,
@@ -872,6 +1120,8 @@ pub struct Validator {
     pub faucet_port: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub faucet_sol: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub geyser_plugin_config: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gossip_host: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -885,13 +1135,18 @@ pub struct Validator {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub slots_per_epoch: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub warp_slot: Option<String>,
+    pub ticks_per_slot: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub warp_slot: Option<Slot>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deactivate_feature: Option<Vec<String>>,
 }
 
 impl From<_Validator> for Validator {
     fn from(_validator: _Validator) -> Self {
         Self {
             account: _validator.account,
+            account_dir: _validator.account_dir,
             bind_address: _validator
                 .bind_address
                 .unwrap_or_else(|| DEFAULT_BIND_ADDRESS.to_string()),
@@ -899,18 +1154,21 @@ impl From<_Validator> for Validator {
             dynamic_port_range: _validator.dynamic_port_range,
             faucet_port: _validator.faucet_port,
             faucet_sol: _validator.faucet_sol,
+            geyser_plugin_config: _validator.geyser_plugin_config,
             gossip_host: _validator.gossip_host,
             gossip_port: _validator.gossip_port,
             url: _validator.url,
             ledger: _validator
                 .ledger
-                .unwrap_or_else(|| DEFAULT_LEDGER_PATH.to_string()),
+                .unwrap_or_else(|| get_default_ledger_path().display().to_string()),
             limit_ledger_size: _validator.limit_ledger_size,
             rpc_port: _validator
                 .rpc_port
                 .unwrap_or(solana_sdk::rpc_port::DEFAULT_RPC_PORT),
             slots_per_epoch: _validator.slots_per_epoch,
+            ticks_per_slot: _validator.ticks_per_slot,
             warp_slot: _validator.warp_slot,
+            deactivate_feature: _validator.deactivate_feature,
         }
     }
 }
@@ -919,11 +1177,13 @@ impl From<Validator> for _Validator {
     fn from(validator: Validator) -> Self {
         Self {
             account: validator.account,
+            account_dir: validator.account_dir,
             bind_address: Some(validator.bind_address),
             clone: validator.clone,
             dynamic_port_range: validator.dynamic_port_range,
             faucet_port: validator.faucet_port,
             faucet_sol: validator.faucet_sol,
+            geyser_plugin_config: validator.geyser_plugin_config,
             gossip_host: validator.gossip_host,
             gossip_port: validator.gossip_port,
             url: validator.url,
@@ -931,12 +1191,17 @@ impl From<Validator> for _Validator {
             limit_ledger_size: validator.limit_ledger_size,
             rpc_port: Some(validator.rpc_port),
             slots_per_epoch: validator.slots_per_epoch,
+            ticks_per_slot: validator.ticks_per_slot,
             warp_slot: validator.warp_slot,
+            deactivate_feature: validator.deactivate_feature,
         }
     }
 }
 
-const DEFAULT_LEDGER_PATH: &str = ".anchor/test-ledger";
+pub fn get_default_ledger_path() -> PathBuf {
+    Path::new(".anchor").join("test-ledger")
+}
+
 const DEFAULT_BIND_ADDRESS: &str = "0.0.0.0";
 
 impl Merge for _Validator {
@@ -954,6 +1219,24 @@ impl Merge for _Validator {
                             match entries
                                 .iter()
                                 .position(|my_entry| *my_entry.address == other_entry.address)
+                            {
+                                None => entries.push(other_entry),
+                                Some(i) => entries[i] = other_entry,
+                            };
+                        }
+                        Some(entries)
+                    }
+                },
+            },
+            account_dir: match self.account_dir.take() {
+                None => other.account_dir,
+                Some(mut entries) => match other.account_dir {
+                    None => Some(entries),
+                    Some(other_entries) => {
+                        for other_entry in other_entries {
+                            match entries
+                                .iter()
+                                .position(|my_entry| *my_entry.directory == other_entry.directory)
                             {
                                 None => entries.push(other_entry),
                                 Some(i) => entries[i] = other_entry,
@@ -987,6 +1270,9 @@ impl Merge for _Validator {
                 .or_else(|| self.dynamic_port_range.take()),
             faucet_port: other.faucet_port.or_else(|| self.faucet_port.take()),
             faucet_sol: other.faucet_sol.or_else(|| self.faucet_sol.take()),
+            geyser_plugin_config: other
+                .geyser_plugin_config
+                .or_else(|| self.geyser_plugin_config.take()),
             gossip_host: other.gossip_host.or_else(|| self.gossip_host.take()),
             gossip_port: other.gossip_port.or_else(|| self.gossip_port.take()),
             url: other.url.or_else(|| self.url.take()),
@@ -998,7 +1284,11 @@ impl Merge for _Validator {
             slots_per_epoch: other
                 .slots_per_epoch
                 .or_else(|| self.slots_per_epoch.take()),
+            ticks_per_slot: other.ticks_per_slot.or_else(|| self.ticks_per_slot.take()),
             warp_slot: other.warp_slot.or_else(|| self.warp_slot.take()),
+            deactivate_feature: other
+                .deactivate_feature
+                .or_else(|| self.deactivate_feature.take()),
         };
     }
 }
@@ -1006,7 +1296,8 @@ impl Merge for _Validator {
 #[derive(Debug, Clone)]
 pub struct Program {
     pub lib_name: String,
-    // Canonicalized path to the program directory.
+    pub solidity: bool,
+    // Canonicalized path to the program directory or Solidity source file
     pub path: PathBuf,
     pub idl: Option<Idl>,
 }
@@ -1018,18 +1309,17 @@ impl Program {
 
     pub fn keypair(&self) -> Result<Keypair> {
         let file = self.keypair_file()?;
-        solana_sdk::signature::read_keypair_file(file.path())
-            .map_err(|_| anyhow!("failed to read keypair for program: {}", self.lib_name))
+        get_keypair(file.path().to_str().unwrap())
     }
 
     // Lazily initializes the keypair file with a new key if it doesn't exist.
     pub fn keypair_file(&self) -> Result<WithPath<File>> {
-        let deploy_dir_path = "target/deploy/";
-        fs::create_dir_all(deploy_dir_path)
-            .with_context(|| format!("Error creating directory with path: {}", deploy_dir_path))?;
+        let deploy_dir_path = Path::new("target").join("deploy");
+        fs::create_dir_all(&deploy_dir_path)
+            .with_context(|| format!("Error creating directory with path: {deploy_dir_path:?}"))?;
         let path = std::env::current_dir()
             .expect("Must have current dir")
-            .join(format!("target/deploy/{}-keypair.json", self.lib_name));
+            .join(deploy_dir_path.join(format!("{}-keypair.json", self.lib_name)));
         if path.exists() {
             return Ok(WithPath::new(
                 File::open(&path)
@@ -1037,17 +1327,22 @@ impl Program {
                 path,
             ));
         }
-        let program_kp = Keypair::generate(&mut rand::rngs::OsRng);
+        let program_kp = Keypair::new();
         let mut file = File::create(&path)
             .with_context(|| format!("Error creating file with path: {}", path.display()))?;
         file.write_all(format!("{:?}", &program_kp.to_bytes()).as_bytes())?;
         Ok(WithPath::new(file, path))
     }
 
-    pub fn binary_path(&self) -> PathBuf {
+    pub fn binary_path(&self, verifiable: bool) -> PathBuf {
+        let path = Path::new("target")
+            .join(if verifiable { "verifiable" } else { "deploy" })
+            .join(&self.lib_name)
+            .with_extension("so");
+
         std::env::current_dir()
             .expect("Must have current dir")
-            .join(format!("target/deploy/{}.so", self.lib_name))
+            .join(path)
     }
 }
 
@@ -1117,7 +1412,48 @@ impl AnchorPackage {
     }
 }
 
-crate::home_path!(WalletPath, ".config/solana/id.json");
+#[macro_export]
+macro_rules! home_path {
+    ($my_struct:ident, $path:literal) => {
+        #[derive(Clone, Debug)]
+        pub struct $my_struct(String);
+
+        impl Default for $my_struct {
+            fn default() -> Self {
+                $my_struct(
+                    home_dir()
+                        .unwrap()
+                        .join($path.replace('/', std::path::MAIN_SEPARATOR_STR))
+                        .display()
+                        .to_string(),
+                )
+            }
+        }
+
+        impl $my_struct {
+            fn stringify_with_tilde(&self) -> String {
+                self.0
+                    .replacen(home_dir().unwrap().to_str().unwrap(), "~", 1)
+            }
+        }
+
+        impl FromStr for $my_struct {
+            type Err = anyhow::Error;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                Ok(Self(s.to_owned()))
+            }
+        }
+
+        impl fmt::Display for $my_struct {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "{}", self.0)
+            }
+        }
+    };
+}
+
+home_path!(WalletPath, ".config/solana/id.json");
 
 #[cfg(test)]
 mod tests {
@@ -1128,6 +1464,18 @@ mod tests {
         cluster = \"localnet\"
         wallet = \"id.json\"
     ";
+
+    const CUSTOM_CONFIG: &str = "
+        [provider]
+        cluster = { http = \"http://my-url.com\", ws = \"ws://my-url.com\" }
+        wallet = \"id.json\"
+    ";
+
+    #[test]
+    fn parse_custom_cluster() {
+        let config = Config::from_str(CUSTOM_CONFIG).unwrap();
+        assert!(!config.features.skip_lint);
+    }
 
     #[test]
     fn parse_skip_lint_no_section() {

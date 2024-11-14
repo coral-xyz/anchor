@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::{convert::TryFrom, fmt, mem, str::FromStr};
+use std::{fmt, mem, str::FromStr};
 use thiserror::Error;
 
 pub const HASH_BYTES: usize = 32;
@@ -87,28 +87,9 @@ impl Hash {
 pub fn hashv(vals: &[&[u8]]) -> Hash {
     // Perform the calculation inline, calling this from within a program is
     // not supported
-    #[cfg(not(target_arch = "bpf"))]
-    {
-        let mut hasher = Hasher::default();
-        hasher.hashv(vals);
-        hasher.result()
-    }
-    // Call via a system call to perform the calculation
-    #[cfg(target_arch = "bpf")]
-    {
-        extern "C" {
-            fn sol_sha256(vals: *const u8, val_len: u64, hash_result: *mut u8) -> u64;
-        };
-        let mut hash_result = [0; HASH_BYTES];
-        unsafe {
-            sol_sha256(
-                vals as *const _ as *const u8,
-                vals.len() as u64,
-                &mut hash_result as *mut _ as *mut u8,
-            );
-        }
-        Hash::new_from_array(hash_result)
-    }
+    let mut hasher = Hasher::default();
+    hasher.hashv(vals);
+    hasher.result()
 }
 
 /// Return a Sha256 hash for the given data.

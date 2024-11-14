@@ -12,7 +12,7 @@ practices for security and transparency.
 
 {% callout title="Note" %}
 The Anchor Program Registry is currently in alpha testing. For access to publishing
-please ask on [Discord](http://discord.gg/ZCHmqvXgDw).
+please ask on [Discord](https://discord.gg/NHHGSXAnXk).
 {% /callout %}
 
 ## Getting Started
@@ -34,7 +34,9 @@ have an `Anchor.toml` to define the build.
 An example `Anchor.toml` config looks as follows,
 
 ```toml
-anchor_version = "0.25.0"
+[toolchain]
+anchor_version = "0.30.1"
+solana_version = "1.18.17"
 
 [workspace]
 members = ["programs/multisig"]
@@ -52,21 +54,21 @@ multisig = "A9HAbnCwoD6f2NkZobKFf6buJoN9gUVVvX5PoUnDHS6u"
 
 Here there are four sections.
 
-1. `anchor_version` (optional) - sets the anchor docker image to use. By default, the builder will use the latest version of Anchor.
+1. `[toolchain]` (optional) - sets the Anchor and Solana version to use. By default, the builder will use the current versions.
 2. `[workspace]` (optional) - sets the paths--relative to the `Anchor.toml`--
    to all programs in the local
    workspace, i.e., the path to the `Cargo.toml` manifest associated with each
    program that can be compiled by the `anchor` CLI. For programs using the
-   standard Anchor workflow, this can be ommitted. For programs not written in Anchor
+   standard Anchor workflow, this can be omitted. For programs not written in Anchor
    but still want to publish, this should be added.
 3. `[provider]` - configures the wallet and cluster settings. Here, `mainnet` is used because the registry only supports `mainnet` binary verification at the moment.
-4. `[programs.mainnet]` - configures each program in the workpace, providing
+4. `[programs.mainnet]` - configures each program in the workspace, providing
    the `address` of the program to verify.
 
 {% callout title="Note" %}
 When defining program in `[programs.mainnet]`, make sure the name provided
 matches the **lib** name for your program, which is defined
-by your program's Cargo.toml.
+by your program's `Cargo.toml`.
 {% /callout %}
 
 ### Examples

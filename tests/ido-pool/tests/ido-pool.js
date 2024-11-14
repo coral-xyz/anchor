@@ -1,4 +1,4 @@
-const anchor = require("@project-serum/anchor");
+const anchor = require("@coral-xyz/anchor");
 const { assert } = require("chai");
 const {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -11,7 +11,7 @@ const {
   createMint,
   createTokenAccount,
 } = require("./utils");
-const { token } = require("@project-serum/anchor/dist/cjs/utils");
+const { token } = require("@coral-xyz/anchor/dist/cjs/utils");
 
 describe("ido-pool", () => {
   const provider = anchor.AnchorProvider.local();
@@ -124,7 +124,6 @@ describe("ido-pool", () => {
           poolUsdc,
           systemProgram: anchor.web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         },
       }
     );
@@ -225,7 +224,6 @@ describe("ido-pool", () => {
               redeemableMint,
               systemProgram: anchor.web3.SystemProgram.programId,
               tokenProgram: TOKEN_PROGRAM_ID,
-              rent: anchor.web3.SYSVAR_RENT_PUBKEY,
             },
           }),
         ],
@@ -326,7 +324,6 @@ describe("ido-pool", () => {
             redeemableMint,
             systemProgram: anchor.web3.SystemProgram.programId,
             tokenProgram: TOKEN_PROGRAM_ID,
-            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
         }),
       ],
@@ -401,7 +398,6 @@ describe("ido-pool", () => {
             usdcMint,
             systemProgram: anchor.web3.SystemProgram.programId,
             tokenProgram: TOKEN_PROGRAM_ID,
-            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
         }),
       ],

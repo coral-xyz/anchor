@@ -1,4 +1,4 @@
-const anchor = require("@project-serum/anchor");
+const anchor = require("@coral-xyz/anchor");
 
 describe("basic-0", () => {
   // Configure the client to use the local cluster.
@@ -10,7 +10,7 @@ describe("basic-0", () => {
     const program = anchor.workspace.Basic0;
 
     // Execute the RPC.
-    await program.rpc.initialize();
+    await program.methods.initialize().rpc();
     // #endregion code
   });
 });

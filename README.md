@@ -10,12 +10,12 @@
   <p>
     <a href="https://github.com/coral-xyz/anchor/actions"><img alt="Build Status" src="https://github.com/coral-xyz/anchor/actions/workflows/tests.yaml/badge.svg" /></a>
     <a href="https://anchor-lang.com"><img alt="Tutorials" src="https://img.shields.io/badge/docs-tutorials-blueviolet" /></a>
-    <a href="https://discord.gg/PDeRXyVURd"><img alt="Discord Chat" src="https://img.shields.io/discord/889577356681945098?color=blueviolet" /></a>
+    <a href="https://discord.gg/NHHGSXAnXk"><img alt="Discord Chat" src="https://img.shields.io/discord/889577356681945098?color=blueviolet" /></a>
     <a href="https://opensource.org/licenses/Apache-2.0"><img alt="License" src="https://img.shields.io/github/license/coral-xyz/anchor?color=blueviolet" /></a>
   </p>
 </div>
 
-Anchor is a framework for Solana's [Sealevel](https://medium.com/solana-labs/sealevel-parallel-processing-thousands-of-smart-contracts-d814b378192) runtime providing several convenient developer tools for writing smart contracts.
+[Anchor](https://www.anchor-lang.com/) is a framework for Solana's [Sealevel](https://medium.com/solana-labs/sealevel-parallel-processing-thousands-of-smart-contracts-d814b378192) runtime providing several convenient developer tools for writing smart contracts.
 
 - Rust eDSL for writing Solana programs
 - [IDL](https://en.wikipedia.org/wiki/Interface_description_language) specification
@@ -31,18 +31,18 @@ To jump straight to examples, go [here](https://github.com/coral-xyz/anchor/tree
 
 ## Packages
 
-| Package                     | Description                                              | Version                                                                                                                                  | Docs                                                                                                            |
-| :-------------------------- | :------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------- |
-| `anchor-lang`               | Rust primitives for writing programs on Solana           | [![Crates.io](https://img.shields.io/crates/v/anchor-lang?color=blue)](https://crates.io/crates/anchor-lang)                             | [![Docs.rs](https://docs.rs/anchor-lang/badge.svg)](https://docs.rs/anchor-lang)                                |
-| `anchor-spl`                | CPI clients for SPL programs on Solana                   | ![crates](https://img.shields.io/crates/v/anchor-spl?color=blue)                                                                         | [![Docs.rs](https://docs.rs/anchor-spl/badge.svg)](https://docs.rs/anchor-spl)                                  |
-| `anchor-client`             | Rust client for Anchor programs                          | ![crates](https://img.shields.io/crates/v/anchor-client?color=blue)                                                                      | [![Docs.rs](https://docs.rs/anchor-client/badge.svg)](https://docs.rs/anchor-client)                            |
-| `@project-serum/anchor`     | TypeScript client for Anchor programs                    | [![npm](https://img.shields.io/npm/v/@project-serum/anchor.svg?color=blue)](https://www.npmjs.com/package/@project-serum/anchor)         | [![Docs](https://img.shields.io/badge/docs-typedoc-blue)](https://coral-xyz.github.io/anchor/ts/index.html)     |
-| `@project-serum/anchor-cli` | CLI to support building and managing an Anchor workspace | [![npm](https://img.shields.io/npm/v/@project-serum/anchor-cli.svg?color=blue)](https://www.npmjs.com/package/@project-serum/anchor-cli) | [![Docs](https://img.shields.io/badge/docs-typedoc-blue)](https://coral-xyz.github.io/anchor/cli/commands.html) |
+| Package                 | Description                                              | Version                                                                                                                          | Docs                                                                                                            |
+| :---------------------- | :------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------- |
+| `anchor-lang`           | Rust primitives for writing programs on Solana           | [![Crates.io](https://img.shields.io/crates/v/anchor-lang?color=blue)](https://crates.io/crates/anchor-lang)                     | [![Docs.rs](https://docs.rs/anchor-lang/badge.svg)](https://docs.rs/anchor-lang)                                |
+| `anchor-spl`            | CPI clients for SPL programs on Solana                   | [![crates](https://img.shields.io/crates/v/anchor-spl?color=blue)](https://crates.io/crates/anchor-spl)                          | [![Docs.rs](https://docs.rs/anchor-spl/badge.svg)](https://docs.rs/anchor-spl)                                  |
+| `anchor-client`         | Rust client for Anchor programs                          | [![crates](https://img.shields.io/crates/v/anchor-client?color=blue)](https://crates.io/crates/anchor-client)                    | [![Docs.rs](https://docs.rs/anchor-client/badge.svg)](https://docs.rs/anchor-client)                            |
+| `@coral-xyz/anchor`     | TypeScript client for Anchor programs                    | [![npm](https://img.shields.io/npm/v/@coral-xyz/anchor.svg?color=blue)](https://www.npmjs.com/package/@coral-xyz/anchor)         | [![Docs](https://img.shields.io/badge/docs-typedoc-blue)](https://coral-xyz.github.io/anchor/ts/index.html)     |
+| `@coral-xyz/anchor-cli` | CLI to support building and managing an Anchor workspace | [![npm](https://img.shields.io/npm/v/@coral-xyz/anchor-cli.svg?color=blue)](https://www.npmjs.com/package/@coral-xyz/anchor-cli) | [![Docs](https://img.shields.io/badge/docs-typedoc-blue)](https://coral-xyz.github.io/anchor/cli/commands.html) |
 
 ## Note
 
-* **Anchor is in active development, so all APIs are subject to change.**
-* **This code is unaudited. Use at your own risk.**
+- **Anchor is in active development, so all APIs are subject to change.**
+- **This code is unaudited. Use at your own risk.**
 
 ## Examples
 

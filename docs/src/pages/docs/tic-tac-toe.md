@@ -268,7 +268,7 @@ Let us briefly explain how we arrived at the `Game::MAXIMUM_SIZE`. Anchor uses t
 
 In addition to the game's size, we have to add another 8 to the space. This is space for the internal discriminator which anchor sets automatically. In short, the discriminator is how anchor can differentiate between different accounts of the same program. For more information, check out the Anchor space reference.
 
-> [Anchor Space Reference](./../anchor_references/space.md)
+> [Anchor Space Reference](./space)
 
 > (What about using `mem::size_of<Game>()`? This almost works but not quite. The issue is that borsh will always serialize an option as 1 byte for the variant identifier and then additional x bytes for the content if it's Some. Rust uses null-pointer optimization to make Option's variant identifier 0 bytes when it can, so an option is sometimes just as big as its contents. This is the case with `Sign`. This means the `MAXIMUM_SIZE` could also be expressed as `mem::size_of<Game>() + 9`.)
 
@@ -340,7 +340,7 @@ The structure of the transaction function is as follows: First come the instruct
 We did not have to specify the `system_program` account. This is because anchor recognizes this account and is able to infer it. This is also true for other known accounts such as the `token_program` or the `rent` sysvar account.
 
 After the transaction returns, we can fetch the state of the game account. You can fetch account state using the `program.account` namespace.
-Finally, we verify the game has been set up properly by comparing the actual state and the expected state. To learn how Anchor maps the Rust types to the js/ts types, check out the [Javascript Anchor Types Reference](./../anchor_references/javascript_anchor_types_reference.md).
+Finally, we verify the game has been set up properly by comparing the actual state and the expected state. To learn how Anchor maps the Rust types to the js/ts types, check out the [Javascript Anchor Types Reference](./javascript-anchor-types).
 
 Now, run `anchor test`. This starts up (and subsequently shuts down) a local validator (make sure you don't have one running before) and runs your tests using the test script defined in `Anchor.toml`.
 
@@ -416,7 +416,7 @@ You can create then a new `it` test, setup the game like in the previous test, b
 ```typescript
 it('player one wins', async () => {
   const gameKeypair = anchor.web3.Keypair.generate()
-  const playerOne = program.provider.wallet
+  const playerOne = (program.provider as anchor.AnchorProvider).wallet
   const playerTwo = anchor.web3.Keypair.generate()
   await program.methods
     .setupGame(playerTwo.publicKey)
@@ -455,7 +455,7 @@ it('player one wins', async () => {
 
 and run `anchor test`.
 
-You can finish writing the test by yourself (or check out [the reference implementation](https://github.com/project-serum/anchor-book/tree/master/programs/tic-tac-toe)). Try to simulate a win and a tie!
+You can finish writing the test by yourself (or check out [the reference implementation](https://github.com/coral-xyz/anchor/tree/master/docs/programs/tic-tac-toe)). Try to simulate a win and a tie!
 
 Proper testing also includes tests that try to exploit the contract. You can check whether you've protected yourself properly by calling `play` with unexpected parameters. You can also familiarize yourself with the returned `AnchorErrors` this way. For example:
 
@@ -538,7 +538,7 @@ There is more to deployments than this e.g. understanding how the BPFLoader work
 
 ## Program directory organization
 
-> [Program Code](https://github.com/project-serum/anchor-book/tree/master/programs/tic-tac-toe)
+> [Program Code](https://github.com/coral-xyz/anchor/tree/master/docs/programs/tic-tac-toe)
 
 Eventually, some programs become too big to keep them in a single file and it makes sense to break them up.
 

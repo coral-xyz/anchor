@@ -1,5 +1,5 @@
-import * as anchor from "@project-serum/anchor";
-import { Program } from "@project-serum/anchor";
+import * as anchor from "@coral-xyz/anchor";
+import { Program } from "@coral-xyz/anchor";
 import { assert } from "chai";
 import { ValidatorClone } from "../target/types/validator_clone";
 
@@ -66,5 +66,14 @@ describe("validator-clone", () => {
     accountInfos.forEach((acc, i) => {
       assert.isNotNull(acc, "Account " + accounts[i] + " not found");
     });
+  });
+
+  it("Load accounts from account-dir directory", async () => {
+    // USDC mint
+    const account = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+    const accountInfo = await connection.getAccountInfo(
+      new anchor.web3.PublicKey(account)
+    );
+    assert.isNotNull(accountInfo, "Account " + account + " not found");
   });
 });

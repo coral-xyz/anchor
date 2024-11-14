@@ -61,7 +61,7 @@ pub struct Data {
 
 There's nothing special happening here. It's a pretty simple program! The interesting part is how it interacts with the next program we are going to create.
 
-Run
+Still inside the project, initialize a new `puppet-master` program using,
 
 ```shell
 anchor new puppet-master
@@ -147,8 +147,8 @@ impl<'info> PullStrings<'info> {
 We can verify that everything works as expected by replacing the contents of the `puppet.ts` file with:
 
 ```ts
-import * as anchor from '@project-serum/anchor'
-import { Program } from '@project-serum/anchor'
+import * as anchor from '@coral-xyz/anchor'
+import { Program } from '@coral-xyz/anchor'
 import { Keypair } from '@solana/web3.js'
 import { expect } from 'chai'
 import { Puppet } from '../target/types/puppet'
@@ -286,8 +286,8 @@ impl<'info> PullStrings<'info> {
 Finally, change the test:
 
 ```ts
-import * as anchor from '@project-serum/anchor'
-import { Program } from '@project-serum/anchor'
+import * as anchor from '@coral-xyz/anchor'
+import { Program } from '@coral-xyz/anchor'
 import { Keypair } from '@solana/web3.js'
 import { Puppet } from '../target/types/puppet'
 import { PuppetMaster } from '../target/types/puppet_master'

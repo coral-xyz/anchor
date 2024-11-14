@@ -1,0 +1,17 @@
+name: No Caching Tests
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  no-caching-tests:
+    name: Reusable
+    uses: ./.github/workflows/reusable-tests.yaml
+    with:
+      cache: false
+      solana_cli_version: 2.1.0
+      node_version: 20.16.0
+      cargo_profile: release
+      anchor_binary_name: anchor-binary-no-caching

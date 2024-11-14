@@ -111,7 +111,7 @@ Add constraints to an account with the following format:
 pub account: AccountType
 ```
 
-Some constraints support custom Errors (we will explore errors [later](./errors.md)):
+Some constraints support custom Errors (we will explore errors [later](./errors)):
 
 ```rust
 #[account(...,<constraint> @ MyError::MyErrorVariant, ...)]
@@ -138,7 +138,7 @@ You can find information about all constraints in the reference. We will cover s
 
 ## Safety checks
 
-Two of the Anchor account types, [AccountInfo](https://docs.rs/anchor-lang/latest/anchor_lang/accounts/account_info/index.html) and [UncheckedAccount](https://docs.rs/anchor-lang/latest/anchor_lang/accounts/unchecked_account/index.html) do not implement any checks on the account being passed. Anchor implements safety checks that encourage additional documentation describing why additional checks are not necesssary.
+Two of the Anchor account types, [AccountInfo](https://docs.rs/anchor-lang/latest/anchor_lang/accounts/account_info/index.html) and [UncheckedAccount](https://docs.rs/anchor-lang/latest/anchor_lang/accounts/unchecked_account/index.html) do not implement any checks on the account being passed. Anchor implements safety checks that encourage additional documentation describing why additional checks are not necessary.
 
 Attempting to build a program containing the following excerpt with `anchor build`:
 
@@ -169,10 +169,8 @@ pub struct Initialize<'info> {
 }
 ```
 
-Note the doc comment needs to be a [line or block doc comment](https://doc.rust-lang.org/reference/comments.html#doc-comments) (/// or /\*\*) to be interepreted as doc attribute by Rust. Double slash comments (//) are not interpreted as such.
-
 {% callout type="warning" title="Note" %}
-The doc comment needs to be a [line or block doc comment](https://doc.rust-lang.org/reference/comments.html#doc-comments) (/// or /\*\*) to be interepreted as doc attribute by Rust. Double slash comments (//) are not interpreted as such.
+The doc comment needs to be a [line or block doc comment](https://doc.rust-lang.org/reference/comments.html#doc-comments) (/// or /\*\*) to be interpreted as doc attribute by Rust. Double slash comments (//) are not interpreted as such.
 {% /callout %}
 
 ## Other Resources

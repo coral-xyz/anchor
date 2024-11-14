@@ -1,6 +1,6 @@
 const { assert } = require("chai");
 const { Token } = require("@solana/spl-token");
-const anchor = require("@project-serum/anchor");
+const anchor = require("@coral-xyz/anchor");
 const serumCmn = require("@project-serum/common");
 const { Market } = require("@project-serum/serum");
 const utf8 = anchor.utils.bytes.utf8;
@@ -8,7 +8,7 @@ const { PublicKey, SystemProgram, Keypair, SYSVAR_RENT_PUBKEY } = anchor.web3;
 const utils = require("./utils");
 const { setupStakePool } = require("./utils/stake");
 
-const DEX_PID = new PublicKey("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin");
+const DEX_PID = new PublicKey("srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX");
 const SWAP_PID = new PublicKey("22Y43yTVxuUkoRKdm9thyRhQ3SdgQS7c7kB6UNCiaczD");
 const TOKEN_PID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 const REGISTRY_PID = new PublicKey(

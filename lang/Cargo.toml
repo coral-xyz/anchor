@@ -1,44 +1,60 @@
 [package]
 name = "anchor-lang"
-version = "0.25.0"
-authors = ["Serum Foundation <foundation@projectserum.com>"]
+version = "0.30.1"
+authors = ["Anchor Maintainers <accounts@200ms.io>"]
 repository = "https://github.com/coral-xyz/anchor"
-rust-version = "1.56"
 edition = "2021"
 license = "Apache-2.0"
 description = "Solana Sealevel eDSL"
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
 [features]
-init-if-needed = ["anchor-derive-accounts/init-if-needed"]
-derive = []
-default = []
+allow-missing-optionals = ["anchor-derive-accounts/allow-missing-optionals"]
 anchor-debug = [
     "anchor-attribute-access-control/anchor-debug",
     "anchor-attribute-account/anchor-debug",
     "anchor-attribute-constant/anchor-debug",
     "anchor-attribute-error/anchor-debug",
     "anchor-attribute-event/anchor-debug",
-    "anchor-attribute-interface/anchor-debug",
     "anchor-attribute-program/anchor-debug",
-    "anchor-attribute-program/anchor-debug",
-    "anchor-attribute-state/anchor-debug",
     "anchor-derive-accounts/anchor-debug"
 ]
+derive = []
+event-cpi = ["anchor-attribute-event/event-cpi"]
+idl-build = [
+    "anchor-attribute-account/idl-build",
+    "anchor-attribute-constant/idl-build",
+    "anchor-attribute-event/idl-build",
+    "anchor-attribute-error/idl-build",
+    "anchor-attribute-program/idl-build",
+    "anchor-derive-accounts/idl-build",
+    "anchor-derive-serde/idl-build",
+    "anchor-lang-idl/build",
+]
+init-if-needed = ["anchor-derive-accounts/init-if-needed"]
+interface-instructions = ["anchor-attribute-program/interface-instructions"]
+lazy-account = ["anchor-attribute-account/lazy-account", "anchor-derive-serde/lazy-account"]
 
 [dependencies]
-anchor-attribute-access-control = { path = "./attribute/access-control", version = "0.25.0" }
-anchor-attribute-account = { path = "./attribute/account", version = "0.25.0" }
-anchor-attribute-constant = { path = "./attribute/constant", version = "0.25.0" }
-anchor-attribute-error = { path = "./attribute/error", version = "0.25.0" }
-anchor-attribute-program = { path = "./attribute/program", version = "0.25.0" }
-anchor-attribute-state = { path = "./attribute/state", version = "0.25.0" }
-anchor-attribute-interface = { path = "./attribute/interface", version = "0.25.0" }
-anchor-attribute-event = { path = "./attribute/event", version = "0.25.0" }
-anchor-derive-accounts = { path = "./derive/accounts", version = "0.25.0" }
-arrayref = "0.3.6"
-base64 = "0.13.0"
-borsh = "0.9"
-bytemuck = "1.4.0"
-solana-program = "~1.10.29"
-thiserror = "1.0.20"
-bincode = "1.3.3"
+anchor-attribute-access-control = { path = "./attribute/access-control", version = "0.30.1" }
+anchor-attribute-account = { path = "./attribute/account", version = "0.30.1" }
+anchor-attribute-constant = { path = "./attribute/constant", version = "0.30.1" }
+anchor-attribute-error = { path = "./attribute/error", version = "0.30.1" }
+anchor-attribute-event = { path = "./attribute/event", version = "0.30.1" }
+anchor-attribute-program = { path = "./attribute/program", version = "0.30.1" }
+anchor-derive-accounts = { path = "./derive/accounts", version = "0.30.1" }
+anchor-derive-serde = { path = "./derive/serde", version = "0.30.1" }
+anchor-derive-space = { path = "./derive/space", version = "0.30.1" }
+
+# `anchor-lang-idl` should only be included with `idl-build` feature
+anchor-lang-idl = { path = "../idl", version = "0.1.1", optional = true }
+
+base64 = "0.21"
+bincode = "1"
+borsh = "0.10.3"
+bytemuck = "1"
+solana-program = "2"
+thiserror = "1"

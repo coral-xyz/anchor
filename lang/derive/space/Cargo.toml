@@ -1,0 +1,16 @@
+[package]
+name = "anchor-derive-space"
+version = "0.30.1"
+authors = ["Anchor Maintainers <accounts@200ms.io>"]
+repository = "https://github.com/coral-xyz/anchor"
+license = "Apache-2.0"
+description = "Anchor Derive macro to automatically calculate the size of a structure or an enum"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "1", features = ["extra-traits"] }

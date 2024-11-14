@@ -33,10 +33,10 @@ pub mod ido_pool {
 
         ido_account.ido_name = name_data;
         ido_account.bumps = PoolBumps {
-            ido_account: *ctx.bumps.get("ido_account").unwrap(),
-            redeemable_mint: *ctx.bumps.get("redeemable_mint").unwrap(),
-            pool_watermelon: *ctx.bumps.get("pool_watermelon").unwrap(),
-            pool_usdc: *ctx.bumps.get("pool_usdc").unwrap(),
+            ido_account: ctx.bumps.ido_account,
+            redeemable_mint: ctx.bumps.redeemable_mint,
+            pool_watermelon: ctx.bumps.pool_watermelon,
+            pool_usdc: ctx.bumps.pool_usdc,
         };
         ido_account.ido_authority = ctx.accounts.ido_authority.key();
 
@@ -296,7 +296,7 @@ pub struct InitializePool<'info> {
         seeds = [ido_name.as_bytes()],
         bump,
         payer = ido_authority,
-        space = IdoAccount::LEN + 8
+        space = 8 + IdoAccount::INIT_SPACE
     )]
     pub ido_account: Box<Account<'info, IdoAccount>>,
     // TODO Confirm USDC mint address on mainnet or leave open as an option for other stables
@@ -331,7 +331,6 @@ pub struct InitializePool<'info> {
     // Programs and Sysvars
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
-    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
@@ -359,7 +358,6 @@ pub struct InitUserRedeemable<'info> {
     // Programs and Sysvars
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
-    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
@@ -418,7 +416,6 @@ pub struct InitEscrowUsdc<'info> {
     // Programs and Sysvars
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
-    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
@@ -548,6 +545,7 @@ pub struct WithdrawFromEscrow<'info> {
 }
 
 #[account]
+#[derive(InitSpace)]
 pub struct IdoAccount {
     pub ido_name: [u8; 10], // Setting an arbitrary max of ten characters in the ido name. // 10
     pub bumps: PoolBumps,   // 4
@@ -563,11 +561,7 @@ pub struct IdoAccount {
     pub ido_times: IdoTimes, // 32
 }
 
-impl IdoAccount {
-    pub const LEN: usize = 10 + 4 + 32 + 5 * 32 + 8 + 32;
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy)]
+#[derive(AnchorSerialize, AnchorDeserialize, InitSpace, Default, Clone, Copy)]
 pub struct IdoTimes {
     pub start_ido: i64,    // 8
     pub end_deposits: i64, // 8
@@ -575,7 +569,7 @@ pub struct IdoTimes {
     pub end_escrow: i64,   // 8
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Default, Clone)]
+#[derive(AnchorSerialize, AnchorDeserialize, InitSpace, Default, Clone)]
 pub struct PoolBumps {
     pub ido_account: u8,     // 1
     pub redeemable_mint: u8, // 1

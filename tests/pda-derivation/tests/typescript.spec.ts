@@ -1,8 +1,7 @@
-import * as anchor from "@project-serum/anchor";
+import * as anchor from "@coral-xyz/anchor";
 import BN from "bn.js";
-import { Keypair } from "@solana/web3.js";
-import { findProgramAddressSync } from "@project-serum/anchor/dist/cjs/utils/pubkey";
-import { Program } from "@project-serum/anchor";
+import { Keypair, PublicKey } from "@solana/web3.js";
+import { Program } from "@coral-xyz/anchor";
 import { PdaDerivation } from "../target/types/pda_derivation";
 import { expect } from "chai";
 const encode = anchor.utils.bytes.utf8.encode;
@@ -15,6 +14,8 @@ describe("typescript", () => {
   const base = Keypair.generate();
   const dataKey = Keypair.generate();
   const data = new BN(1);
+  const another = Keypair.generate();
+  const anotherData = new BN(2);
   const seedA = 4;
 
   it("Inits the base account", async () => {
@@ -25,6 +26,14 @@ describe("typescript", () => {
       })
       .signers([base])
       .rpc();
+
+    await program.methods
+      .initAnother(anotherData)
+      .accounts({
+        base: another.publicKey,
+      })
+      .signers([another])
+      .rpc();
   });
 
   it("Inits the derived accounts", async () => {
@@ -33,7 +42,7 @@ describe("typescript", () => {
     const MY_SEED_U8 = 1;
     const MY_SEED_U32 = 2;
     const MY_SEED_U64 = 3;
-    const expectedPDAKey = findProgramAddressSync(
+    const expectedPDAKey = PublicKey.findProgramAddressSync(
       [
         Buffer.from([seedA]),
         encode("another-seed"),
@@ -47,22 +56,82 @@ describe("typescript", () => {
         new anchor.BN(MY_SEED_U64).toArrayLike(Buffer, "le", 8),
         new anchor.BN(data).toArrayLike(Buffer, "le", 8),
         dataKey.publicKey.toBuffer(),
+        new anchor.BN(anotherData).toArrayLike(Buffer, "le", 8),
       ],
       program.programId
     )[0];
 
-    const tx = program.methods.initMyAccount(seedA).accounts({
+    const tx = program.methods.initMyAccount(seedA).accountsPartial({
       base: base.publicKey,
       base2: base.publicKey,
+      anotherBase: another.publicKey,
     });
 
     const keys = await tx.pubkeys();
-    expect(keys.account.equals(expectedPDAKey)).is.true;
+    expect(keys.account!.equals(expectedPDAKey)).is.true;
 
     await tx.rpc();
 
     const actualData = (await program.account.myAccount.fetch(expectedPDAKey))
       .data;
     expect(actualData.toNumber()).is.equal(1337);
+  });
+
+  it("should allow custom resolvers", async () => {
+    let called = false;
+    const customProgram = new Program<PdaDerivation>(
+      program.idl,
+      program.provider,
+      program.coder,
+      (instruction) => {
+        if (instruction.name === "initMyAccount") {
+          return async ({ accounts }) => {
+            called = true;
+            return { accounts, resolved: 0 };
+          };
+        }
+      }
+    );
+    await customProgram.methods
+      .initMyAccount(seedA)
+      .accountsPartial({
+        base: base.publicKey,
+        base2: base.publicKey,
+        anotherBase: another.publicKey,
+      })
+      .pubkeys();
+
+    expect(called).is.true;
+  });
+
+  it("Can use constant seed ref", async () => {
+    await program.methods.testSeedConstant().rpc();
+  });
+
+  it("Can resolve associated token accounts", async () => {
+    const mintKp = anchor.web3.Keypair.generate();
+    await program.methods
+      .associatedTokenResolution()
+      .accounts({ mint: mintKp.publicKey })
+      .signers([mintKp])
+      .rpc();
+  });
+
+  // TODO: Support more expressions in the IDL e.g. math operations?
+  it("Can use unsupported expressions", () => {
+    // Compilation test to fix issues like https://github.com/coral-xyz/anchor/issues/2933
+  });
+
+  it("Includes the unresolved accounts if resolution fails", async () => {
+    try {
+      // `unknown` account is required for account resolution to work, but it's
+      // intentionally not provided to test the error message
+      await program.methods.resolutionError().rpc();
+      throw new Error("Should throw due to account resolution failure!");
+    } catch (e) {
+      expect(e.message).to.equal(
+        "Reached maximum depth for account resolution. Unresolved accounts: `pda`, `anotherPda`"
+      );
+    }
   });
 });

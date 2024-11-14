@@ -1,4 +1,4 @@
-const anchor = require("@project-serum/anchor");
+const anchor = require("@coral-xyz/anchor");
 const { assert } = require("chai");
 
 describe("multisig", () => {
@@ -59,7 +59,7 @@ describe("multisig", () => {
       },
     ];
     const newOwners = [ownerA.publicKey, ownerB.publicKey, ownerD.publicKey];
-    const data = program.coder.instruction.encode("set_owners", {
+    const data = program.coder.instruction.encode("setOwners", {
       owners: newOwners,
     });
 

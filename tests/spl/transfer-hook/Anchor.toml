@@ -1,0 +1,9 @@
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[programs.localnet]
+transfer_hook = "9vaEfNU4HquQJuNQ6HYrpJW518a3n4wNUt5mAMY2UUHW"
+
+[scripts]
+test = "yarn run ts-mocha -t 1000000 tests/*.ts"

@@ -15,6 +15,10 @@ publish:
 	sleep 25
 	cd lang/derive/accounts/ && cargo publish && cd ../../../
 	sleep 25
+	cd lang/derive/serde/ && cargo publish && cd ../../../
+	sleep 25
+	cd lang/derive/space/ && cargo publish && cd ../../../
+	sleep 25
 	cd lang/attribute/access-control/ && cargo publish && cd ../../../
 	sleep 25
 	cd lang/attribute/account/ && cargo publish && cd ../../../
@@ -23,11 +27,7 @@ publish:
 	sleep 25
 	cd lang/attribute/error/ && cargo publish && cd ../../../
 	sleep 25
-	cd lang/attribute/interface/ && cargo publish && cd ../../../
-	sleep 25
 	cd lang/attribute/program/ && cargo publish && cd ../../..
-	sleep 25
-	cd lang/attribute/state/ && cargo publish && cd ../../../
 	sleep 25
 	cd lang/attribute/event/ && cargo publish && cd ../../../
 	sleep 25

@@ -2,7 +2,7 @@
 
 const process = require("process");
 const fs = require("fs");
-const anchor = require("@project-serum/anchor");
+const anchor = require("@coral-xyz/anchor");
 const { Market, OpenOrders } = require("@project-serum/serum");
 const Account = anchor.web3.Account;
 const Program = anchor.Program;
@@ -11,7 +11,7 @@ const secret = JSON.parse(fs.readFileSync("./scripts/market-maker.json"));
 const MARKET_MAKER = new Account(secret);
 const PublicKey = anchor.web3.PublicKey;
 
-const DEX_PID = new PublicKey("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin");
+const DEX_PID = new PublicKey("srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX");
 
 async function main() {
   const market = new PublicKey(process.argv[2]);
