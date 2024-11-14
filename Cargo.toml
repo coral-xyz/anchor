@@ -9,6 +9,7 @@ members = [
     "avm",
     "cli",
     "client",
+    "idl",
     "lang",
     "lang/attribute/*",
     "lang/derive/*",
@@ -16,7 +17,7 @@ members = [
     "spl",
 ]
 exclude = [
-    "tests/swap/deps/serum-dex",
-    "tests/cfo/deps/serum-dex",
-    "tests/permissioned-markets/deps/serum-dex",
+    "tests/swap/deps/openbook-dex",
+    "tests/cfo/deps/openbook-dex",
 ]
+resolver = "2"

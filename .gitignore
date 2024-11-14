@@ -10,8 +10,11 @@ target/
 test-ledger
 examples/*/Cargo.lock
 examples/**/Cargo.lock
+*/example/Cargo.lock
 tests/*/Cargo.lock
 tests/**/Cargo.lock
+tests/*/yarn.lock
+tests/**/yarn.lock
 .DS_Store
 docs/yarn.lock
 ts/docs/
@@ -19,3 +22,6 @@ cli/npm-package/anchor
 cli/npm-package/*.tgz
 docker-target
 .rollup.cache/
+test-keypair.json
+tsconfig.tsbuildinfo
+.vscode

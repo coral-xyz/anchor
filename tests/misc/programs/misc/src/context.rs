@@ -1,11 +1,9 @@
 use crate::account::*;
-use anchor_lang::accounts::cpi_state::CpiState;
-use anchor_lang::accounts::loader::Loader;
+use crate::program::Misc;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{Mint, Token, TokenAccount};
-use misc2::misc2::MyState as Misc2State;
-use std::mem::size_of;
+use anchor_spl::token_interface::{Mint as MintInterface, TokenAccount as TokenAccountInterface};
 
 #[derive(Accounts)]
 pub struct TestTokenSeedsInit<'info> {
@@ -16,7 +14,6 @@ pub struct TestTokenSeedsInit<'info> {
         payer = authority,
         mint::decimals = 6,
         mint::authority = authority,
-        
     )]
     pub mint: Account<'info, Mint>,
     #[account(
@@ -26,14 +23,12 @@ pub struct TestTokenSeedsInit<'info> {
         payer = authority,
         token::mint = mint,
         token::authority = authority,
-        
     )]
     pub my_pda: Account<'info, TokenAccount>,
     #[account(mut)]
     /// CHECK:
     pub authority: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
 }
 
@@ -44,15 +39,32 @@ pub struct TestInitAssociatedToken<'info> {
         payer = payer,
         associated_token::mint = mint,
         associated_token::authority = payer,
-        
     )]
     pub token: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+}
+
+#[derive(Accounts)]
+pub struct TestInitAssociatedTokenWithTokenProgram<'info> {
+    #[account(
+        init,
+        payer = payer,
+        associated_token::mint = mint,
+        associated_token::authority = payer,
+        associated_token::token_program = associated_token_token_program,
+    )]
+    pub token: InterfaceAccount<'info, TokenAccountInterface>,
+    pub mint: InterfaceAccount<'info, MintInterface>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub system_program: Program<'info, System>,
+    /// CHECK: ignore
+    pub associated_token_token_program: AccountInfo<'info>,
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
@@ -167,18 +179,6 @@ pub struct TestExecutable<'info> {
 }
 
 #[derive(Accounts)]
-pub struct TestStateCpi<'info> {
-    #[account(signer)]
-    /// CHECK:
-    pub authority: AccountInfo<'info>,
-    #[account(mut, state = misc2_program)]
-    pub cpi_state: CpiState<'info, Misc2State>,
-    #[account(executable)]
-    /// CHECK:
-    pub misc2_program: AccountInfo<'info>,
-}
-
-#[derive(Accounts)]
 pub struct TestClose<'info> {
     #[account(mut, close = sol_dest)]
     pub data: Account<'info, Data>,
@@ -187,25 +187,23 @@ pub struct TestClose<'info> {
 }
 
 #[derive(Accounts)]
-pub struct TestU16<'info> {
-    #[account(zero)]
-    pub my_account: Account<'info, DataU16>,
+pub struct TestCloseTwice<'info> {
+    #[account(mut, close = sol_dest)]
+    pub data: Account<'info, Data>,
+    /// CHECK:
+    pub sol_dest: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
-pub struct TestI16<'info> {
-    #[account(zero)]
-    pub data: Account<'info, DataI16>,
+pub struct TestCloseMut<'info> {
+    #[account(mut)]
+    pub data: Account<'info, Data>,
+    /// CHECK:
+    pub sol_dest: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct TestSimulate {}
-
-#[derive(Accounts)]
-pub struct TestI8<'info> {
-    #[account(zero)]
-    pub data: Account<'info, DataI8>,
-}
 
 #[derive(Accounts)]
 pub struct TestInit<'info> {
@@ -219,7 +217,7 @@ pub struct TestInit<'info> {
 #[derive(Accounts)]
 pub struct TestInitZeroCopy<'info> {
     #[account(init, payer = payer, space = DataZeroCopy::LEN + 8)]
-    pub data: Loader<'info, DataZeroCopy>,
+    pub data: AccountLoader<'info, DataZeroCopy>,
     #[account(mut)]
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -231,9 +229,25 @@ pub struct TestInitMint<'info> {
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
+pub struct TestInitMintWithTokenProgram<'info> {
+    #[account(init,
+        payer = payer,
+        mint::decimals = 6,
+        mint::authority = payer,
+        mint::freeze_authority = payer,
+        mint::token_program = mint_token_program,
+    )]
+    pub mint: InterfaceAccount<'info, MintInterface>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub system_program: Program<'info, System>,
+    /// CHECK: ignore
+    pub mint_token_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -243,9 +257,25 @@ pub struct TestInitToken<'info> {
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
+pub struct TestInitTokenWithTokenProgram<'info> {
+    #[account(init,
+        payer = payer,
+        token::mint = mint,
+        token::authority = payer,
+        token::token_program = token_token_program,
+    )]
+    pub token: Account<'info, TokenAccount>,
+    pub mint: Account<'info, Mint>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub system_program: Program<'info, System>,
+    /// CHECK: ignore
+    pub token_token_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -330,12 +360,32 @@ pub struct TestInitMintIfNeeded<'info> {
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     /// CHECK:
     pub mint_authority: AccountInfo<'info>,
     /// CHECK:
+    pub freeze_authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestInitMintIfNeededWithTokenProgram<'info> {
+    #[account(init_if_needed,
+        payer = payer,
+        mint::decimals = 6,
+        mint::authority = mint_authority,
+        mint::token_program = mint_token_program,
+        mint::freeze_authority = freeze_authority,
+    )]
+    pub mint: Account<'info, Mint>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub system_program: Program<'info, System>,
+    /// CHECK: ignore
+    pub mint_token_program: AccountInfo<'info>,
+    /// CHECK: ignore
+    pub mint_authority: AccountInfo<'info>,
+    /// CHECK: ignore
     pub freeze_authority: AccountInfo<'info>,
 }
 
@@ -346,7 +396,6 @@ pub struct TestInitTokenIfNeeded<'info> {
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     /// CHECK:
@@ -354,9 +403,27 @@ pub struct TestInitTokenIfNeeded<'info> {
 }
 
 #[derive(Accounts)]
+pub struct TestInitTokenIfNeededWithTokenProgram<'info> {
+    #[account(init_if_needed,
+        payer = payer,
+        token::mint = mint,
+        token::authority = authority,
+        token::token_program = token_token_program
+    )]
+    pub token: Account<'info, TokenAccount>,
+    pub mint: Account<'info, Mint>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub system_program: Program<'info, System>,
+    /// CHECK: ignore
+    pub token_token_program: AccountInfo<'info>,
+    /// CHECK:
+    pub authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
 pub struct TestInitAssociatedTokenIfNeeded<'info> {
-    #[account(
-        init_if_needed,
+    #[account(init_if_needed,
         payer = payer,
         associated_token::mint = mint,
         associated_token::authority = authority
@@ -365,11 +432,30 @@ pub struct TestInitAssociatedTokenIfNeeded<'info> {
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     /// CHECK:
+    pub authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestInitAssociatedTokenIfNeededWithTokenProgram<'info> {
+    #[account(init_if_needed,
+        payer = payer,
+        associated_token::mint = mint,
+        associated_token::authority = authority,
+        associated_token::token_program = associated_token_token_program,
+    )]
+    pub token: InterfaceAccount<'info, TokenAccountInterface>,
+    pub mint: InterfaceAccount<'info, MintInterface>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub system_program: Program<'info, System>,
+    /// CHECK: ignore
+    pub associated_token_token_program: AccountInfo<'info>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    /// CHECK: ignore
     pub authority: AccountInfo<'info>,
 }
 
@@ -383,6 +469,18 @@ pub struct TestMultidimensionalArray<'info> {
 pub struct TestConstArraySize<'info> {
     #[account(zero)]
     pub data: Account<'info, DataConstArraySize>,
+}
+
+#[derive(Accounts)]
+pub struct TestConstIxDataSize<'info> {
+    #[account(zero)]
+    pub data: Account<'info, DataConstArraySize>,
+}
+
+#[derive(Accounts)]
+pub struct TestMultidimensionalArrayConstSizes<'info> {
+    #[account(zero)]
+    pub data: Account<'info, DataMultidimensionalArrayConstSizes>,
 }
 
 #[derive(Accounts)]
@@ -464,3 +562,257 @@ pub struct TestUnsafeFieldSafetyErrors<'info> {
     pub signer: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
+
+#[derive(Accounts)]
+pub struct TestConstraintToken<'info> {
+    #[account(
+        token::mint = mint,
+        token::authority = payer
+    )]
+    pub token: Account<'info, TokenAccount>,
+    pub mint: Account<'info, Mint>,
+    pub payer: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestAuthorityConstraint<'info> {
+    #[account(
+        token::mint = mint,
+        token::authority = fake_authority
+    )]
+    pub token: Account<'info, TokenAccount>,
+    pub mint: Account<'info, Mint>,
+    /// CHECK: ignore
+    pub fake_authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestOnlyAuthorityConstraint<'info> {
+    #[account(
+        token::authority = payer
+    )]
+    pub token: Account<'info, TokenAccount>,
+    pub mint: Account<'info, Mint>,
+    pub payer: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestOnlyTokenProgramConstraint<'info> {
+    #[account(
+        token::token_program = token_token_program
+    )]
+    pub token: Account<'info, TokenAccount>,
+    /// CHECK: ignore
+    pub token_token_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestOnlyMintConstraint<'info> {
+    #[account(
+        token::mint = mint,
+    )]
+    pub token: Account<'info, TokenAccount>,
+    pub mint: Account<'info, Mint>,
+}
+
+#[derive(Accounts)]
+#[instruction(decimals: u8)]
+pub struct TestMintConstraint<'info> {
+    #[account(
+        mint::decimals = decimals,
+        mint::authority = mint_authority,
+        mint::freeze_authority = freeze_authority
+    )]
+    pub mint: Account<'info, Mint>,
+    /// CHECK: ignore
+    pub mint_authority: AccountInfo<'info>,
+    /// CHECK: ignore
+    pub freeze_authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(decimals: u8)]
+pub struct TestMintOnlyDecimalsConstraint<'info> {
+    #[account(
+        mint::decimals = decimals,
+    )]
+    pub mint: Account<'info, Mint>,
+}
+
+#[derive(Accounts)]
+pub struct TestMintAuthorityConstraint<'info> {
+    #[account(
+        mint::authority = mint_authority,
+        mint::freeze_authority = freeze_authority
+    )]
+    pub mint: Account<'info, Mint>,
+    /// CHECK: ignore
+    pub mint_authority: AccountInfo<'info>,
+    /// CHECK: ignore
+    pub freeze_authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestMintOneAuthorityConstraint<'info> {
+    #[account(
+        mint::authority = mint_authority,
+    )]
+    pub mint: Account<'info, Mint>,
+    /// CHECK: ignore
+    pub mint_authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(decimals: u8)]
+pub struct TestMintMissMintAuthConstraint<'info> {
+    #[account(
+        mint::decimals = decimals,
+        mint::freeze_authority = freeze_authority,
+    )]
+    pub mint: Account<'info, Mint>,
+    /// CHECK: ignore
+    pub freeze_authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestMintOnlyTokenProgramConstraint<'info> {
+    #[account(
+        mint::token_program = mint_token_program,
+    )]
+    pub mint: Account<'info, Mint>,
+    /// CHECK: ignore
+    pub mint_token_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestAssociatedToken<'info> {
+    #[account(
+        associated_token::mint = mint,
+        associated_token::authority = authority,
+    )]
+    pub token: Account<'info, TokenAccount>,
+    pub mint: Account<'info, Mint>,
+    /// CHECK: ignore
+    pub authority: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TestAssociatedTokenWithTokenProgramConstraint<'info> {
+    #[account(
+        associated_token::mint = mint,
+        associated_token::authority = authority,
+        associated_token::token_program = associated_token_token_program,
+    )]
+    pub token: InterfaceAccount<'info, TokenAccountInterface>,
+    pub mint: InterfaceAccount<'info, MintInterface>,
+    /// CHECK: ignore
+    pub authority: AccountInfo<'info>,
+    /// CHECK: ignore
+    pub associated_token_token_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(
+    program_id: u8,
+    accounts: u8,
+    ix_data: u8,
+    remaining_accounts: u8
+)]
+pub struct TestUsedIdentifiers<'info> {
+    #[account(
+        constraint = 1 == program_id,
+        constraint = 2 == accounts,
+        constraint = 3 == ix_data,
+        constraint = 4 == remaining_accounts,
+    )]
+    /// CHECK: ignore
+    pub test: AccountInfo<'info>,
+
+    #[account(
+        seeds = [&[program_id], &[accounts], &[ix_data], &[remaining_accounts]],
+        bump = program_id,
+    )]
+    /// CHECK: ignore
+    pub test1: AccountInfo<'info>,
+    #[account(
+        seeds = [&[program_id], &[accounts], &[ix_data], &[remaining_accounts]],
+        bump = accounts,
+    )]
+    /// CHECK: ignore
+    pub test2: AccountInfo<'info>,
+    #[account(
+        seeds = [&[program_id], &[accounts], &[ix_data], &[remaining_accounts]],
+        bump = ix_data,
+    )]
+    /// CHECK: ignore
+    pub test3: AccountInfo<'info>,
+    #[account(
+        seeds = [&[program_id], &[accounts], &[ix_data], &[remaining_accounts]],
+        bump = remaining_accounts,
+    )]
+    /// CHECK: ignore
+    pub test4: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct InitManyAssociatedTokenAccounts<'info> {
+    #[account(
+        init,
+        payer = user,
+        mint::authority = user,
+        mint::decimals = 9,
+    )]
+    pub mint: Account<'info, Mint>,
+    #[account(
+        init,
+        payer = user,
+        associated_token::authority = user,
+        associated_token::mint = mint,
+    )]
+    pub ata1: Account<'info, TokenAccount>,
+    #[account(
+        init,
+        payer = user,
+        associated_token::authority = system_program,
+        associated_token::mint = mint,
+    )]
+    pub ata2: Account<'info, TokenAccount>,
+    #[account(
+        init,
+        payer = user,
+        associated_token::authority = token_program,
+        associated_token::mint = mint,
+    )]
+    pub ata3: Account<'info, TokenAccount>,
+    #[account(
+        init,
+        payer = user,
+        associated_token::authority = associated_token_program,
+        associated_token::mint = mint,
+    )]
+    pub ata4: Account<'info, TokenAccount>,
+    #[account(
+        init,
+        payer = user,
+        associated_token::authority = mint,
+        associated_token::mint = mint,
+    )]
+    pub ata5: Account<'info, TokenAccount>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+}
+
+#[derive(Accounts)]
+pub struct TestBoxedOwnerConstraint<'info> {
+    // Redundant check to test compilation
+    #[account(owner = program.key())]
+    pub my_account: Box<Account<'info, Data>>,
+    pub program: Program<'info, Misc>,
+}
+
+#[cfg(feature = "my-feature")]
+#[derive(Accounts)]
+pub struct Empty {}

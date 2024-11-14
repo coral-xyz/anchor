@@ -7,7 +7,10 @@ use quote::quote;
 // Generates the private `__cpi_client_accounts` mod implementation, containing
 // a generated struct mapping 1-1 to the `Accounts` struct, except with
 // `AccountInfo`s as the types. This is generated for CPI clients.
-pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
+pub fn generate(
+    accs: &AccountsStruct,
+    program_id: proc_macro2::TokenStream,
+) -> proc_macro2::TokenStream {
     let name = &accs.ident;
     let account_mod_name: proc_macro2::TokenStream = format!(
         "__cpi_client_accounts_{}",
@@ -22,9 +25,15 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         .map(|f: &AccountField| match f {
             AccountField::CompositeField(s) => {
                 let name = &s.ident;
-                let docs = if !s.docs.is_empty() {
-                    proc_macro2::TokenStream::from_str(&format!("#[doc = r#\"{}\"#]", s.docs))
-                        .unwrap()
+                let docs = if let Some(ref docs) = s.docs {
+                    docs.iter()
+                        .map(|docs_line| {
+                            proc_macro2::TokenStream::from_str(&format!(
+                                "#[doc = r#\"{docs_line}\"#]"
+                            ))
+                            .unwrap()
+                        })
+                        .collect()
                 } else {
                     quote!()
                 };
@@ -42,15 +51,28 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             }
             AccountField::Field(f) => {
                 let name = &f.ident;
-                let docs = if !f.docs.is_empty() {
-                    proc_macro2::TokenStream::from_str(&format!("#[doc = r#\"{}\"#]", f.docs))
-                        .unwrap()
+                let docs = if let Some(ref docs) = f.docs {
+                    docs.iter()
+                        .map(|docs_line| {
+                            proc_macro2::TokenStream::from_str(&format!(
+                                "#[doc = r#\"{docs_line}\"#]"
+                            ))
+                            .unwrap()
+                        })
+                        .collect()
                 } else {
                     quote!()
                 };
-                quote! {
-                    #docs
-                    pub #name: anchor_lang::solana_program::account_info::AccountInfo<'info>
+                if f.is_optional {
+                    quote! {
+                        #docs
+                        pub #name: Option<anchor_lang::solana_program::account_info::AccountInfo<'info>>
+                    }
+                } else {
+                    quote! {
+                        #docs
+                        pub #name: anchor_lang::solana_program::account_info::AccountInfo<'info>
+                    }
                 }
             }
         })
@@ -80,8 +102,18 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     true => quote! { anchor_lang::solana_program::instruction::AccountMeta::new },
                 };
                 let name = &f.ident;
-                quote! {
-                    account_metas.push(#meta(anchor_lang::Key::key(&self.#name), #is_signer));
+                if f.is_optional {
+                    quote! {
+                        if let Some(#name) = &self.#name {
+                            account_metas.push(#meta(anchor_lang::Key::key(#name), #is_signer));
+                        } else {
+                            account_metas.push(anchor_lang::solana_program::instruction::AccountMeta::new_readonly(#program_id, false));
+                        }
+                    }
+                } else {
+                    quote! {
+                        account_metas.push(#meta(anchor_lang::Key::key(&self.#name), #is_signer));
+                    }
                 }
             }
         })
@@ -90,18 +122,10 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     let account_struct_infos: Vec<proc_macro2::TokenStream> = accs
         .fields
         .iter()
-        .map(|f: &AccountField| match f {
-            AccountField::CompositeField(s) => {
-                let name = &s.ident;
-                quote! {
-                    account_infos.extend(anchor_lang::ToAccountInfos::to_account_infos(&self.#name));
-                }
-            }
-            AccountField::Field(f) => {
-                let name = &f.ident;
-                quote! {
-                    account_infos.push(anchor_lang::ToAccountInfo::to_account_info(&self.#name));
-                }
+        .map(|f: &AccountField| {
+            let name = &f.ident();
+            quote! {
+                account_infos.extend(anchor_lang::ToAccountInfos::to_account_infos(&self.#name));
             }
         })
         .collect();
@@ -109,7 +133,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     // Re-export all composite account structs (i.e. other structs deriving
     // accounts embedded into this struct. Required because, these embedded
     // structs are *not* visible from the #[program] macro, which is responsible
-    // for generating the `accounts` mod, which aggregates all the the generated
+    // for generating the `accounts` mod, which aggregates all the generated
     // accounts used for structs.
     let re_exports: Vec<proc_macro2::TokenStream> = {
         // First, dedup the exports.
@@ -141,8 +165,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         quote! {<'info>}
     };
     let struct_doc = proc_macro2::TokenStream::from_str(&format!(
-        "#[doc = \" Generated CPI struct of the accounts for [`{}`].\"]",
-        name
+        "#[doc = \" Generated CPI struct of the accounts for [`{name}`].\"]"
     ))
     .unwrap();
     quote! {
@@ -159,12 +182,12 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             #(#re_exports)*
 
             #struct_doc
-            pub struct #name#generics {
+            pub struct #name #generics {
                 #(#account_struct_fields),*
             }
 
             #[automatically_derived]
-            impl#generics anchor_lang::ToAccountMetas for #name#generics {
+            impl #generics anchor_lang::ToAccountMetas for #name #generics {
                 fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<anchor_lang::solana_program::instruction::AccountMeta> {
                     let mut account_metas = vec![];
                     #(#account_struct_metas)*
@@ -173,7 +196,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             }
 
             #[automatically_derived]
-            impl<'info> anchor_lang::ToAccountInfos<'info> for #name#generics {
+            impl<'info> anchor_lang::ToAccountInfos<'info> for #name #generics {
                 fn to_account_infos(&self) -> Vec<anchor_lang::solana_program::account_info::AccountInfo<'info>> {
                     let mut account_infos = vec![];
                     #(#account_struct_infos)*

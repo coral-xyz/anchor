@@ -6,7 +6,10 @@ use std::str::FromStr;
 // Generates the private `__client_accounts` mod implementation, containing
 // a generated struct mapping 1-1 to the `Accounts` struct, except with
 // `Pubkey`s as the types. This is generated for Rust *clients*.
-pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
+pub fn generate(
+    accs: &AccountsStruct,
+    program_id: proc_macro2::TokenStream,
+) -> proc_macro2::TokenStream {
     let name = &accs.ident;
     let account_mod_name: proc_macro2::TokenStream = format!(
         "__client_accounts_{}",
@@ -21,9 +24,15 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
         .map(|f: &AccountField| match f {
             AccountField::CompositeField(s) => {
                 let name = &s.ident;
-                let docs = if !s.docs.is_empty() {
-                    proc_macro2::TokenStream::from_str(&format!("#[doc = r#\"{}\"#]", s.docs))
-                        .unwrap()
+                let docs = if let Some(ref docs) = s.docs {
+                    docs.iter()
+                        .map(|docs_line| {
+                            proc_macro2::TokenStream::from_str(&format!(
+                                "#[doc = r#\"{docs_line}\"#]"
+                            ))
+                            .unwrap()
+                        })
+                        .collect()
                 } else {
                     quote!()
                 };
@@ -41,15 +50,28 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
             }
             AccountField::Field(f) => {
                 let name = &f.ident;
-                let docs = if !f.docs.is_empty() {
-                    proc_macro2::TokenStream::from_str(&format!("#[doc = r#\"{}\"#]", f.docs))
-                        .unwrap()
+                let docs = if let Some(ref docs) = f.docs {
+                    docs.iter()
+                        .map(|docs_line| {
+                            proc_macro2::TokenStream::from_str(&format!(
+                                "#[doc = r#\"{docs_line}\"#]"
+                            ))
+                            .unwrap()
+                        })
+                        .collect()
                 } else {
                     quote!()
                 };
-                quote! {
-                    #docs
-                    pub #name: anchor_lang::solana_program::pubkey::Pubkey
+                if f.is_optional {
+                    quote! {
+                        #docs
+                        pub #name: Option<Pubkey>
+                    }
+                } else {
+                    quote! {
+                        #docs
+                        pub #name: Pubkey
+                    }
                 }
             }
         })
@@ -79,8 +101,18 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
                     true => quote! { anchor_lang::solana_program::instruction::AccountMeta::new },
                 };
                 let name = &f.ident;
-                quote! {
-                    account_metas.push(#meta(self.#name, #is_signer));
+                if f.is_optional {
+                    quote! {
+                        if let Some(#name) = &self.#name {
+                            account_metas.push(#meta(*#name, #is_signer));
+                        } else {
+                            account_metas.push(anchor_lang::solana_program::instruction::AccountMeta::new_readonly(#program_id, false));
+                        }
+                    }
+                } else {
+                    quote! {
+                        account_metas.push(#meta(self.#name, #is_signer));
+                    }
                 }
             }
         })
@@ -88,7 +120,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     // Re-export all composite account structs (i.e. other structs deriving
     // accounts embedded into this struct. Required because, these embedded
     // structs are *not* visible from the #[program] macro, which is responsible
-    // for generating the `accounts` mod, which aggregates all the the generated
+    // for generating the `accounts` mod, which aggregates all the generated
     // accounts used for structs.
     let re_exports: Vec<proc_macro2::TokenStream> = {
         // First, dedup the exports.
@@ -116,8 +148,7 @@ pub fn generate(accs: &AccountsStruct) -> proc_macro2::TokenStream {
     };
 
     let struct_doc = proc_macro2::TokenStream::from_str(&format!(
-        "#[doc = \" Generated client accounts for [`{}`].\"]",
-        name
+        "#[doc = \" Generated client accounts for [`{name}`].\"]"
     ))
     .unwrap();
 

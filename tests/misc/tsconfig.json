@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "types": ["mocha", "node"],
+    "lib": ["ES6"],
+    "module": "commonjs",
+    "target": "es6",
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  }
+}

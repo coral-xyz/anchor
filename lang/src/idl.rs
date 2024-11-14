@@ -17,10 +17,7 @@
 //! Note that IDL account instructions are automatically inserted into all
 //! Anchor programs. To remove them, one can use the `no-idl` feature.
 
-#[allow(deprecated)]
-use crate::accounts::program_account::ProgramAccount;
 use crate::prelude::*;
-use solana_program::pubkey::Pubkey;
 
 // The first 8 bytes of an instruction to create or modify the IDL account. This
 // instruction is defined outside the main program's instruction enum, so that
@@ -28,6 +25,11 @@ use solana_program::pubkey::Pubkey;
 //
 // Sha256(anchor:idl)[..8];
 pub const IDL_IX_TAG: u64 = 0x0a69e9a778bcf440;
+pub const IDL_IX_TAG_LE: &[u8] = IDL_IX_TAG.to_le_bytes().as_slice();
+
+// The Pubkey that is stored as the 'authority' on the IdlAccount when the authority
+// is "erased".
+pub const ERASED_AUTHORITY: Pubkey = Pubkey::new_from_array([0u8; 32]);
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub enum IdlInstruction {
@@ -41,44 +43,9 @@ pub enum IdlInstruction {
     SetBuffer,
     // Sets a new authority on the IdlAccount.
     SetAuthority { new_authority: Pubkey },
-}
-
-// Accounts for the Create instruction.
-pub type IdlCreateAccounts<'info> = crate::ctor::Ctor<'info>;
-
-// Accounts for Idl instructions.
-#[derive(Accounts)]
-pub struct IdlAccounts<'info> {
-    #[account(mut, has_one = authority)]
-    #[allow(deprecated)]
-    pub idl: ProgramAccount<'info, IdlAccount>,
-    #[account(signer, constraint = authority.key != &Pubkey::new_from_array([0u8; 32]))]
-    pub authority: AccountInfo<'info>,
-}
-
-// Accounts for creating an idl buffer.
-#[derive(Accounts)]
-pub struct IdlCreateBuffer<'info> {
-    #[account(zero)]
-    #[allow(deprecated)]
-    pub buffer: ProgramAccount<'info, IdlAccount>,
-    #[account(signer, constraint = authority.key != &Pubkey::new_from_array([0u8; 32]))]
-    pub authority: AccountInfo<'info>,
-}
-
-// Accounts for upgrading the canonical IdlAccount with the buffer.
-#[derive(Accounts)]
-pub struct IdlSetBuffer<'info> {
-    // The buffer with the new idl data.
-    #[account(mut, constraint = buffer.authority == idl.authority)]
-    #[allow(deprecated)]
-    pub buffer: ProgramAccount<'info, IdlAccount>,
-    // The idl account to be updated with the buffer's data.
-    #[account(mut, has_one = authority)]
-    #[allow(deprecated)]
-    pub idl: ProgramAccount<'info, IdlAccount>,
-    #[account(signer, constraint = authority.key != &Pubkey::new_from_array([0u8; 32]))]
-    pub authority: AccountInfo<'info>,
+    Close,
+    // Increases account size for accounts that need over 10kb.
+    Resize { data_len: u64 },
 }
 
 // The account holding a program's IDL. This is stored on chain so that clients
@@ -86,13 +53,19 @@ pub struct IdlSetBuffer<'info> {
 //
 // Note: we use the same account for the "write buffer", similar to the
 //       bpf upgradeable loader's mechanism.
+//
+// TODO: IdlAccount exists here only because it's needed by the CLI, the IDL
+// itself uses an IdlAccount defined inside the program itself, see program/idl.rs.
+// Ideally it would be deleted and a better solution for sharing the type with CLI
+// could be found.
 #[account("internal")]
 #[derive(Debug)]
 pub struct IdlAccount {
     // Address that can modify the IDL.
     pub authority: Pubkey,
-    // Compressed idl bytes.
-    pub data: Vec<u8>,
+    // Length of compressed idl bytes.
+    pub data_len: u32,
+    // Followed by compressed idl bytes.
 }
 
 impl IdlAccount {
@@ -105,3 +78,6 @@ impl IdlAccount {
         "anchor:idl"
     }
 }
+
+#[cfg(feature = "idl-build")]
+pub use anchor_lang_idl::{build::IdlBuild, *};

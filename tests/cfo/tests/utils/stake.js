@@ -1,11 +1,14 @@
-const anchor = require("@project-serum/anchor");
+const anchor = require("@coral-xyz/anchor");
 const serumCmn = require("@project-serum/common");
 const TokenInstructions = require("@project-serum/serum").TokenInstructions;
 const utils = require("../../deps/stake/tests/utils");
 
 const lockup = anchor.workspace.Lockup;
 const registry = anchor.workspace.Registry;
-const provider = anchor.Provider.env();
+const provider = anchor.AnchorProvider.env();
+// hack so we don't have to update serum-common library
+// to the new AnchorProvider class and Provider interface
+provider.send = provider.sendAndConfirm;
 
 let lockupAddress = null;
 let mint = null;

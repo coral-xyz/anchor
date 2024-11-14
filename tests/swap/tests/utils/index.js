@@ -9,15 +9,15 @@ const TOKEN_PROGRAM_ID = require("@solana/spl-token").TOKEN_PROGRAM_ID;
 const TokenInstructions = require("@project-serum/serum").TokenInstructions;
 const Market = require("@project-serum/serum").Market;
 const DexInstructions = require("@project-serum/serum").DexInstructions;
-const web3 = require("@project-serum/anchor").web3;
+const web3 = require("@coral-xyz/anchor").web3;
 const Connection = web3.Connection;
-const BN = require("@project-serum/anchor").BN;
+const BN = require("@coral-xyz/anchor").BN;
 const serumCmn = require("@project-serum/common");
 const Account = web3.Account;
 const Transaction = web3.Transaction;
 const PublicKey = web3.PublicKey;
 const SystemProgram = web3.SystemProgram;
-const DEX_PID = new PublicKey("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin");
+const DEX_PID = new PublicKey("srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX");
 
 async function setupTwoMarkets({ provider }) {
   // Setup mints with initial tokens owned by the provider.
@@ -196,7 +196,7 @@ async function fundAccount({ provider, mints }) {
   };
 
   // Transfer lamports to market maker.
-  await provider.send(
+  await provider.sendAndConfirm(
     (() => {
       const tx = new Transaction();
       tx.add(
@@ -226,7 +226,7 @@ async function fundAccount({ provider, mints }) {
       MARKET_MAKER.publicKey
     );
 
-    await provider.send(
+    await provider.sendAndConfirm(
       (() => {
         const tx = new Transaction();
         tx.add(
@@ -291,7 +291,10 @@ async function setupMarket({
         feeDiscountPubkey: null,
         selfTradeBehavior: "abortTransaction",
       });
-    await provider.send(transaction, signers.concat(marketMaker.account));
+    await provider.sendAndConfirm(
+      transaction,
+      signers.concat(marketMaker.account)
+    );
   }
 
   for (let k = 0; k < bids.length; k += 1) {
@@ -310,7 +313,10 @@ async function setupMarket({
         feeDiscountPubkey: null,
         selfTradeBehavior: "abortTransaction",
       });
-    await provider.send(transaction, signers.concat(marketMaker.account));
+    await provider.sendAndConfirm(
+      transaction,
+      signers.concat(marketMaker.account)
+    );
   }
 
   return MARKET_A_USDC;
@@ -453,7 +459,7 @@ async function signTransactions({
   wallet,
   connection,
 }) {
-  const blockhash = (await connection.getRecentBlockhash("finalized"))
+  const blockhash = (await connection.getLatestBlockhash("finalized"))
     .blockhash;
   transactionsAndSigners.forEach(({ transaction, signers = [] }) => {
     transaction.recentBlockhash = blockhash;

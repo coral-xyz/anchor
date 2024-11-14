@@ -1,0 +1,11 @@
+[features]
+seeds = false
+[programs.localnet]
+multiple_suites_run_single = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[test]
+startup_wait = 20000

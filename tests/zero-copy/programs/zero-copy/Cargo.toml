@@ -2,7 +2,7 @@
 name = "zero-copy"
 version = "0.1.0"
 description = "Created with Anchor"
-edition = "2018"
+edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -13,12 +13,13 @@ no-entrypoint = []
 no-idl = []
 cpi = ["no-entrypoint"]
 default = []
-test-bpf = []
+test-sbf = []
+idl-build = ["anchor-lang/idl-build"]
 
 [dependencies]
 anchor-lang = { path = "../../../../lang" }
+bytemuck = {version = "1.4.0", features = ["derive", "min_const_generics"]}
 
 [dev-dependencies]
-anchor-client = { path = "../../../../client", features = ["debug"] }
-bytemuck = "1.4.0"
-solana-program-test = "1.8.0"
+anchor-client = { path = "../../../../client", features = ["debug", "async"] }
+solana-program-test = "2"

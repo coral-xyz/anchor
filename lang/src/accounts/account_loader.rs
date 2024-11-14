@@ -1,16 +1,16 @@
 //! Type facilitating on demand zero copy deserialization.
 
-use crate::error::ErrorCode;
+use crate::bpf_writer::BpfWriter;
+use crate::error::{Error, ErrorCode};
 use crate::{
-    Accounts, AccountsClose, AccountsExit, Owner, Result, ToAccountInfo, ToAccountInfos,
+    Accounts, AccountsClose, AccountsExit, Key, Owner, Result, ToAccountInfo, ToAccountInfos,
     ToAccountMetas, ZeroCopy,
 };
-use arrayref::array_ref;
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use std::cell::{Ref, RefMut};
-use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::fmt;
 use std::io::Write;
 use std::marker::PhantomData;
@@ -20,15 +20,15 @@ use std::ops::DerefMut;
 /// Type facilitating on demand zero copy deserialization.
 ///
 /// Note that using accounts in this way is distinctly different from using,
-/// for example, the [`Account`](./struct.Account.html). Namely,
+/// for example, the [`Account`](crate::accounts::account::Account). Namely,
 /// one must call
 /// - `load_init` after initializing an account (this will ignore the missing
-/// account discriminator that gets added only after the user's instruction code)
+///    account discriminator that gets added only after the user's instruction code)
 /// - `load` when the account is not mutable
 /// - `load_mut` when the account is mutable
 ///
 /// For more details on zero-copy-deserialization, see the
-/// [`account`](./attr.account.html) attribute.
+/// [`account`](crate::account) attribute.
 /// <p style=";padding:0.75em;border: 1px solid #ee6868">
 /// <strong>⚠️ </strong> When using this type it's important to be mindful
 /// of any calls to the <code>load</code> functions so as not to
@@ -94,7 +94,7 @@ use std::ops::DerefMut;
 /// ```
 #[derive(Clone)]
 pub struct AccountLoader<'info, T: ZeroCopy + Owner> {
-    acc_info: AccountInfo<'info>,
+    acc_info: &'info AccountInfo<'info>,
     phantom: PhantomData<&'info T>,
 }
 
@@ -108,7 +108,7 @@ impl<'info, T: ZeroCopy + Owner + fmt::Debug> fmt::Debug for AccountLoader<'info
 }
 
 impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
-    fn new(acc_info: AccountInfo<'info>) -> AccountLoader<'info, T> {
+    fn new(acc_info: &'info AccountInfo<'info>) -> AccountLoader<'info, T> {
         Self {
             acc_info,
             phantom: PhantomData,
@@ -117,43 +117,54 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
 
     /// Constructs a new `Loader` from a previously initialized account.
     #[inline(never)]
-    pub fn try_from(acc_info: &AccountInfo<'info>) -> Result<AccountLoader<'info, T>> {
+    pub fn try_from(acc_info: &'info AccountInfo<'info>) -> Result<AccountLoader<'info, T>> {
         if acc_info.owner != &T::owner() {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
+                .with_pubkeys((*acc_info.owner, T::owner())));
         }
-        let data: &[u8] = &acc_info.try_borrow_data()?;
-        // Discriminator must match.
-        let disc_bytes = array_ref![data, 0, 8];
-        if disc_bytes != &T::discriminator() {
+
+        let data = &acc_info.try_borrow_data()?;
+        let disc = T::DISCRIMINATOR;
+        if data.len() < disc.len() {
+            return Err(ErrorCode::AccountDiscriminatorNotFound.into());
+        }
+
+        let given_disc = &data[..disc.len()];
+        if given_disc != disc {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
-        Ok(AccountLoader::new(acc_info.clone()))
+        Ok(AccountLoader::new(acc_info))
     }
 
     /// Constructs a new `Loader` from an uninitialized account.
     #[inline(never)]
     pub fn try_from_unchecked(
         _program_id: &Pubkey,
-        acc_info: &AccountInfo<'info>,
+        acc_info: &'info AccountInfo<'info>,
     ) -> Result<AccountLoader<'info, T>> {
         if acc_info.owner != &T::owner() {
-            return Err(ErrorCode::AccountOwnedByWrongProgram.into());
+            return Err(Error::from(ErrorCode::AccountOwnedByWrongProgram)
+                .with_pubkeys((*acc_info.owner, T::owner())));
         }
-        Ok(AccountLoader::new(acc_info.clone()))
+        Ok(AccountLoader::new(acc_info))
     }
 
     /// Returns a Ref to the account data structure for reading.
     pub fn load(&self) -> Result<Ref<T>> {
         let data = self.acc_info.try_borrow_data()?;
+        let disc = T::DISCRIMINATOR;
+        if data.len() < disc.len() {
+            return Err(ErrorCode::AccountDiscriminatorNotFound.into());
+        }
 
-        let disc_bytes = array_ref![data, 0, 8];
-        if disc_bytes != &T::discriminator() {
+        let given_disc = &data[..disc.len()];
+        if given_disc != disc {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
         Ok(Ref::map(data, |data| {
-            bytemuck::from_bytes(&data[8..mem::size_of::<T>() + 8])
+            bytemuck::from_bytes(&data[disc.len()..mem::size_of::<T>() + disc.len()])
         }))
     }
 
@@ -166,14 +177,20 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         }
 
         let data = self.acc_info.try_borrow_mut_data()?;
+        let disc = T::DISCRIMINATOR;
+        if data.len() < disc.len() {
+            return Err(ErrorCode::AccountDiscriminatorNotFound.into());
+        }
 
-        let disc_bytes = array_ref![data, 0, 8];
-        if disc_bytes != &T::discriminator() {
+        let given_disc = &data[..disc.len()];
+        if given_disc != disc {
             return Err(ErrorCode::AccountDiscriminatorMismatch.into());
         }
 
         Ok(RefMut::map(data, |data| {
-            bytemuck::from_bytes_mut(&mut data.deref_mut()[8..mem::size_of::<T>() + 8])
+            bytemuck::from_bytes_mut(
+                &mut data.deref_mut()[disc.len()..mem::size_of::<T>() + disc.len()],
+            )
         }))
     }
 
@@ -189,26 +206,29 @@ impl<'info, T: ZeroCopy + Owner> AccountLoader<'info, T> {
         let data = self.acc_info.try_borrow_mut_data()?;
 
         // The discriminator should be zero, since we're initializing.
-        let mut disc_bytes = [0u8; 8];
-        disc_bytes.copy_from_slice(&data[..8]);
-        let discriminator = u64::from_le_bytes(disc_bytes);
-        if discriminator != 0 {
+        let disc = T::DISCRIMINATOR;
+        let given_disc = &data[..disc.len()];
+        let has_disc = given_disc.iter().any(|b| *b != 0);
+        if has_disc {
             return Err(ErrorCode::AccountDiscriminatorAlreadySet.into());
         }
 
         Ok(RefMut::map(data, |data| {
-            bytemuck::from_bytes_mut(&mut data.deref_mut()[8..mem::size_of::<T>() + 8])
+            bytemuck::from_bytes_mut(
+                &mut data.deref_mut()[disc.len()..mem::size_of::<T>() + disc.len()],
+            )
         }))
     }
 }
 
-impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
+impl<'info, B, T: ZeroCopy + Owner> Accounts<'info, B> for AccountLoader<'info, T> {
     #[inline(never)]
     fn try_accounts(
         _program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
+        accounts: &mut &'info [AccountInfo<'info>],
         _ix_data: &[u8],
-        _bumps: &mut BTreeMap<String, u8>,
+        _bumps: &mut B,
+        _reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
@@ -222,22 +242,18 @@ impl<'info, T: ZeroCopy + Owner> Accounts<'info> for AccountLoader<'info, T> {
 
 impl<'info, T: ZeroCopy + Owner> AccountsExit<'info> for AccountLoader<'info, T> {
     // The account *cannot* be loaded when this is called.
-    fn exit(&self, _program_id: &Pubkey) -> Result<()> {
-        let mut data = self.acc_info.try_borrow_mut_data()?;
-        let dst: &mut [u8] = &mut data;
-        let mut cursor = std::io::Cursor::new(dst);
-        cursor.write_all(&T::discriminator()).unwrap();
+    fn exit(&self, program_id: &Pubkey) -> Result<()> {
+        // Only persist if the owner is the current program and the account is not closed.
+        if &T::owner() == program_id && !crate::common::is_closed(self.acc_info) {
+            let mut data = self.acc_info.try_borrow_mut_data()?;
+            let dst: &mut [u8] = &mut data;
+            let mut writer = BpfWriter::new(dst);
+            writer.write_all(T::DISCRIMINATOR).unwrap();
+        }
         Ok(())
     }
 }
 
-/// This function is for INTERNAL USE ONLY.
-/// Do NOT use this function in a program.
-/// Manual closing of `AccountLoader<'info, T>` types is NOT supported.
-///
-/// Details: Using `close` with `AccountLoader<'info, T>` is not safe because
-/// it requires the `mut` constraint but for that type the constraint
-/// overwrites the "closed account" discriminator at the end of the instruction.
 impl<'info, T: ZeroCopy + Owner> AccountsClose<'info> for AccountLoader<'info, T> {
     fn close(&self, sol_destination: AccountInfo<'info>) -> Result<()> {
         crate::common::close(self.to_account_info(), sol_destination)
@@ -257,12 +273,18 @@ impl<'info, T: ZeroCopy + Owner> ToAccountMetas for AccountLoader<'info, T> {
 
 impl<'info, T: ZeroCopy + Owner> AsRef<AccountInfo<'info>> for AccountLoader<'info, T> {
     fn as_ref(&self) -> &AccountInfo<'info> {
-        &self.acc_info
+        self.acc_info
     }
 }
 
 impl<'info, T: ZeroCopy + Owner> ToAccountInfos<'info> for AccountLoader<'info, T> {
     fn to_account_infos(&self) -> Vec<AccountInfo<'info>> {
         vec![self.acc_info.clone()]
+    }
+}
+
+impl<'info, T: ZeroCopy + Owner> Key for AccountLoader<'info, T> {
+    fn key(&self) -> Pubkey {
+        *self.acc_info.key
     }
 }

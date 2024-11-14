@@ -1,11 +1,11 @@
 //! Type validating that the account is a sysvar and deserializing it
 
 use crate::error::ErrorCode;
-use crate::{Accounts, AccountsExit, Result, ToAccountInfos, ToAccountMetas};
+use crate::{Accounts, AccountsExit, Key, Result, ToAccountInfos, ToAccountMetas};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 
@@ -31,7 +31,7 @@ use std::ops::{Deref, DerefMut};
 /// }
 /// ```
 pub struct Sysvar<'info, T: solana_program::sysvar::Sysvar> {
-    info: AccountInfo<'info>,
+    info: &'info AccountInfo<'info>,
     account: T,
 }
 
@@ -45,10 +45,10 @@ impl<'info, T: solana_program::sysvar::Sysvar + fmt::Debug> fmt::Debug for Sysva
 }
 
 impl<'info, T: solana_program::sysvar::Sysvar> Sysvar<'info, T> {
-    pub fn from_account_info(acc_info: &AccountInfo<'info>) -> Result<Sysvar<'info, T>> {
+    pub fn from_account_info(acc_info: &'info AccountInfo<'info>) -> Result<Sysvar<'info, T>> {
         match T::from_account_info(acc_info) {
             Ok(val) => Ok(Sysvar {
-                info: acc_info.clone(),
+                info: acc_info,
                 account: val,
             }),
             Err(_) => Err(ErrorCode::AccountSysvarMismatch.into()),
@@ -59,18 +59,19 @@ impl<'info, T: solana_program::sysvar::Sysvar> Sysvar<'info, T> {
 impl<'info, T: solana_program::sysvar::Sysvar> Clone for Sysvar<'info, T> {
     fn clone(&self) -> Self {
         Self {
-            info: self.info.clone(),
-            account: T::from_account_info(&self.info).unwrap(),
+            info: self.info,
+            account: T::from_account_info(self.info).unwrap(),
         }
     }
 }
 
-impl<'info, T: solana_program::sysvar::Sysvar> Accounts<'info> for Sysvar<'info, T> {
+impl<'info, B, T: solana_program::sysvar::Sysvar> Accounts<'info, B> for Sysvar<'info, T> {
     fn try_accounts(
         _program_id: &Pubkey,
-        accounts: &mut &[AccountInfo<'info>],
+        accounts: &mut &'info [AccountInfo<'info>],
         _ix_data: &[u8],
-        _bumps: &mut BTreeMap<String, u8>,
+        _bumps: &mut B,
+        _reallocs: &mut BTreeSet<Pubkey>,
     ) -> Result<Self> {
         if accounts.is_empty() {
             return Err(ErrorCode::AccountNotEnoughKeys.into());
@@ -95,7 +96,7 @@ impl<'info, T: solana_program::sysvar::Sysvar> ToAccountInfos<'info> for Sysvar<
 
 impl<'info, T: solana_program::sysvar::Sysvar> AsRef<AccountInfo<'info>> for Sysvar<'info, T> {
     fn as_ref(&self) -> &AccountInfo<'info> {
-        &self.info
+        self.info
     }
 }
 
@@ -114,3 +115,9 @@ impl<'a, T: solana_program::sysvar::Sysvar> DerefMut for Sysvar<'a, T> {
 }
 
 impl<'info, T: solana_program::sysvar::Sysvar> AccountsExit<'info> for Sysvar<'info, T> {}
+
+impl<'info, T: solana_program::sysvar::Sysvar> Key for Sysvar<'info, T> {
+    fn key(&self) -> Pubkey {
+        *self.info.key
+    }
+}

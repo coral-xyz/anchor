@@ -47,7 +47,7 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
         })
         .collect();
 
-    let offset = match error.args {
+    let offset = match &error.args {
         None => quote! { anchor_lang::error::ERROR_CODE_OFFSET},
         Some(args) => {
             let offset = &args.offset;
@@ -55,7 +55,7 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
         }
     };
 
-    quote! {
+    let ret = quote! {
         #[derive(std::fmt::Debug, Clone, Copy)]
         #[repr(u32)]
         #error_enum
@@ -76,14 +76,14 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
         }
 
         impl From<#enum_name> for anchor_lang::error::Error {
-            fn from(error_code: #enum_name) -> Error {
+            fn from(error_code: #enum_name) -> anchor_lang::error::Error {
                 anchor_lang::error::Error::from(
                     anchor_lang::error::AnchorError {
                         error_name: error_code.name(),
                         error_code_number: error_code.into(),
                         error_msg: error_code.to_string(),
-                        source: None,
-                        account_name: None
+                        error_origin: None,
+                        compared_values: None
                     }
                 )
             }
@@ -96,5 +96,17 @@ pub fn generate(error: Error) -> proc_macro2::TokenStream {
                 }
             }
         }
-    }
+    };
+
+    #[cfg(feature = "idl-build")]
+    {
+        let idl_print = crate::idl::gen_idl_print_fn_error(&error);
+        return quote! {
+            #ret
+            #idl_print
+        };
+    };
+
+    #[allow(unreachable_code)]
+    ret
 }

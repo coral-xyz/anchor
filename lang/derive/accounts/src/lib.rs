@@ -44,6 +44,7 @@ use syn::parse_macro_input;
 ///
 /// - [Normal Constraints](#normal-constraints)
 /// - [SPL Constraints](#spl-constraints)
+///
 /// # Normal Constraints
 /// <table>
 ///     <thead>
@@ -93,7 +94,8 @@ use syn::parse_macro_input;
 ///             </td>
 ///             <td>
 ///                 Creates the account via a CPI to the system program and
-///                 initializes it (sets its account discriminator).<br>
+///                 initializes it (sets its account discriminator). The annotated account is required to sign for this instruction
+///                 unless `seeds` is provided. <br>
 ///                 Marks the account as mutable and is mutually exclusive with <code>mut</code>.<br>
 ///                 Makes the account rent exempt unless skipped with <code>rent_exempt = skip</code>.<br><br>
 ///                 Use <code>#[account(zero)]</code> for accounts larger than 10 Kibibyte.<br><br>
@@ -115,7 +117,9 @@ use syn::parse_macro_input;
 ///                         for accounts owned by anchor programs.<br>
 ///                         The given space number is the size of the account in bytes, so accounts that hold
 ///                         a variable number of items such as a <code>Vec</code> should allocate sufficient space for all items that may
-///                         be added to the data structure because account size is fixed. Check out the <a href = "https://borsh.io/" target = "_blank" rel = "noopener noreferrer">borsh library</a>
+///                         be added to the data structure because account size is fixed.
+///                         Check out the <a href = "https://www.anchor-lang.com/docs/space" target = "_blank" rel = "noopener noreferrer">space reference</a>
+///                         and the <a href = "https://borsh.io/" target = "_blank" rel = "noopener noreferrer">borsh library</a>
 ///                         (which anchor uses under the hood for serialization) specification to learn how much
 ///                         space different data structures require.
 ///                     </li>
@@ -163,7 +167,7 @@ use syn::parse_macro_input;
 /// pub struct Initialize<'info> {
 /// &nbsp;&nbsp;&nbsp;&nbsp;#[account(
 /// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;init, payer = payer, space = 8 + 8
-/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;seeds = [b"example_seed".as_ref()], bump = bump
+/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;seeds = [b"example_seed"], bump = bump
 /// &nbsp;&nbsp;&nbsp;&nbsp;)]
 /// &nbsp;&nbsp;&nbsp;&nbsp;pub pda_data_account: Account<'info, MyData>,
 /// &nbsp;&nbsp;&nbsp;&nbsp;#[account(
@@ -174,7 +178,7 @@ use syn::parse_macro_input;
 /// &nbsp;&nbsp;&nbsp;&nbsp;#[account(
 /// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;init, payer = payer, space = 8 + 8,
 /// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;owner = other_program.key(),
-/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;seeds = [b"other_seed".as_ref()], bump
+/// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;seeds = [b"other_seed"], bump
 /// &nbsp;&nbsp;&nbsp;&nbsp;)]
 /// &nbsp;&nbsp;&nbsp;&nbsp;pub pda_for_other_program: AccountInfo<'info>,
 /// &nbsp;&nbsp;&nbsp;&nbsp;#[account(mut)]
@@ -250,18 +254,18 @@ use syn::parse_macro_input;
 /// #[derive(Accounts)]
 /// #[instruction(first_bump: u8, second_bump: u8)]
 /// pub struct Example {
-///     #[account(seeds = [b"example_seed], bump)]
+///     #[account(seeds = [b"example_seed"], bump)]
 ///     pub canonical_pda: AccountInfo<'info>,
 ///     #[account(
-///         seeds = [b"example_seed],
+///         seeds = [b"example_seed"],
 ///         bump,
 ///         seeds::program = other_program.key()
 ///     )]
 ///     pub canonical_pda_two: AccountInfo<'info>,
-///     #[account(seeds = [b"other_seed], bump = first_bump)]
+///     #[account(seeds = [b"other_seed"], bump = first_bump)]
 ///     pub arbitrary_pda: AccountInfo<'info>
 ///     #[account(
-///         seeds = [b"other_seed],
+///         seeds = [b"other_seed"],
 ///         bump = second_bump,
 ///         seeds::program = other_program.key()
 ///     )]
@@ -383,12 +387,10 @@ use syn::parse_macro_input;
 ///                 <code>#[account(close = &lt;target_account&gt;)]</code>
 ///             </td>
 ///             <td>
-///                 Marks the account as closed at the end of the instruction’s execution
-///                 (sets its discriminator to the <code>CLOSED_ACCOUNT_DISCRIMINATOR</code>)
-///                 and sends its lamports to the specified account.<br>
-///                 Setting the discriminator to a special variant
-///                 makes account revival attacks (where a subsequent instruction
-///                 adds the rent exemption lamports again) impossible.<br>
+///                 Closes the account by:<br>
+///                 &nbsp;&nbsp;&nbsp;&nbsp;- Sending the lamports to the specified account<br>
+///                 &nbsp;&nbsp;&nbsp;&nbsp;- Assigning the owner to the System Program<br>
+///                 &nbsp;&nbsp;&nbsp;&nbsp;- Resetting the data of the account<br><br>
 ///                 Requires <code>mut</code> to exist on the account.
 ///                 <br><br>
 ///                 Example:
@@ -416,6 +418,48 @@ use syn::parse_macro_input;
 ///                 </code></pre>
 ///             </td>
 ///         </tr>
+///         <tr>
+///             <td>
+///                 <code>#[account(realloc = &lt;space&gt;, realloc::payer = &lt;target&gt;, realloc::zero = &lt;bool&gt;)]</code>
+///             </td>
+///             <td>
+///                 Used to <a href="https://docs.rs/solana-program/latest/solana_program/account_info/struct.AccountInfo.html#method.realloc" target = "_blank" rel = "noopener noreferrer">realloc</a>
+///                 program account space at the beginning of an instruction.
+///                 <br><br>
+///                 The account must be marked as <code>mut</code> and applied to either <code>Account</code> or <code>AccountLoader</code> types.
+///                 <br><br>
+///                 If the change in account data length is additive, lamports will be transferred from the <code>realloc::payer</code> into the
+///                 program account in order to maintain rent exemption. Likewise, if the change is subtractive, lamports will be transferred from
+///                 the program account back into the <code>realloc::payer</code>.
+///                 <br><br>
+///                 The <code>realloc::zero</code> constraint is required in order to determine whether the new memory should be zero initialized after
+///                 reallocation. Please read the documentation on the <code>AccountInfo::realloc</code> function linked above to understand the
+///                 caveats regarding compute units when providing <code>true</code or <code>false</code> to this flag.
+///                 <br><br>
+///                 The manual use of `AccountInfo::realloc` is discouraged in favor of the `realloc` constraint group due to the lack of native runtime checks
+///                 to prevent reallocation over the `MAX_PERMITTED_DATA_INCREASE` limit (which can unintentionally cause account data overwrite other accounts).
+///                 The constraint group also ensure account reallocation idempotency but checking and restricting duplicate account reallocation within a single ix.
+///                 <br><br>
+///                 Example:
+///                 <pre>
+/// #[derive(Accounts)]
+/// pub struct Example {
+///     #[account(mut)]
+///     pub payer: Signer<'info>,
+///     #[account(
+///         mut,
+///         seeds = [b"example"],
+///         bump,
+///         realloc = 8 + std::mem::size_of::<MyType>() + 100,
+///         realloc::payer = payer,
+///         realloc::zero = false,
+///     )]
+///     pub acc: Account<'info, MyType>,
+///     pub system_program: Program<'info, System>,
+/// }
+///                 </pre>
+///             </td>
+///         </tr>
 ///     </tbody>
 /// </table>
 ///
@@ -434,10 +478,13 @@ use syn::parse_macro_input;
 ///         <tr>
 ///             <td>
 ///                 <code>#[account(token::mint = &lt;target_account&gt;, token::authority = &lt;target_account&gt;)]</code>
+///             <br><br>
+///                 <code>#[account(token::mint = &lt;target_account&gt;, token::authority = &lt;target_account&gt;, token::token_program = &lt;target_account&gt;)]</code>
 ///             </td>
 ///             <td>
-///                 Can currently only be used with <code>init</code> to create a token
-///                 account with the given mint address and authority.
+///                 Can be used as a check or with <code>init</code> to create a token
+///                 account with the given mint address and authority.<br>
+///                  When used as a check, it's possible to only specify a subset of the constraints.
 ///                 <br><br>
 ///                 Example:
 ///                 <pre>
@@ -466,9 +513,10 @@ use syn::parse_macro_input;
 ///                 <code>#[account(mint::authority = &lt;target_account&gt;, mint::decimals = &lt;expr&gt;, mint::freeze_authority = &lt;target_account&gt;)]</code>
 ///             </td>
 ///             <td>
-///                 Can currently only be used with <code>init</code> to create a mint
+///                 Can be used as a check or with <code>init</code> to create a mint
 ///                 account with the given mint decimals and mint authority.<br>
-///                 The freeze authority is optional.
+///                 The freeze authority is optional when used with <code>init</code>.<br>
+///                 When used as a check, it's possible to only specify a subset of the constraints.
 ///                 <br><br>
 ///                 Example:
 ///                 <pre>
@@ -499,6 +547,8 @@ use syn::parse_macro_input;
 ///         <tr>
 ///             <td>
 ///                 <code>#[account(associated_token::mint = &lt;target_account&gt;, associated_token::authority = &lt;target_account&gt;)]</code>
+///                <br><br>
+///                 <code>#[account(associated_token::mint = &lt;target_account&gt;, associated_token::authority = &lt;target_account&gt;, associated_token::token_program = &lt;target_account&gt;)]</code>
 ///             </td>
 ///             <td>
 ///                 Can be used as a standalone as a check or with <code>init</code> to create an associated token
@@ -533,11 +583,53 @@ use syn::parse_macro_input;
 /// pub system_program: Program<'info, System>
 ///                 </pre>
 ///             </td>
+///         </tr><tr>
+///             <td>
+///                 <code>#[account(*::token_program = &lt;target_account&gt;)]</code>
+///             </td>
+///             <td>
+///                 The <code>token_program</code> can optionally be overridden.
+///                 <br><br>
+///                 Example:
+///                 <pre>
+/// use anchor_spl::token_interface::{TokenInterface, TokenAccount, Mint};
+/// ...&#10;
+/// #[account(
+///     mint::token_program = token_a_token_program,
+/// )]
+/// pub token_a_mint: InterfaceAccount<'info, Mint>,
+/// #[account(
+///     mint::token_program = token_b_token_program,
+/// )]
+/// pub token_b_mint: InterfaceAccount<'info, Mint>,
+/// #[account(
+///     init,
+///     payer = payer,
+///     token::mint = token_a_mint,
+///     token::authority = payer,
+///     token::token_program = token_a_token_program,
+/// )]
+/// pub token_a_account: InterfaceAccount<'info, TokenAccount>,
+/// #[account(
+///     init,
+///     payer = payer,
+///     token::mint = token_b_mint,
+///     token::authority = payer,
+///     token::token_program = token_b_token_program,
+/// )]
+/// pub token_b_account: InterfaceAccount<'info, TokenAccount>,
+/// pub token_a_token_program: Interface<'info, TokenInterface>,
+/// pub token_b_token_program: Interface<'info, TokenInterface>,
+/// #[account(mut)]
+/// pub payer: Signer<'info>,
+/// pub system_program: Program<'info, System>
+///                 </pre>
+///             </td>
 ///         </tr>
 ///     <tbody>
 /// </table>
 #[proc_macro_derive(Accounts, attributes(account, instruction))]
-pub fn derive_anchor_deserialize(item: TokenStream) -> TokenStream {
+pub fn derive_accounts(item: TokenStream) -> TokenStream {
     parse_macro_input!(item as anchor_syn::AccountsStruct)
         .to_token_stream()
         .into()

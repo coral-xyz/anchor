@@ -1,187 +1,104 @@
-use crate::codegen::program::common::*;
 use crate::Program;
+use heck::CamelCase;
 use quote::quote;
 
 pub fn generate(program: &Program) -> proc_macro2::TokenStream {
-    // Dispatch the state constructor.
-    let ctor_state_dispatch_arm = match &program.state {
-        None => quote! { /* no-op */ },
-        Some(state) => match state.ctor_and_anchor.is_some() {
-            false => quote! {},
-            true => {
-                let sighash_arr = sighash_ctor();
-                let sighash_tts: proc_macro2::TokenStream =
-                    format!("{:?}", sighash_arr).parse().unwrap();
-                quote! {
-                    #sighash_tts => {
-                        __private::__state::__ctor(
-                            program_id,
-                            accounts,
-                            ix_data,
-                        )
-                    }
-                }
-            }
-        },
-    };
-
-    // Dispatch the state impl instructions.
-    let state_dispatch_arms: Vec<proc_macro2::TokenStream> = match &program.state {
-        None => vec![],
-        Some(s) => s
-            .impl_block_and_methods
-            .as_ref()
-            .map(|(_impl_block, methods)| {
-                methods
-                    .iter()
-                    .map(|ix: &crate::StateIx| {
-                        let name = &ix.raw_method.sig.ident.to_string();
-                        let ix_method_name: proc_macro2::TokenStream =
-                            { format!("__{}", name).parse().unwrap() };
-                        let sighash_arr = sighash(SIGHASH_STATE_NAMESPACE, name);
-                        let sighash_tts: proc_macro2::TokenStream =
-                            format!("{:?}", sighash_arr).parse().unwrap();
-                        quote! {
-                            #sighash_tts => {
-                                __private::__state::#ix_method_name(
-                                    program_id,
-                                    accounts,
-                                    ix_data,
-                                )
-                            }
-                        }
-                    })
-                    .collect()
-            })
-            .unwrap_or_default(),
-    };
-
-    // Dispatch all trait interface implementations.
-    let trait_dispatch_arms: Vec<proc_macro2::TokenStream> = match &program.state {
-        None => vec![],
-        Some(s) => s
-            .interfaces
-            .as_ref()
-            .map(|interfaces| {
-                interfaces
-                    .iter()
-                    .flat_map(|iface: &crate::StateInterface| {
-                        iface
-                            .methods
-                            .iter()
-                            .map(|m: &crate::StateIx| {
-                                let sighash_arr = sighash(&iface.trait_name, &m.ident.to_string());
-                                let sighash_tts: proc_macro2::TokenStream =
-                                    format!("{:?}", sighash_arr).parse().unwrap();
-                                let name = &m.raw_method.sig.ident.to_string();
-                                let ix_method_name: proc_macro2::TokenStream =
-                                    format!("__{}_{}", iface.trait_name, name).parse().unwrap();
-                                quote! {
-                                    #sighash_tts => {
-                                        __private::__interface::#ix_method_name(
-                                            program_id,
-                                            accounts,
-                                            ix_data,
-                                        )
-                                    }
-                                }
-                            })
-                            .collect::<Vec<proc_macro2::TokenStream>>()
-                    })
-                    .collect()
-            })
-            .unwrap_or_default(),
-    };
-
     // Dispatch all global instructions.
-    let global_dispatch_arms: Vec<proc_macro2::TokenStream> = program
-        .ixs
-        .iter()
-        .map(|ix| {
-            let ix_method_name = &ix.raw_method.sig.ident;
-            let sighash_arr = sighash(SIGHASH_GLOBAL_NAMESPACE, &ix_method_name.to_string());
-            let sighash_tts: proc_macro2::TokenStream =
-                format!("{:?}", sighash_arr).parse().unwrap();
+    let global_ixs = program.ixs.iter().map(|ix| {
+        let ix_method_name = &ix.raw_method.sig.ident;
+        let ix_name_camel: proc_macro2::TokenStream = ix_method_name
+            .to_string()
+            .to_camel_case()
+            .parse()
+            .expect("Failed to parse ix method name in camel as `TokenStream`");
+        let discriminator = quote! { instruction::#ix_name_camel::DISCRIMINATOR };
+        let ix_cfgs = &ix.cfgs;
+
+        quote! {
+            #(#ix_cfgs)*
+            if data.starts_with(#discriminator) {
+                return __private::__global::#ix_method_name(
+                    program_id,
+                    accounts,
+                    &data[#discriminator.len()..],
+                )
+            }
+        }
+    });
+
+    // Generate the event-cpi instruction handler based on whether the `event-cpi` feature is enabled.
+    let event_cpi_handler = {
+        #[cfg(feature = "event-cpi")]
+        quote! {
+            // `event-cpi` feature is enabled, dispatch self-cpi instruction
+            __private::__events::__event_dispatch(
+                program_id,
+                accounts,
+                &data[anchor_lang::event::EVENT_IX_TAG_LE.len()..]
+            )
+        }
+        #[cfg(not(feature = "event-cpi"))]
+        quote! {
+            // `event-cpi` feature is not enabled
+            Err(anchor_lang::error::ErrorCode::EventInstructionStub.into())
+        }
+    };
+
+    let fallback_fn = program
+        .fallback_fn
+        .as_ref()
+        .map(|fallback_fn| {
+            let program_name = &program.name;
+            let fn_name = &fallback_fn.raw_method.sig.ident;
             quote! {
-                #sighash_tts => {
-                    __private::__global::#ix_method_name(
-                        program_id,
-                        accounts,
-                        ix_data,
-                    )
-                }
+                #program_name::#fn_name(program_id, accounts, data)
             }
         })
-        .collect();
-    let fallback_fn = gen_fallback(program).unwrap_or(quote! {
-        Err(anchor_lang::error::ErrorCode::InstructionFallbackNotFound.into())
-    });
+        .unwrap_or_else(|| {
+            quote! {
+                Err(anchor_lang::error::ErrorCode::InstructionFallbackNotFound.into())
+            }
+        });
+
     quote! {
         /// Performs method dispatch.
         ///
-        /// Each method in an anchor program is uniquely defined by a namespace
-        /// and a rust identifier (i.e., the name given to the method). These
-        /// two pieces can be combined to creater a method identifier,
-        /// specifically, Anchor uses
+        /// Each instruction's discriminator is checked until the given instruction data starts with
+        /// the current discriminator.
         ///
-        /// Sha256("<namespace>::<rust-identifier>")[..8],
+        /// If a match is found, the instruction handler is called using the given instruction data
+        /// excluding the prepended discriminator bytes.
         ///
-        /// where the namespace can be one of three types. 1) "global" for a
-        /// regular instruction, 2) "state" for a state struct instruction
-        /// handler and 3) a trait namespace (used in combination with the
-        /// `#[interface]` attribute), which is defined by the trait name, e..
-        /// `MyTrait`.
-        ///
-        /// With this 8 byte identifier, Anchor performs method dispatch,
-        /// matching the given 8 byte identifier to the associated method
-        /// handler, which leads to user defined code being eventually invoked.
-        fn dispatch(
+        /// If no match is found, the fallback function is executed if it exists, or an error is
+        /// returned if it doesn't exist.
+        fn dispatch<'info>(
             program_id: &Pubkey,
-            accounts: &[AccountInfo],
+            accounts: &'info [AccountInfo<'info>],
             data: &[u8],
         ) -> anchor_lang::Result<()> {
-            // Split the instruction data into the first 8 byte method
-            // identifier (sighash) and the serialized instruction data.
-            let mut ix_data: &[u8] = data;
-            let sighash: [u8; 8] = {
-                let mut sighash: [u8; 8] = [0; 8];
-                sighash.copy_from_slice(&ix_data[..8]);
-                ix_data = &ix_data[8..];
-                sighash
-            };
+            #(#global_ixs)*
 
-            // If the method identifier is the IDL tag, then execute an IDL
-            // instruction, injected into all Anchor programs.
-            if cfg!(not(feature = "no-idl")) {
-                if sighash == anchor_lang::idl::IDL_IX_TAG.to_le_bytes() {
-                    return __private::__idl::__idl_dispatch(
-                        program_id,
-                        accounts,
-                        &ix_data,
-                    );
-                }
+            // Dispatch IDL instructions
+            if data.starts_with(anchor_lang::idl::IDL_IX_TAG_LE) {
+                // If the method identifier is the IDL tag, then execute an IDL
+                // instruction, injected into all Anchor programs unless they have
+                // `no-idl` feature enabled
+                #[cfg(not(feature = "no-idl"))]
+                return __private::__idl::__idl_dispatch(
+                    program_id,
+                    accounts,
+                    &data[anchor_lang::idl::IDL_IX_TAG_LE.len()..],
+                );
+                #[cfg(feature = "no-idl")]
+                return Err(anchor_lang::error::ErrorCode::IdlInstructionStub.into());
             }
 
-            match sighash {
-                #ctor_state_dispatch_arm
-                #(#state_dispatch_arms)*
-                #(#trait_dispatch_arms)*
-                #(#global_dispatch_arms)*
-                _ => {
-                    #fallback_fn
-                }
+            // Dispatch Event CPI instruction
+            if data.starts_with(anchor_lang::event::EVENT_IX_TAG_LE) {
+                return #event_cpi_handler;
             }
+
+            #fallback_fn
         }
     }
-}
-
-pub fn gen_fallback(program: &Program) -> Option<proc_macro2::TokenStream> {
-    program.fallback_fn.as_ref().map(|fallback_fn| {
-        let program_name = &program.name;
-        let method = &fallback_fn.raw_method;
-        let fn_name = &method.sig.ident;
-        quote! {
-            #program_name::#fn_name(program_id, accounts, data)
-        }
-    })
 }

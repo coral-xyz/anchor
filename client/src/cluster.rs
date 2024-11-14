@@ -3,20 +3,15 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use url::Url;
 
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Cluster {
     Testnet,
     Mainnet,
     Devnet,
+    #[default]
     Localnet,
     Debug,
     Custom(String, String),
-}
-
-impl Default for Cluster {
-    fn default() -> Self {
-        Cluster::Localnet
-    }
 }
 
 impl FromStr for Cluster {
@@ -28,16 +23,15 @@ impl FromStr for Cluster {
             "d" | "devnet" => Ok(Cluster::Devnet),
             "l" | "localnet" => Ok(Cluster::Localnet),
             "g" | "debug" => Ok(Cluster::Debug),
-            url if url.contains("http") => {
-                let http_url = url;
+            _ if s.starts_with("http") => {
+                let http_url = s;
 
-                // Websocket port is always +1 the http port.
+                // Taken from:
+                // https://github.com/solana-labs/solana/blob/aea8f0df1610248d29d8ca3bc0d60e9fabc99e31/web3.js/src/util/url.ts
+
                 let mut ws_url = Url::parse(http_url)?;
                 if let Some(port) = ws_url.port() {
                     ws_url.set_port(Some(port + 1))
-                        .map_err(|_| anyhow!("Unable to set port"))?;
-                } else {
-                    ws_url.set_port(Some(8900))
                         .map_err(|_| anyhow!("Unable to set port"))?;
                 }
                 if ws_url.scheme() == "https" {
@@ -68,7 +62,7 @@ impl std::fmt::Display for Cluster {
             Cluster::Debug => "debug",
             Cluster::Custom(url, _ws_url) => url,
         };
-        write!(f, "{}", clust_str)
+        write!(f, "{clust_str}")
     }
 }
 
@@ -88,8 +82,8 @@ impl Cluster {
             Cluster::Devnet => "wss://api.devnet.solana.com",
             Cluster::Testnet => "wss://api.testnet.solana.com",
             Cluster::Mainnet => "wss://api.mainnet-beta.solana.com",
-            Cluster::Localnet => "ws://127.0.0.1:9000",
-            Cluster::Debug => "ws://34.90.18.145:9000",
+            Cluster::Localnet => "ws://127.0.0.1:8900",
+            Cluster::Debug => "ws://34.90.18.145:8900",
             Cluster::Custom(_url, ws_url) => ws_url,
         }
     }
@@ -134,7 +128,7 @@ mod tests {
         let url = "http://my-url.com/";
         let cluster = Cluster::from_str(url).unwrap();
         assert_eq!(
-            Cluster::Custom(url.to_string(), "ws://my-url.com:8900/".to_string()),
+            Cluster::Custom(url.to_string(), "ws://my-url.com/".to_string()),
             cluster
         );
     }
@@ -153,7 +147,17 @@ mod tests {
         let url = "https://my-url.com/";
         let cluster = Cluster::from_str(url).unwrap();
         assert_eq!(
-            Cluster::Custom(url.to_string(), "wss://my-url.com:8900/".to_string()),
+            Cluster::Custom(url.to_string(), "wss://my-url.com/".to_string()),
+            cluster
+        );
+    }
+
+    #[test]
+    fn test_upper_case() {
+        let url = "http://my-url.com/FooBar";
+        let cluster = Cluster::from_str(url).unwrap();
+        assert_eq!(
+            Cluster::Custom(url.to_string(), "ws://my-url.com/FooBar".to_string()),
             cluster
         );
     }

@@ -1,7 +1,8 @@
-use anchor_attribute_error::error_code;
+use anchor_lang::error_code;
 use borsh::maybestd::io::Error as BorshIoError;
-use solana_program::program_error::ProgramError;
+use solana_program::{program_error::ProgramError, pubkey::Pubkey};
 use std::fmt::{Debug, Display};
+use std::num::TryFromIntError;
 
 /// The starting point for user defined error codes.
 pub const ERROR_CODE_OFFSET: u32 = 6000;
@@ -12,7 +13,6 @@ pub const ERROR_CODE_OFFSET: u32 = 6000;
 /// - &gt;= 1000 IDL error codes
 /// - &gt;= 2000 constraint error codes
 /// - &gt;= 3000 account error codes
-/// - = 4000 state error code
 /// - &gt;= 4100 misc error codes
 /// - = 5000 deprecated error code
 ///
@@ -21,8 +21,8 @@ pub const ERROR_CODE_OFFSET: u32 = 6000;
 #[error_code(offset = 0)]
 pub enum ErrorCode {
     // Instructions
-    /// 100 - 8 byte instruction identifier not provided
-    #[msg("8 byte instruction identifier not provided")]
+    /// 100 - Instruction discriminator not provided
+    #[msg("Instruction discriminator not provided")]
     InstructionMissing = 100,
     /// 101 - Fallback functions are not supported
     #[msg("Fallback functions are not supported")]
@@ -41,6 +41,14 @@ pub enum ErrorCode {
     /// 1001 - Invalid program given to the IDL instruction
     #[msg("Invalid program given to the IDL instruction")]
     IdlInstructionInvalidProgram,
+    /// 1002 - IDL Account must be empty in order to resize
+    #[msg("IDL account must be empty in order to resize, try closing first")]
+    IdlAccountNotEmpty,
+
+    // Event instructions
+    /// 1500 - The program was compiled without `event-cpi` feature
+    #[msg("The program was compiled without `event-cpi` feature")]
+    EventInstructionStub = 1500,
 
     // Constraints
     /// 2000 - A mut constraint was violated
@@ -67,8 +75,8 @@ pub enum ErrorCode {
     /// 2007 - An executable constraint was violated
     #[msg("An executable constraint was violated")]
     ConstraintExecutable,
-    /// 2008 - A state constraint was violated
-    #[msg("A state constraint was violated")]
+    /// 2008 - Deprecated Error, feel free to replace with something else
+    #[msg("Deprecated Error, feel free to replace with something else")]
     ConstraintState,
     /// 2009 - An associated constraint was violated
     #[msg("An associated constraint was violated")]
@@ -105,16 +113,103 @@ pub enum ErrorCode {
     /// 2019 - A space constraint was violated
     #[msg("A space constraint was violated")]
     ConstraintSpace,
+    /// 2020 - A required account for the constraint is None
+    #[msg("A required account for the constraint is None")]
+    ConstraintAccountIsNone,
+    /// The token token is intentional -> a token program for the token account.
+    ///
+    /// 2021 - A token account token program constraint was violated
+    #[msg("A token account token program constraint was violated")]
+    ConstraintTokenTokenProgram,
+    /// 2022 - A mint token program constraint was violated
+    #[msg("A mint token program constraint was violated")]
+    ConstraintMintTokenProgram,
+    /// 2023 - A mint token program constraint was violated
+    #[msg("An associated token account token program constraint was violated")]
+    ConstraintAssociatedTokenTokenProgram,
+    /// Extension constraints
+    ///
+    /// 2024 - A group pointer extension constraint was violated
+    #[msg("A group pointer extension constraint was violated")]
+    ConstraintMintGroupPointerExtension,
+    /// 2025 - A group pointer extension authority constraint was violated
+    #[msg("A group pointer extension authority constraint was violated")]
+    ConstraintMintGroupPointerExtensionAuthority,
+    /// 2026 - A group pointer extension group address constraint was violated
+    #[msg("A group pointer extension group address constraint was violated")]
+    ConstraintMintGroupPointerExtensionGroupAddress,
+    /// 2027 - A group member pointer extension constraint was violated
+    #[msg("A group member pointer extension constraint was violated")]
+    ConstraintMintGroupMemberPointerExtension,
+    /// 2028 - A group member pointer extension authority constraint was violated
+    #[msg("A group member pointer extension authority constraint was violated")]
+    ConstraintMintGroupMemberPointerExtensionAuthority,
+    /// 2029 - A group member pointer extension member address constraint was violated
+    #[msg("A group member pointer extension group address constraint was violated")]
+    ConstraintMintGroupMemberPointerExtensionMemberAddress,
+    /// 2030 - A metadata pointer extension constraint was violated
+    #[msg("A metadata pointer extension constraint was violated")]
+    ConstraintMintMetadataPointerExtension,
+    /// 2031 - A metadata pointer extension authority constraint was violated
+    #[msg("A metadata pointer extension authority constraint was violated")]
+    ConstraintMintMetadataPointerExtensionAuthority,
+    /// 2032 - A metadata pointer extension metadata address constraint was violated
+    #[msg("A metadata pointer extension metadata address constraint was violated")]
+    ConstraintMintMetadataPointerExtensionMetadataAddress,
+    /// 2033 - A close authority extension constraint was violated
+    #[msg("A close authority constraint was violated")]
+    ConstraintMintCloseAuthorityExtension,
+    /// 2034 - A close authority extension authority constraint was violated
+    #[msg("A close authority extension authority constraint was violated")]
+    ConstraintMintCloseAuthorityExtensionAuthority,
+    /// 2035 - A permanent delegate extension constraint was violated
+    #[msg("A permanent delegate extension constraint was violated")]
+    ConstraintMintPermanentDelegateExtension,
+    /// 2036 - A permanent delegate extension authority constraint was violated
+    #[msg("A permanent delegate extension delegate constraint was violated")]
+    ConstraintMintPermanentDelegateExtensionDelegate,
+    /// 2037 - A transfer hook extension constraint was violated
+    #[msg("A transfer hook extension constraint was violated")]
+    ConstraintMintTransferHookExtension,
+    /// 2038 - A transfer hook extension authority constraint was violated
+    #[msg("A transfer hook extension authority constraint was violated")]
+    ConstraintMintTransferHookExtensionAuthority,
+    /// 2039 - A transfer hook extension transfer hook program id constraint was violated
+    #[msg("A transfer hook extension transfer hook program id constraint was violated")]
+    ConstraintMintTransferHookExtensionProgramId,
+
+    // Require
+    /// 2500 - A require expression was violated
+    #[msg("A require expression was violated")]
+    RequireViolated = 2500,
+    /// 2501 - A require_eq expression was violated
+    #[msg("A require_eq expression was violated")]
+    RequireEqViolated,
+    /// 2502 - A require_keys_eq expression was violated
+    #[msg("A require_keys_eq expression was violated")]
+    RequireKeysEqViolated,
+    /// 2503 - A require_neq expression was violated
+    #[msg("A require_neq expression was violated")]
+    RequireNeqViolated,
+    /// 2504 - A require_keys_neq expression was violated
+    #[msg("A require_keys_neq expression was violated")]
+    RequireKeysNeqViolated,
+    /// 2505 - A require_gt expression was violated
+    #[msg("A require_gt expression was violated")]
+    RequireGtViolated,
+    /// 2506 - A require_gte expression was violated
+    #[msg("A require_gte expression was violated")]
+    RequireGteViolated,
 
     // Accounts.
     /// 3000 - The account discriminator was already set on this account
     #[msg("The account discriminator was already set on this account")]
     AccountDiscriminatorAlreadySet = 3000,
-    /// 3001 - No 8 byte discriminator was found on the account
-    #[msg("No 8 byte discriminator was found on the account")]
+    /// 3001 - No discriminator was found on the account
+    #[msg("No discriminator was found on the account")]
     AccountDiscriminatorNotFound,
-    /// 3002 - 8 byte discriminator did not match what was expected
-    #[msg("8 byte discriminator did not match what was expected")]
+    /// 3002 - Account discriminator did not match what was expected
+    #[msg("Account discriminator did not match what was expected")]
     AccountDiscriminatorMismatch,
     /// 3003 - Failed to deserialize the account
     #[msg("Failed to deserialize the account")]
@@ -155,16 +250,23 @@ pub enum ErrorCode {
     /// 3015 - The given public key does not match the required sysvar
     #[msg("The given public key does not match the required sysvar")]
     AccountSysvarMismatch,
-
-    // State.
-    /// 4000 - The given state account does not have the correct address
-    #[msg("The given state account does not have the correct address")]
-    StateInvalidAddress = 4000,
+    /// 3016 - The account reallocation exceeds the MAX_PERMITTED_DATA_INCREASE limit
+    #[msg("The account reallocation exceeds the MAX_PERMITTED_DATA_INCREASE limit")]
+    AccountReallocExceedsLimit,
+    /// 3017 - The account was duplicated for more than one reallocation
+    #[msg("The account was duplicated for more than one reallocation")]
+    AccountDuplicateReallocs,
 
     // Miscellaneous
     /// 4100 - The declared program id does not match actual program id
     #[msg("The declared program id does not match the actual program id")]
     DeclaredProgramIdMismatch = 4100,
+    /// 4101 - You cannot/should not initialize the payer account as a program account
+    #[msg("You cannot/should not initialize the payer account as a program account")]
+    TryingToInitPayerAsProgramAccount = 4101,
+    /// 4102 - Invalid numeric conversion error
+    #[msg("Error during numeric conversion")]
+    InvalidNumericConversion = 4102,
 
     // Deprecated
     /// 5000 - The API being used is deprecated and should no longer be used
@@ -172,10 +274,10 @@ pub enum ErrorCode {
     Deprecated = 5000,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Error {
-    AnchorError(AnchorError),
-    ProgramError(ProgramErrorWithOrigin),
+    AnchorError(Box<AnchorError>),
+    ProgramError(Box<ProgramErrorWithOrigin>),
 }
 
 impl std::error::Error for Error {}
@@ -189,32 +291,38 @@ impl Display for Error {
     }
 }
 
-impl Display for AnchorError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Debug::fmt(&self, f)
-    }
-}
-
 impl From<AnchorError> for Error {
     fn from(ae: AnchorError) -> Self {
-        Self::AnchorError(ae)
+        Self::AnchorError(Box::new(ae))
     }
 }
 
 impl From<ProgramError> for Error {
     fn from(program_error: ProgramError) -> Self {
-        Self::ProgramError(program_error.into())
+        Self::ProgramError(Box::new(program_error.into()))
     }
 }
 impl From<BorshIoError> for Error {
     fn from(error: BorshIoError) -> Self {
-        Error::ProgramError(ProgramError::from(error).into())
+        Error::ProgramError(Box::new(ProgramError::from(error).into()))
     }
 }
 
 impl From<ProgramErrorWithOrigin> for Error {
     fn from(pe: ProgramErrorWithOrigin) -> Self {
-        Self::ProgramError(pe)
+        Self::ProgramError(Box::new(pe))
+    }
+}
+
+impl From<TryFromIntError> for Error {
+    fn from(e: TryFromIntError) -> Self {
+        Self::AnchorError(Box::new(AnchorError {
+            error_name: ErrorCode::InvalidNumericConversion.name(),
+            error_code_number: ErrorCode::InvalidNumericConversion.into(),
+            error_msg: format!("{}", e),
+            error_origin: None,
+            compared_values: None,
+        }))
     }
 }
 
@@ -228,16 +336,51 @@ impl Error {
 
     pub fn with_account_name(mut self, account_name: impl ToString) -> Self {
         match &mut self {
-            Error::AnchorError(ae) => ae.account_name = Some(account_name.to_string()),
-            Error::ProgramError(pe) => pe.account_name = Some(account_name.to_string()),
+            Error::AnchorError(ae) => {
+                ae.error_origin = Some(ErrorOrigin::AccountName(account_name.to_string()));
+            }
+            Error::ProgramError(pe) => {
+                pe.error_origin = Some(ErrorOrigin::AccountName(account_name.to_string()));
+            }
         };
         self
     }
 
     pub fn with_source(mut self, source: Source) -> Self {
         match &mut self {
-            Error::AnchorError(ae) => ae.source = Some(source),
-            Error::ProgramError(pe) => pe.source = Some(source),
+            Error::AnchorError(ae) => {
+                ae.error_origin = Some(ErrorOrigin::Source(source));
+            }
+            Error::ProgramError(pe) => {
+                pe.error_origin = Some(ErrorOrigin::Source(source));
+            }
+        };
+        self
+    }
+
+    pub fn with_pubkeys(mut self, pubkeys: (Pubkey, Pubkey)) -> Self {
+        let pubkeys = Some(ComparedValues::Pubkeys((pubkeys.0, pubkeys.1)));
+        match &mut self {
+            Error::AnchorError(ae) => ae.compared_values = pubkeys,
+            Error::ProgramError(pe) => pe.compared_values = pubkeys,
+        };
+        self
+    }
+
+    pub fn with_values(mut self, values: (impl ToString, impl ToString)) -> Self {
+        match &mut self {
+            Error::AnchorError(ae) => {
+                ae.compared_values = Some(ComparedValues::Values((
+                    values.0.to_string(),
+                    values.1.to_string(),
+                )))
+            }
+            Error::ProgramError(pe) => {
+                pe.compared_values = Some(ComparedValues::Values((
+                    values.0.to_string(),
+                    values.1.to_string(),
+                )))
+            }
         };
         self
     }
@@ -246,9 +389,17 @@ impl Error {
 #[derive(Debug)]
 pub struct ProgramErrorWithOrigin {
     pub program_error: ProgramError,
-    pub source: Option<Source>,
-    pub account_name: Option<String>,
+    pub error_origin: Option<ErrorOrigin>,
+    pub compared_values: Option<ComparedValues>,
 }
+
+// Two ProgramErrors are equal when they have the same error code
+impl PartialEq for ProgramErrorWithOrigin {
+    fn eq(&self, other: &Self) -> bool {
+        self.program_error == other.program_error
+    }
+}
+impl Eq for ProgramErrorWithOrigin {}
 
 impl Display for ProgramErrorWithOrigin {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -258,31 +409,59 @@ impl Display for ProgramErrorWithOrigin {
 
 impl ProgramErrorWithOrigin {
     pub fn log(&self) {
-        if let Some(source) = &self.source {
-            anchor_lang::solana_program::msg!(
-                "ProgramError thrown in {}:{}. Error Code: {:?}. Error Number: {}. Error Message: {}.",
-                source.filename,
-                source.line,
-                self.program_error,
-                u64::from(self.program_error.clone()),
-                self.program_error
-            );
-        } else if let Some(account_name) = &self.account_name {
-            anchor_lang::solana_program::log::sol_log(&format!(
-                "ProgramError caused by account: {}. Error Code: {:?}. Error Number: {}. Error Message: {}.",
-                account_name,
-                self.program_error,
-                u64::from(self.program_error.clone()),
-                self.program_error
-            ));
-        } else {
-            anchor_lang::solana_program::log::sol_log(&format!(
-                "ProgramError occurred. Error Code: {:?}. Error Number: {}. Error Message: {}.",
-                self.program_error,
-                u64::from(self.program_error.clone()),
-                self.program_error
-            ));
+        match &self.error_origin {
+            None => {
+                anchor_lang::solana_program::msg!(
+                    "ProgramError occurred. Error Code: {:?}. Error Number: {}. Error Message: {}.",
+                    self.program_error,
+                    u64::from(self.program_error.clone()),
+                    self.program_error
+                );
+            }
+            Some(ErrorOrigin::Source(source)) => {
+                anchor_lang::solana_program::msg!(
+                    "ProgramError thrown in {}:{}. Error Code: {:?}. Error Number: {}. Error Message: {}.",
+                    source.filename,
+                    source.line,
+                    self.program_error,
+                    u64::from(self.program_error.clone()),
+                    self.program_error
+                );
+            }
+            Some(ErrorOrigin::AccountName(account_name)) => {
+                // using sol_log because msg! wrongly interprets 5 inputs as u64
+                anchor_lang::solana_program::log::sol_log(&format!(
+                    "ProgramError caused by account: {}. Error Code: {:?}. Error Number: {}. Error Message: {}.",
+                    account_name,
+                    self.program_error,
+                    u64::from(self.program_error.clone()),
+                    self.program_error
+                ));
+            }
         }
+        match &self.compared_values {
+            Some(ComparedValues::Pubkeys((left, right))) => {
+                anchor_lang::solana_program::msg!("Left:");
+                left.log();
+                anchor_lang::solana_program::msg!("Right:");
+                right.log();
+            }
+            Some(ComparedValues::Values((left, right))) => {
+                anchor_lang::solana_program::msg!("Left: {}", left);
+                anchor_lang::solana_program::msg!("Right: {}", right);
+            }
+            None => (),
+        }
+    }
+
+    pub fn with_source(mut self, source: Source) -> Self {
+        self.error_origin = Some(ErrorOrigin::Source(source));
+        self
+    }
+
+    pub fn with_account_name(mut self, account_name: impl ToString) -> Self {
+        self.error_origin = Some(ErrorOrigin::AccountName(account_name.to_string()));
+        self
     }
 }
 
@@ -290,10 +469,22 @@ impl From<ProgramError> for ProgramErrorWithOrigin {
     fn from(program_error: ProgramError) -> Self {
         Self {
             program_error,
-            source: None,
-            account_name: None,
+            error_origin: None,
+            compared_values: None,
         }
     }
+}
+
+#[derive(Debug)]
+pub enum ComparedValues {
+    Values((String, String)),
+    Pubkeys((Pubkey, Pubkey)),
+}
+
+#[derive(Debug)]
+pub enum ErrorOrigin {
+    Source(Source),
+    AccountName(String),
 }
 
 #[derive(Debug)]
@@ -301,49 +492,87 @@ pub struct AnchorError {
     pub error_name: String,
     pub error_code_number: u32,
     pub error_msg: String,
-    pub source: Option<Source>,
-    pub account_name: Option<String>,
+    pub error_origin: Option<ErrorOrigin>,
+    pub compared_values: Option<ComparedValues>,
 }
 
 impl AnchorError {
     pub fn log(&self) {
-        if let Some(source) = &self.source {
-            anchor_lang::solana_program::msg!(
-                "AnchorError thrown in {}:{}. Error Code: {}. Error Number: {}. Error Message: {}.",
-                source.filename,
-                source.line,
-                self.error_name,
-                self.error_code_number,
-                self.error_msg
-            );
-        } else if let Some(account_name) = &self.account_name {
-            anchor_lang::solana_program::log::sol_log(&format!(
-                "AnchorError caused by account: {}. Error Code: {}. Error Number: {}. Error Message: {}.",
-                account_name,
-                self.error_name,
-                self.error_code_number,
-                self.error_msg
-            ));
-        } else {
-            anchor_lang::solana_program::log::sol_log(&format!(
-                "AnchorError occurred. Error Code: {}. Error Number: {}. Error Message: {}.",
-                self.error_name, self.error_code_number, self.error_msg
-            ));
+        match &self.error_origin {
+            None => {
+                anchor_lang::solana_program::log::sol_log(&format!(
+                    "AnchorError occurred. Error Code: {}. Error Number: {}. Error Message: {}.",
+                    self.error_name, self.error_code_number, self.error_msg
+                ));
+            }
+            Some(ErrorOrigin::Source(source)) => {
+                anchor_lang::solana_program::msg!(
+                    "AnchorError thrown in {}:{}. Error Code: {}. Error Number: {}. Error Message: {}.",
+                    source.filename,
+                    source.line,
+                    self.error_name,
+                    self.error_code_number,
+                    self.error_msg
+                );
+            }
+            Some(ErrorOrigin::AccountName(account_name)) => {
+                anchor_lang::solana_program::log::sol_log(&format!(
+                    "AnchorError caused by account: {}. Error Code: {}. Error Number: {}. Error Message: {}.",
+                    account_name,
+                    self.error_name,
+                    self.error_code_number,
+                    self.error_msg
+                ));
+            }
+        }
+        match &self.compared_values {
+            Some(ComparedValues::Pubkeys((left, right))) => {
+                anchor_lang::solana_program::msg!("Left:");
+                left.log();
+                anchor_lang::solana_program::msg!("Right:");
+                right.log();
+            }
+            Some(ComparedValues::Values((left, right))) => {
+                anchor_lang::solana_program::msg!("Left: {}", left);
+                anchor_lang::solana_program::msg!("Right: {}", right);
+            }
+            None => (),
         }
     }
+
+    pub fn with_source(mut self, source: Source) -> Self {
+        self.error_origin = Some(ErrorOrigin::Source(source));
+        self
+    }
+
+    pub fn with_account_name(mut self, account_name: impl ToString) -> Self {
+        self.error_origin = Some(ErrorOrigin::AccountName(account_name.to_string()));
+        self
+    }
 }
+
+impl Display for AnchorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(&self, f)
+    }
+}
+
+/// Two `AnchorError`s are equal when they have the same error code
+impl PartialEq for AnchorError {
+    fn eq(&self, other: &Self) -> bool {
+        self.error_code_number == other.error_code_number
+    }
+}
+
+impl Eq for AnchorError {}
 
 impl std::convert::From<Error> for anchor_lang::solana_program::program_error::ProgramError {
     fn from(e: Error) -> anchor_lang::solana_program::program_error::ProgramError {
         match e {
-            Error::AnchorError(AnchorError {
-                error_name: _,
-                error_code_number,
-                error_msg: _,
-                source: _,
-                account_name: _,
-            }) => {
-                anchor_lang::solana_program::program_error::ProgramError::Custom(error_code_number)
+            Error::AnchorError(error) => {
+                anchor_lang::solana_program::program_error::ProgramError::Custom(
+                    error.error_code_number,
+                )
             }
             Error::ProgramError(program_error) => program_error.program_error,
         }

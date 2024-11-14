@@ -1,23 +1,22 @@
 [package]
 name = "anchor-derive-accounts"
-version = "0.22.1"
-authors = ["Serum Foundation <foundation@projectserum.com>"]
-repository = "https://github.com/project-serum/anchor"
+version = "0.30.1"
+authors = ["Anchor Maintainers <accounts@200ms.io>"]
+repository = "https://github.com/coral-xyz/anchor"
 license = "Apache-2.0"
 description = "Anchor Derive macro for accounts"
-edition = "2018"
+edition = "2021"
 
 [lib]
 proc-macro = true
 
 [features]
-init-if-needed = ["anchor-syn/init-if-needed"]
-default = []
+allow-missing-optionals = ["anchor-syn/allow-missing-optionals"]
 anchor-debug = ["anchor-syn/anchor-debug"]
+idl-build = ["anchor-syn/idl-build"]
+init-if-needed = ["anchor-syn/init-if-needed"]
 
 [dependencies]
-proc-macro2 = "1.0"
-quote = "1.0"
-syn = { version = "1.0.60", features = ["full"] }
-anyhow = "1.0.32"
-anchor-syn = { path = "../../syn", version = "0.22.1" }
+anchor-syn = { path = "../../syn", version = "0.30.1" }
+quote = "1"
+syn = { version = "1", features = ["full"] }
