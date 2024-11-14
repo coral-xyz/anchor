@@ -1941,8 +1941,8 @@ fn _build_rust_cwd(
     if std::env::var("HOME").is_err() {
         build_command.env(
             "HOME",
-            std::env::var("USERPROFILE").map_err(|e| {
-                anyhow!("env variable 'HOME' not set and could not read 'USERPROFILE': {e}")
+            std::env::var_os("USERPROFILE").ok_or_else(|| {
+                anyhow!("env variable 'HOME' not set and could not read 'USERPROFILE'")
             })?,
         );
     }
