@@ -1533,7 +1533,7 @@ fn build_rust_cwd(
     // build-sbf depends on cargo metadata, which in turn depends on glob
     // to find packages in a workspace
     // but glob breaks on UNC paths like \\?\C:\...\packages\*
-    // so on windows, find the relative path of the package and use
+    // so on windows, use the relative path of the package
     // https://github.com/rust-lang/glob/issues/132
     #[cfg(windows)]
     {
@@ -1932,7 +1932,8 @@ fn _build_rust_cwd(
 ) -> Result<()> {
     let mut build_command = std::process::Command::new("cargo");
 
-    // TODO: fix upstream in solana-build-sbf
+    // TODO: remove once all supported versions include the fix
+    // https://github.com/anza-xyz/agave/pull/3597
     #[cfg(windows)]
     if std::env::var("HOME").is_err() {
         build_command.env(
