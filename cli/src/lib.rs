@@ -738,7 +738,7 @@ fn restore_toolchain(restore_cbs: RestoreToolchainCallbacks) -> Result<()> {
 
 /// Get the system's default license - what 'npm init' would use.
 fn get_npm_init_license() -> Result<String> {
-    let npm_init_license_output = std::process::Command::new("npm")
+    let npm_init_license_output = std::process::Command::new(PackageManager::NPM.executable_name())
         .arg("config")
         .arg("get")
         .arg("init-license")
@@ -1000,8 +1000,7 @@ fn init(
     let test_script = test_template.get_test_script(javascript, &package_manager);
     cfg.scripts.insert("test".to_owned(), test_script);
 
-    let package_manager_cmd = package_manager.to_string();
-    cfg.toolchain.package_manager = Some(package_manager);
+    cfg.toolchain.package_manager = Some(package_manager.clone());
 
     let mut localnet = BTreeMap::new();
     let program_id = rust_template::get_or_create_program_id(&rust_name);
@@ -1077,14 +1076,14 @@ fn init(
     )?;
 
     if !no_install {
-        let package_manager_result = install_node_modules(&package_manager_cmd)?;
+        let package_manager_result = install_node_modules(&package_manager)?;
 
-        if !package_manager_result.status.success() && package_manager_cmd != "npm" {
+        if !package_manager_result.status.success() && package_manager != PackageManager::NPM {
             println!(
                 "Failed {} install will attempt to npm install",
-                package_manager_cmd
+                package_manager
             );
-            install_node_modules("npm")?;
+            install_node_modules(&PackageManager::NPM)?;
         } else {
             eprintln!("Failed to install node modules");
         }
@@ -1107,22 +1106,13 @@ fn init(
     Ok(())
 }
 
-fn install_node_modules(cmd: &str) -> Result<std::process::Output> {
-    if cfg!(target_os = "windows") {
-        std::process::Command::new("cmd")
-            .arg(format!("/C {cmd} install"))
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .output()
-            .map_err(|e| anyhow::format_err!("{} install failed: {}", cmd, e.to_string()))
-    } else {
-        std::process::Command::new(cmd)
-            .arg("install")
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .output()
-            .map_err(|e| anyhow::format_err!("{} install failed: {}", cmd, e.to_string()))
-    }
+fn install_node_modules(cmd: &PackageManager) -> Result<std::process::Output> {
+    std::process::Command::new(cmd.executable_name())
+        .arg("install")
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .output()
+        .map_err(|e| anyhow::format_err!("{} install failed: {}", cmd, e.to_string()))
 }
 
 // Creates a new program crate in the `programs/<name>` directory.
