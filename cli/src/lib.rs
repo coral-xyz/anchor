@@ -2242,7 +2242,6 @@ pub enum BinVerificationState {
         upgrade_authority_address: Option<Pubkey>,
     },
 }
-
 fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
     match subcmd {
         IdlCommand::Init {
