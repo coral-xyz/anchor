@@ -1076,9 +1076,22 @@ fn init(
     )?;
 
     if !no_install {
-        let package_manager_result = install_node_modules(&package_manager)?;
-
-        if !package_manager_result.status.success() && package_manager != PackageManager::NPM {
+        let package_manager_result = install_node_modules(&package_manager);
+        // if the package manager is NOT `npm` and:
+        // 1. the install command failed to run (eg: binary not found), OR
+        // 2. the install command ran but didn't finish successfully
+        // then retry the install with npm
+        if package_manager != PackageManager::NPM
+            && package_manager_result.map_or_else(
+                |err| {
+                    // command failed to run
+                    eprintln!("{}", err);
+                    true
+                },
+                // command ran but didn't finish successfully
+                |output| !output.status.success(),
+            )
+        {
             println!(
                 "Failed {} install will attempt to npm install",
                 package_manager
