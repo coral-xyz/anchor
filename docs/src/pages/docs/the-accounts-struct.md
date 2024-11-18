@@ -173,7 +173,7 @@ pub struct Initialize<'info> {
 The doc comment needs to be a [line or block doc comment](https://doc.rust-lang.org/reference/comments.html#doc-comments) (/// or /\*\*) to be interpreted as doc attribute by Rust. Double slash comments (//) are not interpreted as such.
 {% /callout %}
 
-#### Disabling safety checks
+### Disabling safety checks
 
 For purposes like quick prototyping, you can disable the safety checks by appending the `--skip-lint` option to Anchor CLI commands:
 
