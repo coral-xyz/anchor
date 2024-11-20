@@ -12,11 +12,12 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             let accounts_ident: proc_macro2::TokenStream = format!("crate::cpi::accounts::{}", &ix.anchor_ident.to_string()).parse().unwrap();
             let cpi_method = {
                 let name = &ix.raw_method.sig.ident;
-                let ix_variant = generate_ix_variant(&name, &ix.args);
+                let name_str = name.to_string();
+                let ix_variant = generate_ix_variant(&name_str, &ix.args);
                 let method_name = &ix.ident;
                 let args: Vec<&syn::PatType> = ix.args.iter().map(|arg| &arg.raw_arg).collect();
                 let discriminator = {
-                    let name = generate_ix_variant_name(name.to_string());
+                    let name = generate_ix_variant_name(&name_str);
                     quote! { <instruction::#name as anchor_lang::Discriminator>::DISCRIMINATOR }
                 };
                 let ret_type = &ix.returns.ty.to_token_stream();

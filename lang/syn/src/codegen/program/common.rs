@@ -23,7 +23,7 @@ pub fn gen_discriminator(namespace: &str, name: impl ToString) -> proc_macro2::T
     format!("&{:?}", discriminator).parse().unwrap()
 }
 
-pub fn generate_ix_variant(name: String, args: &[IxArg]) -> proc_macro2::TokenStream {
+pub fn generate_ix_variant(name: &str, args: &[IxArg]) -> proc_macro2::TokenStream {
     let ix_arg_names: Vec<&syn::Ident> = args.iter().map(|arg| &arg.name).collect();
     let ix_name_camel = generate_ix_variant_name(name);
 
@@ -40,7 +40,7 @@ pub fn generate_ix_variant(name: String, args: &[IxArg]) -> proc_macro2::TokenSt
     }
 }
 
-pub fn generate_ix_variant_name(name: String) -> proc_macro2::TokenStream {
+pub fn generate_ix_variant_name(name: &str) -> proc_macro2::TokenStream {
     let n = name.to_camel_case();
     n.parse().unwrap()
 }
