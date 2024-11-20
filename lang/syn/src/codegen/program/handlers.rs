@@ -1,7 +1,6 @@
 use crate::codegen::program::common::*;
 use crate::program_codegen::idl::idl_accounts_and_functions;
 use crate::Program;
-use heck::CamelCase;
 use quote::{quote, ToTokens};
 
 // Generate non-inlined wrappers for each instruction handler, since Solana's
@@ -189,11 +188,6 @@ pub fn generate(program: &Program) -> proc_macro2::TokenStream {
             #event_cpi_mod
         }
     }
-}
-
-fn generate_ix_variant_name(name: String) -> proc_macro2::TokenStream {
-    let n = name.to_camel_case();
-    n.parse().unwrap()
 }
 
 /// Generate the event module based on whether the `event-cpi` feature is enabled.
