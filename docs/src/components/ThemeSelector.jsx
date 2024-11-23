@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTheme } from 'next-themes'
 import { Listbox } from '@headlessui/react'
 import clsx from 'clsx'
@@ -55,12 +55,21 @@ function SystemIcon(props) {
 
 export function ThemeSelector(props) {
   let { theme, setTheme } = useTheme()
-
+  const [mounted, setMounted] = useState(false)
   useEffect(() => {
     if (theme) {
       document.documentElement.setAttribute('data-theme', theme)
     }
   }, [theme])
+
+   // useEffect only runs on the client, so now we can safely show the UI
+   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return null
+  }
 
   return (
     <Listbox
