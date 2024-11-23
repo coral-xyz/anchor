@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { useTheme } from 'next-themes'
 import { Listbox } from '@headlessui/react'
 import clsx from 'clsx'
 
@@ -53,31 +54,26 @@ function SystemIcon(props) {
 }
 
 export function ThemeSelector(props) {
-  let [selectedTheme, setSelectedTheme] = useState()
+  let { theme, setTheme } = useTheme()
 
   useEffect(() => {
-    if (selectedTheme) {
-      document.documentElement.setAttribute('data-theme', selectedTheme.value)
-    } else {
-      setSelectedTheme(
-        themes.find(
-          (theme) =>
-            theme.value === document.documentElement.getAttribute('data-theme')
-        )
-      )
+    if (theme) {
+      document.documentElement.setAttribute('data-theme', theme)
     }
-  }, [selectedTheme])
+  }, [theme])
 
   return (
     <Listbox
       as="div"
-      value={selectedTheme}
-      onChange={setSelectedTheme}
+      value={themes.find((t) => t.value === theme) }
+      onChange={(theme) => {
+        setTheme(theme.value)
+      }}
       {...props}
     >
       <Listbox.Label className="sr-only">Theme</Listbox.Label>
       <Listbox.Button className="flex h-6 w-6 items-center justify-center rounded-lg shadow-md shadow-black/5 ring-1 ring-black/5 dark:bg-slate-700 dark:ring-inset dark:ring-white/5">
-        <span className="sr-only">{selectedTheme?.name}</span>
+        <span className="sr-only">{theme}</span>
         <LightIcon className="hidden h-4 w-4 fill-sky-400 [[data-theme=light]_&]:block" />
         <DarkIcon className="hidden h-4 w-4 fill-sky-400 [[data-theme=dark]_&]:block" />
         <LightIcon className="hidden h-4 w-4 fill-slate-400 [:not(.dark)[data-theme=system]_&]:block" />
