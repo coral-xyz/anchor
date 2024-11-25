@@ -40,7 +40,6 @@ use solana_sdk::transaction::Transaction;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::error::Error;
 use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -4774,7 +4773,7 @@ fn add_recommended_deployment_solana_args(
 
     // If no priority fee is provided, calculate a recommended fee based on recent txs.
     if !args.contains(&"--with-compute-unit-price".to_string()) {
-        let priority_fee = get_recommended_micro_lamport_fee(&client)?;
+        let priority_fee = get_recommended_micro_lamport_fee(client)?;
         augmented_args.push("--with-compute-unit-price".to_string());
         augmented_args.push(priority_fee.to_string());
     }
