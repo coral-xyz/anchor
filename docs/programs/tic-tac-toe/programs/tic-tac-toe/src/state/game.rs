@@ -96,12 +96,8 @@ impl Game {
 
         // reaching this code means the game has not been won,
         // so if there are unfilled tiles left, it's still active
-        for row in 0..=2 {
-            for column in 0..=2 {
-                if self.board[row][column].is_none() {
-                    return;
-                }
-            }
+        if self.turn < 9 {
+            return;
         }
 
         // game has not been won
