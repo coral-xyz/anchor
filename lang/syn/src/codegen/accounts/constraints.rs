@@ -225,15 +225,26 @@ pub fn generate_constraint_zeroed(
         })
         .take_while(|field| field.ident != f.ident)
         .filter(|field| field.constraints.is_zeroed())
-        .map(|field| &field.ident)
         .map(|other_field| {
-            quote! {
-                if #field.key == &#other_field.key() {
-                    return Err(
-                        anchor_lang::error::Error::from(
-                            anchor_lang::error::ErrorCode::ConstraintZero
-                        ).with_account_name(#name_str)
-                    );
+            let other = &other_field.ident;
+            let err = quote! {
+                Err(
+                    anchor_lang::error::Error::from(
+                        anchor_lang::error::ErrorCode::ConstraintZero
+                    ).with_account_name(#name_str)
+                )
+            };
+            if other_field.is_optional {
+                quote! {
+                    if #other.is_some() && #field.key == &#other.as_ref().unwrap().key() {
+                        return #err;
+                    }
+                }
+            } else {
+                quote! {
+                    if #field.key == &#other.key() {
+                        return #err;
+                    }
                 }
             }
         });
