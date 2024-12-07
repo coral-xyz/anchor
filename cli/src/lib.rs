@@ -741,7 +741,7 @@ fn restore_toolchain(restore_cbs: RestoreToolchainCallbacks) -> Result<()> {
 
 /// Get the system's default license - what 'npm init' would use.
 fn get_npm_init_license() -> Result<String> {
-    let npm_init_license_output = std::process::Command::new("npm")
+    let npm_init_license_output = std::process::Command::new(PackageManager::NPM.executable_name())
         .arg("config")
         .arg("get")
         .arg("init-license")
@@ -1005,8 +1005,7 @@ fn init(
     let test_script = test_template.get_test_script(javascript, &package_manager);
     cfg.scripts.insert("test".to_owned(), test_script);
 
-    let package_manager_cmd = package_manager.to_string();
-    cfg.toolchain.package_manager = Some(package_manager);
+    cfg.toolchain.package_manager = Some(package_manager.clone());
 
     let mut localnet = BTreeMap::new();
     let program_id = rust_template::get_or_create_program_id(&rust_name);
@@ -1082,14 +1081,27 @@ fn init(
     )?;
 
     if !no_install {
-        let package_manager_result = install_node_modules(&package_manager_cmd)?;
-
-        if !package_manager_result.status.success() && package_manager_cmd != "npm" {
+        let package_manager_result = install_node_modules(&package_manager);
+        // if the package manager is NOT `npm` and:
+        // 1. the install command failed to run (eg: binary not found), OR
+        // 2. the install command ran but didn't finish successfully
+        // then retry the install with npm
+        if package_manager != PackageManager::NPM
+            && package_manager_result.map_or_else(
+                |err| {
+                    // command failed to run
+                    eprintln!("{}", err);
+                    true
+                },
+                // command ran but didn't finish successfully
+                |output| !output.status.success(),
+            )
+        {
             println!(
                 "Failed {} install will attempt to npm install",
-                package_manager_cmd
+                package_manager
             );
-            install_node_modules("npm")?;
+            install_node_modules(&PackageManager::NPM)?;
         } else {
             eprintln!("Failed to install node modules");
         }
@@ -1112,22 +1124,13 @@ fn init(
     Ok(())
 }
 
-fn install_node_modules(cmd: &str) -> Result<std::process::Output> {
-    if cfg!(target_os = "windows") {
-        std::process::Command::new("cmd")
-            .arg(format!("/C {cmd} install"))
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .output()
-            .map_err(|e| anyhow::format_err!("{} install failed: {}", cmd, e.to_string()))
-    } else {
-        std::process::Command::new(cmd)
-            .arg("install")
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .output()
-            .map_err(|e| anyhow::format_err!("{} install failed: {}", cmd, e.to_string()))
-    }
+fn install_node_modules(cmd: &PackageManager) -> Result<std::process::Output> {
+    std::process::Command::new(cmd.executable_name())
+        .arg("install")
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .output()
+        .map_err(|e| anyhow::format_err!("{} install failed: {}", cmd, e.to_string()))
 }
 
 // Creates a new program crate in the `programs/<name>` directory.
@@ -1529,10 +1532,25 @@ fn build_rust_cwd(
     no_docs: bool,
     arch: &ProgramArch,
 ) -> Result<()> {
-    match cargo_toml.parent() {
+    #[cfg_attr(not(windows), allow(unused_mut))]
+    let mut cargo_toml_parent = match cargo_toml.parent() {
+        Some(parent) => parent.to_owned(),
         None => return Err(anyhow!("Unable to find parent")),
-        Some(p) => std::env::set_current_dir(p)?,
     };
+
+    // build-sbf depends on cargo metadata, which in turn depends on glob
+    // to find packages in a workspace
+    // but glob breaks on UNC paths like \\?\C:\...\packages\*
+    // so on windows, use the relative path of the package
+    // https://github.com/rust-lang/glob/issues/132
+    #[cfg(windows)]
+    {
+        let workspace_dir = cfg.path().parent().unwrap();
+        let relative_path = cargo_toml_parent.strip_prefix(workspace_dir.canonicalize()?)?;
+        cargo_toml_parent = std::path::absolute(workspace_dir.join(relative_path))?;
+    }
+
+    std::env::set_current_dir(cargo_toml_parent)?;
     match build_config.verifiable {
         false => _build_rust_cwd(
             cfg, no_idl, idl_out, idl_ts_out, skip_lint, no_docs, arch, cargo_args,
@@ -1920,7 +1938,21 @@ fn _build_rust_cwd(
     arch: &ProgramArch,
     cargo_args: Vec<String>,
 ) -> Result<()> {
-    let exit = std::process::Command::new("cargo")
+    let mut build_command = std::process::Command::new("cargo");
+
+    // TODO: remove once all supported versions include the fix
+    // https://github.com/anza-xyz/agave/pull/3597
+    #[cfg(windows)]
+    if std::env::var("HOME").is_err() {
+        build_command.env(
+            "HOME",
+            std::env::var_os("USERPROFILE").ok_or_else(|| {
+                anyhow!("env variable 'HOME' not set and could not read 'USERPROFILE'")
+            })?,
+        );
+    }
+
+    let exit = build_command
         .arg(arch.build_subcommand())
         .args(cargo_args.clone())
         .stdout(Stdio::inherit())
