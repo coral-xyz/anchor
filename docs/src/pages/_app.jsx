@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import { slugifyWithCounter } from '@sindresorhus/slugify'
 import PlausibleProvider from 'next-plausible'
-
+import { ThemeProvider } from 'next-themes'
 import Prism from 'prism-react-renderer/prism'
 ;(typeof global !== 'undefined' ? global : window).Prism = Prism
 
@@ -155,7 +155,7 @@ export default function App({ Component, pageProps }) {
     : []
 
   return (
-    <>
+    <ThemeProvider attribute="class" defaultTheme="system">
       <PlausibleProvider domain="anchor-lang.com" trackOutboundLinks={true}>
         <Head>
           <title>{pageTitle}</title>
@@ -189,6 +189,6 @@ export default function App({ Component, pageProps }) {
           <Component {...pageProps} />
         </Layout>
       </PlausibleProvider>
-    </>
+    </ThemeProvider>
   )
 }
