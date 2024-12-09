@@ -8,8 +8,12 @@ use external::program::External;
 // Compilation check for legacy IDL (pre Anchor `0.30`)
 declare_program!(external_legacy);
 
+pub const GLOBAL: &[u8] = b"global";
+
 #[program]
 pub mod declare_program {
+    use anchor_lang::solana_program::{instruction::Instruction, program::invoke_signed};
+
     use super::*;
 
     pub fn cpi(ctx: Context<Cpi>, value: u32) -> Result<()> {
@@ -114,6 +118,33 @@ pub mod declare_program {
 
         Ok(())
     }
+
+    pub fn proxy(ctx: Context<Proxy>, data: Vec<u8>) -> Result<()> {
+        let (authority, bump) = Pubkey::find_program_address(&[GLOBAL], &ID);
+
+        let accounts = ctx
+            .remaining_accounts
+            .iter()
+            .map(|ra| AccountMeta {
+                pubkey: ra.key(),
+                is_signer: ra.is_signer || &authority == ra.key,
+                is_writable: ra.is_writable,
+            })
+            .collect();
+
+        let signer_seeds: &[&[&[u8]]] = &[&[GLOBAL, &[bump]]];
+        invoke_signed(
+            &Instruction {
+                program_id: ctx.accounts.program.key(),
+                accounts,
+                data,
+            },
+            ctx.remaining_accounts,
+            signer_seeds,
+        )?;
+
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -127,4 +158,9 @@ pub struct Cpi<'info> {
 #[derive(Accounts)]
 pub struct Utils<'info> {
     pub authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct Proxy<'info> {
+    pub program: Program<'info, External>,
 }
