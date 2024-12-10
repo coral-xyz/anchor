@@ -3272,6 +3272,7 @@ const miscTest = (
             })
             .signers([oneKp])
             .rpc();
+          throw new Error("Transaction did not fail!");
         } catch (e) {
           assert(e instanceof AnchorError);
           const err: AnchorError = e;
