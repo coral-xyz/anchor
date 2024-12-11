@@ -3241,7 +3241,7 @@ const miscTest = (
       });
     });
 
-    describe.only("`zero` constraint unique account checks", () => {
+    describe("`zero` constraint unique account checks", () => {
       it("Works with different accounts (multiple `zero`)", async () => {
         const oneKp = anchor.web3.Keypair.generate();
         const twoKp = anchor.web3.Keypair.generate();
