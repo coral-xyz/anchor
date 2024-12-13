@@ -7,7 +7,8 @@ use dirs::home_dir;
 use heck::ToSnakeCase;
 use reqwest::Url;
 use serde::de::{self, MapAccess, Visitor};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::ser::SerializeMap;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use solana_cli_config::{Config as SolanaConfig, CONFIG_FILE};
 use solana_sdk::clock::Slot;
 use solana_sdk::pubkey::Pubkey;
@@ -590,9 +591,27 @@ struct _Config {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Provider {
-    #[serde(deserialize_with = "des_cluster")]
+    #[serde(serialize_with = "ser_cluster", deserialize_with = "des_cluster")]
     cluster: Cluster,
     wallet: String,
+}
+
+fn ser_cluster<S: Serializer>(cluster: &Cluster, s: S) -> Result<S::Ok, S::Error> {
+    match cluster {
+        Cluster::Custom(http, ws) => {
+            match (Url::parse(http), Url::parse(ws)) {
+                // If `ws` was derived from `http`, serialize `http` as string
+                (Ok(h), Ok(w)) if h.domain() == w.domain() => s.serialize_str(http),
+                _ => {
+                    let mut map = s.serialize_map(Some(2))?;
+                    map.serialize_entry("http", http)?;
+                    map.serialize_entry("ws", ws)?;
+                    map.end()
+                }
+            }
+        }
+        _ => s.serialize_str(&cluster.to_string()),
+    }
 }
 
 fn des_cluster<'de, D>(deserializer: D) -> Result<Cluster, D::Error>
