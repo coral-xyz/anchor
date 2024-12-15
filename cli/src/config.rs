@@ -408,6 +408,19 @@ impl std::fmt::Display for PackageManager {
     }
 }
 
+impl PackageManager {
+    /// On Windows, node executables use the `.cmd` suffix.
+    /// If not added, `process::Command::new()` will fail to find them.
+    /// `cmd /c <command>` is a workaround but it spawns an extra process.
+    /// This method returns the correct executable name for the current platform.
+    pub fn executable_name(&self) -> String {
+        #[cfg(windows)]
+        return format!("{self}.cmd");
+        #[cfg(not(windows))]
+        return self.to_string();
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FeaturesConfig {
     /// Enable account resolution.
