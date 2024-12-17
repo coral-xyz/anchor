@@ -4,7 +4,10 @@ mod mods;
 use anchor_lang_idl::{convert::convert_idl, types::Idl};
 use anyhow::anyhow;
 use quote::{quote, ToTokens};
-use syn::parse::{Parse, ParseStream};
+use syn::{
+    parse::{Parse, ParseStream},
+    LitStr, Token,
+};
 
 use common::gen_docs;
 use mods::{
@@ -18,10 +21,30 @@ pub struct DeclareProgram {
     idl: Idl,
 }
 
+// Custom keyword for address
+mod kw {
+    syn::custom_keyword!(address);
+}
+
 impl Parse for DeclareProgram {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let name = input.parse()?;
-        let idl = get_idl(&name).map_err(|e| syn::Error::new(name.span(), e))?;
+
+        let address = if input.peek(Token![,]) {
+            input.parse::<Token![,]>()?;
+            input.parse::<kw::address>()?;
+            input.parse::<Token![=]>()?;
+
+            Some(input.parse::<LitStr>()?)
+        } else {
+            None
+        };
+
+        let mut idl = get_idl(&name).map_err(|e| syn::Error::new(name.span(), e))?;
+
+        if let Some(address) = address {
+            idl.address = address.value();
+        }
         Ok(Self { name, idl })
     }
 }
