@@ -577,8 +577,8 @@ fn override_toolchain(cfg_override: &ConfigOverride) -> Result<RestoreToolchainC
             }
 
             let output_version = std::str::from_utf8(&output.stdout)?;
-            let version = parse_version(output_version).unwrap();
-            Ok(version)
+            parse_version(output_version)
+                .ok_or_else(|| anyhow!("Failed to parse the version of `{cmd_name}`"))
         }
 
         if let Some(solana_version) = &cfg.toolchain.solana_version {
@@ -633,11 +633,10 @@ fn override_toolchain(cfg_override: &ConfigOverride) -> Result<RestoreToolchainC
                     }
 
                     // Hide the installation progress if the version is already installed
-                    let is_installed = std::str::from_utf8(&output.stdout)?.lines().any(|line| {
-                        parse_version(line)
-                            .map(|line_version| line_version == version)
-                            .unwrap_or(false)
-                    });
+                    let is_installed = std::str::from_utf8(&output.stdout)?
+                        .lines()
+                        .filter_map(parse_version)
+                        .any(|line_version| line_version == version);
                     let (stderr, stdout) = if is_installed {
                         (Stdio::null(), Stdio::null())
                     } else {
