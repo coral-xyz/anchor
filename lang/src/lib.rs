@@ -45,6 +45,7 @@ pub mod event;
 pub mod idl;
 pub mod system_program;
 mod vec;
+pub mod address_lookup_table_program;
 
 #[cfg(feature = "lazy-account")]
 mod lazy;
