@@ -45,11 +45,12 @@ pub mod event;
 pub mod idl;
 pub mod system_program;
 mod vec;
-pub mod address_lookup_table_program;
+mod address_lookup_table_program;
 
 #[cfg(feature = "lazy-account")]
 mod lazy;
 
+pub use crate::address_lookup_table_program::*;
 pub use crate::bpf_upgradeable_state::*;
 pub use anchor_attribute_access_control::access_control;
 pub use anchor_attribute_account::{account, declare_id, pubkey, zero_copy};

@@ -1,7 +1,8 @@
 use crate::prelude::*;
 use crate::solana_program::address_lookup_table;
-use solana_program::pubkey::Pubkey;
 use solana_program::address_lookup_table::state::AddressLookupTable as SolanaAddressLookupTable;
+use solana_program::pubkey::Pubkey;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone)]
 pub struct AddressLookupTable;
@@ -11,8 +12,8 @@ impl anchor_lang::Id for AddressLookupTable {
     }
 }
 
-#[derive(Clone, shrinkwraprs::Shrinkwrap)]
-pub struct AddressLookupTableAccount<'info>(pub SolanaAddressLookupTable<'info>);
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AddressLookupTableAccount<'info>(SolanaAddressLookupTable<'info>);
 
 impl AccountSerialize for AddressLookupTableAccount<'_> {}
 
@@ -32,8 +33,32 @@ impl<'info> AccountDeserialize for AddressLookupTableAccount<'info> {
     }
 }
 
+impl<'info> Deref for AddressLookupTableAccount<'info> {
+    type Target = SolanaAddressLookupTable<'info>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<'info> DerefMut for AddressLookupTableAccount<'info> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 impl Owner for AddressLookupTableAccount<'_> {
     fn owner() -> Pubkey {
         address_lookup_table::program::ID
     }
 }
+
+ #[cfg(feature = "idl-build")]
+ mod idl_build {
+     use super::*;
+
+     impl crate::IdlBuild for AddressLookupTableAccount<'_> {}
+     impl crate::Discriminator for AddressLookupTableAccount<'_> {
+         const DISCRIMINATOR: &'static [u8] = &[];
+     }
+ }
