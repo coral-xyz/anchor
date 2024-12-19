@@ -8,6 +8,8 @@ on:
   pull_request:
     branches:
       - master
+    paths:
+      - VERSION
 
 env:
   DIST: dist-${{ github.ref_name }}
