@@ -68,7 +68,7 @@ describe("escrow", () => {
         [mintA, mintB] = await Promise.all(
           [
             { tokenProgram: tokenProgramIdA },
-            { tokenProgram: tokenProgramIdB }
+            { tokenProgram: tokenProgramIdB },
           ].map(({ tokenProgram }) =>
             createMint(
               connection,
@@ -235,16 +235,22 @@ describe("escrow", () => {
 
         const accounts = [
           { address: takerTokenAccountA, tokenProgramId: tokenProgramIdA },
-          { address: takerTokenAccountB, tokenProgramId: tokenProgramIdB }, 
-          { address: initializerTokenAccountA, tokenProgramId: tokenProgramIdA },
-          { address: initializerTokenAccountB, tokenProgramId: tokenProgramIdB }
+          { address: takerTokenAccountB, tokenProgramId: tokenProgramIdB },
+          {
+            address: initializerTokenAccountA,
+            tokenProgramId: tokenProgramIdA,
+          },
+          {
+            address: initializerTokenAccountB,
+            tokenProgramId: tokenProgramIdB,
+          },
         ];
 
         const [
           _takerTokenAccountA,
-          _takerTokenAccountB, 
+          _takerTokenAccountB,
           _initializerTokenAccountA,
-          _initializerTokenAccountB
+          _initializerTokenAccountB,
         ] = await Promise.all(
           accounts.map(({ address, tokenProgramId }) =>
             getAccount(connection, address, undefined, tokenProgramId)

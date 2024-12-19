@@ -1012,8 +1012,8 @@ const miscTest = (
         await setAuthority(
           connection,
           wallet.payer,
-          localClient,
-          provider.wallet.publicKey,
+          associatedToken,
+          wallet.payer,
           AuthorityType.AccountOwner,
           anchor.web3.Keypair.generate().publicKey
         );

@@ -41,7 +41,7 @@ describe("system_accounts", () => {
       authority,
       mint,
       tokenAccount,
-      authority.publicKey,
+      authority,
       1 * anchor.web3.LAMPORTS_PER_SOL
     );
 

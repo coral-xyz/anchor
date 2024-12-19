@@ -3,7 +3,6 @@ import { Program } from "@coral-xyz/anchor";
 import { AccountCommand } from "../target/types/account_command";
 import { assert } from "chai";
 import { execSync } from "child_process";
-import { sleep } from "@project-serum/common";
 
 describe("Test CLI account commands", () => {
   // Configure the client to use the local cluster.
@@ -51,8 +50,6 @@ describe("Test CLI account commands", () => {
           throw e;
         }
       }
-
-      await sleep(5000);
     }
 
     assert(output.balance === balance, "Balance deserialized incorrectly");
