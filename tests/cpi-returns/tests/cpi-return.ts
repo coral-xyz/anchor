@@ -33,7 +33,7 @@ describe("CPI return", () => {
   it("can initialize", async () => {
     await calleeProgram.methods
       .initialize()
-      .accounts({
+      .accountsPartial({
         account: cpiReturn.publicKey,
         user: provider.wallet.publicKey,
         systemProgram: SystemProgram.programId,
@@ -86,7 +86,7 @@ describe("CPI return", () => {
   it("can return a struct from a cpi", async () => {
     const tx = await callerProgram.methods
       .cpiCallReturnStruct()
-      .accounts({
+      .accountsPartial({
         cpiReturn: cpiReturn.publicKey,
         cpiReturnProgram: calleeProgram.programId,
       })
@@ -124,7 +124,7 @@ describe("CPI return", () => {
   it("can return a vec from a cpi", async () => {
     const tx = await callerProgram.methods
       .cpiCallReturnVec()
-      .accounts({
+      .accountsPartial({
         cpiReturn: cpiReturn.publicKey,
         cpiReturnProgram: calleeProgram.programId,
       })
@@ -134,7 +134,7 @@ describe("CPI return", () => {
     });
 
     const [key, data, buffer] = getReturnLog(t);
-    assert.equal(key, calleeProgram.programId);
+    assert.strictEqual(key, calleeProgram.programId);
 
     // Check for matching log on receive side
     let receiveLog = t.meta.logMessages.find(
@@ -213,7 +213,7 @@ describe("CPI return", () => {
     try {
       await calleeProgram.methods
         .initialize()
-        .accounts({
+        .accountsPartial({
           account: cpiReturn.publicKey,
           user: provider.wallet.publicKey,
           systemProgram: SystemProgram.programId,

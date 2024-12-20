@@ -27,7 +27,7 @@ describe("Test CLI account commands", () => {
         memo,
         values.map((x) => new anchor.BN(x))
       )
-      .accounts({
+      .accountsPartial({
         myAccount: myAccount.publicKey,
         user: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
@@ -52,22 +52,26 @@ describe("Test CLI account commands", () => {
       }
     }
 
-    assert(output.balance === balance, "Balance deserialized incorrectly");
-    assert(
-      output.delegate_pubkey === provider.wallet.publicKey.toBase58(),
+    assert.strictEqual(output.balance, balance, "Balance deserialized incorrectly");
+    assert.strictEqual(
+      output.delegate_pubkey,
+      provider.wallet.publicKey.toBase58(),
       "delegatePubkey deserialized incorrectly"
     );
-    assert(
-      output.sub.state.Confirmed.amount === amount,
+    assert.strictEqual(
+      output.sub.state.Confirmed.amount,
+      amount,
       "Amount deserialized incorrectly"
     );
-    assert(
-      output.sub.state.Confirmed.memo === memo,
+    assert.strictEqual(
+      output.sub.state.Confirmed.memo,
+      memo,
       "Memo deserialized incorrectly"
     );
     for (let i = 0; i < values.length; i++) {
-      assert(
-        output.sub.values[i] == values[i],
+      assert.strictEqual(
+        output.sub.values[i],
+        values[i],
         "Values deserialized incorrectly"
       );
     }

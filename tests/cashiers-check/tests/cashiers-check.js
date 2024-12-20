@@ -26,7 +26,7 @@ describe("cashiers-check", () => {
   let god = null;
   let receiver = null;
 
-  it.only("Sets up initial test state", async () => {
+  it("Sets up initial test state", async () => {
     mint = await createMint(connection, payer, walletKey, walletKey, 6);
 
     god = await createAccount(
@@ -53,7 +53,7 @@ describe("cashiers-check", () => {
 
   let checkSigner = null;
 
-  it.only("Creates a check!", async () => {
+  it("Creates a check!", async () => {
     let [_checkSigner, nonce] = PublicKey.findProgramAddressSync(
       [check.publicKey.toBuffer()],
       program.programId
