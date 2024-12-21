@@ -28,7 +28,10 @@ describe("CPI return", () => {
 
   const cpiReturn = anchor.web3.Keypair.generate();
 
-  const confirmOptions: ConfirmOptions = { commitment: "confirmed" };
+  const confirmOptions: ConfirmOptions = {
+    commitment: "confirmed",
+    maxRetries: 5,
+  };
 
   it("can initialize", async () => {
     await calleeProgram.methods
@@ -45,7 +48,7 @@ describe("CPI return", () => {
   it("can return u64 from a cpi", async () => {
     const tx = await callerProgram.methods
       .cpiCallReturnU64()
-      .accounts({
+      .accountsPartial({
         cpiReturn: cpiReturn.publicKey,
         cpiReturnProgram: calleeProgram.programId,
       })
@@ -134,7 +137,7 @@ describe("CPI return", () => {
     });
 
     const [key, data, buffer] = getReturnLog(t);
-    assert.strictEqual(key, calleeProgram.programId);
+    assert.strictEqual(key, calleeProgram.programId.toBase58());
 
     // Check for matching log on receive side
     let receiveLog = t.meta.logMessages.find(

@@ -23,7 +23,7 @@ describe("Test CLI account commands", () => {
     await program.methods
       .initialize(
         balance,
-        new anchor.BN(amount),
+        amount,
         memo,
         values.map((x) => new anchor.BN(x))
       )
@@ -52,7 +52,11 @@ describe("Test CLI account commands", () => {
       }
     }
 
-    assert.strictEqual(output.balance, balance, "Balance deserialized incorrectly");
+    assert.strictEqual(
+      output.balance,
+      balance,
+      "Balance deserialized incorrectly"
+    );
     assert.strictEqual(
       output.delegate_pubkey,
       provider.wallet.publicKey.toBase58(),
@@ -69,7 +73,7 @@ describe("Test CLI account commands", () => {
       "Memo deserialized incorrectly"
     );
     for (let i = 0; i < values.length; i++) {
-      assert.strictEqual(
+      assert.equal(
         output.sub.values[i],
         values[i],
         "Values deserialized incorrectly"
