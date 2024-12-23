@@ -3,10 +3,10 @@ name: Tests
 on:
   push:
     branches:
-      - fix/spl-token-upgrade
+      - master
   pull_request:
     branches:
-      - fix/spl-token-upgrade
+      - master
 
 jobs:
   tests:
