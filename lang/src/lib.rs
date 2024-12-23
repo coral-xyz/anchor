@@ -404,6 +404,7 @@ impl Key for Pubkey {
 /// All programs should include it via `anchor_lang::prelude::*;`.
 pub mod prelude {
     pub use super::{
+        address_lookup_table_program::{AddressLookupTable, AddressLookupTableAccount},
         access_control, account, accounts::account::Account,
         accounts::account_loader::AccountLoader, accounts::interface::Interface,
         accounts::interface_account::InterfaceAccount, accounts::program::Program,
