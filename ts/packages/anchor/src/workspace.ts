@@ -34,8 +34,13 @@ const workspace = new Proxy(
       // Override the workspace programs if the user put them in the config.
       const anchorToml = toml.parse(fs.readFileSync("Anchor.toml"));
       const clusterId = anchorToml.provider.cluster;
-      const programEntry =
-        anchorToml.programs?.[clusterId]?.[snakeCase(programName)];
+      const programs = anchorToml.programs?.[clusterId];
+      let programEntry;
+      if (programs) {
+        programEntry = Object.entries(programs).find(
+          ([key]) => camelcase(key) === programName
+        )?.[1];
+      }
 
       let idlPath: string;
       let programId;
