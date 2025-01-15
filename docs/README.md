@@ -1,7 +1,7 @@
 # Anchor Docs
 
 Created with [Fumadocs](https://fumadocs.vercel.app). Page contents located in
-[`/content/docs`](/content/docs).
+[`docs/content/docs`](/docs/content/docs).
 
 Run development server:
 
