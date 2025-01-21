@@ -62,7 +62,7 @@
     },
     {
       "source": "/docs/verifiable-builds",
-      "destination": "/docs"
+      "destination": "/docs/references/verifiable-builds"
     },
     {
       "source": "/docs/account-constraints",

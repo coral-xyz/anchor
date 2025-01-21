@@ -8,6 +8,7 @@
     "avm",
     "space",
     "type-conversion",
-    "examples"
+    "examples",
+    "verifiable-builds"
   ]
 }
