@@ -249,7 +249,7 @@ A subtle result of this hashmap structure is enforced uniqueness. When `init` is
 Creating PDAs requires them to sign the `createAccount` CPI of the system program. How does that work?
 
 PDAs are not public keys so it's impossible for them to sign anything. However, PDAs can still pseudo sign CPIs.
-In anchor, to sign with a pda you have to change `CpiContext::new(cpi_program, cpi_accounts)` to `CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds)` where the `seeds` argument are the seeds _and_ the bump the PDA was created with.
+In anchor, to sign with a pda you have to change `CpiContext::new(cpi_program, cpi_accounts)` to `CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds)` where the `seeds` argument is the seeds _and_ the bump the PDA was created with.
 When the CPI is invoked, for each account in `cpi_accounts` the Solana runtime will check whether`hash(seeds, current_program_id) == account address` is true. If yes, that account's `is_signer` flag will be turned to true.
 This means a PDA derived from some program X, may only be used to sign CPIs that originate from that program X. This means that on a high level, PDA signatures can be considered program signatures.
 
