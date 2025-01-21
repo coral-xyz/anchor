@@ -54,7 +54,7 @@
     },
     {
       "source": "/docs/contribution-guide",
-      "destination": "/docs"
+      "destination": "/docs/updates/contribution-guide"
     },
     {
       "source": "/docs/publishing-source",
