@@ -98,7 +98,7 @@
     },
     {
       "source": "/docs/security-exploits",
-      "destination": "/docs"
+      "destination": "/docs/references/security-exploits"
     }
   ]
 }

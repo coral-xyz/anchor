@@ -8,7 +8,8 @@
     "avm",
     "space",
     "type-conversion",
-    "examples",
-    "verifiable-builds"
+    "verifiable-builds",
+    "security-exploits",
+    "examples"
   ]
 }
