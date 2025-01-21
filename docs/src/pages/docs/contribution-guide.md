@@ -23,7 +23,7 @@ and engage with the maintainers in [Discord](https://discord.gg/NHHGSXAnXk).
 
 If you'd like to contribute, please claim an issue by commenting, forking, and
 opening a pull request, even if empty. This allows the maintainers to track who
-is working on what issue as to not overlap work.
+is working on what issue so as to not overlap work.
 
 ## Issue Guidelines
 
