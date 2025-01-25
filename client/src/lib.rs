@@ -221,7 +221,7 @@ pub struct EventUnsubscriber<'a> {
     _lifetime_marker: PhantomData<&'a Handle>,
 }
 
-impl<'a> EventUnsubscriber<'a> {
+impl EventUnsubscriber<'_> {
     async fn unsubscribe_internal(mut self) {
         if let Some(unsubscribe) = self.rx.recv().await {
             unsubscribe().await;
@@ -522,7 +522,7 @@ pub struct RequestBuilder<'a, C, S: 'a> {
 }
 
 // Shared implementation for all RequestBuilders
-impl<'a, C: Deref<Target = impl Signer> + Clone, S: AsSigner> RequestBuilder<'a, C, S> {
+impl<C: Deref<Target = impl Signer> + Clone, S: AsSigner> RequestBuilder<'_, C, S> {
     #[must_use]
     pub fn payer(mut self, payer: C) -> Self {
         self.payer = payer;
