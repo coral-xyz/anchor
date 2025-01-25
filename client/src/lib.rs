@@ -679,6 +679,7 @@ fn parse_logs_response<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
         if let Ok(mut execution) = Execution::new(&mut logs) {
             // Create a new peekable iterator so that we can peek at the next log whilst iterating
             let mut logs_iter = logs.iter().peekable();
+            let regex = Regex::new(r"^Program (.*) invoke.*$").unwrap();
 
             while let Some(l) = logs_iter.next() {
                 // Parse the log.
@@ -714,9 +715,8 @@ fn parse_logs_response<T: anchor_lang::Event + anchor_lang::AnchorDeserialize>(
                     // a panic during the next iteration.
                     if let Some(&next_log) = logs_iter.peek() {
                         if next_log.ends_with("invoke [1]") {
-                            let re = Regex::new(r"^Program (.*) invoke.*$").unwrap();
                             let next_instruction =
-                                re.captures(next_log).unwrap().get(1).unwrap().as_str();
+                                regex.captures(next_log).unwrap().get(1).unwrap().as_str();
                             // Within this if block, there will always be a regex match.
                             // Therefore it's safe to unwrap and the captured program ID
                             // at index 1 can also be safely unwrapped.
