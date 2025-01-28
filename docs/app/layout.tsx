@@ -13,7 +13,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <body className="flex flex-col min-h-screen">
         <RootProvider>{children}</RootProvider>
       </body>
-      <GoogleAnalytics gaId="" />
+      <GoogleAnalytics gaId="G-ZJYNM2WNM0" />
     </html>
   );
 }
