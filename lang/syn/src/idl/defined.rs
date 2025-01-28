@@ -608,7 +608,7 @@ pub fn gen_idl_type(
                                 defined.extend(def);
                                 quote! { #idl::IdlGenericArg::Type { ty: #ty } }
                             }
-                            _ => return Err(anyhow!("Unsupported generic arugment: {arg:#?}")),
+                            _ => return Err(anyhow!("Unsupported generic argument: {arg:#?}")),
                         };
                         generics.push(generic);
                     }
