@@ -1,5 +1,5 @@
 import { createMDX } from 'fumadocs-mdx/next';
-import redirectsJson from './redirects.json' assert { type: 'json' };
+import redirectsJson from './redirects.json' with { type: 'json' };
 
 const withMDX = createMDX({
   mdxOptions: {
