@@ -2679,7 +2679,7 @@
           {
             "name": "negativeTickArrayBitmap",
             "docs": [
-              "Packed initialized tick array state for start_tick_index is negitive"
+              "Packed initialized tick array state for start_tick_index is negative"
             ],
             "type": {
               "array": [
