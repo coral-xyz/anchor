@@ -1103,7 +1103,9 @@ fn init(
 
         match package_manager_result.status.code() {
             Some(status) => {
-                if status != 0 {
+                if status == 0 {
+                    eprintln!("node modules installed");
+                } else {
                     eprintln!(
                         "Failed to install node modules: {}",
                         String::from_utf8(package_manager_result.stderr)
@@ -1116,8 +1118,6 @@ fn init(
                 eprintln!("Failed to install node modules");
             }
         }
-
-        eprintln!("node modules installed");
     }
 
     if !no_git {
