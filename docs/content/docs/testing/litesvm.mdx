@@ -66,34 +66,34 @@ assert_eq!(to_account.unwrap().lamports, 64);
 ```ts tab="TypeScript"
 import { LiteSVM } from "litesvm";
 import {
-	PublicKey,
-	Transaction,
-	SystemProgram,
-	Keypair,
-	LAMPORTS_PER_SOL,
+  PublicKey,
+  Transaction,
+  SystemProgram,
+  Keypair,
+  LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 
 test("one transfer", () => {
-	const svm = new LiteSVM();
-	const payer = new Keypair();
-	svm.airdrop(payer.publicKey, BigInt(LAMPORTS_PER_SOL));
-	const receiver = PublicKey.unique();
-	const blockhash = svm.latestBlockhash();
-	const transferLamports = 1_000_000n;
-	const ixs = [
-		SystemProgram.transfer({
-			fromPubkey: payer.publicKey,
-			toPubkey: receiver,
-			lamports: transferLamports,
-		}),
-	];
-	const tx = new Transaction();
-	tx.recentBlockhash = blockhash;
-	tx.add(...ixs);
-	tx.sign(payer);
-	svm.sendTransaction(tx);
-	const balanceAfter = svm.getBalance(receiver);
-	expect(balanceAfter).toBe(transferLamports);
+  const svm = new LiteSVM();
+  const payer = new Keypair();
+  svm.airdrop(payer.publicKey, BigInt(LAMPORTS_PER_SOL));
+  const receiver = PublicKey.unique();
+  const blockhash = svm.latestBlockhash();
+  const transferLamports = 1_000_000n;
+  const ixs = [
+    SystemProgram.transfer({
+      fromPubkey: payer.publicKey,
+      toPubkey: receiver,
+      lamports: transferLamports,
+    }),
+  ];
+  const tx = new Transaction();
+  tx.recentBlockhash = blockhash;
+  tx.add(...ixs);
+  tx.sign(payer);
+  svm.sendTransaction(tx);
+  const balanceAfter = svm.getBalance(receiver);
+  expect(balanceAfter).toBe(transferLamports);
 });
 ```
 
@@ -188,42 +188,43 @@ fn test_logging() {
 ```ts tab="TypeScript"
 import { LiteSVM, TransactionMetadata } from "litesvm";
 import {
-	Keypair,
-	LAMPORTS_PER_SOL,
-	PublicKey,
-	Transaction,
-	TransactionInstruction,
+  Keypair,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+  Transaction,
+  TransactionInstruction,
 } from "@solana/web3.js";
 
 test("spl logging", () => {
-	const programId = PublicKey.unique();
-	const svm = new LiteSVM();
-	svm.addProgramFromFile(programId, "program_bytes/spl_example_logging.so");
-	const payer = new Keypair();
-	svm.airdrop(payer.publicKey, BigInt(LAMPORTS_PER_SOL));
-	const blockhash = svm.latestBlockhash();
-	const ixs = [
-		new TransactionInstruction({
-			programId,
-			keys: [
-				{ pubkey: PublicKey.unique(), isSigner: false, isWritable: false },
-			],
-		}),
-	];
-	const tx = new Transaction();
-	tx.recentBlockhash = blockhash;
-	tx.add(...ixs);
-	tx.sign(payer);
-	// let's sim it first
-	const simRes = svm.simulateTransaction(tx);
-	const sendRes = svm.sendTransaction(tx);
-	if (sendRes instanceof TransactionMetadata) {
-		expect(simRes.meta().logs()).toEqual(sendRes.logs());
-		expect(sendRes.logs()[1]).toBe("Program log: static string");
-	} else {
-		throw new Error("Unexpected tx failure");
-	}
+  const programId = PublicKey.unique();
+  const svm = new LiteSVM();
+  svm.addProgramFromFile(programId, "program_bytes/spl_example_logging.so");
+  const payer = new Keypair();
+  svm.airdrop(payer.publicKey, BigInt(LAMPORTS_PER_SOL));
+  const blockhash = svm.latestBlockhash();
+  const ixs = [
+    new TransactionInstruction({
+      programId,
+      keys: [
+        { pubkey: PublicKey.unique(), isSigner: false, isWritable: false },
+      ],
+    }),
+  ];
+  const tx = new Transaction();
+  tx.recentBlockhash = blockhash;
+  tx.add(...ixs);
+  tx.sign(payer);
+  // let's sim it first
+  const simRes = svm.simulateTransaction(tx);
+  const sendRes = svm.sendTransaction(tx);
+  if (sendRes instanceof TransactionMetadata) {
+    expect(simRes.meta().logs()).toEqual(sendRes.logs());
+    expect(sendRes.logs()[1]).toBe("Program log: static string");
+  } else {
+    throw new Error("Unexpected tx failure");
+  }
 });
+
 ```
 
 ```python tab="Python"
@@ -332,61 +333,61 @@ fn test_set_clock() {
 
 ```ts tab="TypeScript"
 import {
-	FailedTransactionMetadata,
-	LiteSVM,
-	TransactionMetadata,
+  FailedTransactionMetadata,
+  LiteSVM,
+  TransactionMetadata,
 } from "litesvm";
 import {
-	Keypair,
-	LAMPORTS_PER_SOL,
-	PublicKey,
-	Transaction,
-	TransactionInstruction,
+  Keypair,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+  Transaction,
+  TransactionInstruction,
 } from "@solana/web3.js";
 
 test("clock", () => {
-	const programId = PublicKey.unique();
-	const svm = new LiteSVM();
-	svm.addProgramFromFile(programId, "program_bytes/litesvm_clock_example.so");
-	const payer = new Keypair();
-	svm.airdrop(payer.publicKey, BigInt(LAMPORTS_PER_SOL));
-	const blockhash = svm.latestBlockhash();
-	const ixs = [
-		new TransactionInstruction({ keys: [], programId, data: Buffer.from("") }),
-	];
-	const tx = new Transaction();
-	tx.recentBlockhash = blockhash;
-	tx.add(...ixs);
-	tx.sign(payer);
-	// set the time to January 1st 2000
-	const initialClock = svm.getClock();
-	initialClock.unixTimestamp = 1735689600n;
-	svm.setClock(initialClock);
-	// this will fail because the contract wants it to be January 1970
-	const failed = svm.sendTransaction(tx);
-	if (failed instanceof FailedTransactionMetadata) {
-		expect(failed.err().toString()).toContain("ProgramFailedToComplete");
-	} else {
-		throw new Error("Expected transaction failure here");
-	}
-	// so let's turn back time
-	const newClock = svm.getClock();
-	newClock.unixTimestamp = 50n;
-	svm.setClock(newClock);
-	const ixs2 = [
-		new TransactionInstruction({
-			keys: [],
-			programId,
-			data: Buffer.from("foobar"), // unused, just here to dedup the tx
-		}),
-	];
-	const tx2 = new Transaction();
-	tx2.recentBlockhash = blockhash;
-	tx2.add(...ixs2);
-	tx2.sign(payer);
-	// now the transaction goes through
-	const success = svm.sendTransaction(tx2);
-	expect(success).toBeInstanceOf(TransactionMetadata);
+  const programId = PublicKey.unique();
+  const svm = new LiteSVM();
+  svm.addProgramFromFile(programId, "program_bytes/litesvm_clock_example.so");
+  const payer = new Keypair();
+  svm.airdrop(payer.publicKey, BigInt(LAMPORTS_PER_SOL));
+  const blockhash = svm.latestBlockhash();
+  const ixs = [
+    new TransactionInstruction({ keys: [], programId, data: Buffer.from("") }),
+  ];
+  const tx = new Transaction();
+  tx.recentBlockhash = blockhash;
+  tx.add(...ixs);
+  tx.sign(payer);
+  // set the time to January 1st 2000
+  const initialClock = svm.getClock();
+  initialClock.unixTimestamp = 1735689600n;
+  svm.setClock(initialClock);
+  // this will fail because the contract wants it to be January 1970
+  const failed = svm.sendTransaction(tx);
+  if (failed instanceof FailedTransactionMetadata) {
+    expect(failed.err().toString()).toContain("ProgramFailedToComplete");
+  } else {
+    throw new Error("Expected transaction failure here");
+  }
+  // so let's turn back time
+  const newClock = svm.getClock();
+  newClock.unixTimestamp = 50n;
+  svm.setClock(newClock);
+  const ixs2 = [
+    new TransactionInstruction({
+      keys: [],
+      programId,
+      data: Buffer.from("foobar"), // unused, just here to dedup the tx
+    }),
+  ];
+  const tx2 = new Transaction();
+  tx2.recentBlockhash = blockhash;
+  tx2.add(...ixs2);
+  tx2.sign(payer);
+  // now the transaction goes through
+  const success = svm.sendTransaction(tx2);
+  expect(success).toBeInstanceOf(TransactionMetadata);
 });
 
 ```
@@ -511,49 +512,50 @@ fn test_infinite_usdc_mint() {
 import { LiteSVM } from "litesvm";
 import { PublicKey } from "@solana/web3.js";
 import {
-	getAssociatedTokenAddressSync,
-	AccountLayout,
-	ACCOUNT_SIZE,
-	TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddressSync,
+  AccountLayout,
+  ACCOUNT_SIZE,
+  TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 
 test("infinite usdc mint", () => {
-	const owner = PublicKey.unique();
-	const usdcMint = new PublicKey(
-		"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-	);
-	const ata = getAssociatedTokenAddressSync(usdcMint, owner, true);
-	const usdcToOwn = 1_000_000_000_000n;
-	const tokenAccData = Buffer.alloc(ACCOUNT_SIZE);
-	AccountLayout.encode(
-		{
-			mint: usdcMint,
-			owner,
-			amount: usdcToOwn,
-			delegateOption: 0,
-			delegate: PublicKey.default,
-			delegatedAmount: 0n,
-			state: 1,
-			isNativeOption: 0,
-			isNative: 0n,
-			closeAuthorityOption: 0,
-			closeAuthority: PublicKey.default,
-		},
-		tokenAccData,
-	);
-	const svm = new LiteSVM();
-	svm.setAccount(ata, {
-		lamports: 1_000_000_000,
-		data: tokenAccData,
-		owner: TOKEN_PROGRAM_ID,
-		executable: false,
-	});
-	const rawAccount = svm.getAccount(ata);
-	expect(rawAccount).not.toBeNull();
-	const rawAccountData = rawAccount?.data;
-	const decoded = AccountLayout.decode(rawAccountData);
-	expect(decoded.amount).toBe(usdcToOwn);
+  const owner = PublicKey.unique();
+  const usdcMint = new PublicKey(
+    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  );
+  const ata = getAssociatedTokenAddressSync(usdcMint, owner, true);
+  const usdcToOwn = 1_000_000_000_000n;
+  const tokenAccData = Buffer.alloc(ACCOUNT_SIZE);
+  AccountLayout.encode(
+    {
+      mint: usdcMint,
+      owner,
+      amount: usdcToOwn,
+      delegateOption: 0,
+      delegate: PublicKey.default,
+      delegatedAmount: 0n,
+      state: 1,
+      isNativeOption: 0,
+      isNative: 0n,
+      closeAuthorityOption: 0,
+      closeAuthority: PublicKey.default,
+    },
+    tokenAccData,
+  );
+  const svm = new LiteSVM();
+  svm.setAccount(ata, {
+    lamports: 1_000_000_000,
+    data: tokenAccData,
+    owner: TOKEN_PROGRAM_ID,
+    executable: false,
+  });
+  const rawAccount = svm.getAccount(ata);
+  expect(rawAccount).not.toBeNull();
+  const rawAccountData = rawAccount?.data;
+  const decoded = AccountLayout.decode(rawAccountData);
+  expect(decoded.amount).toBe(usdcToOwn);
 });
+
 ```
 
 ```python tab="Python"
