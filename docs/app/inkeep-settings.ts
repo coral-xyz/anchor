@@ -56,7 +56,17 @@ export const settings = {
     disclaimerSettings: {
       isDisclaimerEnabled: true,
     },
+    actionButtonLabels: {
+      getHelpButtonLabel: "Get Support",
+    },
     getHelpCallToActions: [
+      {
+        name: "Discord",
+        url: "https://discord.com/invite/NHHGSXAnXk",
+        icon: {
+          builtIn: "FaDiscord",
+        },
+      },
       {
         name: "Stack Exchange",
         url: "https://solana.stackexchange.com/",
