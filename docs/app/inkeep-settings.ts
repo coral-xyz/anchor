@@ -1,3 +1,4 @@
+// inkeep apiKeys is public, set to only work on https://www.anchor-lang.com
 export const settings = {
   baseSettings: {
     apiKey: "815f8fee7a5da7d98c681626dfbd268bdf7f7dc7cb80f618",
