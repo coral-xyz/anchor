@@ -28,7 +28,6 @@ where
 }
 
 #[account(zero_copy(unsafe))]
-#[repr(C)]
 pub struct FooAccount<const N: usize> {
     pub data: WrappedU8Array<N>,
 }
