@@ -2,7 +2,7 @@ use anchor_lang_idl::types::Idl;
 use heck::CamelCase;
 use quote::{format_ident, quote};
 
-use super::common::{convert_idl_type_to_syn_type, gen_accounts_common, gen_discriminator};
+use super::common::{convert_idl_type_to_syn_type, gen_accounts_common};
 
 pub fn gen_cpi_mod(idl: &Idl) -> proc_macro2::TokenStream {
     let cpi_instructions = gen_cpi_instructions(idl);
@@ -48,7 +48,6 @@ fn gen_cpi_instructions(idl: &Idl) -> proc_macro2::TokenStream {
                 }
             }
         };
-
 
         let (ret_type, ret_value) = match ix.returns.as_ref() {
             Some(ty) => {
