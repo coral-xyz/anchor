@@ -49,7 +49,6 @@ fn gen_cpi_instructions(idl: &Idl) -> proc_macro2::TokenStream {
             }
         };
 
-        let discriminator = gen_discriminator(&ix.discriminator);
 
         let (ret_type, ret_value) = match ix.returns.as_ref() {
             Some(ty) => {
@@ -73,7 +72,7 @@ fn gen_cpi_instructions(idl: &Idl) -> proc_macro2::TokenStream {
                 let ix = {
                     let ix = internal::args::#arg_value;
                     let mut data = Vec::with_capacity(256);
-                    data.extend_from_slice(&#discriminator);
+                    data.extend_from_slice(internal::args::#accounts_ident::DISCRIMINATOR);
                     AnchorSerialize::serialize(&ix, &mut data)
                         .map_err(|_| anchor_lang::error::ErrorCode::InstructionDidNotSerialize)?;
 
