@@ -180,6 +180,7 @@ fn cargo_toml(name: &str, with_mollusk: bool) -> String {
         r#"
 [dev-dependencies]
 mollusk-svm = "=0.0.15"
+solana-program = "~2.1"
 "#
     } else {
         ""
