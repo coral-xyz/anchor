@@ -12,6 +12,14 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Features
 
+### Fixes
+
+### Breaking
+
+## [0.31.0] - 2025-03-08
+
+### Features
+
 - client: Make `solana_account_decoder` dep public in anchor client ([#3455](https://github.com/coral-xyz/anchor/pull/3455)).
 - ts: Add optional `options.blockhash` to `Provider.sendAndConfirm` ([#3070](https://github.com/coral-xyz/anchor/pull/3070)).
 - ts: Add optional `commitment` parameter to `Program.addEventListener` ([#3052](https://github.com/coral-xyz/anchor/pull/3052)).
