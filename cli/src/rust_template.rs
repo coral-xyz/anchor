@@ -208,6 +208,9 @@ idl-build = ["anchor-lang/idl-build"]
 
 [dependencies]
 anchor-lang = "{3}"
+# Enforce bytemuck_derive version manually due to cargo 1.79 resolution bug.
+# More info here: https://github.com/Lokathor/bytemuck/issues/306
+bytemuck_derive = ">=1.8.1, <1.9.0"
 {4}
 "#,
         name,
