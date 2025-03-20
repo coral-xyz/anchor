@@ -266,7 +266,7 @@ describe("custom-error", () = {
     }
   });
 
-  it("Fails with amount too large", async () = {
+  it("Fails with amount too large", async () => {
     try {
       await program.methods.validateAmount(new anchor.BN(150)).rpc();
 
