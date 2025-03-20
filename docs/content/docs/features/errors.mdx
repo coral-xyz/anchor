@@ -213,7 +213,7 @@ pub mod custom_error {
     pub fn validate_amount(_ctx: Context<ValidateAmount>, amount: u64) - Result<()> {
         // [!code word:CustomError]
         // [!code highlight:2]
-        require!(amount == 10, CustomError::AmountTooSmall);
+        require!(amount >= 10, CustomError::AmountTooSmall);
         require!(amount <= 100, CustomError::AmountTooLarge);
 
         msg!("Amount validated successfully: {}", amount);
