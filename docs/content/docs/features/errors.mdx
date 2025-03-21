@@ -158,7 +158,7 @@ can rewrite the previous example using `require!`:
 #[program]
 mod hello_anchor {
     use super::*;
-    pub fn set_data(ctx: Context<SetData, data: MyAccount) - Result<() {
+    pub fn set_data(ctx: Context<SetData>, data: MyAccount) - Result<()> {
         // [!code word:MyError]
         // [!code highlight]
         require!(data.data < 100, MyError::DataTooLarge);
@@ -252,7 +252,7 @@ describe("custom-error", () = {
     console.log("Transaction signature:", tx);
   });
 
-  it("Fails with amount too small", async () = {
+  it("Fails with amount too small", async () => {
     try {
       await program.methods.validateAmount(new anchor.BN(5)).rpc();
 
