@@ -81,7 +81,7 @@ export class AccountsResolver<IDL extends Idl> {
     let depth = 0;
     while (
       (await this.resolvePdasAndRelations(this._idlIx.accounts)) +
-        (await this.resolveCustom()) >
+      (await this.resolveCustom()) >
       0
     ) {
       depth++;
@@ -279,12 +279,12 @@ export class AccountsResolver<IDL extends Idl> {
         if ((account.signer || account.address) && !this.get([...path, name])) {
           // Default signers to the provider
           if (account.signer) {
-            if (!this._provider.wallet) {
+            if (!this._provider.publicKey) {
               throw new Error(
-                "This function requires the `Provider` interface implementor to have a `wallet` field."
+                "This function requires the `Provider` interface implementor to have a `publicKey` field."
               );
             }
-            this.set([...path, name], this._provider.wallet.publicKey);
+            this.set([...path, name], this._provider.publicKey);
           }
 
           // Set based on `address` field
@@ -334,7 +334,7 @@ export class AccountsResolver<IDL extends Idl> {
 
               this.set([...path, name], pubkey);
             }
-          } catch {}
+          } catch { }
 
           try {
             if (account.relations) {
@@ -346,7 +346,7 @@ export class AccountsResolver<IDL extends Idl> {
                 this.set([...path, name], account[name]);
               }
             }
-          } catch {}
+          } catch { }
         }
       }
     }
