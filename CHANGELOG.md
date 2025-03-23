@@ -13,6 +13,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 ### Features
 
 ### Fixes
+ - client: Make `Provider` require publicKey instead of wallet in accounts resolver ([#3613](https://github.com/coral-xyz/anchor/pull/3613))
 
 ### Breaking
 
