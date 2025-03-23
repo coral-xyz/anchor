@@ -81,7 +81,7 @@ export class AccountsResolver<IDL extends Idl> {
     let depth = 0;
     while (
       (await this.resolvePdasAndRelations(this._idlIx.accounts)) +
-      (await this.resolveCustom()) >
+        (await this.resolveCustom()) >
       0
     ) {
       depth++;
@@ -334,7 +334,7 @@ export class AccountsResolver<IDL extends Idl> {
 
               this.set([...path, name], pubkey);
             }
-          } catch { }
+          } catch {}
 
           try {
             if (account.relations) {
@@ -346,7 +346,7 @@ export class AccountsResolver<IDL extends Idl> {
                 this.set([...path, name], account[name]);
               }
             }
-          } catch { }
+          } catch {}
         }
       }
     }
