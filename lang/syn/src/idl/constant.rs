@@ -22,17 +22,31 @@ pub fn gen_idl_print_fn_constant(item: &syn::ItemConst) -> TokenStream {
     };
 
     let fn_body = match gen_idl_type(&item.ty, &[]) {
-        Ok((ty, _)) => gen_print_section(
-            "const",
-            quote! {
-                #idl::IdlConst {
-                    name: #name.into(),
-                    docs: #docs,
-                    ty: #ty,
-                    value: format!("{:?}", #expr),
-                }
-            },
-        ),
+        Ok((ty, _)) => {
+            // Get the type as a string for comparison
+            let type_str = ty.to_string();
+            
+            // Use different formatting based on the type
+            let value_format = if type_str == "string" {
+                // For string types, use Display formatting to avoid extra quotes
+                quote! { format!("{}", #expr) }
+            } else {
+                // For other types, keep using Debug formatting
+                quote! { format!("{:?}", #expr) }
+            };
+            
+            gen_print_section(
+                "const",
+                quote! {
+                    #idl::IdlConst {
+                        name: #name.into(),
+                        docs: #docs,
+                        ty: #ty,
+                        value: #value_format,
+                    }
+                },
+            )
+        },
         _ => quote! {},
     };
 
