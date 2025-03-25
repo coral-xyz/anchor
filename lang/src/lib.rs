@@ -63,7 +63,33 @@ pub use anchor_derive_space::InitSpace;
 /// Borsh is the default serialization format for instructions and accounts.
 pub use borsh::de::BorshDeserialize as AnchorDeserialize;
 pub use borsh::ser::BorshSerialize as AnchorSerialize;
-pub use solana_program;
+pub mod solana_program {
+    pub use {
+        solana_account_info as account_info, solana_cpi as program,
+        solana_instruction as instruction, solana_msg::msg, solana_program_error as program_error,
+        solana_program_memory as program_memory, solana_pubkey as pubkey,
+        solana_sdk_ids::system_program, solana_system_interface::instruction as system_instruction,
+        solana_sysvar as sysvar,
+    };
+    pub mod log {
+        pub use solana_msg::{msg, sol_log};
+    }
+    pub mod bpf_loader_upgradeable {
+        #[allow(deprecated)]
+        pub use solana_loader_v3_interface::{
+            get_program_data_address,
+            instruction::{
+                close, close_any, create_buffer, deploy_with_max_program_len, extend_program,
+                is_close_instruction, is_set_authority_checked_instruction,
+                is_set_authority_instruction, is_upgrade_instruction, set_buffer_authority,
+                set_buffer_authority_checked, set_upgrade_authority, set_upgrade_authority_checked,
+                upgrade, write,
+            },
+            state::UpgradeableLoaderState,
+        };
+        pub use solana_sdk_ids::bpf_loader_upgradeable::{check_id, id, ID};
+    }
+}
 
 #[cfg(feature = "event-cpi")]
 pub use anchor_attribute_event::{emit_cpi, event_cpi};
