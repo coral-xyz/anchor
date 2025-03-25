@@ -2,14 +2,14 @@
 
 use crate::bpf_writer::BpfWriter;
 use crate::error::{Error, ErrorCode};
+use crate::solana_program::account_info::AccountInfo;
+use crate::solana_program::instruction::AccountMeta;
+use crate::solana_program::pubkey::Pubkey;
+use crate::solana_program::system_program;
 use crate::{
     AccountDeserialize, AccountSerialize, Accounts, AccountsClose, AccountsExit, Key, Owner,
     Result, ToAccountInfo, ToAccountInfos, ToAccountMetas,
 };
-use solana_program::account_info::AccountInfo;
-use solana_program::instruction::AccountMeta;
-use solana_program::pubkey::Pubkey;
-use solana_program::system_program;
 use std::collections::BTreeSet;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
@@ -412,7 +412,7 @@ impl<T: AccountSerialize + AccountDeserialize + Clone> DerefMut for Account<'_, 
     fn deref_mut(&mut self) -> &mut Self::Target {
         #[cfg(feature = "anchor-debug")]
         if !self.info.is_writable {
-            solana_program::msg!("The given Account is not mutable");
+            crate::solana_program::msg!("The given Account is not mutable");
             panic!();
         }
         &mut self.account
