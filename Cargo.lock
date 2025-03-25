@@ -274,6 +274,7 @@ dependencies = [
  "solana-msg",
  "solana-program-error",
  "solana-program-memory",
+ "solana-program-pack",
  "solana-pubkey",
  "solana-sdk-ids",
  "solana-system-interface",
