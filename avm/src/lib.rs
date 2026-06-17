@@ -50,6 +50,8 @@ const PLATFORM_TOOLS_LATEST_RELEASE_URL: &str =
 const NIGHTLY_MANIFEST_URL: &str =
     "https://anchor-releases.s3-eu-west-1.amazonaws.com/nightly/latest/manifest.json";
 const NIGHTLY_S3_BASE_URL: &str = "https://anchor-releases.s3-eu-west-1.amazonaws.com/";
+const ANCHOR_GITHUB_REPO: &str = "otter-sec/anchor";
+const SOLANA_VERIFY_GITHUB_REPO: &str = "Ellipsis-Labs/solana-verifiable-build";
 /// Shorter HTTP timeout so a slow or unreachable GitHub does not stall the CLI for long.
 const HTTP_CLIENT_TIMEOUT_SECS: u64 = 5;
 /// Longer timeout for release asset downloads, which can take longer than metadata requests.
@@ -124,6 +126,62 @@ fn download_response_to_vec(
     let mut bytes = Vec::new();
     download_response_to_writer(response, message, &mut bytes)?;
     Ok(bytes)
+}
+
+#[derive(Deserialize)]
+struct GithubRelease {
+    assets: Vec<GithubReleaseAsset>,
+}
+
+#[derive(Deserialize)]
+struct GithubReleaseAsset {
+    name: String,
+    digest: Option<String>,
+}
+
+fn github_release_asset_sha256(repo: &str, tag: &str, asset_name: &str) -> Result<Option<String>> {
+    let url = format!("https://api.github.com/repos/{repo}/releases/tags/{tag}");
+    let response = HTTP_CLIENT
+        .get(&url)
+        .header(USER_AGENT, "avm https://github.com/otter-sec/anchor")
+        .send()
+        .with_context(|| format!("Fetching release metadata from {url}"))?;
+    let status = response.status();
+    if !status.is_success() {
+        bail!("Failed to fetch release metadata for `{repo}` tag `{tag}` (status {status})");
+    }
+
+    let release: GithubRelease = response
+        .json()
+        .with_context(|| format!("Parsing release metadata from {url}"))?;
+    let asset = release
+        .assets
+        .into_iter()
+        .find(|asset| asset.name == asset_name)
+        .ok_or_else(|| anyhow!("Release `{repo}` tag `{tag}` does not include `{asset_name}`"))?;
+    parse_github_sha256_digest(asset.digest.as_deref())
+        .with_context(|| format!("Parsing digest for release asset `{asset_name}`"))
+}
+
+fn parse_github_sha256_digest(digest: Option<&str>) -> Result<Option<String>> {
+    let Some(digest) = digest else {
+        return Ok(None);
+    };
+    let Some(hex) = digest.strip_prefix("sha256:") else {
+        bail!("Unsupported release asset digest `{digest}`");
+    };
+    if hex.len() != 64 || !hex.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        bail!("Invalid SHA-256 release asset digest `{digest}`");
+    }
+    Ok(Some(hex.to_ascii_lowercase()))
+}
+
+fn verify_sha256(bytes: &[u8], expected: &str, artifact: &str) -> Result<()> {
+    let actual = sha256_hex(bytes);
+    if !actual.eq_ignore_ascii_case(expected) {
+        bail!("Checksum mismatch for `{artifact}`: expected {expected}, got {actual}");
+    }
+    Ok(())
 }
 
 /// Storage directory for AVM, customizable by setting the $AVM_HOME, defaults to ~/.avm
@@ -599,9 +657,11 @@ pub fn install_version(
         } else {
             ""
         };
-        let url = format!(
-            "https://github.com/otter-sec/anchor/releases/download/v{version}/anchor-{version}-{target}{ext}"
-        );
+        let asset_name = format!("anchor-{version}-{target}{ext}");
+        let tag = format!("v{version}");
+        let expected_sha256 = github_release_asset_sha256(ANCHOR_GITHUB_REPO, &tag, &asset_name)?;
+        let url =
+            format!("https://github.com/{ANCHOR_GITHUB_REPO}/releases/download/{tag}/{asset_name}");
         let res = DOWNLOAD_CLIENT.get(&url).send()?;
         match res.status() {
             StatusCode::NOT_FOUND => bail!(
@@ -627,6 +687,9 @@ pub fn install_version(
 
         let result = (|| -> Result<()> {
             let bytes = download_response_to_vec(res, format!("Downloading anchor {version}"))?;
+            if let Some(expected_sha256) = &expected_sha256 {
+                verify_sha256(&bytes, expected_sha256, &url)?;
+            }
             fs::write(&staging_path, bytes).with_context(|| {
                 format!("Writing downloaded binary to {}", staging_path.display())
             })?;
@@ -705,8 +768,19 @@ fn solana_verify_installed() -> Result<bool> {
 fn install_solana_verify() -> Result<()> {
     println!("Installing solana-verify...");
     let os = std::env::consts::OS;
+    let asset_name = format!("solana-verify-{os}");
+    let tag = format!("v{SOLANA_VERIFY_VERSION}");
+    let expected_sha256 =
+        github_release_asset_sha256(SOLANA_VERIFY_GITHUB_REPO, &tag, &asset_name)?.ok_or_else(
+            || {
+                anyhow!(
+                    "Release asset `{asset_name}` in `{SOLANA_VERIFY_GITHUB_REPO}` tag `{tag}` \
+                     does not include a digest"
+                )
+            },
+        )?;
     let url = format!(
-        "https://github.com/Ellipsis-Labs/solana-verifiable-build/releases/download/v{SOLANA_VERIFY_VERSION}/solana-verify-{os}"
+        "https://github.com/{SOLANA_VERIFY_GITHUB_REPO}/releases/download/{tag}/{asset_name}"
     );
     let res = DOWNLOAD_CLIENT.get(&url).send()?;
     if !res.status().is_success() {
@@ -720,6 +794,7 @@ fn install_solana_verify() -> Result<()> {
             res,
             format!("Downloading solana-verify {SOLANA_VERIFY_VERSION}"),
         )?;
+        verify_sha256(&bytes, &expected_sha256, &url)?;
         fs::write(&bin_path, bytes)?;
         #[cfg(unix)]
         fs::set_permissions(
@@ -1908,6 +1983,43 @@ mod tests {
                 "accepted invalid tag {invalid}"
             );
         }
+    }
+
+    #[test]
+    fn test_parse_github_sha256_digest() {
+        assert_eq!(
+            parse_github_sha256_digest(Some(
+                "sha256:79BFB0E2BA76B9D447606DDBCC494834F05A4C11DEB052E74B49EA307A3C5BCD"
+            ))
+            .unwrap(),
+            Some("79bfb0e2ba76b9d447606ddbcc494834f05a4c11deb052e74b49ea307a3c5bcd".into())
+        );
+
+        assert_eq!(parse_github_sha256_digest(None).unwrap(), None);
+
+        let err = parse_github_sha256_digest(Some(
+            "sha512:79bfb0e2ba76b9d447606ddbcc494834f05a4c11deb052e74b49ea307a3c5bcd",
+        ))
+        .unwrap_err()
+        .to_string();
+        assert!(err.contains("Unsupported release asset digest"));
+
+        let err = parse_github_sha256_digest(Some("sha256:not-a-valid-digest"))
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("Invalid SHA-256 release asset digest"));
+    }
+
+    #[test]
+    fn test_verify_sha256_rejects_mismatch() {
+        let expected = sha256_hex(b"expected binary");
+        verify_sha256(b"expected binary", &expected, "anchor-test-binary").unwrap();
+
+        let err = verify_sha256(b"tampered binary", &expected, "anchor-test-binary")
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("Checksum mismatch for `anchor-test-binary`"));
+        assert!(err.contains(&expected));
     }
 
     #[test]
