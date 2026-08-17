@@ -58,6 +58,8 @@ pub use crate::{
     // Derive macros
     Accounts,
     AnchorAccount,
+    AnchorDeserialize,
+    AnchorSerialize,
     Bumps,
     // Context
     Context,

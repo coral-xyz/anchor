@@ -1,7 +1,7 @@
 //! Plain `#[derive(IdlType)]` structs used as instruction arguments must
 //! resolve through `IdlAccountType` and land in the IDL's `types[]`.
 //! Regression coverage for otter-sec/anchor#4850 — an arg struct deriving
-//! only the wincode schema traits used to fail `--features idl-build`
+//! only `AnchorDeserialize` / `AnchorSerialize` used to fail `--features idl-build`
 //! compilation with an unsatisfied `IdlAccountType` bound.
 
 use {

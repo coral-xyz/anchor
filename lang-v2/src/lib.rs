@@ -122,7 +122,9 @@ pub const MAX_PAYER_SEEDS: usize = 16;
 pub const MAX_PAYER_SEEDS_WITH_BUMP: usize = MAX_PAYER_SEEDS + 1;
 
 /// Concrete type of [`BORSH_CONFIG`]. Spelled out so downstream callers can
-/// name it in trait bounds (e.g. `T: wincode::SchemaRead<'de, BorshConfig>`).
+/// name it in manual trait bounds (e.g.
+/// `T: anchor_lang::wincode::SchemaRead<'de, BorshConfig>`). Most programs
+/// should derive [`AnchorDeserialize`] and [`AnchorSerialize`] instead.
 pub type BorshConfig = wincode::config::Configuration<
     true,
     { wincode::config::DEFAULT_PREALLOCATION_SIZE_LIMIT },
@@ -170,7 +172,7 @@ pub use {
     accounts::{AccountInitialize, SlabInit},
     anchor_derive_accounts::{
         access_control, account, constant, declare_program, emit, error_code, event, pod_wrapper,
-        program, Accounts, InitSpace, ToCpiAccounts,
+        program, Accounts, AnchorDeserialize, AnchorSerialize, InitSpace, ToCpiAccounts, __erase,
     },
     bytemuck,
     context::{Bumps, Context, MutMask},

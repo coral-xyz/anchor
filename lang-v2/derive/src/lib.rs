@@ -29,6 +29,46 @@ pub fn derive_accounts(input: TokenStream) -> TokenStream {
     TokenStream::from(impl_accounts(&input))
 }
 
+/// Derive Anchor's Wincode-backed serialization implementation.
+///
+/// Use `#[derive(AnchorSerialize)]` rather than deriving Wincode's
+/// `SchemaWrite` directly. The generated duplicate item is erased after
+/// Wincode emits the impl, so a downstream crate needs neither a direct
+/// `wincode` dependency nor the `#[wincode(crate = ...)]` escape hatch.
+/// Wincode attributes remain supported when required.
+#[proc_macro_derive(AnchorSerialize, attributes(wincode))]
+pub fn anchor_serialize(input: TokenStream) -> TokenStream {
+    derive_wincode_schema(input, quote!(anchor_lang::wincode::SchemaWrite))
+}
+
+/// Derive Anchor's Wincode-backed deserialization implementation.
+///
+/// Use `#[derive(AnchorDeserialize)]` rather than deriving Wincode's
+/// `SchemaRead` directly. See [`AnchorSerialize`] for why no direct Wincode
+/// dependency is needed.
+#[proc_macro_derive(AnchorDeserialize, attributes(wincode))]
+pub fn anchor_deserialize(input: TokenStream) -> TokenStream {
+    derive_wincode_schema(input, quote!(anchor_lang::wincode::SchemaRead))
+}
+
+fn derive_wincode_schema(input: TokenStream, schema_derive: TokenStream2) -> TokenStream {
+    let input = TokenStream2::from(input);
+    quote! {
+        #[derive(#schema_derive)]
+        #[wincode(crate = "anchor_lang::wincode")]
+        #[anchor_lang::__erase]
+        #input
+    }
+    .into()
+}
+
+/// Removes the duplicate item emitted by the schema-derive wrappers.
+#[doc(hidden)]
+#[proc_macro_attribute]
+pub fn __erase(_: TokenStream, _: TokenStream) -> TokenStream {
+    TokenStream::new()
+}
+
 // ---------------------------------------------------------------------------
 // #[derive(ToCpiAccounts)]
 // ---------------------------------------------------------------------------
@@ -881,7 +921,7 @@ fn emit_args_deser(args: &[(&Ident, &Type)], struct_name: &str, inline_error: bo
             }
         };
         quote! {
-            #[derive(anchor_lang::wincode::SchemaRead)]
+            #[derive(anchor_lang::AnchorDeserialize)]
             struct #struct_ident #lt_decl { #(#names: #arg_types,)* }
             let __args: #struct_ident #lt_use = #error_handling;
             #(let #names = __args.#names;)*
@@ -2252,7 +2292,9 @@ pub fn account(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let (struct_attrs, pod_impls) = if is_borsh {
         (
-            quote! { #[derive(anchor_lang::wincode::SchemaWrite, anchor_lang::wincode::SchemaRead)] },
+            quote! {
+                #[derive(anchor_lang::AnchorSerialize, anchor_lang::AnchorDeserialize)]
+            },
             quote! {},
         )
     } else {
@@ -2397,7 +2439,7 @@ pub fn account(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// The same applies to custom structs passed as `#[program]` instruction
 /// arguments: the IDL build resolves every arg type through
 /// `IdlAccountType`, so a plain args struct (typically deriving
-/// `wincode::SchemaRead` / `wincode::SchemaWrite` for the wire format)
+/// `AnchorDeserialize` / `AnchorSerialize` for the wire format)
 /// additionally needs this derive or `anchor idl build` fails to compile.
 ///
 /// Unlike `#[account]`, this derive carries **none** of the account-kind
@@ -2431,7 +2473,7 @@ pub fn account(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// }
 ///
 /// // Custom instruction-argument struct.
-/// #[derive(Clone, Copy, IdlType, wincode::SchemaRead, wincode::SchemaWrite)]
+/// #[derive(Clone, Copy, AnchorDeserialize, AnchorSerialize, IdlType)]
 /// pub struct MyArgs {
 ///     pub amount: u64,
 ///     pub tag: [u8; 3],
@@ -3394,7 +3436,7 @@ fn gen_declare_program_types(idl: &serde_json::Value) -> syn::Result<Vec<TokenSt
                     DeclareTypeFields::Named { fields, .. } => quote! {
                         #(#docs)*
                         #repr
-                        #[derive(Clone, anchor_lang::wincode::SchemaRead, anchor_lang::wincode::SchemaWrite)]
+                        #[derive(Clone, anchor_lang::AnchorDeserialize, anchor_lang::AnchorSerialize)]
                         pub struct #ident #impl_generics {
                             #(#fields)*
                         }
@@ -3415,7 +3457,7 @@ fn gen_declare_program_types(idl: &serde_json::Value) -> syn::Result<Vec<TokenSt
                     DeclareTypeFields::Tuple { fields, .. } => quote! {
                         #(#docs)*
                         #repr
-                        #[derive(Clone, anchor_lang::wincode::SchemaRead, anchor_lang::wincode::SchemaWrite)]
+                        #[derive(Clone, anchor_lang::AnchorDeserialize, anchor_lang::AnchorSerialize)]
                         pub struct #ident #impl_generics(#(#fields),*);
                         #discriminator_impl
                         #account_deserialize_impl
@@ -3434,7 +3476,7 @@ fn gen_declare_program_types(idl: &serde_json::Value) -> syn::Result<Vec<TokenSt
                     DeclareTypeFields::Unit => quote! {
                         #(#docs)*
                         #repr
-                        #[derive(Clone, anchor_lang::wincode::SchemaRead, anchor_lang::wincode::SchemaWrite)]
+                        #[derive(Clone, anchor_lang::AnchorDeserialize, anchor_lang::AnchorSerialize)]
                         pub struct #ident #impl_generics;
                         #discriminator_impl
                         #account_deserialize_impl
@@ -3498,7 +3540,7 @@ fn gen_declare_program_types(idl: &serde_json::Value) -> syn::Result<Vec<TokenSt
                 out.push(quote! {
                     #(#docs)*
                     #repr
-                    #[derive(Clone, anchor_lang::wincode::SchemaRead, anchor_lang::wincode::SchemaWrite)]
+                    #[derive(Clone, anchor_lang::AnchorDeserialize, anchor_lang::AnchorSerialize)]
                     pub enum #ident #impl_generics {
                         #(#variant_tokens)*
                     }
@@ -3745,7 +3787,7 @@ fn gen_declare_program_events(idl: &serde_json::Value) -> syn::Result<TokenStrea
                             self,
                             anchor_lang::BORSH_CONFIG,
                         )
-                        .expect("declared event serialization cannot fail for derived SchemaWrite types");
+                        .expect("declared event serialization cannot fail for derived AnchorSerialize types");
                         data
                     }
                 }
@@ -4958,7 +5000,7 @@ fn process_handler(
     };
     let instruction_struct = quote! {
         #(#handler_cfg_attrs)*
-        #[derive(anchor_lang::wincode::SchemaWrite)]
+        #[derive(anchor_lang::AnchorSerialize)]
         pub struct #ix_struct_name #ix_lt_decl {
             #(pub #extra_arg_names: #extra_arg_types,)*
         }
@@ -5640,8 +5682,8 @@ fn impl_program(module: &ItemMod, config: &ProgramConfig) -> TokenStream2 {
 ///
 /// Two modes:
 ///
-/// **Default (`#[event]`, wincode).** Derives `wincode::SchemaWrite` and
-/// serializes via `wincode::config::serialize_into` with `BORSH_CONFIG`, so
+/// **Default (`#[event]`, wincode).** Derives `AnchorSerialize` and
+/// serializes via Wincode with `BORSH_CONFIG`, so
 /// the on-chain wire format is byte-compatible with borsh while keeping
 /// wincode's faster encoding path. Supports arbitrary layouts, including
 /// `Vec`/`String`/`Option`/enums, and is materially cheaper than borsh on
@@ -5817,11 +5859,11 @@ pub fn event(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     match mode {
         EventMode::Wincode => TokenStream::from(quote! {
-            // `#[derive(wincode::SchemaWrite)]` lays down the per-field encoder.
+            // `#[derive(AnchorSerialize)]` lays down the Wincode per-field encoder.
             // No `repr(C)` — wincode is layout-agnostic (it walks the derived
             // schema, not the in-memory byte layout) so the compiler is free
             // to pick whichever Rust layout is best.
-            #[derive(anchor_lang::wincode::SchemaWrite)]
+            #[derive(anchor_lang::AnchorSerialize)]
             #(#attrs)*
             #vis struct #name #fields
 
@@ -5845,7 +5887,7 @@ pub fn event(attr: TokenStream, item: TokenStream) -> TokenStream {
                         anchor_lang::BORSH_CONFIG,
                     )
                         .expect("`#[event]` wincode serialization cannot fail for \
-                                 derived SchemaWrite types");
+                                 derived AnchorSerialize types");
                     buf
                 }
             }

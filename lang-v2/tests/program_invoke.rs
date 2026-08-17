@@ -9,9 +9,8 @@ use {
             program,
         },
         testing::{AccountBuffer, MIN_ACCOUNT_BUF},
-        wincode::{SchemaRead, SchemaWrite},
-        Address, AnchorAccount, CpiContext, CpiHandle, CpiHandleMut, Discriminator, Owner,
-        ToCpiAccounts, ToCpiHandle, ToCpiHandleMut,
+        Address, AnchorAccount, AnchorDeserialize, AnchorSerialize, CpiContext, CpiHandle,
+        CpiHandleMut, Discriminator, Owner, ToCpiAccounts, ToCpiHandle, ToCpiHandleMut,
     },
     bytemuck::{Pod, Zeroable},
     solana_program_error::ProgramError,
@@ -57,7 +56,7 @@ impl Discriminator for PodCounter {
     const DISCRIMINATOR: &'static [u8] = &[0x4c, 0xde, 0x7f, 0x28, 0x61, 0x2f, 0x07, 0x73];
 }
 
-#[derive(SchemaRead, SchemaWrite, Default, Clone, PartialEq, Debug)]
+#[derive(AnchorDeserialize, AnchorSerialize, Default, Clone, PartialEq, Debug)]
 struct BorshCounter {
     value: u64,
 }

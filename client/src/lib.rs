@@ -739,23 +739,18 @@ fn parse_logs_response<
 
 #[cfg(test)]
 mod tests {
-    // Mock event: minimal manual impl avoiding the `#[event]` macro, which
-    // depends on the `wincode` derive (anchor-lang transitively pulls it
-    // in but the re-exported derive's generated code references the bare
-    // `wincode` path, not visible from this crate). The test only needs
-    // `Event + SchemaRead + Discriminator` for type inference inside
-    // `parse_logs_response::<MockEvent>`.
-    // The wincode derive macros emit `::wincode::…` paths, so `wincode` must
-    // be present in this crate's extern-prelude (added as a direct dep).
+    // Mock event: minimal manual implementation avoiding `#[event]`. Anchor's
+    // derives use Anchor's Wincode re-export, so this crate needs no direct
+    // Wincode dependency. The test only needs `Event + SchemaRead +
+    // Discriminator` for type inference inside `parse_logs_response::<MockEvent>`.
     use {
-        anchor_lang::{Discriminator, Event},
+        anchor_lang::{AnchorDeserialize, AnchorSerialize, Discriminator, Event},
         futures::{SinkExt, StreamExt},
         solana_rpc_client_api::response::RpcResponseContext,
         std::sync::atomic::{AtomicU64, Ordering},
         tokio_tungstenite::tungstenite::Message,
-        wincode::{SchemaRead, SchemaWrite},
     };
-    #[derive(Debug, Clone, Copy, SchemaWrite, SchemaRead)]
+    #[derive(Debug, Clone, Copy, AnchorSerialize, AnchorDeserialize)]
     pub struct MockEvent {}
     impl Discriminator for MockEvent {
         const DISCRIMINATOR: &'static [u8] = &[0; 8];

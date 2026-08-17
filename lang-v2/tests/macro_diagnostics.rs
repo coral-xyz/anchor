@@ -21,7 +21,6 @@ publish = false
 
 [dependencies]
 anchor-lang = {{ path = "{}" }}
-wincode = {{ version = "0.5", features = ["derive"] }}
 
 [features]
 idl-build = []
@@ -219,9 +218,9 @@ fn init_space_rejects_wincode_field_overrides() {
     compile_fail_case(
         "init_space_wincode_skip",
         r#"
-use anchor_lang::InitSpace;
+use anchor_lang::{AnchorDeserialize, AnchorSerialize, InitSpace};
 
-#[derive(InitSpace, wincode::SchemaRead, wincode::SchemaWrite)]
+#[derive(InitSpace, AnchorDeserialize, AnchorSerialize)]
 pub struct Bad {
     #[wincode(skip)]
     pub skipped: u64,
@@ -237,9 +236,9 @@ pub struct Bad {
     compile_fail_case(
         "init_space_wincode_skip_default_val",
         r#"
-use anchor_lang::InitSpace;
+use anchor_lang::{AnchorDeserialize, AnchorSerialize, InitSpace};
 
-#[derive(InitSpace, wincode::SchemaRead, wincode::SchemaWrite)]
+#[derive(InitSpace, AnchorDeserialize, AnchorSerialize)]
 pub struct Bad {
     #[wincode(skip(default_val = 9))]
     pub skipped: u64,
@@ -255,9 +254,9 @@ pub struct Bad {
     compile_fail_case(
         "init_space_wincode_with",
         r#"
-use anchor_lang::InitSpace;
+use anchor_lang::{AnchorDeserialize, AnchorSerialize, InitSpace};
 
-#[derive(InitSpace, wincode::SchemaRead, wincode::SchemaWrite)]
+#[derive(InitSpace, AnchorDeserialize, AnchorSerialize)]
 pub struct Bad {
     #[wincode(with = "shim::ByteCodec")]
     pub packed: u64,
@@ -276,9 +275,9 @@ mod shim {
     compile_fail_case(
         "init_space_wincode_tag_encoding",
         r#"
-use anchor_lang::InitSpace;
+use anchor_lang::{AnchorDeserialize, AnchorSerialize, InitSpace};
 
-#[derive(InitSpace, wincode::SchemaRead, wincode::SchemaWrite)]
+#[derive(InitSpace, AnchorDeserialize, AnchorSerialize)]
 #[wincode(tag_encoding = "u32")]
 pub enum Bad {
     A([u8; 32]),
@@ -301,9 +300,9 @@ fn idl_generation_rejects_wincode_field_overrides() {
     compile_fail_case(
         "idl_type_wincode_skip",
         r#"
-use anchor_lang::IdlType;
+use anchor_lang::{AnchorDeserialize, AnchorSerialize, IdlType};
 
-#[derive(IdlType, wincode::SchemaRead, wincode::SchemaWrite)]
+#[derive(IdlType, AnchorDeserialize, AnchorSerialize)]
 pub struct Bad {
     #[wincode(skip)]
     pub skipped: u64,
@@ -746,7 +745,7 @@ use anchor_lang::prelude::*;
 
 declare_id!("11111111111111111111111111111111");
 
-#[derive(anchor_lang::wincode::SchemaRead, anchor_lang::wincode::SchemaWrite)]
+#[derive(anchor_lang::AnchorDeserialize, anchor_lang::AnchorSerialize)]
 pub struct SeedBuf(Vec<u8>);
 
 impl SeedBuf {
@@ -755,7 +754,7 @@ impl SeedBuf {
     }
 }
 
-#[derive(anchor_lang::wincode::SchemaRead, anchor_lang::wincode::SchemaWrite)]
+#[derive(anchor_lang::AnchorDeserialize, anchor_lang::AnchorSerialize)]
 pub struct SeedConfig {
     pub seed: SeedBuf,
 }
@@ -791,7 +790,7 @@ use anchor_lang::prelude::*;
 
 declare_id!("11111111111111111111111111111111");
 
-#[derive(anchor_lang::wincode::SchemaRead, anchor_lang::wincode::SchemaWrite)]
+#[derive(anchor_lang::AnchorDeserialize, anchor_lang::AnchorSerialize)]
 pub struct Data {
     pub value: u64,
 }

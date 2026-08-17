@@ -48,7 +48,7 @@ pub struct LedgerEntry {
 /// Plain instruction-argument struct — not an account, not an event. The
 /// `IdlType` derive is what lets the idl-build arg-type walk resolve it
 /// (`IdlAccountType`); without it `--features idl-build` fails to compile.
-#[derive(Clone, Copy, IdlType, wincode::SchemaRead, wincode::SchemaWrite)]
+#[derive(Clone, Copy, IdlType, anchor_lang::AnchorDeserialize, anchor_lang::AnchorSerialize)]
 pub struct BumpArgs {
     pub amount: u64,
     pub tag: [u8; 4],

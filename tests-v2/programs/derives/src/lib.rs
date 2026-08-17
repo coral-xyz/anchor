@@ -78,8 +78,9 @@ pub struct QualifiedUserTypeHolder<const N: usize> {
 
 // ---- #[event] -------------------------------------------------------------
 
-/// Default-mode event (wincode with a borsh-compatible wire format).
-/// `emit!` serializes via `Event::data()` and calls `sol_log_data`, which
+/// Default-mode event (Wincode with a borsh-compatible wire format).
+/// `#[event]` derives `AnchorSerialize` automatically; `emit!` serializes via
+/// `Event::data()` and calls `sol_log_data`, which
 /// surfaces to clients as a `Program data: <base64>` log line.
 #[event]
 pub struct Bumped {
@@ -157,8 +158,8 @@ pub mod derives_test {
     }
 
     /// Exercises Pod arithmetic + PodBool + pod_wrapper assignment on-chain.
-    /// Also emits a default-mode (wincode) event so the test can inspect the
-    /// `Program data:` log line.
+    /// Also emits a default-mode Wincode event (automatically deriving
+    /// `AnchorSerialize`) so the test can inspect the `Program data:` log line.
     #[discrim = 1]
     pub fn bump(ctx: &mut Context<Bump>, amount: u64, step: i32) -> Result<()> {
         let c = &mut ctx.accounts.counter;

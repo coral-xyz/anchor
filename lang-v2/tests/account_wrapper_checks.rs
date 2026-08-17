@@ -21,8 +21,8 @@ use {
         },
         programs::{System, Token},
         testing::AccountBuffer,
-        wincode::{SchemaRead, SchemaWrite},
-        Accounts, AnchorAccount, Discriminator, ErrorCode, Ids, Owner, TryAccounts,
+        Accounts, AnchorAccount, AnchorDeserialize, AnchorSerialize, Discriminator, ErrorCode,
+        Ids, Owner, TryAccounts,
     },
     bytemuck::{Pod, Zeroable},
     pinocchio::address::Address,
@@ -41,7 +41,7 @@ impl Ids for TestInterface {
     }
 }
 
-#[derive(SchemaRead, SchemaWrite, Default)]
+#[derive(AnchorDeserialize, AnchorSerialize, Default)]
 struct Counter {
     value: u64,
 }
