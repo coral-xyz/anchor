@@ -8,6 +8,11 @@ fn cargo_case(
 ) -> std::process::Output {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let crate_dir = manifest_dir.join("target/macro-diagnostics").join(name);
+    // Keep sources isolated for clear per-case diagnostics, but share Cargo
+    // artifacts across cases. The Rust test harness may invoke these helpers
+    // concurrently; Cargo coordinates the target-directory lock and avoids
+    // recompiling anchor-lang and its dependencies for every fixture.
+    let target_dir = manifest_dir.join("target/macro-diagnostics-target");
     let src_dir = crate_dir.join("src");
     fs::create_dir_all(&src_dir).unwrap();
     fs::write(
@@ -36,6 +41,7 @@ live = []
     fs::write(src_dir.join("lib.rs"), source).unwrap();
 
     Command::new("cargo")
+        .env("CARGO_TARGET_DIR", target_dir)
         .arg(command)
         .arg("--offline")
         .arg("--manifest-path")
