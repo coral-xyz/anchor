@@ -759,10 +759,15 @@ fn type_def_header_parts(
     kind_name: &str,
 ) -> (String, String) {
     const FIELD_MARKER: &str = "__anchor_private_fields__";
+    let entries_key = if kind_name == "enum" {
+        "variants"
+    } else {
+        "fields"
+    };
     let mut type_def_obj = build_type_def_header(name, docs, kind, generics);
     type_def_obj.insert(
         "type".into(),
-        json!({ "kind": kind_name, "fields": [FIELD_MARKER] }),
+        json!({ "kind": kind_name, entries_key: [FIELD_MARKER] }),
     );
     let header = Value::Object(type_def_obj).to_string();
     let marker = Value::String(FIELD_MARKER.to_owned()).to_string();
