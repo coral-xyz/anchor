@@ -802,6 +802,26 @@ fn has_cfg_attrs(attrs: &[syn::Attribute]) -> bool {
     attrs.iter().any(is_cfg_control_attr)
 }
 
+fn handler_wrapper_inline_attr(attrs: &[syn::Attribute]) -> syn::Attribute {
+    attrs
+        .iter()
+        .find(|attr| {
+            attr.path().is_ident("inline")
+                || (attr.path().is_ident("cfg_attr")
+                    && attr
+                        .parse_args_with(
+                            syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated,
+                        )
+                        .is_ok_and(|args| {
+                            args.iter()
+                                .skip(1)
+                                .any(|arg| arg.path().is_ident("inline"))
+                        }))
+        })
+        .cloned()
+        .unwrap_or_else(|| syn::parse_quote!(#[inline(never)]))
+}
+
 fn cfg_field_dep_walkers(fields: &syn::Fields) -> Vec<TokenStream2> {
     fields
         .iter()
@@ -4849,6 +4869,7 @@ fn process_handler(
     let fn_name = &handler.sig.ident;
     let fn_name_str = fn_name.to_string();
     let handler_cfg_attrs = cfg_attrs(&handler.attrs);
+    let handler_inline_attr = handler_wrapper_inline_attr(&handler.attrs);
     let return_type = match extract_result_return_type(&handler.sig.output) {
         Ok(return_ty) => return_ty,
         Err(err) => return HandlerCodegen::error(handler, err),
@@ -5009,7 +5030,7 @@ fn process_handler(
     let wrapper = if extra_arg_names.is_empty() {
         quote! {
             #(#handler_cfg_attrs)*
-            #[inline(always)]
+            #handler_inline_attr
             pub fn #fn_name<'a>(
                 __program_id: &'a anchor_lang::Address,
                 __cursor: &'a mut anchor_lang::AccountCursor,
@@ -5046,7 +5067,7 @@ fn process_handler(
         let deser_args = args_deser.deser;
         quote! {
             #(#handler_cfg_attrs)*
-            #[inline(always)]
+            #handler_inline_attr
             pub fn #fn_name<'a>(
                 __program_id: &'a anchor_lang::Address,
                 __cursor: &'a mut anchor_lang::AccountCursor,
@@ -6790,6 +6811,48 @@ mod tests {
             err.to_string().contains("expected `:`"),
             "unexpected error: {err}"
         );
+    }
+
+    #[test]
+    fn process_handler_applies_inline_policy_to_generated_wrapper() {
+        let mod_name: syn::Ident = syn::parse_quote!(my_program);
+        let program_id: syn::Expr = syn::parse_quote!(crate::ID);
+        for (handler, expected) in [
+            (
+                syn::parse_quote! {
+                    pub fn default_handler(ctx: &mut Context<MyAccounts>) -> Result<()> {
+                        let _ = ctx;
+                        Ok(())
+                    }
+                },
+                "# [inline (never)] pub fn default_handler",
+            ),
+            (
+                syn::parse_quote! {
+                    #[inline(always)]
+                    pub fn fast_handler(ctx: &mut Context<MyAccounts>, amount: u64) -> Result<()> {
+                        let _ = (ctx, amount);
+                        Ok(())
+                    }
+                },
+                "# [inline (always)] pub fn fast_handler",
+            ),
+            (
+                syn::parse_quote! {
+                    #[cfg_attr(feature = "fast", inline(always))]
+                    pub fn conditional_handler(ctx: &mut Context<MyAccounts>) -> Result<()> {
+                        let _ = ctx;
+                        Ok(())
+                    }
+                },
+                "# [cfg_attr (feature = \"fast\" , inline (always))] pub fn conditional_handler",
+            ),
+        ] {
+            let wrapper = process_handler(&handler, &mod_name, None, &program_id)
+                .wrapper
+                .to_string();
+            assert!(wrapper.contains(expected), "unexpected wrapper: {wrapper}");
+        }
     }
 
     #[test]
