@@ -2156,7 +2156,7 @@ fn impl_accounts(input: &DeriveInput) -> TokenStream2 {
         // bitvec and u8 field-offset domain. Top-level field count alone is
         // not enough: Nested<Inner> expands to Inner::HEADER_SIZE slots.
         const _: () = assert!(
-            <#name as anchor_lang_v2::TryAccounts>::HEADER_SIZE <= 255,
+            <#name as anchor_lang::TryAccounts>::HEADER_SIZE <= 255,
             "`Accounts` flattened HEADER_SIZE must be <= 255 (duplicate-tracking domain)"
         );
 

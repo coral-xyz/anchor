@@ -147,7 +147,7 @@ fn nested_accounts_flattened_header_size_must_fit_u8_domain() {
         .collect();
     let source = format!(
         r#"
-use anchor_lang_v2::prelude::*;
+use anchor_lang::prelude::*;
 
 declare_id!("11111111111111111111111111111111");
 
@@ -922,7 +922,7 @@ use anchor_lang::prelude::*;
 
 declare_id!("11111111111111111111111111111111");
 
-#[derive(anchor_lang::wincode::SchemaRead, anchor_lang::wincode::SchemaWrite)]
+#[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct Data {
     pub value: u64,
 }
@@ -1324,7 +1324,7 @@ fn associated_token_init_rejects_optional_sibling_refs() {
     compile_fail_case(
         "associated_token_init_rejects_optional_sibling_refs",
         r#"
-use anchor_lang_v2::prelude::*;
+use anchor_lang::prelude::*;
 use anchor_spl_v2::{
     associated_token::AssociatedToken,
     mint::Mint,
@@ -1492,7 +1492,7 @@ fn optional_sibling_seed_is_rejected() {
     compile_fail_case(
         "optional_sibling_seed_non_init",
         r#"
-use anchor_lang_v2::prelude::*;
+use anchor_lang::prelude::*;
 
 declare_id!("11111111111111111111111111111111");
 
@@ -1513,7 +1513,7 @@ pub struct Bad {
     compile_fail_case(
         "optional_sibling_seed_init",
         r#"
-use anchor_lang_v2::prelude::*;
+use anchor_lang::prelude::*;
 
 declare_id!("11111111111111111111111111111111");
 
