@@ -25,6 +25,7 @@ jobs:
   build-cli:
     if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'release-bump/')
     name: Build CLI
+    if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'release-bump/')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -64,6 +65,7 @@ jobs:
   template-rust-tests:
     if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'release-bump/')
     name: ${{ matrix.template }} + ${{ matrix.test_template }}
+    if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'release-bump/')
     needs: build-cli
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -151,6 +153,7 @@ jobs:
   template-js-tests:
     if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'release-bump/')
     name: ${{ matrix.template }} + ${{ matrix.test_template }} + ${{ matrix.language }} + ${{ matrix.package_manager }}
+    if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'release-bump/')
     needs: build-cli
     runs-on: ubuntu-latest
     timeout-minutes: 30
