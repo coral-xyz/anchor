@@ -9,23 +9,22 @@ import {
   getI32Codec,
   getI64Codec,
   getI128Codec,
+  getI256Codec,
   getStructCodec,
   getU8Codec,
   getU16Codec,
   getU32Codec,
   getU64Codec,
   getU128Codec,
+  getU256Codec,
+  getUtf8Codec,
 } from "@solana/kit";
 import {
   getAnchorOptionCodec,
   getBoolCodec,
-  getBorshStringCodec,
   getCOptionCodec,
-  getI256Codec,
   getPublicKeyCodec,
   getRustEnumCodec,
-  getU256Codec,
-  getVecCodec,
   IdlCodec,
 } from "./codecs.js";
 import {
@@ -100,7 +99,15 @@ export class IdlCoder {
         return addCodecSizePrefix(getBytesCodec(), getU32Codec());
       }
       case "string": {
-        return getBorshStringCodec();
+        // Borsh strings are valid UTF-8 and keep every character they hold.
+        return addCodecSizePrefix(
+          getUtf8Codec({
+            fatal: true,
+            ignoreBOM: true,
+            removeNullCharacters: false,
+          }),
+          getU32Codec()
+        );
       }
       case "pubkey": {
         return getPublicKeyCodec();
@@ -121,8 +128,10 @@ export class IdlCoder {
           );
         }
         if ("vec" in field.type) {
-          return getVecCodec(
-            IdlCoder.fieldCodec({ type: field.type.vec }, types, genericArgs)
+          // Borsh vectors always carry their length prefix.
+          return getArrayCodec(
+            IdlCoder.fieldCodec({ type: field.type.vec }, types, genericArgs),
+            { requireSizePrefix: true }
           );
         }
         if ("array" in field.type) {

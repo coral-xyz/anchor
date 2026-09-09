@@ -1,31 +1,23 @@
 import {
-  addCodecSizePrefix,
   Address,
-  assertByteArrayHasEnoughBytesForCodec,
-  assertNumberIsBetweenForCodec,
   Codec,
   combineCodec,
-  createDecoder,
-  Endian,
   FixedSizeCodec,
   getAddressCodec,
-  getArrayCodec,
-  getBytesCodec,
-  getI128Codec,
+  getBooleanDecoder,
+  getBooleanEncoder,
   getOptionCodec,
   getTupleCodec,
   getU8Codec,
   getU32Codec,
-  getU128Codec,
   getUnionCodec,
   isFixedSize,
   NumberCodec,
-  NumberCodecConfig,
   OptionOrNullable,
-  ReadonlyUint8Array,
+  tapDecoder,
+  tapDecoderBytes,
   transformCodec,
   unwrapOption,
-  VariableSizeCodec,
 } from "@solana/kit";
 import type { PublicKey } from "@solana/web3.js";
 
@@ -55,15 +47,14 @@ export function getPublicKeyCodec(): FixedSizeCodec<
  * decoding any other byte throws, matching Rust borsh deserialization.
  */
 export function getBoolCodec(): FixedSizeCodec<boolean, boolean, 1> {
-  return transformCodec(
-    getU8Codec(),
-    (value: boolean) => (value ? 1 : 0),
-    (byte) => {
-      if (byte !== 0 && byte !== 1) {
-        throw new Error(`Invalid bool: ${byte}`);
+  return combineCodec(
+    getBooleanEncoder(),
+    tapDecoderBytes(getBooleanDecoder(), (bytes, offset) => {
+      // A missing byte falls through to Kit's own bounds check.
+      if (bytes[offset] > 1) {
+        throw new Error(`Invalid bool: ${bytes[offset]}`);
       }
-      return byte === 1;
-    }
+    })
   );
 }
 
@@ -75,16 +66,11 @@ export function getBoolCodec(): FixedSizeCodec<boolean, boolean, 1> {
 function getOptionPrefixCodec<TSize extends number>(
   prefix: FixedSizeCodec<bigint | number, number, TSize>
 ): FixedSizeCodec<bigint | number, number, TSize> {
-  return transformCodec(
-    prefix,
-    (tag: bigint | number) => tag,
-    (tag) => {
-      if (tag !== 0 && tag !== 1) {
-        throw new Error(`Invalid option tag: ${tag}`);
-      }
-      return tag;
+  return tapDecoder(prefix, (tag) => {
+    if (tag !== 0 && tag !== 1) {
+      throw new Error(`Invalid option tag: ${tag}`);
     }
-  );
+  });
 }
 
 /**
@@ -130,59 +116,6 @@ export function getCOptionCodec<TFrom, TTo extends TFrom = TFrom>(
 }
 
 /**
- * Borsh `String`: u32 LE byte length followed by UTF-8 bytes.
- *
- * Unlike Kit's UTF-8 codec, null characters are preserved and invalid UTF-8
- * is rejected in both directions (lone surrogates on encode, malformed bytes
- * on decode), matching Rust's `String`.
- */
-export function getBorshStringCodec(): VariableSizeCodec<string> {
-  const textEncoder = new TextEncoder();
-  const textDecoder = new TextDecoder("utf-8", { fatal: true });
-  return addCodecSizePrefix(
-    transformCodec(
-      getBytesCodec(),
-      (value: string) => {
-        if (!value.isWellFormed()) {
-          throw new Error("Invalid string: contains lone surrogates");
-        }
-        return textEncoder.encode(value);
-      },
-      (bytes) => textDecoder.decode(bytes)
-    ),
-    getU32Codec()
-  );
-}
-
-/**
- * Borsh `Vec<T>`: u32 LE element count followed by the elements.
- *
- * Unlike Kit's array codec, which decodes an empty byte slice as an empty
- * array, a missing length prefix throws, matching Rust's borsh.
- */
-export function getVecCodec<TFrom, TTo extends TFrom = TFrom>(
-  item: Codec<TFrom, TTo>
-): VariableSizeCodec<TFrom[], TTo[]> {
-  const prefix = getU32Codec();
-  const array = getArrayCodec(item, { size: prefix });
-  return combineCodec(
-    array,
-    createDecoder({
-      ...(array.maxSize !== undefined ? { maxSize: array.maxSize } : {}),
-      read: (bytes: ReadonlyUint8Array | Uint8Array, offset) => {
-        assertByteArrayHasEnoughBytesForCodec(
-          "vec",
-          prefix.fixedSize,
-          bytes,
-          offset
-        );
-        return array.read(bytes, offset);
-      },
-    })
-  );
-}
-
-/**
  * Borsh enum, preserving the Anchor JS shape: values are single-key objects
  * (`{ variantName: fields }`), with unit variants represented as
  * `{ variantName: {} }`.
@@ -220,59 +153,4 @@ export function getRustEnumCodec(
     },
     (bytes, offset) => Number(discriminant.read(bytes, offset)[0])
   );
-}
-
-// TODO(kit): upstream 256-bit codecs to @solana/codecs-numbers and remove
-// these local implementations.
-
-const U128_MASK = (1n << 128n) - 1n;
-
-/**
- * 256-bit unsigned integer codec, as two 128-bit chunks.
- */
-export function getU256Codec(
-  config: NumberCodecConfig = {}
-): FixedSizeCodec<bigint | number, bigint, 32> {
-  return get256BitCodec({ config, name: "u256", signed: false });
-}
-
-/**
- * 256-bit signed (two's complement) integer codec, as two 128-bit chunks.
- */
-export function getI256Codec(
-  config: NumberCodecConfig = {}
-): FixedSizeCodec<bigint | number, bigint, 32> {
-  return get256BitCodec({ config, name: "i256", signed: true });
-}
-
-function get256BitCodec({
-  config,
-  name,
-  signed,
-}: {
-  config: NumberCodecConfig;
-  name: string;
-  signed: boolean;
-}): FixedSizeCodec<bigint | number, bigint, 32> {
-  const min = signed ? -(1n << 255n) : 0n;
-  const max = signed ? (1n << 255n) - 1n : (1n << 256n) - 1n;
-  const le = config.endian !== Endian.Big;
-
-  // The most significant chunk carries the sign for signed values.
-  const lowCodec = getU128Codec(config);
-  const highCodec = signed ? getI128Codec(config) : getU128Codec(config);
-
-  return transformCodec(
-    getTupleCodec(le ? [lowCodec, highCodec] : [highCodec, lowCodec]),
-    (value: bigint | number): [bigint, bigint] => {
-      assertNumberIsBetweenForCodec(name, min, max, value);
-      const v = BigInt(value);
-      const [low, high] = [v & U128_MASK, v >> 128n];
-      return le ? [low, high] : [high, low];
-    },
-    (chunks) => {
-      const [low, high] = le ? chunks : [chunks[1], chunks[0]];
-      return (high << 128n) + low;
-    }
-  ) as FixedSizeCodec<bigint | number, bigint, 32>;
 }

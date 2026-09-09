@@ -1,4 +1,10 @@
 import * as assert from "assert";
+import {
+  isSolanaError,
+  SOLANA_ERROR__CODECS__CANNOT_DECODE_EMPTY_BYTE_ARRAY,
+  SOLANA_ERROR__CODECS__INVALID_UTF8_BYTES,
+  SOLANA_ERROR__CODECS__INVALID_UTF8_STRING,
+} from "@solana/kit";
 import { PublicKey } from "@solana/web3.js";
 import { BorshCoder, Idl } from "../src";
 
@@ -395,6 +401,15 @@ describe("coder.types", () => {
       () => coder.types.decode("BoolTest", Buffer.from([2])),
       /Invalid bool: 2/
     );
+    // A missing byte is reported by Kit, not as an invalid bool.
+    assert.throws(
+      () => coder.types.decode("BoolTest", Buffer.from([])),
+      (error) =>
+        isSolanaError(
+          error,
+          SOLANA_ERROR__CODECS__CANNOT_DECODE_EMPTY_BYTE_ARRAY
+        )
+    );
   });
 
   test("Throws when decoding an invalid option tag", () => {
@@ -563,15 +578,24 @@ describe("coder.types", () => {
       text: "a\0b",
     });
 
+    // A leading byte order mark is a character like any other.
+    const withBom = coder.types.encode("StringTest", { text: "\ufeffa" });
+    assert.deepStrictEqual([...withBom], [4, 0, 0, 0, 0xef, 0xbb, 0xbf, 97]);
+    assert.deepStrictEqual(coder.types.decode("StringTest", withBom), {
+      text: "\ufeffa",
+    });
+
     // Invalid UTF-8 bytes throw instead of decoding to U+FFFD.
-    assert.throws(() =>
-      coder.types.decode("StringTest", Buffer.from([2, 0, 0, 0, 0xff, 0xfe]))
+    assert.throws(
+      () =>
+        coder.types.decode("StringTest", Buffer.from([2, 0, 0, 0, 0xff, 0xfe])),
+      (error) => isSolanaError(error, SOLANA_ERROR__CODECS__INVALID_UTF8_BYTES)
     );
 
     // Lone surrogates cannot be represented in a Rust string.
     assert.throws(
       () => coder.types.encode("StringTest", { text: "\ud800" }),
-      /lone surrogates/
+      (error) => isSolanaError(error, SOLANA_ERROR__CODECS__INVALID_UTF8_STRING)
     );
   });
 
