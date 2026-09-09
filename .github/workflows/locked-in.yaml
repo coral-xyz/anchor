@@ -8,8 +8,20 @@ name: Locked-in
 on:
   push:
     branches: [ master ]
+    paths-ignore:
+      - "docs/**"
+      - "docs-v2/**"
+      - "**/*.md"
+      - "**/*.mdx"
+      - ".cspell-anchor-dictionary.txt"
   pull_request:
     branches: [ master ]
+    paths-ignore:
+      - "docs/**"
+      - "docs-v2/**"
+      - "**/*.md"
+      - "**/*.mdx"
+      - ".cspell-anchor-dictionary.txt"
   workflow_dispatch:
 
 permissions: {}

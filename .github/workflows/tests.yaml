@@ -5,13 +5,22 @@ on:
     branches:
       - master
     paths-ignore:
+      # Docs/changelog cannot affect these tests.
       - "docs/**"
+      - "docs-v2/**"
+      - "**/*.md"
+      - "**/*.mdx"
+      - ".cspell-anchor-dictionary.txt"
   pull_request:
     branches:
       - master
       - anchor-next
     paths-ignore:
       - "docs/**"
+      - "docs-v2/**"
+      - "**/*.md"
+      - "**/*.mdx"
+      - ".cspell-anchor-dictionary.txt"
 
 permissions:
   contents: read
