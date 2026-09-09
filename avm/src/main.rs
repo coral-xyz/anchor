@@ -216,6 +216,7 @@ pub fn entry(opts: Cli) -> Result<()> {
         Commands::SelfUpdate { .. } | Commands::Nightly { .. } | Commands::Completions { .. }
     ) {
         avm::check_avm_version_and_warn();
+        avm::check_latest_cargo_build_sbf_and_warn();
     }
 
     match opts.command {
@@ -378,6 +379,8 @@ pub fn entry(opts: Cli) -> Result<()> {
 
 fn anchor_proxy() -> Result<()> {
     let args = std::env::args().skip(1).collect::<Vec<String>>();
+
+    avm::check_latest_cargo_build_sbf_and_warn();
 
     if avm::ensure_nightly_active()?.is_some() {
         return spawn_anchor(avm::nightly_anchor_binary_path(), args);

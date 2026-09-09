@@ -552,6 +552,32 @@ pub fn platform_tools_version_path(version: &str) -> PathBuf {
     get_platform_tools_dir_path().join(version)
 }
 
+/// Path used by `cargo build-sbf` for a cached platform-tools release.
+///
+/// This is intentionally separate from AVM's own platform-tools directory:
+/// invoking `cargo build-sbf --install-only` stores its toolchain in the
+/// shared Solana cache.
+pub fn cargo_build_sbf_platform_tools_path(version: &str) -> Result<PathBuf> {
+    let version = if version.starts_with('v') {
+        version.to_string()
+    } else {
+        format!("v{version}")
+    };
+    Ok(dirs::home_dir()
+        .ok_or_else(|| anyhow!("Could not find home directory"))?
+        .join(".cache")
+        .join("solana")
+        .join(version)
+        .join("platform-tools"))
+}
+
+/// Return whether `cargo build-sbf` has a usable cached platform-tools release.
+pub fn cargo_build_sbf_platform_tools_installed(version: &str) -> Result<bool> {
+    Ok(looks_installed(&cargo_build_sbf_platform_tools_path(
+        version,
+    )?))
+}
+
 /// List installed platform-tools versions, lexicographically ordered.
 pub fn read_installed_platform_tools() -> Result<Vec<String>> {
     let dir = get_platform_tools_dir_path();
@@ -1032,6 +1058,14 @@ mod tests {
 
         std::fs::write(dir.path().join("rust/marker"), b"").unwrap();
         assert!(looks_installed(dir.path()));
+    }
+
+    #[test]
+    fn cargo_build_sbf_cache_path_normalizes_the_version() {
+        let with_v = cargo_build_sbf_platform_tools_path("v1.54").unwrap();
+        let without_v = cargo_build_sbf_platform_tools_path("1.54").unwrap();
+        assert_eq!(with_v, without_v);
+        assert!(with_v.ends_with(".cache/solana/v1.54/platform-tools"));
     }
 
     #[test]

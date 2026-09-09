@@ -40,6 +40,10 @@ pub use {
 
 /// Checked at most once per hour.
 const UPDATE_CHECK_INTERVAL_SECS: i64 = 60 * 60;
+/// Check the locally cached `cargo build-sbf` toolchain at most once per day.
+const CARGO_BUILD_SBF_CHECK_INTERVAL_SECS: i64 = 24 * 60 * 60;
+const PLATFORM_TOOLS_LATEST_RELEASE_URL: &str =
+    "https://api.github.com/repos/anza-xyz/platform-tools/releases/latest";
 const NIGHTLY_MANIFEST_URL: &str =
     "https://anchor-releases.s3-eu-west-1.amazonaws.com/nightly/latest/manifest.json";
 const NIGHTLY_S3_BASE_URL: &str = "https://anchor-releases.s3-eu-west-1.amazonaws.com/";
@@ -1415,6 +1419,119 @@ pub fn check_avm_version_and_warn() {
     }
 }
 
+// ── cargo build-sbf platform-tools reminder ─────────────────────────────────
+
+fn cargo_build_sbf_check_file_path() -> PathBuf {
+    AVM_HOME.join(".cargo-build-sbf-check")
+}
+
+/// The cache stores one of two states:
+///   Success: `{unix_ts}\n{platform_tools_version}`
+///   Error:   `{unix_ts}\n0`
+enum CargoBuildSbfCheckCacheState {
+    Success(i64, String),
+    Error(i64),
+    Missing,
+}
+
+fn read_cargo_build_sbf_check_cache() -> CargoBuildSbfCheckCacheState {
+    let Ok(content) = fs::read_to_string(cargo_build_sbf_check_file_path()) else {
+        return CargoBuildSbfCheckCacheState::Missing;
+    };
+    let mut lines = content.lines();
+    let Some(timestamp) = lines.next().and_then(|line| line.parse().ok()) else {
+        return CargoBuildSbfCheckCacheState::Missing;
+    };
+    match lines.next() {
+        Some("0") | None => CargoBuildSbfCheckCacheState::Error(timestamp),
+        Some(version) if !version.is_empty() => {
+            CargoBuildSbfCheckCacheState::Success(timestamp, version.to_string())
+        }
+        _ => CargoBuildSbfCheckCacheState::Missing,
+    }
+}
+
+fn write_cargo_build_sbf_check_cache(version: &str) {
+    let content = format!("{}\n{version}", Utc::now().timestamp());
+    let _ = fs::create_dir_all(&*AVM_HOME);
+    let _ = fs::write(cargo_build_sbf_check_file_path(), content);
+}
+
+fn write_cargo_build_sbf_check_error_cache() {
+    let content = format!("{}\n0", Utc::now().timestamp());
+    let _ = fs::create_dir_all(&*AVM_HOME);
+    let _ = fs::write(cargo_build_sbf_check_file_path(), content);
+}
+
+#[derive(Deserialize)]
+struct LatestPlatformToolsRelease {
+    tag_name: String,
+}
+
+fn parse_platform_tools_release_tag(tag: &str) -> Result<String> {
+    let Some(version) = tag.strip_prefix('v') else {
+        bail!("Latest platform-tools release has an invalid tag `{tag}`");
+    };
+    if version.split('.').count() < 2
+        || version
+            .split('.')
+            .any(|component| component.is_empty() || !component.chars().all(|c| c.is_ascii_digit()))
+    {
+        bail!("Latest platform-tools release has an invalid tag `{tag}`");
+    }
+    Ok(tag.to_string())
+}
+
+fn get_latest_platform_tools_version_with_client(
+    client: &reqwest::blocking::Client,
+) -> Result<String> {
+    let response = client
+        .get(PLATFORM_TOOLS_LATEST_RELEASE_URL)
+        .header(USER_AGENT, "avm https://github.com/otter-sec/anchor")
+        .send()
+        .with_context(|| format!("Sending GET {PLATFORM_TOOLS_LATEST_RELEASE_URL}"))?;
+    if !response.status().is_success() {
+        bail!(
+            "Fetching the latest platform-tools release failed with status {}",
+            response.status()
+        );
+    }
+    let release = response
+        .json::<LatestPlatformToolsRelease>()
+        .context("Parsing the latest platform-tools release")?;
+    parse_platform_tools_release_tag(&release.tag_name)
+}
+
+fn warn_if_cargo_build_sbf_platform_tools_are_missing(version: &str) {
+    if let Ok(false) = platform_tools::cargo_build_sbf_platform_tools_installed(version) {
+        eprintln!(
+            "The latest cargo build-sbf platform-tools ({version}) is not installed. Run `cargo \
+             build-sbf --tools-version {version} --install-only` to install it."
+        );
+    }
+}
+
+/// Fetch the latest platform-tools release and warn when it is absent from
+/// `cargo build-sbf`'s cache. The check, including failures, is cached for 24
+/// hours in `$AVM_HOME/.cargo-build-sbf-check`; no toolchain is installed
+/// automatically.
+pub fn check_latest_cargo_build_sbf_and_warn() {
+    let now = Utc::now().timestamp();
+    match read_cargo_build_sbf_check_cache() {
+        CargoBuildSbfCheckCacheState::Success(timestamp, _version)
+            if now - timestamp < CARGO_BUILD_SBF_CHECK_INTERVAL_SECS => {}
+        CargoBuildSbfCheckCacheState::Error(timestamp)
+            if now - timestamp < CARGO_BUILD_SBF_CHECK_INTERVAL_SECS => {}
+        _ => match get_latest_platform_tools_version_with_client(&HTTP_CLIENT) {
+            Ok(version) => {
+                write_cargo_build_sbf_check_cache(&version);
+                warn_if_cargo_build_sbf_platform_tools_are_missing(&version);
+            }
+            Err(_) => write_cargo_build_sbf_check_error_cache(),
+        },
+    }
+}
+
 /// Update AVM itself by re-running `cargo install`.
 ///
 /// - Default: installs the latest stable release via `--tag`.
@@ -1621,6 +1738,21 @@ mod tests {
             sha256_hex(b"anchor"),
             "79bfb0e2ba76b9d447606ddbcc494834f05a4c11deb052e74b49ea307a3c5bcd"
         );
+    }
+
+    #[test]
+    fn platform_tools_release_tag_is_strictly_validated() {
+        assert_eq!(parse_platform_tools_release_tag("v1.57").unwrap(), "v1.57");
+        assert_eq!(
+            parse_platform_tools_release_tag("v1.57.1").unwrap(),
+            "v1.57.1"
+        );
+        for invalid in ["1.57", "v1", "v1.", "v1.x", "v1.57/../../tmp"] {
+            assert!(
+                parse_platform_tools_release_tag(invalid).is_err(),
+                "accepted invalid tag {invalid}"
+            );
+        }
     }
 
     #[test]
