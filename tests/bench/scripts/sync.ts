@@ -50,7 +50,7 @@ const IDL_PATH = path.join("target", "idl", "bench.json");
     console.log(`Skipping untagged release snapshot '${version}'.`);
     return false;
   });
-  const buildEnv = {
+  const buildEnv: NodeJS.ProcessEnv = {
     ...process.env,
     // Current benchmarks use SBPFv3; historical versions retain their recorded architecture.
     ANCHOR_BUILD_SBF_ARCH: "v3",
@@ -61,6 +61,8 @@ const IDL_PATH = path.join("target", "idl", "bench.json");
     CARGO_TARGET_SBPFV2_SOLANA_SOLANA_RUSTFLAGS: "-Z emit-stack-sizes",
     CARGO_TARGET_SBPFV3_SOLANA_SOLANA_RUSTFLAGS: "-Z emit-stack-sizes",
   };
+  // Sync intentionally records changed measurements, unlike the CI test job.
+  delete buildEnv.CI;
 
   const setProjectVersion = async (version: Version) => {
     // Reopen the benchmark data because previous iterations update it in a
@@ -136,8 +138,8 @@ const IDL_PATH = path.join("target", "idl", "bench.json");
 
   try {
     await setProjectVersion("unreleased");
-    // The current TypeScript client needs the current IDL format, including
-    // when a historical CLI is responsible for starting the validator.
+    // Build the IDL once with the current CLI. The TypeScript tests use this
+    // format even when a historical CLI starts the validator.
     await fs.rm(IDL_PATH, { force: true });
     const buildResult = spawn("anchor", ["build", "--skip-lint"], {
       env: buildEnv,
@@ -201,7 +203,7 @@ const IDL_PATH = path.join("target", "idl", "bench.json");
       // initial current-IDL build or the previous iteration. Each selected
       // Anchor CLI chooses its own historical build command.
       await fs.rm(path.join("target", "deploy", "bench.so"), { force: true });
-      const buildArgs = ["build", "--skip-lint"];
+      const buildArgs = ["build", "--skip-lint", "--no-idl"];
       // Program ID checks were added in v1.0.0. Historical benchmark builds
       // use a generated keypair, so they must not require it to match the
       // fixed benchmark program ID.

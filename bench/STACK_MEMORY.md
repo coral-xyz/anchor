@@ -16,7 +16,7 @@ The stack size of the `try_accounts` function is measured.
 
 ## [Unreleased]
 
-Solana version: 3.1.10
+Solana version: 4.2.0
 
 | Instruction                    | Stack Memory | -   |
 | ------------------------------ | ------------ | --- |

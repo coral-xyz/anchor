@@ -90,6 +90,40 @@ const DEFAULT_TOOLS_VERSION: &str = "v1.57";
 const DEFAULT_BUILD_ARCH: &str = "v3";
 const BUILD_ARCH_ENV: &str = "ANCHOR_BUILD_SBF_ARCH";
 
+/// Rust target triple used by `cargo build-sbf` for an SBPF architecture.
+pub fn rust_target_triple(arch: &str) -> Option<&'static str> {
+    match arch {
+        "v0" => Some("sbf-solana-solana"),
+        "v1" => Some("sbpfv1-solana-solana"),
+        "v2" => Some("sbpfv2-solana-solana"),
+        "v3" => Some("sbpfv3-solana-solana"),
+        _ => None,
+    }
+}
+
+/// Cargo target triples to search for unstripped program artifacts.
+///
+/// Prefer the configured architecture, then retain support for artifacts from
+/// older platform-tools releases and previous explicit architecture choices.
+pub(crate) fn sbpf_target_triples() -> Vec<&'static str> {
+    let mut triples = Vec::with_capacity(5);
+    if let Some(triple) = rust_target_triple(&default_build_arch()) {
+        triples.push(triple);
+    }
+    for triple in [
+        "sbpfv3-solana-solana",
+        "sbpfv2-solana-solana",
+        "sbpfv1-solana-solana",
+        "sbpf-solana-solana",
+        "sbf-solana-solana",
+    ] {
+        if !triples.contains(&triple) {
+            triples.push(triple);
+        }
+    }
+    triples
+}
+
 /// WebSocket port offset for solana-test-validator (RPC port + 1)
 pub const WEBSOCKET_PORT_OFFSET: u16 = 1;
 
@@ -3020,7 +3054,7 @@ pub struct BuildSbfOptions {
 }
 
 impl BuildSbfOptions {
-    fn new(tools_version: String, arch: String) -> Self {
+    pub fn new(tools_version: String, arch: String) -> Self {
         Self {
             tools_version,
             arch,
@@ -3038,7 +3072,7 @@ impl Default for BuildSbfOptions {
     }
 }
 
-fn default_build_arch() -> String {
+pub fn default_build_arch() -> String {
     std::env::var(BUILD_ARCH_ENV).unwrap_or_else(|_| DEFAULT_BUILD_ARCH.to_owned())
 }
 
@@ -3055,12 +3089,21 @@ fn validator_type_from_env() -> Result<Option<ValidatorType>> {
     }
 }
 
-fn build_sbf_base_args(build_sbf_options: &BuildSbfOptions) -> Vec<String> {
+// Exposed for tests.
+pub fn build_sbf_base_args(build_sbf_options: &BuildSbfOptions) -> Vec<String> {
     let mut args = vec![BUILD_SUBCOMMAND.to_owned()];
     args.push("--tools-version".to_owned());
-    args.push(build_sbf_options.tools_version.clone());
+    // build-sbf requires a 'v' prefix to versions and arches
+    fn prefixed(version: &str) -> String {
+        if version.starts_with('v') {
+            version.to_owned()
+        } else {
+            format!("v{version}")
+        }
+    }
+    args.push(prefixed(&build_sbf_options.tools_version));
     args.push("--arch".to_owned());
-    args.push(build_sbf_options.arch.clone());
+    args.push(prefixed(&build_sbf_options.arch));
     args
 }
 
