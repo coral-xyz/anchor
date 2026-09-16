@@ -12,6 +12,8 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Features
 
+- cli: Add `NO_DNA` mode to disable supported interactive prompts for CI, scripts, and agent runs ([#4773](https://github.com/otter-sec/anchor/pull/4773)).
+
 ### Fixes
 
 - lang: Raise an error when modifying data in an account that has had its ownership changed. ([#5011](https://github.com/otter-sec/anchor/pull/5011)).
