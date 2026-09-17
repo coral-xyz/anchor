@@ -773,23 +773,44 @@ fn security_metadata_path(config: Option<&WithPath<Config>>) -> Result<PathBuf> 
         );
     }
 
-    path.canonicalize().map_err(|err| {
+    let path = path.canonicalize().map_err(|err| {
         anyhow!(
             "Failed to canonicalize security metadata path `{}`: {}",
             path.display(),
             err
         )
-    })
+    })?;
+
+    let contents =
+        fs::read(&path).map_err(|err| anyhow!("Failed to read `{}`: {}", path.display(), err))?;
+    let value: serde_json::Value = serde_json::from_slice(&contents)
+        .map_err(|err| anyhow!("Failed to parse `{}` as JSON: {}", path.display(), err))?;
+    if !value.is_object() {
+        bail!(
+            "Security metadata in `{}` must be a JSON object",
+            path.display()
+        );
+    }
+
+    Ok(path)
+}
+
+fn requested_security_metadata_path(
+    requested: bool,
+    config: Option<&WithPath<Config>>,
+) -> Result<Option<PathBuf>> {
+    requested
+        .then(|| security_metadata_path(config))
+        .transpose()
 }
 
 fn upload_security_metadata(
     cfg_override: &ConfigOverride,
-    config: Option<&WithPath<Config>>,
+    security_path: &Path,
     program_id: Pubkey,
     upgrade_authority_path: &str,
-    payer_path: String,
+    payer_path: Option<String>,
 ) -> Result<()> {
-    let security_path = security_metadata_path(config)?;
     let (cluster_url, _) = crate::get_cluster_and_wallet(cfg_override)?;
 
     let security_path = security_path
@@ -832,6 +853,8 @@ pub fn program_deploy(
 ) -> Result<()> {
     let (rpc_client, config) = get_rpc_client_and_config(cfg_override)?;
     let payer = get_payer_keypair(cfg_override, &config)?;
+    // Resolve requested metadata before performing any on-chain mutations.
+    let security_path = requested_security_metadata_path(security_metadata, config.as_ref())?;
     let (_cluster_url, wallet_path) = crate::get_cluster_and_wallet(cfg_override)?;
     let upgrade_authority_path = upgrade_authority
         .clone()
@@ -1040,7 +1063,7 @@ pub fn program_deploy(
                     &rpc_client,
                     &payer,
                     &program_data,
-                    &upgrade_authority.pubkey(),
+                    &upgrade_authority,
                     kp,
                     CommitmentConfig::confirmed(),
                     send_config,
@@ -1195,13 +1218,14 @@ pub fn program_deploy(
         }
     }
 
-    if security_metadata {
+    if let Some(security_path) = security_path {
+        let payer_path = (payer.pubkey() != upgrade_authority.pubkey()).then_some(wallet_path);
         upload_security_metadata(
             cfg_override,
-            config.as_ref(),
+            &security_path,
             program_id,
             &upgrade_authority_path,
-            wallet_path,
+            payer_path,
         )?;
     }
 
@@ -1638,7 +1662,7 @@ fn program_write_buffer(
         &rpc_client,
         &payer,
         &program_data,
-        &buffer_authority_keypair.pubkey(),
+        &buffer_authority_keypair,
         &buffer_keypair,
         CommitmentConfig::confirmed(),
         RpcSendTransactionConfig {
@@ -2097,7 +2121,7 @@ pub fn program_upgrade(
                 &rpc_client,
                 &payer,
                 &program_data,
-                &upgrade_authority_keypair.pubkey(),
+                &upgrade_authority_keypair,
                 &buffer_keypair,
                 CommitmentConfig::confirmed(),
                 send_config,
@@ -2673,7 +2697,7 @@ pub fn write_program_buffer(
     rpc_client: &RpcClient,
     payer: &dyn Signer,
     program_data: &[u8],
-    buffer_authority: &Pubkey,
+    buffer_authority: &dyn Signer,
     buffer_keypair: &dyn Signer,
     commitment: CommitmentConfig,
     send_transaction_config: RpcSendTransactionConfig,
@@ -2700,7 +2724,7 @@ pub fn write_program_buffer(
         let create_ixs = loader_v3_instruction::create_buffer(
             &payer.pubkey(),
             &buffer_pubkey,
-            buffer_authority,
+            &buffer_authority.pubkey(),
             min_balance,
             buffer_len,
         )
@@ -2728,7 +2752,7 @@ pub fn write_program_buffer(
     let write_messages = prepare_write_messages(
         program_data,
         &buffer_pubkey,
-        buffer_authority,
+        &buffer_authority.pubkey(),
         &payer.pubkey(),
         &blockhash,
         priority_fee,
@@ -2742,7 +2766,7 @@ pub fn write_program_buffer(
         None,
         payer,
         Some(buffer_keypair),
-        Some(payer),
+        Some(buffer_authority),
         None,
         max_sign_attempts,
         use_rpc,
@@ -3056,6 +3080,40 @@ resolver = "2"
 
         assert!(err.contains("--security-metadata"));
         assert!(err.contains("security.json"));
+    }
+
+    #[test]
+    fn security_metadata_path_rejects_invalid_json() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("security.json"), "{\"name\":").unwrap();
+        let cfg = WithPath::new(Config::default(), dir.path().join("Anchor.toml"));
+
+        let err = security_metadata_path(Some(&cfg)).unwrap_err().to_string();
+
+        assert!(err.contains("Failed to parse"));
+        assert!(err.contains("security.json"));
+    }
+
+    #[test]
+    fn security_metadata_path_requires_json_object() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("security.json"), "[]").unwrap();
+        let cfg = WithPath::new(Config::default(), dir.path().join("Anchor.toml"));
+
+        let err = security_metadata_path(Some(&cfg)).unwrap_err().to_string();
+
+        assert!(err.contains("must be a JSON object"));
+    }
+
+    #[test]
+    fn unrequested_security_metadata_does_not_require_file() {
+        let dir = tempdir().unwrap();
+        let cfg = WithPath::new(Config::default(), dir.path().join("Anchor.toml"));
+
+        assert_eq!(
+            requested_security_metadata_path(false, Some(&cfg)).unwrap(),
+            None
+        );
     }
 
     #[test]

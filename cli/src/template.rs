@@ -2151,7 +2151,7 @@ fn test_initialize() {{
 pub fn get_security_metadata_content(project_name: &str) -> Value {
     json!({
         "name": project_name,
-        "logo": "https://solana.com/pt/src/img/branding/solanaLogoMark.png",
+        "logo": "https://solana.com/src/img/branding/solanaLogoMark.png",
         "description": "A fresh Anchor program!",
         "notification": "Remember to review and publish this metadata with `anchor program deploy --security-metadata` once the contents are accurate.",
         "sdk": "https://github.com/your-sdk",
@@ -2176,6 +2176,16 @@ pub fn get_security_metadata_content(project_name: &str) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn security_metadata_uses_canonical_solana_logo() {
+        let metadata = get_security_metadata_content("counter");
+
+        assert_eq!(
+            metadata["logo"],
+            "https://solana.com/src/img/branding/solanaLogoMark.png"
+        );
+    }
 
     #[test]
     fn v1_templates_keep_legacy_anchor_lang_shape() {

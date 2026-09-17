@@ -23,7 +23,7 @@ pub enum MetadataCommand {
 }
 
 impl MetadataCommand {
-    fn status(self, rpc_url: &str) -> io::Result<ExitStatus> {
+    fn command(self, rpc_url: &str) -> Command {
         let mut command = Command::new("npx");
         // Force on first-time install
         command.arg("--yes");
@@ -58,7 +58,11 @@ impl MetadataCommand {
                 command.args(args);
             }
         };
-        command.status()
+        command
+    }
+
+    fn status(self, rpc_url: &str) -> io::Result<ExitStatus> {
+        self.command(rpc_url).status()
     }
 }
 
@@ -107,8 +111,8 @@ pub enum SecurityCommand {
         security_path: String,
         /// Program upgrade authority signs to authorize the write
         keypair_path: String,
-        /// Fee payer for the write
-        payer: String,
+        /// Fee payer for the write; the authority will be used if this is not set.
+        payer: Option<String>,
         priority_fees: Option<String>,
     },
 }
@@ -128,7 +132,7 @@ impl SecurityCommand {
                 ..
             } => MetadataCommand::Funded {
                 keypair_path,
-                payer: Some(payer),
+                payer,
                 priority_fees,
                 args,
             },
@@ -274,5 +278,46 @@ impl UnfundedIdlSubcommand {
             }
         };
         parts.into_iter().map(String::from).collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn security_command(payer: Option<&str>) -> Command {
+        SecurityCommand::Write {
+            program_id: "11111111111111111111111111111111".into(),
+            security_path: "/tmp/security.json".into(),
+            keypair_path: "/tmp/authority.json".into(),
+            payer: payer.map(String::from),
+            priority_fees: None,
+        }
+        .into_metadata()
+        .command("http://localhost:8899")
+    }
+
+    #[test]
+    fn security_command_omits_redundant_payer() {
+        let command = security_command(None);
+        let args = command
+            .get_args()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+
+        assert!(!args.iter().any(|arg| arg == "--payer"));
+    }
+
+    #[test]
+    fn security_command_includes_separate_payer() {
+        let command = security_command(Some("/tmp/payer.json"));
+        let args = command
+            .get_args()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+
+        assert!(args
+            .windows(2)
+            .any(|args| args == ["--payer", "/tmp/payer.json"]));
     }
 }
