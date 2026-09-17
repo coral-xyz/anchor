@@ -48,6 +48,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang: Provide better error messages for `token` constraints ([#4698](https://github.com/solana-foundation/anchor/pull/4698)).
 - ts: Improve account resolution error of self-referencing PDAs ([#4711](https://github.com/solana-foundation/anchor/pull/4711)).
 - cli: Warn unused `Anchor.toml` fields ([#4749](https://github.com/solana-foundation/anchor/pull/4749)).
+- cli: Generate a `security.json` template on `anchor init` (skip with `--no-security-metadata`) and upload it on-chain through program-metadata with `anchor deploy --security-metadata` / `anchor program deploy --security-metadata` ([#4177](https://github.com/otter-sec/anchor/pull/4177)).
 
 ### Fixes
 

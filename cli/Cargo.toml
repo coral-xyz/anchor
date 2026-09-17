@@ -96,7 +96,7 @@ reqwest = { workspace = true, default-features = false, features = [
 semver = "1.0.4"
 serde = { version = "1.0.130", features = ["derive"] }
 serde_ignored = "0.1.14"
-serde_json = "1.0"
+serde_json = { version = "1.0", features = ["preserve_order"] }
 shellexpand = "2.1.0"
 # Cohort-independent.
 solana-commitment-config.workspace = true

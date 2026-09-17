@@ -6,6 +6,7 @@ use {
     anyhow::Result,
     clap::{Parser, ValueEnum},
     heck::{ToLowerCamelCase, ToPascalCase, ToSnakeCase},
+    serde_json::{json, Value},
     solana_keypair::{read_keypair_file, write_keypair_file, Keypair},
     solana_pubkey::Pubkey,
     solana_signer::Signer,
@@ -2145,6 +2146,31 @@ fn test_initialize() {{
             name.to_snake_case(),
         ),
     )]
+}
+
+pub fn get_security_metadata_content(project_name: &str) -> Value {
+    json!({
+        "name": project_name,
+        "logo": "https://solana.com/pt/src/img/branding/solanaLogoMark.png",
+        "description": "A fresh Anchor program!",
+        "notification": "Remember to review and publish this metadata with `anchor program deploy --security-metadata` once the contents are accurate.",
+        "sdk": "https://github.com/your-sdk",
+        "project_url": "https://github.com/your-project/",
+        "contacts": [
+        "email:security@example.com",
+        "discord:MyProgram#1234",
+        "twitter:@MyProgram"
+        ],
+        "policy": "https://example.com/security-policy",
+        "preferred_languages": ["en", "de"],
+        "encryption": "https://example.com/pgp-key",
+        "source_code": "https://github.com/your-source-code/",
+        "source_release": "v0.1.0",
+        "source_revision": "abc123def456",
+        "auditors": ["Audit Firm A", "Security Researcher B"],
+        "acknowledgements": "https://example.com/security-acknowledgements",
+        "version": "0.1.0"
+    })
 }
 
 #[cfg(test)]
