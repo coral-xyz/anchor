@@ -57,7 +57,7 @@ solana-sbpf = "0.23.0"
 solana-sdk-ids = "3.1.0"
 solana-signature = "3.3.0"
 solana-signer = "3.0.0"
-solana-system-interface = "2.0.0"
+solana-system-interface = "3.2.0"
 solana-sysvar-id = "3.1.0"
 
 # --- v3 cohort (default) ---
