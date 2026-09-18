@@ -137,9 +137,8 @@ pub fn ensure_paths() {
     // Copy the `avm` binary to `~/.avm/bin` so we can create symlinks to it.
     let avm_in_bin = bin_dir.join("avm");
     if let Ok(current_avm) = std::env::current_exe() {
-        // Only copy if the paths are different
-        if current_avm != avm_in_bin && !nightly_enabled() {
-            if let Err(e) = fs::copy(current_avm, &avm_in_bin) {
+        if !nightly_enabled() {
+            if let Err(e) = copy_current_avm_to_bin(&current_avm, &avm_in_bin) {
                 eprintln!("Failed to copy avm binary: {e}");
             }
         }
@@ -243,6 +242,22 @@ pub fn ensure_paths() {
     if !current_version_file_path().exists() {
         fs::File::create(current_version_file_path()).expect("Could not create .version file");
     }
+}
+
+fn copy_current_avm_to_bin(current_avm: &Path, avm_in_bin: &Path) -> std::io::Result<()> {
+    // `current_exe` can preserve a Cargo-bin symlink rather than resolving it.
+    // Copying that symlink back to its target truncates the AVM binary.
+    if current_avm == avm_in_bin
+        || matches!(
+            (fs::canonicalize(current_avm), fs::canonicalize(avm_in_bin)),
+            (Ok(current_avm), Ok(avm_in_bin)) if current_avm == avm_in_bin
+        )
+    {
+        return Ok(());
+    }
+
+    fs::copy(current_avm, avm_in_bin)?;
+    Ok(())
 }
 
 /// Read the current version from the version file
@@ -1595,6 +1610,22 @@ mod tests {
         assert!(bin_dir.exists());
         let current_version_file = current_version_file_path();
         assert!(current_version_file.exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn copy_current_avm_to_bin_skips_symlink_to_destination() {
+        let dir = tempfile::tempdir().unwrap();
+        let avm_in_bin = dir.path().join("avm");
+        let cargo_avm = dir.path().join("cargo-avm");
+        let contents = b"non-empty avm binary";
+
+        fs::write(&avm_in_bin, contents).unwrap();
+        std::os::unix::fs::symlink(&avm_in_bin, &cargo_avm).unwrap();
+
+        copy_current_avm_to_bin(&cargo_avm, &avm_in_bin).unwrap();
+
+        assert_eq!(fs::read(&avm_in_bin).unwrap(), contents);
     }
 
     #[test]
