@@ -82,6 +82,8 @@ impl<T: crate::AccountClose> crate::AccountClose for Box<T> {
 impl<T: crate::IdlAccountType> crate::IdlAccountType for Box<T> {
     const __IDL_ACCOUNT_ENTRY: Option<&'static str> = T::__IDL_ACCOUNT_ENTRY;
     const __IDL_TYPE_DEF: Option<&'static str> = T::__IDL_TYPE_DEF;
+    const __IDL_IS_SIGNER: bool = T::__IDL_IS_SIGNER;
+    const __IDL_ADDRESS: Option<&'static str> = T::__IDL_ADDRESS;
     fn __idl_account_entry() -> Option<&'static str> {
         T::__idl_account_entry()
     }
