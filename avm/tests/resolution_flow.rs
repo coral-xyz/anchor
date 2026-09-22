@@ -259,6 +259,7 @@ echo "args=$*" >> "$AVM_TEST_ANCHOR_LOG"
         let cargo_home = self._temp.path().join("cargo-home");
         let home = self._temp.path().join("home");
         fs::create_dir_all(&home).expect("home");
+        fs::write(home.join(".zshrc"), "# existing profile\n").expect(".zshrc");
 
         write_executable(
             &self.avm_home_bin().join("avm"),
@@ -272,6 +273,7 @@ echo "fake stable avm"
             .env("AVM_HOME", &self.avm_home)
             .env("CARGO_HOME", &cargo_home)
             .env("HOME", &home)
+            .env("SHELL", "/bin/zsh")
             .env("AVM_INSTALL_TARGET", nightly_target())
             .env(
                 "AVM_NIGHTLY_MANIFEST_URL",
@@ -291,15 +293,19 @@ echo "fake stable avm"
             "{stdout}"
         );
         assert!(
-            stdout.contains("Add this to your shell profile if avm is not already on PATH:"),
-            "{stdout}"
-        );
-        assert!(
             stdout.contains(&format!(
-                "export PATH=\"{}:$PATH\"",
-                self.avm_home_bin().display()
+                "Added {} to PATH in {}",
+                self.avm_home_bin().display(),
+                home.join(".zshrc").display()
             )),
             "{stdout}"
+        );
+        assert_eq!(
+            fs::read_to_string(home.join(".zshrc")).expect(".zshrc"),
+            format!(
+                "# existing profile\n\n# Added by AVM installer\nexport PATH='{}':\"$PATH\"\n",
+                self.avm_home_bin().display()
+            )
         );
         assert!(
             self.avm_home_bin().join("avm-nightly").is_file(),
@@ -323,6 +329,104 @@ echo "fake stable avm"
         assert!(
             !cargo_home.join("bin").exists(),
             "missing CARGO_HOME/bin should be a no-op, not an early exit"
+        );
+
+        let no_profile_home = self._temp.path().join("home-without-profile");
+        fs::create_dir_all(&no_profile_home).expect("home without profile");
+        let fallback_output = Command::new("sh")
+            .arg(&installer)
+            .env("AVM_HOME", &self.avm_home)
+            .env("CARGO_HOME", &cargo_home)
+            .env("HOME", &no_profile_home)
+            .env("SHELL", "/bin/zsh")
+            .env("AVM_INSTALL_TARGET", nightly_target())
+            .env(
+                "AVM_NIGHTLY_MANIFEST_URL",
+                format!("file://{}", manifest.display()),
+            )
+            .env(
+                "AVM_NIGHTLY_BASE_URL",
+                format!("file://{}/", nightly_dir.display()),
+            )
+            .output()
+            .expect("run checkout installer without a supported shell");
+        assert_success(&fallback_output);
+
+        let fallback_stdout = String::from_utf8_lossy(&fallback_output.stdout);
+        assert!(
+            fallback_stdout
+                .contains("Add this to your shell profile if avm is not already on PATH:"),
+            "{fallback_stdout}"
+        );
+        assert!(
+            fallback_stdout.contains(&format!(
+                "export PATH=\"{}:$PATH\"",
+                self.avm_home_bin().display()
+            )),
+            "{fallback_stdout}"
+        );
+        assert!(
+            !no_profile_home.join(".zshrc").exists(),
+            "installer must not create a shell profile"
+        );
+
+        let bash_home = self._temp.path().join("bash-home");
+        fs::create_dir_all(&bash_home).expect("bash home");
+        fs::write(bash_home.join(".bash_login"), "# existing bash login\n").expect(".bash_login");
+        write_executable(
+            &self.path_bin.join("uname"),
+            r#"#!/bin/sh
+if [ "$1" = "-s" ]; then
+  echo Darwin
+else
+  /usr/bin/uname "$@"
+fi
+"#,
+        );
+        let path = format!(
+            "{}:{}",
+            self.path_bin.display(),
+            env::var("PATH").unwrap_or_default()
+        );
+        let bash_output = Command::new("sh")
+            .arg(&installer)
+            .env("AVM_HOME", &self.avm_home)
+            .env("CARGO_HOME", &cargo_home)
+            .env("HOME", &bash_home)
+            .env("PATH", path)
+            .env("SHELL", "/bin/bash")
+            .env("AVM_INSTALL_TARGET", nightly_target())
+            .env(
+                "AVM_NIGHTLY_MANIFEST_URL",
+                format!("file://{}", manifest.display()),
+            )
+            .env(
+                "AVM_NIGHTLY_BASE_URL",
+                format!("file://{}/", nightly_dir.display()),
+            )
+            .output()
+            .expect("run checkout installer with macOS bash");
+        assert_success(&bash_output);
+
+        let bash_stdout = String::from_utf8_lossy(&bash_output.stdout);
+        assert!(
+            bash_stdout.contains(&format!(
+                "Added {} to PATH in {}",
+                self.avm_home_bin().display(),
+                bash_home.join(".bash_login").display()
+            )),
+            "{bash_stdout}"
+        );
+        assert_eq!(
+            fs::read_to_string(bash_home.join(".bash_login")).expect(".bash_login"),
+            format!(
+                "# existing bash login\n\n# Added by AVM installer\nexport PATH='{}':\"$PATH\"\n",
+                self.avm_home_bin().display()
+            )
+        );
+        assert!(
+            !bash_home.join(".bash_profile").exists(),
+            "installer must not create .bash_profile when bash uses .bash_login"
         );
     }
 

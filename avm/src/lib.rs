@@ -114,7 +114,6 @@ pub fn version_binary_path(version: &Version) -> PathBuf {
 }
 
 /// Path to the cargo binary directory, defaults to `~/.cargo/bin` if `CARGO_HOME`
-#[cfg(not(test))] // this prevents tests from running this function so we don't change the developer environment during tests
 fn cargo_bin_dir() -> Option<PathBuf> {
     if let Ok(cargo_home) = std::env::var("CARGO_HOME") {
         return Some(PathBuf::from(cargo_home).join("bin"));
@@ -1303,6 +1302,37 @@ fn point_anchor_stub_to(target: &Path) -> Result<()> {
     Ok(())
 }
 
+fn point_cargo_avm_to(cargo_bin: &Path, target: &Path) -> Result<()> {
+    let cargo_avm = cargo_bin.join(if cfg!(target_os = "windows") {
+        "avm.exe"
+    } else {
+        "avm"
+    });
+    if cargo_avm == target {
+        return Ok(());
+    }
+
+    fs::create_dir_all(cargo_bin).with_context(|| format!("Creating {}", cargo_bin.display()))?;
+    if fs::symlink_metadata(&cargo_avm).is_ok() {
+        fs::remove_file(&cargo_avm).with_context(|| format!("Removing {}", cargo_avm.display()))?;
+    }
+
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(target, &cargo_avm)
+            .with_context(|| format!("Linking {} to {}", cargo_avm.display(), target.display()))?;
+    }
+
+    #[cfg(windows)]
+    {
+        fs::copy(target, &cargo_avm)
+            .with_context(|| format!("Copying {} to {}", target.display(), cargo_avm.display()))?;
+        set_executable(&cargo_avm)?;
+    }
+
+    Ok(())
+}
+
 fn install_binary_atomic(source: &Path, destination: &Path) -> Result<()> {
     if let Some(parent) = destination.parent() {
         fs::create_dir_all(parent).with_context(|| format!("Creating {}", parent.display()))?;
@@ -1562,6 +1592,8 @@ pub fn self_update(include_pre_release: bool, bleeding_edge: bool) -> Result<()>
         "--git".to_string(),
         "https://github.com/otter-sec/anchor".to_string(),
         "--locked".to_string(),
+        "--root".to_string(),
+        AVM_HOME.display().to_string(),
     ];
 
     if bleeding_edge {
@@ -1588,6 +1620,10 @@ pub fn self_update(include_pre_release: bool, bleeding_edge: bool) -> Result<()>
 
     if !status.success() {
         bail!("Failed to update avm");
+    }
+
+    if let Some(cargo_bin) = cargo_bin_dir() {
+        point_cargo_avm_to(&cargo_bin, &avm_binary_path())?;
     }
 
     println!("avm successfully updated");
@@ -1634,6 +1670,32 @@ mod tests {
             version_binary_path(&Version::parse("0.18.2").unwrap()),
             get_bin_dir_path().join("anchor-0.18.2")
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn point_cargo_avm_to_replaces_binary_with_link() {
+        // Do not change a user's Cargo directory outside CI.
+        if std::env::var_os("CI").is_none() {
+            return;
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let cargo_bin = dir.path().join("cargo-bin");
+        let avm = dir.path().join("avm-bin/avm");
+        fs::create_dir_all(avm.parent().unwrap()).unwrap();
+        fs::write(&avm, b"updated avm").unwrap();
+        fs::create_dir_all(&cargo_bin).unwrap();
+        fs::write(cargo_bin.join("avm"), b"stale avm").unwrap();
+
+        point_cargo_avm_to(&cargo_bin, &avm).unwrap();
+
+        let cargo_avm = cargo_bin.join("avm");
+        assert!(fs::symlink_metadata(&cargo_avm)
+            .unwrap()
+            .file_type()
+            .is_symlink());
+        assert_eq!(fs::read(cargo_avm).unwrap(), b"updated avm");
     }
 
     #[test]
