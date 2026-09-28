@@ -199,6 +199,54 @@ fn qualified_path_does_not_use_builtin_address_size() {
     assert_eq!(WithCustomAddress::INIT_SPACE, 8);
 }
 
+struct WideAddress;
+
+impl Space for WideAddress {
+    const INIT_SPACE: usize = 48;
+}
+
+struct WidePubkey;
+
+impl Space for WidePubkey {
+    const INIT_SPACE: usize = 64;
+}
+
+#[derive(InitSpace)]
+struct GenericAddressParam<Address: Space> {
+    _value: Address,
+}
+
+#[derive(InitSpace)]
+struct GenericPubkeyParam<Pubkey: Space> {
+    _value: Pubkey,
+}
+
+#[test]
+fn generic_parameters_named_like_builtins_use_space() {
+    assert_eq!(
+        GenericAddressParam::<WideAddress>::INIT_SPACE,
+        WideAddress::INIT_SPACE
+    );
+    assert_eq!(
+        GenericPubkeyParam::<WidePubkey>::INIT_SPACE,
+        WidePubkey::INIT_SPACE
+    );
+}
+
+#[derive(InitSpace)]
+struct NestedGenericAddress<Address: Space> {
+    _maybe: Option<Address>,
+    _array: [Address; 2],
+}
+
+#[test]
+fn nested_generic_parameters_use_space_recursively() {
+    assert_eq!(
+        NestedGenericAddress::<WideAddress>::INIT_SPACE,
+        (1 + WideAddress::INIT_SPACE) + 2 * WideAddress::INIT_SPACE
+    );
+}
+
 #[derive(InitSpace)]
 enum Variant {
     A,             // 0

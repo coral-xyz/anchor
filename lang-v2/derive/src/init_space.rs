@@ -54,10 +54,17 @@ pub fn expand(item: TokenStream) -> TokenStream {
     }
 
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let generic_type_params: Vec<Ident> = input
+        .generics
+        .type_params()
+        .map(|param| param.ident.clone())
+        .collect();
     let name = input.ident;
 
     let process_struct_fields = |fields: Punctuated<Field, Comma>| {
-        let recurse = fields.into_iter().map(field_len_tokens);
+        let recurse = fields
+            .into_iter()
+            .map(|field| field_len_tokens(field, &generic_type_params));
 
         quote! {
             #[automatically_derived]
@@ -80,7 +87,10 @@ pub fn expand(item: TokenStream) -> TokenStream {
         },
         syn::Data::Enum(enm) => {
             let variants = enm.variants.into_iter().map(|v| {
-                let len = v.fields.into_iter().map(field_len_tokens);
+                let len = v
+                    .fields
+                    .into_iter()
+                    .map(|field| field_len_tokens(field, &generic_type_params));
 
                 quote! {
                     0 #(+ #len)*
@@ -110,7 +120,7 @@ pub fn expand(item: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
-fn field_len_tokens(field: Field) -> TokenStream2 {
+fn field_len_tokens(field: Field, generic_type_params: &[Ident]) -> TokenStream2 {
     match crate::find_unsupported_wincode_attr(&field.attrs) {
         Ok(Some((crate::UnsupportedWincodeAttrKind::Skip, span))) => {
             return syn::Error::new(
@@ -144,7 +154,7 @@ fn field_len_tokens(field: Field) -> TokenStream2 {
     }
 
     let mut max_len_args = get_max_len_args(&field.attrs);
-    len_from_type(field.ty, &mut max_len_args)
+    len_from_type(field.ty, &mut max_len_args, generic_type_params)
 }
 
 fn gen_max<T: Iterator<Item = TokenStream2>>(mut iter: T) -> TokenStream2 {
@@ -156,15 +166,21 @@ fn gen_max<T: Iterator<Item = TokenStream2>>(mut iter: T) -> TokenStream2 {
     }
 }
 
-fn len_from_type(ty: Type, attrs: &mut Option<VecDeque<TokenStream2>>) -> TokenStream2 {
+fn len_from_type(
+    ty: Type,
+    attrs: &mut Option<VecDeque<TokenStream2>>,
+    generic_type_params: &[Ident],
+) -> TokenStream2 {
     match ty {
         Type::Array(TypeArray { elem, len, .. }) => {
             let array_len = len.to_token_stream();
-            let type_len = len_from_type(*elem, attrs);
+            let type_len = len_from_type(*elem, attrs, generic_type_params);
             quote!((#array_len * #type_len))
         }
         Type::Path(ty_path) => {
-            if let Some(type_name) = builtin_type_name(&ty_path) {
+            if is_generic_type_param(&ty_path, generic_type_params) {
+                quote!(<#ty_path as anchor_lang::Space>::INIT_SPACE)
+            } else if let Some(type_name) = builtin_type_name(&ty_path) {
                 let path_segment = ty_path
                     .path
                     .segments
@@ -186,7 +202,7 @@ fn len_from_type(ty: Type, attrs: &mut Option<VecDeque<TokenStream2>>) -> TokenS
                     "Pubkey" | "Address" => quote!(32),
                     "Option" => {
                         if let Some(ty) = first_ty {
-                            let type_len = len_from_type(ty, attrs);
+                            let type_len = len_from_type(ty, attrs, generic_type_params);
 
                             quote!((1 + #type_len))
                         } else {
@@ -196,7 +212,7 @@ fn len_from_type(ty: Type, attrs: &mut Option<VecDeque<TokenStream2>>) -> TokenS
                     "Vec" => {
                         if let Some(ty) = first_ty {
                             let max_len = get_next_arg(ident, attrs);
-                            let type_len = len_from_type(ty, attrs);
+                            let type_len = len_from_type(ty, attrs, generic_type_params);
 
                             quote!((4 + #type_len * #max_len))
                         } else {
@@ -219,7 +235,7 @@ fn len_from_type(ty: Type, attrs: &mut Option<VecDeque<TokenStream2>>) -> TokenS
             let recurse = ty_tuple
                 .elems
                 .iter()
-                .map(|t| len_from_type(t.clone(), attrs));
+                .map(|t| len_from_type(t.clone(), attrs, generic_type_params));
             quote! {
                 (0 #(+ #recurse)*)
             }
@@ -235,6 +251,14 @@ fn len_from_type(ty: Type, attrs: &mut Option<VecDeque<TokenStream2>>) -> TokenS
         )
         .to_compile_error(),
     }
+}
+
+fn is_generic_type_param(ty_path: &syn::TypePath, generic_type_params: &[Ident]) -> bool {
+    ty_path.qself.is_none()
+        && ty_path.path.segments.len() == 1
+        && generic_type_params
+            .iter()
+            .any(|param| param == &ty_path.path.segments[0].ident)
 }
 
 fn builtin_type_name(ty_path: &syn::TypePath) -> Option<&'static str> {
