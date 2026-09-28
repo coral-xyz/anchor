@@ -335,6 +335,18 @@ fn checked_invoke_rejects_nonsigner_handle_for_signer_meta() {
 }
 
 #[test]
+fn checked_invoke_rejects_signer_override_without_transaction_signature() {
+    let buffer = account_view([1; 32], false);
+    let view = unsafe { buffer.view() };
+    let ix = signer_instruction(*view.address(), false);
+    let handles = [CpiHandle::readonly(&view).as_signer()];
+
+    let err = program::invoke(&ix, &handles).unwrap_err();
+
+    assert_eq!(err, ProgramError::MissingRequiredSignature);
+}
+
+#[test]
 fn checked_invoke_signed_allows_signer_meta_without_tx_signer_when_seeds_are_supplied() {
     let buffer = account_view([1; 32], false);
     let view = unsafe { buffer.view() };
