@@ -255,6 +255,12 @@ pub fn parse_account_attrs(attrs: &[Attribute]) -> syn::Result<AccountAttrs> {
                         result.is_mut = true;
                         while !content.is_empty() {
                             let ns_ident: Ident = Ident::parse_any(&content)?;
+                            if ns_ident == "associated_token" {
+                                return Err(syn::Error::new(
+                                    ns_ident.span(),
+                                    "`update(associated_token::...)` constraints are not supported",
+                                ));
+                            }
                             content.parse::<Token![::]>()?;
                             let key_ident: Ident = Ident::parse_any(&content)?;
                             content.parse::<Token![=]>()?;
@@ -3402,6 +3408,21 @@ mod tests {
         assert!(parsed_attrs.seeds.is_some());
         assert!(parsed_attrs.bump.is_some());
         assert!(parsed_attrs.is_signer);
+    }
+
+    #[test]
+    fn associated_token_update_constraints_are_rejected() {
+        let attrs: Vec<Attribute> = vec![syn::parse_quote!(
+            #[account(update(associated_token::mint = mint))]
+        )];
+        let err = match parse_account_attrs(&attrs) {
+            Ok(_) => panic!("associated_token update constraints must be rejected"),
+            Err(err) => err,
+        };
+        assert_eq!(
+            err.to_string(),
+            "`update(associated_token::...)` constraints are not supported"
+        );
     }
 
     #[test]

@@ -1364,6 +1364,28 @@ pub struct Bad {
     miri,
     ignore = "spawns cargo and writes temporary workspaces; covered by normal cargo test"
 )]
+fn associated_token_update_constraints_are_rejected() {
+    compile_fail_case(
+        "associated_token_update_constraints_are_rejected",
+        r#"
+use anchor_lang::prelude::*;
+
+#[derive(Accounts)]
+pub struct Bad {
+    #[account(update(associated_token::mint = mint))]
+    pub data: UncheckedAccount,
+    pub mint: UncheckedAccount,
+}
+"#,
+        &["`update(associated_token::...)` constraints are not supported"],
+    );
+}
+
+#[test]
+#[cfg_attr(
+    miri,
+    ignore = "spawns cargo and writes temporary workspaces; covered by normal cargo test"
+)]
 fn optional_pda_init_payer_is_rejected() {
     compile_fail_case(
         "optional_pda_init_payer_is_rejected",
