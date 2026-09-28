@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import {
+  getStructCodec,
   isSolanaError,
   SOLANA_ERROR__CODECS__CANNOT_DECODE_EMPTY_BYTE_ARRAY,
   SOLANA_ERROR__CODECS__INVALID_UTF8_BYTES,
@@ -7,6 +8,7 @@ import {
 } from "@solana/kit";
 import { PublicKey } from "@solana/web3.js";
 import { BorshCoder, Idl } from "../src";
+import { getRustEnumCodec } from "../src/coder/borsh/codecs";
 
 describe("coder.types", () => {
   test("Can encode and decode user-defined types", () => {
@@ -256,6 +258,38 @@ describe("coder.types", () => {
       /Invalid enum variant/
     );
     assert.throws(() => coder.types.decode("Side", Buffer.from([4])));
+  });
+
+  test("does not treat inherited constructor as an enum variant", () => {
+    const codec = getRustEnumCodec([
+      ["constructor", getStructCodec([])],
+      ["withdraw", getStructCodec([])],
+    ]);
+
+    const encoded = codec.encode({ withdraw: {} });
+
+    assert.deepStrictEqual([...encoded], [1]);
+    assert.deepStrictEqual(codec.decode(encoded), { withdraw: {} });
+  });
+
+  test("does not treat other Object prototype names as enum variants", () => {
+    const codec = getRustEnumCodec([
+      ["toString", getStructCodec([])],
+      ["hasOwnProperty", getStructCodec([])],
+      ["withdraw", getStructCodec([])],
+    ]);
+
+    const encoded = codec.encode({ withdraw: {} });
+
+    assert.deepStrictEqual([...encoded], [2]);
+  });
+
+  test("accepts enum values with a null prototype", () => {
+    const codec = getRustEnumCodec([["withdraw", getStructCodec([])]]);
+    const value = Object.create(null) as { withdraw: Record<string, never> };
+    value.withdraw = {};
+
+    assert.deepStrictEqual([...codec.encode(value)], [0]);
   });
 
   test("Can encode and decode coptions, reserving the payload slot for fixed-size None values", () => {

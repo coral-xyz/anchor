@@ -146,7 +146,7 @@ export function getRustEnumCodec(
     ),
     (value: unknown) => {
       if (typeof value === "object" && value !== null) {
-        const index = names.findIndex((name) => name in value);
+        const index = names.findIndex((name) => Object.hasOwn(value, name));
         if (index >= 0) return index;
       }
       throw new Error(`Invalid enum variant: ${JSON.stringify(value)}`);
