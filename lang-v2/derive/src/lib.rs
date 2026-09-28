@@ -805,20 +805,29 @@ fn has_cfg_attrs(attrs: &[syn::Attribute]) -> bool {
 fn handler_wrapper_inline_attr(attrs: &[syn::Attribute]) -> syn::Attribute {
     attrs
         .iter()
-        .find(|attr| {
-            attr.path().is_ident("inline")
-                || (attr.path().is_ident("cfg_attr")
-                    && attr
-                        .parse_args_with(
-                            syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated,
-                        )
-                        .is_ok_and(|args| {
-                            args.iter()
-                                .skip(1)
-                                .any(|arg| arg.path().is_ident("inline"))
-                        }))
+        .find_map(|attr| {
+            if attr.path().is_ident("inline") {
+                return Some(attr.clone());
+            }
+
+            if !attr.path().is_ident("cfg_attr") {
+                return None;
+            }
+
+            let args = attr
+                .parse_args_with(
+                    syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated,
+                )
+                .ok()?;
+            let condition = args.first()?.clone();
+            let inline = args
+                .iter()
+                .skip(1)
+                .find(|arg| arg.path().is_ident("inline"))
+                .cloned()?;
+
+            Some(syn::parse_quote!(#[cfg_attr(#condition, #inline)]))
         })
-        .cloned()
         .unwrap_or_else(|| syn::parse_quote!(#[inline(never)]))
 }
 
@@ -6932,7 +6941,7 @@ mod tests {
             ),
             (
                 syn::parse_quote! {
-                    #[cfg_attr(feature = "fast", inline(always))]
+                    #[cfg_attr(feature = "fast", inline(always), no_mangle)]
                     pub fn conditional_handler(ctx: &mut Context<MyAccounts>) -> Result<()> {
                         let _ = ctx;
                         Ok(())
@@ -6945,6 +6954,10 @@ mod tests {
                 .wrapper
                 .to_string();
             assert!(wrapper.contains(expected), "unexpected wrapper: {wrapper}");
+            assert!(
+                !wrapper.contains("no_mangle"),
+                "wrapper copied an unrelated attribute: {wrapper}"
+            );
         }
     }
 
