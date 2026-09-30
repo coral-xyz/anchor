@@ -263,8 +263,6 @@ where
     const MIN_DATA_LEN: usize = T::DISCRIMINATOR.len();
 
     fn load(view: AccountView) -> Result<Self, ProgramError> {
-        // TODO: decide whether alias borrow conflicts surface as a dedicated
-        // Anchor error instead of `AccountBorrowFailed`.
         let data_ref = view.try_borrow()?;
         let (data, serialized_len) = Self::validate_and_load(view, &data_ref)?;
         // SAFETY: AccountView's raw pointer is valid for the entire instruction
@@ -291,8 +289,6 @@ where
             return Err(super::slab::cold_not_writable());
         }
         let mut view_mut = view;
-        // TODO: decide whether alias borrow conflicts surface as a dedicated
-        // Anchor error instead of `AccountBorrowFailed`.
         let data_ref = view_mut.try_borrow_mut()?;
         let (data, serialized_len) = Self::validate_and_load(view, &data_ref)?;
         // SAFETY: Same as load(). RefMut provides exclusive access and prevents

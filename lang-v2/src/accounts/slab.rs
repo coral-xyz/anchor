@@ -365,8 +365,6 @@ where
         let borrow_state = unsafe { (*view.account_ptr()).borrow_state };
         // 0 is the mutable-borrow sentinel; 1 has no shared-borrow slot left
         // for Slab to register below.
-        // TODO: decide whether alias borrow conflicts surface as a dedicated
-        // Anchor error instead of `AccountBorrowFailed`.
         if borrow_state < 2 {
             return Err(ProgramError::AccountBorrowFailed);
         }
@@ -400,8 +398,6 @@ where
         Self::assert_header_alignment();
         // Any live borrow, including one held by a wrapper over an aliased
         // view of this account, rules out the exclusive borrow taken below.
-        // TODO: decide whether alias borrow conflicts surface as a dedicated
-        // Anchor error instead of `AccountBorrowFailed`.
         if unsafe { (*view.account_ptr()).borrow_state } != NOT_BORROWED {
             return Err(ProgramError::AccountBorrowFailed);
         }
