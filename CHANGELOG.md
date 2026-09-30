@@ -14,6 +14,8 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Fixes
 
+- lang-v2: Restore compatibility for `BTreeMap`, `BTreeSet`, tuples, and `IdlType` values, and document intentional Wincode differences from v1 Borsh, including NaN acceptance and `HashMap`/`HashSet` iteration ordering. Native Map/Set IDL and TypeScript SDK support remains future work.
+
 ### Breaking
 
 - ts: Listen to events through Kit subscriptions ([#5103](https://github.com/otter-sec/anchor/pull/5103)).

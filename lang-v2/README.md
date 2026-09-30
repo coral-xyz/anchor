@@ -75,6 +75,26 @@ To help improve the migration for users, we've added an additional `compat` flag
 anchor-lang = { git = "...", branch = "anchor-next", features = ["compat"] }
 ```
 
+### Serialization differences from v1
+
+Anchor v2 uses Wincode for its Borsh-shaped serialization surfaces. Wincode
+supports `HashMap`, `HashSet`, `BTreeMap`, `BTreeSet`, tuples, and floating-point
+values, including `f32::NAN` and `f64::NAN`. These values are not byte-compatible
+with every v1 Borsh encoding:
+
+- Borsh orders `HashMap` / `HashSet` entries by key, while Wincode preserves the
+  collection's iteration order. Use `BTreeMap`, `BTreeSet`, or a sorted
+  `Vec<(K, V)>` when canonical ordering is required.
+- Borsh rejects NaN during float serialization, while Wincode accepts it. Code
+  migrating from v1 should validate float values explicitly when NaN is not a
+  valid application value.
+
+These are intentional serialization differences in the Wincode path, not
+reasons to reject otherwise valid values with the former compatibility guard.
+This applies to Borsh-shaped instruction data, `#[instruction(...)]` values,
+default events, and `#[account(borsh)]` data. Applications that require strict
+v1 behavior should validate values before serialization.
+
 ## Optimizations
 
 Here are some examples of optimizations present in Anchor v2.

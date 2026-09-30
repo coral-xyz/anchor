@@ -95,16 +95,17 @@ pub use wincode;
 ///
 /// Wincode with this config is byte-identical to borsh for the shapes Anchor
 /// programs commonly use (integers, fixed arrays, `Vec`, `String`, `Option`,
-/// tagged enums, nested structs). The following shapes are NOT byte-
-/// identical — if a program built on Anchor v1 (real borsh) used them, the
-/// on-chain bytes will NOT round-trip cleanly through v2:
+/// tagged enums, nested structs). The following shapes are supported but are
+/// NOT byte-identical — if a program built on Anchor v1 (real borsh) used
+/// them, the on-chain bytes will NOT necessarily round-trip cleanly through v2:
 ///
 /// - **`HashMap` / `HashSet`**: borsh sorts entries by key, wincode preserves
 ///   insertion order. Use `BTreeMap` / `BTreeSet` or `Vec<(K, V)>` if you
 ///   need canonical ordering.
-/// - **`f32` / `f64`**: wincode accepts NaN while borsh rejects it, so Anchor
-///   macros reject floats on Borsh-compatible instruction, account, event, and
-///   IDL type surfaces. Use an integer or fixed-point representation instead.
+/// - **`f32` / `f64`**: wincode accepts NaN while borsh rejects it. Anchor v2
+///   intentionally follows wincode here, so floating-point values (including
+///   NaN) are supported. Programs migrating from v1 should account for this
+///   serialization difference when validating or comparing float values.
 ///
 /// Programs that don't use these types are unaffected.
 ///

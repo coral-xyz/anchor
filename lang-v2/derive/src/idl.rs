@@ -1457,6 +1457,14 @@ mod tests {
         let vec_ty: Type = syn::parse_quote!(alloc::vec::Vec<alloc::string::String>);
         assert_eq!(rust_type_to_idl_value(&vec_ty), json!({ "vec": "string" }));
 
+        let set_ty: Type = syn::parse_quote!(alloc::collections::BTreeSet<models::Inner>);
+        assert_eq!(
+            rust_type_to_idl_value(&set_ty),
+            // The audited baseline emits opaque defined references; generic
+            // reference metadata was added separately on anchor-next (#5073).
+            json!({ "defined": { "name": "BTreeSet" } })
+        );
+
         let address_ty: Type = syn::parse_quote!(anchor_lang::prelude::Address);
         assert_eq!(rust_type_to_idl_value(&address_ty), json!("pubkey"));
 
