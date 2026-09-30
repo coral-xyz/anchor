@@ -941,7 +941,7 @@
   },
   "0.31.0": {
     "solanaVersion": "2.1.0",
-    "platformToolsVersion": "v1.43",
+    "platformToolsVersion": "v1.46.1",
     "result": {
       "binarySize": {
         "bench": 1041928
@@ -1128,7 +1128,7 @@
   },
   "0.31.1": {
     "solanaVersion": "2.1.0",
-    "platformToolsVersion": "v1.43",
+    "platformToolsVersion": "v1.46.1",
     "result": {
       "binarySize": {
         "bench": 1041928
@@ -1315,7 +1315,7 @@
   },
   "0.32.0": {
     "solanaVersion": "2.3.0",
-    "platformToolsVersion": "v1.48",
+    "platformToolsVersion": "v1.51.1",
     "result": {
       "binarySize": {
         "bench": 1126368
@@ -1502,7 +1502,7 @@
   },
   "0.32.1": {
     "solanaVersion": "2.3.0",
-    "platformToolsVersion": "v1.48",
+    "platformToolsVersion": "v1.51.1",
     "result": {
       "binarySize": {
         "bench": 1126840
@@ -1689,7 +1689,7 @@
   },
   "1.0.0": {
     "solanaVersion": "3.1.10",
-    "platformToolsVersion": "v1.52",
+    "platformToolsVersion": "v1.57",
     "result": {
       "binarySize": {
         "bench": 932992
@@ -1876,7 +1876,7 @@
   },
   "1.0.1": {
     "solanaVersion": "3.1.10",
-    "platformToolsVersion": "v1.52",
+    "platformToolsVersion": "v1.57",
     "result": {
       "binarySize": {
         "bench": 932992
@@ -2063,7 +2063,7 @@
   },
   "1.0.2": {
     "solanaVersion": "3.1.10",
-    "platformToolsVersion": "v1.52",
+    "platformToolsVersion": "v1.57",
     "result": {
       "binarySize": {
         "bench": 932992
@@ -2250,7 +2250,7 @@
   },
   "1.0.3": {
     "solanaVersion": "3.1.10",
-    "platformToolsVersion": "v1.52",
+    "platformToolsVersion": "v1.57",
     "result": {
       "binarySize": {
         "bench": 932992
@@ -2437,7 +2437,7 @@
   },
   "1.1.0": {
     "solanaVersion": "3.1.10",
-    "platformToolsVersion": "v1.52",
+    "platformToolsVersion": "v1.57",
     "result": {
       "binarySize": {
         "bench": 932992
@@ -2624,7 +2624,7 @@
   },
   "1.1.1": {
     "solanaVersion": "3.1.10",
-    "platformToolsVersion": "v1.52",
+    "platformToolsVersion": "v1.57",
     "result": {
       "binarySize": {
         "bench": 932048
@@ -2811,7 +2811,7 @@
   },
   "1.1.2": {
     "solanaVersion": "3.1.10",
-    "platformToolsVersion": "v1.52",
+    "platformToolsVersion": "v1.57",
     "result": {
       "binarySize": {
         "bench": 932048
