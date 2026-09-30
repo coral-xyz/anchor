@@ -1,6 +1,6 @@
 use {
     crate::{AccountField, AccountsStruct, Ty},
-    heck::SnakeCase,
+    heck::ToSnakeCase,
     quote::quote,
     std::{collections::HashSet, str::FromStr},
 };

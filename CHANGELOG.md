@@ -25,6 +25,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - cli: Redact cluster/RPC URLs printed by the CLI so credentials/secrets aren't leaked into terminal scrollback or CI logs. ([#5061](https://github.com/otter-sec/anchor/pull/5061)), ([#5030](https://github.com/otter-sec/anchor/issues/5030)).
 - lang: Validate Token-2022 mint extension constraints when reusing existing mints with `init_if_needed` ([#4845](https://github.com/otter-sec/anchor/pull/4845)).
 - cli: Make `anchor keygen new --silent` withhold the seed phrase instead of only the pubkey, matching `solana-keygen new --silent`. ([#5080](https://github.com/otter-sec/anchor/pull/5080)).
+- deps: Bump `heck` to 0.5 to avoid incompatible dependencies ([#4960](https://github.com/otter-sec/anchor/pull/4960)).
 
 ### Breaking
 

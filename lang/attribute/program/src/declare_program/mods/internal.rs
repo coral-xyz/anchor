@@ -11,7 +11,7 @@ use {
         parser::accounts,
         AccountsStruct,
     },
-    heck::CamelCase,
+    heck::ToUpperCamelCase,
     quote::{format_ident, quote},
     std::collections::HashSet,
 };
@@ -33,7 +33,7 @@ pub fn gen_internal_mod(idl: &Idl) -> proc_macro2::TokenStream {
 
 fn gen_internal_args_mod(idl: &Idl) -> proc_macro2::TokenStream {
     let ixs = idl.instructions.iter().map(|ix| {
-        let ix_struct_name = format_ident!("{}", ix.name.to_camel_case());
+        let ix_struct_name = format_ident!("{}", ix.name.to_upper_camel_case());
         let ty_def = convert_idl_type_def_to_ts(
             &IdlTypeDef {
                 name: ix_struct_name.to_string(),
@@ -117,7 +117,7 @@ fn get_fieldless_accounts(idl: &Idl) -> HashSet<String> {
     get_all_instruction_accounts(idl)
         .iter()
         .filter(|accs| !accounts_use_lifetime(&accs.accounts))
-        .map(|accs| accs.name.to_camel_case())
+        .map(|accs| accs.name.to_upper_camel_case())
         .collect()
 }
 
@@ -129,7 +129,7 @@ fn gen_internal_accounts_common(
     let accounts = all_ix_accs
         .iter()
         .map(|accs| {
-            let ident = format_ident!("{}", accs.name.to_camel_case());
+            let ident = format_ident!("{}", accs.name.to_upper_camel_case());
             // `<'info>` is only declared when some field actually binds it. A
             // struct whose every field is a fieldless composite has nothing to
             // bind it, and an unused lifetime parameter is a hard `E0392`.
@@ -174,7 +174,7 @@ fn gen_internal_accounts_common(
                     let ty_name = all_ix_accs
                         .iter()
                         .find(|a| a.accounts == accs.accounts)
-                        .map(|a| format_ident!("{}", a.name.to_camel_case()))
+                        .map(|a| format_ident!("{}", a.name.to_upper_camel_case()))
                         .expect("Accounts must exist");
 
                     // The composite's own shape decides its lifetime, not the

@@ -6,7 +6,7 @@ use {
         },
         Program,
     },
-    heck::SnakeCase,
+    heck::ToSnakeCase,
     quote::{quote, ToTokens},
 };
 
