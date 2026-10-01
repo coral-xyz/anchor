@@ -19,7 +19,7 @@ use {
     },
 };
 
-const ANCHOR_MSRV: &str = "1.89.0";
+const ANCHOR_MSRV: &str = "1.95.0";
 const ANCHOR_V2_TEMPLATE_VERSION: &str = "2.0.0-rc.2";
 // Host-side v2 tests depend on Agave and LiteSVM from anchor-next, which require newer Rust.
 const ANCHOR_V2_HOST_RUST_VERSION: &str = "1.97.1";
@@ -617,7 +617,7 @@ solana-sdk-ids = "3"
         Some(TestTemplate::Litesvm) => {
             r#"
 [dev-dependencies]
-# Cargo.lock pins LiteSVM's Rust-1.89-compatible dependency graph.
+# Cargo.lock pins LiteSVM's compatible dependency graph.
 litesvm = "0.15.0"
 solana-message = "4"
 solana-transaction = "4"
