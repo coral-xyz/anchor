@@ -1,7 +1,7 @@
 use {
     crate::{
         compat::solana_pubkey, config::ProgramWorkspace, create_files, override_or_create_files,
-        AbsolutePath, Files, PackageManager, VERSION,
+        AbsolutePath, Files, PackageManager, DEFAULT_TOOLS_VERSION, VERSION,
     },
     anyhow::Result,
     clap::{Parser, ValueEnum},
@@ -1519,7 +1519,7 @@ impl TestTemplate {
                 }
             }
             Self::Rust | Self::Litesvm => "cargo test".to_owned(),
-            Self::Mollusk => "cargo test-sbf".to_owned(),
+            Self::Mollusk => format!("cargo test-sbf --tools-version {DEFAULT_TOOLS_VERSION}"),
         }
     }
 
