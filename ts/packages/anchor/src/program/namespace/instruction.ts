@@ -1,8 +1,9 @@
 import {
   AccountMeta,
   AccountRole,
-  Address as KitAddress,
+  Address,
   Instruction,
+  ReadonlyUint8Array,
 } from "@solana/kit";
 import {
   Idl,
@@ -13,7 +14,7 @@ import {
 } from "../../idl.js";
 import { IdlError } from "../../error.js";
 import {
-  Address,
+  AddressInput,
   toAddress,
   toInstruction,
   validateAccounts,
@@ -32,7 +33,7 @@ export default class InstructionNamespaceFactory {
   public static build<IDL extends Idl, I extends AllInstructions<IDL>>(
     idlIx: I,
     encodeFn: InstructionEncodeFn<I>,
-    programAddress: KitAddress
+    programAddress: Address
   ): InstructionFn<IDL, I> {
     if (idlIx.name === "_inner") {
       throw new IdlError("the _inner name is reserved");
@@ -53,11 +54,10 @@ export default class InstructionNamespaceFactory {
         console.log("Outgoing account metas:", accounts);
       }
 
-      const data = encodeFn(idlIx.name, toInstruction(idlIx, ...ixArgs));
       return {
         programAddress,
         accounts,
-        data: new Uint8Array(data.buffer, data.byteOffset, data.byteLength),
+        data: encodeFn(idlIx.name, toInstruction(idlIx, ...ixArgs)),
       };
     };
 
@@ -77,7 +77,7 @@ export default class InstructionNamespaceFactory {
   public static accountsArray(
     ctx: Accounts | undefined,
     accounts: readonly IdlInstructionAccountItem[],
-    programAddress: KitAddress,
+    programAddress: Address,
     ixName?: string
   ): AccountMeta[] {
     if (!ctx) {
@@ -96,16 +96,16 @@ export default class InstructionNamespaceFactory {
           ).flat();
         }
 
-        let address: KitAddress;
+        let address: Address;
         try {
-          address = toAddress(ctx[acc.name] as Address);
+          address = toAddress(ctx[acc.name] as AddressInput);
         } catch (err) {
           throw new Error(
             `Wrong input type for account "${
               acc.name
             }" in the instruction accounts object${
               ixName !== undefined ? ' for instruction "' + ixName + '"' : ""
-            }. Expected PublicKey or base58 string.`
+            }. Expected an address.`
           );
         }
 
@@ -195,7 +195,7 @@ type IxProps<A extends Accounts> = {
 export type InstructionEncodeFn<I extends IdlInstruction = IdlInstruction> = (
   ixName: I["name"],
   ix: any
-) => Buffer;
+) => ReadonlyUint8Array;
 
 // Throws error if any argument required for the `ix` is not given.
 function validateInstruction(ix: IdlInstruction, ...args: any[]) {

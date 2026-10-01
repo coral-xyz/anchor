@@ -1,4 +1,4 @@
-import { Buffer } from "buffer";
+import { ReadonlyUint8Array } from "@solana/kit";
 import { Idl } from "../../idl.js";
 import { IdlCoder } from "./idl.js";
 import { IdlCodec } from "./codecs.js";
@@ -29,15 +29,15 @@ export class BorshTypesCoder<N extends string = string> implements TypesCoder {
     this.typeCodecs = new Map(codecs);
   }
 
-  public encode<T = any>(name: N, type: T): Buffer {
+  public encode<T = any>(name: N, type: T): ReadonlyUint8Array {
     const codec = this.typeCodecs.get(name);
     if (!codec) {
       throw new Error(`Unknown type: ${name}`);
     }
-    return Buffer.from(codec.encode(type) as Uint8Array);
+    return codec.encode(type);
   }
 
-  public decode<T = any>(name: N, data: Buffer): T {
+  public decode<T = any>(name: N, data: ReadonlyUint8Array): T {
     const codec = this.typeCodecs.get(name);
     if (!codec) {
       throw new Error(`Unknown type: ${name}`);

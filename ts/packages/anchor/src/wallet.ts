@@ -1,4 +1,3 @@
-import { Buffer } from "buffer";
 import {
   createLazyKeyPairSignerFromBytes,
   ReadonlyUint8Array,
@@ -43,7 +42,7 @@ export function createLocalWallet(): TransactionPartialSigner {
   }
 
   return createWallet(
-    Buffer.from(
+    new Uint8Array(
       JSON.parse(
         require("fs").readFileSync(process.env.ANCHOR_WALLET, {
           encoding: "utf-8",

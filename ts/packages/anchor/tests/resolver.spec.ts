@@ -122,9 +122,10 @@ describe("AccountsResolver", () => {
 
     const keys = await program.methods
       .open(7n, { tag: 3 })
-      // `accountsPartial`: the types do not know event CPI accounts resolve.
-      .accountsPartial({ vaultProgram })
-      .pubkeys();
+      // Event CPI accounts resolve on their own, so `accounts()` accepts
+      // their omission.
+      .accounts({ vaultProgram })
+      .addresses();
 
     const [vault] = await getProgramDerivedAddress({
       programAddress: PROGRAM_ADDRESS,
@@ -167,9 +168,10 @@ describe("AccountsResolver", () => {
 
     const keys = await program.methods
       .open(1n, { tag: 0 })
-      // `accountsPartial`: the types do not know event CPI accounts resolve.
-      .accountsPartial({ vaultProgram })
-      .pubkeys();
+      // Event CPI accounts resolve on their own, so `accounts()` accepts
+      // their omission.
+      .accounts({ vaultProgram })
+      .addresses();
 
     expect(keys.vaultProgram).toBe(vaultProgram.toBase58());
   });
@@ -202,7 +204,7 @@ describe("AccountsResolver", () => {
     const keys = await program.methods
       .relate()
       .accounts({ config, tokenAccount, maybe: null })
-      .pubkeys();
+      .addresses();
 
     const [byMint] = await getProgramDerivedAddress({
       programAddress: PROGRAM_ADDRESS,
@@ -243,8 +245,8 @@ describe("AccountsResolver", () => {
 
     await program.methods
       .open(1n, { tag: 0 })
-      .accountsPartial({ vaultProgram: randomAddress() })
-      .pubkeys();
+      .accounts({ vaultProgram: randomAddress() })
+      .addresses();
 
     expect(seen[0]).toMatchObject({
       programAddress: PROGRAM_ADDRESS,
@@ -270,7 +272,7 @@ describe("AccountsResolver", () => {
       () => resolver
     );
 
-    const keys = await program.methods.open(1n, { tag: 0 }).pubkeys();
+    const keys = await program.methods.open(1n, { tag: 0 }).addresses();
 
     // The builder sees the resolver's result, as an address, and the PDA
     // seeded from it resolved.
@@ -309,7 +311,7 @@ describe("AccountsResolver", () => {
       () => resolver
     );
 
-    const keys = await program.methods.open(1n, { tag: 0 }).pubkeys();
+    const keys = await program.methods.open(1n, { tag: 0 }).addresses();
 
     expect(keys.vaultProgram).toBe(vaultProgram);
     expect(calls).toBeGreaterThanOrEqual(2);
@@ -346,7 +348,7 @@ describe("AccountsResolver", () => {
     ).methods
       .nest()
       .accountsPartial({ group: { toBase58, other } })
-      .pubkeys();
+      .addresses();
     expect(fromBuilder.group).toEqual({ toBase58, other });
 
     const resolver: CustomAccountResolver<typeof nestedIdl> = async ({
@@ -362,7 +364,7 @@ describe("AccountsResolver", () => {
       () => resolver
     ).methods
       .nest()
-      .pubkeys();
+      .addresses();
     expect(fromResolver.group).toEqual({ toBase58, other });
   });
 
@@ -388,7 +390,7 @@ describe("AccountsResolver", () => {
 
     const { tagged } = await program.methods
       .tag("hello" as unknown as Uint8Array)
-      .pubkeys();
+      .addresses();
 
     const [expected] = await getProgramDerivedAddress({
       programAddress: PROGRAM_ADDRESS,
@@ -403,7 +405,71 @@ describe("AccountsResolver", () => {
 
     // `foreignVault` needs `vaultProgram`, which is never provided.
     await expect(
-      program.methods.open(1n, { tag: 0 }).pubkeys()
+      program.methods.open(1n, { tag: 0 }).addresses()
     ).rejects.toThrow("Unresolved accounts: `foreignVault`");
+  });
+
+  it("resolves every adjacent event CPI pair and only lets those be omitted", async () => {
+    // Mirrors `resolveEventCpi`: each `eventAuthority` immediately followed
+    // by `program` is filled in, at the top level and inside a composite that
+    // comes after it, while an account merely named `program` elsewhere is
+    // not, so the type must keep requiring that one.
+    const cpiIdl = {
+      ...idl,
+      instructions: [
+        {
+          name: "emit",
+          discriminator: [3, 3, 3, 3, 3, 3, 3, 3],
+          accounts: [
+            { name: "eventAuthority" },
+            { name: "program" },
+            { name: "lone", accounts: [{ name: "program" }] },
+            {
+              name: "cpi",
+              accounts: [{ name: "eventAuthority" }, { name: "program" }],
+            },
+          ],
+          args: [],
+        },
+      ],
+    } as const satisfies Idl;
+    const { provider } = mockProvider({});
+    const program = new Program<typeof cpiIdl>(cpiIdl, provider);
+    const lone = randomAddress();
+
+    const keys = await program.methods
+      .emit()
+      .accounts({ lone: { program: lone } })
+      .addresses();
+
+    const [eventAuthority] = await getProgramDerivedAddress({
+      programAddress: PROGRAM_ADDRESS,
+      seeds: [getUtf8Encoder().encode("__event_authority")],
+    });
+    expect(keys).toEqual({
+      eventAuthority,
+      program: PROGRAM_ADDRESS,
+      lone: { program: lone },
+      cpi: { eventAuthority, program: PROGRAM_ADDRESS },
+    });
+
+    // The lone `program` is not an event CPI account: omitting it is a type
+    // error, and the resolver would leave it unresolved.
+    // @ts-expect-error `lone.program` is required
+    program.methods.emit().accounts({});
+  });
+
+  it("reports why an account could not be resolved", async () => {
+    const { provider } = mockProvider({});
+    const program = new Program<ResolverIdl>(idl, provider);
+
+    // A u8 seed out of range: Kit's encoder rejects it on every pass, and
+    // the failure is surfaced rather than swallowed.
+    await expect(
+      program.methods
+        .open(1n, { tag: 300 })
+        .accounts({ vaultProgram: randomAddress() })
+        .addresses()
+    ).rejects.toThrow(/Unresolved accounts: `vault` \(.*300.*\)/);
   });
 });

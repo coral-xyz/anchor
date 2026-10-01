@@ -1,5 +1,5 @@
 import { AccountMeta, Instruction, TransactionSigner } from "@solana/kit";
-import { Address } from "./common.js";
+import { AddressInput } from "./common.js";
 import type { ConfirmOptions } from "../provider.js";
 import {
   IdlInstructionAccountItem,
@@ -64,10 +64,10 @@ type Account<A extends IdlInstructionAccountItem> =
   A extends IdlInstructionAccounts
     ? Accounts<A["accounts"][number]>
     : A extends { optional: true }
-    ? Address | null
+    ? AddressInput | null
     : A extends { signer: true }
-    ? Address | undefined
-    : Address;
+    ? AddressInput | undefined
+    : AddressInput;
 
 export function splitArgsAndCtx(
   idlIx: IdlInstruction,

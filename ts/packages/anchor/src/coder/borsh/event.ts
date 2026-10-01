@@ -1,18 +1,14 @@
-import { Buffer } from "buffer";
-import * as base64 from "../../utils/bytes/base64.js";
-import { Idl, IdlDiscriminator } from "../../idl.js";
+import { getBase64Encoder, ReadonlyUint8Array } from "@solana/kit";
+import { Idl } from "../../idl.js";
 import { IdlCoder } from "./idl.js";
-import { IdlCodec } from "./codecs.js";
+import { DiscriminatedIdlCodec, getDiscriminatedIdlCodec } from "./codecs.js";
 import { EventCoder } from "../index.js";
 
 export class BorshEventCoder implements EventCoder {
   /**
    * Maps event type identifier to a codec.
    */
-  private codecs: Map<
-    string,
-    { discriminator: IdlDiscriminator; codec: IdlCodec }
-  >;
+  private codecs: Map<string, DiscriminatedIdlCodec>;
 
   public constructor(idl: Idl) {
     if (!idl.events) {
@@ -32,10 +28,10 @@ export class BorshEventCoder implements EventCoder {
       }
       return [
         ev.name,
-        {
-          discriminator: ev.discriminator,
-          codec: IdlCoder.typeDefCodec({ typeDef, types }),
-        },
+        getDiscriminatedIdlCodec(
+          ev.discriminator,
+          IdlCoder.typeDefCodec({ typeDef, types })
+        ),
       ] as const;
     });
     this.codecs = new Map(codecs);
@@ -45,22 +41,17 @@ export class BorshEventCoder implements EventCoder {
     name: string;
     data: any;
   } | null {
-    let logArr: Buffer;
-    // This will throw if log length is not a multiple of 4.
+    let logArr: ReadonlyUint8Array;
+    // This will throw if the log is not valid base64.
     try {
-      logArr = base64.decode(log);
+      logArr = getBase64Encoder().encode(log);
     } catch (e) {
       return null;
     }
 
-    for (const [name, entry] of this.codecs) {
-      const givenDisc = logArr.subarray(0, entry.discriminator.length);
-      const matches = givenDisc.equals(Buffer.from(entry.discriminator));
-      if (matches) {
-        return {
-          name,
-          data: entry.codec.decode(logArr.subarray(givenDisc.length)),
-        };
+    for (const [name, codec] of this.codecs) {
+      if (codec.matches(logArr)) {
+        return { name, data: codec.decode(logArr) };
       }
     }
 

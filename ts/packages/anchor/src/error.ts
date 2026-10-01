@@ -1,5 +1,5 @@
 import { SOLANA_ERROR__INSTRUCTION_ERROR__CUSTOM } from "@solana/kit";
-import { PublicKey } from "@solana/web3.js";
+import { address, Address } from "@solana/kit";
 import * as errors from "@anchor-lang/errors";
 import { findSolanaError } from "./utils/common.js";
 import * as features from "./utils/features.js";
@@ -23,17 +23,17 @@ interface FileLine {
 
 type Origin = string | FileLine;
 type ComparedAccountNames = [string, string];
-type ComparedPublicKeys = [PublicKey, PublicKey];
-type ComparedValues = ComparedAccountNames | ComparedPublicKeys;
+type ComparedAddresses = [Address, Address];
+type ComparedValues = ComparedAccountNames | ComparedAddresses;
 
 export class ProgramErrorStack {
-  constructor(readonly stack: PublicKey[]) {}
+  constructor(readonly stack: Address[]) {}
 
   public static parse(logs: string[]) {
     const programKeyRegex = /^Program (\w*) invoke/;
     const successRegex = /^Program \w* success/;
 
-    const programStack: PublicKey[] = [];
+    const programStack: Address[] = [];
     for (let i = 0; i < logs.length; i++) {
       if (successRegex.exec(logs[i])) {
         programStack.pop();
@@ -44,7 +44,7 @@ export class ProgramErrorStack {
       if (!programKey) {
         continue;
       }
-      programStack.push(new PublicKey(programKey));
+      programStack.push(address(programKey));
     }
     return new ProgramErrorStack(programStack);
   }
@@ -94,13 +94,14 @@ export class AnchorError extends Error {
       // Right:
       // <Pubkey>
       if (logs[anchorErrorLogIndex + 1] === "Program log: Left:") {
-        const pubkeyRegex = /^Program log: (.*)$/;
-        const leftPubkey = pubkeyRegex.exec(logs[anchorErrorLogIndex + 2])![1];
-        const rightPubkey = pubkeyRegex.exec(logs[anchorErrorLogIndex + 4])![1];
-        comparedValues = [
-          new PublicKey(leftPubkey),
-          new PublicKey(rightPubkey),
-        ];
+        const addressRegex = /^Program log: (.*)$/;
+        const leftAddress = addressRegex.exec(
+          logs[anchorErrorLogIndex + 2]
+        )![1];
+        const rightAddress = addressRegex.exec(
+          logs[anchorErrorLogIndex + 4]
+        )![1];
+        comparedValues = [address(leftAddress), address(rightAddress)];
         errorLogs.push(
           ...logs.slice(anchorErrorLogIndex + 1, anchorErrorLogIndex + 5)
         );
@@ -180,13 +181,13 @@ export class AnchorError extends Error {
     }
   }
 
-  get program(): PublicKey {
+  get program(): Address {
     return this._programErrorStack.stack[
       this._programErrorStack.stack.length - 1
     ];
   }
 
-  get programErrorStack(): PublicKey[] {
+  get programErrorStack(): Address[] {
     return this._programErrorStack.stack;
   }
 
@@ -276,13 +277,13 @@ export class ProgramError extends Error {
     }
   }
 
-  get program(): PublicKey | undefined {
+  get program(): Address | undefined {
     return this._programErrorStack?.stack[
       this._programErrorStack.stack.length - 1
     ];
   }
 
-  get programErrorStack(): PublicKey[] | undefined {
+  get programErrorStack(): Address[] | undefined {
     return this._programErrorStack?.stack;
   }
 

@@ -1,4 +1,3 @@
-import { PublicKey } from "@solana/web3.js";
 import { Address, Option, ReadonlyUint8Array } from "@solana/kit";
 import {
   Idl,
@@ -17,6 +16,7 @@ import {
   IdlArrayLen,
 } from "../../idl";
 import { Accounts, Context } from "../context";
+import { AddressInput } from "../common";
 import { MethodsBuilder } from "./methods";
 
 /**
@@ -138,13 +138,13 @@ type DecodedTypeMap = {
 /**
  * JS representations accepted when encoding IDL values, e.g. as instruction
  * arguments. These mirror Kit's `TFrom` codec inputs: slightly looser than
- * {@link DecodedTypeMap}, plus `PublicKey` for public keys.
+ * {@link DecodedTypeMap}, plus objects exposing `toBase58()` for public keys.
  */
 type EncodedTypeMap = {
-  pubkey: Address | PublicKey;
+  pubkey: AddressInput;
   bool: boolean;
   string: string;
-  bytes: Uint8Array;
+  bytes: ReadonlyUint8Array;
 } & {
   [K in "u8" | "i8" | "u16" | "i16" | "u32" | "i32" | "f32" | "f64"]: number;
 } & {

@@ -23,7 +23,7 @@ import {
   getAnchorOptionCodec,
   getBoolCodec,
   getCOptionCodec,
-  getPublicKeyCodec,
+  getAnchorAddressCodec,
   getRustEnumCodec,
   IdlCodec,
 } from "./codecs.js";
@@ -110,7 +110,7 @@ export class IdlCoder {
         );
       }
       case "pubkey": {
-        return getPublicKeyCodec();
+        return getAnchorAddressCodec();
       }
       default: {
         if ("option" in field.type) {

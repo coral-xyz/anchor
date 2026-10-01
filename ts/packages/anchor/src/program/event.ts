@@ -1,10 +1,8 @@
 import { Address, Commitment, Signature, Slot } from "@solana/kit";
-import { PublicKey } from "@solana/web3.js";
 import { Coder } from "../coder/index.js";
 import { IdlEvent, IdlField } from "../idl.js";
 import Provider from "../provider.js";
 import { withProviderDefaults } from "../utils/common.js";
-import { toAddress } from "./common.js";
 import { DecodeType } from "./namespace/types.js";
 
 const PROGRAM_LOG = "Program log: ";
@@ -65,10 +63,10 @@ export class EventManager {
    */
   private _eventParser: EventParser;
 
-  constructor(programId: PublicKey, provider: Provider, coder: Coder) {
-    this._programAddress = toAddress(programId);
+  constructor(programAddress: Address, provider: Provider, coder: Coder) {
+    this._programAddress = programAddress;
     this._provider = provider;
-    this._eventParser = new EventParser(programId, coder);
+    this._eventParser = new EventParser(programAddress, coder);
   }
 
   /**
@@ -167,12 +165,12 @@ export class EventManager {
 
 export class EventParser {
   private coder: Coder;
-  private programId: PublicKey;
+  private programId: Address;
   private static readonly INVOKE_RE =
     /^Program ([1-9A-HJ-NP-Za-km-z]+) invoke \[(\d+)\]$/;
   private static readonly ROOT_DEPTH = "1";
 
-  constructor(programId: PublicKey, coder: Coder) {
+  constructor(programId: Address, coder: Coder) {
     this.coder = coder;
     this.programId = programId;
   }
@@ -238,10 +236,7 @@ export class EventParser {
     errorOnDecodeFailure: boolean
   ): [Event | null, string | null, boolean] {
     // Executing program is this program.
-    if (
-      execution.stack.length > 0 &&
-      execution.program() === this.programId.toString()
-    ) {
+    if (execution.stack.length > 0 && execution.program() === this.programId) {
       return this.handleProgramLog(log, errorOnDecodeFailure);
     }
     // Executing program is not this program.
@@ -275,8 +270,8 @@ export class EventParser {
 
   // Handles logs when the current program being executing is *not* this.
   private handleSystemLog(log: string): [string | null, boolean] {
-    if (log.startsWith(`Program ${this.programId.toString()} log:`)) {
-      return [this.programId.toString(), false];
+    if (log.startsWith(`Program ${this.programId} log:`)) {
+      return [this.programId, false];
     } else if (log.includes("invoke") && !log.endsWith("[1]")) {
       // Extract the invoked program ID from `Program <id> invoke [N]`
       // and push IT onto the execution stack — not a literal "cpi"

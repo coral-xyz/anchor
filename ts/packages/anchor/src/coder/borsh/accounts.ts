@@ -1,8 +1,13 @@
-import { Buffer } from "buffer";
-import { getBase58Decoder } from "@solana/kit";
-import { Idl, IdlDiscriminator } from "../../idl.js";
+import {
+  getBase58Decoder,
+  getBytesEncoder,
+  getConstantEncoder,
+  getHiddenPrefixEncoder,
+  ReadonlyUint8Array,
+} from "@solana/kit";
+import { Idl } from "../../idl.js";
 import { IdlCoder } from "./idl.js";
-import { IdlCodec } from "./codecs.js";
+import { DiscriminatedIdlCodec, getDiscriminatedIdlCodec } from "./codecs.js";
 import { AccountsCoder } from "../index.js";
 
 /**
@@ -14,10 +19,7 @@ export class BorshAccountsCoder<A extends string = string>
   /**
    * Maps account type identifier to a codec.
    */
-  private accountCodecs: Map<
-    A,
-    { discriminator: IdlDiscriminator; codec: IdlCodec }
-  >;
+  private accountCodecs: Map<A, DiscriminatedIdlCodec>;
 
   public constructor(private idl: Idl) {
     if (!idl.accounts) {
@@ -37,64 +39,55 @@ export class BorshAccountsCoder<A extends string = string>
       }
       return [
         acc.name as A,
-        {
-          discriminator: acc.discriminator,
-          codec: IdlCoder.typeDefCodec({ typeDef, types }),
-        },
+        getDiscriminatedIdlCodec(
+          acc.discriminator,
+          IdlCoder.typeDefCodec({ typeDef, types })
+        ),
       ] as const;
     });
 
     this.accountCodecs = new Map(codecs);
   }
 
-  public async encode<T = any>(accountName: A, account: T): Promise<Buffer> {
-    const entry = this.accountCodecs.get(accountName);
-    if (!entry) {
-      throw new Error(`Unknown account: ${accountName}`);
-    }
-    const accountData = Buffer.from(entry.codec.encode(account) as Uint8Array);
-    const discriminator = this.accountDiscriminator(accountName);
-    return Buffer.concat([discriminator, accountData]);
+  public async encode<T = any>(
+    accountName: A,
+    account: T
+  ): Promise<ReadonlyUint8Array> {
+    return this.codec(accountName).encode(account);
   }
 
-  public decode<T = any>(accountName: A, data: Buffer): T {
+  public decode<T = any>(accountName: A, data: ReadonlyUint8Array): T {
     // Assert the account discriminator is correct.
-    const discriminator = this.accountDiscriminator(accountName);
-    if (discriminator.compare(data.subarray(0, discriminator.length))) {
+    const codec = this.codec(accountName);
+    if (!codec.matches(data)) {
       throw new Error("Invalid account discriminator");
     }
-    return this.decodeUnchecked(accountName, data);
+    return codec.decode(data) as T;
   }
 
-  public decodeAny<T = any>(data: Buffer): T {
-    for (const [name, entry] of this.accountCodecs) {
-      const givenDisc = data.subarray(0, entry.discriminator.length);
-      const matches = givenDisc.equals(Buffer.from(entry.discriminator));
-      if (matches) return this.decodeUnchecked(name, data);
+  public decodeAny<T = any>(data: ReadonlyUint8Array): T {
+    for (const codec of this.accountCodecs.values()) {
+      if (codec.matches(data)) {
+        return codec.decode(data) as T;
+      }
     }
 
     throw new Error("Account not found");
   }
 
-  public decodeUnchecked<T = any>(accountName: A, acc: Buffer): T {
-    // Chop off the discriminator before decoding.
-    const discriminator = this.accountDiscriminator(accountName);
-    const data = acc.subarray(discriminator.length);
-    const entry = this.accountCodecs.get(accountName);
-    if (!entry) {
-      throw new Error(`Unknown account: ${accountName}`);
-    }
-    return entry.codec.decode(data) as T;
+  public decodeUnchecked<T = any>(accountName: A, data: ReadonlyUint8Array): T {
+    const codec = this.codec(accountName);
+    return codec.item.decode(data, codec.discriminator.length) as T;
   }
 
-  public memcmp(accountName: A, appendData?: Buffer): any {
+  public memcmp(accountName: A, appendData?: ReadonlyUint8Array): any {
     const discriminator = this.accountDiscriminator(accountName);
-    return {
-      offset: 0,
-      bytes: getBase58Decoder().decode(
-        appendData ? Buffer.concat([discriminator, appendData]) : discriminator
-      ),
-    };
+    const bytes = appendData
+      ? getHiddenPrefixEncoder(getBytesEncoder(), [
+          getConstantEncoder(discriminator),
+        ]).encode(appendData)
+      : discriminator;
+    return { offset: 0, bytes: getBase58Decoder().decode(bytes) };
   }
 
   public size(accountName: A): number {
@@ -105,16 +98,20 @@ export class BorshAccountsCoder<A extends string = string>
   }
 
   /**
-   * Get the unique discriminator prepended to all anchor accounts.
+   * Get the unique discriminator prepended to all anchor accounts, as a
+   * fresh copy: the coder keeps using its own.
    *
    * @param name The name of the account to get the discriminator of.
    */
-  public accountDiscriminator(name: string): Buffer {
-    const account = this.idl.accounts?.find((acc) => acc.name === name);
-    if (!account) {
-      throw new Error(`Account not found: ${name}`);
-    }
+  public accountDiscriminator(name: string): ReadonlyUint8Array {
+    return new Uint8Array(this.codec(name as A).discriminator);
+  }
 
-    return Buffer.from(account.discriminator);
+  private codec(accountName: A): DiscriminatedIdlCodec {
+    const codec = this.accountCodecs.get(accountName);
+    if (!codec) {
+      throw new Error(`Account not found: ${accountName}`);
+    }
+    return codec;
   }
 }

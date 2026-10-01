@@ -572,20 +572,11 @@ describe("AccountClient", () => {
   });
 });
 
-describe("Program.fetchIdl", () => {
-  it("reads the IDL account through the Kit rpc", async () => {
-    const { provider, requests } = mockProvider({
-      getAccountInfo: () => withContext(null),
-    });
-
-    const result = await Program.fetchIdl(PROGRAM_ADDRESS, provider);
-
-    expect(result).toBeNull();
-    const request = requests.find((r) => r.method === "getAccountInfo")!;
-    expect(typeof request.params[0]).toBe("string");
-    expect(request.params[1]).toMatchObject({
-      encoding: "base64",
-      commitment: "confirmed",
-    });
+describe("Program.address", () => {
+  it("exposes the IDL address as a Kit address", () => {
+    const { provider } = mockProvider({});
+    const program = new Program<CounterIdl>(idl, provider);
+    expect(program.address).toBe(PROGRAM_ADDRESS);
+    expect(program.account.counter.programAddress).toBe(PROGRAM_ADDRESS);
   });
 });

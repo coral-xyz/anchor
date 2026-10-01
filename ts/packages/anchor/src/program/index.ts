@@ -1,17 +1,21 @@
-import { Buffer } from "buffer";
-import { fetchEncodedAccount, Signature, Slot } from "@solana/kit";
-import { PublicKey } from "@solana/web3.js";
-import { BorshCoder, Coder } from "../coder/index.js";
 import {
-  Idl,
-  IdlInstruction,
-  convertIdlToCamelCase,
-  decodeIdlAccount,
-  idlAddress,
-} from "../idl.js";
+  address,
+  Address,
+  ReadonlyUint8Array,
+  Signature,
+  Slot,
+} from "@solana/kit";
+import {
+  DataSource,
+  fetchMaybeMetadataFromSeeds,
+  Format,
+  unpackDirectData,
+} from "@solana-program/program-metadata";
+import { BorshCoder, Coder } from "../coder/index.js";
+import { Idl, IdlInstruction, convertIdlToCamelCase } from "../idl.js";
 import Provider, { getProvider } from "../provider.js";
 import { CustomAccountResolver } from "./accounts-resolver.js";
-import { Address, toAddress, translateAddress } from "./common.js";
+import { AddressInput, toAddress } from "./common.js";
 import { EventListenerOptions, EventManager } from "./event.js";
 import { withProviderDefaults } from "../utils/common.js";
 import NamespaceFactory, {
@@ -29,6 +33,9 @@ export * from "./common.js";
 export * from "./context.js";
 export * from "./event.js";
 export * from "./namespace/index.js";
+
+/** The metadata seed under which `anchor idl init` stores a program's IDL. */
+const IDL_METADATA_SEED = "idl";
 
 /**
  * ## Program
@@ -225,10 +232,10 @@ export class Program<IDL extends Idl = Idl> {
   /**
    * Address of the program.
    */
-  public get programId(): PublicKey {
-    return this._programId;
+  public get address(): Address {
+    return this._address;
   }
-  private _programId: PublicKey;
+  private _address: Address;
 
   /**
    * IDL in camelCase format to work in TypeScript.
@@ -268,7 +275,7 @@ export class Program<IDL extends Idl = Idl> {
    *
    * ```ts
    * const ix: Instruction = {
-   *   programAddress: address(program.programId.toBase58()),
+   *   programAddress: program.address,
    *   accounts: [...],
    *   data: program.discriminator("instruction", "increment"),
    * };
@@ -279,7 +286,7 @@ export class Program<IDL extends Idl = Idl> {
   public discriminator(
     kind: "instruction" | "account" | "event",
     name: string
-  ): Buffer {
+  ): ReadonlyUint8Array {
     const section =
       kind === "instruction"
         ? this._rawIdl.instructions
@@ -294,7 +301,7 @@ export class Program<IDL extends Idl = Idl> {
         `anchor: no ${kind} named '${name}' with a discriminator in the IDL`
       );
     }
-    return Buffer.from(entry.discriminator);
+    return new Uint8Array(entry.discriminator);
   }
 
   /**
@@ -330,16 +337,16 @@ export class Program<IDL extends Idl = Idl> {
     this._idl = convertIdlToCamelCase(idl);
     this._rawIdl = idl;
     this._provider = provider;
-    this._programId = translateAddress(idl.address);
+    this._address = address(idl.address);
     this._coder = coder ?? new BorshCoder(this._idl);
-    this._events = new EventManager(this._programId, provider, this._coder);
+    this._events = new EventManager(this._address, provider, this._coder);
 
     // Dynamic namespaces.
     const [rpc, instruction, transaction, account, simulate, methods, views] =
       NamespaceFactory.build(
         this._idl,
         this._coder,
-        this._programId,
+        this._address,
         provider,
         getCustomResolver
       );
@@ -358,18 +365,18 @@ export class Program<IDL extends Idl = Idl> {
    * In order to use this method, an IDL must have been previously initialized
    * via the anchor CLI's `anchor idl init` command.
    *
-   * @param programId The on-chain address of the program.
-   * @param provider  The network and wallet context.
+   * @param address  The on-chain address of the program.
+   * @param provider The network and wallet context.
    */
   public static async at<IDL extends Idl = Idl>(
-    address: Address,
+    address: AddressInput,
     provider?: Provider
   ): Promise<Program<IDL>> {
-    const programId = translateAddress(address);
+    const programAddress = toAddress(address);
 
-    const idl = await Program.fetchIdl<IDL>(programId, provider);
+    const idl = await Program.fetchIdl<IDL>(programAddress, provider);
     if (!idl) {
-      throw new Error(`IDL not found for program: ${address.toString()}`);
+      throw new Error(`IDL not found for program: ${programAddress}`);
     }
 
     return new Program(idl, provider);
@@ -379,25 +386,37 @@ export class Program<IDL extends Idl = Idl> {
    * Fetches an idl from the blockchain.
    *
    * In order to use this method, an IDL must have been previously initialized
-   * via the anchor CLI's `anchor idl init` command.
+   * via the anchor CLI's `anchor idl init` command, which stores it as the
+   * canonical `idl` metadata of the program.
    *
-   * @param programId The on-chain address of the program.
-   * @param provider  The network and wallet context.
+   * @param address  The on-chain address of the program.
+   * @param provider The network and wallet context.
    */
   public static async fetchIdl<IDL extends Idl = Idl>(
-    programAddress: Address,
+    address: AddressInput,
     provider?: Provider
   ): Promise<IDL | null> {
     provider = provider ?? getProvider();
-    const programId = translateAddress(programAddress);
-    const account = await fetchEncodedAccount(
+    const metadata = await fetchMaybeMetadataFromSeeds(
       provider.rpc,
-      toAddress(idlAddress(programId)),
+      { program: toAddress(address), authority: null, seed: IDL_METADATA_SEED },
       withProviderDefaults(provider)
     );
-    if (!account.exists) return null;
+    if (!metadata.exists) return null;
 
-    return decodeIdlAccount<IDL>(Buffer.from(account.data));
+    const { format, dataSource, compression, encoding, data } = metadata.data;
+    if (format !== Format.Json) {
+      throw new Error(
+        `IDL has data format '${format}', only JSON IDLs (${Format.Json}) are supported`
+      );
+    }
+    if (dataSource !== DataSource.Direct) {
+      throw new Error(
+        `IDL has source '${dataSource}', only directly embedded data (${DataSource.Direct}) is supported`
+      );
+    }
+
+    return JSON.parse(unpackDirectData({ compression, encoding, data }));
   }
 
   /**

@@ -1,4 +1,4 @@
-import { PublicKey } from "@solana/web3.js";
+import { Address } from "@solana/kit";
 import Provider from "../../provider.js";
 import { SuccessfulTxSimulationResponse } from "../../utils/rpc.js";
 import { splitArgsAndCtx } from "../context.js";
@@ -20,7 +20,7 @@ export default class SimulateFactory {
     idlErrors: Map<number, string>,
     provider: Provider,
     coder: Coder,
-    programId: PublicKey,
+    programAddress: Address,
     idl: IDL
   ): SimulateFn<IDL, I> {
     const simulate: SimulateFn<IDL> = async (...args) => {
@@ -54,7 +54,7 @@ export default class SimulateFactory {
 
       const events: Event[] = [];
       if (idl.events) {
-        let parser = new EventParser(programId, coder);
+        let parser = new EventParser(programAddress, coder);
         for (const event of parser.parseLogs(logs)) {
           events.push(event);
         }

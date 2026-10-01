@@ -2,7 +2,7 @@ import {
   AccountInfoBase,
   AccountInfoWithBase64EncodedData,
   AccountMeta,
-  Address as KitAddress,
+  Address,
   appendTransactionMessageInstruction,
   Base64EncodedDataResponse,
   createTransactionMessage,
@@ -16,7 +16,7 @@ import {
   Slot,
 } from "@solana/kit";
 import { chunks } from "../utils/common.js";
-import { Address, toAddress } from "../program/common.js";
+import { AddressInput, toAddress } from "../program/common.js";
 import Provider, { getProvider } from "../provider.js";
 
 /**
@@ -24,7 +24,7 @@ import Provider, { getProvider } from "../provider.js";
  * data.
  */
 export async function invoke(
-  programId: Address,
+  programId: AddressInput,
   accounts?: Array<AccountMeta>,
   data?: ReadonlyUint8Array,
   provider?: Provider
@@ -60,7 +60,7 @@ const GET_MULTIPLE_ACCOUNTS_LIMIT = 100;
  */
 export async function getMultipleAccounts(
   rpc: Rpc<GetMultipleAccountsApi>,
-  addresses: KitAddress[],
+  addresses: Address[],
   config?: FetchAccountsConfig
 ): Promise<MaybeEncodedAccount[]> {
   const batches = await getMultipleAccountsAndContext(rpc, addresses, config);
@@ -73,7 +73,7 @@ export async function getMultipleAccounts(
  */
 export async function getMultipleAccountsAndContext(
   rpc: Rpc<GetMultipleAccountsApi>,
-  addresses: KitAddress[],
+  addresses: Address[],
   config: FetchAccountsConfig = {}
 ): Promise<{ accounts: MaybeEncodedAccount[]; context: { slot: Slot } }[]> {
   const { abortSignal, ...rpcConfig } = config;
@@ -113,6 +113,6 @@ export type SuccessfulTxSimulationResponse = {
     /** The return data itself, as base-64 encoded binary data. */
     data: Base64EncodedDataResponse;
     /** The program that generated the return data. */
-    programId: KitAddress;
+    programId: Address;
   } | null;
 };

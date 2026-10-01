@@ -1,3 +1,4 @@
+import { ReadonlyUint8Array } from "@solana/kit";
 import { IdlEvent } from "../idl.js";
 import { Event } from "../program/event.js";
 
@@ -29,15 +30,15 @@ export interface Coder<A extends string = string, T extends string = string> {
 }
 
 export interface AccountsCoder<A extends string = string> {
-  encode<T = any>(accountName: A, account: T): Promise<Buffer>;
-  decode<T = any>(accountName: A, acc: Buffer): T;
-  decodeUnchecked<T = any>(accountName: A, acc: Buffer): T;
-  memcmp(accountName: A, appendData?: Buffer): any;
+  encode<T = any>(accountName: A, account: T): Promise<ReadonlyUint8Array>;
+  decode<T = any>(accountName: A, data: ReadonlyUint8Array): T;
+  decodeUnchecked<T = any>(accountName: A, data: ReadonlyUint8Array): T;
+  memcmp(accountName: A, appendData?: ReadonlyUint8Array): any;
   size(accountName: A): number;
 }
 
 export interface InstructionCoder {
-  encode(ixName: string, ix: any): Buffer;
+  encode(ixName: string, ix: any): ReadonlyUint8Array;
 }
 
 export interface EventCoder {
@@ -47,6 +48,6 @@ export interface EventCoder {
 }
 
 export interface TypesCoder<N extends string = string> {
-  encode<T = any>(typeName: N, type: T): Buffer;
-  decode<T = any>(typeName: N, typeData: Buffer): T;
+  encode<T = any>(typeName: N, type: T): ReadonlyUint8Array;
+  decode<T = any>(typeName: N, typeData: ReadonlyUint8Array): T;
 }

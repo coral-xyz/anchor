@@ -1,5 +1,4 @@
-import { address as kitAddress, Address as KitAddress } from "@solana/kit";
-import { PublicKey } from "@solana/web3.js";
+import { address, Address } from "@solana/kit";
 import {
   Idl,
   IdlInstruction,
@@ -49,16 +48,19 @@ export function validateAccounts(
   });
 }
 
-// Translates an address to a Pubkey.
-export function translateAddress(address: Address): PublicKey {
-  return address instanceof PublicKey ? address : new PublicKey(address);
-}
+/**
+ * An address as accepted by the client: a Kit `Address`, or an object
+ * exposing one through `toBase58()` (e.g. a web3.js public key), so that
+ * values from libraries not yet on Kit can be passed as they are. Outputs
+ * are always Kit addresses.
+ */
+export type AddressInput = Address | { toBase58(): string };
 
 /**
- * Translates an address to a Kit `Address`, validating it on the way.
+ * Translates an address input to a Kit `Address`, validating it on the way.
  */
-export function toAddress(address: Address): KitAddress {
-  return kitAddress(typeof address === "string" ? address : address.toBase58());
+export function toAddress(input: AddressInput): Address {
+  return address(typeof input === "string" ? input : input.toBase58());
 }
 
 /**
@@ -74,9 +76,3 @@ export function hasToBase58(value: unknown): value is { toBase58(): string } {
     typeof (value as { toBase58?: unknown }).toBase58 === "function"
   );
 }
-
-/**
- * An address to identify an account on chain. Can be a [[PublicKey]],
- * or Base 58 encoded string.
- */
-export type Address = PublicKey | string;

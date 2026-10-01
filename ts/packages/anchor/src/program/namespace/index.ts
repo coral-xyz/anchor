@@ -1,4 +1,4 @@
-import { PublicKey } from "@solana/web3.js";
+import { Address } from "@solana/kit";
 import { Coder } from "../../coder/index.js";
 import Provider from "../../provider.js";
 import { Idl, IdlInstruction } from "../../idl.js";
@@ -7,7 +7,7 @@ import TransactionFactory, { TransactionNamespace } from "./transaction.js";
 import RpcFactory, { RpcNamespace } from "./rpc.js";
 import AccountFactory, { AccountNamespace } from "./account.js";
 import SimulateFactory, { SimulateNamespace } from "./simulate.js";
-import { parseIdlErrors, toAddress } from "../common.js";
+import { parseIdlErrors } from "../common.js";
 import { MethodsBuilderFactory, MethodsNamespace } from "./methods";
 import ViewFactory, { ViewNamespace } from "./views";
 import { CustomAccountResolver } from "../accounts-resolver.js";
@@ -44,7 +44,7 @@ export default class NamespaceFactory {
   public static build<IDL extends Idl>(
     idl: IDL,
     coder: Coder,
-    programId: PublicKey,
+    programAddress: Address,
     provider: Provider,
     getCustomResolver?: (
       instruction: IdlInstruction
@@ -66,10 +66,9 @@ export default class NamespaceFactory {
     const view: ViewNamespace = {};
 
     const idlErrors = parseIdlErrors(idl);
-    const programAddress = toAddress(programId);
 
     const account: AccountNamespace<IDL> = idl.accounts
-      ? AccountFactory.build(idl, coder, programId, provider)
+      ? AccountFactory.build(idl, coder, programAddress, provider)
       : ({} as AccountNamespace<IDL>);
 
     idl.instructions.forEach((idlIx) => {
@@ -86,13 +85,18 @@ export default class NamespaceFactory {
         idlErrors,
         provider,
         coder,
-        programId,
+        programAddress,
         idl
       );
-      const viewItem = ViewFactory.build(programId, idlIx, simulateItem, idl);
+      const viewItem = ViewFactory.build(
+        programAddress,
+        idlIx,
+        simulateItem,
+        idl
+      );
       const methodItem = MethodsBuilderFactory.build<IDL, typeof idlIx>(
         provider,
-        programId,
+        programAddress,
         idlIx,
         ixItem,
         txItem,

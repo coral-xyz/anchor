@@ -1,9 +1,13 @@
 import { isBrowser } from "./utils/common.js";
 
-export { default as BN } from "bn.js";
-export * as web3 from "@solana/web3.js";
 export { some, none } from "@solana/kit";
-export type { Option, Some, None, TransactionSigner } from "@solana/kit";
+export type {
+  Address,
+  Option,
+  Some,
+  None,
+  TransactionSigner,
+} from "@solana/kit";
 export {
   default as Provider,
   getProvider,

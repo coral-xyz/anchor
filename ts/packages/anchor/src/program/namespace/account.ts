@@ -1,7 +1,6 @@
-import { Buffer } from "buffer";
 import {
   Account,
-  Address as KitAddress,
+  Address,
   Base58EncodedBytes,
   Commitment,
   createDecoder,
@@ -22,11 +21,10 @@ import {
   TypedEventTarget,
 } from "@solana/kit";
 import { getCreateAccountInstruction } from "@solana-program/system";
-import { PublicKey } from "@solana/web3.js";
 import Provider, { getProvider } from "../../provider.js";
 import { Idl, IdlAccount } from "../../idl.js";
 import { Coder, BorshCoder } from "../../coder/index.js";
-import { Address, toAddress } from "../common.js";
+import { AddressInput, toAddress } from "../common.js";
 import { withProviderDefaults } from "../../utils/common.js";
 import { AllAccountsMap, IdlAccounts } from "./types.js";
 import * as rpcUtil from "../../utils/rpc.js";
@@ -35,14 +33,14 @@ export default class AccountFactory {
   public static build<IDL extends Idl>(
     idl: IDL,
     coder: Coder,
-    programId: PublicKey,
+    programAddress: Address,
     provider?: Provider
   ): AccountNamespace<IDL> {
     return (idl.accounts ?? []).reduce((accountFns, acc) => {
       accountFns[acc.name] = new AccountClient<IDL>(
         idl,
         acc,
-        programId,
+        programAddress,
         provider,
         coder
       );
@@ -118,12 +116,12 @@ export class AccountClient<
   private _size: number;
 
   /**
-   * Returns the program ID owning all accounts.
+   * Returns the address of the program owning all accounts.
    */
-  get programId(): PublicKey {
-    return this._programId;
+  get programAddress(): Address {
+    return this._programAddress;
   }
-  private _programId: PublicKey;
+  private _programAddress: Address;
 
   /**
    * Returns the client's wallet and network provider.
@@ -142,28 +140,23 @@ export class AccountClient<
   private _coder: Coder;
 
   private _idlAccount: N;
-  private _programAddress: KitAddress;
   private _decoder: Decoder<T>;
 
   constructor(
     idl: IDL,
     idlAccount: N,
-    programId: PublicKey,
+    programAddress: Address,
     provider?: Provider,
     coder?: Coder
   ) {
     this._idlAccount = idlAccount;
-    this._programId = programId;
-    this._programAddress = toAddress(programId);
+    this._programAddress = programAddress;
     this._provider = provider ?? getProvider();
     this._coder = coder ?? new BorshCoder(idl);
     this._size = this._coder.accounts.size(idlAccount.name);
     this._decoder = createDecoder({
       read: (bytes, offset) => [
-        this._coder.accounts.decode<T>(
-          idlAccount.name,
-          Buffer.from(bytes.subarray(offset))
-        ),
+        this._coder.accounts.decode<T>(idlAccount.name, bytes.subarray(offset)),
         bytes.length,
       ],
     });
@@ -175,7 +168,7 @@ export class AccountClient<
    * @param address The address of the account to fetch.
    */
   async fetchNullable(
-    address: Address,
+    address: AddressInput,
     config?: FetchAccountConfig
   ): Promise<MaybeAccount<T>> {
     const { account } = await this.fetchNullableAndContext(address, config);
@@ -189,7 +182,7 @@ export class AccountClient<
    * @param address The address of the account to fetch.
    */
   async fetchNullableAndContext(
-    address: Address,
+    address: AddressInput,
     config: FetchAccountConfig = {}
   ): Promise<{ account: MaybeAccount<T>; context: { slot: Slot } }> {
     const kitAddress = toAddress(address);
@@ -215,7 +208,7 @@ export class AccountClient<
    * @param address The address of the account to fetch.
    */
   async fetch(
-    address: Address,
+    address: AddressInput,
     config?: FetchAccountConfig
   ): Promise<Account<T>> {
     const { account } = await this.fetchAndContext(address, config);
@@ -229,7 +222,7 @@ export class AccountClient<
    * @param address The address of the account to fetch.
    */
   async fetchAndContext(
-    address: Address,
+    address: AddressInput,
     config?: FetchAccountConfig
   ): Promise<{ account: Account<T>; context: { slot: Slot } }> {
     const { account, context } = await this.fetchNullableAndContext(
@@ -249,7 +242,7 @@ export class AccountClient<
    * @param addresses The addresses of the accounts to fetch.
    */
   async fetchMultiple(
-    addresses: Address[],
+    addresses: AddressInput[],
     config?: FetchAccountsConfig
   ): Promise<MaybeAccount<T>[]> {
     const batches = await this.fetchMultipleAndContext(addresses, config);
@@ -263,7 +256,7 @@ export class AccountClient<
    * @param addresses The addresses of the accounts to fetch.
    */
   async fetchMultipleAndContext(
-    addresses: Address[],
+    addresses: AddressInput[],
     config?: FetchAccountsConfig
   ): Promise<{ accounts: MaybeAccount<T>[]; context: { slot: Slot } }[]> {
     const batches = await rpcUtil.getMultipleAccountsAndContext(
@@ -298,7 +291,7 @@ export class AccountClient<
       this._coder.accounts.memcmp(
         this._idlAccount.name,
         filters && !Array.isArray(filters)
-          ? Buffer.from(filters as ReadonlyUint8Array)
+          ? (filters as ReadonlyUint8Array)
           : undefined
       );
     const coderFilters: (
@@ -352,7 +345,7 @@ export class AccountClient<
    * `createAsyncIterableFromDataPublisher` if preferred.
    */
   subscribe(
-    address: Address,
+    address: AddressInput,
     config: { abortSignal: AbortSignal; commitment?: Commitment }
   ): DataPublisher<AccountSubscriptionEvents<T>> {
     const { rpcSubscriptions } = this._provider;

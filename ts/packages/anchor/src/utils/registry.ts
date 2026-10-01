@@ -8,10 +8,10 @@ import {
   ReadonlyUint8Array,
   Rpc,
 } from "@solana/kit";
-import { Address as AnchorAddress, toAddress } from "../program/common.js";
+import { AddressInput, toAddress } from "../program/common.js";
 import {
   getAnchorOptionCodec,
-  getPublicKeyCodec,
+  getAnchorAddressCodec,
   getRustEnumCodec,
 } from "../coder/borsh/codecs.js";
 
@@ -22,7 +22,7 @@ import {
  */
 export async function verifiedBuild(
   rpc: Rpc<GetAccountInfoApi>,
-  programId: AnchorAddress,
+  programId: AddressInput,
   limit: number = 5
 ): Promise<Build | null> {
   const programAddress = toAddress(programId);
@@ -58,7 +58,7 @@ export async function verifiedBuild(
  */
 export async function fetchData(
   rpc: Rpc<GetAccountInfoApi>,
-  programId: AnchorAddress
+  programId: AddressInput
 ): Promise<ProgramData> {
   const programAccount = await fetchEncodedAccount(rpc, toAddress(programId));
   if (!programAccount.exists) {
@@ -84,15 +84,21 @@ const UPGRADEABLE_LOADER_STATE_CODEC = getRustEnumCodec(
     [
       "buffer",
       getStructCodec([
-        ["authorityAddress", getAnchorOptionCodec(getPublicKeyCodec())],
+        ["authorityAddress", getAnchorOptionCodec(getAnchorAddressCodec())],
       ]),
     ],
-    ["program", getStructCodec([["programdataAddress", getPublicKeyCodec()]])],
+    [
+      "program",
+      getStructCodec([["programdataAddress", getAnchorAddressCodec()]]),
+    ],
     [
       "programData",
       getStructCodec([
         ["slot", getU64Codec()],
-        ["upgradeAuthorityAddress", getAnchorOptionCodec(getPublicKeyCodec())],
+        [
+          "upgradeAuthorityAddress",
+          getAnchorOptionCodec(getAnchorAddressCodec()),
+        ],
       ]),
     ],
   ],

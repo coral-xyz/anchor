@@ -2,11 +2,14 @@ import {
   Address,
   Codec,
   combineCodec,
+  containsBytes,
   FixedSizeCodec,
   getAddressCodec,
   getBooleanDecoder,
   getBooleanEncoder,
+  getConstantCodec,
   getOptionCodec,
+  getHiddenPrefixCodec,
   getTupleCodec,
   getU8Codec,
   getU32Codec,
@@ -14,12 +17,13 @@ import {
   isFixedSize,
   NumberCodec,
   OptionOrNullable,
+  ReadonlyUint8Array,
   tapDecoder,
   tapDecoderBytes,
   transformCodec,
   unwrapOption,
 } from "@solana/kit";
-import type { PublicKey } from "@solana/web3.js";
+import type { AddressInput } from "../../program/common.js";
 
 /**
  * A codec for a value whose shape is only known at runtime, e.g. because it
@@ -29,15 +33,15 @@ import type { PublicKey } from "@solana/web3.js";
 export type IdlCodec = Codec<unknown, unknown>;
 
 /**
- * Public key codec. Decodes to a Kit `Address` (base58 string); encodes from
- * an `Address` or a web3.js `PublicKey`.
+ * Address codec. Decodes to a Kit `Address`; encodes from an `Address` or any
+ * object exposing one through `toBase58()`, e.g. a web3.js public key.
  */
-export function getPublicKeyCodec(): FixedSizeCodec<
-  Address | PublicKey,
+export function getAnchorAddressCodec(): FixedSizeCodec<
+  AddressInput,
   Address,
   32
 > {
-  return transformCodec(getAddressCodec(), (value: Address | PublicKey) =>
+  return transformCodec(getAddressCodec(), (value: AddressInput) =>
     typeof value === "string" ? value : (value.toBase58() as Address)
   );
 }
@@ -153,4 +157,33 @@ export function getRustEnumCodec(
     },
     (bytes, offset) => Number(discriminant.read(bytes, offset)[0])
   );
+}
+
+/**
+ * An IDL codec for a value prefixed by its discriminator, e.g. an account or
+ * an instruction. Encoding prepends the discriminator and decoding checks it,
+ * as Kit's hidden prefix codec does; the discriminator bytes and the codec of
+ * the value that follows are exposed for callers that need to identify or
+ * decode values without the check.
+ */
+export type DiscriminatedIdlCodec = IdlCodec & {
+  /** The discriminator prefixing encoded values. */
+  readonly discriminator: ReadonlyUint8Array;
+  /** The codec of the value that follows the discriminator. */
+  readonly item: IdlCodec;
+  /** Whether the given bytes start with the discriminator. */
+  matches(bytes: ReadonlyUint8Array): boolean;
+};
+
+export function getDiscriminatedIdlCodec(
+  discriminator: readonly number[],
+  item: IdlCodec
+): DiscriminatedIdlCodec {
+  const prefix: ReadonlyUint8Array = new Uint8Array(discriminator);
+  return Object.freeze({
+    ...getHiddenPrefixCodec(item, [getConstantCodec(prefix)]),
+    discriminator: prefix,
+    item,
+    matches: (bytes: ReadonlyUint8Array) => containsBytes(bytes, prefix, 0),
+  });
 }

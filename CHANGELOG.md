@@ -14,11 +14,16 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Fixes
 
+- ts: Resolve every event CPI account pair of an instruction, not just the first ([#5117](https://github.com/otter-sec/anchor/pull/5117)).
 - ts: Encode signed integer PDA seeds as two's complement ([#5114](https://github.com/otter-sec/anchor/pull/5114)).
 - lang-v2: Restore compatibility for `BTreeMap`, `BTreeSet`, tuples, and `IdlType` values, and document intentional Wincode differences from v1 Borsh, including NaN acceptance and `HashMap`/`HashSet` iteration ordering. Native Map/Set IDL and TypeScript SDK support remains future work.
 
 ### Breaking
 
+- ts: Drop `@solana/web3.js`, `bn.js` and `Buffer` from the public API ([#5117](https://github.com/otter-sec/anchor/pull/5117)).
+- ts: Rename `programId` to `address` and `pubkeys()` to `addresses()` ([#5117](https://github.com/otter-sec/anchor/pull/5117)).
+- ts: Remove `utils.bytes`, `utils.publicKey`, `utils.token` and `utils.sha256` in favour of `@solana/kit` and `@solana-program/token` ([#5117](https://github.com/otter-sec/anchor/pull/5117)).
+- ts: Fetch IDLs through `@solana-program/program-metadata` ([#5117](https://github.com/otter-sec/anchor/pull/5117)).
 - ts: Remove the `@anchor-lang/spl-*` packages in favour of `@solana-program/*` ([#5116](https://github.com/otter-sec/anchor/pull/5116)).
 - ts: Remove `Native.system()` in favour of `@solana-program/system` ([#5115](https://github.com/otter-sec/anchor/pull/5115)).
 - ts: Move the token, public key and registry utilities to `@solana/kit` ([#5115](https://github.com/otter-sec/anchor/pull/5115)).

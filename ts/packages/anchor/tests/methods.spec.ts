@@ -184,7 +184,7 @@ describe("Program namespaces", () => {
       const program = new Program(idl, provider);
       const counter = randomSigner();
 
-      const { instruction, signers, pubkeys } = await program.methods
+      const { instruction, signers, addresses } = await program.methods
         .initialize(1n)
         .accounts({ counter: counter.address })
         .signers([counter.signer])
@@ -192,7 +192,7 @@ describe("Program namespaces", () => {
 
       expect(instruction.programAddress).toBe(PROGRAM_ADDRESS);
       expect(signers).toEqual([counter.signer]);
-      expect(String(pubkeys.authority)).toBe(wallet.address);
+      expect(addresses.authority).toBe(wallet.address);
     });
   });
 
@@ -204,7 +204,8 @@ describe("Program namespaces", () => {
       expect(() =>
         program.instruction.initialize(1n, {
           accounts: {
-            counter: "not-an-address",
+            // A raw string is not an address until validated with `address()`.
+            counter: "not-an-address" as any,
             authority: randomAddress(),
             systemProgram: SYSTEM_PROGRAM,
           },

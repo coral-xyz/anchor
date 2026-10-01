@@ -34,14 +34,11 @@
   },
   "dependencies": {
     "@anchor-lang/errors": "^2.0.0-rc.1",
-    "@noble/hashes": "^1.3.1",
+    "@solana-program/program-metadata": "^0.9.3",
     "@solana-program/system": "^0.14.1",
     "@solana-program/token": "^0.16.1",
     "@solana/kit": "^8.3.0",
-    "@solana/web3.js": "^1.69.0",
-    "bn.js": "^5.1.2",
     "camelcase": "^6.3.0",
-    "pako": "^2.0.3",
     "toml": "^3.0.0"
   },
   "devDependencies": {
@@ -51,11 +48,10 @@
     "@rollup/plugin-node-resolve": "^13.0.6",
     "@rollup/plugin-replace": "^3.0.0",
     "@rollup/plugin-typescript": "^8.3.0",
-    "@types/bn.js": "^4.11.6",
+    "@solana/web3.js": "^1.69.0",
     "@types/crypto-hash": "^1.1.2",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.0.0",
-    "@types/pako": "^1.0.1",
     "@typescript-eslint/eslint-plugin": "^4.6.0",
     "@typescript-eslint/parser": "^4.6.0",
     "eslint": "^7.12.1",
@@ -63,6 +59,7 @@
     "husky": "^4.3.0",
     "jest": "^30.5.1",
     "lint-staged": "^10.5.0",
+    "pako": "^3.0.1",
     "prettier": "^2.1.2",
     "rimraf": "^3.0.2",
     "rollup": "^2.60.2",
@@ -74,7 +71,6 @@
     "typescript": "^5.9.3"
   },
   "files": [
-    "dist",
-    "types"
+    "dist"
   ]
 }
