@@ -221,7 +221,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-attribute-access-control"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -230,7 +230,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-attribute-account"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "anchor-syn",
  "proc-macro2",
@@ -240,7 +240,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-attribute-constant"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "anchor-syn",
  "quote",
@@ -249,7 +249,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-attribute-error"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "anchor-syn",
  "quote",
@@ -258,7 +258,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-attribute-event"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "anchor-syn",
  "proc-macro2",
@@ -268,7 +268,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-attribute-program"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "anchor-lang-idl",
  "anchor-syn",
@@ -281,7 +281,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-cli"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "addr2line",
  "anchor-cli-macros",
@@ -350,7 +350,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-cli-macros"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -359,7 +359,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-client"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "anchor-lang",
  "anyhow",
@@ -387,7 +387,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-derive-accounts"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "anchor-lang-idl",
  "bs58",
@@ -402,7 +402,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-derive-accounts-v1"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "anchor-syn",
  "quote",
@@ -411,7 +411,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-derive-serde"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "anchor-syn",
  "proc-macro-crate 3.5.0",
@@ -422,7 +422,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-derive-space"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -431,7 +431,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-lang"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "anchor-derive-accounts",
  "bytemuck",
@@ -473,7 +473,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-lang-v1"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "anchor-attribute-access-control",
  "anchor-attribute-account",
@@ -516,7 +516,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-spl"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "anchor-lang",
  "borsh 1.6.1",
@@ -539,7 +539,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-spl-v1"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "anchor-lang-v1",
  "borsh 1.6.1",
@@ -557,7 +557,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-syn"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "anyhow",
  "bs58",
@@ -1054,7 +1054,7 @@ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
 name = "avm"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 dependencies = [
  "anyhow",
  "cargo_toml 0.22.3",

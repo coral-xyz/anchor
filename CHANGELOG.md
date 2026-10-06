@@ -14,6 +14,14 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Fixes
 
+### Breaking
+
+## [2.0.0-rc.2] - 2026-10-06
+
+### Features
+
+### Fixes
+
 - ts: Resolve every event CPI account pair of an instruction, not just the first ([#5117](https://github.com/otter-sec/anchor/pull/5117)).
 - ts: Encode signed integer PDA seeds as two's complement ([#5114](https://github.com/otter-sec/anchor/pull/5114)).
 - lang-v2: Restore compatibility for `BTreeMap`, `BTreeSet`, tuples, and `IdlType` values, and document intentional Wincode differences from v1 Borsh, including NaN acceptance and `HashMap`/`HashSet` iteration ordering. Native Map/Set IDL and TypeScript SDK support remains future work.
