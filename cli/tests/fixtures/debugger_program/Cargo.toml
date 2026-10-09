@@ -10,7 +10,7 @@ name = "debugger_fixture"
 
 [dependencies]
 pinocchio = { version = "0.11", default-features = false }
-solana-program-error = "3.0.1"
+solana-program-error = "3.0"
 
 [lints.rust.unexpected_cfgs]
 level = "allow"
